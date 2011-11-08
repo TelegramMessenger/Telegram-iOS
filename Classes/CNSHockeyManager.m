@@ -71,7 +71,6 @@
   
   // Distribution
   [[BWHockeyManager sharedHockeyManager] setAppIdentifier:appIdentifier];
-  [[BWHockeyManager sharedHockeyManager] setUpdateURL:@"http://192.168.178.53:3000"];
   [[BWHockeyManager sharedHockeyManager] setCheckForTracker:YES];
   
 #ifdef JMC_PRESENT

@@ -371,7 +371,7 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
         self.alwaysShowUpdateReminder = YES;
         self.checkForUpdateOnLaunch = YES;
         self.showUserSettings = YES;
-        self.compareVersionType = HockeyComparisonResultDifferent;
+        self.compareVersionType = HockeyComparisonResultGreater;
         
         // load update setting from user defaults and check value
         if ([[NSUserDefaults standardUserDefaults] objectForKey:kHockeyAutoUpdateSetting]) {
