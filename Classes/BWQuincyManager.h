@@ -28,7 +28,6 @@
  */
 
 #import <Foundation/Foundation.h>
-#import <MessageUI/MessageUI.h>
 
 #define kQuincyBundleName @"Quincy.bundle"
 
@@ -113,11 +112,6 @@ typedef enum CrashReportStatus {
     CrashReportStatusSubmitted = 2,
 	
     CrashReportStatusAvailable = 3,
-
-    CrashReportStatusDiscontinued = 4,
-
-    CrashReportStatusMoreInfo = 5,
-
 } CrashReportStatus;
 
 // This protocol is used to send the image updates
@@ -140,8 +134,6 @@ typedef enum CrashReportStatus {
 // Invoked when the internet connection is closed, to let the app disable the activity indicator
 -(void) connectionClosed;
 
--(void) askForCrashInfo:(NSString*)messageBody;
-
 // Invoked before the user is asked to send a crash report, so you can do additional actions. E.g. to make sure not to ask the user for an app rating :) 
 -(void) willShowSubmitCrashReportAlert;
 
@@ -157,6 +149,8 @@ typedef enum CrashReportStatus {
     BOOL _autoSubmitCrashReport;
     BOOL _autoSubmitDeviceUDID;
 
+    BOOL _didCrashInLastSession;
+    
     NSString *_appIdentifier;
 
     NSString *_feedbackRequestID;
@@ -214,6 +208,9 @@ typedef enum CrashReportStatus {
 // if YES, the device UDID will be submitted as the user id, without the need to define it in the crashReportUserID delegate (meant for beta versions!)
 // if NO, the crashReportUserID delegate defines what to be sent as user id (default)
 @property (nonatomic, assign, getter=isAutoSubmitDeviceUDID) BOOL autoSubmitDeviceUDID;
+
+// will return if the last session crashed, to e.g. make sure a "rate my app" alert will not show up
+@property (nonatomic, readonly) BOOL didCrashInLastSession;
 
 // If you want to use HockeyApp instead of your own server, this is required
 @property (nonatomic, retain) NSString *appIdentifier;
