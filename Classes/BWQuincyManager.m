@@ -505,10 +505,11 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
              [self _getDevicePlatform],
              [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"],
              report.applicationInfo.applicationVersion,
-             crashLogString,
+             [crashLogString stringByReplacingOccurrencesOfString:@"]]>" withString:@"]]" @"]]><![CDATA[" @">" options:NSLiteralSearch range:NSMakeRange(0,crashLogString.length)],
              userid,
              contact,
-             description];
+			 [description stringByReplacingOccurrencesOfString:@"]]>" withString:@"]]" @"]]><![CDATA[" @">" options:NSLiteralSearch range:NSMakeRange(0,description.length)]];
+
             
             // store this crash report as user approved, so if it fails it will retry automatically
             [approvedCrashReports setObject:[NSNumber numberWithBool:YES] forKey:[_crashFiles objectAtIndex:i]];
@@ -656,6 +657,7 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
 	if (_statusCode >= 200 && _statusCode < 400) {
         [self _cleanCrashReports];
         
+        _feedbackRequestID = nil;
         if (self.appIdentifier) {
             // HockeyApp uses PList XML format
             NSMutableDictionary *response = [NSPropertyListSerialization propertyListFromData:_responseData
@@ -663,10 +665,12 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
                                                                                        format:nil
                                                                              errorDescription:NULL];
             _serverResult = (CrashReportStatus)[[response objectForKey:@"status"] intValue];
-            _feedbackRequestID = [[NSString alloc] initWithString:[response objectForKey:@"id"]];
-            _feedbackDelayInterval = [[response objectForKey:@"delay"] floatValue];
-            if (_feedbackDelayInterval > 0)
-                _feedbackDelayInterval *= 0.01;            
+            if ([response objectForKey:@"id"]) {
+                _feedbackRequestID = [[NSString alloc] initWithString:[response objectForKey:@"id"]];
+                _feedbackDelayInterval = [[response objectForKey:@"delay"] floatValue];
+                if (_feedbackDelayInterval > 0)
+                    _feedbackDelayInterval *= 0.01;
+            }
         } else {
             NSXMLParser *parser = [[NSXMLParser alloc] initWithData:_responseData];
             // Set self as the delegate of the parser so that it will receive the parser delegate methods callbacks.
@@ -682,15 +686,12 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
         }
         
         if ([self isFeedbackActivated]) {
-            if (self.appIdentifier) {
-                // only proceed if the server did not report any problem
-                if (_serverResult == CrashReportStatusQueued) {
-                    // the report is still in the queue
+            // only proceed if the server did not report any problem
+            if ((self.appIdentifier) && (_serverResult == CrashReportStatusQueued)) {
+                // the report is still in the queue
+                if (_feedbackRequestID) {
                     [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(_checkForFeedbackStatus) object:nil];
                     [self performSelector:@selector(_checkForFeedbackStatus) withObject:nil afterDelay:_feedbackDelayInterval];
-                } else {
-                    // we do have a status, show it if needed
-                    [self showCrashStatusMessage];
                 }
             } else {
                 [self showCrashStatusMessage];
