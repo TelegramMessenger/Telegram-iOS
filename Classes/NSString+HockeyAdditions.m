@@ -47,4 +47,29 @@
     return result;
 }
 
+- (NSComparisonResult)versionCompare:(NSString *)other
+{
+	// Extract plain version number from self
+	NSString *plainSelf = self;
+	NSRange letterRange = [plainSelf rangeOfCharacterFromSet: [NSCharacterSet letterCharacterSet]];
+	if (letterRange.length)
+		plainSelf = [plainSelf substringToIndex: letterRange.location];
+	
+	// Extract plain version number from other
+	NSString *plainOther = other;
+	letterRange = [plainOther rangeOfCharacterFromSet: [NSCharacterSet letterCharacterSet]];
+	if (letterRange.length)
+		plainOther = [plainOther substringToIndex: letterRange.location];
+	
+	// Compare plain versions
+	NSComparisonResult result = [plainSelf compare:plainOther options:NSNumericSearch];
+	
+	// If plain versions are equal, compare full versions
+	if (result == NSOrderedSame)
+		result = [self compare:other options:NSNumericSearch];
+	
+	// Done
+	return result;
+}
+
 @end

@@ -151,7 +151,7 @@
 }
 
 - (NSString *)sizeInMB {
-    if ([[size_ class] isKindOfClass: [NSNumber class]] && [size_ doubleValue] > 0) {
+    if ([size_ isKindOfClass: [NSNumber class]] && [size_ doubleValue] > 0) {
         double appSizeInMB = [size_ doubleValue]/(1024*1024);
         NSString *appSizeString = [NSString stringWithFormat:@"%.1f MB", appSizeInMB];
         return appSizeString;

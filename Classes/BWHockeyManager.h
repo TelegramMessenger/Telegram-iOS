@@ -70,6 +70,8 @@ typedef enum {
     BOOL updateAlertShowing_;
     BOOL lastCheckFailed_;
     
+    BOOL isAppStoreEnvironment_;
+
     NSURLConnection *urlConnection_;
     NSDate *lastCheck_;
     NSDate *usageStartTimestamp_;
@@ -170,6 +172,8 @@ typedef enum {
 @property (nonatomic, assign) HockeyUpdateSetting updateSetting;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+@property (nonatomic, readonly) BOOL isAppStoreEnvironment;
 
 // is an update available?
 - (BOOL)isUpdateAvailable;

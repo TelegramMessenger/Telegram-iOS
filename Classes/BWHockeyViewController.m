@@ -55,7 +55,9 @@
 #pragma mark private
 
 - (void)restoreStoreButtonStateAnimated_:(BOOL)animated {
-    if ([self.hockeyManager isUpdateAvailable]) {
+    if ([self.hockeyManager isAppStoreEnvironment]) {
+        [self setAppStoreButtonState:AppStoreButtonStateOffline animated:animated];
+    } else if ([self.hockeyManager isUpdateAvailable]) {
         [self setAppStoreButtonState:AppStoreButtonStateUpdate animated:animated];
     } else {
         [self setAppStoreButtonState:AppStoreButtonStateCheck animated:animated];
@@ -390,6 +392,8 @@
 }
 
 - (void)viewWillAppear:(BOOL)animated {
+    if ([self.hockeyManager isAppStoreEnvironment])
+        self.appStoreButtonState = AppStoreButtonStateOffline;
     self.hockeyManager.currentHockeyViewController = self;
     [super viewWillAppear:animated];
     statusBarStyle_ = [[UIApplication sharedApplication] statusBarStyle];

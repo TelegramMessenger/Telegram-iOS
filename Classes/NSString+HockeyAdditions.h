@@ -30,4 +30,6 @@
 - (NSString *)bw_URLEncodedString;
 - (NSString *)bw_URLDecodedString;
 
+- (NSComparisonResult)versionCompare:(NSString *)other;
+
 @end
