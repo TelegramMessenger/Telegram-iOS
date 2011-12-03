@@ -20,7 +20,10 @@
 //  THE SOFTWARE.
 
 
-@interface CNSHockeyManager : NSObject
+@interface CNSHockeyManager : NSObject {
+@private
+  NSString *appIdentifier;
+}
 
 + (CNSHockeyManager *)sharedHockeyManager;
 
