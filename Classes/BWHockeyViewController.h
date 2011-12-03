@@ -24,7 +24,8 @@
 
 #import <UIKit/UIKit.h>
 #import "PSStoreButton.h"
-#import "PSAppStoreHeader.h"
+
+@class PSAppStoreHeader;
 
 typedef enum {
 	AppStoreButtonStateOffline,

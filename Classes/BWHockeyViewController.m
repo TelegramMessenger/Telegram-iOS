@@ -28,6 +28,7 @@
 #import "BWHockeyManager.h"
 #import "BWGlobal.h"
 #import "UIImage+HockeyAdditions.h"
+#import "PSAppStoreHeader.h"
 #import "PSWebTableViewCell.h"
 #import "BWHockeySettingsViewController.h"
 
