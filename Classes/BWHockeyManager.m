@@ -81,8 +81,6 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
 
 @implementation BWHockeyManager
 
-@synthesize checkForTracker;
-@synthesize trackerConfig;
 @synthesize delegate = delegate_;
 @synthesize updateURL = updateURL_;
 @synthesize appIdentifier = appIdentifier_;
@@ -110,6 +108,10 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
 @synthesize authenticationSecret = authenticationSecret_;
 @synthesize authorizeView = authorizeView_;
 @synthesize isAppStoreEnvironment = isAppStoreEnvironment_;
+@synthesize checkForTracker = checkForTracker_;
+@synthesize trackerConfig = trackerConfig_;
+@synthesize barStyle = barStyle_;
+@synthesize modalPresentationStyle = modalPresentationStyle_;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark -
@@ -383,6 +385,8 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
         self.checkForUpdateOnLaunch = YES;
         self.showUserSettings = YES;
         self.compareVersionType = HockeyComparisonResultGreater;
+        self.barStyle = UIBarStyleDefault;
+        self.modalPresentationStyle = UIModalPresentationFormSheet;
         
         // load update setting from user defaults and check value
         if ([[NSUserDefaults standardUserDefaults] objectForKey:kHockeyAutoUpdateSetting]) {
@@ -496,6 +500,8 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
     
     BWHockeyViewController *hockeyViewController = [self hockeyViewController:YES];    
     navController_ = [[UINavigationController alloc] initWithRootViewController:hockeyViewController];
+    navController_.navigationBar.barStyle = barStyle_;
+    navController_.modalPresentationStyle = modalPresentationStyle_;
     
     if (parentViewController) {
         if ([navController_ respondsToSelector:@selector(setModalTransitionStyle:)]) {

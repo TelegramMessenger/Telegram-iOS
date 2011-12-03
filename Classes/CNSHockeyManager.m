@@ -227,6 +227,22 @@
   [[BWHockeyManager sharedHockeyManager] setShowUserSettings:showUserSettings];
 }
 
+- (UIBarStyle)barStyle {
+  return [[BWHockeyManager sharedHockeyManager] barStyle];
+}
+
+- (void)setBarStyle:(UIBarStyle)barStyle {
+  [[BWHockeyManager sharedHockeyManager] setBarStyle:barStyle];
+}
+
+- (UIModalPresentationStyle)modalPresentationStyle {
+  return [[BWHockeyManager sharedHockeyManager] modalPresentationStyle];
+}
+
+- (void)setModalPresentationStyle:(UIModalPresentationStyle)modalPresentationStyle {
+  [[BWHockeyManager sharedHockeyManager] setModalPresentationStyle:modalPresentationStyle];
+}
+
 - (BOOL)isUserAllowedToDisableSendData {
   return [[BWHockeyManager sharedHockeyManager] isAllowUserToDisableSendData];
 }

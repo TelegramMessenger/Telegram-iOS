@@ -38,9 +38,9 @@ typedef enum {
 } HockeyAuthorizationState;
 
 typedef enum {
-    HockeyUpdateCheckStartup = 0,
-    HockeyUpdateCheckDaily = 1,
-    HockeyUpdateCheckManually = 2
+  HockeyUpdateCheckStartup = 0,
+  HockeyUpdateCheckDaily = 1,
+  HockeyUpdateCheckManually = 2
 } HockeyUpdateSetting;
 
 @protocol BWHockeyManagerDelegate;
@@ -48,48 +48,54 @@ typedef enum {
 @class BWApp;
 
 @interface BWHockeyManager : NSObject <UIAlertViewDelegate> {
-    id <BWHockeyManagerDelegate> delegate_;
-    NSArray *apps_;
-    
-    NSString *updateURL_;
-    NSString *appIdentifier_;
-    NSString *currentAppVersion_;
-    
-    UINavigationController *navController_;
-    BWHockeyViewController *currentHockeyViewController_;
-    UIView *authorizeView_;
-    
-    NSMutableData *receivedData_;
-    
-    BOOL loggingEnabled_;
-    BOOL checkInProgress_;
-    BOOL dataFound;
-    BOOL updateAvailable_;
-    BOOL showFeedback_; 
-    BOOL updateURLOffline_;
-    BOOL updateAlertShowing_;
-    BOOL lastCheckFailed_;
-    
-    BOOL isAppStoreEnvironment_;
-
-    NSURLConnection *urlConnection_;
-    NSDate *lastCheck_;
-    NSDate *usageStartTimestamp_;
-    
-    BOOL sendUserData_;
-    BOOL sendUsageTime_;
-    BOOL allowUserToDisableSendData_;
-    BOOL userAllowsSendUserData_;
-    BOOL userAllowsSendUsageTime_;
-    BOOL showUpdateReminder_;
-    BOOL checkForUpdateOnLaunch_;
-    HockeyComparisonResult compareVersionType_;
-    HockeyUpdateSetting updateSetting_;
-    BOOL showUserSettings_;
-    BOOL showDirectInstallOption_;
-    
-    BOOL requireAuthorization_;
-    NSString *authenticationSecret_;
+  id <BWHockeyManagerDelegate> delegate_;
+  NSArray *apps_;
+  
+  NSString *updateURL_;
+  NSString *appIdentifier_;
+  NSString *currentAppVersion_;
+  
+  UINavigationController *navController_;
+  BWHockeyViewController *currentHockeyViewController_;
+  UIView *authorizeView_;
+  
+  NSMutableData *receivedData_;
+  
+  BOOL loggingEnabled_;
+  BOOL checkInProgress_;
+  BOOL dataFound;
+  BOOL updateAvailable_;
+  BOOL showFeedback_; 
+  BOOL updateURLOffline_;
+  BOOL updateAlertShowing_;
+  BOOL lastCheckFailed_;
+  
+  BOOL isAppStoreEnvironment_;
+  
+  NSURLConnection *urlConnection_;
+  NSDate *lastCheck_;
+  NSDate *usageStartTimestamp_;
+  
+  BOOL sendUserData_;
+  BOOL sendUsageTime_;
+  BOOL allowUserToDisableSendData_;
+  BOOL userAllowsSendUserData_;
+  BOOL userAllowsSendUsageTime_;
+  BOOL showUpdateReminder_;
+  BOOL checkForUpdateOnLaunch_;
+  HockeyComparisonResult compareVersionType_;
+  HockeyUpdateSetting updateSetting_;
+  BOOL showUserSettings_;
+  BOOL showDirectInstallOption_;
+  
+  BOOL requireAuthorization_;
+  NSString *authenticationSecret_;
+  
+  BOOL checkForTracker_;
+  NSDictionary *trackerConfig_;
+  
+  UIBarStyle barStyle_;
+  UIModalPresentationStyle modalPresentationStyle_;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -144,6 +150,12 @@ typedef enum {
 // if YES, the user can change the HockeyUpdateSetting value (default)
 // if NO, the user can not change it, and the default or developer defined value will be used
 @property (nonatomic, assign, getter=shouldShowUserSettings) BOOL showUserSettings;
+
+// set bar style of navigation controller
+@property (nonatomic, assign) UIBarStyle barStyle;
+
+// set modal presentation style of update view
+@property (nonatomic, assign) UIModalPresentationStyle modalPresentationStyle;
 
 // if YES, then an update check will be performed after the application becomes active (default)
 // if NO, then the update check will not happen unless invoked explicitly

@@ -145,6 +145,16 @@
 // Default: YES
 @property (nonatomic, assign, getter=shouldShowUserSettings) BOOL showUserSettings;
 
+// Set bar style of navigation controller
+//
+// Default: UIBarStyleDefault
+@property (nonatomic, assign) UIBarStyle barStyle;
+
+// Set modal presentation style of update view
+//
+// Default: UIModalPresentationStyleFormSheet
+@property (nonatomic, assign) UIModalPresentationStyle modalPresentationStyle;
+
 // Allow the user to disable the sending of user data; this settings should
 // only be set if showUserSettings is enabled.
 //
