@@ -129,7 +129,6 @@
   [self configureHockeyManager];
 }
 
-
 - (void)configureWithBetaIdentifier:(NSString *)betaIdentifier liveIdentifier:(NSString *)liveIdentifier delegate:(id)delegate {
   [appIdentifier release];
 
