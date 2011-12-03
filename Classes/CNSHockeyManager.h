@@ -61,7 +61,7 @@
 // Maximum length: 255 chars
 // 
 // Default: empty
--(NSString *) crashReportContact;
+-(NSString *)crashReportContact;
 
 // Invoked before a crash report will be sent
 // 
@@ -70,7 +70,7 @@
 // that in your string.
 // 
 // Default: empty 
--(NSString *) crashReportDescription;
+-(NSString *)crashReportDescription;
 
 // Invoked before the user is asked to send a crash report
 // 
@@ -80,12 +80,43 @@
 
 @end
 
-
 @interface CNSHockeyManager : NSObject {
 @private
   id delegate;
   NSString *appIdentifier;
 }
+
+// Custom language style; set to a string which will be appended to 
+// to the localization file name; the Hockey SDK includes an alternative
+// file, to use this, set to @"Alternate"
+// 
+// Default: nil
+@property (nonatomic, retain) NSString *languageStyle;
+
+// Show button "Always" in crash alert; this will cause the dialog not to 
+// show the alert description text landscape mode! (default)
+//
+// Default: NO
+@property (nonatomic, assign, getter=isShowingAlwaysButton) BOOL showAlwaysButton;
+
+// Show feedback from server with status of the crash; if you set a crash
+// to resolved on HockeyApp and assign a fixed version, this version will
+// be reported to the user
+//
+// Default: NO
+@property (nonatomic, assign, getter=isFeedbackActivated) BOOL feedbackActivated;
+
+// Submit crash report without asking the user
+//
+// Default: NO
+@property (nonatomic, assign, getter=isAutoSubmitCrashReport) BOOL autoSubmitCrashReport;
+
+// Submit the device's UDID in the field UserID if crashReportUserID is not
+// implemented (see CNSHockeyManagerDelegate); DO NOT USE THIS FOR LIVE
+// VERSION OF YOUR APP AS THIS VIOLATES THE USERS PRIVACY!
+//
+// Default: NO
+@property (nonatomic, assign, getter=isAutoSubmitDeviceUDID) BOOL autoSubmitDeviceUDID;
 
 // Returns the shared manager object
 + (CNSHockeyManager *)sharedHockeyManager;
@@ -97,5 +128,8 @@
 // Configure HockeyApp with different app identifiers for beta and live versions
 // of the app; the update alert will only be shown for the beta identifier
 - (void)configureWithBetaIdentifier:(NSString *)betaIdentifier liveIdentifier:(NSString *)liveIdentifier delegate:(id)delegate;
+
+// Returns true if the app crashes in the last session
+- (BOOL)didCrashInLastSession;
 
 @end

@@ -119,7 +119,7 @@
   [invocation invoke];
 }
 
-#pragma mark - Public Instance Methods
+#pragma mark - Public Instance Methods (Configuration)
 
 - (void)configureWithIdentifier:(NSString *)newAppIdentifier delegate:(id)newDelegate {
   delegate = newDelegate;
@@ -145,6 +145,52 @@
     [self configureQuincyManager];
     [self configureHockeyManager];
   }
+}
+
+#pragma mark - Public Instance Methods (Crash Reporting)
+
+- (NSString *)languageStyle {
+  return [[BWQuincyManager sharedQuincyManager] languageStyle];
+}
+
+- (void)setLanguageStyle:(NSString *)languageStyle {
+  [[BWQuincyManager sharedQuincyManager] setLanguageStyle:languageStyle];
+}
+
+- (BOOL)isShowingAlwaysButton {
+  return [[BWQuincyManager sharedQuincyManager] isShowingAlwaysButton];
+}
+
+- (void)setShowAlwaysButton:(BOOL)showAlwaysButton {
+  [[BWQuincyManager sharedQuincyManager] setShowAlwaysButton:showAlwaysButton];
+}
+
+- (BOOL)isFeedbackActivated {
+  return [[BWQuincyManager sharedQuincyManager] isFeedbackActivated];
+}
+
+- (void)setFeedbackActivated:(BOOL)setFeedbackActivated {
+  [[BWQuincyManager sharedQuincyManager] setFeedbackActivated:setFeedbackActivated];
+}
+
+- (BOOL)isAutoSubmitCrashReport {
+  return [[BWQuincyManager sharedQuincyManager] isAutoSubmitCrashReport];
+}
+
+- (void)setAutoSubmitCrashReport:(BOOL)autoSubmitCrashReport {
+  [[BWQuincyManager sharedQuincyManager] setAutoSubmitCrashReport:autoSubmitCrashReport];
+}
+
+- (BOOL)isAutoSubmitDeviceUDID {
+  return [[BWQuincyManager sharedQuincyManager] isAutoSubmitDeviceUDID];
+}
+
+- (void)setAutoSubmitDeviceUDID:(BOOL)autoSubmitDeviceUDID {
+  [[BWQuincyManager sharedQuincyManager] setAutoSubmitDeviceUDID:autoSubmitDeviceUDID];
+}
+
+- (BOOL)didCrashInLastSession {
+  return [[BWQuincyManager sharedQuincyManager] didCrashInLastSession];
 }
 
 #pragma mark - Private Instance Methods
