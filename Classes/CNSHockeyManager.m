@@ -25,11 +25,17 @@
 
 @interface CNSHockeyManager ()
 
+- (BOOL)shouldUseLiveIdenfitier;
+
 - (void)configureJMC;
+- (void)configureHockeyManager;
+- (void)configureQuincyManager;
 
 @end
 
 @implementation CNSHockeyManager
+
+#pragma mark - Public Class Methods
 
 #if __IPHONE_OS_VERSION_MIN_REQUIRED >= 40000
 + (CNSHockeyManager *)sharedHockeyManager {   
@@ -71,6 +77,8 @@
   return (jmcClass) && ([jmcClass respondsToSelector:@selector(instance)]);
 }
 
+#pragma mark - Private Class Methods
+
 + (void)disableJMCCrashReporter {
   id jmcClass = NSClassFromString(@"JMC");
   id jmcInstance = [jmcClass performSelector:@selector(instance)];
@@ -111,18 +119,53 @@
   [invocation invoke];
 }
 
+#pragma mark - Public Instance Methods
+
 - (void)configureWithIdentifier:(NSString *)newAppIdentifier delegate:(id)delegate {
   [appIdentifier release];
   appIdentifier = [newAppIdentifier copy];
   
-  // Crash Reporting
+  [self configureQuincyManager];
+  [self configureHockeyManager];
+}
+
+
+- (void)configureWithBetaIdentifier:(NSString *)betaIdentifier liveIdentifier:(NSString *)liveIdentifier delegate:(id)delegate {
+  [appIdentifier release];
+
+  if ([self shouldUseLiveIdenfitier]) {
+    appIdentifier = [liveIdentifier copy];
+    
+    [self configureQuincyManager];
+  }
+  else {
+    appIdentifier = [betaIdentifier copy];
+    
+    [self configureQuincyManager];
+    [self configureHockeyManager];
+  }
+}
+
+#pragma mark - Private Instance Methods
+
+- (BOOL)shouldUseLiveIdenfitier {
+  BOOL delegateResult = NO;
+  if ([delegate respondsToSelector:@selector(shouldUseLiveIdenfitier)]) {
+    delegateResult = [(NSObject <CNSHockeyManagerDelegate>*)delegate shouldUseLiveIdenfitier];
+  }
+
+  return (delegateResult) || ([[BWHockeyManager sharedHockeyManager] isAppStoreEnvironment]);
+}
+
+- (void)configureQuincyManager {
   [[BWQuincyManager sharedQuincyManager] setAppIdentifier:appIdentifier];
-  
-  // Distribution
+}
+
+- (void)configureHockeyManager {
   [[BWHockeyManager sharedHockeyManager] setAppIdentifier:appIdentifier];
   [[BWHockeyManager sharedHockeyManager] setCheckForTracker:YES];
   
-  // JMC
+  // Only if JMC is part of the project
   if ([[self class] isJMCPresent]) {
     [[BWHockeyManager sharedHockeyManager] addObserver:self forKeyPath:@"trackerConfig" options:0 context:nil];
     [[self class] disableJMCCrashReporter];
@@ -168,6 +211,8 @@
 
 - (void)dealloc {
   [appIdentifier release], appIdentifier = nil;
+  delegate = nil;
+  
   [super dealloc];
 }
 

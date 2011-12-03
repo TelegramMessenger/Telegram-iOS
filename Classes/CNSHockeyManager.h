@@ -19,14 +19,23 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 
+@protocol CNSHockeyManagerDelegate <NSObject>
+
+@optional
+- (BOOL)shouldUseLiveIdenfitier;
+
+@end
+
 
 @interface CNSHockeyManager : NSObject {
 @private
+  id delegate;
   NSString *appIdentifier;
 }
 
 + (CNSHockeyManager *)sharedHockeyManager;
 
 - (void)configureWithIdentifier:(NSString *)appIdentifier delegate:(id)delegate;
+- (void)configureWithBetaIdentifier:(NSString *)betaIdentifier liveIdentifier:(NSString *)liveIdentifier delegate:(id)delegate;
 
 @end
