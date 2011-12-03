@@ -147,6 +147,14 @@
   }
 }
 
+- (BOOL)isLoggingEnabled {
+  return [[BWHockeyManager sharedHockeyManager] isLoggingEnabled];
+}
+
+- (void)setLoggingEnabled:(BOOL)loggingEnabled {
+  return [[BWHockeyManager sharedHockeyManager] setLoggingEnabled:loggingEnabled];
+}
+
 #pragma mark - Public Instance Methods (Crash Reporting)
 
 - (NSString *)languageStyle {
@@ -191,6 +199,124 @@
 
 - (BOOL)didCrashInLastSession {
   return [[BWQuincyManager sharedQuincyManager] didCrashInLastSession];
+}
+
+#pragma mark - Public Instance Methods (Distribution)
+
+- (BOOL)shouldSendUserData {
+  return [[BWHockeyManager sharedHockeyManager] shouldSendUserData];
+}
+
+- (void)setSendUserData:(BOOL)sendUserData {
+  [[BWHockeyManager sharedHockeyManager] setSendUserData:sendUserData];
+}
+
+- (BOOL)shouldSendUsageTime {
+  return [[BWHockeyManager sharedHockeyManager] shouldSendUsageTime];
+}
+
+- (void)setSendUsageTime:(BOOL)sendUsageTime {
+  [[BWHockeyManager sharedHockeyManager] setSendUsageTime:sendUsageTime];
+}
+
+- (BOOL)shouldShowUserSettings {
+  return [[BWHockeyManager sharedHockeyManager] shouldShowUserSettings];
+}
+
+- (void)setShowUserSettings:(BOOL)showUserSettings {
+  [[BWHockeyManager sharedHockeyManager] setShowUserSettings:showUserSettings];
+}
+
+- (BOOL)isUserAllowedToDisableSendData {
+  return [[BWHockeyManager sharedHockeyManager] isAllowUserToDisableSendData];
+}
+
+- (void)setAllowUserToDisableSendData:(BOOL)allowUserToDisableSendData {
+  [[BWHockeyManager sharedHockeyManager] setAllowUserToDisableSendData:allowUserToDisableSendData];
+}
+
+- (BOOL)alwaysShowUpdateReminder {
+  return [[BWHockeyManager sharedHockeyManager] alwaysShowUpdateReminder];
+}
+
+- (void)setAlwaysShowUpdateReminder:(BOOL)alwaysShowUpdateReminder {
+  [[BWHockeyManager sharedHockeyManager] setAlwaysShowUpdateReminder:alwaysShowUpdateReminder];
+}
+
+- (BOOL)shouldCheckForUpdateOnLaunch {
+  return [[BWHockeyManager sharedHockeyManager] isCheckForUpdateOnLaunch];
+}
+
+- (void)setCheckForUpdateOnLaunch:(BOOL)checkForUpdateOnLaunch {
+  [[BWHockeyManager sharedHockeyManager] setCheckForUpdateOnLaunch:checkForUpdateOnLaunch];
+}
+
+- (BOOL)isShowingDirectInstallOption {
+  return [[BWHockeyManager sharedHockeyManager] isShowingDirectInstallOption];
+}
+
+- (void)setShowDirectInstallOption:(BOOL)showDirectInstallOption {
+  [[BWHockeyManager sharedHockeyManager] setShowDirectInstallOption:showDirectInstallOption];
+}
+
+- (BOOL)shouldRequireAuthorization {
+  return [[BWHockeyManager sharedHockeyManager] isRequireAuthorization];
+}
+
+- (void)setRequireAuthorization:(BOOL)requireAuthorization {
+  [[BWHockeyManager sharedHockeyManager] setRequireAuthorization:requireAuthorization];
+}
+
+- (NSString *)authenticationSecret {
+  return [[BWHockeyManager sharedHockeyManager] authenticationSecret];
+}
+
+- (void)setAuthenticationSecret:(NSString *)authenticationSecret {
+  [[BWHockeyManager sharedHockeyManager] setAuthenticationSecret:authenticationSecret];
+}
+
+- (HockeyComparisonResult)compareVersionType {
+  return [[BWHockeyManager sharedHockeyManager] compareVersionType];
+}
+
+- (void)setCompareVersionType:(HockeyComparisonResult)compareVersionType {
+  [[BWHockeyManager sharedHockeyManager] setCompareVersionType:compareVersionType];
+}
+
+- (BOOL)isUpdateAvailable {
+  return [[BWHockeyManager sharedHockeyManager] isUpdateAvailable];
+}
+
+- (BOOL)isCheckInProgress {
+  return [[BWHockeyManager sharedHockeyManager] isCheckInProgress];
+}
+
+- (void)showUpdateView {
+  [[BWHockeyManager sharedHockeyManager] showUpdateView];
+}
+
+- (void)checkForUpdate {
+  [[BWHockeyManager sharedHockeyManager] checkForUpdate];
+}
+
+- (void)checkForUpdateShowFeedback:(BOOL)feedback {
+  [[BWHockeyManager sharedHockeyManager] checkForUpdateShowFeedback:feedback];
+}
+
+- (BOOL)initiateAppDownload {
+  return [[BWHockeyManager sharedHockeyManager] initiateAppDownload];
+}
+
+- (BOOL)appVersionIsAuthorized {
+  return [[BWHockeyManager sharedHockeyManager] appVersionIsAuthorized];
+}
+
+- (void)checkForAuthorization {
+  [[BWHockeyManager sharedHockeyManager] checkForAuthorization];
+}
+
+- (BWHockeyViewController *)hockeyViewController:(BOOL)modal {
+  return [[BWHockeyManager sharedHockeyManager] hockeyViewController:modal];
 }
 
 #pragma mark - Private Instance Methods

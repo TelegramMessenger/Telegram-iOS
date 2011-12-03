@@ -111,13 +111,7 @@ typedef enum {
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// settings
-
-// if YES, the API will return an existing JMC config
-// if NO, the API will return only version information
-@property (nonatomic, assign) BOOL checkForTracker;
-
-@property (nonatomic, retain, readonly) NSDictionary *trackerConfig;
+// Setting Properties
 
 // if YES, states will be logged using NSLog. Only enable this for debugging!
 // if NO, nothing will be logged. (default)
@@ -157,7 +151,7 @@ typedef enum {
 
 // if YES, the alert notifying about an new update also shows a button to install the update directly
 // if NO, the alert notifying about an new update only shows ignore and show update button
-@property (nonatomic, assign, getter=ishowingDirectInstallOption) BOOL showDirectInstallOption;
+@property (nonatomic, assign, getter=isShowingDirectInstallOption) BOOL showDirectInstallOption;
 
 // if YES, each app version needs to be authorized by the server to run on this device
 // if NO, each app version does not need to be authorized (default) 
@@ -172,7 +166,17 @@ typedef enum {
 @property (nonatomic, assign) HockeyUpdateSetting updateSetting;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+// Private Properties
 
+// if YES, the API will return an existing JMC config
+// if NO, the API will return only version information
+@property (nonatomic, assign) BOOL checkForTracker;
+
+// Contains the tracker config if received from server
+@property (nonatomic, retain, readonly) NSDictionary *trackerConfig;
+
+// if YES the app is installed from the app store
+// if NO the app is installed via ad-hoc or enterprise distribution
 @property (nonatomic, readonly) BOOL isAppStoreEnvironment;
 
 // is an update available?

@@ -19,7 +19,9 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 
-@class BWHockeyManager;
+#import "BWHockeyManager.h"
+
+#pragma mark - Delegate
 
 @protocol CNSHockeyManagerDelegate <NSObject>
 
@@ -86,12 +88,19 @@
   NSString *appIdentifier;
 }
 
+#pragma mark - Public Properties
+
 // Custom language style; set to a string which will be appended to 
 // to the localization file name; the Hockey SDK includes an alternative
 // file, to use this, set to @"Alternate"
 // 
 // Default: nil
 @property (nonatomic, retain) NSString *languageStyle;
+
+// Enable debug logging; ONLY ENABLE THIS FOR DEBUGGING!
+//
+// Default: NO
+@property (nonatomic, assign, getter=isLoggingEnabled) BOOL loggingEnabled;
 
 // Show button "Always" in crash alert; this will cause the dialog not to 
 // show the alert description text landscape mode! (default)
@@ -118,6 +127,72 @@
 // Default: NO
 @property (nonatomic, assign, getter=isAutoSubmitDeviceUDID) BOOL autoSubmitDeviceUDID;
 
+// Send user data to HockeyApp when checking for a new version; works only 
+// for beta apps and should not be activated for live apps. User data includes
+// the device type, OS version, app version and device UDID.
+//
+// Default: YES
+@property (nonatomic, assign, getter=shouldSendUserData) BOOL sendUserData;
+
+// Send usage time to HockeyApp when checking for a new version; works only 
+// for beta apps and should not be activated for live apps. 
+//
+// Default: YES
+@property (nonatomic, assign, getter=shouldSendUsageTime) BOOL sendUsageTime;
+
+// Enable to allow the user to change the settings from the update view
+//
+// Default: YES
+@property (nonatomic, assign, getter=shouldShowUserSettings) BOOL showUserSettings;
+
+// Allow the user to disable the sending of user data; this settings should
+// only be set if showUserSettings is enabled.
+//
+// Default: YES
+@property (nonatomic, assign, getter=isUserAllowedToDisableSendData) BOOL allowUserToDisableSendData;
+
+// Enable to show the new version alert every time the app becomes active and
+// the current version is outdated
+//
+// Default: YES
+@property (nonatomic, assign) BOOL alwaysShowUpdateReminder;
+
+// Enable to check for a new version every time the app becomes active; if
+// disabled you need to trigger the update mechanism manually
+//
+// Default: YES
+@property (nonatomic, assign, getter=shouldCheckForUpdateOnLaunch) BOOL checkForUpdateOnLaunch;
+
+// Show a button "Install" in the update alert to let the user directly start
+// the update; note that the user will not see the release notes.
+//
+// Default: NO
+@property (nonatomic, assign, getter=isShowingDirectInstallOption) BOOL showDirectInstallOption;
+
+// Enable to check on the server that the app is authorized to run on this 
+// device; the check is based on the UDID and the authentication secret which
+// is shown on the app page on HockeyApp
+//
+// Default: NO
+@property (nonatomic, assign, getter=shouldRequireAuthorization) BOOL requireAuthorization;
+
+// Set to the authentication secret which is shown on the app page on HockeyApp;
+// must be set if requireAuthorization is enabled; leave empty otherwise
+//
+// Default: nil
+@property (nonatomic, retain) NSString *authenticationSecret;
+
+// Define how the client determines if a new version is available.
+//
+// Values:
+// HockeyComparisonResultDifferent - the version on the server is different
+// HockeyComparisonResultGreate - the version on the server is greater
+//
+// Default: HockeyComparisonResultGreater
+@property (nonatomic, assign) HockeyComparisonResult compareVersionType;
+
+#pragma mark - Public Methods
+
 // Returns the shared manager object
 + (CNSHockeyManager *)sharedHockeyManager;
 
@@ -131,5 +206,33 @@
 
 // Returns true if the app crashes in the last session
 - (BOOL)didCrashInLastSession;
+
+// Returns true if an update is available
+- (BOOL)isUpdateAvailable;
+
+// Returns true if update check is running
+- (BOOL)isCheckInProgress;
+
+// Show update info view
+- (void)showUpdateView;
+
+// Manually start an update check
+- (void)checkForUpdate;
+
+// Checks for update and informs the user if an update was found or an 
+// error occurred
+- (void)checkForUpdateShowFeedback:(BOOL)feedback;
+
+// Initiates app-download call; this displays an alert view of the OS
+- (BOOL)initiateAppDownload;
+
+// Returns true if this app version was authorized with the server
+- (BOOL)appVersionIsAuthorized;
+
+// Manually check if the device is authorized to run this version
+- (void)checkForAuthorization;
+
+// Return a new instance of BWHockeyViewController
+- (BWHockeyViewController *)hockeyViewController:(BOOL)modal;
 
 @end
