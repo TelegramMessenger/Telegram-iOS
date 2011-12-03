@@ -164,7 +164,7 @@
     NSString *requiredIdentifier = nil;
     UITableViewCellStyle cellStyle = UITableViewCellStyleSubtitle;
     
-    if (indexPath.section == (NSUInteger)[self numberOfSections] - 1) {
+    if ((NSInteger)indexPath.section == [self numberOfSections] - 1) {
         cellStyle = UITableViewCellStyleDefault;
         requiredIdentifier = CheckmarkCellIdentifier;
     } else {
@@ -181,7 +181,7 @@
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
     
     // Configure the cell...
-    if (indexPath.section == (NSUInteger)[self numberOfSections] - 1) {
+    if ((NSInteger)indexPath.section == [self numberOfSections] - 1) {
         cell.selectionStyle = UITableViewCellSelectionStyleBlue;
         
         // update check selection

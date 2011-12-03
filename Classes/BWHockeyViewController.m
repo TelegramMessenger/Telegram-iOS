@@ -498,7 +498,7 @@
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
     CGFloat rowHeight = 0;
 
-    if ([cells_ count] > indexPath.row) {
+    if ([cells_ count] > (NSUInteger)indexPath.row) {
         PSWebTableViewCell *cell = [cells_ objectAtIndex:indexPath.row];
         rowHeight = cell.webViewSize.height;
     }
@@ -548,7 +548,7 @@
 
 // Customize the appearance of table view cells.
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    if ([cells_ count] > indexPath.row) {
+    if ([cells_ count] > (NSUInteger)indexPath.row) {
         return [cells_ objectAtIndex:indexPath.row];
     } else {
         BWHockeyLog(@"Warning: cells_ and indexPath do not match? forgot calling redrawTableView?");
