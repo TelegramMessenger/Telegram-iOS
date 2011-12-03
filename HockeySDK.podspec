@@ -25,7 +25,7 @@ Pod::Spec.new do |s|
     # Add a copy build phase and make it copy the the CrashReporter.framework to the shared BUILT_PRODUCTS_DIR,
     # so that both the Pods project and the user's project will pick it up.
     phase = target_installer.target.buildPhases.add(Xcodeproj::Project::PBXCopyFilesBuildPhase, 'dstPath' => 'Pods/Frameworks')
-    file = target_installer.project.main_group.files.new('path' => 'HockeySDK-iOS/Vendor/CrashReporter.framework')
+    file = target_installer.project.main_group.files.new('path' => 'HockeySDK/Vendor/CrashReporter.framework')
     phase.files << file.buildFiles.new
     phases = target_installer.target.attributes['buildPhases']
     phases.delete(phase.uuid)
