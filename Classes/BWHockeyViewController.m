@@ -268,21 +268,27 @@
 
 - (void)onAction:(id)sender {
     if (self.modal) {
-        
         // Note that as of 5.0, parentViewController will no longer return the presenting view controller
+        SEL presentingViewControllerSelector = NSSelectorFromString(@"presentingViewController");
         UIViewController *presentingViewController = nil;
-        
-        BW_IF_IOS5_OR_GREATER(presentingViewController = self.navigationController.presentingViewController;);
-        BW_IF_PRE_IOS5(presentingViewController = self.navigationController.parentViewController;)
-        
+        if ([self respondsToSelector:presentingViewControllerSelector]) {
+            presentingViewController = [self performSelector:presentingViewControllerSelector];
+        }
+        else {
+            presentingViewController = [self parentViewController];
+        }
+      
+        // If there is no presenting view controller just remove view
         if (presentingViewController) {
-            [self.navigationController dismissModalViewControllerAnimated:YES];
-        } else {
+            [presentingViewController dismissModalViewControllerAnimated:YES];
+        }
+        else {
             [self.navigationController.view removeFromSuperview];
         }
     }
-    else
+    else {
         [self.navigationController popViewControllerAnimated:YES];
+    }
     
     [[UIApplication sharedApplication] setStatusBarStyle:statusBarStyle_];
 }
