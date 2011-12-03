@@ -121,7 +121,8 @@
 
 #pragma mark - Public Instance Methods
 
-- (void)configureWithIdentifier:(NSString *)newAppIdentifier delegate:(id)delegate {
+- (void)configureWithIdentifier:(NSString *)newAppIdentifier delegate:(id)newDelegate {
+  delegate = newDelegate;
   [appIdentifier release];
   appIdentifier = [newAppIdentifier copy];
   
@@ -129,7 +130,8 @@
   [self configureHockeyManager];
 }
 
-- (void)configureWithBetaIdentifier:(NSString *)betaIdentifier liveIdentifier:(NSString *)liveIdentifier delegate:(id)delegate {
+- (void)configureWithBetaIdentifier:(NSString *)betaIdentifier liveIdentifier:(NSString *)liveIdentifier delegate:(id)newDelegate {
+  delegate = newDelegate;
   [appIdentifier release];
 
   if ([self shouldUseLiveIdenfitier]) {
