@@ -53,7 +53,7 @@ Drag & drop the HockeySDK folder from your project directory to your Xcode proje
 5. You need all of the following frameworks:
 
     * CoreGraphics.framework
-	* CrashReporter.framework
+    * CrashReporter.framework
     * Foundation.framework
     * QuartzCore.framework
     * SystemConfiguration.framework
@@ -75,8 +75,8 @@ Drag & drop the HockeySDK folder from your project directory to your Xcode proje
 3. Search for the method application:didFinishLaunchingWithOptions:
 
 4. Add the following lines:<pre><code>[[CNSHockeyManager sharedHockeyManager] configureWithBetaIdentifier:@"BETA_IDENTIFIER" 
-                                                       liveIdentifier:@"LIVE_IDENTIFIER"
-                                                             delegate:nil];</code></pre>
+                                                         liveIdentifier:@"LIVE_IDENTIFIER"
+                                                               delegate:nil];</code></pre>
     
 5. Replace BETA_IDENTIFIER with the app identifier of your beta app. If you don't know what the app identifier is or how to find it, please read [this how-to](http://support.hockeyapp.net/kb/how-tos/how-to-find-the-app-identifier). 
 
