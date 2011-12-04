@@ -51,3 +51,11 @@ NSString *BWmd5(NSString *str) {
             result[14], result[15]
             ];
 }
+
+NSString *BWHockeyLocalize(NSString *stringToken) {
+    if (hockeyBundle()) {
+        return NSLocalizedStringFromTableInBundle(stringToken, @"Hockey", hockeyBundle(), @"");
+    } else {
+        return stringToken;
+    }
+}

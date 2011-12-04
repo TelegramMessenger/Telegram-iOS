@@ -52,8 +52,7 @@
 
 NSBundle *hockeyBundle(void);
 NSString *BWmd5(NSString *str);
-
-#define BWHockeyLocalize(StringToken) NSLocalizedStringFromTableInBundle(StringToken, @"Hockey", hockeyBundle(), @"")
+NSString *BWHockeyLocalize(NSString *stringToken);
 
 // compatibility helper
 #ifdef HOCKEYLIB_STATIC_LIBRARY

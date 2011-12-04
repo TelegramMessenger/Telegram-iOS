@@ -363,7 +363,8 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
         requireAuthorization_ = NO;
         authenticationSecret_= nil;
         loggingEnabled_ = NO;
-                
+        lastCheck_ = nil;
+        
         // check if we are really not in an app store environment
         if ([[NSBundle mainBundle] pathForResource:@"embedded" ofType:@"mobileprovision"]) {
             isAppStoreEnvironment_ = NO;
@@ -395,6 +396,17 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
             self.updateSetting = HockeyUpdateCheckStartup;
         }
         
+        if ([[NSUserDefaults standardUserDefaults] objectForKey:kDateOfLastHockeyCheck]) {
+            // we did write something else in the past, so for compatibility reasons do this
+            id tempLastCheck = [[NSUserDefaults standardUserDefaults] objectForKey:kDateOfLastHockeyCheck];
+            if ([tempLastCheck isKindOfClass:[NSDate class]]) {
+                lastCheck_ = tempLastCheck;
+            }
+        }
+        if (!lastCheck_) {
+            lastCheck_ = [NSDate distantPast];
+        }
+
         if ([[NSUserDefaults standardUserDefaults] objectForKey:kHockeyAllowUserSetting]) {
             self.userAllowsSendUserData = [[NSUserDefaults standardUserDefaults] boolForKey:kHockeyAllowUserSetting];
         } else {
@@ -405,6 +417,10 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
             self.userAllowsSendUsageTime = [[NSUserDefaults standardUserDefaults] boolForKey:kHockeyAllowUsageSetting];
         } else {
             self.userAllowsSendUsageTime = YES;
+        }
+
+        if (!hockeyBundle()) {
+			NSLog(@"WARNING: Hockey.bundle is missing, make sure it is added!");
         }
         
         if (!isAppStoreEnvironment_) {
@@ -695,7 +711,11 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
             checkForUpdate = YES;
             break;
         case HockeyUpdateCheckDaily:
-            checkForUpdate = [[[self.lastCheck description] substringToIndex:10] compare:[[[NSDate date] description] substringToIndex:10]] != NSOrderedSame;
+            NSTimeInterval dateDiff = fabs([self.lastCheck timeIntervalSinceNow]);
+            if (dateDiff != 0)
+                dateDiff = dateDiff / (60*60*24);
+
+            checkForUpdate = (dateDiff >= 1);
             break;
         case HockeyUpdateCheckManually:
             checkForUpdate = NO;
@@ -1142,7 +1162,7 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
         [lastCheck_ release];
         lastCheck_ = [aLastCheck copy];
         
-		[[NSUserDefaults standardUserDefaults] setObject:[[lastCheck_ description] substringToIndex:10] forKey:kDateOfLastHockeyCheck];
+		[[NSUserDefaults standardUserDefaults] setObject:lastCheck_ forKey:kDateOfLastHockeyCheck];
 		[[NSUserDefaults standardUserDefaults] synchronize];
     }
 }
