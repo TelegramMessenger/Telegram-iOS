@@ -179,6 +179,10 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
             
             [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(startManager) name:BWQuincyNetworkBecomeReachable object:nil];
 		}
+        
+        if (!quincyBundle()) {
+			NSLog(@"WARNING: Quincy.bundle is missing in the app bundle!");
+        }
 	}
 	return self;
 }
@@ -251,7 +255,10 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
 - (void)startManager {
     if (!_sendingInProgress && [self hasPendingCrashReport]) {
         _sendingInProgress = YES;
-        if (!self.autoSubmitCrashReport && [self hasNonApprovedCrashReports]) {
+        if (!quincyBundle()) {
+			NSLog(@"Quincy.bundle is missing, sending report automatically!");
+            [self _sendCrashReports];
+        } else if (!self.autoSubmitCrashReport && [self hasNonApprovedCrashReports]) {
 
             if (self.delegate != nil && [self.delegate respondsToSelector:@selector(willShowSubmitCrashReportAlert)]) {
                 [self.delegate willShowSubmitCrashReportAlert];
@@ -323,7 +330,8 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
 	UIAlertView *alertView = nil;
 	
 	if (_serverResult >= CrashReportStatusAssigned && 
-        _crashIdenticalCurrentVersion) {
+        _crashIdenticalCurrentVersion &&
+        quincyBundle()) {
 		// show some feedback to the user about the crash status
 		NSString *appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"];
 		switch (_serverResult) {
@@ -458,8 +466,8 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
 	NSString *userid = @"";
 	NSString *contact = @"";
 	NSString *description = @"";
-	
-    if (self.autoSubmitDeviceUDID) {
+
+    if (self.autoSubmitDeviceUDID && [[NSBundle mainBundle] pathForResource:@"embedded" ofType:@"mobileprovision"]) {
         userid = [self deviceIdentifier];
     } else if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashReportUserID)]) {
 		userid = [self.delegate crashReportUserID] ?: @"";
