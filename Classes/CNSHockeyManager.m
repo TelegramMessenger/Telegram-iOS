@@ -136,12 +136,12 @@
 
   if ([self shouldUseLiveIdenfitier]) {
     appIdentifier = [liveIdentifier copy];
-    
-    [self configureQuincyManager];
   }
   else {
     appIdentifier = [betaIdentifier copy];
-    
+  }
+  
+  if (appIdentifier) {
     [self configureQuincyManager];
     [self configureHockeyManager];
   }
