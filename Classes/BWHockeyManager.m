@@ -818,7 +818,7 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
     
     NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@?format=json&udid=%@", 
                                   [[self encodedAppIdentifier_] bw_URLEncodedString],
-                                  ([self isAppStoreEnvironment] ? @"" : [[self deviceIdentifier] bw_URLEncodedString])];
+                                  ([self isAppStoreEnvironment] ? @"appstore" : [[self deviceIdentifier] bw_URLEncodedString])];
     
     // add additional statistics if user didn't disable flag
     if ([self canSendUserData]) {
