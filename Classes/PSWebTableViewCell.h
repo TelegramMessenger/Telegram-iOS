@@ -27,11 +27,11 @@
 #import <UIKit/UIKit.h>
 
 @interface PSWebTableViewCell : UITableViewCell <UIWebViewDelegate> {
-    UIWebView *webView_;
-    NSString *webViewContent_;
-    CGSize webViewSize_;
-    
-    UIColor *cellBackgroundColor_;
+  UIWebView *webView_;
+  NSString *webViewContent_;
+  CGSize webViewSize_;
+  
+  UIColor *cellBackgroundColor_;
 }
 
 @property (nonatomic, retain) UIWebView *webView;

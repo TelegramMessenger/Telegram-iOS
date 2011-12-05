@@ -53,7 +53,7 @@ body { font: 13px 'Helvetica Neue', Helvetica; word-wrap:break-word; padding:8px
 
 - (void)addWebView {
 	if(webViewContent_) {
-        CGRect webViewRect = CGRectMake(0, 0, self.frame.size.width, self.frame.size.height);
+    CGRect webViewRect = CGRectMake(0, 0, self.frame.size.width, self.frame.size.height);
 		if(!webView_) {
 			webView_ = [[[UIWebView alloc] initWithFrame:webViewRect] retain];
 			[self addSubview:webView_];
@@ -61,37 +61,37 @@ body { font: 13px 'Helvetica Neue', Helvetica; word-wrap:break-word; padding:8px
 			webView_.backgroundColor = self.cellBackgroundColor;
 			webView_.opaque = NO;
 			webView_.delegate = self;
-            webView_.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-            
-            for(UIView* subView in webView_.subviews){
-                if([subView isKindOfClass:[UIScrollView class]]){
-                    // disable scrolling
-                    UIScrollView *sv = (UIScrollView *)subView;
-                    sv.scrollEnabled = NO;
-                    sv.bounces = NO;
-                    
-                    // hide shadow
-                    for (UIView* shadowView in [subView subviews]) {
-                        if ([shadowView isKindOfClass:[UIImageView class]]) {
-                            shadowView.hidden = YES;
-                        }
-                    }
-                }
+      webView_.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+      
+      for(UIView* subView in webView_.subviews){
+        if([subView isKindOfClass:[UIScrollView class]]){
+          // disable scrolling
+          UIScrollView *sv = (UIScrollView *)subView;
+          sv.scrollEnabled = NO;
+          sv.bounces = NO;
+          
+          // hide shadow
+          for (UIView* shadowView in [subView subviews]) {
+            if ([shadowView isKindOfClass:[UIImageView class]]) {
+              shadowView.hidden = YES;
             }
+          }
         }
+      }
+    }
 		else
 			webView_.frame = webViewRect;
-        
-        NSString *deviceWidth = UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad ? [NSString stringWithFormat:@"%d", CGRectGetWidth(self.bounds)] : @"device-width";
-        //BWHockeyLog(@"%@\n%@\%@", PSWebTableViewCellHtmlTemplate, deviceWidth, self.webViewContent);
-        NSString *contentHtml = [NSString stringWithFormat:PSWebTableViewCellHtmlTemplate, deviceWidth, self.webViewContent];
+    
+    NSString *deviceWidth = UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad ? [NSString stringWithFormat:@"%d", CGRectGetWidth(self.bounds)] : @"device-width";
+    //BWHockeyLog(@"%@\n%@\%@", PSWebTableViewCellHtmlTemplate, deviceWidth, self.webViewContent);
+    NSString *contentHtml = [NSString stringWithFormat:PSWebTableViewCellHtmlTemplate, deviceWidth, self.webViewContent];
 		[webView_ loadHTMLString:contentHtml baseURL:nil];
 	}
 }
 
 - (void)showWebView {
 	webView_.hidden = NO;
-    self.textLabel.text = @"";
+  self.textLabel.text = @"";
 	[self setNeedsDisplay];
 }
 
@@ -109,13 +109,13 @@ body { font: 13px 'Helvetica Neue', Helvetica; word-wrap:break-word; padding:8px
 
 
 - (void)setWebViewContent:(NSString *)aWebViewContent {
-    if (webViewContent_ != aWebViewContent) {
-        [webViewContent_ release];
-        webViewContent_ = [aWebViewContent retain];
-        
-        // add basic accessiblity (prevents "snarfed from ivar layout") logs
-        self.accessibilityLabel = aWebViewContent;
-    }
+  if (webViewContent_ != aWebViewContent) {
+    [webViewContent_ release];
+    webViewContent_ = [aWebViewContent retain];
+    
+    // add basic accessiblity (prevents "snarfed from ivar layout") logs
+    self.accessibilityLabel = aWebViewContent;
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -123,16 +123,16 @@ body { font: 13px 'Helvetica Neue', Helvetica; word-wrap:break-word; padding:8px
 #pragma mark NSObject
 
 - (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
-    if((self = [super initWithStyle:style reuseIdentifier:reuseIdentifier])) {
-        self.cellBackgroundColor = [UIColor clearColor];
-    }
-    return self;
+  if((self = [super initWithStyle:style reuseIdentifier:reuseIdentifier])) {
+    self.cellBackgroundColor = [UIColor clearColor];
+  }
+  return self;
 }
 
 - (void)dealloc {
-    [self removeWebView];
-    [webViewContent_ release];
-    [super dealloc];
+  [self removeWebView];
+  [webViewContent_ release];
+  [super dealloc];
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -140,12 +140,12 @@ body { font: 13px 'Helvetica Neue', Helvetica; word-wrap:break-word; padding:8px
 #pragma mark UIView
 
 - (void)setFrame:(CGRect)aFrame {
-    BOOL needChange = !CGRectEqualToRect(aFrame, self.frame);
-    [super setFrame:aFrame];
-    
-    if (needChange) {
-        [self addWebView];
-    }
+  BOOL needChange = !CGRectEqualToRect(aFrame, self.frame);
+  [super setFrame:aFrame];
+  
+  if (needChange) {
+    [self addWebView];
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -154,7 +154,7 @@ body { font: 13px 'Helvetica Neue', Helvetica; word-wrap:break-word; padding:8px
 
 - (void)prepareForReuse {
 	[self removeWebView];
-    self.webViewContent = nil;
+  self.webViewContent = nil;
 	[super prepareForReuse];
 }
 
@@ -165,25 +165,25 @@ body { font: 13px 'Helvetica Neue', Helvetica; word-wrap:break-word; padding:8px
 - (BOOL)webView:(UIWebView *)webView shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(UIWebViewNavigationType)navigationType {
 	if(navigationType == UIWebViewNavigationTypeOther)
 		return YES;
-
-    return NO;
+  
+  return NO;
 }
 
 
 - (void)webViewDidFinishLoad:(UIWebView *)webView {
 	if(webViewContent_)
-        [self showWebView];
-    
-    CGRect frame = webView_.frame;
-    frame.size.height = 1;
-    webView_.frame = frame;
-    CGSize fittingSize = [webView_ sizeThatFits:CGSizeZero];
-    frame.size = fittingSize;
-    webView_.frame = frame;
-    
-    // sizeThatFits is not reliable - use javascript for optimal height
-    NSString *output = [webView_ stringByEvaluatingJavaScriptFromString:@"document.body.scrollHeight;"];
-    self.webViewSize = CGSizeMake(fittingSize.width, [output integerValue]);
+    [self showWebView];
+  
+  CGRect frame = webView_.frame;
+  frame.size.height = 1;
+  webView_.frame = frame;
+  CGSize fittingSize = [webView_ sizeThatFits:CGSizeZero];
+  frame.size = fittingSize;
+  webView_.frame = frame;
+  
+  // sizeThatFits is not reliable - use javascript for optimal height
+  NSString *output = [webView_ stringByEvaluatingJavaScriptFromString:@"document.body.scrollHeight;"];
+  self.webViewSize = CGSizeMake(fittingSize.width, [output integerValue]);
 }
 
 @end

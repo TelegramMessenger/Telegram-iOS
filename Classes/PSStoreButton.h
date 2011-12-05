@@ -28,10 +28,10 @@
 
 // defines a button action set (data container)
 @interface PSStoreButtonData : NSObject {
-    CGPoint customPadding_;
-    NSString *label_;
-    NSArray *colors_;
-    BOOL enabled_;
+  CGPoint customPadding_;
+  NSString *label_;
+  NSArray *colors_;
+  BOOL enabled_;
 }
 
 + (id)dataWithLabel:(NSString*)aLabel colors:(NSArray*)aColors enabled:(BOOL)flag;
@@ -52,11 +52,11 @@
 // Simulate the Paymeny-Button from the AppStore
 // The interface is flexible, so there is now fixed order
 @interface PSStoreButton : UIButton {
-    PSStoreButtonData *buttonData_;
-    id<PSStoreButtonDelegate> buttonDelegate_;
-    
-    CAGradientLayer *gradient_;
-    CGPoint customPadding_;
+  PSStoreButtonData *buttonData_;
+  id<PSStoreButtonDelegate> buttonDelegate_;
+  
+  CAGradientLayer *gradient_;
+  CGPoint customPadding_;
 }
 
 - (id)initWithFrame:(CGRect)frame;

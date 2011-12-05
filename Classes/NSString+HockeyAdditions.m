@@ -29,22 +29,22 @@
 @implementation NSString (HockeyAdditions)
 
 - (NSString *)bw_URLEncodedString {
-    NSString *result = (NSString *)CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault,
-                                                                           (CFStringRef)self,
-                                                                           NULL,
-                                                                           CFSTR("!*'();:@&=+$,/?%#[]"),
-                                                                           kCFStringEncodingUTF8);
-    [result autorelease];
-    return result;
+  NSString *result = (NSString *)CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault,
+                                                                         (CFStringRef)self,
+                                                                         NULL,
+                                                                         CFSTR("!*'();:@&=+$,/?%#[]"),
+                                                                         kCFStringEncodingUTF8);
+  [result autorelease];
+  return result;
 }
 
 - (NSString*)bw_URLDecodedString {
-    NSString *result = (NSString *)CFURLCreateStringByReplacingPercentEscapesUsingEncoding(kCFAllocatorDefault,
-                                                                                           (CFStringRef)self,
-                                                                                           CFSTR(""),
-                                                                                           kCFStringEncodingUTF8);
-    [result autorelease];
-    return result;
+  NSString *result = (NSString *)CFURLCreateStringByReplacingPercentEscapesUsingEncoding(kCFAllocatorDefault,
+                                                                                         (CFStringRef)self,
+                                                                                         CFSTR(""),
+                                                                                         kCFStringEncodingUTF8);
+  [result autorelease];
+  return result;
 }
 
 - (NSComparisonResult)versionCompare:(NSString *)other
