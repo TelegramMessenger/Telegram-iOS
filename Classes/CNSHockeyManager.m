@@ -42,10 +42,6 @@
   static CNSHockeyManager *sharedInstance = nil;
   static dispatch_once_t pred;
   
-  if (sharedInstance) {
-    return sharedInstance;
-  }
-  
   dispatch_once(&pred, ^{
     sharedInstance = [CNSHockeyManager alloc];
     sharedInstance = [sharedInstance init];
