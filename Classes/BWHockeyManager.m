@@ -481,7 +481,7 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
 
 - (void)showUpdateView {
     if (isAppStoreEnvironment_) {
-        BWHockeyLog(@"this should not be called from an app store build.");
+        NSLog(@"this should not be called from an app store build.");
         return;
     }
     
@@ -685,7 +685,7 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
         [invocation invoke];
         [invocation getReturnValue:&feedResult];
     } else {
-        BWHockeyLog(@"Error: You need a JSON Framework in your runtime!");
+        NSLog(@"Error: You need a JSON Framework in your runtime!");
         [self doesNotRecognizeSelector:_cmd];
     }
 #endif
