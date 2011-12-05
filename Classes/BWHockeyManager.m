@@ -166,7 +166,7 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
 }
 
 - (NSString *)encodedAppIdentifier_ {
-  return (self.appIdentifier ? [self.appIdentifier stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding] : [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]);
+  return (self.appIdentifier ? [self.appIdentifier bw_URLEncodedString] : [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"] bw_URLEncodedString]);
 }
 
 - (NSString *)getDevicePlatform_ {
@@ -727,10 +727,10 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
 }
 
 - (void)checkForAuthorization {
-    NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@", [[self encodedAppIdentifier_] bw_URLEncodedString]];
+    NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@", [self encodedAppIdentifier_]];
     
     [parameter appendFormat:@"?format=json&authorize=yes&app_version=%@&udid=%@",
-     [[[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding] bw_URLEncodedString],
+     [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] bw_URLEncodedString],
      [[self deviceIdentifier] bw_URLEncodedString]
      ];
     
@@ -828,15 +828,15 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
     // add additional statistics if user didn't disable flag
     if ([self canSendUserData]) {
         [parameter appendFormat:@"&app_version=%@&os=iOS&os_version=%@&device=%@&lang=%@&first_start_at=%@",
-         [[[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding] bw_URLEncodedString],
+         [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] bw_URLEncodedString],
          [[[UIDevice currentDevice] systemVersion] bw_URLEncodedString],
          [[self getDevicePlatform_] bw_URLEncodedString],
          [[[[NSBundle mainBundle] preferredLocalizations] objectAtIndex:0] bw_URLEncodedString],
-         [[[self installationDateString] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding] bw_URLEncodedString]
+         [[self installationDateString] bw_URLEncodedString]
          ];
         if ([self canSendUsageTime]) {
             [parameter appendFormat:@"&usage_time=%@",
-             [[[self currentUsageString] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding] bw_URLEncodedString]
+             [[self currentUsageString] bw_URLEncodedString]
              ];
         }
     }
