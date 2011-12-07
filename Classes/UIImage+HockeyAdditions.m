@@ -26,6 +26,11 @@
 #import "UIImage+HockeyAdditions.h"
 #import "BWGlobal.h"
 
+#ifdef HOCKEYLIB_STATIC_LIBRARY
+#import "CNSFixCategoryBug.h"
+CNS_FIX_CATEGORY_BUG(UIImage_HockeyAdditionsPrivate)
+#endif
+
 // Private helper methods
 @interface UIImage (HockeyAdditionsPrivate)
 - (void)addRoundedRectToPath:(CGRect)rect context:(CGContextRef)context ovalWidth:(CGFloat)ovalWidth ovalHeight:(CGFloat)ovalHeight;
