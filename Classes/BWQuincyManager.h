@@ -29,6 +29,8 @@
 
 #import <Foundation/Foundation.h>
 
+#define BWQuincyLog(fmt, ...) do { if([BWQuincyManager sharedQuincyManager].isLoggingEnabled) { NSLog((@"[QuincyLib] %s/%d " fmt), __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__); }} while(0)
+
 #define kQuincyBundleName @"Quincy.bundle"
 
 NSBundle *quincyBundle(void);
@@ -144,6 +146,7 @@ typedef enum CrashReportStatus {
   
   id <BWQuincyManagerDelegate> _delegate;
   
+  BOOL _loggingEnabled;
   BOOL _showAlwaysButton;
   BOOL _feedbackActivated;
   BOOL _autoSubmitCrashReport;
@@ -188,6 +191,10 @@ typedef enum CrashReportStatus {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // settings
+
+// if YES, states will be logged using NSLog. Only enable this for debugging!
+// if NO, nothing will be logged. (default)
+@property (nonatomic, assign, getter=isLoggingEnabled) BOOL loggingEnabled;
 
 // nil, using the default localization files (Default)
 // set to another string which will be appended to the Quincy localization file name, "Alternate" is another provided text set

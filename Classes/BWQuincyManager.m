@@ -87,6 +87,7 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
 @synthesize autoSubmitDeviceUDID = _autoSubmitDeviceUDID;
 @synthesize languageStyle = _languageStyle;
 @synthesize didCrashInLastSession = _didCrashInLastSession;
+@synthesize loggingEnabled = _loggingEnabled;
 
 @synthesize appIdentifier = _appIdentifier;
 
@@ -127,6 +128,7 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
     _sendingInProgress = NO;
     _languageStyle = nil;
     _didCrashInLastSession = NO;
+    _loggingEnabled = NO;
     
 		self.delegate = nil;
     self.feedbackActivated = NO;
@@ -175,13 +177,13 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
       
 			// Enable the Crash Reporter
 			if (![crashReporter enableCrashReporterAndReturnError: &error])
-				NSLog(@"Warning: Could not enable crash reporter: %@", error);
+				NSLog(@"WARNING: Could not enable crash reporter: %@", error);
       
       [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(startManager) name:BWQuincyNetworkBecomeReachable object:nil];
 		}
     
     if (!quincyBundle()) {
-			NSLog(@"WARNING: Quincy.bundle is missing in the app bundle!");
+			NSLog(@"WARNING: Quincy.bundle is missing, will send reports automatically!");
     }
 	}
 	return self;
@@ -256,7 +258,7 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
   if (!_sendingInProgress && [self hasPendingCrashReport]) {
     _sendingInProgress = YES;
     if (!quincyBundle()) {
-			NSLog(@"Quincy.bundle is missing, sending report automatically!");
+			NSLog(@"WARNING: Quincy.bundle is missing, sending reports automatically!");
       [self _sendCrashReports];
     } else if (!self.autoSubmitCrashReport && [self hasNonApprovedCrashReports]) {
       
@@ -300,29 +302,30 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
 }
 
 - (BOOL)hasPendingCrashReport {
-	if (_crashReportActivated) {
-		NSFileManager *fm = [NSFileManager defaultManager];
+  if (_crashReportActivated) {
+    NSFileManager *fm = [NSFileManager defaultManager];
 		
-		if ([_crashFiles count] == 0 && [fm fileExistsAtPath:_crashesDir]) {
-			NSString *file = nil;
+    if ([_crashFiles count] == 0 && [fm fileExistsAtPath:_crashesDir]) {
+      NSString *file = nil;
       NSError *error = NULL;
       
-			NSDirectoryEnumerator *dirEnum = [fm enumeratorAtPath: _crashesDir];
+      NSDirectoryEnumerator *dirEnum = [fm enumeratorAtPath: _crashesDir];
 			
-			while ((file = [dirEnum nextObject])) {
-				NSDictionary *fileAttributes = [fm attributesOfItemAtPath:[_crashesDir stringByAppendingPathComponent:file] error:&error];
-				if ([[fileAttributes objectForKey:NSFileSize] intValue] > 0) {
-					[_crashFiles addObject:file];
-				}
-			}
-		}
-		
-		if ([_crashFiles count] > 0) {
-			return YES;
-		} else
-			return NO;
-	} else
-		return NO;
+      while ((file = [dirEnum nextObject])) {
+        NSDictionary *fileAttributes = [fm attributesOfItemAtPath:[_crashesDir stringByAppendingPathComponent:file] error:&error];
+        if ([[fileAttributes objectForKey:NSFileSize] intValue] > 0) {
+          [_crashFiles addObject:file];
+        }
+      }
+    }
+    
+    if ([_crashFiles count] > 0) {
+      BWQuincyLog(@"Pending crash reports found.");
+      return YES;
+    } else
+      return NO;
+  } else
+    return NO;
 }
 
 
@@ -531,6 +534,7 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
   [[NSUserDefaults standardUserDefaults] synchronize];
   
   if (crashes != nil) {
+    BWQuincyLog(@"Sending crash reports:\n%@", crashes);
     [self _postXML:[NSString stringWithFormat:@"<crashes>%@</crashes>", crashes]
              toURL:[NSURL URLWithString:self.submissionURL]];
     
@@ -583,6 +587,8 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
 	}
 	
 	_urlConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self];    
+  
+  BWQuincyLog(@"Requesting feedback status.");
 }
 
 - (void)_postXML:(NSString*)xml toURL:(NSURL*)url {
@@ -633,7 +639,10 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
 	_urlConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
   
   if (!_urlConnection) {
+    BWQuincyLog(@"Sending crash reports could not start!");
     _sendingInProgress = NO;
+  } else {
+    BWQuincyLog(@"Sending crash reports started.");
   }
 }
 
@@ -650,19 +659,21 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
 }
 
 - (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error {
-	[_responseData release];
-	_responseData = nil;
+  [_responseData release];
+  _responseData = nil;
   _urlConnection = nil;
 	
-	if (self.delegate != nil && [self.delegate respondsToSelector:@selector(connectionClosed)]) {
-		[self.delegate connectionClosed];
-	}
+  if (self.delegate != nil && [self.delegate respondsToSelector:@selector(connectionClosed)]) {
+    [self.delegate connectionClosed];
+  }
+  
+  BWQuincyLog(@"ERROR: %@", [error localizedDescription]);
   
   _sendingInProgress = NO;
 }
 
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection {
-	if (_statusCode >= 200 && _statusCode < 400) {
+	if (_statusCode >= 200 && _statusCode < 400 && _responseData != nil && [_responseData length] > 0) {
     [self _cleanCrashReports];
     
     _feedbackRequestID = nil;
@@ -672,6 +683,8 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
                                                                        mutabilityOption:NSPropertyListMutableContainersAndLeaves
                                                                                  format:nil
                                                                        errorDescription:NULL];
+      BWQuincyLog(@"Received API response: %@", response);
+      
       _serverResult = (CrashReportStatus)[[response objectForKey:@"status"] intValue];
       if ([response objectForKey:@"id"]) {
         _feedbackRequestID = [[NSString alloc] initWithString:[response objectForKey:@"id"]];
@@ -680,6 +693,8 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
           _feedbackDelayInterval *= 0.01;
       }
     } else {
+      BWQuincyLog(@"Received API response: %@", [[[NSString alloc] initWithBytes:[_responseData bytes] length:[_responseData length] encoding: NSUTF8StringEncoding] autorelease]);
+      
       NSXMLParser *parser = [[NSXMLParser alloc] initWithData:_responseData];
       // Set self as the delegate of the parser so that it will receive the parser delegate methods callbacks.
       [parser setDelegate:self];
@@ -705,15 +720,21 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
         [self showCrashStatusMessage];
       }
     }
-	}
+  } else {
+    if (_responseData == nil || [_responseData length] == 0) {
+      BWQuincyLog(@"ERROR: Sending failed with an empty response!");
+    } else {
+      BWQuincyLog(@"ERROR: Sending failed with status code: %i", _statusCode);
+    }
+  }
 	
-	[_responseData release];
-	_responseData = nil;
+  [_responseData release];
+  _responseData = nil;
   _urlConnection = nil;
 	
-	if (self.delegate != nil && [self.delegate respondsToSelector:@selector(connectionClosed)]) {
-		[self.delegate connectionClosed];
-	}
+  if (self.delegate != nil && [self.delegate respondsToSelector:@selector(connectionClosed)]) {
+    [self.delegate connectionClosed];
+  }
   
   _sendingInProgress = NO;
 }
