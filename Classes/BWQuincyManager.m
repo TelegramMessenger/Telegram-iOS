@@ -673,7 +673,7 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
 }
 
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection {
-	if (_statusCode >= 200 && _statusCode < 400 && _responseData != nil && [_responseData length] > 0) {
+  if (_statusCode >= 200 && _statusCode < 400 && _responseData != nil && [_responseData length] > 0) {
     [self _cleanCrashReports];
     
     _feedbackRequestID = nil;
