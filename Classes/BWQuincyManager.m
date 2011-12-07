@@ -377,22 +377,31 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
 #pragma mark UIAlertView Delegate
 
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
-	if ([alertView tag] == QuincyKitAlertTypeSend) {
-		switch (buttonIndex) {
-			case 0:
+  if ([alertView tag] == QuincyKitAlertTypeSend) {
+    switch (buttonIndex) {
+      case 0:
         _sendingInProgress = NO;
-				[self _cleanCrashReports];
-				break;
-			case 1:
-				[self _sendCrashReports];
-				break;
-			case 2:
-				[[NSUserDefaults standardUserDefaults] setBool:YES forKey:kAutomaticallySendCrashReports];
-				
-				[self _sendCrashReports];
-				break;
-		}
-	}
+        [self _cleanCrashReports];
+        break;
+      case 1:
+        [self _sendCrashReports];
+        break;
+      case 2: {
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kAutomaticallySendCrashReports];
+        [[NSUserDefaults standardUserDefaults] synchronize];
+        if (self.delegate != nil && [self.delegate respondsToSelector:@selector(userDidChooseSendAlways)]) {
+          [self.delegate userDidChooseSendAlways];
+        }
+
+        [self _sendCrashReports];
+        break;
+      }
+      default:
+        _sendingInProgress = NO;
+        [self _cleanCrashReports];
+        break;
+    }
+  }
 }
 
 #pragma mark -
