@@ -80,6 +80,9 @@
 // user for an app rating :) 
 - (void)willShowSubmitCrashReportAlert;
 
+// Invoked after the user did choose to send crashes always in the alert 
+-(void) userDidChooseSendAlways;
+
 @end
 
 @interface CNSHockeyManager : NSObject {

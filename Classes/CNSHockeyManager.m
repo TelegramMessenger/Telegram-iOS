@@ -145,10 +145,12 @@
 
 - (BOOL)isLoggingEnabled {
   return [[BWHockeyManager sharedHockeyManager] isLoggingEnabled];
+  return [[BWQuincyManager sharedQuincyManager] isLoggingEnabled];
 }
 
 - (void)setLoggingEnabled:(BOOL)loggingEnabled {
   return [[BWHockeyManager sharedHockeyManager] setLoggingEnabled:loggingEnabled];
+  return [[BWQuincyManager sharedQuincyManager] setLoggingEnabled:loggingEnabled];
 }
 
 #pragma mark - Public Instance Methods (Crash Reporting)
