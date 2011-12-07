@@ -392,7 +392,7 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
         if (self.delegate != nil && [self.delegate respondsToSelector:@selector(userDidChooseSendAlways)]) {
           [self.delegate userDidChooseSendAlways];
         }
-
+        
         [self _sendCrashReports];
         break;
       }
