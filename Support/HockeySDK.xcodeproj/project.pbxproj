@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1E322DAD148FCE2100077977 /* CNSFixCategoryBug.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E322DAC148FCE2100077977 /* CNSFixCategoryBug.h */; };
 		E400561E148D79B500EB22B9 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E400561D148D79B500EB22B9 /* Foundation.framework */; };
 		E400562C148D79B500EB22B9 /* SenTestingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E400562B148D79B500EB22B9 /* SenTestingKit.framework */; };
 		E400562E148D79B500EB22B9 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E400562D148D79B500EB22B9 /* UIKit.framework */; };
@@ -55,6 +56,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		1E322DAC148FCE2100077977 /* CNSFixCategoryBug.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CNSFixCategoryBug.h; sourceTree = "<group>"; };
 		E400561A148D79B500EB22B9 /* libHockeySDK.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libHockeySDK.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		E400561D148D79B500EB22B9 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		E400562A148D79B500EB22B9 /* HockeySDKTests.octest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HockeySDKTests.octest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -226,6 +228,7 @@
 				E41EB46E148D7BF50015DEDC /* PSWebTableViewCell.m */,
 				E41EB46F148D7BF50015DEDC /* UIImage+HockeyAdditions.h */,
 				E41EB470148D7BF50015DEDC /* UIImage+HockeyAdditions.m */,
+				1E322DAC148FCE2100077977 /* CNSFixCategoryBug.h */,
 			);
 			name = Helper;
 			sourceTree = "<group>";
@@ -249,6 +252,7 @@
 				E41EB483148D7BF50015DEDC /* PSStoreButton.h in Headers */,
 				E41EB485148D7BF50015DEDC /* PSWebTableViewCell.h in Headers */,
 				E41EB487148D7BF50015DEDC /* UIImage+HockeyAdditions.h in Headers */,
+				1E322DAD148FCE2100077977 /* CNSFixCategoryBug.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -414,11 +418,12 @@
 					"$(inherited)",
 				);
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_VERSION = "";
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 5.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 3.0;
+				OTHER_CFLAGS = "";
 				SDKROOT = iphoneos;
 			};
 			name = Debug;
@@ -434,11 +439,12 @@
 				COPY_PHASE_STRIP = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_PREPROCESSOR_DEFINITIONS = HOCKEYLIB_STATIC_LIBRARY;
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_VERSION = "";
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 5.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 3.0;
+				OTHER_CFLAGS = "";
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -452,7 +458,7 @@
 					"$(inherited)",
 					"\"$(SRCROOT)/../Vendor\"",
 				);
-				OTHER_LDFLAGS = "-ObjC";
+				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 			};
@@ -466,7 +472,7 @@
 					"$(inherited)",
 					"\"$(SRCROOT)/../Vendor\"",
 				);
-				OTHER_LDFLAGS = "-ObjC";
+				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 			};

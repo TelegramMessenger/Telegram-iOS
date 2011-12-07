@@ -25,6 +25,10 @@
 
 #import "NSString+HockeyAdditions.h"
 
+#ifdef HOCKEYLIB_STATIC_LIBRARY
+#import "CNSFixCategoryBug.h"
+CNS_FIX_CATEGORY_BUG(NSString_HockeyAdditions)
+#endif
 
 @implementation NSString (HockeyAdditions)
 
