@@ -260,7 +260,7 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
     if (!quincyBundle()) {
 			NSLog(@"WARNING: Quincy.bundle is missing, sending reports automatically!");
       [self _sendCrashReports];
-    } else if (!self.autoSubmitCrashReport && [self hasNonApprovedCrashReports]) {
+    } else if (![self autoSendCrashReports] && [self hasNonApprovedCrashReports]) {
       
       if (self.delegate != nil && [self.delegate respondsToSelector:@selector(willShowSubmitCrashReportAlert)]) {
         [self.delegate willShowSubmitCrashReportAlert];
