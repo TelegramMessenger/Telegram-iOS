@@ -204,6 +204,10 @@
 // Default: HockeyComparisonResultGreater
 @property (nonatomic, assign) HockeyComparisonResult compareVersionType;
 
+// if YES the app is installed from the app store
+// if NO the app is installed via ad-hoc or enterprise distribution
+@property (nonatomic, readonly) BOOL isAppStoreEnvironment;
+
 #pragma mark - Public Methods
 
 // Returns the shared manager object

@@ -297,6 +297,10 @@
   [[BWHockeyManager sharedHockeyManager] setCompareVersionType:compareVersionType];
 }
 
+- (BOOL)isAppStoreEnvironment {
+  return [[BWHockeyManager sharedHockeyManager] isAppStoreEnvironment];
+}
+
 - (BOOL)isUpdateAvailable {
   return [[BWHockeyManager sharedHockeyManager] isUpdateAvailable];
 }
