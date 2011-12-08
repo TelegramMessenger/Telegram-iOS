@@ -9,14 +9,6 @@
 /* Begin PBXBuildFile section */
 		1E322DAD148FCE2100077977 /* CNSFixCategoryBug.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E322DAC148FCE2100077977 /* CNSFixCategoryBug.h */; };
 		E400561E148D79B500EB22B9 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E400561D148D79B500EB22B9 /* Foundation.framework */; };
-		E400562C148D79B500EB22B9 /* SenTestingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E400562B148D79B500EB22B9 /* SenTestingKit.framework */; };
-		E400562E148D79B500EB22B9 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E400562D148D79B500EB22B9 /* UIKit.framework */; };
-		E400562F148D79B500EB22B9 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E400561D148D79B500EB22B9 /* Foundation.framework */; };
-		E4005632148D79B500EB22B9 /* libHockeySDK.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E400561A148D79B500EB22B9 /* libHockeySDK.a */; };
-		E4005638148D79B500EB22B9 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = E4005636148D79B500EB22B9 /* InfoPlist.strings */; };
-		E400563B148D79B500EB22B9 /* HockeySDKTests.m in Sources */ = {isa = PBXBuildFile; fileRef = E400563A148D79B500EB22B9 /* HockeySDKTests.m */; };
-		E400564B148D7A3000EB22B9 /* Hockey.bundle in Resources */ = {isa = PBXBuildFile; fileRef = E4005649148D7A3000EB22B9 /* Hockey.bundle */; };
-		E400564C148D7A3000EB22B9 /* Quincy.bundle in Resources */ = {isa = PBXBuildFile; fileRef = E400564A148D7A3000EB22B9 /* Quincy.bundle */; };
 		E41EB471148D7BF50015DEDC /* BWApp.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB459148D7BF50015DEDC /* BWApp.h */; };
 		E41EB472148D7BF50015DEDC /* BWApp.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB45A148D7BF50015DEDC /* BWApp.m */; };
 		E41EB473148D7BF50015DEDC /* BWGlobal.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB45B148D7BF50015DEDC /* BWGlobal.h */; };
@@ -42,30 +34,14 @@
 		E41EB487148D7BF50015DEDC /* UIImage+HockeyAdditions.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB46F148D7BF50015DEDC /* UIImage+HockeyAdditions.h */; };
 		E41EB488148D7BF50015DEDC /* UIImage+HockeyAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB470148D7BF50015DEDC /* UIImage+HockeyAdditions.m */; };
 		E41EB48C148D7C4E0015DEDC /* CrashReporter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E41EB48B148D7C4E0015DEDC /* CrashReporter.framework */; };
-		E41EB48D148D7C4E0015DEDC /* CrashReporter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E41EB48B148D7C4E0015DEDC /* CrashReporter.framework */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		E4005630148D79B500EB22B9 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = E4005611148D79B500EB22B9 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = E4005619148D79B500EB22B9;
-			remoteInfo = HockeySDK;
-		};
-/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		1E322DAC148FCE2100077977 /* CNSFixCategoryBug.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CNSFixCategoryBug.h; sourceTree = "<group>"; };
 		E400561A148D79B500EB22B9 /* libHockeySDK.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libHockeySDK.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		E400561D148D79B500EB22B9 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
-		E400562A148D79B500EB22B9 /* HockeySDKTests.octest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HockeySDKTests.octest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E400562B148D79B500EB22B9 /* SenTestingKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SenTestingKit.framework; path = Library/Frameworks/SenTestingKit.framework; sourceTree = DEVELOPER_DIR; };
 		E400562D148D79B500EB22B9 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
-		E4005635148D79B500EB22B9 /* HockeySDKTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "HockeySDKTests-Info.plist"; sourceTree = "<group>"; };
-		E4005637148D79B500EB22B9 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		E4005639148D79B500EB22B9 /* HockeySDKTests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HockeySDKTests.h; sourceTree = "<group>"; };
-		E400563A148D79B500EB22B9 /* HockeySDKTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = HockeySDKTests.m; sourceTree = "<group>"; };
 		E4005649148D7A3000EB22B9 /* Hockey.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; path = Hockey.bundle; sourceTree = "<group>"; };
 		E400564A148D7A3000EB22B9 /* Quincy.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; path = Quincy.bundle; sourceTree = "<group>"; };
 		E41EB459148D7BF50015DEDC /* BWApp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BWApp.h; sourceTree = "<group>"; };
@@ -107,18 +83,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		E4005626148D79B500EB22B9 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				E400562C148D79B500EB22B9 /* SenTestingKit.framework in Frameworks */,
-				E400562E148D79B500EB22B9 /* UIKit.framework in Frameworks */,
-				E400562F148D79B500EB22B9 /* Foundation.framework in Frameworks */,
-				E4005632148D79B500EB22B9 /* libHockeySDK.a in Frameworks */,
-				E41EB48D148D7C4E0015DEDC /* CrashReporter.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -126,7 +90,6 @@
 			isa = PBXGroup;
 			children = (
 				E41EB489148D7BF90015DEDC /* HockeySDK */,
-				E4005633148D79B500EB22B9 /* HockeySDKTests */,
 				E400561C148D79B500EB22B9 /* Frameworks */,
 				E4005648148D7A3000EB22B9 /* Resources */,
 				E400561B148D79B500EB22B9 /* Products */,
@@ -139,7 +102,6 @@
 			isa = PBXGroup;
 			children = (
 				E400561A148D79B500EB22B9 /* libHockeySDK.a */,
-				E400562A148D79B500EB22B9 /* HockeySDKTests.octest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -153,25 +115,6 @@
 				E400562D148D79B500EB22B9 /* UIKit.framework */,
 			);
 			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		E4005633148D79B500EB22B9 /* HockeySDKTests */ = {
-			isa = PBXGroup;
-			children = (
-				E4005639148D79B500EB22B9 /* HockeySDKTests.h */,
-				E400563A148D79B500EB22B9 /* HockeySDKTests.m */,
-				E4005634148D79B500EB22B9 /* Supporting Files */,
-			);
-			path = HockeySDKTests;
-			sourceTree = "<group>";
-		};
-		E4005634148D79B500EB22B9 /* Supporting Files */ = {
-			isa = PBXGroup;
-			children = (
-				E4005635148D79B500EB22B9 /* HockeySDKTests-Info.plist */,
-				E4005636148D79B500EB22B9 /* InfoPlist.strings */,
-			);
-			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
 		E4005648148D7A3000EB22B9 /* Resources */ = {
@@ -276,25 +219,6 @@
 			productReference = E400561A148D79B500EB22B9 /* libHockeySDK.a */;
 			productType = "com.apple.product-type.library.static";
 		};
-		E4005629148D79B500EB22B9 /* HockeySDKTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = E4005641148D79B500EB22B9 /* Build configuration list for PBXNativeTarget "HockeySDKTests" */;
-			buildPhases = (
-				E4005625148D79B500EB22B9 /* Sources */,
-				E4005626148D79B500EB22B9 /* Frameworks */,
-				E4005627148D79B500EB22B9 /* Resources */,
-				E4005628148D79B500EB22B9 /* ShellScript */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				E4005631148D79B500EB22B9 /* PBXTargetDependency */,
-			);
-			name = HockeySDKTests;
-			productName = HockeySDKTests;
-			productReference = E400562A148D79B500EB22B9 /* HockeySDKTests.octest */;
-			productType = "com.apple.product-type.bundle";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -316,39 +240,9 @@
 			projectRoot = "";
 			targets = (
 				E4005619148D79B500EB22B9 /* HockeySDK */,
-				E4005629148D79B500EB22B9 /* HockeySDKTests */,
 			);
 		};
 /* End PBXProject section */
-
-/* Begin PBXResourcesBuildPhase section */
-		E4005627148D79B500EB22B9 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				E4005638148D79B500EB22B9 /* InfoPlist.strings in Resources */,
-				E400564B148D7A3000EB22B9 /* Hockey.bundle in Resources */,
-				E400564C148D7A3000EB22B9 /* Quincy.bundle in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXResourcesBuildPhase section */
-
-/* Begin PBXShellScriptBuildPhase section */
-		E4005628148D79B500EB22B9 /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# Run the unit tests in this test bundle.\n\"${SYSTEM_DEVELOPER_DIR}/Tools/RunUnitTests\"\n";
-		};
-/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		E4005616148D79B500EB22B9 /* Sources */ = {
@@ -370,34 +264,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		E4005625148D79B500EB22B9 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				E400563B148D79B500EB22B9 /* HockeySDKTests.m in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		E4005631148D79B500EB22B9 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = E4005619148D79B500EB22B9 /* HockeySDK */;
-			targetProxy = E4005630148D79B500EB22B9 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
-
-/* Begin PBXVariantGroup section */
-		E4005636148D79B500EB22B9 /* InfoPlist.strings */ = {
-			isa = PBXVariantGroup;
-			children = (
-				E4005637148D79B500EB22B9 /* en */,
-			);
-			name = InfoPlist.strings;
-			sourceTree = "<group>";
-		};
-/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		E400563C148D79B500EB22B9 /* Debug */ = {
@@ -478,38 +345,6 @@
 			};
 			name = Release;
 		};
-		E4005642148D79B500EB22B9 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(SDKROOT)/Developer/Library/Frameworks",
-					"$(DEVELOPER_LIBRARY_DIR)/Frameworks",
-					"\"$(SRCROOT)/../Vendor\"",
-				);
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "HockeySDK/HockeySDK-Prefix.pch";
-				INFOPLIST_FILE = "HockeySDKTests/HockeySDKTests-Info.plist";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				WRAPPER_EXTENSION = octest;
-			};
-			name = Debug;
-		};
-		E4005643148D79B500EB22B9 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(SDKROOT)/Developer/Library/Frameworks",
-					"$(DEVELOPER_LIBRARY_DIR)/Frameworks",
-					"\"$(SRCROOT)/../Vendor\"",
-				);
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "HockeySDK/HockeySDK-Prefix.pch";
-				INFOPLIST_FILE = "HockeySDKTests/HockeySDKTests-Info.plist";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				WRAPPER_EXTENSION = octest;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -527,15 +362,6 @@
 			buildConfigurations = (
 				E400563F148D79B500EB22B9 /* Debug */,
 				E4005640148D79B500EB22B9 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		E4005641148D79B500EB22B9 /* Build configuration list for PBXNativeTarget "HockeySDKTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				E4005642148D79B500EB22B9 /* Debug */,
-				E4005643148D79B500EB22B9 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
