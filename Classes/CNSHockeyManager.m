@@ -350,12 +350,14 @@
 
 - (void)configureQuincyManager {
   [[BWQuincyManager sharedQuincyManager] setAppIdentifier:appIdentifier];
+  [[BWQuincyManager sharedQuincyManager] setDelegate:delegate];
 }
 
 - (void)configureHockeyManager {
   [[BWHockeyManager sharedHockeyManager] setAppIdentifier:appIdentifier];
   [[BWHockeyManager sharedHockeyManager] setCheckForTracker:YES];
-  
+  [[BWHockeyManager sharedHockeyManager] setDelegate:delegate];
+
   // Only if JMC is part of the project
   if ([[self class] isJMCPresent]) {
     [[BWHockeyManager sharedHockeyManager] addObserver:self forKeyPath:@"trackerConfig" options:0 context:nil];
