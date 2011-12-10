@@ -70,7 +70,7 @@ Drag & drop the HockeySDK folder from your project directory to your Xcode proje
 
 1. Open your AppDelegate.m file.
 
-2. Add the following line at the top of the file below your own #import statements:<pre><code>#import "BWHockeyManager.h"</code></pre>
+2. Add the following line at the top of the file below your own #import statements:<pre><code>#import "CNSHockeyManager.h"</code></pre>
 
 3. Search for the method application:didFinishLaunchingWithOptions:
 
