@@ -123,8 +123,6 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
   static BWHockeyManager *sharedInstance = nil;
   static dispatch_once_t pred;
   
-  if (sharedInstance) return sharedInstance;
-  
   dispatch_once(&pred, ^{
     sharedInstance = [BWHockeyManager alloc];
     sharedInstance = [sharedInstance init];

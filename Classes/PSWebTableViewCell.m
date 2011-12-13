@@ -52,15 +52,15 @@ body { font: 13px 'Helvetica Neue', Helvetica; word-wrap:break-word; padding:8px
 #pragma mark private
 
 - (void)addWebView {
-	if(webViewContent_) {
+  if(webViewContent_) {
     CGRect webViewRect = CGRectMake(0, 0, self.frame.size.width, self.frame.size.height);
-		if(!webView_) {
-			webView_ = [[[UIWebView alloc] initWithFrame:webViewRect] retain];
-			[self addSubview:webView_];
-			webView_.hidden = YES;
-			webView_.backgroundColor = self.cellBackgroundColor;
-			webView_.opaque = NO;
-			webView_.delegate = self;
+    if(!webView_) {
+      webView_ = [[[UIWebView alloc] initWithFrame:webViewRect] retain];
+      [self addSubview:webView_];
+      webView_.hidden = YES;
+      webView_.backgroundColor = self.cellBackgroundColor;
+      webView_.opaque = NO;
+      webView_.delegate = self;
       webView_.autoresizingMask = UIViewAutoresizingFlexibleWidth;
       
       for(UIView* subView in webView_.subviews){
@@ -79,32 +79,32 @@ body { font: 13px 'Helvetica Neue', Helvetica; word-wrap:break-word; padding:8px
         }
       }
     }
-		else
-			webView_.frame = webViewRect;
+    else
+      webView_.frame = webViewRect;
     
     NSString *deviceWidth = UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad ? [NSString stringWithFormat:@"%d", CGRectGetWidth(self.bounds)] : @"device-width";
     //BWHockeyLog(@"%@\n%@\%@", PSWebTableViewCellHtmlTemplate, deviceWidth, self.webViewContent);
     NSString *contentHtml = [NSString stringWithFormat:PSWebTableViewCellHtmlTemplate, deviceWidth, self.webViewContent];
-		[webView_ loadHTMLString:contentHtml baseURL:nil];
-	}
+    [webView_ loadHTMLString:contentHtml baseURL:nil];
+  }
 }
 
 - (void)showWebView {
-	webView_.hidden = NO;
+  webView_.hidden = NO;
   self.textLabel.text = @"";
-	[self setNeedsDisplay];
+  [self setNeedsDisplay];
 }
 
 
 - (void)removeWebView {
-	if(webView_) {
-		webView_.delegate = nil;
-		[webView_ resignFirstResponder];
-		[webView_ removeFromSuperview];
-		[webView_ release];
-	}
-	webView_ = nil;
-	[self setNeedsDisplay];
+  if(webView_) {
+    webView_.delegate = nil;
+    [webView_ resignFirstResponder];
+    [webView_ removeFromSuperview];
+    [webView_ release];
+  }
+  webView_ = nil;
+  [self setNeedsDisplay];
 }
 
 
@@ -163,15 +163,15 @@ body { font: 13px 'Helvetica Neue', Helvetica; word-wrap:break-word; padding:8px
 #pragma mark UIWebView
 
 - (BOOL)webView:(UIWebView *)webView shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(UIWebViewNavigationType)navigationType {
-	if(navigationType == UIWebViewNavigationTypeOther)
-		return YES;
+  if(navigationType == UIWebViewNavigationTypeOther)
+    return YES;
   
   return NO;
 }
 
 
 - (void)webViewDidFinishLoad:(UIWebView *)webView {
-	if(webViewContent_)
+  if(webViewContent_)
     [self showWebView];
   
   CGRect frame = webView_.frame;

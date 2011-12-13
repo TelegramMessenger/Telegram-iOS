@@ -29,6 +29,8 @@
 
 #import <Foundation/Foundation.h>
 
+#define BWQuincyLog(fmt, ...) do { if([BWQuincyManager sharedQuincyManager].isLoggingEnabled) { NSLog((@"[QuincyLib] %s/%d " fmt), __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__); }} while(0)
+
 #define kQuincyBundleName @"Quincy.bundle"
 
 NSBundle *quincyBundle(void);
@@ -52,31 +54,31 @@ NSString *BWQuincyLocalize(NSString *stringToken);
 #define BWQuincyNetworkBecomeReachable @"NetworkDidBecomeReachable"
 
 typedef enum QuincyKitAlertType {
-	QuincyKitAlertTypeSend = 0,
-	QuincyKitAlertTypeFeedback = 1,
+  QuincyKitAlertTypeSend = 0,
+  QuincyKitAlertTypeFeedback = 1,
 } CrashAlertType;
 
 typedef enum CrashReportStatus {
   // The status of the crash is queued, need to check later (HockeyApp)
-	CrashReportStatusQueued = -80,
+  CrashReportStatusQueued = -80,
   
   // This app version is set to discontinued, no new crash reports accepted by the server
-	CrashReportStatusFailureVersionDiscontinued = -30,
+  CrashReportStatusFailureVersionDiscontinued = -30,
   
   // XML: Sender version string contains not allowed characters, only alphanumberical including space and . are allowed
-	CrashReportStatusFailureXMLSenderVersionNotAllowed = -21,
+  CrashReportStatusFailureXMLSenderVersionNotAllowed = -21,
   
   // XML: Version string contains not allowed characters, only alphanumberical including space and . are allowed
-	CrashReportStatusFailureXMLVersionNotAllowed = -20,
+  CrashReportStatusFailureXMLVersionNotAllowed = -20,
   
   // SQL for adding a symoblicate todo entry in the database failed
-	CrashReportStatusFailureSQLAddSymbolicateTodo = -18,
+  CrashReportStatusFailureSQLAddSymbolicateTodo = -18,
   
   // SQL for adding crash log in the database failed
-	CrashReportStatusFailureSQLAddCrashlog = -17,
+  CrashReportStatusFailureSQLAddCrashlog = -17,
   
   // SQL for adding a new version in the database failed
-	CrashReportStatusFailureSQLAddVersion = -16,
+  CrashReportStatusFailureSQLAddVersion = -16,
 	
   // SQL for checking if the version is already added in the database failed
   CrashReportStatusFailureSQLCheckVersionExists = -15,
@@ -137,6 +139,9 @@ typedef enum CrashReportStatus {
 // Invoked before the user is asked to send a crash report, so you can do additional actions. E.g. to make sure not to ask the user for an app rating :) 
 -(void) willShowSubmitCrashReportAlert;
 
+// Invoked after the user did choose to send crashes always in the alert 
+-(void) userDidChooseSendAlways;
+
 @end
 
 @interface BWQuincyManager : NSObject <NSXMLParserDelegate> {
@@ -144,6 +149,7 @@ typedef enum CrashReportStatus {
   
   id <BWQuincyManagerDelegate> _delegate;
   
+  BOOL _loggingEnabled;
   BOOL _showAlwaysButton;
   BOOL _feedbackActivated;
   BOOL _autoSubmitCrashReport;
@@ -156,19 +162,19 @@ typedef enum CrashReportStatus {
   NSString *_feedbackRequestID;
   float _feedbackDelayInterval;
   
-	NSMutableString *_contentOfProperty;
-	CrashReportStatus _serverResult;
+  NSMutableString *_contentOfProperty;
+  CrashReportStatus _serverResult;
   
-	int _analyzerStarted;
-	NSString *_crashesDir;
+  int _analyzerStarted;
+  NSString *_crashesDir;
 	
-	BOOL _crashIdenticalCurrentVersion;
+  BOOL _crashIdenticalCurrentVersion;
   BOOL _crashReportActivated;
   
-	NSMutableArray *_crashFiles;
+  NSMutableArray *_crashFiles;
 	
-	NSMutableData *_responseData;
-	NSInteger _statusCode;
+  NSMutableData *_responseData;
+  NSInteger _statusCode;
   
   NSURLConnection *_urlConnection;
   
@@ -188,6 +194,10 @@ typedef enum CrashReportStatus {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // settings
+
+// if YES, states will be logged using NSLog. Only enable this for debugging!
+// if NO, nothing will be logged. (default)
+@property (nonatomic, assign, getter=isLoggingEnabled) BOOL loggingEnabled;
 
 // nil, using the default localization files (Default)
 // set to another string which will be appended to the Quincy localization file name, "Alternate" is another provided text set

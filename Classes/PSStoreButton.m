@@ -232,8 +232,8 @@
 
 - (CGSize)sizeThatFits:(CGSize)size {
   CGSize constr = (CGSize){.height = self.frame.size.height, .width = PS_MAX_WIDTH};
-	CGSize newSize = [self.buttonData.label sizeWithFont:self.titleLabel.font constrainedToSize:constr lineBreakMode:UILineBreakModeMiddleTruncation];
-	CGFloat newWidth = newSize.width + (PS_PADDING * 2);
+  CGSize newSize = [self.buttonData.label sizeWithFont:self.titleLabel.font constrainedToSize:constr lineBreakMode:UILineBreakModeMiddleTruncation];
+  CGFloat newWidth = newSize.width + (PS_PADDING * 2);
   CGFloat newHeight = PS_MIN_HEIGHT > newSize.height ? PS_MIN_HEIGHT : newSize.height;
   
   CGSize sizeThatFits = CGSizeMake(newWidth, newHeight);
@@ -250,7 +250,7 @@
     rect.size.height = self.frame.size.height;
     aLayer.frame = rect;
     [aLayer layoutIfNeeded];
-	}
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

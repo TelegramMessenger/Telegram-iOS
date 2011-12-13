@@ -62,7 +62,7 @@
 }
 
 - (id)init {
-	return [self init:[BWHockeyManager sharedHockeyManager]];
+  return [self init:[BWHockeyManager sharedHockeyManager]];
 }
 
 #pragma mark -

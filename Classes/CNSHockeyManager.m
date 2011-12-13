@@ -42,10 +42,6 @@
   static CNSHockeyManager *sharedInstance = nil;
   static dispatch_once_t pred;
   
-  if (sharedInstance) {
-    return sharedInstance;
-  }
-  
   dispatch_once(&pred, ^{
     sharedInstance = [CNSHockeyManager alloc];
     sharedInstance = [sharedInstance init];
@@ -55,13 +51,13 @@
 }
 #else
 + (CNSHockeyManager *)sharedHockeyManager {
-	static CNSHockeyManager *hockeyManager = nil;
+  static CNSHockeyManager *hockeyManager = nil;
   
-	if (hockeyManager == nil) {
-		hockeyManager = [[CNSHockeyManager alloc] init];
-	}
+  if (hockeyManager == nil) {
+    hockeyManager = [[CNSHockeyManager alloc] init];
+  }
   
-	return hockeyManager;
+  return hockeyManager;
 }
 #endif
 
@@ -149,10 +145,12 @@
 
 - (BOOL)isLoggingEnabled {
   return [[BWHockeyManager sharedHockeyManager] isLoggingEnabled];
+  return [[BWQuincyManager sharedQuincyManager] isLoggingEnabled];
 }
 
 - (void)setLoggingEnabled:(BOOL)loggingEnabled {
   return [[BWHockeyManager sharedHockeyManager] setLoggingEnabled:loggingEnabled];
+  return [[BWQuincyManager sharedQuincyManager] setLoggingEnabled:loggingEnabled];
 }
 
 #pragma mark - Public Instance Methods (Crash Reporting)
@@ -299,6 +297,10 @@
   [[BWHockeyManager sharedHockeyManager] setCompareVersionType:compareVersionType];
 }
 
+- (BOOL)isAppStoreEnvironment {
+  return [[BWHockeyManager sharedHockeyManager] isAppStoreEnvironment];
+}
+
 - (BOOL)isUpdateAvailable {
   return [[BWHockeyManager sharedHockeyManager] isUpdateAvailable];
 }
@@ -348,12 +350,14 @@
 
 - (void)configureQuincyManager {
   [[BWQuincyManager sharedQuincyManager] setAppIdentifier:appIdentifier];
+  [[BWQuincyManager sharedQuincyManager] setDelegate:delegate];
 }
 
 - (void)configureHockeyManager {
   [[BWHockeyManager sharedHockeyManager] setAppIdentifier:appIdentifier];
   [[BWHockeyManager sharedHockeyManager] setCheckForTracker:YES];
-  
+  [[BWHockeyManager sharedHockeyManager] setDelegate:delegate];
+
   // Only if JMC is part of the project
   if ([[self class] isJMCPresent]) {
     [[BWHockeyManager sharedHockeyManager] addObserver:self forKeyPath:@"trackerConfig" options:0 context:nil];
