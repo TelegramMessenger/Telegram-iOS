@@ -87,9 +87,9 @@ CGImageRef CreateGradientImage(int pixelsWide, int pixelsHigh, float fromAlpha, 
 - (UIImage *)bw_roundedCornerImage:(NSInteger)cornerSize borderSize:(NSInteger)borderSize {
   // If the image does not have an alpha layer, add one
   
-	UIImage *roundedImage = nil;
+  UIImage *roundedImage = nil;
 #if __IPHONE_OS_VERSION_MAX_ALLOWED >= 40000
-	BW_IF_IOS4_OR_GREATER(
+  BW_IF_IOS4_OR_GREATER(
                         UIGraphicsBeginImageContextWithOptions(self.size, NO, 0.0); // 0.0 for scale means "correct scale for device's main screen".
                         CGImageRef sourceImg = CGImageCreateWithImageInRect([self CGImage], CGRectMake(0, 0, self.size.width * self.scale, self.size.height * self.scale)); // cropping happens here.
                         
@@ -224,20 +224,21 @@ CGImageRef CreateGradientImage(int pixelsWide, int pixelsHigh, float fromAlpha, 
    image = UIGraphicsGetImageFromCurrentImageContext();
    UIGraphicsEndImageContext();
    )
+
 	if (!image) {
-		// Try older method.
-		CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-		CGContextRef context = CGBitmapContextCreate(NULL,  scaledWidth, scaledHeight, 8, (fitSize.width * 4),
-                                                 colorSpace, kCGImageAlphaPremultipliedLast);
-		CGImageRef sourceImg = CGImageCreateWithImageInRect([self CGImage], sourceRect);
-		CGContextDrawImage(context, destRect, sourceImg);
-		CGImageRelease(sourceImg);
-		CGImageRef finalImage = CGBitmapContextCreateImage(context);
-		CGContextRelease(context);
-		CGColorSpaceRelease(colorSpace);
-		image = [UIImage imageWithCGImage:finalImage];
-		CGImageRelease(finalImage);
-	}
+    // Try older method.
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+    CGContextRef context = CGBitmapContextCreate(NULL,  scaledWidth, scaledHeight, 8, (fitSize.width * 4),
+                            colorSpace, kCGImageAlphaPremultipliedLast);
+    CGImageRef sourceImg = CGImageCreateWithImageInRect([self CGImage], sourceRect);
+    CGContextDrawImage(context, destRect, sourceImg);
+    CGImageRelease(sourceImg);
+    CGImageRef finalImage = CGBitmapContextCreateImage(context);
+    CGContextRelease(context);
+    CGColorSpaceRelease(colorSpace);
+    image = [UIImage imageWithCGImage:finalImage];
+    CGImageRelease(finalImage);
+  }
   
   return image;
 }
@@ -245,37 +246,37 @@ CGImageRef CreateGradientImage(int pixelsWide, int pixelsHigh, float fromAlpha, 
 
 
 CGImageRef CreateGradientImage(int pixelsWide, int pixelsHigh, float fromAlpha, float toAlpha) {
-	CGImageRef theCGImage = NULL;
+  CGImageRef theCGImage = NULL;
   
-	// gradient is always black-white and the mask must be in the gray colorspace
+  // gradient is always black-white and the mask must be in the gray colorspace
   CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceGray();
   
-	// create the bitmap context
-	CGContextRef gradientBitmapContext = CGBitmapContextCreate(NULL, pixelsWide, pixelsHigh,
-                                                             8, 0, colorSpace, kCGImageAlphaNone);
+  // create the bitmap context
+  CGContextRef gradientBitmapContext = CGBitmapContextCreate(NULL, pixelsWide, pixelsHigh,
+                                        8, 0, colorSpace, kCGImageAlphaNone);
   
-	// define the start and end grayscale values (with the alpha, even though
-	// our bitmap context doesn't support alpha the gradient requires it)
-	CGFloat colors[] = {toAlpha, 1.0, fromAlpha, 1.0};
+  // define the start and end grayscale values (with the alpha, even though
+  // our bitmap context doesn't support alpha the gradient requires it)
+  CGFloat colors[] = {toAlpha, 1.0, fromAlpha, 1.0};
   
-	// create the CGGradient and then release the gray color space
-	CGGradientRef grayScaleGradient = CGGradientCreateWithColorComponents(colorSpace, colors, NULL, 2);
-	CGColorSpaceRelease(colorSpace);
+  // create the CGGradient and then release the gray color space
+  CGGradientRef grayScaleGradient = CGGradientCreateWithColorComponents(colorSpace, colors, NULL, 2);
+  CGColorSpaceRelease(colorSpace);
   
-	// create the start and end points for the gradient vector (straight down)
-	CGPoint gradientEndPoint = CGPointZero;
-	CGPoint gradientStartPoint = CGPointMake(0, pixelsHigh);
+  // create the start and end points for the gradient vector (straight down)
+  CGPoint gradientEndPoint = CGPointZero;
+  CGPoint gradientStartPoint = CGPointMake(0, pixelsHigh);
   
-	// draw the gradient into the gray bitmap context
-	CGContextDrawLinearGradient(gradientBitmapContext, grayScaleGradient, gradientStartPoint,
+  // draw the gradient into the gray bitmap context
+  CGContextDrawLinearGradient(gradientBitmapContext, grayScaleGradient, gradientStartPoint,
                               gradientEndPoint, kCGGradientDrawsAfterEndLocation);
-	CGGradientRelease(grayScaleGradient);
+  CGGradientRelease(grayScaleGradient);
   
-	// convert the context into a CGImageRef and release the context
-	theCGImage = CGBitmapContextCreateImage(gradientBitmapContext);
-	CGContextRelease(gradientBitmapContext);
+  // convert the context into a CGImageRef and release the context
+  theCGImage = CGBitmapContextCreateImage(gradientBitmapContext);
+  CGContextRelease(gradientBitmapContext);
   
-	// return the imageref containing the gradient
+  // return the imageref containing the gradient
   return theCGImage;
 }
 
@@ -293,29 +294,29 @@ CGContextRef MyOpenBitmapContext(int pixelsWide, int pixelsHigh) {
 
 - (UIImage *)bw_reflectedImageWithHeight:(NSUInteger)height fromAlpha:(float)fromAlpha toAlpha:(float)toAlpha {
   if(height == 0)
-		return nil;
+    return nil;
   
-	// create a bitmap graphics context the size of the image
-	CGContextRef mainViewContentContext = MyOpenBitmapContext(self.size.width, height);
+  // create a bitmap graphics context the size of the image
+  CGContextRef mainViewContentContext = MyOpenBitmapContext(self.size.width, height);
   
-	// create a 2 bit CGImage containing a gradient that will be used for masking the
-	// main view content to create the 'fade' of the reflection.  The CGImageCreateWithMask
-	// function will stretch the bitmap image as required, so we can create a 1 pixel wide gradient
-	CGImageRef gradientMaskImage = CreateGradientImage(1, height, fromAlpha, toAlpha);
+  // create a 2 bit CGImage containing a gradient that will be used for masking the
+  // main view content to create the 'fade' of the reflection.  The CGImageCreateWithMask
+  // function will stretch the bitmap image as required, so we can create a 1 pixel wide gradient
+  CGImageRef gradientMaskImage = CreateGradientImage(1, height, fromAlpha, toAlpha);
   
-	// create an image by masking the bitmap of the mainView content with the gradient view
-	// then release the  pre-masked content bitmap and the gradient bitmap
-	CGContextClipToMask(mainViewContentContext, CGRectMake(0.0, 0.0, self.size.width, height), gradientMaskImage);
-	CGImageRelease(gradientMaskImage);
+  // create an image by masking the bitmap of the mainView content with the gradient view
+  // then release the  pre-masked content bitmap and the gradient bitmap
+  CGContextClipToMask(mainViewContentContext, CGRectMake(0.0, 0.0, self.size.width, height), gradientMaskImage);
+  CGImageRelease(gradientMaskImage);
   
-	// draw the image into the bitmap context
-	CGContextDrawImage(mainViewContentContext, CGRectMake(0, 0, self.size.width, self.size.height), self.CGImage);
+  // draw the image into the bitmap context
+  CGContextDrawImage(mainViewContentContext, CGRectMake(0, 0, self.size.width, self.size.height), self.CGImage);
   
-	// convert the finished reflection image to a UIImage
-	UIImage *theImage = UIGraphicsGetImageFromCurrentImageContext(); // returns autoreleased
+  // convert the finished reflection image to a UIImage
+  UIImage *theImage = UIGraphicsGetImageFromCurrentImageContext(); // returns autoreleased
   UIGraphicsEndImageContext();
   
-	return theImage;
+  return theImage;
 }
 
 - (id)bw_initWithContentsOfResolutionIndependentFile:(NSString *)path {
@@ -342,10 +343,10 @@ CGContextRef MyOpenBitmapContext(int pixelsWide, int pixelsHigh) {
 
 
 + (UIImage *)bw_imageNamed:(NSString *)imageName bundle:(NSString *)bundleName {
-	NSString *resourcePath = [[NSBundle mainBundle] resourcePath];
-	NSString *bundlePath = [resourcePath stringByAppendingPathComponent:bundleName];
-	NSString *imagePath = [bundlePath stringByAppendingPathComponent:imageName];
-	return [UIImage bw_imageWithContentsOfResolutionIndependentFile:imagePath];
+  NSString *resourcePath = [[NSBundle mainBundle] resourcePath];
+  NSString *bundlePath = [resourcePath stringByAppendingPathComponent:bundleName];
+  NSString *imagePath = [bundlePath stringByAppendingPathComponent:imageName];
+  return [UIImage bw_imageWithContentsOfResolutionIndependentFile:imagePath];
 }
 
 @end

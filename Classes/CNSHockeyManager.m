@@ -51,13 +51,13 @@
 }
 #else
 + (CNSHockeyManager *)sharedHockeyManager {
-	static CNSHockeyManager *hockeyManager = nil;
+  static CNSHockeyManager *hockeyManager = nil;
   
-	if (hockeyManager == nil) {
-		hockeyManager = [[CNSHockeyManager alloc] init];
-	}
+  if (hockeyManager == nil) {
+    hockeyManager = [[CNSHockeyManager alloc] init];
+  }
   
-	return hockeyManager;
+  return hockeyManager;
 }
 #endif
 
