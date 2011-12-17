@@ -62,20 +62,29 @@
 #endif
 
 + (BOOL)isJMCActive {
+#ifdef JMC_ENABLED
   id jmcClass = NSClassFromString(@"JMC");
   id jmcInstance = [jmcClass performSelector:@selector(instance)];
   
   return (jmcInstance) && ([jmcInstance performSelector:@selector(url)]);
+#else
+  return NO;
+#endif
 }
 
 + (BOOL)isJMCPresent {
+#ifdef JMC_ENABLED
   id jmcClass = NSClassFromString(@"JMC");
   return (jmcClass) && ([jmcClass respondsToSelector:@selector(instance)]);
+#else
+  return NO;
+#endif
 }
 
 #pragma mark - Private Class Methods
 
 + (void)disableJMCCrashReporter {
+#ifdef JMC_ENABLED
   id jmcClass = NSClassFromString(@"JMC");
   id jmcInstance = [jmcClass performSelector:@selector(instance)];
   id jmcOptions = [jmcInstance performSelector:@selector(options)];
@@ -88,16 +97,22 @@
   invocation.selector = crashReporterSelector;
   [invocation setArgument:&value atIndex:2];
   [invocation invoke];
+#endif
 }
 
 + (BOOL)checkJMCConfiguration:(NSDictionary *)configuration {
+#ifdef JMC_ENABLED
   return (([[configuration valueForKey:@"enabled"] boolValue]) &&
           ([[configuration valueForKey:@"url"] length] > 0) &&
           ([[configuration valueForKey:@"key"] length] > 0) &&
           ([[configuration valueForKey:@"project"] length] > 0));
+#else
+  return NO;
+#endif
 }
 
 + (void)applyJMCConfiguration:(NSDictionary *)configuration {
+#ifdef JMC_ENABLED
   id jmcClass = NSClassFromString(@"JMC");
   id jmcInstance = [jmcClass performSelector:@selector(instance)];
   SEL configureSelector = @selector(configureJiraConnect:projectKey:apiKey:);
@@ -113,6 +128,7 @@
   [invocation setArgument:&project atIndex:3];
   [invocation setArgument:&key atIndex:4];
   [invocation invoke];
+#endif
 }
 
 #pragma mark - Public Instance Methods (Configuration)
