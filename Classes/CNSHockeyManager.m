@@ -98,7 +98,6 @@
   invocation.selector = crashReporterSelector;
   [invocation setArgument:&value atIndex:2];
   [invocation invoke];
-
 }
 
 + (BOOL)checkJMCConfiguration:(NSDictionary *)configuration {
@@ -123,7 +122,6 @@
   [invocation setArgument:&project atIndex:3];
   [invocation setArgument:&key atIndex:4];
   [invocation invoke];
-
 }
 
 #pragma mark - Public Instance Methods (Configuration)
