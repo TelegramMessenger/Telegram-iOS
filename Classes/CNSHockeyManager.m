@@ -61,15 +61,18 @@
 }
 #endif
 
-+(id)jmcInstance {
-
-    id jmcClass = NSClassFromString(@"JMC");
-    if (jmcClass && [jmcClass respondsToSelector:@selector(sharedInstance)]) {
-        return [jmcClass performSelector:@selector(sharedInstance)];
-    } else if (jmcClass && [jmcClass respondsToSelector:@selector(instance)]) {
-        return [jmcClass performSelector:@selector(instance)]; // legacy pre (JMC 1.0.11) support
-    }
-    return nil;
++ (id)jmcInstance {
+  id jmcClass = NSClassFromString(@"JMC");
+  if ((jmcClass) && ([jmcClass respondsToSelector:@selector(sharedInstance)])) {
+    return [jmcClass performSelector:@selector(sharedInstance)];
+  } 
+#ifdef JMC_LEGACY
+  else if ((jmcClass) && ([jmcClass respondsToSelector:@selector(instance)])) {
+    return [jmcClass performSelector:@selector(instance)]; // legacy pre (JMC 1.0.11) support
+  }
+#endif
+  
+  return nil;
 }
 
 + (BOOL)isJMCActive {
@@ -78,14 +81,12 @@
 }
 
 + (BOOL)isJMCPresent {
-    
-    return [self jmcInstance] != nil;
+  return [self jmcInstance] != nil;
 }
 
 #pragma mark - Private Class Methods
 
 + (void)disableJMCCrashReporter {
-
   id jmcInstance = [self jmcInstance];
   id jmcOptions = [jmcInstance performSelector:@selector(options)];
   SEL crashReporterSelector = @selector(setCrashReportingEnabled:);
@@ -101,7 +102,6 @@
 }
 
 + (BOOL)checkJMCConfiguration:(NSDictionary *)configuration {
-
   return (([[configuration valueForKey:@"enabled"] boolValue]) &&
           ([[configuration valueForKey:@"url"] length] > 0) &&
           ([[configuration valueForKey:@"key"] length] > 0) &&
@@ -109,7 +109,6 @@
 }
 
 + (void)applyJMCConfiguration:(NSDictionary *)configuration {
-
   id jmcInstance = [self jmcInstance];
   SEL configureSelector = @selector(configureJiraConnect:projectKey:apiKey:);
   
