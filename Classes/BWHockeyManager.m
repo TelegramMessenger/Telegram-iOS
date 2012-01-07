@@ -398,11 +398,11 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
       // we did write something else in the past, so for compatibility reasons do this
       id tempLastCheck = [[NSUserDefaults standardUserDefaults] objectForKey:kDateOfLastHockeyCheck];
       if ([tempLastCheck isKindOfClass:[NSDate class]]) {
-        lastCheck_ = tempLastCheck;
+        self.lastCheck = tempLastCheck;
       }
     }
     if (!lastCheck_) {
-      lastCheck_ = [NSDate distantPast];
+      self.lastCheck = [NSDate distantPast];
     }
     
     if ([[NSUserDefaults standardUserDefaults] objectForKey:kHockeyAllowUserSetting]) {
