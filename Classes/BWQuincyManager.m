@@ -730,6 +730,9 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
         [self showCrashStatusMessage];
       }
     }
+  } else if (_statusCode == 400 && self.appIdentifier) {
+    [self _cleanCrashReports];
+    BWQuincyLog(@"ERROR: The server rejected receiving crash reports for this app version!");
   } else {
     if (_responseData == nil || [_responseData length] == 0) {
       BWQuincyLog(@"ERROR: Sending failed with an empty response!");
