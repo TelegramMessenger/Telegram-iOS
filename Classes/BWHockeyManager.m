@@ -398,11 +398,11 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
       // we did write something else in the past, so for compatibility reasons do this
       id tempLastCheck = [[NSUserDefaults standardUserDefaults] objectForKey:kDateOfLastHockeyCheck];
       if ([tempLastCheck isKindOfClass:[NSDate class]]) {
-        lastCheck_ = tempLastCheck;
+        self.lastCheck = tempLastCheck;
       }
     }
     if (!lastCheck_) {
-      lastCheck_ = [NSDate distantPast];
+      self.lastCheck = [NSDate distantPast];
     }
     
     if ([[NSUserDefaults standardUserDefaults] objectForKey:kHockeyAllowUserSetting]) {
@@ -522,11 +522,14 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
       navController_.modalPresentationStyle = UIModalPresentationFormSheet;
     }
     
+    hockeyViewController.modalAnimated = YES;
+    
     [parentViewController presentModalViewController:navController_ animated:YES];
   } else {
     // if not, we add a subview to the window. A bit hacky but should work in most circumstances.
     // Also, we don't get a nice animation for free, but hey, this is for beta not production users ;)
     BWHockeyLog(@"No rootViewController found, using UIWindow-approach: %@", visibleWindow);
+    hockeyViewController.modalAnimated = NO;
     [visibleWindow addSubview:navController_.view];
   }
 }

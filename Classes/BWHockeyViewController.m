@@ -50,6 +50,7 @@
 @synthesize appStoreButtonState = appStoreButtonState_;
 @synthesize hockeyManager = hockeyManager_;
 @synthesize modal = modal_;
+@synthesize modalAnimated = modalAnimated_;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark -
@@ -234,6 +235,7 @@
   if ((self = [super initWithStyle:UITableViewStylePlain])) {
     self.hockeyManager = newHockeyManager;
     self.modal = newModal;
+    self.modalAnimated = YES;
     self.title = BWHockeyLocalize(@"HockeyUpdateScreenTitle");
     
     if ([self.hockeyManager shouldShowUserSettings]) {
@@ -280,7 +282,7 @@
     }
     
     // If there is no presenting view controller just remove view
-    if (presentingViewController) {
+    if (presentingViewController && self.modalAnimated) {
       [presentingViewController dismissModalViewControllerAnimated:YES];
     }
     else {
