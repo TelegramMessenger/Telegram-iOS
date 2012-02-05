@@ -522,11 +522,14 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
       navController_.modalPresentationStyle = UIModalPresentationFormSheet;
     }
     
+    hockeyViewController.modalAnimated = YES;
+    
     [parentViewController presentModalViewController:navController_ animated:YES];
   } else {
     // if not, we add a subview to the window. A bit hacky but should work in most circumstances.
     // Also, we don't get a nice animation for free, but hey, this is for beta not production users ;)
     BWHockeyLog(@"No rootViewController found, using UIWindow-approach: %@", visibleWindow);
+    hockeyViewController.modalAnimated = NO;
     [visibleWindow addSubview:navController_.view];
   }
 }
