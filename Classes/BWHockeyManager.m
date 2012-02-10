@@ -634,6 +634,9 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
   NSError *error = nil;
   id feedResult = nil;
   
+  if (!jsonString)
+    return nil;
+
 #if BW_NATIVE_JSON_AVAILABLE
   feedResult = [NSJSONSerialization JSONObjectWithData:[jsonString dataUsingEncoding:NSUTF8StringEncoding] options:kNilOptions error:&error];
 #else
@@ -648,6 +651,10 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
     invocation.target = nsjsonClass;
     invocation.selector = nsjsonSelect;
     NSData *jsonData = [jsonString dataUsingEncoding:NSUTF8StringEncoding];
+
+    if (!jsonData)
+      return nil;
+
     [invocation setArgument:&jsonData atIndex:2]; // arguments 0 and 1 are self and _cmd respectively, automatically set by NSInvocation
     NSUInteger readOptions = kNilOptions;
     [invocation setArgument:&readOptions atIndex:3];
