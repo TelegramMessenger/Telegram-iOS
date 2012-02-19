@@ -803,6 +803,7 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
 }
 
 - (void)checkForUpdate {
+  if (!updateURL_) return;
   if (self.requireAuthorization) return;
   if (self.isUpdateAvailable && [self.app.mandatory boolValue]) {
     [self showCheckForUpdateAlert_];
