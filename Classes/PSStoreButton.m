@@ -27,12 +27,6 @@
 
 #import "PSStoreButton.h"
 
-#ifdef DEBUG
-#define PSLog(fmt, ...) NSLog((@"%s [Line %d] " fmt), __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__);
-#else
-#define PSLog(...)
-#endif
-
 #define PS_RGBCOLOR(r,g,b) [UIColor colorWithRed:(r)/255.0 green:(g)/255.0 blue:(b)/255.0 alpha:1]
 #define PS_MIN_HEIGHT 25.0f
 #define PS_MAX_WIDTH 120.0f
@@ -87,12 +81,7 @@
 #pragma mark -
 #pragma mark private
 
-- (void)touchedUpOutside:(id)sender {
-  PSLog(@"touched outside...");
-}
-
 - (void)buttonPressed:(id)sender {
-  PSLog(@"calling delegate:storeButtonFired for %@", sender);
   [buttonDelegate_ storeButtonFired:self];
 }
 
