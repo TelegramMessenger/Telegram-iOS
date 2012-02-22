@@ -171,7 +171,6 @@
     [self.titleLabel setFont:[UIFont boldSystemFontOfSize:13.0]];
     
     // register for touch events
-    [self addTarget:self action:@selector(touchedUpOutside:) forControlEvents:UIControlEventTouchUpOutside];
 		[self addTarget:self action:@selector(buttonPressed:) forControlEvents:UIControlEventTouchUpInside];
     
     // border layers for more sex!
