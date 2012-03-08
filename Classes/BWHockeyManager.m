@@ -829,9 +829,11 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
     return;
   }
   
-  NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@?format=json&udid=%@", 
+  NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@?format=json&udid=%@&sdk=%@&sdk_version=%@", 
                                 [[self encodedAppIdentifier_] bw_URLEncodedString],
-                                ([self isAppStoreEnvironment] ? @"appstore" : [[self deviceIdentifier] bw_URLEncodedString])];
+                                ([self isAppStoreEnvironment] ? @"appstore" : [[self deviceIdentifier] bw_URLEncodedString]),
+                                SDK_NAME,
+                                SDK_VERSION];
   
   // add additional statistics if user didn't disable flag
   if ([self canSendUserData]) {
