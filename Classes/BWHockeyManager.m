@@ -690,13 +690,13 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
     [invocation invoke];
     [invocation getReturnValue:&feedResult];
   } else {
-    NSLog(@"Error: You need a JSON Framework in your runtime!");
-    [self doesNotRecognizeSelector:_cmd];
+    error = [NSError errorWithDomain:kHockeyErrorDomain
+                                code:HockeyAPIServerReturnedEmptyResponse
+                            userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"You need a JSON Framework in your runtime for iOS4!", NSLocalizedDescriptionKey, nil]];
   }
 #endif
   
   if (error) {
-    BWHockeyLog(@"Error while parsing response feed: %@", [error localizedDescription]);
     [self reportError_:error];
     return nil;
   }
