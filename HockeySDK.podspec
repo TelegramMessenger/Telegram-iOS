@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name     = 'HockeySDK'
-  s.version  = '2.2.3'
+  s.version  = '2.2.4'
   s.license  = 'MIT'
   s.platform = :ios
   s.summary  = 'Distribute beta apps and collect crash reports with HockeyApp.'
