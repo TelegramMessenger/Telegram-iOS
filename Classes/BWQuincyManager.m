@@ -35,6 +35,9 @@
 #include <sys/sysctl.h>
 #include <inttypes.h> //needed for PRIx64 macro
 
+#define SDK_NAME @"HockeySDK"
+#define SDK_VERSION @"2.2.4"
+
 NSBundle *quincyBundle(void) {
   static NSBundle* bundle = nil;
   if (!bundle) {
@@ -606,11 +609,13 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
   
   if (self.appIdentifier) {
     request = [NSMutableURLRequest requestWithURL:
-      [NSURL URLWithString:[NSString stringWithFormat:@"%@api/2/apps/%@/crashes",
-                            self.submissionURL,
-                            [self.appIdentifier stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]
-                            ]
-       ]];
+               [NSURL URLWithString:[NSString stringWithFormat:@"%@api/2/apps/%@/crashes?sdk=%@&sdk_version=%@",
+                                     self.submissionURL,
+                                     [self.appIdentifier stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding],
+                                     SDK_NAME,
+                                     SDK_VERSION
+                                     ]
+                ]];
   } else {
     request = [NSMutableURLRequest requestWithURL:url];
   }

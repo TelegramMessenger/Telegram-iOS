@@ -40,6 +40,9 @@
 #define BETA_UPDATE_TIMESTAMP       @"timestamp"
 #define BETA_UPDATE_APPSIZE         @"appsize"
 
+#define SDK_NAME @"HockeySDK"
+#define SDK_VERSION @"2.2.4"
+
 @interface BWHockeyManager ()
 - (NSString *)getDevicePlatform_;
 - (id)parseJSONResultString:(NSString *)jsonString;
@@ -734,9 +737,11 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
 - (void)checkForAuthorization {
   NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@", [self encodedAppIdentifier_]];
   
-  [parameter appendFormat:@"?format=json&authorize=yes&app_version=%@&udid=%@",
+  [parameter appendFormat:@"?format=json&authorize=yes&app_version=%@&udid=%@&sdk=%@&sdk_version=%@",
    [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] bw_URLEncodedString],
-   ([self isAppStoreEnvironment] ? @"appstore" : [[self deviceIdentifier] bw_URLEncodedString])
+   ([self isAppStoreEnvironment] ? @"appstore" : [[self deviceIdentifier] bw_URLEncodedString]),
+   SDK_NAME,
+   SDK_VERSION
    ];
   
   // build request & send
