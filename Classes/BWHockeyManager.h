@@ -229,6 +229,9 @@ typedef enum {
 
 - (NSArray *)apps;
 
+// check if there is any newer version mandatory
+- (BOOL)hasNewerMandatoryVersion;
+
 @end
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

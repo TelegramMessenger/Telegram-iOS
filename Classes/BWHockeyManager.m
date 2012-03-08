@@ -539,7 +539,7 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
   if (isAppStoreEnvironment_) return;
   
   if (!updateAlertShowing_) {
-    if ([self.app.mandatory boolValue] ) {
+    if ([self hasNewerMandatoryVersion]) {
       UIAlertView *alertView = [[[UIAlertView alloc] initWithTitle:BWHockeyLocalize(@"HockeyUpdateAvailable")
                                                            message:[NSString stringWithFormat:BWHockeyLocalize(@"HockeyUpdateAlertMandatoryTextWithAppVersion"), [self.app nameAndVersionString]]
                                                           delegate:self
@@ -805,9 +805,8 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
 - (void)checkForUpdate {
   if (!updateURL_) return;
   if (self.requireAuthorization) return;
-  if (self.isUpdateAvailable && [self.app.mandatory boolValue]) {
+  if (self.isUpdateAvailable && [self hasNewerMandatoryVersion]) {
     [self showCheckForUpdateAlert_];
-    return;
   }
   [self checkForUpdateShowFeedback:NO];
 }
@@ -1054,7 +1053,7 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
         [alert release];
       }
       
-      if (self.isUpdateAvailable && (self.alwaysShowUpdateReminder || newVersionDiffersFromCachedVersion || [self.app.mandatory boolValue])) {
+      if (self.isUpdateAvailable && (self.alwaysShowUpdateReminder || newVersionDiffersFromCachedVersion || [self hasNewerMandatoryVersion])) {
         if (updateAvailable_ && !currentHockeyViewController_) {
           [self showCheckForUpdateAlert_];
         }
@@ -1067,6 +1066,21 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
   }
 }
 
+- (BOOL)hasNewerMandatoryVersion {
+  BOOL result = NO;
+  
+  for (BWApp *app in self.apps) {
+    if ([app.version isEqualToString:self.currentAppVersion]) {
+      break;
+    }
+    
+    if ([app.mandatory boolValue]) {
+      result = YES;
+    }
+  }
+  
+  return result;
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark -
