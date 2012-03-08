@@ -1077,7 +1077,7 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
   BOOL result = NO;
   
   for (BWApp *app in self.apps) {
-    if ([app.version isEqualToString:self.currentAppVersion]) {
+    if ([app.version isEqualToString:self.currentAppVersion] || [app.version versionCompare:self.currentAppVersion] == NSOrderedAscending) {
       break;
     }
     
