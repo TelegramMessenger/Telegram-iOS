@@ -63,6 +63,7 @@
 "HockeyNoUpdateNeededTitle" = "Kein Update Verfügbar";
 "HockeyNoUpdateNeededMessage" = "%@ ist bereits die aktuellste Version.";
 "HockeyUpdateAlertTextWithAppVersion" = "%@ ist verfügbar.";
+"HockeyUpdateAlertMandatoryTextWithAppVersion" = "%@ ist verfügbar und muss installiert werden!";
 "HockeyIgnore" = "Ignorieren";
 "HockeyShowUpdate" = "Anzeigen";
 "HockeyInstallUpdate" = "Installieren";
