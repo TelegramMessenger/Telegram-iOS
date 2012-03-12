@@ -64,6 +64,7 @@
 "HockeyNoUpdateNeededTitle" = "Ingen uppdatering tillgänglig";
 "HockeyNoUpdateNeededMessage" = "%@ är den senaste versionen.";
 "HockeyUpdateAlertTextWithAppVersion" = "%@ finns.";
+"HockeyUpdateAlertMandatoryTextWithAppVersion" = "%@ is available and is a mandatory update!";
 "HockeyIgnore" = "Ignorera";
 "HockeyShowUpdate" = "Visa";
 "HockeyInstallUpdate" = "Installera";
