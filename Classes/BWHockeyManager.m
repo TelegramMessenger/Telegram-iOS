@@ -219,7 +219,7 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
 }
 
 - (NSString *)currentUsageString {
-  double currentUsageTime = [(NSNumber *)[[NSUserDefaults standardUserDefaults] valueForKey:kUsageTimeOfCurrentVersion] doubleValue];
+  double currentUsageTime = [[NSUserDefaults standardUserDefaults] doubleForKey:kUsageTimeOfCurrentVersion];
   
   if (currentUsageTime > 0) {
     // round (up) to 1 minute
@@ -232,7 +232,12 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
 - (NSString *)installationDateString {
   NSDateFormatter *formatter = [[[NSDateFormatter alloc] init] autorelease];
   [formatter setDateFormat:@"MM/dd/yyyy"];
-  return [formatter stringFromDate:[NSDate dateWithTimeIntervalSinceReferenceDate:[(NSNumber *)[[NSUserDefaults standardUserDefaults] valueForKey:kDateOfVersionInstallation] doubleValue]]];
+  double installationTimeStamp = [[NSUserDefaults standardUserDefaults] doubleForKey:kDateOfVersionInstallation];
+  if (installationTimeStamp == 0.0f) {
+    return [formatter stringFromDate:[NSDate date]];
+  } else {
+    return [formatter stringFromDate:[NSDate dateWithTimeIntervalSinceReferenceDate:installationTimeStamp]];
+  }
 }
 
 - (NSString *)deviceIdentifier {
