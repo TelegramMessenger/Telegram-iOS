@@ -101,7 +101,8 @@
 }
 
 + (BOOL)checkJMCConfiguration:(NSDictionary *)configuration {
-  return (([[configuration valueForKey:@"enabled"] boolValue]) &&
+  return (([configuration isKindOfClass:[NSDictionary class]]) &&
+          ([[configuration valueForKey:@"enabled"] boolValue]) &&
           ([[configuration valueForKey:@"url"] length] > 0) &&
           ([[configuration valueForKey:@"key"] length] > 0) &&
           ([[configuration valueForKey:@"project"] length] > 0));
@@ -395,7 +396,7 @@
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
-  if ([object trackerConfig]) {
+  if (([object trackerConfig]) && ([[object trackerConfig] isKindOfClass:[NSDictionary class]])) {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     NSMutableDictionary *trackerConfig = [[defaults valueForKey:@"CNSTrackerConfigurations"] mutableCopy];
     if (!trackerConfig) {

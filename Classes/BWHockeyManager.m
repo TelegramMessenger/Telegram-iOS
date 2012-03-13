@@ -1003,7 +1003,7 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
     BWHockeyLog(@"Received API response: %@", responseString);
     
     id json = [self parseJSONResultString:responseString];
-    self.trackerConfig = ([self checkForTracker] ? [json valueForKey:@"tracker"] : nil);
+    self.trackerConfig = (([self checkForTracker] && [[json valueForKey:@"tracker"] isKindOfClass:[NSDictionary class]]) ? [json valueForKey:@"tracker"] : nil);
     
     if (![self isAppStoreEnvironment]) {
       NSArray *feedArray = (NSArray *)([self checkForTracker] ? [json valueForKey:@"versions"] : json);
