@@ -36,7 +36,7 @@
 #include <inttypes.h> //needed for PRIx64 macro
 
 #define SDK_NAME @"HockeySDK"
-#define SDK_VERSION @"2.2.4"
+#define SDK_VERSION @"2.2.6-develop"
 
 NSBundle *quincyBundle(void) {
   static NSBundle* bundle = nil;
