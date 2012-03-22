@@ -61,6 +61,8 @@
 }
 #endif
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wundeclared-selector"
 + (id)jmcInstance {
   id jmcClass = NSClassFromString(@"JMC");
   if ((jmcClass) && ([jmcClass respondsToSelector:@selector(sharedInstance)])) {
@@ -74,6 +76,7 @@
   
   return nil;
 }
+#pragma clang diagnostic pop
 
 + (BOOL)isJMCActive {
   id jmcInstance = [self jmcInstance];  
@@ -86,6 +89,8 @@
 
 #pragma mark - Private Class Methods
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wundeclared-selector"
 + (void)disableJMCCrashReporter {
   id jmcInstance = [self jmcInstance];
   id jmcOptions = [jmcInstance performSelector:@selector(options)];
@@ -99,6 +104,7 @@
   [invocation setArgument:&value atIndex:2];
   [invocation invoke];
 }
+#pragma clang diagnostic pop
 
 + (BOOL)checkJMCConfiguration:(NSDictionary *)configuration {
   return (([configuration isKindOfClass:[NSDictionary class]]) &&
@@ -108,6 +114,8 @@
           ([[configuration valueForKey:@"project"] length] > 0));
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wundeclared-selector"
 + (void)applyJMCConfiguration:(NSDictionary *)configuration {
   id jmcInstance = [self jmcInstance];
   SEL configureSelector = @selector(configureJiraConnect:projectKey:apiKey:);
@@ -124,6 +132,7 @@
   [invocation setArgument:&key atIndex:4];
   [invocation invoke];
 }
+#pragma clang diagnostic pop
 
 #pragma mark - Public Instance Methods (Configuration)
 
