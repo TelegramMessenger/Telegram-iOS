@@ -240,7 +240,7 @@ typedef enum {
 @protocol BWHockeyManagerDelegate <NSObject>
 
 
-#if HOCKEY_BLOCK_UDID == 0 || defined (CONFIGURATION_Debug1) || defined (CONFIGURATION_AdHoc) || defined (CONFIGURATION_Beta)
+#if HOCKEY_BLOCK_UDID == 0 || defined (CONFIGURATION_Debug) || defined (CONFIGURATION_AdHoc) || defined (CONFIGURATION_Beta)
 @optional
 #endif
 /*
