@@ -166,7 +166,8 @@ typedef enum CrashReportStatus {
   
   int _analyzerStarted;
   NSString *_crashesDir;
-	
+  NSFileManager *_fileManager;
+  
   BOOL _crashIdenticalCurrentVersion;
   BOOL _crashReportActivated;
   
