@@ -30,13 +30,11 @@
 #import <CrashReporter/CrashReporter.h>
 #import <SystemConfiguration/SystemConfiguration.h>
 #import <UIKit/UIKit.h>
+#import "BWGlobal.h"
 #import "BWQuincyManager.h"
 
 #include <sys/sysctl.h>
 #include <inttypes.h> //needed for PRIx64 macro
-
-#define SDK_NAME @"HockeySDK"
-#define SDK_VERSION @"2.2.6-develop"
 
 NSBundle *quincyBundle(void) {
   static NSBundle* bundle = nil;
@@ -87,7 +85,6 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
 @synthesize showAlwaysButton = _showAlwaysButton;
 @synthesize feedbackActivated = _feedbackActivated;
 @synthesize autoSubmitCrashReport = _autoSubmitCrashReport;
-@synthesize autoSubmitDeviceUDID = _autoSubmitDeviceUDID;
 @synthesize languageStyle = _languageStyle;
 @synthesize didCrashInLastSession = _didCrashInLastSession;
 @synthesize loggingEnabled = _loggingEnabled;
@@ -136,7 +133,6 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
     self.feedbackActivated = NO;
     self.showAlwaysButton = NO;
     self.autoSubmitCrashReport = NO;
-    self.autoSubmitDeviceUDID = NO;
     
     NSString *testValue = [[NSUserDefaults standardUserDefaults] stringForKey:kQuincyKitAnalyzerStarted];
     if (testValue) {
@@ -462,14 +458,6 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
   return platform;
 }
 
-- (NSString *)deviceIdentifier {
-  if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)]) {
-    return [[UIDevice currentDevice] performSelector:@selector(uniqueIdentifier)];
-  }
-  else {
-    return @"invalid";
-  }
-}
 
 - (void)_performSendingCrashReports {
   NSMutableDictionary *approvedCrashReports = [NSMutableDictionary dictionaryWithDictionary:[[NSUserDefaults standardUserDefaults] dictionaryForKey: kApprovedCrashReports]];
@@ -481,9 +469,7 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
   NSString *contact = @"";
   NSString *description = @"";
   
-  if (self.autoSubmitDeviceUDID && [[NSBundle mainBundle] pathForResource:@"embedded" ofType:@"mobileprovision"]) {
-    userid = [self deviceIdentifier];
-  } else if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashReportUserID)]) {
+  if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashReportUserID)]) {
     userid = [self.delegate crashReportUserID] ?: @"";
   }
 	

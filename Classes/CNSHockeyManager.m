@@ -206,14 +206,6 @@
   [[BWQuincyManager sharedQuincyManager] setAutoSubmitCrashReport:autoSubmitCrashReport];
 }
 
-- (BOOL)isAutoSubmitDeviceUDID {
-  return [[BWQuincyManager sharedQuincyManager] isAutoSubmitDeviceUDID];
-}
-
-- (void)setAutoSubmitDeviceUDID:(BOOL)autoSubmitDeviceUDID {
-  [[BWQuincyManager sharedQuincyManager] setAutoSubmitDeviceUDID:autoSubmitDeviceUDID];
-}
-
 - (BOOL)didCrashInLastSession {
   return [[BWQuincyManager sharedQuincyManager] didCrashInLastSession];
 }

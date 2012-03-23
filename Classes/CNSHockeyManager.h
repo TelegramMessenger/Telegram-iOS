@@ -123,13 +123,6 @@
 // Default: NO
 @property (nonatomic, assign, getter=isAutoSubmitCrashReport) BOOL autoSubmitCrashReport;
 
-// Submit the device's UDID in the field UserID if crashReportUserID is not
-// implemented (see CNSHockeyManagerDelegate); DO NOT USE THIS FOR LIVE
-// VERSION OF YOUR APP AS THIS VIOLATES THE USERS PRIVACY!
-//
-// Default: NO
-@property (nonatomic, assign, getter=isAutoSubmitDeviceUDID) BOOL autoSubmitDeviceUDID;
-
 // Send user data to HockeyApp when checking for a new version; works only 
 // for beta apps and should not be activated for live apps. User data includes
 // the device type, OS version, app version and device UDID.

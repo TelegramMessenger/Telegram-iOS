@@ -153,7 +153,6 @@ typedef enum CrashReportStatus {
   BOOL _showAlwaysButton;
   BOOL _feedbackActivated;
   BOOL _autoSubmitCrashReport;
-  BOOL _autoSubmitDeviceUDID;
   
   BOOL _didCrashInLastSession;
   
@@ -214,10 +213,6 @@ typedef enum CrashReportStatus {
 // if YES, the crash report will be submitted without asking the user
 // if NO, the user will be asked if the crash report can be submitted (default)
 @property (nonatomic, assign, getter=isAutoSubmitCrashReport) BOOL autoSubmitCrashReport;
-
-// if YES, the device UDID will be submitted as the user id, without the need to define it in the crashReportUserID delegate (meant for beta versions!)
-// if NO, the crashReportUserID delegate defines what to be sent as user id (default)
-@property (nonatomic, assign, getter=isAutoSubmitDeviceUDID) BOOL autoSubmitDeviceUDID;
 
 // will return if the last session crashed, to e.g. make sure a "rate my app" alert will not show up
 @property (nonatomic, readonly) BOOL didCrashInLastSession;

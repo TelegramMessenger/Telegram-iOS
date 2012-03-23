@@ -40,9 +40,6 @@
 #define BETA_UPDATE_TIMESTAMP       @"timestamp"
 #define BETA_UPDATE_APPSIZE         @"appsize"
 
-#define SDK_NAME @"HockeySDK"
-#define SDK_VERSION @"2.2.4"
-
 @interface BWHockeyManager ()
 - (NSString *)getDevicePlatform_;
 - (id)parseJSONResultString:(NSString *)jsonString;
@@ -241,12 +238,12 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
 }
 
 - (NSString *)deviceIdentifier {
-  if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)]) {
+#if DONT_SEND_UDID == 0
+  if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)])
     return [[UIDevice currentDevice] performSelector:@selector(uniqueIdentifier)];
-  }
-  else {
-    return @"invalid";
-  }
+#endif
+    
+  return @"invalid";
 }
 
 - (NSString *)authenticationToken {
