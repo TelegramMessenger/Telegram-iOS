@@ -28,8 +28,8 @@
 #define SDK_NAME @"HockeySDK"
 #define SDK_VERSION @"2.2.6-develop"
 
-#ifndef DONT_SEND_UDID
-#define DONT_SEND_UDID 0
+#ifndef HOCKEY_BLOCK_UDID
+#define HOCKEY_BLOCK_UDID 1
 #endif
 
 // uncomment this line to enable NSLog-debugging output

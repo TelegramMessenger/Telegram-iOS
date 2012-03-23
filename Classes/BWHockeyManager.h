@@ -25,6 +25,8 @@
 
 #import <UIKit/UIKit.h>
 #import "BWHockeyViewController.h"
+#import "BWGlobal.h"
+
 
 typedef enum {
 	HockeyComparisonResultDifferent,
@@ -236,6 +238,24 @@ typedef enum {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 @protocol BWHockeyManagerDelegate <NSObject>
+
+
+#if HOCKEY_BLOCK_UDID == 0 || defined (CONFIGURATION_Debug1) || defined (CONFIGURATION_AdHoc) || defined (CONFIGURATION_Beta)
+@optional
+#endif
+/*
+ Return the device UDID which is required for beta testing, should return nil for app store configuration!
+ The default implementation would be like:
+
+ #ifndef (CONFIGURATION_AppStore)
+   if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)])
+     return [[UIDevice currentDevice] performSelector:@selector(uniqueIdentifier)];
+ #endif
+ return nil;
+ 
+ */
+- (NSString *)customDeviceIdentifier;
+
 @optional
 
 // Invoked when the internet connection is started, to let the app enable the activity indicator
