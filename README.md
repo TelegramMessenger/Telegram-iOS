@@ -72,7 +72,7 @@ Drag & drop the HockeySDK folder from your project directory to your Xcode proje
 
 2. Add the following line at the top of the file below your own #import statements:<pre><code>#import "CNSHockeyManager.h"</code></pre>
 
-3. Let the AppDelegate implement the protocol CNSHockeyManagerDelegate:<pre><code>@interface AppDelegate : UIResponder <CNSHockeyManagerDelegate, UIApplicationDelegate>
+3. Let the AppDelegate implement the protocol CNSHockeyManagerDelegate:<pre><code>@interface AppDelegate : UIResponder &lt;CNSHockeyManagerDelegate, UIApplicationDelegate>
 </code></pre>
 
 4. Search for the method application:didFinishLaunchingWithOptions:
@@ -88,11 +88,12 @@ Drag & drop the HockeySDK folder from your project directory to your Xcode proje
 8. Replace LIVE_IDENTIFIER with the app identifier of your release app.
 
 9. Add the following method:<pre><code>-(NSString *)customDeviceIdentifier {
-#ifdef BETA_BUILD
-  if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)])
-    return [[UIDevice currentDevice] performSelector:@selector(uniqueIdentifier)];
-#endif
-  return nil;
+\#ifdef BETA_BUILD
+      if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)])
+        return [[UIDevice currentDevice] performSelector:@selector(uniqueIdentifier)];
+\#endif
+
+      return nil;
 }</code></pre>This assumes that the precompiler macro BETA_BUILD is set for your ad-hoc builds, but not for store builds.
 
 10. If you have added the lines to the method application:didFinishLaunchingWithOptions:, you should be ready to go. If you do some GCD magic or added the lines at a different place, please make sure to invoke the above code on the main thread. 
