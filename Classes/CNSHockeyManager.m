@@ -361,13 +361,13 @@
 
 - (void)configureQuincyManager {
   [[BWQuincyManager sharedQuincyManager] setAppIdentifier:appIdentifier];
-  [[BWQuincyManager sharedQuincyManager] setDelegate:delegate];
+  [[BWQuincyManager sharedQuincyManager] setDelegate:(id)delegate];
 }
 
 - (void)configureHockeyManager {
   [[BWHockeyManager sharedHockeyManager] setAppIdentifier:appIdentifier];
   [[BWHockeyManager sharedHockeyManager] setCheckForTracker:YES];
-  [[BWHockeyManager sharedHockeyManager] setDelegate:delegate];
+  [[BWHockeyManager sharedHockeyManager] setDelegate:(id)delegate];
 
   // Only if JMC is part of the project
   if ([[self class] isJMCPresent]) {

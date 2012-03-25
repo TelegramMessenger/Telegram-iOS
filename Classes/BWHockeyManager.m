@@ -237,11 +237,6 @@ static NSString *kHockeyErrorDomain = @"HockeyErrorDomain";
 }
 
 - (NSString *)deviceIdentifier {
-#if HOCKEY_BLOCK_UDID == 0 || defined (CONFIGRATION_Debug1) || defined (CONFIGRATION_AdHoc) || defined (CONFIGURATION_Beta)
-  if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)])
-    return [[UIDevice currentDevice] performSelector:@selector(uniqueIdentifier)];
-#endif
-  
   if ([delegate_ respondsToSelector:@selector(customDeviceIdentifier)]) {
     NSString *identifier = [delegate_ performSelector:@selector(customDeviceIdentifier)];
     if (identifier && [identifier length] > 0) {

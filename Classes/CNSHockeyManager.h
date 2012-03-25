@@ -25,16 +25,13 @@
 
 @protocol CNSHockeyManagerDelegate <NSObject>
 
-#if HOCKEY_BLOCK_UDID == 0 || defined (CONFIGURATION_Debug) || defined (CONFIGURATION_AdHoc) || defined (CONFIGURATION_Beta)
-@optional
-#endif
 /*
  Return the device UDID which is required for beta testing, should return nil for app store configuration!
- The default implementation would be like:
+ Example implementation if your configuration for the App Store is called "AppStore":
  
  #ifndef (CONFIGURATION_AppStore)
-   if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)])
-     return [[UIDevice currentDevice] performSelector:@selector(uniqueIdentifier)];
+ if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)])
+ return [[UIDevice currentDevice] performSelector:@selector(uniqueIdentifier)];
  #endif
  return nil;
  
@@ -103,7 +100,7 @@
 
 @interface CNSHockeyManager : NSObject {
 @private
-  id delegate;
+  id<CNSHockeyManagerDelegate> delegate;
   NSString *appIdentifier;
 }
 
@@ -224,11 +221,11 @@
 
 // Configure HockeyApp with a single app identifier and delegate; use this
 // only for debug or beta versions of your app!
-- (void)configureWithIdentifier:(NSString *)appIdentifier delegate:(id)delegate;
+- (void)configureWithIdentifier:(NSString *)appIdentifier delegate:(id<CNSHockeyManagerDelegate>)delegate;
 
 // Configure HockeyApp with different app identifiers for beta and live versions
 // of the app; the update alert will only be shown for the beta identifier
-- (void)configureWithBetaIdentifier:(NSString *)betaIdentifier liveIdentifier:(NSString *)liveIdentifier delegate:(id)delegate;
+- (void)configureWithBetaIdentifier:(NSString *)betaIdentifier liveIdentifier:(NSString *)liveIdentifier delegate:(id<CNSHockeyManagerDelegate>)delegate;
 
 // Returns true if the app crashes in the last session
 - (BOOL)didCrashInLastSession;
