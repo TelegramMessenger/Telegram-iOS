@@ -68,21 +68,34 @@ Drag & drop the HockeySDK folder from your project directory to your Xcode proje
 
 ## Modify Source Code
 
-1. Open your AppDelegate.m file.
+1. Open your AppDelegate.h file.
 
 2. Add the following line at the top of the file below your own #import statements:<pre><code>#import "CNSHockeyManager.h"</code></pre>
 
-3. Search for the method application:didFinishLaunchingWithOptions:
+3. Let the AppDelegate implement the protocol CNSHockeyManagerDelegate:<pre><code>@interface AppDelegate : UIResponder &lt;CNSHockeyManagerDelegate, UIApplicationDelegate>
+</code></pre>
 
-4. Add the following lines:<pre><code>[[CNSHockeyManager sharedHockeyManager] configureWithBetaIdentifier:@"BETA_IDENTIFIER" 
+4. Search for the method application:didFinishLaunchingWithOptions:
+
+5. Open your AppDelegate.m file.
+
+6. Add the following lines:<pre><code>[[CNSHockeyManager sharedHockeyManager] configureWithBetaIdentifier:@"BETA_IDENTIFIER" 
                                                          liveIdentifier:@"LIVE_IDENTIFIER"
-                                                               delegate:nil];</code></pre>
+                                                               delegate:self];</code></pre>
     
-5. Replace BETA_IDENTIFIER with the app identifier of your beta app. If you don't know what the app identifier is or how to find it, please read [this how-to](http://support.hockeyapp.net/kb/how-tos/how-to-find-the-app-identifier). 
+7. Replace BETA_IDENTIFIER with the app identifier of your beta app. If you don't know what the app identifier is or how to find it, please read [this how-to](http://support.hockeyapp.net/kb/how-tos/how-to-find-the-app-identifier). 
 
-6. Replace LIVE_IDENTIFIER with the app identifier of your release app.
+8. Replace LIVE_IDENTIFIER with the app identifier of your release app.
 
-7. If you have added the lines to the method application:didFinishLaunchingWithOptions:, you should be ready to go. If you do some GCD magic or added the lines at a different place, please make sure to invoke the above code on the main thread. 
+9. Add the following method:<pre><code>-(NSString *)customDeviceIdentifier {
+\#ifdef BETA_BUILD
+      if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)])
+        return [[UIDevice currentDevice] performSelector:@selector(uniqueIdentifier)];
+\#endif
+      return nil;
+}</code></pre>This assumes that the precompiler macro BETA_BUILD is set for your ad-hoc builds, but not for store builds.
+
+10. If you have added the lines to the method application:didFinishLaunchingWithOptions:, you should be ready to go. If you do some GCD magic or added the lines at a different place, please make sure to invoke the above code on the main thread. 
 
 ## Optional Delegate Methods
 
