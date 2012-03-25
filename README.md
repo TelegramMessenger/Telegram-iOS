@@ -92,7 +92,6 @@ Drag & drop the HockeySDK folder from your project directory to your Xcode proje
       if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)])
         return [[UIDevice currentDevice] performSelector:@selector(uniqueIdentifier)];
 \#endif
-
       return nil;
 }</code></pre>This assumes that the precompiler macro BETA_BUILD is set for your ad-hoc builds, but not for store builds.
 
