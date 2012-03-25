@@ -26,7 +26,7 @@
 #import "BWApp.h"
 
 #define SDK_NAME @"HockeySDK"
-#define SDK_VERSION @"2.2.6-develop"
+#define SDK_VERSION @"2.2.6"
 
 #ifndef HOCKEY_BLOCK_UDID
 #define HOCKEY_BLOCK_UDID 1
