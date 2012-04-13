@@ -661,9 +661,6 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
 }
 
 - (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error {
-  [_responseData release];
-  _responseData = nil;
-	
   if (self.delegate != nil && [self.delegate respondsToSelector:@selector(connectionClosed)]) {
     [self.delegate connectionClosed];
   }
@@ -671,6 +668,11 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
   BWQuincyLog(@"ERROR: %@", [error localizedDescription]);
   
   _sendingInProgress = NO;
+	
+  [_responseData release];
+  _responseData = nil;	
+  [_urlConnection release];
+  _urlConnection = nil;
 }
 
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection {
@@ -732,14 +734,16 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
     }
   }
 	
-  [_responseData release];
-  _responseData = nil;
-	
   if (self.delegate != nil && [self.delegate respondsToSelector:@selector(connectionClosed)]) {
     [self.delegate connectionClosed];
   }
   
   _sendingInProgress = NO;
+	
+  [_responseData release];
+  _responseData = nil;	
+  [_urlConnection release];
+  _urlConnection = nil;
 }
 
 #pragma mark PLCrashReporter
