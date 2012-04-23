@@ -131,6 +131,10 @@
   [invocation setArgument:&project atIndex:3];
   [invocation setArgument:&key atIndex:4];
   [invocation invoke];
+  
+  if ([jmcInstance respondsToSelector:@selector(ping)]) {
+    [jmcInstance performSelector:@selector(ping)];
+  }
 }
 #pragma clang diagnostic pop
 
