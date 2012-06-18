@@ -82,7 +82,7 @@ body { font: 13px 'Helvetica Neue', Helvetica; word-wrap:break-word; padding:8px
     else
       webView_.frame = webViewRect;
     
-    NSString *deviceWidth = UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad ? [NSString stringWithFormat:@"%d", CGRectGetWidth(self.bounds)] : @"device-width";
+    NSString *deviceWidth = UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad ? [NSString stringWithFormat:@"%.0f", CGRectGetWidth(self.bounds)] : @"device-width";
     //BWHockeyLog(@"%@\n%@\%@", PSWebTableViewCellHtmlTemplate, deviceWidth, self.webViewContent);
     NSString *contentHtml = [NSString stringWithFormat:PSWebTableViewCellHtmlTemplate, deviceWidth, self.webViewContent];
     [webView_ loadHTMLString:contentHtml baseURL:nil];
