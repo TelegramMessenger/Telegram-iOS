@@ -464,6 +464,24 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
 #pragma mark Private
 
 
+- (NSString *) extractAppUUIDs:(PLCrashReport *)report {  
+  NSMutableString *uuidString = [NSMutableString string];
+  NSArray *uuidArray = [CNSCrashReportTextFormatter arrayOfAppUUIDsForCrashReport:report];
+  
+  for (NSDictionary *element in uuidArray) {
+    if ([element objectForKey:kCNSBinaryImageKeyUUID] && [element objectForKey:kCNSBinaryImageKeyArch] && [element objectForKey:kCNSBinaryImageKeyUUID]) {
+      [uuidString appendFormat:@"<uuid type=\"%@\" arch=\"%@\">%@</uuid>",
+       [element objectForKey:kCNSBinaryImageKeyType],
+       [element objectForKey:kCNSBinaryImageKeyArch],
+       [element objectForKey:kCNSBinaryImageKeyUUID]
+       ];
+    }
+  }
+  
+  return uuidString;
+}
+
+
 - (NSString *)_getDevicePlatform {
   size_t size = 0;
   sysctlbyname("hw.machine", NULL, &size, NULL, 0);
@@ -522,8 +540,9 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
         crashes = [NSMutableString string];
       }
       
-      [crashes appendFormat:@"<crash><applicationname>%s</applicationname><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><contact>%@</contact><description><![CDATA[%@]]></description></crash>",
+      [crashes appendFormat:@"<crash><applicationname>%s</applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><contact>%@</contact><description><![CDATA[%@]]></description></crash>",
        [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleExecutable"] UTF8String],
+       [self extractAppUUIDs:report],
        report.applicationInfo.applicationIdentifier,
        report.systemInfo.operatingSystemVersion,
        [self _getDevicePlatform],
