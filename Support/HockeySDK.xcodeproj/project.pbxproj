@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		1E322DAD148FCE2100077977 /* CNSFixCategoryBug.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E322DAC148FCE2100077977 /* CNSFixCategoryBug.h */; };
 		1E40BCB515A3487500BD64D9 /* BWQuincyManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E40BCB415A3487500BD64D9 /* BWQuincyManagerDelegate.h */; };
+		1E40BCB915A3494400BD64D9 /* CNSCrashReportTextFormatter.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E40BCB715A3494400BD64D9 /* CNSCrashReportTextFormatter.h */; };
+		1E40BCBA15A3494400BD64D9 /* CNSCrashReportTextFormatter.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E40BCB815A3494400BD64D9 /* CNSCrashReportTextFormatter.m */; };
 		E400561E148D79B500EB22B9 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E400561D148D79B500EB22B9 /* Foundation.framework */; };
 		E41EB471148D7BF50015DEDC /* BWApp.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB459148D7BF50015DEDC /* BWApp.h */; };
 		E41EB472148D7BF50015DEDC /* BWApp.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB45A148D7BF50015DEDC /* BWApp.m */; };
@@ -40,6 +42,8 @@
 /* Begin PBXFileReference section */
 		1E322DAC148FCE2100077977 /* CNSFixCategoryBug.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CNSFixCategoryBug.h; sourceTree = "<group>"; };
 		1E40BCB415A3487500BD64D9 /* BWQuincyManagerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BWQuincyManagerDelegate.h; sourceTree = "<group>"; };
+		1E40BCB715A3494400BD64D9 /* CNSCrashReportTextFormatter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CNSCrashReportTextFormatter.h; sourceTree = "<group>"; };
+		1E40BCB815A3494400BD64D9 /* CNSCrashReportTextFormatter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CNSCrashReportTextFormatter.m; sourceTree = "<group>"; };
 		E400561A148D79B500EB22B9 /* libHockeySDK.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libHockeySDK.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		E400561D148D79B500EB22B9 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		E400562B148D79B500EB22B9 /* SenTestingKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SenTestingKit.framework; path = Library/Frameworks/SenTestingKit.framework; sourceTree = DEVELOPER_DIR; };
@@ -146,6 +150,8 @@
 				E41EB463148D7BF50015DEDC /* BWQuincyManager.h */,
 				E41EB464148D7BF50015DEDC /* BWQuincyManager.m */,
 				1E40BCB415A3487500BD64D9 /* BWQuincyManagerDelegate.h */,
+				1E40BCB715A3494400BD64D9 /* CNSCrashReportTextFormatter.h */,
+				1E40BCB815A3494400BD64D9 /* CNSCrashReportTextFormatter.m */,
 				E41EB465148D7BF50015DEDC /* CNSHockeyManager.h */,
 				E41EB466148D7BF50015DEDC /* CNSHockeyManager.m */,
 			);
@@ -200,6 +206,7 @@
 				E41EB487148D7BF50015DEDC /* UIImage+HockeyAdditions.h in Headers */,
 				1E322DAD148FCE2100077977 /* CNSFixCategoryBug.h in Headers */,
 				1E40BCB515A3487500BD64D9 /* BWQuincyManagerDelegate.h in Headers */,
+				1E40BCB915A3494400BD64D9 /* CNSCrashReportTextFormatter.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -265,6 +272,7 @@
 				E41EB484148D7BF50015DEDC /* PSStoreButton.m in Sources */,
 				E41EB486148D7BF50015DEDC /* PSWebTableViewCell.m in Sources */,
 				E41EB488148D7BF50015DEDC /* UIImage+HockeyAdditions.m in Sources */,
+				1E40BCBA15A3494400BD64D9 /* CNSCrashReportTextFormatter.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

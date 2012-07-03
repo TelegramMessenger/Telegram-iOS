@@ -32,6 +32,7 @@
 #import <UIKit/UIKit.h>
 #import "BWGlobal.h"
 #import "BWQuincyManager.h"
+#import "CNSCrashReportTextFormatter.h"
 
 #include <sys/sysctl.h>
 #include <inttypes.h> //needed for PRIx64 macro
@@ -511,7 +512,7 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
       }
       
       NSString *crashUUID = report.reportInfo.reportGUID ?: @"";
-      NSString *crashLogString = [PLCrashReportTextFormatter stringValueForCrashReport:report withTextFormat:PLCrashReportTextFormatiOS];
+      NSString *crashLogString = [CNSCrashReportTextFormatter stringValueForCrashReport:report withTextFormat:PLCrashReportTextFormatiOS];
       
       if ([report.applicationInfo.applicationVersion compare:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]] == NSOrderedSame) {
         _crashIdenticalCurrentVersion = YES;
