@@ -604,12 +604,19 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
   NSString *boundary = @"----FOO";
   
   if (self.appIdentifier) {
+    NSString *feedbackEnabled = @"&feedbackEnabled=no";
+    
+    if ([self isFeedbackActivated]) {
+      feedbackEnabled = @"&feedbackEnabled=yes";
+    }
+    
     request = [NSMutableURLRequest requestWithURL:
-               [NSURL URLWithString:[NSString stringWithFormat:@"%@api/2/apps/%@/crashes?sdk=%@&sdk_version=%@",
+               [NSURL URLWithString:[NSString stringWithFormat:@"%@api/2/apps/%@/crashes?sdk=%@&sdk_version=%@%@",
                                      self.submissionURL,
                                      [self.appIdentifier stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding],
                                      SDK_NAME,
-                                     SDK_VERSION
+                                     SDK_VERSION,
+                                     feedbackEnabled
                                      ]
                 ]];
   } else {
