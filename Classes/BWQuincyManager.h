@@ -142,6 +142,15 @@ typedef enum CrashReportStatus {
 // Invoked after the user did choose to send crashes always in the alert 
 -(void) userDidChooseSendAlways;
 
+// Invoked right before sending crash reports to the server succeeded
+-(void) sendingCrashReportsDidStart;
+
+// Invoked after sending crash reports to the server failed
+-(void) sendingCrashReportsDidFailWithError:(NSError *)error;
+
+// Invoked after sending crash reports to the server succeeded
+-(void) sendingCrashReportsDidFinish;
+
 @end
 
 @interface BWQuincyManager : NSObject <NSXMLParserDelegate> {

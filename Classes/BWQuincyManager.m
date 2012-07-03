@@ -36,6 +36,15 @@
 #include <sys/sysctl.h>
 #include <inttypes.h> //needed for PRIx64 macro
 
+// hockey api error domain
+typedef enum {
+  QuincyErrorUnknown,
+  QuincyAPIAppVersionRejected,
+  QuincyAPIReceivedEmptyResponse,
+  QuincyAPIErrorWithStatusCode
+} HockeyErrorReason;
+static NSString *kQuincyErrorDomain = @"QuincyErrorDomain";
+
 NSBundle *quincyBundle(void) {
   static NSBundle* bundle = nil;
   if (!bundle) {
@@ -634,16 +643,20 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
   //Release when done in the delegate method
   _responseData = [[NSMutableData alloc] init];
 	
-  if (self.delegate != nil && [self.delegate respondsToSelector:@selector(connectionOpened)]) {
-    [self.delegate connectionOpened];
-  }
-	
   _urlConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
   
   if (!_urlConnection) {
     BWQuincyLog(@"Sending crash reports could not start!");
     _sendingInProgress = NO;
   } else {
+    if (self.delegate != nil && [self.delegate respondsToSelector:@selector(connectionOpened)]) {
+      [self.delegate connectionOpened];
+    }
+    
+    if (self.delegate != nil && [self.delegate respondsToSelector:@selector(sendingCrashReportsDidStart)]) {
+      [self.delegate sendingCrashReportsDidStart];
+    }
+    
     BWQuincyLog(@"Sending crash reports started.");
   }
 }
@@ -665,6 +678,10 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
     [self.delegate connectionClosed];
   }
   
+  if (self.delegate != nil && [self.delegate respondsToSelector:@selector(sendingCrashReportsDidFailWithError:)]) {
+    [self.delegate sendingCrashReportsDidFailWithError:error];
+  }
+  
   BWQuincyLog(@"ERROR: %@", [error localizedDescription]);
   
   _sendingInProgress = NO;
@@ -676,6 +693,8 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
 }
 
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection {
+  NSError *error = nil;
+  
   if (_statusCode >= 200 && _statusCode < 400 && _responseData != nil && [_responseData length] > 0) {
     [self _cleanCrashReports];
     
@@ -721,17 +740,37 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
         }
       } else {
         [self showCrashStatusMessage];
+        
+        if (self.delegate != nil && [self.delegate respondsToSelector:@selector(sendingCrashReportsDidFinish)]) {
+          [self.delegate sendingCrashReportsDidFinish];
+        }
+        
       }
     }
   } else if (_statusCode == 400 && self.appIdentifier) {
     [self _cleanCrashReports];
-    BWQuincyLog(@"ERROR: The server rejected receiving crash reports for this app version!");
+    
+    error = [NSError errorWithDomain:kQuincyErrorDomain
+                                code:QuincyAPIAppVersionRejected
+                            userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"The server rejected receiving crash reports for this app version!", NSLocalizedDescriptionKey, nil]];
+    
+    if (self.delegate != nil && [self.delegate respondsToSelector:@selector(sendingCrashReportsDidFailWithError:)]) {
+      [self.delegate sendingCrashReportsDidFailWithError:error];
+    }
+    
+    BWQuincyLog(@"ERROR: %@", [error localizedDescription]);
   } else {
     if (_responseData == nil || [_responseData length] == 0) {
-      BWQuincyLog(@"ERROR: Sending failed with an empty response!");
+      error = [NSError errorWithDomain:kQuincyErrorDomain
+                                  code:QuincyAPIReceivedEmptyResponse
+                              userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Sending failed with an empty response!", NSLocalizedDescriptionKey, nil]];
     } else {
-      BWQuincyLog(@"ERROR: Sending failed with status code: %i", _statusCode);
+      error = [NSError errorWithDomain:kQuincyErrorDomain
+                                  code:QuincyAPIErrorWithStatusCode
+                              userInfo:[NSDictionary dictionaryWithObjectsAndKeys:[NSString stringWithFormat:@"Sending failed with status code: %i", _statusCode], NSLocalizedDescriptionKey, nil]];
     }
+    
+    BWQuincyLog(@"ERROR: %@", [error localizedDescription]);
   }
 	
   if (self.delegate != nil && [self.delegate respondsToSelector:@selector(connectionClosed)]) {
