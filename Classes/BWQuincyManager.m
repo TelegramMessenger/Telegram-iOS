@@ -510,6 +510,7 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
         continue;
       }
       
+      NSString *crashUUID = report.reportInfo.reportGUID ?: @"";
       NSString *crashLogString = [PLCrashReportTextFormatter stringValueForCrashReport:report withTextFormat:PLCrashReportTextFormatiOS];
       
       if ([report.applicationInfo.applicationVersion compare:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]] == NSOrderedSame) {
@@ -520,13 +521,14 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
         crashes = [NSMutableString string];
       }
       
-      [crashes appendFormat:@"<crash><applicationname>%s</applicationname><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><log><![CDATA[%@]]></log><userid>%@</userid><contact>%@</contact><description><![CDATA[%@]]></description></crash>",
+      [crashes appendFormat:@"<crash><applicationname>%s</applicationname><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><contact>%@</contact><description><![CDATA[%@]]></description></crash>",
        [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleExecutable"] UTF8String],
        report.applicationInfo.applicationIdentifier,
        report.systemInfo.operatingSystemVersion,
        [self _getDevicePlatform],
        [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"],
        report.applicationInfo.applicationVersion,
+       crashUUID,
        [crashLogString stringByReplacingOccurrencesOfString:@"]]>" withString:@"]]" @"]]><![CDATA[" @">" options:NSLiteralSearch range:NSMakeRange(0,crashLogString.length)],
        userid,
        contact,
