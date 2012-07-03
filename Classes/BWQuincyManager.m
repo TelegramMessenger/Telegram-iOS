@@ -98,6 +98,7 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
 @synthesize autoSubmitCrashReport = _autoSubmitCrashReport;
 @synthesize languageStyle = _languageStyle;
 @synthesize didCrashInLastSession = _didCrashInLastSession;
+@synthesize timeintervalCrashInLastSessionOccured = _timeintervalCrashInLastSessionOccured;
 @synthesize loggingEnabled = _loggingEnabled;
 
 @synthesize appIdentifier = _appIdentifier;
@@ -140,6 +141,7 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
     _sendingInProgress = NO;
     _languageStyle = nil;
     _didCrashInLastSession = NO;
+    _timeintervalCrashInLastSessionOccured = -1;
     _loggingEnabled = NO;
     _fileManager = [[NSFileManager alloc] init];
     
@@ -817,6 +819,13 @@ NSString *BWQuincyLocalize(NSString *stringToken) {
       NSLog(@"Could not load crash report: %@", error);
     } else {
       [_crashData writeToFile:[_crashesDir stringByAppendingPathComponent: cacheFilename] atomically:YES];
+      
+      // get the startup timestamp from the crash report, and the file timestamp to calculate the timeinterval when the crash happened after startup
+      PLCrashReport *report = [[[PLCrashReport alloc] initWithData:_crashData error:&error] autorelease];
+      
+      if (report.systemInfo.timestamp && report.applicationInfo.applicationStartupTimestamp) {
+        _timeintervalCrashInLastSessionOccured = [report.systemInfo.timestamp timeIntervalSinceDate:report.applicationInfo.applicationStartupTimestamp];
+      }
     }
   }
 	

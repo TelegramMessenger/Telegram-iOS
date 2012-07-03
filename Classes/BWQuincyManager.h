@@ -164,6 +164,7 @@ typedef enum CrashReportStatus {
   BOOL _autoSubmitCrashReport;
   
   BOOL _didCrashInLastSession;
+  NSTimeInterval _timeintervalCrashInLastSessionOccured;
   
   NSString *_appIdentifier;
   
@@ -224,8 +225,11 @@ typedef enum CrashReportStatus {
 // if NO, the user will be asked if the crash report can be submitted (default)
 @property (nonatomic, assign, getter=isAutoSubmitCrashReport) BOOL autoSubmitCrashReport;
 
-// will return if the last session crashed, to e.g. make sure a "rate my app" alert will not show up
+// will return YES if the last session crashed, to e.g. make sure a "rate my app" alert will not show up
 @property (nonatomic, readonly) BOOL didCrashInLastSession;
+
+// will return the timeinterval from startup to the crash in seconds, default is -1
+@property (nonatomic, readonly) NSTimeInterval timeintervalCrashInLastSessionOccured;
 
 // If you want to use HockeyApp instead of your own server, this is required
 @property (nonatomic, retain) NSString *appIdentifier;
