@@ -35,6 +35,7 @@
 #import "PLCrashReportThreadInfo.h"
 #import "PLCrashReportBinaryImageInfo.h"
 #import "PLCrashReportExceptionInfo.h"
+#import "PLCrashReportReportInfo.h"
 
 /** 
  * @ingroup constants
@@ -78,6 +79,9 @@ typedef struct _PLCrashReportDecoder _PLCrashReportDecoder;
 @private
     /** Private implementation variables (used to hide the underlying protobuf parser) */
     _PLCrashReportDecoder *_decoder;
+    
+    /** Report info (may be nil) */
+    PLCrashReportReportInfo *_reportInfo;
 
     /** System info */
     PLCrashReportSystemInfo *_systemInfo;
@@ -91,7 +95,7 @@ typedef struct _PLCrashReportDecoder _PLCrashReportDecoder;
     /** Process info */
     PLCrashReportProcessInfo *_processInfo;
 
-    /** Signal info */
+    /** Signal info (may be nil) */
     PLCrashReportSignalInfo *_signalInfo;
 
     /** Thread info (PLCrashReportThreadInfo instances) */
@@ -165,5 +169,15 @@ typedef struct _PLCrashReportDecoder _PLCrashReportDecoder;
  * otherwise nil.
  */
 @property(nonatomic, readonly) PLCrashReportExceptionInfo *exceptionInfo;
+
+/**
+ * YES if report information is available.
+ */
+@property(nonatomic, readonly) BOOL hasReportInfo;
+
+/**
+ * Crash report information.
+ */
+@property(nonatomic, readonly) PLCrashReportReportInfo *reportInfo;
 
 @end

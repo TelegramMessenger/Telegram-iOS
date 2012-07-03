@@ -32,14 +32,30 @@
 @private
     /** Frame instruction pointer. */
     uint64_t _instructionPointer;
+    
+    /** Symbol start address, if any. */
+    uint64_t _symbolStart;
+    
+    /** Symbol name, if any. */
+    NSString *_symbolName;
 }
 
-- (id) initWithInstructionPointer: (uint64_t) instructionPointer;
+- (id) initWithInstructionPointer: (uint64_t) instructionPointer symbolStart: (uint64_t) symbolStart symbolName: (NSString *) symbolName;
 
 /**
  * Frame's instruction pointer.
  */
 @property(nonatomic, readonly) uint64_t instructionPointer;
+
+/**
+ * Frame's symbol address, if determined, otherwise 0.
+ */
+@property(nonatomic, readonly) uint64_t symbolStart;
+
+/** 
+ * Frame's symbol name, if determined, otherwise 0.
+ */
+@property(nonatomic, readonly) NSString *symbolName;
 
 @end
 
