@@ -95,7 +95,7 @@ typedef struct _PLCrashReportDecoder _PLCrashReportDecoder;
     /** Process info */
     PLCrashReportProcessInfo *_processInfo;
 
-    /** Signal info (may be nil) */
+    /** Signal info */
     PLCrashReportSignalInfo *_signalInfo;
 
     /** Thread info (PLCrashReportThreadInfo instances) */

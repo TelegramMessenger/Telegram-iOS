@@ -225,5 +225,5 @@ typedef enum {
  * Most notably, the Objective-C runtime itself is not async-safe, and Objective-C may not be used within a signal
  * handler.
  *
- * @sa PLCrashReporter::setReporterCallbacks:
+ * @sa PLCrashReporter::setCrashCallbacks:
  */
