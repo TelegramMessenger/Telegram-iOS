@@ -68,6 +68,8 @@ typedef enum {
   BOOL _lastCheckFailed;
   
   BOOL _isAppStoreEnvironment;
+  
+  NSString *_uuid;
 }
 
 

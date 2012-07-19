@@ -30,6 +30,7 @@
 
 #import <Foundation/Foundation.h>
 #import <sys/sysctl.h>
+#import <mach-o/ldsyms.h>
 #import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
 
@@ -139,6 +140,25 @@
   return platform;
 }
 
+- (NSString *)executableUUID {
+  const uint8_t *command = (const uint8_t *)(&_mh_execute_header + 1);
+  for (uint32_t idx = 0; idx < _mh_execute_header.ncmds; ++idx) {
+    const struct load_command *load_command = (const struct load_command *)command;
+    if (load_command->cmd == LC_UUID) {
+      const struct uuid_command *uuid_command = (const struct uuid_command *)command;
+      const uint8_t *uuid = uuid_command->uuid;
+      return [[NSString stringWithFormat:@"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+               uuid[0], uuid[1], uuid[2], uuid[3],
+               uuid[4], uuid[5], uuid[6], uuid[7],
+               uuid[8], uuid[9], uuid[10], uuid[11],
+               uuid[12], uuid[13], uuid[14], uuid[15]]
+              lowercaseString];
+    } else {
+      command += load_command->cmdsize;
+    }
+  }
+  return nil;
+}
 
 - (void)startUsage {
   self.usageStartTimestamp = [NSDate date];
@@ -321,7 +341,8 @@
     _requireAuthorization = NO;
     _authenticationSecret = nil;
     _lastCheck = nil;
-        
+    _uuid = [self executableUUID];
+    
     // set defaults
     self.showDirectInstallOption = NO;
     self.requireAuthorization = NO;
@@ -364,7 +385,7 @@
     } else {
       self.userAllowsSendUsageTime = YES;
     }
-    
+        
     if (!BITHockeySDKBundle()) {
       NSLog(@"WARNING: %@.bundle is missing, make sure it is added!", BITHOCKEYSDK_BUNDLE);
     }
@@ -673,11 +694,12 @@
 - (void)checkForAuthorization {
   NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@", [self encodedAppIdentifier]];
   
-  [parameter appendFormat:@"?format=json&authorize=yes&app_version=%@&udid=%@&sdk=%@&sdk_version=%@",
+  [parameter appendFormat:@"?format=json&authorize=yes&app_version=%@&udid=%@&sdk=%@&sdk_version=%@&uuid=%@",
    [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] bit_URLEncodedString],
    (_isAppStoreEnvironment ? @"appstore" : [[self deviceIdentifier] bit_URLEncodedString]),
    BITHOCKEYSDK_NAME,
-   BITHOCKEYSDK_VERSION
+   BITHOCKEYSDK_VERSION,
+   _uuid
    ];
   
   // build request & send
@@ -767,11 +789,12 @@
     return;
   }
   
-  NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@?format=json&udid=%@&sdk=%@&sdk_version=%@", 
+  NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@?format=json&udid=%@&sdk=%@&sdk_version=%@&uuid=%@", 
                                 [[self encodedAppIdentifier] bit_URLEncodedString],
                                 (_isAppStoreEnvironment ? @"appstore" : [[self deviceIdentifier] bit_URLEncodedString]),
                                 BITHOCKEYSDK_NAME,
-                                BITHOCKEYSDK_VERSION];
+                                BITHOCKEYSDK_VERSION,
+                                _uuid];
   
   // add additional statistics if user didn't disable flag
   if ([self canSendUserData]) {
