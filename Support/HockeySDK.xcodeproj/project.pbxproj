@@ -66,7 +66,6 @@
 		1E59557315B6F84D00A03429 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
 		1E59557515B6F85700A03429 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
 		1E59557715B6F85E00A03429 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
-		1E59557915B6F86600A03429 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
 		1E59557C15B6F8CC00A03429 /* HockeySDKResources.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 1E59550A15B6F45800A03429 /* HockeySDKResources.bundle */; };
 		1E59558D15B6FDA500A03429 /* PSAppStoreHeader.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB469148D7BF50015DEDC /* PSAppStoreHeader.h */; };
 		1E59558E15B6FDA500A03429 /* PSStoreButton.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB46B148D7BF50015DEDC /* PSStoreButton.h */; };
@@ -673,7 +672,6 @@
 				1E59557315B6F84D00A03429 /* HockeySDK.strings in Resources */,
 				1E59557515B6F85700A03429 /* HockeySDK.strings in Resources */,
 				1E59557715B6F85E00A03429 /* HockeySDK.strings in Resources */,
-				1E59557915B6F86600A03429 /* HockeySDK.strings in Resources */,
 				1E5955C615B71C8600A03429 /* authorize_denied.png in Resources */,
 				1E5955C715B71C8600A03429 /* authorize_denied@2x.png in Resources */,
 				1E5955C815B71C8600A03429 /* authorize_request.png in Resources */,
