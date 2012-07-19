@@ -1,0 +1,143 @@
+﻿/* General */
+
+/* For dialogs yes buttons */
+"HockeyYes" = "Yes";
+
+/* For dialogs no buttons */
+"HockeyNo" = "No";
+
+/* For dialogs ok buttons */
+"HockeyOK" = "確定";
+
+
+/* Crash */
+
+
+/* Crash dialog */
+
+/* Title showing in the alert box when crash report data has been found */
+"CrashDataFoundTitle" = "發現崩潰數據";
+
+/* Description explaining that crash data has been found and ask the user if the data might be uplaoded to the developers server */
+"CrashDataFoundDescription" = "%@ 不正常退出。你能否匿名提供崩潰記錄以幫助我們解決問題？";
+
+/* Alert box button if the users wants to send crash data always automatically */
+"CrashSendReportAlways" = "總是";
+
+/* Alert box button to send the crash report once */
+"CrashSendReport" = "是";
+
+/* Alert box button to decline sending the report */
+"CrashDontSendReport" = "否";
+
+/* Text showing in a processing box that the crash data is being uploaded to the server */
+"CrashReportSending" = "發送中…";
+
+
+/* Crash status dialog */
+
+/* Title for the alertview giving feedback about the crash */
+"CrashResponseTitle" = "之前在 %@";
+
+/* Full text telling the bug is fixed and will be available in the next release */
+"CrashResponseNextRelease" = "%@ 不正常退出。好消息？造成崩潰的原因已被發現，並將在後續版本中修正。請耐心等待。";
+
+/* Full text telling the bug is fixed and the new release is waiting at Apple */
+"CrashResponseWaitingApple" = "%@ 不正常。好消息？我們已經解決了這個問題，並已將新版本提交到 Apple 審核。請在審核期間耐心等待。";
+
+/* Full text telling the bug is fixed and an update is available in the AppStore */
+"CrashResponseAvailable" = "%@ 不正常退出。好消息？我們已經解決了這個問題。請更新到最新版本。";
+
+
+/* Update */
+
+
+/* Update Alert view */
+
+/* Update available */
+"UpdateAvailable" = "Update available";
+
+"UpdateAlertTextWithAppVersion" = "%@ is available.";
+
+"UpdateAlertMandatoryTextWithAppVersion" = "%@ is available and is a mandatory update!";
+
+"UpdateIgnore" = "Ignore";
+
+"UpdateShow" = "Show";
+
+"UpdateInstall" = "Install";
+
+
+/* Update Details */
+
+"UpdateScreenTitle" = "Update";
+
+"UpdateButtonCheck" = "CHECK";
+
+"UpdateButtonSearching" = "CHECKING";
+
+"UpdateButtonUpdate" = "UPDATE";
+
+"UpdateButtonInstalling" = "INSTALLING";
+
+"UpdateButtonOffline" = "OFFLINE";
+
+"UpdateInstalled" = "INSTALLED";
+
+"UpdateVersion" = "Version";
+
+"UpdateShowPreviousVersions" = "Show previous versions...";
+
+"UpdateNoUpdateAvailableTitle" = "No Update Available";
+
+"UpdateNoUpdateAvailableMessage" = "%@ is already the latest version.";
+
+"UpdateError" = "Error";
+
+"UpdateWarning" = "Warning";
+
+"UpdateNoReleaseNotesAvailable" = "No release notes available.";
+
+
+/* Update Authorization  */
+
+"UpdateAuthorizationProgress" = "Authorizing...";
+
+"UpdateAuthorizationOffline" = "Internet connection required!";
+
+"UpdateAuthorizationDenied" = "Authorizing denied. Please contact the developer.";
+
+
+/* Update Simulator Warning */
+
+"UpdateSimulatorMessage" = "Hockey Update does not work in the Simulator.\nThe itms-services:// url scheme is implemented but nonfunctional.";
+
+
+/* Update Settings */
+
+/* Screen title for settings view */
+"UpdateSettingsTitle" = "Settings";
+
+/* Text asking the user to send user data (on/off switch) */
+"UpdateSettingsUserData" = "Send User Data";
+
+/* Description text for turning on/off sending user data */
+"UpdateSettingsUserDataDescription" = "Send User Data will send the following data to the developer: app version, language, device type and iOS version.";
+
+/* Text asking the user to send usage data (on/off switch) */
+"UpdateSettingsUsageData" = "Send Usage Data";
+
+/* Description text for turning on/off sending usage data */
+"UpdateSettingsUsageDataDescription" = "Send Usage Data will send the amount of test time to the developer, in a granularity of 1 minute.";
+
+/* Title for defining when update checks may be made */
+"UpdateSectionCheckTitle" = "Check For Update";
+
+/* On Startup */
+"UpdateSectionCheckStartup" = "On Startup";
+
+/* Daily */
+"UpdateSectionCheckDaily" = "Daily";
+
+/* Manually */
+"UpdateSectionCheckManually" = "Manually";

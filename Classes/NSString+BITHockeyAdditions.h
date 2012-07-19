@@ -1,6 +1,7 @@
 //
-//  Created by Peter Steinberger on 09.01.11.
-//  Copyright (c) 2011-2012 Peter Steinberger. All rights reserved.
+//  Created by Jon Crosby on 10/19/07.
+//  Copyright 2007 Kaboomerang LLC. All rights reserved.
+//  Copyright (c) 2012 HockeyApp, Bit Stadium GmbH.
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -20,20 +21,14 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 
-#import <UIKit/UIKit.h>
 
-@interface PSAppStoreHeader : UIView {
-  NSString *headerLabel_;
-  NSString *middleHeaderLabel_;
-  NSString *subHeaderLabel;
-  UIImage *iconImage_;
-  
-  UIImage *reflectedImage_;
-}
+#import <Foundation/Foundation.h>
 
-@property (nonatomic, copy) NSString *headerLabel;
-@property (nonatomic, copy) NSString *middleHeaderLabel;
-@property (nonatomic, copy) NSString *subHeaderLabel;
-@property (nonatomic, retain) UIImage *iconImage;
+@interface NSString (BITHockeyAdditions)
+
+- (NSString *)bit_URLEncodedString;
+- (NSString *)bit_URLDecodedString;
+
+- (NSComparisonResult)bit_versionCompare:(NSString *)other;
 
 @end

@@ -1,0 +1,144 @@
+﻿/* General */
+
+/* For dialogs yes buttons */
+"HockeyYes" = "Ja";
+
+/* For dialogs no buttons */
+"HockeyNo" = "Nein";
+
+/* For dialogs ok buttons */
+"HockeyOK" = "OK";
+
+
+/* Crash */
+
+
+/* Crash dialog */
+
+/* Title showing in the alert box when crash report data has been found */
+"CrashDataFoundTitle" = "%@ unerwartet beendet";
+
+/* Description explaining that crash data has been found and ask the user if the data might be uplaoded to the developers server */
+"CrashDataFoundDescription" = "Möchten Sie einen anonymen Absturzbericht senden, damit wir das Problem beheben können?";
+
+/* Alert box button if the users wants to send crash data always automatically */
+"CrashSendReportAlways" = "Immer senden";
+
+/* Alert box button to send the crash report once */
+"CrashSendReport" = "Bericht senden";
+
+/* Alert box button to decline sending the report */
+"CrashDontSendReport" = "Nicht senden";
+
+/* Text showing in a processing box that the crash data is being uploaded to the server */
+"CrashReportSending" = "Senden…";
+
+
+/* Crash status dialog */
+
+/* Title for the alertview giving feedback about the crash */
+"CrashResponseTitle" = "Zuvor auf %@";
+
+/* Full text telling the bug is fixed and will be available in the next release */
+"CrashResponseNextRelease" = "%@ wurde unerwartet beendet. Die gute Nachricht? Die Absturzursache wurde gefunden und wird für eine zukünftige Aktualisierung behoben. Bleiben Sie dran.";
+
+/* Full text telling the bug is fixed and the new release is waiting at Apple */
+"CrashResponseWaitingApple" = "%@ wurde unerwartet beendet. Die gute Nachricht? Wir haben den Fehler bereits behoben und eine Aktualisierung an Apple gesendet. Gedulden Sie sich noch etwas, während sie geprüft wird.";
+
+/* Full text telling the bug is fixed and an update is available in the AppStore */
+"CrashResponseAvailable" = "%@ wurde unerwartet beendet. Die gute Nachricht? Wir haben den Fehler bereits behoben! Aktualisieren Sie auf die neueste Version.";
+
+
+/* Update */
+
+
+/* Update Alert view */
+
+/* Update available */
+"UpdateAvailable" = "Aktualisierung verfügbar";
+
+"UpdateAlertTextWithAppVersion" = "%@ ist verfügbar.";
+
+"UpdateAlertMandatoryTextWithAppVersion" = "%@ ist verfügbar und muss installiert werden!";
+
+"UpdateIgnore" = "Ignorieren";
+
+"UpdateShow" = "Anzeigen";
+
+"UpdateInstall" = "Installieren";
+
+
+/* Update Details */
+
+"UpdateScreenTitle" = "Aktualisierung";
+
+"UpdateButtonCheck" = "PRÜFE";
+
+"UpdateButtonSearching" = "PRÜFEN";
+
+"UpdateButtonUpdate" = "UPDATE";
+
+"UpdateButtonInstalling" = "INSTALLIEREN";
+
+"UpdateButtonOffline" = "OFFLINE";
+
+"UpdateInstalled" = "INSTALLIERT";
+
+"UpdateVersion" = "Version";
+
+"UpdateShowPreviousVersions" = "Zeige frühere Versionen...";
+
+"UpdateNoUpdateAvailableTitle" = "Kein Update Verfügbar";
+
+"UpdateNoUpdateAvailableMessage" = "%@ ist bereits die aktuellste Version.";
+
+"UpdateError" = "Fehler";
+
+"UpdateWarning" = "Warnung";
+
+"UpdateNoReleaseNotesAvailable" = "Keine Release Notes verfügbar.";
+
+
+/* Update Authorization  */
+
+"UpdateAuthorizationProgress" = "Autorisierung...";
+
+"UpdateAuthorizationOffline" = "Internet Verbindung wird benötigt!";
+
+"UpdateAuthorizationDenied" = "Autorisierung verweigert. Bitte kontaktieren Sie den Entwickler.";
+
+
+/* Update Simulator Warning */
+
+"UpdateSimulatorMessage" = "Hockey funktioniert nicht im Simulator.";
+
+
+/* Update Settings */
+
+/* Screen title for settings view */
+"UpdateSettingsTitle" = "Einstellungen";
+
+/* Text asking the user to send user data (on/off switch) */
+"UpdateSettingsUserData" = "Daten senden";
+
+/* Description text for turning on/off sending user data */
+"UpdateSettingsUserDataDescription" = "Daten senden liefert dem Entwickler die folgenden Daten: Programmversion, Sprache, Gerätetyp und iOS Version.";
+
+/* Text asking the user to send usage data (on/off switch) */
+"UpdateSettingsUsageData" = "Testzeit senden";
+
+/* Description text for turning on/off sending usage data */
+"UpdateSettingsUsageDataDescription" = "Testzeit senden informiert den Entwickler über die Summe der Testzeit, in einer Genauigkeit von 1 Minute.";
+
+/* Title for defining when update checks may be made */
+"UpdateSectionCheckTitle" = "Nach Aktualisierung Prüfen";
+
+/* On Startup */
+"UpdateSectionCheckStartup" = "Beim Start";
+
+/* Daily */
+"UpdateSectionCheckDaily" = "Täglich";
+
+/* Manually */
+"UpdateSectionCheckManually" = "Manuell";
+

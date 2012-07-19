@@ -1,0 +1,143 @@
+﻿/* General */
+
+/* For dialogs yes buttons */
+"HockeyYes" = "Oui";
+
+/* For dialogs no buttons */
+"HockeyNo" = "Non";
+
+/* For dialogs ok buttons */
+"HockeyOK" = "OK";
+
+
+/* Crash */
+
+
+/* Crash dialog */
+
+/* Title showing in the alert box when crash report data has been found */
+"CrashDataFoundTitle" = "Rapport de plantage";
+
+/* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
+"CrashDataFoundDescription" = "%@ s’est fermé de façon inattendue. Souhaitez-vous envoyer un rapport d’incident anonyme pour nous aider à corriger le problème ?";
+
+/* Alert box button if the users wants to send crash data always automatically */
+"CrashSendReportAlways" = "Toujours";
+
+/* Alert box button to send the crash report once */
+"CrashSendReport" = "Oui";
+
+/* Alert box button to decline sending the report */
+"CrashDontSendReport" = "Non";
+
+/* Text showing in a processing box that the crash data is being uploaded to the server */
+"CrashReportSending" = "Envoyer…";
+
+
+/* Crash status dialog */
+
+/* Title for the alertview giving feedback about the crash */
+"CrashResponseTitle" = "Précédemment dans %@";
+
+/* Full text telling the bug is fixed and will be available in the next release */
+"CrashResponseNextRelease" = "%@ s’est fermé de façon inattendue. La bonne nouvelle ? La cause du problème a été détectée et une solution a été trouvée pour les versions ultérieures. Restez à l’écoute.";
+
+/* Full text telling the bug is fixed and the new release is waiting at Apple */
+"CrashResponseWaitingApple" = "%@ s’est fermé de façon inattendue. La bonne nouvelle ? Nous avons déjà corrigé le problème et soumis une mise à jour à Apple. Veuillez patienter durant l’examen de cette mise à jour !";
+
+/* Full text telling the bug is fixed and an update is available in the AppStore */
+"CrashResponseAvailable" = "%@ s’est fermé de façon inattendue. La bonne nouvelle ? Nous avons déjà réglé le problème ! Veuillez installer la mise à jour la plus récente.";
+
+
+/* Update */
+
+
+/* Update Alert view */
+
+/* Update available */
+"UpdateAvailable" = "Update available";
+
+"UpdateAlertTextWithAppVersion" = "%@ is available.";
+
+"UpdateAlertMandatoryTextWithAppVersion" = "%@ is available and is a mandatory update!";
+
+"UpdateIgnore" = "Ignore";
+
+"UpdateShow" = "Show";
+
+"UpdateInstall" = "Install";
+
+
+/* Update Details */
+
+"UpdateScreenTitle" = "Update";
+
+"UpdateButtonCheck" = "CHECK";
+
+"UpdateButtonSearching" = "CHECKING";
+
+"UpdateButtonUpdate" = "UPDATE";
+
+"UpdateButtonInstalling" = "INSTALLING";
+
+"UpdateButtonOffline" = "OFFLINE";
+
+"UpdateInstalled" = "INSTALLED";
+
+"UpdateVersion" = "Version";
+
+"UpdateShowPreviousVersions" = "Show previous versions...";
+
+"UpdateNoUpdateAvailableTitle" = "No Update Available";
+
+"UpdateNoUpdateAvailableMessage" = "%@ is already the latest version.";
+
+"UpdateError" = "Error";
+
+"UpdateWarning" = "Warning";
+
+"UpdateNoReleaseNotesAvailable" = "No release notes available.";
+
+
+/* Update Authorization  */
+
+"UpdateAuthorizationProgress" = "Authorizing...";
+
+"UpdateAuthorizationOffline" = "Internet connection required!";
+
+"UpdateAuthorizationDenied" = "Authorizing denied. Please contact the developer.";
+
+
+/* Update Simulator Warning */
+
+"UpdateSimulatorMessage" = "Hockey Update does not work in the Simulator.\nThe itms-services:// url scheme is implemented but nonfunctional.";
+
+
+/* Update Settings */
+
+/* Screen title for settings view */
+"UpdateSettingsTitle" = "Settings";
+
+/* Text asking the user to send user data (on/off switch) */
+"UpdateSettingsUserData" = "Send User Data";
+
+/* Description text for turning on/off sending user data */
+"UpdateSettingsUserDataDescription" = "Send User Data will send the following data to the developer: app version, language, device type and iOS version.";
+
+/* Text asking the user to send usage data (on/off switch) */
+"UpdateSettingsUsageData" = "Send Usage Data";
+
+/* Description text for turning on/off sending usage data */
+"UpdateSettingsUsageDataDescription" = "Send Usage Data will send the amount of test time to the developer, in a granularity of 1 minute.";
+
+/* Title for defining when update checks may be made */
+"UpdateSectionCheckTitle" = "Check For Update";
+
+/* On Startup */
+"UpdateSectionCheckStartup" = "On Startup";
+
+/* Daily */
+"UpdateSectionCheckDaily" = "Daily";
+
+/* Manually */
+"UpdateSectionCheckManually" = "Manually";

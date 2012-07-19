@@ -1,0 +1,143 @@
+﻿/* General */
+
+/* For dialogs yes buttons */
+"HockeyYes" = "Yes";
+
+/* For dialogs no buttons */
+"HockeyNo" = "No";
+
+/* For dialogs ok buttons */
+"HockeyOK" = "保存";
+
+
+/* Crash */
+
+
+/* Crash dialog */
+
+/* Title showing in the alert box when crash report data has been found */
+"CrashDataFoundTitle" = "クラッシュ時のデータを検知";
+
+/* Description explaining that crash data has been found and ask the user if the data might be uplaoded to the developers server */
+"CrashDataFoundDescription" = "%@ は不正に終了しました。問題の修正のため、匿名でクラッシュレポートを送信しますか？";
+
+/* Alert box button if the users wants to send crash data always automatically */
+"CrashSendReportAlways" = "いつも";
+
+/* Alert box button to send the crash report once */
+"CrashSendReport" = "はい";
+
+/* Alert box button to decline sending the report */
+"CrashDontSendReport" = "いいえ";
+
+/* Text showing in a processing box that the crash data is being uploaded to the server */
+"CrashReportSending" = "送信中…";
+
+
+/* Crash status dialog */
+
+/* Title for the alertview giving feedback about the crash */
+"CrashResponseTitle" = "%@、前回までは";
+
+/* Full text telling the bug is fixed and will be available in the next release */
+"CrashResponseNextRelease" = "%@ は不正に終了しました。幸い、クラッシュの原因は既に特定され、将来のバージョンで修正されます。今しばらくお待ちください。";
+
+/* Full text telling the bug is fixed and the new release is waiting at Apple */
+"CrashResponseWaitingApple" = "%@ は不正に終了しました。幸い、クラッシュの原因を既に修正したアップデートを Apple に提出しました。公開まで今しばらくお待ちください！";
+
+/* Full text telling the bug is fixed and an update is available in the AppStore */
+"CrashResponseAvailable" = "%@ は不正に終了しました。幸い、クラッシュの原因を既に修正したアップデートが配布されています！最新版にアップデートしてください。";
+
+
+/* Update */
+
+
+/* Update Alert view */
+
+/* Update available */
+"UpdateAvailable" = "Update available";
+
+"UpdateAlertTextWithAppVersion" = "%@ is available.";
+
+"UpdateAlertMandatoryTextWithAppVersion" = "%@ is available and is a mandatory update!";
+
+"UpdateIgnore" = "Ignore";
+
+"UpdateShow" = "Show";
+
+"UpdateInstall" = "Install";
+
+
+/* Update Details */
+
+"UpdateScreenTitle" = "Update";
+
+"UpdateButtonCheck" = "CHECK";
+
+"UpdateButtonSearching" = "CHECKING";
+
+"UpdateButtonUpdate" = "UPDATE";
+
+"UpdateButtonInstalling" = "INSTALLING";
+
+"UpdateButtonOffline" = "OFFLINE";
+
+"UpdateInstalled" = "INSTALLED";
+
+"UpdateVersion" = "Version";
+
+"UpdateShowPreviousVersions" = "Show previous versions...";
+
+"UpdateNoUpdateAvailableTitle" = "No Update Available";
+
+"UpdateNoUpdateAvailableMessage" = "%@ is already the latest version.";
+
+"UpdateError" = "Error";
+
+"UpdateWarning" = "Warning";
+
+"UpdateNoReleaseNotesAvailable" = "No release notes available.";
+
+
+/* Update Authorization  */
+
+"UpdateAuthorizationProgress" = "Authorizing...";
+
+"UpdateAuthorizationOffline" = "Internet connection required!";
+
+"UpdateAuthorizationDenied" = "Authorizing denied. Please contact the developer.";
+
+
+/* Update Simulator Warning */
+
+"UpdateSimulatorMessage" = "Hockey Update does not work in the Simulator.\nThe itms-services:// url scheme is implemented but nonfunctional.";
+
+
+/* Update Settings */
+
+/* Screen title for settings view */
+"UpdateSettingsTitle" = "Settings";
+
+/* Text asking the user to send user data (on/off switch) */
+"UpdateSettingsUserData" = "Send User Data";
+
+/* Description text for turning on/off sending user data */
+"UpdateSettingsUserDataDescription" = "Send User Data will send the following data to the developer: app version, language, device type and iOS version.";
+
+/* Text asking the user to send usage data (on/off switch) */
+"UpdateSettingsUsageData" = "Send Usage Data";
+
+/* Description text for turning on/off sending usage data */
+"UpdateSettingsUsageDataDescription" = "Send Usage Data will send the amount of test time to the developer, in a granularity of 1 minute.";
+
+/* Title for defining when update checks may be made */
+"UpdateSectionCheckTitle" = "Check For Update";
+
+/* On Startup */
+"UpdateSectionCheckStartup" = "On Startup";
+
+/* Daily */
+"UpdateSectionCheckDaily" = "Daily";
+
+/* Manually */
+"UpdateSectionCheckManually" = "Manually";

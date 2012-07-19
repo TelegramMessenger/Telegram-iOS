@@ -1,6 +1,10 @@
 //
-//  Created by Peter Steinberger on 09.01.11.
-//  Copyright (c) 2011-2012 Peter Steinberger. All rights reserved.
+//  UIImage+BITHockeySDKAdditions.h
+//
+//  Created by Peter Steinberger on 10.01.11.
+//  Copyright (c) 2011-2012 Peter Steinberger.
+//  Copyright (c) 2012 HockeyApp, Bit Stadium GmbH.
+//  All rights reserved.
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -22,18 +26,14 @@
 
 #import <UIKit/UIKit.h>
 
-@interface PSAppStoreHeader : UIView {
-  NSString *headerLabel_;
-  NSString *middleHeaderLabel_;
-  NSString *subHeaderLabel;
-  UIImage *iconImage_;
-  
-  UIImage *reflectedImage_;
-}
+@interface UIImage (BITHockeySDKAdditions)
 
-@property (nonatomic, copy) NSString *headerLabel;
-@property (nonatomic, copy) NSString *middleHeaderLabel;
-@property (nonatomic, copy) NSString *subHeaderLabel;
-@property (nonatomic, retain) UIImage *iconImage;
+- (UIImage *)bit_roundedCornerImage:(NSInteger)cornerSize borderSize:(NSInteger)borderSize;
+- (UIImage *)bit_imageToFitSize:(CGSize)fitSize honorScaleFactor:(BOOL)honorScaleFactor;
+- (UIImage *)bit_reflectedImageWithHeight:(NSUInteger)height fromAlpha:(float)fromAlpha toAlpha:(float)toAlpha;
+
+- (id)bit_initWithContentsOfResolutionIndependentFile:(NSString *)path NS_RETURNS_RETAINED;
++ (UIImage *)bit_imageWithContentsOfResolutionIndependentFile:(NSString *)path;
++ (UIImage *)bit_imageNamed:(NSString *)imageName bundle:(NSString *)bundleName;
 
 @end

@@ -1,0 +1,143 @@
+﻿/* General */
+
+/* For dialogs yes buttons */
+"HockeyYes" = "Ja";
+
+/* For dialogs no buttons */
+"HockeyNo" = "Nee";
+
+/* For dialogs ok buttons */
+"HockeyOK" = "OK";
+
+
+/* Crash */
+
+
+/* Crash dialog */
+
+/* Title showing in the alert box when crash report data has been found */
+"CrashDataFoundTitle" = "Crashdata gevonden";
+
+/* Description explaining that crash data has been found and ask the user if the data might be uplaoded to the developers server */
+"CrashDataFoundDescription" = "De applicatie is gecrasht. Wilt u de ontwikkelaars anonieme data sturen zodat zij kunnen proberen de problemen op te lossen?";
+
+/* Alert box button if the users wants to send crash data always automatically */
+"CrashSendReportAlways" = "Altijd";
+
+/* Alert box button to send the crash report once */
+"CrashSendReport" = "Ja";
+
+/* Alert box button to decline sending the report */
+"CrashDontSendReport" = "Nee";
+
+/* Text showing in a processing box that the crash data is being uploaded to the server */
+"CrashReportSending" = "Zenden…";
+
+
+/* Crash status dialog */
+
+/* Title for the alertview giving feedback about the crash */
+"CrashResponseTitle" = "Bugstatus";
+
+/* Full text telling the bug is fixed and will be available in the next release */
+"CrashResponseNextRelease" = "De bug die uw probleem heeft veroorzaakt is reeds opgelost en de oplossing zal in een volgende versie van %@ worden toegevoegd.";
+
+/* Full text telling the bug is fixed and the new release is waiting at Apple */
+"CrashResponseWaitingApple" = "De bug die uw probleem heeft veroorzaakt is reeds opgelost en een nieuwe versie %@ wacht op goedkeuring door Apple.";
+
+/* Full text telling the bug is fixed and an update is available in the AppStore */
+"CrashResponseAvailable" = "De bug die uw probleem heeft veroorzaakt is reeds opgelost en een nieuwe versie van %@ is beschikbaar. Update a.u.b.!";
+
+
+/* Update */
+
+
+/* Update Alert view */
+
+/* Update available */
+"UpdateAvailable" = "Update available";
+
+"UpdateAlertTextWithAppVersion" = "%@ is available.";
+
+"UpdateAlertMandatoryTextWithAppVersion" = "%@ is available and is a mandatory update!";
+
+"UpdateIgnore" = "Ignore";
+
+"UpdateShow" = "Show";
+
+"UpdateInstall" = "Install";
+
+
+/* Update Details */
+
+"UpdateScreenTitle" = "Update";
+
+"UpdateButtonCheck" = "CHECK";
+
+"UpdateButtonSearching" = "CHECKING";
+
+"UpdateButtonUpdate" = "UPDATE";
+
+"UpdateButtonInstalling" = "INSTALLING";
+
+"UpdateButtonOffline" = "OFFLINE";
+
+"UpdateInstalled" = "INSTALLED";
+
+"UpdateVersion" = "Version";
+
+"UpdateShowPreviousVersions" = "Show previous versions...";
+
+"UpdateNoUpdateAvailableTitle" = "No Update Available";
+
+"UpdateNoUpdateAvailableMessage" = "%@ is already the latest version.";
+
+"UpdateError" = "Error";
+
+"UpdateWarning" = "Warning";
+
+"UpdateNoReleaseNotesAvailable" = "No release notes available.";
+
+
+/* Update Authorization  */
+
+"UpdateAuthorizationProgress" = "Authorizing...";
+
+"UpdateAuthorizationOffline" = "Internet connection required!";
+
+"UpdateAuthorizationDenied" = "Authorizing denied. Please contact the developer.";
+
+
+/* Update Simulator Warning */
+
+"UpdateSimulatorMessage" = "Hockey Update does not work in the Simulator.\nThe itms-services:// url scheme is implemented but nonfunctional.";
+
+
+/* Update Settings */
+
+/* Screen title for settings view */
+"UpdateSettingsTitle" = "Settings";
+
+/* Text asking the user to send user data (on/off switch) */
+"UpdateSettingsUserData" = "Send User Data";
+
+/* Description text for turning on/off sending user data */
+"UpdateSettingsUserDataDescription" = "Send User Data will send the following data to the developer: app version, language, device type and iOS version.";
+
+/* Text asking the user to send usage data (on/off switch) */
+"UpdateSettingsUsageData" = "Send Usage Data";
+
+/* Description text for turning on/off sending usage data */
+"UpdateSettingsUsageDataDescription" = "Send Usage Data will send the amount of test time to the developer, in a granularity of 1 minute.";
+
+/* Title for defining when update checks may be made */
+"UpdateSectionCheckTitle" = "Check For Update";
+
+/* On Startup */
+"UpdateSectionCheckStartup" = "On Startup";
+
+/* Daily */
+"UpdateSectionCheckDaily" = "Daily";
+
+/* Manually */
+"UpdateSectionCheckManually" = "Manually";

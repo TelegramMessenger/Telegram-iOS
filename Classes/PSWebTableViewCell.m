@@ -1,9 +1,6 @@
 //
-//  PSWebTableViewCell.m
-//  HockeyDemo
-//
 //  Created by Peter Steinberger on 04.02.11.
-//  Copyright 2011 Peter Steinberger. All rights reserved.
+//  Copyright 2011-2012 Peter Steinberger. All rights reserved.
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +21,7 @@
 //  THE SOFTWARE.
 
 #import "PSWebTableViewCell.h"
-#import "BWGlobal.h"
+
 
 @implementation PSWebTableViewCell
 
@@ -47,9 +44,8 @@ body { font: 13px 'Helvetica Neue', Helvetica; word-wrap:break-word; padding:8px
 @synthesize webViewSize = webViewSize_;
 @synthesize cellBackgroundColor = cellBackgroundColor_;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma mark -
-#pragma mark private
+
+#pragma mark - private
 
 - (void)addWebView {
   if(webViewContent_) {
@@ -83,7 +79,7 @@ body { font: 13px 'Helvetica Neue', Helvetica; word-wrap:break-word; padding:8px
       webView_.frame = webViewRect;
     
     NSString *deviceWidth = UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad ? [NSString stringWithFormat:@"%.0f", CGRectGetWidth(self.bounds)] : @"device-width";
-    //BWHockeyLog(@"%@\n%@\%@", PSWebTableViewCellHtmlTemplate, deviceWidth, self.webViewContent);
+    //HockeySDKLog(@"%@\n%@\%@", PSWebTableViewCellHtmlTemplate, deviceWidth, self.webViewContent);
     NSString *contentHtml = [NSString stringWithFormat:PSWebTableViewCellHtmlTemplate, deviceWidth, self.webViewContent];
     [webView_ loadHTMLString:contentHtml baseURL:nil];
   }
@@ -118,9 +114,8 @@ body { font: 13px 'Helvetica Neue', Helvetica; word-wrap:break-word; padding:8px
   }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma mark -
-#pragma mark NSObject
+
+#pragma mark - NSObject
 
 - (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
   if((self = [super initWithStyle:style reuseIdentifier:reuseIdentifier])) {
@@ -135,9 +130,8 @@ body { font: 13px 'Helvetica Neue', Helvetica; word-wrap:break-word; padding:8px
   [super dealloc];
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma mark -
-#pragma mark UIView
+
+#pragma mark - UIView
 
 - (void)setFrame:(CGRect)aFrame {
   BOOL needChange = !CGRectEqualToRect(aFrame, self.frame);
@@ -148,9 +142,8 @@ body { font: 13px 'Helvetica Neue', Helvetica; word-wrap:break-word; padding:8px
   }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma mark -
-#pragma mark UITableViewCell
+
+#pragma mark - UITableViewCell
 
 - (void)prepareForReuse {
 	[self removeWebView];
@@ -158,9 +151,8 @@ body { font: 13px 'Helvetica Neue', Helvetica; word-wrap:break-word; padding:8px
 	[super prepareForReuse];
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma mark -
-#pragma mark UIWebView
+
+#pragma mark - UIWebView
 
 - (BOOL)webView:(UIWebView *)webView shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(UIWebViewNavigationType)navigationType {
   if(navigationType == UIWebViewNavigationTypeOther)

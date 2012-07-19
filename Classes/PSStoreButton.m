@@ -1,9 +1,6 @@
 //
-//  PSStoreButton.m
-//  HockeyDemo
-//
 //  Created by Peter Steinberger on 09.01.11.
-//  Copyright 2011 Peter Steinberger. All rights reserved.
+//  Copyright 2011-2012 Peter Steinberger. All rights reserved.
 //
 //  This code was inspired by https://github.com/dhmspector/ZIStoreButton
 //
@@ -39,9 +36,8 @@
 @synthesize colors = colors_;
 @synthesize enabled = enabled_;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma mark -
-#pragma mark NSObject
+
+#pragma mark - NSObject
 
 - (id)initWithLabel:(NSString*)aLabel colors:(NSArray*)aColors enabled:(BOOL)flag {
   if ((self = [super init])) {
@@ -77,9 +73,8 @@
 @synthesize buttonDelegate = buttonDelegate_;
 @synthesize customPadding = customPadding_;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma mark -
-#pragma mark private
+
+#pragma mark - private
 
 - (void)buttonPressed:(id)sender {
   [buttonDelegate_ storeButtonFired:self];
@@ -159,9 +154,8 @@
   }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma mark -
-#pragma mark NSObject
+
+#pragma mark - NSObject
 
 - (id)initWithFrame:(CGRect)frame {
   if ((self = [super initWithFrame:frame])) {
@@ -214,9 +208,8 @@
   [super dealloc];
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma mark -
-#pragma mark UIView
+
+#pragma mark - UIView
 
 - (CGSize)sizeThatFits:(CGSize)size {
   CGSize constr = (CGSize){.height = self.frame.size.height, .width = PS_MAX_WIDTH};
@@ -241,9 +234,8 @@
   }
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma mark -
-#pragma mark Properties
+
+#pragma mark - Properties
 
 - (void)setButtonData:(PSStoreButtonData *)aButtonData {
   [self setButtonData:aButtonData animated:NO];
@@ -258,9 +250,8 @@
   [self updateButtonAnimated:animated];
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma mark -
-#pragma mark Static
+
+#pragma mark - Static
 
 + (NSArray *)appStoreGreenColor {
   return [NSArray arrayWithObjects:(id)
