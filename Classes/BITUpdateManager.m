@@ -231,7 +231,7 @@
 - (void)checkUpdateAvailable {
   // check if there is an update available
   if (self.compareVersionType == BITUpdateComparisonResultGreater) {
-    self.updateAvailable = ([self.newestAppVersion.version versionCompare:self.currentAppVersion] == NSOrderedDescending);
+    self.updateAvailable = ([self.newestAppVersion.version bit_versionCompare:self.currentAppVersion] == NSOrderedDescending);
   } else {
     self.updateAvailable = ([self.newestAppVersion.version compare:self.currentAppVersion] != NSOrderedSame);
   }
@@ -535,13 +535,13 @@
   CGRect frame = [visibleWindow frame];
   
   self.authorizeView = [[[UIView alloc] initWithFrame:frame] autorelease];
-  UIImageView *backgroundView = [[[UIImageView alloc] initWithImage:[UIImage BIT_imageNamed:@"bg.png" bundle:BITHOCKEYSDK_BUNDLE]] autorelease];
+  UIImageView *backgroundView = [[[UIImageView alloc] initWithImage:[UIImage bit_imageNamed:@"bg.png" bundle:BITHOCKEYSDK_BUNDLE]] autorelease];
   backgroundView.contentMode = UIViewContentModeScaleAspectFill;
   backgroundView.frame = frame;
   [self.authorizeView addSubview:backgroundView];
   
   if (image != nil) {
-    UIImageView *imageView = [[[UIImageView alloc] initWithImage:[UIImage BIT_imageNamed:image bundle:BITHOCKEYSDK_BUNDLE]] autorelease];
+    UIImageView *imageView = [[[UIImageView alloc] initWithImage:[UIImage bit_imageNamed:image bundle:BITHOCKEYSDK_BUNDLE]] autorelease];
     imageView.contentMode = UIViewContentModeCenter;
     imageView.frame = frame;
     [self.authorizeView addSubview:imageView];
@@ -1011,7 +1011,7 @@
   BOOL result = NO;
   
   for (BITAppVersionMetaInfo *appVersion in self.appVersions) {
-    if ([appVersion.version isEqualToString:self.currentAppVersion] || [appVersion.version versionCompare:self.currentAppVersion] == NSOrderedAscending) {
+    if ([appVersion.version isEqualToString:self.currentAppVersion] || [appVersion.version bit_versionCompare:self.currentAppVersion] == NSOrderedAscending) {
       break;
     }
     
