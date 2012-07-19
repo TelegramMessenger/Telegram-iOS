@@ -137,7 +137,7 @@
     }
     
     if (!BITHockeySDKBundle()) {
-      NSLog(@"WARNING: Quincy.bundle is missing, will send reports automatically!");
+      NSLog(@"WARNING: %@.bundle is missing, will send reports automatically!", BITHOCKEYSDK_BUNDLE);
     }
   }
   return self;

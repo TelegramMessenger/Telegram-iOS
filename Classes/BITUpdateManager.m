@@ -366,7 +366,7 @@
     }
     
     if (!BITHockeySDKBundle()) {
-      NSLog(@"WARNING: Hockey.bundle is missing, make sure it is added!");
+      NSLog(@"WARNING: %@.bundle is missing, make sure it is added!", BITHOCKEYSDK_BUNDLE);
     }
     
     [self loadAppCache];
