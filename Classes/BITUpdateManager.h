@@ -55,6 +55,7 @@ typedef enum {
 @class BITUpdateViewController;
 
 @interface BITUpdateManager : NSObject <UIAlertViewDelegate> {
+@private
   NSString *_appIdentifier;
   NSString *_currentAppVersion;
   
@@ -63,7 +64,6 @@ typedef enum {
   
   BOOL _dataFound;
   BOOL _showFeedback;
-  BOOL _updateURLOffline;
   BOOL _updateAlertShowing;
   BOOL _lastCheckFailed;
   
@@ -136,61 +136,7 @@ typedef enum {
 // default value: HockeyUpdateCheckStartup
 @property (nonatomic, assign) BITUpdateSetting updateSetting;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-// Private Properties
-
-// if YES, the API will return an existing JMC config
-// if NO, the API will return only version information
-@property (nonatomic, assign) BOOL checkForTracker;
-
-// Contains the tracker config if received from server
-@property (nonatomic, retain, readonly) NSDictionary *trackerConfig;
-
-
-- (id)initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironemt:(BOOL)isAppStoreEnvironment;
-
-- (void)startManager;
-
-// is an update available?
-- (BOOL)isUpdateAvailable;
-
-// are we currently checking for updates?
-- (BOOL)isCheckInProgress;
-
-// open update info view
-- (void)showUpdateView;
-
-// manually start an update check
-- (void)checkForUpdate;
-
-// checks for update, informs the user (error, no update found, etc)
-- (void)checkForUpdateShowFeedback:(BOOL)feedback;
-
-// initiates app-download call. displays an system UIAlertView
-- (BOOL)initiateAppDownload;
-
-// checks wether this app version is authorized
-- (BOOL)appVersionIsAuthorized;
-
-// start checking for an authorization key
-- (void)checkForAuthorization;
-
 // convenience methode to create hockey view controller
 - (BITUpdateViewController *)hockeyViewController:(BOOL)modal;
-
-// get/set current active hockey view controller
-@property (nonatomic, retain) BITUpdateViewController *currentHockeyViewController;
-
-// convenience method to get current running version string
-- (NSString *)currentAppVersion;
-
-// get newest app version
-- (BITAppVersionMetaInfo *)newestAppVersion;
-
-// get array of all available versions
-- (NSArray *)appVersions;
-
-// check if there is any newer version mandatory
-- (BOOL)hasNewerMandatoryVersion;
 
 @end

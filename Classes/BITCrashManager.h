@@ -55,7 +55,6 @@ typedef enum BITCrashStatus {
   NSString *_feedbackRequestID;
   float _feedbackDelayInterval;
   
-  NSMutableString *_contentOfProperty;
   BITCrashStatus _serverResult;
   
   int _analyzerStarted;
@@ -108,9 +107,5 @@ typedef enum BITCrashStatus {
 
 // will return the timeinterval from startup to the crash in seconds, default is -1
 @property (nonatomic, readonly) NSTimeInterval timeintervalCrashInLastSessionOccured;
-
-- (id)initWithAppIdentifier:(NSString *)appIdentifier;
-
-- (void)startManager;
 
 @end

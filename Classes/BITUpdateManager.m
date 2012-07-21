@@ -34,7 +34,7 @@
 #import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
 
-#import "BITUpdateManager.h"
+#import "BITUpdateManagerPrivate.h"
 #import "BITAppVersionMetaInfo.h"
 
 #import "NSString+BITHockeyAdditions.h"
@@ -50,30 +50,6 @@
 #define BETA_UPDATE_VERSION         @"version"
 #define BETA_UPDATE_TIMESTAMP       @"timestamp"
 #define BETA_UPDATE_APPSIZE         @"appsize"
-
-@interface BITUpdateManager ()
-- (id)parseJSONResultString:(NSString *)jsonString;
-- (BOOL)shouldCheckForUpdates;
-- (void)startUsage;
-- (void)stopUsage;
-- (void)showAuthorizationScreen:(NSString *)message image:(NSString *)image;
-- (BOOL)canSendUserData;
-- (BOOL)canSendUsageTime;
-- (NSString *)currentUsageString;
-- (NSString *)installationDateString;
-- (NSString *)authenticationToken;
-- (BITUpdateAuthorizationState)authorizationState;
-
-@property (nonatomic, assign, getter=isUpdateAvailable) BOOL updateAvailable;
-@property (nonatomic, assign, getter=isCheckInProgress) BOOL checkInProgress;
-@property (nonatomic, retain) NSMutableData *receivedData;
-@property (nonatomic, copy) NSDate *lastCheck;
-@property (nonatomic, copy) NSArray *appVersions;
-@property (nonatomic, retain) NSURLConnection *urlConnection;
-@property (nonatomic, copy) NSDate *usageStartTimestamp;
-@property (nonatomic, retain) UIView *authorizeView;
-@property (nonatomic, retain) NSDictionary *trackerConfig;
-@end
 
 
 @implementation BITUpdateManager

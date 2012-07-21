@@ -29,7 +29,9 @@
 
 #import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
-#import "BITUpdateManager.h"
+
+#import "BITCrashManagerPrivate.h"
+#import "BITUpdateManagerPrivate.h"
 
 
 @interface BITHockeyManager ()

@@ -34,6 +34,7 @@
 #import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
 
+#import "BITCrashManagerPrivate.h"
 #import "BITCrashReportTextFormatter.h"
 
 #include <sys/sysctl.h>

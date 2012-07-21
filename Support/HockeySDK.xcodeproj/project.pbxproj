@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1E01118115BB6311007002AC /* BITUpdateManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E01118015BB62FE007002AC /* BITUpdateManagerPrivate.h */; };
+		1E01118215BB6314007002AC /* BITCrashManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E01117E15BB6228007002AC /* BITCrashManagerPrivate.h */; };
 		1E27EF2515BB5033000AE995 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
 		1E40BCB515A3487500BD64D9 /* BITCrashManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E40BCB415A3487500BD64D9 /* BITCrashManagerDelegate.h */; settings = {ATTRIBUTES = (); }; };
 		1E40BCB915A3494400BD64D9 /* BITCrashReportTextFormatter.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E40BCB715A3494400BD64D9 /* BITCrashReportTextFormatter.h */; };
@@ -168,6 +170,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		1E01117E15BB6228007002AC /* BITCrashManagerPrivate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BITCrashManagerPrivate.h; sourceTree = "<group>"; };
+		1E01118015BB62FE007002AC /* BITUpdateManagerPrivate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BITUpdateManagerPrivate.h; sourceTree = "<group>"; };
 		1E40BCB415A3487500BD64D9 /* BITCrashManagerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashManagerDelegate.h; sourceTree = "<group>"; };
 		1E40BCB715A3494400BD64D9 /* BITCrashReportTextFormatter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashReportTextFormatter.h; sourceTree = "<group>"; };
 		1E40BCB815A3494400BD64D9 /* BITCrashReportTextFormatter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITCrashReportTextFormatter.m; sourceTree = "<group>"; };
@@ -354,6 +358,7 @@
 				E41EB459148D7BF50015DEDC /* BITAppVersionMetaInfo.h */,
 				E41EB45A148D7BF50015DEDC /* BITAppVersionMetaInfo.m */,
 				E41EB45D148D7BF50015DEDC /* BITUpdateManager.h */,
+				1E01118015BB62FE007002AC /* BITUpdateManagerPrivate.h */,
 				1E5955D515B72ED500A03429 /* BITUpdateManager.m */,
 				1E5955EE15B7752200A03429 /* BITUpdateManagerDelegate.h */,
 				1E5955E215B751ED00A03429 /* BITUpdateViewController.h */,
@@ -361,6 +366,7 @@
 				E41EB45F148D7BF50015DEDC /* BITUpdateSettingsViewController.h */,
 				E41EB460148D7BF50015DEDC /* BITUpdateSettingsViewController.m */,
 				1E5955D115B72E5300A03429 /* BITCrashManager.h */,
+				1E01117E15BB6228007002AC /* BITCrashManagerPrivate.h */,
 				E41EB464148D7BF50015DEDC /* BITCrashManager.m */,
 				1E40BCB415A3487500BD64D9 /* BITCrashManagerDelegate.h */,
 				1E40BCB715A3494400BD64D9 /* BITCrashReportTextFormatter.h */,
@@ -416,6 +422,8 @@
 				1E5955F815B77F7C00A03429 /* BITUpdateViewController.h in Headers */,
 				1E5954B515B6E16300A03429 /* BITUpdateSettingsViewController.h in Headers */,
 				1E5955F615B77F6500A03429 /* HockeySDKPrivate.h in Headers */,
+				1E01118115BB6311007002AC /* BITUpdateManagerPrivate.h in Headers */,
+				1E01118215BB6314007002AC /* BITCrashManagerPrivate.h in Headers */,
 				1E5955F215B77F5100A03429 /* NSString+BITHockeyAdditions.h in Headers */,
 				1E5955F315B77F5600A03429 /* PSAppStoreHeader.h in Headers */,
 				1E5954B615B6E17700A03429 /* PSStoreButton.h in Headers */,
