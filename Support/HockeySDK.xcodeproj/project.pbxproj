@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1E27EF2515BB5033000AE995 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
 		1E40BCB515A3487500BD64D9 /* BITCrashManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E40BCB415A3487500BD64D9 /* BITCrashManagerDelegate.h */; settings = {ATTRIBUTES = (); }; };
 		1E40BCB915A3494400BD64D9 /* BITCrashReportTextFormatter.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E40BCB715A3494400BD64D9 /* BITCrashReportTextFormatter.h */; };
 		1E40BCBA15A3494400BD64D9 /* BITCrashReportTextFormatter.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E40BCB815A3494400BD64D9 /* BITCrashReportTextFormatter.m */; };
@@ -54,17 +55,6 @@
 		1E5954DC15B6F24A00A03429 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E400561D148D79B500EB22B9 /* Foundation.framework */; };
 		1E5954DD15B6F24A00A03429 /* CrashReporter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E41EB48B148D7C4E0015DEDC /* CrashReporter.framework */; };
 		1E59550C15B6F45800A03429 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E59550B15B6F45800A03429 /* CoreFoundation.framework */; };
-		1E59556115B6F80E00A03429 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
-		1E59556315B6F81500A03429 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
-		1E59556515B6F81C00A03429 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
-		1E59556715B6F82300A03429 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
-		1E59556915B6F82A00A03429 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
-		1E59556B15B6F83100A03429 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
-		1E59556D15B6F83700A03429 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
-		1E59556F15B6F84000A03429 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
-		1E59557115B6F84700A03429 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
-		1E59557315B6F84D00A03429 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
-		1E59557515B6F85700A03429 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
 		1E59557C15B6F8CC00A03429 /* HockeySDKResources.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 1E59550A15B6F45800A03429 /* HockeySDKResources.bundle */; };
 		1E59558D15B6FDA500A03429 /* PSAppStoreHeader.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB469148D7BF50015DEDC /* PSAppStoreHeader.h */; };
 		1E59558E15B6FDA500A03429 /* PSStoreButton.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB46B148D7BF50015DEDC /* PSStoreButton.h */; };
@@ -659,17 +649,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1E59556115B6F80E00A03429 /* HockeySDK.strings in Resources */,
-				1E59556315B6F81500A03429 /* HockeySDK.strings in Resources */,
-				1E59556515B6F81C00A03429 /* HockeySDK.strings in Resources */,
-				1E59556715B6F82300A03429 /* HockeySDK.strings in Resources */,
-				1E59556915B6F82A00A03429 /* HockeySDK.strings in Resources */,
-				1E59556B15B6F83100A03429 /* HockeySDK.strings in Resources */,
-				1E59556D15B6F83700A03429 /* HockeySDK.strings in Resources */,
-				1E59556F15B6F84000A03429 /* HockeySDK.strings in Resources */,
-				1E59557115B6F84700A03429 /* HockeySDK.strings in Resources */,
-				1E59557315B6F84D00A03429 /* HockeySDK.strings in Resources */,
-				1E59557515B6F85700A03429 /* HockeySDK.strings in Resources */,
 				1E5955C615B71C8600A03429 /* authorize_denied.png in Resources */,
 				1E5955C715B71C8600A03429 /* authorize_denied@2x.png in Resources */,
 				1E5955C815B71C8600A03429 /* authorize_request.png in Resources */,
@@ -681,6 +660,7 @@
 				1E5955CE15B71C8600A03429 /* gear@2x.png in Resources */,
 				1E5955CF15B71C8600A03429 /* IconGradient.png in Resources */,
 				1E5955D015B71C8600A03429 /* IconGradient@2x.png in Resources */,
+				1E27EF2515BB5033000AE995 /* HockeySDK.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
