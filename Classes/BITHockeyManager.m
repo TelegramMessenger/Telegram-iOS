@@ -110,6 +110,8 @@
 
 
 - (void)startManager {
+  if (!_validAppIdentifier) return;
+  
   BITHockeyLog(@"Starting HockeyManager");
   _startManagerIsInvoked = YES;
   
