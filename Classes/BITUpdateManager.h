@@ -136,6 +136,12 @@ typedef enum {
 // default value: HockeyUpdateCheckStartup
 @property (nonatomic, assign) BITUpdateSetting updateSetting;
 
+// open update info view
+- (void)showUpdateView;
+
+// manually start an update check
+- (void)checkForUpdate;
+
 // convenience methode to create hockey view controller
 - (BITUpdateViewController *)hockeyViewController:(BOOL)modal;
 

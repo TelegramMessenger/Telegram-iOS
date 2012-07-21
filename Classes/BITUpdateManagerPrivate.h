@@ -66,12 +66,6 @@
 
 - (void)startManager;
 
-// open update info view
-- (void)showUpdateView;
-
-// manually start an update check
-- (void)checkForUpdate;
-
 // checks for update, informs the user (error, no update found, etc)
 - (void)checkForUpdateShowFeedback:(BOOL)feedback;
 
