@@ -179,7 +179,7 @@
     footerButton.layer.shadowColor = [[UIColor blackColor] CGColor];
     footerButton.layer.shadowRadius = 2.0f;
     footerButton.titleLabel.font = [UIFont boldSystemFontOfSize:14];
-    [footerButton setTitle:BITHockeySDKLocalizedString(@"UpdateShowPreviousVersions") forState:UIControlStateNormal];
+    [footerButton setTitle:BITHockeyLocalizedString(@"UpdateShowPreviousVersions") forState:UIControlStateNormal];
     [footerButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
     [footerButton setTitleColor:[UIColor whiteColor] forState:UIControlStateHighlighted];
     [footerButton setBackgroundImage:[UIImage bit_imageNamed:@"buttonHighlight.png" bundle:BITHOCKEYSDK_BUNDLE] forState:UIControlStateHighlighted];
@@ -201,7 +201,7 @@
   // create web view for a version
   NSString *installed = @"";
   if ([appVersion.version isEqualToString:[_updateManager currentAppVersion]]) {
-    installed = [NSString stringWithFormat:@"<span style=\"float:%@;text-shadow:rgba(255,255,255,0.6) 1px 1px 0px;\"><b>%@</b></span>", [appVersion isEqual:_updateManager.newestAppVersion] ? @"left" : @"right", BITHockeySDKLocalizedString(@"UpdateInstalled")];
+    installed = [NSString stringWithFormat:@"<span style=\"float:%@;text-shadow:rgba(255,255,255,0.6) 1px 1px 0px;\"><b>%@</b></span>", [appVersion isEqual:_updateManager.newestAppVersion] ? @"left" : @"right", BITHockeyLocalizedString(@"UpdateInstalled")];
   }
   
   if ([appVersion isEqual:_updateManager.newestAppVersion]) {
@@ -209,7 +209,7 @@
       installed = [NSString stringWithFormat:@"<p>&nbsp;%@</p>", installed];
       cell.webViewContent = [NSString stringWithFormat:@"%@%@", installed, appVersion.notes];
     } else {
-      cell.webViewContent = [NSString stringWithFormat:@"<div style=\"min-height:200px;vertical-align:middle;text-align:center;text-shadow:rgba(255,255,255,0.6) 1px 1px 0px;\">%@</div>", BITHockeySDKLocalizedString(@"UpdateNoReleaseNotesAvailable")];
+      cell.webViewContent = [NSString stringWithFormat:@"<div style=\"min-height:200px;vertical-align:middle;text-align:center;text-shadow:rgba(255,255,255,0.6) 1px 1px 0px;\">%@</div>", BITHockeyLocalizedString(@"UpdateNoReleaseNotesAvailable")];
     }
   } else {
     cell.webViewContent = [NSString stringWithFormat:@"<p><b style=\"text-shadow:rgba(255,255,255,0.6) 1px 1px 0px;\">%@</b>%@<br/><small>%@</small></p><p>%@</p>", [appVersion versionString], installed, [appVersion dateString], [appVersion notesOrEmptyString]];
@@ -231,7 +231,7 @@
     self.updateManager = newUpdateManager;
     self.modal = newModal;
     self.modalAnimated = YES;
-    self.title = BITHockeySDKLocalizedString(@"UpdateScreenTitle");
+    self.title = BITHockeyLocalizedString(@"UpdateScreenTitle");
     
     _isAppStoreEnvironment = [BITHockeyManager sharedHockeyManager].isAppStoreEnvironment;
     
@@ -562,7 +562,7 @@
   if ([_cells count] > (NSUInteger)indexPath.row) {
     return [_cells objectAtIndex:indexPath.row];
   } else {
-    BITHockeySDKLog(@"Warning: cells_ and indexPath do not match? forgot calling redrawTableView?");
+    BITHockeyLog(@"Warning: cells_ and indexPath do not match? forgot calling redrawTableView?");
   }
   return nil;
 }
@@ -601,19 +601,19 @@
   
   switch (anAppStoreButtonState) {
     case AppStoreButtonStateOffline:
-      [_appStoreButton setButtonData:[PSStoreButtonData dataWithLabel:BITHockeySDKLocalizedString(@"UpdateButtonOffline") colors:[PSStoreButton appStoreGrayColor] enabled:NO] animated:animated];
+      [_appStoreButton setButtonData:[PSStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonOffline") colors:[PSStoreButton appStoreGrayColor] enabled:NO] animated:animated];
       break;
     case AppStoreButtonStateCheck:
-      [_appStoreButton setButtonData:[PSStoreButtonData dataWithLabel:BITHockeySDKLocalizedString(@"UpdateButtonCheck") colors:[PSStoreButton appStoreGreenColor] enabled:YES] animated:animated];
+      [_appStoreButton setButtonData:[PSStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonCheck") colors:[PSStoreButton appStoreGreenColor] enabled:YES] animated:animated];
       break;
     case AppStoreButtonStateSearching:
-      [_appStoreButton setButtonData:[PSStoreButtonData dataWithLabel:BITHockeySDKLocalizedString(@"UpdateButtonSearching") colors:[PSStoreButton appStoreGrayColor] enabled:NO] animated:animated];
+      [_appStoreButton setButtonData:[PSStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonSearching") colors:[PSStoreButton appStoreGrayColor] enabled:NO] animated:animated];
       break;
     case AppStoreButtonStateUpdate:
-      [_appStoreButton setButtonData:[PSStoreButtonData dataWithLabel:BITHockeySDKLocalizedString(@"UpdateButtonUpdate") colors:[PSStoreButton appStoreBlueColor] enabled:YES] animated:animated];
+      [_appStoreButton setButtonData:[PSStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonUpdate") colors:[PSStoreButton appStoreBlueColor] enabled:YES] animated:animated];
       break;
     case AppStoreButtonStateInstalling:
-      [_appStoreButton setButtonData:[PSStoreButtonData dataWithLabel:BITHockeySDKLocalizedString(@"UpdateButtonInstalling") colors:[PSStoreButton appStoreGrayColor] enabled:NO] animated:animated];
+      [_appStoreButton setButtonData:[PSStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonInstalling") colors:[PSStoreButton appStoreGrayColor] enabled:NO] animated:animated];
       break;
     default:
       break;

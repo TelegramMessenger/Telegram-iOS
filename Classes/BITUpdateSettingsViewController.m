@@ -48,7 +48,7 @@
 - (id)init:(BITUpdateManager *)newUpdateManager {
   if ((self = [super init])) {
     self.updateManager = newUpdateManager;
-    self.title = BITHockeySDKLocalizedString(@"UpdateSettingsTitle");
+    self.title = BITHockeyLocalizedString(@"UpdateSettingsTitle");
     
     CGRect frame = self.view.frame;
     frame.origin = CGPointZero;
@@ -95,7 +95,7 @@
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
   if (section == [self numberOfSections] - 1) {
-    return BITHockeySDKLocalizedString(@"UpdateSectionCheckTitle");
+    return BITHockeyLocalizedString(@"UpdateSectionCheckTitle");
   } else {
     return nil;
   }
@@ -120,9 +120,9 @@
     footer.font = [UIFont systemFontOfSize:13];
     
     if (section == 0 && [_updateManager isAllowUserToDisableSendData] && [_updateManager shouldSendUserData]) {
-      footer.text = BITHockeySDKLocalizedString(@"UpdateSettingsUserDataDescription");
+      footer.text = BITHockeyLocalizedString(@"UpdateSettingsUserDataDescription");
     } else if ([_updateManager isAllowUserToDisableSendData] && section < [self numberOfSections]) {
-      footer.text = BITHockeySDKLocalizedString(@"UpdateSettingsUsageDataDescription");
+      footer.text = BITHockeyLocalizedString(@"UpdateSettingsUsageDataDescription");
     }
     
     UIView* view = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, 285, footer.frame.size.height + 6 + 11)] autorelease];
@@ -201,19 +201,19 @@
     BITUpdateSetting hockeyAutoUpdateSetting = [_updateManager updateSetting];
     if (indexPath.row == 0) {
       // on startup
-      cell.textLabel.text = BITHockeySDKLocalizedString(@"UpdateSectionCheckStartup");
+      cell.textLabel.text = BITHockeyLocalizedString(@"UpdateSectionCheckStartup");
       if (hockeyAutoUpdateSetting == BITUpdateCheckStartup) {
         cell.accessoryType = UITableViewCellAccessoryCheckmark;
       }
     } else if (indexPath.row == 1) {
       // daily
-      cell.textLabel.text = BITHockeySDKLocalizedString(@"UpdateSectionCheckDaily");
+      cell.textLabel.text = BITHockeyLocalizedString(@"UpdateSectionCheckDaily");
       if (hockeyAutoUpdateSetting == BITUpdateCheckDaily) {
         cell.accessoryType = UITableViewCellAccessoryCheckmark;
       }
     } else {
       // manually
-      cell.textLabel.text = BITHockeySDKLocalizedString(@"UpdateSectionCheckManually");
+      cell.textLabel.text = BITHockeyLocalizedString(@"UpdateSectionCheckManually");
       if (hockeyAutoUpdateSetting == BITUpdateCheckManually) {
         cell.accessoryType = UITableViewCellAccessoryCheckmark;
       }
@@ -223,14 +223,14 @@
     
     if (indexPath.section == 0 && [_updateManager shouldSendUserData] && [_updateManager isAllowUserToDisableSendData]) {
       // send user data
-      cell.textLabel.text = BITHockeySDKLocalizedString(@"UpdateSettingsUserData");
+      cell.textLabel.text = BITHockeyLocalizedString(@"UpdateSettingsUserData");
       [toggleSwitch addTarget:self action:@selector(sendUserData:)
              forControlEvents:UIControlEventValueChanged];
       [toggleSwitch setOn:[_updateManager doesUserAllowsSendUserData]];
       
     } else if ([_updateManager shouldSendUsageTime] && [_updateManager isAllowUserToDisableSendData]) {
       // send usage time
-      cell.textLabel.text = BITHockeySDKLocalizedString(@"UpdateSettingsUsageData");
+      cell.textLabel.text = BITHockeyLocalizedString(@"UpdateSettingsUsageData");
       [toggleSwitch addTarget:self action:@selector(sendUsageData:)
              forControlEvents:UIControlEventValueChanged];
       [toggleSwitch setOn:[_updateManager doesUserAllowsSendUsageTime]];

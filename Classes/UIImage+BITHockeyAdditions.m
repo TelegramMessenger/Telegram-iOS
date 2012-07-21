@@ -1,5 +1,5 @@
 //
-//  UIImage+BITHockeySDKAdditions.m
+//  UIImage+BITHockeyAdditions.m
 //
 //  Created by Peter Steinberger on 10.01.11.
 //  Copyright (c) 2011-2012 Peter Steinberger.

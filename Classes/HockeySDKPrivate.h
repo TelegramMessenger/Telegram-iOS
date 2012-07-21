@@ -52,11 +52,11 @@
 #define BITHOCKEYSDK_BUNDLE @"HockeySDKResources"
 #define BITHOCKEYSDK_URL @"https://sdk.hockeyapp.net/"
 
-#define BITHockeySDKLog(fmt, ...) do { if([BITHockeyManager sharedHockeyManager].isLoggingEnabled) { NSLog((@"[HockeySDK] %s/%d " fmt), __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__); }} while(0)
+#define BITHockeyLog(fmt, ...) do { if([BITHockeyManager sharedHockeyManager].isLoggingEnabled && ![BITHockeyManager sharedHockeyManager].isAppStoreEnvironment) { NSLog((@"[HockeySDK] %s/%d " fmt), __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__); }} while(0)
 
-NSBundle *BITHockeySDKBundle(void);
-NSString *BITHockeySDKLocalizedString(NSString *stringToken);
-NSString *BITHockeySDKMD5(NSString *str);
+NSBundle *BITHockeyBundle(void);
+NSString *BITHockeyLocalizedString(NSString *stringToken);
+NSString *BITHockeyMD5(NSString *str);
 
 
 // compatibility helper

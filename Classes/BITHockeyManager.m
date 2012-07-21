@@ -110,15 +110,15 @@
 
 
 - (void)startManager {
-  BITHockeySDKLog(@"Starting HockeyManager");
+  BITHockeyLog(@"Starting HockeyManager");
   _startManagerIsInvoked = YES;
   
   // start CrashManager
-  BITHockeySDKLog(@"Start crashManager");
+  BITHockeyLog(@"Start crashManager");
   [_crashManager performSelector:@selector(startManager) withObject:nil afterDelay:1.0f];
     
   // Setup UpdateManager
-  BITHockeySDKLog(@"Start UpdateManager");
+  BITHockeyLog(@"Start UpdateManager");
   [_updateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.0f];
 }
 
@@ -162,15 +162,15 @@
   _startManagerIsInvoked = NO;
   
   if (_validAppIdentifier) {
-    BITHockeySDKLog(@"Setup CrashManager");
+    BITHockeyLog(@"Setup CrashManager");
     self.crashManager = [[[BITCrashManager alloc] initWithAppIdentifier:_appIdentifier] autorelease];
     
-    BITHockeySDKLog(@"Setup UpdateManager");
+    BITHockeyLog(@"Setup UpdateManager");
     self.updateManager = [[[BITUpdateManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_isAppStoreEnvironment] autorelease];
     
     // Only if JMC is part of the project
     if ([[self class] isJMCPresent]) {
-      BITHockeySDKLog(@"Setup JMC");
+      BITHockeyLog(@"Setup JMC");
       [_updateManager setCheckForTracker:YES];
       [_updateManager addObserver:self forKeyPath:@"trackerConfig" options:0 context:nil];
       [[self class] disableJMCCrashReporter];

@@ -32,7 +32,7 @@
 
 
 // Load the framework bundle.
-NSBundle *BITHockeySDKBundle(void) {
+NSBundle *BITHockeyBundle(void) {
   static NSBundle *bundle = nil;
   static dispatch_once_t predicate;
   dispatch_once(&predicate, ^{
@@ -43,15 +43,15 @@ NSBundle *BITHockeySDKBundle(void) {
   return bundle;
 }
 
-NSString *BITHockeySDKLocalizedString(NSString *stringToken) {
-  if (BITHockeySDKBundle()) {
-    return NSLocalizedStringFromTableInBundle(stringToken, @"HockeySDK", BITHockeySDKBundle(), @"");
+NSString *BITHockeyLocalizedString(NSString *stringToken) {
+  if (BITHockeyBundle()) {
+    return NSLocalizedStringFromTableInBundle(stringToken, @"HockeySDK", BITHockeyBundle(), @"");
   } else {
     return stringToken;
   }
 }
 
-NSString *BITHockeySDKMD5(NSString *str) {
+NSString *BITHockeyMD5(NSString *str) {
   const char *cStr = [str UTF8String];
   unsigned char result[CC_MD5_DIGEST_LENGTH];
   CC_MD5( cStr, strlen(cStr), result );

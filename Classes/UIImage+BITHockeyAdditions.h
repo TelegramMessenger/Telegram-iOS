@@ -1,5 +1,5 @@
 //
-//  UIImage+BITHockeySDKAdditions.h
+//  UIImage+BITHockeyAdditions.h
 //
 //  Created by Peter Steinberger on 10.01.11.
 //  Copyright (c) 2011-2012 Peter Steinberger.
@@ -26,7 +26,7 @@
 
 #import <UIKit/UIKit.h>
 
-@interface UIImage (BITHockeySDKAdditions)
+@interface UIImage (BITHockeyAdditions)
 
 - (UIImage *)bit_roundedCornerImage:(NSInteger)cornerSize borderSize:(NSInteger)borderSize;
 - (UIImage *)bit_imageToFitSize:(CGSize)fitSize honorScaleFactor:(BOOL)honorScaleFactor;

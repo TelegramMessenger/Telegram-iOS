@@ -33,6 +33,7 @@
 @protocol BITHockeyManagerDelegate;
 
 @class BITCrashManager;
+@class BITUpdateManager;
 
 @interface BITHockeyManager : NSObject {
 @private

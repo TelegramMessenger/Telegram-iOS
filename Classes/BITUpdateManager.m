@@ -111,15 +111,15 @@
 #pragma mark - private
 
 - (void)reportError:(NSError *)error {
-  BITHockeySDKLog(@"Error: %@", [error localizedDescription]);
+  BITHockeyLog(@"Error: %@", [error localizedDescription]);
   _lastCheckFailed = YES;
   
   // only show error if we enable that
   if (_showFeedback) {
-    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:BITHockeySDKLocalizedString(@"UpdateError")
+    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateError")
                                                     message:[error localizedDescription]
                                                    delegate:nil
-                                          cancelButtonTitle:BITHockeySDKLocalizedString(@"OK") otherButtonTitles:nil];
+                                          cancelButtonTitle:BITHockeyLocalizedString(@"OK") otherButtonTitles:nil];
     [alert show];
     [alert release];
     _showFeedback = NO;
@@ -222,7 +222,7 @@
 }
 
 - (NSString *)authenticationToken {
-  return [BITHockeySDKMD5([NSString stringWithFormat:@"%@%@%@%@",
+  return [BITHockeyMD5([NSString stringWithFormat:@"%@%@%@%@",
                  _authenticationSecret,
                  [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"],
                  [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"],
@@ -289,7 +289,7 @@
     if ([UIWindow instancesRespondToSelector:@selector(rootViewController)]) {
       if ([window rootViewController]) {
         visibleWindow = window;
-        BITHockeySDKLog(@"UIWindow with rootViewController found: %@", visibleWindow);
+        BITHockeyLog(@"UIWindow with rootViewController found: %@", visibleWindow);
         break;
       }
     }
@@ -386,7 +386,7 @@
       self.userAllowsSendUsageTime = YES;
     }
         
-    if (!BITHockeySDKBundle()) {
+    if (!BITHockeyBundle()) {
       NSLog(@"WARNING: %@.bundle is missing, make sure it is added!", BITHOCKEYSDK_BUNDLE);
     }
     
@@ -442,7 +442,7 @@
   }
   
   if (_currentHockeyViewController) {
-    BITHockeySDKLog(@"update view already visible, aborting");
+    BITHockeyLog(@"update view already visible, aborting");
     return;
   }
   
@@ -503,24 +503,24 @@
   
   if (!_updateAlertShowing) {
     if ([self hasNewerMandatoryVersion]) {
-      UIAlertView *alertView = [[[UIAlertView alloc] initWithTitle:BITHockeySDKLocalizedString(@"UpdateAvailable")
-                                                           message:[NSString stringWithFormat:BITHockeySDKLocalizedString(@"UpdateAlertMandatoryTextWithAppVersion"), [self.newestAppVersion nameAndVersionString]]
+      UIAlertView *alertView = [[[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateAvailable")
+                                                           message:[NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateAlertMandatoryTextWithAppVersion"), [self.newestAppVersion nameAndVersionString]]
                                                           delegate:self
-                                                 cancelButtonTitle:BITHockeySDKLocalizedString(@"UpdateInstall")
+                                                 cancelButtonTitle:BITHockeyLocalizedString(@"UpdateInstall")
                                                  otherButtonTitles:nil
                                  ] autorelease];
       [alertView setTag:2];
       [alertView show];
       _updateAlertShowing = YES;
     } else {
-      UIAlertView *alertView = [[[UIAlertView alloc] initWithTitle:BITHockeySDKLocalizedString(@"UpdateAvailable")
-                                                           message:[NSString stringWithFormat:BITHockeySDKLocalizedString(@"UpdateAlertTextWithAppVersion"), [self.newestAppVersion nameAndVersionString]]
+      UIAlertView *alertView = [[[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateAvailable")
+                                                           message:[NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateAlertTextWithAppVersion"), [self.newestAppVersion nameAndVersionString]]
                                                           delegate:self
-                                                 cancelButtonTitle:BITHockeySDKLocalizedString(@"UpdateIgnore")
-                                                 otherButtonTitles:BITHockeySDKLocalizedString(@"UpdateShow"), nil
+                                                 cancelButtonTitle:BITHockeyLocalizedString(@"UpdateIgnore")
+                                                 otherButtonTitles:BITHockeyLocalizedString(@"UpdateShow"), nil
                                  ] autorelease];
       if (self.isShowingDirectInstallOption) {
-        [alertView addButtonWithTitle:BITHockeySDKLocalizedString(@"UpdateInstall")];
+        [alertView addButtonWithTitle:BITHockeyLocalizedString(@"UpdateInstall")];
       }
       [alertView setTag:0];
       [alertView show];
@@ -704,7 +704,7 @@
   
   // build request & send
   NSString *url = [NSString stringWithFormat:@"%@%@", BITHOCKEYSDK_URL, parameter];
-  BITHockeySDKLog(@"sending api request to %@", url);
+  BITHockeyLog(@"sending api request to %@", url);
   
   NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url] cachePolicy:1 timeoutInterval:10.0];
   [request setHTTPMethod:@"GET"];
@@ -728,7 +728,7 @@
                                         userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Server returned empty response.", NSLocalizedDescriptionKey, nil]]];
       return;
     } else {
-      BITHockeySDKLog(@"Received API response: %@", responseString);
+      BITHockeyLog(@"Received API response: %@", responseString);
       NSString *token = [[feedDict objectForKey:@"authcode"] lowercaseString];
       failed = NO;
       if ([[self authenticationToken] compare:token] == NSOrderedSame) {
@@ -748,21 +748,21 @@
         }
       } else {
         // different token, block this version
-        BITHockeySDKLog(@"AUTH FAILURE: %@", [self authenticationToken]);
+        BITHockeyLog(@"AUTH FAILURE: %@", [self authenticationToken]);
         
         // store the new data
         [[NSUserDefaults standardUserDefaults] setObject:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] forKey:kBITUpdateAuthorizedVersion];
         [[NSUserDefaults standardUserDefaults] setObject:token forKey:kBITUpdateAuthorizedVersion];
         [[NSUserDefaults standardUserDefaults] synchronize];
         
-        [self showAuthorizationScreen:BITHockeySDKLocalizedString(@"UpdateAuthorizationDenied") image:@"authorize_denied.png"];
+        [self showAuthorizationScreen:BITHockeyLocalizedString(@"UpdateAuthorizationDenied") image:@"authorize_denied.png"];
       }
     }
     
   }
   
   if (failed) {
-    [self showAuthorizationScreen:BITHockeySDKLocalizedString(@"UpdateAuthorizationOffline") image:@"authorize_request.png"];
+    [self showAuthorizationScreen:BITHockeyLocalizedString(@"UpdateAuthorizationOffline") image:@"authorize_request.png"];
   }
 }
 
@@ -784,7 +784,7 @@
   
   // do we need to update?
   if (![self shouldCheckForUpdates] && !_currentHockeyViewController) {
-    BITHockeySDKLog(@"update not needed right now");
+    BITHockeyLog(@"update not needed right now");
     self.checkInProgress = NO;
     return;
   }
@@ -818,7 +818,7 @@
   
   // build request & send
   NSString *url = [NSString stringWithFormat:@"%@%@", BITHOCKEYSDK_URL, parameter];
-  BITHockeySDKLog(@"sending api request to %@", url);
+  BITHockeyLog(@"sending api request to %@", url);
   
   NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url] cachePolicy:1 timeoutInterval:10.0];
   [request setHTTPMethod:@"GET"];
@@ -838,12 +838,12 @@
   if (_isAppStoreEnvironment) return NO;
   
   if (!self.isUpdateAvailable) {
-    BITHockeySDKLog(@"Warning: No update available. Aborting.");
+    BITHockeyLog(@"Warning: No update available. Aborting.");
     return NO;
   }
   
 #if TARGET_IPHONE_SIMULATOR
-  UIAlertView *alert = [[[UIAlertView alloc] initWithTitle:hockeySDKLocalizedString(@"UpdateWarning") message:hockeySDKLocalizedString(@"UpdateSimulatorMessage") delegate:nil cancelButtonTitle:hockeySDKLocalizedString(@"HockeyOK") otherButtonTitles:nil] autorelease];
+  UIAlertView *alert = [[[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateWarning") message:BITHockeyLocalizedString(@"UpdateSimulatorMessage") delegate:nil cancelButtonTitle:BITHockeyLocalizedString(@"HockeyOK") otherButtonTitles:nil] autorelease];
   [alert show];
   return NO;
 #endif
@@ -856,9 +856,9 @@
   NSString *hockeyAPIURL = [NSString stringWithFormat:@"%@api/2/apps/%@?format=plist%@", BITHOCKEYSDK_URL, [self encodedAppIdentifier], extraParameter];
   NSString *iOSUpdateURL = [NSString stringWithFormat:@"itms-services://?action=download-manifest&url=%@", [hockeyAPIURL bit_URLEncodedString]];
   
-  BITHockeySDKLog(@"API Server Call: %@, calling iOS with %@", hockeyAPIURL, iOSUpdateURL);
+  BITHockeyLog(@"API Server Call: %@, calling iOS with %@", hockeyAPIURL, iOSUpdateURL);
   BOOL success = [[UIApplication sharedApplication] openURL:[NSURL URLWithString:iOSUpdateURL]];
-  BITHockeySDKLog(@"System returned: %d", success);
+  BITHockeyLog(@"System returned: %d", success);
   return success;
 }
 
@@ -880,7 +880,7 @@
   
   BITUpdateAuthorizationState state = [self authorizationState];
   if (state == BITUpdateAuthorizationDenied) {
-    [self showAuthorizationScreen:BITHockeySDKLocalizedString(@"UpdateAuthorizationDenied") image:@"authorize_denied.png"];
+    [self showAuthorizationScreen:BITHockeyLocalizedString(@"UpdateAuthorizationDenied") image:@"authorize_denied.png"];
   } else if (state == BITUpdateAuthorizationAllowed) {
     self.requireAuthorization = NO;
     return YES;
@@ -894,7 +894,7 @@
 - (void)startManager {
   if (![self appVersionIsAuthorized]) {
     if ([self authorizationState] == BITUpdateAuthorizationPending) {
-      [self showAuthorizationScreen:BITHockeySDKLocalizedString(@"UpdateAuthorizationProgress") image:@"authorize_request.png"];
+      [self showAuthorizationScreen:BITHockeyLocalizedString(@"UpdateAuthorizationProgress") image:@"authorize_request.png"];
       
       [self performSelector:@selector(checkForAuthorization) withObject:nil afterDelay:0.0f];
     }
@@ -950,7 +950,7 @@
   
   if ([self.receivedData length]) {
     NSString *responseString = [[[NSString alloc] initWithBytes:[_receivedData bytes] length:[_receivedData length] encoding: NSUTF8StringEncoding] autorelease];
-    BITHockeySDKLog(@"Received API response: %@", responseString);
+    BITHockeyLog(@"Received API response: %@", responseString);
     
     id json = [self parseJSONResultString:responseString];
     self.trackerConfig = (([self checkForTracker] && [[json valueForKey:@"tracker"] isKindOfClass:[NSDictionary class]]) ? [json valueForKey:@"tracker"] : nil);
@@ -1005,12 +1005,12 @@
         NSString *shortVersionString = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
         shortVersionString = shortVersionString ? [NSString stringWithFormat:@"%@ ", shortVersionString] : @"";
         versionString = [shortVersionString length] ? [NSString stringWithFormat:@"(%@)", versionString] : versionString;
-        NSString *currentVersionString = [NSString stringWithFormat:@"%@ %@ %@%@", self.newestAppVersion.name, BITHockeySDKLocalizedString(@"UpdateVersion"), shortVersionString, versionString];
-        NSString *alertMsg = [NSString stringWithFormat:BITHockeySDKLocalizedString(@"UpdateNoUpdateAvailableMessage"), currentVersionString];
-        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:BITHockeySDKLocalizedString(@"UpdateNoUpdateAvailableTitle")
+        NSString *currentVersionString = [NSString stringWithFormat:@"%@ %@ %@%@", self.newestAppVersion.name, BITHockeyLocalizedString(@"UpdateVersion"), shortVersionString, versionString];
+        NSString *alertMsg = [NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateNoUpdateAvailableMessage"), currentVersionString];
+        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateNoUpdateAvailableTitle")
                                                         message:alertMsg
                                                        delegate:nil
-                                              cancelButtonTitle:BITHockeySDKLocalizedString(@"HockeyOK")
+                                              cancelButtonTitle:BITHockeyLocalizedString(@"HockeyOK")
                                               otherButtonTitles:nil];
         [alert show];
         [alert release];

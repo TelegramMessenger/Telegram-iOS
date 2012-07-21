@@ -72,7 +72,7 @@
 
 - (id)initWithAppIdentifier:(NSString *)appIdentifier {
   if ((self = [super init])) {
-    BITHockeySDKLog(@"Initializing CrashReporter");
+    BITHockeyLog(@"Initializing CrashReporter");
     
     _appIdentifier = appIdentifier;
     
@@ -136,7 +136,7 @@
       [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(startManager) name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
     }
     
-    if (!BITHockeySDKBundle()) {
+    if (!BITHockeyBundle()) {
       NSLog(@"WARNING: %@.bundle is missing, will send reports automatically!", BITHOCKEYSDK_BUNDLE);
     }
   }
@@ -187,7 +187,7 @@
 - (void)startManager {
   if (!_sendingInProgress && [self hasPendingCrashReport]) {
     _sendingInProgress = YES;
-    if (!BITHockeySDKBundle()) {
+    if (!BITHockeyBundle()) {
 			NSLog(@"WARNING: HockeySDKResource.bundle is missing, sending reports automatically!");
       [self sendCrashReports];
     } else if (![self autoSendCrashReports] && [self hasNonApprovedCrashReports]) {
@@ -198,14 +198,14 @@
       
       NSString *appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"];
       
-      UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:[NSString stringWithFormat:BITHockeySDKLocalizedString(@"CrashDataFoundTitle"), appName]
-                                                          message:[NSString stringWithFormat:BITHockeySDKLocalizedString(@"CrashDataFoundDescription"), appName]
+      UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:[NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundTitle"), appName]
+                                                          message:[NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundDescription"), appName]
                                                          delegate:self
-                                                cancelButtonTitle:BITHockeySDKLocalizedString(@"CrashDontSendReport")
-                                                otherButtonTitles:BITHockeySDKLocalizedString(@"CrashSendReport"), nil];
+                                                cancelButtonTitle:BITHockeyLocalizedString(@"CrashDontSendReport")
+                                                otherButtonTitles:BITHockeyLocalizedString(@"CrashSendReport"), nil];
       
       if ([self isShowingAlwaysButton]) {
-        [alertView addButtonWithTitle:BITHockeySDKLocalizedString(@"CrashSendReportAlways")];
+        [alertView addButtonWithTitle:BITHockeyLocalizedString(@"CrashSendReportAlways")];
       }
       
       [alertView setTag: BITCrashAlertTypeSend];
@@ -294,7 +294,7 @@
     }
     
     if ([_crashFiles count] > 0) {
-      BITHockeySDKLog(@"Pending crash reports found.");
+      BITHockeyLog(@"Pending crash reports found.");
       return YES;
     } else
       return NO;
@@ -308,29 +308,29 @@
 	
   if (_serverResult >= BITCrashStatusAssigned && 
     _crashIdenticalCurrentVersion &&
-    BITHockeySDKBundle()) {
+    BITHockeyBundle()) {
     // show some feedback to the user about the crash status
     NSString *appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"];
     switch (_serverResult) {
       case BITCrashStatusAssigned:
-        alertView = [[UIAlertView alloc] initWithTitle: [NSString stringWithFormat:BITHockeySDKLocalizedString(@"CrashResponseTitle"), appName ]
-                                               message: [NSString stringWithFormat:BITHockeySDKLocalizedString(@"CrashResponseNextRelease"), appName]
+        alertView = [[UIAlertView alloc] initWithTitle: [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashResponseTitle"), appName ]
+                                               message: [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashResponseNextRelease"), appName]
                                               delegate: self
-                                     cancelButtonTitle: BITHockeySDKLocalizedString(@"HockeyOK")
+                                     cancelButtonTitle: BITHockeyLocalizedString(@"HockeyOK")
                                      otherButtonTitles: nil];
         break;
       case BITCrashStatusSubmitted:
-        alertView = [[UIAlertView alloc] initWithTitle: [NSString stringWithFormat:BITHockeySDKLocalizedString(@"CrashResponseTitle"), appName ]
-                                               message: [NSString stringWithFormat:BITHockeySDKLocalizedString(@"CrashResponseWaitingApple"), appName]
+        alertView = [[UIAlertView alloc] initWithTitle: [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashResponseTitle"), appName ]
+                                               message: [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashResponseWaitingApple"), appName]
                                               delegate: self
-                                     cancelButtonTitle: BITHockeySDKLocalizedString(@"HockeyOK")
+                                     cancelButtonTitle: BITHockeyLocalizedString(@"HockeyOK")
                                      otherButtonTitles: nil];
         break;
       case BITCrashStatusAvailable:
-        alertView = [[UIAlertView alloc] initWithTitle: [NSString stringWithFormat:BITHockeySDKLocalizedString(@"CrashResponseTitle"), appName ]
-                                               message: [NSString stringWithFormat:BITHockeySDKLocalizedString(@"CrashResponseAvailable"), appName]
+        alertView = [[UIAlertView alloc] initWithTitle: [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashResponseTitle"), appName ]
+                                               message: [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashResponseAvailable"), appName]
                                               delegate: self
-                                     cancelButtonTitle: BITHockeySDKLocalizedString(@"HockeyOK")
+                                     cancelButtonTitle: BITHockeyLocalizedString(@"HockeyOK")
                                      otherButtonTitles: nil];
         break;
       default:
@@ -479,7 +479,7 @@
   [[NSUserDefaults standardUserDefaults] synchronize];
   
   if (crashes != nil) {
-    BITHockeySDKLog(@"Sending crash reports:\n%@", crashes);
+    BITHockeyLog(@"Sending crash reports:\n%@", crashes);
     [self postXML:[NSString stringWithFormat:@"<crashes>%@</crashes>", crashes]
              toURL:[NSURL URLWithString:BITHOCKEYSDK_URL]];
     
@@ -529,9 +529,9 @@
   _urlConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self];    
   
   if (!_urlConnection) {
-    BITHockeySDKLog(@"Requesting feedback status could not start!");
+    BITHockeyLog(@"Requesting feedback status could not start!");
   } else {
-    BITHockeySDKLog(@"Requesting feedback status.");
+    BITHockeyLog(@"Requesting feedback status.");
   }
 }
 
@@ -581,14 +581,14 @@
   _urlConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
   
   if (!_urlConnection) {
-    BITHockeySDKLog(@"Sending crash reports could not start!");
+    BITHockeyLog(@"Sending crash reports could not start!");
     _sendingInProgress = NO;
   } else {
     if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashReporterWillSendCrashReport:)]) {
       [self.delegate crashReporterWillSendCrashReport:self];
     }
     
-    BITHockeySDKLog(@"Sending crash reports started.");
+    BITHockeyLog(@"Sending crash reports started.");
   }
 }
 
@@ -609,7 +609,7 @@
     [self.delegate crashReporter:self didFailWithError:error];
   }
   
-  BITHockeySDKLog(@"ERROR: %@", [error localizedDescription]);
+  BITHockeyLog(@"ERROR: %@", [error localizedDescription]);
   
   _sendingInProgress = NO;
 	
@@ -631,7 +631,7 @@
                                                                      mutabilityOption:NSPropertyListMutableContainersAndLeaves
                                                                                format:nil
                                                                      errorDescription:NULL];
-    BITHockeySDKLog(@"Received API response: %@", response);
+    BITHockeyLog(@"Received API response: %@", response);
     
     _serverResult = (BITCrashStatus)[[response objectForKey:@"status"] intValue];
     if ([response objectForKey:@"id"]) {
@@ -668,7 +668,7 @@
       [self.delegate crashReporter:self didFailWithError:error];
     }
     
-    BITHockeySDKLog(@"ERROR: %@", [error localizedDescription]);
+    BITHockeyLog(@"ERROR: %@", [error localizedDescription]);
   } else {
     if (_responseData == nil || [_responseData length] == 0) {
       error = [NSError errorWithDomain:kBITCrashErrorDomain
@@ -684,7 +684,7 @@
       [self.delegate crashReporter:self didFailWithError:error];
     }
 
-    BITHockeySDKLog(@"ERROR: %@", [error localizedDescription]);
+    BITHockeyLog(@"ERROR: %@", [error localizedDescription]);
   }
   
   _sendingInProgress = NO;

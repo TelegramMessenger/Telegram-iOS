@@ -65,7 +65,6 @@
 		1E59557115B6F84700A03429 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
 		1E59557315B6F84D00A03429 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
 		1E59557515B6F85700A03429 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
-		1E59557715B6F85E00A03429 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
 		1E59557C15B6F8CC00A03429 /* HockeySDKResources.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 1E59550A15B6F45800A03429 /* HockeySDKResources.bundle */; };
 		1E59558D15B6FDA500A03429 /* PSAppStoreHeader.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB469148D7BF50015DEDC /* PSAppStoreHeader.h */; };
 		1E59558E15B6FDA500A03429 /* PSStoreButton.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB46B148D7BF50015DEDC /* PSStoreButton.h */; };
@@ -230,7 +229,7 @@
 		E41EB45D148D7BF50015DEDC /* BITUpdateManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = BITUpdateManager.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		E41EB45F148D7BF50015DEDC /* BITUpdateSettingsViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITUpdateSettingsViewController.h; sourceTree = "<group>"; };
 		E41EB460148D7BF50015DEDC /* BITUpdateSettingsViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITUpdateSettingsViewController.m; sourceTree = "<group>"; };
-		E41EB464148D7BF50015DEDC /* BITCrashManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITCrashManager.m; sourceTree = "<group>"; };
+		E41EB464148D7BF50015DEDC /* BITCrashManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = BITCrashManager.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
 		E41EB465148D7BF50015DEDC /* BITHockeyManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITHockeyManager.h; sourceTree = "<group>"; };
 		E41EB466148D7BF50015DEDC /* BITHockeyManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITHockeyManager.m; sourceTree = "<group>"; };
 		E41EB468148D7BF50015DEDC /* NSString+BITHockeyAdditions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSString+BITHockeyAdditions.m"; sourceTree = "<group>"; };
@@ -671,7 +670,6 @@
 				1E59557115B6F84700A03429 /* HockeySDK.strings in Resources */,
 				1E59557315B6F84D00A03429 /* HockeySDK.strings in Resources */,
 				1E59557515B6F85700A03429 /* HockeySDK.strings in Resources */,
-				1E59557715B6F85E00A03429 /* HockeySDK.strings in Resources */,
 				1E5955C615B71C8600A03429 /* authorize_denied.png in Resources */,
 				1E5955C715B71C8600A03429 /* authorize_denied@2x.png in Resources */,
 				1E5955C815B71C8600A03429 /* authorize_request.png in Resources */,
