@@ -47,14 +47,14 @@
 
 #pragma mark - Public Properties
 
-@property (nonatomic, retain) BITCrashManager *crashManager;
+@property (nonatomic, retain, readonly) BITCrashManager *crashManager;
 
-@property (nonatomic, retain) BITUpdateManager *updateManager;
+@property (nonatomic, retain, readonly) BITUpdateManager *updateManager;
 
 
 // if YES the app is installed from the app store
 // if NO the app is installed via ad-hoc or enterprise distribution
-@property (nonatomic, readonly) BOOL isAppStoreEnvironment;
+@property (nonatomic, readonly, getter=isAppStoreEnvironment) BOOL appStoreEnvironment;
 
 // Enable debug logging; ONLY ENABLE THIS FOR DEBUGGING!
 //

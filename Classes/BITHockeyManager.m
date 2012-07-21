@@ -45,7 +45,7 @@
 @synthesize crashManager = _crashManager;
 @synthesize updateManager = _updateManager;
 
-@synthesize isAppStoreEnvironment = _isAppStoreEnvironment;
+@synthesize appStoreEnvironment = _appStoreEnvironment;
 
 
 #pragma mark - Public Class Methods
@@ -64,7 +64,7 @@
 
 - (id) init {
   if ((self = [super init])) {
-    _isAppStoreEnvironment = NO;
+    _appStoreEnvironment = NO;
     _startManagerIsInvoked = NO;
 
     [self performSelector:@selector(validateStartManagerIsInvoked) withObject:nil afterDelay:0.0f];
@@ -124,7 +124,7 @@
 
 
 - (void)validateStartManagerIsInvoked {
-  if (_validAppIdentifier && !_isAppStoreEnvironment) {
+  if (_validAppIdentifier && !_appStoreEnvironment) {
     if (!_startManagerIsInvoked) {
       NSLog(@"ERROR: You did not call [[BITHockeyManager sharedHockeyManager] startManager] to startup the HockeySDK! Please do so after setting up all properties. The SDK is NOT running.");
     }
@@ -140,7 +140,7 @@
     delegateResult = [(NSObject <BITHockeyManagerDelegate>*)delegate shouldUseLiveIdenfitier];
   }
 
-  return (delegateResult) || (_isAppStoreEnvironment);
+  return (delegateResult) || (_appStoreEnvironment);
 }
 
 - (void)initializeModules {
@@ -150,23 +150,23 @@
   
   // check if we are really not in an app store environment
   if ([[NSBundle mainBundle] pathForResource:@"embedded" ofType:@"mobileprovision"]) {
-    _isAppStoreEnvironment = NO;
+    _appStoreEnvironment = NO;
   } else {
-    _isAppStoreEnvironment = YES;
+    _appStoreEnvironment = YES;
   }
   
 #if TARGET_IPHONE_SIMULATOR
-  _isAppStoreEnvironment = NO;
+  _appStoreEnvironment = NO;
 #endif
   
   _startManagerIsInvoked = NO;
   
   if (_validAppIdentifier) {
     BITHockeyLog(@"Setup CrashManager");
-    self.crashManager = [[[BITCrashManager alloc] initWithAppIdentifier:_appIdentifier] autorelease];
+    _crashManager = [[BITCrashManager alloc] initWithAppIdentifier:_appIdentifier];
     
     BITHockeyLog(@"Setup UpdateManager");
-    self.updateManager = [[[BITUpdateManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_isAppStoreEnvironment] autorelease];
+    _updateManager = [[BITUpdateManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
     
     // Only if JMC is part of the project
     if ([[self class] isJMCPresent]) {
