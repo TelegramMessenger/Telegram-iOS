@@ -35,6 +35,38 @@
 @class BITCrashManager;
 @class BITUpdateManager;
 
+/** 
+ The HockeySDK manager.
+ 
+ This is the principal SDK class. It represents the entry point for the HockeySDL. The main promises of the class are initializing the SDK modules, providing access to global properties and to all modules. Initialization is divided into several distinct phases:
+ 
+ 1. Setup the [HockeyApp](http://hockeyapp.net/) app identifier and the optional delegate: This is the least required information on setting up the SDK and using it. It does some simple validation of the app identifier and checks if the app is running from the App Store or not. If the [Atlassian JMC framework](http://www.atlassian.com/jmc/) is found, it will disable its Crash Reporting module and configure it with the Jira configuration data from [HockeyApp](http://hockeyapp.net/).
+ 2. Provides access to the SDK modules `BITCrashManager` and `BITUpdateManager`. This way all modules can be further configured to personal needs, if the defaults don't fit the requirements.
+ 3. Start up all modules.
+ 
+ Example:
+    [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"<AppIdentifierFromHockeyApp>" delegate:nil];
+    [[BITHockeyManager sharedHockeyManager] startManager];
+ 
+ @warning **WARNING**: When using the SDK also for updating beta versions and collecting beta usage analytics,
+ you also have to to set the `delegate` property of `BITUpdateManager` and implement the `customDeviceIdentifierForUpdateManager:` delegate!
+ 
+ Example:
+    - (NSString *)customDeviceIdentifierForUpdateManager:(BITUpdateManager *)updateManager {
+    #ifdef CHECKFORBETA
+      if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)])
+        return [[UIDevice currentDevice] performSelector:@selector(uniqueIdentifier)];
+    #endif
+      return nil;
+    }
+ 
+    ...
+    
+    [[BITHockeyManager sharedHockeyManager].updateManager setDelegate:self];
+
+
+ */
+
 @interface BITHockeyManager : NSObject {
 @private
   id<BITHockeyManagerDelegate> delegate;
@@ -45,38 +77,125 @@
   BOOL _startManagerIsInvoked;
 }
 
-#pragma mark - Public Properties
-
-@property (nonatomic, retain, readonly) BITCrashManager *crashManager;
-
-@property (nonatomic, retain, readonly) BITUpdateManager *updateManager;
-
-
-// if YES the app is installed from the app store
-// if NO the app is installed via ad-hoc or enterprise distribution
-@property (nonatomic, readonly, getter=isAppStoreEnvironment) BOOL appStoreEnvironment;
-
-// Enable debug logging; ONLY ENABLE THIS FOR DEBUGGING!
-//
-// Default: NO
-@property (nonatomic, assign, getter=isLoggingEnabled) BOOL loggingEnabled;
-
 
 #pragma mark - Public Methods
 
-// Returns the shared manager object
+///-----------------------------------------------------------------------------
+/// @name Initializion
+///-----------------------------------------------------------------------------
+
+/**
+ Returns a shared BITHockeyManager object
+ 
+ @return A singleton BITHockeyManager instance ready use
+ */
 + (BITHockeyManager *)sharedHockeyManager;
 
-// Configure HockeyApp with a single app identifier and delegate; use this
-// only for debug or beta versions of your app!
+
+/**
+ Initializes the manager with a particular app identifier and delegate
+ 
+ Initialize the manager with a HockeyApp app identifier and assign the class that
+ implements the optional BITHockeyManagerDelegate protocol.
+ 
+    [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"<AppIdentifierFromHockeyApp>" delegate:nil];
+
+ @see configureWithBetaIdentifier:liveIdentifier:delegate:
+ @see startManager
+ @param appIdentifier The app identifier that should be used.
+ @param delegate `nil` or the class implementing the option BITHockeyManagerDelegate protocol or 
+ */
 - (void)configureWithIdentifier:(NSString *)appIdentifier delegate:(id<BITHockeyManagerDelegate>)delegate;
 
-// Configure HockeyApp with different app identifiers for beta and live versions
-// of the app; the update alert will only be shown for the beta identifier
+
+/**
+ Initializes the manager with an app identifier for beta, one for live usage and delegate
+ 
+ Initialize the manager with different HockeyApp app identifiers for beta and live usage.
+ All modules will automatically detect if the app is running in the App Store and use
+ the live app identifier for that. In all other cases it will use the beta app identifier.
+ 
+    [[BITHockeyManager sharedHockeyManager] configureWithBetaIdentifier:@"<AppIdentifierForBetaAppFromHockeyApp>"
+                                                         liveIdentifier:@"<AppIdentifierForLiveAppFromHockeyApp>"
+                                                               delegate:nil];
+
+ @see configureWithIdentifier:delegate:
+ @see startManager
+ @param betaIdentifier The app identifier for the _non_ app store (beta) configurations
+ @param liveIdentifier The app identifier for the app store configurations.
+ @param delegate `nil` or the implementing the optional BITHockeyManagerDelegate protocol
+ */
 - (void)configureWithBetaIdentifier:(NSString *)betaIdentifier liveIdentifier:(NSString *)liveIdentifier delegate:(id<BITHockeyManagerDelegate>)delegate;
 
-// Initialize all submodules and start them
+
+/**
+ Starts the manager and runs all modules
+ 
+ Call this after configuring the manager and setting up all modules.
+ 
+ @see configureWithIdentifier:delegate:
+ @see configureWithBetaIdentifier:liveIdentifier:delegate:
+ */
 - (void)startManager;
+
+
+#pragma mark - Public Properties
+
+///-----------------------------------------------------------------------------
+/// @name Modules
+///-----------------------------------------------------------------------------
+
+
+/**
+ Reference to the initialized BITCrashManager module
+ 
+ @see configureWithIdentifier:delegate:
+ @see configureWithBetaIdentifier:liveIdentifier:delegate:
+ @see startManager
+ @return The BITCrashManager instance initialized by BITHockeyManager
+ */
+@property (nonatomic, retain, readonly) BITCrashManager *crashManager;
+
+
+/**
+ Reference to the initialized BITUpdateManager module
+ 
+ @see configureWithIdentifier:delegate:
+ @see configureWithBetaIdentifier:liveIdentifier:delegate:
+ @see startManager
+ @return The BITCrashManager instance initialized by BITUpdateManager
+ */
+@property (nonatomic, retain, readonly) BITUpdateManager *updateManager;
+
+
+///-----------------------------------------------------------------------------
+/// @name Environment
+///-----------------------------------------------------------------------------
+
+/**
+ Flag that determines whether the application is installed and running
+ from an App Store installation.
+ 
+ @return YES if the app is installed and running from the App Store
+ @return NO if the app is installed via debug, ad-hoc or enterprise distribution
+ */
+@property (nonatomic, readonly, getter=isAppStoreEnvironment) BOOL appStoreEnvironment;
+
+
+///-----------------------------------------------------------------------------
+/// @name Logging
+///-----------------------------------------------------------------------------
+
+/**
+ Flag that determines whether additional logging output should be generated
+ by the manager and all modules.
+ 
+ This is ignored if the app is running in the App Store and reverts to the
+ default value in that case.
+ 
+ *Default*: _NO_
+ */
+@property (nonatomic, assign, getter=isLoggingEnabled) BOOL loggingEnabled;
 
 
 @end

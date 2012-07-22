@@ -47,7 +47,23 @@ typedef enum BITCrashStatus {
 
 @protocol BITCrashManagerDelegate;
 
+/**
+ The crash reporting module.
+ 
+ This is the principal SDK class. It represents the entry point for the HockeySDL. The main promises of the class are initializing the SDK modules, providing access to global properties and to all modules. Initialization is divided into several distinct phases:
+ 
+ 1. Setup the [HockeyApp](http://hockeyapp.net/) app identifier and the optional delegate: This is the least required information on setting up the SDK and using it. It does some simple validation of the app identifier and checks if the app is running from the App Store or not. If the [Atlassian JMC framework](http://www.atlassian.com/jmc/) is found, it will disable its Crash Reporting module and configure it with the Jira configuration data from [HockeyApp](http://hockeyapp.net/).
+ 2. Provides access to the SDK modules `BITCrashManager` and `BITUpdateManager`. This way all modules can be further configured to personal needs, if the defaults don't fit the requirements.
+ 3. Start up all modules.
+ 
+ Example:
+ [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"<AppIdentifierFromHockeyApp>" delegate:nil];
+ [[BITHockeyManager sharedHockeyManager] startManager];
+ 
+ */
+
 @interface BITCrashManager : NSObject {
+@private
   id <BITCrashManagerDelegate> _delegate;
   
   NSString *_appIdentifier;

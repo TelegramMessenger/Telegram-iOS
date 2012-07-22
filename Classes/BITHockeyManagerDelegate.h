@@ -28,14 +28,33 @@
 
 #import <Foundation/Foundation.h>
 
+
+/**
+ The `BITHockeyManagerDelegate` formal protocol defines methods further configuring
+  the behaviour of `BITHockeyManager`.
+ 
+ `BITHockeyManager` conforms to BITHockeyManagerDelegate.
+ */
+
 @protocol BITHockeyManagerDelegate <NSObject>
 
 @optional
 
-// Invoked when the manager is configured
-//
-// Implement to force the usage of the live identifier, e.g. for enterprise apps
-// which are distributed inside your company
+/**
+ Implement to force the usage of the live identifier
+ 
+ This is useful if you are e.g. distributing an enterprise app inside your company
+ and want to use the `liveIdentifier` for that even though it is not running from
+ the App Store.
+ 
+ Example:
+    - (BOOL)shouldUseLiveIdenfitier {
+    #ifdef (CONFIGURATION_Release)
+      return YES;
+    #endif
+      return NO;
+    }
+ */
 - (BOOL)shouldUseLiveIdenfitier;
 
 @end
