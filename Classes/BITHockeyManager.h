@@ -103,7 +103,7 @@
  @see configureWithBetaIdentifier:liveIdentifier:delegate:
  @see startManager
  @param appIdentifier The app identifier that should be used.
- @param delegate `nil` or the class implementing the option BITHockeyManagerDelegate protocol or 
+ @param delegate `nil` or the class implementing the option BITHockeyManagerDelegate protocol
  */
 - (void)configureWithIdentifier:(NSString *)appIdentifier delegate:(id<BITHockeyManagerDelegate>)delegate;
 
