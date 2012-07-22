@@ -6,6 +6,20 @@
 	objectVersion = 46;
 	objects = {
 
+/* Begin PBXAggregateTarget section */
+		1E8E66AD15BC3D7700632A2E /* HockeySDK Documentation */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = 1E8E66B015BC3D7700632A2E /* Build configuration list for PBXAggregateTarget "HockeySDK Documentation" */;
+			buildPhases = (
+				1E8E66B215BC3D8200632A2E /* ShellScript */,
+			);
+			dependencies = (
+			);
+			name = "HockeySDK Documentation";
+			productName = Documentation;
+		};
+/* End PBXAggregateTarget section */
+
 /* Begin PBXBuildFile section */
 		1E01118115BB6311007002AC /* BITUpdateManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E01118015BB62FE007002AC /* BITUpdateManagerPrivate.h */; };
 		1E01118215BB6314007002AC /* BITCrashManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E01117E15BB6228007002AC /* BITCrashManagerPrivate.h */; };
@@ -623,6 +637,7 @@
 				1E59545515B6C41300A03429 /* HockeySDK-Simulator */,
 				1E5954CB15B6F24A00A03429 /* HockeySDKLib */,
 				1E59550915B6F45800A03429 /* HockeySDKResources */,
+				1E8E66AD15BC3D7700632A2E /* HockeySDK Documentation */,
 			);
 		};
 /* End PBXProject section */
@@ -669,6 +684,19 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "FRAMEWORK=\"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.framework\"\n\nlipo \\\n\"${BUILD_DIR}/${CONFIGURATION}-iphoneos/libHockeySDK-iphoneos.a\" \\\n\"${BUILD_DIR}/${CONFIGURATION}-iphonesimulator/libHockeySDK-iphonesimulator.a\" \\\n-create -output \"${FRAMEWORK}/Versions/Current/${PRODUCT_NAME}\"\n\n# Strip debugging symbols\n#strip -S \"${FRAMEWORK}/Versions/Current/${PRODUCT_NAME}\"\n\ncd \"${FRAMEWORK}\" && ln -sf \"Versions/Current/${PRODUCT_NAME}\" ./\n\nif [ ! -e \"$TARGET_BUILD_DIR/HockeySDK.framework/Frameworks\" ];\nthen\ncd \"$TARGET_BUILD_DIR/HockeySDK.framework\"\nln -s \"Versions/Current/Frameworks\" \"Frameworks\"\nfi";
+		};
+		1E8E66B215BC3D8200632A2E /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "/usr/local/bin/appledoc --output \"${SOURCE_ROOT}/../Docs\" --ignore Vendor --ignore .m --create-html --create-docset --install-docset --keep-intermediate-file -p HockeySDK-iOS -v \"2.3.0\" -c \"BitStadium GmbH\" --company-id de.bitstadium --docset-platform-family \"iphoneos\" --index-desc \"${SOURCE_ROOT}/../README.md\" --merge-categories --no-repeat-first-par --warn-undocumented-object --warn-undocumented-member  --warn-empty-description  --warn-unknown-directive --warn-invalid-crossref --warn-missing-arg --logformat xcode --exit-threshold 2 \"${SOURCE_ROOT}/../\"";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -982,6 +1010,20 @@
 			};
 			name = Release;
 		};
+		1E8E66AE15BC3D7700632A2E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		1E8E66AF15BC3D7700632A2E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 		E400563C148D79B500EB22B9 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1127,6 +1169,15 @@
 			buildConfigurations = (
 				1E59551515B6F45800A03429 /* Debug */,
 				1E59551615B6F45800A03429 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1E8E66B015BC3D7700632A2E /* Build configuration list for PBXAggregateTarget "HockeySDK Documentation" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1E8E66AE15BC3D7700632A2E /* Debug */,
+				1E8E66AF15BC3D7700632A2E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
