@@ -60,7 +60,6 @@
 @synthesize urlConnection = _urlConnection;
 @synthesize checkInProgress = _checkInProgress;
 @synthesize receivedData = _receivedData;
-@synthesize sendUsageData = _sendUsageData;
 @synthesize alwaysShowUpdateReminder = _showUpdateReminder;
 @synthesize checkForUpdateOnLaunch = _checkForUpdateOnLaunch;
 @synthesize compareVersionType = _compareVersionType;
@@ -290,11 +289,11 @@
     _authenticationSecret = nil;
     _lastCheck = nil;
     _uuid = [self executableUUID];
+    _sendUsageData = YES;
     
     // set defaults
     self.showDirectInstallOption = NO;
     self.requireAuthorization = NO;
-    self.sendUsageData = YES;
     self.alwaysShowUpdateReminder = YES;
     self.checkForUpdateOnLaunch = YES;
     self.compareVersionType = BITUpdateComparisonResultGreater;
@@ -309,8 +308,13 @@
         self.lastCheck = tempLastCheck;
       }
     }
+    
     if (!_lastCheck) {
       self.lastCheck = [NSDate distantPast];
+    }
+    
+    if (self.delegate != nil && [self.delegate respondsToSelector:@selector(updateManagerShouldSendUsageData:)]) {
+      _sendUsageData = [self.delegate updateManagerShouldSendUsageData:self];
     }
     
     if (!BITHockeyBundle()) {
@@ -724,7 +728,7 @@
                                 _uuid];
   
   // add additional statistics if user didn't disable flag
-  if (self.shouldSendUsageData) {
+  if (_sendUsageData) {
     [parameter appendFormat:@"&app_version=%@&os=iOS&os_version=%@&device=%@&lang=%@&first_start_at=%@&usage_time=%@",
      [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] bit_URLEncodedString],
      [[[UIDevice currentDevice] systemVersion] bit_URLEncodedString],
@@ -772,7 +776,7 @@
 #endif
   
   NSString *extraParameter = [NSString string];
-  if (self.shouldSendUsageData) {
+  if (_sendUsageData) {
     extraParameter = [NSString stringWithFormat:@"&udid=%@", [self deviceIdentifier]];
   }
   

@@ -90,6 +90,7 @@ typedef enum {
   BOOL _showFeedback;
   BOOL _updateAlertShowing;
   BOOL _lastCheckFailed;
+  BOOL _sendUsageData;
   
   BOOL _isAppStoreEnvironment;
   
@@ -121,6 +122,8 @@ typedef enum {
  Defines when a version is defined as being newer than the currently installed
  version. This must be assigned one of the following:
  
+ When running the app from the App Store, this setting is ignored.
+
  - `BITUpdateComparisonResultDifferent`: Version is different
  - `BITUpdateComparisonResultGreater`: Version is greater
  
@@ -145,6 +148,8 @@ typedef enum {
  - `BITUpdateCheckDaily`: Once a day
  - `BITUpdateCheckManually`: Manually
  
+ When running the app from the App Store, this setting is ignored.
+
  **Default**: BITUpdateCheckStartup
  
  @warning When setting this to `BITUpdateCheckManually` you need to either
@@ -164,6 +169,8 @@ typedef enum {
  `updateSetting` property. If this is disabled the `updateSetting` property will have
  no effect, and checking for updates is totally up to be done by yourself.
  
+ When running the app from the App Store, this setting is ignored.
+
  *Default*: _YES_
 
  @warning When setting this to `NO` you need to invoke update checks yourself!
@@ -179,32 +186,12 @@ typedef enum {
  
  Call this to trigger a check if there is a new update available on the HockeyApp servers.
  
+ When running the app from the App Store, this setting is ignored.
+
  @see updateSetting
  @see checkForUpdateOnLaunch
  */
 - (void)checkForUpdate;
-
-
-///-----------------------------------------------------------------------------
-/// @name Privacy
-///-----------------------------------------------------------------------------
-
-/**
- Flag that determines usage data will be send
- 
- If this is enabled then the following data will be submitted to the server
- - App Version
- - iOS Version
- - Device type
- - Language
- - Installation timestamp
- - Usage time
- 
- *Default*: _YES_
- 
- @warning When setting this to `NO`, you will know if this user is actually testing!
- */
-@property (nonatomic, assign, getter=shouldSendUsageData) BOOL sendUsageData;
 
 
 ///-----------------------------------------------------------------------------
@@ -219,6 +206,8 @@ typedef enum {
  If disabled the update alert is only shown once ever and it is up to you to provide an
  alternate way for the user to navigate to the update UI or update in another way.
  
+ When running the app from the App Store, this setting is ignored.
+
  *Default*: _YES_
  */
 @property (nonatomic, assign) BOOL alwaysShowUpdateReminder;
@@ -231,6 +220,8 @@ typedef enum {
  installation process directly, instead of viewing the update UI first.
  By default the alert only shows a `Show` and `Ignore` option.
  
+ When running the app from the App Store, this setting is ignored.
+
  *Default*: _NO_
  */
 @property (nonatomic, assign, getter=isShowingDirectInstallOption) BOOL showDirectInstallOption;
@@ -248,6 +239,8 @@ typedef enum {
  profile on the server. If not, it will present a blocking view on top of the apps UI
  so that no interaction is possible.
  
+ When running the app from the App Store, this setting is ignored.
+ 
  *Default*: _NO_
  @see authenticationSecret
  @warning This only works when using Ad-Hoc provisioning profiles!
@@ -260,6 +253,8 @@ typedef enum {
  
  Set the token to the `Secret ID` which HockeyApp provides for every app.
  
+ When running the app from the App Store, this setting is ignored.
+
  @see requireAuthorization
  */
 @property (nonatomic, retain) NSString *authenticationSecret;

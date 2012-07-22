@@ -35,6 +35,10 @@
 
 @protocol BITUpdateManagerDelegate <NSObject>
 
+///-----------------------------------------------------------------------------
+/// @name Configuration
+///-----------------------------------------------------------------------------
+
 /**
  Return the unique device identifier
  
@@ -55,6 +59,37 @@
 - (NSString *)customDeviceIdentifierForUpdateManager:(BITUpdateManager *)updateManager;
 
 @optional
+
+///-----------------------------------------------------------------------------
+/// @name Privacy
+///-----------------------------------------------------------------------------
+
+/** Return NO if usage data should not be send
+ 
+ The update  module send usage data by default, if the application is _NOT_
+ running in an App Store version. Implement this delegate and
+ return NO if you want to disable this.
+ 
+ If you intend to implement a user setting to let them enable or disable
+ sending usage data, this delegate should be used to return that value.
+ 
+ Usage data contains the following information:
+ - App Version
+ - iOS Version
+ - Device type
+ - Language
+ - Installation timestamp
+ - Usage time
+
+ @param updateManager The `BITUpdateManager` instance invoking this delegate
+ @warning When setting this to `NO`, you will _NOT_ know if this user is actually testing!
+ */
+- (BOOL)updateManagerShouldSendUsageData:(BITUpdateManager *)updateManager;
+
+
+///-----------------------------------------------------------------------------
+/// @name Update View Presentation Helper
+///-----------------------------------------------------------------------------
 
 /**
  Provide a parent view controller for the update user interface
