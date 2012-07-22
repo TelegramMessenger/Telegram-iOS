@@ -30,23 +30,29 @@
 
 #import <UIKit/UIKit.h>
 
-@class PSStoreButton;
-@class PSAppStoreHeader;
+typedef enum {
+	AppStoreButtonStateOffline,
+	AppStoreButtonStateCheck,
+	AppStoreButtonStateSearching,
+	AppStoreButtonStateUpdate,
+	AppStoreButtonStateInstalling
+} AppStoreButtonState;
 
 
-@interface BITUpdateViewController : UITableViewController {
-@private
-  BOOL _kvoRegistered;
-  BOOL _showAllVersions;
-  UIStatusBarStyle _statusBarStyle;
-  PSAppStoreHeader *_appStoreHeader;
-  PSStoreButton *_appStoreButton;
-  
-  id _popOverController;
-  
-  NSMutableArray *_cells;
-  
-  BOOL _isAppStoreEnvironment;
+@class BITUpdateManager;
+
+@protocol PSStoreButtonDelegate;
+
+@interface BITUpdateViewController() <PSStoreButtonDelegate> {
 }
+
+@property (nonatomic, retain) BITUpdateManager *updateManager;
+@property (nonatomic, readwrite) BOOL modal;
+@property (nonatomic, readwrite) BOOL modalAnimated;
+
+@property (nonatomic, assign) AppStoreButtonState appStoreButtonState;
+
+- (id)init:(BITUpdateManager *)newUpdateManager modal:(BOOL)newModal;
+- (id)init;
 
 @end

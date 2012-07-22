@@ -40,24 +40,17 @@
 #import "HockeySDKPrivate.h"
 
 #import "BITUpdateManagerPrivate.h"
+#import "BITUpdateViewControllerPrivate.h"
 
 
 #define BIT_RGBCOLOR(r,g,b) [UIColor colorWithRed:(r)/255.0 green:(g)/255.0 blue:(b)/255.0 alpha:1]
 #define kWebCellIdentifier @"PSWebTableViewCell"
 #define kAppStoreViewHeight 90
 
-@interface BITUpdateViewController()<PSStoreButtonDelegate>
-// updates the whole view
-- (void)showPreviousVersionAction;
-- (void)redrawTableView;
-@property (nonatomic, assign) AppStoreButtonState appStoreButtonState;
-- (void)setAppStoreButtonState:(AppStoreButtonState)anAppStoreButtonState animated:(BOOL)animated;
-@end
-
 
 @implementation BITUpdateViewController
 
-@synthesize appStoreButtonState = appStoreButtonState_;
+@synthesize appStoreButtonState = _appStoreButtonState;
 @synthesize modal = _modal;
 @synthesize modalAnimated = _modalAnimated;
 
@@ -570,7 +563,7 @@
 }
 
 - (void)setAppStoreButtonState:(AppStoreButtonState)anAppStoreButtonState animated:(BOOL)animated {
-  appStoreButtonState_ = anAppStoreButtonState;
+  _appStoreButtonState = anAppStoreButtonState;
   
   switch (anAppStoreButtonState) {
     case AppStoreButtonStateOffline:
@@ -594,7 +587,7 @@
 }
 
 - (void)storeButtonFired:(PSStoreButton *)button {
-  switch (appStoreButtonState_) {
+  switch (_appStoreButtonState) {
     case AppStoreButtonStateCheck:
       [_updateManager checkForUpdateShowFeedback:YES];
       break;

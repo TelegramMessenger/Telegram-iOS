@@ -35,6 +35,7 @@
 #import "HockeySDKPrivate.h"
 
 #import "BITUpdateManagerPrivate.h"
+#import "BITUpdateViewControllerPrivate.h"
 #import "BITAppVersionMetaInfo.h"
 
 #import "NSString+BITHockeyAdditions.h"
