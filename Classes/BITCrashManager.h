@@ -50,9 +50,9 @@ typedef enum BITCrashStatus {
 /**
  The crash reporting module.
  
- This is the HockeySDK module for handling crash reports in any app version, including when distributed via
- the App Store. As a foundation it is using the open source, reliable and async-safe crash reporting framework
- (PLCrashReporter)[https://code.google.com/p/plcrashreporter/].
+ This is the HockeySDK module for handling crash reports, including when distributed via the App Store.
+ As a foundation it is using the open source, reliable and async-safe crash reporting framework
+ [PLCrashReporter](https://code.google.com/p/plcrashreporter/).
  
  This module works as a wrapper around the underlying crash reporting framework and provides functionality to
  detect new crashes, queues them if networking is not available, present a user interface to approve sending
@@ -62,6 +62,21 @@ typedef enum BITCrashStatus {
  additional textual log information via `BITCrashManagerDelegate` protocol and a way to detect startup crashes so
  you can adjust your startup process to get these crash reports too and delay your app initialization.
  
+ Crashes are send the next time the app starts. If `autoSubmitCrashReport` is enabled, crashes will be send
+ without any user interaction, otherwise an alert will appear allowing the users to decide wether they want
+ to send the report or not. This module is not sending the reports right when the crash happens deliberately, 
+ because if is not safe to implement such a mechanism while being async-safe (any Objective-C code is _NOT_
+ async-safe!) and not causing more danger like a deadlock of the device, than helping. We found that users
+ do start the app again because most don't know what happened, and you will get by far most of the reports.
+ 
+ Sending the reports on startup is done asynchronously (non-blocking). This is the only safe way to ensure
+ that the app won't be possibly killed by the iOS watchdog process, because startup could take too long
+ and the app could not react to any user input when network conditions are bad or connectivity might be
+ very slow.
+ 
+ More background information on this topic can be found in the following blog post by Landon Fuller, the
+ developer of [PLCrashReporter](https://code.google.com/p/plcrashreporter/), about writing reliable and
+ safe crash reporting: [Reliable Crash Reporting](http://goo.gl/WvTBR)
  */
 
 @interface BITCrashManager : NSObject {
