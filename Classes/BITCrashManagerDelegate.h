@@ -37,6 +37,24 @@
 
 @optional
 
+
+///-----------------------------------------------------------------------------
+/// @name Configuration
+///-----------------------------------------------------------------------------
+
+/** Return YES if you the crash reporting module should be disabled
+ 
+ The crash reporting module is enabled by default. Implement this delegate and
+ return NO if you want to disable it.
+ 
+ If you intend to implement a user setting to let them enable or disable
+ crash reporting, this delegate should be used to return that value.
+ 
+ @param crashManager The `BITCrashManager` instance invoking this delegate
+ */
+- (BOOL)shouldDisableCrashManager:(BITCrashManager *)crashManager;
+
+
 ///-----------------------------------------------------------------------------
 /// @name Additional meta data
 ///-----------------------------------------------------------------------------

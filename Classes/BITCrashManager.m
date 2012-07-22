@@ -99,16 +99,12 @@
       _analyzerStarted = 0;		
     }
 		
-    testValue = nil;
-    testValue = [[NSUserDefaults standardUserDefaults] stringForKey:kBITCrashActivated];
-    if (testValue) {
-      _crashReportActivated = [[NSUserDefaults standardUserDefaults] boolForKey:kBITCrashActivated];
-    } else {
-      _crashReportActivated = YES;
-      [[NSUserDefaults standardUserDefaults] setValue:[NSNumber numberWithBool:YES] forKey:kBITCrashActivated];
+    _crashReportDisabled = NO;
+    if (self.delegate != nil && [self.delegate respondsToSelector:@selector(shouldDisableCrashManager:)]) {
+      _crashReportDisabled = [self.delegate shouldDisableCrashManager:self];
     }
     
-    if (_crashReportActivated) {
+    if (!_crashReportDisabled) {
       _crashFiles = [[NSMutableArray alloc] init];
       NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
       _crashesDir = [[NSString stringWithFormat:@"%@", [[paths objectAtIndex:0] stringByAppendingPathComponent:@"/crashes/"]] retain];
@@ -295,7 +291,7 @@
 }
 
 - (BOOL)hasPendingCrashReport {
-  if (_crashReportActivated) {
+  if (!_crashReportDisabled) {
     if ([_crashFiles count] == 0 && [self.fileManager fileExistsAtPath:_crashesDir]) {
       NSString *file = nil;
       NSError *error = NULL;

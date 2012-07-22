@@ -95,7 +95,7 @@ typedef enum BITCrashStatus {
   NSFileManager *_fileManager;
   
   BOOL _crashIdenticalCurrentVersion;
-  BOOL _crashReportActivated;
+  BOOL _crashReportDisabled;
   
   NSMutableArray *_crashFiles;
 	
