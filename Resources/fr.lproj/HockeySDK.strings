@@ -19,7 +19,10 @@
 "CrashDataFoundTitle" = "Rapport de plantage";
 
 /* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
-"CrashDataFoundDescription" = "%@ s’est fermé de façon inattendue. Souhaitez-vous envoyer un rapport d’incident anonyme pour nous aider à corriger le problème ?";
+"CrashDataFoundAnonymousDescription" = "%@ s’est fermé de façon inattendue. Souhaitez-vous envoyer un rapport d’incident anonyme pour nous aider à corriger le problème ?";
+
+/* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
+"CrashDataFoundDescription" = "%@ s’est fermé de façon inattendue. Souhaitez-vous envoyer un rapport d’incident pour nous aider à corriger le problème ?";
 
 /* Alert box button if the users wants to send crash data always automatically */
 "CrashSendReportAlways" = "Toujours";

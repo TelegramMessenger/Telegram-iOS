@@ -78,6 +78,12 @@
     _appIdentifier = appIdentifier;
     
     _delegate = nil;
+    _userName = nil;
+    _userEmail = nil;
+    _feedbackActivated = NO;
+    _showAlwaysButton = NO;
+    _autoSubmitCrashReport = NO;
+
     _serverResult = BITCrashStatusUnknown;
     _crashIdenticalCurrentVersion = YES;
     _crashData = nil;
@@ -87,11 +93,6 @@
     _didCrashInLastSession = NO;
     _timeintervalCrashInLastSessionOccured = -1;
     _fileManager = [[NSFileManager alloc] init];
-    
-    self.delegate = nil;
-    self.feedbackActivated = NO;
-    self.showAlwaysButton = NO;
-    self.autoSubmitCrashReport = NO;
     
     NSString *testValue = [[NSUserDefaults standardUserDefaults] stringForKey:kBITCrashAnalyzerStarted];
     if (testValue) {
@@ -198,9 +199,15 @@
       }
       
       NSString *appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"];
+      NSString *alertDescription = [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundAnonymousDescription"), appName];
+      
+      // the crash report is not anynomous any more
+      if (_userName || _userEmail) {
+        alertDescription = [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundDescription"), appName];
+      }
       
       UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:[NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundTitle"), appName]
-                                                          message:[NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundDescription"), appName]
+                                                          message:alertDescription
                                                          delegate:self
                                                 cancelButtonTitle:BITHockeyLocalizedString(@"CrashDontSendReport")
                                                 otherButtonTitles:BITHockeyLocalizedString(@"CrashSendReport"), nil];

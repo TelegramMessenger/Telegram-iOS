@@ -110,11 +110,17 @@ typedef enum BITCrashStatus {
 ///-----------------------------------------------------------------------------
 
 /** Define the users name or userid that should be send along each crash report
+ 
+ @warning When setting this property, crash reports are not anonymous any more
+ and the alerts will not show the "anonymous" word!
  */
 @property (nonatomic, copy) NSString *userName;
 
 
 /** Define the users email address that should be send along each crash report
+ 
+ @warning When setting this property, crash reports are not anonymous any more
+ and the alerts will not show the "anonymous" word!
  */
 @property (nonatomic, copy) NSString *userEmail;
 

@@ -18,8 +18,11 @@
 /* Title showing in the alert box when crash report data has been found */
 "CrashDataFoundTitle" = "%@ unerwartet beendet";
 
-/* Description explaining that crash data has been found and ask the user if the data might be uplaoded to the developers server */
-"CrashDataFoundDescription" = "Möchten Sie einen anonymen Absturzbericht senden, damit wir das Problem beheben können?";
+/* Description explaining that crash data has been found and ask the user if the anonymous data might be uplaoded to the developers server */
+"CrashDataFoundAnonymousDescription" = "Möchten Sie einen anonymen Absturzbericht senden, damit wir das Problem beheben können?";
+
+/* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
+"CrashDataFoundDescription" = "Möchten Sie einen Absturzbericht senden, damit wir das Problem beheben können?";
 
 /* Alert box button if the users wants to send crash data always automatically */
 "CrashSendReportAlways" = "Immer senden";

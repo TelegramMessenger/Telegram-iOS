@@ -19,7 +19,10 @@
 "CrashDataFoundTitle" = "%@ Unexpectedly Quit";
 
 /* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
-"CrashDataFoundDescription" = "Would you like to send an anonymous report so we can fix the problem?";
+"CrashDataFoundAnonymousDescription" = "Would you like to send an anonymous report so we can fix the problem?";
+
+/* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
+"CrashDataFoundDescription" = "Would you like to send a report so we can fix the problem?";
 
 /* Alert box button if the users wants to send crash data always automatically */
 "CrashSendReportAlways" = "Always Send";

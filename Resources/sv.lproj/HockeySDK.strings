@@ -19,7 +19,10 @@
 "CrashDataFoundTitle" = "%@ kraschade";
 
 /* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
-"CrashDataFoundDescription" = "Vill du skicka en anonym kraschrapport så att vi kan lösa felet?";
+"CrashDataFoundAnonymousDescription" = "Vill du skicka en anonym kraschrapport så att vi kan lösa felet?";
+
+/* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
+"CrashDataFoundDescription" = "Vill du skicka en kraschrapport så att vi kan lösa felet?";
 
 /* Alert box button if the users wants to send crash data always automatically */
 "CrashSendReportAlways" = "Skicka alltid";

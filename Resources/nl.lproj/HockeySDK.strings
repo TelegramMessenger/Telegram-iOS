@@ -18,8 +18,11 @@
 /* Title showing in the alert box when crash report data has been found */
 "CrashDataFoundTitle" = "Crashdata gevonden";
 
-/* Description explaining that crash data has been found and ask the user if the data might be uplaoded to the developers server */
-"CrashDataFoundDescription" = "De applicatie is gecrasht. Wilt u de ontwikkelaars anonieme data sturen zodat zij kunnen proberen de problemen op te lossen?";
+/* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
+"CrashDataFoundAnonymousDescription" = "De applicatie is gecrasht. Wilt u de ontwikkelaars anonieme data sturen zodat zij kunnen proberen de problemen op te lossen?";
+
+/* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
+"CrashDataFoundDescription" = "De applicatie is gecrasht. Wilt u de ontwikkelaars data sturen zodat zij kunnen proberen de problemen op te lossen?";
 
 /* Alert box button if the users wants to send crash data always automatically */
 "CrashSendReportAlways" = "Altijd";

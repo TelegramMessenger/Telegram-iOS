@@ -18,8 +18,11 @@
 /* Title showing in the alert box when crash report data has been found */
 "CrashDataFoundTitle" = "Dati del crash trovati";
 
-/* Description explaining that crash data has been found and ask the user if the data might be uplaoded to the developers server */
-"CrashDataFoundDescription" = "L'applicazione precedentemente ha avuto un crash. Vuoi inviare allo sviluppatore i dati anonimi del crash in modo che possa provare a sistemare il problema?";
+/* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
+"CrashDataFoundAnonymousDescription" = "L'applicazione precedentemente ha avuto un crash. Vuoi inviare allo sviluppatore i dati anonimi del crash in modo che possa provare a sistemare il problema?";
+
+/* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
+"CrashDataFoundDescription" = "L'applicazione precedentemente ha avuto un crash. Vuoi inviare allo sviluppatore i dati del crash in modo che possa provare a sistemare il problema?";
 
 /* Alert box button if the users wants to send crash data always automatically */
 "CrashSendReportAlways" = "Sempre";

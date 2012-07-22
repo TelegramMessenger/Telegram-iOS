@@ -18,8 +18,11 @@
 /* Title showing in the alert box when crash report data has been found */
 "CrashDataFoundTitle" = "發現崩潰數據";
 
-/* Description explaining that crash data has been found and ask the user if the data might be uplaoded to the developers server */
-"CrashDataFoundDescription" = "%@ 不正常退出。你能否匿名提供崩潰記錄以幫助我們解決問題？";
+/* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
+"CrashDataFoundAnonymousDescription" = "%@ 不正常退出。你能否匿名提供崩潰記錄以幫助我們解決問題？";
+
+/* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
+"CrashDataFoundDescription" = "%@ 不正常退出。你能否名提供崩潰記錄以幫助我們解決問題？";
 
 /* Alert box button if the users wants to send crash data always automatically */
 "CrashSendReportAlways" = "總是";

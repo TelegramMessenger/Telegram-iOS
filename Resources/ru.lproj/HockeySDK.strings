@@ -18,8 +18,11 @@
 /* Title showing in the alert box when crash report data has been found */
 "CrashDataFoundTitle" = "Обнаружена проблема";
 
-/* Description explaining that crash data has been found and ask the user if the data might be uplaoded to the developers server */
-"CrashDataFoundDescription" = "%@ программа неожиданно завершена. Хотите ли Вы отправить нам анонимное сообщение о неполадках, чтобы мы  могли устранить проблему?";
+/* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
+"CrashDataFoundAnonymousDescription" = "%@ программа неожиданно завершена. Хотите ли Вы отправить нам анонимное сообщение о неполадках, чтобы мы  могли устранить проблему?";
+
+/* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
+"CrashDataFoundDescription" = "%@ программа неожиданно завершена. Хотите ли Вы отправить нам сообщение о неполадках, чтобы мы  могли устранить проблему?";
 
 /* Alert box button if the users wants to send crash data always automatically */
 "Always" = "Всегда";

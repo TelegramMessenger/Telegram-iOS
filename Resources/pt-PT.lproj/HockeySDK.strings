@@ -18,7 +18,10 @@
 /* Title showing in the alert box when crash report data has been found */
 "CrashDataFoundTitle" = "Informação de falha encontrada";
 
-/* Description explaining that crash data has been found and ask the user if the data might be uplaoded to the developers server */
+/* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
+"CrashDataFoundAnonymousDescription" = "A aplicação falhou anteriormente. Gostaria de enviar informação ao programador acerca da falha de forma a poderem resolver o problema?";
+
+/* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
 "CrashDataFoundDescription" = "A aplicação falhou anteriormente. Gostaria de enviar informação anónima ao programador acerca da falha de forma a poderem resolver o problema?";
 
 /* Alert box button if the users wants to send crash data always automatically */

@@ -18,8 +18,11 @@
 /* Title showing in the alert box when crash report data has been found */
 "CrashDataFoundTitle" = "Hata raporu bulundu";
 
-/* Description explaining that crash data has been found and ask the user if the data might be uplaoded to the developers server */
-"CrashDataFoundDescription" = "%@ beklenmeyen bir şekilde kapanmış. Bu hatayı gidermemizi kolaylaştırmak için anonim bir hata raporu göndermek ister misiniz?";
+/* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
+"CrashDataFoundAnonymousDescription" = "%@ beklenmeyen bir şekilde kapanmış. Bu hatayı gidermemizi kolaylaştırmak için anonim bir hata raporu göndermek ister misiniz?";
+
+/* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
+"CrashDataFoundDescription" = "%@ beklenmeyen bir şekilde kapanmış. Bu hatayı gidermemizi kolaylaştırmak için bir hata raporu göndermek ister misiniz?";
 
 /* Alert box button if the users wants to send crash data always automatically */
 "CrashSendReportAlways" = "Her seferinde gönder!";

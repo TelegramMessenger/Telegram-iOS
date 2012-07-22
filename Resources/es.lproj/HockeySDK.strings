@@ -19,7 +19,10 @@
 "CrashDataFoundTitle" = "Conflicto de datos detectado";
 
 /* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
-"CrashDataFoundDescription" = "La aplicación fallo previamente. ¿Le gustaría proporcionar de manera anonima información relacionado con el fallo al programador para que este pueda solucionar el problema?";
+"CrashDataFoundAnonymousDescription" = "La aplicación fallo previamente. ¿Le gustaría proporcionar de manera anonima información relacionado con el fallo al programador para que este pueda solucionar el problema?";
+
+/* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
+"CrashDataFoundDescription" = "La aplicación fallo previamente. ¿Le gustaría proporcionar de manera información relacionado con el fallo al programador para que este pueda solucionar el problema?";
 
 /* Alert box button if the users wants to send crash data always automatically */
 "CrashSendReportAlways" = "Siempre";
