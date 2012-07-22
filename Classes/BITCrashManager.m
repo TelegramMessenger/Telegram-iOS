@@ -355,6 +355,10 @@
   if ([alertView tag] == BITCrashAlertTypeSend) {
     switch (buttonIndex) {
       case 0:
+        if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashReporterWillCancelSendingCrashReport:)]) {
+          [self.delegate crashReporterWillCancelSendingCrashReport:self];
+        }
+        
         _sendingInProgress = NO;
         [self cleanCrashReports];
         break;

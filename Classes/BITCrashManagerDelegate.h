@@ -60,6 +60,13 @@
 -(void)crashReporterWillShowSubmitCrashReportAlert:(BITCrashManager *)crashReporter;
 
 
+/** Invoked after the user did choose _NOT_ to send a crash in the alert
+ 
+ @param crashReporter The `BITCrashManager` instance invoking this delegate
+ */
+-(void)crashReporterWillCancelSendingCrashReport:(BITCrashManager *)crashReporter;
+
+
 /** Invoked after the user did choose to send crashes always in the alert
  
  @param crashReporter The `BITCrashManager` instance invoking this delegate
