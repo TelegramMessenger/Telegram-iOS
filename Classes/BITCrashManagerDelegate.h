@@ -39,13 +39,13 @@
 
 
 ///-----------------------------------------------------------------------------
-/// @name Configuration
+/// @name Privacy
 ///-----------------------------------------------------------------------------
 
-/** Return YES if you the crash reporting module should be disabled
+/** Return YES if the crash reporting module should be disabled
  
  The crash reporting module is enabled by default. Implement this delegate and
- return NO if you want to disable it.
+ return YES if you want to disable it.
  
  If you intend to implement a user setting to let them enable or disable
  crash reporting, this delegate should be used to return that value.
@@ -77,7 +77,7 @@
 
 
 
-/** Define the users email address that should be send along each crash report
+/** Return the users email address that should be send along each crash report
  
  @param crashManager The `BITCrashManager` instance invoking this delegate
  @warning When returning a non nil value, crash reports are not anonymous any
