@@ -29,6 +29,7 @@
  */
 
 #import <UIKit/UIKit.h>
+#import "PSStoreButton.h"
 
 typedef enum {
 	AppStoreButtonStateOffline,
