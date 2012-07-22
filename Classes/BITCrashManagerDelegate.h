@@ -43,9 +43,29 @@
 
 /** Return any log string based data the crash report being processed should contain
 
- @param crashReporter The `BITCrashManager` instance invoking this delegate
+ @param crashManager The `BITCrashManager` instance invoking this delegate
  */
--(NSString *)applicationLogForCrashReporter:(BITCrashManager *)crashReporter;
+-(NSString *)applicationLogForCrashManager:(BITCrashManager *)crashManager;
+
+
+
+/** Return the user name or userid that should be send along each crash report
+ 
+ @param crashManager The `BITCrashManager` instance invoking this delegate
+ @warning When returning a non nil value, crash reports are not anonymous any
+ more and the alerts will not show the "anonymous" word!
+ */
+-(NSString *)userNameForCrashManager:(BITCrashManager *)crashManager;
+
+
+
+/** Define the users email address that should be send along each crash report
+ 
+ @param crashManager The `BITCrashManager` instance invoking this delegate
+ @warning When returning a non nil value, crash reports are not anonymous any
+ more and the alerts will not show the "anonymous" word!
+ */
+-(NSString *)userEmailForCrashManager:(BITCrashManager *)crashManager;
 
 
 ///-----------------------------------------------------------------------------
@@ -55,23 +75,23 @@
 /** Invoked before the user is asked to send a crash report, so you can do additional actions.
     E.g. to make sure not to ask the user for an app rating :)
  
- @param crashReporter The `BITCrashManager` instance invoking this delegate
+ @param crashManager The `BITCrashManager` instance invoking this delegate
  */
--(void)crashReporterWillShowSubmitCrashReportAlert:(BITCrashManager *)crashReporter;
+-(void)crashManagerWillShowSubmitCrashReportAlert:(BITCrashManager *)crashManager;
 
 
 /** Invoked after the user did choose _NOT_ to send a crash in the alert
  
- @param crashReporter The `BITCrashManager` instance invoking this delegate
+ @param crashManager The `BITCrashManager` instance invoking this delegate
  */
--(void)crashReporterWillCancelSendingCrashReport:(BITCrashManager *)crashReporter;
+-(void)crashManagerWillCancelSendingCrashReport:(BITCrashManager *)crashManager;
 
 
 /** Invoked after the user did choose to send crashes always in the alert
  
- @param crashReporter The `BITCrashManager` instance invoking this delegate
+ @param crashManager The `BITCrashManager` instance invoking this delegate
  */
--(void)crashReporterWillSendCrashReportsAlways:(BITCrashManager *)crashReporter;
+-(void)crashManagerWillSendCrashReportsAlways:(BITCrashManager *)crashManager;
 
 
 ///-----------------------------------------------------------------------------
@@ -80,22 +100,22 @@
 
 /** Invoked right before sending crash reports will start
  
- @param crashReporter The `BITCrashManager` instance invoking this delegate
+ @param crashManager The `BITCrashManager` instance invoking this delegate
  */
-- (void)crashReporterWillSendCrashReport:(BITCrashManager *)crashReporter;
+- (void)crashManagerWillSendCrashReport:(BITCrashManager *)crashManager;
 
 /** Invoked after sending crash reports failed
  
- @param crashReporter The `BITCrashManager` instance invoking this delegate
+ @param crashManager The `BITCrashManager` instance invoking this delegate
  @param error The error returned from the NSURLConnection call or `kBITCrashErrorDomain`
  with reason of type `BITCrashErrorReason`.
  */
-- (void)crashReporter:(BITCrashManager *)crashReporter didFailWithError:(NSError *)error;
+- (void)crashManager:(BITCrashManager *)crashManager didFailWithError:(NSError *)error;
 
 /** Invoked after sending crash reports succeeded
  
- @param crashReporter The `BITCrashManager` instance invoking this delegate
+ @param crashManager The `BITCrashManager` instance invoking this delegate
  */
-- (void)crashReporterDidFinishSendingCrashReport:(BITCrashManager *)crashReporter;
+- (void)crashManagerDidFinishSendingCrashReport:(BITCrashManager *)crashManager;
 
 @end

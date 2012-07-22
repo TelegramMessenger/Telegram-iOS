@@ -78,8 +78,6 @@
     _appIdentifier = appIdentifier;
     
     _delegate = nil;
-    _userName = nil;
-    _userEmail = nil;
     _feedbackActivated = NO;
     _showAlwaysButton = NO;
     _autoSubmitCrashReport = NO;
@@ -194,15 +192,26 @@
       [self sendCrashReports];
     } else if (![self autoSendCrashReports] && [self hasNonApprovedCrashReports]) {
       
-      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashReporterWillShowSubmitCrashReportAlert:)]) {
-        [self.delegate crashReporterWillShowSubmitCrashReportAlert:self];
+      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillShowSubmitCrashReportAlert:)]) {
+        [self.delegate crashManagerWillShowSubmitCrashReportAlert:self];
       }
       
       NSString *appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"];
       NSString *alertDescription = [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundAnonymousDescription"), appName];
       
-      // the crash report is not anynomous any more
-      if (_userName || _userEmail) {
+      // the crash report is not anynomous any more if username or useremail are not nil
+      NSString *username = nil;
+      NSString *useremail = nil;
+
+      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(userNameForCrashManager:)]) {
+        username = [self.delegate userNameForCrashManager:self];
+      }
+
+      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(userEmailForCrashManager:)]) {
+        useremail = [self.delegate userEmailForCrashManager:self];
+      }
+
+      if (username || useremail) {
         alertDescription = [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundDescription"), appName];
       }
       
@@ -362,8 +371,8 @@
   if ([alertView tag] == BITCrashAlertTypeSend) {
     switch (buttonIndex) {
       case 0:
-        if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashReporterWillCancelSendingCrashReport:)]) {
-          [self.delegate crashReporterWillCancelSendingCrashReport:self];
+        if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillCancelSendingCrashReport:)]) {
+          [self.delegate crashManagerWillCancelSendingCrashReport:self];
         }
         
         _sendingInProgress = NO;
@@ -375,8 +384,8 @@
       case 2: {
         [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITCrashAutomaticallySendReports];
         [[NSUserDefaults standardUserDefaults] synchronize];
-        if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashReporterWillSendCrashReportsAlways:)]) {
-          [self.delegate crashReporterWillSendCrashReportsAlways:self];
+        if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillSendCrashReportsAlways:)]) {
+          [self.delegate crashManagerWillSendCrashReportsAlways:self];
         }
         
         [self sendCrashReports];
@@ -428,12 +437,20 @@
   
   NSError *error = NULL;
 	
-  NSString *username = _userName ?: @"";
-  NSString *email = _userEmail ?: @"";
+  NSString *username = @"";
+  NSString *useremail = @"";
   NSString *applicationLog = @"";
   
-  if (self.delegate != nil && [self.delegate respondsToSelector:@selector(applicationLogForCrashReporter:)]) {
-    applicationLog = [self.delegate applicationLogForCrashReporter:self] ?: @"";
+  if (self.delegate != nil && [self.delegate respondsToSelector:@selector(userNameForCrashManager:)]) {
+    username = [self.delegate userNameForCrashManager:self] ?: @"";
+  }
+  
+  if (self.delegate != nil && [self.delegate respondsToSelector:@selector(userEmailForCrashManager:)]) {
+    useremail = [self.delegate userEmailForCrashManager:self] ?: @"";
+  }
+
+  if (self.delegate != nil && [self.delegate respondsToSelector:@selector(applicationLogForCrashManager:)]) {
+    applicationLog = [self.delegate applicationLogForCrashManager:self] ?: @"";
   }
 	
   NSMutableString *crashes = nil;
@@ -475,7 +492,7 @@
        crashUUID,
        [crashLogString stringByReplacingOccurrencesOfString:@"]]>" withString:@"]]" @"]]><![CDATA[" @">" options:NSLiteralSearch range:NSMakeRange(0,crashLogString.length)],
        username,
-       email,
+       useremail,
        [applicationLog stringByReplacingOccurrencesOfString:@"]]>" withString:@"]]" @"]]><![CDATA[" @">" options:NSLiteralSearch range:NSMakeRange(0,applicationLog.length)]];
       
       
@@ -596,8 +613,8 @@
     BITHockeyLog(@"Sending crash reports could not start!");
     _sendingInProgress = NO;
   } else {
-    if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashReporterWillSendCrashReport:)]) {
-      [self.delegate crashReporterWillSendCrashReport:self];
+    if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillSendCrashReport:)]) {
+      [self.delegate crashManagerWillSendCrashReport:self];
     }
     
     BITHockeyLog(@"Sending crash reports started.");
@@ -617,8 +634,8 @@
 }
 
 - (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error {
-  if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashReporter:didFailWithError:)]) {
-    [self.delegate crashReporter:self didFailWithError:error];
+  if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManager:didFailWithError:)]) {
+    [self.delegate crashManager:self didFailWithError:error];
   }
   
   BITHockeyLog(@"ERROR: %@", [error localizedDescription]);
@@ -665,8 +682,8 @@
         [self showCrashStatusMessage];
       }
       
-      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashReporterDidFinishSendingCrashReport:)]) {
-        [self.delegate crashReporterDidFinishSendingCrashReport:self];
+      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerDidFinishSendingCrashReport:)]) {
+        [self.delegate crashManagerDidFinishSendingCrashReport:self];
       }
     }
   } else if (_statusCode == 400) {
@@ -676,8 +693,8 @@
                                 code:BITCrashAPIAppVersionRejected
                             userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"The server rejected receiving crash reports for this app version!", NSLocalizedDescriptionKey, nil]];
     
-    if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashReporter:didFailWithError:)]) {
-      [self.delegate crashReporter:self didFailWithError:error];
+    if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManager:didFailWithError:)]) {
+      [self.delegate crashManager:self didFailWithError:error];
     }
     
     BITHockeyLog(@"ERROR: %@", [error localizedDescription]);
@@ -692,8 +709,8 @@
                               userInfo:[NSDictionary dictionaryWithObjectsAndKeys:[NSString stringWithFormat:@"Sending failed with status code: %i", _statusCode], NSLocalizedDescriptionKey, nil]];
     }
 
-    if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashReporter:didFailWithError:)]) {
-      [self.delegate crashReporter:self didFailWithError:error];
+    if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManager:didFailWithError:)]) {
+      [self.delegate crashManager:self didFailWithError:error];
     }
 
     BITHockeyLog(@"ERROR: %@", [error localizedDescription]);

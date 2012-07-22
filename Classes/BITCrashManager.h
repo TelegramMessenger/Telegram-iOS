@@ -121,26 +121,6 @@ typedef enum BITCrashStatus {
 
 
 ///-----------------------------------------------------------------------------
-/// @name Additional meta data
-///-----------------------------------------------------------------------------
-
-/** Define the users name or userid that should be send along each crash report
- 
- @warning When setting this property, crash reports are not anonymous any more
- and the alerts will not show the "anonymous" word!
- */
-@property (nonatomic, copy) NSString *userName;
-
-
-/** Define the users email address that should be send along each crash report
- 
- @warning When setting this property, crash reports are not anonymous any more
- and the alerts will not show the "anonymous" word!
- */
-@property (nonatomic, copy) NSString *userEmail;
-
-
-///-----------------------------------------------------------------------------
 /// @name Configuration
 ///-----------------------------------------------------------------------------
 
@@ -151,7 +131,7 @@ typedef enum BITCrashStatus {
  if he or she agrees on sending the crash report to the server.
  
  By default a crash report is anonymous, unless you are adding personal information
- using the `userName`, `userEmail` or `[BITCrashManagerDelegate applicationLogForCrashReporter:]`
+ using the `userName`, `userEmail` or `[BITCrashManagerDelegate applicationLogForCrashManager:]`
  options. For privacy reasons you should give the user an option not to send
  the reports.
  
