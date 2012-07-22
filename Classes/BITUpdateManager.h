@@ -73,76 +73,204 @@ typedef enum {
 }
 
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-// Setting Properties
+///-----------------------------------------------------------------------------
+/// @name Delegate
+///-----------------------------------------------------------------------------
 
-// delegate is optional
+/**
+ Sets the `BITUpdateManagerDelegate` delegate.
+ 
+ When using `BITUpdateManager` to distribute updates of your beta or enterprise
+ application, it is required to set this delegate and implement the
+ `customDeviceIdentifierForUpdateManager:` delegate!
+ */
 @property (nonatomic, assign) id <BITUpdateManagerDelegate> delegate;
 
-// hockey secret is required if authentication is used
-@property (nonatomic, retain) NSString *authenticationSecret;
 
-// if YES, the current user data is send: device type, iOS version, app version, UDID (default)
-// if NO, no such data is send to the server
-@property (nonatomic, assign, getter=shouldSendUserData) BOOL sendUserData;
+///-----------------------------------------------------------------------------
+/// @name Configuration
+///-----------------------------------------------------------------------------
 
-// if YES, the the users usage time of the app to the service, only in 1 minute granularity! (default)
-// if NO, no such data is send to the server
-@property (nonatomic, assign, getter=shouldSendUsageTime) BOOL sendUsageTime;
-
-// if YES, the user agrees to send the usage data, user can change it if the developer shows the settings (default)
-// if NO, the user overwrites the developer setting and no such data is sent
-@property (nonatomic, assign, getter=isAllowUserToDisableSendData) BOOL allowUserToDisableSendData;
-
-// if YES, the user allowed to send user data (default)
-// if NO, the user denied to send user data
-@property (nonatomic, assign, getter=doesUserAllowsSendUserData) BOOL userAllowsSendUserData;
-
-// if YES, the user allowed to send usage data (default)
-// if NO, the user denied to send usage data
-@property (nonatomic, assign, getter=doesUserAllowsSendUsageTime) BOOL userAllowsSendUsageTime;
-
-// if YES, the new version alert will be displayed always if the current version is outdated (default)
-// if NO, the alert will be displayed only once for each new update
-@property (nonatomic, assign) BOOL alwaysShowUpdateReminder;
-
-// if YES, the user can change the HockeyUpdateSetting value (default)
-// if NO, the user can not change it, and the default or developer defined value will be used
-@property (nonatomic, assign, getter=shouldShowUserSettings) BOOL showUserSettings;
-
-// set bar style of navigation controller
-@property (nonatomic, assign) UIBarStyle barStyle;
-
-// set modal presentation style of update view
-@property (nonatomic, assign) UIModalPresentationStyle modalPresentationStyle;
-
-// if YES, then an update check will be performed after the application becomes active (default)
-// if NO, then the update check will not happen unless invoked explicitly
-@property (nonatomic, assign, getter=isCheckForUpdateOnLaunch) BOOL checkForUpdateOnLaunch;
-
-// if YES, the alert notifying about an new update also shows a button to install the update directly
-// if NO, the alert notifying about an new update only shows ignore and show update button
-@property (nonatomic, assign, getter=isShowingDirectInstallOption) BOOL showDirectInstallOption;
-
-// if YES, each app version needs to be authorized by the server to run on this device
-// if NO, each app version does not need to be authorized (default) 
-@property (nonatomic, assign, getter=isRequireAuthorization) BOOL requireAuthorization;
-
-// HockeyComparisonResultDifferent: alerts if the version on the server is different (default)
-// HockeyComparisonResultGreater: alerts if the version on the server is greater
+/**
+ The type of version comparisson.
+ 
+ Defines when a version is defined as being newer than the currently installed
+ version. This must be assigned one of the following:
+ 
+ - `BITUpdateComparisonResultDifferent`: Version is different
+ - `BITUpdateComparisonResultGreater`: Version is greater
+ 
+ **Default**: BITUpdateComparisonResultGreater
+ */
 @property (nonatomic, assign) BITUpdateComparisonResult compareVersionType;
+
+
+///-----------------------------------------------------------------------------
+/// @name Update Checking
+///-----------------------------------------------------------------------------
 
 // see HockeyUpdateSetting-enum. Will be saved in user defaults.
 // default value: HockeyUpdateCheckStartup
+/**
+ When to check for new updates.
+ 
+ Defines when a the SDK should check if there is a new update available on the
+ server. This must be assigned one of the following:
+ 
+ - `BITUpdateCheckStartup`: On every startup or or when the app comes to the foreground
+ - `BITUpdateCheckDaily`: Once a day
+ - `BITUpdateCheckManually`: Manually
+ 
+ **Default**: BITUpdateCheckStartup
+ 
+ @warning **WARNING**: When setting this to `BITUpdateCheckManually` you need to either
+ invoke the update checking process yourself with `checkForUpdate` somehow, e.g. by
+ proving an update check button for the user or integrating the Update View into your
+ user interface.
+ @see checkForUpdateOnLaunch
+ @see checkForUpdate
+ */
 @property (nonatomic, assign) BITUpdateSetting updateSetting;
 
-// open update info view
-- (void)showUpdateView;
+
+/**
+ Flag that determines whether the automatic update checks should be done.
+ 
+ If this is enabled the update checks will be performed automatically depending on the
+ `updateSetting` property. If this is disabled the `updateSetting` property will have
+ no effect, and checking for updates is totally up to be done by yourself.
+ 
+ *Default*: _YES_
+
+ @warning **WARNING**: When setting this to `NO` you need to invoke update checks yourself!
+ @see updateSetting
+ @see checkForUpdate
+ */
+@property (nonatomic, assign, getter=isCheckForUpdateOnLaunch) BOOL checkForUpdateOnLaunch;
+
 
 // manually start an update check
+/**
+ Check for an update
+ 
+ Call this to trigger a check if there is a new update available on the HockeyApp servers.
+ 
+ @see updateSetting
+ @see checkForUpdateOnLaunch
+ */
 - (void)checkForUpdate;
 
-// convenience methode to create hockey view controller
+
+///-----------------------------------------------------------------------------
+/// @name Privacy
+///-----------------------------------------------------------------------------
+
+/**
+ Flag that determines usage data will be send
+ 
+ If this is enabled then the following data will be submitted to the server
+ - App Version
+ - iOS Version
+ - Device type
+ - Language
+ - Installation timestamp
+ - Usage time
+ 
+ *Default*: _YES_
+ 
+ @warning **WARNING**: When setting this to `NO`, you will know if this user is actually testing!
+ */
+@property (nonatomic, assign, getter=shouldSendUsageData) BOOL sendUsageData;
+
+
+///-----------------------------------------------------------------------------
+/// @name Update Notification
+///-----------------------------------------------------------------------------
+
+/**
+ Flag that determines if updates alert should be repeatedly shown
+ 
+ If enabled the update alert shows on every startup and whenever the app becomes active,
+ until the update is installed.
+ If disabled the update alert is only shown once ever and it is up to you to provide an
+ alternate way for the user to navigate to the update UI or update in another way.
+ 
+ *Default*: _YES_
+ */
+@property (nonatomic, assign) BOOL alwaysShowUpdateReminder;
+
+
+/**
+ Flag that determines if the update alert should show an direct install option
+ 
+ If enabled the update alert shows an additional option which allows to invoke the update
+ installation process directly, instead of viewing the update UI first.
+ By default the alert only shows a `Show` and `Ignore` option.
+ 
+ *Default*: _NO_
+ */
+@property (nonatomic, assign, getter=isShowingDirectInstallOption) BOOL showDirectInstallOption;
+
+
+///-----------------------------------------------------------------------------
+/// @name Authorization
+///-----------------------------------------------------------------------------
+
+/**
+ Flag that determines if each update should be authenticated
+ 
+ If enabled each update will be authenticated on startup against the HockeyApp servers.
+ The process will basically validate if the current device is part of the provisioning
+ profile on the server. If not, it will present a blocking view on top of the apps UI
+ so that no interaction is possible.
+ 
+ *Default*: _NO_
+ @see authenticationSecret
+ */
+@property (nonatomic, assign, getter=isRequireAuthorization) BOOL requireAuthorization;
+
+
+/**
+ The authentication token from HockeyApp.
+ 
+ Set the token to the `Secret ID` which HockeyApp provides for every app.
+ 
+ @see requireAuthorization
+ */
+@property (nonatomic, retain) NSString *authenticationSecret;
+
+
+///-----------------------------------------------------------------------------
+/// @name User Interface
+///-----------------------------------------------------------------------------
+
+/**
+ The UIBarStyle of the update user interface navigation bar.
+ */
+@property (nonatomic, assign) UIBarStyle barStyle;
+
+
+/**
+ The UIModalPresentationStyle for showing the update user interface when invoked
+ with the update alert.
+ */
+@property (nonatomic, assign) UIModalPresentationStyle modalPresentationStyle;
+
+
+/**
+ Present the modal update user interface.
+ */
+- (void)showUpdateView;
+
+
+/**
+ Create an update view
+
+ @param modal Return a view ready for modal presentation with integrated navigation bar
+ @return BITUpdateViewController The update user interface view controller,
+ e.g. to push it onto a navigation stack.
+ */
 - (BITUpdateViewController *)hockeyViewController:(BOOL)modal;
+
 
 @end

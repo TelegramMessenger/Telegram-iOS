@@ -34,7 +34,6 @@
 #import "UIImage+BITHockeyAdditions.h"
 #import "PSAppStoreHeader.h"
 #import "PSWebTableViewCell.h"
-#import "BITUpdateSettingsViewController.h"
 #import "PSStoreButton.h"
 
 #import "HockeySDK.h"
@@ -94,32 +93,11 @@
   _appStoreHeader.subHeaderLabel = subHeaderString;
 }
 
-- (void)appDidBecomeActive_ {
+- (void)appDidBecomeActive {
   if (self.appStoreButtonState == AppStoreButtonStateInstalling) {
     [self setAppStoreButtonState:AppStoreButtonStateUpdate animated:YES];
   } else if (![_updateManager isCheckInProgress]) {
     [self restoreStoreButtonStateAnimated:YES];
-  }
-}
-
-- (void)openSettings:(id)sender {
-  BITUpdateSettingsViewController *settings = [[[BITUpdateSettingsViewController alloc] init] autorelease];
-  
-  Class popoverControllerClass = NSClassFromString(@"UIPopoverController");
-  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad && popoverControllerClass) {
-    if (_popOverController == nil) {
-      _popOverController = [[popoverControllerClass alloc] initWithContentViewController:settings];
-    }
-    if ([_popOverController contentViewController].view.window) {
-      [_popOverController dismissPopoverAnimated:YES];
-    }else {
-      [_popOverController setPopoverContentSize: CGSizeMake(320, 440)];
-      [_popOverController presentPopoverFromBarButtonItem:self.navigationItem.rightBarButtonItem
-                                 permittedArrowDirections:UIPopoverArrowDirectionUp animated:YES];
-    }
-  } else {
-    settings.modalTransitionStyle = UIModalTransitionStylePartialCurl;
-    [self presentModalViewController:settings animated:YES];
   }
 }
 
@@ -236,14 +214,7 @@
     self.title = BITHockeyLocalizedString(@"UpdateScreenTitle");
     
     _isAppStoreEnvironment = [BITHockeyManager sharedHockeyManager].isAppStoreEnvironment;
-    
-    if ([_updateManager shouldShowUserSettings]) {
-      self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc] initWithImage:[UIImage bit_imageNamed:@"gear.png" bundle:BITHOCKEYSDK_BUNDLE]
-                                                                                 style:UIBarButtonItemStyleBordered
-                                                                                target:self
-                                                                                action:@selector(openSettings:)] autorelease];
-    }
-    
+        
     _cells = [[NSMutableArray alloc] initWithCapacity:5];
     _popOverController = nil;
   }
@@ -321,7 +292,7 @@
   
   // add notifications only to loaded view
   NSNotificationCenter *dnc = [NSNotificationCenter defaultCenter];
-  [dnc addObserver:self selector:@selector(appDidBecomeActive_) name:UIApplicationDidBecomeActiveNotification object:nil];
+  [dnc addObserver:self selector:@selector(appDidBecomeActive) name:UIApplicationDidBecomeActiveNotification object:nil];
   
   // hook into manager with kvo!
   [_updateManager addObserver:self forKeyPath:@"checkInProgress" options:0 context:nil];

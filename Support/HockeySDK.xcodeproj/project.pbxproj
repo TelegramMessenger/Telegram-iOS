@@ -14,7 +14,6 @@
 		1E40BCB915A3494400BD64D9 /* BITCrashReportTextFormatter.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E40BCB715A3494400BD64D9 /* BITCrashReportTextFormatter.h */; };
 		1E40BCBA15A3494400BD64D9 /* BITCrashReportTextFormatter.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E40BCB815A3494400BD64D9 /* BITCrashReportTextFormatter.m */; };
 		1E59545715B6C41300A03429 /* BITAppVersionMetaInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB45A148D7BF50015DEDC /* BITAppVersionMetaInfo.m */; };
-		1E59545A15B6C41300A03429 /* BITUpdateSettingsViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB460148D7BF50015DEDC /* BITUpdateSettingsViewController.m */; };
 		1E59545C15B6C41300A03429 /* BITCrashManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB464148D7BF50015DEDC /* BITCrashManager.m */; };
 		1E59545D15B6C41300A03429 /* BITHockeyManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB466148D7BF50015DEDC /* BITHockeyManager.m */; };
 		1E59545E15B6C41300A03429 /* NSString+BITHockeyAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB468148D7BF50015DEDC /* NSString+BITHockeyAdditions.m */; };
@@ -27,7 +26,6 @@
 		1E59546715B6C41300A03429 /* CrashReporter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E41EB48B148D7C4E0015DEDC /* CrashReporter.framework */; };
 		1E59546915B6C41300A03429 /* BITAppVersionMetaInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB459148D7BF50015DEDC /* BITAppVersionMetaInfo.h */; };
 		1E59546B15B6C41300A03429 /* BITUpdateManager.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB45D148D7BF50015DEDC /* BITUpdateManager.h */; };
-		1E59546C15B6C41300A03429 /* BITUpdateSettingsViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB45F148D7BF50015DEDC /* BITUpdateSettingsViewController.h */; };
 		1E59546E15B6C41300A03429 /* BITHockeyManager.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB465148D7BF50015DEDC /* BITHockeyManager.h */; };
 		1E59547015B6C41300A03429 /* PSAppStoreHeader.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB469148D7BF50015DEDC /* PSAppStoreHeader.h */; };
 		1E59547115B6C41300A03429 /* PSStoreButton.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB46B148D7BF50015DEDC /* PSStoreButton.h */; };
@@ -41,11 +39,9 @@
 		1E59548515B6C4FB00A03429 /* BITHockeyManager.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB465148D7BF50015DEDC /* BITHockeyManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E59548715B6C51100A03429 /* BITCrashReportTextFormatter.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E40BCB715A3494400BD64D9 /* BITCrashReportTextFormatter.h */; };
 		1E5954B315B6E15300A03429 /* BITUpdateManager.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB45D148D7BF50015DEDC /* BITUpdateManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		1E5954B515B6E16300A03429 /* BITUpdateSettingsViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB45F148D7BF50015DEDC /* BITUpdateSettingsViewController.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E5954B615B6E17700A03429 /* PSStoreButton.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB46B148D7BF50015DEDC /* PSStoreButton.h */; settings = {ATTRIBUTES = (); }; };
 		1E5954B815B6E19C00A03429 /* BITAppVersionMetaInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB459148D7BF50015DEDC /* BITAppVersionMetaInfo.h */; settings = {ATTRIBUTES = (); }; };
 		1E5954CD15B6F24A00A03429 /* BITAppVersionMetaInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB45A148D7BF50015DEDC /* BITAppVersionMetaInfo.m */; };
-		1E5954D015B6F24A00A03429 /* BITUpdateSettingsViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB460148D7BF50015DEDC /* BITUpdateSettingsViewController.m */; };
 		1E5954D215B6F24A00A03429 /* BITCrashManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB464148D7BF50015DEDC /* BITCrashManager.m */; };
 		1E5954D315B6F24A00A03429 /* BITHockeyManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB466148D7BF50015DEDC /* BITHockeyManager.m */; };
 		1E5954D415B6F24A00A03429 /* NSString+BITHockeyAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB468148D7BF50015DEDC /* NSString+BITHockeyAdditions.m */; };
@@ -64,7 +60,6 @@
 		1E59559015B6FDA500A03429 /* UIImage+BITHockeyAdditions.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB46F148D7BF50015DEDC /* UIImage+BITHockeyAdditions.h */; };
 		1E59559215B6FDA500A03429 /* BITAppVersionMetaInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB459148D7BF50015DEDC /* BITAppVersionMetaInfo.h */; };
 		1E59559415B6FDA500A03429 /* BITUpdateManager.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB45D148D7BF50015DEDC /* BITUpdateManager.h */; settings = {ATTRIBUTES = (); }; };
-		1E59559515B6FDA500A03429 /* BITUpdateSettingsViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB45F148D7BF50015DEDC /* BITUpdateSettingsViewController.h */; };
 		1E59559815B6FDA500A03429 /* BITCrashManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E40BCB415A3487500BD64D9 /* BITCrashManagerDelegate.h */; settings = {ATTRIBUTES = (); }; };
 		1E59559915B6FDA500A03429 /* BITCrashReportTextFormatter.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E40BCB715A3494400BD64D9 /* BITCrashReportTextFormatter.h */; };
 		1E59559A15B6FDA500A03429 /* BITHockeyManager.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB465148D7BF50015DEDC /* BITHockeyManager.h */; settings = {ATTRIBUTES = (); }; };
@@ -82,8 +77,6 @@
 		1E5955CA15B71C8600A03429 /* bg.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955BF15B71C8600A03429 /* bg.png */; };
 		1E5955CB15B71C8600A03429 /* buttonHighlight.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955C015B71C8600A03429 /* buttonHighlight.png */; };
 		1E5955CC15B71C8600A03429 /* buttonHighlight@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955C115B71C8600A03429 /* buttonHighlight@2x.png */; };
-		1E5955CD15B71C8600A03429 /* gear.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955C215B71C8600A03429 /* gear.png */; };
-		1E5955CE15B71C8600A03429 /* gear@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955C315B71C8600A03429 /* gear@2x.png */; };
 		1E5955CF15B71C8600A03429 /* IconGradient.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955C415B71C8600A03429 /* IconGradient.png */; };
 		1E5955D015B71C8600A03429 /* IconGradient@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955C515B71C8600A03429 /* IconGradient@2x.png */; };
 		1E5955D215B72E5400A03429 /* BITCrashManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E5955D115B72E5300A03429 /* BITCrashManager.h */; };
@@ -121,8 +114,6 @@
 		E41EB471148D7BF50015DEDC /* BITAppVersionMetaInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB459148D7BF50015DEDC /* BITAppVersionMetaInfo.h */; };
 		E41EB472148D7BF50015DEDC /* BITAppVersionMetaInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB45A148D7BF50015DEDC /* BITAppVersionMetaInfo.m */; };
 		E41EB475148D7BF50015DEDC /* BITUpdateManager.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB45D148D7BF50015DEDC /* BITUpdateManager.h */; };
-		E41EB477148D7BF50015DEDC /* BITUpdateSettingsViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB45F148D7BF50015DEDC /* BITUpdateSettingsViewController.h */; };
-		E41EB478148D7BF50015DEDC /* BITUpdateSettingsViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB460148D7BF50015DEDC /* BITUpdateSettingsViewController.m */; };
 		E41EB47C148D7BF50015DEDC /* BITCrashManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB464148D7BF50015DEDC /* BITCrashManager.m */; };
 		E41EB47D148D7BF50015DEDC /* BITHockeyManager.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB465148D7BF50015DEDC /* BITHockeyManager.h */; };
 		E41EB47E148D7BF50015DEDC /* BITHockeyManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB466148D7BF50015DEDC /* BITHockeyManager.m */; };
@@ -203,8 +194,6 @@
 		1E5955BF15B71C8600A03429 /* bg.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = bg.png; sourceTree = "<group>"; };
 		1E5955C015B71C8600A03429 /* buttonHighlight.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = buttonHighlight.png; sourceTree = "<group>"; };
 		1E5955C115B71C8600A03429 /* buttonHighlight@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "buttonHighlight@2x.png"; sourceTree = "<group>"; };
-		1E5955C215B71C8600A03429 /* gear.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = gear.png; sourceTree = "<group>"; };
-		1E5955C315B71C8600A03429 /* gear@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "gear@2x.png"; sourceTree = "<group>"; };
 		1E5955C415B71C8600A03429 /* IconGradient.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = IconGradient.png; sourceTree = "<group>"; };
 		1E5955C515B71C8600A03429 /* IconGradient@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "IconGradient@2x.png"; sourceTree = "<group>"; };
 		1E5955D115B72E5300A03429 /* BITCrashManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashManager.h; sourceTree = "<group>"; };
@@ -221,8 +210,6 @@
 		E41EB459148D7BF50015DEDC /* BITAppVersionMetaInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITAppVersionMetaInfo.h; sourceTree = "<group>"; };
 		E41EB45A148D7BF50015DEDC /* BITAppVersionMetaInfo.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITAppVersionMetaInfo.m; sourceTree = "<group>"; };
 		E41EB45D148D7BF50015DEDC /* BITUpdateManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = BITUpdateManager.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		E41EB45F148D7BF50015DEDC /* BITUpdateSettingsViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITUpdateSettingsViewController.h; sourceTree = "<group>"; };
-		E41EB460148D7BF50015DEDC /* BITUpdateSettingsViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITUpdateSettingsViewController.m; sourceTree = "<group>"; };
 		E41EB464148D7BF50015DEDC /* BITCrashManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = BITCrashManager.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
 		E41EB465148D7BF50015DEDC /* BITHockeyManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITHockeyManager.h; sourceTree = "<group>"; };
 		E41EB466148D7BF50015DEDC /* BITHockeyManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITHockeyManager.m; sourceTree = "<group>"; };
@@ -296,8 +283,6 @@
 				1E5955BF15B71C8600A03429 /* bg.png */,
 				1E5955C015B71C8600A03429 /* buttonHighlight.png */,
 				1E5955C115B71C8600A03429 /* buttonHighlight@2x.png */,
-				1E5955C215B71C8600A03429 /* gear.png */,
-				1E5955C315B71C8600A03429 /* gear@2x.png */,
 				1E5955C415B71C8600A03429 /* IconGradient.png */,
 				1E5955C515B71C8600A03429 /* IconGradient@2x.png */,
 			);
@@ -363,8 +348,6 @@
 				1E5955EE15B7752200A03429 /* BITUpdateManagerDelegate.h */,
 				1E5955E215B751ED00A03429 /* BITUpdateViewController.h */,
 				1E5955E615B751FB00A03429 /* BITUpdateViewController.m */,
-				E41EB45F148D7BF50015DEDC /* BITUpdateSettingsViewController.h */,
-				E41EB460148D7BF50015DEDC /* BITUpdateSettingsViewController.m */,
 				1E5955D115B72E5300A03429 /* BITCrashManager.h */,
 				1E01117E15BB6228007002AC /* BITCrashManagerPrivate.h */,
 				E41EB464148D7BF50015DEDC /* BITCrashManager.m */,
@@ -420,7 +403,6 @@
 				1E5954B315B6E15300A03429 /* BITUpdateManager.h in Headers */,
 				1E5955F715B77F7600A03429 /* BITUpdateManagerDelegate.h in Headers */,
 				1E5955F815B77F7C00A03429 /* BITUpdateViewController.h in Headers */,
-				1E5954B515B6E16300A03429 /* BITUpdateSettingsViewController.h in Headers */,
 				1E5955F615B77F6500A03429 /* HockeySDKPrivate.h in Headers */,
 				1E01118115BB6311007002AC /* BITUpdateManagerPrivate.h in Headers */,
 				1E01118215BB6314007002AC /* BITCrashManagerPrivate.h in Headers */,
@@ -442,7 +424,6 @@
 				1E59547515B6C41300A03429 /* BITCrashManagerDelegate.h in Headers */,
 				1E59546915B6C41300A03429 /* BITAppVersionMetaInfo.h in Headers */,
 				1E59546B15B6C41300A03429 /* BITUpdateManager.h in Headers */,
-				1E59546C15B6C41300A03429 /* BITUpdateSettingsViewController.h in Headers */,
 				1E59546E15B6C41300A03429 /* BITHockeyManager.h in Headers */,
 				1E59547015B6C41300A03429 /* PSAppStoreHeader.h in Headers */,
 				1E59547115B6C41300A03429 /* PSStoreButton.h in Headers */,
@@ -471,7 +452,6 @@
 				1E59559B15B6FDA500A03429 /* HockeySDK.h in Headers */,
 				1E59559015B6FDA500A03429 /* UIImage+BITHockeyAdditions.h in Headers */,
 				1E59559215B6FDA500A03429 /* BITAppVersionMetaInfo.h in Headers */,
-				1E59559515B6FDA500A03429 /* BITUpdateSettingsViewController.h in Headers */,
 				1E59559915B6FDA500A03429 /* BITCrashReportTextFormatter.h in Headers */,
 				1E5955A315B70F6900A03429 /* HockeySDKPrivate.h in Headers */,
 				1E5955D415B72E5400A03429 /* BITCrashManager.h in Headers */,
@@ -490,7 +470,6 @@
 				1E40BCB515A3487500BD64D9 /* BITCrashManagerDelegate.h in Headers */,
 				E41EB471148D7BF50015DEDC /* BITAppVersionMetaInfo.h in Headers */,
 				E41EB475148D7BF50015DEDC /* BITUpdateManager.h in Headers */,
-				E41EB477148D7BF50015DEDC /* BITUpdateSettingsViewController.h in Headers */,
 				E41EB47D148D7BF50015DEDC /* BITHockeyManager.h in Headers */,
 				E41EB481148D7BF50015DEDC /* PSAppStoreHeader.h in Headers */,
 				E41EB483148D7BF50015DEDC /* PSStoreButton.h in Headers */,
@@ -664,8 +643,6 @@
 				1E5955CA15B71C8600A03429 /* bg.png in Resources */,
 				1E5955CB15B71C8600A03429 /* buttonHighlight.png in Resources */,
 				1E5955CC15B71C8600A03429 /* buttonHighlight@2x.png in Resources */,
-				1E5955CD15B71C8600A03429 /* gear.png in Resources */,
-				1E5955CE15B71C8600A03429 /* gear@2x.png in Resources */,
 				1E5955CF15B71C8600A03429 /* IconGradient.png in Resources */,
 				1E5955D015B71C8600A03429 /* IconGradient@2x.png in Resources */,
 				1E27EF2515BB5033000AE995 /* HockeySDK.strings in Resources */,
@@ -704,7 +681,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				1E59545715B6C41300A03429 /* BITAppVersionMetaInfo.m in Sources */,
-				1E59545A15B6C41300A03429 /* BITUpdateSettingsViewController.m in Sources */,
 				1E59545C15B6C41300A03429 /* BITCrashManager.m in Sources */,
 				1E59545D15B6C41300A03429 /* BITHockeyManager.m in Sources */,
 				1E59545E15B6C41300A03429 /* NSString+BITHockeyAdditions.m in Sources */,
@@ -724,7 +700,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				1E5954CD15B6F24A00A03429 /* BITAppVersionMetaInfo.m in Sources */,
-				1E5954D015B6F24A00A03429 /* BITUpdateSettingsViewController.m in Sources */,
 				1E5954D215B6F24A00A03429 /* BITCrashManager.m in Sources */,
 				1E5954D315B6F24A00A03429 /* BITHockeyManager.m in Sources */,
 				1E5954D415B6F24A00A03429 /* NSString+BITHockeyAdditions.m in Sources */,
@@ -751,7 +726,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				E41EB472148D7BF50015DEDC /* BITAppVersionMetaInfo.m in Sources */,
-				E41EB478148D7BF50015DEDC /* BITUpdateSettingsViewController.m in Sources */,
 				E41EB47C148D7BF50015DEDC /* BITCrashManager.m in Sources */,
 				E41EB47E148D7BF50015DEDC /* BITHockeyManager.m in Sources */,
 				E41EB480148D7BF50015DEDC /* NSString+BITHockeyAdditions.m in Sources */,

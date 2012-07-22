@@ -59,16 +59,11 @@
 @synthesize urlConnection = _urlConnection;
 @synthesize checkInProgress = _checkInProgress;
 @synthesize receivedData = _receivedData;
-@synthesize sendUserData = _sendUserData;
-@synthesize sendUsageTime = _sendUsageTime;
-@synthesize allowUserToDisableSendData = _allowUserToDisableSendData;
-@synthesize userAllowsSendUserData = _userAllowsSendUserData;
-@synthesize userAllowsSendUsageTime = _userAllowsSendUsageTime;
+@synthesize sendUsageData = _sendUsageData;
 @synthesize alwaysShowUpdateReminder = _showUpdateReminder;
 @synthesize checkForUpdateOnLaunch = _checkForUpdateOnLaunch;
 @synthesize compareVersionType = _compareVersionType;
 @synthesize lastCheck = _lastCheck;
-@synthesize showUserSettings = _showUserSettings;
 @synthesize updateSetting = _updateSetting;
 @synthesize appVersions = _appVersions;
 @synthesize updateAvailable = _updateAvailable;
@@ -274,30 +269,6 @@
   return visibleWindow;
 }
 
-- (BOOL)canSendUserData {
-  if (self.shouldSendUserData) {
-    if (self.allowUserToDisableSendData) {
-      return self.userAllowsSendUserData;
-    }
-    
-    return YES;
-  }
-  
-  return NO;
-}
-
-- (BOOL)canSendUsageTime {
-  if (self.shouldSendUsageTime) {
-    if (self.allowUserToDisableSendData) {
-      return self.userAllowsSendUsageTime;
-    }
-    
-    return YES;
-  }
-  
-  return NO;
-}
-
 
 #pragma mark - Init
 
@@ -322,22 +293,13 @@
     // set defaults
     self.showDirectInstallOption = NO;
     self.requireAuthorization = NO;
-    self.sendUserData = YES;
-    self.sendUsageTime = YES;
-    self.allowUserToDisableSendData = YES;
+    self.sendUsageData = YES;
     self.alwaysShowUpdateReminder = YES;
     self.checkForUpdateOnLaunch = YES;
-    self.showUserSettings = NO;
     self.compareVersionType = BITUpdateComparisonResultGreater;
     self.barStyle = UIBarStyleDefault;
     self.modalPresentationStyle = UIModalPresentationFormSheet;
-    
-    // load update setting from user defaults and check value
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:kBITUpdateAutoUpdateSetting]) {
-      self.updateSetting = (BITUpdateSetting)[[NSUserDefaults standardUserDefaults] integerForKey:kBITUpdateAutoUpdateSetting];
-    } else {
-      self.updateSetting = BITUpdateCheckStartup;
-    }
+    self.updateSetting = BITUpdateCheckStartup;
     
     if ([[NSUserDefaults standardUserDefaults] objectForKey:kBITUpdateDateOfLastCheck]) {
       // we did write something else in the past, so for compatibility reasons do this
@@ -350,18 +312,6 @@
       self.lastCheck = [NSDate distantPast];
     }
     
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:kBITUpdateAllowUserSetting]) {
-      self.userAllowsSendUserData = [[NSUserDefaults standardUserDefaults] boolForKey:kBITUpdateAllowUserSetting];
-    } else {
-      self.userAllowsSendUserData = YES;
-    }
-    
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:kBITUpdateAllowUsageSetting]) {
-      self.userAllowsSendUsageTime = [[NSUserDefaults standardUserDefaults] boolForKey:kBITUpdateAllowUsageSetting];
-    } else {
-      self.userAllowsSendUsageTime = YES;
-    }
-        
     if (!BITHockeyBundle()) {
       NSLog(@"WARNING: %@.bundle is missing, make sure it is added!", BITHOCKEYSDK_BUNDLE);
     }
@@ -773,19 +723,15 @@
                                 _uuid];
   
   // add additional statistics if user didn't disable flag
-  if ([self canSendUserData]) {
-    [parameter appendFormat:@"&app_version=%@&os=iOS&os_version=%@&device=%@&lang=%@&first_start_at=%@",
+  if (self.shouldSendUsageData) {
+    [parameter appendFormat:@"&app_version=%@&os=iOS&os_version=%@&device=%@&lang=%@&first_start_at=%@&usage_time=%@",
      [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] bit_URLEncodedString],
      [[[UIDevice currentDevice] systemVersion] bit_URLEncodedString],
      [[self getDevicePlatform] bit_URLEncodedString],
      [[[[NSBundle mainBundle] preferredLocalizations] objectAtIndex:0] bit_URLEncodedString],
-     [[self installationDateString] bit_URLEncodedString]
+     [[self installationDateString] bit_URLEncodedString],
+     [[self currentUsageString] bit_URLEncodedString]
      ];
-    if ([self canSendUsageTime]) {
-      [parameter appendFormat:@"&usage_time=%@",
-       [[self currentUsageString] bit_URLEncodedString]
-       ];
-    }
   }
   
   if ([self checkForTracker]) {
@@ -825,7 +771,7 @@
 #endif
   
   NSString *extraParameter = [NSString string];
-  if ([self canSendUserData]) {
+  if (self.shouldSendUsageData) {
     extraParameter = [NSString stringWithFormat:@"&udid=%@", [self deviceIdentifier]];
   }
   
@@ -1045,33 +991,8 @@
   }
 }
 
-- (void)setUserAllowsSendUserData:(BOOL)flag {
-  _userAllowsSendUserData = flag;
-  
-  [[NSUserDefaults standardUserDefaults] setObject:[NSNumber numberWithInteger:_userAllowsSendUserData] forKey:kBITUpdateAllowUserSetting];
-  [[NSUserDefaults standardUserDefaults] synchronize];
-}
-
-- (void)setUserAllowsSendUsageTime:(BOOL)flag {
-  _userAllowsSendUsageTime = flag;
-  
-  [[NSUserDefaults standardUserDefaults] setObject:[NSNumber numberWithInteger:_userAllowsSendUsageTime] forKey:kBITUpdateAllowUsageSetting];
-  [[NSUserDefaults standardUserDefaults] synchronize];
-}
-
 - (NSString *)currentAppVersion {
   return _currentAppVersion;
-}
-
-
-- (void)setUpdateSetting:(BITUpdateSetting)anUpdateSetting {
-  if (anUpdateSetting > BITUpdateCheckManually) {
-    _updateSetting = BITUpdateCheckStartup;
-  }
-  
-  _updateSetting = anUpdateSetting;
-  [[NSUserDefaults standardUserDefaults] setObject:[NSNumber numberWithInteger:_updateSetting] forKey:kBITUpdateAutoUpdateSetting];
-  [[NSUserDefaults standardUserDefaults] synchronize];
 }
 
 - (void)setLastCheck:(NSDate *)aLastCheck {

@@ -42,10 +42,6 @@
 #define kBITUpdateDateOfVersionInstallation	@"BITUpdateDateOfVersionInstallation"
 #define kBITUpdateUsageTimeOfCurrentVersion	@"BITUpdateUsageTimeOfCurrentVersion"
 #define kBITUpdateUsageTimeForVersionString	@"BITUpdateUsageTimeForVersionString"
-#define kBITUpdateAutoUpdateSetting					@"BITUpdateAutoUpdateSetting"
-#define kBITUpdateAllowUserSetting					@"BITUpdateAllowUserSetting"
-#define kBITUpdateAllowUsageSetting					@"BITUpdateAllowUsageSetting"
-#define kBITUpdateAutoUpdateSetting					@"BITUpdateAutoUpdateSetting"
 #define kBITUpdateAuthorizedVersion					@"BITUpdateAuthorizedVersion"
 #define kBITUpdateAuthorizedToken						@"BITUpdateAuthorizedToken"
 

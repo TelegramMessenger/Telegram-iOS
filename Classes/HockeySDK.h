@@ -39,7 +39,6 @@
 #import "BITUpdateManager.h"
 #import "BITUpdateManagerDelegate.h"
 #import "BITUpdateViewController.h"
-#import "BITUpdateSettingsViewController.h"
 
 
 // Notification message which HockeyManager is listening to, to retry requesting updated from the server
