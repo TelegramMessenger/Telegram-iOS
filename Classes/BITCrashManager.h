@@ -50,15 +50,17 @@ typedef enum BITCrashStatus {
 /**
  The crash reporting module.
  
- This is the principal SDK class. It represents the entry point for the HockeySDK. The main promises of the class are initializing the SDK modules, providing access to global properties and to all modules. Initialization is divided into several distinct phases:
+ This is the HockeySDK module for handling crash reports in any app version, including when distributed via
+ the App Store. As a foundation it is using the open source, reliable and async-safe crash reporting framework
+ (PLCrashReporter)[https://code.google.com/p/plcrashreporter/].
  
- 1. Setup the [HockeyApp](http://hockeyapp.net/) app identifier and the optional delegate: This is the least required information on setting up the SDK and using it. It does some simple validation of the app identifier and checks if the app is running from the App Store or not. If the [Atlassian JMC framework](http://www.atlassian.com/jmc/) is found, it will disable its Crash Reporting module and configure it with the Jira configuration data from [HockeyApp](http://hockeyapp.net/).
- 2. Provides access to the SDK modules `BITCrashManager` and `BITUpdateManager`. This way all modules can be further configured to personal needs, if the defaults don't fit the requirements.
- 3. Start up all modules.
+ This module works as a wrapper around the underlying crash reporting framework and provides functionality to
+ detect new crashes, queues them if networking is not available, present a user interface to approve sending
+ the reports to the HockeyApp servers and more.
  
- Example:
- [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"<AppIdentifierFromHockeyApp>" delegate:nil];
- [[BITHockeyManager sharedHockeyManager] startManager];
+ It also provides options to add additional meta information to each crash report, like `userName`, `userEmail`,
+ additional textual log information via `BITCrashManagerDelegate` protocol and a way to detect startup crashes so
+ you can adjust your startup process to get these crash reports too and delay your app initialization.
  
  */
 
@@ -92,36 +94,111 @@ typedef enum BITCrashStatus {
   BOOL _sendingInProgress;
 }
 
-// delegate is optional
+
+///-----------------------------------------------------------------------------
+/// @name Delegate
+///-----------------------------------------------------------------------------
+
+/**
+ Sets the optional `BITCrashManagerDelegate` delegate.
+ */
 @property (nonatomic, assign) id <BITCrashManagerDelegate> delegate;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-// settings
+
+///-----------------------------------------------------------------------------
+/// @name Additional meta data
+///-----------------------------------------------------------------------------
 
 /** Define the users name or userid that should be send along each crash report
  */
 @property (nonatomic, copy) NSString *userName;
 
+
 /** Define the users email address that should be send along each crash report
  */
 @property (nonatomic, copy) NSString *userEmail;
 
-// if YES, the user will get the option to choose "Always" for sending crash reports. This will cause the dialog not to show the alert description text landscape mode! (default)
-// if NO, the dialog will not show a "Always" button
+
+///-----------------------------------------------------------------------------
+/// @name Configuration
+///-----------------------------------------------------------------------------
+
+/**
+ Flag that determines if crashes should be send without user interaction
+ 
+ If enabled, new crashes will not cause an alert to show up asking the user
+ if he or she agrees on sending the crash report to the server.
+ 
+ By default a crash report is anonymous, unless you are adding personal information
+ using the `userName`, `userEmail` or `[BITCrashManagerDelegate applicationLogForCrashReporter:]`
+ options. For privacy reasons you should give the user an option not to send
+ the reports.
+ 
+ *Default*: _NO_
+ */
+@property (nonatomic, assign, getter=isAutoSubmitCrashReport) BOOL autoSubmitCrashReport;
+
+
+/**
+ Flag that determines if an "Always" option should be shown
+ 
+ If enabled the crash reporting alert will also present an "Always" option, so
+ the user doesn't have to approve every single crash over and over again.
+ 
+ If `autoSubmitCrashReport` is enabled, this property has no effect, since no
+ alert will be presented.
+ 
+ @warning This will cause the dialog not to show the alert description text landscape mode!
+ @see autoSubmitCrashReport
+ */
 @property (nonatomic, assign, getter=isShowingAlwaysButton) BOOL showAlwaysButton;
 
 // if YES, the user will be presented with a status of the crash, if known
 // if NO, the user will not see any feedback information (default)
+/**
+ Flag that determines if the user should get feedback about the crash
+ 
+ On the HockeyApp servers it is possible to assign each crash group a fixed app
+ version. Each app version also has a status like `new`, `submitted` or 
+ `available`. This status defines what kind of feedback the user will get,
+ if the crash belongs to a crash group with a fixed version assigned.
+ 
+ The best case would be, that an update is already `available` which fixes this
+ crash.
+ 
+ *Default*: _NO_
+ */
 @property (nonatomic, assign, getter=isFeedbackActivated) BOOL feedbackActivated;
 
-// if YES, the crash report will be submitted without asking the user
-// if NO, the user will be asked if the crash report can be submitted (default)
-@property (nonatomic, assign, getter=isAutoSubmitCrashReport) BOOL autoSubmitCrashReport;
 
-// will return YES if the last session crashed, to e.g. make sure a "rate my app" alert will not show up
+///-----------------------------------------------------------------------------
+/// @name Crash Meta Information
+///-----------------------------------------------------------------------------
+
+/**
+ Indicates if the app crash in the previous session
+
+ Use this on startup, to check if the app starts the first time after it crashed
+ previously. You can use this also to disable specific events, like asking
+ the user to rate your app.
+ */
 @property (nonatomic, readonly) BOOL didCrashInLastSession;
 
 // will return the timeinterval from startup to the crash in seconds, default is -1
+/**
+ Provides the time between startup and crash in seconds
+ 
+ Use this in together with `didCrashInLastSession` to detect if the app crashed very
+ early after startup. This can be used to delay app initialization until the crash
+ report has been sent to the server or if you want to do any other actions like
+ cleaning up some cache data etc.
+ 
+ The `BITCrashManagerDelegate` protocol provides some delegates to inform if sending
+ a crash report was finished successfully, ended in error or was cancelled by the user.
+ 
+ @see didCrashInLastSession
+ @see BITCrashManagerDelegate
+ */
 @property (nonatomic, readonly) NSTimeInterval timeintervalCrashInLastSessionOccured;
 
 @end

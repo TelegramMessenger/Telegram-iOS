@@ -54,7 +54,6 @@ NSInteger binaryImageSort(id binary1, id binary2, void *context);
  * the formatted result as a string.
  *
  * @param report The report to format.
- * @param textFormat The text format to use.
  *
  * @return Returns the formatted result on success, or nil if an error occurs.
  */

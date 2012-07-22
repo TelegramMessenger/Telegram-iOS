@@ -54,6 +54,30 @@ typedef enum {
 @class BITAppVersionMetaInfo;
 @class BITUpdateViewController;
 
+/**
+ The update manager module.
+ 
+ This is the HockeySDK module for handling app updates when using Ad-Hoc or Enterprise provisioning profiles.
+ This modul handles version updates, presents update and version information in a App Store like user interface,
+ collects usage information and provides additional authorization options when using Ad-Hoc provisioning profiles.
+ 
+ To use this module, it is important to implement set the `delegate` property and implement
+ `[BITUpdateManagerDelegate customDeviceIdentifierForUpdateManager:]`.
+ 
+ Example implementation if your Xcode configuration for the App Store is called "AppStore":
+    - (NSString *)customDeviceIdentifierForUpdateManager:(BITUpdateManager *)updateManager {
+    #ifndef (CONFIGURATION_AppStore)
+      if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)])
+        return [[UIDevice currentDevice] performSelector:@selector(uniqueIdentifier)];
+    #endif
+    
+      return nil;
+    }
+  
+    [[BITHockeyManager sharedHockeyManager].updateManager setDelegate:self];
+ 
+ */
+
 @interface BITUpdateManager : NSObject <UIAlertViewDelegate> {
 @private
   NSString *_appIdentifier;
@@ -81,8 +105,8 @@ typedef enum {
  Sets the `BITUpdateManagerDelegate` delegate.
  
  When using `BITUpdateManager` to distribute updates of your beta or enterprise
- application, it is required to set this delegate and implement the
- `customDeviceIdentifierForUpdateManager:` delegate!
+ application, it is _REQUIRED_ to set this delegate and implement
+ `[BITUpdateManagerDelegate customDeviceIdentifierForUpdateManager:]`!
  */
 @property (nonatomic, assign) id <BITUpdateManagerDelegate> delegate;
 
@@ -123,7 +147,7 @@ typedef enum {
  
  **Default**: BITUpdateCheckStartup
  
- @warning **WARNING**: When setting this to `BITUpdateCheckManually` you need to either
+ @warning When setting this to `BITUpdateCheckManually` you need to either
  invoke the update checking process yourself with `checkForUpdate` somehow, e.g. by
  proving an update check button for the user or integrating the Update View into your
  user interface.
@@ -142,7 +166,7 @@ typedef enum {
  
  *Default*: _YES_
 
- @warning **WARNING**: When setting this to `NO` you need to invoke update checks yourself!
+ @warning When setting this to `NO` you need to invoke update checks yourself!
  @see updateSetting
  @see checkForUpdate
  */
@@ -178,7 +202,7 @@ typedef enum {
  
  *Default*: _YES_
  
- @warning **WARNING**: When setting this to `NO`, you will know if this user is actually testing!
+ @warning When setting this to `NO`, you will know if this user is actually testing!
  */
 @property (nonatomic, assign, getter=shouldSendUsageData) BOOL sendUsageData;
 
@@ -226,6 +250,7 @@ typedef enum {
  
  *Default*: _NO_
  @see authenticationSecret
+ @warning This only works when using Ad-Hoc provisioning profiles!
  */
 @property (nonatomic, assign, getter=isRequireAuthorization) BOOL requireAuthorization;
 

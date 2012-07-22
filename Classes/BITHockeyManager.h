@@ -48,19 +48,19 @@
     [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"<AppIdentifierFromHockeyApp>" delegate:nil];
     [[BITHockeyManager sharedHockeyManager] startManager];
  
- @warning **WARNING**: When using the SDK also for updating beta versions and collecting beta usage analytics,
- you also have to to set the `delegate` property of `BITUpdateManager` and implement the `customDeviceIdentifierForUpdateManager:` delegate!
+ @warning When also using the SDK for updating app versions (AdHoc or Enterprise) and collecting
+ beta usage analytics, you also have to to set  `[BITUpdateManager delegate]` and
+ implement `[BITUpdateManagerDelegate customDeviceIdentifierForUpdateManager:]`!
  
- Example:
+ 
+ Example implementation if your Xcode configuration for the App Store is called "AppStore":
     - (NSString *)customDeviceIdentifierForUpdateManager:(BITUpdateManager *)updateManager {
-    #ifdef CHECKFORBETA
+    #ifndef (CONFIGURATION_AppStore)
       if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)])
         return [[UIDevice currentDevice] performSelector:@selector(uniqueIdentifier)];
     #endif
       return nil;
     }
- 
-    ...
     
     [[BITHockeyManager sharedHockeyManager].updateManager setDelegate:self];
 

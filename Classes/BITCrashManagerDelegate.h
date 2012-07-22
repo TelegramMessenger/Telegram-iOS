@@ -28,32 +28,66 @@
 
 #import <Foundation/Foundation.h>
 
+/**
+ The `BITCrashManagerDelegate` formal protocol defines methods further configuring
+ the behaviour of `BITCrashManager`.
+ */
+
 @protocol BITCrashManagerDelegate <NSObject>
 
 @optional
 
+///-----------------------------------------------------------------------------
+/// @name Additional meta data
+///-----------------------------------------------------------------------------
+
 /** Return any log string based data the crash report being processed should contain
+
+ @param crashReporter The `BITCrashManager` instance invoking this delegate
  */
 -(NSString *)applicationLogForCrashReporter:(BITCrashManager *)crashReporter;
 
+
+///-----------------------------------------------------------------------------
+/// @name Alert
+///-----------------------------------------------------------------------------
+
 /** Invoked before the user is asked to send a crash report, so you can do additional actions.
     E.g. to make sure not to ask the user for an app rating :)
+ 
+ @param crashReporter The `BITCrashManager` instance invoking this delegate
  */
 -(void)crashReporterWillShowSubmitCrashReportAlert:(BITCrashManager *)crashReporter;
 
+
 /** Invoked after the user did choose to send crashes always in the alert
+ 
+ @param crashReporter The `BITCrashManager` instance invoking this delegate
  */
 -(void)crashReporterWillSendCrashReportsAlways:(BITCrashManager *)crashReporter;
 
+
+///-----------------------------------------------------------------------------
+/// @name Networking
+///-----------------------------------------------------------------------------
+
 /** Invoked right before sending crash reports will start
+ 
+ @param crashReporter The `BITCrashManager` instance invoking this delegate
  */
 - (void)crashReporterWillSendCrashReport:(BITCrashManager *)crashReporter;
 
 /** Invoked after sending crash reports failed
+ 
+ @param crashReporter The `BITCrashManager` instance invoking this delegate
+ @param error The error returned from the NSURLConnection call or `kBITCrashErrorDomain`
+ with reason of type `BITCrashErrorReason`.
  */
 - (void)crashReporter:(BITCrashManager *)crashReporter didFailWithError:(NSError *)error;
 
 /** Invoked after sending crash reports succeeded
+ 
+ @param crashReporter The `BITCrashManager` instance invoking this delegate
  */
 - (void)crashReporterDidFinishSendingCrashReport:(BITCrashManager *)crashReporter;
 

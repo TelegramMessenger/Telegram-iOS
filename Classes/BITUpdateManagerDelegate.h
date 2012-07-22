@@ -28,24 +28,43 @@
 
 #import <Foundation/Foundation.h>
 
+/**
+ The `BITUpdateManagerDelegate` formal protocol defines methods further configuring
+ the behaviour of `BITUpdateManager`. 
+ */
+
 @protocol BITUpdateManagerDelegate <NSObject>
 
-/*
+/**
+ Return the unique device identifier
+ 
  Return the device UDID which is required for beta testing, should return nil for app store configuration!
- Example implementation if your configuration for the App Store is called "AppStore":
+ Example implementation if your Xcode configuration for the App Store is called "AppStore":
  
- #ifndef (CONFIGURATION_AppStore)
- if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)])
- return [[UIDevice currentDevice] performSelector:@selector(uniqueIdentifier)];
- #endif
- return nil;
+    - (NSString *)customDeviceIdentifierForUpdateManager:(BITUpdateManager *)updateManager {
+    #ifndef (CONFIGURATION_AppStore)
+      if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)])
+        return [[UIDevice currentDevice] performSelector:@selector(uniqueIdentifier)];
+    #endif
  
+      return nil;
+    }
+ 
+ @param updateManager The `BITUpdateManager` instance invoking this delegate
  */
 - (NSString *)customDeviceIdentifierForUpdateManager:(BITUpdateManager *)updateManager;
 
 @optional
 
-// optional parent view controller for the update screen when invoked via the alert view, default is the root UIWindow instance
+/**
+ Provide a parent view controller for the update user interface
+ 
+ If you don't have a `rootViewController` set on your `UIWindow` and the SDK cannot
+ automatically find the current top most `UIViewController`, you can provide the 
+ `UIViewController` that should be used to present the update user interface modal.
+
+ @param updateManager The `BITUpdateManager` instance invoking this delegate
+ */
 - (UIViewController *)viewControllerForUpdateManager:(BITUpdateManager *)updateManager;
 
 @end

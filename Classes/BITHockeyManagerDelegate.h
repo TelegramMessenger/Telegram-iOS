@@ -32,8 +32,6 @@
 /**
  The `BITHockeyManagerDelegate` formal protocol defines methods further configuring
   the behaviour of `BITHockeyManager`.
- 
- `BITHockeyManager` conforms to BITHockeyManagerDelegate.
  */
 
 @protocol BITHockeyManagerDelegate <NSObject>
