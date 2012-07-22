@@ -45,16 +45,6 @@
 #define BITHockeyNetworkDidBecomeReachableNotification @"BITHockeyNetworkDidBecomeReachable"
 
 
-// Crash Reporting
-
-// flags if the crashreporter is activated at all
-// set this as bool in user defaults e.g. in the settings, if you want to let the user be able to deactivate it
-#define kBITCrashActivated @"BITCrashActivated"
-
-// flags if the crashreporter should automatically send crashes without asking the user again
-// set this as bool in user defaults e.g. in the settings, if you want to let the user be able to set this on or off
-#define kBITCrashAutomaticallySendReports @"BITCrashAutomaticallySendReports"
-
 // hockey api error domain
 typedef enum {
   BITCrashErrorUnknown,

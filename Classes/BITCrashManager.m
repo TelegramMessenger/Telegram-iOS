@@ -39,6 +39,8 @@
 
 #include <sys/sysctl.h>
 
+// flags if the crashreporter should automatically send crashes without asking the user again
+#define kBITCrashAutomaticallySendReports @"BITCrashAutomaticallySendReports"
 
 // flags if the crashlog analyzer is started. since this may theoretically crash we need to track it
 #define kBITCrashAnalyzerStarted @"HockeySDKCrashAnalyzerStarted"
