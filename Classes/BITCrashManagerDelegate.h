@@ -39,29 +39,14 @@
 
 
 ///-----------------------------------------------------------------------------
-/// @name Privacy
-///-----------------------------------------------------------------------------
-
-/** Return YES if the crash reporting module should be disabled
- 
- The crash reporting module is enabled by default. Implement this delegate and
- return YES if you want to disable it.
- 
- If you intend to implement a user setting to let them enable or disable
- crash reporting, this delegate should be used to return that value.
- 
- @param crashManager The `BITCrashManager` instance invoking this delegate
- */
-- (BOOL)shouldDisableCrashManager:(BITCrashManager *)crashManager;
-
-
-///-----------------------------------------------------------------------------
 /// @name Additional meta data
 ///-----------------------------------------------------------------------------
 
 /** Return any log string based data the crash report being processed should contain
 
  @param crashManager The `BITCrashManager` instance invoking this delegate
+ @see userNameForCrashManager:
+ @see userEmailForCrashManager:
  */
 -(NSString *)applicationLogForCrashManager:(BITCrashManager *)crashManager;
 
@@ -70,6 +55,8 @@
 /** Return the user name or userid that should be send along each crash report
  
  @param crashManager The `BITCrashManager` instance invoking this delegate
+ @see applicationLogForCrashManager:
+ @see userEmailForCrashManager:
  @warning When returning a non nil value, crash reports are not anonymous any
  more and the alerts will not show the "anonymous" word!
  */
@@ -80,6 +67,8 @@
 /** Return the users email address that should be send along each crash report
  
  @param crashManager The `BITCrashManager` instance invoking this delegate
+ @see applicationLogForCrashManager:
+ @see userNameForCrashManager:
  @warning When returning a non nil value, crash reports are not anonymous any
  more and the alerts will not show the "anonymous" word!
  */

@@ -30,11 +30,14 @@
 
 #import <Foundation/Foundation.h>
 
+// hockey crash manager status
+typedef enum {
+  BITCrashManagerStatusDisabled = 0,
+  BITCrashManagerStatusAlwaysAsk = 1,
+  BITCrashManagerStatusAutoSend = 2
+} BITCrashManagerStatus;
+static NSString *kBITCrashManagerStatus = @"BITCrashManagerStatus";
 
-typedef enum BITCrashAlertType {
-  BITCrashAlertTypeSend = 0,
-  BITCrashAlertTypeFeedback = 1,
-} BITCrashAlertType;
 
 typedef enum BITCrashStatus {
   BITCrashStatusQueued = -80,
@@ -95,7 +98,6 @@ typedef enum BITCrashStatus {
   NSFileManager *_fileManager;
   
   BOOL _crashIdenticalCurrentVersion;
-  BOOL _crashReportDisabled;
   
   NSMutableArray *_crashFiles;
 	
@@ -124,20 +126,32 @@ typedef enum BITCrashStatus {
 /// @name Configuration
 ///-----------------------------------------------------------------------------
 
-/**
- Flag that determines if crashes should be send without user interaction
+/** Set the default status of the Crash Manager
  
- If enabled, new crashes will not cause an alert to show up asking the user
- if he or she agrees on sending the crash report to the server.
+ Defines if the crash reporting feature should be disabled, ask the user before
+ sending each crash report or send crash reportings automatically without
+ asking.. This must be assigned one of the following:
  
- By default a crash report is anonymous, unless you are adding personal information
- using the `userName`, `userEmail` or `[BITCrashManagerDelegate applicationLogForCrashManager:]`
- options. For privacy reasons you should give the user an option not to send
- the reports.
+ - `BITCrashManagerStatusDisabled`: Crash reporting is disabled
+ - `BITCrashManagerStatusAlwaysAsk`: User is asked each time before sending
+ - `BITCrashManagerStatusAutoSend`: Each crash report is send automatically
  
- *Default*: _NO_
+ The default value is `BITCrashManagerStatusAlwaysAsk`. You can allow the user
+ to switch from `BITCrashManagerStatusAlwaysAsk` to
+ `BITCrashManagerStatusAutoSend` by setting `showAlwaysButton`
+ to _YES_.
+ 
+ The current value is always stored in User Defaults with the key
+ "BITCrashManagerStatus".
+ 
+ If you intend to implement a user setting to let them enable or disable
+ crash reporting, this delegate should be used to return that value. You also
+ have to make sure the new value is stored in the UserDefaults with the key
+ "BITCrashManagerStatus".
+ 
+ @see showAlwaysButton
  */
-@property (nonatomic, assign, getter=isAutoSubmitCrashReport) BOOL autoSubmitCrashReport;
+@property (nonatomic, assign) BITCrashManagerStatus crashManagerStatus;
 
 
 /**
@@ -150,12 +164,11 @@ typedef enum BITCrashStatus {
  alert will be presented.
  
  @warning This will cause the dialog not to show the alert description text landscape mode!
- @see autoSubmitCrashReport
+ @see crashManagerStatus
  */
 @property (nonatomic, assign, getter=isShowingAlwaysButton) BOOL showAlwaysButton;
 
-// if YES, the user will be presented with a status of the crash, if known
-// if NO, the user will not see any feedback information (default)
+
 /**
  Flag that determines if the user should get feedback about the crash
  

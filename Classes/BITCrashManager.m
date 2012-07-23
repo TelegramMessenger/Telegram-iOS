@@ -55,6 +55,12 @@
 #define kBITCrashUserEmail @"HockeySDKCrashUserEmail"
 
 
+typedef enum BITCrashAlertType {
+  BITCrashAlertTypeSend = 0,
+  BITCrashAlertTypeFeedback = 1,
+} BITCrashAlertType;
+
+
 @interface BITCrashManager ()
 
 @property (nonatomic, retain) NSFileManager *fileManager;
@@ -64,9 +70,9 @@
 @implementation BITCrashManager
 
 @synthesize delegate = _delegate;
+@synthesize crashManagerStatus = _crashManagerStatus;
 @synthesize showAlwaysButton = _showAlwaysButton;
 @synthesize feedbackActivated = _feedbackActivated;
-@synthesize autoSubmitCrashReport = _autoSubmitCrashReport;
 @synthesize didCrashInLastSession = _didCrashInLastSession;
 @synthesize timeintervalCrashInLastSessionOccured = _timeintervalCrashInLastSessionOccured;
 
@@ -82,7 +88,6 @@
     _delegate = nil;
     _feedbackActivated = NO;
     _showAlwaysButton = NO;
-    _autoSubmitCrashReport = NO;
 
     _serverResult = BITCrashStatusUnknown;
     _crashIdenticalCurrentVersion = YES;
@@ -101,12 +106,16 @@
       _analyzerStarted = 0;		
     }
 		
-    _crashReportDisabled = NO;
-    if (self.delegate != nil && [self.delegate respondsToSelector:@selector(shouldDisableCrashManager:)]) {
-      _crashReportDisabled = [self.delegate shouldDisableCrashManager:self];
+    _crashManagerStatus = BITCrashManagerStatusAlwaysAsk;
+    
+    testValue = [[NSUserDefaults standardUserDefaults] stringForKey:kBITCrashManagerStatus];
+    if (testValue) {
+      _crashManagerStatus = [[NSUserDefaults standardUserDefaults] integerForKey:kBITCrashManagerStatus];
+    } else {
+      [[NSUserDefaults standardUserDefaults] setInteger:_crashManagerStatus forKey:kBITCrashManagerStatus];
     }
     
-    if (!_crashReportDisabled) {
+    if (_crashManagerStatus != BITCrashManagerStatusDisabled) {
       _crashFiles = [[NSMutableArray alloc] init];
       NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
       _crashesDir = [[NSString stringWithFormat:@"%@", [[paths objectAtIndex:0] stringByAppendingPathComponent:@"/crashes/"]] retain];
@@ -165,21 +174,14 @@
 }
 
 
-#pragma mark - private methods
-
-- (BOOL)autoSendCrashReports {
-  BOOL result = NO;
+- (void)setCrashManagerStatus:(BITCrashManagerStatus)crashManagerStatus {
+  _crashManagerStatus = crashManagerStatus;
   
-  if (!self.autoSubmitCrashReport) {
-    if (self.isShowingAlwaysButton && [[NSUserDefaults standardUserDefaults] boolForKey: kBITCrashAutomaticallySendReports]) {
-      result = YES;
-    }
-  } else {
-    result = YES;
-  }
-  
-  return result;
+  [[NSUserDefaults standardUserDefaults] setInteger:crashManagerStatus forKey:kBITCrashManagerStatus];
 }
+
+
+#pragma mark - private methods
 
 // begin the startup process
 - (void)startManager {
@@ -188,7 +190,7 @@
     if (!BITHockeyBundle()) {
 			NSLog(@"WARNING: HockeySDKResource.bundle is missing, sending reports automatically!");
       [self sendCrashReports];
-    } else if (![self autoSendCrashReports] && [self hasNonApprovedCrashReports]) {
+    } else if (_crashManagerStatus != BITCrashManagerStatusAutoSend && [self hasNonApprovedCrashReports]) {
       
       if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillShowSubmitCrashReportAlert:)]) {
         [self.delegate crashManagerWillShowSubmitCrashReportAlert:self];
@@ -293,7 +295,7 @@
 }
 
 - (BOOL)hasPendingCrashReport {
-  if (!_crashReportDisabled) {
+  if (_crashManagerStatus != BITCrashManagerStatusDisabled) {
     if ([_crashFiles count] == 0 && [self.fileManager fileExistsAtPath:_crashesDir]) {
       NSString *file = nil;
       NSError *error = NULL;
