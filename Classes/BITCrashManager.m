@@ -91,42 +91,55 @@ typedef enum BITCrashAlertType {
 
     _serverResult = BITCrashStatusUnknown;
     _crashIdenticalCurrentVersion = YES;
-    _crashData = nil;
     _urlConnection = nil;
     _responseData = nil;
     _sendingInProgress = NO;
+    
     _didCrashInLastSession = NO;
     _timeintervalCrashInLastSessionOccured = -1;
-    _fileManager = [[NSFileManager alloc] init];
     
-    NSString *testValue = [[NSUserDefaults standardUserDefaults] stringForKey:kBITCrashAnalyzerStarted];
-    if (testValue) {
-      _analyzerStarted = [[NSUserDefaults standardUserDefaults] integerForKey:kBITCrashAnalyzerStarted];
-    } else {
-      _analyzerStarted = 0;		
-    }
-		
+    _approvedCrashReports = [[NSMutableDictionary alloc] init];
+    _analyzerStarted = NO;
+
+    _fileManager = [[NSFileManager alloc] init];
+    _crashFiles = [[NSMutableArray alloc] init];
+    
     _crashManagerStatus = BITCrashManagerStatusAlwaysAsk;
     
-    testValue = [[NSUserDefaults standardUserDefaults] stringForKey:kBITCrashManagerStatus];
+    NSString *testValue = [[NSUserDefaults standardUserDefaults] stringForKey:kBITCrashManagerStatus];
     if (testValue) {
       _crashManagerStatus = [[NSUserDefaults standardUserDefaults] integerForKey:kBITCrashManagerStatus];
     } else {
       [[NSUserDefaults standardUserDefaults] setInteger:_crashManagerStatus forKey:kBITCrashManagerStatus];
     }
     
-    if (_crashManagerStatus != BITCrashManagerStatusDisabled) {
-      _crashFiles = [[NSMutableArray alloc] init];
-      NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
-      _crashesDir = [[NSString stringWithFormat:@"%@", [[paths objectAtIndex:0] stringByAppendingPathComponent:@"/crashes/"]] retain];
-			
-      if (![self.fileManager fileExistsAtPath:_crashesDir]) {
-        NSDictionary *attributes = [NSDictionary dictionaryWithObject: [NSNumber numberWithUnsignedLong: 0755] forKey: NSFilePosixPermissions];
-        NSError *theError = NULL;
-				
-        [self.fileManager  createDirectoryAtPath:_crashesDir withIntermediateDirectories: YES attributes: attributes error: &theError];
-      }
+    // temporary directory for crashes grabbed from PLCrashReporter
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
+    _crashesDir = [[NSString stringWithFormat:@"%@", [[paths objectAtIndex:0] stringByAppendingPathComponent:@"/crashes/"]] retain];
+    
+    if (![self.fileManager fileExistsAtPath:_crashesDir]) {
+      NSDictionary *attributes = [NSDictionary dictionaryWithObject: [NSNumber numberWithUnsignedLong: 0755] forKey: NSFilePosixPermissions];
+      NSError *theError = NULL;
       
+      [self.fileManager createDirectoryAtPath:_crashesDir withIntermediateDirectories: YES attributes: attributes error: &theError];
+    }
+    
+    // crash reporting specific settings
+    paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES);
+    NSString *settingsDir = [[[paths objectAtIndex: 0] stringByAppendingPathComponent:BITHOCKEYSDK_IDENTIFIER] stringByAppendingPathComponent:[[NSBundle mainBundle] bundleIdentifier]];
+    
+    if (![_fileManager fileExistsAtPath:settingsDir]) {
+      NSDictionary *attributes = [NSDictionary dictionaryWithObject: [NSNumber numberWithUnsignedLong: 0755] forKey: NSFilePosixPermissions];
+      NSError *theError = NULL;
+      
+      [_fileManager createDirectoryAtPath:settingsDir withIntermediateDirectories: YES attributes: attributes error: &theError];
+    }
+    
+    _settingsFile = [[settingsDir stringByAppendingPathComponent:@"BITCrashManager.plist"] retain];
+    
+    // on the very first startup this will always be initialized, since the default value for _crashManagerStatus is BITCrashManagerStatusAlwaysAsk
+    // but we do it anyway, to be able to initialize PLCrashReporter as early as possible
+    if (_crashManagerStatus != BITCrashManagerStatusDisabled) {      
       PLCrashReporter *crashReporter = [PLCrashReporter sharedReporter];
       NSError *error = NULL;
       

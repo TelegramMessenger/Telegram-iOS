@@ -318,7 +318,7 @@
     }
     
     if (!BITHockeyBundle()) {
-      NSLog(@"WARNING: %@.bundle is missing, make sure it is added!", BITHOCKEYSDK_BUNDLE);
+      NSLog(@"WARNING: %@ is missing, make sure it is added!", BITHOCKEYSDK_BUNDLE);
     }
     
     [self loadAppCache];
