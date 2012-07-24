@@ -198,7 +198,7 @@ typedef enum BITCrashStatus {
  */
 @property (nonatomic, readonly) BOOL didCrashInLastSession;
 
-// will return the timeinterval from startup to the crash in seconds, default is -1
+
 /**
  Provides the time between startup and crash in seconds
  
@@ -210,6 +210,7 @@ typedef enum BITCrashStatus {
  The `BITCrashManagerDelegate` protocol provides some delegates to inform if sending
  a crash report was finished successfully, ended in error or was cancelled by the user.
  
+ *Default*: _-1_
  @see didCrashInLastSession
  @see BITCrashManagerDelegate
  */
