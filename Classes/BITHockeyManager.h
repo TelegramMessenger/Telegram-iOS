@@ -183,7 +183,7 @@
 
 
 ///-----------------------------------------------------------------------------
-/// @name Logging
+/// @name Debug Logging
 ///-----------------------------------------------------------------------------
 
 /**
@@ -195,7 +195,7 @@
  
  *Default*: _NO_
  */
-@property (nonatomic, assign, getter=isLoggingEnabled) BOOL loggingEnabled;
+@property (nonatomic, assign, getter=isDebugLogEnabled) BOOL debugLogEnabled;
 
 
 @end
