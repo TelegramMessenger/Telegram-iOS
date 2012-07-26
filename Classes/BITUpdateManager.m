@@ -288,7 +288,7 @@
     _requireAuthorization = NO;
     _authenticationSecret = nil;
     _lastCheck = nil;
-    _uuid = [self executableUUID];
+    _uuid = [[self executableUUID] retain];
     _sendUsageData = YES;
     
     // set defaults
@@ -355,6 +355,7 @@
   [_lastCheck release];
   [_usageStartTimestamp release];
   [_authenticationSecret release];
+  [_uuid release];
   
   [super dealloc];
 }
