@@ -68,7 +68,6 @@
 		1E5954DC15B6F24A00A03429 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E400561D148D79B500EB22B9 /* Foundation.framework */; };
 		1E5954DD15B6F24A00A03429 /* CrashReporter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E41EB48B148D7C4E0015DEDC /* CrashReporter.framework */; };
 		1E59550C15B6F45800A03429 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E59550B15B6F45800A03429 /* CoreFoundation.framework */; };
-		1E59557C15B6F8CC00A03429 /* HockeySDKResources.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 1E59550A15B6F45800A03429 /* HockeySDKResources.bundle */; };
 		1E59558D15B6FDA500A03429 /* PSAppStoreHeader.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB469148D7BF50015DEDC /* PSAppStoreHeader.h */; };
 		1E59558E15B6FDA500A03429 /* PSStoreButton.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB46B148D7BF50015DEDC /* PSStoreButton.h */; };
 		1E59558F15B6FDA500A03429 /* PSWebTableViewCell.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB46D148D7BF50015DEDC /* PSWebTableViewCell.h */; };
@@ -220,6 +219,7 @@
 		1E5955EE15B7752200A03429 /* BITUpdateManagerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITUpdateManagerDelegate.h; sourceTree = "<group>"; };
 		1E5955FA15B7877A00A03429 /* BITHockeyManagerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITHockeyManagerDelegate.h; sourceTree = "<group>"; };
 		1E71509A15B5C76F004E88FF /* HockeySDK.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HockeySDK.h; sourceTree = "<group>"; };
+		1EDA60CF15C2C1450032D10B /* HockeySDK-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "HockeySDK-Info.plist"; sourceTree = "<group>"; };
 		E400561A148D79B500EB22B9 /* libHockeySDK-iphoneos.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libHockeySDK-iphoneos.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		E400561D148D79B500EB22B9 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		E400562B148D79B500EB22B9 /* SenTestingKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SenTestingKit.framework; path = Library/Frameworks/SenTestingKit.framework; sourceTree = DEVELOPER_DIR; };
@@ -343,6 +343,7 @@
 		E4005648148D7A3000EB22B9 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				1EDA60CF15C2C1450032D10B /* HockeySDK-Info.plist */,
 				1E5955A415B71BDC00A03429 /* Images */,
 				1E59555F15B6F80E00A03429 /* HockeySDK.strings */,
 			);
@@ -647,7 +648,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1E59557C15B6F8CC00A03429 /* HockeySDKResources.bundle in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -683,7 +683,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "FRAMEWORK=\"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.framework\"\n\nlipo \\\n\"${BUILD_DIR}/${CONFIGURATION}-iphoneos/libHockeySDK-iphoneos.a\" \\\n\"${BUILD_DIR}/${CONFIGURATION}-iphonesimulator/libHockeySDK-iphonesimulator.a\" \\\n-create -output \"${FRAMEWORK}/Versions/Current/${PRODUCT_NAME}\"\n\n# Strip debugging symbols\n#strip -S \"${FRAMEWORK}/Versions/Current/${PRODUCT_NAME}\"\n\ncd \"${FRAMEWORK}\" && ln -sf \"Versions/Current/${PRODUCT_NAME}\" ./\n\nif [ ! -e \"$TARGET_BUILD_DIR/HockeySDK.framework/Frameworks\" ];\nthen\ncd \"$TARGET_BUILD_DIR/HockeySDK.framework\"\nln -s \"Versions/Current/Frameworks\" \"Frameworks\"\nfi";
+			shellScript = "FRAMEWORK=\"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.framework\"\n\nlipo \\\n\"${BUILD_DIR}/${CONFIGURATION}-iphoneos/libHockeySDK-iphoneos.a\" \\\n\"${BUILD_DIR}/${CONFIGURATION}-iphonesimulator/libHockeySDK-iphonesimulator.a\" \\\n-create -output \"${FRAMEWORK}/Versions/Current/${PRODUCT_NAME}\"\n\nif [ -e \"${FRAMEWORK}/Versions/Current/Resources/HockeySDKResources.bundle\" ];\nthen\nrm -r \"${FRAMEWORK}/Versions/Current/Resources/HockeySDKResources.bundle\"\nfi\n\ncp -r \\\n\"${BUILD_DIR}/${CONFIGURATION}-iphoneos/HockeySDKResources.bundle\" \\\n\"${FRAMEWORK}/Versions/Current/Resources/HockeySDKResources.bundle\"\n\n# Strip debugging symbols\n#strip -S \"${FRAMEWORK}/Versions/Current/${PRODUCT_NAME}\"\n\ncd \"${FRAMEWORK}\" && ln -sf \"Versions/Current/${PRODUCT_NAME}\" ./\n";
 		};
 		1E8E66B215BC3D8200632A2E /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -848,7 +848,7 @@
 					"$(inherited)",
 					"\"$(SRCROOT)/../Vendor\"",
 				);
-				INFOPLIST_FILE = "HockeySDK/HockeySDK-Info.plist";
+				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
 				INSTALL_PATH = "$(HOME)/Library/Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				ONLY_ACTIVE_ARCH = NO;
@@ -881,7 +881,7 @@
 					"$(inherited)",
 					"\"$(SRCROOT)/../Vendor\"",
 				);
-				INFOPLIST_FILE = "HockeySDK/HockeySDK-Info.plist";
+				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
 				INSTALL_PATH = "$(HOME)/Library/Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -932,7 +932,6 @@
 				);
 				PRODUCT_NAME = HockeySDK;
 				SKIP_INSTALL = YES;
-				VALID_ARCHS = "armv6 armv7";
 			};
 			name = Debug;
 		};
@@ -946,17 +945,12 @@
 				);
 				PRODUCT_NAME = HockeySDK;
 				SKIP_INSTALL = YES;
-				VALID_ARCHS = "armv6 armv7";
 			};
 			name = Release;
 		};
 		1E59551515B6F45800A03429 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = (
-					armv6,
-					armv7,
-				);
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -970,10 +964,8 @@
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
-				MACOSX_DEPLOYMENT_TARGET = 10.8;
-				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Debug;
@@ -981,10 +973,6 @@
 		1E59551615B6F45800A03429 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = (
-					armv6,
-					armv7,
-				);
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -995,9 +983,8 @@
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
-				MACOSX_DEPLOYMENT_TARGET = 10.8;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Release;
@@ -1047,7 +1034,6 @@
 				RUN_CLANG_STATIC_ANALYZER = YES;
 				SDKROOT = iphoneos;
 				STRIP_STYLE = "non-global";
-				VALID_ARCHS = "armv6 armv7 i386 x86_64";
 			};
 			name = Debug;
 		};
@@ -1076,7 +1062,6 @@
 				SDKROOT = iphoneos;
 				STRIP_STYLE = "non-global";
 				VALIDATE_PRODUCT = NO;
-				VALID_ARCHS = "armv6 armv7 i386 x86_64";
 			};
 			name = Release;
 		};
