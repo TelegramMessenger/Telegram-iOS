@@ -629,8 +629,8 @@
   [parameter appendFormat:@"?format=json&authorize=yes&app_version=%@&udid=%@&sdk=%@&sdk_version=%@&uuid=%@",
    [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] bit_URLEncodedString],
    (_isAppStoreEnvironment ? @"appstore" : [[self deviceIdentifier] bit_URLEncodedString]),
-   BITHOCKEYSDK_NAME,
-   BITHOCKEYSDK_VERSION,
+   BITHOCKEY_NAME,
+   BITHOCKEY_VERSION,
    _uuid
    ];
   
@@ -724,8 +724,8 @@
   NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@?format=json&udid=%@&sdk=%@&sdk_version=%@&uuid=%@", 
                                 [[self encodedAppIdentifier] bit_URLEncodedString],
                                 (_isAppStoreEnvironment ? @"appstore" : [[self deviceIdentifier] bit_URLEncodedString]),
-                                BITHOCKEYSDK_NAME,
-                                BITHOCKEYSDK_VERSION,
+                                BITHOCKEY_NAME,
+                                BITHOCKEY_VERSION,
                                 _uuid];
   
   // add additional statistics if user didn't disable flag

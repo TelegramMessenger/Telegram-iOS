@@ -119,11 +119,11 @@
   
   // start CrashManager
   BITHockeyLog(@"Start crashManager");
-  [_crashManager performSelector:@selector(startManager) withObject:nil afterDelay:1.0f];
+  [_crashManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
     
   // Setup UpdateManager
   BITHockeyLog(@"Start UpdateManager");
-  [_updateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.0f];
+  [_updateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
 }
 
 

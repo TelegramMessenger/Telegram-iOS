@@ -84,8 +84,6 @@ typedef enum BITCrashStatus {
 
 @interface BITCrashManager : NSObject {
 @private
-  id <BITCrashManagerDelegate> _delegate;
-  
   NSString *_appIdentifier;
   
   NSString *_feedbackRequestID;
@@ -93,20 +91,20 @@ typedef enum BITCrashStatus {
   
   BITCrashStatus _serverResult;
   
-  int _analyzerStarted;
-  NSString *_crashesDir;
-  NSFileManager *_fileManager;
+  NSMutableDictionary *_approvedCrashReports;
+
+  NSMutableArray *_crashFiles;
+  NSString       *_crashesDir;
+  NSString       *_settingsFile;
+  NSString       *_analyzerInProgressFile;
+  NSFileManager  *_fileManager;
   
   BOOL _crashIdenticalCurrentVersion;
-  
-  NSMutableArray *_crashFiles;
-	
+  	
   NSMutableData *_responseData;
   NSInteger _statusCode;
   
   NSURLConnection *_urlConnection;
-  
-  NSData *_crashData;
   
   BOOL _sendingInProgress;
 }
@@ -166,7 +164,7 @@ typedef enum BITCrashStatus {
  @warning This will cause the dialog not to show the alert description text landscape mode!
  @see crashManagerStatus
  */
-@property (nonatomic, assign, getter=isShowingAlwaysButton) BOOL showAlwaysButton;
+@property (nonatomic, assign, getter=shouldShowAlwaysButton) BOOL showAlwaysButton;
 
 
 /**

@@ -66,7 +66,7 @@ We propose the following method to set version numbers in your beta versions:
 
 ## Setup HockeySDK-iOS
 
-1. Open your AppDelegate.m file.
+1. Open your `AppDelegate.m` file.
 2. Add the following line at the top of the file below your own #import statements:<pre><code>#import "HockeySDK.h"</code></pre>
 3. Let the AppDelegate implement the protocols `BITHockeyManager`, `BITUpdateManager` and `BITCrashManager`:<pre><code>@interface AppDelegate() &lt;BITHockeyManager, BITUpdateManager, BITCrashManager&gt; {}
 @end</code></pre>

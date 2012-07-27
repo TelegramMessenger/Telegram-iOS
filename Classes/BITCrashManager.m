@@ -42,17 +42,13 @@
 // flags if the crashreporter should automatically send crashes without asking the user again
 #define kBITCrashAutomaticallySendReports @"BITCrashAutomaticallySendReports"
 
-// flags if the crashlog analyzer is started. since this may theoretically crash we need to track it
-#define kBITCrashAnalyzerStarted @"HockeySDKCrashAnalyzerStarted"
-
 // stores the set of crashreports that have been approved but aren't sent yet
 #define kBITCrashApprovedReports @"HockeySDKCrashApprovedReports"
 
-// stores the user name entered in the UI
-#define kBITCrashUserName @"HockeySDKCrashUserName"
-
-// stores the user email address entered in the UI
-#define kBITCrashUserEmail @"HockeySDKCrashUserEmail"
+// keys for meta information associated to each crash
+#define kBITCrashMetaUserName @"BITCrashMetaUserName"
+#define kBITCrashMetaUserEmail @"BITCrashMetaUserEmail"
+#define kBITCrashMetaApplicationLog @"BITCrashMetaApplicationLog"
 
 
 typedef enum BITCrashAlertType {
@@ -99,7 +95,6 @@ typedef enum BITCrashAlertType {
     _timeintervalCrashInLastSessionOccured = -1;
     
     _approvedCrashReports = [[NSMutableDictionary alloc] init];
-    _analyzerStarted = NO;
 
     _fileManager = [[NSFileManager alloc] init];
     _crashFiles = [[NSMutableArray alloc] init];
@@ -115,7 +110,7 @@ typedef enum BITCrashAlertType {
     
     // temporary directory for crashes grabbed from PLCrashReporter
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
-    _crashesDir = [[NSString stringWithFormat:@"%@", [[paths objectAtIndex:0] stringByAppendingPathComponent:@"/crashes/"]] retain];
+    _crashesDir = [[[paths objectAtIndex:0] stringByAppendingPathComponent:BITHOCKEY_IDENTIFIER] retain];
     
     if (![self.fileManager fileExistsAtPath:_crashesDir]) {
       NSDictionary *attributes = [NSDictionary dictionaryWithObject: [NSNumber numberWithUnsignedLong: 0755] forKey: NSFilePosixPermissions];
@@ -124,18 +119,13 @@ typedef enum BITCrashAlertType {
       [self.fileManager createDirectoryAtPath:_crashesDir withIntermediateDirectories: YES attributes: attributes error: &theError];
     }
     
-    // crash reporting specific settings
-    paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES);
-    NSString *settingsDir = [[[paths objectAtIndex: 0] stringByAppendingPathComponent:BITHOCKEYSDK_IDENTIFIER] stringByAppendingPathComponent:[[NSBundle mainBundle] bundleIdentifier]];
-    
-    if (![_fileManager fileExistsAtPath:settingsDir]) {
-      NSDictionary *attributes = [NSDictionary dictionaryWithObject: [NSNumber numberWithUnsignedLong: 0755] forKey: NSFilePosixPermissions];
-      NSError *theError = NULL;
-      
-      [_fileManager createDirectoryAtPath:settingsDir withIntermediateDirectories: YES attributes: attributes error: &theError];
+    _settingsFile = [[_crashesDir stringByAppendingPathComponent:BITHOCKEY_CRASH_SETTINGS] retain];
+    _analyzerInProgressFile = [[_crashesDir stringByAppendingPathComponent:BITHOCKEY_CRASH_ANALYZER] retain];
+
+    if ([_fileManager fileExistsAtPath:_analyzerInProgressFile]) {
+      NSError *error = nil;
+      [_fileManager removeItemAtPath:_analyzerInProgressFile error:&error];
     }
-    
-    _settingsFile = [[settingsDir stringByAppendingPathComponent:@"BITCrashManager.plist"] retain];
     
     // on the very first startup this will always be initialized, since the default value for _crashManagerStatus is BITCrashManagerStatusAlwaysAsk
     // but we do it anyway, to be able to initialize PLCrashReporter as early as possible
@@ -157,7 +147,7 @@ typedef enum BITCrashAlertType {
     }
     
     if (!BITHockeyBundle()) {
-      NSLog(@"WARNING: %@.bundle is missing, will send reports automatically!", BITHOCKEYSDK_BUNDLE);
+      NSLog(@"WARNING: %@ is missing, will send reports automatically!", BITHOCKEYSDK_BUNDLE);
     }
   }
   return self;
@@ -165,7 +155,7 @@ typedef enum BITCrashAlertType {
 
 
 - (void) dealloc {
-  self.delegate = nil;
+  _delegate = nil;
   [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
   
   [_appIdentifier release];
@@ -175,13 +165,17 @@ typedef enum BITCrashAlertType {
   [_urlConnection release]; 
   _urlConnection = nil;
   
-  [_crashData release];
-  
   [_crashesDir release];
   [_crashFiles release];
   
   [_fileManager release];
   _fileManager = nil;
+
+  [_approvedCrashReports release];
+  _approvedCrashReports = nil;
+  
+  [_analyzerInProgressFile release];
+  _analyzerInProgressFile = nil;
   
   [super dealloc];
 }
@@ -194,14 +188,214 @@ typedef enum BITCrashAlertType {
 }
 
 
-#pragma mark - private methods
+#pragma mark - Private
+
+- (void)saveSettings {
+  NSString *errorString = nil;
+  
+  NSMutableDictionary *rootObj = [NSMutableDictionary dictionaryWithCapacity:2];
+  if (_approvedCrashReports && [_approvedCrashReports count] > 0)
+    [rootObj setObject:_approvedCrashReports forKey:kBITCrashApprovedReports];
+  
+  NSData *plist = [NSPropertyListSerialization dataFromPropertyList:(id)rootObj
+                                                             format:NSPropertyListBinaryFormat_v1_0
+                                                   errorDescription:&errorString];
+  if (plist) {
+    [plist writeToFile:_settingsFile atomically:YES];
+  } else {
+    BITHockeyLog(@"ERROR: Writing settings. %@", errorString);
+  }
+}
+
+- (void)loadSettings {
+  NSString *errorString = nil;
+  NSPropertyListFormat format;
+  
+  if (![_fileManager fileExistsAtPath:_settingsFile])
+    return;
+  
+  NSData *plist = [NSData dataWithContentsOfFile:_settingsFile];
+  if (plist) {
+    NSDictionary *rootObj = (NSDictionary *)[NSPropertyListSerialization
+                                             propertyListFromData:plist
+                                             mutabilityOption:NSPropertyListMutableContainersAndLeaves
+                                             format:&format
+                                             errorDescription:&errorString];
+    
+    if ([rootObj objectForKey:kBITCrashApprovedReports])
+      [_approvedCrashReports setDictionary:[rootObj objectForKey:kBITCrashApprovedReports]];
+  } else {
+    BITHockeyLog(@"ERROR: Reading settings. %@", errorString);
+  }
+}
+
+- (void)cleanCrashReports {
+  NSError *error = NULL;
+  
+  for (NSUInteger i=0; i < [_crashFiles count]; i++) {
+    [_fileManager removeItemAtPath:[_crashFiles objectAtIndex:i] error:&error];
+    [_fileManager removeItemAtPath:[[_crashFiles objectAtIndex:i] stringByAppendingString:@".meta"] error:&error];
+  }
+  [_crashFiles removeAllObjects];
+  [_approvedCrashReports removeAllObjects];
+  
+  [self saveSettings];
+}
+
+- (NSString *) extractAppUUIDs:(PLCrashReport *)report {
+  NSMutableString *uuidString = [NSMutableString string];
+  NSArray *uuidArray = [BITCrashReportTextFormatter arrayOfAppUUIDsForCrashReport:report];
+  
+  for (NSDictionary *element in uuidArray) {
+    if ([element objectForKey:kBITBinaryImageKeyUUID] && [element objectForKey:kBITBinaryImageKeyArch] && [element objectForKey:kBITBinaryImageKeyUUID]) {
+      [uuidString appendFormat:@"<uuid type=\"%@\" arch=\"%@\">%@</uuid>",
+       [element objectForKey:kBITBinaryImageKeyType],
+       [element objectForKey:kBITBinaryImageKeyArch],
+       [element objectForKey:kBITBinaryImageKeyUUID]
+       ];
+    }
+  }
+  
+  return uuidString;
+}
+
+- (NSString *)getDevicePlatform {
+  size_t size = 0;
+  sysctlbyname("hw.machine", NULL, &size, NULL, 0);
+  char *answer = (char*)malloc(size);
+  sysctlbyname("hw.machine", answer, &size, NULL, 0);
+  NSString *platform = [NSString stringWithCString:answer encoding: NSUTF8StringEncoding];
+  free(answer);
+  return platform;
+}
+
+
+#pragma mark - PLCrashReporter
+
+// Called to handle a pending crash report.
+- (void) handleCrashReport {
+  PLCrashReporter *crashReporter = [PLCrashReporter sharedReporter];
+  NSError *error = NULL;
+	
+  [self loadSettings];
+  
+  // check if the next call ran successfully the last time
+  if (![_fileManager fileExistsAtPath:_analyzerInProgressFile]) {
+    // mark the start of the routine
+    [_fileManager createFileAtPath:_analyzerInProgressFile contents:nil attributes:nil];
+    
+    [self saveSettings];
+    
+    // Try loading the crash report
+    NSData *crashData = [[[NSData alloc] initWithData:[crashReporter loadPendingCrashReportDataAndReturnError: &error]] autorelease];
+    
+    NSString *cacheFilename = [NSString stringWithFormat: @"%.0f", [NSDate timeIntervalSinceReferenceDate]];
+    
+    if (crashData == nil) {
+      BITHockeyLog(@"ERROR: Could not load crash report: %@", error);
+    } else {
+      [crashData writeToFile:[_crashesDir stringByAppendingPathComponent: cacheFilename] atomically:YES];
+      
+      // write the meta file
+      NSMutableDictionary *metaDict = [NSMutableDictionary dictionaryWithCapacity:4];
+      NSString *username = @"";
+      NSString *useremail = @"";
+      NSString *applicationLog = @"";
+      NSString *errorString = nil;
+      
+      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(userNameForCrashManager:)]) {
+        username = [self.delegate userNameForCrashManager:self] ?: @"";
+      }
+      [metaDict setObject:username forKey:kBITCrashMetaUserName];
+
+      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(userEmailForCrashManager:)]) {
+        useremail = [self.delegate userEmailForCrashManager:self] ?: @"";
+      }
+      [metaDict setObject:useremail forKey:kBITCrashMetaUserEmail];
+      
+      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(applicationLogForCrashManager:)]) {
+        applicationLog = [self.delegate applicationLogForCrashManager:self] ?: @"";
+      }
+      [metaDict setObject:applicationLog forKey:kBITCrashMetaApplicationLog];
+      
+      NSData *plist = [NSPropertyListSerialization dataFromPropertyList:(id)metaDict
+                                                                 format:NSPropertyListBinaryFormat_v1_0
+                                                       errorDescription:&errorString];
+      if (plist) {
+        [plist writeToFile:[NSString stringWithFormat:@"%@.meta", [_crashesDir stringByAppendingPathComponent: cacheFilename]] atomically:YES];
+      } else {
+        BITHockeyLog(@"ERROR: Writing crash meta data failed. %@", error);
+      }
+
+      // get the startup timestamp from the crash report, and the file timestamp to calculate the timeinterval when the crash happened after startup
+      PLCrashReport *report = [[[PLCrashReport alloc] initWithData:crashData error:&error] autorelease];
+      
+      if (report.systemInfo.timestamp && report.applicationInfo.applicationStartupTimestamp) {
+        _timeintervalCrashInLastSessionOccured = [report.systemInfo.timestamp timeIntervalSinceDate:report.applicationInfo.applicationStartupTimestamp];
+      }
+    }
+  }
+	
+  // Purge the report
+  // mark the end of the routine
+  if ([_fileManager fileExistsAtPath:_analyzerInProgressFile]) {
+    [_fileManager removeItemAtPath:_analyzerInProgressFile error:&error];
+  }
+
+  [self saveSettings];
+  
+  [crashReporter purgePendingCrashReport];
+}
+
+- (BOOL)hasNonApprovedCrashReports {
+  if (!_approvedCrashReports || [_approvedCrashReports count] == 0) return YES;
+  
+  for (NSUInteger i=0; i < [_crashFiles count]; i++) {
+    NSString *filename = [_crashFiles objectAtIndex:i];
+    
+    if (![_approvedCrashReports objectForKey:filename]) return YES;
+  }
+  
+  return NO;
+}
+
+- (BOOL)hasPendingCrashReport {
+  if (_crashManagerStatus == BITCrashManagerStatusDisabled) return NO;
+    
+  if ([self.fileManager fileExistsAtPath:_crashesDir]) {
+    NSString *file = nil;
+    NSError *error = NULL;
+    
+    NSDirectoryEnumerator *dirEnum = [self.fileManager enumeratorAtPath: _crashesDir];
+    
+    while ((file = [dirEnum nextObject])) {
+      NSDictionary *fileAttributes = [self.fileManager attributesOfItemAtPath:[_crashesDir stringByAppendingPathComponent:file] error:&error];
+      if ([[fileAttributes objectForKey:NSFileSize] intValue] > 0 &&
+          ![file hasSuffix:@".analyzer"] &&
+          ![file hasSuffix:@".plist"] &&
+          ![file hasSuffix:@".meta"]) {
+        [_crashFiles addObject:[_crashesDir stringByAppendingPathComponent: file]];
+      }
+    }
+  }
+  
+  if ([_crashFiles count] > 0) {
+    BITHockeyLog(@"%i pending crash reports found.", [_crashFiles count]);
+    return YES;
+  } else
+    return NO;
+}
+
+
+#pragma mark - Crash Report Processing
 
 // begin the startup process
 - (void)startManager {
+  if (_crashManagerStatus == BITCrashManagerStatusDisabled) return;
+  
   if (!_sendingInProgress && [self hasPendingCrashReport]) {
     _sendingInProgress = YES;
     if (!BITHockeyBundle()) {
-			NSLog(@"WARNING: HockeySDKResource.bundle is missing, sending reports automatically!");
       [self sendCrashReports];
     } else if (_crashManagerStatus != BITCrashManagerStatusAutoSend && [self hasNonApprovedCrashReports]) {
       
@@ -215,15 +409,15 @@ typedef enum BITCrashAlertType {
       // the crash report is not anynomous any more if username or useremail are not nil
       NSString *username = nil;
       NSString *useremail = nil;
-
+      
       if (self.delegate != nil && [self.delegate respondsToSelector:@selector(userNameForCrashManager:)]) {
         username = [self.delegate userNameForCrashManager:self];
       }
-
+      
       if (self.delegate != nil && [self.delegate respondsToSelector:@selector(userEmailForCrashManager:)]) {
         useremail = [self.delegate userEmailForCrashManager:self];
       }
-
+      
       if (username || useremail) {
         alertDescription = [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundDescription"), appName];
       }
@@ -234,7 +428,7 @@ typedef enum BITCrashAlertType {
                                                 cancelButtonTitle:BITHockeyLocalizedString(@"CrashDontSendReport")
                                                 otherButtonTitles:BITHockeyLocalizedString(@"CrashSendReport"), nil];
       
-      if ([self isShowingAlwaysButton]) {
+      if (self.shouldShowAlwaysButton) {
         [alertView addButtonWithTitle:BITHockeyLocalizedString(@"CrashSendReportAlways")];
       }
       
@@ -247,91 +441,106 @@ typedef enum BITCrashAlertType {
   }
 }
 
-
-#pragma mark - PLCrashReporter
-
-//
-// Called to handle a pending crash report.
-//
-- (void) handleCrashReport {
-  PLCrashReporter *crashReporter = [PLCrashReporter sharedReporter];
-  NSError *error = NULL;
-	
-  // check if the next call ran successfully the last time
-  if (_analyzerStarted == 0) {
-    // mark the start of the routine
-    _analyzerStarted = 1;
-    [[NSUserDefaults standardUserDefaults] setValue:[NSNumber numberWithInt:_analyzerStarted] forKey:kBITCrashAnalyzerStarted];
-    [[NSUserDefaults standardUserDefaults] synchronize];
-    
-    // Try loading the crash report
-    _crashData = [[NSData alloc] initWithData:[crashReporter loadPendingCrashReportDataAndReturnError: &error]];
-    
-    NSString *cacheFilename = [NSString stringWithFormat: @"%.0f", [NSDate timeIntervalSinceReferenceDate]];
-    
-    if (_crashData == nil) {
-      NSLog(@"Could not load crash report: %@", error);
-    } else {
-      [_crashData writeToFile:[_crashesDir stringByAppendingPathComponent: cacheFilename] atomically:YES];
-      
-      // get the startup timestamp from the crash report, and the file timestamp to calculate the timeinterval when the crash happened after startup
-      PLCrashReport *report = [[[PLCrashReport alloc] initWithData:_crashData error:&error] autorelease];
-      
-      if (report.systemInfo.timestamp && report.applicationInfo.applicationStartupTimestamp) {
-        _timeintervalCrashInLastSessionOccured = [report.systemInfo.timestamp timeIntervalSinceDate:report.applicationInfo.applicationStartupTimestamp];
-      }
-    }
-  }
-	
-  // Purge the report
-  // mark the end of the routine
-  _analyzerStarted = 0;
-  [[NSUserDefaults standardUserDefaults] setValue:[NSNumber numberWithInt:_analyzerStarted] forKey:kBITCrashAnalyzerStarted];
-  [[NSUserDefaults standardUserDefaults] synchronize];
-  
-  [crashReporter purgePendingCrashReport];
-  return;
+- (void)sendCrashReports {
+  // send it to the next runloop
+  [self performSelector:@selector(performSendingCrashReports) withObject:nil afterDelay:1.0f];
 }
 
-- (BOOL)hasNonApprovedCrashReports {
-  NSDictionary *approvedCrashReports = [[NSUserDefaults standardUserDefaults] dictionaryForKey: kBITCrashApprovedReports];
-  
-  if (!approvedCrashReports || [approvedCrashReports count] == 0) return YES;
+- (void)performSendingCrashReports {
+  NSError *error = NULL;
+	  
+  NSMutableString *crashes = nil;
+  _crashIdenticalCurrentVersion = NO;
   
   for (NSUInteger i=0; i < [_crashFiles count]; i++) {
     NSString *filename = [_crashFiles objectAtIndex:i];
-    
-    if (![approvedCrashReports objectForKey:filename]) return YES;
-  }
-  
-  return NO;
-}
-
-- (BOOL)hasPendingCrashReport {
-  if (_crashManagerStatus != BITCrashManagerStatusDisabled) {
-    if ([_crashFiles count] == 0 && [self.fileManager fileExistsAtPath:_crashesDir]) {
-      NSString *file = nil;
-      NSError *error = NULL;
-      
-      NSDirectoryEnumerator *dirEnum = [self.fileManager enumeratorAtPath: _crashesDir];
+    NSData *crashData = [NSData dataWithContentsOfFile:filename];
+		
+    if ([crashData length] > 0) {
+      PLCrashReport *report = [[[PLCrashReport alloc] initWithData:crashData error:&error] autorelease];
 			
-      while ((file = [dirEnum nextObject])) {
-        NSDictionary *fileAttributes = [self.fileManager attributesOfItemAtPath:[_crashesDir stringByAppendingPathComponent:file] error:&error];
-        if ([[fileAttributes objectForKey:NSFileSize] intValue] > 0) {
-          [_crashFiles addObject:file];
-        }
+      if (report == nil) {
+        BITHockeyLog(@"Could not parse crash report");
+        // we cannot do anything with this report, so delete it
+        [_fileManager removeItemAtPath:filename error:&error];
+        [_fileManager removeItemAtPath:[NSString stringWithFormat:@"%@.meta", filename] error:&error];
+        continue;
       }
+      
+      NSString *crashUUID = report.reportInfo.reportGUID ?: @"";
+      NSString *crashLogString = [BITCrashReportTextFormatter stringValueForCrashReport:report];
+      
+      if ([report.applicationInfo.applicationVersion compare:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]] == NSOrderedSame) {
+        _crashIdenticalCurrentVersion = YES;
+      }
+			
+      if (crashes == nil) {
+        crashes = [NSMutableString string];
+      }
+      
+      NSString *username = @"";
+      NSString *useremail = @"";
+      NSString *applicationLog = @"";
+      NSString *description = @"";
+      
+      NSString *errorString = nil;
+      NSPropertyListFormat format;
+      
+      NSData *plist = [NSData dataWithContentsOfFile:[filename stringByAppendingString:@".meta"]];
+      if (plist) {
+        NSDictionary *metaDict = (NSDictionary *)[NSPropertyListSerialization
+                                                  propertyListFromData:plist
+                                                  mutabilityOption:NSPropertyListMutableContainersAndLeaves
+                                                  format:&format
+                                                  errorDescription:&errorString];
+        
+        username = [metaDict objectForKey:kBITCrashMetaUserName] ?: @"";
+        useremail = [metaDict objectForKey:kBITCrashMetaUserEmail] ?: @"";
+        applicationLog = [metaDict objectForKey:kBITCrashMetaApplicationLog] ?: @"";
+      } else {
+        BITHockeyLog(@"ERROR: Reading crash meta data. %@", error);
+      }
+      
+      if ([applicationLog length] > 0) {
+        description = [NSString stringWithFormat:@"Log:\n%@", applicationLog];
+      }
+      
+      [crashes appendFormat:@"<crash><applicationname>%s</applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><contact>%@</contact><description><![CDATA[%@]]></description></crash>",
+       [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleExecutable"] UTF8String],
+       [self extractAppUUIDs:report],
+       report.applicationInfo.applicationIdentifier,
+       report.systemInfo.operatingSystemVersion,
+       [self getDevicePlatform],
+       [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"],
+       report.applicationInfo.applicationVersion,
+       crashUUID,
+       [crashLogString stringByReplacingOccurrencesOfString:@"]]>" withString:@"]]" @"]]><![CDATA[" @">" options:NSLiteralSearch range:NSMakeRange(0,crashLogString.length)],
+       username,
+       useremail,
+       [description stringByReplacingOccurrencesOfString:@"]]>" withString:@"]]" @"]]><![CDATA[" @">" options:NSLiteralSearch range:NSMakeRange(0,description.length)]];
+      
+      
+      // store this crash report as user approved, so if it fails it will retry automatically
+      [_approvedCrashReports setObject:[NSNumber numberWithBool:YES] forKey:filename];
+    } else {
+      // we cannot do anything with this report, so delete it
+      [_fileManager removeItemAtPath:filename error:&error];
+      [_fileManager removeItemAtPath:[NSString stringWithFormat:@"%@.meta", filename] error:&error];
     }
+  }
+	
+  [self saveSettings];
+  
+  if (crashes != nil) {
+    BITHockeyLog(@"Sending crash reports:\n%@", crashes);
+    [self postXML:[NSString stringWithFormat:@"<crashes>%@</crashes>", crashes]
+            toURL:[NSURL URLWithString:BITHOCKEYSDK_URL]];
     
-    if ([_crashFiles count] > 0) {
-      BITHockeyLog(@"Pending crash reports found.");
-      return YES;
-    } else
-      return NO;
-  } else
-    return NO;
+  }
 }
 
+
+#pragma mark - UIAlertView
 
 - (void) showCrashStatusMessage {
   UIAlertView *alertView = nil;
@@ -377,8 +586,7 @@ typedef enum BITCrashAlertType {
 }
 
 
-#pragma mark -
-#pragma mark UIAlertView Delegate
+#pragma mark - UIAlertView Delegate
 
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
   if ([alertView tag] == BITCrashAlertTypeSend) {
@@ -413,137 +621,7 @@ typedef enum BITCrashAlertType {
 }
 
 
-#pragma mark - Private
-
-
-- (NSString *) extractAppUUIDs:(PLCrashReport *)report {  
-  NSMutableString *uuidString = [NSMutableString string];
-  NSArray *uuidArray = [BITCrashReportTextFormatter arrayOfAppUUIDsForCrashReport:report];
-  
-  for (NSDictionary *element in uuidArray) {
-    if ([element objectForKey:kBITBinaryImageKeyUUID] && [element objectForKey:kBITBinaryImageKeyArch] && [element objectForKey:kBITBinaryImageKeyUUID]) {
-      [uuidString appendFormat:@"<uuid type=\"%@\" arch=\"%@\">%@</uuid>",
-       [element objectForKey:kBITBinaryImageKeyType],
-       [element objectForKey:kBITBinaryImageKeyArch],
-       [element objectForKey:kBITBinaryImageKeyUUID]
-       ];
-    }
-  }
-  
-  return uuidString;
-}
-
-
-- (NSString *)getDevicePlatform {
-  size_t size = 0;
-  sysctlbyname("hw.machine", NULL, &size, NULL, 0);
-  char *answer = (char*)malloc(size);
-  sysctlbyname("hw.machine", answer, &size, NULL, 0);
-  NSString *platform = [NSString stringWithCString:answer encoding: NSUTF8StringEncoding];
-  free(answer);
-  return platform;
-}
-
-
-- (void)performSendingCrashReports {
-  NSMutableDictionary *approvedCrashReports = [NSMutableDictionary dictionaryWithDictionary:[[NSUserDefaults standardUserDefaults] dictionaryForKey: kBITCrashApprovedReports]];
-  
-  NSError *error = NULL;
-	
-  NSString *username = @"";
-  NSString *useremail = @"";
-  NSString *applicationLog = @"";
-  
-  if (self.delegate != nil && [self.delegate respondsToSelector:@selector(userNameForCrashManager:)]) {
-    username = [self.delegate userNameForCrashManager:self] ?: @"";
-  }
-  
-  if (self.delegate != nil && [self.delegate respondsToSelector:@selector(userEmailForCrashManager:)]) {
-    useremail = [self.delegate userEmailForCrashManager:self] ?: @"";
-  }
-
-  if (self.delegate != nil && [self.delegate respondsToSelector:@selector(applicationLogForCrashManager:)]) {
-    applicationLog = [self.delegate applicationLogForCrashManager:self] ?: @"";
-  }
-	
-  NSMutableString *crashes = nil;
-  _crashIdenticalCurrentVersion = NO;
-  
-  for (NSUInteger i=0; i < [_crashFiles count]; i++) {
-    NSString *filename = [_crashesDir stringByAppendingPathComponent:[_crashFiles objectAtIndex:i]];
-    NSData *crashData = [NSData dataWithContentsOfFile:filename];
-		
-    if ([crashData length] > 0) {
-      PLCrashReport *report = [[[PLCrashReport alloc] initWithData:crashData error:&error] autorelease];
-			
-      if (report == nil) {
-        NSLog(@"Could not parse crash report");
-        // we cannot do anything with this report, so delete it
-        [self.fileManager removeItemAtPath:filename error:&error];
-        continue;
-      }
-      
-      NSString *crashUUID = report.reportInfo.reportGUID ?: @"";
-      NSString *crashLogString = [BITCrashReportTextFormatter stringValueForCrashReport:report];
-      
-      if ([report.applicationInfo.applicationVersion compare:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]] == NSOrderedSame) {
-        _crashIdenticalCurrentVersion = YES;
-      }
-			
-      if (crashes == nil) {
-        crashes = [NSMutableString string];
-      }
-      
-      [crashes appendFormat:@"<crash><applicationname>%s</applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><contact>%@</contact><description><![CDATA[%@]]></description></crash>",
-       [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleExecutable"] UTF8String],
-       [self extractAppUUIDs:report],
-       report.applicationInfo.applicationIdentifier,
-       report.systemInfo.operatingSystemVersion,
-       [self getDevicePlatform],
-       [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"],
-       report.applicationInfo.applicationVersion,
-       crashUUID,
-       [crashLogString stringByReplacingOccurrencesOfString:@"]]>" withString:@"]]" @"]]><![CDATA[" @">" options:NSLiteralSearch range:NSMakeRange(0,crashLogString.length)],
-       username,
-       useremail,
-       [applicationLog stringByReplacingOccurrencesOfString:@"]]>" withString:@"]]" @"]]><![CDATA[" @">" options:NSLiteralSearch range:NSMakeRange(0,applicationLog.length)]];
-      
-      
-      // store this crash report as user approved, so if it fails it will retry automatically
-      [approvedCrashReports setObject:[NSNumber numberWithBool:YES] forKey:[_crashFiles objectAtIndex:i]];
-    } else {
-      // we cannot do anything with this report, so delete it
-      [self.fileManager removeItemAtPath:filename error:&error];
-    }
-  }
-	
-  [[NSUserDefaults standardUserDefaults] setObject:approvedCrashReports forKey:kBITCrashApprovedReports];
-  [[NSUserDefaults standardUserDefaults] synchronize];
-  
-  if (crashes != nil) {
-    BITHockeyLog(@"Sending crash reports:\n%@", crashes);
-    [self postXML:[NSString stringWithFormat:@"<crashes>%@</crashes>", crashes]
-             toURL:[NSURL URLWithString:BITHOCKEYSDK_URL]];
-    
-  }
-}
-
-- (void)cleanCrashReports {
-  NSError *error = NULL;
-  
-  for (NSUInteger i=0; i < [_crashFiles count]; i++) {		
-    [self.fileManager removeItemAtPath:[_crashesDir stringByAppendingPathComponent:[_crashFiles objectAtIndex:i]] error:&error];
-  }
-  [_crashFiles removeAllObjects];
-  
-  [[NSUserDefaults standardUserDefaults] setObject:nil forKey:kBITCrashApprovedReports];
-  [[NSUserDefaults standardUserDefaults] synchronize];    
-}
-
-- (void)sendCrashReports {
-  // send it to the next runloop
-  [self performSelector:@selector(performSendingCrashReports) withObject:nil afterDelay:0.0f];
-}
+#pragma mark - Networking
 
 - (void)checkForFeedbackStatus {
   NSMutableURLRequest *request = nil;
@@ -591,8 +669,8 @@ typedef enum BITCrashAlertType {
              [NSURL URLWithString:[NSString stringWithFormat:@"%@api/2/apps/%@/crashes?sdk=%@&sdk_version=%@%@",
                                    BITHOCKEYSDK_URL,
                                    [_appIdentifier stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding],
-                                   BITHOCKEYSDK_NAME,
-                                   BITHOCKEYSDK_VERSION,
+                                   BITHOCKEY_NAME,
+                                   BITHOCKEY_VERSION,
                                    feedbackEnabled
                                    ]
               ]];

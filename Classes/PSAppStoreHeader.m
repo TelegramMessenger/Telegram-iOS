@@ -97,7 +97,7 @@
   // shadows are a beast
   NSInteger shadowOffset = 2;
   if([[UIScreen mainScreen] scale] == 2) shadowOffset = 1;
-  BITHOCKEYSDK_IF_IOS5_OR_GREATER(shadowOffset = 1;) // iOS5 changes this - again!
+  BITHOCKEY_IF_IOS5_OR_GREATER(shadowOffset = 1;) // iOS5 changes this - again!
   
   CGContextSetShadowWithColor(context, CGSizeMake(shadowOffset, shadowOffset), 0, myColor);
   
