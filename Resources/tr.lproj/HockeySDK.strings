@@ -113,33 +113,3 @@
 /* Update Simulator Warning */
 
 "UpdateSimulatorMessage" = "Hockey Update does not work in the Simulator.\nThe itms-services:// url scheme is implemented but nonfunctional.";
-
-
-/* Update Settings */
-
-/* Screen title for settings view */
-"UpdateSettingsTitle" = "Settings";
-
-/* Text asking the user to send user data (on/off switch) */
-"UpdateSettingsUserData" = "Send User Data";
-
-/* Description text for turning on/off sending user data */
-"UpdateSettingsUserDataDescription" = "Send User Data will send the following data to the developer: app version, language, device type and iOS version.";
-
-/* Text asking the user to send usage data (on/off switch) */
-"UpdateSettingsUsageData" = "Send Usage Data";
-
-/* Description text for turning on/off sending usage data */
-"UpdateSettingsUsageDataDescription" = "Send Usage Data will send the amount of test time to the developer, in a granularity of 1 minute.";
-
-/* Title for defining when update checks may be made */
-"UpdateSectionCheckTitle" = "Check For Update";
-
-/* On Startup */
-"UpdateSectionCheckStartup" = "On Startup";
-
-/* Daily */
-"UpdateSectionCheckDaily" = "Daily";
-
-/* Manually */
-"UpdateSectionCheckManually" = "Manually";
