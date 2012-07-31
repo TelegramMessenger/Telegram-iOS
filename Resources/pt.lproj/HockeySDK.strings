@@ -58,59 +58,59 @@
 /* Update Alert view */
 
 /* Update available */
-"UpdateAvailable" = "Update available";
+"UpdateAvailable" = "Atualização disponível";
 
-"UpdateAlertTextWithAppVersion" = "%@ is available.";
+"UpdateAlertTextWithAppVersion" = "%@ está disponível.";
 
-"UpdateAlertMandatoryTextWithAppVersion" = "%@ is available and is a mandatory update!";
+"UpdateAlertMandatoryTextWithAppVersion" = "%@ está disponível e é uma atualização obrigatória!";
 
-"UpdateIgnore" = "Ignore";
+"UpdateIgnore" = "Ignorar";
 
-"UpdateShow" = "Show";
+"UpdateShow" = "Mostrar";
 
-"UpdateInstall" = "Install";
+"UpdateInstall" = "Instalar";
 
 
 /* Update Details */
 
-"UpdateScreenTitle" = "Update";
+"UpdateScreenTitle" = "Atualizar";
 
-"UpdateButtonCheck" = "CHECK";
+"UpdateButtonCheck" = "VERIFICAR";
 
-"UpdateButtonSearching" = "CHECKING";
+"UpdateButtonSearching" = "BUSCANDO";
 
-"UpdateButtonUpdate" = "UPDATE";
+"UpdateButtonUpdate" = "ATUALIZAR";
 
-"UpdateButtonInstalling" = "INSTALLING";
+"UpdateButtonInstalling" = "INSTALANDO";
 
-"UpdateButtonOffline" = "OFFLINE";
+"UpdateButtonOffline" = "DESCONECTADO";
 
-"UpdateInstalled" = "INSTALLED";
+"UpdateInstalled" = "INSTALADO";
 
-"UpdateVersion" = "Version";
+"UpdateVersion" = "Versão";
 
-"UpdateShowPreviousVersions" = "Show previous versions...";
+"UpdateShowPreviousVersions" = "Mostrar versões anteriores...";
 
-"UpdateNoUpdateAvailableTitle" = "No Update Available";
+"UpdateNoUpdateAvailableTitle" = "Sem atualização disponível";
 
-"UpdateNoUpdateAvailableMessage" = "%@ is already the latest version.";
+"UpdateNoUpdateAvailableMessage" = "%@ já é a última versão disponível.";
 
-"UpdateError" = "Error";
+"UpdateError" = "Erro";
 
-"UpdateWarning" = "Warning";
+"UpdateWarning" = "Alerta";
 
-"UpdateNoReleaseNotesAvailable" = "No release notes available.";
+"UpdateNoReleaseNotesAvailable" = "Sem notas de atualização disponível.";
 
 
 /* Update Authorization  */
 
-"UpdateAuthorizationProgress" = "Authorizing...";
+"UpdateAuthorizationProgress" = "Autorizando...";
 
-"UpdateAuthorizationOffline" = "Internet connection required!";
+"UpdateAuthorizationOffline" = "É necessário conexão com a internet!";
 
-"UpdateAuthorizationDenied" = "Authorizing denied. Please contact the developer.";
+"UpdateAuthorizationDenied" = "Autorização negada. Contate o desenvolvedor.";
 
 
 /* Update Simulator Warning */
 
-"UpdateSimulatorMessage" = "Hockey Update does not work in the Simulator.\nThe itms-services:// url scheme is implemented but nonfunctional.";
+"UpdateSimulatorMessage" = "Hockey Update não funciona no Simulador.\nA url itms-services:// é implementada mas não é funcional.";
