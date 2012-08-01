@@ -83,6 +83,7 @@ We propose the following method to set version numbers in your beta versions:
     * UIKit.framework    
     
 6. If one of the frameworks is missing, then click the + button, search the framework and confirm with the `Add` button.
+7. In `Header Search Paths`, add a path to `$(SRCROOT)\Vendor\HockeyKit\Classes`
 7. Select `Build Settings`
 8. Search for `Other Linker Flags`
 9. Double click on the build Setting titled Other Linker Flags.
@@ -97,7 +98,7 @@ We propose the following method to set version numbers in your beta versions:
 
 1. Open your `AppDelegate.m` file.
 2. Add the following line at the top of the file below your own #import statements:<pre><code>#import "HockeySDK.h"</code></pre>
-3. Let the AppDelegate implement the protocols `BITHockeyManager`, `BITUpdateManager` and `BITCrashManager`:<pre><code>@interface AppDelegate() &lt;BITHockeyManager, BITUpdateManager, BITCrashManager&gt; {}
+3. Let the AppDelegate implement the protocols `BITHockeyManagerDelegate`, `BITUpdateManagerDelegate` and `BITCrashManagerDelegate`:<pre><code>@interface AppDelegate() &lt;BITHockeyManager, BITUpdateManager, BITCrashManager&gt; {}
 @end</code></pre>
 4. Search for the method `application:didFinishLaunchingWithOptions:`
 5. Add the following lines:<pre><code>[[BITHockeyManager sharedHockeyManager] configureWithBetaIdentifier:@"BETA_IDENTIFIER" 
@@ -106,8 +107,8 @@ We propose the following method to set version numbers in your beta versions:
 [[BITHockeyManager sharedHockeyManager] startManager];</code></pre>
 6. Replace `BETA_IDENTIFIER` with the app identifier of your beta app. If you don't know what the app identifier is or how to find it, please read [this how-to](http://support.hockeyapp.net/kb/how-tos/how-to-find-the-app-identifier). 
 7. Replace `LIVE_IDENTIFIER` with the app identifier of your release app.
-8. Add the following method:<pre><code>- (NSString *)customDeviceIdentifierForUpdateManager:(BITUpdateManager *)updateManager {
-\#ifndef (CONFIGURATION_AppStore)
+8. Add the following method:<pre><code>- (NSString \*)customDeviceIdentifierForUpdateManager:(BITUpdateManager \*)updateManager {
+\#ifndef CONFIGURATION_AppStore
   if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)])
     return [[UIDevice currentDevice] performSelector:@selector(uniqueIdentifier)];
 \#endif
