@@ -18,9 +18,19 @@ Prerequisites
 2. We also assume that you already have a project in Xcode and that this project is opened in Xcode 4.
 3. The SDK supports iOS 4.0 or newer.
 
-Documentation
-=============
+Guides
+======
 
-Documentation can be build using [AppleDoc](https://github.com/tomaz/appledoc/) and the `Documentation` target. This will build the latest version and automatically install it in Xcode.
+- [Installation & Setup](Guide-Installation-Setup)
+- [Migration from HockeyKit & QuincyKit](Guide-Migration-Kits)
 
-The documentation contains installation and setup guides, various HowTos, quick troubleshooting and documentation of the public classes and protocols.
+HowTos
+======
+
+- [How to do app versioning](HowTo-App-Versioning)
+- [How to upload symbols for crash reporting](HowTo-Upload-Symbols)
+
+Troubleshooting
+===============
+
+- [Crashes do not appear on HockeyApp](Troubleshooting-Crashes-Dont-Appear)
