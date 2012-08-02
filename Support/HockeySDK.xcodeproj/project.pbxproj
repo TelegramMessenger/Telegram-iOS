@@ -928,6 +928,7 @@
 					"$(inherited)",
 					"\"$(SRCROOT)/../Vendor\"",
 				);
+				GCC_THUMB_SUPPORT = NO;
 				PRODUCT_NAME = HockeySDK;
 				SKIP_INSTALL = YES;
 			};
@@ -941,6 +942,7 @@
 					"$(inherited)",
 					"\"$(SRCROOT)/../Vendor\"",
 				);
+				GCC_THUMB_SUPPORT = NO;
 				PRODUCT_NAME = HockeySDK;
 				SKIP_INSTALL = YES;
 			};
@@ -949,6 +951,7 @@
 		1E59551515B6F45800A03429 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				GCC_THUMB_SUPPORT = NO;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -960,6 +963,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_THUMB_SUPPORT = NO;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -970,6 +974,7 @@
 		1E8E66AE15BC3D7700632A2E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				GCC_THUMB_SUPPORT = NO;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -977,6 +982,7 @@
 		1E8E66AF15BC3D7700632A2E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				GCC_THUMB_SUPPORT = NO;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -1000,6 +1006,7 @@
 					"$(inherited)",
 				);
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_THUMB_SUPPORT = NO;
 				GCC_VERSION = "";
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
@@ -1026,6 +1033,7 @@
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_PREPROCESSOR_DEFINITIONS = "BITHOCKEY_STATIC_LIBRARY=1";
+				GCC_THUMB_SUPPORT = NO;
 				GCC_VERSION = "";
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
@@ -1053,6 +1061,7 @@
 					"$(inherited)",
 					"\"$(SRCROOT)/../Vendor\"",
 				);
+				GCC_THUMB_SUPPORT = NO;
 				PRODUCT_NAME = "HockeySDK${EFFECTIVE_PLATFORM_NAME}";
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1071,6 +1080,7 @@
 					"$(inherited)",
 					"\"$(SRCROOT)/../Vendor\"",
 				);
+				GCC_THUMB_SUPPORT = NO;
 				PRODUCT_NAME = "HockeySDK${EFFECTIVE_PLATFORM_NAME}";
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
