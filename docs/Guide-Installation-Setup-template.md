@@ -87,11 +87,12 @@ Add HockeySDK to your project
 11. Expand `Copy Bundle Resources`.
 12. Drag & Drop `HockeySDKResources.bundle` from the `Products` folder in `HockeySDK.xcodeproj`
 13. Select `Build Settings`
-14. Search for `Other Linker Flags`
-15. Double click on the build Setting titled Other Linker Flags.
-16. Add `-ObjC`
-17. Hit `Done`.
-18. HockeySDK-iOS also needs a JSON library. If you deployment target iOS >= 5, everything is set. If your deployment target is iOS 4.x, please include one of the following libraries:
+14. In `Header Search Paths`, add a path to `$(SRCROOT)\Vendor\HockeyKit\Classes`
+15. Search for `Other Linker Flags`
+16. Double click on the build Setting titled Other Linker Flags.
+17. Add `-ObjC`
+18. Hit `Done`.
+19. HockeySDK-iOS also needs a JSON library. If you deployment target iOS >= 5, everything is set. If your deployment target is iOS 4.x, please include one of the following libraries:
 	* [JSONKit](https://github.com/johnezang/JSONKit)
 	* [SBJSON](https://github.com/stig/json-framework)
 	* [YAJL](https://github.com/gabriel/yajl-objc)
@@ -102,7 +103,7 @@ Setup HockeySDK
 
 1. Open your `AppDelegate.m` file.
 2. Add the following line at the top of the file below your own #import statements:<pre><code>#import "HockeySDK.h"</code></pre>
-3. Let the AppDelegate implement the protocols `BITHockeyManager`, `BITUpdateManager` and `BITCrashManager`:<pre><code>@interface AppDelegate() &lt;BITHockeyManager, BITUpdateManager, BITCrashManager&gt; {}
+3. Let the AppDelegate implement the protocols `BITHockeyManagerDelegate`, `BITUpdateManagerDelegate` and `BITCrashManagerDelegate`:<pre><code>@interface AppDelegate() &lt;BITHockeyManager, BITUpdateManager, BITCrashManager&gt; {}
 @end</code></pre>
 4. Search for the method `application:didFinishLaunchingWithOptions:`
 5. Add the following lines:<pre><code>[[BITHockeyManager sharedHockeyManager] configureWithBetaIdentifier:@"BETA_IDENTIFIER" 
@@ -111,8 +112,8 @@ Setup HockeySDK
 [[BITHockeyManager sharedHockeyManager] startManager];</code></pre>
 6. Replace `BETA_IDENTIFIER` with the app identifier of your beta app. If you don't know what the app identifier is or how to find it, please read [this how-to](http://support.hockeyapp.net/kb/how-tos/how-to-find-the-app-identifier). 
 7. Replace `LIVE_IDENTIFIER` with the app identifier of your release app.
-8. Add the following method:<pre><code>- (NSString *)customDeviceIdentifierForUpdateManager:(BITUpdateManager *)updateManager {
-\#ifndef (CONFIGURATION_AppStore)
+8. Add the following method:<pre><code>- (NSString \*)customDeviceIdentifierForUpdateManager:(BITUpdateManager \*)updateManager {
+\#ifndef CONFIGURATION_AppStore
   if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)])
     return [[UIDevice currentDevice] performSelector:@selector(uniqueIdentifier)];
 \#endif
