@@ -397,7 +397,10 @@
   
   // special addition to get rootViewController from three20 which has it's own controller handling
   if (NSClassFromString(@"TTNavigator")) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
     parentViewController = [[NSClassFromString(@"TTNavigator") performSelector:(NSSelectorFromString(@"navigator"))] visibleViewController];
+#pragma clang diagnostic pop
   }
   
   if (_navController != nil) [_navController release];
@@ -1049,7 +1052,7 @@
 // invoke the selected action from the actionsheet for a location element
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
   if ([alertView tag] == 2) {
-    [self initiateAppDownload];
+    (void)[self initiateAppDownload];
     _updateAlertShowing = NO;
     return;
   } else if ([alertView tag] == 1) {
@@ -1063,7 +1066,7 @@
     [self showUpdateView];
   } else if (buttonIndex == [alertView firstOtherButtonIndex] + 1) {
     // YES button has been clicked
-    [self initiateAppDownload];
+    (void)[self initiateAppDownload];
   }
 }
 

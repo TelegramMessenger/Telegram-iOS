@@ -236,7 +236,10 @@
     SEL presentingViewControllerSelector = NSSelectorFromString(@"presentingViewController");
     UIViewController *presentingViewController = nil;
     if ([self respondsToSelector:presentingViewControllerSelector]) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
       presentingViewController = [self performSelector:presentingViewControllerSelector];
+#pragma clang diagnostic pop
     }
     else {
       presentingViewController = [self parentViewController];
