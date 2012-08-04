@@ -25,16 +25,16 @@
 "CrashDataFoundDescription" = "%@ программа неожиданно завершена. Хотите ли Вы отправить нам сообщение о неполадках, чтобы мы  могли устранить проблему?";
 
 /* Alert box button if the users wants to send crash data always automatically */
-"Always" = "Всегда";
+"CrashSendReportAlways" = "Всегда";
 
 /* Alert box button to send the crash report once */
-"Send Report" = "Да";
+"CrashSendReport" = "Да";
 
 /* Alert box button to decline sending the report */
-"Don't Send" = "Нет";
+"CrashDontSendReport" = "Нет";
 
 /* Text showing in a processing box that the crash data is being uploaded to the server */
-"Sending" = "Отправить";
+"CrashReportSending" = "Отправить";
 
 
 /* Update */
