@@ -34,4 +34,5 @@ HowTos
 Troubleshooting
 ===============
 
+- [Symbolication doesn't work](Symbolication-Doesnt-Work) (Or the rules of binary UUIDs and dSYMs)
 - [Crashes do not appear on HockeyApp](Troubleshooting-Crashes-Dont-Appear)
