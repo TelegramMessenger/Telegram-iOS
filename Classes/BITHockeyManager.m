@@ -66,6 +66,9 @@
 
 - (id) init {
   if ((self = [super init])) {
+    _disableCrashManager = NO;
+    _disableUpdateManager = NO;
+    
     _appStoreEnvironment = NO;
     _startManagerIsInvoked = NO;
 
@@ -166,11 +169,15 @@
   _startManagerIsInvoked = NO;
   
   if (_validAppIdentifier) {
-    BITHockeyLog(@"Setup CrashManager");
-    _crashManager = [[BITCrashManager alloc] initWithAppIdentifier:_appIdentifier];
+    if (![self isCrashManagerDisabled]) {
+      BITHockeyLog(@"Setup CrashManager");
+      _crashManager = [[BITCrashManager alloc] initWithAppIdentifier:_appIdentifier];
+    }
     
-    BITHockeyLog(@"Setup UpdateManager");
-    _updateManager = [[BITUpdateManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
+    if (![self isUpdateManagerDisabled]) {
+      BITHockeyLog(@"Setup UpdateManager");
+      _updateManager = [[BITUpdateManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
+    }
     
     // Only if JMC is part of the project
     if ([[self class] isJMCPresent]) {

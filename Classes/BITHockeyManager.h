@@ -152,9 +152,22 @@
  @see configureWithIdentifier:delegate:
  @see configureWithBetaIdentifier:liveIdentifier:delegate:
  @see startManager
+ @see disableCrashManager
  @return The BITCrashManager instance initialized by BITHockeyManager
  */
 @property (nonatomic, retain, readonly) BITCrashManager *crashManager;
+
+
+/**
+ Flag the determines wether the Crash Manager should be disabled
+ 
+ If this flag is enabled, then crash reporting is disabled and no crashes will
+ be detected and send
+
+ *Default*: _NO_
+ @see crashManager
+ */
+@property (nonatomic, getter = isCrashManagerDisabled) BOOL disableCrashManager;
 
 
 /**
@@ -163,9 +176,22 @@
  @see configureWithIdentifier:delegate:
  @see configureWithBetaIdentifier:liveIdentifier:delegate:
  @see startManager
+ @see disableUpdateManager
  @return The BITCrashManager instance initialized by BITUpdateManager
  */
 @property (nonatomic, retain, readonly) BITUpdateManager *updateManager;
+
+
+/**
+ Flag the determines wether the Update Manager should be disabled
+ 
+ If this flag is enabled, then checking for updates and submitting beta usage
+ analytics will be turned off!
+ 
+ *Default*: _NO_
+ @see updateManager
+ */
+@property (nonatomic, getter = isUpdateManagerDisabled) BOOL disableUpdateManager;
 
 
 ///-----------------------------------------------------------------------------
