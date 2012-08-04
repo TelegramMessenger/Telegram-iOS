@@ -37,21 +37,6 @@
 "CrashReportSending" = "Sending…";
 
 
-/* Crash status dialog */
-
-/* Title for the alertview giving feedback about the crash */
-"CrashResponseTitle" = "Previously on %@";
-
-/* Full text telling the bug is fixed and will be available in the next release */
-"CrashResponseNextRelease" = "The bug has been fixed for a future update. Stay tuned.";
-
-/* Full text telling the bug is fixed and the new release is waiting at Apple */
-"CrashResponseWaitingApple" = "The bug has been fixed, and we submitted an update to Apple. Hang tight while it’s in review!";
-
-/* Full text telling the bug is fixed and an update is available in the AppStore */
-"CrashResponseAvailable" = "The bug has been fixed. Update to the latest version in the App Store.";
-
-
 /* Update */
 
 

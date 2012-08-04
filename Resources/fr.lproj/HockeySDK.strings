@@ -37,21 +37,6 @@
 "CrashReportSending" = "Envoyer…";
 
 
-/* Crash status dialog */
-
-/* Title for the alertview giving feedback about the crash */
-"CrashResponseTitle" = "Précédemment dans %@";
-
-/* Full text telling the bug is fixed and will be available in the next release */
-"CrashResponseNextRelease" = "%@ s’est fermé de façon inattendue. La bonne nouvelle ? La cause du problème a été détectée et une solution a été trouvée pour les versions ultérieures. Restez à l’écoute.";
-
-/* Full text telling the bug is fixed and the new release is waiting at Apple */
-"CrashResponseWaitingApple" = "%@ s’est fermé de façon inattendue. La bonne nouvelle ? Nous avons déjà corrigé le problème et soumis une mise à jour à Apple. Veuillez patienter durant l’examen de cette mise à jour !";
-
-/* Full text telling the bug is fixed and an update is available in the AppStore */
-"CrashResponseAvailable" = "%@ s’est fermé de façon inattendue. La bonne nouvelle ? Nous avons déjà réglé le problème ! Veuillez installer la mise à jour la plus récente.";
-
-
 /* Update */
 
 

@@ -37,20 +37,6 @@
 "CrashReportSending" = "Gönderiliyor…";
 
 
-/* Crash status dialog */
-
-/* Title for the alertview giving feedback about the crash */
-"CrashResponseTitle" = "Hata raporu bulundu";
-
-/* Full text telling the bug is fixed and will be available in the next release */
-"CrashResponseNextRelease" = "%@ beklenmeyen bir şekilde kapanmış. Sorunun sebebi bulundu ve en kısa zamanda bir güncelleme ile giderilecek.";
-/* Full text telling the bug is fixed and the new release is waiting at Apple */
-"CrashResponseWaitingApple" = "%@ beklenmeyen bir şekilde kapanmış. Hata giderildi ve yeni sunum Apple'a gönderildi. Birkaç gün içerisinde iTunes'tan indirebilirsiniz.";
-
-/* Full text telling the bug is fixed and an update is available in the AppStore */
-"CrashResponseAvailable" = "%@ beklenmeyen bir şekilde kapanmış. Bu hatayı gideren yeni sunumu iTunes'tan indirebilirsiniz.";
-
-
 /* Update */
 
 

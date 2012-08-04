@@ -51,12 +51,6 @@
 #define kBITCrashMetaApplicationLog @"BITCrashMetaApplicationLog"
 
 
-typedef enum BITCrashAlertType {
-  BITCrashAlertTypeSend = 0,
-  BITCrashAlertTypeFeedback = 1,
-} BITCrashAlertType;
-
-
 @interface BITCrashManager ()
 
 @property (nonatomic, retain) NSFileManager *fileManager;
@@ -68,7 +62,6 @@ typedef enum BITCrashAlertType {
 @synthesize delegate = _delegate;
 @synthesize crashManagerStatus = _crashManagerStatus;
 @synthesize showAlwaysButton = _showAlwaysButton;
-@synthesize feedbackActivated = _feedbackActivated;
 @synthesize didCrashInLastSession = _didCrashInLastSession;
 @synthesize timeintervalCrashInLastSessionOccured = _timeintervalCrashInLastSessionOccured;
 
@@ -82,10 +75,8 @@ typedef enum BITCrashAlertType {
     _appIdentifier = appIdentifier;
     
     _delegate = nil;
-    _feedbackActivated = NO;
     _showAlwaysButton = NO;
 
-    _serverResult = BITCrashStatusUnknown;
     _crashIdenticalCurrentVersion = YES;
     _urlConnection = nil;
     _responseData = nil;
@@ -432,7 +423,6 @@ typedef enum BITCrashAlertType {
         [alertView addButtonWithTitle:BITHockeyLocalizedString(@"CrashSendReportAlways")];
       }
       
-      [alertView setTag: BITCrashAlertTypeSend];
       [alertView show];
       [alertView release];
     } else {
@@ -540,138 +530,51 @@ typedef enum BITCrashAlertType {
 }
 
 
-#pragma mark - UIAlertView
-
-- (void) showCrashStatusMessage {
-  UIAlertView *alertView = nil;
-	
-  if (_serverResult >= BITCrashStatusAssigned && 
-    _crashIdenticalCurrentVersion &&
-    BITHockeyBundle()) {
-    // show some feedback to the user about the crash status
-    NSString *appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"];
-    switch (_serverResult) {
-      case BITCrashStatusAssigned:
-        alertView = [[UIAlertView alloc] initWithTitle: [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashResponseTitle"), appName ]
-                                               message: [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashResponseNextRelease"), appName]
-                                              delegate: self
-                                     cancelButtonTitle: BITHockeyLocalizedString(@"HockeyOK")
-                                     otherButtonTitles: nil];
-        break;
-      case BITCrashStatusSubmitted:
-        alertView = [[UIAlertView alloc] initWithTitle: [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashResponseTitle"), appName ]
-                                               message: [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashResponseWaitingApple"), appName]
-                                              delegate: self
-                                     cancelButtonTitle: BITHockeyLocalizedString(@"HockeyOK")
-                                     otherButtonTitles: nil];
-        break;
-      case BITCrashStatusAvailable:
-        alertView = [[UIAlertView alloc] initWithTitle: [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashResponseTitle"), appName ]
-                                               message: [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashResponseAvailable"), appName]
-                                              delegate: self
-                                     cancelButtonTitle: BITHockeyLocalizedString(@"HockeyOK")
-                                     otherButtonTitles: nil];
-        break;
-      default:
-        alertView = nil;
-        break;
-    }
-		
-    if (alertView) {
-      [alertView setTag: BITCrashAlertTypeFeedback];
-      [alertView show];
-      [alertView release];
-    }
-  }
-}
-
-
 #pragma mark - UIAlertView Delegate
 
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
-  if ([alertView tag] == BITCrashAlertTypeSend) {
-    switch (buttonIndex) {
-      case 0:
-        if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillCancelSendingCrashReport:)]) {
-          [self.delegate crashManagerWillCancelSendingCrashReport:self];
-        }
-        
-        _sendingInProgress = NO;
-        [self cleanCrashReports];
-        break;
-      case 1:
-        [self sendCrashReports];
-        break;
-      case 2: {
-        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITCrashAutomaticallySendReports];
-        [[NSUserDefaults standardUserDefaults] synchronize];
-        if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillSendCrashReportsAlways:)]) {
-          [self.delegate crashManagerWillSendCrashReportsAlways:self];
-        }
-        
-        [self sendCrashReports];
-        break;
+  switch (buttonIndex) {
+    case 0:
+      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillCancelSendingCrashReport:)]) {
+        [self.delegate crashManagerWillCancelSendingCrashReport:self];
       }
-      default:
-        _sendingInProgress = NO;
-        [self cleanCrashReports];
-        break;
+      
+      _sendingInProgress = NO;
+      [self cleanCrashReports];
+      break;
+    case 1:
+      [self sendCrashReports];
+      break;
+    case 2: {
+      [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITCrashAutomaticallySendReports];
+      [[NSUserDefaults standardUserDefaults] synchronize];
+      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillSendCrashReportsAlways:)]) {
+        [self.delegate crashManagerWillSendCrashReportsAlways:self];
+      }
+      
+      [self sendCrashReports];
+      break;
     }
+    default:
+      _sendingInProgress = NO;
+      [self cleanCrashReports];
+      break;
   }
 }
 
 
 #pragma mark - Networking
 
-- (void)checkForFeedbackStatus {
-  NSMutableURLRequest *request = nil;
-  
-  request = [NSMutableURLRequest requestWithURL:
-    [NSURL URLWithString:[NSString stringWithFormat:@"%@api/2/apps/%@/crashes/%@",
-                          BITHOCKEYSDK_URL,
-                          [_appIdentifier stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding],
-                          _feedbackRequestID
-                          ]
-     ]];
-  
-  [request setCachePolicy: NSURLRequestReloadIgnoringLocalCacheData];
-  [request setValue:@"Quincy/iOS" forHTTPHeaderField:@"User-Agent"];
-  [request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];
-  [request setTimeoutInterval: 15];
-  [request setHTTPMethod:@"GET"];
-  
-  _serverResult = BITCrashStatusUnknown;
-  _statusCode = 200;
-	
-  // Release when done in the delegate method
-  _responseData = [[NSMutableData alloc] init];
-	
-  _urlConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self];    
-  
-  if (!_urlConnection) {
-    BITHockeyLog(@"Requesting feedback status could not start!");
-  } else {
-    BITHockeyLog(@"Requesting feedback status.");
-  }
-}
-
 - (void)postXML:(NSString*)xml toURL:(NSURL*)url {
   NSMutableURLRequest *request = nil;
   NSString *boundary = @"----FOO";
   
-  NSString *feedbackEnabled = @"&feedbackEnabled=no";
-  
-  if ([self isFeedbackActivated]) {
-    feedbackEnabled = @"&feedbackEnabled=yes";
-  }
-  
   request = [NSMutableURLRequest requestWithURL:
-             [NSURL URLWithString:[NSString stringWithFormat:@"%@api/2/apps/%@/crashes?sdk=%@&sdk_version=%@%@",
+             [NSURL URLWithString:[NSString stringWithFormat:@"%@api/2/apps/%@/crashes?sdk=%@&sdk_version=%@&feedbackEnabled=no",
                                    BITHOCKEYSDK_URL,
                                    [_appIdentifier stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding],
                                    BITHOCKEY_NAME,
-                                   BITHOCKEY_VERSION,
-                                   feedbackEnabled
+                                   BITHOCKEY_VERSION
                                    ]
               ]];
   
@@ -692,7 +595,6 @@ typedef enum BITCrashAlertType {
   
   [request setHTTPBody:postBody];
 	
-  _serverResult = BITCrashStatusUnknown;
   _statusCode = 200;
 	
   //Release when done in the delegate method
@@ -745,37 +647,15 @@ typedef enum BITCrashAlertType {
   if (_statusCode >= 200 && _statusCode < 400 && _responseData != nil && [_responseData length] > 0) {
     [self cleanCrashReports];
     
-    _feedbackRequestID = nil;
     // HockeyApp uses PList XML format
     NSMutableDictionary *response = [NSPropertyListSerialization propertyListFromData:_responseData
                                                                      mutabilityOption:NSPropertyListMutableContainersAndLeaves
                                                                                format:nil
                                                                      errorDescription:NULL];
     BITHockeyLog(@"Received API response: %@", response);
-    
-    _serverResult = (BITCrashStatus)[[response objectForKey:@"status"] intValue];
-    if ([response objectForKey:@"id"]) {
-      _feedbackRequestID = [[NSString alloc] initWithString:[response objectForKey:@"id"]];
-      _feedbackDelayInterval = [[response objectForKey:@"delay"] floatValue];
-      if (_feedbackDelayInterval > 0)
-        _feedbackDelayInterval *= 0.01;
-    }
-    
-    if ([self isFeedbackActivated]) {
-      // only proceed if the server did not report any problem
-      if (_serverResult == BITCrashStatusQueued) {
-        // the report is still in the queue
-        if (_feedbackRequestID) {
-          [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(checkForFeedbackStatus) object:nil];
-          [self performSelector:@selector(checkForFeedbackStatus) withObject:nil afterDelay:_feedbackDelayInterval];
-        }
-      } else {
-        [self showCrashStatusMessage];
-      }
-      
-      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerDidFinishSendingCrashReport:)]) {
-        [self.delegate crashManagerDidFinishSendingCrashReport:self];
-      }
+            
+    if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerDidFinishSendingCrashReport:)]) {
+      [self.delegate crashManagerDidFinishSendingCrashReport:self];
     }
   } else if (_statusCode == 400) {
     [self cleanCrashReports];

@@ -37,21 +37,6 @@
 "CrashReportSending" = "Zenden…";
 
 
-/* Crash status dialog */
-
-/* Title for the alertview giving feedback about the crash */
-"CrashResponseTitle" = "Bugstatus";
-
-/* Full text telling the bug is fixed and will be available in the next release */
-"CrashResponseNextRelease" = "De bug die uw probleem heeft veroorzaakt is reeds opgelost en de oplossing zal in een volgende versie van %@ worden toegevoegd.";
-
-/* Full text telling the bug is fixed and the new release is waiting at Apple */
-"CrashResponseWaitingApple" = "De bug die uw probleem heeft veroorzaakt is reeds opgelost en een nieuwe versie %@ wacht op goedkeuring door Apple.";
-
-/* Full text telling the bug is fixed and an update is available in the AppStore */
-"CrashResponseAvailable" = "De bug die uw probleem heeft veroorzaakt is reeds opgelost en een nieuwe versie van %@ is beschikbaar. Update a.u.b.!";
-
-
 /* Update */
 
 

@@ -39,15 +39,6 @@ typedef enum {
 static NSString *kBITCrashManagerStatus = @"BITCrashManagerStatus";
 
 
-typedef enum BITCrashStatus {
-  BITCrashStatusQueued = -80,
-  BITCrashStatusUnknown = 0,
-  BITCrashStatusAssigned = 1,
-  BITCrashStatusSubmitted = 2,
-  BITCrashStatusAvailable = 3,
-} BITCrashStatus;
-
-
 @protocol BITCrashManagerDelegate;
 
 /**
@@ -85,9 +76,6 @@ typedef enum BITCrashStatus {
 @interface BITCrashManager : NSObject {
 @private
   NSString *_appIdentifier;
-  
-  NSString *_feedbackRequestID;
-  float _feedbackDelayInterval;
   
   BITCrashStatus _serverResult;
   
@@ -165,22 +153,6 @@ typedef enum BITCrashStatus {
  @see crashManagerStatus
  */
 @property (nonatomic, assign, getter=shouldShowAlwaysButton) BOOL showAlwaysButton;
-
-
-/**
- Flag that determines if the user should get feedback about the crash
- 
- On the HockeyApp servers it is possible to assign each crash group a fixed app
- version. Each app version also has a status like `new`, `submitted` or 
- `available`. This status defines what kind of feedback the user will get,
- if the crash belongs to a crash group with a fixed version assigned.
- 
- The best case would be, that an update is already `available` which fixes this
- crash.
- 
- *Default*: _NO_
- */
-@property (nonatomic, assign, getter=isFeedbackActivated) BOOL feedbackActivated;
 
 
 ///-----------------------------------------------------------------------------

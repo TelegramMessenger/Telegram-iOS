@@ -37,21 +37,6 @@
 "CrashReportSending" = "Skickar…";
 
 
-/* Crash status dialog */
-
-/* Title for the alertview giving feedback about the crash */
-"CrashResponseTitle" = "Tidigare %@ krasch";
-
-/* Full text telling the bug is fixed and will be available in the next release */
-"CrashResponseNextRelease" = "Buggen har lösts och är borttagen i nästa release som kommer snart.";
-
-/* Full text telling the bug is fixed and the new release is waiting at Apple */
-"CrashResponseWaitingApple" = "Buggen har lösts, en ny version har skickats till Apple. Håll i dig medans de testar!";
-
-/* Full text telling the bug is fixed and an update is available in the AppStore */
-"CrashResponseAvailable" = "Buggen har lösts. Updatera till senaste versionen i App Store.";
-
-
 /* Update */
 
 

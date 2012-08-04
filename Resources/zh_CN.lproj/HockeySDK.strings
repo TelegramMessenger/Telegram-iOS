@@ -37,21 +37,6 @@
 "CrashReportSending" = "发送中…";
 
 
-/* Crash status dialog */
-
-/* Title for the alertview giving feedback about the crash */
-"CrashResponseTitle" = "之前在 %@";
-
-/* Full text telling the bug is fixed and will be available in the next release */
-"CrashResponseNextRelease" = "%@ 不正常退出。好消息？造成崩溃的原因已被发现，并将在后续版本中修正。请耐心等待。";
-
-/* Full text telling the bug is fixed and the new release is waiting at Apple */
-"CrashResponseWaitingApple" = "%@ 不正常。好消息？我们已经解决了这个问题，并已将新版本提交到苹果审核。请在审核期间耐心等待。";
-
-/* Full text telling the bug is fixed and an update is available in the AppStore */
-"CrashResponseAvailable" = "%@ 不正常退出。好消息？我们已经解决了这个问题。请更新到最新版本。";
-
-
 /* Update */
 
 

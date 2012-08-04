@@ -37,21 +37,6 @@
 "CrashReportSending" = "送信中…";
 
 
-/* Crash status dialog */
-
-/* Title for the alertview giving feedback about the crash */
-"CrashResponseTitle" = "%@、前回までは";
-
-/* Full text telling the bug is fixed and will be available in the next release */
-"CrashResponseNextRelease" = "%@ は不正に終了しました。幸い、クラッシュの原因は既に特定され、将来のバージョンで修正されます。今しばらくお待ちください。";
-
-/* Full text telling the bug is fixed and the new release is waiting at Apple */
-"CrashResponseWaitingApple" = "%@ は不正に終了しました。幸い、クラッシュの原因を既に修正したアップデートを Apple に提出しました。公開まで今しばらくお待ちください！";
-
-/* Full text telling the bug is fixed and an update is available in the AppStore */
-"CrashResponseAvailable" = "%@ は不正に終了しました。幸い、クラッシュの原因を既に修正したアップデートが配布されています！最新版にアップデートしてください。";
-
-
 /* Update */
 
 
