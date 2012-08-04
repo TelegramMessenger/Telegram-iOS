@@ -77,8 +77,6 @@ static NSString *kBITCrashManagerStatus = @"BITCrashManagerStatus";
 @private
   NSString *_appIdentifier;
   
-  BITCrashStatus _serverResult;
-  
   NSMutableDictionary *_approvedCrashReports;
 
   NSMutableArray *_crashFiles;
