@@ -29,6 +29,7 @@ HowTos
 
 - [How to do app versioning](HowTo-App-Versioning)
 - [How to upload symbols for crash reporting](HowTo-Upload-Symbols)
+- [How to handle crashes on startup](HowTo-Handle-Crashes-On-Startup)
 
 Troubleshooting
 ===============
