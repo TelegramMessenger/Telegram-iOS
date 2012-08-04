@@ -39,14 +39,18 @@ Example
 	
 	  [[BITHockeyManager sharedHockeyManager] startManager];
 	  
-	  if ([[BITHockeyManager.crashmanager] didCrashInLastSession] &&
-	  	[[BITHockeyManager.crashmanager] timeintervalCrashInLastSessionOccured] < 5) {
+	  if ([self didCrashInLastSessionOnStartup]) {
 	  	// show intermediate UI
 	  } else {
 	  	[self setupApplication];
 	  }
 	  
 	  return YES;
+	}
+	
+	- (BOOL)didCrashInLastSessionOnStartup {
+	  return ([[BITHockeyManager.crashmanager] didCrashInLastSession] &&
+	  	[[BITHockeyManager.crashmanager] timeintervalCrashInLastSessionOccured] < 5);
 	}
 	
 	- (void)setupApplication {
@@ -56,11 +60,15 @@ Example
 	#pragma mark - BITCrashManagerDelegate
 	
 	- (void)crashManager:(BITCrashManager *)crashManager didFailWithError:(NSError *)error {
-	  [self setupApplication];
+	  if ([self didCrashInLastSessionOnStartup) {
+	    [self setupApplication];
+	  }
 	}
 	
 	- (void)crashManagerDidFinishSendingCrashReport:(BITCrashManager *)crashManager {
-	 [self setupApplication];
+	  if ([self didCrashInLastSessionOnStartup) {
+	    [self setupApplication];
+	  }
 	}
 	
 	@end
