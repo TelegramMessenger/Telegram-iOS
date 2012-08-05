@@ -31,6 +31,8 @@ HowTos
 - [How to upload symbols for crash reporting](HowTo-Upload-Symbols)
 - [How to handle crashes on startup](HowTo-Handle-Crashes-On-Startup)
 - [How to do Xcode build confugration based SDK setup](HowTo-Configuration-Based-Setup)
+- [How to add application specific log data](HowTo-Add-Application-Log)
+
 
 Troubleshooting
 ===============
