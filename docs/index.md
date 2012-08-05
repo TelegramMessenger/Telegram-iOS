@@ -30,6 +30,7 @@ HowTos
 - [How to do app versioning](HowTo-App-Versioning)
 - [How to upload symbols for crash reporting](HowTo-Upload-Symbols)
 - [How to handle crashes on startup](HowTo-Handle-Crashes-On-Startup)
+- [How to do Xcode build confugration based SDK setup](HowTo-Configuration-Based-Setup)
 
 Troubleshooting
 ===============
