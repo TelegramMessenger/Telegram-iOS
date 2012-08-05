@@ -1,5 +1,4 @@
-Crashes Don't Appear
-====================
+## Crashes Don't Appear
 
 This is a checklist to help find the issue if crashes do not appear in HockeyApp:
 

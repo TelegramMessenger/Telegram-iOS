@@ -1,5 +1,4 @@
-Introduction
-============
+## Introduction
 
 Mac and iOS crash reports show the stack traces for all running threads of your app of the time a crash occured. But the stack traces only contain memory addresses and don't show class names, methods, file names and line numbers that are needed to understand them.
 
@@ -7,8 +6,7 @@ To get these memory addresses translated you need to upload a dSYM package to th
 
 **WARNING:** Every time you are doing a build, the app binary and the dSYM will get a new unique UUID, no matter if you changed the code or not. So make sure to archive all your binaries and dSYMs that you are using for beta or app store builds!
 
-HowTo
-=====
+## HowTo
 
 Once you have your app ready for beta testing or even to submit it to the App Store, you need to upload the `.dSYM` bundle to HockeyApp to enable symbolication. If you have built your app with Xcode4, menu `Product` > `Archive`, you can find the `.dSYM` as follows:
 

@@ -1,5 +1,4 @@
-Introduction
-============
+## Introduction
 
 We suggest to handle beta and release versions in two separate *apps* on HockeyApp with their own bundle identifier (e.g. by adding "beta" to the bundle identifier), so
 
@@ -13,8 +12,7 @@ We propose the following method to set version numbers in your beta versions:
 * "Bundle Version" should contain a sequential build number, e.g. 1, 2, 3.
 * "Bundle Version String, short" should contain the target official version number, e.g. 1.0.
 
-HowTo
-=====
+## HowTo
 
 The recommended way to do versioning of your app versions is as follows:
 

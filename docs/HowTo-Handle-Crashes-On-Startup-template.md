@@ -1,5 +1,4 @@
-Introduction
-============
+## Introduction
 
 To catch and send crashes that occur while the app is starting up, the app has to get adjusted a little bit to make this work.
 
@@ -10,8 +9,7 @@ The challenges in this scenario are:
 - The app might crash again before the crash report could have been send
 
 
-HowTo
-=====
+## HowTo
 
 1. Setup the SDK
 2. Check if the app crashed in the last session by checking `[BITCrashManager didCrashInLastSession]`
@@ -19,8 +17,7 @@ HowTo
 4. If the crash happened in that timeframe, delay your app initialization and show an intermediate screen
 5. Implement the `BITCrashManagerDelegate` protocol methods `- (void)crashManager:(BITCrashManager *)crashManager didFailWithError:(NSError *)error;` and `- (void)crashManagerDidFinishSendingCrashReport:(BITCrashManager *)crashManager;` and continue app initialization
 
-Example
-=======
+## Example
 
 	@interface BITAppDelegate () <BITCrashManagerDelegate> {}
 	@end

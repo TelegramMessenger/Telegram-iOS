@@ -1,5 +1,4 @@
-Symbolication doesn't work
-==========================
+## Symbolication doesn't work
 
 In most cases the symbolication process doesn't work, since there is no dSYM uploaded to HockeyApp, or the dSYM doesn't match the application binary. So this is also about the rules of binary UUIDs and dSYMs.
 
