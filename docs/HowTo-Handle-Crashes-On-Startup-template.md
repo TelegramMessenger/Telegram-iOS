@@ -46,8 +46,8 @@ The challenges in this scenario are:
 	}
 	
 	- (BOOL)didCrashInLastSessionOnStartup {
-	  return ([[BITHockeyManager.crashmanager] didCrashInLastSession] &&
-	  	[[BITHockeyManager.crashmanager] timeintervalCrashInLastSessionOccured] < 5);
+	  return ([[BITHockeyManager sharedHockeyManager].crashmanager didCrashInLastSession] &&
+	  	[[BITHockeyManager sharedHockeyManager].crashmanager timeintervalCrashInLastSessionOccured] < 5);
 	}
 	
 	- (void)setupApplication {
