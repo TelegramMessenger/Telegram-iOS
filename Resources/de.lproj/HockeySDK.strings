@@ -1,0 +1,101 @@
+﻿/* General */
+
+/* For dialogs yes buttons */
+"HockeyYes" = "Ja";
+
+/* For dialogs no buttons */
+"HockeyNo" = "Nein";
+
+/* For dialogs ok buttons */
+"HockeyOK" = "OK";
+
+
+/* Crash */
+
+
+/* Crash dialog */
+
+/* Title showing in the alert box when crash report data has been found */
+"CrashDataFoundTitle" = "%@ unerwartet beendet";
+
+/* Description explaining that crash data has been found and ask the user if the anonymous data might be uplaoded to the developers server */
+"CrashDataFoundAnonymousDescription" = "Möchten Sie einen anonymen Absturzbericht senden, damit wir das Problem beheben können?";
+
+/* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
+"CrashDataFoundDescription" = "Möchten Sie einen Absturzbericht senden, damit wir das Problem beheben können?";
+
+/* Alert box button if the users wants to send crash data always automatically */
+"CrashSendReportAlways" = "Immer senden";
+
+/* Alert box button to send the crash report once */
+"CrashSendReport" = "Bericht senden";
+
+/* Alert box button to decline sending the report */
+"CrashDontSendReport" = "Nicht senden";
+
+/* Text showing in a processing box that the crash data is being uploaded to the server */
+"CrashReportSending" = "Senden…";
+
+
+/* Update */
+
+
+/* Update Alert view */
+
+/* Update available */
+"UpdateAvailable" = "Aktualisierung verfügbar";
+
+"UpdateAlertTextWithAppVersion" = "%@ ist verfügbar.";
+
+"UpdateAlertMandatoryTextWithAppVersion" = "%@ ist verfügbar und muss installiert werden!";
+
+"UpdateIgnore" = "Ignorieren";
+
+"UpdateShow" = "Anzeigen";
+
+"UpdateInstall" = "Installieren";
+
+
+/* Update Details */
+
+"UpdateScreenTitle" = "Aktualisierung";
+
+"UpdateButtonCheck" = "PRÜFE";
+
+"UpdateButtonSearching" = "PRÜFEN";
+
+"UpdateButtonUpdate" = "UPDATE";
+
+"UpdateButtonInstalling" = "INSTALLIEREN";
+
+"UpdateButtonOffline" = "OFFLINE";
+
+"UpdateInstalled" = "INSTALLIERT";
+
+"UpdateVersion" = "Version";
+
+"UpdateShowPreviousVersions" = "Zeige frühere Versionen...";
+
+"UpdateNoUpdateAvailableTitle" = "Kein Update Verfügbar";
+
+"UpdateNoUpdateAvailableMessage" = "%@ ist bereits die aktuellste Version.";
+
+"UpdateError" = "Fehler";
+
+"UpdateWarning" = "Warnung";
+
+"UpdateNoReleaseNotesAvailable" = "Keine Release Notes verfügbar.";
+
+
+/* Update Authorization  */
+
+"UpdateAuthorizationProgress" = "Autorisierung...";
+
+"UpdateAuthorizationOffline" = "Internet Verbindung wird benötigt!";
+
+"UpdateAuthorizationDenied" = "Autorisierung verweigert. Bitte kontaktieren Sie den Entwickler.";
+
+
+/* Update Simulator Warning */
+
+"UpdateSimulatorMessage" = "Hockey funktioniert nicht im Simulator.";

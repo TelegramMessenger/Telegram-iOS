@@ -1,0 +1,101 @@
+﻿/* General */
+
+/* For dialogs yes buttons */
+"HockeyYes" = "Evet";
+
+/* For dialogs no buttons */
+"HockeyNo" = "Yok";
+
+/* For dialogs ok buttons */
+"HockeyOK" = "Tamam";
+
+
+/* Crash */
+
+
+/* Crash dialog */
+
+/* Title showing in the alert box when crash report data has been found */
+"CrashDataFoundTitle" = "Hata raporu bulundu";
+
+/* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
+"CrashDataFoundAnonymousDescription" = "%@ beklenmeyen bir şekilde kapanmış. Bu hatayı gidermemizi kolaylaştırmak için anonim bir hata raporu göndermek ister misiniz?";
+
+/* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
+"CrashDataFoundDescription" = "%@ beklenmeyen bir şekilde kapanmış. Bu hatayı gidermemizi kolaylaştırmak için bir hata raporu göndermek ister misiniz?";
+
+/* Alert box button if the users wants to send crash data always automatically */
+"CrashSendReportAlways" = "Her seferinde gönder!";
+
+/* Alert box button to send the crash report once */
+"CrashSendReport" = "Gönder!";
+
+/* Alert box button to decline sending the report */
+"CrashDontSendReport" = "Hayır";
+
+/* Text showing in a processing box that the crash data is being uploaded to the server */
+"CrashReportSending" = "Gönderiliyor…";
+
+
+/* Update */
+
+
+/* Update Alert view */
+
+/* Update available */
+"UpdateAvailable" = "Update available";
+
+"UpdateAlertTextWithAppVersion" = "%@ is available.";
+
+"UpdateAlertMandatoryTextWithAppVersion" = "%@ is available and is a mandatory update!";
+
+"UpdateIgnore" = "Ignore";
+
+"UpdateShow" = "Show";
+
+"UpdateInstall" = "Install";
+
+
+/* Update Details */
+
+"UpdateScreenTitle" = "Update";
+
+"UpdateButtonCheck" = "CHECK";
+
+"UpdateButtonSearching" = "CHECKING";
+
+"UpdateButtonUpdate" = "UPDATE";
+
+"UpdateButtonInstalling" = "INSTALLING";
+
+"UpdateButtonOffline" = "OFFLINE";
+
+"UpdateInstalled" = "INSTALLED";
+
+"UpdateVersion" = "Version";
+
+"UpdateShowPreviousVersions" = "Show previous versions...";
+
+"UpdateNoUpdateAvailableTitle" = "No Update Available";
+
+"UpdateNoUpdateAvailableMessage" = "%@ is already the latest version.";
+
+"UpdateError" = "Error";
+
+"UpdateWarning" = "Warning";
+
+"UpdateNoReleaseNotesAvailable" = "No release notes available.";
+
+
+/* Update Authorization  */
+
+"UpdateAuthorizationProgress" = "Authorizing...";
+
+"UpdateAuthorizationOffline" = "Internet connection required!";
+
+"UpdateAuthorizationDenied" = "Authorizing denied. Please contact the developer.";
+
+
+/* Update Simulator Warning */
+
+"UpdateSimulatorMessage" = "Hockey Update does not work in the Simulator.\nThe itms-services:// url scheme is implemented but nonfunctional.";

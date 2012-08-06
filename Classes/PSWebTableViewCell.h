@@ -1,9 +1,6 @@
 //
-//  PSWebTableViewCell.h
-//  HockeyDemo
-//
 //  Created by Peter Steinberger on 04.02.11.
-//  Copyright 2011 Peter Steinberger. All rights reserved.
+//  Copyright 2011-2012 Peter Steinberger. All rights reserved.
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal

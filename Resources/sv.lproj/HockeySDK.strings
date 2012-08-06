@@ -1,0 +1,101 @@
+﻿/* General */
+
+/* For dialogs yes buttons */
+"HockeyYes" = "Ja";
+
+/* For dialogs no buttons */
+"HockeyNo" = "Nej";
+
+/* For dialogs ok buttons */
+"HockeyOK" = "OK";
+
+
+/* Crash */
+
+
+/* Crash dialog */
+
+/* Title showing in the alert box when crash report data has been found */
+"CrashDataFoundTitle" = "%@ kraschade";
+
+/* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
+"CrashDataFoundAnonymousDescription" = "Vill du skicka en anonym kraschrapport så att vi kan lösa felet?";
+
+/* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
+"CrashDataFoundDescription" = "Vill du skicka en kraschrapport så att vi kan lösa felet?";
+
+/* Alert box button if the users wants to send crash data always automatically */
+"CrashSendReportAlways" = "Skicka alltid";
+
+/* Alert box button to send the crash report once */
+"CrashSendReport" = "Skicka rapport";
+
+/* Alert box button to decline sending the report */
+"CrashDontSendReport" = "Skicka inte";
+
+/* Text showing in a processing box that the crash data is being uploaded to the server */
+"CrashReportSending" = "Skickar…";
+
+
+/* Update */
+
+
+/* Update Alert view */
+
+/* Update available */
+"UpdateAvailable" = "Uppdatering tillgänglig";
+
+"UpdateAlertTextWithAppVersion" = "%@ finns.";
+
+"UpdateAlertMandatoryTextWithAppVersion" = "%@ is available and is a mandatory update!";
+
+"UpdateIgnore" = "Ignorera";
+
+"UpdateShow" = "Visa";
+
+"UpdateInstall" = "Installera";
+
+
+/* Update Details */
+
+"UpdateScreenTitle" = "Uppdatera";
+
+"UpdateButtonCheck" = "FRÅGA";
+
+"UpdateButtonSearching" = "FRÅGAR";
+
+"UpdateButtonUpdate" = "UPPDATERA";
+
+"UpdateButtonInstalling" = "INSTALLERAR";
+
+"UpdateButtonOffline" = "OFFLINE";
+
+"UpdateInstalled" = "INSTALLERAD";
+
+"UpdateVersion" = "Version";
+
+"UpdateShowPreviousVersions" = "Se tidigare versioner...";
+
+"UpdateNoUpdateAvailableTitle" = "Ingen uppdatering tillgänglig";
+
+"UpdateNoUpdateAvailableMessage" = "%@ är den senaste versionen.";
+
+"UpdateError" = "Error";
+
+"UpdateWarning" = "Varning";
+
+"UpdateNoReleaseNotesAvailable" = "Inga releasenoteringar tillgängliga.";
+
+
+/* Update Authorization  */
+
+"UpdateAuthorizationProgress" = "Auktoriserar...";
+
+"UpdateAuthorizationOffline" = "Internetuppkoppling krävs!";
+
+"UpdateAuthorizationDenied" = "Auktoriseringen nekades. Kontakta utvecklaren.";
+
+
+/* Update Simulator Warning */
+
+"UpdateSimulatorMessage" = "Hockey Update fungerar inte i Simulatorn.\nitms-services:// url schemat är implementerat men fungerar ej.";
