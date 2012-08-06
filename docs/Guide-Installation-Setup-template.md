@@ -5,10 +5,19 @@ It is possible to install HockeySDK either using a [binary framework distributio
 
 This document contains the following sections:
 
+- [Prerequisites](#prerequisites)
 - [Installation with binary framework distribution](#framework)
 - [Installation as subproject](#subproject)
 - [Setup HockeySDK](#setup)
 
+<a id="prerequisites"></a> 
+## Prerequisites
+
+1. Before you integrate HockeySDK into your own app, you should add the app to HockeyApp if you haven't already. Read [this how-to](http://support.hockeyapp.net/kb/how-tos/how-to-create-a-new-app) on how to do it.
+2. We also assume that you already have a project in Xcode and that this project is opened in Xcode 4.
+3. The SDK supports iOS 4.0 or newer.
+4. Make sure any other crash reporting framework or exception handler is **disabled**!
+5. Make sure previous versions of `PLCrashReporter` is removed! Search for `CrashReporter.framework` in your Project navigator.
 
 <a id="framework"></a> 
 ## Installation with binary framework distribution
@@ -46,7 +55,19 @@ This document contains the following sections:
     ![XcodeOtherLinkerFlags.png](XcodeOtherLinkerFlags_normal.png)
 
 14. Hit `Done`.
-15. HockeySDK-iOS also needs a JSON library. If you deployment target iOS >= 5, everything is set. If your deployment target is iOS 4.x, please include one of the following libraries:
+16. Search for `preprocessor macros`
+
+    ![XcodeMacros1.png](XcodeMacros1_normal.png)
+
+17. Select the top-most line and double-click the value field.
+18. Click the + button.
+19. Enter the following string into the input field and finish with "Done".<pre><code>CONFIGURATION_$(CONFIGURATION)</code></pre>
+
+    ![XcodeMacros2.png](XcodeMacros2_normal.png)
+
+    Now you can use `#if defined (CONFIGURATION_ABCDEF)` directives in your code, where `ABCDEF` is the actual name of **YOUR** build configuration.
+
+20. HockeySDK-iOS also needs a JSON library. If you deployment target iOS >= 5, everything is set. If your deployment target is iOS 4.x, please include one of the following libraries:
 	* [JSONKit](https://github.com/johnezang/JSONKit)
 	* [SBJSON](https://github.com/stig/json-framework)
 	* [YAJL](https://github.com/gabriel/yajl-objc)
@@ -108,7 +129,18 @@ This document contains the following sections:
     ![XcodeOtherLinkerFlags.png](XcodeOtherLinkerFlags_normal.png)
 
 19. Hit `Done`.
-20. HockeySDK-iOS also needs a JSON library. If you deployment target iOS >= 5, everything is set. If your deployment target is iOS 4.x, please include one of the following libraries:
+20. Search for `preprocessor macros`
+
+    ![XcodeMacros1.png](XcodeMacros1_normal.png)
+
+21. Select the top-most line and double-click the value field.
+22. Click the + button.
+23. Enter the following string into the input field and finish with "Done".<pre><code>CONFIGURATION_$(CONFIGURATION)</code></pre>
+
+    ![XcodeMacros2.png](XcodeMacros2_normal.png)
+
+    Now you can use `#if defined (CONFIGURATION_ABCDEF)` directives in your code, where `ABCDEF` is the actual name of **YOUR** build configuration.
+24. HockeySDK-iOS also needs a JSON library. If you deployment target iOS >= 5, everything is set. If your deployment target is iOS 4.x, please include one of the following libraries:
 	* [JSONKit](https://github.com/johnezang/JSONKit)
 	* [SBJSON](https://github.com/stig/json-framework)
 	* [YAJL](https://github.com/gabriel/yajl-objc)
