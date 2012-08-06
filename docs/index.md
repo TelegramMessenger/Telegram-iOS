@@ -32,4 +32,4 @@ The main SDK class is `BITHockeyManager`. It initializes all modules and provide
 ## Troubleshooting
 
 - [Symbolication doesn't work](Symbolication-Doesnt-Work) (Or the rules of binary UUIDs and dSYMs)
-- [Crashes do not appear on HockeyApp](Troubleshooting-Crashes-Dont-Appear)
+- [Crash Reporting is not working](Troubleshooting-Crash-Reporting-Not-Working)
