@@ -55,19 +55,19 @@ This document contains the following sections:
     ![XcodeOtherLinkerFlags.png](XcodeOtherLinkerFlags_normal.png)
 
 14. Hit `Done`.
-16. Search for `preprocessor macros`
+15. Search for `preprocessor macros`
 
     ![XcodeMacros1.png](XcodeMacros1_normal.png)
 
-17. Select the top-most line and double-click the value field.
-18. Click the + button.
-19. Enter the following string into the input field and finish with "Done".<pre><code>CONFIGURATION_$(CONFIGURATION)</code></pre>
+16. Select the top-most line and double-click the value field.
+17. Click the + button.
+18. Enter the following string into the input field and finish with "Done".<pre><code>CONFIGURATION_$(CONFIGURATION)</code></pre>
 
     ![XcodeMacros2.png](XcodeMacros2_normal.png)
 
     Now you can use `#if defined (CONFIGURATION_ABCDEF)` directives in your code, where `ABCDEF` is the actual name of **YOUR** build configuration.
 
-20. HockeySDK-iOS also needs a JSON library. If you deployment target iOS >= 5, everything is set. If your deployment target is iOS 4.x, please include one of the following libraries:
+19. HockeySDK-iOS also needs a JSON library. If you deployment target iOS >= 5, everything is set. If your deployment target is iOS 4.x, please include one of the following libraries:
 	* [JSONKit](https://github.com/johnezang/JSONKit)
 	* [SBJSON](https://github.com/stig/json-framework)
 	* [YAJL](https://github.com/gabriel/yajl-objc)
