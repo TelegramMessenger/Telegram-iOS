@@ -72,6 +72,7 @@
   if ((self = [super init])) {
     BITHockeyLog(@"Initializing CrashReporter");
     
+    _updateURL = BITHOCKEYSDK_URL;
     _appIdentifier = appIdentifier;
     
     _delegate = nil;
@@ -148,6 +149,9 @@
 - (void) dealloc {
   _delegate = nil;
   [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
+  
+  [_updateURL release];
+  _updateURL = nil;
   
   [_appIdentifier release];
   _appIdentifier = nil;
@@ -523,9 +527,7 @@
   
   if (crashes != nil) {
     BITHockeyLog(@"Sending crash reports:\n%@", crashes);
-    [self postXML:[NSString stringWithFormat:@"<crashes>%@</crashes>", crashes]
-            toURL:[NSURL URLWithString:BITHOCKEYSDK_URL]];
-    
+    [self postXML:[NSString stringWithFormat:@"<crashes>%@</crashes>", crashes]];
   }
 }
 
@@ -565,13 +567,13 @@
 
 #pragma mark - Networking
 
-- (void)postXML:(NSString*)xml toURL:(NSURL*)url {
+- (void)postXML:(NSString*)xml {
   NSMutableURLRequest *request = nil;
   NSString *boundary = @"----FOO";
   
   request = [NSMutableURLRequest requestWithURL:
              [NSURL URLWithString:[NSString stringWithFormat:@"%@api/2/apps/%@/crashes?sdk=%@&sdk_version=%@&feedbackEnabled=no",
-                                   BITHOCKEYSDK_URL,
+                                   _updateURL,
                                    [_appIdentifier stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding],
                                    BITHOCKEY_NAME,
                                    BITHOCKEY_VERSION

@@ -277,6 +277,7 @@
     _appIdentifier = appIdentifier;
     _isAppStoreEnvironment = isAppStoreEnvironment;
     
+    _updateURL = BITHOCKEYSDK_URL;
     _delegate = nil;
     _checkInProgress = NO;
     _dataFound = NO;
@@ -344,6 +345,9 @@
   
   _delegate = nil;
   
+  [_updateURL release];
+  _updateURL = nil;
+
   [_urlConnection cancel];
   self.urlConnection = nil;
   
@@ -638,7 +642,7 @@
    ];
   
   // build request & send
-  NSString *url = [NSString stringWithFormat:@"%@%@", BITHOCKEYSDK_URL, parameter];
+  NSString *url = [NSString stringWithFormat:@"%@%@", _updateURL, parameter];
   BITHockeyLog(@"sending api request to %@", url);
   
   NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url] cachePolicy:1 timeoutInterval:10.0];
@@ -748,7 +752,7 @@
   }
   
   // build request & send
-  NSString *url = [NSString stringWithFormat:@"%@%@", BITHOCKEYSDK_URL, parameter];
+  NSString *url = [NSString stringWithFormat:@"%@%@", _updateURL, parameter];
   BITHockeyLog(@"sending api request to %@", url);
   
   NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url] cachePolicy:1 timeoutInterval:10.0];
@@ -784,7 +788,7 @@
     extraParameter = [NSString stringWithFormat:@"&udid=%@", [self deviceIdentifier]];
   }
   
-  NSString *hockeyAPIURL = [NSString stringWithFormat:@"%@api/2/apps/%@?format=plist%@", BITHOCKEYSDK_URL, [self encodedAppIdentifier], extraParameter];
+  NSString *hockeyAPIURL = [NSString stringWithFormat:@"%@api/2/apps/%@?format=plist%@", _updateURL, [self encodedAppIdentifier], extraParameter];
   NSString *iOSUpdateURL = [NSString stringWithFormat:@"itms-services://?action=download-manifest&url=%@", [hockeyAPIURL bit_URLEncodedString]];
   
   BITHockeyLog(@"API Server Call: %@, calling iOS with %@", hockeyAPIURL, iOSUpdateURL);

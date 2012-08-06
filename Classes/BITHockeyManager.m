@@ -66,6 +66,8 @@
 
 - (id) init {
   if ((self = [super init])) {
+    _updateURL = nil;
+    
     _disableCrashManager = NO;
     _disableUpdateManager = NO;
     
@@ -121,12 +123,22 @@
   _startManagerIsInvoked = YES;
   
   // start CrashManager
-  BITHockeyLog(@"Start crashManager");
-  [_crashManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
-    
+  if (![self isCrashManagerDisabled]) {
+    BITHockeyLog(@"Start crashManager");
+    if (_updateURL) {
+      [_crashManager setUpdateURL:_updateURL];
+    }
+    [_crashManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
+  }
+  
   // Setup UpdateManager
-  BITHockeyLog(@"Start UpdateManager");
-  [_updateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
+  if (![self isUpdateManagerDisabled]) {
+    BITHockeyLog(@"Start UpdateManager");
+    if (_updateURL) {
+      [_updateManager setUpdateURL:_updateURL];
+    }
+    [_updateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
+  }
 }
 
 
@@ -135,6 +147,19 @@
     if (!_startManagerIsInvoked) {
       NSLog(@"ERROR: You did not call [[BITHockeyManager sharedHockeyManager] startManager] to startup the HockeySDK! Please do so after setting up all properties. The SDK is NOT running.");
     }
+  }
+}
+
+
+- (void)setUpdateURL:(NSString *)anUpdateURL {
+  // ensure url ends with a trailing slash
+  if (![anUpdateURL hasSuffix:@"/"]) {
+    anUpdateURL = [NSString stringWithFormat:@"%@/", anUpdateURL];
+  }
+  
+  if (_updateURL != anUpdateURL) {
+    [_updateURL release];
+    _updateURL = [anUpdateURL copy];
   }
 }
 
@@ -169,15 +194,11 @@
   _startManagerIsInvoked = NO;
   
   if (_validAppIdentifier) {
-    if (![self isCrashManagerDisabled]) {
-      BITHockeyLog(@"Setup CrashManager");
-      _crashManager = [[BITCrashManager alloc] initWithAppIdentifier:_appIdentifier];
-    }
+    BITHockeyLog(@"Setup CrashManager");
+    _crashManager = [[BITCrashManager alloc] initWithAppIdentifier:_appIdentifier];
     
-    if (![self isUpdateManagerDisabled]) {
-      BITHockeyLog(@"Setup UpdateManager");
-      _updateManager = [[BITUpdateManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
-    }
+    BITHockeyLog(@"Setup UpdateManager");
+    _updateManager = [[BITUpdateManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
     
     // Only if JMC is part of the project
     if ([[self class] isJMCPresent]) {

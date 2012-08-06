@@ -147,6 +147,15 @@
 
 
 /**
+ Defines the server URL to send data to or request data from
+ 
+ By default this is set to the HockeyApp servers and there rarely should be a
+ need to modify that.
+ */
+@property (nonatomic, retain) NSString *updateURL;
+
+
+/**
  Reference to the initialized BITCrashManager module
  
  @see configureWithIdentifier:delegate:
@@ -162,7 +171,9 @@
  Flag the determines wether the Crash Manager should be disabled
  
  If this flag is enabled, then crash reporting is disabled and no crashes will
- be detected and send
+ be send.
+ 
+ Please note that the Crash Manager will be initialized anyway!
 
  *Default*: _NO_
  @see crashManager
@@ -187,6 +198,8 @@
  
  If this flag is enabled, then checking for updates and submitting beta usage
  analytics will be turned off!
+ 
+ Please note that the Update Manager will be initialized anyway!
  
  *Default*: _NO_
  @see updateManager

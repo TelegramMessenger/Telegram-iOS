@@ -34,6 +34,9 @@
 @interface BITCrashManager () {
 }
 
+// set the server URL
+@property (nonatomic, retain) NSString *updateURL;
+
 - (id)initWithAppIdentifier:(NSString *)appIdentifier;
 
 - (void)startManager;
