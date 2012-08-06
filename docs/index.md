@@ -16,6 +16,10 @@ The main SDK class is `BITHockeyManager`. It initializes all modules and provide
 2. We also assume that you already have a project in Xcode and that this project is opened in Xcode 4.
 3. The SDK supports iOS 4.0 or newer.
 
+## Release Notes
+
+- [Changelog](Changelog)
+
 ## Guides
 
 - [Installation & Setup](Guide-Installation-Setup)
