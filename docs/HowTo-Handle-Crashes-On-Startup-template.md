@@ -46,8 +46,8 @@ The challenges in this scenario are:
 	}
 	
 	- (BOOL)didCrashInLastSessionOnStartup {
-	  return ([[BITHockeyManager sharedHockeyManager].crashmanager didCrashInLastSession] &&
-	  	[[BITHockeyManager sharedHockeyManager].crashmanager timeintervalCrashInLastSessionOccured] < 5);
+	  return ([[BITHockeyManager sharedHockeyManager].crashManager didCrashInLastSession] &&
+	  	[[BITHockeyManager sharedHockeyManager].crashManager timeintervalCrashInLastSessionOccured] < 5);
 	}
 	
 	- (void)setupApplication {
@@ -57,13 +57,13 @@ The challenges in this scenario are:
 	#pragma mark - BITCrashManagerDelegate
 	
 	- (void)crashManager:(BITCrashManager *)crashManager didFailWithError:(NSError *)error {
-	  if ([self didCrashInLastSessionOnStartup) {
+	  if ([self didCrashInLastSessionOnStartup]) {
 	    [self setupApplication];
 	  }
 	}
 	
 	- (void)crashManagerDidFinishSendingCrashReport:(BITCrashManager *)crashManager {
-	  if ([self didCrashInLastSessionOnStartup) {
+	  if ([self didCrashInLastSessionOnStartup]) {
 	    [self setupApplication];
 	  }
 	}

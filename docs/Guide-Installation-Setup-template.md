@@ -156,6 +156,8 @@ This document contains the following sections:
 5. Add the following lines:<pre><code>[[BITHockeyManager sharedHockeyManager] configureWithBetaIdentifier:@"BETA_IDENTIFIER" 
                                                         liveIdentifier:@"LIVE_IDENTIFIER"
                                                               delegate:self];
+[[BITHockeyManager sharedHockeyManager].updateManager setDelegate:self];
+[[BITHockeyManager sharedHockeyManager].crashManager setDelegate:self];
 [[BITHockeyManager sharedHockeyManager] startManager];</code></pre>
 6. Replace `BETA_IDENTIFIER` with the app identifier of your beta app. If you don't know what the app identifier is or how to find it, please read [this how-to](http://support.hockeyapp.net/kb/how-tos/how-to-find-the-app-identifier). 
 7. Replace `LIVE_IDENTIFIER` with the app identifier of your release app.

@@ -8,6 +8,8 @@
 		  The previous SDKs are still available and are still working. But future
 		  HockeyApp features will only be integrated in this new unified SDK.
 		- Integration either as framework or Xcode subproject using the sourcecode
+		
+		  Check out [Installation & Setup](Guide-Installation-Setup)
 	- [NEW] Cleaned up public interfaces and internal processing all across the SDK
 	- [NEW] [AppleDoc](http://gentlebytes.com/appledoc/) based documentation and HowTos
 	
