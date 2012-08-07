@@ -16,11 +16,13 @@ This is a checklist to help find the issue if crashes do not appear in HockeyApp
 
 5. Make sure Xcode debugger is not attached while causing the app to crash
 
-6. If you are using `#ifdef (CONFIGURATION_something)`, make sure that the `something` string matches the exact name of your Xcode build configuration. Spaces are not allowed!
+6. Are you trying to catch "out of memory crashes"? This is _NOT_ possible! Out of memory crashes are actually kills by the watchdog process. Whenever you kill a process, there is no crash happening. The crash reports for those that you see on iTunes Connect, are arbitrary reports written by the watchdog process that did the kill. So they only system that can provide information about these, is iOS itself.
 
-7. Remove of at least disable any other exception handler or crash reporting framework.
+7. If you are using `#ifdef (CONFIGURATION_something)`, make sure that the `something` string matches the exact name of your Xcode build configuration. Spaces are not allowed!
 
-8. If there an older version of PLCrashReporters framework `CrashReporter.framework` added to the project, remove it.
+8. Remove or at least disable any other exception handler or crash reporting framework.
 
-9. If it still does not work, please [contact us](http://support.hockeyapp.net/discussion/new).
+9. If there an older version of PLCrashReporters framework `CrashReporter.framework` added to the project, remove it.
+
+10. If it still does not work, please [contact us](http://support.hockeyapp.net/discussion/new).
 
