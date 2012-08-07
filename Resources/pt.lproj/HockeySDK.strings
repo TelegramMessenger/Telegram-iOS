@@ -96,6 +96,11 @@
 "UpdateAuthorizationDenied" = "Autorização negada. Contate o desenvolvedor.";
 
 
+/* Update Expiry  */
+
+"UpdateExpired" = "%@ is expired and can not be used any longer.";
+
+
 /* Update Simulator Warning */
 
 "UpdateSimulatorMessage" = "Hockey Update não funciona no Simulador.\nA url itms-services:// é implementada mas não é funcional.";

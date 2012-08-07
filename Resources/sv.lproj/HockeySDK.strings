@@ -96,6 +96,11 @@
 "UpdateAuthorizationDenied" = "Auktoriseringen nekades. Kontakta utvecklaren.";
 
 
+/* Update Expiry  */
+
+"UpdateExpired" = "%@ is expired and can not be used any longer.";
+
+
 /* Update Simulator Warning */
 
 "UpdateSimulatorMessage" = "Hockey Update fungerar inte i Simulatorn.\nitms-services:// url schemat är implementerat men fungerar ej.";

@@ -131,8 +131,47 @@
   return nil;
 }
 
+#pragma mark - Expiry
+
+- (BOOL)expiryDateReached {
+  if (_isAppStoreEnvironment) return NO;
+  
+  if (_expiryDate) {
+    NSDate *currentDate = [NSDate date];
+    if ([currentDate compare:_expiryDate] != NSOrderedAscending)
+      return YES;
+  }
+  
+  return NO;
+}
+
+- (void)checkExpiryDateReached {
+  if (![self expiryDateReached]) return;
+  
+  BOOL shouldShowDefaultAlert = YES;
+  
+  if (self.delegate != nil && [self.delegate respondsToSelector:@selector(shouldDisplayExpiryAlertForUpdateManager:)]) {
+    shouldShowDefaultAlert = [self.delegate shouldDisplayExpiryAlertForUpdateManager:self];
+  }
+  
+  if (shouldShowDefaultAlert) {
+    NSString *appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"];
+    
+    [self alertFallback:[NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateExpired"), appName]];
+    
+    if (self.delegate != nil && [self.delegate respondsToSelector:@selector(didDisplayExpiryAlertForUpdateManager:)]) {
+      [self.delegate didDisplayExpiryAlertForUpdateManager:self];
+    }
+  }
+}
+
+#pragma mark - Usage
+
 - (void)startUsage {
+  if ([self expiryDateReached]) return;
+
   self.usageStartTimestamp = [NSDate date];
+  
   BOOL newVersion = NO;
   
   if (![[NSUserDefaults standardUserDefaults] valueForKey:kBITUpdateUsageTimeForVersionString]) {
@@ -152,6 +191,8 @@
 }
 
 - (void)stopUsage {
+  if ([self expiryDateReached]) return;
+  
   double timeDifference = [[NSDate date] timeIntervalSinceReferenceDate] - [_usageStartTimestamp timeIntervalSinceReferenceDate];
   double previousTimeDifference = [(NSNumber *)[[NSUserDefaults standardUserDefaults] valueForKey:kBITUpdateUsageTimeOfCurrentVersion] doubleValue];
   
@@ -181,6 +222,8 @@
   }
 }
 
+#pragma mark - Device identifier
+
 - (NSString *)deviceIdentifier {
   if ([_delegate respondsToSelector:@selector(customDeviceIdentifierForUpdateManager:)]) {
     NSString *identifier = [_delegate performSelector:@selector(customDeviceIdentifierForUpdateManager:) withObject:self];
@@ -191,6 +234,8 @@
   
   return @"invalid";
 }
+
+#pragma mark - Authorization
 
 - (NSString *)authenticationToken {
   return [BITHockeyMD5([NSString stringWithFormat:@"%@%@%@%@",
@@ -218,6 +263,8 @@
   }
   return BITUpdateAuthorizationPending;
 }
+
+#pragma mark - Cache
 
 - (void)checkUpdateAvailable {
   // check if there is an update available
@@ -247,6 +294,8 @@
   [[NSUserDefaults standardUserDefaults] setObject:data forKey:kBITUpdateArrayOfLastCheck];
   [[NSUserDefaults standardUserDefaults] synchronize];
 }
+
+#pragma mark - Window Helper
 
 - (UIWindow *)findVisibleWindow {
   UIWindow *visibleWindow = nil;
@@ -279,6 +328,7 @@
     
     _updateURL = BITHOCKEYSDK_URL;
     _delegate = nil;
+    _expiryDate = nil;
     _checkInProgress = NO;
     _dataFound = NO;
     _updateAvailable = NO;
@@ -330,6 +380,7 @@
     [dnc addObserver:self selector:@selector(startManager) name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
     
     [dnc addObserver:self selector:@selector(stopUsage) name:UIApplicationWillTerminateNotification object:nil];
+    [dnc addObserver:self selector:@selector(checkExpiryDateReached) name:UIApplicationDidBecomeActiveNotification object:nil];
     [dnc addObserver:self selector:@selector(startUsage) name:UIApplicationDidBecomeActiveNotification object:nil];
     [dnc addObserver:self selector:@selector(stopUsage) name:UIApplicationWillResignActiveNotification object:nil];
   }
@@ -350,6 +401,9 @@
 
   [_urlConnection cancel];
   self.urlConnection = nil;
+  
+  [_expiryDate release];
+  _expiryDate = nil;
   
   [_navController release];
   [_authorizeView release];
@@ -474,7 +528,7 @@
   UIAlertView *alertView = [[[UIAlertView alloc] initWithTitle:nil
                                                        message:message
                                                       delegate:self
-                                             cancelButtonTitle:@"Ok"
+                                             cancelButtonTitle:BITHockeyLocalizedString(@"HockeyOK")
                                              otherButtonTitles:nil
                              ] autorelease];
   [alertView setTag:1];
@@ -707,7 +761,9 @@
 
 - (void)checkForUpdate {
   if (_isAppStoreEnvironment && !_checkForTracker) return;
-  
+
+  if ([self expiryDateReached]) return;
+
   if (self.requireAuthorization) return;
   if (self.isUpdateAvailable && [self hasNewerMandatoryVersion]) {
     [self showCheckForUpdateAlert];
@@ -827,6 +883,8 @@
 
 // begin the startup process
 - (void)startManager {
+  if ([self expiryDateReached]) return;
+  
   if (![self appVersionIsAuthorized]) {
     if ([self authorizationState] == BITUpdateAuthorizationPending) {
       [self showAuthorizationScreen:BITHockeyLocalizedString(@"UpdateAuthorizationProgress") image:@"authorize_request.png"];

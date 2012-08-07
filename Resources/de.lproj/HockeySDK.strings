@@ -96,6 +96,11 @@
 "UpdateAuthorizationDenied" = "Autorisierung verweigert. Bitte kontaktieren Sie den Entwickler.";
 
 
+/* Update Expiry  */
+
+"UpdateExpired" = "%@ ist abgelaufen und kann nicht weiter benutzt werden.";
+
+
 /* Update Simulator Warning */
 
 "UpdateSimulatorMessage" = "Hockey funktioniert nicht im Simulator.";

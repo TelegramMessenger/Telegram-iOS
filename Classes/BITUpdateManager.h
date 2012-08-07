@@ -254,10 +254,34 @@ typedef enum {
  Set the token to the `Secret ID` which HockeyApp provides for every app.
  
  When running the app from the App Store, this setting is ignored.
-
+ 
  @see requireAuthorization
  */
 @property (nonatomic, retain) NSString *authenticationSecret;
+
+
+///-----------------------------------------------------------------------------
+/// @name Expiry
+///-----------------------------------------------------------------------------
+
+/**
+ Expiry date of the current app version
+ 
+ If set, the app will get unusable at the given date showing a neverending
+ alert. Alternatively the developer can present his own UI by implementing
+ the `[BITUpdateManagerDelegate shouldDisplayExpiryAlertForUpdateManager:]` delegate.
+ 
+ Once the expiry date is reached, the app will no longer check for updates or
+ send any usage data to the server!
+ 
+ When running the app from the App Store, this setting is ignored.
+ 
+ *Default*: nil
+ @see [BITUpdateManagerDelegate shouldDisplayExpiryAlertForUpdateManager:]
+ @see [BITUpdateManagerDelegate didDisplayExpiryAlertForUpdateManager:]
+ @warning This only works when using Ad-Hoc provisioning profiles!
+ */
+@property (nonatomic, retain) NSDate *expiryDate;
 
 
 ///-----------------------------------------------------------------------------

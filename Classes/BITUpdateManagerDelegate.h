@@ -60,6 +60,43 @@
 
 @optional
 
+
+///-----------------------------------------------------------------------------
+/// @name Expiry
+///-----------------------------------------------------------------------------
+
+/**
+ Return if expiry alert should be shown if date is reached
+ 
+ If you want to display your own user interface when the expiry date is reached,
+ implement this method, present your user interface and return _NO_. In this case
+ it is your responsibility to make the app unusable!
+ 
+ If you return _YES_ the default neverending expiry alert message will be shown.
+ 
+ When running the app from the App Store, this delegate is ignored.
+ 
+ @param updateManager The `BITUpdateManager` instance invoking this delegate
+ @see [BITUpdateManager expiryDate]
+ @see [BITUpdateManagerDelegate didDisplayExpiryAlertForUpdateManager:]
+ */
+- (BOOL)shouldDisplayExpiryAlertForUpdateManager:(BITUpdateManager *)updateManager;
+
+
+/**
+ Invoked once a default expiry alert is shown
+ 
+ Once expiry date is reached and the default neverending expiry alert is shown,
+ this delegate method is invoked to provide you the possibility to do any
+ desired additional processing.
+ 
+ @param updateManager The `BITUpdateManager` instance invoking this delegate
+ @see [BITUpdateManager expiryDate]
+ @see [BITUpdateManagerDelegate shouldDisplayExpiryAlertForUpdateManager:]
+ */
+- (void)didDisplayExpiryAlertForUpdateManager:(BITUpdateManager *)updateManager;
+
+
 ///-----------------------------------------------------------------------------
 /// @name Privacy
 ///-----------------------------------------------------------------------------

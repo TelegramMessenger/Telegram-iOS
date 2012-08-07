@@ -96,6 +96,11 @@
 "UpdateAuthorizationDenied" = "Authorizing denied. Please contact the developer.";
 
 
+/* Update Expiry  */
+
+"UpdateExpired" = "%@ is expired and can not be used any longer.";
+
+
 /* Update Simulator Warning */
 
 "UpdateSimulatorMessage" = "Hockey Update does not work in the Simulator.\nThe itms-services:// url scheme is implemented but nonfunctional.";

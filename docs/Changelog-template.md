@@ -30,6 +30,7 @@
 		Please keep using QuincyKit for now if you want this feature. This feature needs to be
 		redesigned on SDK and server side to be more efficient and easier to use.
 - Updating:
+	- [NEW] Expire beta versions with a given date
 	- [REMOVED] Settings screen
 
 		If you want users to be able not to send analytics data, implement the
