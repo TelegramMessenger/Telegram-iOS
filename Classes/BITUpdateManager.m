@@ -72,7 +72,7 @@
 @synthesize showDirectInstallOption = _showDirectInstallOption;
 @synthesize requireAuthorization = _requireAuthorization;
 @synthesize authenticationSecret = _authenticationSecret;
-@synthesize authorizeView = _authorizeView;
+@synthesize blockingView = _blockingView;
 @synthesize checkForTracker = _checkForTracker;
 @synthesize trackerConfig = _trackerConfig;
 @synthesize barStyle = _barStyle;
@@ -156,9 +156,8 @@
   
   if (shouldShowDefaultAlert) {
     NSString *appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"];
-    
-    [self alertFallback:[NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateExpired"), appName]];
-    
+    [self showBlockingScreen:[NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateExpired"), appName] image:@"authorize_denied.png"];
+
     if (self.delegate != nil && [self.delegate respondsToSelector:@selector(didDisplayExpiryAlertForUpdateManager:)]) {
       [self.delegate didDisplayExpiryAlertForUpdateManager:self];
     }
@@ -335,7 +334,7 @@
     _lastCheckFailed = NO;
     _currentAppVersion = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"];
     _navController = nil;
-    _authorizeView = nil;
+    _blockingView = nil;
     _requireAuthorization = NO;
     _authenticationSecret = nil;
     _lastCheck = nil;
@@ -406,7 +405,7 @@
   _expiryDate = nil;
   
   [_navController release];
-  [_authorizeView release];
+  [_blockingView release];
   [_currentHockeyViewController release];
   [_appVersions release];
   [_receivedData release];
@@ -537,8 +536,8 @@
 
 
 // open an authorization screen
-- (void)showAuthorizationScreen:(NSString *)message image:(NSString *)image {
-  self.authorizeView = nil;
+- (void)showBlockingScreen:(NSString *)message image:(NSString *)image {
+  self.blockingView = nil;
   
   UIWindow *visibleWindow = [self findVisibleWindow];
   if (visibleWindow == nil) {
@@ -548,24 +547,24 @@
   
   CGRect frame = [visibleWindow frame];
   
-  self.authorizeView = [[[UIView alloc] initWithFrame:frame] autorelease];
+  self.blockingView = [[[UIView alloc] initWithFrame:frame] autorelease];
   UIImageView *backgroundView = [[[UIImageView alloc] initWithImage:[UIImage bit_imageNamed:@"bg.png" bundle:BITHOCKEYSDK_BUNDLE]] autorelease];
   backgroundView.contentMode = UIViewContentModeScaleAspectFill;
   backgroundView.frame = frame;
-  [self.authorizeView addSubview:backgroundView];
+  [self.blockingView addSubview:backgroundView];
   
   if (image != nil) {
     UIImageView *imageView = [[[UIImageView alloc] initWithImage:[UIImage bit_imageNamed:image bundle:BITHOCKEYSDK_BUNDLE]] autorelease];
     imageView.contentMode = UIViewContentModeCenter;
     imageView.frame = frame;
-    [self.authorizeView addSubview:imageView];
+    [self.blockingView addSubview:imageView];
   }
   
   if (message != nil) {
     frame.origin.x = 20;
     frame.origin.y = frame.size.height - 140;
     frame.size.width -= 40;
-    frame.size.height = 40;
+    frame.size.height = 50;
     
     UILabel *label = [[[UILabel alloc] initWithFrame:frame] autorelease];
     label.text = message;
@@ -573,10 +572,10 @@
     label.numberOfLines = 2;
     label.backgroundColor = [UIColor clearColor];
     
-    [self.authorizeView addSubview:label];
+    [self.blockingView addSubview:label];
   }
   
-  [visibleWindow addSubview:self.authorizeView];
+  [visibleWindow addSubview:self.blockingView];
 }
 
 
@@ -733,7 +732,7 @@
         [[NSUserDefaults standardUserDefaults] synchronize];
         
         self.requireAuthorization = NO;
-        self.authorizeView = nil;
+        self.blockingView = nil;
         
         // now continue with an update check right away
         if (self.checkForUpdateOnLaunch) {
@@ -748,14 +747,14 @@
         [[NSUserDefaults standardUserDefaults] setObject:token forKey:kBITUpdateAuthorizedVersion];
         [[NSUserDefaults standardUserDefaults] synchronize];
         
-        [self showAuthorizationScreen:BITHockeyLocalizedString(@"UpdateAuthorizationDenied") image:@"authorize_denied.png"];
+        [self showBlockingScreen:BITHockeyLocalizedString(@"UpdateAuthorizationDenied") image:@"authorize_denied.png"];
       }
     }
     
   }
   
   if (failed) {
-    [self showAuthorizationScreen:BITHockeyLocalizedString(@"UpdateAuthorizationOffline") image:@"authorize_request.png"];
+    [self showBlockingScreen:BITHockeyLocalizedString(@"UpdateAuthorizationOffline") image:@"authorize_request.png"];
   }
 }
 
@@ -865,13 +864,13 @@
   }
   
   if (!self.requireAuthorization) {
-    self.authorizeView = nil;
+    self.blockingView = nil;
     return YES;
   }
   
   BITUpdateAuthorizationState state = [self authorizationState];
   if (state == BITUpdateAuthorizationDenied) {
-    [self showAuthorizationScreen:BITHockeyLocalizedString(@"UpdateAuthorizationDenied") image:@"authorize_denied.png"];
+    [self showBlockingScreen:BITHockeyLocalizedString(@"UpdateAuthorizationDenied") image:@"authorize_denied.png"];
   } else if (state == BITUpdateAuthorizationAllowed) {
     self.requireAuthorization = NO;
     return YES;
@@ -887,7 +886,7 @@
   
   if (![self appVersionIsAuthorized]) {
     if ([self authorizationState] == BITUpdateAuthorizationPending) {
-      [self showAuthorizationScreen:BITHockeyLocalizedString(@"UpdateAuthorizationProgress") image:@"authorize_request.png"];
+      [self showBlockingScreen:BITHockeyLocalizedString(@"UpdateAuthorizationProgress") image:@"authorize_request.png"];
       
       [self performSelector:@selector(checkForAuthorization) withObject:nil afterDelay:0.0f];
     }
@@ -1100,11 +1099,11 @@
   return appVersion;
 }
 
-- (void)setAuthorizeView:(UIView *)anAuthorizeView {
-  if (_authorizeView != anAuthorizeView) {
-    [_authorizeView removeFromSuperview];
-    [_authorizeView release];
-    _authorizeView = [anAuthorizeView retain];
+- (void)setBlockingView:(UIView *)anBlockingView {
+  if (_blockingView != anBlockingView) {
+    [_blockingView removeFromSuperview];
+    [_blockingView release];
+    _blockingView = [anBlockingView retain];
   }
 }
 

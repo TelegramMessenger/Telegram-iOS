@@ -55,7 +55,7 @@
 
 @property (nonatomic, copy) NSDate *usageStartTimestamp;
 
-@property (nonatomic, retain) UIView *authorizeView;
+@property (nonatomic, retain) UIView *blockingView;
 
 // if YES, the API will return an existing JMC config
 // if NO, the API will return only version information
