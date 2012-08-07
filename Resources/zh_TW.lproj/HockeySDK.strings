@@ -9,6 +9,9 @@
 /* For dialogs ok buttons */
 "HockeyOK" = "確定";
 
+/* Replacement for app name, if it could not be detected */
+"HockeyAppNamePlaceholder" = "This app";
+
 
 /* Crash */
 
