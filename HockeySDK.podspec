@@ -2,7 +2,7 @@ Pod::Spec.new do |s|
   s.name     = 'HockeySDK'
   s.version  = '2.5.0'
   s.license  = 'MIT'
-  s.platform = :ios
+  s.platform = :ios, '4.0'
   s.summary  = 'Distribute beta apps and collect crash reports with HockeyApp.'
   s.homepage = 'http://hockeyapp.net/'
   s.author   = { 'Andreas Linde' => 'mail@andreaslinde.de', 'Thomas Dohmke' => "thomas@dohmke.de" }
@@ -17,6 +17,7 @@ Pod::Spec.new do |s|
                   'yourself when the network becomse reachable.'
 
   s.source_files = 'Classes'
+  s.requires_arc = false
   s.resources    = 'Resources/HockeySDKResources.bundle'
   s.frameworks   = 'QuartzCore', 'SystemConfiguration', 'CrashReporter', 'CoreGraphics.framework', 'UIKit.framework'
   s.xcconfig     = { 'FRAMEWORK_SEARCH_PATHS' => '"$(BUILT_PRODUCTS_DIR)/Pods/Frameworks"' }
