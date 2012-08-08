@@ -135,16 +135,16 @@
   
   // start CrashManager
   if (![self isCrashManagerDisabled]) {
-    BITHockeyLog(@"Start crashManager");
+    BITHockeyLog(@"Start CrashManager");
     if (_updateURL) {
       [_crashManager setUpdateURL:_updateURL];
     }
-    [_crashManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
+    [_crashManager startManager];
   }
   
   // Setup UpdateManager
   if (![self isUpdateManagerDisabled]) {
-    BITHockeyLog(@"Start UpdateManager");
+    BITHockeyLog(@"Start UpdateManager with small delay");
     if (_updateURL) {
       [_updateManager setUpdateURL:_updateURL];
     }

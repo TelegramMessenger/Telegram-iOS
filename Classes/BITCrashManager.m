@@ -70,8 +70,6 @@
 
 - (id)initWithAppIdentifier:(NSString *)appIdentifier {
   if ((self = [super init])) {
-    BITHockeyLog(@"Initializing CrashReporter");
-    
     _updateURL = BITHOCKEYSDK_URL;
     _appIdentifier = appIdentifier;
     
@@ -119,24 +117,7 @@
       [_fileManager removeItemAtPath:_analyzerInProgressFile error:&error];
     }
     
-    // on the very first startup this will always be initialized, since the default value for _crashManagerStatus is BITCrashManagerStatusAlwaysAsk
-    // but we do it anyway, to be able to initialize PLCrashReporter as early as possible
-    if (_crashManagerStatus != BITCrashManagerStatusDisabled) {      
-      PLCrashReporter *crashReporter = [PLCrashReporter sharedReporter];
-      NSError *error = NULL;
-      
-      // Check if we previously crashed
-      if ([crashReporter hasPendingCrashReport]) {
-        _didCrashInLastSession = YES;
-        [self handleCrashReport];
-      }
-      
-      // Enable the Crash Reporter
-      if (![crashReporter enableCrashReporterAndReturnError: &error])
-        NSLog(@"WARNING: Could not enable crash reporter: %@", error);
-      
-      [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(startManager) name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
-    }
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(startManager) name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
     
     if (!BITHockeyBundle()) {
       NSLog(@"WARNING: %@ is missing, will send reports automatically!", BITHOCKEYSDK_BUNDLE);
@@ -384,9 +365,9 @@
 
 #pragma mark - Crash Report Processing
 
-// begin the startup process
-- (void)startManager {
-  if (_crashManagerStatus == BITCrashManagerStatusDisabled) return;
+// slightly delayed startup processing, so we don't keep the first runloop on startup busy for too long
+- (void)invokeDelayedProcessing {
+  BITHockeyLog(@"Start delayed CrashManager processing");
   
   if (!_sendingInProgress && [self hasPendingCrashReport]) {
     _sendingInProgress = YES;
@@ -435,6 +416,26 @@
       [self sendCrashReports];
     }
   }
+}
+
+// begin the startup process
+- (void)startManager {
+  if (_crashManagerStatus == BITCrashManagerStatusDisabled) return;
+  
+  PLCrashReporter *crashReporter = [PLCrashReporter sharedReporter];
+  NSError *error = NULL;
+  
+  // Check if we previously crashed
+  if ([crashReporter hasPendingCrashReport]) {
+    _didCrashInLastSession = YES;
+    [self handleCrashReport];
+  }
+  
+  // Enable the Crash Reporter
+  if (![crashReporter enableCrashReporterAndReturnError: &error])
+    NSLog(@"WARNING: Could not enable crash reporter: %@", [error localizedDescription]);
+
+  [self performSelector:@selector(invokeDelayedProcessing) withObject:nil afterDelay:0.5];
 }
 
 - (void)sendCrashReports {

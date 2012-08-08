@@ -884,6 +884,8 @@
 
 // begin the startup process
 - (void)startManager {
+  BITHockeyLog(@"Start UpdateManager");
+  
   if ([self expiryDateReached]) return;
   
   if (![self appVersionIsAuthorized]) {
