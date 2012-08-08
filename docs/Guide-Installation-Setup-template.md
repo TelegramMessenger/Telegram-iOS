@@ -35,39 +35,47 @@ This document contains the following sections:
 3. Select `Create groups for any added folders` and set the checkmark for your target. Then click `Finish`.
 4. Select your project in the `Project Navigator` (⌘+1).
 5. Select your target.
-6. Select the tab `Build Phases`.
+6. Select the tab `Summary`.
 7. Expand `Link Binary With Libraries`.
-8. You need all of the following frameworks:
+8. The following entries should be present:
+	* `CrashReporter.framework`
+	* `HockeySDK.framework`
 	* `CoreGraphics.framework`
     * `Foundation.framework`
     * `QuartzCore.framework`
     * `SystemConfiguration.framework`
     * `UIKit.framework`
 
-    ![XcodeFrameworks.png](XcodeFrameworks_normal.png)
+    <img src="XcodeFrameworks1_normal.png"/>
         
 9. If one of the frameworks is missing, then click the + button, search the framework and confirm with the `Add` button.
-10. Select `Build Settings`
-11. Search for `Other Linker Flags`
-12. Double click on the build Setting titled Other Linker Flags.
-13. Add `-ObjC`
+10. Select `Build Phases`
+11. The following entries should be present:
+	* `HockeySDKResources.bundle`
 
-    ![XcodeOtherLinkerFlags.png](XcodeOtherLinkerFlags_normal.png)
+    <img src="XcodeCopyBundle1_normal.png"/>
+        
+12. Select `Build Settings`
+13. Search for `Other Linker Flags`
+14. Double click on the build Setting titled Other Linker Flags.
+15. Add `-ObjC`
 
-14. Hit `Done`.
-15. Search for `preprocessor macros`
+    <img src="XcodeOtherLinkerFlags_normal.png"/>
 
-    ![XcodeMacros1.png](XcodeMacros1_normal.png)
+16. Hit `Done`.
+17. Search for `preprocessor macros`
 
-16. Select the top-most line and double-click the value field.
-17. Click the + button.
-18. Enter the following string into the input field and finish with "Done".<pre><code>CONFIGURATION_$(CONFIGURATION)</code></pre>
+    <img src="XcodeMacros1_normal.png"/>
 
-    ![XcodeMacros2.png](XcodeMacros2_normal.png)
+18. Select the top-most line and double-click the value field.
+19. Click the + button.
+20. Enter the following string into the input field and finish with "Done".<pre><code>CONFIGURATION_$(CONFIGURATION)</code></pre>
+
+    <img src="XcodeMacros2_normal.png"/>
 
     Now you can use `#if defined (CONFIGURATION_ABCDEF)` directives in your code, where `ABCDEF` is the actual name of **YOUR** build configuration.
 
-19. HockeySDK-iOS also needs a JSON library. If you deployment target iOS >= 5, everything is set. If your deployment target is iOS 4.x, please include one of the following libraries:
+21. HockeySDK-iOS also needs a JSON library. If you deployment target iOS >= 5, everything is set. If your deployment target is iOS 4.x, please include one of the following libraries:
 	* [JSONKit](https://github.com/johnezang/JSONKit)
 	* [SBJSON](https://github.com/stig/json-framework)
 	* [YAJL](https://github.com/gabriel/yajl-objc)
@@ -88,56 +96,58 @@ This document contains the following sections:
 1. Find the `HockeySDK.xcodeproj` file inside of the cloned HockeySDK-iOS project directory.
 2. Drag & Drop it into the `Project Navigator` (⌘+1).
 3. Select your project in the `Project Navigator` (⌘+1).
-4. Select your target.
+4. Select your target.5. 
 5. Select the tab `Build Phases`.
 6. Expand `Target Dependencies`.
 7. Add the following dependencies:
 	* `HockeySDKLib`
 	* `HockeySDKResources`
 
-    ![XcodeTargetDependencies.png](XcodeTargetDependencies_normal.png)
+    <img src="XcodeTargetDependencies_normal.png"/>
 
 8. Expand `Link Binary With Libraries`.
 9. Add `libHockeySDK.a`
 
-    ![XcodeLinkBinariesLib.png](XcodeLinkBinariesLib_normal.png)
+    <img src="XcodeLinkBinariesLib_normal.png"/>
 
 10. Drag & Drop `CrashReporter.framework` from the `Frameworks` folder in `HockeySDK.xcodeproj`
 
-    ![XcodeLinkBinariesPLCrashReporter.png](XcodeLinkBinariesPLCrashReporter_normal.png)
+    <img src="XcodeLinkBinariesPLCrashReporter_normal.png"/>
 
-11. You also need all of the following frameworks:
+11. The following entries should be present:
+	* `CrashReporter.framework`
+	* `libHockeySDK.a`
 	* `CoreGraphics.framework`
     * `Foundation.framework`
     * `QuartzCore.framework`
     * `SystemConfiguration.framework`
     * `UIKit.framework`
 
-    ![XcodeFrameworks.png](XcodeFrameworks_normal.png)
+    <img src="XcodeFrameworks2_normal.png"/>
 
 12. Expand `Copy Bundle Resources`.
 13. Drag & Drop `HockeySDKResources.bundle` from the `Products` folder in `HockeySDK.xcodeproj`
 14. Select `Build Settings`
 15. In `Header Search Paths`, add a path to `$(SRCROOT)\Vendor\HockeyKit\Classes`
 
-    ![XcodeHeaderSearchPath.png](XcodeHeaderSearchPath_normal.png)
+    <img src="XcodeHeaderSearchPath_normal.png"/>
 
 16. Search for `Other Linker Flags`
 17. Double click on the build Setting titled Other Linker Flags.
 18. Add `-ObjC`
 
-    ![XcodeOtherLinkerFlags.png](XcodeOtherLinkerFlags_normal.png)
+    <img src="XcodeOtherLinkerFlags_normal.png"/>
 
 19. Hit `Done`.
 20. Search for `preprocessor macros`
 
-    ![XcodeMacros1.png](XcodeMacros1_normal.png)
+    <img src="XcodeMacros1_normal.png"/>
 
 21. Select the top-most line and double-click the value field.
 22. Click the + button.
 23. Enter the following string into the input field and finish with "Done".<pre><code>CONFIGURATION_$(CONFIGURATION)</code></pre>
 
-    ![XcodeMacros2.png](XcodeMacros2_normal.png)
+    <img src="XcodeMacros2_normal.png"/>
 
     Now you can use `#if defined (CONFIGURATION_ABCDEF)` directives in your code, where `ABCDEF` is the actual name of **YOUR** build configuration.
 24. HockeySDK-iOS also needs a JSON library. If you deployment target iOS >= 5, everything is set. If your deployment target is iOS 4.x, please include one of the following libraries:
