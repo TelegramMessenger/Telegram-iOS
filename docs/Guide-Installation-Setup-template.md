@@ -96,7 +96,7 @@ This document contains the following sections:
 1. Find the `HockeySDK.xcodeproj` file inside of the cloned HockeySDK-iOS project directory.
 2. Drag & Drop it into the `Project Navigator` (⌘+1).
 3. Select your project in the `Project Navigator` (⌘+1).
-4. Select your target.5. 
+4. Select your target. 
 5. Select the tab `Build Phases`.
 6. Expand `Target Dependencies`.
 7. Add the following dependencies:
