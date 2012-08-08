@@ -15,7 +15,7 @@ The challenges in this scenario are:
 2. Check if the app crashed in the last session by checking `[BITCrashManager didCrashInLastSession]`
 3. Check if `[BITCrashManager timeintervalCrashInLastSessionOccured]` is below a treshhold that you define. E.g. say your app usually requires 2 seconds for startup, and giving sending a crash report some time, you mighe choose `5` seconds as the treshhold
 4. If the crash happened in that timeframe, delay your app initialization and show an intermediate screen
-5. Implement the `BITCrashManagerDelegate` protocol methods `- (void)crashManager:(BITCrashManager *)crashManager didFailWithError:(NSError *)error;` and `- (void)crashManagerDidFinishSendingCrashReport:(BITCrashManager *)crashManager;` and continue app initialization
+5. Implement the `BITCrashManagerDelegate` protocol methods `- (void)crashManagerWillCancelSendingCrashReport:(BITCrashManager *)crashManager`,  `- (void)crashManager:(BITCrashManager *)crashManager didFailWithError:(NSError *)error;` and `- (void)crashManagerDidFinishSendingCrashReport:(BITCrashManager *)crashManager;` and continue app initialization
 
 ## Example
 
@@ -56,6 +56,12 @@ The challenges in this scenario are:
 	
 	#pragma mark - BITCrashManagerDelegate
 	
+	- (void)crashManagerWillCancelSendingCrashReport:(BITCrashManager *)crashManager {
+	  if ([self didCrashInLastSessionOnStartup]) {
+	    [self setupApplication];
+	  }
+	}
+
 	- (void)crashManager:(BITCrashManager *)crashManager didFailWithError:(NSError *)error {
 	  if ([self didCrashInLastSessionOnStartup]) {
 	    [self setupApplication];
