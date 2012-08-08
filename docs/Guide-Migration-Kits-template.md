@@ -1,4 +1,3 @@
-
 ## Introduction
 
 This guide will help you migrate from QuincyKit, HockeyKit or an older version of HockeySDK-iOS to the latest release of the unified HockeySDK for iOS.
@@ -36,7 +35,7 @@ Search again in the `Project Navigator` (⌘+1) for "CrashReporter.framework". Y
 
 ## Installation
 
-Follow the steps in our installation guide for either "Installation with binary framework distribution":http://support.hockeyapp.net/kb/client-integration/hockeyapp-for-ios-hockeysdk#framework (Recommended) or "Installation as a subproject":http://support.hockeyapp.net/kb/client-integration/hockeyapp-for-ios-hockeysdk#subproject
+Follow the steps in our installation guide for either [Installation with binary framework distribution](http://support.hockeyapp.net/kb/client-integration/hockeyapp-for-ios-hockeysdk#framework) (Recommended) or [Installation as a subproject](http://support.hockeyapp.net/kb/client-integration/hockeyapp-for-ios-hockeysdk#subproject)
 
 After you finished the steps for either of the installation procedures, we have to migrate your existing code.
 
@@ -46,34 +45,34 @@ After you finished the steps for either of the installation procedures, we have 
 
 In your application delegate (for example `AppDelegate.m`) search for the following lines:
 
-  [[BWQuincyManager sharedQuincyManager] setAppIdentifier:@"0123456789abcdef"];
-
-  [[BWHockeyManager sharedHockeyManager] setAppIdentifier:@"0123456789abcdef"];
-  [[BWHockeyManager sharedHockeyManager] setUpdateURL:@"https://rink.hockeyapp.net/"];
+    [[BWQuincyManager sharedQuincyManager] setAppIdentifier:@"0123456789abcdef"];
+    
+    [[BWHockeyManager sharedHockeyManager] setAppIdentifier:@"0123456789abcdef"];
+    [[BWHockeyManager sharedHockeyManager] setUpdateURL:@"https://rink.hockeyapp.net/"];
 
 If you use (as recommended) different identifiers for beta and store distribution some lines may be wrapped with compiler macros like this:
 
-  #if defined (CONFIGURATION_Beta)
-    [[BWQuincyManager sharedQuincyManager] setAppIdentifier:@"BETA_IDENTIFIER"];
-  #endif
+    #if defined (CONFIGURATION_Beta)
+      [[BWQuincyManager sharedQuincyManager] setAppIdentifier:@"BETA_IDENTIFIER"];
+    #endif
 
-  #if defined (CONFIGURATION_Distribution)
-    [[BWQuincyManager sharedQuincyManager] setAppIdentifier:@"LIVE_IDENTIFIER"];
-  #endif
+    #if defined (CONFIGURATION_Distribution)
+      [[BWQuincyManager sharedQuincyManager] setAppIdentifier:@"LIVE_IDENTIFIER"];
+    #endif
 
 For now comment out all lines with either `[BWQuincyManager sharedQuincyManager]` or `[BWHockeyManager sharedHockeyManager]`. 
 
 Open the header file of your application delegate (for example `AppDelegate.m`) or just press ^ + ⌘ + ↑ there should be a line like this (AppDelegate should match the name of the file)
 
-  @interface AppDelegate : NSObject <UIApplicationDelegate, UITabBarControllerDelegate, BWHockeyManagerDelegate> {  
+    @interface AppDelegate : NSObject <UIApplicationDelegate, UITabBarControllerDelegate, BWHockeyManagerDelegate> {  
 
 Remove the `BWHockeyManagerDelegate`. Also look for the following line: 
   
-  #import "BWHockeyManager.h"
+    #import "BWHockeyManager.h"
 
 And remove it too. (This line may have a #if macro around it, remove that too)
 
-Now follow the steps described in our "setup guide":http://support.hockeyapp.net/kb/client-integration/hockeyapp-for-ios-hockeysdk#setup The values for `LIVE_IDENTIFIER` and `BETA_IDENTIFIER` are used in the setup guide.
+Now follow the steps described in our [setup guide](http://support.hockeyapp.net/kb/client-integration/hockeyapp-for-ios-hockeysdk#setup) The values for `LIVE_IDENTIFIER` and `BETA_IDENTIFIER` are used in the setup guide.
 
 After you have finished the setup guide make sure everything works as expected and then delete the out commented lines from above.
 
@@ -81,21 +80,21 @@ After you have finished the setup guide make sure everything works as expected a
 
 In your application delegate (for example `AppDelegate.m`) search for the following lines:
 
-  [[CNSHockeyManager sharedHockeyManager] configureWithBetaIdentifier:BETA_IDENTIFIER 
+    [[CNSHockeyManager sharedHockeyManager] configureWithBetaIdentifier:BETA_IDENTIFIER 
                                                        liveIdentifier:LIVE_IDENTIFIER
                                                              delegate:self];
 
 For now comment out all lines whith `[CNSHockeyManager sharedHockeyManager]`. Open the header file of your application delegate by pressing ^ + ⌘ + ↑. There should be a line like this: 
 
-  @interface AppDelegate : NSObject <UIApplicationDelegate, CNSHockeyManagerDelegate> {
+    @interface AppDelegate : NSObject <UIApplicationDelegate, CNSHockeyManagerDelegate> {
 
 Remove `CNSHockeyManagerDelegate`, also look for this line:
 
-  #import "CNSHockeyManager.h"
+    #import "CNSHockeyManager.h"
 
 And remove that too. 
 
-Now follow the steps described in our "setup guide":http://support.hockeyapp.net/kb/client-integration/hockeyapp-for-ios-hockeysdk#setup The values for `LIVE_IDENTIFIER` and `BETA_IDENTIFIER` are used in the setup guide.
+Now follow the steps described in our [setup guide](http://support.hockeyapp.net/kb/client-integration/hockeyapp-for-ios-hockeysdk#setup) The values for `LIVE_IDENTIFIER` and `BETA_IDENTIFIER` are used in the setup guide.
 
 After you have finished the setup guide make sure everything works as expected and then delete the out commented lines from above.
 
