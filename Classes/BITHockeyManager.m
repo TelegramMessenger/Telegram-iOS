@@ -74,6 +74,17 @@
     _appStoreEnvironment = NO;
     _startManagerIsInvoked = NO;
 
+    // check if we are really not in an app store environment
+    if ([[NSBundle mainBundle] pathForResource:@"embedded" ofType:@"mobileprovision"]) {
+      _appStoreEnvironment = NO;
+    } else {
+      _appStoreEnvironment = YES;
+    }
+    
+#if TARGET_IPHONE_SIMULATOR
+    _appStoreEnvironment = NO;
+#endif
+
     [self performSelector:@selector(validateStartManagerIsInvoked) withObject:nil afterDelay:0.0f];
   }
   return self;
@@ -179,18 +190,7 @@
   NSCharacterSet *hexSet = [NSCharacterSet characterSetWithCharactersInString:@"0123456789abcdef"];
   NSCharacterSet *inStringSet = [NSCharacterSet characterSetWithCharactersInString:_appIdentifier];
   _validAppIdentifier = ([_appIdentifier length] == 32) && ([hexSet isSupersetOfSet:inStringSet]);
-  
-  // check if we are really not in an app store environment
-  if ([[NSBundle mainBundle] pathForResource:@"embedded" ofType:@"mobileprovision"]) {
-    _appStoreEnvironment = NO;
-  } else {
-    _appStoreEnvironment = YES;
-  }
-  
-#if TARGET_IPHONE_SIMULATOR
-  _appStoreEnvironment = NO;
-#endif
-  
+    
   _startManagerIsInvoked = NO;
   
   if (_validAppIdentifier) {
