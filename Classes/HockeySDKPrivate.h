@@ -35,7 +35,6 @@
 #define HockeySDK_HockeySDKPrivate_h
 
 #define BITHOCKEY_NAME @"HockeySDK"
-#define BITHOCKEY_VERSION @"2.5.0"
 #define BITHOCKEY_IDENTIFIER @"net.hockeyapp.sdk.ios"
 #define BITHOCKEY_CRASH_SETTINGS @"BITCrashManager.plist"
 #define BITHOCKEY_CRASH_ANALYZER @"BITCrashManager.analyzer"
