@@ -6,6 +6,8 @@ First of all we will cleanup the obsolete installation files and then convert yo
 
 ## Cleanup
 
+First of all you should remove all files from prior versions of either QuincyKit, HockeyKit or HockeySDK-iOS. If you not sure which files you added, here are a few easy steps for each SDK.
+
 ### QuincyKit
 
 In Xcode open the `Project Navigator` (⌘+1). In the search field at the bottom enter "Quincy". Search should find the following files:
@@ -97,6 +99,10 @@ And remove that too.
 Now follow the steps described in our [setup guide](http://support.hockeyapp.net/kb/client-integration/hockeyapp-for-ios-hockeysdk#setup) The values for `LIVE_IDENTIFIER` and `BETA_IDENTIFIER` are used in the setup guide.
 
 After you have finished the setup guide make sure everything works as expected and then delete the out commented lines from above.
+
+## Advanced Migration
+
+If you used any optional API calls, for example adding a custom description to a crash report, migrating those would exceed the scope of this guide. Please have a look at the [API documentation](https://github.com/bitstadium/HockeySDK-iOS/downloads). 
 
 
 
