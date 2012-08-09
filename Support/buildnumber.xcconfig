@@ -1,0 +1,3 @@
+// Version also needs to be set in HockeySDKPrivate.h !
+BUILD_NUMBER = 1
+VERSION_STRING = 2.5.0
