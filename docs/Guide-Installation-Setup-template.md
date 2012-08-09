@@ -79,6 +79,14 @@ This document contains the following sections:
 	* [JSONKit](https://github.com/johnezang/JSONKit)
 	* [SBJSON](https://github.com/stig/json-framework)
 	* [YAJL](https://github.com/gabriel/yajl-objc)
+22. If you haven't installed `HockeyMac` desktop uploader, we highly recommend to follow the [installation instructions](Guide-Installation-Mac-App) to automatically invoke the uploader every time you archive a build
+23. Select `Product` > `Edit Scheme`.
+24. Expand `Archive`.
+25. Select `Post-actions`.
+26. Click the `+` in the lower left corner of the right pane and select `New Run Script Action`.
+27. Select your project for the build settings and enter the following command below:<pre>open -a HockeyApp "${ARCHIVE_PATH}"</pre>![Post-action for HockeyMac](XcodeArchivePostAction_normal.png)
+28. Confirm with `OK`.
+
 
 
 <a id="subproject"></a> 
@@ -155,6 +163,14 @@ This document contains the following sections:
 	* [SBJSON](https://github.com/stig/json-framework)
 	* [YAJL](https://github.com/gabriel/yajl-objc)
 	
+25. If you haven't installed `HockeyMac` desktop uploader, we highly recommend to follow the [installation instructions](Guide-Installation-Mac-App) to automatically invoke the uploader every time you archive a build
+26. Select `Product` > `Edit Scheme`.
+27. Expand `Archive`.
+28. Select `Post-actions`.
+29. Click the `+` in the lower left corner of the right pane and select `New Run Script Action`.
+30. Select your project for the build settings and enter the following command below:<pre>open -a HockeyApp "${ARCHIVE_PATH}"</pre>![Post-action for HockeyMac](XcodeArchivePostAction_normal.png)
+31. Confirm with `OK`.
+
 <a id="setup"></a> 
 ## Setup HockeySDK
 

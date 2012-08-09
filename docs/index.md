@@ -24,6 +24,7 @@ The main SDK class is `BITHockeyManager`. It initializes all modules and provide
 
 - [Installation & Setup](Guide-Installation-Setup)
 - [Migration from HockeyKit & QuincyKit](Guide-Migration-Kits)
+- [Mac Desktop Uploader](Guide-Installation-Mac-App)
 
 ## HowTos
 
