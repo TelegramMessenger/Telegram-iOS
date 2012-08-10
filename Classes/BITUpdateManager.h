@@ -109,7 +109,7 @@ typedef enum {
  application, it is _REQUIRED_ to set this delegate and implement
  `[BITUpdateManagerDelegate customDeviceIdentifierForUpdateManager:]`!
  */
-@property (nonatomic, assign) id <BITUpdateManagerDelegate> delegate;
+@property (nonatomic, assign) id delegate;
 
 
 ///-----------------------------------------------------------------------------

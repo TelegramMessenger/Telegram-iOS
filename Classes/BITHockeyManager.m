@@ -67,6 +67,7 @@
 - (id) init {
   if ((self = [super init])) {
     _updateURL = nil;
+    _delegate = nil;
     
     _disableCrashManager = NO;
     _disableUpdateManager = NO;
@@ -96,7 +97,7 @@
   [_crashManager release], _crashManager = nil;
   [_updateManager release], _updateManager = nil;
   
-  delegate = nil;
+  _delegate = nil;
   
   [super dealloc];
 }
@@ -104,16 +105,16 @@
 
 #pragma mark - Public Instance Methods (Configuration)
 
-- (void)configureWithIdentifier:(NSString *)newAppIdentifier delegate:(id)newDelegate {
-  delegate = newDelegate;
+- (void)configureWithIdentifier:(NSString *)appIdentifier delegate:(id)delegate {
+  _delegate = delegate;
   [_appIdentifier release];
-  _appIdentifier = [newAppIdentifier copy];
+  _appIdentifier = [appIdentifier copy];
   
   [self initializeModules];
 }
 
-- (void)configureWithBetaIdentifier:(NSString *)betaIdentifier liveIdentifier:(NSString *)liveIdentifier delegate:(id)newDelegate {
-  delegate = newDelegate;
+- (void)configureWithBetaIdentifier:(NSString *)betaIdentifier liveIdentifier:(NSString *)liveIdentifier delegate:(id)delegate {
+  _delegate = delegate;
   [_appIdentifier release];
 
   if ([self shouldUseLiveIdenfitier]) {
@@ -179,8 +180,8 @@
 
 - (BOOL)shouldUseLiveIdenfitier {
   BOOL delegateResult = NO;
-  if ([delegate respondsToSelector:@selector(shouldUseLiveIdenfitier)]) {
-    delegateResult = [(NSObject <BITHockeyManagerDelegate>*)delegate shouldUseLiveIdenfitier];
+  if ([_delegate respondsToSelector:@selector(shouldUseLiveIdenfitier)]) {
+    delegateResult = [(NSObject <BITHockeyManagerDelegate>*)_delegate shouldUseLiveIdenfitier];
   }
 
   return (delegateResult) || (_appStoreEnvironment);
@@ -196,9 +197,11 @@
   if (_validAppIdentifier) {
     BITHockeyLog(@"Setup CrashManager");
     _crashManager = [[BITCrashManager alloc] initWithAppIdentifier:_appIdentifier];
+    _crashManager.delegate = _delegate;
     
     BITHockeyLog(@"Setup UpdateManager");
     _updateManager = [[BITUpdateManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
+    _crashManager.delegate = _delegate;
     
     // Only if JMC is part of the project
     if ([[self class] isJMCPresent]) {
