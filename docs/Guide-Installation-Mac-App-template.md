@@ -24,7 +24,10 @@ This document contains the following sections:
 2. Extract the .zip archive.
 3. Copy HockeyApp to your Application folder.
 4. Start HockeyApp.
-5. If this is your first start, the app automatically shows the Preferences dialog: ![Preferences](HockeyMacGeneral_normal.png)
+5. If this is your first start, the app automatically shows the Preferences dialog:
+
+    <img src="HockeyMacGeneral_normal.png"/>
+
 6. You need to enter your HockeyApp API token. If you don't have one, then create one [here](https://rink.hockeyapp.net/manage/auth_tokens).
 7. Close the dialog and you're ready to go.
 
@@ -36,7 +39,9 @@ This document contains the following sections:
 3. Expand `Archive`.
 4. Select `Post-actions`.
 5. Click the `+` in the lower left corner of the right pane and select `New Run Script Action`.
-6. Select your project for the build settings and enter the following command below:<pre>open -a HockeyApp "${ARCHIVE_PATH}"</pre>![Post-action for HockeyMac](http://f.cl.ly/items/0k0B0h1Q1z1e373k0440/XcodePostActionsForHockeyMac.png)
+6. Select your project for the build settings and enter the following command below:<pre>open -a HockeyApp "${ARCHIVE_PATH}"</pre>
+
+    <img src="XcodeArchivePostAction_normal.png"/>
 7. Confirm with `OK`.
 
 If you now build your product with Build & Archive and the build was successful, the .xcarchive is automatically opened with HockeyMac. You can enter your release notes and then HockeyMac creates and uploads both the .ipa and the .dSYM file. Please note that you have to configure the correct provisioning profile for AdHoc distribution in the build configuration that you use for Build & Archive.
@@ -61,9 +66,9 @@ You can specify the following command line options:
 * setBeta - set release type to 'beta'
 * setLive - set release type to 'live'
 * tags - only allow users who are tagged by these tags to download the app (restrict downloads)
-* token - use this api token instead of the one configured in settings
+* token - use this api token instead of the one configured in settings.
 
-Please note that the command line options are passed to the app only at the first start. If the HockeyMac is already running, it will not consider any new arguments.
+Please note that the command line options are passed to the app only at the first start. If the HockeyMac is already running, it will not consider any new arguments. In addition upload only tokens cause the app _NOT_ to be downloadable and notifications will _NOT_ be send.
 
 Example:
 

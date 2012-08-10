@@ -1,12 +1,12 @@
 
 ## Introduction
 
-This article describes how to integrate HockeyApp into your iOS apps. The SDK allows testers to update your app to another beta version right from within the application. It will notify the tester if a new update is available. The SDK also allows to send crash reports. If a crash has happened, it will ask the tester on the next start whether he wants to send information about the crash to the server.
+This article describes how to integrate HockeyApp into your iOS apps using a Git submodule and Xcode subprojects. The SDK allows testers to update your app to another beta version right from within the application. It will notify the tester if a new update is available. The SDK also allows to send crash reports. If a crash has happened, it will ask the tester on the next start whether he wants to send information about the crash to the server.
 
 This document contains the following sections:
 
 - [Requirements](#requirements)
-- [Download & Extract](#download)
+- [Set up Git submodule](#download)
 - [Set up Xcode](#xcode)
 - [Modify Code](#modify)
 - [Submit the UDID](#udid)
@@ -21,71 +21,83 @@ The SDK runs on devices with iOS 4.0 or higher.
 If you need support for iOS 3.x, please check out [HockeyKit](http://support.hockeyapp.net/kb/client-integration/beta-distribution-on-ios-hockeykit) and [QuincyKit](http://support.hockeyapp.net/kb/client-integration/crash-reporting-on-ios-quincykit)
 
 <a id="download"></a> 
-## Download & Extract
+## Set up Git submodule
 
-1. Download the latest [HockeySDK-iOS](https://github.com/bitstadium/HockeySDK-iOS/downloads) framework.
+1. Open a Terminal window
 
-2. Unzip the file. A new folder `HockeySDK-iOS` is created.
+2. Change to your projects directory `cd /path/to/MyProject'
 
-3. Move the folder into your project directory. We usually put 3rd-party code into a subdirectory named `Vendor`, so we move the directory into it.
+3. If this is a new project, initialize Git: `git init`
+
+4. Add the submodule: `git submodule add git://github.com/BitStadium/HockeySDK-iOS.git Vendor/HockeySDK`. This would add the submdolue into the `Vendor/HockeySDK` subfolder. Change this to the folder you prefer.
 
 <a id="xcode"></a> 
 ## Set up Xcode
 
-1. Drag & drop the `HockeySDK-iOS` folder from your project directory to your Xcode project.
+1. Find the `HockeySDK.xcodeproj` file inside of the cloned HockeySDK-iOS project directory.
 
-2. Similar to above, our projects have a group `Vendor`, so we drop it there.
+2. Drag & Drop it into the `Project Navigator` (⌘+1).
 
-3. Select `Create groups for any added folders` and set the checkmark for your target. Then click `Finish`.
+3. Select your project in the `Project Navigator` (⌘+1).
 
-    ![XcodeCreateGroups_normal.png](XcodeCreateGroups_normal.png)
+4. Select your target. 
 
-4. Select your project in the `Project Navigator` (⌘+1).
+5. Select the tab `Build Phases`.
 
-5. Select your target.
+6. Expand `Target Dependencies`.
 
-6. Select the tab `Summary`.
+7. Add the following dependencies:
+	* `HockeySDKLib`
+	* `HockeySDKResources`
 
-7. Expand `Link Binary With Libraries`.
+    <img src="XcodeTargetDependencies_normal.png"/>
 
-8. The following entries should be present:
-    * CoreGraphics.framework
-    * CrashReporter.framework
-    * Foundation.framework
-    * HockeySDK.framework
-    * QuartzCore.framework
-    * SystemConfiguration.framework
-    * UIKit.framework    
-    
-    ![XcodeFrameworks1.png](XcodeFrameworks1_normal.png)
+8. Expand `Link Binary With Libraries`.
 
-9. If one of the frameworks is missing, then click the + button, search the framework and confirm with the `Add` button.
+9. Add `libHockeySDK.a`
 
-10. Select `Build Phases`
+    <img src="XcodeLinkBinariesLib_normal.png"/>
 
-11. Expand `Copy Bundle Resources`.
+10. Drag & Drop `CrashReporter.framework` from the `Frameworks` folder in `HockeySDK.xcodeproj`
 
-12. The following entries should be present:
-  * `HockeySDKResources.bundle`
-    
-    ![XcodeCopyBundle1.png](XcodeCopyBundle1_normal.png)
+    <img src="XcodeLinkBinariesPLCrashReporter_normal.png"/>
 
-13. Select `Build Settings`
+11. The following entries should be present:
+	* `CrashReporter.framework`
+	* `libHockeySDK.a`
+	* `CoreGraphics.framework`
+    * `Foundation.framework`
+    * `QuartzCore.framework`
+    * `SystemConfiguration.framework`
+    * `UIKit.framework`
 
-14. Search for `Other Linker Flags`
+    <img src="XcodeFrameworks2_normal.png"/>
 
-15. Double click on the build setting titled `Other Linker Flags`.
+12. Expand `Copy Bundle Resources`.
 
-16. Add `-ObjC`
-    
-    ![XcodeOtherLinkerFlags_normal.png](XcodeOtherLinkerFlags_normal.png)
+13. Drag & Drop `HockeySDKResources.bundle` from the `Products` folder in `HockeySDK.xcodeproj`
 
-17. HockeySDK-iOS needs a JSON library if your deployment target is iOS 4.x. Please include one of the following libraries:
-    * [JSONKit](https://github.com/johnezang/JSONKit)
-    * [SBJSON](https://github.com/stig/json-framework)
-    * [YAJL](https://github.com/gabriel/yajl-objc)
+14. Select `Build Settings`
 
+15. In `Header Search Paths`, add a path to `$(SRCROOT)\Vendor\HockeyKit\Classes`
 
+    <img src="XcodeHeaderSearchPath_normal.png"/>
+
+16. Search for `Other Linker Flags`
+
+17. Double click on the build Setting titled Other Linker Flags.
+
+18. Add `-ObjC`
+
+    <img src="XcodeOtherLinkerFlags_normal.png"/>
+
+19. Hit `Done`.
+
+20. HockeySDK-iOS also needs a JSON library. If you deployment target iOS >= 5, everything is set. If your deployment target is iOS 4.x, please include one of the following libraries:
+	* [JSONKit](https://github.com/johnezang/JSONKit)
+	* [SBJSON](https://github.com/stig/json-framework)
+	* [YAJL](https://github.com/gabriel/yajl-objc)
+	
 <a id="modify"></a> 
 ## Modify Code
 
