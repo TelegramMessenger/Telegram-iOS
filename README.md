@@ -1,5 +1,4 @@
-Introduction
-============
+## Introduction
 
 HockeySDK-iOS implements support for using HockeyApp in your iOS applications.
 
@@ -11,16 +10,27 @@ The following features are currently supported:
 
 The main SDK class is `BITHockeyManager`. It initializes all modules and provides access to them, so they can be further adjusted if required. Additionally all modules provide their own protocols.
 
-Prerequisites
-=============
+## Prerequisites
 
 1. Before you integrate HockeySDK into your own app, you should add the app to HockeyApp if you haven't already. Read [this how-to](http://support.hockeyapp.net/kb/how-tos/how-to-create-a-new-app) on how to do it.
 2. We also assume that you already have a project in Xcode and that this project is opened in Xcode 4.
 3. The SDK supports iOS 4.0 or newer.
 
-Documentation
-=============
 
-Documentation can be build using [AppleDoc](https://github.com/tomaz/appledoc/) and the `Documentation` target. This will build the latest version and automatically install it in Xcode.
+## Installation & Setup
 
-The documentation contains installation and setup guides, various HowTos, quick troubleshooting and documentation of the public classes and protocols.
+- [Installation & Setup](http://support.hockeyapp.net/kb/client-integration/hockeyapp-for-ios-hockeysdk) (Recommended)
+- [Installation & Setup Advanced](http://support.hockeyapp.net/kb/client-integration/hockeyapp-for-ios-hockeysdk-advanced) (Using Git submodule and Xcode sub-project)
+- [Migration from HockeyKit & QuincyKit](http://support.hockeyapp.net/kb/how-tos/how-to-migration-from-hockeykit-quincykit)
+- [Mac Desktop Uploader](http://support.hockeyapp.net/kb/how-tos/how-to-upload-to-hockeyapp-on-a-mac)
+
+
+## Xcode Documentation
+
+This documentation provides integrated help in Xcode for all public APIs and a set of additional tutorials and HowTos.
+
+1. Download the latest [HockeySDK-iOS documentation](https://github.com/bitstadium/HockeySDK-iOS/downloads).
+
+2. Unzip the file. A new folder `HockeySDK-iOS-documentation` is created.
+
+3. Copy the content into ~`/Library/Developer/Shared/Documentation/DocSet`

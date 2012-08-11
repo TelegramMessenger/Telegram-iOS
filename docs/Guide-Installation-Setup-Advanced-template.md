@@ -44,25 +44,17 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
 
 5. Select the tab `Build Phases`.
 
-6. Expand `Target Dependencies`.
+6. Expand `Link Binary With Libraries`.
 
-7. Add the following dependencies:
-	* `HockeySDKLib`
-	* `HockeySDKResources`
-
-    <img src="XcodeTargetDependencies_normal.png"/>
-
-8. Expand `Link Binary With Libraries`.
-
-9. Add `libHockeySDK.a`
+7. Add `libHockeySDK.a`
 
     <img src="XcodeLinkBinariesLib_normal.png"/>
 
-10. Drag & Drop `CrashReporter.framework` from the `Frameworks` folder in `HockeySDK.xcodeproj`
+8. Drag & Drop `CrashReporter.framework` from the `Frameworks` folder in `HockeySDK.xcodeproj`
 
     <img src="XcodeLinkBinariesPLCrashReporter_normal.png"/>
 
-11. The following entries should be present:
+9. The following entries should be present:
 	* `CrashReporter.framework`
 	* `libHockeySDK.a`
 	* `CoreGraphics.framework`
@@ -73,27 +65,27 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
 
     <img src="XcodeFrameworks2_normal.png"/>
 
-12. Expand `Copy Bundle Resources`.
+10. Expand `Copy Bundle Resources`.
 
-13. Drag & Drop `HockeySDKResources.bundle` from the `Products` folder in `HockeySDK.xcodeproj`
+11. Drag & Drop `HockeySDKResources.bundle` from the `Products` folder in `HockeySDK.xcodeproj`
 
-14. Select `Build Settings`
+12. Select `Build Settings`
 
-15. In `Header Search Paths`, add a path to `$(SRCROOT)\Vendor\HockeyKit\Classes`
+13. In `Header Search Paths`, add a path to `$(SRCROOT)\Vendor\HockeyKit\Classes`
 
     <img src="XcodeHeaderSearchPath_normal.png"/>
 
-16. Search for `Other Linker Flags`
+14. Search for `Other Linker Flags`
 
-17. Double click on the build Setting titled Other Linker Flags.
+15. Double click on the build Setting titled Other Linker Flags.
 
-18. Add `-ObjC`
+16. Add `-ObjC`
 
     <img src="XcodeOtherLinkerFlags_normal.png"/>
 
-19. Hit `Done`.
+17. Hit `Done`.
 
-20. HockeySDK-iOS also needs a JSON library. If you deployment target iOS >= 5, everything is set. If your deployment target is iOS 4.x, please include one of the following libraries:
+18. HockeySDK-iOS also needs a JSON library. If you deployment target iOS >= 5, everything is set. If your deployment target is iOS 4.x, please include one of the following libraries:
 	* [JSONKit](https://github.com/johnezang/JSONKit)
 	* [SBJSON](https://github.com/stig/json-framework)
 	* [YAJL](https://github.com/gabriel/yajl-objc)

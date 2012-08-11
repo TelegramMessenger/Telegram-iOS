@@ -38,7 +38,7 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
 
 3. Select `Create groups for any added folders` and set the checkmark for your target. Then click `Finish`.
 
-    ![XcodeCreateGroups_normal.png](XcodeCreateGroups_normal.png)
+    <img src="XcodeCreateGroups_normal.png"/>
 
 4. Select your project in the `Project Navigator` (⌘+1).
 
@@ -55,9 +55,9 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
     * HockeySDK.framework
     * QuartzCore.framework
     * SystemConfiguration.framework
-    * UIKit.framework    
+    * UIKit.framework
     
-    ![XcodeFrameworks1.png](XcodeFrameworks1_normal.png)
+    <img src="XcodeFrameworks1_normal.png"/>
 
 9. If one of the frameworks is missing, then click the + button, search the framework and confirm with the `Add` button.
 
@@ -68,7 +68,7 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
 12. The following entries should be present:
   * `HockeySDKResources.bundle`
     
-    ![XcodeCopyBundle1.png](XcodeCopyBundle1_normal.png)
+    <img src="XcodeCopyBundle1_normal.png"/>
 
 13. Select `Build Settings`
 
@@ -78,7 +78,7 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
 
 16. Add `-ObjC`
     
-    ![XcodeOtherLinkerFlags_normal.png](XcodeOtherLinkerFlags_normal.png)
+    <img src="XcodeOtherLinkerFlags_normal.png"/>
 
 17. HockeySDK-iOS needs a JSON library if your deployment target is iOS 4.x. Please include one of the following libraries:
     * [JSONKit](https://github.com/johnezang/JSONKit)
@@ -93,7 +93,7 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
 
 2. Add the following line at the top of the file below your own #import statements:
 
-        #import "HockeySDK.h"
+        #import <HockeySDK/HockeySDK.h>
 
 3. Let the AppDelegate implement the protocols `BITHockeyManagerDelegate`, `BITUpdateManagerDelegate` and `BITCrashManagerDelegate`:
 
@@ -137,7 +137,7 @@ The method only returns the UDID when the build is not targeted to the App Sore.
 
 4. Search for `preprocessor macros`
 
-    ![XcodeMacros1_normal.png](XcodeMacros1_normal.png)
+    <img src="XcodeMacros1_normal.png"/>
 
 5. Select the top-most line and double-click the value field.
 
@@ -145,7 +145,7 @@ The method only returns the UDID when the build is not targeted to the App Sore.
 
 7. Enter the following string into the input field and finish with "Done".<pre><code>CONFIGURATION_$(CONFIGURATION)</code></pre>
 
-    ![XcodeMacros2_normal.png](XcodeMacros2_normal.png)
+    <img src="XcodeMacros2_normal.png"/>
 
 Now you can use `#if defined (CONFIGURATION_AppStore)` statements in your code. If your configurations have different names, please adjust the above use of `CONFIGURATION_AppStore`.
 
