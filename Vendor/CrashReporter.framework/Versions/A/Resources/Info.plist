@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
 	<key>BuildMachineOSBuild</key>
-	<string>11D50</string>
+	<string>12A269</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
 	<string>CrashReporter</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.yourcompany.CrashReporter</string>
+	<string>coop.plausible.CrashReporter</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -19,20 +19,20 @@
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
-	<string>1.0</string>
+	<string>1.2-beta1</string>
 	<key>DTCompiler</key>
-	<string>com.apple.compilers.llvmgcc42</string>
+	<string></string>
 	<key>DTPlatformBuild</key>
-	<string>4D502</string>
+	<string>4F1003</string>
 	<key>DTPlatformVersion</key>
 	<string>GM</string>
 	<key>DTSDKBuild</key>
-	<string>11C63</string>
+	<string>12A264</string>
 	<key>DTSDKName</key>
-	<string>macosx10.7</string>
+	<string>macosx10.8</string>
 	<key>DTXcode</key>
-	<string>0421</string>
+	<string>0441</string>
 	<key>DTXcodeBuild</key>
-	<string>4D502</string>
+	<string>4F1003</string>
 </dict>
 </plist>
