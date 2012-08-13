@@ -100,6 +100,12 @@ Now follow the steps described in our [setup guide](http://support.hockeyapp.net
 
 After you have finished the setup guide make sure everything works as expected and then delete the out commented lines from above.
 
+## Troubleshooting
+
+### ld: warning: directory not found for option '....QuincyKit.....'
+
+This warning means there is still a `Framework Search Path` pointing to the folder of the old SDK. Open the `Project Navigator` (⌘+1) and go to the tab `Build Settings`. In the search field enter the name of the folder mentioned in the warning (for example "QuincyKit") . If the search finds something in `Framework Search Paths` you should double click that entry and remove the line which points to the old folder.
+
 ## Advanced Migration
 
 If you used any optional API calls, for example adding a custom description to a crash report, migrating those would exceed the scope of this guide. Please have a look at the [API documentation](https://github.com/bitstadium/HockeySDK-iOS/downloads). 
