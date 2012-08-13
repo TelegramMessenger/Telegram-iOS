@@ -175,6 +175,9 @@ static NSString *kBITCrashManagerStatus = @"BITCrashManagerStatus";
  report has been sent to the server or if you want to do any other actions like
  cleaning up some cache data etc.
  
+ Note that sending a crash reports starts as early as 1.5 seconds after the application
+ did finish launching!
+ 
  The `BITCrashManagerDelegate` protocol provides some delegates to inform if sending
  a crash report was finished successfully, ended in error or was cancelled by the user.
  

@@ -17,4 +17,8 @@ Once you have your app ready for beta testing or even to submit it to the App St
 5. Right-click the `.xcarchive` in Finder and select `Show Package Contents`.
 6. You should see a folder named dSYMs which contains your dSYM bundle. If you use Safari, just drag this file from Finder and drop it on to the corresponding drop zone in HockeyApp. If you use another browser, copy the file to a different location, then right-click it and choose Compress `YourApp.dSYM`. The file will be compressed as a .zip file. Drag & drop this file to HockeyApp. 
 
-As an alternative for step 5 and 6, you can use our [HockeyMac](https://github.com/codenauts/HockeyMac) app to upload the complete archive in one step. You can even integrate HockeyMac into Xcode to automatically show the upload interface after archiving your app, which would make all steps 1 to 6 not necessary any more!
+## Mac Desktop Uploader
+
+As an alternative, you can use our [HockeyMac](Guide-Installation-Mac-App) app to upload the complete archive in one step. You can even integrate HockeyMac into Xcode to automatically show the upload interface after archiving your app, which would make all steps 1 to 6 not necessary any more!
+
+Check out the [Mac Desktop Uploader Guide](Guide-Installation-Mac-App).
