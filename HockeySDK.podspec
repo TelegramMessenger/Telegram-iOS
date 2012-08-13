@@ -6,30 +6,35 @@ Pod::Spec.new do |s|
   s.summary  = 'Distribute beta apps and collect crash reports with HockeyApp.'
   s.homepage = 'http://hockeyapp.net/'
   s.author   = { 'Andreas Linde' => 'mail@andreaslinde.de', 'Thomas Dohmke' => "thomas@dohmke.de" }
-  s.source   = { :git => 'https://github.com/bitstadium/HockeySDK-iOS', :tag => '2.5.0' }
+  s.source   = { :git => 'https://github.com/bitstadium/HockeySDK-iOS.git', :tag => '2.5.0' }
 
-  s.description = 'HockeyApp is a server to distribute beta apps and collect crash reports. '          \
-                  'It improves the testing process dramatically and can be used for both beta '        \
-                  'and App Store builds. Only beta builds will notify users about a new version  '     \
-                  'NOTE: You will need to add a dependency on JSONKit, SBJson or YAJL yourself. If you '     \
-                  'want the framework to try again when a network is available, add a dependency '     \
+  s.description = 'HockeyApp is a server to distribute beta apps and collect crash reports. '                   \
+                  'It improves the testing process dramatically and can be used for both beta '                 \
+                  'and App Store builds. Only beta builds will notify users about a new version  '              \
+                  'NOTE: You will need to add a dependency on JSONKit, SBJson or YAJL yourself. If you '        \
+                  'want the framework to try again when a network is available, add a dependency '              \
                   'on Reachability and send a notification with the name `BITHockeyNetworkDidBecomeReachable` ' \
                   'yourself when the network becomse reachable.'
 
   s.source_files = 'Classes'
   s.requires_arc = false
-  s.resources    = 'Resources/HockeySDKResources.bundle'
-  s.frameworks   = 'QuartzCore', 'SystemConfiguration', 'CrashReporter', 'CoreGraphics.framework', 'UIKit.framework'
-  s.xcconfig     = { 'FRAMEWORK_SEARCH_PATHS' => '"$(BUILT_PRODUCTS_DIR)/Pods/Frameworks"' }
+  s.preserve_paths = 'Resources', 'Support', 'Vendor'
+  s.frameworks   = 'QuartzCore', 'SystemConfiguration', 'CrashReporter', 'CoreGraphics', 'UIKit'
+  s.xcconfig     = { 'FRAMEWORK_SEARCH_PATHS' => '"$(PODS_ROOT)/HockeySDK/Vendor"',
+                     'GCC_PREPROCESSOR_DEFINITIONS' => %{BITHOCKEY_VERSION="@\\"#{s.version}\\""} }
 
   def s.post_install(target_installer)
-    # Add a copy build phase and make it copy the CrashReporter.framework to the shared BUILT_PRODUCTS_DIR,
-    # so that both the Pods project and the user's project will pick it up.
-    phase = target_installer.target.buildPhases.add(Xcodeproj::Project::PBXCopyFilesBuildPhase, 'dstPath' => 'Pods/Frameworks')
-    file = target_installer.project.main_group.files.new('path' => 'HockeySDK/Vendor/CrashReporter.framework')
-    phase.files << file.buildFiles.new
-    phases = target_installer.target.attributes['buildPhases']
-    phases.delete(phase.uuid)
-    phases.insert(1, phase.uuid)
-  end  
+    puts "\nGenerating HockeySDK resources bundle\n".yellow if config.verbose?
+    Dir.chdir File.join(config.project_pods_root, 'HockeySDK/Support') do
+      command = "xcodebuild -project HockeySDK.xcodeproj -target HockeySDKResources CONFIGURATION_BUILD_DIR=../Resources"
+      command << " 2>&1 > /dev/null" unless config.verbose?
+      unless system(command)
+        raise ::Pod::Informative, "Failed to generate HockeySDK resources bundle"
+      end
+    end
+    File.open(File.join(config.project_pods_root, target_installer.target_definition.copy_resources_script_name), 'a') do |file|
+      file.puts "install_resource 'HockeySDK/Resources/HockeySDKResources.bundle'"
+    end
+  end
 end
+
