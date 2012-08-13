@@ -36,7 +36,7 @@
 
 @interface BITHockeyManager ()
 
-- (BOOL)shouldUseLiveIdenfitier;
+- (BOOL)shouldUseLiveIdentifier;
 
 - (void)configureJMC;
 
@@ -117,7 +117,7 @@
   _delegate = delegate;
   [_appIdentifier release];
 
-  if ([self shouldUseLiveIdenfitier]) {
+  if ([self shouldUseLiveIdentifier]) {
     _appIdentifier = [liveIdentifier copy];
   }
   else {
@@ -178,10 +178,10 @@
 
 #pragma mark - Private Instance Methods
 
-- (BOOL)shouldUseLiveIdenfitier {
+- (BOOL)shouldUseLiveIdentifier {
   BOOL delegateResult = NO;
-  if ([_delegate respondsToSelector:@selector(shouldUseLiveIdenfitier)]) {
-    delegateResult = [(NSObject <BITHockeyManagerDelegate>*)_delegate shouldUseLiveIdenfitier];
+  if ([_delegate respondsToSelector:@selector(shouldUseLiveIdentifier)]) {
+    delegateResult = [(NSObject <BITHockeyManagerDelegate>*)_delegate shouldUseLiveIdentifier];
   }
 
   return (delegateResult) || (_appStoreEnvironment);

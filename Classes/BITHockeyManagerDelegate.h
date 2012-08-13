@@ -46,13 +46,13 @@
  the App Store.
  
  Example:
-    - (BOOL)shouldUseLiveIdenfitier {
+    - (BOOL)shouldUseLiveIdentifier {
     #ifdef (CONFIGURATION_Release)
       return YES;
     #endif
       return NO;
     }
  */
-- (BOOL)shouldUseLiveIdenfitier;
+- (BOOL)shouldUseLiveIdentifier;
 
 @end
