@@ -75,6 +75,7 @@
     
     _delegate = nil;
     _showAlwaysButton = NO;
+    _isSetup = NO;
 
     _crashIdenticalCurrentVersion = YES;
     _urlConnection = nil;
@@ -117,7 +118,7 @@
       [_fileManager removeItemAtPath:_analyzerInProgressFile error:&error];
     }
     
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(startManager) name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(invokeDelayedProcessing) name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
     
     if (!BITHockeyBundle()) {
       NSLog(@"WARNING: %@ is missing, will send reports automatically!", BITHOCKEYSDK_BUNDLE);
@@ -422,18 +423,29 @@
 - (void)startManager {
   if (_crashManagerStatus == BITCrashManagerStatusDisabled) return;
   
-  PLCrashReporter *crashReporter = [PLCrashReporter sharedReporter];
-  NSError *error = NULL;
-  
-  // Check if we previously crashed
-  if ([crashReporter hasPendingCrashReport]) {
-    _didCrashInLastSession = YES;
-    [self handleCrashReport];
+  if (!_isSetup) {
+    PLCrashReporter *crashReporter = [PLCrashReporter sharedReporter];
+    NSError *error = NULL;
+    
+    // Check if we previously crashed
+    if ([crashReporter hasPendingCrashReport]) {
+      _didCrashInLastSession = YES;
+      [self handleCrashReport];
+    }
+
+    // PLCrashReporter is throwing an NSException if it is being enabled again
+    // even though it already is enabled
+    @try {
+      // Enable the Crash Reporter
+      if (![crashReporter enableCrashReporterAndReturnError: &error])
+        NSLog(@"WARNING: Could not enable crash reporter: %@", [error localizedDescription]);
+    }
+    @catch (NSException * e) {
+      NSLog(@"WARNING: %@", [e reason]);
+    }
+
+    _isSetup = YES;
   }
-  
-  // Enable the Crash Reporter
-  if (![crashReporter enableCrashReporterAndReturnError: &error])
-    NSLog(@"WARNING: Could not enable crash reporter: %@", [error localizedDescription]);
 
   [self performSelector:@selector(invokeDelayedProcessing) withObject:nil afterDelay:0.5];
 }
