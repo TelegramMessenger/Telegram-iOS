@@ -117,7 +117,7 @@
       [_fileManager removeItemAtPath:_analyzerInProgressFile error:&error];
     }
     
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(startManager) name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(invokeDelayedProcessing) name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
     
     if (!BITHockeyBundle()) {
       NSLog(@"WARNING: %@ is missing, will send reports automatically!", BITHOCKEYSDK_BUNDLE);
