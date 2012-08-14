@@ -38,7 +38,19 @@ This documentation provides integrated help in Xcode for all public APIs and a s
 
 ## Changelog
 
-### Version 2.5
+### Version 2.5.1
+
+- General:
+
+	- [BUGFIX] Typo in delegate `shouldUseLiveIdentifier` of `BITHockeyManagerDelegate`
+	- [BUGFIX] Default updateManager delegate wasn't set
+
+- Crash Reporting:
+
+	- [BUGFIX] Crash when developer sends the notification `BITHockeyNetworkDidBecomeReachableNotification`
+
+
+### Version 2.5.0
 
 - General:
 
