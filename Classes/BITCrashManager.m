@@ -444,7 +444,7 @@
       NSLog(@"WARNING: %@", [e reason]);
     }
 
-    _isSetup = NO;
+    _isSetup = YES;
   }
 
   [self performSelector:@selector(invokeDelayedProcessing) withObject:nil afterDelay:0.5];
