@@ -1,3 +1,15 @@
+## Version 2.5.1
+
+- General:
+
+	- [BUGFIX] Typo in delegate `shouldUseLiveIdentifier` of `BITHockeyManagerDelegate`
+	- [BUGFIX] Default updateManager delegate wasn't set
+
+- Crash Reporting:
+
+	- [BUGFIX] Crash when developer sends the notification `BITHockeyNetworkDidBecomeReachableNotification`
+
+
 ## Version 2.5
 
 - General:
