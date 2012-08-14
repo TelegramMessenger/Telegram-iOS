@@ -93,6 +93,7 @@ static NSString *kBITCrashManagerStatus = @"BITCrashManagerStatus";
   NSURLConnection *_urlConnection;
   
   BOOL _sendingInProgress;
+  BOOL _isSetup;
 }
 
 

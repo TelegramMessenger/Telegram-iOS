@@ -75,6 +75,7 @@
     
     _delegate = nil;
     _showAlwaysButton = NO;
+    _isSetup = NO;
 
     _crashIdenticalCurrentVersion = YES;
     _urlConnection = nil;
@@ -422,18 +423,29 @@
 - (void)startManager {
   if (_crashManagerStatus == BITCrashManagerStatusDisabled) return;
   
-  PLCrashReporter *crashReporter = [PLCrashReporter sharedReporter];
-  NSError *error = NULL;
-  
-  // Check if we previously crashed
-  if ([crashReporter hasPendingCrashReport]) {
-    _didCrashInLastSession = YES;
-    [self handleCrashReport];
+  if (!_isSetup) {
+    PLCrashReporter *crashReporter = [PLCrashReporter sharedReporter];
+    NSError *error = NULL;
+    
+    // Check if we previously crashed
+    if ([crashReporter hasPendingCrashReport]) {
+      _didCrashInLastSession = YES;
+      [self handleCrashReport];
+    }
+
+    // PLCrashReporter is throwing an NSException if it is being enabled again
+    // even though it already is enabled
+    @try {
+      // Enable the Crash Reporter
+      if (![crashReporter enableCrashReporterAndReturnError: &error])
+        NSLog(@"WARNING: Could not enable crash reporter: %@", [error localizedDescription]);
+    }
+    @catch (NSException * e) {
+      NSLog(@"WARNING: %@", [e reason]);
+    }
+
+    _isSetup = NO;
   }
-  
-  // Enable the Crash Reporter
-  if (![crashReporter enableCrashReporterAndReturnError: &error])
-    NSLog(@"WARNING: Could not enable crash reporter: %@", [error localizedDescription]);
 
   [self performSelector:@selector(invokeDelayedProcessing) withObject:nil afterDelay:0.5];
 }
