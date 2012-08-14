@@ -201,7 +201,7 @@
     
     BITHockeyLog(@"Setup UpdateManager");
     _updateManager = [[BITUpdateManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
-    _crashManager.delegate = _delegate;
+    _updateManager.delegate = _delegate;
     
     // Only if JMC is part of the project
     if ([[self class] isJMCPresent]) {
