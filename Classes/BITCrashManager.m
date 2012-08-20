@@ -429,6 +429,13 @@
     PLCrashReporter *crashReporter = [PLCrashReporter sharedReporter];
     NSError *error = NULL;
     
+    // Make sure the correct version of PLCrashReporter is linked
+    id plCrashReportReportInfoClass = NSClassFromString(@"PLCrashReportReportInfo");
+    
+    if (!plCrashReportReportInfoClass) {
+      NSLog(@"[HockeySDK] ERROR: An old version of PLCrashReporter framework is linked! Please check the framework search path in the target build settings and remove references to folders that contain an older version of CrashReporter.framework and also delete these files.");
+    }
+    
     // Check if we previously crashed
     if ([crashReporter hasPendingCrashReport]) {
       _didCrashInLastSession = YES;
