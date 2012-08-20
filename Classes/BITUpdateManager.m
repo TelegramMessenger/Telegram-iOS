@@ -370,7 +370,7 @@
     }
     
     if (!BITHockeyBundle()) {
-      NSLog(@"WARNING: %@ is missing, make sure it is added!", BITHOCKEYSDK_BUNDLE);
+      NSLog(@"[HockeySDK] WARNING: %@ is missing, make sure it is added!", BITHOCKEYSDK_BUNDLE);
     }
     
     [self loadAppCache];
@@ -428,7 +428,7 @@
 
 - (void)showUpdateView {
   if (_isAppStoreEnvironment) {
-    NSLog(@"this should not be called from an app store build.");
+    NSLog(@"[HockeySDK] This should not be called from an app store build!");
     return;
   }
   
@@ -485,7 +485,7 @@
   } else {
     // if not, we add a subview to the window. A bit hacky but should work in most circumstances.
     // Also, we don't get a nice animation for free, but hey, this is for beta not production users ;)
-    NSLog(@"Warning: No rootViewController found and no view controller set via delegate, using UIWindow-approach: %@", visibleWindow);
+    NSLog(@"[HockeySDK] Warning: No rootViewController found and no view controller set via delegate, using UIWindow-approach: %@", visibleWindow);
     hockeyViewController.modalAnimated = NO;
     [visibleWindow addSubview:_navController.view];
   }

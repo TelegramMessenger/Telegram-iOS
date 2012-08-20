@@ -121,7 +121,7 @@
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(invokeDelayedProcessing) name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
     
     if (!BITHockeyBundle()) {
-      NSLog(@"WARNING: %@ is missing, will send reports automatically!", BITHOCKEYSDK_BUNDLE);
+      NSLog(@"[HockeySDK] WARNING: %@ is missing, will send reports automatically!", BITHOCKEYSDK_BUNDLE);
     }
   }
   return self;
@@ -447,10 +447,10 @@
     @try {
       // Enable the Crash Reporter
       if (![crashReporter enableCrashReporterAndReturnError: &error])
-        NSLog(@"WARNING: Could not enable crash reporter: %@", [error localizedDescription]);
+        NSLog(@"[HockeySDK] WARNING: Could not enable crash reporter: %@", [error localizedDescription]);
     }
     @catch (NSException * e) {
-      NSLog(@"WARNING: %@", [e reason]);
+      NSLog(@"[HockeySDK] WARNING: %@", [e reason]);
     }
 
     _isSetup = YES;
