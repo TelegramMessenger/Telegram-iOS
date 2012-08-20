@@ -29,7 +29,7 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
 
 3. If this is a new project, initialize Git: `git init`
 
-4. Add the submodule: `git submodule add git://github.com/BitStadium/HockeySDK-iOS.git Vendor/HockeySDK`. This would add the submdolue into the `Vendor/HockeySDK` subfolder. Change this to the folder you prefer.
+4. Add the submodule: `git submodule add git://github.com/BitStadium/HockeySDK-iOS.git Vendor/HockeySDK`. This would add the submodule into the `Vendor/HockeySDK` subfolder. Change this to the folder you prefer.
 
 <a id="xcode"></a> 
 ## Set up Xcode
@@ -50,13 +50,17 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
 
     <img src="XcodeLinkBinariesLib_normal.png"/>
 
-8. Drag & Drop `CrashReporter.framework` from the `Frameworks` folder in `HockeySDK.xcodeproj`
+8. Select `Add Other...`.
 
-    <img src="XcodeLinkBinariesPLCrashReporter_normal.png"/>
+    <img src="XcodeFrameworks3_normal.png"/>
+    
+9. Select `CrashReporter.framework` from the `Vendor/HockeySDK/Vendor` folder
 
-9. The following entries should be present:
-	* `CrashReporter.framework`
+    <img src="XcodeFrameworks4_normal.png"/>
+
+10. The following entries should be present:
 	* `libHockeySDK.a`
+	* `CrashReporter.framework`
 	* `CoreGraphics.framework`
     * `Foundation.framework`
     * `QuartzCore.framework`
@@ -65,27 +69,31 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
 
     <img src="XcodeFrameworks2_normal.png"/>
 
-10. Expand `Copy Bundle Resources`.
+11. Expand `Copy Bundle Resources`.
 
-11. Drag & Drop `HockeySDKResources.bundle` from the `Products` folder in `HockeySDK.xcodeproj`
+12. Drag & Drop `HockeySDKResources.bundle` from the `Products` folder in `HockeySDK.xcodeproj`
 
-12. Select `Build Settings`
+    <img src="XcodeBundleResource1_normal.png"/>
 
-13. In `Header Search Paths`, add a path to `$(SRCROOT)\Vendor\HockeyKit\Classes`
+13. Select `Build Settings`
 
-    <img src="XcodeHeaderSearchPath_normal.png"/>
+14. Search for `Header Search Paths`
 
-14. Search for `Other Linker Flags`
+15. Add a path to `$(SRCROOT)/Vendor/HockeySDK/Vendor` and make sure that the list does not contain a path pointing to the `QuincyKit` SDK or another framework that contains `PLCrashReporter`
 
-15. Double click on the build Setting titled Other Linker Flags.
+    <img src="XcodeFrameworkSearchPath_normal.png"/>
 
-16. Add `-ObjC`
+16. Search for `Other Linker Flags`
+
+17. Double click on the build Setting titled Other Linker Flags.
+
+18. Add `-ObjC`
 
     <img src="XcodeOtherLinkerFlags_normal.png"/>
 
-17. Hit `Done`.
+19. Hit `Done`.
 
-18. HockeySDK-iOS also needs a JSON library. If you deployment target iOS >= 5, everything is set. If your deployment target is iOS 4.x, please include one of the following libraries:
+20. HockeySDK-iOS also needs a JSON library. If your deployment target iOS 5.0 or later, then you don't have to do anything. If your deployment target is iOS 4.x, please include one of the following libraries:
 	* [JSONKit](https://github.com/johnezang/JSONKit)
 	* [SBJSON](https://github.com/stig/json-framework)
 	* [YAJL](https://github.com/gabriel/yajl-objc)
