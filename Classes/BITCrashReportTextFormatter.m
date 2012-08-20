@@ -169,8 +169,10 @@ static NSInteger binaryImageSort(id binary1, id binary2, void *context) {
 
     {
         NSString *reportGUID = @"[TODO]";
-        if (report.hasReportInfo && report.reportInfo.reportGUID != nil)
-            reportGUID = report.reportInfo.reportGUID;
+        if ([[report class] respondsToSelector:@selector(reportInfo)]) {
+            if (report.hasReportInfo && report.reportInfo.reportGUID != nil)
+                reportGUID = report.reportInfo.reportGUID;
+        }
       
         NSString *hardwareModel = @"???";
         if (report.hasMachineInfo && report.machineInfo.modelName != nil)
@@ -553,10 +555,12 @@ static NSInteger binaryImageSort(id binary1, id binary2, void *context) {
         pcOffset = frameInfo.instructionPointer - imageInfo.imageBaseAddress;
         NSString *imagePath = [imageInfo.imageName stringByStandardizingPath];
         NSString *appBundleContentsPath = [[report.processInfo.processPath stringByDeletingLastPathComponent] stringByDeletingLastPathComponent]; 
-      
-        if (![imagePath isEqual: report.processInfo.processPath] && ![imagePath hasPrefix:appBundleContentsPath]) {
-          symbol = frameInfo.symbolName;
-          pcOffset = frameInfo.instructionPointer - frameInfo.symbolStart;
+        
+        if ([[frameInfo class] respondsToSelector:@selector(symbolName)]) {
+          if (![imagePath isEqual: report.processInfo.processPath] && ![imagePath hasPrefix:appBundleContentsPath]) {
+            symbol = frameInfo.symbolName;
+            pcOffset = frameInfo.instructionPointer - frameInfo.symbolStart;
+          }
         }
     }
   
