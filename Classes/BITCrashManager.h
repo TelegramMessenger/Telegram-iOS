@@ -94,6 +94,8 @@ static NSString *kBITCrashManagerStatus = @"BITCrashManagerStatus";
   
   BOOL _sendingInProgress;
   BOOL _isSetup;
+  
+  NSUncaughtExceptionHandler *_exceptionHandler;
 }
 
 
