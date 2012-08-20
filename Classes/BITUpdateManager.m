@@ -82,7 +82,7 @@
 #pragma mark - private
 
 - (void)reportError:(NSError *)error {
-  BITHockeyLog(@"Error: %@", [error localizedDescription]);
+  BITHockeyLog(@"ERROR: %@", [error localizedDescription]);
   _lastCheckFailed = YES;
   
   // only show error if we enable that
@@ -310,7 +310,7 @@
     if ([UIWindow instancesRespondToSelector:@selector(rootViewController)]) {
       if ([window rootViewController]) {
         visibleWindow = window;
-        BITHockeyLog(@"UIWindow with rootViewController found: %@", visibleWindow);
+        BITHockeyLog(@"INFO: UIWindow with rootViewController found: %@", visibleWindow);
         break;
       }
     }
@@ -433,7 +433,7 @@
   }
   
   if (_currentHockeyViewController) {
-    BITHockeyLog(@"update view already visible, aborting");
+    BITHockeyLog(@"INFO: Update view already visible, aborting");
     return;
   }
   
@@ -698,7 +698,7 @@
   
   // build request & send
   NSString *url = [NSString stringWithFormat:@"%@%@", _updateURL, parameter];
-  BITHockeyLog(@"sending api request to %@", url);
+  BITHockeyLog(@"INFO: Sending api request to %@", url);
   
   NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url] cachePolicy:1 timeoutInterval:10.0];
   [request setHTTPMethod:@"GET"];
@@ -722,7 +722,7 @@
                                         userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Server returned empty response.", NSLocalizedDescriptionKey, nil]]];
       return;
     } else {
-      BITHockeyLog(@"Received API response: %@", responseString);
+      BITHockeyLog(@"INFO: Received API response: %@", responseString);
       NSString *token = [[feedDict objectForKey:@"authcode"] lowercaseString];
       failed = NO;
       if ([[self authenticationToken] compare:token] == NSOrderedSame) {
@@ -742,7 +742,7 @@
         }
       } else {
         // different token, block this version
-        BITHockeyLog(@"AUTH FAILURE: %@", [self authenticationToken]);
+        BITHockeyLog(@"INFO: AUTH FAILURE: %@", [self authenticationToken]);
         
         // store the new data
         [[NSUserDefaults standardUserDefaults] setObject:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] forKey:kBITUpdateAuthorizedVersion];
@@ -780,7 +780,7 @@
   
   // do we need to update?
   if (![self shouldCheckForUpdates] && !_currentHockeyViewController) {
-    BITHockeyLog(@"update not needed right now");
+    BITHockeyLog(@"INFO: Update not needed right now");
     self.checkInProgress = NO;
     return;
   }
@@ -810,7 +810,7 @@
   
   // build request & send
   NSString *url = [NSString stringWithFormat:@"%@%@", _updateURL, parameter];
-  BITHockeyLog(@"sending api request to %@", url);
+  BITHockeyLog(@"INFO: Sending api request to %@", url);
   
   NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url] cachePolicy:1 timeoutInterval:10.0];
   [request setHTTPMethod:@"GET"];
@@ -830,7 +830,7 @@
   if (_isAppStoreEnvironment) return NO;
   
   if (!self.isUpdateAvailable) {
-    BITHockeyLog(@"Warning: No update available. Aborting.");
+    BITHockeyLog(@"WARNING: No update available. Aborting.");
     return NO;
   }
   
@@ -848,9 +848,9 @@
   NSString *hockeyAPIURL = [NSString stringWithFormat:@"%@api/2/apps/%@?format=plist%@", _updateURL, [self encodedAppIdentifier], extraParameter];
   NSString *iOSUpdateURL = [NSString stringWithFormat:@"itms-services://?action=download-manifest&url=%@", [hockeyAPIURL bit_URLEncodedString]];
   
-  BITHockeyLog(@"API Server Call: %@, calling iOS with %@", hockeyAPIURL, iOSUpdateURL);
+  BITHockeyLog(@"INFO: API Server Call: %@, calling iOS with %@", hockeyAPIURL, iOSUpdateURL);
   BOOL success = [[UIApplication sharedApplication] openURL:[NSURL URLWithString:iOSUpdateURL]];
-  BITHockeyLog(@"System returned: %d", success);
+  BITHockeyLog(@"INFO: System returned: %d", success);
   return success;
 }
 
@@ -884,7 +884,7 @@
 
 // begin the startup process
 - (void)startManager {
-  BITHockeyLog(@"Start UpdateManager");
+  BITHockeyLog(@"INFO: Start UpdateManager");
   
   if ([self expiryDateReached]) return;
   
@@ -946,7 +946,7 @@
   
   if ([self.receivedData length]) {
     NSString *responseString = [[[NSString alloc] initWithBytes:[_receivedData bytes] length:[_receivedData length] encoding: NSUTF8StringEncoding] autorelease];
-    BITHockeyLog(@"Received API response: %@", responseString);
+    BITHockeyLog(@"INFO: Received API response: %@", responseString);
     
     id json = [self parseJSONResultString:responseString];
     self.trackerConfig = (([self checkForTracker] && [[json valueForKey:@"tracker"] isKindOfClass:[NSDictionary class]]) ? [json valueForKey:@"tracker"] : nil);

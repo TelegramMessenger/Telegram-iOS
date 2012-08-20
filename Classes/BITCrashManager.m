@@ -359,7 +359,7 @@
   }
   
   if ([_crashFiles count] > 0) {
-    BITHockeyLog(@"%i pending crash reports found.", [_crashFiles count]);
+    BITHockeyLog(@"INFO: %i pending crash reports found.", [_crashFiles count]);
     return YES;
   } else
     return NO;
@@ -370,7 +370,7 @@
 
 // slightly delayed startup processing, so we don't keep the first runloop on startup busy for too long
 - (void)invokeDelayedProcessing {
-  BITHockeyLog(@"Start delayed CrashManager processing");
+  BITHockeyLog(@"INFO: Start delayed CrashManager processing");
   
   if (!_sendingInProgress && [self hasPendingCrashReport]) {
     _sendingInProgress = YES;
@@ -478,7 +478,7 @@
       PLCrashReport *report = [[[PLCrashReport alloc] initWithData:crashData error:&error] autorelease];
 			
       if (report == nil) {
-        BITHockeyLog(@"Could not parse crash report");
+        BITHockeyLog(@"WARNING: Could not parse crash report");
         // we cannot do anything with this report, so delete it
         [_fileManager removeItemAtPath:filename error:&error];
         [_fileManager removeItemAtPath:[NSString stringWithFormat:@"%@.meta", filename] error:&error];
@@ -553,7 +553,7 @@
   [self saveSettings];
   
   if (crashes != nil) {
-    BITHockeyLog(@"Sending crash reports:\n%@", crashes);
+    BITHockeyLog(@"INFO: Sending crash reports:\n%@", crashes);
     [self postXML:[NSString stringWithFormat:@"<crashes>%@</crashes>", crashes]];
   }
 }
@@ -632,14 +632,14 @@
   _urlConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
   
   if (!_urlConnection) {
-    BITHockeyLog(@"Sending crash reports could not start!");
+    BITHockeyLog(@"INFO: Sending crash reports could not start!");
     _sendingInProgress = NO;
   } else {
     if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillSendCrashReport:)]) {
       [self.delegate crashManagerWillSendCrashReport:self];
     }
     
-    BITHockeyLog(@"Sending crash reports started.");
+    BITHockeyLog(@"INFO: Sending crash reports started.");
   }
 }
 
@@ -681,7 +681,7 @@
                                                                      mutabilityOption:NSPropertyListMutableContainersAndLeaves
                                                                                format:nil
                                                                      errorDescription:NULL];
-    BITHockeyLog(@"Received API response: %@", response);
+    BITHockeyLog(@"INFO: Received API response: %@", response);
             
     if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerDidFinishSendingCrashReport:)]) {
       [self.delegate crashManagerDidFinishSendingCrashReport:self];
