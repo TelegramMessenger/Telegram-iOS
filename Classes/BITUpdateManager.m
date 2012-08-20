@@ -962,9 +962,7 @@
       
       // server returned empty response?
       if (![feedArray count]) {
-        [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
-                                              code:BITUpdateAPIServerReturnedEmptyResponse
-                                          userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Server returned empty response.", NSLocalizedDescriptionKey, nil]]];
+        BITHockeyLog(@"WARNING: No versions available for download on HockeyApp.");
         return;
       } else {
         _lastCheckFailed = NO;
