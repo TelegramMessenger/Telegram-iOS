@@ -132,13 +132,9 @@
 }
 
 - (void)didBecomeActiveActions {
-  if ([self isUpdateManagerDisabled]) return;
-  
-  [self checkExpiryDateReached];
-  [self startUsage];
-
-  if (_checkForUpdateOnLaunch) {
-    [self checkForUpdate];
+  if (![self isUpdateManagerDisabled]) {
+    [self checkExpiryDateReached];
+    [self startUsage];
   }
 }
 
@@ -354,10 +350,10 @@
     _uuid = [[self executableUUID] retain];
     _sendUsageData = YES;
     _disableUpdateManager = NO;
+    _checkForTracker = NO;
     
     // set defaults
     self.showDirectInstallOption = NO;
-    self.requireAuthorization = NO;
     self.alwaysShowUpdateReminder = YES;
     self.checkForUpdateOnLaunch = YES;
     self.compareVersionType = BITUpdateComparisonResultGreater;
@@ -773,16 +769,18 @@
 }
 
 - (void)checkForUpdate {
-  if (_isAppStoreEnvironment && !_checkForTracker) return;
-  if ([self isUpdateManagerDisabled]) return;
-
-  if ([self expiryDateReached]) return;
-
-  if (self.requireAuthorization) return;
-  if (self.isUpdateAvailable && [self hasNewerMandatoryVersion]) {
-    [self showCheckForUpdateAlert];
+  if (!_isAppStoreEnvironment && ![self isUpdateManagerDisabled]) {
+    if ([self expiryDateReached]) return;
+    if (self.requireAuthorization) return;
+    
+    if (self.isUpdateAvailable && [self hasNewerMandatoryVersion]) {
+      [self showCheckForUpdateAlert];
+    }
+    
+    [self checkForUpdateShowFeedback:NO];
+  } else if ([self checkForTracker]) {
+    [self checkForUpdateShowFeedback:NO];
   }
-  [self checkForUpdateShowFeedback:NO];
 }
 
 - (void)checkForUpdateShowFeedback:(BOOL)feedback {
@@ -792,7 +790,7 @@
   self.checkInProgress = YES;
   
   // do we need to update?
-  if (![self shouldCheckForUpdates] && !_currentHockeyViewController) {
+  if (![self checkForTracker] && ![self shouldCheckForUpdates] && !_currentHockeyViewController) {
     BITHockeyLog(@"INFO: Update not needed right now");
     self.checkInProgress = NO;
     return;
@@ -897,20 +895,29 @@
 
 // begin the startup process
 - (void)startManager {
-  if ([self isUpdateManagerDisabled]) return;
-  
-  BITHockeyLog(@"INFO: Start UpdateManager");
-  
-  if ([self expiryDateReached]) return;
-  
-  if (![self appVersionIsAuthorized]) {
-    if ([self authorizationState] == BITUpdateAuthorizationPending) {
-      [self showBlockingScreen:BITHockeyLocalizedString(@"UpdateAuthorizationProgress") image:@"authorize_request.png"];
-      
-      [self performSelector:@selector(checkForAuthorization) withObject:nil afterDelay:0.0f];
+  if (!_isAppStoreEnvironment) {
+    if ([self isUpdateManagerDisabled]) return;
+
+    BITHockeyLog(@"INFO: Start UpdateManager");
+
+    if ([self expiryDateReached]) return;
+    
+    if (![self appVersionIsAuthorized]) {
+      if ([self authorizationState] == BITUpdateAuthorizationPending) {
+        [self showBlockingScreen:BITHockeyLocalizedString(@"UpdateAuthorizationProgress") image:@"authorize_request.png"];
+        
+        [self performSelector:@selector(checkForAuthorization) withObject:nil afterDelay:0.0f];
+      }
+    } else {
+      if ([self checkForTracker] || ([self isCheckForUpdateOnLaunch] && [self shouldCheckForUpdates])) {
+        [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0f];
+      }
     }
   } else {
-    if ([self shouldCheckForUpdates]) {
+    if ([self checkForTracker]) {
+      // if we are in the app store, make sure not to send usage information in any case for now
+      _sendUsageData = NO;
+      
       [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0f];
     }
   }

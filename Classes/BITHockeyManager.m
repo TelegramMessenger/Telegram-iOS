@@ -144,7 +144,7 @@
   }
   
   // Setup UpdateManager
-  if (![self isUpdateManagerDisabled]) {
+  if (![self isUpdateManagerDisabled] || [[self class] isJMCPresent]) {
     BITHockeyLog(@"INFO: Start UpdateManager with small delay");
     if (_updateURL) {
       [_updateManager setUpdateURL:_updateURL];
