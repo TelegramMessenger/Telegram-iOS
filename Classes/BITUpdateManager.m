@@ -342,6 +342,7 @@
     _lastCheck = nil;
     _uuid = [[self executableUUID] retain];
     _sendUsageData = YES;
+    _disableUpdateManager = NO;
     
     // set defaults
     self.showDirectInstallOption = NO;
@@ -494,6 +495,7 @@
 
 - (void)showCheckForUpdateAlert {
   if (_isAppStoreEnvironment) return;
+  if ([self isUpdateManagerDisabled]) return;
   
   if (!_updateAlertShowing) {
     if ([self hasNewerMandatoryVersion]) {
@@ -762,6 +764,7 @@
 
 - (void)checkForUpdate {
   if (_isAppStoreEnvironment && !_checkForTracker) return;
+  if ([self isUpdateManagerDisabled]) return;
 
   if ([self expiryDateReached]) return;
 
@@ -884,6 +887,8 @@
 
 // begin the startup process
 - (void)startManager {
+  if ([self isUpdateManagerDisabled]) return;
+  
   BITHockeyLog(@"INFO: Start UpdateManager");
   
   if ([self expiryDateReached]) return;

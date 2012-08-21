@@ -163,6 +163,14 @@
 }
 
 
+- (void)setDisableUpdateManager:(BOOL)disableUpdateManager {
+  if (_updateManager) {
+    [_updateManager setDisableUpdateManager:disableUpdateManager];
+  }
+  _disableUpdateManager = disableUpdateManager;
+}
+
+
 - (void)setUpdateURL:(NSString *)anUpdateURL {
   // ensure url ends with a trailing slash
   if (![anUpdateURL hasSuffix:@"/"]) {
