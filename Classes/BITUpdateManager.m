@@ -131,6 +131,17 @@
   return nil;
 }
 
+- (void)didBecomeActiveActions {
+  if ([self isUpdateManagerDisabled]) return;
+  
+  [self checkExpiryDateReached];
+  [self startUsage];
+
+  if (_checkForUpdateOnLaunch) {
+    [self checkForUpdate];
+  }
+}
+
 #pragma mark - Expiry
 
 - (BOOL)expiryDateReached {
@@ -382,8 +393,7 @@
     [dnc addObserver:self selector:@selector(startManager) name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
     
     [dnc addObserver:self selector:@selector(stopUsage) name:UIApplicationWillTerminateNotification object:nil];
-    [dnc addObserver:self selector:@selector(checkExpiryDateReached) name:UIApplicationDidBecomeActiveNotification object:nil];
-    [dnc addObserver:self selector:@selector(startUsage) name:UIApplicationDidBecomeActiveNotification object:nil];
+    [dnc addObserver:self selector:@selector(didBecomeActiveActions) name:UIApplicationDidBecomeActiveNotification object:nil];
     [dnc addObserver:self selector:@selector(stopUsage) name:UIApplicationWillResignActiveNotification object:nil];
   }
   return self;
@@ -1053,18 +1063,6 @@
     [_currentHockeyViewController release];
     _currentHockeyViewController = [aCurrentHockeyViewController retain];
     //HockeySDKLog(@"active hockey view controller: %@", aCurrentHockeyViewController);
-  }
-}
-
-- (void)setCheckForUpdateOnLaunch:(BOOL)flag {
-  if (_checkForUpdateOnLaunch != flag) {
-    _checkForUpdateOnLaunch = flag;
-    NSNotificationCenter *dnc = [NSNotificationCenter defaultCenter];
-    if (flag) {
-      [dnc addObserver:self selector:@selector(checkForUpdate) name:UIApplicationDidBecomeActiveNotification object:nil];
-    } else {
-      [dnc removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
-    }
   }
 }
 
