@@ -33,8 +33,8 @@
 
 @implementation UIImage (BITHockeyAdditions)
 
-CGContextRef MyOpenBitmapContext(int pixelsWide, int pixelsHigh);
-CGImageRef CreateGradientImage(int pixelsWide, int pixelsHigh, float fromAlpha, float toAlpha);
+static CGContextRef MyOpenBitmapContext(int pixelsWide, int pixelsHigh);
+static CGImageRef CreateGradientImage(int pixelsWide, int pixelsHigh, float fromAlpha, float toAlpha);
 
 // Returns true if the image has an alpha layer
 - (BOOL)hasAlpha {
