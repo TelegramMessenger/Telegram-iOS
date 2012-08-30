@@ -291,7 +291,7 @@ UIImage *bit_reflectedImageWithHeight(UIImage *inputImage, NSUInteger height, fl
 }
 
 
-UIImage *bit_initWithContentsOfResolutionIndependentFile(NSString * path) {
+UIImage *bit_newWithContentsOfResolutionIndependentFile(NSString * path) {
   if ([UIScreen instancesRespondToSelector:@selector(scale)] && (int)[[UIScreen mainScreen] scale] == 2.0) {
     NSString *path2x = [[path stringByDeletingLastPathComponent]
                         stringByAppendingPathComponent:[NSString stringWithFormat:@"%@@2x.%@",
@@ -310,8 +310,7 @@ UIImage *bit_initWithContentsOfResolutionIndependentFile(NSString * path) {
 UIImage *bit_imageWithContentsOfResolutionIndependentFile(NSString *path) {
 #ifndef __clang_analyzer__
   // clang alayzer in 4.2b3 thinks here's a leak, which is not the case.
-  UIImage *newImage = bit_initWithContentsOfResolutionIndependentFile(path);
-  return [newImage autorelease];
+  return [bit_newWithContentsOfResolutionIndependentFile(path) autorelease];
 #endif
 }
 
