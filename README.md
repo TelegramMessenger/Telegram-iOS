@@ -38,6 +38,27 @@ This documentation provides integrated help in Xcode for all public APIs and a s
 
 ## Changelog
 
+### Version 2.5.2b1
+
+- General:
+
+    - [NEW] Replace categories with C functions, so the `Other Linker Flag` `-ObjC` and `-all_load` won't not be needed for integration
+	- [BUGFIX] Some code style fixes and missing new lines in headers at EOF
+
+- Crash Reporting:
+
+    - [NEW] PLCrashReporter framework now linked into the HockeySDK framework, so that won't be needed to be added separately any more
+    - [NEW] Add some error handler detection to optionally notify the developer of multiple handlers that could cause crashes not to be reported to HockeyApp
+    - [NEW] Show an error in the console if an older version of PLCrashReporter is linked
+    - [NEW] Make sure the app doesn't crash if the developer forgot to delete the old PLCrashReporter version and the framework search path is still pointing to it
+
+- Updating:
+
+    - [BUGFIX] Fix disabling usage tracking and expiry check not working if `checkForUpdateOnLaunch` is set to NO
+    - [BUGFIX] `disableUpdateManager` wasn't working correctly
+    - [BUGFIX] If the server doesn't return any app versions, don't handle this as an error, but show a warning in the console when `debugLogging` is enabled
+
+
 ### Version 2.5.1
 
 - General:

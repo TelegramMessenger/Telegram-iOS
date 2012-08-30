@@ -83,17 +83,9 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
 
     <img src="XcodeFrameworkSearchPath_normal.png"/>
 
-16. Search for `Other Linker Flags`
+16. Hit `Done`.
 
-17. Double click on the build Setting titled Other Linker Flags.
-
-18. Add `-ObjC`
-
-    <img src="XcodeOtherLinkerFlags_normal.png"/>
-
-19. Hit `Done`.
-
-20. HockeySDK-iOS also needs a JSON library. If your deployment target iOS 5.0 or later, then you don't have to do anything. If your deployment target is iOS 4.x, please include one of the following libraries:
+17. HockeySDK-iOS also needs a JSON library. If your deployment target iOS 5.0 or later, then you don't have to do anything. If your deployment target is iOS 4.x, please include one of the following libraries:
 	* [JSONKit](https://github.com/johnezang/JSONKit)
 	* [SBJSON](https://github.com/stig/json-framework)
 	* [YAJL](https://github.com/gabriel/yajl-objc)
