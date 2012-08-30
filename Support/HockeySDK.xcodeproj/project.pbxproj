@@ -31,11 +31,9 @@
 		1E59545715B6C41300A03429 /* BITAppVersionMetaInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB45A148D7BF50015DEDC /* BITAppVersionMetaInfo.m */; };
 		1E59545C15B6C41300A03429 /* BITCrashManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB464148D7BF50015DEDC /* BITCrashManager.m */; };
 		1E59545D15B6C41300A03429 /* BITHockeyManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB466148D7BF50015DEDC /* BITHockeyManager.m */; };
-		1E59545E15B6C41300A03429 /* NSString+BITHockeyAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB468148D7BF50015DEDC /* NSString+BITHockeyAdditions.m */; };
 		1E59545F15B6C41300A03429 /* PSAppStoreHeader.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB46A148D7BF50015DEDC /* PSAppStoreHeader.m */; };
 		1E59546015B6C41300A03429 /* PSStoreButton.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB46C148D7BF50015DEDC /* PSStoreButton.m */; };
 		1E59546115B6C41300A03429 /* PSWebTableViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB46E148D7BF50015DEDC /* PSWebTableViewCell.m */; };
-		1E59546215B6C41300A03429 /* UIImage+BITHockeyAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB470148D7BF50015DEDC /* UIImage+BITHockeyAdditions.m */; };
 		1E59546315B6C41300A03429 /* BITCrashReportTextFormatter.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E40BCB815A3494400BD64D9 /* BITCrashReportTextFormatter.m */; };
 		1E59546615B6C41300A03429 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E400561D148D79B500EB22B9 /* Foundation.framework */; };
 		1E59546715B6C41300A03429 /* CrashReporter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E41EB48B148D7C4E0015DEDC /* CrashReporter.framework */; };
@@ -45,7 +43,6 @@
 		1E59547015B6C41300A03429 /* PSAppStoreHeader.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB469148D7BF50015DEDC /* PSAppStoreHeader.h */; };
 		1E59547115B6C41300A03429 /* PSStoreButton.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB46B148D7BF50015DEDC /* PSStoreButton.h */; };
 		1E59547215B6C41300A03429 /* PSWebTableViewCell.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB46D148D7BF50015DEDC /* PSWebTableViewCell.h */; };
-		1E59547315B6C41300A03429 /* UIImage+BITHockeyAdditions.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB46F148D7BF50015DEDC /* UIImage+BITHockeyAdditions.h */; };
 		1E59547515B6C41300A03429 /* BITCrashManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E40BCB415A3487500BD64D9 /* BITCrashManagerDelegate.h */; settings = {ATTRIBUTES = (); }; };
 		1E59547615B6C41300A03429 /* BITCrashReportTextFormatter.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E40BCB715A3494400BD64D9 /* BITCrashReportTextFormatter.h */; };
 		1E59547815B6C41300A03429 /* HockeySDK.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E71509A15B5C76F004E88FF /* HockeySDK.h */; settings = {ATTRIBUTES = (); }; };
@@ -59,18 +56,15 @@
 		1E5954CD15B6F24A00A03429 /* BITAppVersionMetaInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB45A148D7BF50015DEDC /* BITAppVersionMetaInfo.m */; };
 		1E5954D215B6F24A00A03429 /* BITCrashManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB464148D7BF50015DEDC /* BITCrashManager.m */; };
 		1E5954D315B6F24A00A03429 /* BITHockeyManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB466148D7BF50015DEDC /* BITHockeyManager.m */; };
-		1E5954D415B6F24A00A03429 /* NSString+BITHockeyAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB468148D7BF50015DEDC /* NSString+BITHockeyAdditions.m */; };
 		1E5954D515B6F24A00A03429 /* PSAppStoreHeader.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB46A148D7BF50015DEDC /* PSAppStoreHeader.m */; };
 		1E5954D615B6F24A00A03429 /* PSStoreButton.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB46C148D7BF50015DEDC /* PSStoreButton.m */; };
 		1E5954D715B6F24A00A03429 /* PSWebTableViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB46E148D7BF50015DEDC /* PSWebTableViewCell.m */; };
-		1E5954D815B6F24A00A03429 /* UIImage+BITHockeyAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB470148D7BF50015DEDC /* UIImage+BITHockeyAdditions.m */; };
 		1E5954D915B6F24A00A03429 /* BITCrashReportTextFormatter.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E40BCB815A3494400BD64D9 /* BITCrashReportTextFormatter.m */; };
 		1E5954DC15B6F24A00A03429 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E400561D148D79B500EB22B9 /* Foundation.framework */; };
 		1E5954DD15B6F24A00A03429 /* CrashReporter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E41EB48B148D7C4E0015DEDC /* CrashReporter.framework */; };
 		1E59558D15B6FDA500A03429 /* PSAppStoreHeader.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB469148D7BF50015DEDC /* PSAppStoreHeader.h */; };
 		1E59558E15B6FDA500A03429 /* PSStoreButton.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB46B148D7BF50015DEDC /* PSStoreButton.h */; };
 		1E59558F15B6FDA500A03429 /* PSWebTableViewCell.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB46D148D7BF50015DEDC /* PSWebTableViewCell.h */; };
-		1E59559015B6FDA500A03429 /* UIImage+BITHockeyAdditions.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB46F148D7BF50015DEDC /* UIImage+BITHockeyAdditions.h */; };
 		1E59559215B6FDA500A03429 /* BITAppVersionMetaInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB459148D7BF50015DEDC /* BITAppVersionMetaInfo.h */; };
 		1E59559415B6FDA500A03429 /* BITUpdateManager.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB45D148D7BF50015DEDC /* BITUpdateManager.h */; settings = {ATTRIBUTES = (); }; };
 		1E59559815B6FDA500A03429 /* BITCrashManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E40BCB415A3487500BD64D9 /* BITCrashManagerDelegate.h */; settings = {ATTRIBUTES = (); }; };
@@ -104,16 +98,11 @@
 		1E5955E715B751FB00A03429 /* BITUpdateViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E5955E615B751FB00A03429 /* BITUpdateViewController.m */; };
 		1E5955E815B751FB00A03429 /* BITUpdateViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E5955E615B751FB00A03429 /* BITUpdateViewController.m */; };
 		1E5955E915B751FB00A03429 /* BITUpdateViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E5955E615B751FB00A03429 /* BITUpdateViewController.m */; };
-		1E5955EB15B7538B00A03429 /* NSString+BITHockeyAdditions.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E5955EA15B7538B00A03429 /* NSString+BITHockeyAdditions.h */; };
-		1E5955EC15B7538B00A03429 /* NSString+BITHockeyAdditions.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E5955EA15B7538B00A03429 /* NSString+BITHockeyAdditions.h */; };
-		1E5955ED15B7538B00A03429 /* NSString+BITHockeyAdditions.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E5955EA15B7538B00A03429 /* NSString+BITHockeyAdditions.h */; };
 		1E5955EF15B7752300A03429 /* BITUpdateManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E5955EE15B7752200A03429 /* BITUpdateManagerDelegate.h */; };
 		1E5955F015B7752300A03429 /* BITUpdateManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E5955EE15B7752200A03429 /* BITUpdateManagerDelegate.h */; };
 		1E5955F115B7752300A03429 /* BITUpdateManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E5955EE15B7752200A03429 /* BITUpdateManagerDelegate.h */; };
-		1E5955F215B77F5100A03429 /* NSString+BITHockeyAdditions.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E5955EA15B7538B00A03429 /* NSString+BITHockeyAdditions.h */; };
 		1E5955F315B77F5600A03429 /* PSAppStoreHeader.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB469148D7BF50015DEDC /* PSAppStoreHeader.h */; };
 		1E5955F415B77F5E00A03429 /* PSWebTableViewCell.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB46D148D7BF50015DEDC /* PSWebTableViewCell.h */; };
-		1E5955F515B77F6000A03429 /* UIImage+BITHockeyAdditions.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB46F148D7BF50015DEDC /* UIImage+BITHockeyAdditions.h */; };
 		1E5955F615B77F6500A03429 /* HockeySDKPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E5955A015B70F6900A03429 /* HockeySDKPrivate.h */; };
 		1E5955F715B77F7600A03429 /* BITUpdateManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E5955EE15B7752200A03429 /* BITUpdateManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E5955F815B77F7C00A03429 /* BITUpdateViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E5955E215B751ED00A03429 /* BITUpdateViewController.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -123,6 +112,12 @@
 		1E5955FD15B7877B00A03429 /* BITHockeyManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E5955FA15B7877A00A03429 /* BITHockeyManagerDelegate.h */; };
 		1E5955FE15B787D600A03429 /* BITHockeyManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E5955FA15B7877A00A03429 /* BITHockeyManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E71509B15B5C76F004E88FF /* HockeySDK.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E71509A15B5C76F004E88FF /* HockeySDK.h */; settings = {ATTRIBUTES = (); }; };
+		1EB6046D15EF6B3200F69880 /* BITHockeyHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EB6046B15EF6B3200F69880 /* BITHockeyHelper.h */; };
+		1EB6046E15EF6B3200F69880 /* BITHockeyHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EB6046B15EF6B3200F69880 /* BITHockeyHelper.h */; };
+		1EB6046F15EF6B3200F69880 /* BITHockeyHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EB6046B15EF6B3200F69880 /* BITHockeyHelper.h */; };
+		1EB6047015EF6B3200F69880 /* BITHockeyHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EB6046C15EF6B3200F69880 /* BITHockeyHelper.m */; };
+		1EB6047115EF6B3200F69880 /* BITHockeyHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EB6046C15EF6B3200F69880 /* BITHockeyHelper.m */; };
+		1EB6047215EF6B3200F69880 /* BITHockeyHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EB6046C15EF6B3200F69880 /* BITHockeyHelper.m */; };
 		E400561E148D79B500EB22B9 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E400561D148D79B500EB22B9 /* Foundation.framework */; };
 		E41EB471148D7BF50015DEDC /* BITAppVersionMetaInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB459148D7BF50015DEDC /* BITAppVersionMetaInfo.h */; };
 		E41EB472148D7BF50015DEDC /* BITAppVersionMetaInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB45A148D7BF50015DEDC /* BITAppVersionMetaInfo.m */; };
@@ -130,15 +125,12 @@
 		E41EB47C148D7BF50015DEDC /* BITCrashManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB464148D7BF50015DEDC /* BITCrashManager.m */; };
 		E41EB47D148D7BF50015DEDC /* BITHockeyManager.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB465148D7BF50015DEDC /* BITHockeyManager.h */; };
 		E41EB47E148D7BF50015DEDC /* BITHockeyManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB466148D7BF50015DEDC /* BITHockeyManager.m */; };
-		E41EB480148D7BF50015DEDC /* NSString+BITHockeyAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB468148D7BF50015DEDC /* NSString+BITHockeyAdditions.m */; };
 		E41EB481148D7BF50015DEDC /* PSAppStoreHeader.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB469148D7BF50015DEDC /* PSAppStoreHeader.h */; };
 		E41EB482148D7BF50015DEDC /* PSAppStoreHeader.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB46A148D7BF50015DEDC /* PSAppStoreHeader.m */; };
 		E41EB483148D7BF50015DEDC /* PSStoreButton.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB46B148D7BF50015DEDC /* PSStoreButton.h */; };
 		E41EB484148D7BF50015DEDC /* PSStoreButton.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB46C148D7BF50015DEDC /* PSStoreButton.m */; };
 		E41EB485148D7BF50015DEDC /* PSWebTableViewCell.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB46D148D7BF50015DEDC /* PSWebTableViewCell.h */; };
 		E41EB486148D7BF50015DEDC /* PSWebTableViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB46E148D7BF50015DEDC /* PSWebTableViewCell.m */; };
-		E41EB487148D7BF50015DEDC /* UIImage+BITHockeyAdditions.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB46F148D7BF50015DEDC /* UIImage+BITHockeyAdditions.h */; };
-		E41EB488148D7BF50015DEDC /* UIImage+BITHockeyAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB470148D7BF50015DEDC /* UIImage+BITHockeyAdditions.m */; };
 		E41EB48C148D7C4E0015DEDC /* CrashReporter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E41EB48B148D7C4E0015DEDC /* CrashReporter.framework */; };
 /* End PBXBuildFile section */
 
@@ -213,11 +205,12 @@
 		1E5955D515B72ED500A03429 /* BITUpdateManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = BITUpdateManager.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
 		1E5955E215B751ED00A03429 /* BITUpdateViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITUpdateViewController.h; sourceTree = "<group>"; };
 		1E5955E615B751FB00A03429 /* BITUpdateViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITUpdateViewController.m; sourceTree = "<group>"; };
-		1E5955EA15B7538B00A03429 /* NSString+BITHockeyAdditions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSString+BITHockeyAdditions.h"; sourceTree = "<group>"; };
 		1E5955EE15B7752200A03429 /* BITUpdateManagerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITUpdateManagerDelegate.h; sourceTree = "<group>"; };
 		1E5955FA15B7877A00A03429 /* BITHockeyManagerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITHockeyManagerDelegate.h; sourceTree = "<group>"; };
 		1E66CA9115D4100500F35BED /* buildnumber.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = buildnumber.xcconfig; sourceTree = "<group>"; };
 		1E71509A15B5C76F004E88FF /* HockeySDK.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HockeySDK.h; sourceTree = "<group>"; };
+		1EB6046B15EF6B3200F69880 /* BITHockeyHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITHockeyHelper.h; sourceTree = "<group>"; };
+		1EB6046C15EF6B3200F69880 /* BITHockeyHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITHockeyHelper.m; sourceTree = "<group>"; };
 		1EDA60CF15C2C1450032D10B /* HockeySDK-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "HockeySDK-Info.plist"; sourceTree = "<group>"; };
 		E400561A148D79B500EB22B9 /* libHockeySDK-iphoneos.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libHockeySDK-iphoneos.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		E400561D148D79B500EB22B9 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -227,15 +220,12 @@
 		E41EB464148D7BF50015DEDC /* BITCrashManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = BITCrashManager.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
 		E41EB465148D7BF50015DEDC /* BITHockeyManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITHockeyManager.h; sourceTree = "<group>"; };
 		E41EB466148D7BF50015DEDC /* BITHockeyManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITHockeyManager.m; sourceTree = "<group>"; };
-		E41EB468148D7BF50015DEDC /* NSString+BITHockeyAdditions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSString+BITHockeyAdditions.m"; sourceTree = "<group>"; };
 		E41EB469148D7BF50015DEDC /* PSAppStoreHeader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PSAppStoreHeader.h; sourceTree = "<group>"; };
 		E41EB46A148D7BF50015DEDC /* PSAppStoreHeader.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PSAppStoreHeader.m; sourceTree = "<group>"; };
 		E41EB46B148D7BF50015DEDC /* PSStoreButton.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PSStoreButton.h; sourceTree = "<group>"; };
 		E41EB46C148D7BF50015DEDC /* PSStoreButton.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PSStoreButton.m; sourceTree = "<group>"; };
 		E41EB46D148D7BF50015DEDC /* PSWebTableViewCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PSWebTableViewCell.h; sourceTree = "<group>"; };
 		E41EB46E148D7BF50015DEDC /* PSWebTableViewCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PSWebTableViewCell.m; sourceTree = "<group>"; };
-		E41EB46F148D7BF50015DEDC /* UIImage+BITHockeyAdditions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIImage+BITHockeyAdditions.h"; sourceTree = "<group>"; };
-		E41EB470148D7BF50015DEDC /* UIImage+BITHockeyAdditions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIImage+BITHockeyAdditions.m"; sourceTree = "<group>"; };
 		E41EB48B148D7C4E0015DEDC /* CrashReporter.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CrashReporter.framework; path = ../Vendor/CrashReporter.framework; sourceTree = "<group>"; };
 		E4E7335A148D7A5A00763A39 /* LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; name = LICENSE.txt; path = ../LICENSE.txt; sourceTree = "<group>"; };
 		E4E7335B148D7A5A00763A39 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = text; name = README.md; path = ../README.md; sourceTree = "<group>"; };
@@ -396,16 +386,14 @@
 		E41EB48A148D7C150015DEDC /* Helper */ = {
 			isa = PBXGroup;
 			children = (
-				1E5955EA15B7538B00A03429 /* NSString+BITHockeyAdditions.h */,
-				E41EB468148D7BF50015DEDC /* NSString+BITHockeyAdditions.m */,
 				E41EB469148D7BF50015DEDC /* PSAppStoreHeader.h */,
 				E41EB46A148D7BF50015DEDC /* PSAppStoreHeader.m */,
 				E41EB46B148D7BF50015DEDC /* PSStoreButton.h */,
 				E41EB46C148D7BF50015DEDC /* PSStoreButton.m */,
 				E41EB46D148D7BF50015DEDC /* PSWebTableViewCell.h */,
 				E41EB46E148D7BF50015DEDC /* PSWebTableViewCell.m */,
-				E41EB46F148D7BF50015DEDC /* UIImage+BITHockeyAdditions.h */,
-				E41EB470148D7BF50015DEDC /* UIImage+BITHockeyAdditions.m */,
+				1EB6046B15EF6B3200F69880 /* BITHockeyHelper.h */,
+				1EB6046C15EF6B3200F69880 /* BITHockeyHelper.m */,
 			);
 			name = Helper;
 			sourceTree = "<group>";
@@ -428,12 +416,10 @@
 				1E5955F615B77F6500A03429 /* HockeySDKPrivate.h in Headers */,
 				1E01118115BB6311007002AC /* BITUpdateManagerPrivate.h in Headers */,
 				1E01118215BB6314007002AC /* BITCrashManagerPrivate.h in Headers */,
-				1E5955F215B77F5100A03429 /* NSString+BITHockeyAdditions.h in Headers */,
 				1E01118D15BB83FB007002AC /* BITUpdateViewControllerPrivate.h in Headers */,
 				1E5955F315B77F5600A03429 /* PSAppStoreHeader.h in Headers */,
 				1E5954B615B6E17700A03429 /* PSStoreButton.h in Headers */,
 				1E5955F415B77F5E00A03429 /* PSWebTableViewCell.h in Headers */,
-				1E5955F515B77F6000A03429 /* UIImage+BITHockeyAdditions.h in Headers */,
 				1E5954B815B6E19C00A03429 /* BITAppVersionMetaInfo.h in Headers */,
 				1E59548715B6C51100A03429 /* BITCrashReportTextFormatter.h in Headers */,
 			);
@@ -451,14 +437,13 @@
 				1E59547015B6C41300A03429 /* PSAppStoreHeader.h in Headers */,
 				1E59547115B6C41300A03429 /* PSStoreButton.h in Headers */,
 				1E59547215B6C41300A03429 /* PSWebTableViewCell.h in Headers */,
-				1E59547315B6C41300A03429 /* UIImage+BITHockeyAdditions.h in Headers */,
 				1E59547615B6C41300A03429 /* BITCrashReportTextFormatter.h in Headers */,
 				1E5955A215B70F6900A03429 /* HockeySDKPrivate.h in Headers */,
 				1E5955D315B72E5400A03429 /* BITCrashManager.h in Headers */,
 				1E5955E415B751EE00A03429 /* BITUpdateViewController.h in Headers */,
-				1E5955EC15B7538B00A03429 /* NSString+BITHockeyAdditions.h in Headers */,
 				1E5955F015B7752300A03429 /* BITUpdateManagerDelegate.h in Headers */,
 				1E5955FC15B7877B00A03429 /* BITHockeyManagerDelegate.h in Headers */,
+				1EB6046E15EF6B3200F69880 /* BITHockeyHelper.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -473,15 +458,14 @@
 				1E59558E15B6FDA500A03429 /* PSStoreButton.h in Headers */,
 				1E59558F15B6FDA500A03429 /* PSWebTableViewCell.h in Headers */,
 				1E59559B15B6FDA500A03429 /* HockeySDK.h in Headers */,
-				1E59559015B6FDA500A03429 /* UIImage+BITHockeyAdditions.h in Headers */,
 				1E59559215B6FDA500A03429 /* BITAppVersionMetaInfo.h in Headers */,
 				1E59559915B6FDA500A03429 /* BITCrashReportTextFormatter.h in Headers */,
 				1E5955A315B70F6900A03429 /* HockeySDKPrivate.h in Headers */,
 				1E5955D415B72E5400A03429 /* BITCrashManager.h in Headers */,
 				1E5955E515B751EE00A03429 /* BITUpdateViewController.h in Headers */,
-				1E5955ED15B7538B00A03429 /* NSString+BITHockeyAdditions.h in Headers */,
 				1E5955F115B7752300A03429 /* BITUpdateManagerDelegate.h in Headers */,
 				1E5955FD15B7877B00A03429 /* BITHockeyManagerDelegate.h in Headers */,
+				1EB6046F15EF6B3200F69880 /* BITHockeyHelper.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -497,14 +481,13 @@
 				E41EB481148D7BF50015DEDC /* PSAppStoreHeader.h in Headers */,
 				E41EB483148D7BF50015DEDC /* PSStoreButton.h in Headers */,
 				E41EB485148D7BF50015DEDC /* PSWebTableViewCell.h in Headers */,
-				E41EB487148D7BF50015DEDC /* UIImage+BITHockeyAdditions.h in Headers */,
 				1E40BCB915A3494400BD64D9 /* BITCrashReportTextFormatter.h in Headers */,
 				1E5955A115B70F6900A03429 /* HockeySDKPrivate.h in Headers */,
 				1E5955D215B72E5400A03429 /* BITCrashManager.h in Headers */,
 				1E5955E315B751EE00A03429 /* BITUpdateViewController.h in Headers */,
-				1E5955EB15B7538B00A03429 /* NSString+BITHockeyAdditions.h in Headers */,
 				1E5955EF15B7752300A03429 /* BITUpdateManagerDelegate.h in Headers */,
 				1E5955FB15B7877B00A03429 /* BITHockeyManagerDelegate.h in Headers */,
+				1EB6046D15EF6B3200F69880 /* BITHockeyHelper.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -719,15 +702,14 @@
 				1E59545715B6C41300A03429 /* BITAppVersionMetaInfo.m in Sources */,
 				1E59545C15B6C41300A03429 /* BITCrashManager.m in Sources */,
 				1E59545D15B6C41300A03429 /* BITHockeyManager.m in Sources */,
-				1E59545E15B6C41300A03429 /* NSString+BITHockeyAdditions.m in Sources */,
 				1E59545F15B6C41300A03429 /* PSAppStoreHeader.m in Sources */,
 				1E59546015B6C41300A03429 /* PSStoreButton.m in Sources */,
 				1E59546115B6C41300A03429 /* PSWebTableViewCell.m in Sources */,
-				1E59546215B6C41300A03429 /* UIImage+BITHockeyAdditions.m in Sources */,
 				1E59546315B6C41300A03429 /* BITCrashReportTextFormatter.m in Sources */,
 				1E59559E15B70F4D00A03429 /* HockeySDKPrivate.m in Sources */,
 				1E5955D715B72ED500A03429 /* BITUpdateManager.m in Sources */,
 				1E5955E815B751FB00A03429 /* BITUpdateViewController.m in Sources */,
+				1EB6047115EF6B3200F69880 /* BITHockeyHelper.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -738,15 +720,14 @@
 				1E5954CD15B6F24A00A03429 /* BITAppVersionMetaInfo.m in Sources */,
 				1E5954D215B6F24A00A03429 /* BITCrashManager.m in Sources */,
 				1E5954D315B6F24A00A03429 /* BITHockeyManager.m in Sources */,
-				1E5954D415B6F24A00A03429 /* NSString+BITHockeyAdditions.m in Sources */,
 				1E5954D515B6F24A00A03429 /* PSAppStoreHeader.m in Sources */,
 				1E5954D615B6F24A00A03429 /* PSStoreButton.m in Sources */,
 				1E5954D715B6F24A00A03429 /* PSWebTableViewCell.m in Sources */,
-				1E5954D815B6F24A00A03429 /* UIImage+BITHockeyAdditions.m in Sources */,
 				1E5954D915B6F24A00A03429 /* BITCrashReportTextFormatter.m in Sources */,
 				1E59559F15B70F4D00A03429 /* HockeySDKPrivate.m in Sources */,
 				1E5955D815B72ED500A03429 /* BITUpdateManager.m in Sources */,
 				1E5955E915B751FB00A03429 /* BITUpdateViewController.m in Sources */,
+				1EB6047215EF6B3200F69880 /* BITHockeyHelper.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -764,15 +745,14 @@
 				E41EB472148D7BF50015DEDC /* BITAppVersionMetaInfo.m in Sources */,
 				E41EB47C148D7BF50015DEDC /* BITCrashManager.m in Sources */,
 				E41EB47E148D7BF50015DEDC /* BITHockeyManager.m in Sources */,
-				E41EB480148D7BF50015DEDC /* NSString+BITHockeyAdditions.m in Sources */,
 				E41EB482148D7BF50015DEDC /* PSAppStoreHeader.m in Sources */,
 				E41EB484148D7BF50015DEDC /* PSStoreButton.m in Sources */,
 				E41EB486148D7BF50015DEDC /* PSWebTableViewCell.m in Sources */,
-				E41EB488148D7BF50015DEDC /* UIImage+BITHockeyAdditions.m in Sources */,
 				1E40BCBA15A3494400BD64D9 /* BITCrashReportTextFormatter.m in Sources */,
 				1E59559D15B70F4D00A03429 /* HockeySDKPrivate.m in Sources */,
 				1E5955D615B72ED500A03429 /* BITUpdateManager.m in Sources */,
 				1E5955E715B751FB00A03429 /* BITUpdateViewController.m in Sources */,
+				1EB6047015EF6B3200F69880 /* BITHockeyHelper.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

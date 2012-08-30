@@ -29,9 +29,8 @@
  */
 
 #import <QuartzCore/QuartzCore.h>
-#import "NSString+BITHockeyAdditions.h"
+#import "BITHockeyHelper.h"
 #import "BITAppVersionMetaInfo.h"
-#import "UIImage+BITHockeyAdditions.h"
 #import "PSAppStoreHeader.h"
 #import "PSWebTableViewCell.h"
 #import "PSStoreButton.h"
@@ -98,7 +97,7 @@
   UIGraphicsBeginImageContextWithOptions(image.size, NO, 0.0);
   
   [image drawAtPoint:CGPointZero];
-  UIImage *iconGradient = [UIImage bit_imageNamed:@"IconGradient.png" bundle:BITHOCKEYSDK_BUNDLE];
+  UIImage *iconGradient = bit_imageNamed(@"IconGradient.png", BITHOCKEYSDK_BUNDLE);
   [iconGradient drawInRect:CGRectMake(0, 0, image.size.width, image.size.height) blendMode:kCGBlendModeNormal alpha:0.5];
   
   UIImage *result = UIGraphicsGetImageFromCurrentImageContext();
@@ -155,7 +154,7 @@
     [footerButton setTitle:BITHockeyLocalizedString(@"UpdateShowPreviousVersions") forState:UIControlStateNormal];
     [footerButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
     [footerButton setTitleColor:[UIColor whiteColor] forState:UIControlStateHighlighted];
-    [footerButton setBackgroundImage:[UIImage bit_imageNamed:@"buttonHighlight.png" bundle:BITHOCKEYSDK_BUNDLE] forState:UIControlStateHighlighted];
+    [footerButton setBackgroundImage:bit_imageNamed(@"buttonHighlight.png", BITHOCKEYSDK_BUNDLE) forState:UIControlStateHighlighted];
     footerButton.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
     [footerButton addTarget:self action:@selector(showPreviousVersionAction) forControlEvents:UIControlEventTouchUpInside];
     footerButton.frame = CGRectMake(0, kMinPreviousVersionButtonHeight-44, self.view.frame.size.width, 44);

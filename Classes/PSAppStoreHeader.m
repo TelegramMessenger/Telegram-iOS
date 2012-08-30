@@ -21,7 +21,7 @@
 //  THE SOFTWARE.
 
 #import "PSAppStoreHeader.h"
-#import "UIImage+BITHockeyAdditions.h"
+#import "BITHockeyHelper.h"
 #import "HockeySDKPrivate.h"
 
 
@@ -149,14 +149,14 @@
     [iconImage_ release];
     
     // scale, make borders and reflection
-    iconImage_ = [anIconImage bit_imageToFitSize:CGSizeMake(kImageHeight, kImageHeight) honorScaleFactor:YES];
-    iconImage_ = [[iconImage_ bit_roundedCornerImage:kImageBorderRadius borderSize:0.0] retain];
+    iconImage_ = bit_imageToFitSize(anIconImage, CGSizeMake(kImageHeight, kImageHeight), YES);
+    iconImage_ = [bit_roundedCornerImage(iconImage_, kImageBorderRadius, 0.0) retain];
     
     // create reflected image
     [reflectedImage_ release];
     reflectedImage_ = nil;
     if (anIconImage) {
-      reflectedImage_ = [[iconImage_ bit_reflectedImageWithHeight:kReflectionHeight fromAlpha:0.5 toAlpha:0.0] retain];
+      reflectedImage_ = [bit_reflectedImageWithHeight(iconImage_, kReflectionHeight, 0.5, 0.0) retain];
     }
     [self setNeedsDisplay];
   }
