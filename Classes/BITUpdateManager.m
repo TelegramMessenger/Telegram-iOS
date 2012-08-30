@@ -33,13 +33,12 @@
 #import <mach-o/ldsyms.h>
 #import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
+#import "BITHockeyHelper.h"
 
 #import "BITUpdateManagerPrivate.h"
 #import "BITUpdateViewControllerPrivate.h"
 #import "BITAppVersionMetaInfo.h"
 
-#import "NSString+BITHockeyAdditions.h"
-#import "UIImage+BITHockeyAdditions.h"
 
 
 // API defines - do not change
@@ -98,7 +97,7 @@
 }
 
 - (NSString *)encodedAppIdentifier {
-  return (_appIdentifier ? [_appIdentifier bit_URLEncodedString] : [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"] bit_URLEncodedString]);
+  return (_appIdentifier ? bit_URLEncodedString(_appIdentifier) : bit_URLEncodedString([[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"]));
 }
 
 - (NSString *)getDevicePlatform {
@@ -277,7 +276,7 @@
 - (void)checkUpdateAvailable {
   // check if there is an update available
   if (self.compareVersionType == BITUpdateComparisonResultGreater) {
-    self.updateAvailable = ([self.newestAppVersion.version bit_versionCompare:self.currentAppVersion] == NSOrderedDescending);
+    self.updateAvailable = (bit_versionCompare(self.newestAppVersion.version, self.currentAppVersion) == NSOrderedDescending);
   } else {
     self.updateAvailable = ([self.newestAppVersion.version compare:self.currentAppVersion] != NSOrderedSame);
   }
@@ -558,13 +557,13 @@
   CGRect frame = [visibleWindow frame];
   
   self.blockingView = [[[UIView alloc] initWithFrame:frame] autorelease];
-  UIImageView *backgroundView = [[[UIImageView alloc] initWithImage:[UIImage bit_imageNamed:@"bg.png" bundle:BITHOCKEYSDK_BUNDLE]] autorelease];
+  UIImageView *backgroundView = [[[UIImageView alloc] initWithImage:bit_imageNamed(@"bg.png", BITHOCKEYSDK_BUNDLE)] autorelease];
   backgroundView.contentMode = UIViewContentModeScaleAspectFill;
   backgroundView.frame = frame;
   [self.blockingView addSubview:backgroundView];
   
   if (image != nil) {
-    UIImageView *imageView = [[[UIImageView alloc] initWithImage:[UIImage bit_imageNamed:image bundle:BITHOCKEYSDK_BUNDLE]] autorelease];
+    UIImageView *imageView = [[[UIImageView alloc] initWithImage:bit_imageNamed(image, BITHOCKEYSDK_BUNDLE)] autorelease];
     imageView.contentMode = UIViewContentModeCenter;
     imageView.frame = frame;
     [self.blockingView addSubview:imageView];
@@ -697,8 +696,8 @@
   NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@", [self encodedAppIdentifier]];
   
   [parameter appendFormat:@"?format=json&authorize=yes&app_version=%@&udid=%@&sdk=%@&sdk_version=%@&uuid=%@",
-   [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] bit_URLEncodedString],
-   (_isAppStoreEnvironment ? @"appstore" : [[self deviceIdentifier] bit_URLEncodedString]),
+   bit_URLEncodedString([[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]),
+   (_isAppStoreEnvironment ? @"appstore" : bit_URLEncodedString([self deviceIdentifier])),
    BITHOCKEY_NAME,
    BITHOCKEY_VERSION,
    _uuid
@@ -797,8 +796,8 @@
   }
   
   NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@?format=json&udid=%@&sdk=%@&sdk_version=%@&uuid=%@", 
-                                [[self encodedAppIdentifier] bit_URLEncodedString],
-                                (_isAppStoreEnvironment ? @"appstore" : [[self deviceIdentifier] bit_URLEncodedString]),
+                                bit_URLEncodedString([self encodedAppIdentifier]),
+                                (_isAppStoreEnvironment ? @"appstore" : bit_URLEncodedString([self deviceIdentifier])),
                                 BITHOCKEY_NAME,
                                 BITHOCKEY_VERSION,
                                 _uuid];
@@ -806,12 +805,12 @@
   // add additional statistics if user didn't disable flag
   if (_sendUsageData) {
     [parameter appendFormat:@"&app_version=%@&os=iOS&os_version=%@&device=%@&lang=%@&first_start_at=%@&usage_time=%@",
-     [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] bit_URLEncodedString],
-     [[[UIDevice currentDevice] systemVersion] bit_URLEncodedString],
-     [[self getDevicePlatform] bit_URLEncodedString],
-     [[[[NSBundle mainBundle] preferredLocalizations] objectAtIndex:0] bit_URLEncodedString],
-     [[self installationDateString] bit_URLEncodedString],
-     [[self currentUsageString] bit_URLEncodedString]
+     bit_URLEncodedString([[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]),
+     bit_URLEncodedString([[UIDevice currentDevice] systemVersion]),
+     bit_URLEncodedString([self getDevicePlatform]),
+     bit_URLEncodedString([[[NSBundle mainBundle] preferredLocalizations] objectAtIndex:0]),
+     bit_URLEncodedString([self installationDateString]),
+     bit_URLEncodedString([self currentUsageString])
      ];
   }
   
@@ -857,7 +856,7 @@
   }
   
   NSString *hockeyAPIURL = [NSString stringWithFormat:@"%@api/2/apps/%@?format=plist%@", _updateURL, [self encodedAppIdentifier], extraParameter];
-  NSString *iOSUpdateURL = [NSString stringWithFormat:@"itms-services://?action=download-manifest&url=%@", [hockeyAPIURL bit_URLEncodedString]];
+  NSString *iOSUpdateURL = [NSString stringWithFormat:@"itms-services://?action=download-manifest&url=%@", bit_URLEncodedString(hockeyAPIURL)];
   
   BITHockeyLog(@"INFO: API Server Call: %@, calling iOS with %@", hockeyAPIURL, iOSUpdateURL);
   BOOL success = [[UIApplication sharedApplication] openURL:[NSURL URLWithString:iOSUpdateURL]];
@@ -1050,7 +1049,7 @@
   BOOL result = NO;
   
   for (BITAppVersionMetaInfo *appVersion in self.appVersions) {
-    if ([appVersion.version isEqualToString:self.currentAppVersion] || [appVersion.version bit_versionCompare:self.currentAppVersion] == NSOrderedAscending) {
+    if ([appVersion.version isEqualToString:self.currentAppVersion] || bit_versionCompare(appVersion.version, self.currentAppVersion) == NSOrderedAscending) {
       break;
     }
     
