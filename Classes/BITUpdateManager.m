@@ -131,9 +131,12 @@
 }
 
 - (void)didBecomeActiveActions {
+  _checkForUpdateOnLaunchOfBitUpdateManager = YES;
+  
   if (![self isUpdateManagerDisabled]) {
     [self checkExpiryDateReached];
     [self startUsage];
+    [self checkForUpdate];
   }
 }
 
@@ -350,6 +353,7 @@
     _sendUsageData = YES;
     _disableUpdateManager = NO;
     _checkForTracker = NO;
+    _checkForUpdateOnLaunchOfBitUpdateManager = NO;
     
     // set defaults
     self.showDirectInstallOption = NO;
@@ -909,7 +913,9 @@
       }
     } else {
       if ([self checkForTracker] || ([self isCheckForUpdateOnLaunch] && [self shouldCheckForUpdates])) {
-        [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0f];
+        if (!_checkForUpdateOnLaunchOfBitUpdateManager) {
+          [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0f];
+        }
       }
     }
   } else {
@@ -917,7 +923,9 @@
       // if we are in the app store, make sure not to send usage information in any case for now
       _sendUsageData = NO;
       
-      [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0f];
+      if (!_checkForUpdateOnLaunchOfBitUpdateManager) {
+        [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0f];
+      }
     }
   }
 }

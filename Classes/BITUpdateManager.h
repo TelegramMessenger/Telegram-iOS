@@ -94,6 +94,8 @@ typedef enum {
   
   BOOL _isAppStoreEnvironment;
   
+  BOOL _checkForUpdateOnLaunchOfBitUpdateManager;
+  
   NSString *_uuid;
 }
 
