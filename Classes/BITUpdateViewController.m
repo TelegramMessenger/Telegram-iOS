@@ -367,9 +367,9 @@
   storeButton.buttonDelegate = self;
   [self.tableView.tableHeaderView addSubview:storeButton];
   storeButton.buttonData = [PSStoreButtonData dataWithLabel:@"" colors:[PSStoreButton appStoreGrayColor] enabled:NO];
-  self.appStoreButtonState = AppStoreButtonStateCheck;
   [storeButton alignToSuperview];
   _appStoreButton = [storeButton retain];
+  self.appStoreButtonState = AppStoreButtonStateCheck;
 }
 
 - (void)viewWillAppear:(BOOL)animated {
