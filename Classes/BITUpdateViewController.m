@@ -209,6 +209,14 @@
         
     _cells = [[NSMutableArray alloc] initWithCapacity:5];
     _popOverController = nil;
+    
+    //might be better in viewDidLoad, but to workaround rdar://12214613 and as it doesn't
+    //hurt, we do it here
+    if (self.modal) {
+      self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
+                                                                                             target:self
+                                                                                             action:@selector(onAction:)] autorelease];
+    }
   }
   return self;
 }
@@ -355,12 +363,6 @@
   }
   
   self.tableView.tableHeaderView = _appStoreHeader;
-  
-  if (self.modal) {
-    self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
-                                                                                           target:self
-                                                                                           action:@selector(onAction:)] autorelease];
-  }
   
   PSStoreButton *storeButton = [[[PSStoreButton alloc] initWithPadding:CGPointMake(5, 40)] autorelease];
   storeButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
