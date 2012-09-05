@@ -883,7 +883,12 @@
     self.blockingView = nil;
     return YES;
   }
-  
+
+#if TARGET_IPHONE_SIMULATOR
+  NSLog(@"Authentication checks only work on devices. Using the simulator will always return being authorized.");
+  return YES;
+#endif
+
   BITUpdateAuthorizationState state = [self authorizationState];
   if (state == BITUpdateAuthorizationDenied) {
     [self showBlockingScreen:BITHockeyLocalizedString(@"UpdateAuthorizationDenied") image:@"authorize_denied.png"];
