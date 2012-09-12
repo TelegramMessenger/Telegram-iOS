@@ -50,6 +50,9 @@
 #define BITHOCKEYSDK_BUNDLE @"HockeySDKResources.bundle"
 #define BITHOCKEYSDK_URL @"https://sdk.hockeyapp.net/"
 
+/* Whether to compile in support for Jira Mobile Connect */
+#define JIRA_MOBILE_CONNECT_SUPPORT_ENABLED 0
+
 #define BITHockeyLog(fmt, ...) do { if([BITHockeyManager sharedHockeyManager].isDebugLogEnabled && ![BITHockeyManager sharedHockeyManager].isAppStoreEnvironment) { NSLog((@"[HockeySDK] %s/%d " fmt), __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__); }} while(0)
 
 NSBundle *BITHockeyBundle(void);

@@ -38,7 +38,9 @@
 
 - (BOOL)shouldUseLiveIdentifier;
 
+#if defined(JIRA_MOBILE_CONNECT_SUPPORT_ENABLED) && JIRA_MOBILE_CONNECT_SUPPORT_ENABLED
 - (void)configureJMC;
+#endif
 
 @end
 
@@ -144,7 +146,11 @@
   }
   
   // Setup UpdateManager
-  if (![self isUpdateManagerDisabled] || [[self class] isJMCPresent]) {
+  if (![self isUpdateManagerDisabled]
+#if defined(JIRA_MOBILE_CONNECT_SUPPORT_ENABLED) && JIRA_MOBILE_CONNECT_SUPPORT_ENABLED
+      || [[self class] isJMCPresent]
+#endif
+      ) {
     BITHockeyLog(@"INFO: Start UpdateManager with small delay");
     if (_updateURL) {
       [_updateManager setUpdateURL:_updateURL];
@@ -211,6 +217,7 @@
     _updateManager = [[BITUpdateManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
     _updateManager.delegate = _delegate;
     
+#if defined(JIRA_MOBILE_CONNECT_SUPPORT_ENABLED) && JIRA_MOBILE_CONNECT_SUPPORT_ENABLED
     // Only if JMC is part of the project
     if ([[self class] isJMCPresent]) {
       BITHockeyLog(@"INFO: Setup JMC");
@@ -219,12 +226,14 @@
       [[self class] disableJMCCrashReporter];
       [self performSelector:@selector(configureJMC) withObject:nil afterDelay:0];
     }
+#endif
     
   } else {
     NSLog(@"[HockeySDK] ERROR: The app identifier is invalid! Please use the HockeyApp app identifier you find on the apps website on HockeyApp! The SDK is disabled!");
   }
 }
 
+#if defined(JIRA_MOBILE_CONNECT_SUPPORT_ENABLED) && JIRA_MOBILE_CONNECT_SUPPORT_ENABLED
 
 #pragma mark - JMC
 
@@ -335,5 +344,6 @@
     [self configureJMC];
   }
 }
+#endif
 
 @end
