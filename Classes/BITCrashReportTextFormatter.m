@@ -35,6 +35,10 @@
 
 #import "BITCrashReportTextFormatter.h"
 
+#ifndef CPU_SUBTYPE_ARM_V7S
+#define CPU_SUBTYPE_ARM_V7S		((cpu_subtype_t) 11) /* Swift */
+#endif
+
 /**
  * Sort PLCrashReportBinaryImageInfo instances by their starting address.
  */
@@ -144,6 +148,7 @@ static NSInteger binaryImageSort(id binary1, id binary2, void *context) {
             switch (report.systemInfo.architecture) {
                 case PLCrashReportArchitectureARMv6:
                 case PLCrashReportArchitectureARMv7:
+                case PLCrashReportArchitectureARMv7s:
                     codeType = @"ARM";
                     lp64 = false;
                     break;
@@ -386,7 +391,11 @@ static NSInteger binaryImageSort(id binary1, id binary2, void *context) {
                         case CPU_SUBTYPE_ARM_V7:
                             archName = @"armv7";
                             break;
-                            
+
+                        case CPU_SUBTYPE_ARM_V7S:
+                            archName = @"armv7s";
+                            break;
+
                         default:
                             archName = @"arm-unknown";
                             break;
