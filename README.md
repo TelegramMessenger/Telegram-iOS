@@ -38,6 +38,17 @@ This documentation provides integrated help in Xcode for all public APIs and a s
 
 ## Changelog
 
+### Version 2.5.2b2
+
+- General:
+
+    - [NEW] Added support for armv7s architecture
+
+- Updating:
+
+    - [BUGFIX] Fix update checks not done when the app becomes active again
+
+
 ### Version 2.5.2b1
 
 - General:
