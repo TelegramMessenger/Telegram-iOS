@@ -131,12 +131,12 @@
 - (void)startManager {
   if (!_validAppIdentifier) return;
   
-  BITHockeyLog(@"Starting HockeyManager");
+  BITHockeyLog(@"INFO: Starting HockeyManager");
   _startManagerIsInvoked = YES;
   
   // start CrashManager
   if (![self isCrashManagerDisabled]) {
-    BITHockeyLog(@"Start CrashManager");
+    BITHockeyLog(@"INFO: Start CrashManager");
     if (_updateURL) {
       [_crashManager setUpdateURL:_updateURL];
     }
@@ -144,8 +144,8 @@
   }
   
   // Setup UpdateManager
-  if (![self isUpdateManagerDisabled]) {
-    BITHockeyLog(@"Start UpdateManager with small delay");
+  if (![self isUpdateManagerDisabled] || [[self class] isJMCPresent]) {
+    BITHockeyLog(@"INFO: Start UpdateManager with small delay");
     if (_updateURL) {
       [_updateManager setUpdateURL:_updateURL];
     }
@@ -157,9 +157,17 @@
 - (void)validateStartManagerIsInvoked {
   if (_validAppIdentifier && !_appStoreEnvironment) {
     if (!_startManagerIsInvoked) {
-      NSLog(@"ERROR: You did not call [[BITHockeyManager sharedHockeyManager] startManager] to startup the HockeySDK! Please do so after setting up all properties. The SDK is NOT running.");
+      NSLog(@"[HockeySDK] ERROR: You did not call [[BITHockeyManager sharedHockeyManager] startManager] to startup the HockeySDK! Please do so after setting up all properties. The SDK is NOT running.");
     }
   }
+}
+
+
+- (void)setDisableUpdateManager:(BOOL)disableUpdateManager {
+  if (_updateManager) {
+    [_updateManager setDisableUpdateManager:disableUpdateManager];
+  }
+  _disableUpdateManager = disableUpdateManager;
 }
 
 
@@ -195,17 +203,17 @@
   _startManagerIsInvoked = NO;
   
   if (_validAppIdentifier) {
-    BITHockeyLog(@"Setup CrashManager");
+    BITHockeyLog(@"INFO: Setup CrashManager");
     _crashManager = [[BITCrashManager alloc] initWithAppIdentifier:_appIdentifier];
     _crashManager.delegate = _delegate;
     
-    BITHockeyLog(@"Setup UpdateManager");
+    BITHockeyLog(@"INFO: Setup UpdateManager");
     _updateManager = [[BITUpdateManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
     _updateManager.delegate = _delegate;
     
     // Only if JMC is part of the project
     if ([[self class] isJMCPresent]) {
-      BITHockeyLog(@"Setup JMC");
+      BITHockeyLog(@"INFO: Setup JMC");
       [_updateManager setCheckForTracker:YES];
       [_updateManager addObserver:self forKeyPath:@"trackerConfig" options:0 context:nil];
       [[self class] disableJMCCrashReporter];
@@ -213,7 +221,7 @@
     }
     
   } else {
-    NSLog(@"ERROR: The app identifier is invalid! Please use the HockeyApp app identifier you find on the apps website on HockeyApp! The SDK is disabled!");
+    NSLog(@"[HockeySDK] ERROR: The app identifier is invalid! Please use the HockeyApp app identifier you find on the apps website on HockeyApp! The SDK is disabled!");
   }
 }
 

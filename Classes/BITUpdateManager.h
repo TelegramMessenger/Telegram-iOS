@@ -94,6 +94,8 @@ typedef enum {
   
   BOOL _isAppStoreEnvironment;
   
+  BOOL _didSetupDidBecomeActiveNotifications;
+  
   NSString *_uuid;
 }
 

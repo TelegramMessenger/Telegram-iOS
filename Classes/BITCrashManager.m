@@ -76,7 +76,9 @@
     _delegate = nil;
     _showAlwaysButton = NO;
     _isSetup = NO;
-
+    
+    _exceptionHandler = nil;
+    
     _crashIdenticalCurrentVersion = YES;
     _urlConnection = nil;
     _responseData = nil;
@@ -121,7 +123,7 @@
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(invokeDelayedProcessing) name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
     
     if (!BITHockeyBundle()) {
-      NSLog(@"WARNING: %@ is missing, will send reports automatically!", BITHOCKEYSDK_BUNDLE);
+      NSLog(@"[HockeySDK] WARNING: %@ is missing, will send reports automatically!", BITHOCKEYSDK_BUNDLE);
     }
   }
   return self;
@@ -307,8 +309,10 @@
       // get the startup timestamp from the crash report, and the file timestamp to calculate the timeinterval when the crash happened after startup
       PLCrashReport *report = [[[PLCrashReport alloc] initWithData:crashData error:&error] autorelease];
       
-      if (report.systemInfo.timestamp && report.applicationInfo.applicationStartupTimestamp) {
-        _timeintervalCrashInLastSessionOccured = [report.systemInfo.timestamp timeIntervalSinceDate:report.applicationInfo.applicationStartupTimestamp];
+      if ([[report.applicationInfo class] respondsToSelector:@selector(applicationStartupTimestamp)]) {
+        if (report.systemInfo.timestamp && report.applicationInfo.applicationStartupTimestamp) {
+          _timeintervalCrashInLastSessionOccured = [report.systemInfo.timestamp timeIntervalSinceDate:report.applicationInfo.applicationStartupTimestamp];
+        }
       }
     }
   }
@@ -357,7 +361,7 @@
   }
   
   if ([_crashFiles count] > 0) {
-    BITHockeyLog(@"%i pending crash reports found.", [_crashFiles count]);
+    BITHockeyLog(@"INFO: %i pending crash reports found.", [_crashFiles count]);
     return YES;
   } else
     return NO;
@@ -368,7 +372,19 @@
 
 // slightly delayed startup processing, so we don't keep the first runloop on startup busy for too long
 - (void)invokeDelayedProcessing {
-  BITHockeyLog(@"Start delayed CrashManager processing");
+  BITHockeyLog(@"INFO: Start delayed CrashManager processing");
+  
+  // was our own exception handler successfully added?
+  if (_exceptionHandler) {
+    // get the current top level error handler
+    NSUncaughtExceptionHandler *currentHandler = NSGetUncaughtExceptionHandler();
+  
+    // If the top level error handler differs from our own, then at least another one was added.
+    // This could cause exception crashes not to be reported to HockeyApp. See log message for details.
+    if (_exceptionHandler != currentHandler) {
+      BITHockeyLog(@"[HockeySDK] WARNING: Another exception handler was added. If this invokes any kind exit() after processing the exception, which causes any subsequent error handler not to be invoked, these crashes will NOT be reported to HockeyApp!");
+    }
+  }
   
   if (!_sendingInProgress && [self hasPendingCrashReport]) {
     _sendingInProgress = YES;
@@ -427,6 +443,13 @@
     PLCrashReporter *crashReporter = [PLCrashReporter sharedReporter];
     NSError *error = NULL;
     
+    // Make sure the correct version of PLCrashReporter is linked
+    id plCrashReportReportInfoClass = NSClassFromString(@"PLCrashReportReportInfo");
+    
+    if (!plCrashReportReportInfoClass) {
+      NSLog(@"[HockeySDK] ERROR: An old version of PLCrashReporter framework is linked! Please check the framework search path in the target build settings and remove references to folders that contain an older version of CrashReporter.framework and also delete these files.");
+    }
+    
     // Check if we previously crashed
     if ([crashReporter hasPendingCrashReport]) {
       _didCrashInLastSession = YES;
@@ -436,12 +459,39 @@
     // PLCrashReporter is throwing an NSException if it is being enabled again
     // even though it already is enabled
     @try {
+      // Multiple exception handlers can be set, but we can only query the top level error handler (uncaught exception handler).
+      //
+      // To check if PLCrashReporter's error handler is successfully added, we compare the top
+      // level one that is set before and the one after PLCrashReporter sets up its own.
+      //
+      // With delayed processing we can then check if another error handler was set up afterwards
+      // and can show a debug warning log message, that the dev has to make sure the "newer" error handler
+      // doesn't exit the process itself, because then all subsequent handlers would never be invoked.
+      // 
+      // Note: ANY error handler setup BEFORE HockeySDK initialization will not be processed!
+      
+      // get the current top level error handler
+      NSUncaughtExceptionHandler *initialHandler = NSGetUncaughtExceptionHandler();
+      
       // Enable the Crash Reporter
       if (![crashReporter enableCrashReporterAndReturnError: &error])
-        NSLog(@"WARNING: Could not enable crash reporter: %@", [error localizedDescription]);
+        NSLog(@"[HockeySDK] WARNING: Could not enable crash reporter: %@", [error localizedDescription]);
+
+      // get the new current top level error handler, which should now be the one from PLCrashReporter
+      NSUncaughtExceptionHandler *currentHandler = NSGetUncaughtExceptionHandler();
+      
+      // do we have a new top level error handler? then we were successful
+      if (currentHandler && currentHandler != initialHandler) {
+        _exceptionHandler = currentHandler;
+        
+        BITHockeyLog(@"INFO: Exception handler successfully initialized.");
+      } else {
+        // this should never happen, theoretically only if NSSetUncaugtExceptionHandler() has some internal issues
+        NSLog(@"[HockeySDK] ERROR: Exception handler could not be set. Make sure there is no other exception handler set up!");
+      }
     }
     @catch (NSException * e) {
-      NSLog(@"WARNING: %@", [e reason]);
+      NSLog(@"[HockeySDK] WARNING: %@", [e reason]);
     }
 
     _isSetup = YES;
@@ -469,14 +519,17 @@
       PLCrashReport *report = [[[PLCrashReport alloc] initWithData:crashData error:&error] autorelease];
 			
       if (report == nil) {
-        BITHockeyLog(@"Could not parse crash report");
+        BITHockeyLog(@"WARNING: Could not parse crash report");
         // we cannot do anything with this report, so delete it
         [_fileManager removeItemAtPath:filename error:&error];
         [_fileManager removeItemAtPath:[NSString stringWithFormat:@"%@.meta", filename] error:&error];
         continue;
       }
       
-      NSString *crashUUID = report.reportInfo.reportGUID ?: @"";
+      NSString *crashUUID = @"";
+      if ([[report class] respondsToSelector:@selector(reportInfo)]) {
+        crashUUID = report.reportInfo.reportGUID ?: @"";
+      }
       NSString *crashLogString = [BITCrashReportTextFormatter stringValueForCrashReport:report];
       
       if ([report.applicationInfo.applicationVersion compare:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]] == NSOrderedSame) {
@@ -541,7 +594,7 @@
   [self saveSettings];
   
   if (crashes != nil) {
-    BITHockeyLog(@"Sending crash reports:\n%@", crashes);
+    BITHockeyLog(@"INFO: Sending crash reports:\n%@", crashes);
     [self postXML:[NSString stringWithFormat:@"<crashes>%@</crashes>", crashes]];
   }
 }
@@ -620,14 +673,14 @@
   _urlConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
   
   if (!_urlConnection) {
-    BITHockeyLog(@"Sending crash reports could not start!");
+    BITHockeyLog(@"INFO: Sending crash reports could not start!");
     _sendingInProgress = NO;
   } else {
     if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillSendCrashReport:)]) {
       [self.delegate crashManagerWillSendCrashReport:self];
     }
     
-    BITHockeyLog(@"Sending crash reports started.");
+    BITHockeyLog(@"INFO: Sending crash reports started.");
   }
 }
 
@@ -669,7 +722,7 @@
                                                                      mutabilityOption:NSPropertyListMutableContainersAndLeaves
                                                                                format:nil
                                                                      errorDescription:NULL];
-    BITHockeyLog(@"Received API response: %@", response);
+    BITHockeyLog(@"INFO: Received API response: %@", response);
             
     if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerDidFinishSendingCrashReport:)]) {
       [self.delegate crashManagerDidFinishSendingCrashReport:self];

@@ -50,7 +50,6 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
 
 8. The following entries should be present:
     * CoreGraphics.framework
-    * CrashReporter.framework
     * Foundation.framework
     * HockeySDK.framework
     * QuartzCore.framework
@@ -61,26 +60,17 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
 
 9. If one of the frameworks is missing, then click the + button, search the framework and confirm with the `Add` button.
 
-10. Select `Build Phases`
+10. Remove `CrashReporter.framework` if present, and also remove if from the project by deleting it also from the filesystem
 
-11. Expand `Copy Bundle Resources`.
+11. Select `Build Settings`
 
-12. The following entries should be present:
-  * `HockeySDKResources.bundle`
+12. Search `Framework Search Paths`
+
+13. Make sure that the list does not contain a path pointing to the `QuincyKit` SDK or another framework that contains `PLCrashReporter`
     
-    <img src="XcodeCopyBundle1_normal.png"/>
+    <img src="XcodeFrameworkSearchPath_normal.png"/>
 
-13. Select `Build Settings`
-
-14. Search for `Other Linker Flags`
-
-15. Double click on the build setting titled `Other Linker Flags`.
-
-16. Add `-ObjC`
-    
-    <img src="XcodeOtherLinkerFlags_normal.png"/>
-
-17. HockeySDK-iOS needs a JSON library if your deployment target is iOS 4.x. Please include one of the following libraries:
+14. HockeySDK-iOS also needs a JSON library. If your deployment target iOS 5.0 or later, then you don't have to do anything. If your deployment target is iOS 4.x, please include one of the following libraries:
     * [JSONKit](https://github.com/johnezang/JSONKit)
     * [SBJSON](https://github.com/stig/json-framework)
     * [YAJL](https://github.com/gabriel/yajl-objc)

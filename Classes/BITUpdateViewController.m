@@ -29,9 +29,8 @@
  */
 
 #import <QuartzCore/QuartzCore.h>
-#import "NSString+BITHockeyAdditions.h"
+#import "BITHockeyHelper.h"
 #import "BITAppVersionMetaInfo.h"
-#import "UIImage+BITHockeyAdditions.h"
 #import "PSAppStoreHeader.h"
 #import "PSWebTableViewCell.h"
 #import "PSStoreButton.h"
@@ -98,7 +97,7 @@
   UIGraphicsBeginImageContextWithOptions(image.size, NO, 0.0);
   
   [image drawAtPoint:CGPointZero];
-  UIImage *iconGradient = [UIImage bit_imageNamed:@"IconGradient.png" bundle:BITHOCKEYSDK_BUNDLE];
+  UIImage *iconGradient = bit_imageNamed(@"IconGradient.png", BITHOCKEYSDK_BUNDLE);
   [iconGradient drawInRect:CGRectMake(0, 0, image.size.width, image.size.height) blendMode:kCGBlendModeNormal alpha:0.5];
   
   UIImage *result = UIGraphicsGetImageFromCurrentImageContext();
@@ -155,7 +154,7 @@
     [footerButton setTitle:BITHockeyLocalizedString(@"UpdateShowPreviousVersions") forState:UIControlStateNormal];
     [footerButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
     [footerButton setTitleColor:[UIColor whiteColor] forState:UIControlStateHighlighted];
-    [footerButton setBackgroundImage:[UIImage bit_imageNamed:@"buttonHighlight.png" bundle:BITHOCKEYSDK_BUNDLE] forState:UIControlStateHighlighted];
+    [footerButton setBackgroundImage:bit_imageNamed(@"buttonHighlight.png", BITHOCKEYSDK_BUNDLE) forState:UIControlStateHighlighted];
     footerButton.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
     [footerButton addTarget:self action:@selector(showPreviousVersionAction) forControlEvents:UIControlEventTouchUpInside];
     footerButton.frame = CGRectMake(0, kMinPreviousVersionButtonHeight-44, self.view.frame.size.width, 44);
@@ -210,6 +209,14 @@
         
     _cells = [[NSMutableArray alloc] initWithCapacity:5];
     _popOverController = nil;
+    
+    //might be better in viewDidLoad, but to workaround rdar://12214613 and as it doesn't
+    //hurt, we do it here
+    if (self.modal) {
+      self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
+                                                                                             target:self
+                                                                                             action:@selector(onAction:)] autorelease];
+    }
   }
   return self;
 }
@@ -357,20 +364,14 @@
   
   self.tableView.tableHeaderView = _appStoreHeader;
   
-  if (self.modal) {
-    self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
-                                                                                           target:self
-                                                                                           action:@selector(onAction:)] autorelease];
-  }
-  
   PSStoreButton *storeButton = [[[PSStoreButton alloc] initWithPadding:CGPointMake(5, 40)] autorelease];
   storeButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
   storeButton.buttonDelegate = self;
   [self.tableView.tableHeaderView addSubview:storeButton];
   storeButton.buttonData = [PSStoreButtonData dataWithLabel:@"" colors:[PSStoreButton appStoreGrayColor] enabled:NO];
-  self.appStoreButtonState = AppStoreButtonStateCheck;
   [storeButton alignToSuperview];
   _appStoreButton = [storeButton retain];
+  self.appStoreButtonState = AppStoreButtonStateCheck;
 }
 
 - (void)viewWillAppear:(BOOL)animated {

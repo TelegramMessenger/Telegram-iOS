@@ -27,32 +27,18 @@
  */
 
 #import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 
+/* NSString helpers */
+NSString *bit_URLEncodedString(NSString *inputString);
+NSString *bit_URLDecodedString(NSString *inputString);
+NSComparisonResult bit_versionCompare(NSString *stringA, NSString *stringB);
 
-/**
- The `BITHockeyManagerDelegate` formal protocol defines methods further configuring
-  the behaviour of `BITHockeyManager`.
- */
+/* UIImage helpers */
+UIImage *bit_roundedCornerImage(UIImage *inputImage, NSInteger cornerSize, NSInteger borderSize);
+UIImage *bit_imageToFitSize(UIImage *inputImage, CGSize fitSize, BOOL honorScaleFactor);
+UIImage *bit_reflectedImageWithHeight(UIImage *inputImage, NSUInteger height, float fromAlpha, float toAlpha);
 
-@protocol BITHockeyManagerDelegate <NSObject>
-
-@optional
-
-/**
- Implement to force the usage of the live identifier
- 
- This is useful if you are e.g. distributing an enterprise app inside your company
- and want to use the `liveIdentifier` for that even though it is not running from
- the App Store.
- 
- Example:
-    - (BOOL)shouldUseLiveIdentifier {
-    #ifdef (CONFIGURATION_Release)
-      return YES;
-    #endif
-      return NO;
-    }
- */
-- (BOOL)shouldUseLiveIdentifier;
-
-@end
+UIImage *bit_newWithContentsOfResolutionIndependentFile(NSString * path);
+UIImage *bit_imageWithContentsOfResolutionIndependentFile(NSString * path);
+UIImage *bit_imageNamed(NSString *imageName, NSString *bundleName);
