@@ -38,6 +38,12 @@ This documentation provides integrated help in Xcode for all public APIs and a s
 
 ## Changelog
 
+### Version 2.5.3
+
+- General:
+
+    - Fix checking validity of live identifier not working correctly
+
 ### Version 2.5.2
 
 - General:
