@@ -38,6 +38,12 @@ This documentation provides integrated help in Xcode for all public APIs and a s
 
 ## Changelog
 
+### Version 2.5.2
+
+- General:
+
+    - Declared as final release, since everything in 2.5.2b2 is working as expected
+
 ### Version 2.5.2b2
 
 - General:
