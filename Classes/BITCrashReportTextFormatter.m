@@ -584,7 +584,7 @@ static NSInteger binaryImageSort(id binary1, id binary2, void *context) {
     
     /* Make sure UTF8/16 characters are handled correctly */
     NSInteger offset = 0;
-    NSInteger index = 0;
+    NSUInteger index = 0;
     for (index = 0; index < [imageName length]; index++) {
         NSRange range = [imageName rangeOfComposedCharacterSequenceAtIndex:index];
         if (range.length > 1) {
