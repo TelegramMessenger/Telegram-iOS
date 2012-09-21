@@ -20,7 +20,7 @@ The main SDK class is `BITHockeyManager`. It initializes all modules and provide
 ## Installation & Setup
 
 - [Installation & Setup](http://support.hockeyapp.net/kb/client-integration/hockeyapp-for-ios-hockeysdk) (Recommended)
-- [Installation & Setup Advanced](http://support.hockeyapp.net/kb/client-integration/hockeyapp-for-ios-hockeysdk-advanced) (Using Git submodule and Xcode sub-project)
+- [Integrate as a Subproject ](http://support.hockeyapp.net/kb/client-integration/integrate-hockeyapp-on-ios-as-a-subproject-advanced-usage) (Using Git submodule and Xcode sub-project)
 - [Migration from HockeyKit & QuincyKit](http://support.hockeyapp.net/kb/how-tos/how-to-migration-from-hockeykit-quincykit)
 - [Mac Desktop Uploader](http://support.hockeyapp.net/kb/how-tos/how-to-upload-to-hockeyapp-on-a-mac)
 
@@ -37,6 +37,12 @@ This documentation provides integrated help in Xcode for all public APIs and a s
 
 
 ## Changelog
+
+### Version 2.5.2
+
+- General:
+
+    - Declared as final release, since everything in 2.5.2b2 is working as expected
 
 ### Version 2.5.2b2
 
