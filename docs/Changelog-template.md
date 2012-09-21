@@ -1,3 +1,9 @@
+### Version 2.5.3
+
+- General:
+
+    - Fix checking validity of live identifier not working correctly
+
 ### Version 2.5.2
 
 - General:
