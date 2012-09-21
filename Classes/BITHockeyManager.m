@@ -57,7 +57,7 @@
   if (identifier) {
     NSCharacterSet *hexSet = [NSCharacterSet characterSetWithCharactersInString:@"0123456789abcdef"];
     NSCharacterSet *inStringSet = [NSCharacterSet characterSetWithCharactersInString:identifier];
-    result = ([_appIdentifier length] == 32) && ([hexSet isSupersetOfSet:inStringSet]);
+    result = ([identifier length] == 32) && ([hexSet isSupersetOfSet:inStringSet]);
   }
   
   return result;
