@@ -49,6 +49,26 @@
 
 @synthesize appStoreEnvironment = _appStoreEnvironment;
 
+#pragma mark - Private Class Methods
+
+- (BOOL)checkValidityOfAppIdentifier:(NSString *)identifier {
+  BOOL result = NO;
+  
+  if (identifier) {
+    NSCharacterSet *hexSet = [NSCharacterSet characterSetWithCharactersInString:@"0123456789abcdef"];
+    NSCharacterSet *inStringSet = [NSCharacterSet characterSetWithCharactersInString:identifier];
+    result = ([_appIdentifier length] == 32) && ([hexSet isSupersetOfSet:inStringSet]);
+  }
+  
+  return result;
+}
+
+- (void)logInvalidIdentifier:(NSString *)environment {
+  if (!_appStoreEnvironment) {
+    NSLog(@"[HockeySDK] ERROR: The %@ is invalid! Please use the HockeyApp app identifier you find on the apps website on HockeyApp! The SDK is disabled!", environment);
+  }
+}
+
 
 #pragma mark - Public Class Methods
 
@@ -116,6 +136,11 @@
 - (void)configureWithBetaIdentifier:(NSString *)betaIdentifier liveIdentifier:(NSString *)liveIdentifier delegate:(id)delegate {
   _delegate = delegate;
   [_appIdentifier release];
+
+  // check the live identifier now, because otherwise invalid identifier would only be logged when the app is already in the store
+  if (![self checkValidityOfAppIdentifier:liveIdentifier]) {
+    [self logInvalidIdentifier:@"liveIdentifier"];
+  }
 
   if ([self shouldUseLiveIdentifier]) {
     _appIdentifier = [liveIdentifier copy];
@@ -196,10 +221,8 @@
 }
 
 - (void)initializeModules {
-  NSCharacterSet *hexSet = [NSCharacterSet characterSetWithCharactersInString:@"0123456789abcdef"];
-  NSCharacterSet *inStringSet = [NSCharacterSet characterSetWithCharactersInString:_appIdentifier];
-  _validAppIdentifier = ([_appIdentifier length] == 32) && ([hexSet isSupersetOfSet:inStringSet]);
-    
+  _validAppIdentifier = [self checkValidityOfAppIdentifier:_appIdentifier];
+  
   _startManagerIsInvoked = NO;
   
   if (_validAppIdentifier) {
@@ -221,7 +244,7 @@
     }
     
   } else {
-    NSLog(@"[HockeySDK] ERROR: The app identifier is invalid! Please use the HockeyApp app identifier you find on the apps website on HockeyApp! The SDK is disabled!");
+    [self logInvalidIdentifier:@"app identifier"];
   }
 }
 
