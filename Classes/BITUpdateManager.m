@@ -77,7 +77,6 @@
 @synthesize barStyle = _barStyle;
 @synthesize modalPresentationStyle = _modalPresentationStyle;
 
-
 #pragma mark - private
 
 - (void)reportError:(NSError *)error {
@@ -131,12 +130,23 @@
 }
 
 - (void)didBecomeActiveActions {
-  _checkForUpdateOnLaunchOfBitUpdateManager = YES;
-  
   if (![self isUpdateManagerDisabled]) {
     [self checkExpiryDateReached];
-    [self startUsage];
-    [self checkForUpdate];
+    if (![self expiryDateReached]) {
+      [self startUsage];
+      if (_checkForUpdateOnLaunch) {
+        [self checkForUpdate];
+      }
+    }
+  }
+}
+
+- (void)setupDidBecomeActiveNotifications {
+  if (!_didSetupDidBecomeActiveNotifications) {
+    NSNotificationCenter *dnc = [NSNotificationCenter defaultCenter];
+    [dnc addObserver:self selector:@selector(didBecomeActiveActions) name:UIApplicationDidBecomeActiveNotification object:nil];
+    [dnc addObserver:self selector:@selector(didBecomeActiveActions) name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
+    _didSetupDidBecomeActiveNotifications = YES;
   }
 }
 
@@ -353,7 +363,7 @@
     _sendUsageData = YES;
     _disableUpdateManager = NO;
     _checkForTracker = NO;
-    _checkForUpdateOnLaunchOfBitUpdateManager = NO;
+    _didSetupDidBecomeActiveNotifications = NO;
     
     // set defaults
     self.showDirectInstallOption = NO;
@@ -389,10 +399,7 @@
     [self startUsage];
 
     NSNotificationCenter *dnc = [NSNotificationCenter defaultCenter];
-    [dnc addObserver:self selector:@selector(startManager) name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
-    
     [dnc addObserver:self selector:@selector(stopUsage) name:UIApplicationWillTerminateNotification object:nil];
-    [dnc addObserver:self selector:@selector(didBecomeActiveActions) name:UIApplicationDidBecomeActiveNotification object:nil];
     [dnc addObserver:self selector:@selector(stopUsage) name:UIApplicationWillResignActiveNotification object:nil];
   }
   return self;
@@ -918,9 +925,7 @@
       }
     } else {
       if ([self checkForTracker] || ([self isCheckForUpdateOnLaunch] && [self shouldCheckForUpdates])) {
-        if (!_checkForUpdateOnLaunchOfBitUpdateManager) {
-          [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0f];
-        }
+        [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0f];
       }
     }
   } else {
@@ -928,11 +933,10 @@
       // if we are in the app store, make sure not to send usage information in any case for now
       _sendUsageData = NO;
       
-      if (!_checkForUpdateOnLaunchOfBitUpdateManager) {
-        [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0f];
-      }
+      [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0f];
     }
   }
+  [self setupDidBecomeActiveNotifications];
 }
 
 

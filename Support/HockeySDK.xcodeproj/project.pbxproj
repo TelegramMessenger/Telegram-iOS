@@ -879,7 +879,6 @@
 		1E59547A15B6C41300A03429 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				DSTROOT = /tmp/HockeySDK.dst;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -894,7 +893,6 @@
 		1E59547B15B6C41300A03429 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				DSTROOT = /tmp/HockeySDK.dst;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -988,10 +986,7 @@
 			baseConfigurationReference = 1E66CA9115D4100500F35BED /* buildnumber.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = (
-					armv7,
-					armv6,
-				);
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
@@ -1023,10 +1018,7 @@
 			baseConfigurationReference = 1E66CA9115D4100500F35BED /* buildnumber.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = (
-					armv7,
-					armv6,
-				);
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
@@ -1053,10 +1045,6 @@
 		E400563F148D79B500EB22B9 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = (
-					armv6,
-					armv7,
-				);
 				DSTROOT = /tmp/HockeySDK.dst;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1072,10 +1060,6 @@
 		E4005640148D79B500EB22B9 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = (
-					armv6,
-					armv7,
-				);
 				DSTROOT = /tmp/HockeySDK.dst;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
