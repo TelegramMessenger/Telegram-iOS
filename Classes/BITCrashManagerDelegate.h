@@ -28,6 +28,8 @@
 
 #import <Foundation/Foundation.h>
 
+@class BITCrashManager;
+
 /**
  The `BITCrashManagerDelegate` formal protocol defines methods further configuring
  the behaviour of `BITCrashManager`.
