@@ -1,8 +1,19 @@
+### Version 2.5.4b1
+
+- General:
+
+    - [NEW] JMC support is removed from binary distribution, requires the compiler preprocessor definition `JIRA_MOBILE_CONNECT_SUPPORT_ENABLED=1` to be linked. Enabled when using the subproject
+    - [BUGFIX] Fix compiler warnings when using Cocoapods
+
+- Updating:
+
+    - [BUGFIX] `expiryDate` property not working correctly
+
 ### Version 2.5.3
 
 - General:
 
-    - Fix checking validity of live identifier not working correctly
+    - [BUGFIX] Fix checking validity of live identifier not working correctly
 
 ### Version 2.5.2
 
