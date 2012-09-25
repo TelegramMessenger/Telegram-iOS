@@ -915,17 +915,18 @@
 
     BITHockeyLog(@"INFO: Start UpdateManager");
 
-    if ([self expiryDateReached]) return;
-    
-    if (![self appVersionIsAuthorized]) {
-      if ([self authorizationState] == BITUpdateAuthorizationPending) {
-        [self showBlockingScreen:BITHockeyLocalizedString(@"UpdateAuthorizationProgress") image:@"authorize_request.png"];
-        
-        [self performSelector:@selector(checkForAuthorization) withObject:nil afterDelay:0.0f];
-      }
-    } else {
-      if ([self checkForTracker] || ([self isCheckForUpdateOnLaunch] && [self shouldCheckForUpdates])) {
-        [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0f];
+    [self checkExpiryDateReached];
+    if (![self expiryDateReached]) {
+      if (![self appVersionIsAuthorized]) {
+        if ([self authorizationState] == BITUpdateAuthorizationPending) {
+          [self showBlockingScreen:BITHockeyLocalizedString(@"UpdateAuthorizationProgress") image:@"authorize_request.png"];
+          
+          [self performSelector:@selector(checkForAuthorization) withObject:nil afterDelay:0.0f];
+        }
+      } else {
+        if ([self checkForTracker] || ([self isCheckForUpdateOnLaunch] && [self shouldCheckForUpdates])) {
+          [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0f];
+        }
       }
     }
   } else {
