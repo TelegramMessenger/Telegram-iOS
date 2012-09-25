@@ -150,6 +150,11 @@
   }
 }
 
+- (void)cleanupDidBecomeActiveNotifications {
+  [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
+  [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
+}
+
 #pragma mark - Expiry
 
 - (BOOL)expiryDateReached {
@@ -182,6 +187,9 @@
     if (self.delegate != nil && [self.delegate respondsToSelector:@selector(didDisplayExpiryAlertForUpdateManager:)]) {
       [self.delegate didDisplayExpiryAlertForUpdateManager:self];
     }
+    
+    // the UI is now blocked, make sure we don't add our UI on top of it over and over again
+    [self cleanupDidBecomeActiveNotifications];
   }
 }
 

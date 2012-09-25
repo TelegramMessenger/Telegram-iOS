@@ -72,6 +72,9 @@
  implement this method, present your user interface and return _NO_. In this case
  it is your responsibility to make the app unusable!
  
+ Note: This delegate will be invoked on startup and every time the app becomes
+ active again!
+ 
  When returning _YES_ the default blocking UI will be shown.
  
  When running the app from the App Store, this delegate is ignored.
