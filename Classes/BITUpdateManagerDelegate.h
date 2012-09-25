@@ -28,6 +28,8 @@
 
 #import <Foundation/Foundation.h>
 
+@class BITUpdateManager;
+
 /**
  The `BITUpdateManagerDelegate` formal protocol defines methods further configuring
  the behaviour of `BITUpdateManager`. 
