@@ -309,7 +309,7 @@
       // get the startup timestamp from the crash report, and the file timestamp to calculate the timeinterval when the crash happened after startup
       PLCrashReport *report = [[[PLCrashReport alloc] initWithData:crashData error:&error] autorelease];
       
-      if ([[report.applicationInfo class] respondsToSelector:@selector(applicationStartupTimestamp)]) {
+      if ([report.applicationInfo respondsToSelector:@selector(applicationStartupTimestamp)]) {
         if (report.systemInfo.timestamp && report.applicationInfo.applicationStartupTimestamp) {
           _timeintervalCrashInLastSessionOccured = [report.systemInfo.timestamp timeIntervalSinceDate:report.applicationInfo.applicationStartupTimestamp];
         }
@@ -527,7 +527,7 @@
       }
       
       NSString *crashUUID = @"";
-      if ([[report class] respondsToSelector:@selector(reportInfo)]) {
+      if ([report respondsToSelector:@selector(reportInfo)]) {
         crashUUID = report.reportInfo.reportGUID ?: @"";
       }
       NSString *crashLogString = [BITCrashReportTextFormatter stringValueForCrashReport:report];
