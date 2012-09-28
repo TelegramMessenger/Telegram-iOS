@@ -616,7 +616,8 @@
       [self sendCrashReports];
       break;
     case 2: {
-      [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITCrashAutomaticallySendReports];
+      _crashManagerStatus = BITCrashManagerStatusAutoSend;
+      [[NSUserDefaults standardUserDefaults] setInteger:_crashManagerStatus forKey:kBITCrashManagerStatus];
       [[NSUserDefaults standardUserDefaults] synchronize];
       if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillSendCrashReportsAlways:)]) {
         [self.delegate crashManagerWillSendCrashReportsAlways:self];
