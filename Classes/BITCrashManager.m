@@ -39,9 +39,6 @@
 
 #include <sys/sysctl.h>
 
-// flags if the crashreporter should automatically send crashes without asking the user again
-#define kBITCrashAutomaticallySendReports @"BITCrashAutomaticallySendReports"
-
 // stores the set of crashreports that have been approved but aren't sent yet
 #define kBITCrashApprovedReports @"HockeySDKCrashApprovedReports"
 
