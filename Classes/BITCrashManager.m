@@ -566,7 +566,7 @@
       }
       
       if ([applicationLog length] > 0) {
-        description = [NSString stringWithFormat:@"Log:\n%@", applicationLog];
+        description = [NSString stringWithFormat:@"%@", applicationLog];
       }
       
       [crashes appendFormat:@"<crash><applicationname>%s</applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><contact>%@</contact><description><![CDATA[%@]]></description></crash>",
