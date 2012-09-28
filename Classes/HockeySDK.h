@@ -33,6 +33,8 @@
 #import "BITHockeyManager.h"
 #import "BITHockeyManagerDelegate.h"
 
+#import "BITHockeyBaseManager.h"
+
 #import "BITCrashManager.h"
 #import "BITCrashManagerDelegate.h"
 
@@ -40,9 +42,19 @@
 #import "BITUpdateManagerDelegate.h"
 #import "BITUpdateViewController.h"
 
+#import "BITFeedbackManager.h"
+#import "BITFeedbackComposeViewController.h"
+#import "BITFeedbackListViewController.h"
+
 
 // Notification message which HockeyManager is listening to, to retry requesting updated from the server
 #define BITHockeyNetworkDidBecomeReachableNotification @"BITHockeyNetworkDidBecomeReachable"
+
+// Notification message which tells that messages got updated or added
+#define BITHockeyFeedbackMessagesUpdated @"BITHockeyFeedbackMessagesUpdated"
+
+// Notification message which tells that new messages arrived
+#define BITHockeyFeedbackNewMessagesReceived @"BITHockeyFeedbackNewMessagesReceived"
 
 
 // hockey api error domain
@@ -67,6 +79,30 @@ typedef enum {
   BITUpdateAPIClientCannotCreateConnection
 } BITUpdateErrorReason;
 static NSString *kBITUpdateErrorDomain = @"BITUpdaterErrorDomain";
+
+
+// Update App Versions
+
+// hockey api error domain
+typedef enum {
+  BITFeedbackErrorUnknown,
+  BITFeedbackAPIServerReturnedInvalidStatus,
+  BITFeedbackAPIServerReturnedInvalidData,
+  BITFeedbackAPIServerReturnedEmptyResponse,
+  BITFeedbackAPIClientAuthorizationMissingSecret,
+  BITFeedbackAPIClientCannotCreateConnection
+} BITFeedbackErrorReason;
+static NSString *kBITFeedbackErrorDomain = @"BITFeedbackErrorDomain";
+
+
+// HockeySDK
+
+// hockey api error domain
+typedef enum {
+  BITHockeyErrorUnknown,
+  HockeyAPIClientMissingJSONLibrary
+} BITHockeyErrorReason;
+static NSString *kBITHockeyErrorDomain = @"BITHockeyErrorDomain";
 
 
 #endif

@@ -106,3 +106,87 @@
 /* Update Simulator Warning */
 
 "UpdateSimulatorMessage" = "Hockey Update does not work in the Simulator.\nThe itms-services:// url scheme is implemented but nonfunctional.";
+
+
+/* Feedback */
+
+
+/* New Message Alert */
+
+/* Alert Title */
+"HockeyFeedbackNewMessageTitle" = "New Feedback Response";
+
+/* Alert Text */
+"HockeyFeedbackNewMessageText" = "A new response to your feedback is available. Would you like to view it?";
+
+/* Alert Ignore Button */
+"HockeyFeedbackIgnore" = "Ignore";
+
+/* Alert Show Button */
+"HockeyFeedbackShow" = "Show";
+
+
+/* List View */
+
+/* Title */
+"HockeyFeedbackListTitle" = "Feedback";
+
+/* Last Updated */
+"HockeyFeedbackListLastUpdated" = "Last Updated: %@";
+
+/* Never Updated */
+"HockeyFeedbackListNeverUpdated" = "Never";
+
+/* Write Feedback Button Title */
+"HockeyFeedbackListButonWriteFeedback" = "Write Feedback";
+
+/* Write Response Button Title */
+"HockeyFeedbackListButonWriteResponse" = "Write Response";
+
+/* User Data Set Name Button Title */
+"HockeyFeedbackListButonUserDataSetName" = "Set Your Name";
+
+/* User Data Set Email Button Title */
+"HockeyFeedbackListButonUserDataSetEmail" = "Set Your Email";
+
+/* User Data With Name Button Title */
+"HockeyFeedbackListButonUserDataWithName" = "Name: %@";
+
+/* User Data With Email Button Title */
+"HockeyFeedbackListButonUserDataWithEmail" = "Email: %@";
+
+/* User Name In Message If Name Not Set */
+"HockeyFeedbackListMessageUserNameNotSet" = "You";
+
+/* Name In Message From Server If Name Not Set */
+"HockeyFeedbackListmessageResponseNameNotSet" = "Response";
+
+
+/* Compose Message */
+
+/* Title */
+"HockeyFeedbackComposeTitle" = "New Feedback";
+
+/* Send button */
+"HockeyFeedbackComposeSend" = "Send";
+
+
+/* Set User Data */
+
+/* Title */
+"HockeyFeedbackUserDataTitle" = "Who Are You";
+
+/* Description On What Should Be Entered */
+"HockeyFeedbackUserDataDescription" = "Please let us know who you are before writing us your feedback.";
+
+/* Name Field */
+"HockeyFeedbackUserDataName" = "Name";
+
+/* Name Placeholder */
+"HockeyFeedbackUserDataNamePlaceHolder" = "John Doe";
+
+/* Email Field */
+"HockeyFeedbackUserDataEmail" = "Email";
+
+/* Email Placeholder */
+"HockeyFeedbackUserDataEmailPlaceholder" = "example@email.com";

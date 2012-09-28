@@ -1,9 +1,7 @@
 /*
  * Author: Andreas Linde <mail@andreaslinde.de>
- *         Kent Sutherland
  *
  * Copyright (c) 2012 HockeyApp, Bit Stadium GmbH.
- * Copyright (c) 2011 Andreas Linde & Kent Sutherland.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -28,17 +26,29 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+
 #import <Foundation/Foundation.h>
 
+typedef enum {
+  // default and new messages from SDK per default
+  BITFeedbackMessageStatusSendPending = 0,
+  // sending of message is in progress
+  BITFeedbackMessageStatusSendInProgress = 1,
+  // new messages from server
+  BITFeedbackMessageStatusUnread = 2,
+  // messages from server once read and new local messages once successful send from SDK
+  BITFeedbackMessageStatusRead = 3
+} BITFeedbackMessageStatus;
 
-@interface BITCrashManager () {
+@interface BITFeedbackMessage : NSObject {
 }
 
-// set the server URL
-@property (nonatomic, retain) NSString *updateURL;
-
-- (id)initWithAppIdentifier:(NSString *)appIdentifier;
-
-- (void)startManager;
+@property (nonatomic, copy) NSString *text;
+@property (nonatomic, copy) NSString *name;
+@property (nonatomic, copy) NSString *email;
+@property (nonatomic, copy) NSDate *date;
+@property (nonatomic, copy) NSNumber *id;
+@property (nonatomic) BITFeedbackMessageStatus status;
+@property (nonatomic) BOOL userMessage;
 
 @end

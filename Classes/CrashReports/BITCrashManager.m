@@ -34,6 +34,8 @@
 #import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
 
+#import "BITHockeyManagerPrivate.h"
+#import "BITHockeyBaseManagerPrivate.h"
 #import "BITCrashManagerPrivate.h"
 #import "BITCrashReportTextFormatter.h"
 
@@ -57,7 +59,27 @@
 
 @end
 
-@implementation BITCrashManager
+@implementation BITCrashManager {
+  NSMutableDictionary *_approvedCrashReports;
+  
+  NSMutableArray *_crashFiles;
+  NSString       *_crashesDir;
+  NSString       *_settingsFile;
+  NSString       *_analyzerInProgressFile;
+  NSFileManager  *_fileManager;
+  
+  BOOL _crashIdenticalCurrentVersion;
+  
+  NSMutableData *_responseData;
+  NSInteger _statusCode;
+  
+  NSURLConnection *_urlConnection;
+  
+  BOOL _sendingInProgress;
+  BOOL _isSetup;
+  
+  NSUncaughtExceptionHandler *_exceptionHandler;
+}
 
 @synthesize delegate = _delegate;
 @synthesize crashManagerStatus = _crashManagerStatus;
@@ -68,10 +90,9 @@
 @synthesize fileManager = _fileManager;
 
 
-- (id)initWithAppIdentifier:(NSString *)appIdentifier {
+- (id)init {
   if ((self = [super init])) {
-    _updateURL = BITHOCKEYSDK_URL;
-    _appIdentifier = appIdentifier;
+    self.serverURL = BITHOCKEYSDK_URL;
     
     _delegate = nil;
     _showAlwaysButton = NO;
@@ -133,12 +154,6 @@
 - (void) dealloc {
   _delegate = nil;
   [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
-  
-  [_updateURL release];
-  _updateURL = nil;
-  
-  [_appIdentifier release];
-  _appIdentifier = nil;
   
   [_urlConnection cancel];
   [_urlConnection release]; 
@@ -282,14 +297,26 @@
       NSString *applicationLog = @"";
       NSString *errorString = nil;
       
-      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(userNameForCrashManager:)]) {
-        username = [self.delegate userNameForCrashManager:self] ?: @"";
+      if ([BITHockeyManager sharedHockeyManager].delegate &&
+          [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
+        username = [[BITHockeyManager sharedHockeyManager].delegate
+                    userNameForHockeyManager:[BITHockeyManager sharedHockeyManager]
+                    componentManager:self];
+      }
+      if ([BITHockeyManager sharedHockeyManager].delegate &&
+          [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
+        username = [[BITHockeyManager sharedHockeyManager].delegate
+                    userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
+                    componentManager:self];
       }
       [metaDict setObject:username forKey:kBITCrashMetaUserName];
 
-      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(userEmailForCrashManager:)]) {
-        useremail = [self.delegate userEmailForCrashManager:self] ?: @"";
-      }
+      if ([BITHockeyManager sharedHockeyManager].delegate &&
+          [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userEmailForHockeyManager:componentManager:)]) {
+        useremail = [[BITHockeyManager sharedHockeyManager].delegate
+                    userEmailForHockeyManager:[BITHockeyManager sharedHockeyManager]
+                    componentManager:self];
+      }      
       [metaDict setObject:useremail forKey:kBITCrashMetaUserEmail];
       
       if (self.delegate != nil && [self.delegate respondsToSelector:@selector(applicationLogForCrashManager:)]) {
@@ -405,12 +432,24 @@
       NSString *username = nil;
       NSString *useremail = nil;
       
-      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(userNameForCrashManager:)]) {
-        username = [self.delegate userNameForCrashManager:self];
+      if ([BITHockeyManager sharedHockeyManager].delegate &&
+          [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
+        username = [[BITHockeyManager sharedHockeyManager].delegate
+                    userNameForHockeyManager:[BITHockeyManager sharedHockeyManager]
+                    componentManager:self];
+      }
+      if ([BITHockeyManager sharedHockeyManager].delegate &&
+          [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
+        username = [[BITHockeyManager sharedHockeyManager].delegate
+                    userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
+                    componentManager:self];
       }
       
-      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(userEmailForCrashManager:)]) {
-        useremail = [self.delegate userEmailForCrashManager:self];
+      if ([BITHockeyManager sharedHockeyManager].delegate &&
+          [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userEmailForHockeyManager:componentManager:)]) {
+        useremail = [[BITHockeyManager sharedHockeyManager].delegate
+                     userEmailForHockeyManager:[BITHockeyManager sharedHockeyManager]
+                     componentManager:self];
       }
       
       if (username || useremail) {
@@ -641,8 +680,8 @@
   
   request = [NSMutableURLRequest requestWithURL:
              [NSURL URLWithString:[NSString stringWithFormat:@"%@api/2/apps/%@/crashes?sdk=%@&sdk_version=%@&feedbackEnabled=no",
-                                   _updateURL,
-                                   [_appIdentifier stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding],
+                                   self.serverURL,
+                                   [self encodedAppIdentifier],
                                    BITHOCKEY_NAME,
                                    BITHOCKEY_VERSION
                                    ]

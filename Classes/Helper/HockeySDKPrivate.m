@@ -27,6 +27,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
 #include <CommonCrypto/CommonDigest.h>
 

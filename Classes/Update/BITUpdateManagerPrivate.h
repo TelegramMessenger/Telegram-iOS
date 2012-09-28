@@ -36,7 +36,7 @@
 }
 
 // set the server URL
-@property (nonatomic, retain) NSString *updateURL;
+@property (nonatomic, retain) NSString *serverURL;
 
 // is an update available?
 @property (nonatomic, assign, getter=isUpdateAvailable) BOOL updateAvailable;

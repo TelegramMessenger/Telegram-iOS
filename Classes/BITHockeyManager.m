@@ -30,9 +30,11 @@
 #import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
 
+#import "BITHockeyManagerPrivate.h"
+#import "BITHockeyBaseManagerPrivate.h"
 #import "BITCrashManagerPrivate.h"
 #import "BITUpdateManagerPrivate.h"
-
+#import "BITFeedbackManagerPrivate.h"
 
 @interface BITHockeyManager ()
 
@@ -44,12 +46,14 @@
 
 @end
 
-@implementation BITHockeyManager
 
-@synthesize crashManager = _crashManager;
-@synthesize updateManager = _updateManager;
-
-@synthesize appStoreEnvironment = _appStoreEnvironment;
+@implementation BITHockeyManager {
+  NSString *_appIdentifier;
+  
+  BOOL _validAppIdentifier;
+  
+  BOOL _startManagerIsInvoked;
+}
 
 #pragma mark - Private Class Methods
 
@@ -88,11 +92,12 @@
 
 - (id) init {
   if ((self = [super init])) {
-    _updateURL = nil;
+    _serverURL = nil;
     _delegate = nil;
     
     _disableCrashManager = NO;
     _disableUpdateManager = NO;
+    _disableFeedbackManager = NO;
     
     _appStoreEnvironment = NO;
     _startManagerIsInvoked = NO;
@@ -118,6 +123,7 @@
   
   [_crashManager release], _crashManager = nil;
   [_updateManager release], _updateManager = nil;
+  [_feedbackManager release], _feedbackManager = nil;
   
   _delegate = nil;
   
@@ -164,8 +170,8 @@
   // start CrashManager
   if (![self isCrashManagerDisabled]) {
     BITHockeyLog(@"INFO: Start CrashManager");
-    if (_updateURL) {
-      [_crashManager setUpdateURL:_updateURL];
+    if (_serverURL) {
+      [_crashManager setServerURL:_serverURL];
     }
     [_crashManager startManager];
   }
@@ -177,10 +183,19 @@
 #endif
       ) {
     BITHockeyLog(@"INFO: Start UpdateManager with small delay");
-    if (_updateURL) {
-      [_updateManager setUpdateURL:_updateURL];
+    if (_serverURL) {
+      [_updateManager setServerURL:_serverURL];
     }
     [_updateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
+  }
+
+  // start FeedbackManager
+  if (![self isFeedbackManagerDisabled]) {
+    BITHockeyLog(@"INFO: Start FeedbackManager");
+    if (_serverURL) {
+      [_feedbackManager setServerURL:_serverURL];
+    }
+    [_feedbackManager performSelector:@selector(startManager) withObject:nil afterDelay:1.0f];
   }
 }
 
@@ -202,15 +217,15 @@
 }
 
 
-- (void)setUpdateURL:(NSString *)anUpdateURL {
+- (void)setServerURL:(NSString *)aServerURL {
   // ensure url ends with a trailing slash
-  if (![anUpdateURL hasSuffix:@"/"]) {
-    anUpdateURL = [NSString stringWithFormat:@"%@/", anUpdateURL];
+  if (![aServerURL hasSuffix:@"/"]) {
+    aServerURL = [NSString stringWithFormat:@"%@/", aServerURL];
   }
   
-  if (_updateURL != anUpdateURL) {
-    [_updateURL release];
-    _updateURL = [anUpdateURL copy];
+  if (_serverURL != aServerURL) {
+    [_serverURL release];
+    _serverURL = [aServerURL copy];
   }
 }
 
@@ -219,8 +234,8 @@
 
 - (BOOL)shouldUseLiveIdentifier {
   BOOL delegateResult = NO;
-  if ([_delegate respondsToSelector:@selector(shouldUseLiveIdentifier)]) {
-    delegateResult = [(NSObject <BITHockeyManagerDelegate>*)_delegate shouldUseLiveIdentifier];
+  if ([_delegate respondsToSelector:@selector(shouldUseLiveIdentifierForHockeyManager:)]) {
+    delegateResult = [(NSObject <BITHockeyManagerDelegate>*)_delegate shouldUseLiveIdentifierForHockeyManager:self];
   }
 
   return (delegateResult) || (_appStoreEnvironment);
@@ -233,12 +248,15 @@
   
   if (_validAppIdentifier) {
     BITHockeyLog(@"INFO: Setup CrashManager");
-    _crashManager = [[BITCrashManager alloc] initWithAppIdentifier:_appIdentifier];
+    _crashManager = [[BITCrashManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
     _crashManager.delegate = _delegate;
     
     BITHockeyLog(@"INFO: Setup UpdateManager");
     _updateManager = [[BITUpdateManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
     _updateManager.delegate = _delegate;
+    
+    BITHockeyLog(@"INFO: Setup FeedbackManager");
+    _feedbackManager = [[BITFeedbackManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
     
 #if JIRA_MOBILE_CONNECT_SUPPORT_ENABLED
     // Only if JMC is part of the project

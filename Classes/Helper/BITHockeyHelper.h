@@ -33,6 +33,8 @@
 NSString *bit_URLEncodedString(NSString *inputString);
 NSString *bit_URLDecodedString(NSString *inputString);
 NSComparisonResult bit_versionCompare(NSString *stringA, NSString *stringB);
+id bit_parseJSON(NSString *inputString, NSError **error);
+NSString *bit_encodeAppIdentifier(NSString *inputString);
 
 /* UIImage helpers */
 UIImage *bit_roundedCornerImage(UIImage *inputImage, NSInteger cornerSize, NSInteger borderSize);

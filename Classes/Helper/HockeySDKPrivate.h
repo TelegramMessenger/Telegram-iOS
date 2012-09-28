@@ -39,6 +39,8 @@
 #define BITHOCKEY_CRASH_SETTINGS @"BITCrashManager.plist"
 #define BITHOCKEY_CRASH_ANALYZER @"BITCrashManager.analyzer"
 
+#define BITHOCKEY_FEEDBACK_SETTINGS @"BITFeedbackManager.plist"
+
 #define kBITUpdateArrayOfLastCheck					@"BITUpdateArrayOfLastCheck"
 #define kBITUpdateDateOfLastCheck						@"BITUpdateDateOfLastCheck"
 #define kBITUpdateDateOfVersionInstallation	@"BITUpdateDateOfVersionInstallation"
@@ -61,6 +63,7 @@
 NSBundle *BITHockeyBundle(void);
 NSString *BITHockeyLocalizedString(NSString *stringToken);
 NSString *BITHockeyMD5(NSString *str);
+id BITHockeyParseJSON(NSString *str, NSError **error);
 
 
 // compatibility helper

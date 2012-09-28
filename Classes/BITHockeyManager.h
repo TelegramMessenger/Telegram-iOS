@@ -34,9 +34,10 @@
 
 @class BITCrashManager;
 @class BITUpdateManager;
+@class BITFeedbackManager;
 
 /** 
- The HockeySDK manager.
+ The HockeySDK manager. Responsible for setup and management of all components
  
  This is the principal SDK class. It represents the entry point for the HockeySDK. The main promises of the class are initializing the SDK modules, providing access to global properties and to all modules. Initialization is divided into several distinct phases:
  
@@ -45,7 +46,9 @@
  3. Start up all modules.
  
  Example:
-    [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"<AppIdentifierFromHockeyApp>" delegate:nil];
+    [[BITHockeyManager sharedHockeyManager]
+      configureWithIdentifier:@"<AppIdentifierFromHockeyApp>"
+                     delegate:nil];
     [[BITHockeyManager sharedHockeyManager] startManager];
  
  @warning When also using the SDK for updating app versions (AdHoc or Enterprise) and collecting
@@ -67,16 +70,7 @@
 
  */
 
-@interface BITHockeyManager : NSObject {
-@private
-  id _delegate;
-  NSString *_appIdentifier;
-  
-  BOOL _validAppIdentifier;
-  
-  BOOL _startManagerIsInvoked;
-}
-
+@interface BITHockeyManager : NSObject
 
 #pragma mark - Public Methods
 
@@ -99,7 +93,9 @@
  implements the optional protocols `BITHockeyManagerDelegate`, `BITCrashManagerDelegate` or
  `BITUpdateManagerDelegate`.
  
-    [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"<AppIdentifierFromHockeyApp>" delegate:nil];
+    [[BITHockeyManager sharedHockeyManager]
+      configureWithIdentifier:@"<AppIdentifierFromHockeyApp>"
+                     delegate:nil];
 
  @see configureWithBetaIdentifier:liveIdentifier:delegate:
  @see startManager
@@ -121,9 +117,10 @@
  And also assign the class that implements the optional protocols `BITHockeyManagerDelegate`,
  `BITCrashManagerDelegate` or `BITUpdateManagerDelegate`
  
-    [[BITHockeyManager sharedHockeyManager] configureWithBetaIdentifier:@"<AppIdentifierForBetaAppFromHockeyApp>"
-                                                         liveIdentifier:@"<AppIdentifierForLiveAppFromHockeyApp>"
-                                                               delegate:nil];
+    [[BITHockeyManager sharedHockeyManager]
+      configureWithBetaIdentifier:@"<AppIdentifierForBetaAppFromHockeyApp>"
+                   liveIdentifier:@"<AppIdentifierForLiveAppFromHockeyApp>"
+                         delegate:nil];
 
  @see configureWithIdentifier:delegate:
  @see startManager
@@ -161,7 +158,7 @@
  By default this is set to the HockeyApp servers and there rarely should be a
  need to modify that.
  */
-@property (nonatomic, retain) NSString *updateURL;
+@property (nonatomic, retain) NSString *serverURL;
 
 
 /**
@@ -197,7 +194,7 @@
  @see configureWithBetaIdentifier:liveIdentifier:delegate:
  @see startManager
  @see disableUpdateManager
- @return The BITCrashManager instance initialized by BITUpdateManager
+ @return The BITUpdateManager instance initialized by BITHockeyManager
  */
 @property (nonatomic, retain, readonly) BITUpdateManager *updateManager;
 
@@ -214,6 +211,32 @@
  @see updateManager
  */
 @property (nonatomic, getter = isUpdateManagerDisabled) BOOL disableUpdateManager;
+
+
+/**
+ Reference to the initialized BITFeedbackManager module
+ 
+ @see configureWithIdentifier:delegate:
+ @see configureWithBetaIdentifier:liveIdentifier:delegate:
+ @see startManager
+ @see disableFeedbackManager
+ @return The BITFeedbackManager instance initialized by BITHockeyManager
+ */
+@property (nonatomic, retain, readonly) BITFeedbackManager *feedbackManager;
+
+
+/**
+ Flag the determines wether the Feedback Manager should be disabled
+ 
+ If this flag is enabled, then letting the user give feedback and
+ get responses will be turned off!
+ 
+ Please note that the Feedback Manager will be initialized anyway!
+ 
+ *Default*: _NO_
+ @see feedbackManager
+ */
+@property (nonatomic, getter = isFeedbackManagerDisabled) BOOL disableFeedbackManager;
 
 
 ///-----------------------------------------------------------------------------

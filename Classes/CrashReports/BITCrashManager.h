@@ -30,6 +30,9 @@
 
 #import <Foundation/Foundation.h>
 
+#import "BITHockeyBaseManager.h"
+
+
 // hockey crash manager status
 typedef enum {
   BITCrashManagerStatusDisabled = 0,
@@ -73,30 +76,7 @@ static NSString *kBITCrashManagerStatus = @"BITCrashManagerStatus";
  safe crash reporting: [Reliable Crash Reporting](http://goo.gl/WvTBR)
  */
 
-@interface BITCrashManager : NSObject {
-@private
-  NSString *_appIdentifier;
-  
-  NSMutableDictionary *_approvedCrashReports;
-
-  NSMutableArray *_crashFiles;
-  NSString       *_crashesDir;
-  NSString       *_settingsFile;
-  NSString       *_analyzerInProgressFile;
-  NSFileManager  *_fileManager;
-  
-  BOOL _crashIdenticalCurrentVersion;
-  	
-  NSMutableData *_responseData;
-  NSInteger _statusCode;
-  
-  NSURLConnection *_urlConnection;
-  
-  BOOL _sendingInProgress;
-  BOOL _isSetup;
-  
-  NSUncaughtExceptionHandler *_exceptionHandler;
-}
+@interface BITCrashManager : BITHockeyBaseManager
 
 
 ///-----------------------------------------------------------------------------

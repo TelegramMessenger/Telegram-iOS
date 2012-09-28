@@ -54,28 +54,6 @@
 
 @implementation BITUpdateManager
 
-@synthesize delegate = _delegate;
-
-@synthesize urlConnection = _urlConnection;
-@synthesize checkInProgress = _checkInProgress;
-@synthesize receivedData = _receivedData;
-@synthesize alwaysShowUpdateReminder = _showUpdateReminder;
-@synthesize checkForUpdateOnLaunch = _checkForUpdateOnLaunch;
-@synthesize compareVersionType = _compareVersionType;
-@synthesize lastCheck = _lastCheck;
-@synthesize updateSetting = _updateSetting;
-@synthesize appVersions = _appVersions;
-@synthesize updateAvailable = _updateAvailable;
-@synthesize usageStartTimestamp = _usageStartTimestamp;
-@synthesize currentHockeyViewController = _currentHockeyViewController;
-@synthesize showDirectInstallOption = _showDirectInstallOption;
-@synthesize requireAuthorization = _requireAuthorization;
-@synthesize authenticationSecret = _authenticationSecret;
-@synthesize blockingView = _blockingView;
-@synthesize checkForTracker = _checkForTracker;
-@synthesize trackerConfig = _trackerConfig;
-@synthesize barStyle = _barStyle;
-@synthesize modalPresentationStyle = _modalPresentationStyle;
 
 #pragma mark - private
 
@@ -354,7 +332,7 @@
     _appIdentifier = appIdentifier;
     _isAppStoreEnvironment = isAppStoreEnvironment;
     
-    _updateURL = BITHOCKEYSDK_URL;
+    _serverURL = BITHOCKEYSDK_URL;
     _delegate = nil;
     _expiryDate = nil;
     _checkInProgress = NO;
@@ -422,8 +400,7 @@
   
   _delegate = nil;
   
-  [_updateURL release];
-  _updateURL = nil;
+  [_serverURL release];
 
   [_urlConnection cancel];
   self.urlConnection = nil;
@@ -607,83 +584,6 @@
 }
 
 
-#pragma mark - JSONParsing
-
-- (id)parseJSONResultString:(NSString *)jsonString {
-  NSError *error = nil;
-  id feedResult = nil;
-  
-  if (!jsonString)
-    return nil;
-
-#if BITHOCKEYSDK_NATIVE_JSON_AVAILABLE
-  feedResult = [NSJSONSerialization JSONObjectWithData:[jsonString dataUsingEncoding:NSUTF8StringEncoding] options:kNilOptions error:&error];
-#else
-  id nsjsonClass = NSClassFromString(@"NSJSONSerialization");
-  SEL nsjsonSelect = NSSelectorFromString(@"JSONObjectWithData:options:error:");
-  SEL sbJSONSelector = NSSelectorFromString(@"JSONValue");
-  SEL jsonKitSelector = NSSelectorFromString(@"objectFromJSONStringWithParseOptions:error:");
-  SEL yajlSelector = NSSelectorFromString(@"yajl_JSONWithOptions:error:");
-  
-  if (nsjsonClass && [nsjsonClass respondsToSelector:nsjsonSelect]) {
-    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:[nsjsonClass methodSignatureForSelector:nsjsonSelect]];
-    invocation.target = nsjsonClass;
-    invocation.selector = nsjsonSelect;
-    NSData *jsonData = [jsonString dataUsingEncoding:NSUTF8StringEncoding];
-
-    if (!jsonData)
-      return nil;
-
-    [invocation setArgument:&jsonData atIndex:2]; // arguments 0 and 1 are self and _cmd respectively, automatically set by NSInvocation
-    NSUInteger readOptions = kNilOptions;
-    [invocation setArgument:&readOptions atIndex:3];
-    [invocation setArgument:&error atIndex:4];
-    [invocation invoke];
-    [invocation getReturnValue:&feedResult];
-  } else if (jsonKitSelector && [jsonString respondsToSelector:jsonKitSelector]) {
-    // first try JSONkit
-    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:[jsonString methodSignatureForSelector:jsonKitSelector]];
-    invocation.target = jsonString;
-    invocation.selector = jsonKitSelector;
-    int parseOptions = 0;
-    [invocation setArgument:&parseOptions atIndex:2]; // arguments 0 and 1 are self and _cmd respectively, automatically set by NSInvocation
-    [invocation setArgument:&error atIndex:3];
-    [invocation invoke];
-    [invocation getReturnValue:&feedResult];
-  } else if (sbJSONSelector && [jsonString respondsToSelector:sbJSONSelector]) {
-    // now try SBJson
-    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:[jsonString methodSignatureForSelector:sbJSONSelector]];
-    invocation.target = jsonString;
-    invocation.selector = sbJSONSelector;
-    [invocation invoke];
-    [invocation getReturnValue:&feedResult];
-  } else if (yajlSelector && [jsonString respondsToSelector:yajlSelector]) {
-    NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:[jsonString methodSignatureForSelector:yajlSelector]];
-    invocation.target = jsonString;
-    invocation.selector = yajlSelector;
-    
-    NSUInteger yajlParserOptions = 0;
-    [invocation setArgument:&yajlParserOptions atIndex:2]; // arguments 0 and 1 are self and _cmd respectively, automatically set by NSInvocation
-    [invocation setArgument:&error atIndex:3];
-    
-    [invocation invoke];
-    [invocation getReturnValue:&feedResult];
-  } else {
-    error = [NSError errorWithDomain:kBITUpdateErrorDomain
-                                code:BITUpdateAPIServerReturnedEmptyResponse
-                            userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"You need a JSON Framework in your runtime for iOS4!", NSLocalizedDescriptionKey, nil]];
-  }
-#endif
-  
-  if (error) {
-    [self reportError:error];
-    return nil;
-  }
-  
-  return feedResult;
-}
-
-
 #pragma mark - RequestComments
 
 - (BOOL)shouldCheckForUpdates {
@@ -723,7 +623,7 @@
    ];
   
   // build request & send
-  NSString *url = [NSString stringWithFormat:@"%@%@", _updateURL, parameter];
+  NSString *url = [NSString stringWithFormat:@"%@%@", _serverURL, parameter];
   BITHockeyLog(@"INFO: Sending api request to %@", url);
   
   NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url] cachePolicy:1 timeoutInterval:10.0];
@@ -739,7 +639,7 @@
   if ([responseData length]) {
     NSString *responseString = [[[NSString alloc] initWithBytes:[responseData bytes] length:[responseData length] encoding: NSUTF8StringEncoding] autorelease];
     
-    NSDictionary *feedDict = (NSDictionary *)[self parseJSONResultString:responseString];
+    NSDictionary *feedDict = (NSDictionary *)bit_parseJSON(responseString, &error);
     
     // server returned empty response?
     if (![feedDict count]) {
@@ -838,7 +738,7 @@
   }
   
   // build request & send
-  NSString *url = [NSString stringWithFormat:@"%@%@", _updateURL, parameter];
+  NSString *url = [NSString stringWithFormat:@"%@%@", _serverURL, parameter];
   BITHockeyLog(@"INFO: Sending api request to %@", url);
   
   NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url] cachePolicy:1 timeoutInterval:10.0];
@@ -874,7 +774,7 @@
     extraParameter = [NSString stringWithFormat:@"&udid=%@", [self deviceIdentifier]];
   }
   
-  NSString *hockeyAPIURL = [NSString stringWithFormat:@"%@api/2/apps/%@?format=plist%@", _updateURL, [self encodedAppIdentifier], extraParameter];
+  NSString *hockeyAPIURL = [NSString stringWithFormat:@"%@api/2/apps/%@?format=plist%@", _serverURL, [self encodedAppIdentifier], extraParameter];
   NSString *iOSUpdateURL = [NSString stringWithFormat:@"itms-services://?action=download-manifest&url=%@", bit_URLEncodedString(hockeyAPIURL)];
   
   BITHockeyLog(@"INFO: API Server Call: %@, calling iOS with %@", hockeyAPIURL, iOSUpdateURL);
@@ -995,7 +895,8 @@
     NSString *responseString = [[[NSString alloc] initWithBytes:[_receivedData bytes] length:[_receivedData length] encoding: NSUTF8StringEncoding] autorelease];
     BITHockeyLog(@"INFO: Received API response: %@", responseString);
     
-    id json = [self parseJSONResultString:responseString];
+    NSError *error = nil;
+    id json = bit_parseJSON(responseString, &error);
     self.trackerConfig = (([self checkForTracker] && [[json valueForKey:@"tracker"] isKindOfClass:[NSDictionary class]]) ? [json valueForKey:@"tracker"] : nil);
     
     if (!_isAppStoreEnvironment) {
