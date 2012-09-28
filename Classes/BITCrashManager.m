@@ -95,6 +95,11 @@
     if (testValue) {
       _crashManagerStatus = [[NSUserDefaults standardUserDefaults] integerForKey:kBITCrashManagerStatus];
     } else {
+      // migrate previous setting if available
+      if ([[NSUserDefaults standardUserDefaults] boolForKey:@"BITCrashAutomaticallySendReports"]) {
+        _crashManagerStatus = BITCrashManagerStatusAutoSend;
+        [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"BITCrashAutomaticallySendReports"];
+      }
       [[NSUserDefaults standardUserDefaults] setInteger:_crashManagerStatus forKey:kBITCrashManagerStatus];
     }
     
