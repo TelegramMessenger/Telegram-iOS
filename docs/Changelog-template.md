@@ -1,3 +1,14 @@
+### Version 2.5.4b2
+
+- Crash Reporting:
+
+    - [UPDATE] Migrate pre v2.5 auto send user setting
+    - [BUGFIX] The alert option 'Auto Send' did not persist correctly
+
+- Updating:
+
+    - [BUGFIX] Authorization option did not persist correctly and caused authorization to re-appear on every cold app start
+
 ### Version 2.5.4b1
 
 - General:
