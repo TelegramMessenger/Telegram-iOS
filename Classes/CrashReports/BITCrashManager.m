@@ -41,9 +41,6 @@
 
 #include <sys/sysctl.h>
 
-// flags if the crashreporter should automatically send crashes without asking the user again
-#define kBITCrashAutomaticallySendReports @"BITCrashAutomaticallySendReports"
-
 // stores the set of crashreports that have been approved but aren't sent yet
 #define kBITCrashApprovedReports @"HockeySDKCrashApprovedReports"
 
@@ -119,6 +116,11 @@
     if (testValue) {
       _crashManagerStatus = [[NSUserDefaults standardUserDefaults] integerForKey:kBITCrashManagerStatus];
     } else {
+      // migrate previous setting if available
+      if ([[NSUserDefaults standardUserDefaults] boolForKey:@"BITCrashAutomaticallySendReports"]) {
+        _crashManagerStatus = BITCrashManagerStatusAutoSend;
+        [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"BITCrashAutomaticallySendReports"];
+      }
       [[NSUserDefaults standardUserDefaults] setInteger:_crashManagerStatus forKey:kBITCrashManagerStatus];
     }
     
@@ -603,7 +605,7 @@
       }
       
       if ([applicationLog length] > 0) {
-        description = [NSString stringWithFormat:@"Log:\n%@", applicationLog];
+        description = [NSString stringWithFormat:@"%@", applicationLog];
       }
       
       [crashes appendFormat:@"<crash><applicationname>%s</applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><contact>%@</contact><description><![CDATA[%@]]></description></crash>",
@@ -655,7 +657,8 @@
       [self sendCrashReports];
       break;
     case 2: {
-      [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITCrashAutomaticallySendReports];
+      _crashManagerStatus = BITCrashManagerStatusAutoSend;
+      [[NSUserDefaults standardUserDefaults] setInteger:_crashManagerStatus forKey:kBITCrashManagerStatus];
       [[NSUserDefaults standardUserDefaults] synchronize];
       if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillSendCrashReportsAlways:)]) {
         [self.delegate crashManagerWillSendCrashReportsAlways:self];
