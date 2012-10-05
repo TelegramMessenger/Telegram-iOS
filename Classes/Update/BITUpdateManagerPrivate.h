@@ -35,9 +35,6 @@
 @interface BITUpdateManager () {
 }
 
-// set the server URL
-@property (nonatomic, retain) NSString *serverURL;
-
 // is an update available?
 @property (nonatomic, assign, getter=isUpdateAvailable) BOOL updateAvailable;
 
@@ -66,10 +63,6 @@
 
 // used by BITHockeyManager if disable status is changed
 @property (nonatomic, getter = isUpdateManagerDisabled) BOOL disableUpdateManager;
-
-- (id)initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironemt:(BOOL)isAppStoreEnvironment;
-
-- (void)startManager;
 
 // checks for update, informs the user (error, no update found, etc)
 - (void)checkForUpdateShowFeedback:(BOOL)feedback;

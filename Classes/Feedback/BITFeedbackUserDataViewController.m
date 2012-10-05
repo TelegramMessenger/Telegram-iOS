@@ -31,7 +31,7 @@
 #import "HockeySDKPrivate.h"
 
 #import "BITFeedbackUserDataViewController.h"
-
+#import "BITFeedbackManagerPrivate.h"
 
 @interface BITFeedbackUserDataViewController ()
 @property (nonatomic, assign) BITFeedbackManager *manager;

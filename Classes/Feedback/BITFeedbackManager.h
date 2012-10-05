@@ -42,53 +42,32 @@ typedef enum {
 
 
 @class BITFeedbackMessage;
-@protocol BITFeedbackManagerDelegate;
 
 
 @interface BITFeedbackManager : BITHockeyBaseManager <UIAlertViewDelegate>
-
-@property (nonatomic, retain) BITFeedbackListViewController *currentFeedbackListViewController;
-@property (nonatomic, retain) BITFeedbackComposeViewController *currentFeedbackComposeViewController;
-@property (nonatomic) BOOL didAskUserData;
-
-@property (nonatomic, retain) NSDate *lastCheck;
 
 @property (nonatomic, readwrite) BITFeedbackUserDataElement requireUserName; // default is BITFeedbackUserDataRequired
 @property (nonatomic, readwrite) BITFeedbackUserDataElement requireUserEmail; // default is BITFeedbackUserDataRequired
 @property (nonatomic, readwrite) BOOL showAlertOnIncomingMessages; // default is YES
 
-@property (nonatomic, copy) NSString *userName;
-@property (nonatomic, copy) NSString *userEmail;
+///-----------------------------------------------------------------------------
+/// @name User Interface
+///-----------------------------------------------------------------------------
 
 
-// convenience methode to create feedback view controller
-- (BITFeedbackListViewController *)feedbackListViewController:(BOOL)modal;
-
-// load new messages from the server
-- (void)updateMessagesList;
-
-// open feedback list view
+/**
+ Present the modal feedback list user interface.
+ */
 - (void)showFeedbackListView;
 
-// open feedback compose view
-- (void)showFeedbackComposeView;
 
-- (NSUInteger)numberOfMessages;
-- (BITFeedbackMessage *)messageAtIndex:(NSUInteger)index;
-
-- (void)submitMessageWithText:(NSString *)text;
-- (void)submitPendingMessages;
-
-// Returns YES if manual user data can be entered, required or optional
-- (BOOL)askManualUserDataAvailable;
-
-// Returns YES if required user data is missing?
-- (BOOL)requireManualUserDataMissing;
-
-// Returns YES if user data is available and can be edited
-- (BOOL)isManualUserDataAvailable;
-
-// used in the user data screen
-- (void)updateDidAskUserData;
+/**
+ Create an feedback list view
+ 
+ @param modal Return a view ready for modal presentation with integrated navigation bar
+ @return BITFeedbackListViewController The update user interface view controller,
+ e.g. to push it onto a navigation stack.
+ */
+- (BITFeedbackListViewController *)feedbackListViewController:(BOOL)modal;
 
 @end

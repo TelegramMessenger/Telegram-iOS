@@ -51,8 +51,10 @@
   NSFileManager  *_fileManager;
   NSString       *_feedbackDir;
   NSString       *_settingsFile;
-
+  
+  BOOL _incomingMessagesAlertShowing;
   BOOL _didSetupDidBecomeActiveNotifications;
+  BOOL _networkRequestInProgress;
 }
 
 #pragma mark - Initialization
@@ -174,7 +176,7 @@
 #pragma mark - Manager Control
 
 - (void)startManager {
-  if ([self.feedbackList count] == 0) {
+  if ([_feedbackList count] == 0) {
     [self loadMessages];
   } else {
     [self updateAppDefinedUserData];
@@ -265,7 +267,7 @@
   }
   
   if ([unarchiver containsValueForKey:kBITFeedbackUserDataAsked])
-    self.didAskUserData = YES;
+    _didAskUserData = YES;
   
   if ([unarchiver containsValueForKey:kBITFeedbackToken])
     self.token = [unarchiver decodeObjectForKey:kBITFeedbackToken];
@@ -303,7 +305,7 @@
   NSMutableData *data = [[NSMutableData alloc] init];
   NSKeyedArchiver *archiver = [[NSKeyedArchiver alloc] initForWritingWithMutableData:data];
 
-  if (self.didAskUserData)
+  if (_didAskUserData)
     [archiver encodeObject:[NSNumber numberWithBool:YES] forKey:kBITFeedbackUserDataAsked];
   
   if (self.token)
@@ -328,8 +330,8 @@
 
 
 - (void)updateDidAskUserData {
-  if (!self.didAskUserData) {
-    self.didAskUserData = YES;
+  if (!_didAskUserData) {
+    _didAskUserData = YES;
     
     [self saveMessages];
   }
@@ -338,7 +340,7 @@
 #pragma mark - Messages
 
 - (void)sortFeedbackList {
-  [self.feedbackList sortUsingComparator:^(BITFeedbackMessage *obj1, BITFeedbackMessage *obj2) {
+  [_feedbackList sortUsingComparator:^(BITFeedbackMessage *obj1, BITFeedbackMessage *obj2) {
     NSDate *date1 = [obj1 date];
     NSDate *date2 = [obj2 date];
     
@@ -356,12 +358,12 @@
 }
 
 - (NSUInteger)numberOfMessages {
-  return [self.feedbackList count];
+  return [_feedbackList count];
 }
 
 - (BITFeedbackMessage *)messageAtIndex:(NSUInteger)index {
-  if ([self.feedbackList count] > index) {
-    return [self.feedbackList objectAtIndex:index];
+  if ([_feedbackList count] > index) {
+    return [_feedbackList objectAtIndex:index];
   }
   
   return nil;
@@ -370,7 +372,7 @@
 - (BITFeedbackMessage *)messageWithID:(NSNumber *)messageID {
   __block BITFeedbackMessage *message = nil;
   
-  [self.feedbackList enumerateObjectsUsingBlock:^(BITFeedbackMessage *objMessage, NSUInteger messagesIdx, BOOL *stop) {
+  [_feedbackList enumerateObjectsUsingBlock:^(BITFeedbackMessage *objMessage, NSUInteger messagesIdx, BOOL *stop) {
     if ([[objMessage id] isEqualToNumber:messageID]) {
       message = objMessage;
       *stop = YES;
@@ -381,9 +383,9 @@
 }
 
 - (NSArray *)messagesWithStatus:(BITFeedbackMessageStatus)status {
-  NSMutableArray *resultMessages = [[NSMutableArray alloc] initWithCapacity:[self.feedbackList count]];
+  NSMutableArray *resultMessages = [[NSMutableArray alloc] initWithCapacity:[_feedbackList count]];
   
-  [self.feedbackList enumerateObjectsUsingBlock:^(BITFeedbackMessage *objMessage, NSUInteger messagesIdx, BOOL *stop) {
+  [_feedbackList enumerateObjectsUsingBlock:^(BITFeedbackMessage *objMessage, NSUInteger messagesIdx, BOOL *stop) {
     if ([objMessage status] == status) {
       [resultMessages addObject: objMessage];
     }
@@ -394,7 +396,7 @@
 
 - (void)markSendInProgressMessagesAsPending {
   // make sure message that may have not been send successfully, get back into the right state to be send again
-  [self.feedbackList enumerateObjectsUsingBlock:^(id objMessage, NSUInteger messagesIdx, BOOL *stop) {
+  [_feedbackList enumerateObjectsUsingBlock:^(id objMessage, NSUInteger messagesIdx, BOOL *stop) {
     if ([(BITFeedbackMessage *)objMessage status] == BITFeedbackMessageStatusSendInProgress)
       [(BITFeedbackMessage *)objMessage setStatus:BITFeedbackMessageStatusSendPending];
   }];
@@ -441,7 +443,7 @@
 
     [self markSendInProgressMessagesAsPending];
     
-    [self.feedbackList enumerateObjectsUsingBlock:^(id objMessage, NSUInteger messagesIdx, BOOL *stop) {
+    [_feedbackList enumerateObjectsUsingBlock:^(id objMessage, NSUInteger messagesIdx, BOOL *stop) {
       if ([(BITFeedbackMessage *)objMessage status] != BITFeedbackMessageStatusSendPending)
         [(BITFeedbackMessage *)objMessage setStatus:BITFeedbackMessageStatusArchived];
     }];
@@ -512,7 +514,7 @@
           message.id = [(NSDictionary *)objMessage objectForKey:@"id"];
           message.status = BITFeedbackMessageStatusUnread;
           
-          [self.feedbackList addObject:message];
+          [_feedbackList addObject:message];
           
           newResponseMessage = YES;
         }
@@ -525,7 +527,7 @@
     [self markSendInProgressMessagesAsPending];
     
     // mark all messages as archived that are removed on the server
-    [self.feedbackList enumerateObjectsUsingBlock:^(id objMessage, NSUInteger messagesIdx, BOOL *stop) {
+    [_feedbackList enumerateObjectsUsingBlock:^(id objMessage, NSUInteger messagesIdx, BOOL *stop) {
       if (![returnedMessageIDs member:[(BITFeedbackMessage *)objMessage id]] &&
           [(BITFeedbackMessage *)objMessage status] != BITFeedbackMessageStatusSendPending
           ) {
@@ -661,7 +663,7 @@
 }
 
 - (void)fetchMessageUpdates {
-  if ([self.feedbackList count] == 0) {
+  if ([_feedbackList count] == 0) {
     return;
   }
   
@@ -715,7 +717,7 @@
   [message setStatus:BITFeedbackMessageStatusSendPending];
   [message setUserMessage:YES];
   
-  [self.feedbackList addObject:message];
+  [_feedbackList addObject:message];
   
   [self submitPendingMessages];
 }
