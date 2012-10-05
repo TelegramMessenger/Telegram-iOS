@@ -50,11 +50,8 @@
 // Notification message which HockeyManager is listening to, to retry requesting updated from the server
 #define BITHockeyNetworkDidBecomeReachableNotification @"BITHockeyNetworkDidBecomeReachable"
 
-// Notification message which tells that messages got updated or added
+// Notification message which tells that loading messages finished
 #define BITHockeyFeedbackMessagesUpdated @"BITHockeyFeedbackMessagesUpdated"
-
-// Notification message which tells that new messages arrived
-#define BITHockeyFeedbackNewMessagesReceived @"BITHockeyFeedbackNewMessagesReceived"
 
 
 // hockey api error domain

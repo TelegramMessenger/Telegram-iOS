@@ -572,6 +572,8 @@
   [self sendNetworkRequestWithHTTPMethod:@"GET"
                                 withText:nil
                        completionHandler:^(NSError *err){
+                         // inform the UI to update its data in case the list is already showing
+                         [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyFeedbackMessagesUpdated object:nil];
                        }];
 }
 
@@ -597,11 +599,10 @@
                              [message setStatus:BITFeedbackMessageStatusSendPending];
                              
                              [self saveMessages];
-                             
-                             // inform the UI to update its data in case the list is already showing
-                             [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyFeedbackMessagesUpdated object:nil];
-                             
                            }
+                           
+                           // inform the UI to update its data in case the list is already showing
+                           [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyFeedbackMessagesUpdated object:nil];
                          }];
   }
 }
