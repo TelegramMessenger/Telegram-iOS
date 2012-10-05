@@ -403,9 +403,12 @@
     __block BITFeedbackMessage *sendInProgressMessage = [self sendInProgressMessage];
     __block BOOL messagesUpdated = NO;
     __block BOOL newResponseMessage = NO;
+    __block NSMutableSet *returnedMessageIDs = [[[NSMutableSet alloc] init] autorelease];
     
     [feedMessages enumerateObjectsUsingBlock:^(id objMessage, NSUInteger messagesIdx, BOOL *stop) {
       NSNumber *messageID = [(NSDictionary *)objMessage objectForKey:@"id"];
+      [returnedMessageIDs addObject:messageID];
+      
       if (![self messageWithID:messageID]) {
         // check if this is the message that was sent right now
         if (sendInProgressMessage && [[sendInProgressMessage text] isEqualToString:[(NSDictionary *)objMessage objectForKey:@"text"]]) {
@@ -430,18 +433,27 @@
       }
     }];
     
+    // remove all messages that are removed on the server
+    NSMutableSet *removedMessageIDs = [[[NSMutableSet alloc] init] autorelease];
+    [self.feedbackList enumerateObjectsUsingBlock:^(id objMessage, NSUInteger messagesIdx, BOOL *stop) {
+      if (![returnedMessageIDs member:[(BITFeedbackMessage *)objMessage id]]) {
+        [removedMessageIDs addObject:[(BITFeedbackMessage *)objMessage id]];
+      }
+    }];
+
+    if ([removedMessageIDs count] > 0) {
+      [removedMessageIDs enumerateObjectsUsingBlock:^(id objID, BOOL *stop) {
+        [self.feedbackList removeObject:[self messageWithID:objID]];
+      }];
+    }
+    
     // new data arrived, so save it
     if (messagesUpdated) {
       [self saveMessages];
-      
-      // inform the UI to update its data in case the list is already showing
-      [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyFeedbackMessagesUpdated object:nil];
     }
     
     // we got a new incoming message, trigger user notification system
     if (newResponseMessage) {
-      [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyFeedbackNewMessagesReceived object:nil];
-      
       if (self.showAlertOnIncomingMessages && !self.currentFeedbackListViewController && !self.currentFeedbackComposeViewController) {
         UIAlertView *alertView = [[[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageTitle")
                                                              message:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageText")
