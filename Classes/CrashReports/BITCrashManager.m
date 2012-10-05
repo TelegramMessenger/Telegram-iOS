@@ -89,8 +89,6 @@
 
 - (id)init {
   if ((self = [super init])) {
-    self.serverURL = BITHOCKEYSDK_URL;
-    
     _delegate = nil;
     _showAlwaysButton = NO;
     _isSetup = NO;

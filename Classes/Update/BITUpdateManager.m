@@ -308,8 +308,8 @@
 
 #pragma mark - Init
 
-- (id)initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironemt:(BOOL)isAppStoreEnvironment {
-  if ((self = [super initWithAppIdentifier:appIdentifier isAppStoreEnvironemt:isAppStoreEnvironment])) {
+- (id)init {
+  if ((self = [super init])) {
     _delegate = nil;
     _expiryDate = nil;
     _checkInProgress = NO;
