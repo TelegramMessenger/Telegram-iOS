@@ -165,9 +165,6 @@
 #pragma mark - Local Storage
 
 - (void)loadMessages {
-  NSError *error = nil;
-  NSPropertyListFormat format;
-  
   BOOL userNameViaDelegate = NO;
   BOOL userEmailViaDelegate = NO;
   
