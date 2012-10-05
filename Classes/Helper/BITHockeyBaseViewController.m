@@ -25,6 +25,15 @@
   if (self) {
     _modalAnimated = YES;
     _modal = NO;
+    
+    //might be better in viewDidLoad, but to workaround rdar://12214613 and as it doesn't
+    //hurt, we do it here
+    if (self.modal) {
+      self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
+                                                                                             target:self
+                                                                                             action:@selector(onDismissModal:)] autorelease];
+    }
+
   }
   return self;
 }
@@ -46,7 +55,10 @@
     SEL presentingViewControllerSelector = NSSelectorFromString(@"presentingViewController");
     UIViewController *presentingViewController = nil;
     if ([self respondsToSelector:presentingViewControllerSelector]) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
       presentingViewController = [self performSelector:presentingViewControllerSelector];
+#pragma clang diagnostic pop
     } else {
       presentingViewController = [self parentViewController];
     }
@@ -64,22 +76,6 @@
   [[UIApplication sharedApplication] setStatusBarStyle:_statusBarStyle];
 }
 
-- (void)viewDidLoad {
-  [super viewDidLoad];
-  
-  if (self.modal) {
-    self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
-                                                                                           target:self
-                                                                                           action:@selector(onDismissModal:)] autorelease];
-  }
-
-	// Do any additional setup after loading the view.
-}
-
-- (void)viewDidUnload {
-  [super viewDidUnload];
-  // Release any retained subviews of the main view.
-}
 
 - (void)viewWillAppear:(BOOL)animated {
   [super viewWillAppear:animated];

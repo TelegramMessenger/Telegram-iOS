@@ -47,13 +47,9 @@ typedef enum {
 @interface BITUpdateViewController() <PSStoreButtonDelegate> {
 }
 
-@property (nonatomic, retain) BITUpdateManager *updateManager;
+@property (nonatomic, assign) BITUpdateManager *updateManager;
 @property (nonatomic, readwrite) BOOL modal;
-@property (nonatomic, readwrite) BOOL modalAnimated;
 
 @property (nonatomic, assign) AppStoreButtonState appStoreButtonState;
-
-- (id)init:(BITUpdateManager *)newUpdateManager modal:(BOOL)newModal;
-- (id)init;
 
 @end

@@ -14,16 +14,33 @@
 @interface BITHockeyBaseManager : NSObject
 
 ///-----------------------------------------------------------------------------
-/// @name Delegate
+/// @name Modules
+///-----------------------------------------------------------------------------
+
+
+/**
+ Defines the server URL to send data to or request data from
+ 
+ By default this is set to the HockeyApp servers and there rarely should be a
+ need to modify that.
+ */
+@property (nonatomic, copy) NSString *serverURL;
+
+
+///-----------------------------------------------------------------------------
+/// @name User Interface
 ///-----------------------------------------------------------------------------
 
 /**
- Sets the `BITUpdateManagerDelegate` delegate.
- 
- When using `BITUpdateManager` to distribute updates of your beta or enterprise
- application, it is _REQUIRED_ to set this delegate and implement
- `[BITUpdateManagerDelegate customDeviceIdentifierForUpdateManager:]`!
+ The UIBarStyle of the update user interface navigation bar.
  */
-@property (nonatomic, assign) id delegate;
+@property (nonatomic, assign) UIBarStyle barStyle;
+
+/**
+ The UIModalPresentationStyle for showing the update user interface when invoked
+ with the update alert.
+ */
+@property (nonatomic, assign) UIModalPresentationStyle modalPresentationStyle;
+
 
 @end

@@ -18,16 +18,25 @@
 #import "BITHockeyManagerPrivate.h"
 
 #import <sys/sysctl.h>
+#import <mach-o/ldsyms.h>
 
 
-@implementation BITHockeyBaseManager
+@implementation BITHockeyBaseManager {
+  UINavigationController *_navController;
+  
+  NSDateFormatter *_rfc3339Formatter;
+  
+  NSString *_appIdentifier;
+  BOOL _isAppStoreEnvironment;
+}
 
 
 - (id)init {
   if ((self = [super init])) {
     _isAppStoreEnvironment = NO;
     _appIdentifier = nil;
-    
+    _serverURL = BITHOCKEYSDK_URL;
+
     _navController = nil;
     _barStyle = UIBarStyleDefault;
     _modalPresentationStyle = UIModalPresentationFormSheet;
@@ -42,7 +51,7 @@
 - (id)initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironemt:(BOOL)isAppStoreEnvironment {
   if ((self = [self init])) {
  
-    self.appIdentifier = appIdentifier;
+    _appIdentifier = appIdentifier;
     _isAppStoreEnvironment = isAppStoreEnvironment;
   
   }
@@ -51,7 +60,7 @@
 
 
 - (void)dealloc {
-  [_appIdentifier release];
+  [_serverURL release]; _serverURL = nil;
 
   [_navController release], _navController = nil;
   
@@ -64,7 +73,11 @@
 #pragma mark - Private
 
 - (void)reportError:(NSError *)error {
-  BITHockeyLog(@"Error: %@", [error localizedDescription]);
+  BITHockeyLog(@"ERROR: %@", [error localizedDescription]);
+}
+
+- (BOOL)isAppStoreEnvironment {
+  return _isAppStoreEnvironment;
 }
 
 - (NSString *)encodedAppIdentifier {
@@ -79,6 +92,26 @@
   NSString *platform = [NSString stringWithCString:answer encoding: NSUTF8StringEncoding];
   free(answer);
   return platform;
+}
+
+- (NSString *)executableUUID {
+  const uint8_t *command = (const uint8_t *)(&_mh_execute_header + 1);
+  for (uint32_t idx = 0; idx < _mh_execute_header.ncmds; ++idx) {
+    const struct load_command *load_command = (const struct load_command *)command;
+    if (load_command->cmd == LC_UUID) {
+      const struct uuid_command *uuid_command = (const struct uuid_command *)command;
+      const uint8_t *uuid = uuid_command->uuid;
+      return [[NSString stringWithFormat:@"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+               uuid[0], uuid[1], uuid[2], uuid[3],
+               uuid[4], uuid[5], uuid[6], uuid[7],
+               uuid[8], uuid[9], uuid[10], uuid[11],
+               uuid[12], uuid[13], uuid[14], uuid[15]]
+              lowercaseString];
+    } else {
+      command += load_command->cmdsize;
+    }
+  }
+  return nil;
 }
 
 - (UIWindow *)findVisibleWindow {
@@ -122,7 +155,10 @@
   
   // special addition to get rootViewController from three20 which has it's own controller handling
   if (NSClassFromString(@"TTNavigator")) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
     parentViewController = [[NSClassFromString(@"TTNavigator") performSelector:(NSSelectorFromString(@"navigator"))] visibleViewController];
+#pragma clang diagnostic pop
   }
   
   if (_navController != nil) [_navController release], _navController = nil;

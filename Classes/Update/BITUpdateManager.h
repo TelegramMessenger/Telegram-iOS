@@ -30,6 +30,7 @@
 
 
 #import <UIKit/UIKit.h>
+#import "BITHockeyBaseManager.h"
 
 
 typedef enum {
@@ -78,26 +79,7 @@ typedef enum {
  
  */
 
-@interface BITUpdateManager : NSObject <UIAlertViewDelegate> {
-@private
-  NSString *_appIdentifier;
-  NSString *_currentAppVersion;
-  
-  UINavigationController *_navController;
-  BITUpdateViewController *_currentHockeyViewController;
-  
-  BOOL _dataFound;
-  BOOL _showFeedback;
-  BOOL _updateAlertShowing;
-  BOOL _lastCheckFailed;
-  BOOL _sendUsageData;
-  
-  BOOL _isAppStoreEnvironment;
-  
-  BOOL _didSetupDidBecomeActiveNotifications;
-  
-  NSString *_uuid;
-}
+@interface BITUpdateManager : BITHockeyBaseManager <UIAlertViewDelegate>
 
 
 ///-----------------------------------------------------------------------------
@@ -290,18 +272,6 @@ typedef enum {
 ///-----------------------------------------------------------------------------
 /// @name User Interface
 ///-----------------------------------------------------------------------------
-
-/**
- The UIBarStyle of the update user interface navigation bar.
- */
-@property (nonatomic, assign) UIBarStyle barStyle;
-
-
-/**
- The UIModalPresentationStyle for showing the update user interface when invoked
- with the update alert.
- */
-@property (nonatomic, assign) UIModalPresentationStyle modalPresentationStyle;
 
 
 /**

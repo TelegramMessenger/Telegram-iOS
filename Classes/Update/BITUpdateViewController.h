@@ -30,23 +30,12 @@
 
 #import <UIKit/UIKit.h>
 
+#import "BITHockeyBaseViewController.h"
+
+
 @class PSStoreButton;
 @class PSAppStoreHeader;
 
 
-@interface BITUpdateViewController : UITableViewController {
-@private
-  BOOL _kvoRegistered;
-  BOOL _showAllVersions;
-  UIStatusBarStyle _statusBarStyle;
-  PSAppStoreHeader *_appStoreHeader;
-  PSStoreButton *_appStoreButton;
-  
-  id _popOverController;
-  
-  NSMutableArray *_cells;
-  
-  BOOL _isAppStoreEnvironment;
-}
-
+@interface BITUpdateViewController : BITHockeyBaseViewController 
 @end

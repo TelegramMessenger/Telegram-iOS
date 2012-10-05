@@ -47,11 +47,19 @@
 #define kAppStoreViewHeight 90
 
 
-@implementation BITUpdateViewController
-
-@synthesize appStoreButtonState = _appStoreButtonState;
-@synthesize modal = _modal;
-@synthesize modalAnimated = _modalAnimated;
+@implementation BITUpdateViewController {
+  BOOL _kvoRegistered;
+  BOOL _showAllVersions;
+  UIStatusBarStyle _statusBarStyle;
+  PSAppStoreHeader *_appStoreHeader;
+  PSStoreButton *_appStoreButton;
+  
+  id _popOverController;
+  
+  NSMutableArray *_cells;
+  
+  BOOL _isAppStoreEnvironment;
+}
 
 
 #pragma mark - Private
@@ -198,74 +206,43 @@
 
 #pragma mark - Init
 
-- (id)init:(BITUpdateManager *)newUpdateManager modal:(BOOL)newModal {
+- (id)init {
   if ((self = [super initWithStyle:UITableViewStylePlain])) {
-    self.updateManager = newUpdateManager;
-    self.modal = newModal;
-    self.modalAnimated = YES;
+    _updateManager = [BITHockeyManager sharedHockeyManager].updateManager ;
+    _isAppStoreEnvironment = [BITHockeyManager sharedHockeyManager].isAppStoreEnvironment;
+
     self.title = BITHockeyLocalizedString(@"UpdateScreenTitle");
     
-    _isAppStoreEnvironment = [BITHockeyManager sharedHockeyManager].isAppStoreEnvironment;
-        
     _cells = [[NSMutableArray alloc] initWithCapacity:5];
     _popOverController = nil;
-    
-    //might be better in viewDidLoad, but to workaround rdar://12214613 and as it doesn't
-    //hurt, we do it here
-    if (self.modal) {
-      self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
-                                                                                             target:self
-                                                                                             action:@selector(onAction:)] autorelease];
-    }
   }
   return self;
 }
 
-- (id)init {
-	return [self init:[BITHockeyManager sharedHockeyManager].updateManager modal:NO];
-}
-
 - (void)dealloc {
-  [self viewDidUnload];
+  [_appStoreHeader release]; _appStoreHeader = nil;
+  [_popOverController release], _popOverController = nil;
+  [[NSNotificationCenter defaultCenter] removeObserver:self];
+  
+  // test if KVO's are registered. if class is destroyed before it was shown(viewDidLoad) no KVOs are registered.
+  if (_kvoRegistered) {
+    [_updateManager removeObserver:self forKeyPath:@"checkInProgress"];
+    [_updateManager removeObserver:self forKeyPath:@"isUpdateURLOffline"];
+    [_updateManager removeObserver:self forKeyPath:@"updateAvailable"];
+    [_updateManager removeObserver:self forKeyPath:@"apps"];
+    _kvoRegistered = NO;
+  }
+  
   for (UITableViewCell *cell in _cells) {
     [cell removeObserver:self forKeyPath:@"webViewSize"];
   }
   [_cells release];
+  
   [super dealloc];
 }
 
 
 #pragma mark - View lifecycle
-
-- (void)onAction:(id)sender {
-  if (self.modal) {
-    // Note that as of 5.0, parentViewController will no longer return the presenting view controller
-    SEL presentingViewControllerSelector = NSSelectorFromString(@"presentingViewController");
-    UIViewController *presentingViewController = nil;
-    if ([self respondsToSelector:presentingViewControllerSelector]) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-      presentingViewController = [self performSelector:presentingViewControllerSelector];
-#pragma clang diagnostic pop
-    }
-    else {
-      presentingViewController = [self parentViewController];
-    }
-    
-    // If there is no presenting view controller just remove view
-    if (presentingViewController && self.modalAnimated) {
-      [presentingViewController dismissModalViewControllerAnimated:YES];
-    }
-    else {
-      [self.navigationController.view removeFromSuperview];
-    }
-  }
-  else {
-    [self.navigationController popViewControllerAnimated:YES];
-  }
-  
-  [[UIApplication sharedApplication] setStatusBarStyle:_statusBarStyle];
-}
 
 - (CAGradientLayer *)backgroundLayer {
   UIColor *colorOne	= [UIColor colorWithWhite:0.9 alpha:1.0];
@@ -453,23 +430,6 @@
   [self showHidePreviousVersionsButton];
 }
 
-- (void)viewDidUnload {
-  [_appStoreHeader release]; _appStoreHeader = nil;
-  [_popOverController release], _popOverController = nil;
-  [[NSNotificationCenter defaultCenter] removeObserver:self];
-  
-  // test if KVO's are registered. if class is destroyed before it was shown(viewDidLoad) no KVOs are registered.
-  if (_kvoRegistered) {
-    [_updateManager removeObserver:self forKeyPath:@"checkInProgress"];
-    [_updateManager removeObserver:self forKeyPath:@"isUpdateURLOffline"];
-    [_updateManager removeObserver:self forKeyPath:@"updateAvailable"];
-    [_updateManager removeObserver:self forKeyPath:@"apps"];
-    _kvoRegistered = NO;
-  }
-  
-  [super viewDidUnload];
-}
-
 
 #pragma mark - Table view data source
 
@@ -539,20 +499,6 @@
 
 
 #pragma mark - Rotation
-
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
-  BOOL shouldAutorotate;
-  
-  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) {
-    shouldAutorotate = (interfaceOrientation == UIInterfaceOrientationLandscapeLeft ||
-                        interfaceOrientation == UIInterfaceOrientationLandscapeRight ||
-                        interfaceOrientation == UIInterfaceOrientationPortrait);
-  } else {
-    shouldAutorotate = YES;
-  }
-  
-  return shouldAutorotate;
-}
 
 - (void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation duration:(NSTimeInterval)duration {
   // update all cells

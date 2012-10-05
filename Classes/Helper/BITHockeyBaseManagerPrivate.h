@@ -12,20 +12,7 @@
 @class BITHockeyBaseManager;
 @class BITHockeyBaseViewController;
 
-@interface BITHockeyBaseManager() {
-  UINavigationController *_navController;
-  UIBarStyle _barStyle;
-  UIModalPresentationStyle _modalPresentationStyle;
-  
-  NSDateFormatter *_rfc3339Formatter;
-
-  BOOL _isAppStoreEnvironment;
-}
-
-// set the server URL
-@property (nonatomic, retain) NSString *serverURL;
-
-@property (nonatomic, retain) NSString *appIdentifier;
+@interface BITHockeyBaseManager()
 
 - (id)initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironemt:(BOOL)isAppStoreEnvironment;
 
@@ -33,8 +20,10 @@
 
 - (void)reportError:(NSError *)error;
 - (NSString *)encodedAppIdentifier;
+- (BOOL)isAppStoreEnvironment;
 
 - (NSString *)getDevicePlatform;
+- (NSString *)executableUUID;
 
 - (UIWindow *)findVisibleWindow;
 - (void)showView:(BITHockeyBaseViewController *)viewController;

@@ -30,11 +30,11 @@
 
 #import <Foundation/Foundation.h>
 #import <sys/sysctl.h>
-#import <mach-o/ldsyms.h>
 #import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
 #import "BITHockeyHelper.h"
 
+#import "BITHockeyBaseManagerPrivate.h"
 #import "BITUpdateManagerPrivate.h"
 #import "BITUpdateViewControllerPrivate.h"
 #import "BITAppVersionMetaInfo.h"
@@ -52,7 +52,21 @@
 #define BETA_UPDATE_APPSIZE         @"appsize"
 
 
-@implementation BITUpdateManager
+@implementation BITUpdateManager {
+  NSString *_currentAppVersion;
+  
+  BITUpdateViewController *_currentHockeyViewController;
+  
+  BOOL _dataFound;
+  BOOL _showFeedback;
+  BOOL _updateAlertShowing;
+  BOOL _lastCheckFailed;
+  BOOL _sendUsageData;
+  
+  BOOL _didSetupDidBecomeActiveNotifications;
+  
+  NSString *_uuid;
+}
 
 
 #pragma mark - private
@@ -73,39 +87,6 @@
   }
 }
 
-- (NSString *)encodedAppIdentifier {
-  return (_appIdentifier ? bit_URLEncodedString(_appIdentifier) : bit_URLEncodedString([[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"]));
-}
-
-- (NSString *)getDevicePlatform {
-  size_t size;
-  sysctlbyname("hw.machine", NULL, &size, NULL, 0);
-  char *answer = (char*)malloc(size);
-  sysctlbyname("hw.machine", answer, &size, NULL, 0);
-  NSString *platform = [NSString stringWithCString:answer encoding: NSUTF8StringEncoding];
-  free(answer);
-  return platform;
-}
-
-- (NSString *)executableUUID {
-  const uint8_t *command = (const uint8_t *)(&_mh_execute_header + 1);
-  for (uint32_t idx = 0; idx < _mh_execute_header.ncmds; ++idx) {
-    const struct load_command *load_command = (const struct load_command *)command;
-    if (load_command->cmd == LC_UUID) {
-      const struct uuid_command *uuid_command = (const struct uuid_command *)command;
-      const uint8_t *uuid = uuid_command->uuid;
-      return [[NSString stringWithFormat:@"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
-               uuid[0], uuid[1], uuid[2], uuid[3],
-               uuid[4], uuid[5], uuid[6], uuid[7],
-               uuid[8], uuid[9], uuid[10], uuid[11],
-               uuid[12], uuid[13], uuid[14], uuid[15]]
-              lowercaseString];
-    } else {
-      command += load_command->cmdsize;
-    }
-  }
-  return nil;
-}
 
 - (void)didBecomeActiveActions {
   if (![self isUpdateManagerDisabled]) {
@@ -136,7 +117,7 @@
 #pragma mark - Expiry
 
 - (BOOL)expiryDateReached {
-  if (_isAppStoreEnvironment) return NO;
+  if ([self isAppStoreEnvironment]) return NO;
   
   if (_expiryDate) {
     NSDate *currentDate = [NSDate date];
@@ -328,11 +309,7 @@
 #pragma mark - Init
 
 - (id)initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironemt:(BOOL)isAppStoreEnvironment {
-  if ((self = [super init])) {
-    _appIdentifier = appIdentifier;
-    _isAppStoreEnvironment = isAppStoreEnvironment;
-    
-    _serverURL = BITHOCKEYSDK_URL;
+  if ((self = [super initWithAppIdentifier:appIdentifier isAppStoreEnvironemt:isAppStoreEnvironment])) {
     _delegate = nil;
     _expiryDate = nil;
     _checkInProgress = NO;
@@ -340,12 +317,11 @@
     _updateAvailable = NO;
     _lastCheckFailed = NO;
     _currentAppVersion = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"];
-    _navController = nil;
     _blockingView = nil;
     _requireAuthorization = NO;
     _authenticationSecret = nil;
     _lastCheck = nil;
-    _uuid = [[self executableUUID] retain];
+    _uuid = [[self executableUUID] copy];
     _sendUsageData = YES;
     _disableUpdateManager = NO;
     _checkForTracker = NO;
@@ -356,8 +332,6 @@
     self.alwaysShowUpdateReminder = YES;
     self.checkForUpdateOnLaunch = YES;
     self.compareVersionType = BITUpdateComparisonResultGreater;
-    self.barStyle = UIBarStyleDefault;
-    self.modalPresentationStyle = UIModalPresentationFormSheet;
     self.updateSetting = BITUpdateCheckStartup;
     
     if ([[NSUserDefaults standardUserDefaults] objectForKey:kBITUpdateDateOfLastCheck]) {
@@ -400,15 +374,12 @@
   
   _delegate = nil;
   
-  [_serverURL release];
-
   [_urlConnection cancel];
   self.urlConnection = nil;
   
   [_expiryDate release];
   _expiryDate = nil;
   
-  [_navController release];
   [_blockingView release];
   [_currentHockeyViewController release];
   [_appVersions release];
@@ -425,11 +396,11 @@
 #pragma mark - BetaUpdateUI
 
 - (BITUpdateViewController *)hockeyViewController:(BOOL)modal {
-  return [[[BITUpdateViewController alloc] init:self modal:modal] autorelease];
+  return [[[BITUpdateViewController alloc] initWithModalStyle:modal] autorelease];
 }
 
 - (void)showUpdateView {
-  if (_isAppStoreEnvironment) {
+  if ([self isAppStoreEnvironment]) {
     NSLog(@"[HockeySDK] This should not be called from an app store build!");
     return;
   }
@@ -439,63 +410,12 @@
     return;
   }
   
-  UIViewController *parentViewController = nil;
-  
-  if ([[self delegate] respondsToSelector:@selector(viewControllerForUpdateManager:)]) {
-    parentViewController = [_delegate viewControllerForUpdateManager:self];
-  }
-  
-  UIWindow *visibleWindow = [self findVisibleWindow];
-  
-  if (parentViewController == nil && [UIWindow instancesRespondToSelector:@selector(rootViewController)]) {
-    parentViewController = [visibleWindow rootViewController];
-  }
-  
-  // use topmost modal view
-  while (parentViewController.modalViewController) {
-    parentViewController = parentViewController.modalViewController;
-  }
-  
-  // special addition to get rootViewController from three20 which has it's own controller handling
-  if (NSClassFromString(@"TTNavigator")) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-    parentViewController = [[NSClassFromString(@"TTNavigator") performSelector:(NSSelectorFromString(@"navigator"))] visibleViewController];
-#pragma clang diagnostic pop
-  }
-  
-  if (_navController != nil) [_navController release];
-  
-  BITUpdateViewController *hockeyViewController = [self hockeyViewController:YES];    
-  _navController = [[UINavigationController alloc] initWithRootViewController:hockeyViewController];
-  _navController.navigationBar.barStyle = _barStyle;
-  _navController.modalPresentationStyle = _modalPresentationStyle;
-  
-  if (parentViewController) {
-    if ([_navController respondsToSelector:@selector(setModalTransitionStyle:)]) {
-      _navController.modalTransitionStyle = UIModalTransitionStyleCoverVertical;
-    }
-    
-    // page sheet for the iPad
-    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad && [_navController respondsToSelector:@selector(setModalPresentationStyle:)]) {
-      _navController.modalPresentationStyle = UIModalPresentationFormSheet;
-    }
-    
-    hockeyViewController.modalAnimated = YES;
-    
-    [parentViewController presentModalViewController:_navController animated:YES];
-  } else {
-    // if not, we add a subview to the window. A bit hacky but should work in most circumstances.
-    // Also, we don't get a nice animation for free, but hey, this is for beta not production users ;)
-    NSLog(@"[HockeySDK] Warning: No rootViewController found and no view controller set via delegate, using UIWindow-approach: %@", visibleWindow);
-    hockeyViewController.modalAnimated = NO;
-    [visibleWindow addSubview:_navController.view];
-  }
+  [self showView:[self hockeyViewController:YES]];
 }
 
 
 - (void)showCheckForUpdateAlert {
-  if (_isAppStoreEnvironment) return;
+  if ([self isAppStoreEnvironment]) return;
   if ([self isUpdateManagerDisabled]) return;
   
   if (!_updateAlertShowing) {
@@ -616,14 +536,14 @@
   
   [parameter appendFormat:@"?format=json&authorize=yes&app_version=%@&udid=%@&sdk=%@&sdk_version=%@&uuid=%@",
    bit_URLEncodedString([[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]),
-   (_isAppStoreEnvironment ? @"appstore" : bit_URLEncodedString([self deviceIdentifier])),
+   ([self isAppStoreEnvironment] ? @"appstore" : bit_URLEncodedString([self deviceIdentifier])),
    BITHOCKEY_NAME,
    BITHOCKEY_VERSION,
    _uuid
    ];
   
   // build request & send
-  NSString *url = [NSString stringWithFormat:@"%@%@", _serverURL, parameter];
+  NSString *url = [NSString stringWithFormat:@"%@%@", self.serverURL, parameter];
   BITHockeyLog(@"INFO: Sending api request to %@", url);
   
   NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url] cachePolicy:1 timeoutInterval:10.0];
@@ -687,7 +607,7 @@
 }
 
 - (void)checkForUpdate {
-  if (!_isAppStoreEnvironment && ![self isUpdateManagerDisabled]) {
+  if (![self isAppStoreEnvironment] && ![self isUpdateManagerDisabled]) {
     if ([self expiryDateReached]) return;
     if (self.requireAuthorization) return;
     
@@ -716,7 +636,7 @@
   
   NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@?format=json&udid=%@&sdk=%@&sdk_version=%@&uuid=%@", 
                                 bit_URLEncodedString([self encodedAppIdentifier]),
-                                (_isAppStoreEnvironment ? @"appstore" : bit_URLEncodedString([self deviceIdentifier])),
+                                ([self isAppStoreEnvironment] ? @"appstore" : bit_URLEncodedString([self deviceIdentifier])),
                                 BITHOCKEY_NAME,
                                 BITHOCKEY_VERSION,
                                 _uuid];
@@ -738,7 +658,7 @@
   }
   
   // build request & send
-  NSString *url = [NSString stringWithFormat:@"%@%@", _serverURL, parameter];
+  NSString *url = [NSString stringWithFormat:@"%@%@", self.serverURL, parameter];
   BITHockeyLog(@"INFO: Sending api request to %@", url);
   
   NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url] cachePolicy:1 timeoutInterval:10.0];
@@ -756,7 +676,7 @@
 }
 
 - (BOOL)initiateAppDownload {
-  if (_isAppStoreEnvironment) return NO;
+  if ([self isAppStoreEnvironment]) return NO;
   
   if (!self.isUpdateAvailable) {
     BITHockeyLog(@"WARNING: No update available. Aborting.");
@@ -774,7 +694,7 @@
     extraParameter = [NSString stringWithFormat:@"&udid=%@", [self deviceIdentifier]];
   }
   
-  NSString *hockeyAPIURL = [NSString stringWithFormat:@"%@api/2/apps/%@?format=plist%@", _serverURL, [self encodedAppIdentifier], extraParameter];
+  NSString *hockeyAPIURL = [NSString stringWithFormat:@"%@api/2/apps/%@?format=plist%@", self.serverURL, [self encodedAppIdentifier], extraParameter];
   NSString *iOSUpdateURL = [NSString stringWithFormat:@"itms-services://?action=download-manifest&url=%@", bit_URLEncodedString(hockeyAPIURL)];
   
   BITHockeyLog(@"INFO: API Server Call: %@, calling iOS with %@", hockeyAPIURL, iOSUpdateURL);
@@ -818,7 +738,7 @@
 
 // begin the startup process
 - (void)startManager {
-  if (!_isAppStoreEnvironment) {
+  if (![self isAppStoreEnvironment]) {
     if ([self isUpdateManagerDisabled]) return;
 
     BITHockeyLog(@"INFO: Start UpdateManager");
@@ -899,7 +819,7 @@
     id json = bit_parseJSON(responseString, &error);
     self.trackerConfig = (([self checkForTracker] && [[json valueForKey:@"tracker"] isKindOfClass:[NSDictionary class]]) ? [json valueForKey:@"tracker"] : nil);
     
-    if (!_isAppStoreEnvironment) {
+    if (![self isAppStoreEnvironment]) {
       NSArray *feedArray = (NSArray *)([self checkForTracker] ? [json valueForKey:@"versions"] : json);
       
       self.receivedData = nil;
