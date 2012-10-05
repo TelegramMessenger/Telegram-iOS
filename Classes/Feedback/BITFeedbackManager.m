@@ -70,7 +70,8 @@
     _incomingMessagesAlertShowing = NO;
     _lastCheck = nil;
     _token = nil;
-    _feedbackList = nil;
+
+    self.feedbackList = [NSMutableArray array];
 
     _fileManager = [[NSFileManager alloc] init];
 
@@ -164,7 +165,7 @@
 #pragma mark - Local Storage
 
 - (void)loadMessages {
-  NSString *errorString = nil;
+  NSError *error = nil;
   NSPropertyListFormat format;
   
   BOOL userNameViaDelegate = NO;
@@ -191,54 +192,55 @@
   
   if (![_fileManager fileExistsAtPath:_settingsFile])
     return;
+
+  NSData *codedData = [[[NSData alloc] initWithContentsOfFile:_settingsFile] autorelease];
+  if (codedData == nil) return;
   
-  NSData *plist = [NSData dataWithContentsOfFile:_settingsFile];
-  if (plist) {
-    NSDictionary *rootObj = (NSDictionary *)[NSPropertyListSerialization
-                                             propertyListFromData:plist
-                                             mutabilityOption:NSPropertyListMutableContainersAndLeaves
-                                             format:&format
-                                             errorDescription:&errorString];
-    
-    if (!userNameViaDelegate) {
-      if ([rootObj objectForKey:kBITFeedbackName])
-        self.userName = [rootObj objectForKey:kBITFeedbackName];
-    }
-
-    if (!userEmailViaDelegate) {
-      if ([rootObj objectForKey:kBITFeedbackEmail])
-        self.userEmail = [rootObj objectForKey:kBITFeedbackEmail];
-    }
-
-    if ([rootObj objectForKey:kBITFeedbackUserDataAsked])
-      self.didAskUserData = YES;
-
-    if ([rootObj objectForKey:kBITFeedbackToken])
-      self.token = [rootObj objectForKey:kBITFeedbackToken];
-
-    if ([rootObj objectForKey:kBITFeedbackName])
-      self.userName = [rootObj objectForKey:kBITFeedbackName];
-    
-    if ([rootObj objectForKey:kBITFeedbackEmail])
-      self.userEmail = [rootObj objectForKey:kBITFeedbackEmail];
-    
-    if ([rootObj objectForKey:kBITFeedbackDateOfLastCheck])
-      self.lastCheck = [rootObj objectForKey:kBITFeedbackDateOfLastCheck];
-    
-    if ([rootObj objectForKey:kBITFeedbackMessages]) {
-      self.feedbackList = [NSMutableArray arrayWithArray:[rootObj objectForKey:kBITFeedbackMessages]];
-
-      [self sortFeedbackList];
-      
-      // inform the UI to update its data in case the list is already showing
-      [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyFeedbackMessagesUpdated object:nil];
-    } else {
-      self.feedbackList = [NSMutableArray array];
-    }
-  } else {
-    self.feedbackList = [NSMutableArray array];
-    BITHockeyLog(@"ERROR: Reading settings. %@", errorString);
+  NSKeyedUnarchiver *unarchiver = nil;
+  
+  @try {
+    unarchiver = [[NSKeyedUnarchiver alloc] initForReadingWithData:codedData];
   }
+  @catch (NSException *exception) {
+    return;
+  }
+
+  if (!userNameViaDelegate) {
+    if ([unarchiver containsValueForKey:kBITFeedbackName])
+      self.userName = [unarchiver decodeObjectForKey:kBITFeedbackName];
+  }
+
+  if (!userEmailViaDelegate) {
+    if ([unarchiver containsValueForKey:kBITFeedbackEmail])
+      self.userEmail = [unarchiver decodeObjectForKey:kBITFeedbackEmail];
+  }
+  
+  if ([unarchiver containsValueForKey:kBITFeedbackUserDataAsked])
+    self.didAskUserData = YES;
+  
+  if ([unarchiver containsValueForKey:kBITFeedbackToken])
+    self.token = [unarchiver decodeObjectForKey:kBITFeedbackToken];
+  
+  if ([unarchiver containsValueForKey:kBITFeedbackName])
+    self.userName = [unarchiver decodeObjectForKey:kBITFeedbackName];
+  
+  if ([unarchiver containsValueForKey:kBITFeedbackEmail])
+    self.userEmail = [unarchiver decodeObjectForKey:kBITFeedbackEmail];
+  
+  if ([unarchiver containsValueForKey:kBITFeedbackDateOfLastCheck])
+    self.lastCheck = [unarchiver decodeObjectForKey:kBITFeedbackDateOfLastCheck];
+  
+  if ([unarchiver containsValueForKey:kBITFeedbackMessages]) {
+    [self.feedbackList setArray:[unarchiver decodeObjectForKey:kBITFeedbackMessages]];
+    
+    [self sortFeedbackList];
+    
+    // inform the UI to update its data in case the list is already showing
+    [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyFeedbackMessagesUpdated object:nil];
+  }
+
+  [unarchiver finishDecoding];
+  [unarchiver release];
 
   if (!self.lastCheck) {
     self.lastCheck = [NSDate distantPast];
@@ -249,34 +251,30 @@
 - (void)saveMessages {
   [self sortFeedbackList];
   
-  NSString *errorString = nil;
-  
-  NSMutableDictionary *rootObj = [NSMutableDictionary dictionaryWithCapacity:2];
-  
+  NSMutableData *data = [[NSMutableData alloc] init];
+  NSKeyedArchiver *archiver = [[NSKeyedArchiver alloc] initForWritingWithMutableData:data];
+
   if (self.didAskUserData)
-    [rootObj setObject:[NSNumber numberWithBool:YES] forKey:kBITFeedbackUserDataAsked];
+    [archiver encodeObject:[NSNumber numberWithBool:YES] forKey:kBITFeedbackUserDataAsked];
   
   if (self.token)
-    [rootObj setObject:self.token forKey:kBITFeedbackToken];
+    [archiver encodeObject:self.token forKey:kBITFeedbackToken];
   
   if (self.userName)
-    [rootObj setObject:self.userName forKey:kBITFeedbackName];
+    [archiver encodeObject:self.userName forKey:kBITFeedbackName];
   
   if (self.userEmail)
-    [rootObj setObject:self.userEmail forKey:kBITFeedbackEmail];
+    [archiver encodeObject:self.userEmail forKey:kBITFeedbackEmail];
   
-  [rootObj setObject:self.lastCheck forKey:kBITFeedbackDateOfLastCheck];
+  if (self.lastCheck)
+    [archiver encodeObject:self.lastCheck forKey:kBITFeedbackDateOfLastCheck];
   
-  [rootObj setObject:self.feedbackList forKey:kBITFeedbackMessages];
+  [archiver encodeObject:self.feedbackList forKey:kBITFeedbackMessages];
   
-  NSData *plist = [NSPropertyListSerialization dataFromPropertyList:(id)rootObj
-                                                             format:NSPropertyListBinaryFormat_v1_0
-                                                   errorDescription:&errorString];
-  if (plist) {
-    [plist writeToFile:_settingsFile atomically:YES];
-  } else {
-    BITHockeyLog(@"ERROR: Writing settings. %@", errorString);
-  }
+  [archiver finishEncoding];
+  [data writeToFile:_settingsFile atomically:YES];
+  [archiver release];
+  [data release];
 }
 
 

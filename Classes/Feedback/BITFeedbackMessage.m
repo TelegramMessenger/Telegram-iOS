@@ -67,7 +67,7 @@
   [encoder encodeObject:self.date forKey:@"date"];
   [encoder encodeObject:self.id forKey:@"id"];
   [encoder encodeInteger:self.status forKey:@"status"];
-  [encoder encodeInteger:self.userMessage forKey:@"userMessage"];
+  [encoder encodeBool:self.userMessage forKey:@"userMessage"];
 }
 
 - (id)initWithCoder:(NSCoder *)decoder {
@@ -78,7 +78,7 @@
     self.date = [decoder decodeObjectForKey:@"date"];
     self.id = [decoder decodeObjectForKey:@"id"];
     self.status = [decoder decodeIntegerForKey:@"status"];
-    self.userMessage = [decoder decodeIntegerForKey:@"userMessage"];
+    self.userMessage = [decoder decodeBoolForKey:@"userMessage"];
   }
   return self;
 }
