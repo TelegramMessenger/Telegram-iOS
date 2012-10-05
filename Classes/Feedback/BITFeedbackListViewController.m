@@ -42,7 +42,6 @@
 
 @interface BITFeedbackListViewController () <BITFeedbackUserDataDelegate>
 @property (nonatomic, assign) BITFeedbackManager *manager;
-@property (nonatomic, retain) UITableView *tableView;
 
 @property (nonatomic, retain) NSDateFormatter *lastUpdateDateFormatter;
 @end
@@ -63,7 +62,8 @@
 
 
 - (void)dealloc {
-  [_tableView release], _tableView = nil;
+  [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyFeedbackMessagesUpdated object:nil];
+
   [_lastUpdateDateFormatter release]; _lastUpdateDateFormatter = nil;
   
   [super dealloc];
@@ -82,34 +82,40 @@
   
   self.title = BITHockeyLocalizedString(@"HockeyFeedbackListTitle");
   
-  self.tableView = [[[UITableView alloc] initWithFrame:self.view.bounds] autorelease];
   self.tableView.delegate = self;
   self.tableView.dataSource = self;
   self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
   [self.tableView setAutoresizingMask:UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth];
   [self.tableView setBackgroundColor:[UIColor colorWithRed:0.82 green:0.84 blue:0.84 alpha:1]];
   [self.tableView setSeparatorColor:[UIColor colorWithRed:0.79 green:0.79 blue:0.79 alpha:1]];
-  [self.view addSubview:self.tableView];
   
-  self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemRefresh
-                                                                                          target:self
-                                                                                          action:@selector(reloadList)] autorelease];
-  
-}
-
-- (void)viewDidUnload {
-  [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyFeedbackMessagesUpdated object:nil];
-  
-  [super viewDidUnload];
+  id refreshClass = NSClassFromString(@"UIRefreshControl");
+  if (refreshClass) {
+    self.refreshControl = [[[UIRefreshControl alloc] init] autorelease];
+    [self.refreshControl addTarget:self action:@selector(reloadList) forControlEvents:UIControlEventValueChanged];
+  } else {
+    self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemRefresh
+                                                                                            target:self
+                                                                                            action:@selector(reloadList)] autorelease];
+  }  
 }
 
 - (void)reloadList {
+  id refreshClass = NSClassFromString(@"UIRefreshControl");
+  if (refreshClass) {
+    [self.refreshControl beginRefreshing];
+  }
   [self.manager updateMessagesList];
 }
 
 - (void)updateList {
   CGSize contentSize = self.tableView.contentSize;
   CGPoint contentOffset = self.tableView.contentOffset;
+  
+  id refreshClass = NSClassFromString(@"UIRefreshControl");
+  if (refreshClass) {
+    [self.refreshControl endRefreshing];
+  }
   
   [self.tableView reloadData];
   if (self.tableView.contentSize.height > contentSize.height)
@@ -304,7 +310,6 @@
   BITFeedbackMessage *message = [self.manager messageAtIndex:indexPath.row];
   if (!message) return 44;
   
-  //  BITFeedbackListViewCell *cell = (BITFeedbackListViewCell *)[tableView cellForRowAtIndexPath:indexPath];
   return [BITFeedbackListViewCell heightForRowWithText:message.text tableViewWidth:self.view.frame.size.width];
 }
 

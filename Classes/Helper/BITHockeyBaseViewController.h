@@ -8,7 +8,7 @@
 
 #import <UIKit/UIKit.h>
 
-@interface BITHockeyBaseViewController : UIViewController
+@interface BITHockeyBaseViewController : UITableViewController
 
 @property (nonatomic, readwrite) BOOL modalAnimated;
 

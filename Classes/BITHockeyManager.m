@@ -217,6 +217,14 @@
 }
 
 
+- (void)setDisableFeedbackManager:(BOOL)disableFeedbackManager {
+  if (_feedbackManager) {
+    [_feedbackManager setDisableFeedbackManager:disableFeedbackManager];
+  }
+  _disableFeedbackManager = disableFeedbackManager;
+}
+
+
 - (void)setServerURL:(NSString *)aServerURL {
   // ensure url ends with a trailing slash
   if (![aServerURL hasSuffix:@"/"]) {

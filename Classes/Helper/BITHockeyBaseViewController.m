@@ -8,16 +8,16 @@
 
 #import "BITHockeyBaseViewController.h"
 
+
 @interface BITHockeyBaseViewController ()
+
 @property (nonatomic) BOOL modal;
 @property (nonatomic) UIStatusBarStyle statusBarStyle;
+
 @end
 
-@implementation BITHockeyBaseViewController
 
-@synthesize modalAnimated = _modalAnimated;
-@synthesize modal = _modal;
-@synthesize statusBarStyle = _statusBarStyle;
+@implementation BITHockeyBaseViewController
 
 
 - (id)init {

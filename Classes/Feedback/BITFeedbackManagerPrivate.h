@@ -29,6 +29,7 @@
  */
 
 #import <Foundation/Foundation.h>
+#import "BITFeedbackMessage.h"
 
 
 @interface BITFeedbackManager () {
@@ -42,15 +43,18 @@
 @property (nonatomic, retain) NSMutableArray *feedbackList;
 
 
+// used by BITHockeyManager if disable status is changed
+@property (nonatomic, getter = isFeedbackManagerDisabled) BOOL disableFeedbackManager;
+
 
 - (BITFeedbackMessage *)messageWithID:(NSNumber *)messageID;
-- (BITFeedbackMessage *)sendInProgressMessage;
-- (BITFeedbackMessage *)nextPendingMessage;
+
+- (NSArray *)messagesWithStatus:(BITFeedbackMessageStatus)status;
 
 - (void)saveMessages;
 
 - (void)fetchMessageUpdates;
-- (BOOL)updateMessageListFromResponse:(NSDictionary *)jsonDictionary;
+- (void)updateMessageListFromResponse:(NSDictionary *)jsonDictionary;
 
 
 @end

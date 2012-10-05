@@ -37,7 +37,9 @@ typedef enum {
   // new messages from server
   BITFeedbackMessageStatusUnread = 2,
   // messages from server once read and new local messages once successful send from SDK
-  BITFeedbackMessageStatusRead = 3
+  BITFeedbackMessageStatusRead = 3,
+  // message is archived, happens if the thread is deleted from the server
+  BITFeedbackMessageStatusArchived = 4
 } BITFeedbackMessageStatus;
 
 @interface BITFeedbackMessage : NSObject {
