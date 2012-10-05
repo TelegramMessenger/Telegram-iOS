@@ -94,11 +94,6 @@
   [self.view addSubview:self.textView];
 }
 
-- (void)viewDidUnload {
-  [super viewDidUnload];
-  // Release any retained subviews of the main view.
-}
-
 - (void)viewWillAppear:(BOOL)animated {
   self.manager.currentFeedbackComposeViewController = self;
   

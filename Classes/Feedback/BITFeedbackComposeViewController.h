@@ -30,7 +30,7 @@
 #import <UIKit/UIKit.h>
 #import "BITHockeyBaseViewController.h"
 
-@interface BITFeedbackComposeViewController : BITHockeyBaseViewController <UITextViewDelegate>
+@interface BITFeedbackComposeViewController : UIViewController <UITextViewDelegate>
 
 - (id)init;
 

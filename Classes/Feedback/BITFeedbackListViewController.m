@@ -154,6 +154,7 @@
   BITFeedbackComposeViewController *composeController = [[[BITFeedbackComposeViewController alloc] init] autorelease];
   
   UINavigationController *navController = [[[UINavigationController alloc] initWithRootViewController:composeController] autorelease];
+  navController.modalPresentationStyle = UIModalPresentationFormSheet;
   
   [self.navigationController presentModalViewController:navController animated:YES];
 }
