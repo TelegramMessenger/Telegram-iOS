@@ -331,8 +331,9 @@
   [invocation setArgument:&key atIndex:4];
   [invocation invoke];
   
-  if ([jmcInstance respondsToSelector:@selector(ping)]) {
-    [jmcInstance performSelector:@selector(ping)];
+  SEL pingSelector = NSSelectorFromString(@"ping");
+  if ([jmcInstance respondsToSelector:pingSelector]) {
+    [jmcInstance performSelector:pingSelector];
   }
 }
 #pragma clang diagnostic pop
