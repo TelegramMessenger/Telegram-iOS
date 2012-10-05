@@ -27,11 +27,13 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import "BITUpdateManager.h"
+#import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 
 
 @protocol BITHockeyManagerDelegate;
 
+@class BITHockeyBaseManager;
 @class BITCrashManager;
 @class BITUpdateManager;
 @class BITFeedbackManager;
