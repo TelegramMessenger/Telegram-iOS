@@ -38,6 +38,12 @@ This documentation provides integrated help in Xcode for all public APIs and a s
 
 ## Changelog
 
+### Version 2.5.4b3
+
+- General:
+
+    - [NEW] Atlassian JMC support disabled (Use subproject integration if you want it)
+
 ### Version 2.5.4b2
 
 - Crash Reporting:
