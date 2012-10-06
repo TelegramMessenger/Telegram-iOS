@@ -159,19 +159,6 @@
   [self showView:[self feedbackListViewController:YES]];
 }
 
-- (BITFeedbackComposeViewController *)feedbackComposeViewController:(BOOL)modal {
-  return [[[BITFeedbackComposeViewController alloc] initWithModalStyle:modal] autorelease];
-}
-
-- (void)showFeedbackComposeView {
-  if (_currentFeedbackComposeViewController) {
-    BITHockeyLog(@"INFO: update view already visible, aborting");
-    return;
-  }
-  
-  [self showView:[self feedbackComposeViewController:YES]];
-}
-
 
 #pragma mark - Manager Control
 

@@ -56,9 +56,6 @@
 // load new messages from the server
 - (void)updateMessagesList;
 
-// open feedback compose view
-- (void)showFeedbackComposeView;
-
 - (NSUInteger)numberOfMessages;
 - (BITFeedbackMessage *)messageAtIndex:(NSUInteger)index;
 
