@@ -137,11 +137,11 @@
 /* Never Updated */
 "HockeyFeedbackListNeverUpdated" = "Never";
 
-/* Write Feedback Button Title */
-"HockeyFeedbackListButonWriteFeedback" = "Write Feedback";
+/* Provide Feedback Button Title */
+"HockeyFeedbackListButonWriteFeedback" = "Provide Feedback";
 
-/* Write Response Button Title */
-"HockeyFeedbackListButonWriteResponse" = "Write Response";
+/* Add a Response Button Title */
+"HockeyFeedbackListButonWriteResponse" = "Add a Response";
 
 /* User Data Set Name Button Title */
 "HockeyFeedbackListButonUserDataSetName" = "Set Your Name";

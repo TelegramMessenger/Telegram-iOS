@@ -28,25 +28,34 @@
 
 
 #import "BITFeedbackListViewCell.h"
+#import "HockeySDKPrivate.h"
+
+#define BACKGROUNDCOLOR_DEFAULT BIT_RGBCOLOR(245, 245, 245)
+#define BACKGROUNDCOLOR_ALTERNATE BIT_RGBCOLOR(235, 235, 235)
+
+#define TEXTCOLOR_TITLE BIT_RGBCOLOR(75, 75, 75)
+
+#define TEXTCOLOR_DEFAULT BIT_RGBCOLOR(25, 25, 25)
+#define TEXTCOLOR_PENDING BIT_RGBCOLOR(75, 75, 75)
+
+#define TITLE_FONTSIZE 12
+#define TEXT_FONTSIZE 15
 
 #define FRAME_SIDE_BORDER 10
-#define FRAME_TOP_BORDER 5
+#define FRAME_TOP_BORDER 8
 #define FRAME_BOTTOM_BORDER 5
+#define FRAME_LEFT_RESPONSE_BORDER 20
 
-#define LABEL_DATE_Y 0
-#define LABEL_DATE_HEIGHT 15
+#define LABEL_TITLE_Y 3
+#define LABEL_TITLE_HEIGHT 15
 
-#define LABEL_NAME_Y 15
-#define LABEL_NAME_HEIGHT 15
-
-#define LABEL_TEXT_Y 40
+#define LABEL_TEXT_Y 25
 
 @interface BITFeedbackListViewCell ()
 
 @property (nonatomic, retain) NSDateFormatter *dateFormatter;
 
-@property (nonatomic, retain) UILabel *labelDate;
-@property (nonatomic, retain) UILabel *labelName;
+@property (nonatomic, retain) UILabel *labelTitle;
 @property (nonatomic, retain) UILabel *labelText;
 
 @end
@@ -59,9 +68,8 @@
   self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
   if (self) {
     // Initialization code
-    self.contentView.backgroundColor = [UIColor whiteColor];
-    
     _style = BITFeedbackListViewCellStyleNormal;
+    _backgroundStyle = BITFeedbackListViewCellBackgroundStyleNormal;
     _sent = YES;
     
     _date = nil;
@@ -74,14 +82,11 @@
     [self.dateFormatter setLocale:[NSLocale currentLocale]];    
     [self.dateFormatter setDoesRelativeDateFormatting:YES];
 
-    self.labelDate = [[[UILabel alloc] init] autorelease];
-    self.labelDate.font = [UIFont systemFontOfSize:12];
-    
-    self.labelName = [[[UILabel alloc] init] autorelease];
-    self.labelName.font = [UIFont systemFontOfSize:12];
+    self.labelTitle = [[[UILabel alloc] init] autorelease];
+    self.labelTitle.font = [UIFont systemFontOfSize:TITLE_FONTSIZE];
     
     self.labelText = [[[UILabel alloc] init] autorelease];
-    self.labelText.font = [UIFont systemFontOfSize:14];
+    self.labelText.font = [UIFont systemFontOfSize:TEXT_FONTSIZE];
     self.labelText.numberOfLines = 0;
     self.labelText.textAlignment = UITextAlignmentLeft;
   }
@@ -91,8 +96,7 @@
 - (void)dealloc {
   [_dateFormatter release], _dateFormatter = nil;
   
-  [_labelDate release], _labelDate = nil;
-  [_labelName release], _labelName = nil;
+  [_labelTitle release], _labelTitle = nil;
   [_labelText release], _labelText = nil;
   
   [_date release], _date = nil;
@@ -106,53 +110,52 @@
 #pragma mark - Layout
 
 + (CGFloat) heightForRowWithText:(NSString *)text tableViewWidth:(CGFloat)width {
-  CGFloat calculatedHeight = [text sizeWithFont:[UIFont systemFontOfSize:14] 
-                              constrainedToSize:CGSizeMake(width - (2 * FRAME_SIDE_BORDER), CGFLOAT_MAX)].height + LABEL_TEXT_Y + FRAME_BOTTOM_BORDER;
+  CGFloat calculatedHeight = [text sizeWithFont:[UIFont systemFontOfSize:TEXT_FONTSIZE]
+                              constrainedToSize:CGSizeMake(width - (2 * FRAME_SIDE_BORDER), CGFLOAT_MAX)].height + FRAME_TOP_BORDER + LABEL_TEXT_Y + FRAME_BOTTOM_BORDER;
   return calculatedHeight;
 }
 
 - (void)layoutSubviews {
   [super layoutSubviews];
-    
-  NSString *dateString = [self.dateFormatter stringFromDate:self.date];
-  [self.labelDate setText:dateString];// [self.date description]];
-  [self.labelDate setFrame:CGRectMake(FRAME_SIDE_BORDER, FRAME_TOP_BORDER + LABEL_DATE_Y, self.frame.size.width - (2 * FRAME_SIDE_BORDER), LABEL_DATE_HEIGHT)];
   
-  [self.labelName setText:self.name];
-  [self.labelName setFrame:CGRectMake(FRAME_SIDE_BORDER, FRAME_TOP_BORDER + LABEL_NAME_Y, self.frame.size.width - (2 * FRAME_SIDE_BORDER), LABEL_NAME_HEIGHT)];
-  // header
-  if (_style == BITFeedbackListViewCellStyleNormal) {
-    self.contentView.backgroundColor = [UIColor whiteColor];
-    self.labelDate.backgroundColor = [UIColor whiteColor];
-    self.labelName.backgroundColor = [UIColor whiteColor];
-    self.labelText.backgroundColor = [UIColor whiteColor];
-    
-    self.labelDate.textAlignment = UITextAlignmentLeft;
-    self.labelName.textAlignment = UITextAlignmentLeft;
+  // colors
+  if (_backgroundStyle == BITFeedbackListViewCellBackgroundStyleNormal) {
+    self.contentView.backgroundColor = BACKGROUNDCOLOR_DEFAULT;
+    self.labelTitle.backgroundColor = BACKGROUNDCOLOR_DEFAULT;
+    self.labelText.backgroundColor = BACKGROUNDCOLOR_DEFAULT;
   } else {
-    self.contentView.backgroundColor = [UIColor lightGrayColor];
-    self.labelDate.backgroundColor = [UIColor lightGrayColor];
-    self.labelName.backgroundColor = [UIColor lightGrayColor];
-    self.labelText.backgroundColor = [UIColor lightGrayColor];
-    
-    self.labelDate.textAlignment = UITextAlignmentRight;
-    self.labelName.textAlignment = UITextAlignmentRight;
+    self.contentView.backgroundColor = BACKGROUNDCOLOR_ALTERNATE;
+    self.labelTitle.backgroundColor = BACKGROUNDCOLOR_ALTERNATE;
+    self.labelText.backgroundColor = BACKGROUNDCOLOR_ALTERNATE;
+  }
+  self.labelTitle.textColor = TEXTCOLOR_TITLE;
+  if (self.sent) {
+    [self.labelText setTextColor:TEXTCOLOR_DEFAULT];
+  } else {
+    [self.labelText setTextColor:TEXTCOLOR_PENDING];
   }
 
-  [self addSubview:self.labelDate];
-  [self addSubview:self.labelName];
+  // header
+  NSString *dateString = [self.dateFormatter stringFromDate:self.date];
+  [self.labelTitle setText:dateString];// [self.date description]];
+  [self.labelTitle setFrame:CGRectMake(FRAME_SIDE_BORDER, FRAME_TOP_BORDER + LABEL_TITLE_Y, self.frame.size.width - (2 * FRAME_SIDE_BORDER), LABEL_TITLE_HEIGHT)];
+    
+  if (_style == BITFeedbackListViewCellStyleNormal) {
+    self.labelTitle.textAlignment = UITextAlignmentRight;
+    self.labelText.textAlignment = UITextAlignmentRight;
+  } else {
+    self.labelTitle.textAlignment = UITextAlignmentLeft;
+    self.labelText.textAlignment = UITextAlignmentLeft;
+  }
+
+  [self addSubview:self.labelTitle];
 
   // text
   [self.labelText setText:self.text];
   CGSize size = CGSizeMake(self.frame.size.width - (2 * FRAME_SIDE_BORDER),
                            [[self class] heightForRowWithText:self.text tableViewWidth:self.frame.size.width] - LABEL_TEXT_Y - FRAME_BOTTOM_BORDER);
   
-  [self.labelText setFrame : CGRectMake(FRAME_SIDE_BORDER, LABEL_TEXT_Y, size.width, size.height)];
-  if (self.sent) {
-    [self.labelText setTextColor:[UIColor darkTextColor]];
-  } else {
-    [self.labelText setTextColor:[UIColor lightGrayColor]];
-  }
+  [self.labelText setFrame:CGRectMake(FRAME_SIDE_BORDER, LABEL_TEXT_Y, size.width, size.height)];
   
   [self addSubview:self.labelText];
 }

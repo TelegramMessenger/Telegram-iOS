@@ -30,13 +30,19 @@
 #import <UIKit/UIKit.h>
 
 typedef enum {
-  BITFeedbackListViewCellStyleNormal = 0, // left aligned header style
-  BITFeedbackListViewCellStyleRepsonse = 1 // right aligned header style for dev responses
+  BITFeedbackListViewCellStyleNormal = 0, // right aligned header style
+  BITFeedbackListViewCellStyleRepsonse = 1 // left aligned header style for dev responses
 } BITFeedbackListViewCellStyle;
+
+typedef enum {
+  BITFeedbackListViewCellBackgroundStyleNormal = 0,
+  BITFeedbackListViewCellBackgroundStyleAlternate = 1
+} BITFeedbackListViewCellBackgroundStyle;
 
 @interface BITFeedbackListViewCell : UITableViewCell
 
 @property (nonatomic) BITFeedbackListViewCellStyle style;
+@property (nonatomic) BITFeedbackListViewCellBackgroundStyle backgroundStyle;
 @property (nonatomic) BOOL sent;
 
 @property (nonatomic, copy) NSDate *date;

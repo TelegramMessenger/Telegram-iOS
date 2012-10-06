@@ -38,7 +38,18 @@
 #import "BITFeedbackMessage.h"
 
 #import "BITHockeyHelper.h"
+#import <QuartzCore/QuartzCore.h>
 
+
+#define DEFAULT_BACKGROUNDCOLOR BIT_RGBCOLOR(245, 245, 245)
+#define DEFAULT_TEXTCOLOR BIT_RGBCOLOR(75, 75, 75)
+#define BUTTON_BACKGROUNDCOLOR BIT_RGBCOLOR(225, 225, 225)
+#define BUTTON_BORDERCOLOR BIT_RGBCOLOR(175, 175, 175)
+#define BUTTON_TEXTCOLOR BIT_RGBCOLOR(58, 58, 58)
+#define BUTTON_TEXTCOLOR_SHADOW BIT_RGBCOLOR(175, 175, 175)
+#define BORDER_COLOR1 BIT_RGBCOLOR(215, 215, 215)
+#define BORDER_COLOR2 BIT_RGBCOLOR(221, 221, 221)
+#define BORDER_COLOR3 BIT_RGBCOLOR(255, 255, 255)
 
 @interface BITFeedbackListViewController () <BITFeedbackUserDataDelegate>
 @property (nonatomic, assign) BITFeedbackManager *manager;
@@ -88,7 +99,9 @@
   [self.tableView setAutoresizingMask:UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth];
   [self.tableView setBackgroundColor:[UIColor colorWithRed:0.82 green:0.84 blue:0.84 alpha:1]];
   [self.tableView setSeparatorColor:[UIColor colorWithRed:0.79 green:0.79 blue:0.79 alpha:1]];
-  
+
+  self.view.backgroundColor = DEFAULT_BACKGROUNDCOLOR;
+
   id refreshClass = NSClassFromString(@"UIRefreshControl");
   if (refreshClass) {
     self.refreshControl = [[[UIRefreshControl alloc] init] autorelease];
@@ -185,7 +198,7 @@
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
   if (section == 0) {
-    return 2;
+    return 1;
   } else if (section == 2) {
     return 1;
   } else {
@@ -204,6 +217,7 @@
     if (!cell) {
       cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:LastUpdateIdentifier] autorelease];
       cell.textLabel.font = [UIFont systemFontOfSize:10];
+      cell.textLabel.textColor = DEFAULT_TEXTCOLOR;
       cell.accessoryType = UITableViewCellAccessoryNone;
       cell.selectionStyle = UITableViewCellSelectionStyleNone;
       cell.textLabel.textAlignment = UITextAlignmentCenter;
@@ -214,6 +228,8 @@
     
     return cell;
   } else if (indexPath.section == 0 || indexPath.section == 2) {
+    CGFloat topGap = 0.0f;
+    
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:ButtonIdentifier];
     
     if (!cell) {
@@ -224,9 +240,16 @@
       cell.selectionStyle = UITableViewCellSelectionStyleNone;
     }
     
-    UIButton *button = [UIButton buttonWithType:UIButtonTypeRoundedRect];
-    [button setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
-    [button setTitleShadowColor:[UIColor lightGrayColor] forState:UIControlStateNormal];
+    UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
+    [button.layer setMasksToBounds:YES];
+    [button.layer setCornerRadius:10.0f];
+    [button.layer setBorderWidth:1];
+    [button.layer setBackgroundColor:BUTTON_BACKGROUNDCOLOR.CGColor];
+    [button.layer setBorderColor:BUTTON_BORDERCOLOR.CGColor];
+    [button.layer setShadowOffset:CGSizeMake(-1, -1)];
+    [[button titleLabel] setFont:[UIFont boldSystemFontOfSize:14.0]];
+    [button setTitleColor:BUTTON_TEXTCOLOR forState:UIControlStateNormal];
+    [button setTitleShadowColor:BUTTON_TEXTCOLOR_SHADOW forState:UIControlStateNormal];
     if (indexPath.section == 0) {
       if ([self.manager numberOfMessages] == 0) {
         [button setTitle:BITHockeyLocalizedString(@"HockeyFeedbackListButonWriteFeedback") forState:UIControlStateNormal];
@@ -235,6 +258,7 @@
       }
       [button addTarget:self action:@selector(newFeedbackAction:) forControlEvents:UIControlEventTouchUpInside];
     } else {
+      topGap = 6.0f;
       NSString *title = @"";
       if ([self.manager requireUserName] == BITFeedbackUserDataElementRequired ||
           ([self.manager requireUserName] == BITFeedbackUserDataElementOptional && [self.manager userName] != nil)
@@ -252,9 +276,39 @@
       [button setTitle:title forState:UIControlStateNormal];
       [button addTarget:self action:@selector(setUserDataAction:) forControlEvents:UIControlEventTouchUpInside];
     }
-    [button setFrame: CGRectMake( 10.0f, 12.0f, self.view.frame.size.width - 20.0f, 50.0f)];
+    [button setFrame: CGRectMake( 10.0f, topGap + 12.0f, self.view.frame.size.width - 20.0f, 42.0f)];
     
     [cell addSubview:button];
+    
+    if (indexPath.section == 0) {
+      UILabel *statusLabel = [[[UILabel alloc] initWithFrame:CGRectMake(0, 59, self.view.frame.size.width, 28)] autorelease];
+      
+      statusLabel.font = [UIFont systemFontOfSize:10];
+      statusLabel.textColor = DEFAULT_TEXTCOLOR;
+      statusLabel.textAlignment = UITextAlignmentCenter;
+      statusLabel.backgroundColor = DEFAULT_BACKGROUNDCOLOR;
+      statusLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+
+      statusLabel.text = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListLastUpdated"),
+                             [self.manager lastCheck] ? [self.lastUpdateDateFormatter stringFromDate:[self.manager lastCheck]] : BITHockeyLocalizedString(@"HockeyFeedbackListNeverUpdated")];
+
+      [cell addSubview:statusLabel];
+    } else {
+      UIView *lineView1 = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.contentView.bounds.size.width, 1)] autorelease];
+      lineView1.backgroundColor = BORDER_COLOR1;
+      lineView1.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+      [cell addSubview:lineView1];
+
+      UIView *lineView2 = [[[UIView alloc] initWithFrame:CGRectMake(0, 1, cell.contentView.bounds.size.width, 1)] autorelease];
+      lineView2.backgroundColor = BORDER_COLOR2;
+      lineView2.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+      [cell addSubview:lineView2];
+
+      UIView *lineView3 = [[[UIView alloc] initWithFrame:CGRectMake(0, 2, cell.contentView.bounds.size.width, 1)] autorelease];
+      lineView3.backgroundColor = BORDER_COLOR3;
+      lineView3.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+      [cell addSubview:lineView3];
+    }
     
     return cell;
   } else {
@@ -264,6 +318,12 @@
       cell = [[[BITFeedbackListViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier] autorelease];
       cell.accessoryType = UITableViewCellAccessoryNone;
       cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    }
+    
+    if (indexPath.row == 0 || indexPath.row % 2 == 0) {
+      cell.backgroundStyle = BITFeedbackListViewCellBackgroundStyleAlternate;
+    } else {
+      cell.backgroundStyle = BITFeedbackListViewCellBackgroundStyleNormal;
     }
     
     BITFeedbackMessage *message = [self.manager messageAtIndex:indexPath.row];
@@ -292,7 +352,22 @@
     } else {
       cell.text = @"";
     }
+
+    UIView *lineView1 = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.contentView.bounds.size.width, 1)] autorelease];
+    lineView1.backgroundColor = BORDER_COLOR1;
+    lineView1.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    [cell addSubview:lineView1];
     
+    UIView *lineView2 = [[[UIView alloc] initWithFrame:CGRectMake(0, 1, cell.contentView.bounds.size.width, 1)] autorelease];
+    lineView2.backgroundColor = BORDER_COLOR2;
+    lineView2.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    [cell addSubview:lineView2];
+    
+    UIView *lineView3 = [[[UIView alloc] initWithFrame:CGRectMake(0, 2, cell.contentView.bounds.size.width, 1)] autorelease];
+    lineView3.backgroundColor = BORDER_COLOR3;
+    lineView3.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    [cell addSubview:lineView3];
+
     return cell;
   }
 }
@@ -301,11 +376,11 @@
 #pragma mark - Table view delegate
 
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
-  if (indexPath.section == 0 && indexPath.row == 1) {
-    return 28;
+  if (indexPath.section == 0 ) {
+    return 87;
   }
-  if (indexPath.section == 0 || indexPath.section == 2) {
-    return 74;
+  if (indexPath.section == 2) {
+    return 75;
   }
   
   BITFeedbackMessage *message = [self.manager messageAtIndex:indexPath.row];
