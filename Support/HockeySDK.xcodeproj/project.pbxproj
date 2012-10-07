@@ -38,7 +38,7 @@
 		1E49A43F1612223B00463151 /* BITFeedbackComposeViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A42E1612223B00463151 /* BITFeedbackComposeViewController.m */; };
 		1E49A4421612223B00463151 /* BITFeedbackListViewCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A42F1612223B00463151 /* BITFeedbackListViewCell.h */; };
 		1E49A4451612223B00463151 /* BITFeedbackListViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4301612223B00463151 /* BITFeedbackListViewCell.m */; };
-		1E49A4481612223B00463151 /* BITFeedbackListViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4311612223B00463151 /* BITFeedbackListViewController.h */; };
+		1E49A4481612223B00463151 /* BITFeedbackListViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4311612223B00463151 /* BITFeedbackListViewController.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E49A44B1612223B00463151 /* BITFeedbackListViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4321612223B00463151 /* BITFeedbackListViewController.m */; };
 		1E49A44E1612223B00463151 /* BITFeedbackManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4331612223B00463151 /* BITFeedbackManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E49A4511612223B00463151 /* BITFeedbackManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4341612223B00463151 /* BITFeedbackManager.m */; };
@@ -53,7 +53,7 @@
 		1E49A4761612226D00463151 /* BITUpdateManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4651612226D00463151 /* BITUpdateManager.m */; };
 		1E49A4791612226D00463151 /* BITUpdateManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4661612226D00463151 /* BITUpdateManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E49A47C1612226D00463151 /* BITUpdateManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4671612226D00463151 /* BITUpdateManagerPrivate.h */; };
-		1E49A47F1612226D00463151 /* BITUpdateViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4681612226D00463151 /* BITUpdateViewController.h */; };
+		1E49A47F1612226D00463151 /* BITUpdateViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4681612226D00463151 /* BITUpdateViewController.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E49A4821612226D00463151 /* BITUpdateViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4691612226D00463151 /* BITUpdateViewController.m */; };
 		1E49A4851612226D00463151 /* BITUpdateViewControllerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A46A1612226D00463151 /* BITUpdateViewControllerPrivate.h */; };
 		1E49A4AF161222B900463151 /* BITHockeyBaseManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4A0161222B900463151 /* BITHockeyBaseManager.h */; };
@@ -391,15 +391,15 @@
 				1E49A4731612226D00463151 /* BITUpdateManager.h in Headers */,
 				1E49A4791612226D00463151 /* BITUpdateManagerDelegate.h in Headers */,
 				1E49A44E1612223B00463151 /* BITFeedbackManager.h in Headers */,
+				1E49A4481612223B00463151 /* BITFeedbackListViewController.h in Headers */,
+				1E49A47F1612226D00463151 /* BITUpdateViewController.h in Headers */,
 				1E49A43C1612223B00463151 /* BITFeedbackComposeViewController.h in Headers */,
 				1E49A4421612223B00463151 /* BITFeedbackListViewCell.h in Headers */,
-				1E49A4481612223B00463151 /* BITFeedbackListViewController.h in Headers */,
 				1E49A4541612223B00463151 /* BITFeedbackManagerPrivate.h in Headers */,
 				1E49A4571612223B00463151 /* BITFeedbackMessage.h in Headers */,
 				1E49A45D1612223B00463151 /* BITFeedbackUserDataViewController.h in Headers */,
 				1E49A46D1612226D00463151 /* BITAppVersionMetaInfo.h in Headers */,
 				1E49A47C1612226D00463151 /* BITUpdateManagerPrivate.h in Headers */,
-				1E49A47F1612226D00463151 /* BITUpdateViewController.h in Headers */,
 				1E49A4851612226D00463151 /* BITUpdateViewControllerPrivate.h in Headers */,
 				1E49A4AF161222B900463151 /* BITHockeyBaseManager.h in Headers */,
 				1E49A4B5161222B900463151 /* BITHockeyBaseManagerPrivate.h in Headers */,
