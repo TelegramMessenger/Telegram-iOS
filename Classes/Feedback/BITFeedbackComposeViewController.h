@@ -28,7 +28,6 @@
 
 
 #import <UIKit/UIKit.h>
-#import "BITHockeyBaseViewController.h"
 
 @interface BITFeedbackComposeViewController : UIViewController <UITextViewDelegate>
 

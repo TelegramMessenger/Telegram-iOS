@@ -30,7 +30,7 @@
 
 #import <Foundation/Foundation.h>
 
-#import "BITHockeyBaseManager.h"
+#import "../Helper/BITHockeyBaseManager.h"
 
 
 // hockey crash manager status

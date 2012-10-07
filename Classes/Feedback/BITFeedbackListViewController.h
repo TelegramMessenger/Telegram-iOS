@@ -29,7 +29,7 @@
 
 #import <UIKit/UIKit.h>
 
-#import "BITHockeyBaseViewController.h"
+#import "../Helper/BITHockeyBaseViewController.h"
 
 
 @interface BITFeedbackListViewController : BITHockeyBaseViewController <UITableViewDelegate, UITableViewDataSource> {

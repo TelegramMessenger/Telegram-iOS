@@ -30,7 +30,7 @@
 
 #import <UIKit/UIKit.h>
 
-#import "BITHockeyBaseViewController.h"
+#import "../Helper/BITHockeyBaseViewController.h"
 
 
 @class PSStoreButton;

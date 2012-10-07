@@ -29,7 +29,7 @@
 
 #import <Foundation/Foundation.h>
 
-#import "BITHockeyBaseManager.h"
+#import "../Helper/BITHockeyBaseManager.h"
 #import "BITFeedbackListViewController.h"
 #import "BITFeedbackComposeViewController.h"
 
