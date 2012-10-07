@@ -42,7 +42,7 @@
 		1E49A44B1612223B00463151 /* BITFeedbackListViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4321612223B00463151 /* BITFeedbackListViewController.m */; };
 		1E49A44C1612223B00463151 /* BITFeedbackManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4331612223B00463151 /* BITFeedbackManager.h */; };
 		1E49A44D1612223B00463151 /* BITFeedbackManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4331612223B00463151 /* BITFeedbackManager.h */; };
-		1E49A44E1612223B00463151 /* BITFeedbackManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4331612223B00463151 /* BITFeedbackManager.h */; };
+		1E49A44E1612223B00463151 /* BITFeedbackManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4331612223B00463151 /* BITFeedbackManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E49A44F1612223B00463151 /* BITFeedbackManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4341612223B00463151 /* BITFeedbackManager.m */; };
 		1E49A4501612223B00463151 /* BITFeedbackManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4341612223B00463151 /* BITFeedbackManager.m */; };
 		1E49A4511612223B00463151 /* BITFeedbackManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4341612223B00463151 /* BITFeedbackManager.m */; };
@@ -69,13 +69,13 @@
 		1E49A4701612226D00463151 /* BITAppVersionMetaInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4631612226D00463151 /* BITAppVersionMetaInfo.m */; };
 		1E49A4711612226D00463151 /* BITUpdateManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4641612226D00463151 /* BITUpdateManager.h */; };
 		1E49A4721612226D00463151 /* BITUpdateManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4641612226D00463151 /* BITUpdateManager.h */; };
-		1E49A4731612226D00463151 /* BITUpdateManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4641612226D00463151 /* BITUpdateManager.h */; };
+		1E49A4731612226D00463151 /* BITUpdateManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4641612226D00463151 /* BITUpdateManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E49A4741612226D00463151 /* BITUpdateManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4651612226D00463151 /* BITUpdateManager.m */; };
 		1E49A4751612226D00463151 /* BITUpdateManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4651612226D00463151 /* BITUpdateManager.m */; };
 		1E49A4761612226D00463151 /* BITUpdateManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4651612226D00463151 /* BITUpdateManager.m */; };
 		1E49A4771612226D00463151 /* BITUpdateManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4661612226D00463151 /* BITUpdateManagerDelegate.h */; };
 		1E49A4781612226D00463151 /* BITUpdateManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4661612226D00463151 /* BITUpdateManagerDelegate.h */; };
-		1E49A4791612226D00463151 /* BITUpdateManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4661612226D00463151 /* BITUpdateManagerDelegate.h */; };
+		1E49A4791612226D00463151 /* BITUpdateManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4661612226D00463151 /* BITUpdateManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E49A47A1612226D00463151 /* BITUpdateManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4671612226D00463151 /* BITUpdateManagerPrivate.h */; };
 		1E49A47B1612226D00463151 /* BITUpdateManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4671612226D00463151 /* BITUpdateManagerPrivate.h */; };
 		1E49A47C1612226D00463151 /* BITUpdateManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4671612226D00463151 /* BITUpdateManagerPrivate.h */; };
@@ -90,13 +90,13 @@
 		1E49A4851612226D00463151 /* BITUpdateViewControllerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A46A1612226D00463151 /* BITUpdateViewControllerPrivate.h */; };
 		1E49A48D1612228800463151 /* BITCrashManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4871612228800463151 /* BITCrashManager.h */; };
 		1E49A48E1612228800463151 /* BITCrashManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4871612228800463151 /* BITCrashManager.h */; };
-		1E49A48F1612228800463151 /* BITCrashManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4871612228800463151 /* BITCrashManager.h */; };
+		1E49A48F1612228800463151 /* BITCrashManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4871612228800463151 /* BITCrashManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E49A4901612228800463151 /* BITCrashManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4881612228800463151 /* BITCrashManager.m */; };
 		1E49A4911612228800463151 /* BITCrashManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4881612228800463151 /* BITCrashManager.m */; };
 		1E49A4921612228800463151 /* BITCrashManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4881612228800463151 /* BITCrashManager.m */; };
 		1E49A4931612228800463151 /* BITCrashManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4891612228800463151 /* BITCrashManagerDelegate.h */; };
 		1E49A4941612228800463151 /* BITCrashManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4891612228800463151 /* BITCrashManagerDelegate.h */; };
-		1E49A4951612228800463151 /* BITCrashManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4891612228800463151 /* BITCrashManagerDelegate.h */; };
+		1E49A4951612228800463151 /* BITCrashManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4891612228800463151 /* BITCrashManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E49A4961612228800463151 /* BITCrashManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A48A1612228800463151 /* BITCrashManagerPrivate.h */; };
 		1E49A4971612228800463151 /* BITCrashManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A48A1612228800463151 /* BITCrashManagerPrivate.h */; };
 		1E49A4981612228800463151 /* BITCrashManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A48A1612228800463151 /* BITCrashManagerPrivate.h */; };
@@ -151,18 +151,24 @@
 		1E49A4D9161222D400463151 /* HockeySDKPrivate.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4D5161222D400463151 /* HockeySDKPrivate.m */; };
 		1E49A4DA161222D400463151 /* HockeySDKPrivate.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4D5161222D400463151 /* HockeySDKPrivate.m */; };
 		1E49A4DB161222D400463151 /* HockeySDKPrivate.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4D5161222D400463151 /* HockeySDKPrivate.m */; };
+		1E4F61D51621A3620033EFC5 /* BITCrashManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4871612228800463151 /* BITCrashManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		1E4F61D71621A3660033EFC5 /* BITCrashManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4891612228800463151 /* BITCrashManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		1E4F61DC1621A3830033EFC5 /* BITFeedbackManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4331612223B00463151 /* BITFeedbackManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		1E4F61DD1621A39B0033EFC5 /* BITUpdateManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4641612226D00463151 /* BITUpdateManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		1E4F61DE1621A39E0033EFC5 /* BITUpdateManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4661612226D00463151 /* BITUpdateManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		1E4F61DF1621A3CA0033EFC5 /* BITHockeyManager.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB465148D7BF50015DEDC /* BITHockeyManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		1E4F61E01621A3CD0033EFC5 /* BITHockeyManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E5955FA15B7877A00A03429 /* BITHockeyManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E59545D15B6C41300A03429 /* BITHockeyManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB466148D7BF50015DEDC /* BITHockeyManager.m */; };
 		1E59546615B6C41300A03429 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E400561D148D79B500EB22B9 /* Foundation.framework */; };
 		1E59546715B6C41300A03429 /* CrashReporter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E41EB48B148D7C4E0015DEDC /* CrashReporter.framework */; };
 		1E59546E15B6C41300A03429 /* BITHockeyManager.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB465148D7BF50015DEDC /* BITHockeyManager.h */; };
 		1E59547815B6C41300A03429 /* HockeySDK.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E71509A15B5C76F004E88FF /* HockeySDK.h */; settings = {ATTRIBUTES = (); }; };
 		1E59548315B6C4EF00A03429 /* HockeySDK.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E71509A15B5C76F004E88FF /* HockeySDK.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		1E59548515B6C4FB00A03429 /* BITHockeyManager.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB465148D7BF50015DEDC /* BITHockeyManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E5954D315B6F24A00A03429 /* BITHockeyManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB466148D7BF50015DEDC /* BITHockeyManager.m */; };
 		1E5954DC15B6F24A00A03429 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E400561D148D79B500EB22B9 /* Foundation.framework */; };
 		1E5954DD15B6F24A00A03429 /* CrashReporter.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E41EB48B148D7C4E0015DEDC /* CrashReporter.framework */; };
-		1E59559A15B6FDA500A03429 /* BITHockeyManager.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB465148D7BF50015DEDC /* BITHockeyManager.h */; settings = {ATTRIBUTES = (); }; };
-		1E59559B15B6FDA500A03429 /* HockeySDK.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E71509A15B5C76F004E88FF /* HockeySDK.h */; settings = {ATTRIBUTES = (); }; };
+		1E59559A15B6FDA500A03429 /* BITHockeyManager.h in Headers */ = {isa = PBXBuildFile; fileRef = E41EB465148D7BF50015DEDC /* BITHockeyManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		1E59559B15B6FDA500A03429 /* HockeySDK.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E71509A15B5C76F004E88FF /* HockeySDK.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E5955C615B71C8600A03429 /* authorize_denied.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955BB15B71C8600A03429 /* authorize_denied.png */; };
 		1E5955C715B71C8600A03429 /* authorize_denied@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955BC15B71C8600A03429 /* authorize_denied@2x.png */; };
 		1E5955C815B71C8600A03429 /* authorize_request.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955BD15B71C8600A03429 /* authorize_request.png */; };
@@ -174,8 +180,7 @@
 		1E5955D015B71C8600A03429 /* IconGradient@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955C515B71C8600A03429 /* IconGradient@2x.png */; };
 		1E5955FB15B7877B00A03429 /* BITHockeyManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E5955FA15B7877A00A03429 /* BITHockeyManagerDelegate.h */; };
 		1E5955FC15B7877B00A03429 /* BITHockeyManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E5955FA15B7877A00A03429 /* BITHockeyManagerDelegate.h */; };
-		1E5955FD15B7877B00A03429 /* BITHockeyManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E5955FA15B7877A00A03429 /* BITHockeyManagerDelegate.h */; };
-		1E5955FE15B787D600A03429 /* BITHockeyManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E5955FA15B7877A00A03429 /* BITHockeyManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		1E5955FD15B7877B00A03429 /* BITHockeyManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E5955FA15B7877A00A03429 /* BITHockeyManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E71509B15B5C76F004E88FF /* HockeySDK.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E71509A15B5C76F004E88FF /* HockeySDK.h */; settings = {ATTRIBUTES = (); }; };
 		1EC69F5E1615001500808FD9 /* BITHockeyManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EC69F5D1615001500808FD9 /* BITHockeyManagerPrivate.h */; };
 		1EC69F5F1615001500808FD9 /* BITHockeyManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EC69F5D1615001500808FD9 /* BITHockeyManagerPrivate.h */; };
@@ -520,8 +525,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				1E59548315B6C4EF00A03429 /* HockeySDK.h in Headers */,
-				1E59548515B6C4FB00A03429 /* BITHockeyManager.h in Headers */,
-				1E5955FE15B787D600A03429 /* BITHockeyManagerDelegate.h in Headers */,
+				1E4F61DF1621A3CA0033EFC5 /* BITHockeyManager.h in Headers */,
+				1E4F61E01621A3CD0033EFC5 /* BITHockeyManagerDelegate.h in Headers */,
+				1E4F61DD1621A39B0033EFC5 /* BITUpdateManager.h in Headers */,
+				1E4F61DE1621A39E0033EFC5 /* BITUpdateManagerDelegate.h in Headers */,
+				1E4F61D51621A3620033EFC5 /* BITCrashManager.h in Headers */,
+				1E4F61D71621A3660033EFC5 /* BITCrashManagerDelegate.h in Headers */,
+				1E4F61DC1621A3830033EFC5 /* BITFeedbackManager.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -565,24 +575,24 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1E59559A15B6FDA500A03429 /* BITHockeyManager.h in Headers */,
 				1E59559B15B6FDA500A03429 /* HockeySDK.h in Headers */,
+				1E59559A15B6FDA500A03429 /* BITHockeyManager.h in Headers */,
 				1E5955FD15B7877B00A03429 /* BITHockeyManagerDelegate.h in Headers */,
+				1E49A48F1612228800463151 /* BITCrashManager.h in Headers */,
+				1E49A4951612228800463151 /* BITCrashManagerDelegate.h in Headers */,
+				1E49A4731612226D00463151 /* BITUpdateManager.h in Headers */,
+				1E49A4791612226D00463151 /* BITUpdateManagerDelegate.h in Headers */,
+				1E49A44E1612223B00463151 /* BITFeedbackManager.h in Headers */,
 				1E49A43C1612223B00463151 /* BITFeedbackComposeViewController.h in Headers */,
 				1E49A4421612223B00463151 /* BITFeedbackListViewCell.h in Headers */,
 				1E49A4481612223B00463151 /* BITFeedbackListViewController.h in Headers */,
-				1E49A44E1612223B00463151 /* BITFeedbackManager.h in Headers */,
 				1E49A4541612223B00463151 /* BITFeedbackManagerPrivate.h in Headers */,
 				1E49A4571612223B00463151 /* BITFeedbackMessage.h in Headers */,
 				1E49A45D1612223B00463151 /* BITFeedbackUserDataViewController.h in Headers */,
 				1E49A46D1612226D00463151 /* BITAppVersionMetaInfo.h in Headers */,
-				1E49A4731612226D00463151 /* BITUpdateManager.h in Headers */,
-				1E49A4791612226D00463151 /* BITUpdateManagerDelegate.h in Headers */,
 				1E49A47C1612226D00463151 /* BITUpdateManagerPrivate.h in Headers */,
 				1E49A47F1612226D00463151 /* BITUpdateViewController.h in Headers */,
 				1E49A4851612226D00463151 /* BITUpdateViewControllerPrivate.h in Headers */,
-				1E49A48F1612228800463151 /* BITCrashManager.h in Headers */,
-				1E49A4951612228800463151 /* BITCrashManagerDelegate.h in Headers */,
 				1E49A4981612228800463151 /* BITCrashManagerPrivate.h in Headers */,
 				1E49A49B1612228800463151 /* BITCrashReportTextFormatter.h in Headers */,
 				1E49A4AF161222B900463151 /* BITHockeyBaseManager.h in Headers */,

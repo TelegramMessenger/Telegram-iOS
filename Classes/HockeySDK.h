@@ -33,8 +33,6 @@
 #import "BITHockeyManager.h"
 #import "BITHockeyManagerDelegate.h"
 
-#import "Helper/BITHockeyBaseManager.h"
-
 #import "CrashReports/BITCrashManager.h"
 #import "CrashReports/BITCrashManagerDelegate.h"
 
