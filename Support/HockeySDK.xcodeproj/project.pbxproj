@@ -191,8 +191,6 @@
 		E41EB465148D7BF50015DEDC /* BITHockeyManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITHockeyManager.h; sourceTree = "<group>"; };
 		E41EB466148D7BF50015DEDC /* BITHockeyManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITHockeyManager.m; sourceTree = "<group>"; };
 		E41EB48B148D7C4E0015DEDC /* CrashReporter.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CrashReporter.framework; path = ../Vendor/CrashReporter.framework; sourceTree = "<group>"; };
-		E4E7335A148D7A5A00763A39 /* LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; name = LICENSE.txt; path = ../LICENSE.txt; sourceTree = "<group>"; };
-		E4E7335B148D7A5A00763A39 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = text; name = README.md; path = ../README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -319,8 +317,6 @@
 				E4005648148D7A3000EB22B9 /* Resources */,
 				1E66CA8F15D40FF600F35BED /* Support */,
 				E400561B148D79B500EB22B9 /* Products */,
-				E4E7335A148D7A5A00763A39 /* LICENSE.txt */,
-				E4E7335B148D7A5A00763A39 /* README.md */,
 			);
 			sourceTree = "<group>";
 		};
