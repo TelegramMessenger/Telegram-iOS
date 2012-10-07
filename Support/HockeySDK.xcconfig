@@ -1,0 +1,2 @@
+OTHER_LDFLAGS=$(inherited) -ObjC -framework CoreGraphics -framework Foundation -framework QuartzCore -framework SystemConfiguration -weak_framework AdSupport -weak_framework UIKit
+APPLEDOC_DOCSET_NAME=HockeySDK-iOS

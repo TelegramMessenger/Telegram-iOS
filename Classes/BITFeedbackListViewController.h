@@ -1,9 +1,7 @@
 /*
  * Author: Andreas Linde <mail@andreaslinde.de>
- *         Peter Steinberger
  *
  * Copyright (c) 2012 HockeyApp, Bit Stadium GmbH.
- * Copyright (c) 2011 Andreas Linde, Peter Steinberger.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -28,14 +26,13 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+
 #import <UIKit/UIKit.h>
 
-#import "../Helper/BITHockeyBaseViewController.h"
+#import "BITHockeyBaseViewController.h"
 
 
-@class PSStoreButton;
-@class PSAppStoreHeader;
+@interface BITFeedbackListViewController : BITHockeyBaseViewController <UITableViewDelegate, UITableViewDataSource> {
+}
 
-
-@interface BITUpdateViewController : BITHockeyBaseViewController 
 @end

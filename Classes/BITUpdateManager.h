@@ -30,7 +30,7 @@
 
 
 #import <UIKit/UIKit.h>
-#import "../Helper/BITHockeyBaseManager.h"
+#import "BITHockeyBaseManager.h"
 
 
 typedef enum {

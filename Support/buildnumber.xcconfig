@@ -1,3 +1,5 @@
+#include "HockeySDK.xcconfig"
+
 BUILD_NUMBER = 6
 VERSION_STRING = 2.5.4b1
 GCC_PREPROCESSOR_DEFINITIONS = $(inherited) BITHOCKEY_VERSION="@\"2.5.4b1\""

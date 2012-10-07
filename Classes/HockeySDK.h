@@ -33,16 +33,16 @@
 #import "BITHockeyManager.h"
 #import "BITHockeyManagerDelegate.h"
 
-#import "CrashReports/BITCrashManager.h"
-#import "CrashReports/BITCrashManagerDelegate.h"
+#import "BITCrashManager.h"
+#import "BITCrashManagerDelegate.h"
 
-#import "Update/BITUpdateManager.h"
-#import "Update/BITUpdateManagerDelegate.h"
-#import "Update/BITUpdateViewController.h"
+#import "BITUpdateManager.h"
+#import "BITUpdateManagerDelegate.h"
+#import "BITUpdateViewController.h"
 
-#import "Feedback/BITFeedbackManager.h"
-#import "Feedback/BITFeedbackComposeViewController.h"
-#import "Feedback/BITFeedbackListViewController.h"
+#import "BITFeedbackManager.h"
+#import "BITFeedbackComposeViewController.h"
+#import "BITFeedbackListViewController.h"
 
 
 // Notification message which HockeyManager is listening to, to retry requesting updated from the server
