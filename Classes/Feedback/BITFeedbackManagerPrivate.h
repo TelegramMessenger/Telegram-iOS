@@ -56,6 +56,9 @@
 // load new messages from the server
 - (void)updateMessagesList;
 
+// load new messages from the server if the last request is too long ago
+- (void)updateMessagesListIfRequired;
+
 - (NSUInteger)numberOfMessages;
 - (BITFeedbackMessage *)messageAtIndex:(NSUInteger)index;
 

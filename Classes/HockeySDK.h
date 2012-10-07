@@ -50,9 +50,6 @@
 // Notification message which HockeyManager is listening to, to retry requesting updated from the server
 #define BITHockeyNetworkDidBecomeReachableNotification @"BITHockeyNetworkDidBecomeReachable"
 
-// Notification message which tells that loading messages finished
-#define BITHockeyFeedbackMessagesUpdated @"BITHockeyFeedbackMessagesUpdated"
-
 
 // hockey api error domain
 typedef enum {

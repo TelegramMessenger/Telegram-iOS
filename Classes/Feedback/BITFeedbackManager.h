@@ -34,6 +34,13 @@
 #import "BITFeedbackComposeViewController.h"
 
 
+// Notification message which tells that loading messages finished
+#define BITHockeyFeedbackMessagesLoadingStarted @"BITHockeyFeedbackMessagesLoadingStarted"
+
+// Notification message which tells that loading messages finished
+#define BITHockeyFeedbackMessagesLoadingFinished @"BITHockeyFeedbackMessagesLoadingFinished"
+
+
 typedef enum {
   BITFeedbackUserDataElementDontShow = 0, // don't ask for this user data element at all
   BITFeedbackUserDataElementOptional = 1, // the user may provide it, but does not have to

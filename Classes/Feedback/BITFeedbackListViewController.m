@@ -73,7 +73,8 @@
 
 
 - (void)dealloc {
-  [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyFeedbackMessagesUpdated object:nil];
+  [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyFeedbackMessagesLoadingStarted object:nil];
+  [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyFeedbackMessagesLoadingFinished object:nil];
 
   [_lastUpdateDateFormatter release]; _lastUpdateDateFormatter = nil;
   
@@ -85,10 +86,15 @@
 
 - (void)viewDidLoad {
   [super viewDidLoad];
-  
+
+  [[NSNotificationCenter defaultCenter] addObserver:self
+                                           selector:@selector(startLoadingIndicator)
+                                               name:BITHockeyFeedbackMessagesLoadingStarted
+                                             object:nil];
+
   [[NSNotificationCenter defaultCenter] addObserver:self
                                            selector:@selector(updateList)
-                                               name:BITHockeyFeedbackMessagesUpdated
+                                               name:BITHockeyFeedbackMessagesLoadingFinished
                                              object:nil];
   
   self.title = BITHockeyLocalizedString(@"HockeyFeedbackListTitle");
@@ -113,11 +119,27 @@
   }  
 }
 
-- (void)reloadList {
+- (void)startLoadingIndicator {
   id refreshClass = NSClassFromString(@"UIRefreshControl");
   if (refreshClass) {
     [self.refreshControl beginRefreshing];
+  } else {
+    self.navigationItem.rightBarButtonItem.enabled = NO;
   }
+}
+
+- (void)stopLoadingIndicator {
+  id refreshClass = NSClassFromString(@"UIRefreshControl");
+  if (refreshClass) {
+    [self.refreshControl endRefreshing];
+  } else {
+    self.navigationItem.rightBarButtonItem.enabled = YES;
+  }
+}
+
+- (void)reloadList {
+  [self startLoadingIndicator];
+  
   [self.manager updateMessagesList];
 }
 
@@ -125,10 +147,7 @@
   CGSize contentSize = self.tableView.contentSize;
   CGPoint contentOffset = self.tableView.contentOffset;
   
-  id refreshClass = NSClassFromString(@"UIRefreshControl");
-  if (refreshClass) {
-    [self.refreshControl endRefreshing];
-  }
+  [self stopLoadingIndicator];
   
   [self.tableView reloadData];
   if (self.tableView.contentSize.height > contentSize.height)
@@ -140,9 +159,11 @@
 - (void)viewWillAppear:(BOOL)animated {
   self.manager.currentFeedbackListViewController = self;
   
-  [super viewWillAppear:animated];
+  [self.manager updateMessagesListIfRequired];
   
   [self.tableView reloadData];
+
+  [super viewWillAppear:animated];
 }
 
 - (void)viewWillDisappear:(BOOL)animated {

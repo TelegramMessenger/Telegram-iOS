@@ -75,7 +75,7 @@
     _incomingMessagesAlertShowing = NO;
     _lastCheck = nil;
     _token = nil;
-
+    
     self.feedbackList = [NSMutableArray array];
 
     _fileManager = [[NSFileManager alloc] init];
@@ -184,6 +184,13 @@
   }
 }
 
+- (void)updateMessagesListIfRequired {
+  double now = [[NSDate date] timeIntervalSince1970];
+  if ((now - [_lastCheck timeIntervalSince1970] > 30)) {
+    [self updateMessagesList];
+  }
+}
+
 - (void)updateAppDefinedUserData {
   if ([BITHockeyManager sharedHockeyManager].delegate &&
       [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
@@ -274,7 +281,7 @@
     [self sortFeedbackList];
     
     // inform the UI to update its data in case the list is already showing
-    [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyFeedbackMessagesUpdated object:nil];
+    [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyFeedbackMessagesLoadingFinished object:nil];
   }
 
   [unarchiver finishDecoding];
@@ -557,7 +564,9 @@
   NSString *boundary = @"----FOO";
   
   _networkRequestInProgress = YES;
-  
+  // inform the UI to update its data in case the list is already showing
+  [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyFeedbackMessagesLoadingStarted object:nil];
+
   NSString *tokenParameter = @"";
   if ([self token]) {
     tokenParameter = [NSString stringWithFormat:@"/%@", [self token]];
@@ -658,11 +667,16 @@
                                 withText:nil
                        completionHandler:^(NSError *err){
                          // inform the UI to update its data in case the list is already showing
-                         [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyFeedbackMessagesUpdated object:nil];
+                         [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyFeedbackMessagesLoadingFinished object:nil];
                        }];
 }
 
 - (void)submitPendingMessages {
+  if (_networkRequestInProgress) {
+    [self performSelector:@selector(submitPendingMessages) withObject:nil afterDelay:2.0f];
+    return;
+  }
+  
   // app defined user data may have changed, update it
   [self updateAppDefinedUserData];
   
@@ -693,7 +707,7 @@
                            }
                            
                            // inform the UI to update its data in case the list is already showing
-                           [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyFeedbackMessagesUpdated object:nil];
+                           [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyFeedbackMessagesLoadingFinished object:nil];
                          }];
   }
 }
