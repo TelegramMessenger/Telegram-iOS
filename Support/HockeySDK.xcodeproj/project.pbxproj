@@ -912,7 +912,6 @@
 					"$(inherited)",
 					"\"$(SRCROOT)/../Vendor\"",
 				);
-				GCC_PREPROCESSOR_DEFINITIONS = "";
 				GCC_THUMB_SUPPORT = NO;
 				PRODUCT_NAME = HockeySDK;
 				SKIP_INSTALL = YES;
@@ -927,7 +926,6 @@
 					"$(inherited)",
 					"\"$(SRCROOT)/../Vendor\"",
 				);
-				GCC_PREPROCESSOR_DEFINITIONS = "";
 				GCC_THUMB_SUPPORT = NO;
 				PRODUCT_NAME = HockeySDK;
 				SKIP_INSTALL = YES;
