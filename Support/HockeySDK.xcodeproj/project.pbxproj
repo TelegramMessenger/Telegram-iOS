@@ -912,6 +912,7 @@
 					"$(inherited)",
 					"\"$(SRCROOT)/../Vendor\"",
 				);
+				GCC_PREPROCESSOR_DEFINITIONS = "";
 				GCC_THUMB_SUPPORT = NO;
 				PRODUCT_NAME = HockeySDK;
 				SKIP_INSTALL = YES;
@@ -926,6 +927,7 @@
 					"$(inherited)",
 					"\"$(SRCROOT)/../Vendor\"",
 				);
+				GCC_PREPROCESSOR_DEFINITIONS = "";
 				GCC_THUMB_SUPPORT = NO;
 				PRODUCT_NAME = HockeySDK;
 				SKIP_INSTALL = YES;
@@ -936,6 +938,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				GCC_THUMB_SUPPORT = NO;
+				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -948,6 +951,7 @@
 			buildSettings = {
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_THUMB_SUPPORT = NO;
+				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

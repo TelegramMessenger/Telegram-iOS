@@ -1,8 +1,42 @@
+### Version 2.5.4
+
+- General:
+
+    - Declared as final release, since everything in 2.5.4b3 is working as expected
+
+### Version 2.5.4b3
+
+- General:
+
+    - [NEW] Atlassian JMC support disabled (Use subproject integration if you want it)
+
+### Version 2.5.4b2
+
+- Crash Reporting:
+
+    - [UPDATE] Migrate pre v2.5 auto send user setting
+    - [BUGFIX] The alert option 'Auto Send' did not persist correctly
+
+- Updating:
+
+    - [BUGFIX] Authorization option did not persist correctly and caused authorization to re-appear on every cold app start
+
+### Version 2.5.4b1
+
+- General:
+
+    - [NEW] JMC support is removed from binary distribution, requires the compiler preprocessor definition `JIRA_MOBILE_CONNECT_SUPPORT_ENABLED=1` to be linked. Enabled when using the subproject
+    - [BUGFIX] Fix compiler warnings when using Cocoapods
+
+- Updating:
+
+    - [BUGFIX] `expiryDate` property not working correctly
+
 ### Version 2.5.3
 
 - General:
 
-    - Fix checking validity of live identifier not working correctly
+    - [BUGFIX] Fix checking validity of live identifier not working correctly
 
 ### Version 2.5.2
 

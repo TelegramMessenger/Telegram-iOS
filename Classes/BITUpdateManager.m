@@ -150,6 +150,11 @@
   }
 }
 
+- (void)cleanupDidBecomeActiveNotifications {
+  [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
+  [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
+}
+
 #pragma mark - Expiry
 
 - (BOOL)expiryDateReached {
@@ -182,6 +187,9 @@
     if (self.delegate != nil && [self.delegate respondsToSelector:@selector(didDisplayExpiryAlertForUpdateManager:)]) {
       [self.delegate didDisplayExpiryAlertForUpdateManager:self];
     }
+    
+    // the UI is now blocked, make sure we don't add our UI on top of it over and over again
+    [self cleanupDidBecomeActiveNotifications];
   }
 }
 
@@ -748,7 +756,7 @@
         
         // store the new data
         [[NSUserDefaults standardUserDefaults] setObject:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] forKey:kBITUpdateAuthorizedVersion];
-        [[NSUserDefaults standardUserDefaults] setObject:token forKey:kBITUpdateAuthorizedVersion];
+        [[NSUserDefaults standardUserDefaults] setObject:token forKey:kBITUpdateAuthorizedToken];
         [[NSUserDefaults standardUserDefaults] synchronize];
         
         self.requireAuthorization = NO;
@@ -764,7 +772,7 @@
         
         // store the new data
         [[NSUserDefaults standardUserDefaults] setObject:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] forKey:kBITUpdateAuthorizedVersion];
-        [[NSUserDefaults standardUserDefaults] setObject:token forKey:kBITUpdateAuthorizedVersion];
+        [[NSUserDefaults standardUserDefaults] setObject:token forKey:kBITUpdateAuthorizedToken];
         [[NSUserDefaults standardUserDefaults] synchronize];
         
         [self showBlockingScreen:BITHockeyLocalizedString(@"UpdateAuthorizationDenied") image:@"authorize_denied.png"];
@@ -915,17 +923,18 @@
 
     BITHockeyLog(@"INFO: Start UpdateManager");
 
-    if ([self expiryDateReached]) return;
-    
-    if (![self appVersionIsAuthorized]) {
-      if ([self authorizationState] == BITUpdateAuthorizationPending) {
-        [self showBlockingScreen:BITHockeyLocalizedString(@"UpdateAuthorizationProgress") image:@"authorize_request.png"];
-        
-        [self performSelector:@selector(checkForAuthorization) withObject:nil afterDelay:0.0f];
-      }
-    } else {
-      if ([self checkForTracker] || ([self isCheckForUpdateOnLaunch] && [self shouldCheckForUpdates])) {
-        [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0f];
+    [self checkExpiryDateReached];
+    if (![self expiryDateReached]) {
+      if (![self appVersionIsAuthorized]) {
+        if ([self authorizationState] == BITUpdateAuthorizationPending) {
+          [self showBlockingScreen:BITHockeyLocalizedString(@"UpdateAuthorizationProgress") image:@"authorize_request.png"];
+          
+          [self performSelector:@selector(checkForAuthorization) withObject:nil afterDelay:0.0f];
+        }
+      } else {
+        if ([self checkForTracker] || ([self isCheckForUpdateOnLaunch] && [self shouldCheckForUpdates])) {
+          [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0f];
+        }
       }
     }
   } else {

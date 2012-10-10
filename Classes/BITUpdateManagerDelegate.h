@@ -28,6 +28,8 @@
 
 #import <Foundation/Foundation.h>
 
+@class BITUpdateManager;
+
 /**
  The `BITUpdateManagerDelegate` formal protocol defines methods further configuring
  the behaviour of `BITUpdateManager`. 
@@ -71,6 +73,9 @@
  If you want to display your own user interface when the expiry date is reached,
  implement this method, present your user interface and return _NO_. In this case
  it is your responsibility to make the app unusable!
+ 
+ Note: This delegate will be invoked on startup and every time the app becomes
+ active again!
  
  When returning _YES_ the default blocking UI will be shown.
  
