@@ -660,6 +660,9 @@
 
 - (void)fetchMessageUpdates {
   if ([_feedbackList count] == 0) {
+    // inform the UI to update its data in case the list is already showing
+    [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyFeedbackMessagesLoadingFinished object:nil];
+    
     return;
   }
   
