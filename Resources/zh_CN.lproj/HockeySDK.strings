@@ -162,6 +162,9 @@
 /* Name In Message From Server If Name Not Set */
 "HockeyFeedbackListmessageResponseNameNotSet" = "Response";
 
+/* Message pending to be send */
+"HockeyFeedbackListMessagePending" = "Pending";
+
 
 /* Compose Message */
 

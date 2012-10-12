@@ -136,7 +136,12 @@
   }
 
   // header
-  NSString *dateString = [self.dateFormatter stringFromDate:self.date];
+  NSString *dateString;
+  if (self.date) {
+    dateString = [self.dateFormatter stringFromDate:self.date];
+  } else {
+    dateString = BITHockeyLocalizedString(@"Pending");
+  }
   [self.labelTitle setText:dateString];// [self.date description]];
   [self.labelTitle setFrame:CGRectMake(FRAME_SIDE_BORDER, FRAME_TOP_BORDER + LABEL_TITLE_Y, self.frame.size.width - (2 * FRAME_SIDE_BORDER), LABEL_TITLE_HEIGHT)];
     

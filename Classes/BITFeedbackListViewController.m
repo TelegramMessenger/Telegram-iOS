@@ -150,7 +150,7 @@
   [self stopLoadingIndicator];
   
   [self.tableView reloadData];
-  if (self.tableView.contentSize.height > contentSize.height)
+  if (contentSize.height > 0 && self.tableView.contentSize.height > contentSize.height)
     [self.tableView setContentOffset:CGPointMake(contentOffset.x, self.tableView.contentSize.height - contentSize.height + contentOffset.y) animated:NO];
   
   [self.tableView flashScrollIndicators];

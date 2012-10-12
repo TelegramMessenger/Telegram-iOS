@@ -266,12 +266,6 @@
   if ([unarchiver containsValueForKey:kBITFeedbackToken])
     self.token = [unarchiver decodeObjectForKey:kBITFeedbackToken];
   
-  if ([unarchiver containsValueForKey:kBITFeedbackName])
-    self.userName = [unarchiver decodeObjectForKey:kBITFeedbackName];
-  
-  if ([unarchiver containsValueForKey:kBITFeedbackEmail])
-    self.userEmail = [unarchiver decodeObjectForKey:kBITFeedbackEmail];
-  
   if ([unarchiver containsValueForKey:kBITFeedbackDateOfLastCheck])
     self.lastCheck = [unarchiver decodeObjectForKey:kBITFeedbackDateOfLastCheck];
   
@@ -617,6 +611,7 @@
     _networkRequestInProgress = NO;
     
     if (err) {
+      [self reportError:err];
       [self markSendInProgressMessagesAsPending];
       completionHandler(err);
     } else {
@@ -693,7 +688,7 @@
     if (self.userName)
       [messageToSend setName:self.userName];
     if (self.userEmail)
-      [messageToSend setName:self.userEmail];
+      [messageToSend setEmail:self.userEmail];
     
     NSString *httpMethod = @"POST";
     if ([self token]) {
