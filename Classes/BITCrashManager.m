@@ -264,6 +264,46 @@
 }
 
 
+- (NSString *)userNameForCrashReport {
+  NSString *username = @"";
+  
+  if (self.delegate && [self.delegate respondsToSelector:@selector(userNameForCrashManager:)]) {
+    BITHockeyLog(@"DEPRECATED: Please user BITHockeyManagerDelegate's userNameForHockeyManager:componentManager: or userIDForHockeyManager:componentManager: instead.");
+    username = [self.delegate userNameForCrashManager:self];
+  }
+  if ([BITHockeyManager sharedHockeyManager].delegate &&
+      [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
+    username = [[BITHockeyManager sharedHockeyManager].delegate
+                userNameForHockeyManager:[BITHockeyManager sharedHockeyManager]
+                componentManager:self];
+  }
+  if ([BITHockeyManager sharedHockeyManager].delegate &&
+      [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
+    username = [[BITHockeyManager sharedHockeyManager].delegate
+                userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
+                componentManager:self];
+  }
+  
+  return username;
+}
+
+- (NSString *)userEmailForCrashReport {
+  NSString *useremail = @"";
+
+  if (self.delegate && [self.delegate respondsToSelector:@selector(userEmailForCrashManager:)]) {
+    BITHockeyLog(@"DEPRECATED: Please user BITHockeyManagerDelegate's userEmailForHockeyManager:componentManager: instead.");
+    useremail = [self.delegate userEmailForCrashManager:self];
+  }
+  if ([BITHockeyManager sharedHockeyManager].delegate &&
+      [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userEmailForHockeyManager:componentManager:)]) {
+    useremail = [[BITHockeyManager sharedHockeyManager].delegate
+                 userEmailForHockeyManager:[BITHockeyManager sharedHockeyManager]
+                 componentManager:self];
+  }
+  
+  return useremail;
+}
+
 #pragma mark - PLCrashReporter
 
 // Called to handle a pending crash report.
@@ -292,32 +332,11 @@
       
       // write the meta file
       NSMutableDictionary *metaDict = [NSMutableDictionary dictionaryWithCapacity:4];
-      NSString *username = @"";
-      NSString *useremail = @"";
       NSString *applicationLog = @"";
       NSString *errorString = nil;
       
-      if ([BITHockeyManager sharedHockeyManager].delegate &&
-          [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
-        username = [[BITHockeyManager sharedHockeyManager].delegate
-                    userNameForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                    componentManager:self];
-      }
-      if ([BITHockeyManager sharedHockeyManager].delegate &&
-          [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
-        username = [[BITHockeyManager sharedHockeyManager].delegate
-                    userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                    componentManager:self];
-      }
-      [metaDict setObject:username forKey:kBITCrashMetaUserName];
-
-      if ([BITHockeyManager sharedHockeyManager].delegate &&
-          [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userEmailForHockeyManager:componentManager:)]) {
-        useremail = [[BITHockeyManager sharedHockeyManager].delegate
-                    userEmailForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                    componentManager:self];
-      }      
-      [metaDict setObject:useremail forKey:kBITCrashMetaUserEmail];
+      [metaDict setObject:[self userNameForCrashReport] forKey:kBITCrashMetaUserName];
+      [metaDict setObject:[self userEmailForCrashReport] forKey:kBITCrashMetaUserEmail];
       
       if (self.delegate != nil && [self.delegate respondsToSelector:@selector(applicationLogForCrashManager:)]) {
         applicationLog = [self.delegate applicationLogForCrashManager:self] ?: @"";
@@ -429,30 +448,10 @@
       NSString *alertDescription = [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundAnonymousDescription"), appName];
       
       // the crash report is not anynomous any more if username or useremail are not nil
-      NSString *username = nil;
-      NSString *useremail = nil;
-      
-      if ([BITHockeyManager sharedHockeyManager].delegate &&
-          [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
-        username = [[BITHockeyManager sharedHockeyManager].delegate
-                    userNameForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                    componentManager:self];
-      }
-      if ([BITHockeyManager sharedHockeyManager].delegate &&
-          [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
-        username = [[BITHockeyManager sharedHockeyManager].delegate
-                    userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                    componentManager:self];
-      }
-      
-      if ([BITHockeyManager sharedHockeyManager].delegate &&
-          [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userEmailForHockeyManager:componentManager:)]) {
-        useremail = [[BITHockeyManager sharedHockeyManager].delegate
-                     userEmailForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                     componentManager:self];
-      }
-      
-      if (username || useremail) {
+      NSString *username = [self userNameForCrashReport];
+      NSString *useremail = [self userEmailForCrashReport];
+            
+      if ((username && [username length] > 0) || (useremail && [useremail length] > 0)) {
         alertDescription = [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundDescription"), appName];
       }
       

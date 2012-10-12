@@ -94,8 +94,8 @@
  
  @param hockeyManager The `BITHockeyManager` HockeyManager instance invoking this delegate
  @param componentManager The `BITHockeyBaseManager` component instance invoking this delegate
- @see userNameForHockeyManager:
- @see userEmailForHockeyManager:
+ @see userNameForHockeyManager:componentManager:
+ @see userEmailForHockeyManager:componentManager:
  @warning When returning a non nil value for the `BITCrashManager` component, crash reports
  are not anonymous any more and the crash alerts will not show the word "anonymous"!
  */
@@ -121,8 +121,8 @@
  
  @param hockeyManager The `BITHockeyManager` HockeyManager instance invoking this delegate
  @param componentManager The `BITHockeyBaseManager` component instance invoking this delegate
- @see userIDForHockeyManager:
- @see userEmailForHockeyManager:
+ @see userIDForHockeyManager:componentManager:
+ @see userEmailForHockeyManager:componentManager:
  @warning When returning a non nil value for the `BITCrashManager` component, crash reports
  are not anonymous any more and the crash alerts will not show the word "anonymous"!
  */
@@ -148,8 +148,8 @@
  
  @param hockeyManager The `BITHockeyManager` HockeyManager instance invoking this delegate
  @param componentManager The `BITHockeyBaseManager` component instance invoking this delegate
- @see userIDForHockeyManager:
- @see userNameForHockeyManager:
+ @see userIDForHockeyManager:componentManager:
+ @see userNameForHockeyManager:componentManager:
  @warning When returning a non nil value for the `BITCrashManager` component, crash reports
  are not anonymous any more and the crash alerts will not show the word "anonymous"!
  */

@@ -54,6 +54,32 @@
 
 
 
+/** Return the user name or userid that should be send along each crash report
+ 
+ @param crashManager The `BITCrashManager` instance invoking this delegate
+ @see applicationLogForCrashManager:
+ @see userEmailForCrashManager:
+ @deprecated Please use `BITHockeyManagerDelegate userNameForHockeyManager:componentManager:` instead
+ @warning When returning a non nil value, crash reports are not anonymous any
+ more and the alerts will not show the "anonymous" word!
+ */
+-(NSString *)userNameForCrashManager:(BITCrashManager *)crashManager;
+
+
+
+/** Return the users email address that should be send along each crash report
+ 
+ @param crashManager The `BITCrashManager` instance invoking this delegate
+ @see applicationLogForCrashManager:
+ @see userNameForCrashManager:
+ @deprecated Please use `BITHockeyManagerDelegate userEmailForHockeyManager:componentManager:` instead
+ @warning When returning a non nil value, crash reports are not anonymous any
+ more and the alerts will not show the "anonymous" word!
+ */
+-(NSString *)userEmailForCrashManager:(BITCrashManager *)crashManager;
+
+
+
 ///-----------------------------------------------------------------------------
 /// @name Alert
 ///-----------------------------------------------------------------------------
