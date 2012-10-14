@@ -40,6 +40,7 @@
     _name = nil;
     _email = nil;
     _date = nil;
+    _token = nil;
     _id = [[NSNumber alloc] initWithInteger:0];
     _status = BITFeedbackMessageStatusSendPending;
     _userMessage = NO;
@@ -53,6 +54,7 @@
   [_email release], _email = nil;
   [_date release], _date = nil;
   [_id release], _id = nil;
+  [_token release], _token = nil;
   
   [super dealloc];
 }
@@ -68,6 +70,7 @@
   [encoder encodeObject:self.id forKey:@"id"];
   [encoder encodeInteger:self.status forKey:@"status"];
   [encoder encodeBool:self.userMessage forKey:@"userMessage"];
+  [encoder encodeObject:self.token forKey:@"token"];
 }
 
 - (id)initWithCoder:(NSCoder *)decoder {
@@ -79,6 +82,7 @@
     self.id = [decoder decodeObjectForKey:@"id"];
     self.status = [decoder decodeIntegerForKey:@"status"];
     self.userMessage = [decoder decodeBoolForKey:@"userMessage"];
+    self.token = [decoder decodeObjectForKey:@"token"];
   }
   return self;
 }

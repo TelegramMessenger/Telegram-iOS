@@ -32,14 +32,16 @@
 typedef enum {
   // default and new messages from SDK per default
   BITFeedbackMessageStatusSendPending = 0,
+  // message is in conflict, happens if the message is already stored on the server and tried sending it again
+  BITFeedbackMessageStatusInConflict = 1,
   // sending of message is in progress
-  BITFeedbackMessageStatusSendInProgress = 1,
+  BITFeedbackMessageStatusSendInProgress = 2,
   // new messages from server
-  BITFeedbackMessageStatusUnread = 2,
+  BITFeedbackMessageStatusUnread = 3,
   // messages from server once read and new local messages once successful send from SDK
-  BITFeedbackMessageStatusRead = 3,
+  BITFeedbackMessageStatusRead = 4,
   // message is archived, happens if the thread is deleted from the server
-  BITFeedbackMessageStatusArchived = 4
+  BITFeedbackMessageStatusArchived = 5
 } BITFeedbackMessageStatus;
 
 @interface BITFeedbackMessage : NSObject {
@@ -50,6 +52,7 @@ typedef enum {
 @property (nonatomic, copy) NSString *email;
 @property (nonatomic, copy) NSDate *date;
 @property (nonatomic, copy) NSNumber *id;
+@property (nonatomic, copy) NSString *token;
 @property (nonatomic) BITFeedbackMessageStatus status;
 @property (nonatomic) BOOL userMessage;
 

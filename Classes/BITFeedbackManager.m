@@ -45,6 +45,7 @@
 #define kBITFeedbackToken           @"HockeyFeedbackToken"
 #define kBITFeedbackName            @"HockeyFeedbackName"
 #define kBITFeedbackEmail           @"HockeyFeedbackEmail"
+#define kBITFeedbackLastMessageID   @"HockeyFeedbackLastMessageID"
 
 
 @implementation BITFeedbackManager {
@@ -142,6 +143,20 @@
 - (void)cleanupDidBecomeActiveNotifications {
   [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
   [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
+}
+
+#pragma mark - Private methods
+
+- (NSString *)uuidString {
+  CFUUIDRef theToken = CFUUIDCreate(NULL);
+  CFStringRef stringUUID = CFUUIDCreateString(NULL, theToken);
+  CFRelease(theToken);
+  
+  return [(NSString *)stringUUID autorelease];
+}
+
+- (NSString *)uuidAsLowerCaseAndShortened {
+  return [[[self uuidString] lowercaseString] stringByReplacingOccurrencesOfString:@"-" withString:@""];
 }
 
 #pragma mark - Feedback Modal UI
@@ -332,13 +347,18 @@
     NSDate *date1 = [obj1 date];
     NSDate *date2 = [obj2 date];
     
-    // not send and send in progress messages on top, sorted by date
+    // not send, in conflict and send in progress messages on top, sorted by date
     // read and unread on bottom, sorted by date
+    // archived on the very bottom
     
     if ([obj1 status] >= BITFeedbackMessageStatusSendInProgress && [obj2 status] < BITFeedbackMessageStatusSendInProgress) {
       return NSOrderedAscending;
     } else if ([obj1 status] < BITFeedbackMessageStatusSendInProgress && [obj2 status] >= BITFeedbackMessageStatusSendInProgress) {
       return NSOrderedDescending;
+    } else if ([obj1 status] == BITFeedbackMessageStatusArchived && [obj2 status] < BITFeedbackMessageStatusArchived) {
+      return NSOrderedDescending;
+    } else if ([obj1 status] < BITFeedbackMessageStatusArchived && [obj2 status] == BITFeedbackMessageStatusArchived) {
+      return NSOrderedAscending;
     } else {
       return (NSInteger)[date2 compare:date1];
     }
@@ -387,6 +407,14 @@
   [_feedbackList enumerateObjectsUsingBlock:^(id objMessage, NSUInteger messagesIdx, BOOL *stop) {
     if ([(BITFeedbackMessage *)objMessage status] == BITFeedbackMessageStatusSendInProgress)
       [(BITFeedbackMessage *)objMessage setStatus:BITFeedbackMessageStatusSendPending];
+  }];
+}
+
+- (void)markSendInProgressMessagesAsInConflict {
+  // make sure message that may have not been send successfully, get back into the right state to be send again
+  [_feedbackList enumerateObjectsUsingBlock:^(id objMessage, NSUInteger messagesIdx, BOOL *stop) {
+    if ([(BITFeedbackMessage *)objMessage status] == BITFeedbackMessageStatusSendInProgress)
+      [(BITFeedbackMessage *)objMessage setStatus:BITFeedbackMessageStatusInConflict];
   }];
 }
 
@@ -479,19 +507,21 @@
       BITFeedbackMessage *thisMessage = [self messageWithID:messageID];
       if (!thisMessage) {
         // check if this is a message that was sent right now
-        __block BITFeedbackMessage *matchingSendInProgressMessage = nil;
+        __block BITFeedbackMessage *matchingSendInProgressOrInConflictMessage = nil;
+        
+        // TODO: match messages in state conflict
         
         [messagesSendInProgress enumerateObjectsUsingBlock:^(id objSendInProgressMessage, NSUInteger messagesSendInProgressIdx, BOOL *stop) {
-          if ([[(NSDictionary *)objMessage objectForKey:@"text"] isEqualToString:[(BITFeedbackMessage *)objSendInProgressMessage text]]) {
-            matchingSendInProgressMessage = objSendInProgressMessage;
+          if ([[(NSDictionary *)objMessage objectForKey:@"token"] isEqualToString:[(BITFeedbackMessage *)objSendInProgressMessage token]]) {
+            matchingSendInProgressOrInConflictMessage = objSendInProgressMessage;
             *stop = YES;
           }
         }];
         
-        if (matchingSendInProgressMessage) {
-          matchingSendInProgressMessage.date = [self parseRFC3339Date:[(NSDictionary *)objMessage objectForKey:@"created_at"]];
-          matchingSendInProgressMessage.id = messageID;
-          matchingSendInProgressMessage.status = BITFeedbackMessageStatusRead;
+        if (matchingSendInProgressOrInConflictMessage) {
+          matchingSendInProgressOrInConflictMessage.date = [self parseRFC3339Date:[(NSDictionary *)objMessage objectForKey:@"created_at"]];
+          matchingSendInProgressOrInConflictMessage.id = messageID;
+          matchingSendInProgressOrInConflictMessage.status = BITFeedbackMessageStatusRead;
         } else {
           BITFeedbackMessage *message = [[[BITFeedbackMessage alloc] init] autorelease];
           message.text = [(NSDictionary *)objMessage objectForKey:@"text"];
@@ -554,7 +584,7 @@
   return;
 }
 
-- (void)sendNetworkRequestWithHTTPMethod:(NSString *)httpMethod withText:(NSString *)text completionHandler:(void (^)(NSError *err))completionHandler {
+- (void)sendNetworkRequestWithHTTPMethod:(NSString *)httpMethod withMessage:(BITFeedbackMessage *)message completionHandler:(void (^)(NSError *err))completionHandler {
   NSString *boundary = @"----FOO";
   
   _networkRequestInProgress = YES;
@@ -582,7 +612,7 @@
   [request setValue:@"Hockey/iOS" forHTTPHeaderField:@"User-Agent"];
   [request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];
   
-  if (text) {
+  if (message) {
     NSString *contentType = [NSString stringWithFormat:@"multipart/form-data; boundary=%@", boundary];
     [request setValue:contentType forHTTPHeaderField:@"Content-type"];
     
@@ -593,7 +623,8 @@
     [postBody appendData:[self appendPostValue:[self getDevicePlatform] forKey:@"model"]];
     [postBody appendData:[self appendPostValue:[[[NSBundle mainBundle] preferredLocalizations] objectAtIndex:0] forKey:@"lang"]];
     [postBody appendData:[self appendPostValue:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] forKey:@"bundle_version"]];
-    [postBody appendData:[self appendPostValue:text forKey:@"text"]];
+    [postBody appendData:[self appendPostValue:[message text] forKey:@"text"]];
+    [postBody appendData:[self appendPostValue:[message token] forKey:@"message_token"]];
     
     if (self.userName) {
       [postBody appendData:[self appendPostValue:self.userName forKey:@"name"]];
@@ -619,6 +650,28 @@
       if (statusCode == 404) {
         // thread has been deleted, we archive it
         [self updateMessageListFromResponse:nil];
+      } else if (statusCode == 409) {
+        // we submitted a message that is already on the server, mark it as being in conflict and resolve it with another fetch
+        
+        if (!self.token) {
+          // set the token to the first message token, since this is identical
+          __block NSString *token = nil;
+
+          [_feedbackList enumerateObjectsUsingBlock:^(id objMessage, NSUInteger messagesIdx, BOOL *stop) {
+            if ([(BITFeedbackMessage *)objMessage status] == BITFeedbackMessageStatusSendInProgress) {
+              token = [(BITFeedbackMessage *)objMessage token];
+              *stop = YES;
+            }
+          }];
+
+          if (token) {
+            self.token = token;
+          }
+        }
+        
+        [self markSendInProgressMessagesAsInConflict];
+        [self saveMessages];
+        [self performSelector:@selector(fetchMessageUpdates) withObject:nil afterDelay:0.2];
       } else if ([responseData length]) {
         NSString *responseString = [[[NSString alloc] initWithBytes:[responseData bytes] length:[responseData length] encoding: NSUTF8StringEncoding] autorelease];
         BITHockeyLog(@"INFO: Received API response: %@", responseString);
@@ -662,7 +715,7 @@
   }
   
   [self sendNetworkRequestWithHTTPMethod:@"GET"
-                                withText:nil
+                             withMessage:nil
                        completionHandler:^(NSError *err){
                          // inform the UI to update its data in case the list is already showing
                          [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyFeedbackMessagesLoadingFinished object:nil];
@@ -696,7 +749,7 @@
     }
     
     [self sendNetworkRequestWithHTTPMethod:httpMethod
-                                  withText:[messageToSend text]
+                               withMessage:messageToSend
                          completionHandler:^(NSError *err){
                            if (err) {
                              [self markSendInProgressMessagesAsPending];
@@ -714,6 +767,7 @@
   BITFeedbackMessage *message = [[[BITFeedbackMessage alloc] init] autorelease];
   message.text = text;
   [message setStatus:BITFeedbackMessageStatusSendPending];
+  [message setToken:[self uuidAsLowerCaseAndShortened]];  
   [message setUserMessage:YES];
   
   [_feedbackList addObject:message];
