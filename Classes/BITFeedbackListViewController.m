@@ -137,6 +137,14 @@
   }
 }
 
+- (BOOL)isRefreshingWithNewControl {
+  id refreshClass = NSClassFromString(@"UIRefreshControl");
+  if (refreshClass) {
+    return [self.refreshControl isRefreshing];
+  }
+  return NO;
+}
+
 - (void)reloadList {
   [self startLoadingIndicator];
   
@@ -147,12 +155,12 @@
   CGSize contentSize = self.tableView.contentSize;
   CGPoint contentOffset = self.tableView.contentOffset;
   
-  [self stopLoadingIndicator];
-  
   [self.tableView reloadData];
-  if (contentSize.height > 0 && self.tableView.contentSize.height > contentSize.height)
+  if (contentSize.height > 0 && self.tableView.contentSize.height > contentSize.height && ![self isRefreshingWithNewControl])
     [self.tableView setContentOffset:CGPointMake(contentOffset.x, self.tableView.contentSize.height - contentSize.height + contentOffset.y) animated:NO];
   
+  [self stopLoadingIndicator];
+
   [self.tableView flashScrollIndicators];
 }
 
