@@ -54,6 +54,7 @@
 @interface BITFeedbackListViewCell ()
 
 @property (nonatomic, retain) NSDateFormatter *dateFormatter;
+@property (nonatomic, retain) NSDateFormatter *timeFormatter;
 
 @property (nonatomic, retain) UILabel *labelTitle;
 @property (nonatomic, retain) UILabel *labelText;
@@ -82,6 +83,12 @@
     [self.dateFormatter setLocale:[NSLocale currentLocale]];    
     [self.dateFormatter setDoesRelativeDateFormatting:YES];
 
+    self.timeFormatter = [[[NSDateFormatter alloc] init] autorelease];
+    [self.timeFormatter setTimeStyle:NSDateFormatterShortStyle];
+    [self.timeFormatter setDateStyle:NSDateFormatterNoStyle];
+    [self.timeFormatter setLocale:[NSLocale currentLocale]];
+    [self.timeFormatter setDoesRelativeDateFormatting:YES];
+
     self.labelTitle = [[[UILabel alloc] init] autorelease];
     self.labelTitle.font = [UIFont systemFontOfSize:TITLE_FONTSIZE];
     
@@ -95,6 +102,7 @@
 
 - (void)dealloc {
   [_dateFormatter release], _dateFormatter = nil;
+  [_timeFormatter release], _timeFormatter = nil;
   
   [_labelTitle release], _labelTitle = nil;
   [_labelText release], _labelText = nil;
@@ -104,6 +112,21 @@
   [_text release], _text = nil;
   
   [super dealloc];
+}
+
+
+#pragma mark - Private
+
+- (BOOL)isSameDayWithDate1:(NSDate*)date1 date2:(NSDate*)date2 {
+  NSCalendar* calendar = [NSCalendar currentCalendar];
+  
+  unsigned unitFlags = NSYearCalendarUnit | NSMonthCalendarUnit |  NSDayCalendarUnit;
+  NSDateComponents *dateComponent1 = [calendar components:unitFlags fromDate:date1];
+  NSDateComponents *dateComponent2 = [calendar components:unitFlags fromDate:date2];
+  
+  return ([dateComponent1 day] == [dateComponent2 day] &&
+          [dateComponent1 month] == [dateComponent2 month] &&
+          [dateComponent1 year]  == [dateComponent2 year]);
 }
 
 
@@ -138,7 +161,11 @@
   // header
   NSString *dateString;
   if (self.date) {
-    dateString = [self.dateFormatter stringFromDate:self.date];
+    if ([self isSameDayWithDate1:[NSDate date] date2:self.date]) {
+      dateString = [self.timeFormatter stringFromDate:self.date];
+    } else {
+      dateString = [self.dateFormatter stringFromDate:self.date];
+    }
   } else {
     dateString = BITHockeyLocalizedString(@"Pending");
   }
