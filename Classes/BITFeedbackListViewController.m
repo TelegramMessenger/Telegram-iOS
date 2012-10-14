@@ -230,7 +230,8 @@
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
   static NSString *CellIdentifier = @"MessageCell";
   static NSString *LastUpdateIdentifier = @"LastUpdateCell";
-  static NSString *ButtonIdentifier = @"ButtonCell";
+  static NSString *ButtonTopIdentifier = @"ButtonTopCell";
+  static NSString *ButtonBottomIdentifier = @"ButtonBottomCell";
   
   if (indexPath.section == 0 && indexPath.row == 1) {
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:LastUpdateIdentifier];
@@ -251,15 +252,26 @@
   } else if (indexPath.section == 0 || indexPath.section == 2) {
     CGFloat topGap = 0.0f;
     
-    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:ButtonIdentifier];
+    UITableViewCell *cell = nil;
     
-    if (!cell) {
-      cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:ButtonIdentifier] autorelease];
-      cell.textLabel.font = [UIFont systemFontOfSize:14];
-      cell.textLabel.numberOfLines = 0;
-      cell.accessoryType = UITableViewCellAccessoryNone;
-      cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    if (indexPath.section == 0) {
+      cell = [tableView dequeueReusableCellWithIdentifier:ButtonTopIdentifier];
+    
+      if (!cell) {
+        cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:ButtonTopIdentifier] autorelease];
+      }
+    } else {
+      cell = [tableView dequeueReusableCellWithIdentifier:ButtonBottomIdentifier];
+      
+      if (!cell) {
+        cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:ButtonBottomIdentifier] autorelease];
+      }
     }
+    cell.textLabel.font = [UIFont systemFontOfSize:14];
+    cell.textLabel.numberOfLines = 0;
+    cell.accessoryType = UITableViewCellAccessoryNone;
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+
     
     UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
     [button.layer setMasksToBounds:YES];
