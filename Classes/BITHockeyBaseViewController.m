@@ -25,15 +25,6 @@
   if (self) {
     _modalAnimated = YES;
     _modal = NO;
-    
-    //might be better in viewDidLoad, but to workaround rdar://12214613 and as it doesn't
-    //hurt, we do it here
-    if (self.modal) {
-      self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
-                                                                                             target:self
-                                                                                             action:@selector(onDismissModal:)] autorelease];
-    }
-
   }
   return self;
 }
@@ -42,6 +33,14 @@
   self = [self init];
   if (self) {
     _modal = modal;
+
+    //might be better in viewDidLoad, but to workaround rdar://12214613 and as it doesn't
+    //hurt, we do it here
+    if (self.modal) {
+      self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
+                                                                                             target:self
+                                                                                             action:@selector(onDismissModal:)] autorelease];
+    }
   }
   return self;
 }
