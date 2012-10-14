@@ -41,9 +41,11 @@
     _barStyle = UIBarStyleDefault;
     _modalPresentationStyle = UIModalPresentationFormSheet;
     
+    NSLocale *enUSPOSIXLocale = [[[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"] autorelease];
     _rfc3339Formatter = [[NSDateFormatter alloc] init];
-    [_rfc3339Formatter setLocale:[[[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"] autorelease]];
-    [_rfc3339Formatter setDateFormat:@"yyyy-MM-dd'T'HH:mm:ss'Z'"];
+    [_rfc3339Formatter setLocale:enUSPOSIXLocale];
+    [_rfc3339Formatter setDateFormat:@"yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'"];
+    [_rfc3339Formatter setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:0]];
   }
   return self;
 }
