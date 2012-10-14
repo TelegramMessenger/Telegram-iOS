@@ -402,6 +402,19 @@
   return [NSArray arrayWithArray:resultMessages];;
 }
 
+- (BITFeedbackMessage *)lastMessageHavingID {
+  __block BITFeedbackMessage *message = nil;
+  
+  [_feedbackList enumerateObjectsUsingBlock:^(BITFeedbackMessage *objMessage, NSUInteger messagesIdx, BOOL *stop) {
+    if ([[objMessage id] integerValue] != 0) {
+      message = objMessage;
+      *stop = YES;
+    }
+  }];
+  
+  return message;
+}
+
 - (void)markSendInProgressMessagesAsPending {
   // make sure message that may have not been send successfully, get back into the right state to be send again
   [_feedbackList enumerateObjectsUsingBlock:^(id objMessage, NSUInteger messagesIdx, BOOL *stop) {
@@ -537,21 +550,12 @@
           newResponseMessage = YES;
         }
       } else {
-        // TODO: update message
+        // we should never get any messages back that are already stored locally,
+        // since we add the last_message_id to the request
       }
     }];
-    // TODO: implement todo defined above
     
     [self markSendInProgressMessagesAsPending];
-    
-    // mark all messages as archived that are removed on the server
-    [_feedbackList enumerateObjectsUsingBlock:^(id objMessage, NSUInteger messagesIdx, BOOL *stop) {
-      if (![returnedMessageIDs member:[(BITFeedbackMessage *)objMessage id]] &&
-          [(BITFeedbackMessage *)objMessage status] != BITFeedbackMessageStatusSendPending
-          ) {
-        [(BITFeedbackMessage *)objMessage setStatus:BITFeedbackMessageStatusArchived];
-      }
-    }];
     
     // we got a new incoming message, trigger user notification system
     if (newResponseMessage) {
@@ -597,10 +601,17 @@
   }
   NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@/feedback%@", [self encodedAppIdentifier], tokenParameter];
   
-  [parameter appendFormat:@"?format=json&bundle_version=%@&sdk=%@&sdk_version=%@",
+  NSString *lastMessageID = @"";
+  BITFeedbackMessage *lastMessageHavingID = [self lastMessageHavingID];
+  if (lastMessageHavingID) {
+    lastMessageID = [NSString stringWithFormat:@"&last_message_id=%i", [[lastMessageHavingID id] integerValue]];
+  }
+  
+  [parameter appendFormat:@"?format=json&bundle_version=%@&sdk=%@&sdk_version=%@%@",
    bit_URLEncodedString([[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]),
    BITHOCKEY_NAME,
-   BITHOCKEY_VERSION
+   BITHOCKEY_VERSION,
+   lastMessageID
    ];
   
   // build request & send
