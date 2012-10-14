@@ -62,6 +62,9 @@ typedef enum {
  This modul handles version updates, presents update and version information in a App Store like user interface,
  collects usage information and provides additional authorization options when using Ad-Hoc provisioning profiles.
  
+ This module automatically disables itself when running in an App Store build by default! If you integrate the
+ Atlassian JMC client this module is used to automatically configure JMC, but will not do anything else.
+ 
  To use this module, it is important to implement set the `delegate` property and implement
  `[BITUpdateManagerDelegate customDeviceIdentifierForUpdateManager:]`.
  

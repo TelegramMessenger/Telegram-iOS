@@ -59,11 +59,11 @@ static NSString *kBITCrashManagerStatus = @"BITCrashManagerStatus";
  additional textual log information via `BITCrashManagerDelegate` protocol and a way to detect startup crashes so
  you can adjust your startup process to get these crash reports too and delay your app initialization.
  
- Crashes are send the next time the app starts. If `autoSubmitCrashReport` is enabled, crashes will be send
- without any user interaction, otherwise an alert will appear allowing the users to decide wether they want
- to send the report or not. This module is not sending the reports right when the crash happens deliberately, 
- because if is not safe to implement such a mechanism while being async-safe (any Objective-C code is _NOT_
- async-safe!) and not causing more danger like a deadlock of the device, than helping. We found that users
+ Crashes are send the next time the app starts. If `crashManagerStatus` is set to `BITCrashManagerStatusAutoSend`,
+ crashes will be send without any user interaction, otherwise an alert will appear allowing the users to decide
+ wether they want to send the report or not. This module is not sending the reports right when the crash happens
+ deliberately, because if is not safe to implement such a mechanism while being async-safe (any Objective-C code
+ is _NOT_ async-safe!) and not causing more danger like a deadlock of the device, than helping. We found that users
  do start the app again because most don't know what happened, and you will get by far most of the reports.
  
  Sending the reports on startup is done asynchronously (non-blocking). This is the only safe way to ensure
@@ -127,8 +127,8 @@ static NSString *kBITCrashManagerStatus = @"BITCrashManagerStatus";
  If enabled the crash reporting alert will also present an "Always" option, so
  the user doesn't have to approve every single crash over and over again.
  
- If `autoSubmitCrashReport` is enabled, this property has no effect, since no
- alert will be presented.
+ If If `crashManagerStatus` is set to `BITCrashManagerStatusAutoSend`, this property
+ has no effect, since no alert will be presented.
  
  @warning This will cause the dialog not to show the alert description text landscape mode!
  @see crashManagerStatus

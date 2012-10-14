@@ -124,6 +124,15 @@
                    liveIdentifier:@"<AppIdentifierForLiveAppFromHockeyApp>"
                          delegate:nil];
 
+ We recommend using one app entry on HockeyApp for your beta versions and another one for
+ your live versions. The reason is that you will have way more beta versions than live
+ versions, but on the other side get way more crash reports on the live version. Separating
+ them into two different app entries makes it easier to work with the data. In addition
+ you will likely end up having the same version number for a beta and live version which
+ would mix different data into the same version. Also the live version does not require
+ you to upload any IPA files, uploading only the dSYM package for crash reporting is
+ just fine.
+
  @see configureWithIdentifier:delegate:
  @see startManager
  @see BITHockeyManagerDelegate
