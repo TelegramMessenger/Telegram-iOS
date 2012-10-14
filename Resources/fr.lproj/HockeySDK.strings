@@ -178,10 +178,10 @@
 /* Set User Data */
 
 /* Title */
-"HockeyFeedbackUserDataTitle" = "Who Are You";
+"HockeyFeedbackUserDataTitle" = "My Info";
 
 /* Description On What Should Be Entered */
-"HockeyFeedbackUserDataDescription" = "Please let us know who you are before writing us your feedback.";
+"HockeyFeedbackUserDataDescription" = "Please provide your information before writing your feedback.";
 
 /* Name Field */
 "HockeyFeedbackUserDataName" = "Name";
