@@ -510,7 +510,7 @@
     
     NSInteger pendingMessagesCount = [messagesSendInProgress count] + [[self messagesWithStatus:BITFeedbackMessageStatusSendPending] count];
     
-    __block BOOL newResponseMessage = NO;
+    __block BOOL newMessage = NO;
     __block NSMutableSet *returnedMessageIDs = [[[NSMutableSet alloc] init] autorelease];
     
     [feedMessages enumerateObjectsUsingBlock:^(id objMessage, NSUInteger messagesIdx, BOOL *stop) {
@@ -547,7 +547,7 @@
           
           [_feedbackList addObject:message];
           
-          newResponseMessage = YES;
+          newMessage = YES;
         }
       } else {
         // we should never get any messages back that are already stored locally,
@@ -558,8 +558,17 @@
     [self markSendInProgressMessagesAsPending];
     
     // we got a new incoming message, trigger user notification system
-    if (newResponseMessage) {
-      if (self.showAlertOnIncomingMessages && !self.currentFeedbackListViewController && !self.currentFeedbackComposeViewController) {
+    if (newMessage) {
+      // check if the latest message is from the users own email address, then don't show an alert since he answered using his own email
+      BOOL latestMessageFromUser = NO;
+      
+      [self sortFeedbackList];
+      
+      BITFeedbackMessage *latestMessage = [self lastMessageHavingID];
+      if (self.userEmail && [latestMessage.email compare:self.userEmail] == NSOrderedSame)
+        latestMessageFromUser = YES;
+      
+      if (!latestMessageFromUser && self.showAlertOnIncomingMessages && !self.currentFeedbackListViewController && !self.currentFeedbackComposeViewController) {
         UIAlertView *alertView = [[[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageTitle")
                                                              message:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageText")
                                                             delegate:self
