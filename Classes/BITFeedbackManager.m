@@ -66,8 +66,8 @@
     _currentFeedbackComposeViewController = nil;
     _didAskUserData = NO;
     
-    _requireUserName = BITFeedbackUserDataElementRequired;
-    _requireUserEmail = BITFeedbackUserDataElementRequired;
+    _requireUserName = BITFeedbackUserDataElementOptional;
+    _requireUserEmail = BITFeedbackUserDataElementOptional;
     _showAlertOnIncomingMessages = YES;
     
     _disableFeedbackManager = NO;

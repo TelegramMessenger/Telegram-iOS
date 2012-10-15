@@ -53,8 +53,8 @@ typedef enum {
 
 @interface BITFeedbackManager : BITHockeyBaseManager <UIAlertViewDelegate>
 
-@property (nonatomic, readwrite) BITFeedbackUserDataElement requireUserName; // default is BITFeedbackUserDataRequired
-@property (nonatomic, readwrite) BITFeedbackUserDataElement requireUserEmail; // default is BITFeedbackUserDataRequired
+@property (nonatomic, readwrite) BITFeedbackUserDataElement requireUserName; // default is BITFeedbackUserDataElementOptional
+@property (nonatomic, readwrite) BITFeedbackUserDataElement requireUserEmail; // default is BITFeedbackUserDataElementOptional
 @property (nonatomic, readwrite) BOOL showAlertOnIncomingMessages; // default is YES
 
 ///-----------------------------------------------------------------------------
