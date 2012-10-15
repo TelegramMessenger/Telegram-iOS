@@ -26,7 +26,7 @@
 - (NSString *)executableUUID;
 
 - (UIWindow *)findVisibleWindow;
-- (void)showView:(BITHockeyBaseViewController *)viewController;
+- (void)showView:(UIViewController *)viewController;
 
 - (NSData *)appendPostValue:(NSString *)value forKey:(NSString *)key;
 

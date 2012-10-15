@@ -41,7 +41,9 @@
 #import "BITUpdateViewController.h"
 
 #import "BITFeedbackManager.h"
+#import "BITFeedbackActivity.h"
 #import "BITFeedbackComposeViewController.h"
+#import "BITFeedbackComposeViewControllerDelegate.h"
 #import "BITFeedbackListViewController.h"
 
 

@@ -57,33 +57,70 @@
   if (self) {
     self.title = BITHockeyLocalizedString(@"HockeyFeedbackComposeTitle");
     blockUserDataScreen = NO;
+    _delegate = nil;
     _manager = [BITHockeyManager sharedHockeyManager].feedbackManager;
   }
   return self;
 }
 
+
+- (id)initWithDelegate:(id<BITFeedbackComposeViewControllerDelegate>)delegate {
+  self = [self init];
+  if (self) {
+    _delegate = delegate;
+  }
+  return self;
+}
+
+
+#pragma mark - View lifecycle
+
 - (void)viewDidLoad {
   [super viewDidLoad];
   
   self.view.backgroundColor = [UIColor whiteColor];
+  CGFloat yPos = 0;
   
-	// Do any additional setup after loading the view.
-  self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel
-                                                                                         target:self
-                                                                                         action:@selector(dismissAction:)] autorelease];
-  
-  self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeSend")
-                                                                             style:UIBarButtonItemStyleDone
-                                                                            target:self
-                                                                            action:@selector(sendAction:)] autorelease];
+  // when being used inside an activity, we don't have a navigation controller embedded
+  if (!self.navigationController) {
+    UINavigationBar *navigationBar = [[[UINavigationBar alloc] initWithFrame:CGRectMake(self.view.bounds.origin.x, self.view.bounds.origin.y, self.view.bounds.size.width, 44)] autorelease];
+    navigationBar.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleBottomMargin;
+    [self.view addSubview:navigationBar];
+    [navigationBar sizeToFit];
+    yPos = navigationBar.frame.size.height;
+
+    UIBarButtonItem *cancelItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel
+                                                                                 target:self
+                                                                                 action:@selector(dismissAction:)] autorelease];
+    
+    UIBarButtonItem *saveItem = [[[UIBarButtonItem alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeSend")
+                                                                  style:UIBarButtonItemStyleDone
+                                                                 target:self
+                                                                 action:@selector(sendAction:)] autorelease];
+
+    UINavigationItem *navigationItem = [[[UINavigationItem alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeTitle")] autorelease];
+    navigationItem.leftBarButtonItem = cancelItem;
+    navigationItem.rightBarButtonItem = saveItem;
+    [navigationBar pushNavigationItem:navigationItem animated:NO];
+  } else {
+    // Do any additional setup after loading the view.
+    self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel
+                                                                                           target:self
+                                                                                           action:@selector(dismissAction:)] autorelease];
+    
+    self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeSend")
+                                                                               style:UIBarButtonItemStyleDone
+                                                                              target:self
+                                                                              action:@selector(sendAction:)] autorelease];
+  }
   
   // message input textfield
   CGRect frame = CGRectZero;
   
   if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
-    frame = CGRectMake(0, 0, self.view.bounds.size.width, 200);
+    frame = CGRectMake(0, yPos, self.view.bounds.size.width, 200-yPos);
   } else {
-    frame = CGRectMake(0, 0, self.view.bounds.size.width, self.view.bounds.size.height);
+    frame = CGRectMake(0, yPos, self.view.bounds.size.width, self.view.bounds.size.height-yPos);
   }
   self.textView = [[[UITextView alloc] initWithFrame:frame] autorelease];
   self.textView.font = [UIFont systemFontOfSize:17];
@@ -100,6 +137,8 @@
   [super viewWillAppear:animated];
   
   self.navigationItem.rightBarButtonItem.enabled = NO;
+
+  [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleBlackOpaque];
 }
 
 - (void)viewDidAppear:(BOOL)animated {
@@ -129,6 +168,14 @@
 
 #pragma mark - Private methods
 
+- (void)dismiss {
+  if (self.delegate && [self.delegate respondsToSelector:@selector(feedbackComposeViewControllerDidFinish:)]) {
+    [self.delegate feedbackComposeViewControllerDidFinish:self];
+  } else {
+    [self dismissModalViewControllerAnimated:YES];
+  }
+}
+
 - (void)setUserDataAction {
   BITFeedbackUserDataViewController *userController = [[[BITFeedbackUserDataViewController alloc] initWithStyle:UITableViewStyleGrouped] autorelease];
   userController.delegate = self;
@@ -139,7 +186,7 @@
 }
 
 - (void)dismissAction:(id)sender {
-  [self dismissModalViewControllerAnimated:YES];
+  [self dismiss];
 }
 
 - (void)sendAction:(id)sender {
@@ -150,7 +197,7 @@
   
   [self.manager submitMessageWithText:text];
   
-  [self dismissModalViewControllerAnimated:YES];
+  [self dismiss];
 }
 
 

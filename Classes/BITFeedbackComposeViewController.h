@@ -29,8 +29,14 @@
 
 #import <UIKit/UIKit.h>
 
+#import "BITFeedbackComposeViewControllerDelegate.h"
+
+
 @interface BITFeedbackComposeViewController : UIViewController <UITextViewDelegate>
 
+@property (nonatomic, assign) id<BITFeedbackComposeViewControllerDelegate> delegate;
+
 - (id)init;
+- (id)initWithDelegate:(id<BITFeedbackComposeViewControllerDelegate>)delegate;
 
 @end

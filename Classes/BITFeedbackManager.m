@@ -177,6 +177,20 @@
 }
 
 
+- (BITFeedbackComposeViewController *)feedbackComposeViewControllerWithDelegate:(id<BITFeedbackComposeViewControllerDelegate>)delegate {
+  return [[[BITFeedbackComposeViewController alloc] initWithDelegate:delegate] autorelease];
+}
+
+- (void)showFeedbackComposeView {
+  if (_currentFeedbackComposeViewController) {
+    BITHockeyLog(@"INFO: update view already visible, aborting");
+    return;
+  }
+  
+  [self showView:[self feedbackComposeViewControllerWithDelegate:nil]];
+}
+
+
 #pragma mark - Manager Control
 
 - (void)startManager {

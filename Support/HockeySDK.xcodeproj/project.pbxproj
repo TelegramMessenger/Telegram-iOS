@@ -34,7 +34,7 @@
 
 /* Begin PBXBuildFile section */
 		1E27EF2515BB5033000AE995 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
-		1E49A43C1612223B00463151 /* BITFeedbackComposeViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A42D1612223B00463151 /* BITFeedbackComposeViewController.h */; };
+		1E49A43C1612223B00463151 /* BITFeedbackComposeViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A42D1612223B00463151 /* BITFeedbackComposeViewController.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E49A43F1612223B00463151 /* BITFeedbackComposeViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A42E1612223B00463151 /* BITFeedbackComposeViewController.m */; };
 		1E49A4421612223B00463151 /* BITFeedbackListViewCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A42F1612223B00463151 /* BITFeedbackListViewCell.h */; };
 		1E49A4451612223B00463151 /* BITFeedbackListViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4301612223B00463151 /* BITFeedbackListViewCell.m */; };
@@ -93,6 +93,9 @@
 		1E754E601621FBB70070AB92 /* BITCrashReportTextFormatter.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E754E5A1621FBB70070AB92 /* BITCrashReportTextFormatter.h */; };
 		1E754E611621FBB70070AB92 /* BITCrashReportTextFormatter.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E754E5B1621FBB70070AB92 /* BITCrashReportTextFormatter.m */; };
 		1EC69F601615001500808FD9 /* BITHockeyManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EC69F5D1615001500808FD9 /* BITHockeyManagerPrivate.h */; };
+		1EF95CA6162CB037000AE3AD /* BITFeedbackActivity.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EF95CA4162CB036000AE3AD /* BITFeedbackActivity.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		1EF95CA7162CB037000AE3AD /* BITFeedbackActivity.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EF95CA5162CB036000AE3AD /* BITFeedbackActivity.m */; };
+		1EF95CAA162CB314000AE3AD /* BITFeedbackComposeViewControllerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EF95CA9162CB313000AE3AD /* BITFeedbackComposeViewControllerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -187,6 +190,9 @@
 		1E754E5B1621FBB70070AB92 /* BITCrashReportTextFormatter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITCrashReportTextFormatter.m; sourceTree = "<group>"; };
 		1EC69F5D1615001500808FD9 /* BITHockeyManagerPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITHockeyManagerPrivate.h; sourceTree = "<group>"; };
 		1EDA60CF15C2C1450032D10B /* HockeySDK-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "HockeySDK-Info.plist"; sourceTree = "<group>"; };
+		1EF95CA4162CB036000AE3AD /* BITFeedbackActivity.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITFeedbackActivity.h; sourceTree = "<group>"; };
+		1EF95CA5162CB036000AE3AD /* BITFeedbackActivity.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITFeedbackActivity.m; sourceTree = "<group>"; };
+		1EF95CA9162CB313000AE3AD /* BITFeedbackComposeViewControllerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITFeedbackComposeViewControllerDelegate.h; sourceTree = "<group>"; };
 		E400561D148D79B500EB22B9 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		E41EB465148D7BF50015DEDC /* BITHockeyManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITHockeyManager.h; sourceTree = "<group>"; };
 		E41EB466148D7BF50015DEDC /* BITHockeyManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITHockeyManager.m; sourceTree = "<group>"; };
@@ -267,12 +273,15 @@
 				1E49A4371612223B00463151 /* BITFeedbackMessage.m */,
 				1E49A42D1612223B00463151 /* BITFeedbackComposeViewController.h */,
 				1E49A42E1612223B00463151 /* BITFeedbackComposeViewController.m */,
+				1EF95CA9162CB313000AE3AD /* BITFeedbackComposeViewControllerDelegate.h */,
 				1E49A4381612223B00463151 /* BITFeedbackUserDataViewController.h */,
 				1E49A4391612223B00463151 /* BITFeedbackUserDataViewController.m */,
 				1E49A42F1612223B00463151 /* BITFeedbackListViewCell.h */,
 				1E49A4301612223B00463151 /* BITFeedbackListViewCell.m */,
 				1E49A4311612223B00463151 /* BITFeedbackListViewController.h */,
 				1E49A4321612223B00463151 /* BITFeedbackListViewController.m */,
+				1EF95CA4162CB036000AE3AD /* BITFeedbackActivity.h */,
+				1EF95CA5162CB036000AE3AD /* BITFeedbackActivity.m */,
 				1E49A4331612223B00463151 /* BITFeedbackManager.h */,
 				1E49A4341612223B00463151 /* BITFeedbackManager.m */,
 				1E49A4351612223B00463151 /* BITFeedbackManagerPrivate.h */,
@@ -390,6 +399,8 @@
 				1E49A4481612223B00463151 /* BITFeedbackListViewController.h in Headers */,
 				1E49A47F1612226D00463151 /* BITUpdateViewController.h in Headers */,
 				1E49A43C1612223B00463151 /* BITFeedbackComposeViewController.h in Headers */,
+				1EF95CAA162CB314000AE3AD /* BITFeedbackComposeViewControllerDelegate.h in Headers */,
+				1EF95CA6162CB037000AE3AD /* BITFeedbackActivity.h in Headers */,
 				1E49A4421612223B00463151 /* BITFeedbackListViewCell.h in Headers */,
 				1E49A4541612223B00463151 /* BITFeedbackManagerPrivate.h in Headers */,
 				1E49A4571612223B00463151 /* BITFeedbackMessage.h in Headers */,
@@ -568,6 +579,7 @@
 				1E49A4DB161222D400463151 /* HockeySDKPrivate.m in Sources */,
 				1E754E5D1621FBB70070AB92 /* BITCrashManager.m in Sources */,
 				1E754E611621FBB70070AB92 /* BITCrashReportTextFormatter.m in Sources */,
+				1EF95CA7162CB037000AE3AD /* BITFeedbackActivity.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

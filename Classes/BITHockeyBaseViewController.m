@@ -50,17 +50,7 @@
 
 - (void)onDismissModal:(id)sender {
   if (self.modal) {
-    // Note that as of 5.0, parentViewController will no longer return the presenting view controller
-    SEL presentingViewControllerSelector = NSSelectorFromString(@"presentingViewController");
-    UIViewController *presentingViewController = nil;
-    if ([self respondsToSelector:presentingViewControllerSelector]) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-      presentingViewController = [self performSelector:presentingViewControllerSelector];
-#pragma clang diagnostic pop
-    } else {
-      presentingViewController = [self parentViewController];
-    }
+    UIViewController *presentingViewController = [self presentingViewController];
     
     // If there is no presenting view controller just remove view
     if (presentingViewController && self.modalAnimated) {
