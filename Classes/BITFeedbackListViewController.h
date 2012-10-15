@@ -32,7 +32,7 @@
 #import "BITHockeyBaseViewController.h"
 
 
-@interface BITFeedbackListViewController : BITHockeyBaseViewController <UITableViewDelegate, UITableViewDataSource, UIActionSheetDelegate> {
+@interface BITFeedbackListViewController : BITHockeyBaseViewController <UITableViewDelegate, UITableViewDataSource, UIActionSheetDelegate, UIAlertViewDelegate> {
 }
 
 @end

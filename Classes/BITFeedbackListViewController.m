@@ -210,15 +210,27 @@
 }
 
 - (void)deleteAllMessagesAction:(id)sender {
-  UIActionSheet *deleteAction = [[UIActionSheet alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllTitle")
-                                                            delegate:self
-                                                   cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllCancel")
-                                              destructiveButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllDelete")
-                                                   otherButtonTitles:nil
-                               ];
-  [deleteAction setActionSheetStyle:UIActionSheetStyleBlackTranslucent];
-  [deleteAction showInView:self.view];
-  [deleteAction release];
+  if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
+    UIActionSheet *deleteAction = [[UIActionSheet alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllTitle")
+                                                              delegate:self
+                                                     cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllCancel")
+                                                destructiveButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllDelete")
+                                                     otherButtonTitles:nil
+                                   ];
+    [deleteAction setActionSheetStyle:UIActionSheetStyleBlackTranslucent];
+    [deleteAction showInView:self.view];
+    [deleteAction release];
+  } else {
+    UIAlertView *deleteAction = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListButonDeleteAllMessages")
+                                                           message:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllTitle")
+                                                       delegate:self
+                                              cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllCancel")
+                                              otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllDelete"), nil];
+    
+    [deleteAction show];
+    [deleteAction release];
+    
+  }
 }
 
 
@@ -480,6 +492,14 @@
 }
 
 
+#pragma mark - UIAlertViewDelegate
+
+- (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
+  if (buttonIndex == [alertView firstOtherButtonIndex]) {
+    [self deleteAllMessages];
+  }
+}
+
 
 #pragma mark - UIActionSheetDelegate
 
@@ -488,5 +508,6 @@
     [self deleteAllMessages];
   }
 }
+
 
 @end
