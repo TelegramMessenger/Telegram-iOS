@@ -183,6 +183,12 @@
 "HockeyFeedbackListDeleteAllCancel" = "Cancel";
 
 
+/* UIActivity */
+
+/* Activity Sharing Button Title */
+"HockeyFeedbackActivityButtonTitle" = "App Feedback";
+
+
 /* Compose Message */
 
 /* Title */

@@ -19,7 +19,7 @@
 }
 
 - (NSString *)activityTitle {
-  return @"Feedback";
+  return BITHockeyLocalizedString(@"HockeyFeedbackActivityButtonTitle");
 }
 
 - (UIImage *)activityImage {
