@@ -139,14 +139,16 @@
 }
 
 - (void)layoutSubviews {
-  [super layoutSubviews];
-  
+  UIView *accessoryViewBackground = [[[UIView alloc] initWithFrame:CGRectMake(0, 2, self.frame.size.width * 2, self.frame.size.height - 2)] autorelease];
+
   // colors
   if (_backgroundStyle == BITFeedbackListViewCellBackgroundStyleNormal) {
+    accessoryViewBackground.backgroundColor = BACKGROUNDCOLOR_DEFAULT;
     self.contentView.backgroundColor = BACKGROUNDCOLOR_DEFAULT;
     self.labelTitle.backgroundColor = BACKGROUNDCOLOR_DEFAULT;
     self.labelText.backgroundColor = BACKGROUNDCOLOR_DEFAULT;
   } else {
+    accessoryViewBackground.backgroundColor = BACKGROUNDCOLOR_ALTERNATE;
     self.contentView.backgroundColor = BACKGROUNDCOLOR_ALTERNATE;
     self.labelTitle.backgroundColor = BACKGROUNDCOLOR_ALTERNATE;
     self.labelText.backgroundColor = BACKGROUNDCOLOR_ALTERNATE;
@@ -157,6 +159,9 @@
   } else {
     [self.labelText setTextColor:TEXTCOLOR_PENDING];
   }
+
+  // background for deletion accessory view
+  [self addSubview:accessoryViewBackground];
 
   // header
   NSString *dateString;
@@ -190,6 +195,8 @@
   [self.labelText setFrame:CGRectMake(FRAME_SIDE_BORDER, LABEL_TEXT_Y, size.width, size.height)];
   
   [self addSubview:self.labelText];
+  
+  [super layoutSubviews];
 }
 
 

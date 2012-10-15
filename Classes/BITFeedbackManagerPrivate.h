@@ -49,6 +49,8 @@
 
 @property (nonatomic, retain) NSDate *lastCheck;
 
+@property (nonatomic, retain) NSNumber *lastMessageID;
+
 @property (nonatomic, copy) NSString *userName;
 @property (nonatomic, copy) NSString *userEmail;
 
@@ -87,5 +89,7 @@
 - (void)fetchMessageUpdates;
 - (void)updateMessageListFromResponse:(NSDictionary *)jsonDictionary;
 
+- (BOOL)deleteMessageAtIndex:(NSUInteger)index;
+- (void)deleteAllMessages;
 
 @end

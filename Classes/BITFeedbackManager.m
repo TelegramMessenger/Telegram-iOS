@@ -76,6 +76,7 @@
     _incomingMessagesAlertShowing = NO;
     _lastCheck = nil;
     _token = nil;
+    _lastMessageID = nil;
     
     self.feedbackList = [NSMutableArray array];
 
@@ -111,6 +112,7 @@
   
   [_lastCheck release], _lastCheck = nil;
   [_token release], _token = nil;
+  [_lastMessageID release], _lastMessageID = nil;
   [_feedbackList release], _feedbackList = nil;
   
   [_userName release], _userName = nil;
@@ -284,6 +286,9 @@
   if ([unarchiver containsValueForKey:kBITFeedbackDateOfLastCheck])
     self.lastCheck = [unarchiver decodeObjectForKey:kBITFeedbackDateOfLastCheck];
   
+  if ([unarchiver containsValueForKey:kBITFeedbackLastMessageID])
+    self.lastMessageID = [unarchiver decodeObjectForKey:kBITFeedbackLastMessageID];
+  
   if ([unarchiver containsValueForKey:kBITFeedbackMessages]) {
     [self.feedbackList setArray:[unarchiver decodeObjectForKey:kBITFeedbackMessages]];
     
@@ -322,6 +327,9 @@
   
   if (self.lastCheck)
     [archiver encodeObject:self.lastCheck forKey:kBITFeedbackDateOfLastCheck];
+  
+  if (self.lastMessageID)
+    [archiver encodeObject:self.lastMessageID forKey:kBITFeedbackLastMessageID];
   
   [archiver encodeObject:self.feedbackList forKey:kBITFeedbackMessages];
   
@@ -429,6 +437,31 @@
     if ([(BITFeedbackMessage *)objMessage status] == BITFeedbackMessageStatusSendInProgress)
       [(BITFeedbackMessage *)objMessage setStatus:BITFeedbackMessageStatusInConflict];
   }];
+}
+
+- (void)updateLastMessageID {
+  BITFeedbackMessage *lastMessageHavingID = [self lastMessageHavingID];
+  if (lastMessageHavingID) {
+    if (!self.lastMessageID || [self.lastMessageID compare:[lastMessageHavingID id]] != NSOrderedSame)
+      self.lastMessageID = [lastMessageHavingID id];
+  }
+}
+
+- (BOOL)deleteMessageAtIndex:(NSUInteger)index {
+  if (_feedbackList && [_feedbackList count] > index && [_feedbackList objectAtIndex:index]) {
+    [_feedbackList removeObjectAtIndex:index];
+    
+    [self saveMessages];
+    return YES;
+  }
+  
+  return NO;
+}
+
+- (void)deleteAllMessages {
+  [_feedbackList removeAllObjects];
+  
+  [self saveMessages];
 }
 
 
@@ -563,7 +596,8 @@
       BOOL latestMessageFromUser = NO;
       
       [self sortFeedbackList];
-      
+      [self updateLastMessageID];
+
       BITFeedbackMessage *latestMessage = [self lastMessageHavingID];
       if (self.userEmail && [latestMessage.email compare:self.userEmail] == NSOrderedSame)
         latestMessageFromUser = YES;
@@ -611,9 +645,11 @@
   NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@/feedback%@", [self encodedAppIdentifier], tokenParameter];
   
   NSString *lastMessageID = @"";
-  BITFeedbackMessage *lastMessageHavingID = [self lastMessageHavingID];
-  if (lastMessageHavingID) {
-    lastMessageID = [NSString stringWithFormat:@"&last_message_id=%i", [[lastMessageHavingID id] integerValue]];
+  if (!self.lastMessageID) {
+    [self updateLastMessageID];
+  }
+  if (self.lastMessageID) {
+    lastMessageID = [NSString stringWithFormat:@"&last_message_id=%i", [self.lastMessageID integerValue]];
   }
   
   [parameter appendFormat:@"?format=json&bundle_version=%@&sdk=%@&sdk_version=%@%@",
@@ -727,7 +763,7 @@
 }
 
 - (void)fetchMessageUpdates {
-  if ([_feedbackList count] == 0) {
+  if ([_feedbackList count] == 0 && !self.token) {
     // inform the UI to update its data in case the list is already showing
     [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyFeedbackMessagesLoadingFinished object:nil];
     

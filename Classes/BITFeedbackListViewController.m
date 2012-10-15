@@ -43,9 +43,12 @@
 
 #define DEFAULT_BACKGROUNDCOLOR BIT_RGBCOLOR(245, 245, 245)
 #define DEFAULT_TEXTCOLOR BIT_RGBCOLOR(75, 75, 75)
+#define BUTTON_DELETE_BACKGROUNDCOLOR BIT_RGBCOLOR(225, 0, 0)
 #define BUTTON_BACKGROUNDCOLOR BIT_RGBCOLOR(225, 225, 225)
 #define BUTTON_BORDERCOLOR BIT_RGBCOLOR(175, 175, 175)
+#define BUTTON_DELETE_TEXTCOLOR BIT_RGBCOLOR(240, 240, 240)
 #define BUTTON_TEXTCOLOR BIT_RGBCOLOR(58, 58, 58)
+#define BUTTON_DELETE_TEXTCOLOR_SHADOW BIT_RGBCOLOR(175, 175, 175)
 #define BUTTON_TEXTCOLOR_SHADOW BIT_RGBCOLOR(175, 175, 175)
 #define BORDER_COLOR1 BIT_RGBCOLOR(215, 215, 215)
 #define BORDER_COLOR2 BIT_RGBCOLOR(221, 221, 221)
@@ -201,6 +204,23 @@
   [self.navigationController presentModalViewController:navController animated:YES];
 }
 
+- (void)deleteAllMessages {
+  [_manager deleteAllMessages];
+  [self.tableView reloadData];
+}
+
+- (void)deleteAllMessagesAction:(id)sender {
+  UIActionSheet *deleteAction = [[UIActionSheet alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllTitle")
+                                                            delegate:self
+                                                   cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllCancel")
+                                              destructiveButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllDelete")
+                                                   otherButtonTitles:nil
+                               ];
+  [deleteAction setActionSheetStyle:UIActionSheetStyleBlackTranslucent];
+  [deleteAction showInView:self.view];
+  [deleteAction release];
+}
+
 
 #pragma mark - BITFeedbackUserDataDelegate
 
@@ -222,16 +242,17 @@
   if ([self.manager isManualUserDataAvailable] || [self.manager didAskUserData])
     rows++;
   
+  if ([self.manager numberOfMessages] > 0)
+    rows++;
+  
   return rows;
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-  if (section == 0) {
-    return 1;
-  } else if (section == 2) {
-    return 1;
-  } else {
+  if (section == 1) {
     return [self.manager numberOfMessages];
+  } else {
+    return 1;
   }
 }
 
@@ -240,6 +261,7 @@
   static NSString *LastUpdateIdentifier = @"LastUpdateCell";
   static NSString *ButtonTopIdentifier = @"ButtonTopCell";
   static NSString *ButtonBottomIdentifier = @"ButtonBottomCell";
+  static NSString *ButtonDeleteIdentifier = @"ButtonDeleteCell";
   
   if (indexPath.section == 0 && indexPath.row == 1) {
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:LastUpdateIdentifier];
@@ -257,30 +279,33 @@
                            [self.manager lastCheck] ? [self.lastUpdateDateFormatter stringFromDate:[self.manager lastCheck]] : BITHockeyLocalizedString(@"HockeyFeedbackListNeverUpdated")];
     
     return cell;
-  } else if (indexPath.section == 0 || indexPath.section == 2) {
+  } else if (indexPath.section == 0 || indexPath.section == 2 || indexPath.section == 3) {
     CGFloat topGap = 0.0f;
     
     UITableViewCell *cell = nil;
     
-    if (indexPath.section == 0) {
-      cell = [tableView dequeueReusableCellWithIdentifier:ButtonTopIdentifier];
+    NSString *identifier = nil;
     
-      if (!cell) {
-        cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:ButtonTopIdentifier] autorelease];
-      }
+    if (indexPath.section == 0) {
+      identifier = ButtonTopIdentifier;
+    } else if (indexPath.section == 2) {
+      identifier = ButtonBottomIdentifier;
     } else {
-      cell = [tableView dequeueReusableCellWithIdentifier:ButtonBottomIdentifier];
-      
-      if (!cell) {
-        cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:ButtonBottomIdentifier] autorelease];
-      }
+      identifier = ButtonDeleteIdentifier;
     }
+    
+    cell = [tableView dequeueReusableCellWithIdentifier:identifier];
+    
+    if (!cell) {
+      cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:identifier] autorelease];
+    }
+
     cell.textLabel.font = [UIFont systemFontOfSize:14];
     cell.textLabel.numberOfLines = 0;
     cell.accessoryType = UITableViewCellAccessoryNone;
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
 
-    
+    // button
     UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
     [button.layer setMasksToBounds:YES];
     [button.layer setCornerRadius:10.0f];
@@ -298,7 +323,7 @@
         [button setTitle:BITHockeyLocalizedString(@"HockeyFeedbackListButonWriteResponse") forState:UIControlStateNormal];
       }
       [button addTarget:self action:@selector(newFeedbackAction:) forControlEvents:UIControlEventTouchUpInside];
-    } else {
+    } else if (indexPath.section == 2) {
       topGap = 6.0f;
       NSString *title = @"";
       if ([self.manager requireUserName] == BITFeedbackUserDataElementRequired ||
@@ -316,11 +341,19 @@
       }
       [button setTitle:title forState:UIControlStateNormal];
       [button addTarget:self action:@selector(setUserDataAction:) forControlEvents:UIControlEventTouchUpInside];
+    } else {
+      [button.layer setBackgroundColor:BUTTON_DELETE_BACKGROUNDCOLOR.CGColor];
+      [button setTitleColor:BUTTON_DELETE_TEXTCOLOR forState:UIControlStateNormal];
+      [button setTitleShadowColor:BUTTON_DELETE_TEXTCOLOR_SHADOW forState:UIControlStateNormal];
+
+      [button setTitle:BITHockeyLocalizedString(@"HockeyFeedbackListButonDeleteAllMessages") forState:UIControlStateNormal];
+      [button addTarget:self action:@selector(deleteAllMessagesAction:) forControlEvents:UIControlEventTouchUpInside];
     }
     [button setFrame: CGRectMake( 10.0f, topGap + 12.0f, self.view.frame.size.width - 20.0f, 42.0f)];
     
     [cell addSubview:button];
     
+    // status label or shadow lines
     if (indexPath.section == 0) {
       UILabel *statusLabel = [[[UILabel alloc] initWithFrame:CGRectMake(0, 59, self.view.frame.size.width, 28)] autorelease];
       
@@ -334,7 +367,7 @@
                              [self.manager lastCheck] ? [self.lastUpdateDateFormatter stringFromDate:[self.manager lastCheck]] : BITHockeyLocalizedString(@"HockeyFeedbackListNeverUpdated")];
 
       [cell addSubview:statusLabel];
-    } else {
+    } else if (indexPath.section == 2) {
       UIView *lineView1 = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.contentView.bounds.size.width, 1)] autorelease];
       lineView1.backgroundColor = BORDER_COLOR1;
       lineView1.autoresizingMask = UIViewAutoresizingFlexibleWidth;
@@ -384,7 +417,7 @@
       if (message.name && [message.name length] > 0) {
         cell.name = message.name;
       } else {
-        cell.name = BITHockeyLocalizedString(@"HockeyFeedbackListmessageResponseNameNotSet");
+        cell.name = BITHockeyLocalizedString(@"HockeyFeedbackListMessageResponseNameNotSet");
       }
     }
     
@@ -414,6 +447,22 @@
 }
 
 
+- (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath {
+  if (indexPath.section == 1)
+    return YES;
+  
+  return NO;
+}
+
+- (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
+  if (editingStyle == UITableViewCellEditingStyleDelete) {
+    if ([_manager deleteMessageAtIndex:indexPath.row]) {
+      [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
+    }
+  }
+}
+
+
 #pragma mark - Table view delegate
 
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -428,6 +477,16 @@
   if (!message) return 44;
   
   return [BITFeedbackListViewCell heightForRowWithText:message.text tableViewWidth:self.view.frame.size.width];
+}
+
+
+
+#pragma mark - UIActionSheetDelegate
+
+- (void)actionSheet:(UIActionSheet *)actionSheet didDismissWithButtonIndex:(NSInteger)buttonIndex {
+  if (buttonIndex == [actionSheet destructiveButtonIndex]) {
+    [self deleteAllMessages];
+  }
 }
 
 @end
