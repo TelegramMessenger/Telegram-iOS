@@ -30,20 +30,12 @@
 - (BOOL)canPerformWithActivityItems:(NSArray *)activityItems {
   if ([BITHockeyManager sharedHockeyManager].disableFeedbackManager) return NO;
 
-  // we can present the user data screen on top of the compose screen
-  // so for now only allow this if all required user data is available
-  BITFeedbackManager *feedbackManager = [BITHockeyManager sharedHockeyManager].feedbackManager;
-  if ([feedbackManager askManualUserDataAvailable] &&
-      ([feedbackManager requireManualUserDataMissing])
-      )
-      return NO;
-
   for (UIActivityItemProvider *item in activityItems) {
     if ([item isKindOfClass:[UIImage class]]) {
       return YES;
     } else if ([item isKindOfClass:[NSString class]]) {
       return YES;
-    } else if ([item isKindOfClass:[NSString class]]) {
+    } else if ([item isKindOfClass:[NSURL class]]) {
       return YES;
     }
   }
@@ -66,9 +58,13 @@
 
 - (UIViewController *)activityViewController {
   // TODO: return compose controller with activity content added
-  BITFeedbackComposeViewController *composeViewController = [[BITHockeyManager sharedHockeyManager].feedbackManager feedbackComposeViewControllerWithDelegate:self];
-  composeViewController.modalPresentationStyle = UIModalPresentationFormSheet;
-  return composeViewController;
+  BITFeedbackComposeViewController *composeViewController = [[BITHockeyManager sharedHockeyManager].feedbackManager feedbackComposeViewControllerWithScreenshot:NO delegate:self];
+  
+  UINavigationController *navController = [[[UINavigationController alloc] initWithRootViewController: composeViewController] autorelease];
+  navController.modalPresentationStyle = UIModalPresentationFormSheet;  
+  navController.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
+  
+  return navController;
 }
 
 -(void)feedbackComposeViewControllerDidFinish:(BITFeedbackComposeViewController *)composeViewController {

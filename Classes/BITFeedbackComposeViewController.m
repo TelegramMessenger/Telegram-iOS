@@ -79,48 +79,24 @@
   [super viewDidLoad];
   
   self.view.backgroundColor = [UIColor whiteColor];
-  CGFloat yPos = 0;
   
-  // when being used inside an activity, we don't have a navigation controller embedded
-  if (!self.navigationController) {
-    UINavigationBar *navigationBar = [[[UINavigationBar alloc] initWithFrame:CGRectMake(self.view.bounds.origin.x, self.view.bounds.origin.y, self.view.bounds.size.width, 44)] autorelease];
-    navigationBar.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleBottomMargin;
-    [self.view addSubview:navigationBar];
-    [navigationBar sizeToFit];
-    yPos = navigationBar.frame.size.height;
-
-    UIBarButtonItem *cancelItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel
-                                                                                 target:self
-                                                                                 action:@selector(dismissAction:)] autorelease];
-    
-    UIBarButtonItem *saveItem = [[[UIBarButtonItem alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeSend")
-                                                                  style:UIBarButtonItemStyleDone
-                                                                 target:self
-                                                                 action:@selector(sendAction:)] autorelease];
-
-    UINavigationItem *navigationItem = [[[UINavigationItem alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeTitle")] autorelease];
-    navigationItem.leftBarButtonItem = cancelItem;
-    navigationItem.rightBarButtonItem = saveItem;
-    [navigationBar pushNavigationItem:navigationItem animated:NO];
-  } else {
-    // Do any additional setup after loading the view.
-    self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel
-                                                                                           target:self
-                                                                                           action:@selector(dismissAction:)] autorelease];
-    
-    self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeSend")
-                                                                               style:UIBarButtonItemStyleDone
-                                                                              target:self
-                                                                              action:@selector(sendAction:)] autorelease];
-  }
+  // Do any additional setup after loading the view.
+  self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel
+                                                                                         target:self
+                                                                                         action:@selector(dismissAction:)] autorelease];
   
+  self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeSend")
+                                                                             style:UIBarButtonItemStyleDone
+                                                                            target:self
+                                                                            action:@selector(sendAction:)] autorelease];
+
   // message input textfield
   CGRect frame = CGRectZero;
   
   if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
-    frame = CGRectMake(0, yPos, self.view.bounds.size.width, 200-yPos);
+    frame = CGRectMake(0, 0, self.view.bounds.size.width, 200);
   } else {
-    frame = CGRectMake(0, yPos, self.view.bounds.size.width, self.view.bounds.size.height-yPos);
+    frame = CGRectMake(0, 0, self.view.bounds.size.width, self.view.bounds.size.height);
   }
   self.textView = [[[UITextView alloc] initWithFrame:frame] autorelease];
   self.textView.font = [UIFont systemFontOfSize:17];
