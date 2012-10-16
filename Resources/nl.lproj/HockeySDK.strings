@@ -186,6 +186,9 @@
 /* Activity Sharing Button Title, App Name will be inserted */
 "HockeyFeedbackActivityButtonTitle" = "%@ Feedback";
 
+/* if there can no app name be found, use this instead for HockeyFeedbackActivityButtonTitle */
+"HockeyFeedbackActivityAppPlaceholder" = "App";
+
 
 /* Compose Message */
 
