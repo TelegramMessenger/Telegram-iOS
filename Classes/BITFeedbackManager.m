@@ -83,7 +83,6 @@
     _fileManager = [[NSFileManager alloc] init];
 
     // temporary directory for crashes grabbed from PLCrashReporter
-    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
     _feedbackDir = [[[paths objectAtIndex:0] stringByAppendingPathComponent:BITHOCKEY_IDENTIFIER] retain];
     
     if (![_fileManager fileExistsAtPath:_feedbackDir]) {
