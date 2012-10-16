@@ -748,7 +748,7 @@
         
         NSError *error = NULL;
         
-        NSDictionary *feedDict = (NSDictionary *)bit_parseJSON(responseString, &error);
+        NSDictionary *feedDict = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:kNilOptions error:&error];
         
         // server returned empty response?
         if (error) {

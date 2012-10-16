@@ -559,8 +559,8 @@
   if ([responseData length]) {
     NSString *responseString = [[[NSString alloc] initWithBytes:[responseData bytes] length:[responseData length] encoding: NSUTF8StringEncoding] autorelease];
     
-    NSDictionary *feedDict = (NSDictionary *)bit_parseJSON(responseString, &error);
-    
+    NSDictionary *feedDict = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:kNilOptions error:&error];
+
     // server returned empty response?
     if (![feedDict count]) {
       [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
@@ -816,7 +816,8 @@
     BITHockeyLog(@"INFO: Received API response: %@", responseString);
     
     NSError *error = nil;
-    id json = bit_parseJSON(responseString, &error);
+    NSDictionary *json = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:kNilOptions error:&error];
+                                              
     self.trackerConfig = (([self checkForTracker] && [[json valueForKey:@"tracker"] isKindOfClass:[NSDictionary class]]) ? [json valueForKey:@"tracker"] : nil);
     
     if (![self isAppStoreEnvironment]) {
