@@ -10,6 +10,7 @@
 
 #import "HockeySDKPrivate.h"
 #import "HockeySDK.h"
+#import "BITHockeyHelper.h"
 #import "BITFeedbackManagerPrivate.h"
 
 @implementation BITFeedbackActivity
@@ -19,11 +20,13 @@
 }
 
 - (NSString *)activityTitle {
-  return BITHockeyLocalizedString(@"HockeyFeedbackActivityButtonTitle");
+  NSString *appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleName"];
+
+  return [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackActivityButtonTitle"), appName];
 }
 
 - (UIImage *)activityImage {
-  return [UIImage imageNamed:@"instagram.png"];
+  return bit_imageNamed(@"feedbackActiviy.png", BITHOCKEYSDK_BUNDLE);
 }
 
 

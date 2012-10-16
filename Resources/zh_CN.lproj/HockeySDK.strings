@@ -183,8 +183,8 @@
 
 /* UIActivity */
 
-/* Activity Sharing Button Title */
-"HockeyFeedbackActivityButtonTitle" = "App Feedback";
+/* Activity Sharing Button Title, App Name will be inserted */
+"HockeyFeedbackActivityButtonTitle" = "%@ Feedback";
 
 
 /* Compose Message */

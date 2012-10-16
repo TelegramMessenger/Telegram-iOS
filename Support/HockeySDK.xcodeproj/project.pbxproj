@@ -92,6 +92,10 @@
 		1E754E5F1621FBB70070AB92 /* BITCrashManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E754E591621FBB70070AB92 /* BITCrashManagerPrivate.h */; };
 		1E754E601621FBB70070AB92 /* BITCrashReportTextFormatter.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E754E5A1621FBB70070AB92 /* BITCrashReportTextFormatter.h */; };
 		1E754E611621FBB70070AB92 /* BITCrashReportTextFormatter.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E754E5B1621FBB70070AB92 /* BITCrashReportTextFormatter.m */; };
+		1EAF20A8162DC0F600957B1D /* feedbackActivity@2x~ipad.png in Resources */ = {isa = PBXBuildFile; fileRef = 1EAF20A4162DC0F600957B1D /* feedbackActivity@2x~ipad.png */; };
+		1EAF20A9162DC0F600957B1D /* feedbackActivity~ipad.png in Resources */ = {isa = PBXBuildFile; fileRef = 1EAF20A5162DC0F600957B1D /* feedbackActivity~ipad.png */; };
+		1EAF20AA162DC0F600957B1D /* feedbackActiviy.png in Resources */ = {isa = PBXBuildFile; fileRef = 1EAF20A6162DC0F600957B1D /* feedbackActiviy.png */; };
+		1EAF20AB162DC0F600957B1D /* feedbackActiviy@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1EAF20A7162DC0F600957B1D /* feedbackActiviy@2x.png */; };
 		1EC69F601615001500808FD9 /* BITHockeyManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EC69F5D1615001500808FD9 /* BITHockeyManagerPrivate.h */; };
 		1EF95CA6162CB037000AE3AD /* BITFeedbackActivity.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EF95CA4162CB036000AE3AD /* BITFeedbackActivity.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1EF95CA7162CB037000AE3AD /* BITFeedbackActivity.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EF95CA5162CB036000AE3AD /* BITFeedbackActivity.m */; };
@@ -188,6 +192,10 @@
 		1E754E591621FBB70070AB92 /* BITCrashManagerPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashManagerPrivate.h; sourceTree = "<group>"; };
 		1E754E5A1621FBB70070AB92 /* BITCrashReportTextFormatter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashReportTextFormatter.h; sourceTree = "<group>"; };
 		1E754E5B1621FBB70070AB92 /* BITCrashReportTextFormatter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITCrashReportTextFormatter.m; sourceTree = "<group>"; };
+		1EAF20A4162DC0F600957B1D /* feedbackActivity@2x~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "feedbackActivity@2x~ipad.png"; sourceTree = "<group>"; };
+		1EAF20A5162DC0F600957B1D /* feedbackActivity~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "feedbackActivity~ipad.png"; sourceTree = "<group>"; };
+		1EAF20A6162DC0F600957B1D /* feedbackActiviy.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = feedbackActiviy.png; sourceTree = "<group>"; };
+		1EAF20A7162DC0F600957B1D /* feedbackActiviy@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "feedbackActiviy@2x.png"; sourceTree = "<group>"; };
 		1EC69F5D1615001500808FD9 /* BITHockeyManagerPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITHockeyManagerPrivate.h; sourceTree = "<group>"; };
 		1EDA60CF15C2C1450032D10B /* HockeySDK-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "HockeySDK-Info.plist"; sourceTree = "<group>"; };
 		1EF95CA4162CB036000AE3AD /* BITFeedbackActivity.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITFeedbackActivity.h; sourceTree = "<group>"; };
@@ -231,6 +239,10 @@
 				1E5955C115B71C8600A03429 /* buttonHighlight@2x.png */,
 				1E5955C415B71C8600A03429 /* IconGradient.png */,
 				1E5955C515B71C8600A03429 /* IconGradient@2x.png */,
+				1EAF20A4162DC0F600957B1D /* feedbackActivity@2x~ipad.png */,
+				1EAF20A5162DC0F600957B1D /* feedbackActivity~ipad.png */,
+				1EAF20A6162DC0F600957B1D /* feedbackActiviy.png */,
+				1EAF20A7162DC0F600957B1D /* feedbackActiviy@2x.png */,
 			);
 			name = Images;
 			sourceTree = "<group>";
@@ -520,6 +532,10 @@
 				1E5955CF15B71C8600A03429 /* IconGradient.png in Resources */,
 				1E5955D015B71C8600A03429 /* IconGradient@2x.png in Resources */,
 				1E27EF2515BB5033000AE995 /* HockeySDK.strings in Resources */,
+				1EAF20A8162DC0F600957B1D /* feedbackActivity@2x~ipad.png in Resources */,
+				1EAF20A9162DC0F600957B1D /* feedbackActivity~ipad.png in Resources */,
+				1EAF20AA162DC0F600957B1D /* feedbackActiviy.png in Resources */,
+				1EAF20AB162DC0F600957B1D /* feedbackActiviy@2x.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
