@@ -176,11 +176,15 @@
 
 /* Open Link In Safari Action Sheet / Alert View */
 
-/* Title for the Action Sheet */
-"HockeyFeedbackListCancelOpenLink" = "Cancel";
+/* Button Title to cancel */
+"HockeyFeedbackListLinkActionCancel" = "Cancel";
 
-/* Title for the Action Sheet */
-"HockeyFeedbackListOpenLinkInSafari" = "Open Link in Safari";
+/* Button Title to Open the Link */
+"HockeyFeedbackListLinkActionOpen" = "Open";
+
+/* Button Title to Copy the Link */
+"HockeyFeedbackListLinkActionCopy" = "Copy";
+
 
 /* UIActivity */
 

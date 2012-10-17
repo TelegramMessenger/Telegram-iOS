@@ -477,6 +477,35 @@
 }
 
 
+#pragma mark - BITAttributedLabelDelegate
+
+- (void)attributedLabel:(BITAttributedLabel *)label didSelectLinkWithURL:(NSURL *)url {
+  if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
+    UIActionSheet *linkAction = [[UIActionSheet alloc] initWithTitle:[url absoluteString]
+                                                            delegate:self
+                                                   cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionCancel")
+                                              destructiveButtonTitle:nil
+                                                   otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionOpen"), BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionCopy"), nil
+                                 ];
+    [linkAction setTag:1];
+    [linkAction setActionSheetStyle:UIActionSheetStyleBlackTranslucent];
+    [linkAction showInView:self.view];
+    [linkAction release];
+  } else {
+    UIAlertView *linkAction = [[UIAlertView alloc] initWithTitle:[url absoluteString]
+                                                         message:nil
+                                                        delegate:self
+                                               cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionCancel")
+                                               otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionOpen"), BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionCopy"), nil
+                               ];
+    
+    [linkAction setTag:1];
+    [linkAction show];
+    [linkAction release];
+  }
+}
+
+
 #pragma mark - UIAlertViewDelegate
 
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
@@ -489,7 +518,12 @@
       [self deleteAllMessages];
     }
   } else {
-    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:alertView.title]];
+    if (buttonIndex == [alertView firstOtherButtonIndex]) {
+      [[UIApplication sharedApplication] openURL:[NSURL URLWithString:alertView.title]];
+    } else {
+      UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
+      pasteboard.URL = [NSURL URLWithString:alertView.title];
+    }
   }
 }
 
@@ -506,35 +540,12 @@
       [self deleteAllMessages];
     }
   } else {
-    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:actionSheet.title]];
-  }
-}
-
-
-#pragma mark - BITAttributedLabelDelegate
-
-- (void)attributedLabel:(BITAttributedLabel *)label didSelectLinkWithURL:(NSURL *)url {
-  if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
-    UIActionSheet *linkAction = [[UIActionSheet alloc] initWithTitle:[url absoluteString]
-                                                            delegate:self
-                                                   cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListCancelOpenLink")
-                                              destructiveButtonTitle:nil
-                                                   otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackListOpenLinkInSafari"), nil
-                                   ];
-    [linkAction setTag:1];
-    [linkAction setActionSheetStyle:UIActionSheetStyleBlackTranslucent];
-    [linkAction showInView:self.view];
-    [linkAction release];
-  } else {
-    UIAlertView *linkAction = [[UIAlertView alloc] initWithTitle:[url absoluteString]
-                                                         message:nil
-                                                        delegate:self
-                                               cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListCancelOpenLink")
-                                               otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackListOpenLinkInSafari"), nil];
-    
-    [linkAction setTag:1];
-    [linkAction show];
-    [linkAction release];
+    if (buttonIndex == [actionSheet destructiveButtonIndex]) {
+      [[UIApplication sharedApplication] openURL:[NSURL URLWithString:actionSheet.title]];
+    } else {
+      UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
+      pasteboard.URL = [NSURL URLWithString:actionSheet.title];
+    }
   }
 }
 
