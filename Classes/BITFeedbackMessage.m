@@ -39,7 +39,7 @@
     _text = nil;
     _name = nil;
     _email = nil;
-    _date = nil;
+    _date = [[NSDate alloc] init];
     _token = nil;
     _id = [[NSNumber alloc] initWithInteger:0];
     _status = BITFeedbackMessageStatusSendPending;

@@ -799,6 +799,7 @@
   
   // app defined user data may have changed, update it
   [self updateAppDefinedUserData];
+  [self saveMessages];
   
   NSArray *pendingMessages = [self messagesWithStatus:BITFeedbackMessageStatusSendPending];
 

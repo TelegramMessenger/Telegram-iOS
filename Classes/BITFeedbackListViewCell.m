@@ -57,7 +57,6 @@
 @property (nonatomic, retain) NSDateFormatter *timeFormatter;
 
 @property (nonatomic, retain) UILabel *labelTitle;
-@property (nonatomic, retain) UILabel *labelText;
 
 @end
 
@@ -69,13 +68,9 @@
   self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
   if (self) {
     // Initialization code
-    _style = BITFeedbackListViewCellStyleNormal;
     _backgroundStyle = BITFeedbackListViewCellBackgroundStyleNormal;
-    _sent = YES;
     
-    _date = nil;
-    _name = nil;
-    _text = nil;
+    _message = nil;
     
     self.dateFormatter = [[[NSDateFormatter alloc] init] autorelease];
     [self.dateFormatter setTimeStyle:NSDateFormatterNoStyle];
@@ -92,10 +87,11 @@
     self.labelTitle = [[[UILabel alloc] init] autorelease];
     self.labelTitle.font = [UIFont systemFontOfSize:TITLE_FONTSIZE];
     
-    self.labelText = [[[UILabel alloc] init] autorelease];
+    self.labelText = [[[BITAttributedLabel alloc] init] autorelease];
     self.labelText.font = [UIFont systemFontOfSize:TEXT_FONTSIZE];
     self.labelText.numberOfLines = 0;
     self.labelText.textAlignment = UITextAlignmentLeft;
+    self.labelText.dataDetectorTypes = UIDataDetectorTypeAll;
   }
   return self;
 }
@@ -107,9 +103,7 @@
   [_labelTitle release], _labelTitle = nil;
   [_labelText release], _labelText = nil;
   
-  [_date release], _date = nil;
-  [_name release], _name = nil;
-  [_text release], _text = nil;
+  [_message release], _message = nil;
   
   [super dealloc];
 }
@@ -132,15 +126,15 @@
 
 #pragma mark - Layout
 
-+ (CGFloat) heightForRowWithText:(NSString *)text tableViewWidth:(CGFloat)width {
-  CGFloat calculatedHeight = [text sizeWithFont:[UIFont systemFontOfSize:TEXT_FONTSIZE]
++ (CGFloat) heightForRowWithMessage:(BITFeedbackMessage *)message tableViewWidth:(CGFloat)width {
+  CGFloat calculatedHeight = [message.text sizeWithFont:[UIFont systemFontOfSize:TEXT_FONTSIZE]
                               constrainedToSize:CGSizeMake(width - (2 * FRAME_SIDE_BORDER), CGFLOAT_MAX)].height + FRAME_TOP_BORDER + LABEL_TEXT_Y + FRAME_BOTTOM_BORDER;
   return calculatedHeight;
 }
 
 - (void)layoutSubviews {
   UIView *accessoryViewBackground = [[[UIView alloc] initWithFrame:CGRectMake(0, 2, self.frame.size.width * 2, self.frame.size.height - 2)] autorelease];
-
+  
   // colors
   if (_backgroundStyle == BITFeedbackListViewCellBackgroundStyleNormal) {
     accessoryViewBackground.backgroundColor = BACKGROUNDCOLOR_DEFAULT;
@@ -154,30 +148,30 @@
     self.labelText.backgroundColor = BACKGROUNDCOLOR_ALTERNATE;
   }
   self.labelTitle.textColor = TEXTCOLOR_TITLE;
-  if (self.sent) {
-    [self.labelText setTextColor:TEXTCOLOR_DEFAULT];
-  } else {
+  if (_message.status == BITFeedbackMessageStatusSendPending || _message.status == BITFeedbackMessageStatusSendInProgress) {
     [self.labelText setTextColor:TEXTCOLOR_PENDING];
+  } else {
+    [self.labelText setTextColor:TEXTCOLOR_DEFAULT];
   }
 
   // background for deletion accessory view
   [self addSubview:accessoryViewBackground];
-
+  
   // header
   NSString *dateString;
-  if (self.date) {
-    if ([self isSameDayWithDate1:[NSDate date] date2:self.date]) {
-      dateString = [self.timeFormatter stringFromDate:self.date];
-    } else {
-      dateString = [self.dateFormatter stringFromDate:self.date];
-    }
-  } else {
+  if (_message.status == BITFeedbackMessageStatusSendPending || _message.status == BITFeedbackMessageStatusSendInProgress) {
     dateString = BITHockeyLocalizedString(@"Pending");
+  } else {
+    if ([self isSameDayWithDate1:[NSDate date] date2:_message.date]) {
+      dateString = [self.timeFormatter stringFromDate:_message.date];
+    } else {
+      dateString = [self.dateFormatter stringFromDate:_message.date];
+    }
   }
   [self.labelTitle setText:dateString];// [self.date description]];
   [self.labelTitle setFrame:CGRectMake(FRAME_SIDE_BORDER, FRAME_TOP_BORDER + LABEL_TITLE_Y, self.frame.size.width - (2 * FRAME_SIDE_BORDER), LABEL_TITLE_HEIGHT)];
     
-  if (_style == BITFeedbackListViewCellStyleNormal) {
+  if (_message.userMessage) {
     self.labelTitle.textAlignment = UITextAlignmentRight;
     self.labelText.textAlignment = UITextAlignmentRight;
   } else {
@@ -188,9 +182,9 @@
   [self addSubview:self.labelTitle];
 
   // text
-  [self.labelText setText:self.text];
+  [self.labelText setText:_message.text];
   CGSize size = CGSizeMake(self.frame.size.width - (2 * FRAME_SIDE_BORDER),
-                           [[self class] heightForRowWithText:self.text tableViewWidth:self.frame.size.width] - LABEL_TEXT_Y - FRAME_BOTTOM_BORDER);
+                           [[self class] heightForRowWithMessage:_message tableViewWidth:self.frame.size.width] - LABEL_TEXT_Y - FRAME_BOTTOM_BORDER);
   
   [self.labelText setFrame:CGRectMake(FRAME_SIDE_BORDER, LABEL_TEXT_Y, size.width, size.height)];
   

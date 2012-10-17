@@ -159,17 +159,11 @@
 /* Button title for deleting all local messages*/
 "HockeyFeedbackListButonDeleteAllMessages" = "Delete All Messages";
 
-/* User Name In Message If Name Not Set */
-"HockeyFeedbackListMessageUserNameNotSet" = "You";
-
-/* Name In Message From Server If Name Not Set */
-"HockeyFeedbackListMessageResponseNameNotSet" = "Response";
-
 /* Message pending to be send */
 "HockeyFeedbackListMessagePending" = "Pending";
 
 
-/* Delete All Messages Action Sheet */
+/* Delete All Messages Action Sheet / Alert View */
 
 /* Title for the Action Sheet */
 "HockeyFeedbackListDeleteAllTitle" = "This will delete all messages on this device.";
@@ -180,6 +174,14 @@
 /* Button Title to cancel delete action */
 "HockeyFeedbackListDeleteAllCancel" = "Cancel";
 
+
+/* Open Link In Safari Action Sheet / Alert View */
+
+/* Title for the Action Sheet */
+"HockeyFeedbackListCancelOpenLink" = "Cancel";
+
+/* Title for the Action Sheet */
+"HockeyFeedbackListOpenLinkInSafari" = "Open Link in Safari";
 
 /* UIActivity */
 

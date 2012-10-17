@@ -28,11 +28,8 @@
 
 
 #import <UIKit/UIKit.h>
-
-typedef enum {
-  BITFeedbackListViewCellStyleNormal = 0, // right aligned header style
-  BITFeedbackListViewCellStyleRepsonse = 1 // left aligned header style for dev responses
-} BITFeedbackListViewCellStyle;
+#import "BITFeedbackMessage.h"
+#import "BITAttributedLabel.h"
 
 typedef enum {
   BITFeedbackListViewCellBackgroundStyleNormal = 0,
@@ -41,14 +38,12 @@ typedef enum {
 
 @interface BITFeedbackListViewCell : UITableViewCell
 
-@property (nonatomic) BITFeedbackListViewCellStyle style;
+@property (nonatomic, retain) BITFeedbackMessage *message;
+
 @property (nonatomic) BITFeedbackListViewCellBackgroundStyle backgroundStyle;
-@property (nonatomic) BOOL sent;
 
-@property (nonatomic, copy) NSDate *date;
-@property (nonatomic, copy) NSString *name;
-@property (nonatomic, copy) NSString *text;
+@property (nonatomic, retain) BITAttributedLabel *labelText;
 
-+ (CGFloat) heightForRowWithText:(NSString *)text tableViewWidth:(CGFloat)width;
++ (CGFloat) heightForRowWithMessage:(BITFeedbackMessage *)message tableViewWidth:(CGFloat)width;
 
 @end

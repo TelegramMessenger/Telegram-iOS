@@ -36,6 +36,7 @@
 #import "BITFeedbackComposeViewController.h"
 #import "BITFeedbackUserDataViewController.h"
 #import "BITFeedbackMessage.h"
+#import "BITAttributedLabel.h"
 
 #import "BITHockeyHelper.h"
 #import <QuartzCore/QuartzCore.h>
@@ -54,7 +55,7 @@
 #define BORDER_COLOR2 BIT_RGBCOLOR(221, 221, 221)
 #define BORDER_COLOR3 BIT_RGBCOLOR(255, 255, 255)
 
-@interface BITFeedbackListViewController () <BITFeedbackUserDataDelegate>
+@interface BITFeedbackListViewController () <BITFeedbackUserDataDelegate, BITAttributedLabelDelegate>
 @property (nonatomic, assign) BITFeedbackManager *manager;
 
 @property (nonatomic, retain) NSDateFormatter *lastUpdateDateFormatter;
@@ -217,6 +218,7 @@
                                                 destructiveButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllDelete")
                                                      otherButtonTitles:nil
                                    ];
+    [deleteAction setTag:0];
     [deleteAction setActionSheetStyle:UIActionSheetStyleBlackTranslucent];
     [deleteAction showInView:self.view];
     [deleteAction release];
@@ -227,9 +229,9 @@
                                               cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllCancel")
                                               otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllDelete"), nil];
     
+    [deleteAction setTag:0];
     [deleteAction show];
     [deleteAction release];
-    
   }
 }
 
@@ -316,7 +318,7 @@
     cell.textLabel.numberOfLines = 0;
     cell.accessoryType = UITableViewCellAccessoryNone;
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
-
+    
     // button
     UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
     [button.layer setMasksToBounds:YES];
@@ -413,31 +415,9 @@
     }
     
     BITFeedbackMessage *message = [self.manager messageAtIndex:indexPath.row];
-    cell.date = message.date;
-    
-    if (message.userMessage) {
-      cell.style = BITFeedbackListViewCellStyleNormal;
-      if ([self.manager requireUserName] == BITFeedbackUserDataElementRequired ||
-          ([self.manager requireUserName] == BITFeedbackUserDataElementOptional && [self.manager userName] != nil)
-          ) {
-        cell.name = [self.manager userName];
-      } else {
-        cell.name = BITHockeyLocalizedString(@"HockeyFeedbackListMessageUserNameNotSet");
-      }
-    } else {
-      cell.style = BITFeedbackListViewCellStyleRepsonse;
-      if (message.name && [message.name length] > 0) {
-        cell.name = message.name;
-      } else {
-        cell.name = BITHockeyLocalizedString(@"HockeyFeedbackListMessageResponseNameNotSet");
-      }
-    }
-    
-    if (message.text) {
-      cell.text = message.text;
-    } else {
-      cell.text = @"";
-    }
+    cell.message = message;
+    cell.labelText.delegate = self;
+    cell.labelText.userInteractionEnabled = YES;
 
     UIView *lineView1 = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.contentView.bounds.size.width, 1)] autorelease];
     lineView1.backgroundColor = BORDER_COLOR1;
@@ -468,8 +448,13 @@
 
 - (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
   if (editingStyle == UITableViewCellEditingStyleDelete) {
+    NSLog(@"%i %i", indexPath.section, indexPath.row);
     if ([_manager deleteMessageAtIndex:indexPath.row]) {
-      [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
+      if ([_manager numberOfMessages] > 0) {
+        [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
+      } else {
+        [tableView reloadData];
+      }
     }
   }
 }
@@ -488,15 +473,23 @@
   BITFeedbackMessage *message = [self.manager messageAtIndex:indexPath.row];
   if (!message) return 44;
   
-  return [BITFeedbackListViewCell heightForRowWithText:message.text tableViewWidth:self.view.frame.size.width];
+  return [BITFeedbackListViewCell heightForRowWithMessage:message tableViewWidth:self.view.frame.size.width];
 }
 
 
 #pragma mark - UIAlertViewDelegate
 
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
-  if (buttonIndex == [alertView firstOtherButtonIndex]) {
-    [self deleteAllMessages];
+  if (buttonIndex == alertView.cancelButtonIndex) {
+    return;
+  }
+  
+  if ([alertView tag] == 0) {
+    if (buttonIndex == [alertView firstOtherButtonIndex]) {
+      [self deleteAllMessages];
+    }
+  } else {
+    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:alertView.title]];
   }
 }
 
@@ -504,10 +497,45 @@
 #pragma mark - UIActionSheetDelegate
 
 - (void)actionSheet:(UIActionSheet *)actionSheet didDismissWithButtonIndex:(NSInteger)buttonIndex {
-  if (buttonIndex == [actionSheet destructiveButtonIndex]) {
-    [self deleteAllMessages];
+  if (buttonIndex == actionSheet.cancelButtonIndex) {
+    return;
+  }
+
+  if ([actionSheet tag] == 0) {
+    if (buttonIndex == [actionSheet destructiveButtonIndex]) {
+      [self deleteAllMessages];
+    }
+  } else {
+    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:actionSheet.title]];
   }
 }
 
+
+#pragma mark - BITAttributedLabelDelegate
+
+- (void)attributedLabel:(BITAttributedLabel *)label didSelectLinkWithURL:(NSURL *)url {
+  if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
+    UIActionSheet *linkAction = [[UIActionSheet alloc] initWithTitle:[url absoluteString]
+                                                            delegate:self
+                                                   cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListCancelOpenLink")
+                                              destructiveButtonTitle:nil
+                                                   otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackListOpenLinkInSafari"), nil
+                                   ];
+    [linkAction setTag:1];
+    [linkAction setActionSheetStyle:UIActionSheetStyleBlackTranslucent];
+    [linkAction showInView:self.view];
+    [linkAction release];
+  } else {
+    UIAlertView *linkAction = [[UIAlertView alloc] initWithTitle:[url absoluteString]
+                                                         message:nil
+                                                        delegate:self
+                                               cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListCancelOpenLink")
+                                               otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackListOpenLinkInSafari"), nil];
+    
+    [linkAction setTag:1];
+    [linkAction show];
+    [linkAction release];
+  }
+}
 
 @end
