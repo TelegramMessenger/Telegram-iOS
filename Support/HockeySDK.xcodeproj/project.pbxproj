@@ -92,6 +92,8 @@
 		1E754E5F1621FBB70070AB92 /* BITCrashManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E754E591621FBB70070AB92 /* BITCrashManagerPrivate.h */; };
 		1E754E601621FBB70070AB92 /* BITCrashReportTextFormatter.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E754E5A1621FBB70070AB92 /* BITCrashReportTextFormatter.h */; };
 		1E754E611621FBB70070AB92 /* BITCrashReportTextFormatter.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E754E5B1621FBB70070AB92 /* BITCrashReportTextFormatter.m */; };
+		1EACC97B162F041E007578C5 /* BITAttributedLabel.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EACC979162F041E007578C5 /* BITAttributedLabel.h */; };
+		1EACC97C162F041E007578C5 /* BITAttributedLabel.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EACC97A162F041E007578C5 /* BITAttributedLabel.m */; settings = {COMPILER_FLAGS = "-fobjc-arc"; }; };
 		1EAF20A8162DC0F600957B1D /* feedbackActivity@2x~ipad.png in Resources */ = {isa = PBXBuildFile; fileRef = 1EAF20A4162DC0F600957B1D /* feedbackActivity@2x~ipad.png */; };
 		1EAF20A9162DC0F600957B1D /* feedbackActivity~ipad.png in Resources */ = {isa = PBXBuildFile; fileRef = 1EAF20A5162DC0F600957B1D /* feedbackActivity~ipad.png */; };
 		1EAF20AA162DC0F600957B1D /* feedbackActiviy.png in Resources */ = {isa = PBXBuildFile; fileRef = 1EAF20A6162DC0F600957B1D /* feedbackActiviy.png */; };
@@ -192,6 +194,8 @@
 		1E754E591621FBB70070AB92 /* BITCrashManagerPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashManagerPrivate.h; sourceTree = "<group>"; };
 		1E754E5A1621FBB70070AB92 /* BITCrashReportTextFormatter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashReportTextFormatter.h; sourceTree = "<group>"; };
 		1E754E5B1621FBB70070AB92 /* BITCrashReportTextFormatter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITCrashReportTextFormatter.m; sourceTree = "<group>"; };
+		1EACC979162F041E007578C5 /* BITAttributedLabel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITAttributedLabel.h; sourceTree = "<group>"; };
+		1EACC97A162F041E007578C5 /* BITAttributedLabel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITAttributedLabel.m; sourceTree = "<group>"; };
 		1EAF20A4162DC0F600957B1D /* feedbackActivity@2x~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "feedbackActivity@2x~ipad.png"; sourceTree = "<group>"; };
 		1EAF20A5162DC0F600957B1D /* feedbackActivity~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "feedbackActivity~ipad.png"; sourceTree = "<group>"; };
 		1EAF20A6162DC0F600957B1D /* feedbackActiviy.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = feedbackActiviy.png; sourceTree = "<group>"; };
@@ -268,6 +272,8 @@
 				1E49A4A4161222B900463151 /* BITHockeyBaseViewController.m */,
 				1E49A4A5161222B900463151 /* BITHockeyHelper.h */,
 				1E49A4A6161222B900463151 /* BITHockeyHelper.m */,
+				1EACC979162F041E007578C5 /* BITAttributedLabel.h */,
+				1EACC97A162F041E007578C5 /* BITAttributedLabel.m */,
 				1E49A4A7161222B900463151 /* PSAppStoreHeader.h */,
 				1E49A4A8161222B900463151 /* PSAppStoreHeader.m */,
 				1E49A4A9161222B900463151 /* PSStoreButton.h */,
@@ -433,6 +439,7 @@
 				1E754E5E1621FBB70070AB92 /* BITCrashManagerDelegate.h in Headers */,
 				1E754E5F1621FBB70070AB92 /* BITCrashManagerPrivate.h in Headers */,
 				1E754E601621FBB70070AB92 /* BITCrashReportTextFormatter.h in Headers */,
+				1EACC97B162F041E007578C5 /* BITAttributedLabel.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -596,6 +603,7 @@
 				1E754E5D1621FBB70070AB92 /* BITCrashManager.m in Sources */,
 				1E754E611621FBB70070AB92 /* BITCrashReportTextFormatter.m in Sources */,
 				1EF95CA7162CB037000AE3AD /* BITFeedbackActivity.m in Sources */,
+				1EACC97C162F041E007578C5 /* BITAttributedLabel.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
