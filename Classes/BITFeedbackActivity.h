@@ -12,7 +12,4 @@
 
 @interface BITFeedbackActivity : UIActivity <BITFeedbackComposeViewControllerDelegate>
 
-@property (nonatomic, retain) UIImage *shareImage;
-@property (nonatomic, retain) NSString *shareString;
-
 @end

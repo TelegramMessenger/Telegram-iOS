@@ -13,7 +13,34 @@
 #import "BITHockeyHelper.h"
 #import "BITFeedbackManagerPrivate.h"
 
+
+@interface BITFeedbackActivity()
+
+@property (nonatomic, retain) NSMutableArray *items;
+
+@end
+
+
 @implementation BITFeedbackActivity
+
+#pragma mark - NSObject
+
+- (id)init {
+  if ((self = [super init])) {
+    self.items = [NSMutableArray array];;
+  }
+  
+  return self;
+}
+
+- (void)dealloc {
+  [_items release]; _items = nil;
+  
+  [super dealloc];
+}
+
+
+#pragma mark - UIActivity
 
 - (NSString *)activityType {
   return @"UIActivityTypePostToHockeySDKFeedback";
@@ -36,9 +63,7 @@
   if ([BITHockeyManager sharedHockeyManager].disableFeedbackManager) return NO;
 
   for (UIActivityItemProvider *item in activityItems) {
-    if ([item isKindOfClass:[UIImage class]]) {
-      return YES;
-    } else if ([item isKindOfClass:[NSString class]]) {
+    if ([item isKindOfClass:[NSString class]]) {
       return YES;
     } else if ([item isKindOfClass:[NSURL class]]) {
       return YES;
@@ -49,12 +74,9 @@
 
 - (void)prepareWithActivityItems:(NSArray *)activityItems {
   for (id item in activityItems) {
-    if ([item isKindOfClass:[UIImage class]]) {
-      self.shareImage = item;
-    } else if ([item isKindOfClass:[NSString class]]) {
-      self.shareString = [(self.shareString ? self.shareString : @"") stringByAppendingFormat:@"%@%@",(self.shareString ? @" " : @""),item];
-    } else if ([item isKindOfClass:[NSURL class]]) {
-      self.shareString = [(self.shareString ? self.shareString : @"") stringByAppendingFormat:@"%@%@",(self.shareString ? @" " : @""),[(NSURL *)item absoluteString]];
+    if ([item isKindOfClass:[NSString class]] ||
+        [item isKindOfClass:[NSURL class]]) {
+      [_items addObject:item];
     } else {
       BITHockeyLog(@"Unknown item type %@", item);
     }
@@ -63,7 +85,9 @@
 
 - (UIViewController *)activityViewController {
   // TODO: return compose controller with activity content added
-  BITFeedbackComposeViewController *composeViewController = [[BITHockeyManager sharedHockeyManager].feedbackManager feedbackComposeViewControllerWithScreenshot:NO delegate:self];
+  BITFeedbackComposeViewController *composeViewController = [[BITHockeyManager sharedHockeyManager].feedbackManager feedbackComposeViewController];
+  composeViewController.delegate = self;
+  [composeViewController prepareWithItems:_items];
   
   UINavigationController *navController = [[[UINavigationController alloc] initWithRootViewController: composeViewController] autorelease];
   navController.modalPresentationStyle = UIModalPresentationFormSheet;  

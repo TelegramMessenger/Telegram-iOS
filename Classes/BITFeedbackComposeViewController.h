@@ -37,6 +37,7 @@
 @property (nonatomic, assign) id<BITFeedbackComposeViewControllerDelegate> delegate;
 
 - (id)init;
-- (id)initWithDelegate:(id<BITFeedbackComposeViewControllerDelegate>)delegate;
+
+- (void)prepareWithItems:(NSArray *)items;
 
 @end

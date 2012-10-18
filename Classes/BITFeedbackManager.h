@@ -87,10 +87,9 @@ typedef enum {
 /**
  Create an feedback compose view
  
- @param modal Return a view ready for modal presentation with integrated navigation bar
  @return `BITFeedbackComposeViewController` The compose feedback view controller,
  e.g. to push it onto a navigation stack.
  */
-- (BITFeedbackComposeViewController *)feedbackComposeViewControllerWithDelegate:(id<BITFeedbackComposeViewControllerDelegate>)delegate;
+- (BITFeedbackComposeViewController *)feedbackComposeViewController;
 
 @end

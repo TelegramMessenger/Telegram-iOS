@@ -37,39 +37,59 @@
 #import "BITHockeyHelper.h"
 
 
-@interface BITFeedbackComposeViewController () <BITFeedbackUserDataDelegate> {
-  BOOL blockUserDataScreen;
-}
+@interface BITFeedbackComposeViewController () <BITFeedbackUserDataDelegate>
 
 @property (nonatomic, assign) BITFeedbackManager *manager;
 @property (nonatomic, retain) UITextView *textView;
+
+@property (nonatomic, retain) NSString *text;
 
 - (void)setUserDataAction;
 
 @end
 
 
+@implementation BITFeedbackComposeViewController {
+  BOOL _blockUserDataScreen;  
+}
 
-@implementation BITFeedbackComposeViewController
+
+#pragma mark - NSObject
 
 - (id)init {
   self = [super init];
   if (self) {
     self.title = BITHockeyLocalizedString(@"HockeyFeedbackComposeTitle");
-    blockUserDataScreen = NO;
+    _blockUserDataScreen = NO;
     _delegate = nil;
     _manager = [BITHockeyManager sharedHockeyManager].feedbackManager;
+
+    _text = nil;
   }
+  
   return self;
 }
 
+- (void)dealloc {
+  [_text release];
+  [_textView release], _textView = nil;
+  
+  [super dealloc];
+}
 
-- (id)initWithDelegate:(id<BITFeedbackComposeViewControllerDelegate>)delegate {
-  self = [self init];
-  if (self) {
-    _delegate = delegate;
+
+#pragma mark - Public
+
+- (void)prepareWithItems:(NSArray *)items {
+  for (id item in items) {
+    if ([item isKindOfClass:[NSString class]]) {
+      self.text = [(self.text ? self.text : @"") stringByAppendingFormat:@"%@%@", (self.text ? @" " : @""), item];
+    } else if ([item isKindOfClass:[NSURL class]]) {
+      self.text = [(self.text ? self.text : @"") stringByAppendingFormat:@"%@%@", (self.text ? @" " : @""), [(NSURL *)item absoluteString]];
+    } else {
+      BITHockeyLog(@"Unknown item type %@", item);
+    }
   }
-  return self;
 }
 
 
@@ -112,9 +132,14 @@
   
   [super viewWillAppear:animated];
   
-  self.navigationItem.rightBarButtonItem.enabled = NO;
-
   [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleBlackOpaque];
+  
+  if (_text) {
+    self.textView.text = _text;
+    self.navigationItem.rightBarButtonItem.enabled = YES;
+  } else {
+    self.navigationItem.rightBarButtonItem.enabled = NO;
+  }
 }
 
 - (void)viewDidAppear:(BOOL)animated {
@@ -124,7 +149,7 @@
       ([self.manager requireManualUserDataMissing] ||
        ![self.manager didAskUserData])
       ) {
-    if (!blockUserDataScreen)
+    if (!_blockUserDataScreen)
       [self setUserDataAction];
   } else {
     [self.textView becomeFirstResponder];
@@ -180,7 +205,7 @@
 #pragma mark - CNSFeedbackUserDataDelegate
 
 - (void)userDataUpdateCancelled {
-  blockUserDataScreen = YES;
+  _blockUserDataScreen = YES;
   
   if ([self.manager requireManualUserDataMissing]) {
     if ([self.navigationController respondsToSelector:@selector(dismissViewControllerAnimated:completion:)]) {

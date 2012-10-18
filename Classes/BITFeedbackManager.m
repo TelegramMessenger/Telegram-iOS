@@ -177,8 +177,8 @@
 }
 
 
-- (BITFeedbackComposeViewController *)feedbackComposeViewControllerWithDelegate:(id<BITFeedbackComposeViewControllerDelegate>)delegate {
-  return [[[BITFeedbackComposeViewController alloc] initWithDelegate:delegate] autorelease];
+- (BITFeedbackComposeViewController *)feedbackComposeViewController {
+  return [[[BITFeedbackComposeViewController alloc] init] autorelease];
 }
 
 - (void)showFeedbackComposeView {
@@ -187,7 +187,7 @@
     return;
   }
   
-  [self showView:[self feedbackComposeViewControllerWithDelegate:nil]];
+  [self showView:[self feedbackComposeViewController]];
 }
 
 
