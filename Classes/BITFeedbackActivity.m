@@ -47,9 +47,7 @@
 }
 
 - (NSString *)activityTitle {
-  NSString *appName = [[[NSBundle mainBundle] localizedInfoDictionary] objectForKey:@"CFBundleDisplayName"];
-  if (!appName)
-    appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"] ?: BITHockeyLocalizedString(@"HockeyFeedbackActivityAppPlaceholder");
+  NSString *appName = bit_appName();
   
   return [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackActivityButtonTitle"), appName];
 }
