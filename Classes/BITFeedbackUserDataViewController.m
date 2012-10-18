@@ -100,8 +100,10 @@
   self.navigationItem.rightBarButtonItem.enabled = [self allRequiredFieldsEntered];
 }
 
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
-    return (interfaceOrientation == UIInterfaceOrientationPortrait);
+#pragma mark - UIViewController Rotation
+
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)orientation {
+  return YES;
 }
 
 #pragma mark - Private methods

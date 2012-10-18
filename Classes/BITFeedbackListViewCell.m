@@ -134,6 +134,7 @@
 
 - (void)layoutSubviews {
   UIView *accessoryViewBackground = [[[UIView alloc] initWithFrame:CGRectMake(0, 2, self.frame.size.width * 2, self.frame.size.height - 2)] autorelease];
+  accessoryViewBackground.autoresizingMask = UIViewAutoresizingFlexibleHeight;
   
   // colors
   if (_backgroundStyle == BITFeedbackListViewCellBackgroundStyleNormal) {

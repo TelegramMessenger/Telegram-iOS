@@ -192,6 +192,7 @@
   userController.delegate = self;
   
   UINavigationController *navController = [[[UINavigationController alloc] initWithRootViewController:userController] autorelease];
+  navController.modalPresentationStyle = UIModalPresentationFormSheet;
   
   [self.navigationController presentModalViewController:navController animated:YES];
 }
@@ -246,6 +247,18 @@
   [self.manager saveMessages];
   
   [self.navigationController dismissModalViewControllerAnimated:YES];
+}
+
+
+#pragma mark - UIViewController Rotation
+
+- (void)willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration {
+  [self.tableView beginUpdates];
+  [self.tableView endUpdates];
+}
+
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)orientation {
+  return YES;
 }
 
 
@@ -331,6 +344,7 @@
     [button setTitleColor:BUTTON_TEXTCOLOR forState:UIControlStateNormal];
     [button setTitleShadowColor:BUTTON_TEXTCOLOR_SHADOW forState:UIControlStateNormal];
     if (indexPath.section == 0) {
+      topGap += 22;
       if ([self.manager numberOfMessages] == 0) {
         [button setTitle:BITHockeyLocalizedString(@"HockeyFeedbackListButonWriteFeedback") forState:UIControlStateNormal];
       } else {
@@ -356,6 +370,7 @@
       [button setTitle:title forState:UIControlStateNormal];
       [button addTarget:self action:@selector(setUserDataAction:) forControlEvents:UIControlEventTouchUpInside];
     } else {
+      topGap -= 6.0f;
       [button.layer setBackgroundColor:BUTTON_DELETE_BACKGROUNDCOLOR.CGColor];
       [button setTitleColor:BUTTON_DELETE_TEXTCOLOR forState:UIControlStateNormal];
       [button setTitleShadowColor:BUTTON_DELETE_TEXTCOLOR_SHADOW forState:UIControlStateNormal];
@@ -363,13 +378,14 @@
       [button setTitle:BITHockeyLocalizedString(@"HockeyFeedbackListButonDeleteAllMessages") forState:UIControlStateNormal];
       [button addTarget:self action:@selector(deleteAllMessagesAction:) forControlEvents:UIControlEventTouchUpInside];
     }
+    
     [button setFrame: CGRectMake( 10.0f, topGap + 12.0f, self.view.frame.size.width - 20.0f, 42.0f)];
     
     [cell addSubview:button];
     
     // status label or shadow lines
     if (indexPath.section == 0) {
-      UILabel *statusLabel = [[[UILabel alloc] initWithFrame:CGRectMake(0, 59, self.view.frame.size.width, 28)] autorelease];
+      UILabel *statusLabel = [[[UILabel alloc] initWithFrame:CGRectMake(0, 6, self.view.frame.size.width, 28)] autorelease];
       
       statusLabel.font = [UIFont systemFontOfSize:10];
       statusLabel.textColor = DEFAULT_TEXTCOLOR;

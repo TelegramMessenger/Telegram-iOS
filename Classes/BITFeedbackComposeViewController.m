@@ -93,6 +93,47 @@
 }
 
 
+#pragma mark - Keyboard
+
+- (void)keyboardWasShown:(NSNotification*)aNotification {
+  NSDictionary* info = [aNotification userInfo];
+  CGSize kbSize = [[info objectForKey:UIKeyboardFrameBeginUserInfoKey] CGRectValue].size;
+  
+  CGRect frame = CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height);
+  if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
+    if (UIInterfaceOrientationIsPortrait(self.interfaceOrientation))
+      frame.size.height -= kbSize.height;
+    else
+      frame.size.height -= kbSize.width;
+  } else {
+    CGSize windowSize = [[UIScreen mainScreen] bounds].size;
+    CGFloat windowHeight = windowSize.height - 20;
+    CGFloat navBarHeight = self.navigationController.navigationBar.frame.size.height;
+    
+    if (UIInterfaceOrientationIsPortrait(self.interfaceOrientation)) {
+      CGFloat modalGap = (windowHeight - self.view.bounds.size.height) / 2;
+      frame.size.height = windowHeight - navBarHeight - modalGap - kbSize.height;
+    } else {
+      windowHeight = windowSize.width - 20;
+      CGFloat modalGap = 0.0f;
+      if (windowHeight - kbSize.width < self.view.bounds.size.height) {
+        modalGap = 30;
+      } else {
+        modalGap = (windowHeight - self.view.bounds.size.height) / 2;
+      }
+      frame.size.height = windowSize.width - navBarHeight - modalGap - kbSize.width;
+    }
+    NSLog(@"%@", NSStringFromCGRect(frame));
+  }
+  [self.textView setFrame:frame];
+}
+
+- (void)keyboardWillBeHidden:(NSNotification*)aNotification {
+  CGRect frame = CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height);
+  [self.textView setFrame:frame];
+}
+
+
 #pragma mark - View lifecycle
 
 - (void)viewDidLoad {
@@ -111,14 +152,7 @@
                                                                             action:@selector(sendAction:)] autorelease];
 
   // message input textfield
-  CGRect frame = CGRectZero;
-  
-  if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
-    frame = CGRectMake(0, 0, self.view.bounds.size.width, 200);
-  } else {
-    frame = CGRectMake(0, 0, self.view.bounds.size.width, self.view.bounds.size.height);
-  }
-  self.textView = [[[UITextView alloc] initWithFrame:frame] autorelease];
+  self.textView = [[[UITextView alloc] initWithFrame:self.view.frame] autorelease];
   self.textView.font = [UIFont systemFontOfSize:17];
   self.textView.delegate = self;
   self.textView.backgroundColor = [UIColor whiteColor];
@@ -128,12 +162,22 @@
 }
 
 - (void)viewWillAppear:(BOOL)animated {
+  [[NSNotificationCenter defaultCenter] addObserver:self
+                                           selector:@selector(keyboardWasShown:)
+                                               name:UIKeyboardDidShowNotification object:nil];
+  
+  [[NSNotificationCenter defaultCenter] addObserver:self
+                                           selector:@selector(keyboardWillBeHidden:)
+                                               name:UIKeyboardWillHideNotification object:nil];
+
   self.manager.currentFeedbackComposeViewController = self;
   
   [super viewWillAppear:animated];
   
   [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleBlackOpaque];
   
+  [self.textView setFrame:self.view.frame];
+
   if (_text) {
     self.textView.text = _text;
     self.navigationItem.rightBarButtonItem.enabled = YES;
@@ -157,6 +201,9 @@
 }
 
 - (void)viewWillDisappear:(BOOL)animated {
+  [[NSNotificationCenter defaultCenter] removeObserver:self name:UIKeyboardDidShowNotification object:nil];
+  [[NSNotificationCenter defaultCenter] removeObserver:self name:UIKeyboardWillHideNotification object:nil];
+  
   self.manager.currentFeedbackComposeViewController = nil;
   
 	[super viewWillDisappear:animated];
@@ -164,6 +211,13 @@
 
 - (void)viewDidDisappear:(BOOL)animated {
 	[super viewDidDisappear:animated];
+}
+
+
+#pragma mark - UIViewController Rotation
+
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)orientation {
+  return YES;
 }
 
 
