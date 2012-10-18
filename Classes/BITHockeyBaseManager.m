@@ -146,7 +146,7 @@
   
   UIWindow *visibleWindow = [self findVisibleWindow];
   
-  if (parentViewController == nil && [UIWindow instancesRespondToSelector:@selector(rootViewController)]) {
+  if (parentViewController == nil) {
     parentViewController = [visibleWindow rootViewController];
   }
   
@@ -170,12 +170,10 @@
   _navController.modalPresentationStyle = _modalPresentationStyle;
   
   if (parentViewController) {
-    if ([_navController respondsToSelector:@selector(setModalTransitionStyle:)]) {
-      _navController.modalTransitionStyle = UIModalTransitionStyleCoverVertical;
-    }
+    _navController.modalTransitionStyle = UIModalTransitionStyleCoverVertical;
     
     // page sheet for the iPad
-    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad && [_navController respondsToSelector:@selector(setModalPresentationStyle:)]) {
+    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
       _navController.modalPresentationStyle = UIModalPresentationFormSheet;
     }
     
