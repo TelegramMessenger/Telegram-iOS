@@ -47,7 +47,7 @@
 }
 
 - (NSString *)activityTitle {
-  NSString *appName = bit_appName();
+  NSString *appName = bit_appName(BITHockeyLocalizedString(@"HockeyFeedbackActivityAppPlaceholder"));
   
   return [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackActivityButtonTitle"), appName];
 }

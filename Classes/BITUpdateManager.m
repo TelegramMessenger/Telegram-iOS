@@ -138,7 +138,7 @@
   }
   
   if (shouldShowDefaultAlert) {
-    NSString *appName = bit_appName();
+    NSString *appName = bit_appName(BITHockeyLocalizedString(@"HockeyAppNamePlaceholder"));
     [self showBlockingScreen:[NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateExpired"), appName] image:@"authorize_denied.png"];
 
     if (self.delegate != nil && [self.delegate respondsToSelector:@selector(didDisplayExpiryAlertForUpdateManager:)]) {
@@ -940,7 +940,7 @@
     // populate with default values (if empty)
     if (![anAppVersions count]) {
       BITAppVersionMetaInfo *defaultApp = [[[BITAppVersionMetaInfo alloc] init] autorelease];
-      defaultApp.name = bit_appName();
+      defaultApp.name = bit_appName(BITHockeyLocalizedString(@"HockeyAppNamePlaceholder"));
       defaultApp.version = _currentAppVersion;
       defaultApp.shortVersion = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
       _appVersions = [[NSArray arrayWithObject:defaultApp] retain];

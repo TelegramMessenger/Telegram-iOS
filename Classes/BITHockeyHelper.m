@@ -82,13 +82,10 @@ NSString *bit_encodeAppIdentifier(NSString *inputString) {
   return (inputString ? bit_URLEncodedString(inputString) : bit_URLEncodedString([[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"]));
 }
 
-NSString *bit_appName(void) {
+NSString *bit_appName(NSString *placeHolderString) {
   NSString *appName = [[[NSBundle mainBundle] localizedInfoDictionary] objectForKey:@"CFBundleDisplayName"];
   if (!appName)
-    appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"] ?: BITHockeyLocalizedString(@"HockeyFeedbackActivityAppPlaceholder");
-
-  if (!appName)
-    appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleName"];
+    appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"] ?: placeHolderString;
   
   return appName;
 }
