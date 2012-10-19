@@ -48,6 +48,7 @@
 // keys for meta information associated to each crash
 #define kBITCrashMetaUserName @"BITCrashMetaUserName"
 #define kBITCrashMetaUserEmail @"BITCrashMetaUserEmail"
+#define kBITCrashMetaUserID @"BITCrashMetaUserID"
 #define kBITCrashMetaApplicationLog @"BITCrashMetaApplicationLog"
 
 
@@ -78,14 +79,6 @@
   
   NSUncaughtExceptionHandler *_exceptionHandler;
 }
-
-@synthesize delegate = _delegate;
-@synthesize crashManagerStatus = _crashManagerStatus;
-@synthesize showAlwaysButton = _showAlwaysButton;
-@synthesize didCrashInLastSession = _didCrashInLastSession;
-@synthesize timeintervalCrashInLastSessionOccured = _timeintervalCrashInLastSessionOccured;
-
-@synthesize fileManager = _fileManager;
 
 
 - (id)init {
@@ -265,6 +258,19 @@
 }
 
 
+- (NSString *)userIDForCrashReport {
+  NSString *userID = @"";
+  
+  if ([BITHockeyManager sharedHockeyManager].delegate &&
+      [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
+    userID = [[BITHockeyManager sharedHockeyManager].delegate
+                userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
+                componentManager:self];
+  }
+  
+  return userID;
+}
+
 - (NSString *)userNameForCrashReport {
   NSString *username = @"";
   
@@ -277,12 +283,6 @@
       [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
     username = [[BITHockeyManager sharedHockeyManager].delegate
                 userNameForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                componentManager:self];
-  }
-  if ([BITHockeyManager sharedHockeyManager].delegate &&
-      [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
-    username = [[BITHockeyManager sharedHockeyManager].delegate
-                userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
                 componentManager:self];
   }
   
@@ -340,6 +340,7 @@
       
       [metaDict setObject:[self userNameForCrashReport] forKey:kBITCrashMetaUserName];
       [metaDict setObject:[self userEmailForCrashReport] forKey:kBITCrashMetaUserEmail];
+      [metaDict setObject:[self userIDForCrashReport] forKey:kBITCrashMetaUserID];
       
       if (self.delegate != nil && [self.delegate respondsToSelector:@selector(applicationLogForCrashManager:)]) {
         applicationLog = [self.delegate applicationLogForCrashManager:self] ?: @"";
@@ -449,10 +450,13 @@
       NSString *alertDescription = [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundAnonymousDescription"), appName];
       
       // the crash report is not anynomous any more if username or useremail are not nil
+      NSString *userid = [self userIDForCrashReport];
       NSString *username = [self userNameForCrashReport];
       NSString *useremail = [self userEmailForCrashReport];
             
-      if ((username && [username length] > 0) || (useremail && [useremail length] > 0)) {
+      if ((userid && [userid length] > 0) ||
+          (username && [username length] > 0) ||
+          (useremail && [useremail length] > 0)) {
         alertDescription = [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundDescription"), appName];
       }
       
@@ -581,6 +585,7 @@
       
       NSString *username = @"";
       NSString *useremail = @"";
+      NSString *userid = @"";
       NSString *applicationLog = @"";
       NSString *description = @"";
       
@@ -597,6 +602,7 @@
         
         username = [metaDict objectForKey:kBITCrashMetaUserName] ?: @"";
         useremail = [metaDict objectForKey:kBITCrashMetaUserEmail] ?: @"";
+        userid = [metaDict objectForKey:kBITCrashMetaUserID] ?: @"";
         applicationLog = [metaDict objectForKey:kBITCrashMetaApplicationLog] ?: @"";
       } else {
         BITHockeyLog(@"ERROR: Reading crash meta data. %@", error);
@@ -606,7 +612,7 @@
         description = [NSString stringWithFormat:@"%@", applicationLog];
       }
       
-      [crashes appendFormat:@"<crash><applicationname>%s</applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><contact>%@</contact><description><![CDATA[%@]]></description></crash>",
+      [crashes appendFormat:@"<crash><applicationname>%s</applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><username>%@</username><contact>%@</contact><description><![CDATA[%@]]></description></crash>",
        [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleExecutable"] UTF8String],
        [self extractAppUUIDs:report],
        report.applicationInfo.applicationIdentifier,
@@ -616,6 +622,7 @@
        report.applicationInfo.applicationVersion,
        crashUUID,
        [crashLogString stringByReplacingOccurrencesOfString:@"]]>" withString:@"]]" @"]]><![CDATA[" @">" options:NSLiteralSearch range:NSMakeRange(0,crashLogString.length)],
+       userid,
        username,
        useremail,
        [description stringByReplacingOccurrencesOfString:@"]]>" withString:@"]]" @"]]><![CDATA[" @">" options:NSLiteralSearch range:NSMakeRange(0,description.length)]];

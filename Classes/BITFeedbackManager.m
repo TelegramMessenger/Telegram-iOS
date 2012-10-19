@@ -43,6 +43,7 @@
 #define kBITFeedbackDateOfLastCheck	@"HockeyFeedbackDateOfLastCheck"
 #define kBITFeedbackMessages        @"HockeyFeedbackMessages"
 #define kBITFeedbackToken           @"HockeyFeedbackToken"
+#define kBITFeedbackUserID          @"HockeyFeedbackuserID"
 #define kBITFeedbackName            @"HockeyFeedbackName"
 #define kBITFeedbackEmail           @"HockeyFeedbackEmail"
 #define kBITFeedbackLastMessageID   @"HockeyFeedbackLastMessageID"
@@ -95,7 +96,7 @@
     
     _settingsFile = [[_feedbackDir stringByAppendingPathComponent:BITHOCKEY_FEEDBACK_SETTINGS] retain];
     
-    
+    _userID = nil;
     _userName = nil;
     _userEmail = nil;
   }
@@ -115,6 +116,7 @@
   [_lastMessageID release], _lastMessageID = nil;
   [_feedbackList release], _feedbackList = nil;
   
+  [_userID release], _userID = nil;
   [_userName release], _userName = nil;
   [_userEmail release], _userEmail = nil;
   
@@ -224,6 +226,14 @@
 
 - (void)updateAppDefinedUserData {
   if ([BITHockeyManager sharedHockeyManager].delegate &&
+      [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
+    self.userID = [[BITHockeyManager sharedHockeyManager].delegate
+                   userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
+                   componentManager:self];
+    self.requireUserName = BITFeedbackUserDataElementDontShow;
+    self.requireUserEmail = BITFeedbackUserDataElementDontShow;
+  }
+  if ([BITHockeyManager sharedHockeyManager].delegate &&
       [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
     self.userName = [[BITHockeyManager sharedHockeyManager].delegate
                      userNameForHockeyManager:[BITHockeyManager sharedHockeyManager]
@@ -244,9 +254,17 @@
 #pragma mark - Local Storage
 
 - (void)loadMessages {
+  BOOL userIDViaDelegate = NO;
   BOOL userNameViaDelegate = NO;
   BOOL userEmailViaDelegate = NO;
   
+  if ([BITHockeyManager sharedHockeyManager].delegate &&
+      [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
+    userIDViaDelegate = YES;
+    self.userID = [[BITHockeyManager sharedHockeyManager].delegate
+                   userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
+                   componentManager:self];
+  }
   if ([BITHockeyManager sharedHockeyManager].delegate &&
       [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
     userNameViaDelegate = YES;
@@ -281,6 +299,11 @@
     return;
   }
 
+  if (!userIDViaDelegate) {
+    if ([unarchiver containsValueForKey:kBITFeedbackUserID])
+      self.userID = [unarchiver decodeObjectForKey:kBITFeedbackUserID];
+  }
+  
   if (!userNameViaDelegate) {
     if ([unarchiver containsValueForKey:kBITFeedbackName])
       self.userName = [unarchiver decodeObjectForKey:kBITFeedbackName];
@@ -332,6 +355,9 @@
   
   if (self.token)
     [archiver encodeObject:self.token forKey:kBITFeedbackToken];
+  
+  if (self.userID)
+    [archiver encodeObject:self.userID forKey:kBITFeedbackUserID];
   
   if (self.userName)
     [archiver encodeObject:self.userName forKey:kBITFeedbackName];
@@ -696,6 +722,9 @@
     [postBody appendData:[self appendPostValue:[message text] forKey:@"text"]];
     [postBody appendData:[self appendPostValue:[message token] forKey:@"message_token"]];
     
+    if (self.userID) {
+      [postBody appendData:[self appendPostValue:self.userID forKey:@"user_string"]];
+    }
     if (self.userName) {
       [postBody appendData:[self appendPostValue:self.userName forKey:@"name"]];
     }
@@ -809,6 +838,8 @@
     BITFeedbackMessage *messageToSend = [pendingMessages objectAtIndex:0];
     
     [messageToSend setStatus:BITFeedbackMessageStatusSendInProgress];
+    if (self.userID)
+      [messageToSend setUserID:self.userID];
     if (self.userName)
       [messageToSend setName:self.userName];
     if (self.userEmail)

@@ -48,6 +48,7 @@ typedef enum {
 }
 
 @property (nonatomic, copy) NSString *text;
+@property (nonatomic, copy) NSString *userID;
 @property (nonatomic, copy) NSString *name;
 @property (nonatomic, copy) NSString *email;
 @property (nonatomic, copy) NSDate *date;

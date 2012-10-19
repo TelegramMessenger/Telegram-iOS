@@ -37,6 +37,7 @@
 - (id) init {
   if ((self = [super init])) {
     _text = nil;
+    _userID = nil;
     _name = nil;
     _email = nil;
     _date = [[NSDate alloc] init];
@@ -50,6 +51,7 @@
 
 - (void)dealloc {
   [_text release], _text = nil;
+  [_userID release], _userID = nil;
   [_name release], _name = nil;
   [_email release], _email = nil;
   [_date release], _date = nil;
@@ -64,6 +66,7 @@
 
 - (void)encodeWithCoder:(NSCoder *)encoder {
   [encoder encodeObject:self.text forKey:@"text"];
+  [encoder encodeObject:self.userID forKey:@"userID"];
   [encoder encodeObject:self.name forKey:@"name"];
   [encoder encodeObject:self.email forKey:@"email"];
   [encoder encodeObject:self.date forKey:@"date"];
@@ -76,6 +79,7 @@
 - (id)initWithCoder:(NSCoder *)decoder {
   if ((self = [super init])) {
     self.text = [decoder decodeObjectForKey:@"text"];
+    self.userID = [decoder decodeObjectForKey:@"userID"];
     self.name = [decoder decodeObjectForKey:@"name"];
     self.email = [decoder decodeObjectForKey:@"email"];
     self.date = [decoder decodeObjectForKey:@"date"];
