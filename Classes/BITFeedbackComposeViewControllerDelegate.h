@@ -10,6 +10,11 @@
 
 @class BITFeedbackComposeViewController;
 
+/**
+ The `BITFeedbackComposeViewControllerDelegate` formal protocol defines methods further configuring
+ the behaviour of `BITFeedbackComposeViewController`.
+ */
+
 @protocol BITFeedbackComposeViewControllerDelegate <NSObject>
 
 @optional

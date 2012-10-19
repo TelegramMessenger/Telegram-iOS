@@ -31,6 +31,17 @@
 
 #import "BITHockeyBaseViewController.h"
 
+/**
+ View controller providing a default interface to manage feedback
+
+ The message list interface contains options to locally delete single messages
+ by swiping over them, or deleting all messages. This will not delete the messages
+ on the server though!
+ 
+ It is also integrates actions to invoke the user interface to compose a new messages,
+ reload the list content from the server and changing the users name or email if these
+ are allowed to be set.
+ */
 
 @interface BITFeedbackListViewController : BITHockeyBaseViewController <UITableViewDelegate, UITableViewDataSource, UIActionSheetDelegate, UIAlertViewDelegate> {
 }

@@ -31,13 +31,42 @@
 
 #import "BITFeedbackComposeViewControllerDelegate.h"
 
+/**
+ View controller allowing the user to write and send new feedback
+ */
 
 @interface BITFeedbackComposeViewController : UIViewController <UITextViewDelegate>
 
+
+///-----------------------------------------------------------------------------
+/// @name Delegate
+///-----------------------------------------------------------------------------
+
+
+/**
+ Sets the `BITUpdateManagerDelegate` delegate.
+ 
+ When using `BITUpdateManager` to distribute updates of your beta or enterprise
+ application, it is _REQUIRED_ to set this delegate and implement
+ `[BITUpdateManagerDelegate customDeviceIdentifierForUpdateManager:]`!
+ */
 @property (nonatomic, assign) id<BITFeedbackComposeViewControllerDelegate> delegate;
 
-- (id)init;
 
+///-----------------------------------------------------------------------------
+/// @name Presetting content
+///-----------------------------------------------------------------------------
+
+
+/**
+ An array of data objects that should be used to prefill the compose view content
+ 
+ The follwoing data object classes are currently supported:
+ - NSString
+ - NSURL
+ 
+ These are automatically concatenated to one text string.
+ */
 - (void)prepareWithItems:(NSArray *)items;
 
 @end
