@@ -87,6 +87,9 @@ NSString *bit_appName(void) {
   if (!appName)
     appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"] ?: BITHockeyLocalizedString(@"HockeyFeedbackActivityAppPlaceholder");
 
+  if (!appName)
+    appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleName"];
+  
   return appName;
 }
 

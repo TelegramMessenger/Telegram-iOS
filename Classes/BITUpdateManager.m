@@ -940,7 +940,7 @@
     // populate with default values (if empty)
     if (![anAppVersions count]) {
       BITAppVersionMetaInfo *defaultApp = [[[BITAppVersionMetaInfo alloc] init] autorelease];
-      defaultApp.name = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleName"];
+      defaultApp.name = bit_appName();
       defaultApp.version = _currentAppVersion;
       defaultApp.shortVersion = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
       _appVersions = [[NSArray arrayWithObject:defaultApp] retain];
