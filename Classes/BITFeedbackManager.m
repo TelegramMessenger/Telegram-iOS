@@ -79,6 +79,9 @@
     _token = nil;
     _lastMessageID = nil;
     
+    _activityImage = nil;
+    _activityTitle = nil;
+    
     self.feedbackList = [NSMutableArray array];
 
     _fileManager = [[NSFileManager alloc] init];
@@ -123,6 +126,9 @@
   [_fileManager release], _fileManager = nil;
   [_feedbackDir release], _feedbackDir = nil;
   [_settingsFile release], _settingsFile = nil;
+  
+  [_activityImage release];
+  [_activityTitle release];
   
   [super dealloc];
 }

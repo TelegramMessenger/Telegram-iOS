@@ -47,12 +47,18 @@
 }
 
 - (NSString *)activityTitle {
+  if ([BITHockeyManager sharedHockeyManager].feedbackManager.activityTitle)
+    return [BITHockeyManager sharedHockeyManager].feedbackManager.activityTitle;
+  
   NSString *appName = bit_appName(BITHockeyLocalizedString(@"HockeyFeedbackActivityAppPlaceholder"));
   
   return [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackActivityButtonTitle"), appName];
 }
 
 - (UIImage *)activityImage {
+  if ([BITHockeyManager sharedHockeyManager].feedbackManager.activityImage)
+    return [BITHockeyManager sharedHockeyManager].feedbackManager.activityImage;
+
   return bit_imageNamed(@"feedbackActiviy.png", BITHOCKEYSDK_BUNDLE);
 }
 
