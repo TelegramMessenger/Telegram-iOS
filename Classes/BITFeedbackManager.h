@@ -109,6 +109,8 @@ typedef enum {
  - `BITFeedbackUserDataElementRequired`: The user has to provide this to continue
 
  The default value is `BITFeedbackUserDataElementOptional`.
+
+ @see requireUserEmail
  */
 @property (nonatomic, readwrite) BITFeedbackUserDataElement requireUserName;
 
@@ -124,6 +126,8 @@ typedef enum {
  - `BITFeedbackUserDataElementRequired`: The user has to provide this to continue
  
  The default value is `BITFeedbackUserDataElementOptional`.
+
+ @see requireUserName
  */
 @property (nonatomic, readwrite) BITFeedbackUserDataElement requireUserEmail;
 
@@ -134,8 +138,15 @@ typedef enum {
  This lets the user to view the new feedback by choosing the appropriate option
  in the alert sheet, and the `BITFeedbackListViewController` will be shown.
  
+ The alert is only shown, if the newest message is not originated from the current user.
+ This requires the users email address to be present! The optional userid property
+ cannot be used, because users could also answer via email and then this information
+ is not available.
+ 
  Default is `YES`
  @see feedbackListViewController:
+ @see requireUserEmail
+ @see `[BITHockeyManagerDelegate userEmailForHockeyManager:componentManager:]`
  */
 @property (nonatomic, readwrite) BOOL showAlertOnIncomingMessages;
 
