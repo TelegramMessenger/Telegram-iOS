@@ -53,9 +53,46 @@ typedef enum {
 
 @interface BITFeedbackManager : BITHockeyBaseManager <UIAlertViewDelegate>
 
-@property (nonatomic, readwrite) BITFeedbackUserDataElement requireUserName; // default is BITFeedbackUserDataElementOptional
+///-----------------------------------------------------------------------------
+/// @name General settings
+///-----------------------------------------------------------------------------
+
+
+/**
+ Define if a name has to be provided by the user when providing feedback
+
+ - `BITFeedbackUserDataElementDontShow`: Don't ask for this user data element at all
+ - `BITFeedbackUserDataElementOptional`: The user may provide it, but does not have to
+ - `BITFeedbackUserDataElementRequired`: The user has to provide this to continue
+
+ The default value is `BITFeedbackUserDataElementOptional`.
+ */
+@property (nonatomic, readwrite) BITFeedbackUserDataElement requireUserName;
+
+
+/**
+ Define if an email address has to be provided by the user when providing feedback
+ 
+ - `BITFeedbackUserDataElementDontShow`: Don't ask for this user data element at all
+ - `BITFeedbackUserDataElementOptional`: The user may provide it, but does not have to
+ - `BITFeedbackUserDataElementRequired`: The user has to provide this to continue
+ 
+ The default value is `BITFeedbackUserDataElementOptional`.
+ */
 @property (nonatomic, readwrite) BITFeedbackUserDataElement requireUserEmail; // default is BITFeedbackUserDataElementOptional
-@property (nonatomic, readwrite) BOOL showAlertOnIncomingMessages; // default is YES
+
+
+/**
+ Indicates if an alert should be shown when new messages arrived
+ 
+ This lets the user to view the new feedback by choosing the appropriate option
+ in the alert sheet, and the `BITFeedbackListViewController` will be shown.
+ 
+ Default is `YES`
+ @see feedbackListViewController:
+ */
+@property (nonatomic, readwrite) BOOL showAlertOnIncomingMessages;
+
 
 ///-----------------------------------------------------------------------------
 /// @name User Interface
