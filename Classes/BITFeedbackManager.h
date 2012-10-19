@@ -130,29 +130,4 @@ typedef enum {
 - (BITFeedbackComposeViewController *)feedbackComposeViewController;
 
 
-///-----------------------------------------------------------------------------
-/// @name BITFeedbackActivity settings
-///-----------------------------------------------------------------------------
-
-
-/**
- Define the image shown when using `BITFeedbackActivity`
- 
- If not set a default icon is being used.
- 
- @see activityTitle
- */
-@property (nonatomic, retain) UIImage *activityImage;
-
-
-/**
- Define the title shown when using `BITFeedbackActivity`
- 
- If not set, a default string is shown by using the apps name
- and adding the localized string "Feedback" to it.
- 
- @see activityImage
- */
-@property (nonatomic, retain) NSString *activityTitle;
-
 @end

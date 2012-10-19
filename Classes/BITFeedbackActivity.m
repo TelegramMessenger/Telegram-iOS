@@ -27,6 +27,9 @@
 
 - (id)init {
   if ((self = [super init])) {
+    _customActivityImage = nil;
+    _customActivityTitle = nil;
+    
     self.items = [NSMutableArray array];;
   }
   
@@ -36,6 +39,9 @@
 - (void)dealloc {
   [_items release]; _items = nil;
   
+  [_customActivityImage release];
+  [_customActivityTitle release];
+
   [super dealloc];
 }
 
@@ -47,8 +53,8 @@
 }
 
 - (NSString *)activityTitle {
-  if ([BITHockeyManager sharedHockeyManager].feedbackManager.activityTitle)
-    return [BITHockeyManager sharedHockeyManager].feedbackManager.activityTitle;
+  if (self.customActivityTitle)
+    return self.customActivityTitle;
   
   NSString *appName = bit_appName(BITHockeyLocalizedString(@"HockeyFeedbackActivityAppPlaceholder"));
   
@@ -56,8 +62,8 @@
 }
 
 - (UIImage *)activityImage {
-  if ([BITHockeyManager sharedHockeyManager].feedbackManager.activityImage)
-    return [BITHockeyManager sharedHockeyManager].feedbackManager.activityImage;
+  if (self.customActivityImage)
+    return self.customActivityImage;
 
   return bit_imageNamed(@"feedbackActiviy.png", BITHOCKEYSDK_BUNDLE);
 }
