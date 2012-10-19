@@ -35,6 +35,7 @@ NSString *bit_URLDecodedString(NSString *inputString);
 NSComparisonResult bit_versionCompare(NSString *stringA, NSString *stringB);
 NSString *bit_encodeAppIdentifier(NSString *inputString);
 NSString *bit_appName(NSString *placeHolderString);
+NSString *bit_appAnonID(void);
 
 /* UIImage helpers */
 UIImage *bit_roundedCornerImage(UIImage *inputImage, NSInteger cornerSize, NSInteger borderSize);

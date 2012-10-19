@@ -722,6 +722,11 @@
     [postBody appendData:[self appendPostValue:[message text] forKey:@"text"]];
     [postBody appendData:[self appendPostValue:[message token] forKey:@"message_token"]];
     
+    NSString *installString = bit_appAnonID();
+    if (installString) {
+      [postBody appendData:[self appendPostValue:installString forKey:@"install_string"]];
+    }
+    
     if (self.userID) {
       [postBody appendData:[self appendPostValue:self.userID forKey:@"user_string"]];
     }

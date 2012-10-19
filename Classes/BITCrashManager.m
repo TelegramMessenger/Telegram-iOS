@@ -588,6 +588,7 @@
       NSString *userid = @"";
       NSString *applicationLog = @"";
       NSString *description = @"";
+      NSString *installString = bit_appAnonID() ?: @"";
       
       NSString *errorString = nil;
       NSPropertyListFormat format;
@@ -612,7 +613,7 @@
         description = [NSString stringWithFormat:@"%@", applicationLog];
       }
       
-      [crashes appendFormat:@"<crash><applicationname>%s</applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><username>%@</username><contact>%@</contact><description><![CDATA[%@]]></description></crash>",
+      [crashes appendFormat:@"<crash><applicationname>%s</applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><username>%@</username><contact>%@</contact><installstring>%@</installstring><description><![CDATA[%@]]></description></crash>",
        [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleExecutable"] UTF8String],
        [self extractAppUUIDs:report],
        report.applicationInfo.applicationIdentifier,
@@ -625,6 +626,7 @@
        userid,
        username,
        useremail,
+       installString,
        [description stringByReplacingOccurrencesOfString:@"]]>" withString:@"]]" @"]]><![CDATA[" @">" options:NSLiteralSearch range:NSMakeRange(0,description.length)]];
       
       
