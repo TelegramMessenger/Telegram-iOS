@@ -180,7 +180,7 @@
     if ([viewController isKindOfClass:[BITHockeyBaseViewController class]])
       [(BITHockeyBaseViewController *)viewController setModalAnimated:YES];
     
-    [parentViewController presentModalViewController:_navController animated:YES];
+    [parentViewController presentViewController:_navController animated:YES completion:nil];
   } else {
     // if not, we add a subview to the window. A bit hacky but should work in most circumstances.
     // Also, we don't get a nice animation for free, but hey, this is for beta not production users ;)

@@ -123,7 +123,6 @@
       }
       frame.size.height = windowSize.width - navBarHeight - modalGap - kbSize.width;
     }
-    NSLog(@"%@", NSStringFromCGRect(frame));
   }
   [self.textView setFrame:frame];
 }

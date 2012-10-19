@@ -194,7 +194,7 @@
   UINavigationController *navController = [[[UINavigationController alloc] initWithRootViewController:userController] autorelease];
   navController.modalPresentationStyle = UIModalPresentationFormSheet;
   
-  [self.navigationController presentModalViewController:navController animated:YES];
+  [self presentViewController:navController animated:YES completion:nil];
 }
 
 - (void)newFeedbackAction:(id)sender {
@@ -203,7 +203,7 @@
   UINavigationController *navController = [[[UINavigationController alloc] initWithRootViewController:composeController] autorelease];
   navController.modalPresentationStyle = UIModalPresentationFormSheet;
   
-  [self.navigationController presentModalViewController:navController animated:YES];
+  [self presentViewController:navController animated:YES completion:nil];
 }
 
 - (void)deleteAllMessages {
@@ -334,6 +334,7 @@
     
     // button
     UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
+    button.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     [button.layer setMasksToBounds:YES];
     [button.layer setCornerRadius:10.0f];
     [button.layer setBorderWidth:1];
@@ -379,7 +380,7 @@
       [button addTarget:self action:@selector(deleteAllMessagesAction:) forControlEvents:UIControlEventTouchUpInside];
     }
     
-    [button setFrame: CGRectMake( 10.0f, topGap + 12.0f, self.view.frame.size.width - 20.0f, 42.0f)];
+    [button setFrame: CGRectMake( 10.0f, topGap + 12.0f, cell.contentView.bounds.size.width - 20.0f, 42.0f)];
     
     [cell addSubview:button];
     
