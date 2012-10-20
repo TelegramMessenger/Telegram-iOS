@@ -557,7 +557,7 @@
       [self deleteAllMessages];
     }
   } else {
-    if (buttonIndex == [actionSheet destructiveButtonIndex]) {
+    if (buttonIndex == [actionSheet firstOtherButtonIndex]) {
       [[UIApplication sharedApplication] openURL:[NSURL URLWithString:actionSheet.title]];
     } else {
       UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
