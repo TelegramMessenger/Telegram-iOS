@@ -188,10 +188,9 @@ typedef enum {
      [feedbackCompose prepareWithItems:
          @[@"Adding some example default text and also adding a link.",
          [NSURL URLWithString:@"http://hockeayyp.net/"]]];
-     
-     feedbackCompose.modalPresentationStyle = UIModalPresentationFormSheet;
  
      UINavigationController *navController = [[[UINavigationController alloc] initWithRootViewController:feedbackCompose] autorelease];
+     navController.modalPresentationStyle = UIModalPresentationFormSheet;
      [self presentViewController:navController animated:YES completion:nil];
 
  @return `BITFeedbackComposeViewController` The compose feedback view controller,
