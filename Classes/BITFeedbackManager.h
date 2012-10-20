@@ -180,7 +180,18 @@ typedef enum {
 
 /**
  Create an feedback compose view
- 
+
+ Example to show a modal feedback compose UI with prefilled text
+     
+     BITFeedbackComposeViewController *feedbackCompose = [[BITHockeyManager sharedHockeyManager].feedbackManager feedbackComposeViewController];
+     
+     [feedbackCompose prepareWithItems:
+         @[@"Adding some example default text and also adding a link.",
+         [NSURL URLWithString:@"http://hockeayyp.net/"]]];
+     
+     feedbackCompose.modalPresentationStyle = UIModalPresentationFormSheet;
+     [self presentViewController:feedbackCompose animated:YES completion:nil];
+
  @return `BITFeedbackComposeViewController` The compose feedback view controller,
  e.g. to push it onto a navigation stack.
  */
