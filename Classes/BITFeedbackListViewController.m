@@ -325,17 +325,16 @@
     
     if (!cell) {
       cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:identifier] autorelease];
-    }
 
-    cell.textLabel.font = [UIFont systemFontOfSize:14];
-    cell.textLabel.numberOfLines = 0;
-    cell.accessoryType = UITableViewCellAccessoryNone;
-    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+      cell.textLabel.font = [UIFont systemFontOfSize:14];
+      cell.textLabel.numberOfLines = 0;
+      cell.accessoryType = UITableViewCellAccessoryNone;
+      cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    }
     
     // button
     UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
     button.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    [button.layer setMasksToBounds:YES];
     [button.layer setCornerRadius:10.0f];
     [button.layer setBorderWidth:1];
     [button.layer setBackgroundColor:BUTTON_BACKGROUNDCOLOR.CGColor];
