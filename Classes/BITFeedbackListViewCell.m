@@ -160,17 +160,17 @@
   [self addSubview:accessoryViewBackground];
   
   // header
-  NSString *dateString;
+  NSString *dateString = @"";
   if (_message.status == BITFeedbackMessageStatusSendPending || _message.status == BITFeedbackMessageStatusSendInProgress) {
     dateString = BITHockeyLocalizedString(@"Pending");
-  } else {
+  } else if (_message.date) {
     if ([self isSameDayWithDate1:[NSDate date] date2:_message.date]) {
       dateString = [self.timeFormatter stringFromDate:_message.date];
     } else {
       dateString = [self.dateFormatter stringFromDate:_message.date];
     }
   }
-  [self.labelTitle setText:dateString];// [self.date description]];
+  [self.labelTitle setText:dateString];
   [self.labelTitle setFrame:CGRectMake(FRAME_SIDE_BORDER, FRAME_TOP_BORDER + LABEL_TITLE_Y, self.frame.size.width - (2 * FRAME_SIDE_BORDER), LABEL_TITLE_HEIGHT)];
     
   if (_message.userMessage) {

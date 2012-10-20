@@ -609,18 +609,20 @@
           matchingSendInProgressOrInConflictMessage.id = messageID;
           matchingSendInProgressOrInConflictMessage.status = BITFeedbackMessageStatusRead;
         } else {
-          BITFeedbackMessage *message = [[[BITFeedbackMessage alloc] init] autorelease];
-          message.text = [(NSDictionary *)objMessage objectForKey:@"text"];
-          message.name = [(NSDictionary *)objMessage objectForKey:@"name"];
-          message.email = [(NSDictionary *)objMessage objectForKey:@"email"];
-          
-          message.date = [self parseRFC3339Date:[(NSDictionary *)objMessage objectForKey:@"created_at"]];
-          message.id = [(NSDictionary *)objMessage objectForKey:@"id"];
-          message.status = BITFeedbackMessageStatusUnread;
-          
-          [_feedbackList addObject:message];
-          
-          newMessage = YES;
+          if ([(NSDictionary *)objMessage objectForKey:@"id"] && [(NSDictionary *)objMessage objectForKey:@"text"]) {
+            BITFeedbackMessage *message = [[[BITFeedbackMessage alloc] init] autorelease];
+            message.text = [(NSDictionary *)objMessage objectForKey:@"text"] ?: @"";
+            message.name = [(NSDictionary *)objMessage objectForKey:@"name"] ?: @"";
+            message.email = [(NSDictionary *)objMessage objectForKey:@"email"] ?: @"";
+            
+            message.date = [self parseRFC3339Date:[(NSDictionary *)objMessage objectForKey:@"created_at"]] ?: [NSDate date];
+            message.id = [(NSDictionary *)objMessage objectForKey:@"id"];
+            message.status = BITFeedbackMessageStatusUnread;
+            
+            [_feedbackList addObject:message];
+            
+            newMessage = YES;
+          }
         }
       } else {
         // we should never get any messages back that are already stored locally,
