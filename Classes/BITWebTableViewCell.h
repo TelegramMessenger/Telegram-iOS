@@ -3,7 +3,7 @@
  *         Peter Steinberger
  *
  * Copyright (c) 2012 HockeyApp, Bit Stadium GmbH.
- * Copyright (c) 2011 Andreas Linde, Peter Steinberger.
+ * Copyright (c) 2011-2012 Peter Steinberger.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -28,28 +28,17 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+
+#import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
-#import "BITStoreButton.h"
 
-typedef enum {
-	AppStoreButtonStateOffline,
-	AppStoreButtonStateCheck,
-	AppStoreButtonStateSearching,
-	AppStoreButtonStateUpdate,
-	AppStoreButtonStateInstalling
-} AppStoreButtonState;
+@interface BITWebTableViewCell : UITableViewCell <UIWebViewDelegate>
 
+@property (nonatomic, retain) UIWebView *webView;
+@property (nonatomic, copy) NSString *webViewContent;
+@property (nonatomic, assign) CGSize webViewSize;
+@property (nonatomic, retain) UIColor *cellBackgroundColor;
 
-@class BITUpdateManager;
-
-@protocol PSStoreButtonDelegate;
-
-@interface BITUpdateViewController() <BITStoreButtonDelegate> {
-}
-
-@property (nonatomic, assign) BITUpdateManager *updateManager;
-@property (nonatomic, readwrite) BOOL modal;
-
-@property (nonatomic, assign) AppStoreButtonState appStoreButtonState;
+- (void)addWebView;
 
 @end

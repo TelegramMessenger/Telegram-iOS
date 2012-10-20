@@ -63,12 +63,12 @@
 		1E49A4BB161222B900463151 /* BITHockeyBaseViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4A4161222B900463151 /* BITHockeyBaseViewController.m */; };
 		1E49A4BE161222B900463151 /* BITHockeyHelper.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4A5161222B900463151 /* BITHockeyHelper.h */; };
 		1E49A4C1161222B900463151 /* BITHockeyHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4A6161222B900463151 /* BITHockeyHelper.m */; };
-		1E49A4C4161222B900463151 /* PSAppStoreHeader.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4A7161222B900463151 /* PSAppStoreHeader.h */; };
-		1E49A4C7161222B900463151 /* PSAppStoreHeader.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4A8161222B900463151 /* PSAppStoreHeader.m */; };
-		1E49A4CA161222B900463151 /* PSStoreButton.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4A9161222B900463151 /* PSStoreButton.h */; };
-		1E49A4CD161222B900463151 /* PSStoreButton.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4AA161222B900463151 /* PSStoreButton.m */; };
-		1E49A4D0161222B900463151 /* PSWebTableViewCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4AB161222B900463151 /* PSWebTableViewCell.h */; };
-		1E49A4D3161222B900463151 /* PSWebTableViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4AC161222B900463151 /* PSWebTableViewCell.m */; };
+		1E49A4C4161222B900463151 /* BITAppStoreHeader.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4A7161222B900463151 /* BITAppStoreHeader.h */; };
+		1E49A4C7161222B900463151 /* BITAppStoreHeader.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4A8161222B900463151 /* BITAppStoreHeader.m */; };
+		1E49A4CA161222B900463151 /* BITStoreButton.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4A9161222B900463151 /* BITStoreButton.h */; };
+		1E49A4CD161222B900463151 /* BITStoreButton.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4AA161222B900463151 /* BITStoreButton.m */; };
+		1E49A4D0161222B900463151 /* BITWebTableViewCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4AB161222B900463151 /* BITWebTableViewCell.h */; };
+		1E49A4D3161222B900463151 /* BITWebTableViewCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4AC161222B900463151 /* BITWebTableViewCell.m */; };
 		1E49A4D8161222D400463151 /* HockeySDKPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4D4161222D400463151 /* HockeySDKPrivate.h */; };
 		1E49A4DB161222D400463151 /* HockeySDKPrivate.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4D5161222D400463151 /* HockeySDKPrivate.m */; };
 		1E5954D315B6F24A00A03429 /* BITHockeyManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB466148D7BF50015DEDC /* BITHockeyManager.m */; };
@@ -151,12 +151,12 @@
 		1E49A4A4161222B900463151 /* BITHockeyBaseViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITHockeyBaseViewController.m; sourceTree = "<group>"; };
 		1E49A4A5161222B900463151 /* BITHockeyHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITHockeyHelper.h; sourceTree = "<group>"; };
 		1E49A4A6161222B900463151 /* BITHockeyHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITHockeyHelper.m; sourceTree = "<group>"; };
-		1E49A4A7161222B900463151 /* PSAppStoreHeader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PSAppStoreHeader.h; sourceTree = "<group>"; };
-		1E49A4A8161222B900463151 /* PSAppStoreHeader.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PSAppStoreHeader.m; sourceTree = "<group>"; };
-		1E49A4A9161222B900463151 /* PSStoreButton.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PSStoreButton.h; sourceTree = "<group>"; };
-		1E49A4AA161222B900463151 /* PSStoreButton.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PSStoreButton.m; sourceTree = "<group>"; };
-		1E49A4AB161222B900463151 /* PSWebTableViewCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PSWebTableViewCell.h; sourceTree = "<group>"; };
-		1E49A4AC161222B900463151 /* PSWebTableViewCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PSWebTableViewCell.m; sourceTree = "<group>"; };
+		1E49A4A7161222B900463151 /* BITAppStoreHeader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITAppStoreHeader.h; sourceTree = "<group>"; };
+		1E49A4A8161222B900463151 /* BITAppStoreHeader.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITAppStoreHeader.m; sourceTree = "<group>"; };
+		1E49A4A9161222B900463151 /* BITStoreButton.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITStoreButton.h; sourceTree = "<group>"; };
+		1E49A4AA161222B900463151 /* BITStoreButton.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITStoreButton.m; sourceTree = "<group>"; };
+		1E49A4AB161222B900463151 /* BITWebTableViewCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITWebTableViewCell.h; sourceTree = "<group>"; };
+		1E49A4AC161222B900463151 /* BITWebTableViewCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITWebTableViewCell.m; sourceTree = "<group>"; };
 		1E49A4D4161222D400463151 /* HockeySDKPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HockeySDKPrivate.h; sourceTree = "<group>"; };
 		1E49A4D5161222D400463151 /* HockeySDKPrivate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = HockeySDKPrivate.m; sourceTree = "<group>"; };
 		1E5954F215B6F24A00A03429 /* libHockeySDK.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libHockeySDK.a; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -274,12 +274,12 @@
 				1E49A4A6161222B900463151 /* BITHockeyHelper.m */,
 				1EACC979162F041E007578C5 /* BITAttributedLabel.h */,
 				1EACC97A162F041E007578C5 /* BITAttributedLabel.m */,
-				1E49A4A7161222B900463151 /* PSAppStoreHeader.h */,
-				1E49A4A8161222B900463151 /* PSAppStoreHeader.m */,
-				1E49A4A9161222B900463151 /* PSStoreButton.h */,
-				1E49A4AA161222B900463151 /* PSStoreButton.m */,
-				1E49A4AB161222B900463151 /* PSWebTableViewCell.h */,
-				1E49A4AC161222B900463151 /* PSWebTableViewCell.m */,
+				1E49A4A7161222B900463151 /* BITAppStoreHeader.h */,
+				1E49A4A8161222B900463151 /* BITAppStoreHeader.m */,
+				1E49A4A9161222B900463151 /* BITStoreButton.h */,
+				1E49A4AA161222B900463151 /* BITStoreButton.m */,
+				1E49A4AB161222B900463151 /* BITWebTableViewCell.h */,
+				1E49A4AC161222B900463151 /* BITWebTableViewCell.m */,
 			);
 			name = Helper;
 			sourceTree = "<group>";
@@ -430,9 +430,9 @@
 				1E49A4B5161222B900463151 /* BITHockeyBaseManagerPrivate.h in Headers */,
 				1E49A4B8161222B900463151 /* BITHockeyBaseViewController.h in Headers */,
 				1E49A4BE161222B900463151 /* BITHockeyHelper.h in Headers */,
-				1E49A4C4161222B900463151 /* PSAppStoreHeader.h in Headers */,
-				1E49A4CA161222B900463151 /* PSStoreButton.h in Headers */,
-				1E49A4D0161222B900463151 /* PSWebTableViewCell.h in Headers */,
+				1E49A4C4161222B900463151 /* BITAppStoreHeader.h in Headers */,
+				1E49A4CA161222B900463151 /* BITStoreButton.h in Headers */,
+				1E49A4D0161222B900463151 /* BITWebTableViewCell.h in Headers */,
 				1E49A4D8161222D400463151 /* HockeySDKPrivate.h in Headers */,
 				1EC69F601615001500808FD9 /* BITHockeyManagerPrivate.h in Headers */,
 				1E754E5C1621FBB70070AB92 /* BITCrashManager.h in Headers */,
@@ -596,9 +596,9 @@
 				1E49A4B2161222B900463151 /* BITHockeyBaseManager.m in Sources */,
 				1E49A4BB161222B900463151 /* BITHockeyBaseViewController.m in Sources */,
 				1E49A4C1161222B900463151 /* BITHockeyHelper.m in Sources */,
-				1E49A4C7161222B900463151 /* PSAppStoreHeader.m in Sources */,
-				1E49A4CD161222B900463151 /* PSStoreButton.m in Sources */,
-				1E49A4D3161222B900463151 /* PSWebTableViewCell.m in Sources */,
+				1E49A4C7161222B900463151 /* BITAppStoreHeader.m in Sources */,
+				1E49A4CD161222B900463151 /* BITStoreButton.m in Sources */,
+				1E49A4D3161222B900463151 /* BITWebTableViewCell.m in Sources */,
 				1E49A4DB161222D400463151 /* HockeySDKPrivate.m in Sources */,
 				1E754E5D1621FBB70070AB92 /* BITCrashManager.m in Sources */,
 				1E754E611621FBB70070AB92 /* BITCrashReportTextFormatter.m in Sources */,

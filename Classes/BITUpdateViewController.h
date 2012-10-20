@@ -33,9 +33,5 @@
 #import "BITHockeyBaseViewController.h"
 
 
-@class PSStoreButton;
-@class PSAppStoreHeader;
-
-
 @interface BITUpdateViewController : BITHockeyBaseViewController 
 @end
