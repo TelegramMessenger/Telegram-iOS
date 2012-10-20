@@ -89,19 +89,8 @@
   UIFont *mainFont = [UIFont boldSystemFontOfSize:15];
   UIFont *secondaryFont = [UIFont systemFontOfSize:10];
   
-//  float myColorValues[] = {255, 255, 255, .6};
-//  CGColorSpaceRef myColorSpace = CGColorSpaceCreateDeviceRGB();
-//  CGColorRef myColor = CGColorCreate(myColorSpace, myColorValues);
-  
   // icon
   [_iconImage drawAtPoint:CGPointMake(kImageLeftMargin, kImageTopMargin)];
-  
-  // shadows are a beast
-//  NSInteger shadowOffset = 2;
-//  if([[UIScreen mainScreen] scale] == 2) shadowOffset = 1;
-//  BITHOCKEY_IF_IOS5_OR_GREATER(shadowOffset = 1;) // iOS5 changes this - again!
-//  
-//  CGContextSetShadowWithColor(context, CGSizeMake(shadowOffset, shadowOffset), 0, myColor);
   
   [mainTextColor set];
   [_headerLabel drawInRect:CGRectMake(kTextRow, kImageTopMargin, globalWidth-kTextRow, 20) withFont:mainFont lineBreakMode:UILineBreakModeTailTruncation];
@@ -114,9 +103,6 @@
   // sub
   [secondaryTextColor set];
   [_subHeaderLabel drawAtPoint:CGPointMake(kTextRow, kImageTopMargin + 29) forWidth:globalWidth-kTextRow withFont:secondaryFont lineBreakMode:UILineBreakModeTailTruncation];
-  
-//  CGColorRelease(myColor);
-//  CGColorSpaceRelease(myColorSpace);
 }
 
 
