@@ -639,7 +639,7 @@
       [self updateLastMessageID];
 
       BITFeedbackMessage *latestMessage = [self lastMessageHavingID];
-      if (self.userEmail && [latestMessage.email compare:self.userEmail] == NSOrderedSame)
+      if (self.userEmail && latestMessage.email && [self.userEmail compare:latestMessage.email] == NSOrderedSame)
         latestMessageFromUser = YES;
       
       if (!latestMessageFromUser && self.showAlertOnIncomingMessages && !self.currentFeedbackListViewController && !self.currentFeedbackComposeViewController) {
