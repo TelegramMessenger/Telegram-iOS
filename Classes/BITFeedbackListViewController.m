@@ -44,28 +44,39 @@
 
 #define DEFAULT_BACKGROUNDCOLOR BIT_RGBCOLOR(245, 245, 245)
 #define DEFAULT_TEXTCOLOR BIT_RGBCOLOR(75, 75, 75)
-#define BUTTON_DELETE_BACKGROUNDCOLOR BIT_RGBCOLOR(225, 0, 0)
-#define BUTTON_BACKGROUNDCOLOR BIT_RGBCOLOR(225, 225, 225)
+
 #define BUTTON_BORDERCOLOR BIT_RGBCOLOR(175, 175, 175)
-#define BUTTON_DELETE_TEXTCOLOR BIT_RGBCOLOR(240, 240, 240)
+#define BUTTON_BACKGROUNDCOLOR BIT_RGBCOLOR(225, 225, 225)
 #define BUTTON_TEXTCOLOR BIT_RGBCOLOR(58, 58, 58)
-#define BUTTON_DELETE_TEXTCOLOR_SHADOW BIT_RGBCOLOR(175, 175, 175)
 #define BUTTON_TEXTCOLOR_SHADOW BIT_RGBCOLOR(175, 175, 175)
-#define BORDER_COLOR1 BIT_RGBCOLOR(215, 215, 215)
-#define BORDER_COLOR2 BIT_RGBCOLOR(221, 221, 221)
-#define BORDER_COLOR3 BIT_RGBCOLOR(255, 255, 255)
+
+#define BUTTON_DELETE_BORDERCOLOR BIT_RGBCOLOR(61, 61, 61)
+#define BUTTON_DELETE_BACKGROUNDCOLOR BIT_RGBCOLOR(225, 0, 0)
+#define BUTTON_DELETE_TEXTCOLOR BIT_RGBCOLOR(240, 240, 240)
+#define BUTTON_DELETE_TEXTCOLOR_SHADOW BIT_RGBCOLOR(175, 175, 175)
+
+#define BORDER_COLOR BIT_RGBCOLOR(215, 215, 215)
+
 
 @interface BITFeedbackListViewController () <BITFeedbackUserDataDelegate, BITAttributedLabelDelegate>
-@property (nonatomic, assign) BITFeedbackManager *manager;
 
+@property (nonatomic, assign) BITFeedbackManager *manager;
 @property (nonatomic, retain) NSDateFormatter *lastUpdateDateFormatter;
+
 @end
 
-@implementation BITFeedbackListViewController
+
+@implementation BITFeedbackListViewController {
+  NSInteger _deleteButtonSection;
+  NSInteger _userButtonSection;
+}
 
 - (id)init {
   if ((self = [super init])) {
     _manager = [BITHockeyManager sharedHockeyManager].feedbackManager;
+    
+    _deleteButtonSection = -1;
+    _userButtonSection = -1;
     
     self.lastUpdateDateFormatter = [[[NSDateFormatter alloc] init] autorelease];
 		[self.lastUpdateDateFormatter setDateStyle:NSDateFormatterShortStyle];
@@ -240,13 +251,13 @@
 #pragma mark - BITFeedbackUserDataDelegate
 
 -(void)userDataUpdateCancelled {
-  [self.navigationController dismissModalViewControllerAnimated:YES];
+  [self dismissViewControllerAnimated:YES completion:^(void){}];
 }
 
 -(void)userDataUpdateFinished {
   [self.manager saveMessages];
   
-  [self.navigationController dismissModalViewControllerAnimated:YES];
+  [self dismissViewControllerAnimated:YES completion:^(void){}];
 }
 
 
@@ -266,11 +277,18 @@
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
   NSInteger rows = 2;
-  if ([self.manager isManualUserDataAvailable] || [self.manager didAskUserData])
-    rows++;
+  _deleteButtonSection = -1;
+  _userButtonSection = -1;
   
-  if ([self.manager numberOfMessages] > 0)
+  if ([self.manager isManualUserDataAvailable] || [self.manager didAskUserData]) {
+    _userButtonSection = rows;
     rows++;
+  }
+  
+  if ([self.manager numberOfMessages] > 0) {
+    _deleteButtonSection = rows;
+    rows++;
+  }
   
   return rows;
 }
@@ -306,7 +324,7 @@
                            [self.manager lastCheck] ? [self.lastUpdateDateFormatter stringFromDate:[self.manager lastCheck]] : BITHockeyLocalizedString(@"HockeyFeedbackListNeverUpdated")];
     
     return cell;
-  } else if (indexPath.section == 0 || indexPath.section == 2 || indexPath.section == 3) {
+  } else if (indexPath.section == 0 || indexPath.section >= 2) {
     CGFloat topGap = 0.0f;
     
     UITableViewCell *cell = nil;
@@ -315,7 +333,7 @@
     
     if (indexPath.section == 0) {
       identifier = ButtonTopIdentifier;
-    } else if (indexPath.section == 2) {
+    } else if (indexPath.section == _userButtonSection) {
       identifier = ButtonBottomIdentifier;
     } else {
       identifier = ButtonDeleteIdentifier;
@@ -344,14 +362,14 @@
     [button setTitleColor:BUTTON_TEXTCOLOR forState:UIControlStateNormal];
     [button setTitleShadowColor:BUTTON_TEXTCOLOR_SHADOW forState:UIControlStateNormal];
     if (indexPath.section == 0) {
-      topGap += 22;
+      topGap = 22;
       if ([self.manager numberOfMessages] == 0) {
         [button setTitle:BITHockeyLocalizedString(@"HockeyFeedbackListButonWriteFeedback") forState:UIControlStateNormal];
       } else {
         [button setTitle:BITHockeyLocalizedString(@"HockeyFeedbackListButonWriteResponse") forState:UIControlStateNormal];
       }
       [button addTarget:self action:@selector(newFeedbackAction:) forControlEvents:UIControlEventTouchUpInside];
-    } else if (indexPath.section == 2) {
+    } else if (indexPath.section == _userButtonSection) {
       topGap = 6.0f;
       NSString *title = @"";
       if ([self.manager requireUserName] == BITFeedbackUserDataElementRequired ||
@@ -370,8 +388,9 @@
       [button setTitle:title forState:UIControlStateNormal];
       [button addTarget:self action:@selector(setUserDataAction:) forControlEvents:UIControlEventTouchUpInside];
     } else {
-      topGap -= 6.0f;
+      topGap = 0.0f;
       [button.layer setBackgroundColor:BUTTON_DELETE_BACKGROUNDCOLOR.CGColor];
+      [button.layer setBorderColor:BUTTON_DELETE_BORDERCOLOR.CGColor];
       [button setTitleColor:BUTTON_DELETE_TEXTCOLOR forState:UIControlStateNormal];
       [button setTitleShadowColor:BUTTON_DELETE_TEXTCOLOR_SHADOW forState:UIControlStateNormal];
 
@@ -379,7 +398,7 @@
       [button addTarget:self action:@selector(deleteAllMessagesAction:) forControlEvents:UIControlEventTouchUpInside];
     }
     
-    [button setFrame: CGRectMake( 10.0f, topGap + 12.0f, cell.contentView.bounds.size.width - 20.0f, 42.0f)];
+    [button setFrame: CGRectMake( 10.0f, topGap + 12.0f, self.view.frame.size.width - 20.0f, 42.0f)];
     
     [cell addSubview:button];
     
@@ -399,19 +418,9 @@
       [cell addSubview:statusLabel];
     } else if (indexPath.section == 2) {
       UIView *lineView1 = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.contentView.bounds.size.width, 1)] autorelease];
-      lineView1.backgroundColor = BORDER_COLOR1;
+      lineView1.backgroundColor = BORDER_COLOR;
       lineView1.autoresizingMask = UIViewAutoresizingFlexibleWidth;
       [cell addSubview:lineView1];
-
-      UIView *lineView2 = [[[UIView alloc] initWithFrame:CGRectMake(0, 1, cell.contentView.bounds.size.width, 1)] autorelease];
-      lineView2.backgroundColor = BORDER_COLOR2;
-      lineView2.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-      [cell addSubview:lineView2];
-
-      UIView *lineView3 = [[[UIView alloc] initWithFrame:CGRectMake(0, 2, cell.contentView.bounds.size.width, 1)] autorelease];
-      lineView3.backgroundColor = BORDER_COLOR3;
-      lineView3.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-      [cell addSubview:lineView3];
     }
     
     return cell;
@@ -436,19 +445,9 @@
     cell.labelText.userInteractionEnabled = YES;
 
     UIView *lineView1 = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.contentView.bounds.size.width, 1)] autorelease];
-    lineView1.backgroundColor = BORDER_COLOR1;
+    lineView1.backgroundColor = BORDER_COLOR;
     lineView1.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     [cell addSubview:lineView1];
-    
-    UIView *lineView2 = [[[UIView alloc] initWithFrame:CGRectMake(0, 1, cell.contentView.bounds.size.width, 1)] autorelease];
-    lineView2.backgroundColor = BORDER_COLOR2;
-    lineView2.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    [cell addSubview:lineView2];
-    
-    UIView *lineView3 = [[[UIView alloc] initWithFrame:CGRectMake(0, 2, cell.contentView.bounds.size.width, 1)] autorelease];
-    lineView3.backgroundColor = BORDER_COLOR3;
-    lineView3.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    [cell addSubview:lineView3];
 
     return cell;
   }
@@ -464,7 +463,6 @@
 
 - (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
   if (editingStyle == UITableViewCellEditingStyleDelete) {
-    NSLog(@"%i %i", indexPath.section, indexPath.row);
     if ([_manager deleteMessageAtIndex:indexPath.row]) {
       if ([_manager numberOfMessages] > 0) {
         [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
@@ -482,8 +480,8 @@
   if (indexPath.section == 0 ) {
     return 87;
   }
-  if (indexPath.section == 2) {
-    return 75;
+  if (indexPath.section >= 2) {
+    return 65;
   }
   
   BITFeedbackMessage *message = [self.manager messageAtIndex:indexPath.row];
