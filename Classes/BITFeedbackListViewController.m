@@ -398,13 +398,13 @@
       [button addTarget:self action:@selector(deleteAllMessagesAction:) forControlEvents:UIControlEventTouchUpInside];
     }
     
-    [button setFrame: CGRectMake( 10.0f, topGap + 12.0f, self.view.frame.size.width - 20.0f, 42.0f)];
+    [button setFrame: CGRectMake( 10.0f, topGap + 12.0f, cell.frame.size.width - 20.0f, 42.0f)];
     
     [cell addSubview:button];
     
     // status label or shadow lines
     if (indexPath.section == 0) {
-      UILabel *statusLabel = [[[UILabel alloc] initWithFrame:CGRectMake(0, 6, self.view.frame.size.width, 28)] autorelease];
+      UILabel *statusLabel = [[[UILabel alloc] initWithFrame:CGRectMake(0, 6, cell.frame.size.width, 28)] autorelease];
       
       statusLabel.font = [UIFont systemFontOfSize:10];
       statusLabel.textColor = DEFAULT_TEXTCOLOR;
@@ -417,7 +417,7 @@
 
       [cell addSubview:statusLabel];
     } else if (indexPath.section == 2) {
-      UIView *lineView1 = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.contentView.bounds.size.width, 1)] autorelease];
+      UIView *lineView1 = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.frame.size.width, 1)] autorelease];
       lineView1.backgroundColor = BORDER_COLOR;
       lineView1.autoresizingMask = UIViewAutoresizingFlexibleWidth;
       [cell addSubview:lineView1];
@@ -444,7 +444,7 @@
     cell.labelText.delegate = self;
     cell.labelText.userInteractionEnabled = YES;
 
-    UIView *lineView1 = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.contentView.bounds.size.width, 1)] autorelease];
+    UIView *lineView1 = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.frame.size.width, 1)] autorelease];
     lineView1.backgroundColor = BORDER_COLOR;
     lineView1.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     [cell addSubview:lineView1];
