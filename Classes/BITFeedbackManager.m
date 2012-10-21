@@ -634,9 +634,9 @@
             matchingSendInProgressOrInConflictMessage.id = messageID;
             matchingSendInProgressOrInConflictMessage.status = BITFeedbackMessageStatusRead;
           } else {
-            if ([(NSDictionary *)objMessage objectForKey:@"text"]) {
+            if ([(NSDictionary *)objMessage objectForKey:@"clean_text"] || [(NSDictionary *)objMessage objectForKey:@"text"]) {
               BITFeedbackMessage *message = [[[BITFeedbackMessage alloc] init] autorelease];
-              message.text = [(NSDictionary *)objMessage objectForKey:@"text"] ?: @"";
+              message.text = [(NSDictionary *)objMessage objectForKey:@"clean_text"] ?: [(NSDictionary *)objMessage objectForKey:@"text"] ?: @"";
               message.name = [(NSDictionary *)objMessage objectForKey:@"name"] ?: @"";
               message.email = [(NSDictionary *)objMessage objectForKey:@"email"] ?: @"";
               
