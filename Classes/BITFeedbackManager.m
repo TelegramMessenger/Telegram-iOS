@@ -228,27 +228,36 @@
 - (void)updateAppDefinedUserData {
   if ([BITHockeyManager sharedHockeyManager].delegate &&
       [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
-    self.userID = [[BITHockeyManager sharedHockeyManager].delegate
-                   userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                   componentManager:self];
-    self.requireUserName = BITFeedbackUserDataElementDontShow;
-    self.requireUserEmail = BITFeedbackUserDataElementDontShow;
+    NSString *userID = [[BITHockeyManager sharedHockeyManager].delegate
+                        userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
+                        componentManager:self];
+    if (self.userID) {
+      self.userID = userID;
+      self.requireUserName = BITFeedbackUserDataElementDontShow;
+      self.requireUserEmail = BITFeedbackUserDataElementDontShow;
+    }
   }
   if ([BITHockeyManager sharedHockeyManager].delegate &&
       [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
-    self.userName = [[BITHockeyManager sharedHockeyManager].delegate
-                     userNameForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                     componentManager:self];
-    self.requireUserName = BITFeedbackUserDataElementDontShow;
-    self.requireUserEmail = BITFeedbackUserDataElementDontShow;
+    NSString *userName = [[BITHockeyManager sharedHockeyManager].delegate
+                          userNameForHockeyManager:[BITHockeyManager sharedHockeyManager]
+                          componentManager:self];
+    if (userName) {
+      self.userName = userName;
+      self.requireUserName = BITFeedbackUserDataElementDontShow;
+      self.requireUserEmail = BITFeedbackUserDataElementDontShow;
+    }
   }
   if ([BITHockeyManager sharedHockeyManager].delegate &&
       [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userEmailForHockeyManager:componentManager:)]) {
-    self.userEmail = [[BITHockeyManager sharedHockeyManager].delegate
-                      userEmailForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                      componentManager:self];
-    self.requireUserName = BITFeedbackUserDataElementDontShow;
-    self.requireUserEmail = BITFeedbackUserDataElementDontShow;
+    NSString *userEmail = [[BITHockeyManager sharedHockeyManager].delegate
+                           userEmailForHockeyManager:[BITHockeyManager sharedHockeyManager]
+                           componentManager:self];
+    if (userEmail) {
+      self.userEmail = userEmail;
+      self.requireUserName = BITFeedbackUserDataElementDontShow;
+      self.requireUserEmail = BITFeedbackUserDataElementDontShow;
+    }
   }
 }
 
