@@ -38,7 +38,8 @@
     _serverURL = BITHOCKEYSDK_URL;
 
     _navController = nil;
-    _barStyle = UIBarStyleDefault;
+    _barStyle = UIBarStyleBlackOpaque;
+    self.tintColor = BIT_RGBCOLOR(25, 25, 25);
     _modalPresentationStyle = UIModalPresentationFormSheet;
     
     NSLocale *enUSPOSIXLocale = [[[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"] autorelease];
@@ -67,6 +68,8 @@
   [_navController release], _navController = nil;
   
   [_rfc3339Formatter release], _rfc3339Formatter = nil;
+
+  [_tintColor release], _tintColor = nil;
   
   [super dealloc];
 }
@@ -167,6 +170,7 @@
   
   _navController = [[UINavigationController alloc] initWithRootViewController:viewController];
   _navController.navigationBar.barStyle = _barStyle;
+  _navController.navigationBar.tintColor = _tintColor;
   _navController.modalPresentationStyle = _modalPresentationStyle;
   
   if (parentViewController) {
@@ -190,6 +194,7 @@
     [visibleWindow addSubview:_navController.view];
   }
 }
+
 
 #pragma mark - Manager Control
 

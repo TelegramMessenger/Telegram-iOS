@@ -408,6 +408,7 @@
     return;
   }
   
+  self.barStyle = UIBarStyleBlack;
   [self showView:[self hockeyViewController:YES]];
 }
 

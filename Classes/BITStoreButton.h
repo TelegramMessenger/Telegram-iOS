@@ -29,18 +29,14 @@
  */
 
 
-#import <QuartzCore/QuartzCore.h>
 #import <UIKit/UIKit.h>
 
 // defines a button action set (data container)
-@interface BITStoreButtonData : NSObject {
-  CGPoint _customPadding;
-}
+@interface BITStoreButtonData : NSObject
 
-+ (id)dataWithLabel:(NSString*)aLabel colors:(NSArray*)aColors enabled:(BOOL)flag;
++ (id)dataWithLabel:(NSString*)aLabel enabled:(BOOL)flag;
 
 @property (nonatomic, copy) NSString *label;
-@property (nonatomic, retain) NSArray *colors;
 @property (nonatomic, assign, getter=isEnabled) BOOL enabled;
 
 @end
@@ -54,10 +50,7 @@
 
 // Simulate the Paymeny-Button from the AppStore
 // The interface is flexible, so there is now fixed order
-@interface BITStoreButton : UIButton {
-  CAGradientLayer *_gradient;
-  CGPoint _customPadding;
-}
+@interface BITStoreButton : UIButton
 
 - (id)initWithFrame:(CGRect)frame;
 - (id)initWithPadding:(CGPoint)padding;
@@ -72,10 +65,5 @@
 // align helper
 @property (nonatomic, assign) CGPoint customPadding;
 - (void)alignToSuperview;
-
-// helpers to mimic an AppStore button
-+ (NSArray *)appStoreGreenColor;
-+ (NSArray *)appStoreBlueColor;
-+ (NSArray *)appStoreGrayColor;
 
 @end

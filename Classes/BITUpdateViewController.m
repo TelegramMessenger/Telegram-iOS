@@ -76,20 +76,20 @@
 - (void)updateAppStoreHeader {
   BITAppVersionMetaInfo *appVersion = _updateManager.newestAppVersion;
   _appStoreHeader.headerLabel = appVersion.name;
-  _appStoreHeader.middleHeaderLabel = [appVersion versionString];
-  NSDateFormatter *formatter = [[[NSDateFormatter alloc] init] autorelease];
-  [formatter setDateStyle:NSDateFormatterMediumStyle];
-  NSMutableString *subHeaderString = [NSMutableString string];
-  if (appVersion.date) {
-    [subHeaderString appendString:[formatter stringFromDate:appVersion.date]];
-  }
-  if (appVersion.size) {
-    if ([subHeaderString length]) {
-      [subHeaderString appendString:@" - "];
-    }
-    [subHeaderString appendString:appVersion.sizeInMB];
-  }
-  _appStoreHeader.subHeaderLabel = subHeaderString;
+  _appStoreHeader.middleHeaderLabel = [_updateManager currentAppVersion];// [appVersion versionString];
+//  NSDateFormatter *formatter = [[[NSDateFormatter alloc] init] autorelease];
+//  [formatter setDateStyle:NSDateFormatterMediumStyle];
+//  NSMutableString *subHeaderString = [NSMutableString string];
+//  if (appVersion.date) {
+//    [subHeaderString appendString:[formatter stringFromDate:appVersion.date]];
+//  }
+//  if (appVersion.size) {
+//    if ([subHeaderString length]) {
+//      [subHeaderString appendString:@" - "];
+//    }
+//    [subHeaderString appendString:appVersion.sizeInMB];
+//  }
+//  _appStoreHeader.subHeaderLabel = subHeaderString;
 }
 
 - (void)appDidBecomeActive {
@@ -190,20 +190,30 @@
 
 - (void)configureWebCell:(BITWebTableViewCell *)cell forAppVersion:(BITAppVersionMetaInfo *)appVersion {
   // create web view for a version
+  NSMutableString *dateAndSizeString = [NSMutableString string];
+  if (appVersion.date) {
+    [dateAndSizeString appendString:[appVersion dateString]];
+  }
+  if (appVersion.size) {
+    if ([dateAndSizeString length]) {
+      [dateAndSizeString appendString:@" - "];
+    }
+    [dateAndSizeString appendString:appVersion.sizeInMB];
+  }
+  
   NSString *installed = @"";
   if ([appVersion.version isEqualToString:[_updateManager currentAppVersion]]) {
-    installed = [NSString stringWithFormat:@"<span style=\"float:%@;\"><b>%@</b></span>", [appVersion isEqual:_updateManager.newestAppVersion] ? @"left" : @"right", BITHockeyLocalizedString(@"UpdateInstalled")];
+    installed = [NSString stringWithFormat:@"<span style=\"float:right;\"><b>%@</b></span>", BITHockeyLocalizedString(@"UpdateInstalled")];
   }
   
   if ([appVersion isEqual:_updateManager.newestAppVersion]) {
     if ([appVersion.notes length] > 0) {
-      installed = [NSString stringWithFormat:@"<p>&nbsp;%@</p>", installed];
-      cell.webViewContent = [NSString stringWithFormat:@"%@%@", installed, appVersion.notes];
+      cell.webViewContent = [NSString stringWithFormat:@"<p><b>%@</b>%@<br/><small>%@</small></p><p>%@</p>", [appVersion versionString], installed, dateAndSizeString, appVersion.notes];
     } else {
       cell.webViewContent = [NSString stringWithFormat:@"<div style=\"min-height:200px;vertical-align:middle;text-align:center;\">%@</div>", BITHockeyLocalizedString(@"UpdateNoReleaseNotesAvailable")];
     }
   } else {
-    cell.webViewContent = [NSString stringWithFormat:@"<p><b>%@</b>%@<br/><small>%@</small></p><p>%@</p>", [appVersion versionString], installed, [appVersion dateString], [appVersion notesOrEmptyString]];
+    cell.webViewContent = [NSString stringWithFormat:@"<p><b>%@</b>%@<br/><small>%@</small></p><p>%@</p>", [appVersion versionString], installed, dateAndSizeString, [appVersion notesOrEmptyString]];
   }
   cell.cellBackgroundColor = BIT_RGBCOLOR(235, 235, 235);
   
@@ -255,29 +265,6 @@
 
 #pragma mark - View lifecycle
 
-//- (CAGradientLayer *)backgroundLayer {
-//  UIColor *colorOne	= [UIColor colorWithWhite:0.9 alpha:1.0];
-//  UIColor *colorTwo	= [UIColor colorWithHue:0.625 saturation:0.0 brightness:0.85 alpha:1.0];
-//  UIColor *colorThree	= [UIColor colorWithHue:0.625 saturation:0.0 brightness:0.7 alpha:1.0];
-//  UIColor *colorFour	= [UIColor colorWithHue:0.625 saturation:0.0 brightness:0.4 alpha:1.0];
-//  
-//  NSArray *colors     = [NSArray arrayWithObjects:(id)colorOne.CGColor, colorTwo.CGColor, colorThree.CGColor, colorFour.CGColor, nil];
-//  
-//  NSNumber *stopOne	= [NSNumber numberWithFloat:0.0];
-//  NSNumber *stopTwo	= [NSNumber numberWithFloat:0.02];
-//  NSNumber *stopThree = [NSNumber numberWithFloat:0.99];
-//  NSNumber *stopFour  = [NSNumber numberWithFloat:1.0];
-//  
-//  NSArray *locations  = [NSArray arrayWithObjects:stopOne, stopTwo, stopThree, stopFour, nil];
-//  
-//  CAGradientLayer *headerLayer = [CAGradientLayer layer];
-//  //headerLayer.frame = CGRectMake(0.0, 0.0, 320.0, 77.0);
-//  headerLayer.colors = colors;
-//  headerLayer.locations = locations;
-//  
-//  return headerLayer;
-//}
-
 - (void)viewDidLoad {
   [super viewDidLoad];
   
@@ -292,12 +279,12 @@
   [_updateManager addObserver:self forKeyPath:@"apps" options:0 context:nil];
   _kvoRegistered = YES;
   
-  self.tableView.backgroundColor = BIT_RGBCOLOR(235, 235, 235);
+  self.tableView.backgroundColor = BIT_RGBCOLOR(245, 245, 245);
   self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
   
   UIView *topView = [[[UIView alloc] initWithFrame:CGRectMake(0, -(600-kAppStoreViewHeight), self.view.frame.size.width, 600)] autorelease];
   topView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-  topView.backgroundColor = BIT_RGBCOLOR(140, 141, 142);
+  topView.backgroundColor = BIT_RGBCOLOR(245, 245, 245);
   [self.tableView addSubview:topView];
   
   _appStoreHeader = [[BITAppStoreHeader alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, kAppStoreViewHeight)];
@@ -359,7 +346,7 @@
   storeButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
   storeButton.buttonDelegate = self;
   [self.tableView.tableHeaderView addSubview:storeButton];
-  storeButton.buttonData = [BITStoreButtonData dataWithLabel:@"" colors:[BITStoreButton appStoreGrayColor] enabled:NO];
+  storeButton.buttonData = [BITStoreButtonData dataWithLabel:@"" enabled:NO];
   [storeButton alignToSuperview];
   _appStoreButton = [storeButton retain];
   self.appStoreButtonState = AppStoreButtonStateCheck;
@@ -531,19 +518,19 @@
   
   switch (anAppStoreButtonState) {
     case AppStoreButtonStateOffline:
-      [_appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonOffline") colors:[BITStoreButton appStoreGrayColor] enabled:NO] animated:animated];
+      [_appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonOffline") enabled:NO] animated:animated];
       break;
     case AppStoreButtonStateCheck:
-      [_appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonCheck") colors:[BITStoreButton appStoreGreenColor] enabled:YES] animated:animated];
+      [_appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonCheck") enabled:YES] animated:animated];
       break;
     case AppStoreButtonStateSearching:
-      [_appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonSearching") colors:[BITStoreButton appStoreGrayColor] enabled:NO] animated:animated];
+      [_appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonSearching") enabled:NO] animated:animated];
       break;
     case AppStoreButtonStateUpdate:
-      [_appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonUpdate") colors:[BITStoreButton appStoreBlueColor] enabled:YES] animated:animated];
+      [_appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonUpdate") enabled:YES] animated:animated];
       break;
     case AppStoreButtonStateInstalling:
-      [_appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonInstalling") colors:[BITStoreButton appStoreGrayColor] enabled:NO] animated:animated];
+      [_appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonInstalling") enabled:NO] animated:animated];
       break;
     default:
       break;

@@ -34,8 +34,6 @@
 #import "HockeySDKPrivate.h"
 
 
-#define BIT_RGBCOLOR(r,g,b) [UIColor colorWithRed:(r)/255.0 green:(g)/255.0 blue:(b)/255.0 alpha:1]
-
 #define kLightGrayColor BIT_RGBCOLOR(235, 235, 235)
 #define kDarkGrayColor  BIT_RGBCOLOR(186, 186, 186)
 #define kWhiteBackgroundColor  BIT_RGBCOLOR(245, 245, 245)

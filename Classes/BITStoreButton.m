@@ -30,11 +30,12 @@
 
 
 #import "BITStoreButton.h"
+#import "HockeySDKPrivate.h"
+#import <QuartzCore/QuartzCore.h>
 
-#define PS_RGBCOLOR(r,g,b) [UIColor colorWithRed:(r)/255.0 green:(g)/255.0 blue:(b)/255.0 alpha:1]
-#define PS_MIN_HEIGHT 25.0f
-#define PS_MAX_WIDTH 120.0f
-#define PS_PADDING 12.0f
+#define BIT_MIN_HEIGHT 25.0f
+#define BIT_MAX_WIDTH 120.0f
+#define BIT_PADDING 12.0f
 #define kDefaultButtonAnimationTime 0.25f
 
 
@@ -42,31 +43,23 @@
 
 #pragma mark - NSObject
 
-- (id)initWithLabel:(NSString*)aLabel colors:(NSArray*)aColors enabled:(BOOL)flag {
+- (id)initWithLabel:(NSString*)aLabel enabled:(BOOL)flag {
   if ((self = [super init])) {
     self.label = aLabel;
-    self.colors = aColors;
     self.enabled = flag;
   }
   return self;
 }
 
-+ (id)dataWithLabel:(NSString*)aLabel colors:(NSArray*)aColors enabled:(BOOL)flag {
-  return [[[[self class] alloc] initWithLabel:aLabel colors:aColors enabled:flag] autorelease];
++ (id)dataWithLabel:(NSString*)aLabel enabled:(BOOL)flag {
+  return [[[[self class] alloc] initWithLabel:aLabel enabled:flag] autorelease];
 }
 
 - (void)dealloc {
   [_label release], _label = nil;
-  [_colors release];
   
   [super dealloc];
 }
-@end
-
-
-@interface BITStoreButton ()
-// call when buttonData was updated
-- (void)updateButtonAnimated:(BOOL)animated;
 @end
 
 
@@ -94,21 +87,17 @@
     [UIView setAnimationDuration:kDefaultButtonAnimationTime];
     [UIView setAnimationDelegate:self];
     [UIView setAnimationDidStopSelector:@selector(animationDidStop:finished:context:)];
-  }else {
+  } else {
     [self setTitle:self.buttonData.label forState:UIControlStateNormal];
   }
   
   self.enabled = self.buttonData.isEnabled;
-  _gradient.colors = self.buttonData.colors;
   
   // show white or gray text, depending on the state
   if (self.buttonData.isEnabled) {
-    [self setTitleShadowColor:[UIColor colorWithWhite:0.200 alpha:1.000] forState:UIControlStateNormal];
-    [self.titleLabel setShadowOffset:CGSizeMake(0.0, -0.6)];
-    [self setTitleColor:[UIColor colorWithWhite:1.0 alpha:1.000] forState:UIControlStateNormal];
-  }else {
-    [self.titleLabel setShadowOffset:CGSizeMake(0.0, 0.0)];
-    [self setTitleColor:PS_RGBCOLOR(148,150,151) forState:UIControlStateNormal];
+    [self setTitleColor:BIT_RGBCOLOR(106, 106, 106) forState:UIControlStateNormal];
+  } else {
+    [self setTitleColor:BIT_RGBCOLOR(148, 150, 151) forState:UIControlStateNormal];
   }
   
   // calculate optimal new size
@@ -121,7 +110,7 @@
     if (animated) {
       [CATransaction setAnimationDuration:kDefaultButtonAnimationTime];
       [CATransaction setAnimationTimingFunction:[CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut]];
-    }else {
+    } else {
       // frame is calculated and explicitely animated. so we absolutely need kCATransactionDisableActions
       [CATransaction setValue:[NSNumber numberWithBool:YES] forKey:kCATransactionDisableActions];
     }
@@ -165,35 +154,31 @@
     // register for touch events
 		[self addTarget:self action:@selector(buttonPressed:) forControlEvents:UIControlEventTouchUpInside];
     
-    // border layers for more sex!
-    CAGradientLayer *bevelLayer = [CAGradientLayer layer];
-		bevelLayer.colors = [NSArray arrayWithObjects:(id)[[UIColor colorWithWhite:0.4 alpha:1.0] CGColor], [[UIColor whiteColor] CGColor], nil];
-		bevelLayer.frame = CGRectMake(0.0, 0.0, CGRectGetWidth(frame), CGRectGetHeight(frame));
-		bevelLayer.cornerRadius = 2.5;
-		bevelLayer.needsDisplayOnBoundsChange = YES;
-    [self.layer addSublayer:bevelLayer];
-    
-		CAGradientLayer *topBorderLayer = [CAGradientLayer layer];
-		topBorderLayer.colors = [NSArray arrayWithObjects:(id)[[UIColor darkGrayColor] CGColor], [[UIColor lightGrayColor] CGColor], nil];
-		topBorderLayer.frame = CGRectMake(0.5, 0.5, CGRectGetWidth(frame) - 1.0, CGRectGetHeight(frame) - 1.0);
-		topBorderLayer.cornerRadius = 2.6;
-		topBorderLayer.needsDisplayOnBoundsChange = YES;
-		[self.layer addSublayer:topBorderLayer];
-    
     // main gradient layer
-    _gradient = [[CAGradientLayer layer] retain];
-    _gradient.locations = [NSArray arrayWithObjects:[NSNumber numberWithFloat:0.0], [NSNumber numberWithFloat:1.0], nil];//[NSNumber numberWithFloat:0.500], [NSNumber numberWithFloat:0.5001],
-		_gradient.frame = CGRectMake(0.75, 0.75, CGRectGetWidth(frame) - 1.5, CGRectGetHeight(frame) - 1.5);
-		_gradient.cornerRadius = 2.5;
-		_gradient.needsDisplayOnBoundsChange = YES;
-    [self.layer addSublayer:_gradient];
+    CAGradientLayer *gradient = [CAGradientLayer layer];
+    gradient.colors = @[(id)BIT_RGBCOLOR(243, 243, 243).CGColor, (id)BIT_RGBCOLOR(222, 222, 222).CGColor];
+    gradient.locations = @[[NSNumber numberWithFloat:0.0], [NSNumber numberWithFloat:1.0]];
+		gradient.frame = CGRectMake(0.0, 0.0, CGRectGetWidth(frame), CGRectGetHeight(frame));
+		gradient.cornerRadius = 2.5;
+		gradient.needsDisplayOnBoundsChange = YES;
+    [self.layer addSublayer:gradient];
+    
+    // border layers for more sex!
+    CALayer *borderLayer = [CALayer layer];
+		borderLayer.borderColor = [BIT_RGBCOLOR(191, 191, 191) CGColor];
+    borderLayer.borderWidth = 1.0;
+		borderLayer.frame = CGRectMake(0.0, 0.0, CGRectGetWidth(frame), CGRectGetHeight(frame));
+		borderLayer.cornerRadius = 2.5;
+		borderLayer.needsDisplayOnBoundsChange = YES;
+    [self.layer addSublayer:borderLayer];
+
     [self bringSubviewToFront:self.titleLabel];
   }
   return self;
 }
 
 - (id)initWithPadding:(CGPoint)padding {
-  if ((self = [self initWithFrame:CGRectMake(0, 0, 40, PS_MIN_HEIGHT)])) {
+  if ((self = [self initWithFrame:CGRectMake(0, 0, 40, BIT_MIN_HEIGHT)])) {
     _customPadding = padding;
   }
   return self;
@@ -201,7 +186,6 @@
 
 - (void)dealloc {
   [_buttonData release];
-  [_gradient release];
   
   [super dealloc];
 }
@@ -210,10 +194,10 @@
 #pragma mark - UIView
 
 - (CGSize)sizeThatFits:(CGSize)size {
-  CGSize constr = (CGSize){.height = self.frame.size.height, .width = PS_MAX_WIDTH};
+  CGSize constr = (CGSize){.height = self.frame.size.height, .width = BIT_MAX_WIDTH};
   CGSize newSize = [self.buttonData.label sizeWithFont:self.titleLabel.font constrainedToSize:constr lineBreakMode:UILineBreakModeMiddleTruncation];
-  CGFloat newWidth = newSize.width + (PS_PADDING * 2);
-  CGFloat newHeight = PS_MIN_HEIGHT > newSize.height ? PS_MIN_HEIGHT : newSize.height;
+  CGFloat newWidth = newSize.width + (BIT_PADDING * 2);
+  CGFloat newHeight = BIT_MIN_HEIGHT > newSize.height ? BIT_MIN_HEIGHT : newSize.height;
   
   CGSize sizeThatFits = CGSizeMake(newWidth, newHeight);
   return sizeThatFits;
@@ -246,27 +230,6 @@
   }
   
   [self updateButtonAnimated:animated];
-}
-
-
-#pragma mark - Static
-
-+ (NSArray *)appStoreGreenColor {
-  return [NSArray arrayWithObjects:(id)
-          [UIColor colorWithRed:0.482 green:0.674 blue:0.406 alpha:1.000].CGColor,
-          [UIColor colorWithRed:0.299 green:0.606 blue:0.163 alpha:1.000].CGColor, nil];
-}
-
-+ (NSArray *)appStoreBlueColor {
-  return [NSArray arrayWithObjects:(id)
-          [UIColor colorWithRed:0.306 green:0.380 blue:0.547 alpha:1.000].CGColor,
-          [UIColor colorWithRed:0.129 green:0.220 blue:0.452 alpha:1.000].CGColor, nil];
-}
-
-+ (NSArray *)appStoreGrayColor {
-  return [NSArray arrayWithObjects:(id)
-          PS_RGBCOLOR(187,189,191).CGColor,
-          PS_RGBCOLOR(210,210,210).CGColor, nil];
 }
 
 @end
