@@ -76,7 +76,7 @@
 - (void)updateAppStoreHeader {
   BITAppVersionMetaInfo *appVersion = _updateManager.newestAppVersion;
   _appStoreHeader.headerLabel = appVersion.name;
-  _appStoreHeader.middleHeaderLabel = [_updateManager currentAppVersion];// [appVersion versionString];
+//  _appStoreHeader.middleHeaderLabel = appVersion versionString];
 //  NSDateFormatter *formatter = [[[NSDateFormatter alloc] init] autorelease];
 //  [formatter setDateStyle:NSDateFormatterMediumStyle];
 //  NSMutableString *subHeaderString = [NSMutableString string];
