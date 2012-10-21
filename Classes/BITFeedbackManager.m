@@ -47,6 +47,7 @@
 #define kBITFeedbackName            @"HockeyFeedbackName"
 #define kBITFeedbackEmail           @"HockeyFeedbackEmail"
 #define kBITFeedbackLastMessageID   @"HockeyFeedbackLastMessageID"
+#define kBITFeedbackAppID           @"HockeyFeedbackAppID"
 
 
 @implementation BITFeedbackManager {
@@ -320,6 +321,17 @@
   if ([unarchiver containsValueForKey:kBITFeedbackToken])
     self.token = [unarchiver decodeObjectForKey:kBITFeedbackToken];
   
+  if ([unarchiver containsValueForKey:kBITFeedbackAppID]) {
+    NSString *appID = [unarchiver decodeObjectForKey:kBITFeedbackAppID];
+
+    // the stored thread is from another application identifier, so clear the token
+    // which will cause the new posts to create a new thread on the server for the
+    // current app identifier
+    if ([appID compare:self.appIdentifier] != NSOrderedSame) {
+      self.token = nil;
+    }
+  }
+  
   if ([unarchiver containsValueForKey:kBITFeedbackDateOfLastCheck])
     self.lastCheck = [unarchiver decodeObjectForKey:kBITFeedbackDateOfLastCheck];
   
@@ -355,6 +367,9 @@
   
   if (self.token)
     [archiver encodeObject:self.token forKey:kBITFeedbackToken];
+  
+  if (self.appIdentifier)
+    [archiver encodeObject:self.appIdentifier forKey:kBITFeedbackAppID];
   
   if (self.userID)
     [archiver encodeObject:self.userID forKey:kBITFeedbackUserID];

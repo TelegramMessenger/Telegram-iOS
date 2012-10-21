@@ -26,7 +26,6 @@
   
   NSDateFormatter *_rfc3339Formatter;
   
-  NSString *_appIdentifier;
   BOOL _isAppStoreEnvironment;
 }
 
@@ -54,7 +53,7 @@
 - (id)initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironemt:(BOOL)isAppStoreEnvironment {
   if ((self = [self init])) {
  
-    _appIdentifier = appIdentifier;
+    self.appIdentifier = appIdentifier;
     _isAppStoreEnvironment = isAppStoreEnvironment;
   
   }
