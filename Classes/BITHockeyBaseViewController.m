@@ -9,15 +9,10 @@
 #import "BITHockeyBaseViewController.h"
 
 
-@interface BITHockeyBaseViewController ()
-
-@property (nonatomic) BOOL modal;
-@property (nonatomic) UIStatusBarStyle statusBarStyle;
-
-@end
-
-
-@implementation BITHockeyBaseViewController
+@implementation BITHockeyBaseViewController {
+  BOOL _modal;
+  UIStatusBarStyle _statusBarStyle;
+}
 
 
 - (id)init {
@@ -36,7 +31,7 @@
 
     //might be better in viewDidLoad, but to workaround rdar://12214613 and as it doesn't
     //hurt, we do it here
-    if (self.modal) {
+    if (_modal) {
       self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
                                                                                              target:self
                                                                                              action:@selector(onDismissModal:)] autorelease];
@@ -49,7 +44,7 @@
 #pragma mark - View lifecycle
 
 - (void)onDismissModal:(id)sender {
-  if (self.modal) {
+  if (_modal) {
     UIViewController *presentingViewController = [self presentingViewController];
     
     // If there is no presenting view controller just remove view
