@@ -225,7 +225,9 @@
   }
 }
 
-- (void)updateAppDefinedUserData {
+- (BOOL)updateUserIDUsingDelegate {
+  BOOL availableViaDelegate = NO;
+  
   if ([BITHockeyManager sharedHockeyManager].delegate &&
       [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
     NSString *userID = [[BITHockeyManager sharedHockeyManager].delegate
@@ -233,21 +235,34 @@
                         componentManager:self];
     if (self.userID) {
       self.userID = userID;
-      self.requireUserName = BITFeedbackUserDataElementDontShow;
-      self.requireUserEmail = BITFeedbackUserDataElementDontShow;
+      availableViaDelegate = YES;
     }
   }
+  
+  return availableViaDelegate;
+}
+
+- (BOOL)updateUserNameUsingDelegate {
+  BOOL availableViaDelegate = NO;
+  
   if ([BITHockeyManager sharedHockeyManager].delegate &&
       [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
     NSString *userName = [[BITHockeyManager sharedHockeyManager].delegate
                           userNameForHockeyManager:[BITHockeyManager sharedHockeyManager]
                           componentManager:self];
     if (userName) {
+      availableViaDelegate = YES;
       self.userName = userName;
       self.requireUserName = BITFeedbackUserDataElementDontShow;
-      self.requireUserEmail = BITFeedbackUserDataElementDontShow;
     }
   }
+  
+  return availableViaDelegate;
+}
+
+- (BOOL)updateUserEmailUsingDelegate {
+  BOOL availableViaDelegate = NO;
+  
   if ([BITHockeyManager sharedHockeyManager].delegate &&
       [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userEmailForHockeyManager:componentManager:)]) {
     NSString *userEmail = [[BITHockeyManager sharedHockeyManager].delegate
@@ -255,44 +270,26 @@
                            componentManager:self];
     if (userEmail) {
       self.userEmail = userEmail;
-      self.requireUserName = BITFeedbackUserDataElementDontShow;
+      availableViaDelegate = YES;
       self.requireUserEmail = BITFeedbackUserDataElementDontShow;
     }
   }
+  
+  return availableViaDelegate;
+}
+
+- (void)updateAppDefinedUserData {
+  [self updateUserIDUsingDelegate];
+  [self updateUserNameUsingDelegate];
+  [self updateUserEmailUsingDelegate];
 }
 
 #pragma mark - Local Storage
 
 - (void)loadMessages {
-  BOOL userIDViaDelegate = NO;
-  BOOL userNameViaDelegate = NO;
-  BOOL userEmailViaDelegate = NO;
-  
-  if ([BITHockeyManager sharedHockeyManager].delegate &&
-      [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
-    userIDViaDelegate = YES;
-    self.userID = [[BITHockeyManager sharedHockeyManager].delegate
-                   userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                   componentManager:self];
-  }
-  if ([BITHockeyManager sharedHockeyManager].delegate &&
-      [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
-    userNameViaDelegate = YES;
-    self.userName = [[BITHockeyManager sharedHockeyManager].delegate
-                     userNameForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                     componentManager:self];
-    self.requireUserName = BITFeedbackUserDataElementDontShow;
-    self.requireUserEmail = BITFeedbackUserDataElementDontShow;
-  }
-  if ([BITHockeyManager sharedHockeyManager].delegate &&
-      [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userEmailForHockeyManager:componentManager:)]) {
-    userEmailViaDelegate = YES;
-    self.userEmail = [[BITHockeyManager sharedHockeyManager].delegate
-                     userEmailForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                     componentManager:self];
-    self.requireUserName = BITFeedbackUserDataElementDontShow;
-    self.requireUserEmail = BITFeedbackUserDataElementDontShow;
-  }
+  BOOL userIDViaDelegate = [self updateUserIDUsingDelegate];
+  BOOL userNameViaDelegate = [self updateUserNameUsingDelegate];
+  BOOL userEmailViaDelegate = [self updateUserEmailUsingDelegate];
   
   if (![_fileManager fileExistsAtPath:_settingsFile])
     return;
