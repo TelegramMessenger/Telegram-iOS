@@ -682,6 +682,7 @@
 				);
 				GCC_THUMB_SUPPORT = NO;
 				PRODUCT_NAME = HockeySDK;
+				PUBLIC_HEADERS_FOLDER_PATH = "include/$(PRODUCT_NAME)";
 				SKIP_INSTALL = YES;
 			};
 			name = Debug;
@@ -700,6 +701,7 @@
 				);
 				GCC_THUMB_SUPPORT = NO;
 				PRODUCT_NAME = HockeySDK;
+				PUBLIC_HEADERS_FOLDER_PATH = "include/$(PRODUCT_NAME)";
 				SKIP_INSTALL = YES;
 			};
 			name = Release;
@@ -773,7 +775,6 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				RUN_CLANG_STATIC_ANALYZER = YES;
 				SDKROOT = iphoneos;
-				STRIP_STYLE = "non-global";
 			};
 			name = Debug;
 		};
@@ -803,7 +804,6 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				RUN_CLANG_STATIC_ANALYZER = YES;
 				SDKROOT = iphoneos;
-				STRIP_STYLE = "non-global";
 				VALIDATE_PRODUCT = NO;
 			};
 			name = Release;
