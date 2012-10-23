@@ -39,10 +39,10 @@
 
 @interface BITFeedbackComposeViewController () <BITFeedbackUserDataDelegate>
 
-@property (nonatomic, assign) BITFeedbackManager *manager;
-@property (nonatomic, retain) UITextView *textView;
+@property (nonatomic, weak) BITFeedbackManager *manager;
+@property (nonatomic, strong) UITextView *textView;
 
-@property (nonatomic, retain) NSString *text;
+@property (nonatomic, strong) NSString *text;
 
 - (void)setUserDataAction;
 
@@ -68,13 +68,6 @@
   }
   
   return self;
-}
-
-- (void)dealloc {
-  [_text release];
-  [_textView release], _textView = nil;
-  
-  [super dealloc];
 }
 
 
@@ -141,17 +134,17 @@
   self.view.backgroundColor = [UIColor whiteColor];
   
   // Do any additional setup after loading the view.
-  self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel
+  self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel
                                                                                          target:self
-                                                                                         action:@selector(dismissAction:)] autorelease];
+                                                                                         action:@selector(dismissAction:)];
   
-  self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeSend")
+  self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeSend")
                                                                              style:UIBarButtonItemStyleDone
                                                                             target:self
-                                                                            action:@selector(sendAction:)] autorelease];
+                                                                            action:@selector(sendAction:)];
 
   // message input textfield
-  self.textView = [[[UITextView alloc] initWithFrame:self.view.frame] autorelease];
+  self.textView = [[UITextView alloc] initWithFrame:self.view.frame];
   self.textView.font = [UIFont systemFontOfSize:17];
   self.textView.delegate = self;
   self.textView.backgroundColor = [UIColor whiteColor];
@@ -231,10 +224,10 @@
 }
 
 - (void)setUserDataAction {
-  BITFeedbackUserDataViewController *userController = [[[BITFeedbackUserDataViewController alloc] initWithStyle:UITableViewStyleGrouped] autorelease];
+  BITFeedbackUserDataViewController *userController = [[BITFeedbackUserDataViewController alloc] initWithStyle:UITableViewStyleGrouped];
   userController.delegate = self;
   
-  UINavigationController *navController = [[[UINavigationController alloc] initWithRootViewController:userController] autorelease];
+  UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:userController];
   
   [self.navigationController presentModalViewController:navController animated:YES];
 }

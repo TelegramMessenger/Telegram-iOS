@@ -86,7 +86,7 @@ static NSString *kBITCrashManagerStatus = @"BITCrashManagerStatus";
 /**
  Sets the optional `BITCrashManagerDelegate` delegate.
  */
-@property (nonatomic, assign) id delegate;
+@property (nonatomic, weak) id delegate;
 
 
 ///-----------------------------------------------------------------------------

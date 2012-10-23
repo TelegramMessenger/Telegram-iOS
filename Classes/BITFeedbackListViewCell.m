@@ -53,10 +53,10 @@
 
 @interface BITFeedbackListViewCell ()
 
-@property (nonatomic, retain) NSDateFormatter *dateFormatter;
-@property (nonatomic, retain) NSDateFormatter *timeFormatter;
+@property (nonatomic, strong) NSDateFormatter *dateFormatter;
+@property (nonatomic, strong) NSDateFormatter *timeFormatter;
 
-@property (nonatomic, retain) UILabel *labelTitle;
+@property (nonatomic, strong) UILabel *labelTitle;
 
 @end
 
@@ -72,40 +72,28 @@
     
     _message = nil;
     
-    self.dateFormatter = [[[NSDateFormatter alloc] init] autorelease];
+    self.dateFormatter = [[NSDateFormatter alloc] init];
     [self.dateFormatter setTimeStyle:NSDateFormatterNoStyle];
     [self.dateFormatter setDateStyle:NSDateFormatterMediumStyle];
     [self.dateFormatter setLocale:[NSLocale currentLocale]];    
     [self.dateFormatter setDoesRelativeDateFormatting:YES];
 
-    self.timeFormatter = [[[NSDateFormatter alloc] init] autorelease];
+    self.timeFormatter = [[NSDateFormatter alloc] init];
     [self.timeFormatter setTimeStyle:NSDateFormatterShortStyle];
     [self.timeFormatter setDateStyle:NSDateFormatterNoStyle];
     [self.timeFormatter setLocale:[NSLocale currentLocale]];
     [self.timeFormatter setDoesRelativeDateFormatting:YES];
 
-    self.labelTitle = [[[UILabel alloc] init] autorelease];
+    self.labelTitle = [[UILabel alloc] init];
     self.labelTitle.font = [UIFont systemFontOfSize:TITLE_FONTSIZE];
     
-    self.labelText = [[[BITAttributedLabel alloc] init] autorelease];
+    self.labelText = [[BITAttributedLabel alloc] init];
     self.labelText.font = [UIFont systemFontOfSize:TEXT_FONTSIZE];
     self.labelText.numberOfLines = 0;
     self.labelText.textAlignment = UITextAlignmentLeft;
     self.labelText.dataDetectorTypes = UIDataDetectorTypeAll;
   }
   return self;
-}
-
-- (void)dealloc {
-  [_dateFormatter release], _dateFormatter = nil;
-  [_timeFormatter release], _timeFormatter = nil;
-  
-  [_labelTitle release], _labelTitle = nil;
-  [_labelText release], _labelText = nil;
-  
-  [_message release], _message = nil;
-  
-  [super dealloc];
 }
 
 
@@ -133,7 +121,7 @@
 }
 
 - (void)layoutSubviews {
-  UIView *accessoryViewBackground = [[[UIView alloc] initWithFrame:CGRectMake(0, 2, self.frame.size.width * 2, self.frame.size.height - 2)] autorelease];
+  UIView *accessoryViewBackground = [[UIView alloc] initWithFrame:CGRectMake(0, 2, self.frame.size.width * 2, self.frame.size.height - 2)];
   accessoryViewBackground.autoresizingMask = UIViewAutoresizingFlexibleHeight;
   accessoryViewBackground.clipsToBounds = YES;
   

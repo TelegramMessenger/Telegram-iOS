@@ -96,7 +96,7 @@ typedef enum {
  application, it is _REQUIRED_ to set this delegate and implement
  `[BITUpdateManagerDelegate customDeviceIdentifierForUpdateManager:]`!
  */
-@property (nonatomic, assign) id delegate;
+@property (nonatomic, weak) id delegate;
 
 
 ///-----------------------------------------------------------------------------
@@ -244,7 +244,7 @@ typedef enum {
  
  @see requireAuthorization
  */
-@property (nonatomic, retain) NSString *authenticationSecret;
+@property (nonatomic, strong) NSString *authenticationSecret;
 
 
 ///-----------------------------------------------------------------------------
@@ -269,7 +269,7 @@ typedef enum {
  @see [BITUpdateManagerDelegate didDisplayExpiryAlertForUpdateManager:]
  @warning This only works when using Ad-Hoc provisioning profiles!
  */
-@property (nonatomic, retain) NSDate *expiryDate;
+@property (nonatomic, strong) NSDate *expiryDate;
 
 
 ///-----------------------------------------------------------------------------

@@ -52,14 +52,9 @@
 }
 
 + (id)dataWithLabel:(NSString*)aLabel enabled:(BOOL)flag {
-  return [[[[self class] alloc] initWithLabel:aLabel enabled:flag] autorelease];
+  return [[[self class] alloc] initWithLabel:aLabel enabled:flag];
 }
 
-- (void)dealloc {
-  [_label release], _label = nil;
-  
-  [super dealloc];
-}
 @end
 
 
@@ -184,11 +179,6 @@
   return self;
 }
 
-- (void)dealloc {
-  [_buttonData release];
-  
-  [super dealloc];
-}
 
 
 #pragma mark - UIView
@@ -225,8 +215,7 @@
 
 - (void)setButtonData:(BITStoreButtonData *)aButtonData animated:(BOOL)animated {
   if (_buttonData != aButtonData) {
-    [_buttonData release];
-    _buttonData = [aButtonData retain];
+    _buttonData = aButtonData;
   }
   
   [self updateButtonAnimated:animated];

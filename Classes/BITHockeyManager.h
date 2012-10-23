@@ -169,7 +169,7 @@
  By default this is set to the HockeyApp servers and there rarely should be a
  need to modify that.
  */
-@property (nonatomic, retain) NSString *serverURL;
+@property (nonatomic, strong) NSString *serverURL;
 
 
 /**
@@ -181,7 +181,7 @@
  @see disableCrashManager
  @return The BITCrashManager instance initialized by BITHockeyManager
  */
-@property (nonatomic, retain, readonly) BITCrashManager *crashManager;
+@property (nonatomic, strong, readonly) BITCrashManager *crashManager;
 
 
 /**
@@ -207,7 +207,7 @@
  @see disableUpdateManager
  @return The BITUpdateManager instance initialized by BITHockeyManager
  */
-@property (nonatomic, retain, readonly) BITUpdateManager *updateManager;
+@property (nonatomic, strong, readonly) BITUpdateManager *updateManager;
 
 
 /**
@@ -233,7 +233,7 @@
  @see disableFeedbackManager
  @return The BITFeedbackManager instance initialized by BITHockeyManager
  */
-@property (nonatomic, retain, readonly) BITFeedbackManager *feedbackManager;
+@property (nonatomic, strong, readonly) BITFeedbackManager *feedbackManager;
 
 
 /**

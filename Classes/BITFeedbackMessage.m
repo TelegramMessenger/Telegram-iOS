@@ -49,18 +49,6 @@
   return self;
 }
 
-- (void)dealloc {
-  [_text release], _text = nil;
-  [_userID release], _userID = nil;
-  [_name release], _name = nil;
-  [_email release], _email = nil;
-  [_date release], _date = nil;
-  [_id release], _id = nil;
-  [_token release], _token = nil;
-  
-  [super dealloc];
-}
-
 
 #pragma mark - NSCoder
 

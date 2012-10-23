@@ -60,8 +60,8 @@
 
 @interface BITFeedbackListViewController () <BITFeedbackUserDataDelegate, BITAttributedLabelDelegate>
 
-@property (nonatomic, assign) BITFeedbackManager *manager;
-@property (nonatomic, retain) NSDateFormatter *lastUpdateDateFormatter;
+@property (nonatomic, weak) BITFeedbackManager *manager;
+@property (nonatomic, strong) NSDateFormatter *lastUpdateDateFormatter;
 
 @end
 
@@ -78,7 +78,7 @@
     _deleteButtonSection = -1;
     _userButtonSection = -1;
     
-    self.lastUpdateDateFormatter = [[[NSDateFormatter alloc] init] autorelease];
+    self.lastUpdateDateFormatter = [[NSDateFormatter alloc] init];
 		[self.lastUpdateDateFormatter setDateStyle:NSDateFormatterShortStyle];
 		[self.lastUpdateDateFormatter setTimeStyle:NSDateFormatterShortStyle];
 		self.lastUpdateDateFormatter.locale = [NSLocale currentLocale];
@@ -91,9 +91,7 @@
   [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyFeedbackMessagesLoadingStarted object:nil];
   [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyFeedbackMessagesLoadingFinished object:nil];
 
-  [_lastUpdateDateFormatter release]; _lastUpdateDateFormatter = nil;
   
-  [super dealloc];
 }
 
 
@@ -125,12 +123,12 @@
 
   id refreshClass = NSClassFromString(@"UIRefreshControl");
   if (refreshClass) {
-    self.refreshControl = [[[UIRefreshControl alloc] init] autorelease];
+    self.refreshControl = [[UIRefreshControl alloc] init];
     [self.refreshControl addTarget:self action:@selector(reloadList) forControlEvents:UIControlEventValueChanged];
   } else {
-    self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemRefresh
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemRefresh
                                                                                             target:self
-                                                                                            action:@selector(reloadList)] autorelease];
+                                                                                            action:@selector(reloadList)];
   }  
 }
 
@@ -199,19 +197,19 @@
 #pragma mark - Private methods
 
 - (void)setUserDataAction:(id)sender {
-  BITFeedbackUserDataViewController *userController = [[[BITFeedbackUserDataViewController alloc] initWithStyle:UITableViewStyleGrouped] autorelease];
+  BITFeedbackUserDataViewController *userController = [[BITFeedbackUserDataViewController alloc] initWithStyle:UITableViewStyleGrouped];
   userController.delegate = self;
   
-  UINavigationController *navController = [[[UINavigationController alloc] initWithRootViewController:userController] autorelease];
+  UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:userController];
   navController.modalPresentationStyle = UIModalPresentationFormSheet;
   
   [self presentViewController:navController animated:YES completion:nil];
 }
 
 - (void)newFeedbackAction:(id)sender {
-  BITFeedbackComposeViewController *composeController = [[[BITFeedbackComposeViewController alloc] init] autorelease];
+  BITFeedbackComposeViewController *composeController = [[BITFeedbackComposeViewController alloc] init];
   
-  UINavigationController *navController = [[[UINavigationController alloc] initWithRootViewController:composeController] autorelease];
+  UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:composeController];
   navController.modalPresentationStyle = UIModalPresentationFormSheet;
   
   [self presentViewController:navController animated:YES completion:nil];
@@ -233,7 +231,6 @@
     [deleteAction setTag:0];
     [deleteAction setActionSheetStyle:UIActionSheetStyleBlackTranslucent];
     [deleteAction showInView:self.view];
-    [deleteAction release];
   } else {
     UIAlertView *deleteAction = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListButonDeleteAllMessages")
                                                            message:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllTitle")
@@ -243,7 +240,6 @@
     
     [deleteAction setTag:0];
     [deleteAction show];
-    [deleteAction release];
   }
 }
 
@@ -312,7 +308,7 @@
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:LastUpdateIdentifier];
     
     if (!cell) {
-      cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:LastUpdateIdentifier] autorelease];
+      cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:LastUpdateIdentifier];
       cell.textLabel.font = [UIFont systemFontOfSize:10];
       cell.textLabel.textColor = DEFAULT_TEXTCOLOR;
       cell.accessoryType = UITableViewCellAccessoryNone;
@@ -342,7 +338,7 @@
     cell = [tableView dequeueReusableCellWithIdentifier:identifier];
     
     if (!cell) {
-      cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:identifier] autorelease];
+      cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:identifier];
 
       cell.textLabel.font = [UIFont systemFontOfSize:14];
       cell.textLabel.numberOfLines = 0;
@@ -404,7 +400,7 @@
     
     // status label or shadow lines
     if (indexPath.section == 0) {
-      UILabel *statusLabel = [[[UILabel alloc] initWithFrame:CGRectMake(0, 6, cell.frame.size.width, 28)] autorelease];
+      UILabel *statusLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 6, cell.frame.size.width, 28)];
       
       statusLabel.font = [UIFont systemFontOfSize:10];
       statusLabel.textColor = DEFAULT_TEXTCOLOR;
@@ -417,7 +413,7 @@
 
       [cell addSubview:statusLabel];
     } else if (indexPath.section == 2) {
-      UIView *lineView1 = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.frame.size.width, 1)] autorelease];
+      UIView *lineView1 = [[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.frame.size.width, 1)];
       lineView1.backgroundColor = BORDER_COLOR;
       lineView1.autoresizingMask = UIViewAutoresizingFlexibleWidth;
       [cell addSubview:lineView1];
@@ -428,7 +424,7 @@
     BITFeedbackListViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
     
     if (!cell) {
-      cell = [[[BITFeedbackListViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier] autorelease];
+      cell = [[BITFeedbackListViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
       cell.accessoryType = UITableViewCellAccessoryNone;
       cell.selectionStyle = UITableViewCellSelectionStyleNone;
     }
@@ -444,7 +440,7 @@
     cell.labelText.delegate = self;
     cell.labelText.userInteractionEnabled = YES;
 
-    UIView *lineView1 = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.frame.size.width, 1)] autorelease];
+    UIView *lineView1 = [[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.frame.size.width, 1)];
     lineView1.backgroundColor = BORDER_COLOR;
     lineView1.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     [cell addSubview:lineView1];
@@ -504,7 +500,6 @@
     [linkAction setTag:1];
     [linkAction setActionSheetStyle:UIActionSheetStyleBlackTranslucent];
     [linkAction showInView:self.view];
-    [linkAction release];
   } else {
     UIAlertView *linkAction = [[UIAlertView alloc] initWithTitle:[url absoluteString]
                                                          message:nil
@@ -515,7 +510,6 @@
     
     [linkAction setTag:1];
     [linkAction show];
-    [linkAction release];
   }
 }
 

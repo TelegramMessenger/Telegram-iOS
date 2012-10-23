@@ -48,7 +48,7 @@
  Default is RGB(25, 25, 25)
  @see barStyle
  */
-@property (nonatomic, retain) UIColor *tintColor;
+@property (nonatomic, strong) UIColor *tintColor;
 
 /**
  The UIModalPresentationStyle for showing the update user interface when invoked

@@ -45,7 +45,7 @@
 #pragma mark - Static
 
 + (BITAppVersionMetaInfo *)appVersionMetaInfoFromDict:(NSDictionary *)dict {
-  BITAppVersionMetaInfo *appVersionMetaInfo = [[[[self class] alloc] init] autorelease];
+  BITAppVersionMetaInfo *appVersionMetaInfo = [[[self class] alloc] init];
   
   if ([dict isKindOfClass:[NSDictionary class]]) {
     appVersionMetaInfo.name = [dict objectForKey:@"title"];
@@ -63,17 +63,6 @@
 
 #pragma mark - NSObject
 
-- (void)dealloc {
-  [_name release];
-  [_version release];
-  [_shortVersion release];
-  [_notes release];
-  [_date release];
-  [_size release];
-  [_mandatory release];
-  
-  [super dealloc];
-}
 
 - (BOOL)isEqual:(id)other {
   if (other == self)
@@ -144,7 +133,7 @@
 }
 
 - (NSString *)dateString {
-  NSDateFormatter *formatter = [[[NSDateFormatter alloc] init] autorelease];
+  NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
   [formatter setDateStyle:NSDateFormatterMediumStyle];
   
   return [formatter stringFromDate:self.date];

@@ -36,20 +36,20 @@
 }
 
 
-@property (nonatomic, retain) NSMutableArray *feedbackList;
-@property (nonatomic, retain) NSString *token;
+@property (nonatomic, strong) NSMutableArray *feedbackList;
+@property (nonatomic, strong) NSString *token;
 
 
 // used by BITHockeyManager if disable status is changed
 @property (nonatomic, getter = isFeedbackManagerDisabled) BOOL disableFeedbackManager;
 
-@property (nonatomic, retain) BITFeedbackListViewController *currentFeedbackListViewController;
-@property (nonatomic, retain) BITFeedbackComposeViewController *currentFeedbackComposeViewController;
+@property (nonatomic, strong) BITFeedbackListViewController *currentFeedbackListViewController;
+@property (nonatomic, strong) BITFeedbackComposeViewController *currentFeedbackComposeViewController;
 @property (nonatomic) BOOL didAskUserData;
 
-@property (nonatomic, retain) NSDate *lastCheck;
+@property (nonatomic, strong) NSDate *lastCheck;
 
-@property (nonatomic, retain) NSNumber *lastMessageID;
+@property (nonatomic, strong) NSNumber *lastMessageID;
 
 @property (nonatomic, copy) NSString *userID;
 @property (nonatomic, copy) NSString *userName;

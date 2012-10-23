@@ -32,9 +32,9 @@
     //might be better in viewDidLoad, but to workaround rdar://12214613 and as it doesn't
     //hurt, we do it here
     if (_modal) {
-      self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
+      self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
                                                                                              target:self
-                                                                                             action:@selector(onDismissModal:)] autorelease];
+                                                                                             action:@selector(onDismissModal:)];
     }
   }
   return self;

@@ -56,15 +56,6 @@
   return self;
 }
 
-- (void)dealloc {
-  [_headerLabel release], _headerLabel = nil;
-  [_middleHeaderLabel release], _middleHeaderLabel = nil;
-  [_subHeaderLabel release], _subHeaderLabel = nil;
-  [_iconImage release], _iconImage = nil;;
-  
-  [super dealloc];
-}
-
 
 #pragma mark - UIView
 
@@ -75,7 +66,7 @@
   
   // draw the gradient
   NSArray *colors = [NSArray arrayWithObjects:(id)kDarkGrayColor.CGColor, (id)kLightGrayColor.CGColor, nil];
-  CGGradientRef gradient = CGGradientCreateWithColors(CGColorGetColorSpace((CGColorRef)[colors objectAtIndex:0]), (CFArrayRef)colors, (CGFloat[2]){0, 1});
+  CGGradientRef gradient = CGGradientCreateWithColors(CGColorGetColorSpace((__bridge CGColorRef)[colors objectAtIndex:0]), (__bridge CFArrayRef)colors, (CGFloat[2]){0, 1});
   CGPoint top = CGPointMake(CGRectGetMidX(bounds), bounds.size.height - 3);
   CGPoint bottom = CGPointMake(CGRectGetMidX(bounds), CGRectGetMaxY(bounds));
   CGContextDrawLinearGradient(context, gradient, top, bottom, 0);
@@ -108,7 +99,6 @@
 
 - (void)setHeaderLabel:(NSString *)anHeaderLabel {
   if (_headerLabel != anHeaderLabel) {
-    [_headerLabel release];
     _headerLabel = [anHeaderLabel copy];
     [self setNeedsDisplay];
   }
@@ -116,7 +106,6 @@
 
 - (void)setMiddleHeaderLabel:(NSString *)aMiddleHeaderLabel {
   if (_middleHeaderLabel != aMiddleHeaderLabel) {
-    [_middleHeaderLabel release];
     _middleHeaderLabel = [aMiddleHeaderLabel copy];
     [self setNeedsDisplay];
   }
@@ -124,7 +113,6 @@
 
 - (void)setSubHeaderLabel:(NSString *)aSubHeaderLabel {
   if (_subHeaderLabel != aSubHeaderLabel) {
-    [_subHeaderLabel release];
     _subHeaderLabel = [aSubHeaderLabel copy];
     [self setNeedsDisplay];
   }
@@ -132,11 +120,10 @@
 
 - (void)setIconImage:(UIImage *)anIconImage {
   if (_iconImage != anIconImage) {
-    [_iconImage release];
     
     // scale, make borders and reflection
     _iconImage = bit_imageToFitSize(anIconImage, CGSizeMake(kImageHeight, kImageHeight), YES);
-    _iconImage = [bit_roundedCornerImage(_iconImage, kImageBorderRadius, 0.0) retain];
+    _iconImage = bit_roundedCornerImage(_iconImage, kImageBorderRadius, 0.0);
     
     [self setNeedsDisplay];
   }

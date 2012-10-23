@@ -36,6 +36,6 @@
 @property (nonatomic, copy) NSString *headerLabel;
 @property (nonatomic, copy) NSString *middleHeaderLabel;
 @property (nonatomic, copy) NSString *subHeaderLabel;
-@property (nonatomic, retain) UIImage *iconImage;
+@property (nonatomic, strong) UIImage *iconImage;
 
 @end

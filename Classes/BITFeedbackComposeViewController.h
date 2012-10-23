@@ -50,7 +50,7 @@
  application, it is _REQUIRED_ to set this delegate and implement
  `[BITUpdateManagerDelegate customDeviceIdentifierForUpdateManager:]`!
  */
-@property (nonatomic, assign) id<BITFeedbackComposeViewControllerDelegate> delegate;
+@property (nonatomic, weak) id<BITFeedbackComposeViewControllerDelegate> delegate;
 
 
 ///-----------------------------------------------------------------------------

@@ -34,7 +34,7 @@
 #import "BITFeedbackManagerPrivate.h"
 
 @interface BITFeedbackUserDataViewController ()
-@property (nonatomic, assign) BITFeedbackManager *manager;
+@property (nonatomic, weak) BITFeedbackManager *manager;
 
 @property (nonatomic, copy) NSString *name;
 @property (nonatomic, copy) NSString *email;
@@ -58,26 +58,19 @@
   return self;
 }
 
-- (void)dealloc {
-  [_name release], _name = nil;
-  [_email release], _email = nil;
-  
-  [super dealloc];
-}
-
 - (void)viewDidLoad {
   [super viewDidLoad];
 
   [self.tableView setScrollEnabled:NO];
    
 	// Do any additional setup after loading the view.
-  self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel
+  self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel
                                                                                          target:self
-                                                                                         action:@selector(dismissAction:)] autorelease];
+                                                                                         action:@selector(dismissAction:)];
   
-  self.navigationItem.rightBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemSave
+  self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemSave
                                                                                           target:self
-                                                                                          action:@selector(saveAction:)] autorelease];
+                                                                                          action:@selector(saveAction:)];
 }
 
 - (void)viewDidUnload {
@@ -195,13 +188,13 @@
   
   UITableViewCell *cell = [self.tableView dequeueReusableCellWithIdentifier:CellIdentifier];
   if (cell == nil) {
-    cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier] autorelease];
+    cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
 
     cell.accessoryType = UITableViewCellAccessoryNone;
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
     cell.backgroundColor = [UIColor whiteColor];
     
-    UITextField *textField = [[[UITextField alloc] initWithFrame:CGRectMake(110, 10, 185, 30)] autorelease];
+    UITextField *textField = [[UITextField alloc] initWithFrame:CGRectMake(110, 10, 185, 30)];
     textField.adjustsFontSizeToFitWidth = YES;
     textField.textColor = [UIColor blackColor];
     textField.backgroundColor = [UIColor lightGrayColor];

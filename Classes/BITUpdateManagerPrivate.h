@@ -41,25 +41,25 @@
 // are we currently checking for updates?
 @property (nonatomic, assign, getter=isCheckInProgress) BOOL checkInProgress;
 
-@property (nonatomic, retain) NSMutableData *receivedData;
+@property (nonatomic, strong) NSMutableData *receivedData;
 
 @property (nonatomic, copy) NSDate *lastCheck;
 
 // get array of all available versions
 @property (nonatomic, copy) NSArray *appVersions;
 
-@property (nonatomic, retain) NSURLConnection *urlConnection;
+@property (nonatomic, strong) NSURLConnection *urlConnection;
 
 @property (nonatomic, copy) NSDate *usageStartTimestamp;
 
-@property (nonatomic, retain) UIView *blockingView;
+@property (nonatomic, strong) UIView *blockingView;
 
 // if YES, the API will return an existing JMC config
 // if NO, the API will return only version information
 @property (nonatomic, assign) BOOL checkForTracker;
 
 // Contains the tracker config if received from server
-@property (nonatomic, retain) NSDictionary *trackerConfig;
+@property (nonatomic, strong) NSDictionary *trackerConfig;
 
 // used by BITHockeyManager if disable status is changed
 @property (nonatomic, getter = isUpdateManagerDisabled) BOOL disableUpdateManager;
@@ -77,7 +77,7 @@
 - (void)checkForAuthorization;
 
 // get/set current active hockey view controller
-@property (nonatomic, retain) BITUpdateViewController *currentHockeyViewController;
+@property (nonatomic, strong) BITUpdateViewController *currentHockeyViewController;
 
 // convenience method to get current running version string
 - (NSString *)currentAppVersion;

@@ -41,7 +41,7 @@
     self.tintColor = BIT_RGBCOLOR(25, 25, 25);
     _modalPresentationStyle = UIModalPresentationFormSheet;
     
-    NSLocale *enUSPOSIXLocale = [[[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"] autorelease];
+    NSLocale *enUSPOSIXLocale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"];
     _rfc3339Formatter = [[NSDateFormatter alloc] init];
     [_rfc3339Formatter setLocale:enUSPOSIXLocale];
     [_rfc3339Formatter setDateFormat:@"yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'"];
@@ -52,25 +52,10 @@
 
 - (id)initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironemt:(BOOL)isAppStoreEnvironment {
   if ((self = [self init])) {
- 
-    self.appIdentifier = appIdentifier;
+    _appIdentifier = appIdentifier;
     _isAppStoreEnvironment = isAppStoreEnvironment;
-  
   }
   return self;
-}
-
-
-- (void)dealloc {
-  [_serverURL release]; _serverURL = nil;
-
-  [_navController release], _navController = nil;
-  
-  [_rfc3339Formatter release], _rfc3339Formatter = nil;
-
-  [_tintColor release], _tintColor = nil;
-  
-  [super dealloc];
 }
 
 
@@ -165,7 +150,7 @@
 #pragma clang diagnostic pop
   }
   
-  if (_navController != nil) [_navController release], _navController = nil;
+  if (_navController != nil) _navController = nil;
   
   _navController = [[UINavigationController alloc] initWithRootViewController:viewController];
   _navController.navigationBar.barStyle = _barStyle;

@@ -14,7 +14,7 @@
 
 @interface BITHockeyBaseManager()
 
-@property (nonatomic, retain) NSString *appIdentifier;
+@property (nonatomic, strong) NSString *appIdentifier;
 
 - (id)initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironemt:(BOOL)isAppStoreEnvironment;
 

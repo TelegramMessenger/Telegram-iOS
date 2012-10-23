@@ -39,7 +39,7 @@
  
  @see customActivityTitle
  */
-@property (nonatomic, retain) UIImage *customActivityImage;
+@property (nonatomic, strong) UIImage *customActivityImage;
 
 
 /**
@@ -50,6 +50,6 @@
  
  @see customActivityImage
  */
-@property (nonatomic, retain) NSString *customActivityTitle;
+@property (nonatomic, strong) NSString *customActivityTitle;
 
 @end

@@ -34,10 +34,10 @@
 
 @interface BITWebTableViewCell : UITableViewCell <UIWebViewDelegate>
 
-@property (nonatomic, retain) UIWebView *webView;
+@property (nonatomic, strong) UIWebView *webView;
 @property (nonatomic, copy) NSString *webViewContent;
 @property (nonatomic, assign) CGSize webViewSize;
-@property (nonatomic, retain) UIColor *cellBackgroundColor;
+@property (nonatomic, strong) UIColor *cellBackgroundColor;
 
 - (void)addWebView;
 

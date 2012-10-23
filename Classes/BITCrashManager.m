@@ -54,7 +54,7 @@
 
 @interface BITCrashManager ()
 
-@property (nonatomic, retain) NSFileManager *fileManager;
+@property (nonatomic, strong) NSFileManager *fileManager;
 
 @end
 
@@ -118,7 +118,7 @@
     
     // temporary directory for crashes grabbed from PLCrashReporter
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
-    _crashesDir = [[[paths objectAtIndex:0] stringByAppendingPathComponent:BITHOCKEY_IDENTIFIER] retain];
+    _crashesDir = [[paths objectAtIndex:0] stringByAppendingPathComponent:BITHOCKEY_IDENTIFIER];
     
     if (![self.fileManager fileExistsAtPath:_crashesDir]) {
       NSDictionary *attributes = [NSDictionary dictionaryWithObject: [NSNumber numberWithUnsignedLong: 0755] forKey: NSFilePosixPermissions];
@@ -127,8 +127,8 @@
       [self.fileManager createDirectoryAtPath:_crashesDir withIntermediateDirectories: YES attributes: attributes error: &theError];
     }
     
-    _settingsFile = [[_crashesDir stringByAppendingPathComponent:BITHOCKEY_CRASH_SETTINGS] retain];
-    _analyzerInProgressFile = [[_crashesDir stringByAppendingPathComponent:BITHOCKEY_CRASH_ANALYZER] retain];
+    _settingsFile = [_crashesDir stringByAppendingPathComponent:BITHOCKEY_CRASH_SETTINGS];
+    _analyzerInProgressFile = [_crashesDir stringByAppendingPathComponent:BITHOCKEY_CRASH_ANALYZER];
 
     if ([_fileManager fileExistsAtPath:_analyzerInProgressFile]) {
       NSError *error = nil;
@@ -146,26 +146,9 @@
 
 
 - (void) dealloc {
-  _delegate = nil;
   [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
   
   [_urlConnection cancel];
-  [_urlConnection release]; 
-  _urlConnection = nil;
-  
-  [_crashesDir release];
-  [_crashFiles release];
-  
-  [_fileManager release];
-  _fileManager = nil;
-
-  [_approvedCrashReports release];
-  _approvedCrashReports = nil;
-  
-  [_analyzerInProgressFile release];
-  _analyzerInProgressFile = nil;
-  
-  [super dealloc];
 }
 
 
@@ -324,7 +307,7 @@
     [self saveSettings];
     
     // Try loading the crash report
-    NSData *crashData = [[[NSData alloc] initWithData:[crashReporter loadPendingCrashReportDataAndReturnError: &error]] autorelease];
+    NSData *crashData = [[NSData alloc] initWithData:[crashReporter loadPendingCrashReportDataAndReturnError: &error]];
     
     NSString *cacheFilename = [NSString stringWithFormat: @"%.0f", [NSDate timeIntervalSinceReferenceDate]];
     
@@ -357,7 +340,7 @@
       }
 
       // get the startup timestamp from the crash report, and the file timestamp to calculate the timeinterval when the crash happened after startup
-      PLCrashReport *report = [[[PLCrashReport alloc] initWithData:crashData error:&error] autorelease];
+      PLCrashReport *report = [[PLCrashReport alloc] initWithData:crashData error:&error];
       
       if ([report.applicationInfo respondsToSelector:@selector(applicationStartupTimestamp)]) {
         if (report.systemInfo.timestamp && report.applicationInfo.applicationStartupTimestamp) {
@@ -471,7 +454,6 @@
       }
       
       [alertView show];
-      [alertView release];
     } else {
       [self sendCrashReports];
     }
@@ -559,7 +541,7 @@
     NSData *crashData = [NSData dataWithContentsOfFile:filename];
 		
     if ([crashData length] > 0) {
-      PLCrashReport *report = [[[PLCrashReport alloc] initWithData:crashData error:&error] autorelease];
+      PLCrashReport *report = [[PLCrashReport alloc] initWithData:crashData error:&error];
 			
       if (report == nil) {
         BITHockeyLog(@"WARNING: Could not parse crash report");
@@ -754,9 +736,7 @@
   
   _sendingInProgress = NO;
 	
-  [_responseData release];
   _responseData = nil;	
-  [_urlConnection release];
   _urlConnection = nil;
 }
 
@@ -808,9 +788,7 @@
   
   _sendingInProgress = NO;
 	
-  [_responseData release];
   _responseData = nil;	
-  [_urlConnection release];
   _urlConnection = nil;
 }
 

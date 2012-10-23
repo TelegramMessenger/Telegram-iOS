@@ -56,10 +56,10 @@
 - (id)initWithPadding:(CGPoint)padding;
 
 // action delegate
-@property (nonatomic, assign) id<BITStoreButtonDelegate> buttonDelegate;
+@property (nonatomic, weak) id<BITStoreButtonDelegate> buttonDelegate;
 
 // change the button layer
-@property (nonatomic, retain) BITStoreButtonData *buttonData;
+@property (nonatomic, strong) BITStoreButtonData *buttonData;
 - (void)setButtonData:(BITStoreButtonData *)aButtonData animated:(BOOL)animated;
 
 // align helper

@@ -86,7 +86,7 @@
 
     // temporary directory for crashes grabbed from PLCrashReporter
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
-    _feedbackDir = [[[paths objectAtIndex:0] stringByAppendingPathComponent:BITHOCKEY_IDENTIFIER] retain];
+    _feedbackDir = [[paths objectAtIndex:0] stringByAppendingPathComponent:BITHOCKEY_IDENTIFIER];
     
     if (![_fileManager fileExistsAtPath:_feedbackDir]) {
       NSDictionary *attributes = [NSDictionary dictionaryWithObject: [NSNumber numberWithUnsignedLong: 0755] forKey: NSFilePosixPermissions];
@@ -95,7 +95,7 @@
       [_fileManager createDirectoryAtPath:_feedbackDir withIntermediateDirectories: YES attributes: attributes error: &theError];
     }
     
-    _settingsFile = [[_feedbackDir stringByAppendingPathComponent:BITHOCKEY_FEEDBACK_SETTINGS] retain];
+    _settingsFile = [_feedbackDir stringByAppendingPathComponent:BITHOCKEY_FEEDBACK_SETTINGS];
     
     _userID = nil;
     _userName = nil;
@@ -108,24 +108,6 @@
   [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
   
   [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
-
-  [_currentFeedbackListViewController release], _currentFeedbackListViewController = nil;
-  [_currentFeedbackComposeViewController release], _currentFeedbackComposeViewController = nil;
-  
-  [_lastCheck release], _lastCheck = nil;
-  [_token release], _token = nil;
-  [_lastMessageID release], _lastMessageID = nil;
-  [_feedbackList release], _feedbackList = nil;
-  
-  [_userID release], _userID = nil;
-  [_userName release], _userName = nil;
-  [_userEmail release], _userEmail = nil;
-  
-  [_fileManager release], _fileManager = nil;
-  [_feedbackDir release], _feedbackDir = nil;
-  [_settingsFile release], _settingsFile = nil;
-  
-  [super dealloc];
 }
 
 
@@ -154,10 +136,10 @@
 
 - (NSString *)uuidString {
   CFUUIDRef theToken = CFUUIDCreate(NULL);
-  CFStringRef stringUUID = CFUUIDCreateString(NULL, theToken);
+  NSString *stringUUID = (__bridge_transfer NSString *)CFUUIDCreateString(NULL, theToken);
   CFRelease(theToken);
   
-  return [(NSString *)stringUUID autorelease];
+  return stringUUID;
 }
 
 - (NSString *)uuidAsLowerCaseAndShortened {
@@ -167,7 +149,7 @@
 #pragma mark - Feedback Modal UI
 
 - (BITFeedbackListViewController *)feedbackListViewController:(BOOL)modal {
-  return [[[BITFeedbackListViewController alloc] initWithModalStyle:modal] autorelease];
+  return [[BITFeedbackListViewController alloc] initWithModalStyle:modal];
 }
 
 - (void)showFeedbackListView {
@@ -181,7 +163,7 @@
 
 
 - (BITFeedbackComposeViewController *)feedbackComposeViewController {
-  return [[[BITFeedbackComposeViewController alloc] init] autorelease];
+  return [[BITFeedbackComposeViewController alloc] init];
 }
 
 - (void)showFeedbackComposeView {
@@ -294,7 +276,7 @@
   if (![_fileManager fileExistsAtPath:_settingsFile])
     return;
 
-  NSData *codedData = [[[NSData alloc] initWithContentsOfFile:_settingsFile] autorelease];
+  NSData *codedData = [[NSData alloc] initWithContentsOfFile:_settingsFile];
   if (codedData == nil) return;
   
   NSKeyedUnarchiver *unarchiver = nil;
@@ -354,7 +336,6 @@
   }
 
   [unarchiver finishDecoding];
-  [unarchiver release];
 
   if (!self.lastCheck) {
     self.lastCheck = [NSDate distantPast];
@@ -396,8 +377,6 @@
   
   [archiver finishEncoding];
   [data writeToFile:_settingsFile atomically:YES];
-  [archiver release];
-  [data release];
 }
 
 
@@ -605,7 +584,7 @@
     NSInteger pendingMessagesCount = [messagesSendInProgress count] + [[self messagesWithStatus:BITFeedbackMessageStatusSendPending] count];
     
     __block BOOL newMessage = NO;
-    __block NSMutableSet *returnedMessageIDs = [[[NSMutableSet alloc] init] autorelease];
+    NSMutableSet *returnedMessageIDs = [[NSMutableSet alloc] init];
     
     [feedMessages enumerateObjectsUsingBlock:^(id objMessage, NSUInteger messagesIdx, BOOL *stop) {
       if ([(NSDictionary *)objMessage objectForKey:@"id"]) {
@@ -632,7 +611,7 @@
             matchingSendInProgressOrInConflictMessage.status = BITFeedbackMessageStatusRead;
           } else {
             if ([(NSDictionary *)objMessage objectForKey:@"clean_text"] || [(NSDictionary *)objMessage objectForKey:@"text"]) {
-              BITFeedbackMessage *message = [[[BITFeedbackMessage alloc] init] autorelease];
+              BITFeedbackMessage *message = [[BITFeedbackMessage alloc] init];
               message.text = [(NSDictionary *)objMessage objectForKey:@"clean_text"] ?: [(NSDictionary *)objMessage objectForKey:@"text"] ?: @"";
               message.name = [(NSDictionary *)objMessage objectForKey:@"name"] ?: @"";
               message.email = [(NSDictionary *)objMessage objectForKey:@"email"] ?: @"";
@@ -668,12 +647,12 @@
         latestMessageFromUser = YES;
       
       if (!latestMessageFromUser && self.showAlertOnIncomingMessages && !self.currentFeedbackListViewController && !self.currentFeedbackComposeViewController) {
-        UIAlertView *alertView = [[[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageTitle")
+        UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageTitle")
                                                              message:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageText")
                                                             delegate:self
                                                    cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackIgnore")
                                                    otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackShow"), nil
-                                   ] autorelease];
+                                   ];
         [alertView setTag:0];
         [alertView show];
         _incomingMessagesAlertShowing = YES;
@@ -802,7 +781,7 @@
         [self saveMessages];
         [self performSelector:@selector(fetchMessageUpdates) withObject:nil afterDelay:0.2];
       } else if ([responseData length]) {
-        NSString *responseString = [[[NSString alloc] initWithBytes:[responseData bytes] length:[responseData length] encoding: NSUTF8StringEncoding] autorelease];
+        NSString *responseString = [[NSString alloc] initWithBytes:[responseData bytes] length:[responseData length] encoding: NSUTF8StringEncoding];
         BITHockeyLog(@"INFO: Received API response: %@", responseString);
         
         NSError *error = NULL;
@@ -896,7 +875,7 @@
 }
 
 - (void)submitMessageWithText:(NSString *)text {
-  BITFeedbackMessage *message = [[[BITFeedbackMessage alloc] init] autorelease];
+  BITFeedbackMessage *message = [[BITFeedbackMessage alloc] init];
   message.text = text;
   [message setStatus:BITFeedbackMessageStatusSendPending];
   [message setToken:[self uuidAsLowerCaseAndShortened]];  

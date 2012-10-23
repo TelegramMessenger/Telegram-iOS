@@ -32,6 +32,6 @@
 @interface BITHockeyManager () {
 }
 
-@property (nonatomic, assign) id delegate;
+@property (nonatomic, weak) id delegate;
 
 @end

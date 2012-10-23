@@ -36,22 +36,20 @@
 #pragma mark NSString helpers
 
 NSString *bit_URLEncodedString(NSString *inputString) {
-  NSString *result = (NSString *)CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault,
-                                                                         (CFStringRef)inputString,
-                                                                         NULL,
-                                                                         CFSTR("!*'();:@&=+$,/?%#[]"),
-                                                                         kCFStringEncodingUTF8);
-  [result autorelease];
-  return result;
+  return CFBridgingRelease(CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault,
+                                                                    (__bridge CFStringRef)inputString,
+                                                                    NULL,
+                                                                    CFSTR("!*'();:@&=+$,/?%#[]"),
+                                                                    kCFStringEncodingUTF8)
+                           );
 }
 
 NSString *bit_URLDecodedString(NSString *inputString) {
-  NSString *result = (NSString *)CFURLCreateStringByReplacingPercentEscapesUsingEncoding(kCFAllocatorDefault,
-                                                                                         (CFStringRef)inputString,
-                                                                                         CFSTR(""),
-                                                                                         kCFStringEncodingUTF8);
-  [result autorelease];
-  return result;
+  return CFBridgingRelease(CFURLCreateStringByReplacingPercentEscapesUsingEncoding(kCFAllocatorDefault,
+                                                                                   (__bridge CFStringRef)inputString,
+                                                                                   CFSTR(""),
+                                                                                   kCFStringEncodingUTF8)
+                           );
 }
 
 NSComparisonResult bit_versionCompare(NSString *stringA, NSString *stringB) {
@@ -94,16 +92,25 @@ NSString *bit_appAnonID(void) {
   // try to new iOS6 identifierForAdvertising
   Class advertisingClass = NSClassFromString(@"ASIdentifierManager");
 	if (advertisingClass) {
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Warc-performSelector-leaks"
     id adInstance = [advertisingClass performSelector:NSSelectorFromString(@"sharedManager")];
+# pragma clang diagnostic pop
     
     SEL adidSelector = NSSelectorFromString(@"advertisingIdentifier");
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Warc-performSelector-leaks"
     return [[adInstance performSelector:adidSelector] performSelector:NSSelectorFromString(@"UUIDString")];
+# pragma clang diagnostic pop
   }
   
   // try to new iOS6 identifierForVendor, in case ASIdentifierManager is not linked
   SEL vendoridSelector = NSSelectorFromString(@"identifierForVendor");
   if ([[UIDevice currentDevice] respondsToSelector:vendoridSelector]) {
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Warc-performSelector-leaks"
     return [[[UIDevice currentDevice] performSelector:vendoridSelector] performSelector:NSSelectorFromString(@"UUIDString")];
+# pragma clang diagnostic pop
   }
   
   // use app bundle path
@@ -360,7 +367,7 @@ UIImage *bit_newWithContentsOfResolutionIndependentFile(NSString * path) {
 UIImage *bit_imageWithContentsOfResolutionIndependentFile(NSString *path) {
 #ifndef __clang_analyzer__
   // clang alayzer in 4.2b3 thinks here's a leak, which is not the case.
-  return [bit_newWithContentsOfResolutionIndependentFile(path) autorelease];
+  return bit_newWithContentsOfResolutionIndependentFile(path);
 #endif
 }
 

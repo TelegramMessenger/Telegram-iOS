@@ -118,24 +118,11 @@
   return self;
 }
 
-- (void)dealloc {
-  [_appIdentifier release], _appIdentifier = nil;
-  
-  [_crashManager release], _crashManager = nil;
-  [_updateManager release], _updateManager = nil;
-  [_feedbackManager release], _feedbackManager = nil;
-  
-  _delegate = nil;
-  
-  [super dealloc];
-}
-
 
 #pragma mark - Public Instance Methods (Configuration)
 
 - (void)configureWithIdentifier:(NSString *)appIdentifier delegate:(id)delegate {
   _delegate = delegate;
-  [_appIdentifier release];
   _appIdentifier = [appIdentifier copy];
   
   [self initializeModules];
@@ -143,7 +130,6 @@
 
 - (void)configureWithBetaIdentifier:(NSString *)betaIdentifier liveIdentifier:(NSString *)liveIdentifier delegate:(id)delegate {
   _delegate = delegate;
-  [_appIdentifier release];
 
   // check the live identifier now, because otherwise invalid identifier would only be logged when the app is already in the store
   if (![self checkValidityOfAppIdentifier:liveIdentifier]) {
@@ -232,7 +218,6 @@
   }
   
   if (_serverURL != aServerURL) {
-    [_serverURL release];
     _serverURL = [aServerURL copy];
   }
 }
@@ -345,9 +330,9 @@
   id jmcInstance = [self jmcInstance];
   SEL configureSelector = @selector(configureJiraConnect:projectKey:apiKey:);
   
-  NSString *url = [configuration valueForKey:@"url"];
-  NSString *project = [configuration valueForKey:@"project"];
-  NSString *key = [configuration valueForKey:@"key"];
+  __unsafe_unretained NSString *url = [configuration valueForKey:@"url"];
+  __unsafe_unretained NSString *project = [configuration valueForKey:@"project"];
+  __unsafe_unretained NSString *key = [configuration valueForKey:@"key"];
   
   NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:[jmcInstance methodSignatureForSelector:configureSelector]];
   invocation.target = jmcInstance;
@@ -382,12 +367,11 @@
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     NSMutableDictionary *trackerConfig = [[defaults valueForKey:@"BITTrackerConfigurations"] mutableCopy];
     if (!trackerConfig) {
-      trackerConfig = [[NSMutableDictionary dictionaryWithCapacity:1] retain];
+      trackerConfig = [NSMutableDictionary dictionaryWithCapacity:1];
     }
 
     [trackerConfig setValue:[object trackerConfig] forKey:_appIdentifier];
     [defaults setValue:trackerConfig forKey:@"BITTrackerConfigurations"];
-    [trackerConfig release];
     
     [defaults synchronize];
     [self configureJMC];

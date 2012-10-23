@@ -82,7 +82,6 @@
                                                    delegate:nil
                                           cancelButtonTitle:BITHockeyLocalizedString(@"OK") otherButtonTitles:nil];
     [alert show];
-    [alert release];
     _showFeedback = NO;
   }
 }
@@ -197,7 +196,7 @@
 }
 
 - (NSString *)installationDateString {
-  NSDateFormatter *formatter = [[[NSDateFormatter alloc] init] autorelease];
+  NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
   [formatter setDateFormat:@"MM/dd/yyyy"];
   double installationTimeStamp = [[NSUserDefaults standardUserDefaults] doubleForKey:kBITUpdateDateOfVersionInstallation];
   if (installationTimeStamp == 0.0f) {
@@ -370,31 +369,14 @@
   [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
   [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationWillResignActiveNotification object:nil];
   
-  _delegate = nil;
-  
   [_urlConnection cancel];
-  self.urlConnection = nil;
-  
-  [_expiryDate release];
-  _expiryDate = nil;
-  
-  [_blockingView release];
-  [_currentHockeyViewController release];
-  [_appVersions release];
-  [_receivedData release];
-  [_lastCheck release];
-  [_usageStartTimestamp release];
-  [_authenticationSecret release];
-  [_uuid release];
-  
-  [super dealloc];
 }
 
 
 #pragma mark - BetaUpdateUI
 
 - (BITUpdateViewController *)hockeyViewController:(BOOL)modal {
-  return [[[BITUpdateViewController alloc] initWithModalStyle:modal] autorelease];
+  return [[BITUpdateViewController alloc] initWithModalStyle:modal];
 }
 
 - (void)showUpdateView {
@@ -419,22 +401,22 @@
   
   if (!_updateAlertShowing) {
     if ([self hasNewerMandatoryVersion]) {
-      UIAlertView *alertView = [[[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateAvailable")
+      UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateAvailable")
                                                            message:[NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateAlertMandatoryTextWithAppVersion"), [self.newestAppVersion nameAndVersionString]]
                                                           delegate:self
                                                  cancelButtonTitle:BITHockeyLocalizedString(@"UpdateInstall")
                                                  otherButtonTitles:nil
-                                 ] autorelease];
+                                 ];
       [alertView setTag:2];
       [alertView show];
       _updateAlertShowing = YES;
     } else {
-      UIAlertView *alertView = [[[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateAvailable")
+      UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateAvailable")
                                                            message:[NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateAlertTextWithAppVersion"), [self.newestAppVersion nameAndVersionString]]
                                                           delegate:self
                                                  cancelButtonTitle:BITHockeyLocalizedString(@"UpdateIgnore")
                                                  otherButtonTitles:BITHockeyLocalizedString(@"UpdateShow"), nil
-                                 ] autorelease];
+                                 ];
       if (self.isShowingDirectInstallOption) {
         [alertView addButtonWithTitle:BITHockeyLocalizedString(@"UpdateInstall")];
       }
@@ -448,12 +430,12 @@
 
 // nag the user with neverending alerts if we cannot find out the window for presenting the covering sheet
 - (void)alertFallback:(NSString *)message {
-  UIAlertView *alertView = [[[UIAlertView alloc] initWithTitle:nil
+  UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil
                                                        message:message
                                                       delegate:self
                                              cancelButtonTitle:BITHockeyLocalizedString(@"HockeyOK")
                                              otherButtonTitles:nil
-                             ] autorelease];
+                             ];
   [alertView setTag:1];
   [alertView show];    
 }
@@ -471,14 +453,14 @@
   
   CGRect frame = [visibleWindow frame];
   
-  self.blockingView = [[[UIView alloc] initWithFrame:frame] autorelease];
-  UIImageView *backgroundView = [[[UIImageView alloc] initWithImage:bit_imageNamed(@"bg.png", BITHOCKEYSDK_BUNDLE)] autorelease];
+  self.blockingView = [[UIView alloc] initWithFrame:frame];
+  UIImageView *backgroundView = [[UIImageView alloc] initWithImage:bit_imageNamed(@"bg.png", BITHOCKEYSDK_BUNDLE)];
   backgroundView.contentMode = UIViewContentModeScaleAspectFill;
   backgroundView.frame = frame;
   [self.blockingView addSubview:backgroundView];
   
   if (image != nil) {
-    UIImageView *imageView = [[[UIImageView alloc] initWithImage:bit_imageNamed(image, BITHOCKEYSDK_BUNDLE)] autorelease];
+    UIImageView *imageView = [[UIImageView alloc] initWithImage:bit_imageNamed(image, BITHOCKEYSDK_BUNDLE)];
     imageView.contentMode = UIViewContentModeCenter;
     imageView.frame = frame;
     [self.blockingView addSubview:imageView];
@@ -490,7 +472,7 @@
     frame.size.width -= 40;
     frame.size.height = 50;
     
-    UILabel *label = [[[UILabel alloc] initWithFrame:frame] autorelease];
+    UILabel *label = [[UILabel alloc] initWithFrame:frame];
     label.text = message;
     label.textAlignment = UITextAlignmentCenter;
     label.numberOfLines = 2;
@@ -556,7 +538,7 @@
   NSData *responseData = [NSURLConnection sendSynchronousRequest:request returningResponse:&response error:&error];
   
   if ([responseData length]) {
-    NSString *responseString = [[[NSString alloc] initWithBytes:[responseData bytes] length:[responseData length] encoding: NSUTF8StringEncoding] autorelease];
+    NSString *responseString = [[NSString alloc] initWithBytes:[responseData bytes] length:[responseData length] encoding: NSUTF8StringEncoding];
     
     NSDictionary *feedDict = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:kNilOptions error:&error];
 
@@ -665,7 +647,7 @@
   [request setValue:@"Hockey/iOS" forHTTPHeaderField:@"User-Agent"];
   [request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];
   
-  self.urlConnection = [[[NSURLConnection alloc] initWithRequest:request delegate:self] autorelease];
+  self.urlConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
   if (!_urlConnection) {
     self.checkInProgress = NO;
     [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
@@ -683,7 +665,7 @@
   }
   
 #if TARGET_IPHONE_SIMULATOR
-  UIAlertView *alert = [[[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateWarning") message:BITHockeyLocalizedString(@"UpdateSimulatorMessage") delegate:nil cancelButtonTitle:BITHockeyLocalizedString(@"HockeyOK") otherButtonTitles:nil] autorelease];
+  UIAlertView *alert = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateWarning") message:BITHockeyLocalizedString(@"UpdateSimulatorMessage") delegate:nil cancelButtonTitle:BITHockeyLocalizedString(@"HockeyOK") otherButtonTitles:nil];
   [alert show];
   return NO;
 #endif
@@ -811,7 +793,7 @@
   self.checkInProgress = NO;
   
   if ([self.receivedData length]) {
-    NSString *responseString = [[[NSString alloc] initWithBytes:[_receivedData bytes] length:[_receivedData length] encoding: NSUTF8StringEncoding] autorelease];
+    NSString *responseString = [[NSString alloc] initWithBytes:[_receivedData bytes] length:[_receivedData length] encoding: NSUTF8StringEncoding];
     BITHockeyLog(@"INFO: Received API response: %@", responseString);
     
     NSError *error = nil;
@@ -837,7 +819,7 @@
       }
       
       
-      NSString *currentAppCacheVersion = [[[self newestAppVersion].version copy] autorelease];
+      NSString *currentAppCacheVersion = [[self newestAppVersion].version copy];
       
       // clear cache and reload with new data
       NSMutableArray *tmpAppVersions = [NSMutableArray arrayWithCapacity:[feedArray count]];
@@ -853,7 +835,7 @@
       }
       // only set if different!
       if (![self.appVersions isEqualToArray:tmpAppVersions]) {
-        self.appVersions = [[tmpAppVersions copy] autorelease];
+        self.appVersions = [tmpAppVersions copy];
       }
       [self saveAppCache];
       
@@ -875,7 +857,6 @@
                                               cancelButtonTitle:BITHockeyLocalizedString(@"HockeyOK")
                                               otherButtonTitles:nil];
         [alert show];
-        [alert release];
       }
       
       if (self.isUpdateAvailable && (self.alwaysShowUpdateReminder || newVersionDiffersFromCachedVersion || [self hasNewerMandatoryVersion])) {
@@ -913,8 +894,7 @@
 
 - (void)setCurrentHockeyViewController:(BITUpdateViewController *)aCurrentHockeyViewController {
   if (_currentHockeyViewController != aCurrentHockeyViewController) {
-    [_currentHockeyViewController release];
-    _currentHockeyViewController = [aCurrentHockeyViewController retain];
+    _currentHockeyViewController = aCurrentHockeyViewController;
     //HockeySDKLog(@"active hockey view controller: %@", aCurrentHockeyViewController);
   }
 }
@@ -925,7 +905,6 @@
 
 - (void)setLastCheck:(NSDate *)aLastCheck {
   if (_lastCheck != aLastCheck) {
-    [_lastCheck release];
     _lastCheck = [aLastCheck copy];
     
     [[NSUserDefaults standardUserDefaults] setObject:_lastCheck forKey:kBITUpdateDateOfLastCheck];
@@ -935,16 +914,15 @@
 
 - (void)setAppVersions:(NSArray *)anAppVersions {
   if (_appVersions != anAppVersions || !_appVersions) {
-    [_appVersions release];
     [self willChangeValueForKey:@"appVersions"];
     
     // populate with default values (if empty)
     if (![anAppVersions count]) {
-      BITAppVersionMetaInfo *defaultApp = [[[BITAppVersionMetaInfo alloc] init] autorelease];
+      BITAppVersionMetaInfo *defaultApp = [[BITAppVersionMetaInfo alloc] init];
       defaultApp.name = bit_appName(BITHockeyLocalizedString(@"HockeyAppNamePlaceholder"));
       defaultApp.version = _currentAppVersion;
       defaultApp.shortVersion = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
-      _appVersions = [[NSArray arrayWithObject:defaultApp] retain];
+      _appVersions = [NSArray arrayWithObject:defaultApp];
     } else {
       _appVersions = [anAppVersions copy];
     }      
@@ -960,8 +938,7 @@
 - (void)setBlockingView:(UIView *)anBlockingView {
   if (_blockingView != anBlockingView) {
     [_blockingView removeFromSuperview];
-    [_blockingView release];
-    _blockingView = [anBlockingView retain];
+    _blockingView = anBlockingView;
   }
 }
 

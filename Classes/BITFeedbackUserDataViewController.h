@@ -33,7 +33,7 @@
 
 @interface BITFeedbackUserDataViewController : UITableViewController <UITextFieldDelegate>
 
-@property (nonatomic, assign) id <BITFeedbackUserDataDelegate> delegate;
+@property (nonatomic, weak) id <BITFeedbackUserDataDelegate> delegate;
 
 @end
 

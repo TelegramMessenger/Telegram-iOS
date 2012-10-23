@@ -16,7 +16,7 @@
 
 @interface BITFeedbackActivity()
 
-@property (nonatomic, retain) NSMutableArray *items;
+@property (nonatomic, strong) NSMutableArray *items;
 
 @end
 
@@ -36,14 +36,6 @@
   return self;
 }
 
-- (void)dealloc {
-  [_items release]; _items = nil;
-  
-  [_customActivityImage release];
-  [_customActivityTitle release];
-
-  [super dealloc];
-}
 
 
 #pragma mark - UIActivity
@@ -99,7 +91,7 @@
   composeViewController.delegate = self;
   [composeViewController prepareWithItems:_items];
   
-  UINavigationController *navController = [[[UINavigationController alloc] initWithRootViewController: composeViewController] autorelease];
+  UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController: composeViewController];
   navController.modalPresentationStyle = UIModalPresentationFormSheet;  
   navController.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
   

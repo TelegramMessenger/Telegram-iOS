@@ -153,15 +153,15 @@
     UIView *footerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, kMinPreviousVersionButtonHeight)];
     footerView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     footerView.backgroundColor = BIT_RGBCOLOR(245, 245, 245);
-    UIView *lineView1 = [[[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, 1)] autorelease];
+    UIView *lineView1 = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, 1)];
     lineView1.backgroundColor = BIT_RGBCOLOR(214, 214, 214);
     lineView1.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     [footerView addSubview:lineView1];
-    UIView *lineView2 = [[[UIView alloc] initWithFrame:CGRectMake(0, 1, self.view.frame.size.width, 1)] autorelease];
+    UIView *lineView2 = [[UIView alloc] initWithFrame:CGRectMake(0, 1, self.view.frame.size.width, 1)];
     lineView2.backgroundColor = BIT_RGBCOLOR(221, 221, 221);
     lineView2.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     [footerView addSubview:lineView2];
-    UIView *lineView3 = [[[UIView alloc] initWithFrame:CGRectMake(0, 1, self.view.frame.size.width, 1)] autorelease];
+    UIView *lineView3 = [[UIView alloc] initWithFrame:CGRectMake(0, 1, self.view.frame.size.width, 1)];
     lineView3.backgroundColor = BIT_RGBCOLOR(255, 255, 255);
     lineView3.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     [footerView addSubview:lineView3];
@@ -181,7 +181,6 @@
     [footerView addSubview:footerButton];
     self.tableView.tableFooterView = footerView;
     [self realignPreviousVersionButton];
-    [footerView release];
   } else {
     self.tableView.tableFooterView = nil;
     self.tableView.backgroundColor = BIT_RGBCOLOR(235, 235, 235);
@@ -241,8 +240,6 @@
 }
 
 - (void)dealloc {
-  [_appStoreHeader release]; _appStoreHeader = nil;
-  [_popOverController release], _popOverController = nil;
   [[NSNotificationCenter defaultCenter] removeObserver:self];
   
   // test if KVO's are registered. if class is destroyed before it was shown(viewDidLoad) no KVOs are registered.
@@ -257,9 +254,7 @@
   for (UITableViewCell *cell in _cells) {
     [cell removeObserver:self forKeyPath:@"webViewSize"];
   }
-  [_cells release];
   
-  [super dealloc];
 }
 
 
@@ -282,7 +277,7 @@
   self.tableView.backgroundColor = BIT_RGBCOLOR(245, 245, 245);
   self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
   
-  UIView *topView = [[[UIView alloc] initWithFrame:CGRectMake(0, -(600-kAppStoreViewHeight), self.view.frame.size.width, 600)] autorelease];
+  UIView *topView = [[UIView alloc] initWithFrame:CGRectMake(0, -(600-kAppStoreViewHeight), self.view.frame.size.width, 600)];
   topView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
   topView.backgroundColor = BIT_RGBCOLOR(245, 245, 245);
   [self.tableView addSubview:topView];
@@ -342,13 +337,13 @@
   
   self.tableView.tableHeaderView = _appStoreHeader;
   
-  BITStoreButton *storeButton = [[[BITStoreButton alloc] initWithPadding:CGPointMake(5, 58)] autorelease];
+  BITStoreButton *storeButton = [[BITStoreButton alloc] initWithPadding:CGPointMake(5, 58)];
   storeButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
   storeButton.buttonDelegate = self;
   [self.tableView.tableHeaderView addSubview:storeButton];
   storeButton.buttonData = [BITStoreButtonData dataWithLabel:@"" enabled:NO];
   [storeButton alignToSuperview];
-  _appStoreButton = [storeButton retain];
+  _appStoreButton = storeButton;
   self.appStoreButtonState = AppStoreButtonStateCheck;
 }
 
@@ -396,7 +391,7 @@
       }
     }
     
-    BITWebTableViewCell *cell = [[[BITWebTableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:kWebCellIdentifier] autorelease];
+    BITWebTableViewCell *cell = [[BITWebTableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:kWebCellIdentifier];
     [self configureWebCell:cell forAppVersion:appVersion];
     [_cells addObject:cell];
     
@@ -423,7 +418,7 @@
       }
     }
     
-    BITWebTableViewCell *cell = [[[BITWebTableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:kWebCellIdentifier] autorelease];
+    BITWebTableViewCell *cell = [[BITWebTableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:kWebCellIdentifier];
     [self configureWebCell:cell forAppVersion:appVersion];
     [_cells addObject:cell];
   }

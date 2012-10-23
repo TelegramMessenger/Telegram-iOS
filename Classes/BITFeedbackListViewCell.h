@@ -38,11 +38,11 @@ typedef enum {
 
 @interface BITFeedbackListViewCell : UITableViewCell
 
-@property (nonatomic, retain) BITFeedbackMessage *message;
+@property (nonatomic, strong) BITFeedbackMessage *message;
 
 @property (nonatomic) BITFeedbackListViewCellBackgroundStyle backgroundStyle;
 
-@property (nonatomic, retain) BITAttributedLabel *labelText;
+@property (nonatomic, strong) BITAttributedLabel *labelText;
 
 + (CGFloat) heightForRowWithMessage:(BITFeedbackMessage *)message tableViewWidth:(CGFloat)width;
 
