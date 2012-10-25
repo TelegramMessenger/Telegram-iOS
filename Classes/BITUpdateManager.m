@@ -252,11 +252,7 @@
 
 - (void)checkUpdateAvailable {
   // check if there is an update available
-  if (self.compareVersionType == BITUpdateComparisonResultGreater) {
-    self.updateAvailable = (bit_versionCompare(self.newestAppVersion.version, self.currentAppVersion) == NSOrderedDescending);
-  } else {
-    self.updateAvailable = ([self.newestAppVersion.version compare:self.currentAppVersion] != NSOrderedSame);
-  }
+  self.updateAvailable = (bit_versionCompare(self.newestAppVersion.version, self.currentAppVersion) == NSOrderedDescending);
 }
 
 - (void)loadAppCache {
@@ -328,7 +324,6 @@
     self.showDirectInstallOption = NO;
     self.alwaysShowUpdateReminder = YES;
     self.checkForUpdateOnLaunch = YES;
-    self.compareVersionType = BITUpdateComparisonResultGreater;
     self.updateSetting = BITUpdateCheckStartup;
     
     if ([[NSUserDefaults standardUserDefaults] objectForKey:kBITUpdateDateOfLastCheck]) {

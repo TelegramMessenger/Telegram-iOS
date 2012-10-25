@@ -34,11 +34,6 @@
 
 
 typedef enum {
-	BITUpdateComparisonResultDifferent,
-	BITUpdateComparisonResultGreater
-} BITUpdateComparisonResult;
-
-typedef enum {
 	BITUpdateAuthorizationDenied,
 	BITUpdateAuthorizationAllowed,
 	BITUpdateAuthorizationPending
@@ -97,26 +92,6 @@ typedef enum {
  `[BITUpdateManagerDelegate customDeviceIdentifierForUpdateManager:]`!
  */
 @property (nonatomic, weak) id delegate;
-
-
-///-----------------------------------------------------------------------------
-/// @name Configuration
-///-----------------------------------------------------------------------------
-
-/**
- The type of version comparisson.
- 
- Defines when a version is defined as being newer than the currently installed
- version. This must be assigned one of the following:
- 
- When running the app from the App Store, this setting is ignored.
-
- - `BITUpdateComparisonResultDifferent`: Version is different
- - `BITUpdateComparisonResultGreater`: Version is greater
- 
- **Default**: BITUpdateComparisonResultGreater
- */
-@property (nonatomic, assign) BITUpdateComparisonResult compareVersionType;
 
 
 ///-----------------------------------------------------------------------------
