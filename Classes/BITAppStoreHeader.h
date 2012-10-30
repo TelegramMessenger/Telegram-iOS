@@ -34,7 +34,6 @@
 @interface BITAppStoreHeader : UIView
 
 @property (nonatomic, copy) NSString *headerLabel;
-@property (nonatomic, copy) NSString *middleHeaderLabel;
 @property (nonatomic, copy) NSString *subHeaderLabel;
 @property (nonatomic, strong) UIImage *iconImage;
 

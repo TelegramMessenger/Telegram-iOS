@@ -61,7 +61,6 @@
 
 - (void)drawRect:(CGRect)rect {
   CGRect bounds = self.bounds;
-  CGFloat globalWidth = self.frame.size.width;
   CGContextRef context = UIGraphicsGetCurrentContext();
   
   // draw the gradient
@@ -72,26 +71,38 @@
   CGContextDrawLinearGradient(context, gradient, top, bottom, 0);
   CGGradientRelease(gradient);
   
+  // icon
+  [_iconImage drawAtPoint:CGPointMake(kImageLeftMargin, kImageTopMargin)];
+}
+
+
+- (void)layoutSubviews {
+  [super layoutSubviews];
+  
+  CGFloat globalWidth = self.frame.size.width;
+  
   // draw header name
   UIColor *mainTextColor = BIT_RGBCOLOR(61, 61, 61);
   UIColor *secondaryTextColor = BIT_RGBCOLOR(100, 100, 100);
   UIFont *mainFont = [UIFont boldSystemFontOfSize:15];
   UIFont *secondaryFont = [UIFont systemFontOfSize:10];
   
-  // icon
-  [_iconImage drawAtPoint:CGPointMake(kImageLeftMargin, kImageTopMargin)];
-  
-  [mainTextColor set];
-  [_headerLabel drawInRect:CGRectMake(kTextRow, kImageTopMargin, globalWidth-kTextRow, 20) withFont:mainFont lineBreakMode:UILineBreakModeTailTruncation];
+  UILabel *headerLabelView = [[UILabel alloc] init];
+  [headerLabelView setFont:mainFont];
+  [headerLabelView setFrame:CGRectMake(kTextRow, kImageTopMargin, globalWidth-kTextRow, 20)];
+  [headerLabelView setTextColor:mainTextColor];
+  [headerLabelView setBackgroundColor:[UIColor clearColor]];
+  [headerLabelView setText:_headerLabel];
+  [self addSubview:headerLabelView];
   
   // middle
-  [secondaryTextColor set];
-  [_middleHeaderLabel drawInRect:CGRectMake(kTextRow, kImageTopMargin + 17, globalWidth-kTextRow, 20) withFont:secondaryFont lineBreakMode:UILineBreakModeTailTruncation];
-//  CGContextSetShadowWithColor(context, CGSizeZero, 0, nil);
-  
-  // sub
-  [secondaryTextColor set];
-  [_subHeaderLabel drawAtPoint:CGPointMake(kTextRow, kImageTopMargin + 29) forWidth:globalWidth-kTextRow withFont:secondaryFont lineBreakMode:UILineBreakModeTailTruncation];
+  UILabel *middleLabelView = [[UILabel alloc] init];
+  [middleLabelView setFont:secondaryFont];
+  [middleLabelView setFrame:CGRectMake(kTextRow, kImageTopMargin + 17, globalWidth-kTextRow, 20)];
+  [middleLabelView setTextColor:secondaryTextColor];
+  [middleLabelView setBackgroundColor:[UIColor clearColor]];
+  [middleLabelView setText:_subHeaderLabel];
+  [self addSubview:middleLabelView];
 }
 
 
@@ -100,13 +111,6 @@
 - (void)setHeaderLabel:(NSString *)anHeaderLabel {
   if (_headerLabel != anHeaderLabel) {
     _headerLabel = [anHeaderLabel copy];
-    [self setNeedsDisplay];
-  }
-}
-
-- (void)setMiddleHeaderLabel:(NSString *)aMiddleHeaderLabel {
-  if (_middleHeaderLabel != aMiddleHeaderLabel) {
-    _middleHeaderLabel = [aMiddleHeaderLabel copy];
     [self setNeedsDisplay];
   }
 }

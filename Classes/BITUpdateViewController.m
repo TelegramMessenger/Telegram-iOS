@@ -76,20 +76,7 @@
 - (void)updateAppStoreHeader {
   BITAppVersionMetaInfo *appVersion = _updateManager.newestAppVersion;
   _appStoreHeader.headerLabel = appVersion.name;
-//  _appStoreHeader.middleHeaderLabel = appVersion versionString];
-//  NSDateFormatter *formatter = [[[NSDateFormatter alloc] init] autorelease];
-//  [formatter setDateStyle:NSDateFormatterMediumStyle];
-//  NSMutableString *subHeaderString = [NSMutableString string];
-//  if (appVersion.date) {
-//    [subHeaderString appendString:[formatter stringFromDate:appVersion.date]];
-//  }
-//  if (appVersion.size) {
-//    if ([subHeaderString length]) {
-//      [subHeaderString appendString:@" - "];
-//    }
-//    [subHeaderString appendString:appVersion.sizeInMB];
-//  }
-//  _appStoreHeader.subHeaderLabel = subHeaderString;
+  _appStoreHeader.subHeaderLabel = _updateManager.companyName;
 }
 
 - (void)appDidBecomeActive {

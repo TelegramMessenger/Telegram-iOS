@@ -40,18 +40,6 @@
 #import "BITAppVersionMetaInfo.h"
 
 
-
-// API defines - do not change
-#define BETA_DOWNLOAD_TYPE_PROFILE	@"profile"
-#define BETA_UPDATE_RESULT          @"result"
-#define BETA_UPDATE_TITLE           @"title"
-#define BETA_UPDATE_SUBTITLE        @"subtitle"
-#define BETA_UPDATE_NOTES           @"notes"
-#define BETA_UPDATE_VERSION         @"version"
-#define BETA_UPDATE_TIMESTAMP       @"timestamp"
-#define BETA_UPDATE_APPSIZE         @"appsize"
-
-
 @implementation BITUpdateManager {
   NSString *_currentAppVersion;
   
@@ -256,6 +244,8 @@
 }
 
 - (void)loadAppCache {
+  _companyName = [[NSUserDefaults standardUserDefaults] objectForKey:kBITUpdateCurrentCompanyName];
+  
   NSData *savedHockeyData = [[NSUserDefaults standardUserDefaults] objectForKey:kBITUpdateArrayOfLastCheck];
   NSArray *savedHockeyCheck = nil;
   if (savedHockeyData) {
@@ -270,6 +260,8 @@
 }
 
 - (void)saveAppCache {
+  if (_companyName)
+    [[NSUserDefaults standardUserDefaults] setObject:_companyName forKey:kBITUpdateCurrentCompanyName];
   NSData *data = [NSKeyedArchiver archivedDataWithRootObject:self.appVersions];
   [[NSUserDefaults standardUserDefaults] setObject:data forKey:kBITUpdateArrayOfLastCheck];
   [[NSUserDefaults standardUserDefaults] synchronize];
@@ -319,6 +311,7 @@
     _disableUpdateManager = NO;
     _checkForTracker = NO;
     _didSetupDidBecomeActiveNotifications = NO;
+    _companyName = nil;
     
     // set defaults
     self.showDirectInstallOption = NO;
@@ -610,7 +603,7 @@
     return;
   }
   
-  NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@?format=json&udid=%@&sdk=%@&sdk_version=%@&uuid=%@", 
+  NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@?format=json&extended=true&udid=%@&sdk=%@&sdk_version=%@&uuid=%@", 
                                 bit_URLEncodedString([self encodedAppIdentifier]),
                                 ([self isAppStoreEnvironment] ? @"appstore" : bit_URLEncodedString([self deviceIdentifier])),
                                 BITHOCKEY_NAME,
@@ -795,6 +788,7 @@
     NSDictionary *json = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:kNilOptions error:&error];
                                               
     self.trackerConfig = (([self checkForTracker] && [[json valueForKey:@"tracker"] isKindOfClass:[NSDictionary class]]) ? [json valueForKey:@"tracker"] : nil);
+    self.companyName = (([[json valueForKey:@"company"] isKindOfClass:[NSString class]]) ? [json valueForKey:@"company"] : nil);
     
     if (![self isAppStoreEnvironment]) {
       NSArray *feedArray = (NSArray *)([self checkForTracker] ? [json valueForKey:@"versions"] : json);
