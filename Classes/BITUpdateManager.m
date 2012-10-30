@@ -52,7 +52,11 @@
   BOOL _sendUsageData;
   
   BOOL _didSetupDidBecomeActiveNotifications;
+
+  BOOL _firstStartAfterInstall;
   
+  NSNumber *_versionID;
+  NSString *_versionUUID;
   NSString *_uuid;
 }
 
@@ -146,17 +150,17 @@
   
   BOOL newVersion = NO;
   
-  if (![[NSUserDefaults standardUserDefaults] valueForKey:kBITUpdateUsageTimeForVersionString]) {
+  if (![[NSUserDefaults standardUserDefaults] valueForKey:kBITUpdateUsageTimeForUUID]) {
     newVersion = YES;
   } else {
-    if ([(NSString *)[[NSUserDefaults standardUserDefaults] valueForKey:kBITUpdateUsageTimeForVersionString] compare:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]] != NSOrderedSame) {
+    if ([(NSString *)[[NSUserDefaults standardUserDefaults] valueForKey:kBITUpdateUsageTimeForUUID] compare:_uuid] != NSOrderedSame) {
       newVersion = YES;
     }
   }
   
   if (newVersion) {
     [[NSUserDefaults standardUserDefaults] setObject:[NSNumber numberWithDouble:[[NSDate date] timeIntervalSinceReferenceDate]] forKey:kBITUpdateDateOfVersionInstallation];
-    [[NSUserDefaults standardUserDefaults] setObject:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] forKey:kBITUpdateUsageTimeForVersionString];
+    [[NSUserDefaults standardUserDefaults] setObject:_uuid forKey:kBITUpdateUsageTimeForUUID];
     [[NSUserDefaults standardUserDefaults] setObject:[NSNumber numberWithDouble:0] forKey:kBITUpdateUsageTimeOfCurrentVersion];
     [[NSUserDefaults standardUserDefaults] synchronize];
   }    
@@ -240,10 +244,55 @@
 
 - (void)checkUpdateAvailable {
   // check if there is an update available
-  self.updateAvailable = (bit_versionCompare(self.newestAppVersion.version, self.currentAppVersion) == NSOrderedDescending);
+  NSComparisonResult comparissonResult = bit_versionCompare(self.newestAppVersion.version, self.currentAppVersion);
+  
+  if (comparissonResult == NSOrderedDescending) {
+    self.updateAvailable = YES;
+  } else if (comparissonResult == NSOrderedSame) {
+    // compare using the binary UUID and stored version id
+    self.updateAvailable = NO;
+    if (_firstStartAfterInstall) {
+      if ([self.newestAppVersion hasUUID:_uuid]) {
+        _versionUUID = [_uuid copy];
+        _versionID = [self.newestAppVersion.versionID copy];
+        [self saveAppCache];
+      } else {
+        [self.appVersions enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+          if (idx > 0 && [obj isKindOfClass:[BITAppVersionMetaInfo class]]) {
+            NSComparisonResult compareVersions = bit_versionCompare([(BITAppVersionMetaInfo *)obj version], self.currentAppVersion);
+            BOOL uuidFound = [(BITAppVersionMetaInfo *)obj hasUUID:_uuid];
+
+            if (uuidFound) {
+              _versionUUID = [_uuid copy];
+              _versionID = [[(BITAppVersionMetaInfo *)obj versionID] copy];
+              [self saveAppCache];
+              
+              self.updateAvailable = YES;
+            }
+
+            if (compareVersions != NSOrderedSame || uuidFound) {
+              *stop = YES;
+            }
+          }
+        }];
+      }
+    } else {
+      if ([self.newestAppVersion.versionID compare:_versionID] == NSOrderedDescending)
+        self.updateAvailable = YES;
+    }
+  }
 }
 
 - (void)loadAppCache {
+  _firstStartAfterInstall = NO;
+  _versionUUID = [[NSUserDefaults standardUserDefaults] objectForKey:kBITUpdateInstalledUUID];
+  if (!_versionUUID) {
+    _firstStartAfterInstall = YES;
+  } else {
+    if ([_uuid compare:_versionUUID] != NSOrderedSame)
+      _firstStartAfterInstall = YES;
+  }
+  _versionID = [[NSUserDefaults standardUserDefaults] objectForKey:kBITUpdateInstalledVersionID];
   _companyName = [[NSUserDefaults standardUserDefaults] objectForKey:kBITUpdateCurrentCompanyName];
   
   NSData *savedHockeyData = [[NSUserDefaults standardUserDefaults] objectForKey:kBITUpdateArrayOfLastCheck];
@@ -262,6 +311,10 @@
 - (void)saveAppCache {
   if (_companyName)
     [[NSUserDefaults standardUserDefaults] setObject:_companyName forKey:kBITUpdateCurrentCompanyName];
+  if (_versionUUID)
+    [[NSUserDefaults standardUserDefaults] setObject:_versionUUID forKey:kBITUpdateInstalledUUID];
+  if (_versionID)
+    [[NSUserDefaults standardUserDefaults] setObject:_versionID forKey:kBITUpdateInstalledVersionID];
   NSData *data = [NSKeyedArchiver archivedDataWithRootObject:self.appVersions];
   [[NSUserDefaults standardUserDefaults] setObject:data forKey:kBITUpdateArrayOfLastCheck];
   [[NSUserDefaults standardUserDefaults] synchronize];
@@ -307,10 +360,13 @@
     _authenticationSecret = nil;
     _lastCheck = nil;
     _uuid = [[self executableUUID] copy];
+    _versionUUID = nil;
+    _versionID = nil;
     _sendUsageData = YES;
     _disableUpdateManager = NO;
     _checkForTracker = NO;
     _didSetupDidBecomeActiveNotifications = NO;
+    _firstStartAfterInstall = NO;
     _companyName = nil;
     
     // set defaults
@@ -791,7 +847,7 @@
     self.companyName = (([[json valueForKey:@"company"] isKindOfClass:[NSString class]]) ? [json valueForKey:@"company"] : nil);
     
     if (![self isAppStoreEnvironment]) {
-      NSArray *feedArray = (NSArray *)([self checkForTracker] ? [json valueForKey:@"versions"] : json);
+      NSArray *feedArray = (NSArray *)[json valueForKey:@"versions"];
       
       self.receivedData = nil;
       self.urlConnection = nil;

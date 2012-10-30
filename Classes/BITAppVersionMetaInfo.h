@@ -38,6 +38,8 @@
 @property (nonatomic, copy) NSDate *date;
 @property (nonatomic, copy) NSNumber *size;
 @property (nonatomic, copy) NSNumber *mandatory;
+@property (nonatomic, copy) NSNumber *versionID;
+@property (nonatomic, copy) NSDictionary *uuids;
 
 - (NSString *)nameAndVersionString;
 - (NSString *)versionString;
@@ -46,6 +48,7 @@
 - (NSString *)notesOrEmptyString;
 - (void)setDateWithTimestamp:(NSTimeInterval)timestamp;
 - (BOOL)isValid;
+- (BOOL)hasUUID:(NSString *)uuid;
 - (BOOL)isEqualToAppVersionMetaInfo:(BITAppVersionMetaInfo *)anAppVersionMetaInfo;
 
 + (BITAppVersionMetaInfo *)appVersionMetaInfoFromDict:(NSDictionary *)dict;

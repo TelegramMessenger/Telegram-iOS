@@ -41,12 +41,14 @@
 
 #define BITHOCKEY_FEEDBACK_SETTINGS @"BITFeedbackManager.plist"
 
+#define kBITUpdateInstalledUUID             @"BITUpdateInstalledUUID"
+#define kBITUpdateInstalledVersionID        @"BITUpdateInstalledVersionID"
 #define kBITUpdateCurrentCompanyName        @"BITUpdateCurrentCompanyName"
 #define kBITUpdateArrayOfLastCheck          @"BITUpdateArrayOfLastCheck"
 #define kBITUpdateDateOfLastCheck           @"BITUpdateDateOfLastCheck"
 #define kBITUpdateDateOfVersionInstallation @"BITUpdateDateOfVersionInstallation"
 #define kBITUpdateUsageTimeOfCurrentVersion @"BITUpdateUsageTimeOfCurrentVersion"
-#define kBITUpdateUsageTimeForVersionString @"BITUpdateUsageTimeForVersionString"
+#define kBITUpdateUsageTimeForUUID          @"BITUpdateUsageTimeForUUID"
 #define kBITUpdateAuthorizedVersion         @"BITUpdateAuthorizedVersion"
 #define kBITUpdateAuthorizedToken           @"BITUpdateAuthorizedToken"
 
