@@ -66,6 +66,8 @@
  - NSURL
  
  These are automatically concatenated to one text string.
+ 
+ @param items Array of data objects to prefill the feedback text message.
  */
 - (void)prepareWithItems:(NSArray *)items;
 

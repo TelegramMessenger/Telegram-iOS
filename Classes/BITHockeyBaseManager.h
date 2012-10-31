@@ -10,6 +10,10 @@
 #import <UIKit/UIKit.h>
 
 
+/**
+ The internal superclass for all component managers
+ 
+ */
 
 @interface BITHockeyBaseManager : NSObject
 
