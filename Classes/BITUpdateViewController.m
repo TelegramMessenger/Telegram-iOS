@@ -31,9 +31,9 @@
 #import <QuartzCore/QuartzCore.h>
 #import "BITHockeyHelper.h"
 #import "BITAppVersionMetaInfo.h"
-#import "PSAppStoreHeader.h"
-#import "PSWebTableViewCell.h"
-#import "PSStoreButton.h"
+#import "BITAppStoreHeader.h"
+#import "BITWebTableViewCell.h"
+#import "BITStoreButton.h"
 
 #import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
@@ -42,16 +42,23 @@
 #import "BITUpdateViewControllerPrivate.h"
 
 
-#define BIT_RGBCOLOR(r,g,b) [UIColor colorWithRed:(r)/255.0 green:(g)/255.0 blue:(b)/255.0 alpha:1]
 #define kWebCellIdentifier @"PSWebTableViewCell"
-#define kAppStoreViewHeight 90
+#define kAppStoreViewHeight 99
 
 
-@implementation BITUpdateViewController
-
-@synthesize appStoreButtonState = _appStoreButtonState;
-@synthesize modal = _modal;
-@synthesize modalAnimated = _modalAnimated;
+@implementation BITUpdateViewController {
+  BOOL _kvoRegistered;
+  BOOL _showAllVersions;
+  UIStatusBarStyle _statusBarStyle;
+  BITAppStoreHeader *_appStoreHeader;
+  BITStoreButton *_appStoreButton;
+  
+  id _popOverController;
+  
+  NSMutableArray *_cells;
+  
+  BOOL _isAppStoreEnvironment;
+}
 
 
 #pragma mark - Private
@@ -69,20 +76,7 @@
 - (void)updateAppStoreHeader {
   BITAppVersionMetaInfo *appVersion = _updateManager.newestAppVersion;
   _appStoreHeader.headerLabel = appVersion.name;
-  _appStoreHeader.middleHeaderLabel = [appVersion versionString];
-  NSDateFormatter *formatter = [[[NSDateFormatter alloc] init] autorelease];
-  [formatter setDateStyle:NSDateFormatterMediumStyle];
-  NSMutableString *subHeaderString = [NSMutableString string];
-  if (appVersion.date) {
-    [subHeaderString appendString:[formatter stringFromDate:appVersion.date]];
-  }
-  if (appVersion.size) {
-    if ([subHeaderString length]) {
-      [subHeaderString appendString:@" - "];
-    }
-    [subHeaderString appendString:appVersion.sizeInMB];
-  }
-  _appStoreHeader.subHeaderLabel = subHeaderString;
+  _appStoreHeader.subHeaderLabel = _updateManager.companyName;
 }
 
 - (void)appDidBecomeActive {
@@ -131,11 +125,11 @@
 }
 
 - (void)changePreviousVersionButtonBackground:(id)sender {
-  [(UIButton *)sender setBackgroundColor:BIT_RGBCOLOR(183,183,183)];
+  [(UIButton *)sender setBackgroundColor:BIT_RGBCOLOR(245, 245, 245)];
 }
 
 - (void)changePreviousVersionButtonBackgroundHighlighted:(id)sender {
-  [(UIButton *)sender setBackgroundColor:BIT_RGBCOLOR(183,183,183)];
+  [(UIButton *)sender setBackgroundColor:BIT_RGBCOLOR(245, 245, 245)];
 }
 
 - (void)showHidePreviousVersionsButton {
@@ -145,48 +139,69 @@
     // align at the bottom if tableview is small
     UIView *footerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, kMinPreviousVersionButtonHeight)];
     footerView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    footerView.backgroundColor = BIT_RGBCOLOR(200, 202, 204);
+    footerView.backgroundColor = BIT_RGBCOLOR(245, 245, 245);
+    UIView *lineView1 = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, 1)];
+    lineView1.backgroundColor = BIT_RGBCOLOR(214, 214, 214);
+    lineView1.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    [footerView addSubview:lineView1];
+    UIView *lineView2 = [[UIView alloc] initWithFrame:CGRectMake(0, 1, self.view.frame.size.width, 1)];
+    lineView2.backgroundColor = BIT_RGBCOLOR(221, 221, 221);
+    lineView2.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    [footerView addSubview:lineView2];
+    UIView *lineView3 = [[UIView alloc] initWithFrame:CGRectMake(0, 1, self.view.frame.size.width, 1)];
+    lineView3.backgroundColor = BIT_RGBCOLOR(255, 255, 255);
+    lineView3.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    [footerView addSubview:lineView3];
     UIButton *footerButton = [UIButton buttonWithType:UIButtonTypeCustom];
     //footerButton.layer.shadowOffset = CGSizeMake(-2, 2);
     footerButton.layer.shadowColor = [[UIColor blackColor] CGColor];
     footerButton.layer.shadowRadius = 2.0f;
     footerButton.titleLabel.font = [UIFont boldSystemFontOfSize:14];
     [footerButton setTitle:BITHockeyLocalizedString(@"UpdateShowPreviousVersions") forState:UIControlStateNormal];
-    [footerButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    [footerButton setTitleColor:BIT_RGBCOLOR(61, 61, 61) forState:UIControlStateNormal];
     [footerButton setTitleColor:[UIColor whiteColor] forState:UIControlStateHighlighted];
     [footerButton setBackgroundImage:bit_imageNamed(@"buttonHighlight.png", BITHOCKEYSDK_BUNDLE) forState:UIControlStateHighlighted];
     footerButton.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
     [footerButton addTarget:self action:@selector(showPreviousVersionAction) forControlEvents:UIControlEventTouchUpInside];
     footerButton.frame = CGRectMake(0, kMinPreviousVersionButtonHeight-44, self.view.frame.size.width, 44);
-    footerButton.backgroundColor = BIT_RGBCOLOR(183,183,183);
+    footerButton.backgroundColor = BIT_RGBCOLOR(245, 245, 245);
     [footerView addSubview:footerButton];
     self.tableView.tableFooterView = footerView;
     [self realignPreviousVersionButton];
-    [footerView release];
   } else {
     self.tableView.tableFooterView = nil;
-    self.tableView.backgroundColor = BIT_RGBCOLOR(200, 202, 204);
+    self.tableView.backgroundColor = BIT_RGBCOLOR(235, 235, 235);
   }
 }
 
-- (void)configureWebCell:(PSWebTableViewCell *)cell forAppVersion:(BITAppVersionMetaInfo *)appVersion {
+- (void)configureWebCell:(BITWebTableViewCell *)cell forAppVersion:(BITAppVersionMetaInfo *)appVersion {
   // create web view for a version
+  NSMutableString *dateAndSizeString = [NSMutableString string];
+  if (appVersion.date) {
+    [dateAndSizeString appendString:[appVersion dateString]];
+  }
+  if (appVersion.size) {
+    if ([dateAndSizeString length]) {
+      [dateAndSizeString appendString:@" - "];
+    }
+    [dateAndSizeString appendString:appVersion.sizeInMB];
+  }
+  
   NSString *installed = @"";
   if ([appVersion.version isEqualToString:[_updateManager currentAppVersion]]) {
-    installed = [NSString stringWithFormat:@"<span style=\"float:%@;text-shadow:rgba(255,255,255,0.6) 1px 1px 0px;\"><b>%@</b></span>", [appVersion isEqual:_updateManager.newestAppVersion] ? @"left" : @"right", BITHockeyLocalizedString(@"UpdateInstalled")];
+    installed = [NSString stringWithFormat:@"<span style=\"float:right;\"><b>%@</b></span>", BITHockeyLocalizedString(@"UpdateInstalled")];
   }
   
   if ([appVersion isEqual:_updateManager.newestAppVersion]) {
     if ([appVersion.notes length] > 0) {
-      installed = [NSString stringWithFormat:@"<p>&nbsp;%@</p>", installed];
-      cell.webViewContent = [NSString stringWithFormat:@"%@%@", installed, appVersion.notes];
+      cell.webViewContent = [NSString stringWithFormat:@"<p><b>%@</b>%@<br/><small>%@</small></p><p>%@</p>", [appVersion versionString], installed, dateAndSizeString, appVersion.notes];
     } else {
-      cell.webViewContent = [NSString stringWithFormat:@"<div style=\"min-height:200px;vertical-align:middle;text-align:center;text-shadow:rgba(255,255,255,0.6) 1px 1px 0px;\">%@</div>", BITHockeyLocalizedString(@"UpdateNoReleaseNotesAvailable")];
+      cell.webViewContent = [NSString stringWithFormat:@"<div style=\"min-height:200px;vertical-align:middle;text-align:center;\">%@</div>", BITHockeyLocalizedString(@"UpdateNoReleaseNotesAvailable")];
     }
   } else {
-    cell.webViewContent = [NSString stringWithFormat:@"<p><b style=\"text-shadow:rgba(255,255,255,0.6) 1px 1px 0px;\">%@</b>%@<br/><small>%@</small></p><p>%@</p>", [appVersion versionString], installed, [appVersion dateString], [appVersion notesOrEmptyString]];
+    cell.webViewContent = [NSString stringWithFormat:@"<p><b>%@</b>%@<br/><small>%@</small></p><p>%@</p>", [appVersion versionString], installed, dateAndSizeString, [appVersion notesOrEmptyString]];
   }
-  cell.cellBackgroundColor = BIT_RGBCOLOR(200, 202, 204);
+  cell.cellBackgroundColor = BIT_RGBCOLOR(235, 235, 235);
   
   [cell addWebView];
   // hack
@@ -198,97 +213,39 @@
 
 #pragma mark - Init
 
-- (id)init:(BITUpdateManager *)newUpdateManager modal:(BOOL)newModal {
+- (id)init {
   if ((self = [super initWithStyle:UITableViewStylePlain])) {
-    self.updateManager = newUpdateManager;
-    self.modal = newModal;
-    self.modalAnimated = YES;
+    _updateManager = [BITHockeyManager sharedHockeyManager].updateManager ;
+    _isAppStoreEnvironment = [BITHockeyManager sharedHockeyManager].isAppStoreEnvironment;
+
     self.title = BITHockeyLocalizedString(@"UpdateScreenTitle");
     
-    _isAppStoreEnvironment = [BITHockeyManager sharedHockeyManager].isAppStoreEnvironment;
-        
     _cells = [[NSMutableArray alloc] initWithCapacity:5];
     _popOverController = nil;
-    
-    //might be better in viewDidLoad, but to workaround rdar://12214613 and as it doesn't
-    //hurt, we do it here
-    if (self.modal) {
-      self.navigationItem.leftBarButtonItem = [[[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
-                                                                                             target:self
-                                                                                             action:@selector(onAction:)] autorelease];
-    }
   }
   return self;
 }
 
-- (id)init {
-	return [self init:[BITHockeyManager sharedHockeyManager].updateManager modal:NO];
-}
-
 - (void)dealloc {
-  [self viewDidUnload];
+  [[NSNotificationCenter defaultCenter] removeObserver:self];
+  
+  // test if KVO's are registered. if class is destroyed before it was shown(viewDidLoad) no KVOs are registered.
+  if (_kvoRegistered) {
+    [_updateManager removeObserver:self forKeyPath:@"checkInProgress"];
+    [_updateManager removeObserver:self forKeyPath:@"isUpdateURLOffline"];
+    [_updateManager removeObserver:self forKeyPath:@"updateAvailable"];
+    [_updateManager removeObserver:self forKeyPath:@"apps"];
+    _kvoRegistered = NO;
+  }
+  
   for (UITableViewCell *cell in _cells) {
     [cell removeObserver:self forKeyPath:@"webViewSize"];
   }
-  [_cells release];
-  [super dealloc];
+  
 }
 
 
 #pragma mark - View lifecycle
-
-- (void)onAction:(id)sender {
-  if (self.modal) {
-    // Note that as of 5.0, parentViewController will no longer return the presenting view controller
-    SEL presentingViewControllerSelector = NSSelectorFromString(@"presentingViewController");
-    UIViewController *presentingViewController = nil;
-    if ([self respondsToSelector:presentingViewControllerSelector]) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-      presentingViewController = [self performSelector:presentingViewControllerSelector];
-#pragma clang diagnostic pop
-    }
-    else {
-      presentingViewController = [self parentViewController];
-    }
-    
-    // If there is no presenting view controller just remove view
-    if (presentingViewController && self.modalAnimated) {
-      [presentingViewController dismissModalViewControllerAnimated:YES];
-    }
-    else {
-      [self.navigationController.view removeFromSuperview];
-    }
-  }
-  else {
-    [self.navigationController popViewControllerAnimated:YES];
-  }
-  
-  [[UIApplication sharedApplication] setStatusBarStyle:_statusBarStyle];
-}
-
-- (CAGradientLayer *)backgroundLayer {
-  UIColor *colorOne	= [UIColor colorWithWhite:0.9 alpha:1.0];
-  UIColor *colorTwo	= [UIColor colorWithHue:0.625 saturation:0.0 brightness:0.85 alpha:1.0];
-  UIColor *colorThree	= [UIColor colorWithHue:0.625 saturation:0.0 brightness:0.7 alpha:1.0];
-  UIColor *colorFour	= [UIColor colorWithHue:0.625 saturation:0.0 brightness:0.4 alpha:1.0];
-  
-  NSArray *colors     = [NSArray arrayWithObjects:(id)colorOne.CGColor, colorTwo.CGColor, colorThree.CGColor, colorFour.CGColor, nil];
-  
-  NSNumber *stopOne	= [NSNumber numberWithFloat:0.0];
-  NSNumber *stopTwo	= [NSNumber numberWithFloat:0.02];
-  NSNumber *stopThree = [NSNumber numberWithFloat:0.99];
-  NSNumber *stopFour  = [NSNumber numberWithFloat:1.0];
-  
-  NSArray *locations  = [NSArray arrayWithObjects:stopOne, stopTwo, stopThree, stopFour, nil];
-  
-  CAGradientLayer *headerLayer = [CAGradientLayer layer];
-  //headerLayer.frame = CGRectMake(0.0, 0.0, 320.0, 77.0);
-  headerLayer.colors = colors;
-  headerLayer.locations = locations;
-  
-  return headerLayer;
-}
 
 - (void)viewDidLoad {
   [super viewDidLoad];
@@ -304,15 +261,15 @@
   [_updateManager addObserver:self forKeyPath:@"apps" options:0 context:nil];
   _kvoRegistered = YES;
   
-  self.tableView.backgroundColor = BIT_RGBCOLOR(200, 202, 204);
+  self.tableView.backgroundColor = BIT_RGBCOLOR(245, 245, 245);
   self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
   
-  UIView *topView = [[[UIView alloc] initWithFrame:CGRectMake(0, -(600-kAppStoreViewHeight), self.view.frame.size.width, 600)] autorelease];
+  UIView *topView = [[UIView alloc] initWithFrame:CGRectMake(0, -(600-kAppStoreViewHeight), self.view.frame.size.width, 600)];
   topView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-  topView.backgroundColor = BIT_RGBCOLOR(140, 141, 142);
+  topView.backgroundColor = BIT_RGBCOLOR(245, 245, 245);
   [self.tableView addSubview:topView];
   
-  _appStoreHeader = [[PSAppStoreHeader alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, kAppStoreViewHeight)];
+  _appStoreHeader = [[BITAppStoreHeader alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, kAppStoreViewHeight)];
   [self updateAppStoreHeader];
   
   NSString *iconString = nil;
@@ -333,17 +290,20 @@
   
   if (icons) {
     BOOL useHighResIcon = NO;
+    BOOL useiPadIcon = NO;
     if ([UIScreen mainScreen].scale == 2.0f) useHighResIcon = YES;
-    
+    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) useiPadIcon = YES;
+
     for(NSString *icon in icons) {
       iconString = icon;
       UIImage *iconImage = [UIImage imageNamed:icon];
       
-      if (iconImage.size.height == 57 && !useHighResIcon) {
-        // found!
-        break;
-      }
-      if (iconImage.size.height == 114 && useHighResIcon) {
+      if (
+          (iconImage.size.height == 57 && !useHighResIcon && !useiPadIcon) ||
+          (iconImage.size.height == 114 && useHighResIcon && !useiPadIcon) ||
+          (iconImage.size.height == 72 && !useHighResIcon && useiPadIcon) ||
+          (iconImage.size.height == 144 && useHighResIcon && useiPadIcon)
+          ) {
         // found!
         break;
       }
@@ -364,13 +324,13 @@
   
   self.tableView.tableHeaderView = _appStoreHeader;
   
-  PSStoreButton *storeButton = [[[PSStoreButton alloc] initWithPadding:CGPointMake(5, 40)] autorelease];
+  BITStoreButton *storeButton = [[BITStoreButton alloc] initWithPadding:CGPointMake(5, 58)];
   storeButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
   storeButton.buttonDelegate = self;
   [self.tableView.tableHeaderView addSubview:storeButton];
-  storeButton.buttonData = [PSStoreButtonData dataWithLabel:@"" colors:[PSStoreButton appStoreGrayColor] enabled:NO];
+  storeButton.buttonData = [BITStoreButtonData dataWithLabel:@"" enabled:NO];
   [storeButton alignToSuperview];
-  _appStoreButton = [storeButton retain];
+  _appStoreButton = storeButton;
   self.appStoreButtonState = AppStoreButtonStateCheck;
 }
 
@@ -418,7 +378,7 @@
       }
     }
     
-    PSWebTableViewCell *cell = [[[PSWebTableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:kWebCellIdentifier] autorelease];
+    BITWebTableViewCell *cell = [[BITWebTableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:kWebCellIdentifier];
     [self configureWebCell:cell forAppVersion:appVersion];
     [_cells addObject:cell];
     
@@ -445,29 +405,12 @@
       }
     }
     
-    PSWebTableViewCell *cell = [[[PSWebTableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:kWebCellIdentifier] autorelease];
+    BITWebTableViewCell *cell = [[BITWebTableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:kWebCellIdentifier];
     [self configureWebCell:cell forAppVersion:appVersion];
     [_cells addObject:cell];
   }
   [self.tableView reloadData];
   [self showHidePreviousVersionsButton];
-}
-
-- (void)viewDidUnload {
-  [_appStoreHeader release]; _appStoreHeader = nil;
-  [_popOverController release], _popOverController = nil;
-  [[NSNotificationCenter defaultCenter] removeObserver:self];
-  
-  // test if KVO's are registered. if class is destroyed before it was shown(viewDidLoad) no KVOs are registered.
-  if (_kvoRegistered) {
-    [_updateManager removeObserver:self forKeyPath:@"checkInProgress"];
-    [_updateManager removeObserver:self forKeyPath:@"isUpdateURLOffline"];
-    [_updateManager removeObserver:self forKeyPath:@"updateAvailable"];
-    [_updateManager removeObserver:self forKeyPath:@"apps"];
-    _kvoRegistered = NO;
-  }
-  
-  [super viewDidUnload];
 }
 
 
@@ -481,17 +424,17 @@
   CGFloat rowHeight = 0;
   
   if ([_cells count] > (NSUInteger)indexPath.row) {
-    PSWebTableViewCell *cell = [_cells objectAtIndex:indexPath.row];
+    BITWebTableViewCell *cell = [_cells objectAtIndex:indexPath.row];
     rowHeight = cell.webViewSize.height;
   }
   
   if ([_updateManager.appVersions count] > 1 && !_showAllVersions) {
-    self.tableView.backgroundColor = BIT_RGBCOLOR(183, 183, 183);
+    self.tableView.backgroundColor = BIT_RGBCOLOR(245, 245, 245);
   }
   
   if (rowHeight == 0) {
     rowHeight = indexPath.row == 0 ? 250 : 44; // fill screen on startup
-    self.tableView.backgroundColor = BIT_RGBCOLOR(200, 202, 204);
+    self.tableView.backgroundColor = BIT_RGBCOLOR(235, 235, 235);
   }
   
   return rowHeight;
@@ -540,20 +483,6 @@
 
 #pragma mark - Rotation
 
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
-  BOOL shouldAutorotate;
-  
-  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) {
-    shouldAutorotate = (interfaceOrientation == UIInterfaceOrientationLandscapeLeft ||
-                        interfaceOrientation == UIInterfaceOrientationLandscapeRight ||
-                        interfaceOrientation == UIInterfaceOrientationPortrait);
-  } else {
-    shouldAutorotate = YES;
-  }
-  
-  return shouldAutorotate;
-}
-
 - (void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation duration:(NSTimeInterval)duration {
   // update all cells
   [_cells makeObjectsPerformSelector:@selector(addWebView)];
@@ -571,26 +500,26 @@
   
   switch (anAppStoreButtonState) {
     case AppStoreButtonStateOffline:
-      [_appStoreButton setButtonData:[PSStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonOffline") colors:[PSStoreButton appStoreGrayColor] enabled:NO] animated:animated];
+      [_appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonOffline") enabled:NO] animated:animated];
       break;
     case AppStoreButtonStateCheck:
-      [_appStoreButton setButtonData:[PSStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonCheck") colors:[PSStoreButton appStoreGreenColor] enabled:YES] animated:animated];
+      [_appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonCheck") enabled:YES] animated:animated];
       break;
     case AppStoreButtonStateSearching:
-      [_appStoreButton setButtonData:[PSStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonSearching") colors:[PSStoreButton appStoreGrayColor] enabled:NO] animated:animated];
+      [_appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonSearching") enabled:NO] animated:animated];
       break;
     case AppStoreButtonStateUpdate:
-      [_appStoreButton setButtonData:[PSStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonUpdate") colors:[PSStoreButton appStoreBlueColor] enabled:YES] animated:animated];
+      [_appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonUpdate") enabled:YES] animated:animated];
       break;
     case AppStoreButtonStateInstalling:
-      [_appStoreButton setButtonData:[PSStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonInstalling") colors:[PSStoreButton appStoreGrayColor] enabled:NO] animated:animated];
+      [_appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonInstalling") enabled:NO] animated:animated];
       break;
     default:
       break;
   }
 }
 
-- (void)storeButtonFired:(PSStoreButton *)button {
+- (void)storeButtonFired:(BITStoreButton *)button {
   switch (_appStoreButtonState) {
     case AppStoreButtonStateCheck:
       [_updateManager checkForUpdateShowFeedback:YES];

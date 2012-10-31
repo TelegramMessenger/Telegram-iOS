@@ -27,6 +27,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
 #include <CommonCrypto/CommonDigest.h>
 
@@ -38,7 +39,7 @@ NSBundle *BITHockeyBundle(void) {
   dispatch_once(&predicate, ^{
     NSString* mainBundlePath = [[NSBundle mainBundle] resourcePath];
     NSString* frameworkBundlePath = [mainBundlePath stringByAppendingPathComponent:BITHOCKEYSDK_BUNDLE];
-    bundle = [[NSBundle bundleWithPath:frameworkBundlePath] retain];
+    bundle = [NSBundle bundleWithPath:frameworkBundlePath];
   });
   return bundle;
 }

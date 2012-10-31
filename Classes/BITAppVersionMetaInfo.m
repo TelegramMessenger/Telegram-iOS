@@ -33,19 +33,11 @@
 
 @implementation BITAppVersionMetaInfo
 
-@synthesize name = _name;
-@synthesize version = _version;
-@synthesize shortVersion = _shortVersion;
-@synthesize notes = _notes;
-@synthesize date = _date;
-@synthesize size = _size;
-@synthesize mandatory = _mandatory;
-
 
 #pragma mark - Static
 
 + (BITAppVersionMetaInfo *)appVersionMetaInfoFromDict:(NSDictionary *)dict {
-  BITAppVersionMetaInfo *appVersionMetaInfo = [[[[self class] alloc] init] autorelease];
+  BITAppVersionMetaInfo *appVersionMetaInfo = [[[self class] alloc] init];
   
   if ([dict isKindOfClass:[NSDictionary class]]) {
     appVersionMetaInfo.name = [dict objectForKey:@"title"];
@@ -55,6 +47,8 @@
     appVersionMetaInfo.size = [dict objectForKey:@"appsize"];
     appVersionMetaInfo.notes = [dict objectForKey:@"notes"];
     appVersionMetaInfo.mandatory = [dict objectForKey:@"mandatory"];
+    appVersionMetaInfo.versionID = [dict objectForKey:@"id"];
+    appVersionMetaInfo.uuids = [dict objectForKey:@"uuids"];
   }
   
   return appVersionMetaInfo;
@@ -63,17 +57,6 @@
 
 #pragma mark - NSObject
 
-- (void)dealloc {
-  [_name release];
-  [_version release];
-  [_shortVersion release];
-  [_notes release];
-  [_date release];
-  [_size release];
-  [_mandatory release];
-  
-  [super dealloc];
-}
 
 - (BOOL)isEqual:(id)other {
   if (other == self)
@@ -100,6 +83,8 @@
     return NO;
   if (self.mandatory != anAppVersionMetaInfo.mandatory && ![self.mandatory isEqualToNumber:anAppVersionMetaInfo.mandatory])
     return NO;
+  if (![self.uuids isEqualToDictionary:anAppVersionMetaInfo.uuids])
+    return NO;
   return YES;
 }
 
@@ -114,6 +99,8 @@
   [encoder encodeObject:self.date forKey:@"date"];
   [encoder encodeObject:self.size forKey:@"size"];
   [encoder encodeObject:self.mandatory forKey:@"mandatory"];
+  [encoder encodeObject:self.versionID forKey:@"versionID"];
+  [encoder encodeObject:self.uuids forKey:@"uuids"];
 }
 
 - (id)initWithCoder:(NSCoder *)decoder {
@@ -125,6 +112,8 @@
     self.date = [decoder decodeObjectForKey:@"date"];
     self.size = [decoder decodeObjectForKey:@"size"];
     self.mandatory = [decoder decodeObjectForKey:@"mandatory"];
+    self.versionID = [decoder decodeObjectForKey:@"versionID"];
+    self.uuids = [decoder decodeObjectForKey:@"uuids"];
   }
   return self;
 }
@@ -144,7 +133,7 @@
 }
 
 - (NSString *)dateString {
-  NSDateFormatter *formatter = [[[NSDateFormatter alloc] init] autorelease];
+  NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
   [formatter setDateStyle:NSDateFormatterMediumStyle];
   
   return [formatter stringFromDate:self.date];
@@ -183,4 +172,19 @@
   return valid;
 }
 
+- (BOOL)hasUUID:(NSString *)uuid {
+  if (!uuid) return NO;
+  if (!self.uuids) return NO;
+  
+  __block BOOL hasUUID = NO;
+  
+  [self.uuids enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop){
+    if (obj && [uuid compare:obj] == NSOrderedSame) {
+      hasUUID = YES;
+      *stop = YES;
+    }
+  }];
+  
+  return hasUUID;
+}
 @end

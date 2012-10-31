@@ -29,7 +29,7 @@
  */
 
 #import <UIKit/UIKit.h>
-#import "PSStoreButton.h"
+#import "BITStoreButton.h"
 
 typedef enum {
 	AppStoreButtonStateOffline,
@@ -44,16 +44,12 @@ typedef enum {
 
 @protocol PSStoreButtonDelegate;
 
-@interface BITUpdateViewController() <PSStoreButtonDelegate> {
+@interface BITUpdateViewController() <BITStoreButtonDelegate> {
 }
 
-@property (nonatomic, retain) BITUpdateManager *updateManager;
+@property (nonatomic, weak) BITUpdateManager *updateManager;
 @property (nonatomic, readwrite) BOOL modal;
-@property (nonatomic, readwrite) BOOL modalAnimated;
 
 @property (nonatomic, assign) AppStoreButtonState appStoreButtonState;
-
-- (id)init:(BITUpdateManager *)newUpdateManager modal:(BOOL)newModal;
-- (id)init;
 
 @end

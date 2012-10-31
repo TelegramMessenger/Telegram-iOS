@@ -1,3 +1,26 @@
+### Version 3.0.0b1
+
+- General:
+
+    - [NEW] Feedback component
+    - [NEW] Minimum iOS Deployment version is now iOS 5.0
+    - [NEW] Migrated to use ARC
+    - [UPDATE] Improved Xcode project setup to only use one static library
+    - [UPDATE] Providing build settings as `HockeySDK.xcconfig` file for easier setup
+    - [UPDATE] Using embedded.framework for binary distribution containing everything needed in one package
+    
+- Feedback:
+
+    - [NEW] User feedback interface for direct communication with your users
+    - [NEW] iOS 6 UIActivity component for integrating feedback
+
+- Updating:
+
+    - [NEW] Support for In-App updates without changing `CFBundleVersion`
+    - [UPDATE] Update UI modified to be more iOS 6 alike
+    - [UPDATE] Update UI shows the company name next to the app name if defined in the backend
+
+
 ### Version 2.5.4
 
 - General:

@@ -33,6 +33,9 @@
 NSString *bit_URLEncodedString(NSString *inputString);
 NSString *bit_URLDecodedString(NSString *inputString);
 NSComparisonResult bit_versionCompare(NSString *stringA, NSString *stringB);
+NSString *bit_encodeAppIdentifier(NSString *inputString);
+NSString *bit_appName(NSString *placeHolderString);
+NSString *bit_appAnonID(void);
 
 /* UIImage helpers */
 UIImage *bit_roundedCornerImage(UIImage *inputImage, NSInteger cornerSize, NSInteger borderSize);
@@ -42,3 +45,5 @@ UIImage *bit_reflectedImageWithHeight(UIImage *inputImage, NSUInteger height, fl
 UIImage *bit_newWithContentsOfResolutionIndependentFile(NSString * path);
 UIImage *bit_imageWithContentsOfResolutionIndependentFile(NSString * path);
 UIImage *bit_imageNamed(NSString *imageName, NSString *bundleName);
+UIImage *bit_screenshot(void);
+UIImage *bit_appIcon(void);

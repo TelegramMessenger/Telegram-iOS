@@ -107,3 +107,120 @@
 /* Update Simulator Warning */
 
 "UpdateSimulatorMessage" = "Hockey Update fungerar inte i Simulatorn.\nitms-services:// url schemat är implementerat men fungerar ej.";
+
+
+/* Feedback */
+
+
+/* New Message Alert */
+
+/* Alert Title */
+"HockeyFeedbackNewMessageTitle" = "New Feedback Response";
+
+/* Alert Text */
+"HockeyFeedbackNewMessageText" = "A new response to your feedback is available. Would you like to view it?";
+
+/* Alert Ignore Button */
+"HockeyFeedbackIgnore" = "Ignore";
+
+/* Alert Show Button */
+"HockeyFeedbackShow" = "Show";
+
+
+/* List View */
+
+/* Title */
+"HockeyFeedbackListTitle" = "Feedback";
+
+/* Last Updated */
+"HockeyFeedbackListLastUpdated" = "Last Updated: %@";
+
+/* Never Updated */
+"HockeyFeedbackListNeverUpdated" = "Never";
+
+/* Provide Feedback Button Title */
+"HockeyFeedbackListButonWriteFeedback" = "Provide Feedback";
+
+/* Add a Response Button Title */
+"HockeyFeedbackListButonWriteResponse" = "Add a Response";
+
+/* User Data Set Name Button Title */
+"HockeyFeedbackListButonUserDataSetName" = "Set Your Name";
+
+/* User Data Set Email Button Title */
+"HockeyFeedbackListButonUserDataSetEmail" = "Set Your Email";
+
+/* User Data With Name Button Title */
+"HockeyFeedbackListButonUserDataWithName" = "Name: %@";
+
+/* User Data With Email Button Title */
+"HockeyFeedbackListButonUserDataWithEmail" = "Email: %@";
+
+/* Button title for deleting all local messages*/
+"HockeyFeedbackListButonDeleteAllMessages" = "Delete All Messages";
+
+/* Message pending to be send */
+"HockeyFeedbackListMessagePending" = "Pending";
+
+
+/* Delete All Messages Action Sheet / Alert View */
+
+/* Title for the Action Sheet */
+"HockeyFeedbackListDeleteAllTitle" = "This will delete all messages on this device.";
+
+/* Button Title to perform delete action */
+"HockeyFeedbackListDeleteAllDelete" = "Delete";
+
+/* Button Title to cancel delete action */
+"HockeyFeedbackListDeleteAllCancel" = "Cancel";
+
+
+/* Open Link In Safari Action Sheet / Alert View */
+
+/* Button Title to cancel */
+"HockeyFeedbackListLinkActionCancel" = "Cancel";
+
+/* Button Title to Open the Link */
+"HockeyFeedbackListLinkActionOpen" = "Open";
+
+/* Button Title to Copy the Link */
+"HockeyFeedbackListLinkActionCopy" = "Copy";
+
+
+/* UIActivity */
+
+/* Activity Sharing Button Title, App Name will be inserted */
+"HockeyFeedbackActivityButtonTitle" = "%@ Feedback";
+
+/* if there can no app name be found, use this instead for HockeyFeedbackActivityButtonTitle */
+"HockeyFeedbackActivityAppPlaceholder" = "App";
+
+
+/* Compose Message */
+
+/* Title */
+"HockeyFeedbackComposeTitle" = "New Feedback";
+
+/* Send button */
+"HockeyFeedbackComposeSend" = "Send";
+
+
+/* Set User Data */
+
+/* Title */
+"HockeyFeedbackUserDataTitle" = "My Info";
+
+/* Description On What Should Be Entered */
+"HockeyFeedbackUserDataDescription" = "Please provide your information before writing your feedback.";
+
+/* Name Field */
+"HockeyFeedbackUserDataName" = "Name";
+
+/* Name Placeholder */
+"HockeyFeedbackUserDataNamePlaceHolder" = "John Doe";
+
+/* Email Field */
+"HockeyFeedbackUserDataEmail" = "Email";
+
+/* Email Placeholder */
+"HockeyFeedbackUserDataEmailPlaceholder" = "example@email.com";

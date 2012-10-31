@@ -28,26 +28,28 @@
 
 
 #import "BITHockeyHelper.h"
+#import "HockeySDK.h"
+#import "HockeySDKPrivate.h"
+#import <QuartzCore/QuartzCore.h>
+
 
 #pragma mark NSString helpers
 
 NSString *bit_URLEncodedString(NSString *inputString) {
-  NSString *result = (NSString *)CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault,
-                                                                         (CFStringRef)inputString,
-                                                                         NULL,
-                                                                         CFSTR("!*'();:@&=+$,/?%#[]"),
-                                                                         kCFStringEncodingUTF8);
-  [result autorelease];
-  return result;
+  return CFBridgingRelease(CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault,
+                                                                    (__bridge CFStringRef)inputString,
+                                                                    NULL,
+                                                                    CFSTR("!*'();:@&=+$,/?%#[]"),
+                                                                    kCFStringEncodingUTF8)
+                           );
 }
 
 NSString *bit_URLDecodedString(NSString *inputString) {
-  NSString *result = (NSString *)CFURLCreateStringByReplacingPercentEscapesUsingEncoding(kCFAllocatorDefault,
-                                                                                         (CFStringRef)inputString,
-                                                                                         CFSTR(""),
-                                                                                         kCFStringEncodingUTF8);
-  [result autorelease];
-  return result;
+  return CFBridgingRelease(CFURLCreateStringByReplacingPercentEscapesUsingEncoding(kCFAllocatorDefault,
+                                                                                   (__bridge CFStringRef)inputString,
+                                                                                   CFSTR(""),
+                                                                                   kCFStringEncodingUTF8)
+                           );
 }
 
 NSComparisonResult bit_versionCompare(NSString *stringA, NSString *stringB) {
@@ -74,6 +76,53 @@ NSComparisonResult bit_versionCompare(NSString *stringA, NSString *stringB) {
   return result;
 }
 
+NSString *bit_encodeAppIdentifier(NSString *inputString) {
+  return (inputString ? bit_URLEncodedString(inputString) : bit_URLEncodedString([[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"]));
+}
+
+NSString *bit_appName(NSString *placeHolderString) {
+  NSString *appName = [[[NSBundle mainBundle] localizedInfoDictionary] objectForKey:@"CFBundleDisplayName"];
+  if (!appName)
+    appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"] ?: placeHolderString;
+  
+  return appName;
+}
+
+NSString *bit_appAnonID(void) {
+  // try to new iOS6 identifierForAdvertising
+  Class advertisingClass = NSClassFromString(@"ASIdentifierManager");
+	if (advertisingClass) {
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+    id adInstance = [advertisingClass performSelector:NSSelectorFromString(@"sharedManager")];
+# pragma clang diagnostic pop
+    
+    SEL adidSelector = NSSelectorFromString(@"advertisingIdentifier");
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+    return [[adInstance performSelector:adidSelector] performSelector:NSSelectorFromString(@"UUIDString")];
+# pragma clang diagnostic pop
+  }
+  
+  // try to new iOS6 identifierForVendor, in case ASIdentifierManager is not linked
+  SEL vendoridSelector = NSSelectorFromString(@"identifierForVendor");
+  if ([[UIDevice currentDevice] respondsToSelector:vendoridSelector]) {
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+    return [[[UIDevice currentDevice] performSelector:vendoridSelector] performSelector:NSSelectorFromString(@"UUIDString")];
+# pragma clang diagnostic pop
+  }
+  
+  // use app bundle path
+  NSArray *pathComponents = [[[NSBundle mainBundle] bundlePath] pathComponents];
+  
+  if ([pathComponents count] > 1) {
+    return [pathComponents objectAtIndex:(pathComponents.count - 2)];
+  }
+  
+  return nil;
+}
+
 
 #pragma mark UIImage private helpers
 
@@ -82,6 +131,7 @@ static CGContextRef bit_MyOpenBitmapContext(int pixelsWide, int pixelsHigh);
 static CGImageRef bit_CreateGradientImage(int pixelsWide, int pixelsHigh, float fromAlpha, float toAlpha);
 static BOOL bit_hasAlpha(UIImage *inputImage);
 UIImage *bit_imageWithAlpha(UIImage *inputImage);
+UIImage *bit_addGlossToImage(UIImage *inputImage);
 
 // Adds a rectangular path to the given context and rounds its corners by the given extents
 // Original author: Björn Sållarp. Used with permission. See: http://blog.sallarp.com/iphone-uiimage-round-corners/
@@ -141,12 +191,7 @@ CGImageRef bit_CreateGradientImage(int pixelsWide, int pixelsHigh, float fromAlp
 
 CGContextRef bit_MyOpenBitmapContext(int pixelsWide, int pixelsHigh) {
   CGSize size = CGSizeMake(pixelsWide, pixelsHigh);
-  if (UIGraphicsBeginImageContextWithOptions != NULL) {
-    UIGraphicsBeginImageContextWithOptions(size, NO, 0.0);
-  }
-  else {
-    UIGraphicsBeginImageContext(size);
-  }
+  UIGraphicsBeginImageContextWithOptions(size, NO, 0.0);
   
   return UIGraphicsGetCurrentContext();
 }
@@ -192,6 +237,18 @@ UIImage *bit_imageWithAlpha(UIImage *inputImage) {
   return imageWithAlpha;
 }
 
+UIImage *bit_addGlossToImage(UIImage *inputImage) {
+  UIGraphicsBeginImageContextWithOptions(inputImage.size, NO, 0.0);
+  
+  [inputImage drawAtPoint:CGPointZero];
+  UIImage *iconGradient = bit_imageNamed(@"IconGradient.png", BITHOCKEYSDK_BUNDLE);
+  [iconGradient drawInRect:CGRectMake(0, 0, inputImage.size.width, inputImage.size.height) blendMode:kCGBlendModeNormal alpha:0.5];
+  
+  UIImage *result = UIGraphicsGetImageFromCurrentImageContext();
+  UIGraphicsEndImageContext();
+  
+  return result;
+}
 
 #pragma mark UIImage helpers
 
@@ -310,7 +367,7 @@ UIImage *bit_newWithContentsOfResolutionIndependentFile(NSString * path) {
 UIImage *bit_imageWithContentsOfResolutionIndependentFile(NSString *path) {
 #ifndef __clang_analyzer__
   // clang alayzer in 4.2b3 thinks here's a leak, which is not the case.
-  return [bit_newWithContentsOfResolutionIndependentFile(path) autorelease];
+  return bit_newWithContentsOfResolutionIndependentFile(path);
 #endif
 }
 
@@ -379,4 +436,116 @@ UIImage *bit_roundedCornerImage(UIImage *inputImage, NSInteger cornerSize, NSInt
   }
   
   return roundedImage;
+}
+
+UIImage *bit_appIcon() {
+  NSString *iconString = nil;
+  NSArray *icons = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIconFiles"];
+  if (!icons) {
+    icons = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIcons"];
+    if ((icons) && ([icons isKindOfClass:[NSDictionary class]])) {
+      icons = [icons valueForKeyPath:@"CFBundlePrimaryIcon.CFBundleIconFiles"];
+    }
+    
+    if (!icons) {
+      iconString = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIconFile"];
+      if (!iconString) {
+        iconString = @"Icon.png";
+      }
+    }
+  }
+  
+  if (icons) {
+    BOOL useHighResIcon = NO;
+    if ([UIScreen mainScreen].scale == 2.0f) useHighResIcon = YES;
+    
+    for(NSString *icon in icons) {
+      iconString = icon;
+      UIImage *iconImage = [UIImage imageNamed:icon];
+      
+      if (iconImage.size.height == 57 && !useHighResIcon) {
+        // found!
+        break;
+      }
+      if (iconImage.size.height == 114 && useHighResIcon) {
+        // found!
+        break;
+      }
+    }
+  }
+  
+  BOOL addGloss = YES;
+  NSNumber *prerendered = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"UIPrerenderedIcon"];
+  if (prerendered) {
+    addGloss = ![prerendered boolValue];
+  }
+  
+  if (addGloss) {
+    return bit_addGlossToImage([UIImage imageNamed:iconString]);
+  } else {
+    return [UIImage imageNamed:iconString];
+  }
+}
+
+UIImage *bit_screenshot() {
+  // Create a graphics context with the target size
+  CGSize imageSize = [[UIScreen mainScreen] bounds].size;
+  BOOL isLandscapeLeft = [UIApplication sharedApplication].statusBarOrientation == UIInterfaceOrientationLandscapeLeft;
+  BOOL isLandscapeRight = [UIApplication sharedApplication].statusBarOrientation == UIInterfaceOrientationLandscapeRight;
+  BOOL isUpsideDown = [UIApplication sharedApplication].statusBarOrientation == UIInterfaceOrientationPortraitUpsideDown;
+  
+  if (isLandscapeLeft ||isLandscapeRight) {
+    CGFloat temp = imageSize.width;
+    imageSize.width = imageSize.height;
+    imageSize.height = temp;
+  }
+  
+  UIGraphicsBeginImageContextWithOptions(imageSize, NO, 0);
+  
+  CGContextRef context = UIGraphicsGetCurrentContext();
+  
+  // Iterate over every window from back to front
+  //NSInteger count = 0;
+  for (UIWindow *window in [[UIApplication sharedApplication] windows])  {
+    if (![window respondsToSelector:@selector(screen)] || [window screen] == [UIScreen mainScreen]) {
+      // -renderInContext: renders in the coordinate space of the layer,
+      // so we must first apply the layer's geometry to the graphics context
+      CGContextSaveGState(context);
+      
+      // Center the context around the window's anchor point
+      CGContextTranslateCTM(context, [window center].x, [window center].y);
+      
+      // Apply the window's transform about the anchor point
+      CGContextConcatCTM(context, [window transform]);
+      
+      // Y-offset for the status bar (if it's showing)
+      NSInteger yOffset = [UIApplication sharedApplication].statusBarHidden ? 0 : -20;
+      
+      // Offset by the portion of the bounds left of and above the anchor point
+      CGContextTranslateCTM(context,
+                            -[window bounds].size.width * [[window layer] anchorPoint].x,
+                            -[window bounds].size.height * [[window layer] anchorPoint].y + yOffset);
+      
+      if (isLandscapeLeft) {
+        CGContextConcatCTM(context, CGAffineTransformRotate(CGAffineTransformMakeTranslation( imageSize.width, 0), M_PI / 2.0));
+      } else if (isLandscapeRight) {
+        CGContextConcatCTM(context, CGAffineTransformRotate(CGAffineTransformMakeTranslation( 0, imageSize.height), 3 * M_PI / 2.0));
+      } else if (isUpsideDown) {
+        CGContextConcatCTM(context, CGAffineTransformRotate(CGAffineTransformMakeTranslation( imageSize.width, imageSize.height), M_PI));
+      }
+      
+      // Render the layer hierarchy to the current context
+      [[window layer] renderInContext:context];
+      
+      // Restore the context
+      CGContextRestoreGState(context);
+    }
+  }
+  
+  // Retrieve the screenshot image
+  UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+  
+  UIGraphicsEndImageContext();
+  
+  return image;
 }

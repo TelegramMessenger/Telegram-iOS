@@ -29,6 +29,9 @@
 #import <Foundation/Foundation.h>
 
 
+@class BITHockeyManager;
+@class BITHockeyBaseManager;
+
 /**
  The `BITHockeyManagerDelegate` formal protocol defines methods further configuring
   the behaviour of `BITHockeyManager`.
@@ -38,6 +41,11 @@
 
 @optional
 
+
+///-----------------------------------------------------------------------------
+/// @name App Identifier usage
+///-----------------------------------------------------------------------------
+
 /**
  Implement to force the usage of the live identifier
  
@@ -46,13 +54,128 @@
  the App Store.
  
  Example:
-    - (BOOL)shouldUseLiveIdentifier {
+    - (BOOL)shouldUseLiveIdentifierForHockeyManager:(BITHockeyManager *)hockeyManager {
     #ifdef (CONFIGURATION_Release)
       return YES;
     #endif
       return NO;
     }
  */
-- (BOOL)shouldUseLiveIdentifier;
+- (BOOL)shouldUseLiveIdentifierForHockeyManager:(BITHockeyManager *)hockeyManager;
+
+
+///-----------------------------------------------------------------------------
+/// @name UI presentation
+///-----------------------------------------------------------------------------
+
+
+// optional parent view controller for the feedback screen when invoked via the alert view, default is the root UIWindow instance
+/**
+ Return a custom parent view controller for presenting modal sheets
+ 
+ By default the SDK is using the root UIWindow instance to present any required
+ view controllers. Overwrite this if this doesn't result in a satisfying
+ behavior or if you want to define any other parent view controller.
+ 
+ @param hockeyManager The `BITHockeyManager` HockeyManager instance invoking this delegate
+ @param componentManager The `BITHockeyBaseManager` component instance invoking this delegate, can be `BITCrashManager` or `BITFeedbackManager`
+ */
+- (UIViewController *)viewControllerForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager;
+
+
+///-----------------------------------------------------------------------------
+/// @name Additional meta data
+///-----------------------------------------------------------------------------
+
+
+/** Return the userid that should used in the SDK components
+ 
+ Right now this is used by the `BITCrashMananger` to attach to a crash report.
+ `BITFeedbackManager` uses it too for assigning the user to a discussion thread.
+ 
+ In addition, if this returns not nil for `BITFeedbackManager` the user will
+ not be asked for any user details by the component, including useerName or userEmail.
+ 
+ You can find out the component requesting the user name like this:
+    - (NSString *)userNameForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager {
+      if (componentManager == hockeyManager.feedbackManager) {
+        return UserNameForFeedback;
+      } else if (componentManager == hockeyManager.crashManager) {
+        return UserNameForCrashReports;
+      } else {
+        return nil;
+      }
+    }
+ 
+ 
+ 
+ @param hockeyManager The `BITHockeyManager` HockeyManager instance invoking this delegate
+ @param componentManager The `BITHockeyBaseManager` component instance invoking this delegate, can be `BITCrashManager` or `BITFeedbackManager`
+ @see userNameForHockeyManager:componentManager:
+ @see userEmailForHockeyManager:componentManager:
+ @warning When returning a non nil value for the `BITCrashManager` component, crash reports
+ are not anonymous any more and the crash alerts will not show the word "anonymous"!
+ */
+- (NSString *)userIDForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager;
+
+
+/** Return the user name that should used in the SDK components
+ 
+ Right now this is used by the `BITCrashMananger` to attach to a crash report.
+ `BITFeedbackManager` uses it too for assigning the user to a discussion thread.
+ 
+ In addition, if this returns not nil for `BITFeedbackManager` the user will
+ not be asked for any user details by the component, including useerName or userEmail.
+ 
+ You can find out the component requesting the user name like this:
+    - (NSString *)userNameForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager {
+      if (componentManager == hockeyManager.feedbackManager) {
+        return UserNameForFeedback;
+      } else if (componentManager == hockeyManager.crashManager) {
+        return UserNameForCrashReports;
+      } else {
+        return nil;
+      }
+ }
+
+ 
+ @param hockeyManager The `BITHockeyManager` HockeyManager instance invoking this delegate
+ @param componentManager The `BITHockeyBaseManager` component instance invoking this delegate, can be `BITCrashManager` or `BITFeedbackManager`
+ @see userIDForHockeyManager:componentManager:
+ @see userEmailForHockeyManager:componentManager:
+ @warning When returning a non nil value for the `BITCrashManager` component, crash reports
+ are not anonymous any more and the crash alerts will not show the word "anonymous"!
+ */
+- (NSString *)userNameForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager;
+
+
+/** Return the users email address that should used in the SDK components
+ 
+ Right now this is used by the `BITCrashMananger` to attach to a crash report.
+ `BITFeedbackManager` uses it too for assigning the user to a discussion thread.
+ 
+ In addition, if this returns not nil for `BITFeedbackManager` the user will
+ not be asked for any user details by the component, including useerName or userEmail.
+ 
+ You can find out the component requesting the user name like this:
+    - (NSString *)userNameForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager {
+      if (componentManager == hockeyManager.feedbackManager) {
+        return UserNameForFeedback;
+      } else if (componentManager == hockeyManager.crashManager) {
+        return UserNameForCrashReports;
+       } else {
+        return nil;
+       }
+    }
+ 
+ 
+ @param hockeyManager The `BITHockeyManager` HockeyManager instance invoking this delegate
+ @param componentManager The `BITHockeyBaseManager` component instance invoking this delegate, can be `BITCrashManager` or `BITFeedbackManager`
+ @see userIDForHockeyManager:componentManager:
+ @see userNameForHockeyManager:componentManager:
+ @warning When returning a non nil value for the `BITCrashManager` component, crash reports
+ are not anonymous any more and the crash alerts will not show the word "anonymous"!
+ */
+- (NSString *)userEmailForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager;
 
 @end

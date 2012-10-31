@@ -30,12 +30,8 @@
 
 
 #import <UIKit/UIKit.h>
+#import "BITHockeyBaseManager.h"
 
-
-typedef enum {
-	BITUpdateComparisonResultDifferent,
-	BITUpdateComparisonResultGreater
-} BITUpdateComparisonResult;
 
 typedef enum {
 	BITUpdateAuthorizationDenied,
@@ -61,6 +57,9 @@ typedef enum {
  This modul handles version updates, presents update and version information in a App Store like user interface,
  collects usage information and provides additional authorization options when using Ad-Hoc provisioning profiles.
  
+ This module automatically disables itself when running in an App Store build by default! If you integrate the
+ Atlassian JMC client this module is used to automatically configure JMC, but will not do anything else.
+ 
  To use this module, it is important to implement set the `delegate` property and implement
  `[BITUpdateManagerDelegate customDeviceIdentifierForUpdateManager:]`.
  
@@ -78,26 +77,7 @@ typedef enum {
  
  */
 
-@interface BITUpdateManager : NSObject <UIAlertViewDelegate> {
-@private
-  NSString *_appIdentifier;
-  NSString *_currentAppVersion;
-  
-  UINavigationController *_navController;
-  BITUpdateViewController *_currentHockeyViewController;
-  
-  BOOL _dataFound;
-  BOOL _showFeedback;
-  BOOL _updateAlertShowing;
-  BOOL _lastCheckFailed;
-  BOOL _sendUsageData;
-  
-  BOOL _isAppStoreEnvironment;
-  
-  BOOL _didSetupDidBecomeActiveNotifications;
-  
-  NSString *_uuid;
-}
+@interface BITUpdateManager : BITHockeyBaseManager <UIAlertViewDelegate>
 
 
 ///-----------------------------------------------------------------------------
@@ -111,27 +91,7 @@ typedef enum {
  application, it is _REQUIRED_ to set this delegate and implement
  `[BITUpdateManagerDelegate customDeviceIdentifierForUpdateManager:]`!
  */
-@property (nonatomic, assign) id delegate;
-
-
-///-----------------------------------------------------------------------------
-/// @name Configuration
-///-----------------------------------------------------------------------------
-
-/**
- The type of version comparisson.
- 
- Defines when a version is defined as being newer than the currently installed
- version. This must be assigned one of the following:
- 
- When running the app from the App Store, this setting is ignored.
-
- - `BITUpdateComparisonResultDifferent`: Version is different
- - `BITUpdateComparisonResultGreater`: Version is greater
- 
- **Default**: BITUpdateComparisonResultGreater
- */
-@property (nonatomic, assign) BITUpdateComparisonResult compareVersionType;
+@property (nonatomic, weak) id delegate;
 
 
 ///-----------------------------------------------------------------------------
@@ -259,7 +219,7 @@ typedef enum {
  
  @see requireAuthorization
  */
-@property (nonatomic, retain) NSString *authenticationSecret;
+@property (nonatomic, strong) NSString *authenticationSecret;
 
 
 ///-----------------------------------------------------------------------------
@@ -284,24 +244,12 @@ typedef enum {
  @see [BITUpdateManagerDelegate didDisplayExpiryAlertForUpdateManager:]
  @warning This only works when using Ad-Hoc provisioning profiles!
  */
-@property (nonatomic, retain) NSDate *expiryDate;
+@property (nonatomic, strong) NSDate *expiryDate;
 
 
 ///-----------------------------------------------------------------------------
 /// @name User Interface
 ///-----------------------------------------------------------------------------
-
-/**
- The UIBarStyle of the update user interface navigation bar.
- */
-@property (nonatomic, assign) UIBarStyle barStyle;
-
-
-/**
- The UIModalPresentationStyle for showing the update user interface when invoked
- with the update alert.
- */
-@property (nonatomic, assign) UIModalPresentationStyle modalPresentationStyle;
 
 
 /**
