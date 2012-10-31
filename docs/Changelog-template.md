@@ -1,3 +1,49 @@
+### Version 3.0.0b1
+
+- General:
+
+    - [NEW] Feedback component
+    - [NEW] Minimum iOS Deployment version is now iOS 5.0
+    - [NEW] Migrated to use ARC
+    - [UPDATE] Improved Xcode project setup to only use one static library
+    - [UPDATE] Providing build settings as `HockeySDK.xcconfig` file for easier setup
+    - [UPDATE] Using embedded.framework for binary distribution containing everything needed in one package
+    
+- Feedback:
+
+    - [NEW] User feedback interface for direct communication with your users
+    - [NEW] iOS 6 UIActivity component for integrating feedback
+
+- Updating:
+
+    - [NEW] Support for In-App updates without changing `CFBundleVersion`
+    - [UPDATE] Update UI modified to be more iOS 6 alike
+    - [UPDATE] Update UI shows the company name next to the app name if defined in the backend
+
+
+### Version 2.5.4
+
+- General:
+
+    - Declared as final release, since everything in 2.5.4b3 is working as expected
+
+### Version 2.5.4b3
+
+- General:
+
+    - [NEW] Atlassian JMC support disabled (Use subproject integration if you want it)
+
+### Version 2.5.4b2
+
+- Crash Reporting:
+
+    - [UPDATE] Migrate pre v2.5 auto send user setting
+    - [BUGFIX] The alert option 'Auto Send' did not persist correctly
+
+- Updating:
+
+    - [BUGFIX] Authorization option did not persist correctly and caused authorization to re-appear on every cold app start
+
 ### Version 2.5.4b1
 
 - General:
