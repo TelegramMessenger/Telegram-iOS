@@ -86,9 +86,9 @@
 		1E5955CF15B71C8600A03429 /* IconGradient.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955C415B71C8600A03429 /* IconGradient.png */; };
 		1E5955D015B71C8600A03429 /* IconGradient@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955C515B71C8600A03429 /* IconGradient@2x.png */; };
 		1E5955FD15B7877B00A03429 /* BITHockeyManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E5955FA15B7877A00A03429 /* BITHockeyManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		1E754E5C1621FBB70070AB92 /* BITCrashManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E754E561621FBB70070AB92 /* BITCrashManager.h */; };
+		1E754E5C1621FBB70070AB92 /* BITCrashManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E754E561621FBB70070AB92 /* BITCrashManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E754E5D1621FBB70070AB92 /* BITCrashManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E754E571621FBB70070AB92 /* BITCrashManager.m */; };
-		1E754E5E1621FBB70070AB92 /* BITCrashManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E754E581621FBB70070AB92 /* BITCrashManagerDelegate.h */; };
+		1E754E5E1621FBB70070AB92 /* BITCrashManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E754E581621FBB70070AB92 /* BITCrashManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E754E5F1621FBB70070AB92 /* BITCrashManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E754E591621FBB70070AB92 /* BITCrashManagerPrivate.h */; };
 		1E754E601621FBB70070AB92 /* BITCrashReportTextFormatter.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E754E5A1621FBB70070AB92 /* BITCrashReportTextFormatter.h */; };
 		1E754E611621FBB70070AB92 /* BITCrashReportTextFormatter.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E754E5B1621FBB70070AB92 /* BITCrashReportTextFormatter.m */; };
@@ -411,6 +411,8 @@
 				1E59559B15B6FDA500A03429 /* HockeySDK.h in Headers */,
 				1E59559A15B6FDA500A03429 /* BITHockeyManager.h in Headers */,
 				1E5955FD15B7877B00A03429 /* BITHockeyManagerDelegate.h in Headers */,
+				1E754E5C1621FBB70070AB92 /* BITCrashManager.h in Headers */,
+				1E754E5E1621FBB70070AB92 /* BITCrashManagerDelegate.h in Headers */,
 				1E49A4731612226D00463151 /* BITUpdateManager.h in Headers */,
 				1E49A4791612226D00463151 /* BITUpdateManagerDelegate.h in Headers */,
 				1E49A44E1612223B00463151 /* BITFeedbackManager.h in Headers */,
@@ -435,8 +437,6 @@
 				1E49A4D0161222B900463151 /* BITWebTableViewCell.h in Headers */,
 				1E49A4D8161222D400463151 /* HockeySDKPrivate.h in Headers */,
 				1EC69F601615001500808FD9 /* BITHockeyManagerPrivate.h in Headers */,
-				1E754E5C1621FBB70070AB92 /* BITCrashManager.h in Headers */,
-				1E754E5E1621FBB70070AB92 /* BITCrashManagerDelegate.h in Headers */,
 				1E754E5F1621FBB70070AB92 /* BITCrashManagerPrivate.h in Headers */,
 				1E754E601621FBB70070AB92 /* BITCrashReportTextFormatter.h in Headers */,
 				1EACC97B162F041E007578C5 /* BITAttributedLabel.h in Headers */,
