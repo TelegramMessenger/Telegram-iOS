@@ -1,3 +1,10 @@
+### Version 3.0.0b2
+
+- General:
+
+    - [BUGFIX] Add missing header files to the binary distribution
+    - [BUGFIX] Add missing new lines of two header files
+    
 ### Version 3.0.0b1
 
 - General:
