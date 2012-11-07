@@ -30,6 +30,8 @@
 #import "HockeySDKPrivate.h"
 #include <CommonCrypto/CommonDigest.h>
 
+NSString *const kBITCrashErrorDomain = @"BITCrashReporterErrorDomain";
+NSString *const kBITUpdateErrorDomain = @"BITUpdaterErrorDomain";
 
 // Load the framework bundle.
 NSBundle *BITHockeyBundle(void) {
