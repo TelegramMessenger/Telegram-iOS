@@ -95,7 +95,7 @@ typedef enum {
   BITHockeyErrorUnknown,
   HockeyAPIClientMissingJSONLibrary
 } BITHockeyErrorReason;
-NSString *kBITHockeyErrorDomain = @"BITHockeyErrorDomain";
+extern NSString *const kBITHockeyErrorDomain;
 
 
 #endif
