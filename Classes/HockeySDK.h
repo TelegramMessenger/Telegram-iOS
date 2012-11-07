@@ -58,8 +58,7 @@ typedef enum {
   BITCrashAPIReceivedEmptyResponse,
   BITCrashAPIErrorWithStatusCode
 } BITCrashErrorReason;
-static NSString *kBITCrashErrorDomain = @"BITCrashReporterErrorDomain";
-
+extern NSString *const kBITCrashErrorDomain;
 
 // Update App Versions
 
@@ -72,7 +71,7 @@ typedef enum {
   BITUpdateAPIClientAuthorizationMissingSecret,
   BITUpdateAPIClientCannotCreateConnection
 } BITUpdateErrorReason;
-static NSString *kBITUpdateErrorDomain = @"BITUpdaterErrorDomain";
+extern NSString *const kBITUpdateErrorDomain;
 
 
 // Update App Versions
@@ -86,7 +85,7 @@ typedef enum {
   BITFeedbackAPIClientAuthorizationMissingSecret,
   BITFeedbackAPIClientCannotCreateConnection
 } BITFeedbackErrorReason;
-static NSString *kBITFeedbackErrorDomain = @"BITFeedbackErrorDomain";
+extern NSString *const kBITFeedbackErrorDomain;
 
 
 // HockeySDK
@@ -96,7 +95,7 @@ typedef enum {
   BITHockeyErrorUnknown,
   HockeyAPIClientMissingJSONLibrary
 } BITHockeyErrorReason;
-static NSString *kBITHockeyErrorDomain = @"BITHockeyErrorDomain";
+NSString *kBITHockeyErrorDomain = @"BITHockeyErrorDomain";
 
 
 #endif

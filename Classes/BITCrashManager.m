@@ -51,6 +51,8 @@
 #define kBITCrashMetaUserID @"BITCrashMetaUserID"
 #define kBITCrashMetaApplicationLog @"BITCrashMetaApplicationLog"
 
+NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
+
 
 @interface BITCrashManager ()
 
