@@ -1,3 +1,14 @@
+### Version 3.0.0b3
+
+- General:
+
+    - [BUGFIX] Exchange some more prefixes of TTTAttributedLabel class that have been missed out
+    - [BUGFIX] Fix some new compiler warnings
+
+- Crash Reporting:
+
+    - [BUGFIX] Format timestamp in crash report to be always UTC in en_US locale
+
 ### Version 3.0.0b2
 
 - General:
