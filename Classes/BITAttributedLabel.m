@@ -22,16 +22,16 @@
 
 #import "BITAttributedLabel.h"
 
-#define kTTTLineBreakWordWrapTextWidthScalingFactor (M_PI / M_E)
+#define kBITLineBreakWordWrapTextWidthScalingFactor (M_PI / M_E)
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
-NSString * const kTTTStrikeOutAttributeName = @"TTTStrikeOutAttribute";
-NSString * const kTTTBackgroundFillColorAttributeName = @"TTTBackgroundFillColor";
-NSString * const kTTTBackgroundStrokeColorAttributeName = @"TTTBackgroundStrokeColor";
-NSString * const kTTTBackgroundLineWidthAttributeName = @"TTTBackgroundLineWidth";
-NSString * const kTTTBackgroundCornerRadiusAttributeName = @"TTTBackgroundCornerRadius";
+NSString * const kBITStrikeOutAttributeName = @"BITStrikeOutAttribute";
+NSString * const kBITBackgroundFillColorAttributeName = @"BITBackgroundFillColor";
+NSString * const kBITBackgroundStrokeColorAttributeName = @"BITBackgroundStrokeColor";
+NSString * const kBITBackgroundLineWidthAttributeName = @"BITBackgroundLineWidth";
+NSString * const kBITBackgroundCornerRadiusAttributeName = @"BITBackgroundCornerRadius";
 
 static inline CTTextAlignment CTTextAlignmentFromUITextAlignment(UITextAlignment alignment) {
 	switch (alignment) {
@@ -564,10 +564,10 @@ static inline NSAttributedString * NSAttributedStringBySettingColorFromContext(N
         
         for (id glyphRun in (__bridge NSArray *)CTLineGetGlyphRuns((__bridge CTLineRef)line)) {
             NSDictionary *attributes = (__bridge NSDictionary *)CTRunGetAttributes((__bridge CTRunRef) glyphRun);
-            CGColorRef strokeColor = (__bridge CGColorRef)[attributes objectForKey:kTTTBackgroundStrokeColorAttributeName];
-            CGColorRef fillColor = (__bridge CGColorRef)[attributes objectForKey:kTTTBackgroundFillColorAttributeName];
-            CGFloat cornerRadius = [[attributes objectForKey:kTTTBackgroundCornerRadiusAttributeName] floatValue];
-            CGFloat lineWidth = [[attributes objectForKey:kTTTBackgroundLineWidthAttributeName] floatValue];
+            CGColorRef strokeColor = (__bridge CGColorRef)[attributes objectForKey:kBITBackgroundStrokeColorAttributeName];
+            CGColorRef fillColor = (__bridge CGColorRef)[attributes objectForKey:kBITBackgroundFillColorAttributeName];
+            CGFloat cornerRadius = [[attributes objectForKey:kBITBackgroundCornerRadiusAttributeName] floatValue];
+            CGFloat lineWidth = [[attributes objectForKey:kBITBackgroundLineWidthAttributeName] floatValue];
 
             if (strokeColor || fillColor) {
                 CGRect runBounds = CGRectZero;
@@ -623,7 +623,7 @@ static inline NSAttributedString * NSAttributedStringBySettingColorFromContext(N
         
         for (id glyphRun in (__bridge NSArray *)CTLineGetGlyphRuns((__bridge CTLineRef)line)) {
             NSDictionary *attributes = (__bridge NSDictionary *)CTRunGetAttributes((__bridge CTRunRef) glyphRun);
-            BOOL strikeOut = [[attributes objectForKey:kTTTStrikeOutAttributeName] boolValue];
+            BOOL strikeOut = [[attributes objectForKey:kBITStrikeOutAttributeName] boolValue];
             NSInteger superscriptStyle = [[attributes objectForKey:(id)kCTSuperscriptAttributeName] integerValue];
             
             if (strikeOut) {
@@ -788,7 +788,7 @@ static inline NSAttributedString * NSAttributedStringBySettingColorFromContext(N
         CGFloat textWidth = [self sizeThatFits:CGSizeZero].width;
         CGFloat availableWidth = self.frame.size.width * self.numberOfLines;
         if (self.numberOfLines > 1 && self.lineBreakMode == UILineBreakModeWordWrap) {
-            textWidth *= kTTTLineBreakWordWrapTextWidthScalingFactor;
+            textWidth *= kBITLineBreakWordWrapTextWidthScalingFactor;
         }
         
         if (textWidth > availableWidth && textWidth > 0.0f) {
