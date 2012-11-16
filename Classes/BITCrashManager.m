@@ -250,7 +250,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
     userID = [[BITHockeyManager sharedHockeyManager].delegate
                 userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                componentManager:self];
+                componentManager:self] ?: @"";
   }
   
   return userID;
@@ -262,13 +262,13 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   if (self.delegate && [self.delegate respondsToSelector:@selector(userNameForCrashManager:)]) {
     if (!self.isAppStoreEnvironment)
       NSLog(@"[HockeySDK] DEPRECATED: Please use BITHockeyManagerDelegate's userNameForHockeyManager:componentManager: or userIDForHockeyManager:componentManager: instead.");
-    username = [self.delegate userNameForCrashManager:self];
+    username = [self.delegate userNameForCrashManager:self] ?: @"";
   }
   if ([BITHockeyManager sharedHockeyManager].delegate &&
       [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
     username = [[BITHockeyManager sharedHockeyManager].delegate
                 userNameForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                componentManager:self];
+                componentManager:self] ?: @"";
   }
   
   return username;
@@ -280,13 +280,13 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   if (self.delegate && [self.delegate respondsToSelector:@selector(userEmailForCrashManager:)]) {
     if (!self.isAppStoreEnvironment)
       NSLog(@"[HockeySDK] DEPRECATED: Please use BITHockeyManagerDelegate's userEmailForHockeyManager:componentManager: instead.");
-    useremail = [self.delegate userEmailForCrashManager:self];
+    useremail = [self.delegate userEmailForCrashManager:self] ?: @"";
   }
   if ([BITHockeyManager sharedHockeyManager].delegate &&
       [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userEmailForHockeyManager:componentManager:)]) {
     useremail = [[BITHockeyManager sharedHockeyManager].delegate
                  userEmailForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                 componentManager:self];
+                 componentManager:self] ?: @"";
   }
   
   return useremail;
