@@ -228,8 +228,9 @@
   userController.delegate = self;
   
   UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:userController];
+  navController.modalPresentationStyle = UIModalPresentationFormSheet;
   
-  [self.navigationController presentModalViewController:navController animated:YES];
+  [self presentViewController:navController animated:YES completion:nil];
 }
 
 - (void)dismissAction:(id)sender {
