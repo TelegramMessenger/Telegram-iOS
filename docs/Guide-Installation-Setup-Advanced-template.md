@@ -58,13 +58,17 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
 
     <img src="XcodeFrameworks4_normal.png"/>
 
-10. Select `Build Settings`
+10. Expand `Copy Bundle Resource`.
 
-11. Add the following `Header Search Path`
+11. Drag `HockeySDKResources.bundle` from the `HockeySDK` sub-projects `Products` folder and drop into the `Copy Bundle Resource` section
+
+12. Select `Build Settings`
+
+13. Add the following `Header Search Path`
 
     `$(SRCROOT)/Vendor/HockeySDK/Classes`
 
-12. Create a new `Project.xcconfig` file, if you don't already have one (You can give it any name)
+14. Create a new `Project.xcconfig` file, if you don't already have one (You can give it any name)
 
     a. Select your project.
 
@@ -76,9 +80,9 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
     
         <img src="XcodeFrameworks1_normal.png"/>
 
-13. Open `Project.xcconfig` in the editor
+15. Open `Project.xcconfig` in the editor
 
-14. Add the following line:
+16. Add the following line:
 
     `#include "../Vendor/HockeySDK/Support/HockeySDK.xcconfig"`
     

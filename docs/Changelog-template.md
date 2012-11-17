@@ -1,3 +1,17 @@
+### Version 3.0.0b4
+
+- Crash Reporting:
+
+    - [BUGFIX] Fix a crash if `username`, `useremail` or `userid` delegate method returns `nil` and trying to send a crash report
+
+- Feedback:
+
+    - [BUGFIX] Fix user data UI not always being presented as a form sheet on the iPad
+    
+- Updating:
+
+    - [BUGFIX] Fix a problem showing the update UI animated if there TTNavigator class is present even though not being used
+    
 ### Version 3.0.0b3
 
 - General:
