@@ -634,14 +634,14 @@
     
     [self markSendInProgressMessagesAsPending];
     
+    [self sortFeedbackList];
+    [self updateLastMessageID];
+
     // we got a new incoming message, trigger user notification system
     if (newMessage) {
       // check if the latest message is from the users own email address, then don't show an alert since he answered using his own email
       BOOL latestMessageFromUser = NO;
       
-      [self sortFeedbackList];
-      [self updateLastMessageID];
-
       BITFeedbackMessage *latestMessage = [self lastMessageHavingID];
       if (self.userEmail && latestMessage.email && [self.userEmail compare:latestMessage.email] == NSOrderedSame)
         latestMessageFromUser = YES;
