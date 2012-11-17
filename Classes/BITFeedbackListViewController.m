@@ -48,12 +48,12 @@
 #define BUTTON_BORDERCOLOR BIT_RGBCOLOR(175, 175, 175)
 #define BUTTON_BACKGROUNDCOLOR BIT_RGBCOLOR(225, 225, 225)
 #define BUTTON_TEXTCOLOR BIT_RGBCOLOR(58, 58, 58)
-#define BUTTON_TEXTCOLOR_SHADOW BIT_RGBCOLOR(175, 175, 175)
+#define BUTTON_TEXTCOLOR_SHADOW BIT_RGBCOLOR(255, 255, 255)
 
 #define BUTTON_DELETE_BORDERCOLOR BIT_RGBCOLOR(61, 61, 61)
 #define BUTTON_DELETE_BACKGROUNDCOLOR BIT_RGBCOLOR(225, 0, 0)
 #define BUTTON_DELETE_TEXTCOLOR BIT_RGBCOLOR(240, 240, 240)
-#define BUTTON_DELETE_TEXTCOLOR_SHADOW BIT_RGBCOLOR(175, 175, 175)
+#define BUTTON_DELETE_TEXTCOLOR_SHADOW BIT_RGBCOLOR(125, 0, 0)
 
 #define BORDER_COLOR BIT_RGBCOLOR(215, 215, 215)
 
@@ -349,12 +349,14 @@
     // button
     UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
     button.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    [button.layer setCornerRadius:10.0f];
-    [button.layer setBorderWidth:1];
-    [button.layer setBackgroundColor:BUTTON_BACKGROUNDCOLOR.CGColor];
-    [button.layer setBorderColor:BUTTON_BORDERCOLOR.CGColor];
-    [button.layer setShadowOffset:CGSizeMake(-1, -1)];
+    UIImage *stretchableButton = [bit_imageNamed(@"buttonRoundedRegular.png", BITHOCKEYSDK_BUNDLE) stretchableImageWithLeftCapWidth:10 topCapHeight:0];
+    UIImage *stretchableHighlightedButton = [bit_imageNamed(@"buttonRoundedRegularHighlighted.png", BITHOCKEYSDK_BUNDLE) stretchableImageWithLeftCapWidth:10 topCapHeight:0];
+    [button setBackgroundImage:stretchableButton forState:UIControlStateNormal];
+    [button setBackgroundImage:stretchableHighlightedButton forState:UIControlStateHighlighted];
+    
+    [[button titleLabel] setShadowOffset:CGSizeMake(0, 1)];
     [[button titleLabel] setFont:[UIFont boldSystemFontOfSize:14.0]];
+    
     [button setTitleColor:BUTTON_TEXTCOLOR forState:UIControlStateNormal];
     [button setTitleShadowColor:BUTTON_TEXTCOLOR_SHADOW forState:UIControlStateNormal];
     if (indexPath.section == 0) {
@@ -385,8 +387,12 @@
       [button addTarget:self action:@selector(setUserDataAction:) forControlEvents:UIControlEventTouchUpInside];
     } else {
       topGap = 0.0f;
-      [button.layer setBackgroundColor:BUTTON_DELETE_BACKGROUNDCOLOR.CGColor];
-      [button.layer setBorderColor:BUTTON_DELETE_BORDERCOLOR.CGColor];
+      [[button titleLabel] setShadowOffset:CGSizeMake(0, -1)];
+      UIImage *stretchableDeleteButton = [bit_imageNamed(@"buttonRoundedDelete.png", BITHOCKEYSDK_BUNDLE) stretchableImageWithLeftCapWidth:10 topCapHeight:0];
+      UIImage *stretchableDeleteHighlightedButton = [bit_imageNamed(@"buttonRoundedDeleteHighlighted.png", BITHOCKEYSDK_BUNDLE) stretchableImageWithLeftCapWidth:10 topCapHeight:0];
+      [button setBackgroundImage:stretchableDeleteButton forState:UIControlStateNormal];
+      [button setBackgroundImage:stretchableDeleteHighlightedButton forState:UIControlStateHighlighted];
+
       [button setTitleColor:BUTTON_DELETE_TEXTCOLOR forState:UIControlStateNormal];
       [button setTitleShadowColor:BUTTON_DELETE_TEXTCOLOR_SHADOW forState:UIControlStateNormal];
 
