@@ -58,7 +58,7 @@ This example code is based on CocoaLumberjack logging into log files:
 	- (NSString *) getLogFilesContentWithMaxSize:(NSInteger)maxSize {
 	  NSMutableString *description = [NSMutableString string];
 	    
-	  NSArray *sortedLogFileInfos = [[[Logging fileLogger] logFileManager] sortedLogFileInfos];
+	  NSArray *sortedLogFileInfos = [[_fileLogger logFileManager] sortedLogFileInfos];
 	  NSUInteger count = [sortedLogFileInfos count];
 	  
 	  // we start from the last one
@@ -96,3 +96,100 @@ This example code is based on CocoaLumberjack logging into log files:
 	
 	@end
 
+
+## Advanced HowTo
+
+If you want to restrict the log files to contain only the data from the last application run (from app start until it crashed, ignoring all suspend and resume actions), you follow these steps. (Thanks to Michael Tyson for this hint!)
+
+4. Adjust CocoaLumberjack to initialize a new log file per application start
+
+        [_fileLogger performSelector:@selector(currentLogFileHandle)]; // init log file prior to rolling  
+        [_fileLogger rollLogFile];  
+        [_fileLogger performSelector:@selector(currentLogFileHandle)]; // re-init log file to apply roll
+
+5. And when loading the prior (crashed) application run log file, stop the iteration over the log files before the most current one (which is the new session, the one after the crash):
+
+        // we start from the last (oldest) one, and stop just before the newest (which is the log for the session after the crash)  
+        for (int index = count - 1; index > 0; index--) {
+
+
+## Example
+
+    @interface BITAppDelegate () <BITCrashManagerDelegate> {}
+        @property (nonatomic) DDFileLogger *fileLogger;
+    @end
+    
+    
+    @implementation BITAppDelegate
+    
+    - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+      [self.window makeKeyAndVisible];
+    
+      // initialize before HockeySDK, so the delegate can access the file logger!
+      _fileLogger = [[DDFileLogger alloc] init];
+      _fileLogger.maximumFileSize = (1024 * 64); // 64 KByte
+      _fileLogger.logFileManager.maximumNumberOfLogFiles = 1;
+      [_fileLogger performSelector:@selector(currentLogFileHandle)]; // init log file prior to rolling
+      [_fileLogger rollLogFile];
+      [_fileLogger performSelector:@selector(currentLogFileHandle)]; // re-init log file to apply roll
+      [DDLog addLogger:_fileLogger];
+    
+      [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"<>"
+                                                         delegate:nil];
+    
+      [[BITHockeyManager sharedHockeyManager] startManager];
+    
+      // add Xcode console logger if not running in the App Store
+      if (![[BITHockeyManager sharedHockeyManager] isAppStoreEnvironment]) {
+        PSDDFormatter *psLogger = [[[PSDDFormatter alloc] init] autorelease];
+        [[DDTTYLogger sharedInstance] setLogFormatter:psLogger];
+    
+        [DDLog addLogger:[DDTTYLogger sharedInstance]];
+    
+        [DDLog addLogger:[DDNSLoggerLogger sharedInstance]];
+      }
+    
+      return YES;
+    }
+    
+    // get the log content with a maximum byte size
+    - (NSString *) getLogFilesContentWithMaxSize:(NSInteger)maxSize {
+      NSMutableString *description = [NSMutableString string];
+    
+      NSArray *sortedLogFileInfos = [[_fileLogger logFileManager] sortedLogFileInfos];
+      NSUInteger count = [sortedLogFileInfos count];
+    
+      // we start from the last (oldest) one, and stop just before the newest (which is the log for the session after the crash)
+      for (int index = count - 1; index > 0; index--) {
+        DDLogFileInfo *logFileInfo = [sortedLogFileInfos objectAtIndex:index];
+    
+        NSData *logData = [[NSFileManager defaultManager] contentsAtPath:[logFileInfo filePath]];
+        if ([logData length] > 0) {
+          NSString *result = [[NSString alloc] initWithBytes:[logData bytes]
+                                                      length:[logData length]
+                                                    encoding: NSUTF8StringEncoding];
+    
+          [description appendString:result];
+          [result release];
+        }
+      }
+    
+      if ([description length] > maxSize) {
+        description = (NSMutableString *)[description substringWithRange:NSMakeRange([description length]-maxSize-1, maxSize)]; 
+      }
+    
+      return description;
+    }
+    
+    #pragma mark - BITCrashManagerDelegate
+    
+    - (NSString *)applicationLogForCrashManager:(BITCrashManager *)crashManager {
+      NSString *description = [self getLogFilesContentWithMaxSize:5000]; // 5000 bytes should be enough!
+      if ([description length] == 0) {
+        return nil;
+      } else {
+        return description;
+      }
+    }
+    
+    @end
