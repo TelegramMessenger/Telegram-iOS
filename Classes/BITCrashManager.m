@@ -398,8 +398,17 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   if ([_crashFiles count] > 0) {
     BITHockeyLog(@"INFO: %i pending crash reports found.", [_crashFiles count]);
     return YES;
-  } else
+  } else {
+    if (_didCrashInLastSession) {
+      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillCancelSendingCrashReport:)]) {
+        [self.delegate crashManagerWillCancelSendingCrashReport:self];
+      }
+
+      _didCrashInLastSession = NO;
+    }
+    
     return NO;
+  }
 }
 
 
