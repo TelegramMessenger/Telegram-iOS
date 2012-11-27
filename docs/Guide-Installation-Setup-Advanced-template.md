@@ -87,7 +87,8 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
     `#include "../Vendor/HockeySDK/Support/HockeySDK.xcconfig"`
     
     (Adjust the path depending where the `Project.xcconfig` file is located related to the Xcode project package)
-	
+    
+    **Important note:** Check if you overwrite any of the build settings and add a missing `$(inherited)` entry on the projects build settings level, so the `HockeySDK.xcconfig` settings will be passed through successfully.
 
 
 <a id="modify"></a> 
