@@ -277,6 +277,15 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
     if (crashData == nil) {
       BITHockeyLog(@"ERROR: Could not load crash report: %@", error);
     } else {
+      // get the startup timestamp from the crash report, and the file timestamp to calculate the timeinterval when the crash happened after startup
+      PLCrashReport *report = [[[PLCrashReport alloc] initWithData:crashData error:&error] autorelease];
+      
+      if ([report.applicationInfo respondsToSelector:@selector(applicationStartupTimestamp)]) {
+        if (report.systemInfo.timestamp && report.applicationInfo.applicationStartupTimestamp) {
+          _timeintervalCrashInLastSessionOccured = [report.systemInfo.timestamp timeIntervalSinceDate:report.applicationInfo.applicationStartupTimestamp];
+        }
+      }
+
       [crashData writeToFile:[_crashesDir stringByAppendingPathComponent: cacheFilename] atomically:YES];
       
       // write the meta file
@@ -308,15 +317,6 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
         [plist writeToFile:[NSString stringWithFormat:@"%@.meta", [_crashesDir stringByAppendingPathComponent: cacheFilename]] atomically:YES];
       } else {
         BITHockeyLog(@"ERROR: Writing crash meta data failed. %@", error);
-      }
-
-      // get the startup timestamp from the crash report, and the file timestamp to calculate the timeinterval when the crash happened after startup
-      PLCrashReport *report = [[[PLCrashReport alloc] initWithData:crashData error:&error] autorelease];
-      
-      if ([report.applicationInfo respondsToSelector:@selector(applicationStartupTimestamp)]) {
-        if (report.systemInfo.timestamp && report.applicationInfo.applicationStartupTimestamp) {
-          _timeintervalCrashInLastSessionOccured = [report.systemInfo.timestamp timeIntervalSinceDate:report.applicationInfo.applicationStartupTimestamp];
-        }
       }
     }
   }
