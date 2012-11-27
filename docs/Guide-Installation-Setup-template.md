@@ -72,7 +72,7 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
 
 3. Let the AppDelegate implement the protocols `BITHockeyManagerDelegate`, `BITUpdateManagerDelegate` and `BITCrashManagerDelegate`:
 
-        @interface AppDelegate() <BITHockeyManagerDelegate, BITUpdateManagerDelegate, BITCrashManagerDelegate> {}
+        @interface AppDelegate(HockeyProtocols) <BITHockeyManagerDelegate, BITUpdateManagerDelegate, BITCrashManagerDelegate> {}
         @end
 
 4. Search for the method `application:didFinishLaunchingWithOptions:`
