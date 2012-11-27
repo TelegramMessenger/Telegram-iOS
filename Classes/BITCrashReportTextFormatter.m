@@ -76,7 +76,7 @@ static NSInteger binaryImageSort(id binary1, id binary2, void *context) {
  *
  * @return Returns the formatted result on success, or nil if an error occurs.
  */
-+ (NSString *)stringValueForCrashReport:(PLCrashReport *)report {
++ (NSString *)stringValueForCrashReport:(PLCrashReport *)report crashReporterKey:(NSString *)crashReporterKey {
 	NSMutableString* text = [NSMutableString string];
 	boolean_t lp64 = true; // quiesce GCC uninitialized value warning
     
@@ -178,13 +178,17 @@ static NSInteger binaryImageSort(id binary1, id binary2, void *context) {
             if (report.hasReportInfo && report.reportInfo.reportGUID != nil)
                 reportGUID = report.reportInfo.reportGUID;
         }
-      
+
+        NSString *reporterKey = @"[TODO]";
+        if (crashReporterKey)
+            reporterKey = crashReporterKey;
+
         NSString *hardwareModel = @"???";
         if (report.hasMachineInfo && report.machineInfo.modelName != nil)
             hardwareModel = report.machineInfo.modelName;
 
         [text appendFormat: @"Incident Identifier: %@\n", reportGUID];
-        [text appendFormat: @"CrashReporter Key:   [TODO]\n"];
+        [text appendFormat: @"CrashReporter Key:   %@\n", reporterKey];
         [text appendFormat: @"Hardware Model:      %@\n", hardwareModel];
     }
     

@@ -47,7 +47,7 @@
 @interface BITCrashReportTextFormatter : NSObject {
 }
 
-+ (NSString *)stringValueForCrashReport:(PLCrashReport *)report;
++ (NSString *)stringValueForCrashReport:(PLCrashReport *)report crashReporterKey:(NSString *)crashReporterKey;
 + (NSArray *)arrayOfAppUUIDsForCrashReport:(PLCrashReport *)report;
 
 @end
