@@ -566,7 +566,8 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       if ([report respondsToSelector:@selector(reportInfo)]) {
         crashUUID = report.reportInfo.reportGUID ?: @"";
       }
-      NSString *crashLogString = [BITCrashReportTextFormatter stringValueForCrashReport:report];
+      NSString *installString = bit_appAnonID() ?: @"";
+      NSString *crashLogString = [BITCrashReportTextFormatter stringValueForCrashReport:report crashReporterKey:installString];
       
       if ([report.applicationInfo.applicationVersion compare:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]] == NSOrderedSame) {
         _crashIdenticalCurrentVersion = YES;
@@ -581,7 +582,6 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       NSString *userid = @"";
       NSString *applicationLog = @"";
       NSString *description = @"";
-      NSString *installString = bit_appAnonID() ?: @"";
       
       NSString *errorString = nil;
       NSPropertyListFormat format;
