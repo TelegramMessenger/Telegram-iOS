@@ -97,8 +97,8 @@
     _appStoreEnvironment = NO;
     _startManagerIsInvoked = NO;
 
-    // check if we are really not in an app store environment
 #if !TARGET_IPHONE_SIMULATOR
+    // check if we are really in an app store environment
     if (![[NSBundle mainBundle] pathForResource:@"embedded" ofType:@"mobileprovision"]) {
       _appStoreEnvironment = YES;
     }
