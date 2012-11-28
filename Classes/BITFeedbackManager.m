@@ -784,26 +784,28 @@
         NSString *responseString = [[NSString alloc] initWithBytes:[responseData bytes] length:[responseData length] encoding: NSUTF8StringEncoding];
         BITHockeyLog(@"INFO: Received API response: %@", responseString);
         
-        NSError *error = NULL;
-        
-        NSDictionary *feedDict = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:kNilOptions error:&error];
-        
-        // server returned empty response?
-        if (error) {
-          [self reportError:error];
-        } else if (![feedDict count]) {
-          [self reportError:[NSError errorWithDomain:kBITFeedbackErrorDomain
-                                                code:BITFeedbackAPIServerReturnedEmptyResponse
-                                            userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Server returned empty response.", NSLocalizedDescriptionKey, nil]]];
-        } else {
-          BITHockeyLog(@"INFO: Received API response: %@", responseString);
-          NSString *status = [feedDict objectForKey:@"status"];
-          if ([status compare:@"success"] != NSOrderedSame) {
+        if (responseString && [responseString dataUsingEncoding:NSUTF8StringEncoding]) {
+          NSError *error = NULL;
+          
+          NSDictionary *feedDict = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:kNilOptions error:&error];
+          
+          // server returned empty response?
+          if (error) {
+            [self reportError:error];
+          } else if (![feedDict count]) {
             [self reportError:[NSError errorWithDomain:kBITFeedbackErrorDomain
-                                                  code:BITFeedbackAPIServerReturnedInvalidStatus
-                                              userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Server returned invalid status.", NSLocalizedDescriptionKey, nil]]];
+                                                  code:BITFeedbackAPIServerReturnedEmptyResponse
+                                              userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Server returned empty response.", NSLocalizedDescriptionKey, nil]]];
           } else {
-            [self updateMessageListFromResponse:feedDict];
+            BITHockeyLog(@"INFO: Received API response: %@", responseString);
+            NSString *status = [feedDict objectForKey:@"status"];
+            if ([status compare:@"success"] != NSOrderedSame) {
+              [self reportError:[NSError errorWithDomain:kBITFeedbackErrorDomain
+                                                    code:BITFeedbackAPIServerReturnedInvalidStatus
+                                                userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Server returned invalid status.", NSLocalizedDescriptionKey, nil]]];
+            } else {
+              [self updateMessageListFromResponse:feedDict];
+            }
           }
         }
       }
