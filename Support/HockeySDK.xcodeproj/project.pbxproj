@@ -138,6 +138,7 @@
 		1E1127C116580C87007067A2 /* buttonRoundedRegular@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "buttonRoundedRegular@2x.png"; sourceTree = "<group>"; };
 		1E1127C216580C87007067A2 /* buttonRoundedRegularHighlighted.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = buttonRoundedRegularHighlighted.png; sourceTree = "<group>"; };
 		1E1127C316580C87007067A2 /* buttonRoundedRegularHighlighted@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "buttonRoundedRegularHighlighted@2x.png"; sourceTree = "<group>"; };
+		1E36D8B816667611000B134C /* hr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = hr; path = hr.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		1E49A42D1612223B00463151 /* BITFeedbackComposeViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITFeedbackComposeViewController.h; sourceTree = "<group>"; };
 		1E49A42E1612223B00463151 /* BITFeedbackComposeViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITFeedbackComposeViewController.m; sourceTree = "<group>"; };
 		1E49A42F1612223B00463151 /* BITFeedbackListViewCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITFeedbackListViewCell.h; sourceTree = "<group>"; };
@@ -534,6 +535,7 @@
 				zh_TW,
 				"zh-Hans",
 				"zh-Hant",
+				hr,
 			);
 			mainGroup = E400560F148D79B500EB22B9;
 			productRefGroup = E400561B148D79B500EB22B9 /* Products */;
@@ -679,6 +681,7 @@
 				1E59557615B6F85E00A03429 /* tr */,
 				1E59557815B6F86600A03429 /* zh_CN */,
 				1E59557A15B6F86E00A03429 /* zh_TW */,
+				1E36D8B816667611000B134C /* hr */,
 			);
 			name = HockeySDK.strings;
 			sourceTree = "<group>";
