@@ -58,10 +58,11 @@
 #define BORDER_COLOR BIT_RGBCOLOR(215, 215, 215)
 
 
-@interface BITFeedbackListViewController () <BITFeedbackUserDataDelegate, BITAttributedLabelDelegate>
+@interface BITFeedbackListViewController () <BITFeedbackUserDataDelegate, BITFeedbackComposeViewControllerDelegate, BITAttributedLabelDelegate>
 
 @property (nonatomic, weak) BITFeedbackManager *manager;
 @property (nonatomic, strong) NSDateFormatter *lastUpdateDateFormatter;
+@property (nonatomic) BOOL userDataComposeFlow;
 
 @end
 
@@ -77,6 +78,7 @@
     
     _deleteButtonSection = -1;
     _userButtonSection = -1;
+    _userDataComposeFlow = NO;
     
     self.lastUpdateDateFormatter = [[NSDateFormatter alloc] init];
 		[self.lastUpdateDateFormatter setDateStyle:NSDateFormatterShortStyle];
@@ -169,7 +171,10 @@
   CGPoint contentOffset = self.tableView.contentOffset;
   
   [self.tableView reloadData];
-  if (contentSize.height > 0 && self.tableView.contentSize.height > contentSize.height && ![self isRefreshingWithNewControl])
+  if (contentSize.height > 0 &&
+      self.tableView.contentSize.height > self.tableView.frame.size.height &&
+      self.tableView.contentSize.height > contentSize.height &&
+      ![self isRefreshingWithNewControl])
     [self.tableView setContentOffset:CGPointMake(contentOffset.x, self.tableView.contentSize.height - contentSize.height + contentOffset.y) animated:NO];
   
   [self stopLoadingIndicator];
@@ -178,11 +183,27 @@
 }
 
 - (void)viewWillAppear:(BOOL)animated {
+  if (self.userDataComposeFlow) {
+    self.userDataComposeFlow = NO;
+  }
   self.manager.currentFeedbackListViewController = self;
   
   [self.manager updateMessagesListIfRequired];
   
-  [self.tableView reloadData];
+  if ([self.manager numberOfMessages] == 0 &&
+      [self.manager askManualUserDataAvailable] &&
+      ([self.manager requireManualUserDataMissing] ||
+       ![self.manager didAskUserData])
+      ) {
+    self.userDataComposeFlow = YES;
+    
+    BITFeedbackUserDataViewController *userController = [[BITFeedbackUserDataViewController alloc] initWithStyle:UITableViewStyleGrouped];
+    userController.delegate = self;
+    
+    [self.navigationController pushViewController:userController animated:NO];
+  } else {
+    [self.tableView reloadData];
+  }
 
   [super viewWillAppear:animated];
 }
@@ -251,13 +272,35 @@
 #pragma mark - BITFeedbackUserDataDelegate
 
 -(void)userDataUpdateCancelled {
-  [self dismissViewControllerAnimated:YES completion:^(void){}];
+  if (self.userDataComposeFlow) {
+    [self.navigationController popToViewController:self animated:YES];
+  } else {
+    [self dismissViewControllerAnimated:YES completion:^(void){}];
+  }
 }
 
 -(void)userDataUpdateFinished {
   [self.manager saveMessages];
   
-  [self dismissViewControllerAnimated:YES completion:^(void){}];
+  if (self.userDataComposeFlow) {
+    BITFeedbackComposeViewController *composeController = [[BITFeedbackComposeViewController alloc] init];
+    composeController.delegate = self;
+    
+    [self.navigationController pushViewController:composeController animated:YES];
+  } else {
+    [self dismissViewControllerAnimated:YES completion:^(void){}];
+  }
+}
+
+
+#pragma mark - BITFeedbackComposeViewControllerDelegate
+
+- (void)feedbackComposeViewControllerDidFinish:(BITFeedbackComposeViewController *)composeViewController {
+  if (self.userDataComposeFlow) {
+    [self.navigationController popToViewController:self animated:YES];
+  } else {
+    [self dismissViewControllerAnimated:YES completion:^(void){}];
+  }
 }
 
 
