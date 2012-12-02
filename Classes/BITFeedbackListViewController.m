@@ -201,6 +201,8 @@
   userController.delegate = self;
   
   UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:userController];
+  navController.navigationBar.barStyle = [self.manager barStyle];
+  navController.navigationBar.tintColor = [self.manager tintColor];
   navController.modalPresentationStyle = UIModalPresentationFormSheet;
   
   [self presentViewController:navController animated:YES completion:nil];
@@ -210,6 +212,8 @@
   BITFeedbackComposeViewController *composeController = [[BITFeedbackComposeViewController alloc] init];
   
   UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:composeController];
+  navController.navigationBar.barStyle = [self.manager barStyle];
+  navController.navigationBar.tintColor = [self.manager tintColor];
   navController.modalPresentationStyle = UIModalPresentationFormSheet;
   
   [self presentViewController:navController animated:YES completion:nil];

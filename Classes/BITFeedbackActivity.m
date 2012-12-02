@@ -92,7 +92,9 @@
   [composeViewController prepareWithItems:_items];
   
   UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController: composeViewController];
-  navController.modalPresentationStyle = UIModalPresentationFormSheet;  
+  navController.navigationBar.barStyle = [[[BITHockeyManager sharedHockeyManager] feedbackManager] barStyle];
+  navController.navigationBar.tintColor = [[[BITHockeyManager sharedHockeyManager] feedbackManager] tintColor];
+  navController.modalPresentationStyle = UIModalPresentationFormSheet;
   navController.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
   
   return navController;

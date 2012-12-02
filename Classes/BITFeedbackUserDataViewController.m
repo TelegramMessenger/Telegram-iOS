@@ -33,7 +33,10 @@
 #import "BITFeedbackUserDataViewController.h"
 #import "BITFeedbackManagerPrivate.h"
 
-@interface BITFeedbackUserDataViewController ()
+@interface BITFeedbackUserDataViewController () {
+  UIStatusBarStyle _statusBarStyle;
+}
+
 @property (nonatomic, weak) BITFeedbackManager *manager;
 
 @property (nonatomic, copy) NSString *name;
@@ -62,25 +65,22 @@
   [super viewDidLoad];
 
   [self.tableView setScrollEnabled:NO];
-   
-	// Do any additional setup after loading the view.
-  self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel
-                                                                                         target:self
-                                                                                         action:@selector(dismissAction:)];
-  
-  self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemSave
-                                                                                          target:self
-                                                                                          action:@selector(saveAction:)];
-}
-
-- (void)viewDidUnload {
-    [super viewDidUnload];
-    // Release any retained subviews of the main view.
-    // e.g. self.myOutlet = nil;
 }
 
 - (void)viewWillAppear:(BOOL)animated {
   [super viewWillAppear:animated];
+
+  _statusBarStyle = [[UIApplication sharedApplication] statusBarStyle];
+  [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleBlackOpaque];
+
+  // Do any additional setup after loading the view.
+  self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel
+                                                                                        target:self
+                                                                                        action:@selector(dismissAction:)];
+  
+  self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemSave
+                                                                                         target:self
+                                                                                         action:@selector(saveAction:)];
   
   if ([self.manager userName])
     self.name = [self.manager userName];
@@ -91,6 +91,12 @@
   [self.manager updateDidAskUserData];
   
   self.navigationItem.rightBarButtonItem.enabled = [self allRequiredFieldsEntered];
+}
+
+- (void)viewWillDisappear:(BOOL)animated {
+	[super viewWillDisappear:animated];
+  
+  [[UIApplication sharedApplication] setStatusBarStyle:_statusBarStyle];
 }
 
 #pragma mark - UIViewController Rotation
