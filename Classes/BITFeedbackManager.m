@@ -215,7 +215,7 @@
     NSString *userID = [[BITHockeyManager sharedHockeyManager].delegate
                         userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
                         componentManager:self];
-    if (self.userID) {
+    if (userID) {
       self.userID = userID;
       availableViaDelegate = YES;
     }
