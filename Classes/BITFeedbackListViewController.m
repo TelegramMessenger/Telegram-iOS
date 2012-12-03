@@ -255,7 +255,7 @@
                                    ];
     [deleteAction setTag:0];
     [deleteAction setActionSheetStyle:UIActionSheetStyleBlackTranslucent];
-    [deleteAction showInView:self.view];
+    [deleteAction showInView:[self viewForShowingActionSheetOnPhone]];
   } else {
     UIAlertView *deleteAction = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListButonDeleteAllMessages")
                                                            message:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllTitle")
@@ -268,6 +268,18 @@
   }
 }
 
+- (UIView*) viewForShowingActionSheetOnPhone {
+  if(self.view.window.rootViewController) {
+    //try to show it in the rootviewcontroller's view
+    //so it covers the UITabBar or works if this
+    //controller is inside a UIScrollView
+    return self.view.window.rootViewController.view;
+  } else {
+    //hope for the best. Should work
+    //on simple view(controller) hierarchies
+    return self.view;
+  }
+}
 
 #pragma mark - BITFeedbackUserDataDelegate
 
@@ -552,7 +564,7 @@
                                  ];
     [linkAction setTag:1];
     [linkAction setActionSheetStyle:UIActionSheetStyleBlackTranslucent];
-    [linkAction showInView:self.view];
+    [linkAction showInView:[self viewForShowingActionSheetOnPhone]];
   } else {
     UIAlertView *linkAction = [[UIAlertView alloc] initWithTitle:[url absoluteString]
                                                          message:nil
