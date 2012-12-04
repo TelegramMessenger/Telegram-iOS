@@ -182,7 +182,7 @@
   [self.tableView flashScrollIndicators];
 }
 
-- (void)viewWillAppear:(BOOL)animated {
+- (void)viewDidAppear:(BOOL)animated {
   if (self.userDataComposeFlow) {
     self.userDataComposeFlow = NO;
   }
@@ -200,12 +200,12 @@
     BITFeedbackUserDataViewController *userController = [[BITFeedbackUserDataViewController alloc] initWithStyle:UITableViewStyleGrouped];
     userController.delegate = self;
     
-    [self.navigationController pushViewController:userController animated:NO];
+    [self.navigationController pushViewController:userController animated:YES];
   } else {
     [self.tableView reloadData];
   }
 
-  [super viewWillAppear:animated];
+  [super viewDidAppear:animated];
 }
 
 - (void)viewWillDisappear:(BOOL)animated {
