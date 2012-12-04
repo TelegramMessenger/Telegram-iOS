@@ -269,16 +269,21 @@
 }
 
 - (UIView*) viewForShowingActionSheetOnPhone {
-  if(self.view.window.rootViewController) {
-    //try to show it in the rootviewcontroller's view
-    //so it covers the UITabBar or works if this
-    //controller is inside a UIScrollView
-    return self.view.window.rootViewController.view;
-  } else {
+  //find the topmost presented viewcontroller
+  //and use its view
+  UIViewController* topMostPresentedViewController = self.view.window.rootViewController;
+  while(topMostPresentedViewController.presentedViewController) {
+    topMostPresentedViewController = topMostPresentedViewController.presentedViewController;
+  }
+  UIView* view = topMostPresentedViewController.view;
+  
+  if(nil == view) {
     //hope for the best. Should work
     //on simple view(controller) hierarchies
-    return self.view;
+    view = self.view;
   }
+  
+  return view;
 }
 
 #pragma mark - BITFeedbackUserDataDelegate
