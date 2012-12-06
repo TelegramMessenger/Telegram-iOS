@@ -1,3 +1,21 @@
+### Version 2.5.5
+
+- General:
+
+    - [BUGFIX] Fix some new compiler warnings
+
+- Crash Reporting:
+
+    - [NEW] Add anonymous device ID to crash reports
+    - [BUGFIX] Move calculation of time interval between startup and crash further up in the code, so delegates can use this information e.g. to add it into a log file
+    - [BUGFIX] Call delegate also if a crash was detected but could not be read (if handling crashes on startup is implemented)
+    - [BUGFIX] Format timestamp in crash report to be always UTC in en_US locale
+    - [BUGFIX] Make sure crash reports incident identifier and key don't have special [] chars and some value
+
+- Updating:
+
+    - [BUGFIX] Fix a problem showing the update UI animated if there TTNavigator class is present even though not being used
+
 ### Version 2.5.4
 
 - General:
