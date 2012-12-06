@@ -173,14 +173,14 @@ static NSInteger binaryImageSort(id binary1, id binary2, void *context) {
     }
 
     {
-        NSString *reportGUID = @"[TODO]";
+        NSString *reportGUID = @"TODO";
         if ([report respondsToSelector:@selector(reportInfo)]) {
             if (report.hasReportInfo && report.reportInfo.reportGUID != nil)
                 reportGUID = report.reportInfo.reportGUID;
         }
 
-        NSString *reporterKey = @"[TODO]";
-        if (crashReporterKey)
+        NSString *reporterKey = @"TODO";
+        if (crashReporterKey && [crashReporterKey length] > 0)
             reporterKey = crashReporterKey;
 
         NSString *hardwareModel = @"???";
