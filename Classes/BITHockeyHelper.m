@@ -74,6 +74,44 @@ NSComparisonResult bit_versionCompare(NSString *stringA, NSString *stringB) {
   return result;
 }
 
+NSString *bit_encodeAppIdentifier(NSString *inputString) {
+  return (inputString ? bit_URLEncodedString(inputString) : bit_URLEncodedString([[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"]));
+}
+
+NSString *bit_appName(NSString *placeHolderString) {
+  NSString *appName = [[[NSBundle mainBundle] localizedInfoDictionary] objectForKey:@"CFBundleDisplayName"];
+  if (!appName)
+    appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"] ?: placeHolderString;
+  
+  return appName;
+}
+
+NSString *bit_appAnonID(void) {
+  // try to new iOS6 identifierForAdvertising
+  Class advertisingClass = NSClassFromString(@"ASIdentifierManager");
+	if (advertisingClass) {
+    id adInstance = [advertisingClass performSelector:NSSelectorFromString(@"sharedManager")];
+    
+    SEL adidSelector = NSSelectorFromString(@"advertisingIdentifier");
+    return [[adInstance performSelector:adidSelector] performSelector:NSSelectorFromString(@"UUIDString")];
+  }
+  
+  // try to new iOS6 identifierForVendor, in case ASIdentifierManager is not linked
+  SEL vendoridSelector = NSSelectorFromString(@"identifierForVendor");
+  if ([[UIDevice currentDevice] respondsToSelector:vendoridSelector]) {
+    return [[[UIDevice currentDevice] performSelector:vendoridSelector] performSelector:NSSelectorFromString(@"UUIDString")];
+  }
+  
+  // use app bundle path
+  NSArray *pathComponents = [[[NSBundle mainBundle] bundlePath] pathComponents];
+  
+  if ([pathComponents count] > 1) {
+    return [pathComponents objectAtIndex:(pathComponents.count - 2)];
+  }
+  
+  return nil;
+}
+
 
 #pragma mark UIImage private helpers
 

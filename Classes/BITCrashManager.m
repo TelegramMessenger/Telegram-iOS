@@ -33,6 +33,7 @@
 #import <UIKit/UIKit.h>
 #import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
+#import "BITHockeyHelper.h"
 
 #import "BITCrashManagerPrivate.h"
 #import "BITCrashReportTextFormatter.h"
@@ -46,6 +47,8 @@
 #define kBITCrashMetaUserName @"BITCrashMetaUserName"
 #define kBITCrashMetaUserEmail @"BITCrashMetaUserEmail"
 #define kBITCrashMetaApplicationLog @"BITCrashMetaApplicationLog"
+
+NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 
 
 @interface BITCrashManager ()
@@ -63,7 +66,6 @@
 @synthesize timeintervalCrashInLastSessionOccured = _timeintervalCrashInLastSessionOccured;
 
 @synthesize fileManager = _fileManager;
-
 
 - (id)initWithAppIdentifier:(NSString *)appIdentifier {
   if ((self = [super init])) {
@@ -275,6 +277,15 @@
     if (crashData == nil) {
       BITHockeyLog(@"ERROR: Could not load crash report: %@", error);
     } else {
+      // get the startup timestamp from the crash report, and the file timestamp to calculate the timeinterval when the crash happened after startup
+      PLCrashReport *report = [[[PLCrashReport alloc] initWithData:crashData error:&error] autorelease];
+      
+      if ([report.applicationInfo respondsToSelector:@selector(applicationStartupTimestamp)]) {
+        if (report.systemInfo.timestamp && report.applicationInfo.applicationStartupTimestamp) {
+          _timeintervalCrashInLastSessionOccured = [report.systemInfo.timestamp timeIntervalSinceDate:report.applicationInfo.applicationStartupTimestamp];
+        }
+      }
+
       [crashData writeToFile:[_crashesDir stringByAppendingPathComponent: cacheFilename] atomically:YES];
       
       // write the meta file
@@ -306,15 +317,6 @@
         [plist writeToFile:[NSString stringWithFormat:@"%@.meta", [_crashesDir stringByAppendingPathComponent: cacheFilename]] atomically:YES];
       } else {
         BITHockeyLog(@"ERROR: Writing crash meta data failed. %@", error);
-      }
-
-      // get the startup timestamp from the crash report, and the file timestamp to calculate the timeinterval when the crash happened after startup
-      PLCrashReport *report = [[[PLCrashReport alloc] initWithData:crashData error:&error] autorelease];
-      
-      if ([report.applicationInfo respondsToSelector:@selector(applicationStartupTimestamp)]) {
-        if (report.systemInfo.timestamp && report.applicationInfo.applicationStartupTimestamp) {
-          _timeintervalCrashInLastSessionOccured = [report.systemInfo.timestamp timeIntervalSinceDate:report.applicationInfo.applicationStartupTimestamp];
-        }
       }
     }
   }
@@ -365,8 +367,17 @@
   if ([_crashFiles count] > 0) {
     BITHockeyLog(@"INFO: %i pending crash reports found.", [_crashFiles count]);
     return YES;
-  } else
+  } else {
+    if (_didCrashInLastSession) {
+      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillCancelSendingCrashReport:)]) {
+        [self.delegate crashManagerWillCancelSendingCrashReport:self];
+      }
+
+      _didCrashInLastSession = NO;
+    }
+    
     return NO;
+  }
 }
 
 
@@ -398,9 +409,7 @@
         [self.delegate crashManagerWillShowSubmitCrashReportAlert:self];
       }
       
-      NSString *appName = [[[NSBundle mainBundle] localizedInfoDictionary] objectForKey:@"CFBundleDisplayName"];
-      if (!appName)
-        appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"] ?: BITHockeyLocalizedString(@"HockeyAppNamePlaceholder");
+      NSString *appName = bit_appName(BITHockeyLocalizedString(@"HockeyAppNamePlaceholder"));
       NSString *alertDescription = [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundAnonymousDescription"), appName];
       
       // the crash report is not anynomous any more if username or useremail are not nil
@@ -532,7 +541,8 @@
       if ([report respondsToSelector:@selector(reportInfo)]) {
         crashUUID = report.reportInfo.reportGUID ?: @"";
       }
-      NSString *crashLogString = [BITCrashReportTextFormatter stringValueForCrashReport:report];
+      NSString *installString = bit_appAnonID() ?: @"";
+      NSString *crashLogString = [BITCrashReportTextFormatter stringValueForCrashReport:report crashReporterKey:installString];
       
       if ([report.applicationInfo.applicationVersion compare:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]] == NSOrderedSame) {
         _crashIdenticalCurrentVersion = YES;
@@ -569,7 +579,7 @@
         description = [NSString stringWithFormat:@"%@", applicationLog];
       }
       
-      [crashes appendFormat:@"<crash><applicationname>%s</applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><contact>%@</contact><description><![CDATA[%@]]></description></crash>",
+      [crashes appendFormat:@"<crash><applicationname>%s</applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><username>%@</username><contact>%@</contact><installstring>%@</installstring><description><![CDATA[%@]]></description></crash>",
        [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleExecutable"] UTF8String],
        [self extractAppUUIDs:report],
        report.applicationInfo.applicationIdentifier,
@@ -581,6 +591,7 @@
        [crashLogString stringByReplacingOccurrencesOfString:@"]]>" withString:@"]]" @"]]><![CDATA[" @">" options:NSLiteralSearch range:NSMakeRange(0,crashLogString.length)],
        username,
        useremail,
+       installString,
        [description stringByReplacingOccurrencesOfString:@"]]>" withString:@"]]" @"]]><![CDATA[" @">" options:NSLiteralSearch range:NSMakeRange(0,description.length)]];
       
       

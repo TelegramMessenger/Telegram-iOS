@@ -76,7 +76,7 @@ static NSInteger binaryImageSort(id binary1, id binary2, void *context) {
  *
  * @return Returns the formatted result on success, or nil if an error occurs.
  */
-+ (NSString *)stringValueForCrashReport:(PLCrashReport *)report {
++ (NSString *)stringValueForCrashReport:(PLCrashReport *)report crashReporterKey:(NSString *)crashReporterKey {
 	NSMutableString* text = [NSMutableString string];
 	boolean_t lp64 = true; // quiesce GCC uninitialized value warning
     
@@ -173,18 +173,22 @@ static NSInteger binaryImageSort(id binary1, id binary2, void *context) {
     }
 
     {
-        NSString *reportGUID = @"[TODO]";
+        NSString *reportGUID = @"TODO";
         if ([report respondsToSelector:@selector(reportInfo)]) {
             if (report.hasReportInfo && report.reportInfo.reportGUID != nil)
                 reportGUID = report.reportInfo.reportGUID;
         }
-      
+
+        NSString *reporterKey = @"TODO";
+        if (crashReporterKey && [crashReporterKey length] > 0)
+            reporterKey = crashReporterKey;
+
         NSString *hardwareModel = @"???";
         if (report.hasMachineInfo && report.machineInfo.modelName != nil)
             hardwareModel = report.machineInfo.modelName;
 
         [text appendFormat: @"Incident Identifier: %@\n", reportGUID];
-        [text appendFormat: @"CrashReporter Key:   [TODO]\n"];
+        [text appendFormat: @"CrashReporter Key:   %@\n", reporterKey];
         [text appendFormat: @"Hardware Model:      %@\n", hardwareModel];
     }
     
@@ -240,8 +244,14 @@ static NSInteger binaryImageSort(id binary1, id binary2, void *context) {
         NSString *osBuild = @"???";
         if (report.systemInfo.operatingSystemBuild != nil)
             osBuild = report.systemInfo.operatingSystemBuild;
-        
-        [text appendFormat: @"Date/Time:       %@\n", report.systemInfo.timestamp];
+      
+        NSLocale *enUSPOSIXLocale = [[[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"] autorelease];
+        NSDateFormatter *rfc3339Formatter = [[[NSDateFormatter alloc] init] autorelease];
+        [rfc3339Formatter setLocale:enUSPOSIXLocale];
+        [rfc3339Formatter setDateFormat:@"yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'"];
+        [rfc3339Formatter setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:0]];
+
+        [text appendFormat: @"Date/Time:       %@\n", [rfc3339Formatter stringFromDate:report.systemInfo.timestamp]];
         [text appendFormat: @"OS Version:      %@ %@ (%@)\n", osName, report.systemInfo.operatingSystemVersion, osBuild];
         [text appendFormat: @"Report Version:  104\n"];        
     }

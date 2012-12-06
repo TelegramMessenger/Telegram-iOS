@@ -52,8 +52,7 @@ typedef enum {
   BITCrashAPIReceivedEmptyResponse,
   BITCrashAPIErrorWithStatusCode
 } BITCrashErrorReason;
-static NSString *kBITCrashErrorDomain = @"BITCrashReporterErrorDomain";
-
+extern NSString *const kBITCrashErrorDomain;
 
 // Update App Versions
 
@@ -66,7 +65,7 @@ typedef enum {
   BITUpdateAPIClientAuthorizationMissingSecret,
   BITUpdateAPIClientCannotCreateConnection
 } BITUpdateErrorReason;
-static NSString *kBITUpdateErrorDomain = @"BITUpdaterErrorDomain";
+extern NSString *const kBITUpdateErrorDomain;
 
 
 #endif
