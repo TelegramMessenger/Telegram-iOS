@@ -33,6 +33,7 @@
 #import <UIKit/UIKit.h>
 #import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
+#import "BITHockeyHelper.h"
 
 #import "BITCrashManagerPrivate.h"
 #import "BITCrashReportTextFormatter.h"
@@ -63,7 +64,6 @@
 @synthesize timeintervalCrashInLastSessionOccured = _timeintervalCrashInLastSessionOccured;
 
 @synthesize fileManager = _fileManager;
-
 
 - (id)initWithAppIdentifier:(NSString *)appIdentifier {
   if ((self = [super init])) {
@@ -398,9 +398,7 @@
         [self.delegate crashManagerWillShowSubmitCrashReportAlert:self];
       }
       
-      NSString *appName = [[[NSBundle mainBundle] localizedInfoDictionary] objectForKey:@"CFBundleDisplayName"];
-      if (!appName)
-        appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"] ?: BITHockeyLocalizedString(@"HockeyAppNamePlaceholder");
+      NSString *appName = bit_appName(BITHockeyLocalizedString(@"HockeyAppNamePlaceholder"));
       NSString *alertDescription = [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundAnonymousDescription"), appName];
       
       // the crash report is not anynomous any more if username or useremail are not nil
@@ -546,6 +544,7 @@
       NSString *useremail = @"";
       NSString *applicationLog = @"";
       NSString *description = @"";
+      NSString *installString = bit_appAnonID() ?: @"";
       
       NSString *errorString = nil;
       NSPropertyListFormat format;
@@ -569,7 +568,7 @@
         description = [NSString stringWithFormat:@"%@", applicationLog];
       }
       
-      [crashes appendFormat:@"<crash><applicationname>%s</applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><contact>%@</contact><description><![CDATA[%@]]></description></crash>",
+      [crashes appendFormat:@"<crash><applicationname>%s</applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><username>%@</username><contact>%@</contact><installstring>%@</installstring><description><![CDATA[%@]]></description></crash>",
        [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleExecutable"] UTF8String],
        [self extractAppUUIDs:report],
        report.applicationInfo.applicationIdentifier,
@@ -581,6 +580,7 @@
        [crashLogString stringByReplacingOccurrencesOfString:@"]]>" withString:@"]]" @"]]><![CDATA[" @">" options:NSLiteralSearch range:NSMakeRange(0,crashLogString.length)],
        username,
        useremail,
+       installString,
        [description stringByReplacingOccurrencesOfString:@"]]>" withString:@"]]" @"]]><![CDATA[" @">" options:NSLiteralSearch range:NSMakeRange(0,description.length)]];
       
       
