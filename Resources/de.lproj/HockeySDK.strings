@@ -159,7 +159,7 @@
 "HockeyFeedbackListButonUserDataWithEmail" = "Email: %@";
 
 /* Button title for deleting all local messages*/
-"HockeyFeedbackListButonDeleteAllMessages" = "Alle Nachrichten löchen";
+"HockeyFeedbackListButonDeleteAllMessages" = "Alle Nachrichten löschen";
 
 /* Message pending to be send */
 "HockeyFeedbackListMessagePending" = "Pending";
