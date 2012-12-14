@@ -1,4 +1,4 @@
-﻿/* General */
+/* General */
 
 /* For dialogs yes buttons */
 "HockeyYes" = "Sim";
@@ -10,8 +10,7 @@
 "HockeyOK" = "OK";
 
 /* Replacement for app name, if it could not be detected */
-"HockeyAppNamePlaceholder" = "This app";
-
+"HockeyAppNamePlaceholder" = "Esta aplicação";
 
 /* Crash */
 
@@ -19,25 +18,25 @@
 /* Crash dialog */
 
 /* Title showing in the alert box when crash report data has been found */
-"CrashDataFoundTitle" = "Informação de falha encontrada";
+"CrashDataFoundTitle" = "%@ fechou inesperadamente";
 
 /* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
-"CrashDataFoundAnonymousDescription" = "A aplicação falhou anteriormente. Gostaria de enviar informação ao programador acerca da falha de forma a poderem resolver o problema?";
+"CrashDataFoundAnonymousDescription" = "Pretende enviar um relatório anónimo para que possamos resolver o problema?";
 
 /* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
-"CrashDataFoundDescription" = "A aplicação falhou anteriormente. Gostaria de enviar informação anónima ao programador acerca da falha de forma a poderem resolver o problema?";
+"CrashDataFoundDescription" = "Pretende enviar um relatório para que possamos resolver o problema?";
 
 /* Alert box button if the users wants to send crash data always automatically */
-"CrashSendReportAlways" = "Sempre";
+"CrashSendReportAlways" = "Enviar sempre";
 
 /* Alert box button to send the crash report once */
-"CrashSendReport" = "Sim";
+"CrashSendReport" = "Enviar relatório";
 
 /* Alert box button to decline sending the report */
-"CrashDontSendReport" = "Não";
+"CrashDontSendReport" = "Não enviar";
 
 /* Text showing in a processing box that the crash data is being uploaded to the server */
-"CrashReportSending" = "Enviando…";
+"CrashReportSending" = "A enviar...";
 
 
 /* Update */
@@ -46,67 +45,67 @@
 /* Update Alert view */
 
 /* Update available */
-"UpdateAvailable" = "Update available";
+"UpdateAvailable" = "Actualização disponível";
 
-"UpdateAlertTextWithAppVersion" = "%@ is available.";
+"UpdateAlertTextWithAppVersion" = "A versão %@ está disponível.";
 
-"UpdateAlertMandatoryTextWithAppVersion" = "%@ is available and is a mandatory update!";
+"UpdateAlertMandatoryTextWithAppVersion" = "A versão %@ está disponível e é uma actualização obrigatória!";
 
-"UpdateIgnore" = "Ignore";
+"UpdateIgnore" = "Ignorar";
 
-"UpdateShow" = "Show";
+"UpdateShow" = "Mostrar";
 
-"UpdateInstall" = "Install";
+"UpdateInstall" = "Instalar";
 
 
 /* Update Details */
 
-"UpdateScreenTitle" = "Update";
+"UpdateScreenTitle" = "Actualização";
 
-"UpdateButtonCheck" = "CHECK";
+"UpdateButtonCheck" = "VERIFICAR";
 
-"UpdateButtonSearching" = "CHECKING";
+"UpdateButtonSearching" = "VERIFICAR";
 
-"UpdateButtonUpdate" = "UPDATE";
+"UpdateButtonUpdate" = "ACTUALIZAR";
 
-"UpdateButtonInstalling" = "INSTALLING";
+"UpdateButtonInstalling" = "INSTALAR";
 
 "UpdateButtonOffline" = "OFFLINE";
 
-"UpdateInstalled" = "INSTALLED";
+"UpdateInstalled" = "INSTALADO";
 
-"UpdateVersion" = "Version";
+"UpdateVersion" = "Versão";
 
-"UpdateShowPreviousVersions" = "Show previous versions...";
+"UpdateShowPreviousVersions" = "Mostrar versões anteriores...";
 
-"UpdateNoUpdateAvailableTitle" = "No Update Available";
+"UpdateNoUpdateAvailableTitle" = "Nenhuma actualização disponível";
 
-"UpdateNoUpdateAvailableMessage" = "%@ is already the latest version.";
+"UpdateNoUpdateAvailableMessage" = "A versão %@ é a mais recente.";
 
-"UpdateError" = "Error";
+"UpdateError" = "Erro";
 
-"UpdateWarning" = "Warning";
+"UpdateWarning" = "Aviso";
 
-"UpdateNoReleaseNotesAvailable" = "No release notes available.";
+"UpdateNoReleaseNotesAvailable" = "Nenhuma nota de lançamento disponível.";
 
 
 /* Update Authorization  */
 
-"UpdateAuthorizationProgress" = "Authorizing...";
+"UpdateAuthorizationProgress" = "A autorizar...";
 
-"UpdateAuthorizationOffline" = "Internet connection required!";
+"UpdateAuthorizationOffline" = "É necessária uma ligação à Internet!";
 
-"UpdateAuthorizationDenied" = "Authorizing denied. Please contact the developer.";
+"UpdateAuthorizationDenied" = "Autorização negada. Contacte o programador.";
 
 
 /* Update Expiry  */
 
-"UpdateExpired" = "%@ is expired and can not be used any longer.";
+"UpdateExpired" = "%@ expirou e já não pode ser utilizada.";
 
 
 /* Update Simulator Warning */
 
-"UpdateSimulatorMessage" = "Hockey Update does not work in the Simulator.\nThe itms-services:// url scheme is implemented but nonfunctional.";
+"UpdateSimulatorMessage" = "A actualização Hockey não funciona com o Simulador.\nO url scheme itms-services:// está implementado mas não funciona.";
 
 
 /* Feedback */
@@ -115,112 +114,112 @@
 /* New Message Alert */
 
 /* Alert Title */
-"HockeyFeedbackNewMessageTitle" = "New Feedback Response";
+"HockeyFeedbackNewMessageTitle" = "Nova resposta a comentário";
 
 /* Alert Text */
-"HockeyFeedbackNewMessageText" = "A new response to your feedback is available. Would you like to view it?";
+"HockeyFeedbackNewMessageText" = "Está disponível uma nova resposta ao seu comentário. Pretende vê-la?";
 
 /* Alert Ignore Button */
-"HockeyFeedbackIgnore" = "Ignore";
+"HockeyFeedbackIgnore" = "Ignorar";
 
 /* Alert Show Button */
-"HockeyFeedbackShow" = "Show";
+"HockeyFeedbackShow" = "Mostrar";
 
 
 /* List View */
 
 /* Title */
-"HockeyFeedbackListTitle" = "Feedback";
+"HockeyFeedbackListTitle" = "Comentário";
 
 /* Last Updated */
-"HockeyFeedbackListLastUpdated" = "Last Updated: %@";
+"HockeyFeedbackListLastUpdated" = "Última actualização: %@";
 
 /* Never Updated */
-"HockeyFeedbackListNeverUpdated" = "Never";
+"HockeyFeedbackListNeverUpdated" = "Nunca";
 
 /* Provide Feedback Button Title */
-"HockeyFeedbackListButonWriteFeedback" = "Provide Feedback";
+"HockeyFeedbackListButonWriteFeedback" = "Fornecer comentário";
 
 /* Add a Response Button Title */
-"HockeyFeedbackListButonWriteResponse" = "Add a Response";
+"HockeyFeedbackListButonWriteResponse" = "Adicionar uma resposta";
 
 /* User Data Set Name Button Title */
-"HockeyFeedbackListButonUserDataSetName" = "Set Your Name";
+"HockeyFeedbackListButonUserDataSetName" = "Definir o nome";
 
 /* User Data Set Email Button Title */
-"HockeyFeedbackListButonUserDataSetEmail" = "Set Your Email";
+"HockeyFeedbackListButonUserDataSetEmail" = "Definir o e-mail";
 
 /* User Data With Name Button Title */
-"HockeyFeedbackListButonUserDataWithName" = "Name: %@";
+"HockeyFeedbackListButonUserDataWithName" = "Nome: %@";
 
 /* User Data With Email Button Title */
-"HockeyFeedbackListButonUserDataWithEmail" = "Email: %@";
+"HockeyFeedbackListButonUserDataWithEmail" = "E-mail: %@";
 
 /* Button title for deleting all local messages*/
-"HockeyFeedbackListButonDeleteAllMessages" = "Delete All Messages";
+"HockeyFeedbackListButonDeleteAllMessages" = "Eliminar todas as mensagens";
 
 /* Message pending to be send */
-"HockeyFeedbackListMessagePending" = "Pending";
+"HockeyFeedbackListMessagePending" = "Pendente";
 
 
 /* Delete All Messages Action Sheet / Alert View */
 
 /* Title for the Action Sheet */
-"HockeyFeedbackListDeleteAllTitle" = "This will delete all messages on this device.";
+"HockeyFeedbackListDeleteAllTitle" = "Assim, todas as mensagens do dispositivo serão eliminadas.";
 
 /* Button Title to perform delete action */
-"HockeyFeedbackListDeleteAllDelete" = "Delete";
+"HockeyFeedbackListDeleteAllDelete" = "Eliminar";
 
 /* Button Title to cancel delete action */
-"HockeyFeedbackListDeleteAllCancel" = "Cancel";
+"HockeyFeedbackListDeleteAllCancel" = "Cancelar";
 
 
 /* Open Link In Safari Action Sheet / Alert View */
 
 /* Button Title to cancel */
-"HockeyFeedbackListLinkActionCancel" = "Cancel";
+"HockeyFeedbackListLinkActionCancel" = "Cancelar";
 
 /* Button Title to Open the Link */
-"HockeyFeedbackListLinkActionOpen" = "Open";
+"HockeyFeedbackListLinkActionOpen" = "Abrir";
 
 /* Button Title to Copy the Link */
-"HockeyFeedbackListLinkActionCopy" = "Copy";
+"HockeyFeedbackListLinkActionCopy" = "Copiar";
 
 
 /* UIActivity */
 
 /* Activity Sharing Button Title, App Name will be inserted */
-"HockeyFeedbackActivityButtonTitle" = "%@ Feedback";
+"HockeyFeedbackActivityButtonTitle" = "Comentário de %@";
 
 /* if there can no app name be found, use this instead for HockeyFeedbackActivityButtonTitle */
-"HockeyFeedbackActivityAppPlaceholder" = "App";
+"HockeyFeedbackActivityAppPlaceholder" = "Aplicação";
 
 
 /* Compose Message */
 
 /* Title */
-"HockeyFeedbackComposeTitle" = "New Feedback";
+"HockeyFeedbackComposeTitle" = "Novo comentário";
 
 /* Send button */
-"HockeyFeedbackComposeSend" = "Send";
+"HockeyFeedbackComposeSend" = "Enviar";
 
 
 /* Set User Data */
 
 /* Title */
-"HockeyFeedbackUserDataTitle" = "My Info";
+"HockeyFeedbackUserDataTitle" = "Os meus dados";
 
 /* Description On What Should Be Entered */
-"HockeyFeedbackUserDataDescription" = "Please provide your information before writing your feedback.";
+"HockeyFeedbackUserDataDescription" = "Forneça os seus dados antes de escrever o comentário.";
 
 /* Name Field */
-"HockeyFeedbackUserDataName" = "Name";
+"HockeyFeedbackUserDataName" = "Nome";
 
 /* Name Placeholder */
-"HockeyFeedbackUserDataNamePlaceHolder" = "John Doe";
+"HockeyFeedbackUserDataNamePlaceHolder" = "João Silva";
 
 /* Email Field */
-"HockeyFeedbackUserDataEmail" = "Email";
+"HockeyFeedbackUserDataEmail" = "E-mail";
 
 /* Email Placeholder */
-"HockeyFeedbackUserDataEmailPlaceholder" = "example@email.com";
+"HockeyFeedbackUserDataEmailPlaceholder" = "exemplo@email.com";

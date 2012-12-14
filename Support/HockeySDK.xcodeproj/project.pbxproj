@@ -41,7 +41,6 @@
 		1E1127C916580C87007067A2 /* buttonRoundedRegular@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E1127C116580C87007067A2 /* buttonRoundedRegular@2x.png */; };
 		1E1127CA16580C87007067A2 /* buttonRoundedRegularHighlighted.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E1127C216580C87007067A2 /* buttonRoundedRegularHighlighted.png */; };
 		1E1127CB16580C87007067A2 /* buttonRoundedRegularHighlighted@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E1127C316580C87007067A2 /* buttonRoundedRegularHighlighted@2x.png */; };
-		1E27EF2515BB5033000AE995 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
 		1E49A43C1612223B00463151 /* BITFeedbackComposeViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A42D1612223B00463151 /* BITFeedbackComposeViewController.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E49A43F1612223B00463151 /* BITFeedbackComposeViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A42E1612223B00463151 /* BITFeedbackComposeViewController.m */; };
 		1E49A4421612223B00463151 /* BITFeedbackListViewCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A42F1612223B00463151 /* BITFeedbackListViewCell.h */; };
@@ -184,14 +183,8 @@
 		1E59556615B6F82300A03429 /* fr */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		1E59556815B6F82A00A03429 /* it */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = it; path = it.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		1E59556A15B6F83100A03429 /* ja */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/HockeySDK.strings; sourceTree = "<group>"; };
-		1E59556C15B6F83700A03429 /* nl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = nl; path = nl.lproj/HockeySDK.strings; sourceTree = "<group>"; };
-		1E59556E15B6F84000A03429 /* pt-PT */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = "pt-PT"; path = "pt-PT.lproj/HockeySDK.strings"; sourceTree = "<group>"; };
 		1E59557015B6F84700A03429 /* pt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = pt; path = pt.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		1E59557215B6F84D00A03429 /* ru */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/HockeySDK.strings; sourceTree = "<group>"; };
-		1E59557415B6F85700A03429 /* sv */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = sv; path = sv.lproj/HockeySDK.strings; sourceTree = "<group>"; };
-		1E59557615B6F85E00A03429 /* tr */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = tr; path = tr.lproj/HockeySDK.strings; sourceTree = "<group>"; };
-		1E59557815B6F86600A03429 /* zh_CN */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = zh_CN; path = zh_CN.lproj/HockeySDK.strings; sourceTree = "<group>"; };
-		1E59557A15B6F86E00A03429 /* zh_TW */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = zh_TW; path = zh_TW.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		1E5955BB15B71C8600A03429 /* authorize_denied.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = authorize_denied.png; sourceTree = "<group>"; };
 		1E5955BC15B71C8600A03429 /* authorize_denied@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "authorize_denied@2x.png"; sourceTree = "<group>"; };
 		1E5955BD15B71C8600A03429 /* authorize_request.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = authorize_request.png; sourceTree = "<group>"; };
@@ -203,6 +196,8 @@
 		1E5955C515B71C8600A03429 /* IconGradient@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "IconGradient@2x.png"; sourceTree = "<group>"; };
 		1E5955FA15B7877A00A03429 /* BITHockeyManagerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITHockeyManagerDelegate.h; sourceTree = "<group>"; };
 		1E66CA9115D4100500F35BED /* buildnumber.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = buildnumber.xcconfig; sourceTree = "<group>"; };
+		1E6F044F167B5D9600ED1C86 /* zh */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = zh; path = zh.lproj/HockeySDK.strings; sourceTree = "<group>"; };
+		1E6F0450167B5E5600ED1C86 /* pt-PT */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-PT"; path = "pt-PT.lproj/HockeySDK.strings"; sourceTree = "<group>"; };
 		1E71509A15B5C76F004E88FF /* HockeySDK.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HockeySDK.h; sourceTree = "<group>"; };
 		1E754DC61621BC170070AB92 /* HockeySDK.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = HockeySDK.xcconfig; sourceTree = "<group>"; };
 		1E754E561621FBB70070AB92 /* BITCrashManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashManager.h; sourceTree = "<group>"; };
@@ -531,11 +526,8 @@
 				ru,
 				sv,
 				tr,
-				zh_CN,
-				zh_TW,
-				"zh-Hans",
-				"zh-Hant",
 				hr,
+				zh,
 			);
 			mainGroup = E400560F148D79B500EB22B9;
 			productRefGroup = E400561B148D79B500EB22B9 /* Products */;
@@ -564,7 +556,6 @@
 				1E5955CC15B71C8600A03429 /* buttonHighlight@2x.png in Resources */,
 				1E5955CF15B71C8600A03429 /* IconGradient.png in Resources */,
 				1E5955D015B71C8600A03429 /* IconGradient@2x.png in Resources */,
-				1E27EF2515BB5033000AE995 /* HockeySDK.strings in Resources */,
 				1EAF20A8162DC0F600957B1D /* feedbackActivity@2x~ipad.png in Resources */,
 				1EAF20A9162DC0F600957B1D /* feedbackActivity~ipad.png in Resources */,
 				1EAF20AA162DC0F600957B1D /* feedbackActiviy.png in Resources */,
@@ -673,15 +664,11 @@
 				1E59556615B6F82300A03429 /* fr */,
 				1E59556815B6F82A00A03429 /* it */,
 				1E59556A15B6F83100A03429 /* ja */,
-				1E59556C15B6F83700A03429 /* nl */,
-				1E59556E15B6F84000A03429 /* pt-PT */,
 				1E59557015B6F84700A03429 /* pt */,
 				1E59557215B6F84D00A03429 /* ru */,
-				1E59557415B6F85700A03429 /* sv */,
-				1E59557615B6F85E00A03429 /* tr */,
-				1E59557815B6F86600A03429 /* zh_CN */,
-				1E59557A15B6F86E00A03429 /* zh_TW */,
 				1E36D8B816667611000B134C /* hr */,
+				1E6F044F167B5D9600ED1C86 /* zh */,
+				1E6F0450167B5E5600ED1C86 /* pt-PT */,
 			);
 			name = HockeySDK.strings;
 			sourceTree = "<group>";
