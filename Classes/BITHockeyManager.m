@@ -71,7 +71,11 @@
 
 - (void)logInvalidIdentifier:(NSString *)environment {
   if (!_appStoreEnvironment) {
-    NSLog(@"[HockeySDK] ERROR: The %@ is invalid! Please use the HockeyApp app identifier you find on the apps website on HockeyApp! The SDK is disabled!", environment);
+    if ([environment isEqualToString:@"liveIdentifier"]) {
+      NSLog(@"[HockeySDK] WARNING: The liveIdentifier is invalid! The SDK will be disabled when deployed to the App Store without setting a valid app identifier!");
+    } else {
+      NSLog(@"[HockeySDK] ERROR: The %@ is invalid! Please use the HockeyApp app identifier you find on the apps website on HockeyApp! The SDK is disabled!", environment);
+    }
   }
 }
 
