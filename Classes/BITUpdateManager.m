@@ -842,8 +842,11 @@
     NSString *responseString = [[NSString alloc] initWithBytes:[_receivedData bytes] length:[_receivedData length] encoding: NSUTF8StringEncoding];
     BITHockeyLog(@"INFO: Received API response: %@", responseString);
     
-    if (!responseString || ![responseString dataUsingEncoding:NSUTF8StringEncoding])
+    if (!responseString || ![responseString dataUsingEncoding:NSUTF8StringEncoding]) {
+      self.receivedData = nil;
+      self.urlConnection = nil;
       return;
+    }
     
     NSError *error = nil;
     NSDictionary *json = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:kNilOptions error:&error];
@@ -854,15 +857,14 @@
     if (![self isAppStoreEnvironment]) {
       NSArray *feedArray = (NSArray *)[json valueForKey:@"versions"];
       
-      self.receivedData = nil;
-      self.urlConnection = nil;
-      
       // remember that we just checked the server
       self.lastCheck = [NSDate date];
       
       // server returned empty response?
       if (![feedArray count]) {
         BITHockeyLog(@"WARNING: No versions available for download on HockeyApp.");
+        self.receivedData = nil;
+        self.urlConnection = nil;
         return;
       } else {
         _lastCheckFailed = NO;
@@ -921,6 +923,8 @@
                                           code:BITUpdateAPIServerReturnedEmptyResponse
                                       userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Server returned an empty response.", NSLocalizedDescriptionKey, nil]]];
   }
+  self.receivedData = nil;
+  self.urlConnection = nil;
 }
 
 - (BOOL)hasNewerMandatoryVersion {
