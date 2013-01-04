@@ -210,7 +210,7 @@
 "HockeyFeedbackUserDataTitle" = "Meus dados";
 
 /* Description On What Should Be Entered */
-"HockeyFeedbackUserDataDescription" = "Informe seus dados antes de redigir seu feedback.";
+"HockeyFeedbackUserDataDescription" = "Informe seus dados antes de redigir o feedback.";
 
 /* Name Field */
 "HockeyFeedbackUserDataName" = "Nome";

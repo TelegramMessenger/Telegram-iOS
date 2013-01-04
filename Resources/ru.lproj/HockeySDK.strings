@@ -21,10 +21,10 @@
 "CrashDataFoundTitle" = "Неожиданное завершение %@";
 
 /* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
-"CrashDataFoundAnonymousDescription" = "Пошлете ли вы анонимный отчет, чтобы мы могли исправить эту ошибку?";
+"CrashDataFoundAnonymousDescription" = "Пошлете анонимный отчет, чтобы мы могли исправить эту ошибку?";
 
 /* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
-"CrashDataFoundDescription" = "Пошлете ли вы отчет, чтобы мы могли исправить эту ошибку?";
+"CrashDataFoundDescription" = "Пошлете отчет, чтобы мы могли исправить эту ошибку?";
 
 /* Alert box button if the users wants to send crash data always automatically */
 "CrashSendReportAlways" = "Отправлять всегда";
@@ -60,7 +60,7 @@
 
 /* Update Details */
 
-"UpdateScreenTitle" = "Обновить";
+"UpdateScreenTitle" = "Обновление";
 
 "UpdateButtonCheck" = "ПРОВЕРИТЬ";
 
@@ -86,12 +86,12 @@
 
 "UpdateWarning" = "Предупреждение";
 
-"UpdateNoReleaseNotesAvailable" = "Нет комментариев версии.";
+"UpdateNoReleaseNotesAvailable" = "Нет комментариев по этой версии.";
 
 
 /* Update Authorization  */
 
-"UpdateAuthorizationProgress" = "Авторизую...";
+"UpdateAuthorizationProgress" = "Авторизация...";
 
 "UpdateAuthorizationOffline" = "Нужно подключить Интернет!";
 
@@ -138,16 +138,16 @@
 "HockeyFeedbackListNeverUpdated" = "Никогда";
 
 /* Provide Feedback Button Title */
-"HockeyFeedbackListButonWriteFeedback" = "Дать отклик";
+"HockeyFeedbackListButonWriteFeedback" = "Написать отклик";
 
 /* Add a Response Button Title */
 "HockeyFeedbackListButonWriteResponse" = "Добавить ответ";
 
 /* User Data Set Name Button Title */
-"HockeyFeedbackListButonUserDataSetName" = "Уст. ваше имя";
+"HockeyFeedbackListButonUserDataSetName" = "Ввести ваше имя";
 
 /* User Data Set Email Button Title */
-"HockeyFeedbackListButonUserDataSetEmail" = "Уст. вашу email";
+"HockeyFeedbackListButonUserDataSetEmail" = "Ввести ваш email";
 
 /* User Data With Name Button Title */
 "HockeyFeedbackListButonUserDataWithName" = "Имя: %@";
@@ -198,7 +198,7 @@
 /* Compose Message */
 
 /* Title */
-"HockeyFeedbackComposeTitle" = "Новый отклик";
+"HockeyFeedbackComposeTitle" = "Новый";
 
 /* Send button */
 "HockeyFeedbackComposeSend" = "Отправить";
@@ -210,7 +210,7 @@
 "HockeyFeedbackUserDataTitle" = "Мои данные";
 
 /* Description On What Should Be Entered */
-"HockeyFeedbackUserDataDescription" = "Перед отправкой отклика необходимо указать вашу информацию.";
+"HockeyFeedbackUserDataDescription" = "Перед отправкой отклика необходимо ввести ваши личные данные.";
 
 /* Name Field */
 "HockeyFeedbackUserDataName" = "Имя";

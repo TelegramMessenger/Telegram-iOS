@@ -216,7 +216,7 @@
 "HockeyFeedbackUserDataName" = "姓名";
 
 /* Name Placeholder */
-"HockeyFeedbackUserDataNamePlaceHolder" = "张三";
+"HockeyFeedbackUserDataNamePlaceHolder" = "姓名";
 
 /* Email Field */
 "HockeyFeedbackUserDataEmail" = "邮件";

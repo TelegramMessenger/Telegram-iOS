@@ -30,7 +30,7 @@
 "CrashSendReportAlways" = "Toujours envoyer";
 
 /* Alert box button to send the crash report once */
-"CrashSendReport" = "Envoyer le rapport";
+"CrashSendReport" = "Envoyer un rapport";
 
 /* Alert box button to decline sending the report */
 "CrashDontSendReport" = "Ne pas envoyer";
@@ -66,13 +66,13 @@
 
 "UpdateButtonSearching" = "RECHERCHE";
 
-"UpdateButtonUpdate" = "MISE À JOUR";
+"UpdateButtonUpdate" = "METTRE À JOUR";
 
 "UpdateButtonInstalling" = "INSTALLATION";
 
 "UpdateButtonOffline" = "HORS LIGNE";
 
-"UpdateInstalled" = "INSTALLÉE";
+"UpdateInstalled" = "INSTALLÉ";
 
 "UpdateVersion" = "Version";
 
@@ -129,7 +129,7 @@
 /* List View */
 
 /* Title */
-"HockeyFeedbackListTitle" = "Commentaire";
+"HockeyFeedbackListTitle" = "Commentaires";
 
 /* Last Updated */
 "HockeyFeedbackListLastUpdated" = "Dernière mise à jour : %@";
@@ -198,7 +198,7 @@
 /* Compose Message */
 
 /* Title */
-"HockeyFeedbackComposeTitle" = "Nouveau commentaire";
+"HockeyFeedbackComposeTitle" = "Commentaire";
 
 /* Send button */
 "HockeyFeedbackComposeSend" = "Envoyer";

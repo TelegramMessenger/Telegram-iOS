@@ -45,7 +45,7 @@
 /* Update Alert view */
 
 /* Update available */
-"UpdateAvailable" = "Aggiornamento disponibile";
+"UpdateAvailable" = "Nuovo aggiornamento";
 
 "UpdateAlertTextWithAppVersion" = "È disponibile %@.";
 
@@ -62,11 +62,11 @@
 
 "UpdateScreenTitle" = "Aggiornamento";
 
-"UpdateButtonCheck" = "VERIFICA";
+"UpdateButtonCheck" = "VERIFICO";
 
 "UpdateButtonSearching" = "VERIFICO";
 
-"UpdateButtonUpdate" = "AGGIORNAMENTO";
+"UpdateButtonUpdate" = "AGGIORNA";
 
 "UpdateButtonInstalling" = "INSTALLO";
 
@@ -78,7 +78,7 @@
 
 "UpdateShowPreviousVersions" = "Visualizzo versioni precedenti...";
 
-"UpdateNoUpdateAvailableTitle" = "Aggiornamenti non disponibili";
+"UpdateNoUpdateAvailableTitle" = "Non sono presenti aggiornamenti";
 
 "UpdateNoUpdateAvailableMessage" = "%@ è già la versione attuale.";
 
@@ -117,7 +117,7 @@
 "HockeyFeedbackNewMessageTitle" = "Nuova risposta a un commento";
 
 /* Alert Text */
-"HockeyFeedbackNewMessageText" = "È presente una nuova risposta al tuo commento. Vuoi visualizzarla?";
+"HockeyFeedbackNewMessageText" = "C'è una nuova risposta al tuo commento. Vuoi visualizzarla?";
 
 /* Alert Ignore Button */
 "HockeyFeedbackIgnore" = "Ignora";
@@ -165,10 +165,10 @@
 /* Delete All Messages Action Sheet / Alert View */
 
 /* Title for the Action Sheet */
-"HockeyFeedbackListDeleteAllTitle" = "Tutti i messaggi presenti sul dispositivo verranno cancellati.";
+"HockeyFeedbackListDeleteAllTitle" = "Tutti i messaggi presenti sul dispositivo saranno cancellati.";
 
 /* Button Title to perform delete action */
-"HockeyFeedbackListDeleteAllDelete" = "Elimina";
+"HockeyFeedbackListDeleteAllDelete" = "Cancella";
 
 /* Button Title to cancel delete action */
 "HockeyFeedbackListDeleteAllCancel" = "Annulla";
@@ -198,7 +198,7 @@
 /* Compose Message */
 
 /* Title */
-"HockeyFeedbackComposeTitle" = "Nuova commento";
+"HockeyFeedbackComposeTitle" = "Nuovo commento";
 
 /* Send button */
 "HockeyFeedbackComposeSend" = "Invia";

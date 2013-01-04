@@ -68,7 +68,7 @@
 
 "UpdateButtonUpdate" = "UPDATE";
 
-"UpdateButtonInstalling" = "INSTALLIEREN …";
+"UpdateButtonInstalling" = "INSTALLIEREN";
 
 "UpdateButtonOffline" = "OFFLINE";
 
@@ -132,7 +132,7 @@
 "HockeyFeedbackListTitle" = "Feedback";
 
 /* Last Updated */
-"HockeyFeedbackListLastUpdated" = "Zuletzt aktualisiert: %@";
+"HockeyFeedbackListLastUpdated" = "Letztes Update: %@";
 
 /* Never Updated */
 "HockeyFeedbackListNeverUpdated" = "Noch nie";
@@ -198,7 +198,7 @@
 /* Compose Message */
 
 /* Title */
-"HockeyFeedbackComposeTitle" = "Neue Feedback-Meldung";
+"HockeyFeedbackComposeTitle" = "Neues Feedback";
 
 /* Send button */
 "HockeyFeedbackComposeSend" = "Senden";
@@ -222,4 +222,4 @@
 "HockeyFeedbackUserDataEmail" = "E-Mail";
 
 /* Email Placeholder */
-"HockeyFeedbackUserDataEmailPlaceholder" = "Max@mustermann.de";
+"HockeyFeedbackUserDataEmailPlaceholder" = "beispiel@email.de";

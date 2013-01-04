@@ -47,9 +47,9 @@
 /* Update available */
 "UpdateAvailable" = "Actualização disponível";
 
-"UpdateAlertTextWithAppVersion" = "A versão %@ está disponível.";
+"UpdateAlertTextWithAppVersion" = "%@ está disponível.";
 
-"UpdateAlertMandatoryTextWithAppVersion" = "A versão %@ está disponível e é uma actualização obrigatória!";
+"UpdateAlertMandatoryTextWithAppVersion" = "%@ está disponível e é uma actualização obrigatória!";
 
 "UpdateIgnore" = "Ignorar";
 
@@ -64,11 +64,11 @@
 
 "UpdateButtonCheck" = "VERIFICAR";
 
-"UpdateButtonSearching" = "VERIFICAR";
+"UpdateButtonSearching" = "A VERIFICAR";
 
 "UpdateButtonUpdate" = "ACTUALIZAR";
 
-"UpdateButtonInstalling" = "INSTALAR";
+"UpdateButtonInstalling" = "A INSTALAR";
 
 "UpdateButtonOffline" = "OFFLINE";
 
@@ -80,7 +80,7 @@
 
 "UpdateNoUpdateAvailableTitle" = "Nenhuma actualização disponível";
 
-"UpdateNoUpdateAvailableMessage" = "A versão %@ é a mais recente.";
+"UpdateNoUpdateAvailableMessage" = "%@ é a mais recente.";
 
 "UpdateError" = "Erro";
 
@@ -105,7 +105,7 @@
 
 /* Update Simulator Warning */
 
-"UpdateSimulatorMessage" = "A actualização Hockey não funciona com o Simulador.\nO url scheme itms-services:// está implementado mas não funciona.";
+"UpdateSimulatorMessage" = "A actualização do Hockey não funciona com o Simulador.\nO url scheme itms-services:// está implementado mas não funciona.";
 
 
 /* Feedback */
@@ -144,10 +144,10 @@
 "HockeyFeedbackListButonWriteResponse" = "Adicionar uma resposta";
 
 /* User Data Set Name Button Title */
-"HockeyFeedbackListButonUserDataSetName" = "Definir o nome";
+"HockeyFeedbackListButonUserDataSetName" = "Definir nome";
 
 /* User Data Set Email Button Title */
-"HockeyFeedbackListButonUserDataSetEmail" = "Definir o e-mail";
+"HockeyFeedbackListButonUserDataSetEmail" = "Definir e-mail";
 
 /* User Data With Name Button Title */
 "HockeyFeedbackListButonUserDataWithName" = "Nome: %@";
@@ -165,7 +165,7 @@
 /* Delete All Messages Action Sheet / Alert View */
 
 /* Title for the Action Sheet */
-"HockeyFeedbackListDeleteAllTitle" = "Assim, todas as mensagens do dispositivo serão eliminadas.";
+"HockeyFeedbackListDeleteAllTitle" = "Todas as mensagens do dispositivo serão eliminadas.";
 
 /* Button Title to perform delete action */
 "HockeyFeedbackListDeleteAllDelete" = "Eliminar";

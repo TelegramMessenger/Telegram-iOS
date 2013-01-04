@@ -105,6 +105,7 @@
 		1EAF20A9162DC0F600957B1D /* feedbackActivity~ipad.png in Resources */ = {isa = PBXBuildFile; fileRef = 1EAF20A5162DC0F600957B1D /* feedbackActivity~ipad.png */; };
 		1EAF20AA162DC0F600957B1D /* feedbackActiviy.png in Resources */ = {isa = PBXBuildFile; fileRef = 1EAF20A6162DC0F600957B1D /* feedbackActiviy.png */; };
 		1EAF20AB162DC0F600957B1D /* feedbackActiviy@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1EAF20A7162DC0F600957B1D /* feedbackActiviy@2x.png */; };
+		1EB52FD5167B766100C801D5 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
 		1EC69F601615001500808FD9 /* BITHockeyManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EC69F5D1615001500808FD9 /* BITHockeyManagerPrivate.h */; };
 		1EF95CA6162CB037000AE3AD /* BITFeedbackActivity.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EF95CA4162CB036000AE3AD /* BITFeedbackActivity.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1EF95CA7162CB037000AE3AD /* BITFeedbackActivity.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EF95CA5162CB036000AE3AD /* BITFeedbackActivity.m */; };
@@ -178,7 +179,6 @@
 		1E5954F215B6F24A00A03429 /* libHockeySDK.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libHockeySDK.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E59550A15B6F45800A03429 /* HockeySDKResources.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HockeySDKResources.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E59556015B6F80E00A03429 /* de */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/HockeySDK.strings; sourceTree = "<group>"; };
-		1E59556215B6F81500A03429 /* en */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		1E59556415B6F81C00A03429 /* es */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		1E59556615B6F82300A03429 /* fr */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		1E59556815B6F82A00A03429 /* it */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = it; path = it.lproj/HockeySDK.strings; sourceTree = "<group>"; };
@@ -196,7 +196,6 @@
 		1E5955C515B71C8600A03429 /* IconGradient@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "IconGradient@2x.png"; sourceTree = "<group>"; };
 		1E5955FA15B7877A00A03429 /* BITHockeyManagerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITHockeyManagerDelegate.h; sourceTree = "<group>"; };
 		1E66CA9115D4100500F35BED /* buildnumber.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = buildnumber.xcconfig; sourceTree = "<group>"; };
-		1E6F044F167B5D9600ED1C86 /* zh */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = zh; path = zh.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		1E6F0450167B5E5600ED1C86 /* pt-PT */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-PT"; path = "pt-PT.lproj/HockeySDK.strings"; sourceTree = "<group>"; };
 		1E71509A15B5C76F004E88FF /* HockeySDK.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HockeySDK.h; sourceTree = "<group>"; };
 		1E754DC61621BC170070AB92 /* HockeySDK.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = HockeySDK.xcconfig; sourceTree = "<group>"; };
@@ -206,12 +205,14 @@
 		1E754E591621FBB70070AB92 /* BITCrashManagerPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashManagerPrivate.h; sourceTree = "<group>"; };
 		1E754E5A1621FBB70070AB92 /* BITCrashReportTextFormatter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashReportTextFormatter.h; sourceTree = "<group>"; };
 		1E754E5B1621FBB70070AB92 /* BITCrashReportTextFormatter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITCrashReportTextFormatter.m; sourceTree = "<group>"; };
+		1EA512DF167F7EF000FC9FBA /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/HockeySDK.strings"; sourceTree = "<group>"; };
 		1EACC979162F041E007578C5 /* BITAttributedLabel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITAttributedLabel.h; sourceTree = "<group>"; };
 		1EACC97A162F041E007578C5 /* BITAttributedLabel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITAttributedLabel.m; sourceTree = "<group>"; };
 		1EAF20A4162DC0F600957B1D /* feedbackActivity@2x~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "feedbackActivity@2x~ipad.png"; sourceTree = "<group>"; };
 		1EAF20A5162DC0F600957B1D /* feedbackActivity~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "feedbackActivity~ipad.png"; sourceTree = "<group>"; };
 		1EAF20A6162DC0F600957B1D /* feedbackActiviy.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = feedbackActiviy.png; sourceTree = "<group>"; };
 		1EAF20A7162DC0F600957B1D /* feedbackActiviy@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "feedbackActiviy@2x.png"; sourceTree = "<group>"; };
+		1EB52FC3167B73D400C801D5 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		1EC69F5D1615001500808FD9 /* BITHockeyManagerPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITHockeyManagerPrivate.h; sourceTree = "<group>"; };
 		1EDA60CF15C2C1450032D10B /* HockeySDK-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "HockeySDK-Info.plist"; sourceTree = "<group>"; };
 		1EF95CA4162CB036000AE3AD /* BITFeedbackActivity.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITFeedbackActivity.h; sourceTree = "<group>"; };
@@ -528,6 +529,7 @@
 				tr,
 				hr,
 				zh,
+				"zh-Hans",
 			);
 			mainGroup = E400560F148D79B500EB22B9;
 			productRefGroup = E400561B148D79B500EB22B9 /* Products */;
@@ -568,6 +570,7 @@
 				1E1127C916580C87007067A2 /* buttonRoundedRegular@2x.png in Resources */,
 				1E1127CA16580C87007067A2 /* buttonRoundedRegularHighlighted.png in Resources */,
 				1E1127CB16580C87007067A2 /* buttonRoundedRegularHighlighted@2x.png in Resources */,
+				1EB52FD5167B766100C801D5 /* HockeySDK.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -659,7 +662,6 @@
 			isa = PBXVariantGroup;
 			children = (
 				1E59556015B6F80E00A03429 /* de */,
-				1E59556215B6F81500A03429 /* en */,
 				1E59556415B6F81C00A03429 /* es */,
 				1E59556615B6F82300A03429 /* fr */,
 				1E59556815B6F82A00A03429 /* it */,
@@ -667,8 +669,9 @@
 				1E59557015B6F84700A03429 /* pt */,
 				1E59557215B6F84D00A03429 /* ru */,
 				1E36D8B816667611000B134C /* hr */,
-				1E6F044F167B5D9600ED1C86 /* zh */,
 				1E6F0450167B5E5600ED1C86 /* pt-PT */,
+				1EB52FC3167B73D400C801D5 /* en */,
+				1EA512DF167F7EF000FC9FBA /* zh-Hans */,
 			);
 			name = HockeySDK.strings;
 			sourceTree = "<group>";

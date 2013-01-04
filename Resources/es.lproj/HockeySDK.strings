@@ -47,9 +47,9 @@
 /* Update available */
 "UpdateAvailable" = "Actualización disponible";
 
-"UpdateAlertTextWithAppVersion" = "La versión %@ está disponible.";
+"UpdateAlertTextWithAppVersion" = "%@ está disponible.";
 
-"UpdateAlertMandatoryTextWithAppVersion" = "La versión %@ está disponible y es una actualización obligatoria.";
+"UpdateAlertMandatoryTextWithAppVersion" = "%@ está disponible, y es una actualización obligatoria.";
 
 "UpdateIgnore" = "Ignorar";
 
@@ -80,7 +80,7 @@
 
 "UpdateNoUpdateAvailableTitle" = "No hay actualizaciones disponibles";
 
-"UpdateNoUpdateAvailableMessage" = "La versión %@ es la más reciente.";
+"UpdateNoUpdateAvailableMessage" = "%@ es la versión más reciente.";
 
 "UpdateError" = "Error";
 
@@ -114,10 +114,10 @@
 /* New Message Alert */
 
 /* Alert Title */
-"HockeyFeedbackNewMessageTitle" = "Nueva respuesta al comentario";
+"HockeyFeedbackNewMessageTitle" = "Nueva respuesta al mensaje";
 
 /* Alert Text */
-"HockeyFeedbackNewMessageText" = "Hay una nueva respuesta a su comentario. ¿Desea verla?";
+"HockeyFeedbackNewMessageText" = "Hay una nueva respuesta a su mensaje. ¿Desea verla?";
 
 /* Alert Ignore Button */
 "HockeyFeedbackIgnore" = "Ignorar";
@@ -129,7 +129,7 @@
 /* List View */
 
 /* Title */
-"HockeyFeedbackListTitle" = "Comentarios";
+"HockeyFeedbackListTitle" = "Mensajes";
 
 /* Last Updated */
 "HockeyFeedbackListLastUpdated" = "Última actualización: %@";
@@ -138,16 +138,16 @@
 "HockeyFeedbackListNeverUpdated" = "Nunca";
 
 /* Provide Feedback Button Title */
-"HockeyFeedbackListButonWriteFeedback" = "Dejar un comentario";
+"HockeyFeedbackListButonWriteFeedback" = "Dejar un mensaje";
 
 /* Add a Response Button Title */
 "HockeyFeedbackListButonWriteResponse" = "Añadir una respuesta";
 
 /* User Data Set Name Button Title */
-"HockeyFeedbackListButonUserDataSetName" = "Indicar mi nombre";
+"HockeyFeedbackListButonUserDataSetName" = "Introduzca su nombre";
 
 /* User Data Set Email Button Title */
-"HockeyFeedbackListButonUserDataSetEmail" = "Indicar mi correo";
+"HockeyFeedbackListButonUserDataSetEmail" = "Introduzca su correo";
 
 /* User Data With Name Button Title */
 "HockeyFeedbackListButonUserDataWithName" = "Nombre: %@";
@@ -198,7 +198,7 @@
 /* Compose Message */
 
 /* Title */
-"HockeyFeedbackComposeTitle" = "Nuevo comentario";
+"HockeyFeedbackComposeTitle" = "Nuevo mensaje";
 
 /* Send button */
 "HockeyFeedbackComposeSend" = "Enviar";
@@ -210,7 +210,7 @@
 "HockeyFeedbackUserDataTitle" = "Mis datos";
 
 /* Description On What Should Be Entered */
-"HockeyFeedbackUserDataDescription" = "Indique sus datos antes de escribir el comentario.";
+"HockeyFeedbackUserDataDescription" = "Indique sus datos antes de escribir el mensaje.";
 
 /* Name Field */
 "HockeyFeedbackUserDataName" = "Nombre";
