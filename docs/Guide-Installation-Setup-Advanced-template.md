@@ -89,6 +89,14 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
     (Adjust the path depending where the `Project.xcconfig` file is located related to the Xcode project package)
     
     **Important note:** Check if you overwrite any of the build settings and add a missing `$(inherited)` entry on the projects build settings level, so the `HockeySDK.xcconfig` settings will be passed through successfully.
+    
+17. If you are getting build warnings, then the `.xcconfig` setting wasn't included successfully or its settings in `Other Linker Flags` get ignored because `$(interited)` is missing on project or target level. Either add `$(inherited)` or link the following frameworks manually in `Link Binary With Libraries` under `Build Phases`:
+    - `CoreText`
+    - `CoreGraphics`
+    - `Foundation`
+    - `QuartzCore`
+    - `SystemConfiguration`
+    - `UIKit`  
 
 
 <a id="modify"></a> 
