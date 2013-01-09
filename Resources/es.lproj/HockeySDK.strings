@@ -1,3 +1,10 @@
+/*
+ Localization provided by Wordcrafts
+ The Mac OS X and iOS localization experts.
+ http://www.wordcrafts.de
+ */
+
+
 /* General */
 
 /* For dialogs yes buttons */
@@ -27,7 +34,7 @@
 "CrashDataFoundDescription" = "¿Desea enviar un informe para ayudarnos a solucionar el problema?";
 
 /* Alert box button if the users wants to send crash data always automatically */
-"CrashSendReportAlways" = "Enviar siempre";
+"CrashSendReportAlways" = "Enviarlo siempre";
 
 /* Alert box button to send the crash report once */
 "CrashSendReport" = "Enviar informe";

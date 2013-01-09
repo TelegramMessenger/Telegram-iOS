@@ -1,3 +1,10 @@
+/*
+ Localization provided by Wordcrafts
+ The Mac OS X and iOS localization experts.
+ http://www.wordcrafts.de
+ */
+
+
 /* General */
 
 /* For dialogs yes buttons */
@@ -159,7 +166,7 @@
 "HockeyFeedbackListButonDeleteAllMessages" = "删除全部信息";
 
 /* Message pending to be send */
-"HockeyFeedbackListMessagePending" = "挂起";
+"HockeyFeedbackListMessagePending" = "待定";
 
 
 /* Delete All Messages Action Sheet / Alert View */

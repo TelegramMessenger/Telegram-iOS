@@ -1,3 +1,10 @@
+/*
+ Localization provided by Wordcrafts
+ The Mac OS X and iOS localization experts.
+ http://www.wordcrafts.de
+ */
+
+
 /* General */
 
 /* For dialogs yes buttons */
@@ -135,7 +142,7 @@
 "HockeyFeedbackListLastUpdated" = "Последнее обновление: %@";
 
 /* Never Updated */
-"HockeyFeedbackListNeverUpdated" = "Никогда";
+"HockeyFeedbackListNeverUpdated" = "Не было";
 
 /* Provide Feedback Button Title */
 "HockeyFeedbackListButonWriteFeedback" = "Написать отклик";
@@ -216,7 +223,7 @@
 "HockeyFeedbackUserDataName" = "Имя";
 
 /* Name Placeholder */
-"HockeyFeedbackUserDataNamePlaceHolder" = "John Doe";
+"HockeyFeedbackUserDataNamePlaceHolder" = "Имя";
 
 /* Email Field */
 "HockeyFeedbackUserDataEmail" = "Email";

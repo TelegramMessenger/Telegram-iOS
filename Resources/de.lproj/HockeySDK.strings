@@ -1,3 +1,10 @@
+/*
+  Localization provided by Wordcrafts
+  The Mac OS X and iOS localization experts.
+  http://www.wordcrafts.de
+ */
+
+
 /* General */
 
 /* For dialogs yes buttons */
@@ -80,7 +87,7 @@
 
 "UpdateNoUpdateAvailableTitle" = "Kein Update verfügbar";
 
-"UpdateNoUpdateAvailableMessage" = "%@ ist die zurzeit aktuellste Version";
+"UpdateNoUpdateAvailableMessage" = "%@ ist die derzeit aktuellste Version";
 
 "UpdateError" = "Fehler";
 
@@ -144,10 +151,10 @@
 "HockeyFeedbackListButonWriteResponse" = "Antworten";
 
 /* User Data Set Name Button Title */
-"HockeyFeedbackListButonUserDataSetName" = "Namen eintragen";
+"HockeyFeedbackListButonUserDataSetName" = "Namen eingeben";
 
 /* User Data Set Email Button Title */
-"HockeyFeedbackListButonUserDataSetEmail" = "E-Mail-Adresse eintragen";
+"HockeyFeedbackListButonUserDataSetEmail" = "E-Mail-Adresse eingeben";
 
 /* User Data With Name Button Title */
 "HockeyFeedbackListButonUserDataWithName" = "Name: %@";
@@ -165,7 +172,7 @@
 /* Delete All Messages Action Sheet / Alert View */
 
 /* Title for the Action Sheet */
-"HockeyFeedbackListDeleteAllTitle" = "Diese Aktion löscht alle auf diesem Gerät befindlichen Mitteilungen.";
+"HockeyFeedbackListDeleteAllTitle" = "Diese Aktion löscht alle auf diesem Gerät befindlichen HockeyApp-Mitteilungen.";
 
 /* Button Title to perform delete action */
 "HockeyFeedbackListDeleteAllDelete" = "Löschen";
