@@ -1,0 +1,225 @@
+﻿/* General */
+
+/* For dialogs yes buttons */
+"HockeyYes" = "Da";
+
+/* For dialogs no buttons */
+"HockeyNo" = "Nu";
+
+/* For dialogs ok buttons */
+"HockeyOK" = "OK";
+
+/* Replacement for app name, if it could not be detected */
+"HockeyAppNamePlaceholder" = "Aplicația curentă";
+
+/* Crash */
+
+
+/* Crash dialog */
+
+/* Title showing in the alert box when crash report data has been found */
+"CrashDataFoundTitle" = "Raportare eroare";
+
+/* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
+"CrashDataFoundAnonymousDescription" = "Doriți să trimiteți un raport anonim ca să putem corecta problema?";
+
+/* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
+"CrashDataFoundDescription" = "Doriți să trimiteți un raport ca să putem corecta problema??";
+
+/* Alert box button if the users wants to send crash data always automatically */
+"CrashSendReportAlways" = "Trimite mereu";
+
+/* Alert box button to send the crash report once */
+"CrashSendReport" = "Trimite raport";
+
+/* Alert box button to decline sending the report */
+"CrashDontSendReport" = "Nu trimite";
+
+/* Text showing in a processing box that the crash data is being uploaded to the server */
+"CrashReportSending" = "Se trimite…";
+
+
+/* Update */
+
+
+/* Update Alert view */
+
+/* Update available */
+"UpdateAvailable" = "Versiune nouă";
+
+"UpdateAlertTextWithAppVersion" = "A apărut versiunea %@.";
+
+"UpdateAlertMandatoryTextWithAppVersion" = "A apărut versiunea %@ și actualizarea e obligatorie!";
+
+"UpdateIgnore" = "Ignoră";
+
+"UpdateShow" = "Arată";
+
+"UpdateInstall" = "Instalează";
+
+
+/* Update Details */
+
+"UpdateScreenTitle" = "Actualizare";
+
+"UpdateButtonCheck" = "VERIFICĂ";
+
+"UpdateButtonSearching" = "SE VERIFICĂ";
+
+"UpdateButtonUpdate" = "ACTUALIZEAZĂ";
+
+"UpdateButtonInstalling" = "SE INSTALEAZĂ";
+
+"UpdateButtonOffline" = "OFFLINE";
+
+"UpdateInstalled" = "INSTALAT";
+
+"UpdateVersion" = "Versiune";
+
+"UpdateShowPreviousVersions" = "Arată versiunile anterioare...";
+
+"UpdateNoUpdateAvailableTitle" = "Nici o actualizare disponibilă";
+
+"UpdateNoUpdateAvailableMessage" = "%@ e cea mai recentă versiune.";
+
+"UpdateError" = "Eroare";
+
+"UpdateWarning" = "Avertisment";
+
+"UpdateNoReleaseNotesAvailable" = "Nu există note.";
+
+
+/* Update Authorization  */
+
+"UpdateAuthorizationProgress" = "Se authorizează...";
+
+"UpdateAuthorizationOffline" = "Necesită conexiune la Internet!";
+
+"UpdateAuthorizationDenied" = "Autorizare refuzată. Vă rugăm contactați dezvoltatorul.";
+
+
+/* Update Expiry  */
+
+"UpdateExpired" = "%@ a expirat și nu mai poate fi folosită.";
+
+
+/* Update Simulator Warning */
+
+"UpdateSimulatorMessage" = "Hockey Update nu funcționează în simulator.\nSchema itms-services:// este implementată dar nefuncțională.";
+
+
+/* Feedback */
+
+
+/* New Message Alert */
+
+/* Alert Title */
+"HockeyFeedbackNewMessageTitle" = "Nou răspuns feedback";
+
+/* Alert Text */
+"HockeyFeedbackNewMessageText" = "A apărut un nou răspuns la feedback-ul dvs. Doriți să îl vedeți?";
+
+/* Alert Ignore Button */
+"HockeyFeedbackIgnore" = "Ignoră";
+
+/* Alert Show Button */
+"HockeyFeedbackShow" = "Arată";
+
+
+/* List View */
+
+/* Title */
+"HockeyFeedbackListTitle" = "Feedback";
+
+/* Last Updated */
+"HockeyFeedbackListLastUpdated" = "Ultima actualizare: %@";
+
+/* Never Updated */
+"HockeyFeedbackListNeverUpdated" = "Niciodată";
+
+/* Provide Feedback Button Title */
+"HockeyFeedbackListButonWriteFeedback" = "Furnizează Feedback";
+
+/* Add a Response Button Title */
+"HockeyFeedbackListButonWriteResponse" = "Adaugă un răspuns";
+
+/* User Data Set Name Button Title */
+"HockeyFeedbackListButonUserDataSetName" = "Introduceți numele";
+
+/* User Data Set Email Button Title */
+"HockeyFeedbackListButonUserDataSetEmail" = "Introduceți e-mail";
+
+/* User Data With Name Button Title */
+"HockeyFeedbackListButonUserDataWithName" = "Nume: %@";
+
+/* User Data With Email Button Title */
+"HockeyFeedbackListButonUserDataWithEmail" = "E-mail: %@";
+
+/* Button title for deleting all local messages*/
+"HockeyFeedbackListButonDeleteAllMessages" = "Șterge toate mesajele";
+
+/* Message pending to be send */
+"HockeyFeedbackListMessagePending" = "În aștepare";
+
+
+/* Delete All Messages Action Sheet / Alert View */
+
+/* Title for the Action Sheet */
+"HockeyFeedbackListDeleteAllTitle" = "Toate mesajele de pe acest dispozitiv vor fi șterse.";
+
+/* Button Title to perform delete action */
+"HockeyFeedbackListDeleteAllDelete" = "Șterge";
+
+/* Button Title to cancel delete action */
+"HockeyFeedbackListDeleteAllCancel" = "Anulează";
+
+
+/* Open Link In Safari Action Sheet / Alert View */
+
+/* Button Title to cancel */
+"HockeyFeedbackListLinkActionCancel" = "Anulează";
+
+/* Button Title to Open the Link */
+"HockeyFeedbackListLinkActionOpen" = "Deschide";
+
+/* Button Title to Copy the Link */
+"HockeyFeedbackListLinkActionCopy" = "Copiază";
+
+
+/* UIActivity */
+
+/* Activity Sharing Button Title, App Name will be inserted */
+"HockeyFeedbackActivityButtonTitle" = "Feedback pentru %@";
+
+/* if there can no app name be found, use this instead for HockeyFeedbackActivityButtonTitle */
+"HockeyFeedbackActivityAppPlaceholder" = "Aplicație";
+
+
+/* Compose Message */
+
+/* Title */
+"HockeyFeedbackComposeTitle" = "Nou feedback";
+
+/* Send button */
+"HockeyFeedbackComposeSend" = "Trimite";
+
+
+/* Set User Data */
+
+/* Title */
+"HockeyFeedbackUserDataTitle" = "Informațiile mele";
+
+/* Description On What Should Be Entered */
+"HockeyFeedbackUserDataDescription" = "Vă rugăm introduceți informațiile despre dvs.";
+
+/* Name Field */
+"HockeyFeedbackUserDataName" = "Nume";
+
+/* Name Placeholder */
+"HockeyFeedbackUserDataNamePlaceHolder" = "Ion Popescu";
+
+/* Email Field */
+"HockeyFeedbackUserDataEmail" = "E-mail";
+
+/* Email Placeholder */
+"HockeyFeedbackUserDataEmailPlaceholder" = "exemplu@email.ro";
