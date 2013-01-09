@@ -1,4 +1,9 @@
-﻿/* General */
+﻿/*
+ Localization provided by Cristi Paraschiv
+ */
+
+
+/* General */
 
 /* For dialogs yes buttons */
 "HockeyYes" = "Da";
@@ -91,7 +96,7 @@
 
 /* Update Authorization  */
 
-"UpdateAuthorizationProgress" = "Se authorizează...";
+"UpdateAuthorizationProgress" = "Se autorizeaza...";
 
 "UpdateAuthorizationOffline" = "Necesită conexiune la Internet!";
 

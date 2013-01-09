@@ -196,6 +196,7 @@
 		1E5955C515B71C8600A03429 /* IconGradient@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "IconGradient@2x.png"; sourceTree = "<group>"; };
 		1E5955FA15B7877A00A03429 /* BITHockeyManagerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITHockeyManagerDelegate.h; sourceTree = "<group>"; };
 		1E66CA9115D4100500F35BED /* buildnumber.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = buildnumber.xcconfig; sourceTree = "<group>"; };
+		1E6DDCEE169E290C0076C65D /* ro */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ro; path = ro.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		1E6F0450167B5E5600ED1C86 /* pt-PT */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-PT"; path = "pt-PT.lproj/HockeySDK.strings"; sourceTree = "<group>"; };
 		1E71509A15B5C76F004E88FF /* HockeySDK.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HockeySDK.h; sourceTree = "<group>"; };
 		1E754DC61621BC170070AB92 /* HockeySDK.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = HockeySDK.xcconfig; sourceTree = "<group>"; };
@@ -530,6 +531,7 @@
 				hr,
 				zh,
 				"zh-Hans",
+				ro,
 			);
 			mainGroup = E400560F148D79B500EB22B9;
 			productRefGroup = E400561B148D79B500EB22B9 /* Products */;
@@ -672,6 +674,7 @@
 				1E6F0450167B5E5600ED1C86 /* pt-PT */,
 				1EB52FC3167B73D400C801D5 /* en */,
 				1EA512DF167F7EF000FC9FBA /* zh-Hans */,
+				1E6DDCEE169E290C0076C65D /* ro */,
 			);
 			name = HockeySDK.strings;
 			sourceTree = "<group>";
