@@ -18,8 +18,9 @@
 #import "BITHockeyManagerPrivate.h"
 
 #import <sys/sysctl.h>
+#if !TARGET_IPHONE_SIMULATOR
 #import <mach-o/ldsyms.h>
-
+#endif
 
 @implementation BITHockeyBaseManager {
   UINavigationController *_navController;
@@ -84,6 +85,12 @@
 }
 
 - (NSString *)executableUUID {
+  // This now requires the testing of this feature to be done on an actual device, since it returns always empty strings on the simulator
+  // Once there is a better solution to get unit test targets build without problems this should be changed again, so testing of this
+  // feature is also possible using the simulator
+  // See: http://support.hockeyapp.net/discussions/problems/2306-integrating-hockeyapp-with-test-bundle-target-i386-issues
+  //      http://support.hockeyapp.net/discussions/problems/4113-linking-hockeysdk-to-test-bundle-target
+#if !TARGET_IPHONE_SIMULATOR
   const uint8_t *command = (const uint8_t *)(&_mh_execute_header + 1);
   for (uint32_t idx = 0; idx < _mh_execute_header.ncmds; ++idx) {
     const struct load_command *load_command = (const struct load_command *)command;
@@ -100,7 +107,7 @@
       command += load_command->cmdsize;
     }
   }
-  return nil;
+#endif
   return @"";
 }
 
