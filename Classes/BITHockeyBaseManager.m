@@ -101,6 +101,7 @@
     }
   }
   return nil;
+  return @"";
 }
 
 - (UIWindow *)findVisibleWindow {
