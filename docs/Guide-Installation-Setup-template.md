@@ -53,6 +53,8 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
 8. Select `HockeySDK.xcconfig` for all your configurations (if you don't already use a `.xcconfig` file)
     
     <img src="XcodeFrameworks1_normal.png"/>
+    
+    **Note:** You can also add the required frameworks manually to your targets `Build Phases` an continue with step `10.` instead.
 
 9. If you are already using a `.xcconfig` file, simply add the following line to it
 
@@ -112,7 +114,7 @@ If you only want crash reporting, you can skip this step. If you want to use Hoc
       return nil;
     }
   
-The method only returns the UDID when the build is not targeted to the App Sore. This assumes that a preprocessor macro name CONFIGURATION_AppStore exists and is set for App Store builds. The macros are already defined in `HockeySDK.xcconfig`.
+The method only returns the UDID when the build is not targeted to the App Sore. This assumes that a preprocessor macro name CONFIGURATION_AppStore exists and is set for App Store builds. The macros are already defined in `HockeySDK.xcconfig` or can be set manually by setting `GCC_PREPROCESSOR_DEFINITIONS` in your build configurations to `CONFIGURATION_$(CONFIGURATION)`.
 
 <a id="mac"></a> 
 ## Mac Desktop Uploader
