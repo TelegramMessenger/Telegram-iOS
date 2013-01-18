@@ -21,7 +21,7 @@ Pod::Spec.new do |s|
   s.preserve_paths = 'Resources', 'Support', 'Vendor'
   s.frameworks   = 'CoreText', 'QuartzCore', 'SystemConfiguration', 'CrashReporter', 'CoreGraphics', 'UIKit'
   s.xcconfig     = { 'FRAMEWORK_SEARCH_PATHS' => '"$(PODS_ROOT)/HockeySDK/Vendor"',
-                     'GCC_PREPROCESSOR_DEFINITIONS' => %{BITHOCKEY_VERSION="@\\"#{s.version}\\""} }
+                     'GCC_PREPROCESSOR_DEFINITIONS' => %{$(inherited) BITHOCKEY_VERSION="@\\"#{s.version}\\""} }
 
   def s.post_install(target_installer)
     puts "\nGenerating HockeySDK resources bundle\n".yellow if config.verbose?
