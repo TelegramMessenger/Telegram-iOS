@@ -216,8 +216,8 @@
                         userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
                         componentManager:self];
     if (userID) {
-      self.userID = userID;
       availableViaDelegate = YES;
+      self.userID = userID;
     }
   }
   
@@ -251,8 +251,8 @@
                            userEmailForHockeyManager:[BITHockeyManager sharedHockeyManager]
                            componentManager:self];
     if (userEmail) {
-      self.userEmail = userEmail;
       availableViaDelegate = YES;
+      self.userEmail = userEmail;
       self.requireUserEmail = BITFeedbackUserDataElementDontShow;
     }
   }
@@ -264,6 +264,12 @@
   [self updateUserIDUsingDelegate];
   [self updateUserNameUsingDelegate];
   [self updateUserEmailUsingDelegate];
+
+  // if both values are shown via the delegates, we never ever did ask and will never ever ask for user data
+  if (self.requireUserName == BITFeedbackUserDataElementDontShow &&
+      self.requireUserEmail == BITFeedbackUserDataElementDontShow) {
+    self.didAskUserData = NO;
+  }
 }
 
 #pragma mark - Local Storage
@@ -508,6 +514,8 @@
 #pragma mark - User
 
 - (BOOL)askManualUserDataAvailable {
+  [self updateAppDefinedUserData];
+  
   if (self.requireUserName == BITFeedbackUserDataElementDontShow &&
       self.requireUserEmail == BITFeedbackUserDataElementDontShow)
     return NO;
@@ -516,6 +524,8 @@
 }
 
 - (BOOL)requireManualUserDataMissing {
+  [self updateAppDefinedUserData];
+  
   if (self.requireUserName == BITFeedbackUserDataElementRequired && !self.userName)
     return YES;
   
@@ -526,6 +536,8 @@
 }
 
 - (BOOL)isManualUserDataAvailable {
+  [self updateAppDefinedUserData];
+
   if ((self.requireUserName != BITFeedbackUserDataElementDontShow && self.userName) ||
       (self.requireUserEmail != BITFeedbackUserDataElementDontShow && self.userEmail))
     return YES;
