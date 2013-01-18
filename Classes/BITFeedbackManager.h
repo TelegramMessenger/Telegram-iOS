@@ -110,7 +110,12 @@ typedef enum {
 
  The default value is `BITFeedbackUserDataElementOptional`.
 
+ @warning If you provide a non nil value for the `BITFeedbackManager` class via
+ `[BITHockeyManagerDelegate userNameForHockeyManager:componentManager:]` then this
+ property will automatically be set to `BITFeedbackUserDataElementDontShow`
+
  @see requireUserEmail
+ @see `[BITHockeyManagerDelegate userNameForHockeyManager:componentManager:]`
  */
 @property (nonatomic, readwrite) BITFeedbackUserDataElement requireUserName;
 
@@ -127,7 +132,12 @@ typedef enum {
  
  The default value is `BITFeedbackUserDataElementOptional`.
 
+ @warning If you provide a non nil value for the `BITFeedbackManager` class via
+ `[BITHockeyManagerDelegate userEmailForHockeyManager:componentManager:]` then this
+ property will automatically be set to `BITFeedbackUserDataElementDontShow`
+ 
  @see requireUserName
+ @see `[BITHockeyManagerDelegate userEmailForHockeyManager:componentManager:]`
  */
 @property (nonatomic, readwrite) BITFeedbackUserDataElement requireUserEmail;
 
