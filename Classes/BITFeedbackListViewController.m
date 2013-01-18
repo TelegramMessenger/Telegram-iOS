@@ -192,8 +192,8 @@
   
   if ([self.manager numberOfMessages] == 0 &&
       [self.manager askManualUserDataAvailable] &&
-      ([self.manager requireManualUserDataMissing] ||
-       ![self.manager didAskUserData])
+      [self.manager requireManualUserDataMissing] &&
+      ![self.manager didAskUserData]
       ) {
     self.userDataComposeFlow = YES;
     
