@@ -610,13 +610,13 @@
           
           // TODO: match messages in state conflict
           
-          [messagesSendInProgress enumerateObjectsUsingBlock:^(id objSendInProgressMessage, NSUInteger messagesSendInProgressIdx, BOOL *stop) {
+          [messagesSendInProgress enumerateObjectsUsingBlock:^(id objSendInProgressMessage, NSUInteger messagesSendInProgressIdx, BOOL *stop2) {
             if ([[(NSDictionary *)objMessage objectForKey:@"token"] isEqualToString:[(BITFeedbackMessage *)objSendInProgressMessage token]]) {
               matchingSendInProgressOrInConflictMessage = objSendInProgressMessage;
-              *stop = YES;
+              *stop2 = YES;
             }
           }];
-          
+
           if (matchingSendInProgressOrInConflictMessage) {
             matchingSendInProgressOrInConflictMessage.date = [self parseRFC3339Date:[(NSDictionary *)objMessage objectForKey:@"created_at"]];
             matchingSendInProgressOrInConflictMessage.id = messageID;
