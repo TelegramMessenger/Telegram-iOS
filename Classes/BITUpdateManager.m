@@ -731,7 +731,7 @@
 }
 
 
-// checks wether this app version is authorized
+// checks whether this app version is authorized
 - (BOOL)appVersionIsAuthorized {
   if (self.requireAuthorization && !_authenticationSecret) {
     [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
@@ -999,7 +999,7 @@
 
 #pragma mark - UIAlertViewDelegate
 
-// invoke the selected action from the actionsheet for a location element
+// invoke the selected action from the action sheet for a location element
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
   if ([alertView tag] == 2) {
     (void)[self initiateAppDownload];

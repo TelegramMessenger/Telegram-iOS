@@ -111,7 +111,7 @@ extern NSString * const kBITBackgroundCornerRadiusAttributeName;
 /**
  A dictionary containing the `NSAttributedString` attributes to be applied to links detected or manually added to the label text. The default link style is blue and underlined.
  
- @warning You must specify `linkAttributes` before setting autodecting or manually-adding links for these attributes to be applied.
+ @warning You must specify `linkAttributes` before setting autodetecting or manually-adding links for these attributes to be applied.
  */
 @property (nonatomic, strong) NSDictionary *linkAttributes;
 
@@ -121,7 +121,7 @@ extern NSString * const kBITBackgroundCornerRadiusAttributeName;
 @property (nonatomic, strong) NSDictionary *activeLinkAttributes;
 
 ///---------------------------------------
-/// @name Acccessing Text Style Attributes
+/// @name Accessing Text Style Attributes
 ///---------------------------------------
 
 /**
@@ -130,7 +130,7 @@ extern NSString * const kBITBackgroundCornerRadiusAttributeName;
 @property (nonatomic, assign) CGFloat shadowRadius;
 
 ///--------------------------------------------
-/// @name Acccessing Paragraph Style Attributes
+/// @name Accessing Paragraph Style Attributes
 ///--------------------------------------------
 
 /**
@@ -303,7 +303,7 @@ extern NSString * const kBITBackgroundCornerRadiusAttributeName;
  Tells the delegate that the user did select a link to a date.
  
  @param label The label whose link was selected.
- @param date The datefor the selected link.
+ @param date The date for the selected link.
  */
 - (void)attributedLabel:(BITAttributedLabel *)label didSelectLinkWithDate:(NSDate *)date;
 

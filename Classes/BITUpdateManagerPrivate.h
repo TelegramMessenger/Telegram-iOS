@@ -72,7 +72,7 @@
 // initiates app-download call. displays an system UIAlertView
 - (BOOL)initiateAppDownload;
 
-// checks wether this app version is authorized
+// checks whether this app version is authorized
 - (BOOL)appVersionIsAuthorized;
 
 // start checking for an authorization key

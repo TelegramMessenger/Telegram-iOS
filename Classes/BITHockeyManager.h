@@ -190,7 +190,7 @@
 
 
 /**
- Flag the determines wether the Crash Manager should be disabled
+ Flag the determines whether the Crash Manager should be disabled
  
  If this flag is enabled, then crash reporting is disabled and no crashes will
  be send.
@@ -216,7 +216,7 @@
 
 
 /**
- Flag the determines wether the Update Manager should be disabled
+ Flag the determines whether the Update Manager should be disabled
  
  If this flag is enabled, then checking for updates and submitting beta usage
  analytics will be turned off!
@@ -242,7 +242,7 @@
 
 
 /**
- Flag the determines wether the Feedback Manager should be disabled
+ Flag the determines whether the Feedback Manager should be disabled
  
  If this flag is enabled, then letting the user give feedback and
  get responses will be turned off!

@@ -903,7 +903,7 @@
 
 #pragma mark - UIAlertViewDelegate
 
-// invoke the selected action from the actionsheet for a location element
+// invoke the selected action from the action sheet for a location element
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
   
   _incomingMessagesAlertShowing = NO;
