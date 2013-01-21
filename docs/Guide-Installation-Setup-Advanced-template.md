@@ -1,3 +1,6 @@
+## Version 3.0.0 RC1
+
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.0.0RC1/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -156,8 +159,10 @@ The Mac Desktop Uploader can provide easy uploading of your app versions to Hock
 
 This documentation provides integrated help in Xcode for all public APIs and a set of additional tutorials and HowTos.
 
-1. Download the latest [HockeySDK-iOS documentation](https://github.com/bitstadium/HockeySDK-iOS/downloads).
+1. Download the [HockeySDK-iOS documentation](http://hockeyapp.net/releases/).
 
 2. Unzip the file. A new folder `HockeySDK-iOS-documentation` is created.
 
 3. Copy the content into ~`/Library/Developer/Shared/Documentation/DocSet`
+
+The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.0.0RC1/](http://hockeyapp.net/help/sdk/ios/3.0.0RC1/)

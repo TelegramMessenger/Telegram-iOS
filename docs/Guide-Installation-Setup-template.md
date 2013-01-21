@@ -1,3 +1,6 @@
+## Version 3.0.0 RC1
+
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.0.0RC1/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -126,4 +129,4 @@ The Mac Desktop Uploader can provide easy uploading of your app versions to Hock
 
 This documentation provides integrated help in Xcode for all public APIs and a set of additional tutorials and HowTos.
 
-1. Copy `de.bitstadium.HockeySDK-iOS-3.0.0b5.docset` into ~`/Library/Developer/Shared/Documentation/DocSet`
+1. Copy `de.bitstadium.HockeySDK-iOS-3.0.0RC1.docset` into ~`/Library/Developer/Shared/Documentation/DocSet`

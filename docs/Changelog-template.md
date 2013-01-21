@@ -1,3 +1,22 @@
+### Version 3.0.0 RC 1
+
+- General:
+
+    - [NEW] Added localizations provided by [Wordcrafts.de](http://wordcrafts.de):
+      Chinese, English, French, German, Italian, Japanese, Portuguese, Brazilian-Portuguese, Russian, Spanish
+    - [NEW] Added Romanian localization
+    - [UPDATE] Documentation improvements
+    - [UPDATE] Exclude binary UUID check from simulator builds, so unit test targets will work. But functionality based on binary UUID cannot be tested in the simulator, e.g. update without changing build version.
+    - [BUGFIX] Cocoapods bugfix for preprocessor definitions
+    - [BUGFIX] Various additional minor fixes
+
+- Feedback:
+
+    - [UPDATE] Only push user details screen automatically onto the list view once
+    - [BUGFIX] Show proper missing user name or email instead of showing `(null)` in a button
+    - [BUGFIX] Various fixes to changing the `requireUserEmail` and `requireUserName` values
+
+    
 ### Version 3.0.0b5
 
 - General:
@@ -81,7 +100,25 @@
     - [UPDATE] Update UI shows the company name next to the app name if defined in the backend
 
 
-### Version 2.5.4
+## Version 2.5.5
+
+- General:
+
+    - [BUGFIX] Fix some new compiler warnings
+
+- Crash Reporting:
+
+    - [NEW] Add anonymous device ID to crash reports
+    - [BUGFIX] Move calculation of time interval between startup and crash further up in the code, so delegates can use this information e.g. to add it into a log file
+    - [BUGFIX] Call delegate also if a crash was detected but could not be read (if handling crashes on startup is implemented)
+    - [BUGFIX] Format timestamp in crash report to be always UTC in en_US locale
+    - [BUGFIX] Make sure crash reports incident identifier and key don't have special [] chars and some value
+
+- Updating:
+
+    - [BUGFIX] Fix a problem showing the update UI animated if there TTNavigator class is present even though not being used
+
+## Version 2.5.4
 
 - General:
 
@@ -115,13 +152,13 @@
 
     - [BUGFIX] `expiryDate` property not working correctly
 
-### Version 2.5.3
+## Version 2.5.3
 
 - General:
 
     - [BUGFIX] Fix checking validity of live identifier not working correctly
 
-### Version 2.5.2
+## Version 2.5.2
 
 - General:
 
