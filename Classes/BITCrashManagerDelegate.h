@@ -63,7 +63,7 @@
  @warning When returning a non nil value, crash reports are not anonymous any
  more and the alerts will not show the "anonymous" word!
  */
--(NSString *)userNameForCrashManager:(BITCrashManager *)crashManager;
+-(NSString *)userNameForCrashManager:(BITCrashManager *)crashManager DEPRECATED_ATTRIBUTE;
 
 
 
@@ -76,7 +76,7 @@
  @warning When returning a non nil value, crash reports are not anonymous any
  more and the alerts will not show the "anonymous" word!
  */
--(NSString *)userEmailForCrashManager:(BITCrashManager *)crashManager;
+-(NSString *)userEmailForCrashManager:(BITCrashManager *)crashManager DEPRECATED_ATTRIBUTE;
 
 
 
