@@ -179,12 +179,13 @@
 
 /**
  Reference to the initialized BITCrashManager module
+
+ Returns the BITCrashManager instance initialized by BITHockeyManager
  
  @see configureWithIdentifier:delegate:
  @see configureWithBetaIdentifier:liveIdentifier:delegate:
  @see startManager
  @see disableCrashManager
- @return The BITCrashManager instance initialized by BITHockeyManager
  */
 @property (nonatomic, strong, readonly) BITCrashManager *crashManager;
 
@@ -206,11 +207,12 @@
 /**
  Reference to the initialized BITUpdateManager module
  
+ Returns the BITUpdateManager instance initialized by BITHockeyManager
+ 
  @see configureWithIdentifier:delegate:
  @see configureWithBetaIdentifier:liveIdentifier:delegate:
  @see startManager
  @see disableUpdateManager
- @return The BITUpdateManager instance initialized by BITHockeyManager
  */
 @property (nonatomic, strong, readonly) BITUpdateManager *updateManager;
 
@@ -232,11 +234,12 @@
 /**
  Reference to the initialized BITFeedbackManager module
  
+ Returns the BITFeedbackManager instance initialized by BITHockeyManager
+ 
  @see configureWithIdentifier:delegate:
  @see configureWithBetaIdentifier:liveIdentifier:delegate:
  @see startManager
  @see disableFeedbackManager
- @return The BITFeedbackManager instance initialized by BITHockeyManager
  */
 @property (nonatomic, strong, readonly) BITFeedbackManager *feedbackManager;
 
@@ -263,8 +266,8 @@
  Flag that determines whether the application is installed and running
  from an App Store installation.
  
- @return YES if the app is installed and running from the App Store
- @return NO if the app is installed via debug, ad-hoc or enterprise distribution
+ Returns _YES_ if the app is installed and running from the App Store
+ Returns _NO_ if the app is installed via debug, ad-hoc or enterprise distribution
  */
 @property (nonatomic, readonly, getter=isAppStoreEnvironment) BOOL appStoreEnvironment;
 
