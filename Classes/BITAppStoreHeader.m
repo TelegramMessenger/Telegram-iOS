@@ -43,7 +43,10 @@
 #define kImageTopMargin 12
 #define kTextRow kImageTopMargin*2 + kImageHeight
 
-@implementation BITAppStoreHeader
+@implementation BITAppStoreHeader {
+  UILabel *_headerLabelView;
+  UILabel *_middleLabelView;
+}
 
 
 #pragma mark - NSObject
@@ -87,22 +90,22 @@
   UIFont *mainFont = [UIFont boldSystemFontOfSize:15];
   UIFont *secondaryFont = [UIFont systemFontOfSize:10];
   
-  UILabel *headerLabelView = [[UILabel alloc] init];
-  [headerLabelView setFont:mainFont];
-  [headerLabelView setFrame:CGRectMake(kTextRow, kImageTopMargin, globalWidth-kTextRow, 20)];
-  [headerLabelView setTextColor:mainTextColor];
-  [headerLabelView setBackgroundColor:[UIColor clearColor]];
-  [headerLabelView setText:_headerLabel];
-  [self addSubview:headerLabelView];
+  if (!_headerLabelView) _headerLabelView = [[UILabel alloc] init];
+  [_headerLabelView setFont:mainFont];
+  [_headerLabelView setFrame:CGRectMake(kTextRow, kImageTopMargin, globalWidth-kTextRow, 20)];
+  [_headerLabelView setTextColor:mainTextColor];
+  [_headerLabelView setBackgroundColor:[UIColor clearColor]];
+  [_headerLabelView setText:_headerLabel];
+  [self addSubview:_headerLabelView];
   
   // middle
-  UILabel *middleLabelView = [[UILabel alloc] init];
-  [middleLabelView setFont:secondaryFont];
-  [middleLabelView setFrame:CGRectMake(kTextRow, kImageTopMargin + 17, globalWidth-kTextRow, 20)];
-  [middleLabelView setTextColor:secondaryTextColor];
-  [middleLabelView setBackgroundColor:[UIColor clearColor]];
-  [middleLabelView setText:_subHeaderLabel];
-  [self addSubview:middleLabelView];
+  if (!_middleLabelView) _middleLabelView = [[UILabel alloc] init];
+  [_middleLabelView setFont:secondaryFont];
+  [_middleLabelView setFrame:CGRectMake(kTextRow, kImageTopMargin + 17, globalWidth-kTextRow, 20)];
+  [_middleLabelView setTextColor:secondaryTextColor];
+  [_middleLabelView setBackgroundColor:[UIColor clearColor]];
+  [_middleLabelView setText:_subHeaderLabel];
+  [self addSubview:_middleLabelView];
 }
 
 
