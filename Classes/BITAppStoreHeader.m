@@ -95,7 +95,7 @@
   [_headerLabelView setFrame:CGRectMake(kTextRow, kImageTopMargin, globalWidth-kTextRow, 20)];
   [_headerLabelView setTextColor:mainTextColor];
   [_headerLabelView setBackgroundColor:[UIColor clearColor]];
-  [_headerLabelView setText:_headerLabel];
+  [_headerLabelView setText:_headerText];
   [self addSubview:_headerLabelView];
   
   // middle
@@ -104,23 +104,23 @@
   [_middleLabelView setFrame:CGRectMake(kTextRow, kImageTopMargin + 17, globalWidth-kTextRow, 20)];
   [_middleLabelView setTextColor:secondaryTextColor];
   [_middleLabelView setBackgroundColor:[UIColor clearColor]];
-  [_middleLabelView setText:_subHeaderLabel];
+  [_middleLabelView setText:_subHeaderText];
   [self addSubview:_middleLabelView];
 }
 
 
 #pragma mark - Properties
 
-- (void)setHeaderLabel:(NSString *)anHeaderLabel {
-  if (_headerLabel != anHeaderLabel) {
-    _headerLabel = [anHeaderLabel copy];
+- (void)setHeaderText:(NSString *)anHeaderText {
+  if (_headerText != anHeaderText) {
+    _headerText = [anHeaderText copy];
     [self setNeedsDisplay];
   }
 }
 
-- (void)setSubHeaderLabel:(NSString *)aSubHeaderLabel {
-  if (_subHeaderLabel != aSubHeaderLabel) {
-    _subHeaderLabel = [aSubHeaderLabel copy];
+- (void)setSubHeaderText:(NSString *)aSubHeaderText {
+  if (_subHeaderText != aSubHeaderText) {
+    _subHeaderText = [aSubHeaderText copy];
     [self setNeedsDisplay];
   }
 }

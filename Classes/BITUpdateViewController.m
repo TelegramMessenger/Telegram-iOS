@@ -75,8 +75,8 @@
 
 - (void)updateAppStoreHeader {
   BITAppVersionMetaInfo *appVersion = _updateManager.newestAppVersion;
-  _appStoreHeader.headerLabel = appVersion.name;
-  _appStoreHeader.subHeaderLabel = _updateManager.companyName;
+  _appStoreHeader.headerText = appVersion.name;
+  _appStoreHeader.subHeaderText = _updateManager.companyName;
 }
 
 - (void)appDidBecomeActive {
