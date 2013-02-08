@@ -1,0 +1,230 @@
+﻿/*
+ Hungarian localization provided by Gábor Varga at Sanoma Media Budapest Zrt.
+ */
+
+
+/* General */
+
+/* For dialogs yes buttons */
+"HockeyYes" = "Igen";
+
+/* For dialogs no buttons */
+"HockeyNo" = "Nem";
+
+/* For dialogs ok buttons */
+"HockeyOK" = "OK";
+
+/* Replacement for app name, if it could not be detected */
+"HockeyAppNamePlaceholder" = "Az alkalmazás";
+
+/* Crash */
+
+
+/* Crash dialog */
+
+/* Title showing in the alert box when crash report data has been found */
+"CrashDataFoundTitle" = "%@ váratlanul kilépett";
+
+/* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
+"CrashDataFoundAnonymousDescription" = "Szeretne hibajelentést küldeni, hogy javíthassuk a problémát? A küldés névtelenül történik.";
+
+/* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
+"CrashDataFoundDescription" = "Szeretne hibajelentést küldeni, hogy javíthassuk a problémát?";
+
+/* Alert box button if the users wants to send crash data always automatically */
+"CrashSendReportAlways" = "Mindig küldjön";
+
+/* Alert box button to send the crash report once */
+"CrashSendReport" = "Jelentés küldése";
+
+/* Alert box button to decline sending the report */
+"CrashDontSendReport" = "Ne küldjön";
+
+/* Text showing in a processing box that the crash data is being uploaded to the server */
+"CrashReportSending" = "Küldés…";
+
+
+/* Update */
+
+
+/* Update Alert view */
+
+/* Update available */
+"UpdateAvailable" = "Frissítés elérhető";
+
+"UpdateAlertTextWithAppVersion" = "%@ elérhető.";
+
+"UpdateAlertMandatoryTextWithAppVersion" = "%@ elérhető, és szükséges frissíteni!";
+
+"UpdateIgnore" = "Most nem";
+
+"UpdateShow" = "Megjelenítés";
+
+"UpdateInstall" = "Telepítés";
+
+
+/* Update Details */
+
+"UpdateScreenTitle" = "Frissítés";
+
+"UpdateButtonCheck" = "ELLENŐRZÉS";
+
+"UpdateButtonSearching" = "KERESÉS";
+
+"UpdateButtonUpdate" = "FRISSÍTÉS";
+
+"UpdateButtonInstalling" = "TELEPÍTÉS";
+
+"UpdateButtonOffline" = "NINCS KAPCSOLAT";
+
+"UpdateInstalled" = "TELEPÍTVE";
+
+"UpdateVersion" = "verzió";
+
+"UpdateShowPreviousVersions" = "Korábbi verziók megtekintése…";
+
+"UpdateNoUpdateAvailableTitle" = "Nincs elérhető frissítés";
+
+"UpdateNoUpdateAvailableMessage" = "%@ már a legfrissebb verzió.";
+
+"UpdateError" = "Hiba";
+
+"UpdateWarning" = "Figyelmeztetés";
+
+"UpdateNoReleaseNotesAvailable" = "Nem elérhető a változások listája.";
+
+
+/* Update Authorization  */
+
+"UpdateAuthorizationProgress" = "Engedélyezés…";
+
+"UpdateAuthorizationOffline" = "Internetkapcsolat szükséges!";
+
+"UpdateAuthorizationDenied" = "Engedélyezés megtagadva. Lépjen kapcsolatba a fejlesztővel.";
+
+
+/* Update Expiry  */
+
+"UpdateExpired" = "%@ érvényessége lejárt, és már nem használható.";
+
+
+/* Update Simulator Warning */
+
+"UpdateSimulatorMessage" = "A Hockey Update nem használható a szimulátorban.\nAz itms-services:// URL séma elérhető, de nem működőképes.";
+
+
+/* Feedback */
+
+
+/* New Message Alert */
+
+/* Alert Title */
+"HockeyFeedbackNewMessageTitle" = "Új válasz";
+
+/* Alert Text */
+"HockeyFeedbackNewMessageText" = "Új válasz érkezett az Ön visszajelzésére. Kívánja most megtekinteni?";
+
+/* Alert Ignore Button */
+"HockeyFeedbackIgnore" = "Most nem";
+
+/* Alert Show Button */
+"HockeyFeedbackShow" = "Megtekintés";
+
+
+/* List View */
+
+/* Title */
+"HockeyFeedbackListTitle" = "Visszajelzés";
+
+/* Last Updated */
+"HockeyFeedbackListLastUpdated" = "Utolsó frissítés: %@";
+
+/* Never Updated */
+"HockeyFeedbackListNeverUpdated" = "Soha";
+
+/* Provide Feedback Button Title */
+"HockeyFeedbackListButonWriteFeedback" = "Visszajelzés küldése";
+
+/* Add a Response Button Title */
+"HockeyFeedbackListButonWriteResponse" = "Válasz küldése";
+
+/* User Data Set Name Button Title */
+"HockeyFeedbackListButonUserDataSetName" = "Adja meg a nevét";
+
+/* User Data Set Email Button Title */
+"HockeyFeedbackListButonUserDataSetEmail" = "Adja meg az e-mail címét";
+
+/* User Data With Name Button Title */
+"HockeyFeedbackListButonUserDataWithName" = "Név: %@";
+
+/* User Data With Email Button Title */
+"HockeyFeedbackListButonUserDataWithEmail" = "E-mail: %@";
+
+/* Button title for deleting all local messages*/
+"HockeyFeedbackListButonDeleteAllMessages" = "Összes üzenet törlése";
+
+/* Message pending to be send */
+"HockeyFeedbackListMessagePending" = "Folyamatban";
+
+
+/* Delete All Messages Action Sheet / Alert View */
+
+/* Title for the Action Sheet */
+"HockeyFeedbackListDeleteAllTitle" = "Minden üzenet törlődni fog erről az eszközről.";
+
+/* Button Title to perform delete action */
+"HockeyFeedbackListDeleteAllDelete" = "Törlés";
+
+/* Button Title to cancel delete action */
+"HockeyFeedbackListDeleteAllCancel" = "Mégsem";
+
+
+/* Open Link In Safari Action Sheet / Alert View */
+
+/* Button Title to cancel */
+"HockeyFeedbackListLinkActionCancel" = "Mégsem";
+
+/* Button Title to Open the Link */
+"HockeyFeedbackListLinkActionOpen" = "Megnyitás";
+
+/* Button Title to Copy the Link */
+"HockeyFeedbackListLinkActionCopy" = "Másolás";
+
+
+/* UIActivity */
+
+/* Activity Sharing Button Title, App Name will be inserted */
+"HockeyFeedbackActivityButtonTitle" = "Visszajelzés: %@";
+
+/* if there can no app name be found, use this instead for HockeyFeedbackActivityButtonTitle */
+"HockeyFeedbackActivityAppPlaceholder" = "az alkalmazásról";
+
+
+/* Compose Message */
+
+/* Title */
+"HockeyFeedbackComposeTitle" = "Új visszajelzés";
+
+/* Send button */
+"HockeyFeedbackComposeSend" = "Küldés";
+
+
+/* Set User Data */
+
+/* Title */
+"HockeyFeedbackUserDataTitle" = "Felhasználói adatok";
+
+/* Description On What Should Be Entered */
+"HockeyFeedbackUserDataDescription" = "Kérjük, adja meg néhány adatát, mielőtt megírja a visszajelzést.";
+
+/* Name Field */
+"HockeyFeedbackUserDataName" = "Név";
+
+/* Name Placeholder */
+"HockeyFeedbackUserDataNamePlaceHolder" = "Gipsz Jakab";
+
+/* Email Field */
+"HockeyFeedbackUserDataEmail" = "E-mail";
+
+/* Email Placeholder */
+"HockeyFeedbackUserDataEmailPlaceholder" = "example@email.com";
