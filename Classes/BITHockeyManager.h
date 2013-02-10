@@ -48,7 +48,7 @@
  3. Configure each module.
  4. Start up all modules.
  
- The SDK is optimized to defer everything possible to a later time while making sure e.g.  crashes on startup can also be catched and each module executes other code with a delay some seconds. This ensures that applicationDidFinishLaunching will process as fast as possible and the SDK will not block the startup sequence resulting in a possible kill by the watchdog process.
+ The SDK is optimized to defer everything possible to a later time while making sure e.g. crashes on startup can also be caught and each module executes other code with a delay some seconds. This ensures that applicationDidFinishLaunching will process as fast as possible and the SDK will not block the startup sequence resulting in a possible kill by the watchdog process.
 
  All modules do **NOT** show any user interface if the module is not activated or not integrated.
  `BITCrashManager`: Shows an alert on startup asking the user if he/she agrees on sending the crash report, if `[BITCrashManager crashManagerStatus]` is set to `BITCrashManagerStatusAlwaysAsk` (default)
