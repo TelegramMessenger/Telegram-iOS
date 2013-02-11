@@ -1,44 +1,54 @@
-### Version 3.0.0
+## Version 3.0.0
 
-- General:
-    - [NEW] Added new Feedback module
-    - [NEW] Minimum iOS Deployment version is now iOS 5.0
-    - [NEW] Migrated to use ARC
-    - [NEW] Added localizations provided by [Wordcrafts.de](http://wordcrafts.de):
-      Chinese, English, French, German, Italian, Japanese, Portuguese, Brazilian-Portuguese, Russian, Spanish
-    - [NEW] Added Romanian, Hungarian localization
-    - [UPDATE] Using embedded.framework for binary distribution containing everything needed in one package
-    - [UPDATE] Improved Xcode project setup to only use one static library
-    - [UPDATE] Providing build settings as `HockeySDK.xcconfig` file for easier setup
-    - [UPDATE] Remove `-ObjC` from `Other Linker Flags`, since the SDK doesn't need it
-    - [UPDATE] Documentation improvements
-    - [UPDATE] Exclude binary UUID check from simulator builds, so unit test targets will work. But functionality based on binary UUID cannot be tested in the simulator, e.g. update without changing build version.
-    - [BUGFIX] Fix some new compiler warnings
-    - [BUGFIX] Fix some missing new lines at EOF
-    - [BUGFIX] Make sure sure JSON serialization doesn't crash if the string is nil
-    - [BUGFIX] Various additional minor fixes
+- General
 
-- Crash Reporting:
-    - [NEW] Add anonymous device ID to crash reports
-    - [UPDATE] The following delegates in `BITCrashManagerDelegate` moved to `BITHockeyManagerDelegate`:
-        - `- (NSString *)userNameForCrashManager:(BITCrashManager *)crashManager;` is now `- (NSString *)userNameForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager;`
-        - `- (NSString *)userEmailForCrashManager:(BITCrashManager *)crashManager;` is now `- (NSString *)userEmailForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager;`
-    - [BUGFIX] Move calculation of time interval between startup and crash further up in the code, so delegates can use this information e.g. to add it into a log file
-    - [BUGFIX] Call delegate also if a crash was detected but could not be read (if handling crashes on startup is implemented)
-    - [BUGFIX] Format timestamp in crash report to be always UTC in en_US locale
-    - [BUGFIX] Make sure crash reports incident identifier and key don't have special [] chars and some value
+	- [NEW] Added new Feedback module
+	- [NEW] Minimum iOS Deployment version is now iOS 5.0
+	- [NEW] Migrated to use ARC
+	- [NEW] Added localizations provided by [Wordcrafts.de](http://wordcrafts.de):
+	Chinese, English, French, German, Italian, Japanese, Portuguese, Brazilian-Portuguese, Russian, Spanish
+	- [NEW] Added Romanian, Hungarian localization
+	- [UPDATE] Using embedded.framework for binary distribution containing everything needed in one package
+	- [UPDATE] Improved Xcode project setup to only use one static library
+	- [UPDATE] Providing build settings as `HockeySDK.xcconfig` file for easier setup
+	- [UPDATE] Remove `-ObjC` from `Other Linker Flags`, since the SDK doesn't need it anymore
+	- [UPDATE] Improved documentation
+	- [UPDATE] Excluded binary UUID check from simulator builds, so unit test targets will work. But functionality based on binary UUID cannot be tested in the simulator, e.g. update without changing build version.
+	- [BUGFIX] Fixed some new compiler warnings
+	- [BUGFIX] Fixed some missing new lines at EOF
+	- [BUGFIX] Make sure sure JSON serialization doesn't crash if the string is nil
+	- [BUGFIX] Various additional minor fixes
+	<br /><br/>
 
-- Feedback:
-    - [NEW] User feedback interface for direct communication with your users
-    - [NEW] iOS 6 UIActivity component for integrating feedback
-    - [NEW] Ask user details and show compose screen automatically on first opening feedback list view
+- Crash Reporting
 
-- Updating:
-    - [NEW] Support for In-App updates without changing `CFBundleVersion`
-    - [UPDATE] Update UI modified to be more iOS 6 alike
-    - [UPDATE] Update UI shows the company name next to the app name if defined in the backend
-    - [BUGFIX] Fix a problem showing the update UI animated if there TTNavigator class is present even though not being used
+	- [NEW] Added anonymous device ID to crash reports
+	- [UPDATE] The following delegates in `BITCrashManagerDelegate` moved to `BITHockeyManagerDelegate`:
+	- `- (NSString *)userNameForCrashManager:(BITCrashManager *)crashManager;` is now `- (NSString *)userNameForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager;`
+	- `- (NSString *)userEmailForCrashManager:(BITCrashManager *)crashManager;` is now `- (NSString *)userEmailForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager;`
+	- [BUGFIX] Moved calculation of time interval between startup and crash further up in the code, so delegates can use this information e.g. to add it into a log file
+	- [BUGFIX] If a crash was detected but could not be read (if handling crashes on startup is implemented), the delegate is still called
+	- [BUGFIX] Timestamp in crash report is now always UTC in en_US locale
+	- [BUGFIX] Make sure crash reports incident identifier and key don't have special [] chars and some value
+	<br /><br/>
 
+- Feedback
+
+	- [NEW] User feedback interface for direct communication with your users
+	- [NEW] iOS 6 UIActivity component for integrating feedback
+	- [NEW] When first opening the feedback list view, user details and show compose screen are automatically shown
+	<br /><br/>
+
+- Updating
+
+	- [NEW] Support for In-App updates without changing `CFBundleVersion`
+	- [UPDATE] Update UI modified to be more iOS 6 alike
+	- [UPDATE] Update UI shows the company name next to the app name if defined in the backend
+	- [UPDATE] Updated integration and migration documentation: [Installation & Setup](http://www.hockeyapp.net/help/sdk/ios/3.0.0/docs/docs/Guide-Installation-Setup.html) (Recommended), [Installation & Setup Advanced](http://www.hockeyapp.net/help/sdk/ios/3.0.0/docs/docs/Guide-Installation-Setup-Advanced.html) (Using Git submodule and Xcode sub-project), [Migration from previous SDK Versions](http://www.hockeyapp.net/help/sdk/ios/3.0.0/docs/docs/Guide-Migration-Kits.html)
+      		
+	- [BUGFIX] Fixed a problem showing the update UI animated if there TTNavigator class is present even though not being used
+
+---
 
 ### Version 3.0.0 RC 1
 
