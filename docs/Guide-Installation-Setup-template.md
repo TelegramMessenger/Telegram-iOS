@@ -57,7 +57,7 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
     
     <img src="XcodeFrameworks1_normal.png"/>
     
-    **Note:** You can also add the required frameworks manually to your targets `Build Phases` an continue with step `10.` instead.
+    **Note:** You can also add the required frameworks manually to your targets `Build Phases` and continue with step `10.` instead.
 
 9. If you are already using a `.xcconfig` file, simply add the following line to it
 
