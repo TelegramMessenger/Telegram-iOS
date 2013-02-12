@@ -51,7 +51,7 @@
 #define BITHockeyNetworkDidBecomeReachableNotification @"BITHockeyNetworkDidBecomeReachable"
 
 
-// hockey api error domain
+// hockey crash reporting api error domain
 typedef enum {
   BITCrashErrorUnknown,
   BITCrashAPIAppVersionRejected,
@@ -60,9 +60,7 @@ typedef enum {
 } BITCrashErrorReason;
 extern NSString *const __attribute__((unused)) kBITCrashErrorDomain;
 
-// Update App Versions
-
-// hockey api error domain
+// hockey update api error domain
 typedef enum {
   BITUpdateErrorUnknown,
   BITUpdateAPIServerReturnedInvalidStatus,
@@ -74,9 +72,7 @@ typedef enum {
 extern NSString *const __attribute__((unused)) kBITUpdateErrorDomain;
 
 
-// Update App Versions
-
-// hockey api error domain
+// hockey feedback api error domain
 typedef enum {
   BITFeedbackErrorUnknown,
   BITFeedbackAPIServerReturnedInvalidStatus,
@@ -90,7 +86,6 @@ extern NSString *const __attribute__((unused)) kBITFeedbackErrorDomain;
 
 // HockeySDK
 
-// hockey api error domain
 typedef enum {
   BITHockeyErrorUnknown,
   HockeyAPIClientMissingJSONLibrary

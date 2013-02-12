@@ -8,6 +8,10 @@
 	- [NEW] Added localizations provided by [Wordcrafts.de](http://wordcrafts.de):
 	Chinese, English, French, German, Italian, Japanese, Portuguese, Brazilian-Portuguese, Russian, Spanish
 	- [NEW] Added Romanian, Hungarian localization
+	- [UPDATE] Updated integration and migration documentation
+      - [Installation & Setup](http://www.hockeyapp.net/help/sdk/ios/3.0.0/docs/docs/Guide-Installation-Setup.html) (Recommended)
+      - [Installation & Setup Advanced](http://www.hockeyapp.net/help/sdk/ios/3.0.0/docs/docs/Guide-Installation-Setup-Advanced.html) (Using Git submodule and Xcode sub-project)
+      - [Migration from previous SDK Versions](http://www.hockeyapp.net/help/sdk/ios/3.0.0/docs/docs/Guide-Migration-Kits.html)
 	- [UPDATE] Using embedded.framework for binary distribution containing everything needed in one package
 	- [UPDATE] Improved Xcode project setup to only use one static library
 	- [UPDATE] Providing build settings as `HockeySDK.xcconfig` file for easier setup

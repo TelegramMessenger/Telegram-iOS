@@ -10,7 +10,7 @@ First of all you should remove all files from prior versions of either QuincyKit
 
 ### QuincyKit
 
-In Xcode open the `Project Navigator` (⌘+1). In the search field at the bottom enter "Quincy". Search should find the following files:
+In Xcode open the `Project Navigator` (⌘+1). In the search field at the bottom enter "Quincy". QuincyKit is installed, if search finds the following files:
 
 * BWQuincyManager.h
 * BWQuincyManager.m
@@ -20,7 +20,7 @@ Delete them all ("Move to Trash"). Or if you have them grouped into a folder (fo
 
 ### HockeyKit
 
-In Xcode open the `Project Navigator` (⌘+1). In the search field at the bottom enter "Hockey". You should find different files with the string "Hockey" in it, for example:
+In Xcode open the `Project Navigator` (⌘+1). In the search field at the bottom enter "Hockey". HockeyKit is installed, if search finds for example:
 
 * BWHockeyManager.h
 * Hockey.bundle
