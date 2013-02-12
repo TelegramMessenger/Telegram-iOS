@@ -122,4 +122,4 @@ This warning means there is still a `Framework Search Path` pointing to the fold
 
 ## Advanced Migration
 
-If you used any optional API calls, for example adding a custom description to a crash report, migrating those would exceed the scope of this guide. Please have a look at the [API documentation](https://github.com/bitstadium/HockeySDK-iOS/downloads). 
+If you used any optional API calls, for example adding a custom description to a crash report, migrating those would exceed the scope of this guide. Please have a look at the [API documentation](http://hockeyapp.net/releases/). 

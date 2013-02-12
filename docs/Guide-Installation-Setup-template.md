@@ -21,14 +21,14 @@ This document contains the following sections:
 
 The SDK runs on devices with iOS 5.0 or higher.
 
-If you need support for iOS 4.x, please check out [HockeySDK v2.5.5](https://github.com/bitstadium/HockeySDK-iOS/downloads)
+If you need support for iOS 4.x, please check out [HockeySDK v2.5.5](http://www.hockeyapp.net/releases/)
 
 If you need support for iOS 3.x, please check out [HockeyKit](http://support.hockeyapp.net/kb/client-integration/beta-distribution-on-ios-hockeykit) and [QuincyKit](http://support.hockeyapp.net/kb/client-integration/crash-reporting-on-ios-quincykit)
 
 <a id="download"></a> 
 ## Download & Extract
 
-1. Download the latest [HockeySDK-iOS](https://github.com/bitstadium/HockeySDK-iOS/downloads) framework.
+1. Download the latest [HockeySDK-iOS](http://www.hockeyapp.net/releases/) framework.
 
 2. Unzip the file. A new folder `HockeySDK-iOS` is created.
 
@@ -132,4 +132,6 @@ The Mac Desktop Uploader can provide easy uploading of your app versions to Hock
 
 This documentation provides integrated help in Xcode for all public APIs and a set of additional tutorials and HowTos.
 
-1. Copy `de.bitstadium.HockeySDK-iOS-3.0.0RC1.docset` into ~`/Library/Developer/Shared/Documentation/DocSet`
+1. Copy `de.bitstadium.HockeySDK-iOS-3.0.0.docset` into ~`/Library/Developer/Shared/Documentation/DocSet`
+
+The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.0.0/](http://hockeyapp.net/help/sdk/ios/3.0.0/)
