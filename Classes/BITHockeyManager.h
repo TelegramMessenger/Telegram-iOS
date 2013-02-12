@@ -2,7 +2,7 @@
  * Author: Andreas Linde <mail@andreaslinde.de>
  *         Kent Sutherland
  *
- * Copyright (c) 2012 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2012-2013 HockeyApp, Bit Stadium GmbH.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -27,25 +27,40 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import "BITUpdateManager.h"
+#import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 
 
 @protocol BITHockeyManagerDelegate;
 
+@class BITHockeyBaseManager;
 @class BITCrashManager;
 @class BITUpdateManager;
+@class BITFeedbackManager;
 
 /** 
- The HockeySDK manager.
+ The HockeySDK manager. Responsible for setup and management of all components
  
  This is the principal SDK class. It represents the entry point for the HockeySDK. The main promises of the class are initializing the SDK modules, providing access to global properties and to all modules. Initialization is divided into several distinct phases:
  
  1. Setup the [HockeyApp](http://hockeyapp.net/) app identifier and the optional delegate: This is the least required information on setting up the SDK and using it. It does some simple validation of the app identifier and checks if the app is running from the App Store or not. If the [Atlassian JMC framework](http://www.atlassian.com/jmc/) is found, it will disable its Crash Reporting module and configure it with the Jira configuration data from [HockeyApp](http://hockeyapp.net/).
- 2. Provides access to the SDK modules `BITCrashManager` and `BITUpdateManager`. This way all modules can be further configured to personal needs, if the defaults don't fit the requirements.
- 3. Start up all modules.
+ 2. Provides access to the SDK modules `BITCrashManager`, `BITUpdateManager`, and `BITFeedbackManager`. This way all modules can be further configured to personal needs, if the defaults don't fit the requirements.
+ 3. Configure each module.
+ 4. Start up all modules.
+ 
+ The SDK is optimized to defer everything possible to a later time while making sure e.g. crashes on startup can also be caught and each module executes other code with a delay some seconds. This ensures that applicationDidFinishLaunching will process as fast as possible and the SDK will not block the startup sequence resulting in a possible kill by the watchdog process.
+
+ All modules do **NOT** show any user interface if the module is not activated or not integrated.
+ `BITCrashManager`: Shows an alert on startup asking the user if he/she agrees on sending the crash report, if `[BITCrashManager crashManagerStatus]` is set to `BITCrashManagerStatusAlwaysAsk` (default)
+ `BITUpdateManager`: Is automatically deactivated when the SDK detects it is running from a build distributed via the App Store. Otherwise if it is not deactivated manually, it will show an alert after startup informing the user about a pending update, if one is available. If the user then decides to view the update another screen is presented with further details and an option to install the update.
+ `BITFeedbackManager`: If this module is deactivated or the user interface is nowhere added into the app, this module will not do anything. It will not fetch the server for data or show any user interface. If it is integrated, activated, and the user already used it to provide feedback, it will show an alert after startup if a new answer has been received from the server with the option to view it.
+ 
+ @warning You should **NOT** change any module configuration after calling `startManager`!
  
  Example:
-    [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"<AppIdentifierFromHockeyApp>" delegate:nil];
+    [[BITHockeyManager sharedHockeyManager]
+      configureWithIdentifier:@"<AppIdentifierFromHockeyApp>"
+                     delegate:nil];
     [[BITHockeyManager sharedHockeyManager] startManager];
  
  @warning When also using the SDK for updating app versions (AdHoc or Enterprise) and collecting
@@ -67,16 +82,7 @@
 
  */
 
-@interface BITHockeyManager : NSObject {
-@private
-  id _delegate;
-  NSString *_appIdentifier;
-  
-  BOOL _validAppIdentifier;
-  
-  BOOL _startManagerIsInvoked;
-}
-
+@interface BITHockeyManager : NSObject
 
 #pragma mark - Public Methods
 
@@ -99,13 +105,16 @@
  implements the optional protocols `BITHockeyManagerDelegate`, `BITCrashManagerDelegate` or
  `BITUpdateManagerDelegate`.
  
-    [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"<AppIdentifierFromHockeyApp>" delegate:nil];
+    [[BITHockeyManager sharedHockeyManager]
+      configureWithIdentifier:@"<AppIdentifierFromHockeyApp>"
+                     delegate:nil];
 
  @see configureWithBetaIdentifier:liveIdentifier:delegate:
  @see startManager
  @see BITHockeyManagerDelegate
  @see BITCrashManagerDelegate
  @see BITUpdateManagerDelegate
+ @see BITFeedbackManagerDelegate
  @param appIdentifier The app identifier that should be used.
  @param delegate `nil` or the class implementing the option protocols
  */
@@ -121,15 +130,26 @@
  And also assign the class that implements the optional protocols `BITHockeyManagerDelegate`,
  `BITCrashManagerDelegate` or `BITUpdateManagerDelegate`
  
-    [[BITHockeyManager sharedHockeyManager] configureWithBetaIdentifier:@"<AppIdentifierForBetaAppFromHockeyApp>"
-                                                         liveIdentifier:@"<AppIdentifierForLiveAppFromHockeyApp>"
-                                                               delegate:nil];
+    [[BITHockeyManager sharedHockeyManager]
+      configureWithBetaIdentifier:@"<AppIdentifierForBetaAppFromHockeyApp>"
+                   liveIdentifier:@"<AppIdentifierForLiveAppFromHockeyApp>"
+                         delegate:nil];
+
+ We recommend using one app entry on HockeyApp for your beta versions and another one for
+ your live versions. The reason is that you will have way more beta versions than live
+ versions, but on the other side get way more crash reports on the live version. Separating
+ them into two different app entries makes it easier to work with the data. In addition
+ you will likely end up having the same version number for a beta and live version which
+ would mix different data into the same version. Also the live version does not require
+ you to upload any IPA files, uploading only the dSYM package for crash reporting is
+ just fine.
 
  @see configureWithIdentifier:delegate:
  @see startManager
  @see BITHockeyManagerDelegate
  @see BITCrashManagerDelegate
  @see BITUpdateManagerDelegate
+ @see BITFeedbackManagerDelegate
  @param betaIdentifier The app identifier for the _non_ app store (beta) configurations
  @param liveIdentifier The app identifier for the app store configurations.
  @param delegate `nil` or the class implementing the optional protocols
@@ -161,23 +181,24 @@
  By default this is set to the HockeyApp servers and there rarely should be a
  need to modify that.
  */
-@property (nonatomic, retain) NSString *updateURL;
+@property (nonatomic, strong) NSString *serverURL;
 
 
 /**
  Reference to the initialized BITCrashManager module
+
+ Returns the BITCrashManager instance initialized by BITHockeyManager
  
  @see configureWithIdentifier:delegate:
  @see configureWithBetaIdentifier:liveIdentifier:delegate:
  @see startManager
  @see disableCrashManager
- @return The BITCrashManager instance initialized by BITHockeyManager
  */
-@property (nonatomic, retain, readonly) BITCrashManager *crashManager;
+@property (nonatomic, strong, readonly) BITCrashManager *crashManager;
 
 
 /**
- Flag the determines wether the Crash Manager should be disabled
+ Flag the determines whether the Crash Manager should be disabled
  
  If this flag is enabled, then crash reporting is disabled and no crashes will
  be send.
@@ -193,17 +214,18 @@
 /**
  Reference to the initialized BITUpdateManager module
  
+ Returns the BITUpdateManager instance initialized by BITHockeyManager
+ 
  @see configureWithIdentifier:delegate:
  @see configureWithBetaIdentifier:liveIdentifier:delegate:
  @see startManager
  @see disableUpdateManager
- @return The BITCrashManager instance initialized by BITUpdateManager
  */
-@property (nonatomic, retain, readonly) BITUpdateManager *updateManager;
+@property (nonatomic, strong, readonly) BITUpdateManager *updateManager;
 
 
 /**
- Flag the determines wether the Update Manager should be disabled
+ Flag the determines whether the Update Manager should be disabled
  
  If this flag is enabled, then checking for updates and submitting beta usage
  analytics will be turned off!
@@ -216,6 +238,33 @@
 @property (nonatomic, getter = isUpdateManagerDisabled) BOOL disableUpdateManager;
 
 
+/**
+ Reference to the initialized BITFeedbackManager module
+ 
+ Returns the BITFeedbackManager instance initialized by BITHockeyManager
+ 
+ @see configureWithIdentifier:delegate:
+ @see configureWithBetaIdentifier:liveIdentifier:delegate:
+ @see startManager
+ @see disableFeedbackManager
+ */
+@property (nonatomic, strong, readonly) BITFeedbackManager *feedbackManager;
+
+
+/**
+ Flag the determines whether the Feedback Manager should be disabled
+ 
+ If this flag is enabled, then letting the user give feedback and
+ get responses will be turned off!
+ 
+ Please note that the Feedback Manager will be initialized anyway!
+ 
+ *Default*: _NO_
+ @see feedbackManager
+ */
+@property (nonatomic, getter = isFeedbackManagerDisabled) BOOL disableFeedbackManager;
+
+
 ///-----------------------------------------------------------------------------
 /// @name Environment
 ///-----------------------------------------------------------------------------
@@ -224,8 +273,8 @@
  Flag that determines whether the application is installed and running
  from an App Store installation.
  
- @return YES if the app is installed and running from the App Store
- @return NO if the app is installed via debug, ad-hoc or enterprise distribution
+ Returns _YES_ if the app is installed and running from the App Store
+ Returns _NO_ if the app is installed via debug, ad-hoc or enterprise distribution
  */
 @property (nonatomic, readonly, getter=isAppStoreEnvironment) BOOL appStoreEnvironment;
 

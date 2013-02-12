@@ -4,9 +4,9 @@
  *  Damian Morris <damian@moso.com.au>
  *  Andreas Linde <mail@andreaslinde.de>
  *
- * Copyright (c) 2008-2012 Plausible Labs Cooperative, Inc.
+ * Copyright (c) 2008-2013 Plausible Labs Cooperative, Inc.
  * Copyright (c) 2010 MOSO Corporation, Pty Ltd.
- * Copyright (c) 2012 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2012-2013 HockeyApp, Bit Stadium GmbH.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -245,8 +245,8 @@ static NSInteger binaryImageSort(id binary1, id binary2, void *context) {
         if (report.systemInfo.operatingSystemBuild != nil)
             osBuild = report.systemInfo.operatingSystemBuild;
       
-        NSLocale *enUSPOSIXLocale = [[[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"] autorelease];
-        NSDateFormatter *rfc3339Formatter = [[[NSDateFormatter alloc] init] autorelease];
+        NSLocale *enUSPOSIXLocale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"];
+        NSDateFormatter *rfc3339Formatter = [[NSDateFormatter alloc] init];
         [rfc3339Formatter setLocale:enUSPOSIXLocale];
         [rfc3339Formatter setDateFormat:@"yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'"];
         [rfc3339Formatter setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:0]];

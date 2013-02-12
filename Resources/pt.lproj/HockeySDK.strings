@@ -1,4 +1,11 @@
-﻿/* General */
+/*
+ Localization provided by Wordcrafts
+ The Mac OS X and iOS localization experts.
+ http://www.wordcrafts.de
+ */
+
+
+/* General */
 
 /* For dialogs yes buttons */
 "HockeyYes" = "Sim";
@@ -10,8 +17,7 @@
 "HockeyOK" = "OK";
 
 /* Replacement for app name, if it could not be detected */
-"HockeyAppNamePlaceholder" = "This app";
-
+"HockeyAppNamePlaceholder" = "Este app";
 
 /* Crash */
 
@@ -19,22 +25,22 @@
 /* Crash dialog */
 
 /* Title showing in the alert box when crash report data has been found */
-"CrashDataFoundTitle" = "Dados de falha encontrados";
+"CrashDataFoundTitle" = "%@ fechou repentinamente";
 
 /* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
-"CrashDataFoundAnonymousDescription" = "O aplicativo falhou anteriormente. Você gostaria de enviar ao desenvolvedor os dados sobre a falha do sistema, para que ele resolva o problema?";
+"CrashDataFoundAnonymousDescription" = "Gostaria de enviar um relatório anônimo para que possamos resolver o problema?";
 
 /* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
-"CrashDataFoundDescription" = "O aplicativo falhou anteriormente. Você gostaria de enviar ao desenvolvedor os dados sobre a falha do sistema, para que ele resolva o problema?";
+"CrashDataFoundDescription" = "Gostaria de enviar um relatório para que possamos resolver o problema?";
 
 /* Alert box button if the users wants to send crash data always automatically */
-"CrashSendReportAlways" = "Sempre";
+"CrashSendReportAlways" = "Sempre enviar";
 
 /* Alert box button to send the crash report once */
-"CrashSendReport" = "Sim";
+"CrashSendReport" = "Enviar relatório";
 
 /* Alert box button to decline sending the report */
-"CrashDontSendReport" = "Não";
+"CrashDontSendReport" = "Não enviar";
 
 /* Text showing in a processing box that the crash data is being uploaded to the server */
 "CrashReportSending" = "Enviando…";
@@ -50,11 +56,11 @@
 
 "UpdateAlertTextWithAppVersion" = "%@ está disponível.";
 
-"UpdateAlertMandatoryTextWithAppVersion" = "%@ está disponível e é uma atualização obrigatória!";
+"UpdateAlertMandatoryTextWithAppVersion" = "%@ está disponível e é uma atualização obrigatória.";
 
 "UpdateIgnore" = "Ignorar";
 
-"UpdateShow" = "Mostrar";
+"UpdateShow" = "Exibir";
 
 "UpdateInstall" = "Instalar";
 
@@ -65,13 +71,13 @@
 
 "UpdateButtonCheck" = "VERIFICAR";
 
-"UpdateButtonSearching" = "BUSCANDO";
+"UpdateButtonSearching" = "VERIFICANDO";
 
 "UpdateButtonUpdate" = "ATUALIZAR";
 
 "UpdateButtonInstalling" = "INSTALANDO";
 
-"UpdateButtonOffline" = "DESCONECTADO";
+"UpdateButtonOffline" = "OFFLINE";
 
 "UpdateInstalled" = "INSTALADO";
 
@@ -79,31 +85,148 @@
 
 "UpdateShowPreviousVersions" = "Mostrar versões anteriores...";
 
-"UpdateNoUpdateAvailableTitle" = "Sem atualização disponível";
+"UpdateNoUpdateAvailableTitle" = "Não há atualização disponível";
 
-"UpdateNoUpdateAvailableMessage" = "%@ já é a última versão disponível.";
+"UpdateNoUpdateAvailableMessage" = "%@ já é a versão mais recente.";
 
 "UpdateError" = "Erro";
 
-"UpdateWarning" = "Alerta";
+"UpdateWarning" = "Aviso";
 
-"UpdateNoReleaseNotesAvailable" = "Sem notas de atualização disponível.";
+"UpdateNoReleaseNotesAvailable" = "Não há notas de versão disponíveis.";
 
 
 /* Update Authorization  */
 
 "UpdateAuthorizationProgress" = "Autorizando...";
 
-"UpdateAuthorizationOffline" = "É necessário conexão com a internet!";
+"UpdateAuthorizationOffline" = "É necessário ter conexão à internet.";
 
-"UpdateAuthorizationDenied" = "Autorização negada. Contate o desenvolvedor.";
+"UpdateAuthorizationDenied" = "Autorização recusada. Entre em contato com o desenvolvedor.";
 
 
 /* Update Expiry  */
 
-"UpdateExpired" = "%@ is expired and can not be used any longer.";
+"UpdateExpired" = "%@ expirou e não pode mais ser usado.";
 
 
 /* Update Simulator Warning */
 
-"UpdateSimulatorMessage" = "Hockey Update não funciona no Simulador.\nA url itms-services:// é implementada mas não é funcional.";
+"UpdateSimulatorMessage" = "A atualização do Hockey não funciona no simulador.\nO protocolo itms-services:// está implementado, mas não funcional.";
+
+
+/* Feedback */
+
+
+/* New Message Alert */
+
+/* Alert Title */
+"HockeyFeedbackNewMessageTitle" = "Nova resposta de feedback";
+
+/* Alert Text */
+"HockeyFeedbackNewMessageText" = "Uma nova resposta a seu feedback está disponível. Gostaria de vê-la?";
+
+/* Alert Ignore Button */
+"HockeyFeedbackIgnore" = "Ignorar";
+
+/* Alert Show Button */
+"HockeyFeedbackShow" = "Exibir";
+
+
+/* List View */
+
+/* Title */
+"HockeyFeedbackListTitle" = "Feedback";
+
+/* Last Updated */
+"HockeyFeedbackListLastUpdated" = "Atualizado em: %@";
+
+/* Never Updated */
+"HockeyFeedbackListNeverUpdated" = "Nunca";
+
+/* Provide Feedback Button Title */
+"HockeyFeedbackListButonWriteFeedback" = "Fornecer feedback";
+
+/* Add a Response Button Title */
+"HockeyFeedbackListButonWriteResponse" = "Adicionar uma resposta";
+
+/* User Data Set Name Button Title */
+"HockeyFeedbackListButonUserDataSetName" = "Informe seu nome";
+
+/* User Data Set Email Button Title */
+"HockeyFeedbackListButonUserDataSetEmail" = "Informe seu e-mail";
+
+/* User Data With Name Button Title */
+"HockeyFeedbackListButonUserDataWithName" = "Nome: %@";
+
+/* User Data With Email Button Title */
+"HockeyFeedbackListButonUserDataWithEmail" = "E-mail: %@";
+
+/* Button title for deleting all local messages*/
+"HockeyFeedbackListButonDeleteAllMessages" = "Excluir todas as mensagens";
+
+/* Message pending to be send */
+"HockeyFeedbackListMessagePending" = "Pendente";
+
+
+/* Delete All Messages Action Sheet / Alert View */
+
+/* Title for the Action Sheet */
+"HockeyFeedbackListDeleteAllTitle" = "Todas as mensagens serão excluídas deste dispositivo.";
+
+/* Button Title to perform delete action */
+"HockeyFeedbackListDeleteAllDelete" = "Excluir";
+
+/* Button Title to cancel delete action */
+"HockeyFeedbackListDeleteAllCancel" = "Cancelar";
+
+
+/* Open Link In Safari Action Sheet / Alert View */
+
+/* Button Title to cancel */
+"HockeyFeedbackListLinkActionCancel" = "Cancelar";
+
+/* Button Title to Open the Link */
+"HockeyFeedbackListLinkActionOpen" = "Abrir";
+
+/* Button Title to Copy the Link */
+"HockeyFeedbackListLinkActionCopy" = "Copiar";
+
+
+/* UIActivity */
+
+/* Activity Sharing Button Title, App Name will be inserted */
+"HockeyFeedbackActivityButtonTitle" = "Feedback para %@";
+
+/* if there can no app name be found, use this instead for HockeyFeedbackActivityButtonTitle */
+"HockeyFeedbackActivityAppPlaceholder" = "App";
+
+
+/* Compose Message */
+
+/* Title */
+"HockeyFeedbackComposeTitle" = "Novo feedback";
+
+/* Send button */
+"HockeyFeedbackComposeSend" = "Enviar";
+
+
+/* Set User Data */
+
+/* Title */
+"HockeyFeedbackUserDataTitle" = "Meus dados";
+
+/* Description On What Should Be Entered */
+"HockeyFeedbackUserDataDescription" = "Informe seus dados antes de redigir o feedback.";
+
+/* Name Field */
+"HockeyFeedbackUserDataName" = "Nome";
+
+/* Name Placeholder */
+"HockeyFeedbackUserDataNamePlaceHolder" = "José da Silva";
+
+/* Email Field */
+"HockeyFeedbackUserDataEmail" = "E-mail";
+
+/* Email Placeholder */
+"HockeyFeedbackUserDataEmailPlaceholder" = "exemplo@email.com";

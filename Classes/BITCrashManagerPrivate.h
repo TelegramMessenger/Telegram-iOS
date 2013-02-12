@@ -2,7 +2,7 @@
  * Author: Andreas Linde <mail@andreaslinde.de>
  *         Kent Sutherland
  *
- * Copyright (c) 2012 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2012-2013 HockeyApp, Bit Stadium GmbH.
  * Copyright (c) 2011 Andreas Linde & Kent Sutherland.
  * All rights reserved.
  *
@@ -34,11 +34,11 @@
 @interface BITCrashManager () {
 }
 
-// set the server URL
-@property (nonatomic, retain) NSString *updateURL;
-
-- (id)initWithAppIdentifier:(NSString *)appIdentifier;
-
-- (void)startManager;
+//// set the server URL
+//@property (nonatomic, retain) NSString *serverURL;
+//
+//- (id)initWithAppIdentifier:(NSString *)appIdentifier;
+//
+//- (void)startManager;
 
 @end

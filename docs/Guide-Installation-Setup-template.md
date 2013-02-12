@@ -1,3 +1,6 @@
+## Version 3.0.0 RC1
+
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.0.0RC1/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -16,7 +19,9 @@ This document contains the following sections:
 <a id="requirements"></a> 
 ## Requirements
 
-The SDK runs on devices with iOS 4.0 or higher.
+The SDK runs on devices with iOS 5.0 or higher.
+
+If you need support for iOS 4.x, please check out [HockeySDK v2.5.5](https://github.com/bitstadium/HockeySDK-iOS/downloads)
 
 If you need support for iOS 3.x, please check out [HockeyKit](http://support.hockeyapp.net/kb/client-integration/beta-distribution-on-ios-hockeykit) and [QuincyKit](http://support.hockeyapp.net/kb/client-integration/crash-reporting-on-ios-quincykit)
 
@@ -32,7 +37,7 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
 <a id="xcode"></a> 
 ## Set up Xcode
 
-1. Drag & drop the `HockeySDK-iOS` folder from your project directory to your Xcode project.
+1. Drag & drop `HockeySDK.embeddedframework` from your project directory to your Xcode project.
 
 2. Similar to above, our projects have a group `Vendor`, so we drop it there.
 
@@ -42,38 +47,33 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
 
 4. Select your project in the `Project Navigator` (⌘+1).
 
-5. Select your target.
+5. Select your project.
 
-6. Select the tab `Summary`.
+6. Select the tab `Info`.
 
-7. Expand `Link Binary With Libraries`.
+7. Expand `Configurations`.
 
-8. The following entries should be present:
-    * CoreGraphics.framework
-    * Foundation.framework
-    * HockeySDK.framework
-    * QuartzCore.framework
-    * SystemConfiguration.framework
-    * UIKit.framework
+8. Select `HockeySDK.xcconfig` for all your configurations (if you don't already use a `.xcconfig` file)
     
     <img src="XcodeFrameworks1_normal.png"/>
-
-9. If one of the frameworks is missing, then click the + button, search the framework and confirm with the `Add` button.
-
-10. Remove `CrashReporter.framework` if present, and also remove if from the project by deleting it also from the filesystem
-
-11. Select `Build Settings`
-
-12. Search `Framework Search Paths`
-
-13. Make sure that the list does not contain a path pointing to the `QuincyKit` SDK or another framework that contains `PLCrashReporter`
     
-    <img src="XcodeFrameworkSearchPath_normal.png"/>
+    **Note:** You can also add the required frameworks manually to your targets `Build Phases` an continue with step `10.` instead.
 
-14. HockeySDK-iOS also needs a JSON library. If your deployment target iOS 5.0 or later, then you don't have to do anything. If your deployment target is iOS 4.x, please include one of the following libraries:
-    * [JSONKit](https://github.com/johnezang/JSONKit)
-    * [SBJSON](https://github.com/stig/json-framework)
-    * [YAJL](https://github.com/gabriel/yajl-objc)
+9. If you are already using a `.xcconfig` file, simply add the following line to it
+
+    `#include "../Vendor/HockeySDK/Support/HockeySDK.xcconfig"`
+    
+    (Adjust the path depending where the `Project.xcconfig` file is located related to the Xcode project package)
+    
+    **Important note:** Check if you overwrite any of the build settings and add a missing `$(inherited)` entry on the projects build settings level, so the `HockeySDK.xcconfig` settings will be passed through successfully.
+
+10. If you are getting build warnings, then the `.xcconfig` setting wasn't included successfully or its settings in `Other Linker Flags` get ignored because `$(interited)` is missing on project or target level. Either add `$(inherited)` or link the following frameworks manually in `Link Binary With Libraries` under `Build Phases`:
+    - `CoreText`
+    - `CoreGraphics`
+    - `Foundation`
+    - `QuartzCore`
+    - `SystemConfiguration`
+    - `UIKit`    
 
 
 <a id="modify"></a> 
@@ -87,7 +87,7 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
 
 3. Let the AppDelegate implement the protocols `BITHockeyManagerDelegate`, `BITUpdateManagerDelegate` and `BITCrashManagerDelegate`:
 
-        @interface AppDelegate() <BITHockeyManagerDelegate, BITUpdateManagerDelegate, BITCrashManagerDelegate> {}
+        @interface AppDelegate(HockeyProtocols) <BITHockeyManagerDelegate, BITUpdateManagerDelegate, BITCrashManagerDelegate> {}
         @end
 
 4. Search for the method `application:didFinishLaunchingWithOptions:`
@@ -101,7 +101,10 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
 
 6. Replace `BETA_IDENTIFIER` with the app identifier of your beta app. If you don't know what the app identifier is or how to find it, please read [this how-to](http://support.hockeyapp.net/kb/how-tos/how-to-find-the-app-identifier). 
 
-7. Replace `LIVE_IDENTIFIER` with the app identifier of your release app.
+7. Replace `LIVE_IDENTIFIER` with the app identifier of your release app. We suggest to setup different apps on HockeyApp for your test and production builds. You usually will have way more test versions, but your production version usually has way more crash reports. This helps to keep data separated, getting a better overview and less trouble setting the right app versions downloadable for your beta users.
+
+*Note:* The SDK is optimized to defer everything possible to a later time while making sure e.g. crashes on startup can also be caught and each module executes other code with a delay some seconds. This ensures that applicationDidFinishLaunching will process as fast as possible and the SDK will not block the startup sequence resulting in a possible kill by the watchdog process.
+
 
 <a id="udid"></a> 
 ## Submit the UDID
@@ -117,27 +120,7 @@ If you only want crash reporting, you can skip this step. If you want to use Hoc
       return nil;
     }
   
-The method only returns the UDID when the build is not targeted to the App Sore. This assumes that a preprocessor macro name CONFIGURATION_AppStore exists and is set for App Store builds. You can define the macro as follows:
-
-1. Select your project in the `Project Navigator` (⌘+1).
-
-2. Select your target.
-
-3. Select the tab `Build Settings`.
-
-4. Search for `preprocessor macros`
-
-    <img src="XcodeMacros1_normal.png"/>
-
-5. Select the top-most line and double-click the value field.
-
-6. Click the + button.
-
-7. Enter the following string into the input field and finish with "Done".<pre><code>CONFIGURATION_$(CONFIGURATION)</code></pre>
-
-    <img src="XcodeMacros2_normal.png"/>
-
-Now you can use `#if defined (CONFIGURATION_AppStore)` statements in your code. If your configurations have different names, please adjust the above use of `CONFIGURATION_AppStore`.
+The method only returns the UDID when the build is not targeted to the App Sore. This assumes that a preprocessor macro name CONFIGURATION_AppStore exists and is set for App Store builds. The macros are already defined in `HockeySDK.xcconfig` or can be set manually by setting `GCC_PREPROCESSOR_DEFINITIONS` in your build configurations to `CONFIGURATION_$(CONFIGURATION)`.
 
 <a id="mac"></a> 
 ## Mac Desktop Uploader
@@ -149,8 +132,4 @@ The Mac Desktop Uploader can provide easy uploading of your app versions to Hock
 
 This documentation provides integrated help in Xcode for all public APIs and a set of additional tutorials and HowTos.
 
-1. Download the latest [HockeySDK-iOS documentation](https://github.com/bitstadium/HockeySDK-iOS/downloads).
-
-2. Unzip the file. A new folder `HockeySDK-iOS-documentation` is created.
-
-3. Copy the content into ~`/Library/Developer/Shared/Documentation/DocSet`
+1. Copy `de.bitstadium.HockeySDK-iOS-3.0.0RC1.docset` into ~`/Library/Developer/Shared/Documentation/DocSet`

@@ -1,7 +1,7 @@
 /*
  * Author: Andreas Linde <mail@andreaslinde.de>
  *
- * Copyright (c) 2012 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2012-2013 HockeyApp, Bit Stadium GmbH.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -45,3 +45,5 @@ UIImage *bit_reflectedImageWithHeight(UIImage *inputImage, NSUInteger height, fl
 UIImage *bit_newWithContentsOfResolutionIndependentFile(NSString * path);
 UIImage *bit_imageWithContentsOfResolutionIndependentFile(NSString * path);
 UIImage *bit_imageNamed(NSString *imageName, NSString *bundleName);
+UIImage *bit_screenshot(void);
+UIImage *bit_appIcon(void);

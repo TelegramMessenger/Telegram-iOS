@@ -1,7 +1,7 @@
 /*
  * Author: Peter Steinberger
  *
- * Copyright (c) 2012 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2012-2013 HockeyApp, Bit Stadium GmbH.
  * Copyright (c) 2011 Andreas Linde, Peter Steinberger.
  * All rights reserved.
  *
@@ -38,6 +38,8 @@
 @property (nonatomic, copy) NSDate *date;
 @property (nonatomic, copy) NSNumber *size;
 @property (nonatomic, copy) NSNumber *mandatory;
+@property (nonatomic, copy) NSNumber *versionID;
+@property (nonatomic, copy) NSDictionary *uuids;
 
 - (NSString *)nameAndVersionString;
 - (NSString *)versionString;
@@ -46,6 +48,7 @@
 - (NSString *)notesOrEmptyString;
 - (void)setDateWithTimestamp:(NSTimeInterval)timestamp;
 - (BOOL)isValid;
+- (BOOL)hasUUID:(NSString *)uuid;
 - (BOOL)isEqualToAppVersionMetaInfo:(BITAppVersionMetaInfo *)anAppVersionMetaInfo;
 
 + (BITAppVersionMetaInfo *)appVersionMetaInfoFromDict:(NSDictionary *)dict;

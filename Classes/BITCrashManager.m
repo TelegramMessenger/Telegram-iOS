@@ -2,7 +2,7 @@
  * Author: Andreas Linde <mail@andreaslinde.de>
  *         Kent Sutherland
  *
- * Copyright (c) 2012 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2012-2013 HockeyApp, Bit Stadium GmbH.
  * Copyright (c) 2011 Andreas Linde & Kent Sutherland.
  * All rights reserved.
  *
@@ -35,6 +35,8 @@
 #import "HockeySDKPrivate.h"
 #import "BITHockeyHelper.h"
 
+#import "BITHockeyManagerPrivate.h"
+#import "BITHockeyBaseManagerPrivate.h"
 #import "BITCrashManagerPrivate.h"
 #import "BITCrashReportTextFormatter.h"
 
@@ -46,6 +48,7 @@
 // keys for meta information associated to each crash
 #define kBITCrashMetaUserName @"BITCrashMetaUserName"
 #define kBITCrashMetaUserEmail @"BITCrashMetaUserEmail"
+#define kBITCrashMetaUserID @"BITCrashMetaUserID"
 #define kBITCrashMetaApplicationLog @"BITCrashMetaApplicationLog"
 
 NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
@@ -53,25 +56,35 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 
 @interface BITCrashManager ()
 
-@property (nonatomic, retain) NSFileManager *fileManager;
+@property (nonatomic, strong) NSFileManager *fileManager;
 
 @end
 
-@implementation BITCrashManager
+@implementation BITCrashManager {
+  NSMutableDictionary *_approvedCrashReports;
+  
+  NSMutableArray *_crashFiles;
+  NSString       *_crashesDir;
+  NSString       *_settingsFile;
+  NSString       *_analyzerInProgressFile;
+  NSFileManager  *_fileManager;
+  
+  BOOL _crashIdenticalCurrentVersion;
+  
+  NSMutableData *_responseData;
+  NSInteger _statusCode;
+  
+  NSURLConnection *_urlConnection;
+  
+  BOOL _sendingInProgress;
+  BOOL _isSetup;
+  
+  NSUncaughtExceptionHandler *_exceptionHandler;
+}
 
-@synthesize delegate = _delegate;
-@synthesize crashManagerStatus = _crashManagerStatus;
-@synthesize showAlwaysButton = _showAlwaysButton;
-@synthesize didCrashInLastSession = _didCrashInLastSession;
-@synthesize timeintervalCrashInLastSessionOccured = _timeintervalCrashInLastSessionOccured;
 
-@synthesize fileManager = _fileManager;
-
-- (id)initWithAppIdentifier:(NSString *)appIdentifier {
+- (id)init {
   if ((self = [super init])) {
-    _updateURL = BITHOCKEYSDK_URL;
-    _appIdentifier = appIdentifier;
-    
     _delegate = nil;
     _showAlwaysButton = NO;
     _isSetup = NO;
@@ -107,7 +120,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
     
     // temporary directory for crashes grabbed from PLCrashReporter
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
-    _crashesDir = [[[paths objectAtIndex:0] stringByAppendingPathComponent:BITHOCKEY_IDENTIFIER] retain];
+    _crashesDir = [[paths objectAtIndex:0] stringByAppendingPathComponent:BITHOCKEY_IDENTIFIER];
     
     if (![self.fileManager fileExistsAtPath:_crashesDir]) {
       NSDictionary *attributes = [NSDictionary dictionaryWithObject: [NSNumber numberWithUnsignedLong: 0755] forKey: NSFilePosixPermissions];
@@ -116,8 +129,8 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       [self.fileManager createDirectoryAtPath:_crashesDir withIntermediateDirectories: YES attributes: attributes error: &theError];
     }
     
-    _settingsFile = [[_crashesDir stringByAppendingPathComponent:BITHOCKEY_CRASH_SETTINGS] retain];
-    _analyzerInProgressFile = [[_crashesDir stringByAppendingPathComponent:BITHOCKEY_CRASH_ANALYZER] retain];
+    _settingsFile = [_crashesDir stringByAppendingPathComponent:BITHOCKEY_CRASH_SETTINGS];
+    _analyzerInProgressFile = [_crashesDir stringByAppendingPathComponent:BITHOCKEY_CRASH_ANALYZER];
 
     if ([_fileManager fileExistsAtPath:_analyzerInProgressFile]) {
       NSError *error = nil;
@@ -135,32 +148,9 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 
 
 - (void) dealloc {
-  _delegate = nil;
   [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
   
-  [_updateURL release];
-  _updateURL = nil;
-  
-  [_appIdentifier release];
-  _appIdentifier = nil;
-  
   [_urlConnection cancel];
-  [_urlConnection release]; 
-  _urlConnection = nil;
-  
-  [_crashesDir release];
-  [_crashFiles release];
-  
-  [_fileManager release];
-  _fileManager = nil;
-
-  [_approvedCrashReports release];
-  _approvedCrashReports = nil;
-  
-  [_analyzerInProgressFile release];
-  _analyzerInProgressFile = nil;
-  
-  [super dealloc];
 }
 
 
@@ -253,6 +243,55 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 }
 
 
+- (NSString *)userIDForCrashReport {
+  NSString *userID = @"";
+  
+  if ([BITHockeyManager sharedHockeyManager].delegate &&
+      [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
+    userID = [[BITHockeyManager sharedHockeyManager].delegate
+                userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
+                componentManager:self] ?: @"";
+  }
+  
+  return userID;
+}
+
+- (NSString *)userNameForCrashReport {
+  NSString *username = @"";
+  
+  if (self.delegate && [self.delegate respondsToSelector:@selector(userNameForCrashManager:)]) {
+    if (!self.isAppStoreEnvironment)
+      NSLog(@"[HockeySDK] DEPRECATED: Please use BITHockeyManagerDelegate's userNameForHockeyManager:componentManager: or userIDForHockeyManager:componentManager: instead.");
+    username = [self.delegate userNameForCrashManager:self] ?: @"";
+  }
+  if ([BITHockeyManager sharedHockeyManager].delegate &&
+      [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
+    username = [[BITHockeyManager sharedHockeyManager].delegate
+                userNameForHockeyManager:[BITHockeyManager sharedHockeyManager]
+                componentManager:self] ?: @"";
+  }
+  
+  return username;
+}
+
+- (NSString *)userEmailForCrashReport {
+  NSString *useremail = @"";
+
+  if (self.delegate && [self.delegate respondsToSelector:@selector(userEmailForCrashManager:)]) {
+    if (!self.isAppStoreEnvironment)
+      NSLog(@"[HockeySDK] DEPRECATED: Please use BITHockeyManagerDelegate's userEmailForHockeyManager:componentManager: instead.");
+    useremail = [self.delegate userEmailForCrashManager:self] ?: @"";
+  }
+  if ([BITHockeyManager sharedHockeyManager].delegate &&
+      [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userEmailForHockeyManager:componentManager:)]) {
+    useremail = [[BITHockeyManager sharedHockeyManager].delegate
+                 userEmailForHockeyManager:[BITHockeyManager sharedHockeyManager]
+                 componentManager:self] ?: @"";
+  }
+  
+  return useremail;
+}
+
 #pragma mark - PLCrashReporter
 
 // Called to handle a pending crash report.
@@ -270,7 +309,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
     [self saveSettings];
     
     // Try loading the crash report
-    NSData *crashData = [[[NSData alloc] initWithData:[crashReporter loadPendingCrashReportDataAndReturnError: &error]] autorelease];
+    NSData *crashData = [[NSData alloc] initWithData:[crashReporter loadPendingCrashReportDataAndReturnError: &error]];
     
     NSString *cacheFilename = [NSString stringWithFormat: @"%.0f", [NSDate timeIntervalSinceReferenceDate]];
     
@@ -278,7 +317,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       BITHockeyLog(@"ERROR: Could not load crash report: %@", error);
     } else {
       // get the startup timestamp from the crash report, and the file timestamp to calculate the timeinterval when the crash happened after startup
-      PLCrashReport *report = [[[PLCrashReport alloc] initWithData:crashData error:&error] autorelease];
+      PLCrashReport *report = [[PLCrashReport alloc] initWithData:crashData error:&error];
       
       if ([report.applicationInfo respondsToSelector:@selector(applicationStartupTimestamp)]) {
         if (report.systemInfo.timestamp && report.applicationInfo.applicationStartupTimestamp) {
@@ -290,20 +329,12 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       
       // write the meta file
       NSMutableDictionary *metaDict = [NSMutableDictionary dictionaryWithCapacity:4];
-      NSString *username = @"";
-      NSString *useremail = @"";
       NSString *applicationLog = @"";
       NSString *errorString = nil;
       
-      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(userNameForCrashManager:)]) {
-        username = [self.delegate userNameForCrashManager:self] ?: @"";
-      }
-      [metaDict setObject:username forKey:kBITCrashMetaUserName];
-
-      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(userEmailForCrashManager:)]) {
-        useremail = [self.delegate userEmailForCrashManager:self] ?: @"";
-      }
-      [metaDict setObject:useremail forKey:kBITCrashMetaUserEmail];
+      [metaDict setObject:[self userNameForCrashReport] forKey:kBITCrashMetaUserName];
+      [metaDict setObject:[self userEmailForCrashReport] forKey:kBITCrashMetaUserEmail];
+      [metaDict setObject:[self userIDForCrashReport] forKey:kBITCrashMetaUserID];
       
       if (self.delegate != nil && [self.delegate respondsToSelector:@selector(applicationLogForCrashManager:)]) {
         applicationLog = [self.delegate applicationLogForCrashManager:self] ?: @"";
@@ -413,18 +444,13 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       NSString *alertDescription = [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundAnonymousDescription"), appName];
       
       // the crash report is not anynomous any more if username or useremail are not nil
-      NSString *username = nil;
-      NSString *useremail = nil;
-      
-      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(userNameForCrashManager:)]) {
-        username = [self.delegate userNameForCrashManager:self];
-      }
-      
-      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(userEmailForCrashManager:)]) {
-        useremail = [self.delegate userEmailForCrashManager:self];
-      }
-      
-      if (username || useremail) {
+      NSString *userid = [self userIDForCrashReport];
+      NSString *username = [self userNameForCrashReport];
+      NSString *useremail = [self userEmailForCrashReport];
+            
+      if ((userid && [userid length] > 0) ||
+          (username && [username length] > 0) ||
+          (useremail && [useremail length] > 0)) {
         alertDescription = [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundDescription"), appName];
       }
       
@@ -439,7 +465,6 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       }
       
       [alertView show];
-      [alertView release];
     } else {
       [self sendCrashReports];
     }
@@ -527,7 +552,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
     NSData *crashData = [NSData dataWithContentsOfFile:filename];
 		
     if ([crashData length] > 0) {
-      PLCrashReport *report = [[[PLCrashReport alloc] initWithData:crashData error:&error] autorelease];
+      PLCrashReport *report = [[PLCrashReport alloc] initWithData:crashData error:&error];
 			
       if (report == nil) {
         BITHockeyLog(@"WARNING: Could not parse crash report");
@@ -554,6 +579,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       
       NSString *username = @"";
       NSString *useremail = @"";
+      NSString *userid = @"";
       NSString *applicationLog = @"";
       NSString *description = @"";
       
@@ -570,6 +596,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
         
         username = [metaDict objectForKey:kBITCrashMetaUserName] ?: @"";
         useremail = [metaDict objectForKey:kBITCrashMetaUserEmail] ?: @"";
+        userid = [metaDict objectForKey:kBITCrashMetaUserID] ?: @"";
         applicationLog = [metaDict objectForKey:kBITCrashMetaApplicationLog] ?: @"";
       } else {
         BITHockeyLog(@"ERROR: Reading crash meta data. %@", error);
@@ -579,7 +606,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
         description = [NSString stringWithFormat:@"%@", applicationLog];
       }
       
-      [crashes appendFormat:@"<crash><applicationname>%s</applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><username>%@</username><contact>%@</contact><installstring>%@</installstring><description><![CDATA[%@]]></description></crash>",
+      [crashes appendFormat:@"<crash><applicationname>%s</applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><username>%@</username><contact>%@</contact><installstring>%@</installstring><description><![CDATA[%@]]></description></crash>",
        [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleExecutable"] UTF8String],
        [self extractAppUUIDs:report],
        report.applicationInfo.applicationIdentifier,
@@ -589,6 +616,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
        report.applicationInfo.applicationVersion,
        crashUUID,
        [crashLogString stringByReplacingOccurrencesOfString:@"]]>" withString:@"]]" @"]]><![CDATA[" @">" options:NSLiteralSearch range:NSMakeRange(0,crashLogString.length)],
+       userid,
        username,
        useremail,
        installString,
@@ -655,8 +683,8 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   
   request = [NSMutableURLRequest requestWithURL:
              [NSURL URLWithString:[NSString stringWithFormat:@"%@api/2/apps/%@/crashes?sdk=%@&sdk_version=%@&feedbackEnabled=no",
-                                   _updateURL,
-                                   [_appIdentifier stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding],
+                                   self.serverURL,
+                                   [self encodedAppIdentifier],
                                    BITHOCKEY_NAME,
                                    BITHOCKEY_VERSION
                                    ]
@@ -719,9 +747,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   
   _sendingInProgress = NO;
 	
-  [_responseData release];
   _responseData = nil;	
-  [_urlConnection release];
   _urlConnection = nil;
 }
 
@@ -773,9 +799,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   
   _sendingInProgress = NO;
 	
-  [_responseData release];
   _responseData = nil;	
-  [_urlConnection release];
   _urlConnection = nil;
 }
 

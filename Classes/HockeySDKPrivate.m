@@ -1,7 +1,7 @@
 /*
  * Author: Andreas Linde <mail@andreaslinde.de>
  *
- * Copyright (c) 2012 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2012-2013 HockeyApp, Bit Stadium GmbH.
  * Copyright (c) 2011 Andreas Linde.
  * All rights reserved.
  *
@@ -27,11 +27,14 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
 #include <CommonCrypto/CommonDigest.h>
 
 NSString *const kBITCrashErrorDomain = @"BITCrashReporterErrorDomain";
 NSString *const kBITUpdateErrorDomain = @"BITUpdaterErrorDomain";
+NSString *const kBITFeedbackErrorDomain = @"BITFeedbackErrorDomain";
+NSString *const kBITHockeyErrorDomain = @"BITHockeyErrorDomain";
 
 // Load the framework bundle.
 NSBundle *BITHockeyBundle(void) {
@@ -40,7 +43,7 @@ NSBundle *BITHockeyBundle(void) {
   dispatch_once(&predicate, ^{
     NSString* mainBundlePath = [[NSBundle mainBundle] resourcePath];
     NSString* frameworkBundlePath = [mainBundlePath stringByAppendingPathComponent:BITHOCKEYSDK_BUNDLE];
-    bundle = [[NSBundle bundleWithPath:frameworkBundlePath] retain];
+    bundle = [NSBundle bundleWithPath:frameworkBundlePath];
   });
   return bundle;
 }

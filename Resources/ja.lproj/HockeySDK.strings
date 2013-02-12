@@ -1,17 +1,23 @@
-﻿/* General */
+/*
+ Localization provided by Wordcrafts
+ The Mac OS X and iOS localization experts.
+ http://www.wordcrafts.de
+ */
+
+
+/* General */
 
 /* For dialogs yes buttons */
-"HockeyYes" = "Yes";
+"HockeyYes" = "はい";
 
 /* For dialogs no buttons */
-"HockeyNo" = "No";
+"HockeyNo" = "いいえ";
 
 /* For dialogs ok buttons */
-"HockeyOK" = "保存";
+"HockeyOK" = "OK";
 
 /* Replacement for app name, if it could not be detected */
-"HockeyAppNamePlaceholder" = "This app";
-
+"HockeyAppNamePlaceholder" = "この App";
 
 /* Crash */
 
@@ -19,22 +25,22 @@
 /* Crash dialog */
 
 /* Title showing in the alert box when crash report data has been found */
-"CrashDataFoundTitle" = "クラッシュ時のデータを検知";
+"CrashDataFoundTitle" = "%@ が予期しない理由で終了";
 
 /* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
-"CrashDataFoundAnonymousDescription" = "%@ は不正に終了しました。問題の修正のため、匿名でクラッシュレポートを送信しますか？";
+"CrashDataFoundAnonymousDescription" = "問題が修正できるよう、匿名のレポートを送信しますか。";
 
 /* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
-"CrashDataFoundDescription" = "%@ は不正に終了しました。問題の修正のため、クラッシュレポートを送信しますか？";
+"CrashDataFoundDescription" = "問題が修正できるよう、レポートを送信しますか。";
 
 /* Alert box button if the users wants to send crash data always automatically */
-"CrashSendReportAlways" = "いつも";
+"CrashSendReportAlways" = "常に送信";
 
 /* Alert box button to send the crash report once */
-"CrashSendReport" = "はい";
+"CrashSendReport" = "レポートを送信";
 
 /* Alert box button to decline sending the report */
-"CrashDontSendReport" = "いいえ";
+"CrashDontSendReport" = "送信しない";
 
 /* Text showing in a processing box that the crash data is being uploaded to the server */
 "CrashReportSending" = "送信中…";
@@ -46,64 +52,181 @@
 /* Update Alert view */
 
 /* Update available */
-"UpdateAvailable" = "Update available";
+"UpdateAvailable" = "アップデートあり";
 
-"UpdateAlertTextWithAppVersion" = "%@ is available.";
+"UpdateAlertTextWithAppVersion" = "%@ が入手できます。";
 
-"UpdateAlertMandatoryTextWithAppVersion" = "%@ is available and is a mandatory update!";
+"UpdateAlertMandatoryTextWithAppVersion" = "必須アップデート %@ が利用可能です！";
 
-"UpdateIgnore" = "Ignore";
+"UpdateIgnore" = "無視";
 
-"UpdateShow" = "Show";
+"UpdateShow" = "表示";
 
-"UpdateInstall" = "Install";
+"UpdateInstall" = "インストール";
 
 
 /* Update Details */
 
-"UpdateScreenTitle" = "Update";
+"UpdateScreenTitle" = "アップデート";
 
-"UpdateButtonCheck" = "CHECK";
+"UpdateButtonCheck" = "確認";
 
-"UpdateButtonSearching" = "CHECKING";
+"UpdateButtonSearching" = "確認中";
 
-"UpdateButtonUpdate" = "UPDATE";
+"UpdateButtonUpdate" = "アップデート";
 
-"UpdateButtonInstalling" = "INSTALLING";
+"UpdateButtonInstalling" = "インストール中";
 
-"UpdateButtonOffline" = "OFFLINE";
+"UpdateButtonOffline" = "オフライン";
 
-"UpdateInstalled" = "INSTALLED";
+"UpdateInstalled" = "インストール済み";
 
-"UpdateVersion" = "Version";
+"UpdateVersion" = "バージョン";
 
-"UpdateShowPreviousVersions" = "Show previous versions...";
+"UpdateShowPreviousVersions" = "前のバージョンを表示…";
 
-"UpdateNoUpdateAvailableTitle" = "No Update Available";
+"UpdateNoUpdateAvailableTitle" = "アップデートなし";
 
-"UpdateNoUpdateAvailableMessage" = "%@ is already the latest version.";
+"UpdateNoUpdateAvailableMessage" = "%@ は現在入手できる最新バージョンです。";
 
-"UpdateError" = "Error";
+"UpdateError" = "エラー";
 
-"UpdateWarning" = "Warning";
+"UpdateWarning" = "警告";
 
-"UpdateNoReleaseNotesAvailable" = "No release notes available.";
+"UpdateNoReleaseNotesAvailable" = "リリースノートがありません。";
 
 
 /* Update Authorization  */
 
-"UpdateAuthorizationProgress" = "Authorizing...";
+"UpdateAuthorizationProgress" = "認証中…";
 
-"UpdateAuthorizationOffline" = "Internet connection required!";
+"UpdateAuthorizationOffline" = "インターネットへの接続が必要です。";
 
-"UpdateAuthorizationDenied" = "Authorizing denied. Please contact the developer.";
+"UpdateAuthorizationDenied" = "認証が拒否されました。デベロッパに連絡してください。";
 
 
 /* Update Expiry  */
 
-"UpdateExpired" = "%@ is expired and can not be used any longer.";
+"UpdateExpired" = "%@ の有効期限が切れたため、これ以上使用できません。";
 
 
 /* Update Simulator Warning */
 
-"UpdateSimulatorMessage" = "Hockey Update does not work in the Simulator.\nThe itms-services:// url scheme is implemented but nonfunctional.";
+"UpdateSimulatorMessage" = "Hockey のアップデートは Simulator では作動しません。\nitms-services:// のURL方式は実装されていますが、機能しません。";
+
+
+/* Feedback */
+
+
+/* New Message Alert */
+
+/* Alert Title */
+"HockeyFeedbackNewMessageTitle" = "新規フィードバックの応答";
+
+/* Alert Text */
+"HockeyFeedbackNewMessageText" = "フィードバックに対する新しい応答があります。表示しますか。";
+
+/* Alert Ignore Button */
+"HockeyFeedbackIgnore" = "無視";
+
+/* Alert Show Button */
+"HockeyFeedbackShow" = "表示";
+
+
+/* List View */
+
+/* Title */
+"HockeyFeedbackListTitle" = "フィードバック";
+
+/* Last Updated */
+"HockeyFeedbackListLastUpdated" = "前回のアップデート：%@";
+
+/* Never Updated */
+"HockeyFeedbackListNeverUpdated" = "しない";
+
+/* Provide Feedback Button Title */
+"HockeyFeedbackListButonWriteFeedback" = "フィードバックを送信";
+
+/* Add a Response Button Title */
+"HockeyFeedbackListButonWriteResponse" = "応答を追加";
+
+/* User Data Set Name Button Title */
+"HockeyFeedbackListButonUserDataSetName" = "名前を設定";
+
+/* User Data Set Email Button Title */
+"HockeyFeedbackListButonUserDataSetEmail" = "メールを設定";
+
+/* User Data With Name Button Title */
+"HockeyFeedbackListButonUserDataWithName" = "名前：%@";
+
+/* User Data With Email Button Title */
+"HockeyFeedbackListButonUserDataWithEmail" = "メール：%@";
+
+/* Button title for deleting all local messages*/
+"HockeyFeedbackListButonDeleteAllMessages" = "すべてのメッセージを削除";
+
+/* Message pending to be send */
+"HockeyFeedbackListMessagePending" = "保留中";
+
+
+/* Delete All Messages Action Sheet / Alert View */
+
+/* Title for the Action Sheet */
+"HockeyFeedbackListDeleteAllTitle" = "この操作はこのデバイスのメッセージすべてを削除します。";
+
+/* Button Title to perform delete action */
+"HockeyFeedbackListDeleteAllDelete" = "消去";
+
+/* Button Title to cancel delete action */
+"HockeyFeedbackListDeleteAllCancel" = "キャンセル";
+
+
+/* Open Link In Safari Action Sheet / Alert View */
+
+/* Button Title to cancel */
+"HockeyFeedbackListLinkActionCancel" = "キャンセル";
+
+/* Button Title to Open the Link */
+"HockeyFeedbackListLinkActionOpen" = "開く";
+
+/* Button Title to Copy the Link */
+"HockeyFeedbackListLinkActionCopy" = "コピー";
+
+
+/* UIActivity */
+
+/* Activity Sharing Button Title, App Name will be inserted */
+"HockeyFeedbackActivityButtonTitle" = "%@ フィードバック";
+
+/* if there can no app name be found, use this instead for HockeyFeedbackActivityButtonTitle */
+"HockeyFeedbackActivityAppPlaceholder" = "App";
+
+
+/* Compose Message */
+
+/* Title */
+"HockeyFeedbackComposeTitle" = "新規フィードバック";
+
+/* Send button */
+"HockeyFeedbackComposeSend" = "送信";
+
+
+/* Set User Data */
+
+/* Title */
+"HockeyFeedbackUserDataTitle" = "自分の情報";
+
+/* Description On What Should Be Entered */
+"HockeyFeedbackUserDataDescription" = "フィードバックを記入する前に情報を入力してください。";
+
+/* Name Field */
+"HockeyFeedbackUserDataName" = "名前";
+
+/* Name Placeholder */
+"HockeyFeedbackUserDataNamePlaceHolder" = "Hiromi Sato";
+
+/* Email Field */
+"HockeyFeedbackUserDataEmail" = "メール";
+
+/* Email Placeholder */
+"HockeyFeedbackUserDataEmailPlaceholder" = "example@email.com";

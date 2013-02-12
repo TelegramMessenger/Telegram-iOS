@@ -1,7 +1,14 @@
-﻿/* General */
+/*
+ Localization provided by Wordcrafts
+ The Mac OS X and iOS localization experts.
+ http://www.wordcrafts.de
+ */
+
+
+/* General */
 
 /* For dialogs yes buttons */
-"HockeyYes" = "Si";
+"HockeyYes" = "Sì";
 
 /* For dialogs no buttons */
 "HockeyNo" = "No";
@@ -10,8 +17,7 @@
 "HockeyOK" = "OK";
 
 /* Replacement for app name, if it could not be detected */
-"HockeyAppNamePlaceholder" = "This app";
-
+"HockeyAppNamePlaceholder" = "Questa app";
 
 /* Crash */
 
@@ -19,25 +25,25 @@
 /* Crash dialog */
 
 /* Title showing in the alert box when crash report data has been found */
-"CrashDataFoundTitle" = "Dati del crash trovati";
+"CrashDataFoundTitle" = "%@ si è chiusa inaspettatamente";
 
 /* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
-"CrashDataFoundAnonymousDescription" = "L'applicazione precedentemente ha avuto un crash. Vuoi inviare allo sviluppatore i dati anonimi del crash in modo che possa provare a sistemare il problema?";
+"CrashDataFoundAnonymousDescription" = "Vuoi inviare una segnalazione anonima per aiutarci a risolvere il problema?";
 
 /* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
-"CrashDataFoundDescription" = "L'applicazione precedentemente ha avuto un crash. Vuoi inviare allo sviluppatore i dati del crash in modo che possa provare a sistemare il problema?";
+"CrashDataFoundDescription" = "Vuoi inviare una segnalazione con i dettagli del crash per aiutarci a risolvere il problema?";
 
 /* Alert box button if the users wants to send crash data always automatically */
-"CrashSendReportAlways" = "Sempre";
+"CrashSendReportAlways" = "Invia sempre";
 
 /* Alert box button to send the crash report once */
-"CrashSendReport" = "Si";
+"CrashSendReport" = "Invia segnalazione";
 
 /* Alert box button to decline sending the report */
-"CrashDontSendReport" = "No";
+"CrashDontSendReport" = "Non inviare";
 
 /* Text showing in a processing box that the crash data is being uploaded to the server */
-"CrashReportSending" = "Invio…";
+"CrashReportSending" = "Invio...";
 
 
 /* Update */
@@ -46,26 +52,26 @@
 /* Update Alert view */
 
 /* Update available */
-"UpdateAvailable" = "Aggiornamento disponibile";
+"UpdateAvailable" = "Nuovo aggiornamento";
 
-"UpdateAlertTextWithAppVersion" = "%@ è disponibile.";
+"UpdateAlertTextWithAppVersion" = "È disponibile %@.";
 
-"UpdateAlertMandatoryTextWithAppVersion" = "%@ is available and is a mandatory update!";
+"UpdateAlertMandatoryTextWithAppVersion" = "È disponibile %@ ed è un aggiornamento obbligatorio!";
 
 "UpdateIgnore" = "Ignora";
 
-"UpdateShow" = "Mostra";
+"UpdateShow" = "Visualizza";
 
 "UpdateInstall" = "Installa";
 
 
 /* Update Details */
 
-"UpdateScreenTitle" = "Aggiorna";
+"UpdateScreenTitle" = "Aggiornamento";
 
-"UpdateButtonCheck" = "CONTROLLA";
+"UpdateButtonCheck" = "VERIFICO";
 
-"UpdateButtonSearching" = "CONTROLLO";
+"UpdateButtonSearching" = "VERIFICO";
 
 "UpdateButtonUpdate" = "AGGIORNA";
 
@@ -73,37 +79,154 @@
 
 "UpdateButtonOffline" = "OFFLINE";
 
-"UpdateInstalled" = "INSTALLATA";
+"UpdateInstalled" = "INSTALLATO";
 
 "UpdateVersion" = "Versione";
 
-"UpdateShowPreviousVersions" = "Mostra le versioni precedenti...";
+"UpdateShowPreviousVersions" = "Visualizzo versioni precedenti...";
 
-"UpdateNoUpdateAvailableTitle" = "Nessun aggiornamento disponibile";
+"UpdateNoUpdateAvailableTitle" = "Non sono presenti aggiornamenti";
 
-"UpdateNoUpdateAvailableMessage" = "%@ è aggiornata all'ultima versione.";
+"UpdateNoUpdateAvailableMessage" = "%@ è già la versione attuale.";
 
 "UpdateError" = "Errore";
 
 "UpdateWarning" = "Avviso";
 
-"UpdateNoReleaseNotesAvailable" = "Non sono disponibili note di rilascio.";
+"UpdateNoReleaseNotesAvailable" = "Non sono disponibili note sulla release.";
 
 
 /* Update Authorization  */
 
-"UpdateAuthorizationProgress" = "Attendo autorizzazione...";
+"UpdateAuthorizationProgress" = "Autorizzazione...";
 
-"UpdateAuthorizationOffline" = "E' richiesta la connessione internet!";
+"UpdateAuthorizationOffline" = "È necessario un collegamento a Internet!";
 
-"UpdateAuthorizationDenied" = "Autorizzazione negata, contattare lo sviluppatore.";
+"UpdateAuthorizationDenied" = "Autorizzazione negata. Contattare lo sviluppatore.";
 
 
 /* Update Expiry  */
 
-"UpdateExpired" = "%@ is expired and can not be used any longer.";
+"UpdateExpired" = "%@ è scaduta e non può più essere utilizzata.";
 
 
 /* Update Simulator Warning */
 
-"UpdateSimulatorMessage" = "Hockey Update does not work in the Simulator.\nThe itms-services:// url scheme is implemented but nonfunctional.";
+"UpdateSimulatorMessage" = "L'aggiornamento di Hockey non funziona nel Simulator.\nLo schema url tms-services:// è implementato ma non è funzionante.";
+
+
+/* Feedback */
+
+
+/* New Message Alert */
+
+/* Alert Title */
+"HockeyFeedbackNewMessageTitle" = "Nuova risposta a un commento";
+
+/* Alert Text */
+"HockeyFeedbackNewMessageText" = "C'è una nuova risposta al tuo commento. Vuoi visualizzarla?";
+
+/* Alert Ignore Button */
+"HockeyFeedbackIgnore" = "Ignora";
+
+/* Alert Show Button */
+"HockeyFeedbackShow" = "Visualizza";
+
+
+/* List View */
+
+/* Title */
+"HockeyFeedbackListTitle" = "Commento";
+
+/* Last Updated */
+"HockeyFeedbackListLastUpdated" = "Ultimo aggiornamento: %@";
+
+/* Never Updated */
+"HockeyFeedbackListNeverUpdated" = "Mai";
+
+/* Provide Feedback Button Title */
+"HockeyFeedbackListButonWriteFeedback" = "Commenta";
+
+/* Add a Response Button Title */
+"HockeyFeedbackListButonWriteResponse" = "Aggiungi una risposta";
+
+/* User Data Set Name Button Title */
+"HockeyFeedbackListButonUserDataSetName" = "Imposta il tuo nome";
+
+/* User Data Set Email Button Title */
+"HockeyFeedbackListButonUserDataSetEmail" = "Imposta la tua e-mail";
+
+/* User Data With Name Button Title */
+"HockeyFeedbackListButonUserDataWithName" = "Nome: %@";
+
+/* User Data With Email Button Title */
+"HockeyFeedbackListButonUserDataWithEmail" = "E-mail: %@";
+
+/* Button title for deleting all local messages*/
+"HockeyFeedbackListButonDeleteAllMessages" = "Cancella tutti i messagi";
+
+/* Message pending to be send */
+"HockeyFeedbackListMessagePending" = "In attesa";
+
+
+/* Delete All Messages Action Sheet / Alert View */
+
+/* Title for the Action Sheet */
+"HockeyFeedbackListDeleteAllTitle" = "Tutti i messaggi presenti sul dispositivo saranno cancellati.";
+
+/* Button Title to perform delete action */
+"HockeyFeedbackListDeleteAllDelete" = "Cancella";
+
+/* Button Title to cancel delete action */
+"HockeyFeedbackListDeleteAllCancel" = "Annulla";
+
+
+/* Open Link In Safari Action Sheet / Alert View */
+
+/* Button Title to cancel */
+"HockeyFeedbackListLinkActionCancel" = "Annulla";
+
+/* Button Title to Open the Link */
+"HockeyFeedbackListLinkActionOpen" = "Apri";
+
+/* Button Title to Copy the Link */
+"HockeyFeedbackListLinkActionCopy" = "Copia";
+
+
+/* UIActivity */
+
+/* Activity Sharing Button Title, App Name will be inserted */
+"HockeyFeedbackActivityButtonTitle" = "Commento su %@ ";
+
+/* if there can no app name be found, use this instead for HockeyFeedbackActivityButtonTitle */
+"HockeyFeedbackActivityAppPlaceholder" = "App";
+
+
+/* Compose Message */
+
+/* Title */
+"HockeyFeedbackComposeTitle" = "Nuovo commento";
+
+/* Send button */
+"HockeyFeedbackComposeSend" = "Invia";
+
+
+/* Set User Data */
+
+/* Title */
+"HockeyFeedbackUserDataTitle" = "Le mie info";
+
+/* Description On What Should Be Entered */
+"HockeyFeedbackUserDataDescription" = "Prima di scrivere il commento inserisci i tuoi dati.";
+
+/* Name Field */
+"HockeyFeedbackUserDataName" = "Nome";
+
+/* Name Placeholder */
+"HockeyFeedbackUserDataNamePlaceHolder" = "Mario Rossi";
+
+/* Email Field */
+"HockeyFeedbackUserDataEmail" = "E-mail";
+
+/* Email Placeholder */
+"HockeyFeedbackUserDataEmailPlaceholder" = "esempio@email.com";

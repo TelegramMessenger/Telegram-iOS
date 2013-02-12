@@ -2,7 +2,7 @@
  * Author: Andreas Linde <mail@andreaslinde.de>
  *         Kent Sutherland
  *
- * Copyright (c) 2012 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2012-2013 HockeyApp, Bit Stadium GmbH.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -30,9 +30,11 @@
 #import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
 
+#import "BITHockeyManagerPrivate.h"
+#import "BITHockeyBaseManagerPrivate.h"
 #import "BITCrashManagerPrivate.h"
 #import "BITUpdateManagerPrivate.h"
-
+#import "BITFeedbackManagerPrivate.h"
 
 @interface BITHockeyManager ()
 
@@ -44,12 +46,14 @@
 
 @end
 
-@implementation BITHockeyManager
 
-@synthesize crashManager = _crashManager;
-@synthesize updateManager = _updateManager;
-
-@synthesize appStoreEnvironment = _appStoreEnvironment;
+@implementation BITHockeyManager {
+  NSString *_appIdentifier;
+  
+  BOOL _validAppIdentifier;
+  
+  BOOL _startManagerIsInvoked;
+}
 
 #pragma mark - Private Class Methods
 
@@ -67,7 +71,11 @@
 
 - (void)logInvalidIdentifier:(NSString *)environment {
   if (!_appStoreEnvironment) {
-    NSLog(@"[HockeySDK] ERROR: The %@ is invalid! Please use the HockeyApp app identifier you find on the apps website on HockeyApp! The SDK is disabled!", environment);
+    if ([environment isEqualToString:@"liveIdentifier"]) {
+      NSLog(@"[HockeySDK] WARNING: The liveIdentifier is invalid! The SDK will be disabled when deployed to the App Store without setting a valid app identifier!");
+    } else {
+      NSLog(@"[HockeySDK] ERROR: The %@ is invalid! Please use the HockeyApp app identifier you find on the apps website on HockeyApp! The SDK is disabled!", environment);
+    }
   }
 }
 
@@ -88,11 +96,12 @@
 
 - (id) init {
   if ((self = [super init])) {
-    _updateURL = nil;
+    _serverURL = nil;
     _delegate = nil;
     
     _disableCrashManager = NO;
     _disableUpdateManager = NO;
+    _disableFeedbackManager = NO;
     
     _appStoreEnvironment = NO;
     _startManagerIsInvoked = NO;
@@ -109,23 +118,11 @@
   return self;
 }
 
-- (void)dealloc {
-  [_appIdentifier release], _appIdentifier = nil;
-  
-  [_crashManager release], _crashManager = nil;
-  [_updateManager release], _updateManager = nil;
-  
-  _delegate = nil;
-  
-  [super dealloc];
-}
-
 
 #pragma mark - Public Instance Methods (Configuration)
 
 - (void)configureWithIdentifier:(NSString *)appIdentifier delegate:(id)delegate {
   _delegate = delegate;
-  [_appIdentifier release];
   _appIdentifier = [appIdentifier copy];
   
   [self initializeModules];
@@ -133,7 +130,6 @@
 
 - (void)configureWithBetaIdentifier:(NSString *)betaIdentifier liveIdentifier:(NSString *)liveIdentifier delegate:(id)delegate {
   _delegate = delegate;
-  [_appIdentifier release];
 
   // check the live identifier now, because otherwise invalid identifier would only be logged when the app is already in the store
   if (![self checkValidityOfAppIdentifier:liveIdentifier]) {
@@ -160,8 +156,8 @@
   // start CrashManager
   if (![self isCrashManagerDisabled]) {
     BITHockeyLog(@"INFO: Start CrashManager");
-    if (_updateURL) {
-      [_crashManager setUpdateURL:_updateURL];
+    if (_serverURL) {
+      [_crashManager setServerURL:_serverURL];
     }
     [_crashManager startManager];
   }
@@ -173,10 +169,19 @@
 #endif
       ) {
     BITHockeyLog(@"INFO: Start UpdateManager with small delay");
-    if (_updateURL) {
-      [_updateManager setUpdateURL:_updateURL];
+    if (_serverURL) {
+      [_updateManager setServerURL:_serverURL];
     }
     [_updateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
+  }
+
+  // start FeedbackManager
+  if (![self isFeedbackManagerDisabled]) {
+    BITHockeyLog(@"INFO: Start FeedbackManager");
+    if (_serverURL) {
+      [_feedbackManager setServerURL:_serverURL];
+    }
+    [_feedbackManager performSelector:@selector(startManager) withObject:nil afterDelay:1.0f];
   }
 }
 
@@ -198,15 +203,22 @@
 }
 
 
-- (void)setUpdateURL:(NSString *)anUpdateURL {
+- (void)setDisableFeedbackManager:(BOOL)disableFeedbackManager {
+  if (_feedbackManager) {
+    [_feedbackManager setDisableFeedbackManager:disableFeedbackManager];
+  }
+  _disableFeedbackManager = disableFeedbackManager;
+}
+
+
+- (void)setServerURL:(NSString *)aServerURL {
   // ensure url ends with a trailing slash
-  if (![anUpdateURL hasSuffix:@"/"]) {
-    anUpdateURL = [NSString stringWithFormat:@"%@/", anUpdateURL];
+  if (![aServerURL hasSuffix:@"/"]) {
+    aServerURL = [NSString stringWithFormat:@"%@/", aServerURL];
   }
   
-  if (_updateURL != anUpdateURL) {
-    [_updateURL release];
-    _updateURL = [anUpdateURL copy];
+  if (_serverURL != aServerURL) {
+    _serverURL = [aServerURL copy];
   }
 }
 
@@ -215,8 +227,8 @@
 
 - (BOOL)shouldUseLiveIdentifier {
   BOOL delegateResult = NO;
-  if ([_delegate respondsToSelector:@selector(shouldUseLiveIdentifier)]) {
-    delegateResult = [(NSObject <BITHockeyManagerDelegate>*)_delegate shouldUseLiveIdentifier];
+  if ([_delegate respondsToSelector:@selector(shouldUseLiveIdentifierForHockeyManager:)]) {
+    delegateResult = [(NSObject <BITHockeyManagerDelegate>*)_delegate shouldUseLiveIdentifierForHockeyManager:self];
   }
 
   return (delegateResult) || (_appStoreEnvironment);
@@ -229,12 +241,15 @@
   
   if (_validAppIdentifier) {
     BITHockeyLog(@"INFO: Setup CrashManager");
-    _crashManager = [[BITCrashManager alloc] initWithAppIdentifier:_appIdentifier];
+    _crashManager = [[BITCrashManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
     _crashManager.delegate = _delegate;
     
     BITHockeyLog(@"INFO: Setup UpdateManager");
     _updateManager = [[BITUpdateManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
     _updateManager.delegate = _delegate;
+    
+    BITHockeyLog(@"INFO: Setup FeedbackManager");
+    _feedbackManager = [[BITFeedbackManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
     
 #if JIRA_MOBILE_CONNECT_SUPPORT_ENABLED
     // Only if JMC is part of the project
@@ -315,9 +330,9 @@
   id jmcInstance = [self jmcInstance];
   SEL configureSelector = @selector(configureJiraConnect:projectKey:apiKey:);
   
-  NSString *url = [configuration valueForKey:@"url"];
-  NSString *project = [configuration valueForKey:@"project"];
-  NSString *key = [configuration valueForKey:@"key"];
+  __unsafe_unretained NSString *url = [configuration valueForKey:@"url"];
+  __unsafe_unretained NSString *project = [configuration valueForKey:@"project"];
+  __unsafe_unretained NSString *key = [configuration valueForKey:@"key"];
   
   NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:[jmcInstance methodSignatureForSelector:configureSelector]];
   invocation.target = jmcInstance;
@@ -353,12 +368,11 @@
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     NSMutableDictionary *trackerConfig = [[defaults valueForKey:@"BITTrackerConfigurations"] mutableCopy];
     if (!trackerConfig) {
-      trackerConfig = [[NSMutableDictionary dictionaryWithCapacity:1] retain];
+      trackerConfig = [NSMutableDictionary dictionaryWithCapacity:1];
     }
 
     [trackerConfig setValue:[object trackerConfig] forKey:_appIdentifier];
     [defaults setValue:trackerConfig forKey:@"BITTrackerConfigurations"];
-    [trackerConfig release];
     
     [defaults synchronize];
     [self configureJMC];

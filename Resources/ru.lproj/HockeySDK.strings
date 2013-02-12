@@ -1,4 +1,11 @@
-﻿/* General */
+/*
+ Localization provided by Wordcrafts
+ The Mac OS X and iOS localization experts.
+ http://www.wordcrafts.de
+ */
+
+
+/* General */
 
 /* For dialogs yes buttons */
 "HockeyYes" = "Да";
@@ -10,8 +17,7 @@
 "HockeyOK" = "OK";
 
 /* Replacement for app name, if it could not be detected */
-"HockeyAppNamePlaceholder" = "This app";
-
+"HockeyAppNamePlaceholder" = "Эта программа";
 
 /* Crash */
 
@@ -19,25 +25,25 @@
 /* Crash dialog */
 
 /* Title showing in the alert box when crash report data has been found */
-"CrashDataFoundTitle" = "Обнаружена проблема";
+"CrashDataFoundTitle" = "Неожиданное завершение %@";
 
 /* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
-"CrashDataFoundAnonymousDescription" = "%@ программа неожиданно завершена. Хотите ли Вы отправить нам анонимное сообщение о неполадках, чтобы мы  могли устранить проблему?";
+"CrashDataFoundAnonymousDescription" = "Пошлете анонимный отчет, чтобы мы могли исправить эту ошибку?";
 
 /* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
-"CrashDataFoundDescription" = "%@ программа неожиданно завершена. Хотите ли Вы отправить нам сообщение о неполадках, чтобы мы  могли устранить проблему?";
+"CrashDataFoundDescription" = "Пошлете отчет, чтобы мы могли исправить эту ошибку?";
 
 /* Alert box button if the users wants to send crash data always automatically */
-"CrashSendReportAlways" = "Всегда";
+"CrashSendReportAlways" = "Отправлять всегда";
 
 /* Alert box button to send the crash report once */
-"CrashSendReport" = "Да";
+"CrashSendReport" = "Отправить отчет";
 
 /* Alert box button to decline sending the report */
-"CrashDontSendReport" = "Нет";
+"CrashDontSendReport" = "Не отправлять";
 
 /* Text showing in a processing box that the crash data is being uploaded to the server */
-"CrashReportSending" = "Отправить";
+"CrashReportSending" = "Отправка...";
 
 
 /* Update */
@@ -46,64 +52,181 @@
 /* Update Alert view */
 
 /* Update available */
-"UpdateAvailable" = "Update available";
+"UpdateAvailable" = "Имеется обновление";
 
-"UpdateAlertTextWithAppVersion" = "%@ is available.";
+"UpdateAlertTextWithAppVersion" = " Доступно: %@.";
 
-"UpdateAlertMandatoryTextWithAppVersion" = "%@ is available and is a mandatory update!";
+"UpdateAlertMandatoryTextWithAppVersion" = "Доступно обязательное обновление %@!";
 
-"UpdateIgnore" = "Ignore";
+"UpdateIgnore" = "Игнорировать";
 
-"UpdateShow" = "Show";
+"UpdateShow" = "Показать";
 
-"UpdateInstall" = "Install";
+"UpdateInstall" = "Установить";
 
 
 /* Update Details */
 
-"UpdateScreenTitle" = "Update";
+"UpdateScreenTitle" = "Обновление";
 
-"UpdateButtonCheck" = "CHECK";
+"UpdateButtonCheck" = "ПРОВЕРИТЬ";
 
-"UpdateButtonSearching" = "CHECKING";
+"UpdateButtonSearching" = "ПРОВЕРКА";
 
-"UpdateButtonUpdate" = "UPDATE";
+"UpdateButtonUpdate" = "ОБНОВИТЬ";
 
-"UpdateButtonInstalling" = "INSTALLING";
+"UpdateButtonInstalling" = "УСТАНОВКА";
 
-"UpdateButtonOffline" = "OFFLINE";
+"UpdateButtonOffline" = "ОФЛАЙН";
 
-"UpdateInstalled" = "INSTALLED";
+"UpdateInstalled" = "УСТАНОВЛЕНО";
 
-"UpdateVersion" = "Version";
+"UpdateVersion" = "Версия";
 
-"UpdateShowPreviousVersions" = "Show previous versions...";
+"UpdateShowPreviousVersions" = "Показать предыдущие версии...";
 
-"UpdateNoUpdateAvailableTitle" = "No Update Available";
+"UpdateNoUpdateAvailableTitle" = "Нет обновлений";
 
-"UpdateNoUpdateAvailableMessage" = "%@ is already the latest version.";
+"UpdateNoUpdateAvailableMessage" = "%@: самая новая версия.";
 
-"UpdateError" = "Error";
+"UpdateError" = "Ошибка";
 
-"UpdateWarning" = "Warning";
+"UpdateWarning" = "Предупреждение";
 
-"UpdateNoReleaseNotesAvailable" = "No release notes available.";
+"UpdateNoReleaseNotesAvailable" = "Нет комментариев по этой версии.";
 
 
 /* Update Authorization  */
 
-"UpdateAuthorizationProgress" = "Authorizing...";
+"UpdateAuthorizationProgress" = "Авторизация...";
 
-"UpdateAuthorizationOffline" = "Internet connection required!";
+"UpdateAuthorizationOffline" = "Нужно подключить Интернет!";
 
-"UpdateAuthorizationDenied" = "Authorizing denied. Please contact the developer.";
+"UpdateAuthorizationDenied" = "Отказано в авторизации. Свяжитесь с разработчиком.";
 
 
 /* Update Expiry  */
 
-"UpdateExpired" = "%@ is expired and can not be used any longer.";
+"UpdateExpired" = "Срок использования %@ истек, использование прекращено.";
 
 
 /* Update Simulator Warning */
 
-"UpdateSimulatorMessage" = "Hockey Update does not work in the Simulator.\nThe itms-services:// url scheme is implemented but nonfunctional.";
+"UpdateSimulatorMessage" = "Hockey Update не работает в Simulator.\nСхема itms-services:// url применена, но не работает.";
+
+
+/* Feedback */
+
+
+/* New Message Alert */
+
+/* Alert Title */
+"HockeyFeedbackNewMessageTitle" = "Новый ответ на отклик";
+
+/* Alert Text */
+"HockeyFeedbackNewMessageText" = "Поступил новый ответ на ваш отклик. Просмотреть его?";
+
+/* Alert Ignore Button */
+"HockeyFeedbackIgnore" = "Игнорировать";
+
+/* Alert Show Button */
+"HockeyFeedbackShow" = "Показать";
+
+
+/* List View */
+
+/* Title */
+"HockeyFeedbackListTitle" = "Отклик";
+
+/* Last Updated */
+"HockeyFeedbackListLastUpdated" = "Последнее обновление: %@";
+
+/* Never Updated */
+"HockeyFeedbackListNeverUpdated" = "Не было";
+
+/* Provide Feedback Button Title */
+"HockeyFeedbackListButonWriteFeedback" = "Написать отклик";
+
+/* Add a Response Button Title */
+"HockeyFeedbackListButonWriteResponse" = "Добавить ответ";
+
+/* User Data Set Name Button Title */
+"HockeyFeedbackListButonUserDataSetName" = "Ввести ваше имя";
+
+/* User Data Set Email Button Title */
+"HockeyFeedbackListButonUserDataSetEmail" = "Ввести ваш email";
+
+/* User Data With Name Button Title */
+"HockeyFeedbackListButonUserDataWithName" = "Имя: %@";
+
+/* User Data With Email Button Title */
+"HockeyFeedbackListButonUserDataWithEmail" = "Email: %@";
+
+/* Button title for deleting all local messages*/
+"HockeyFeedbackListButonDeleteAllMessages" = "Удалить все сообщения";
+
+/* Message pending to be send */
+"HockeyFeedbackListMessagePending" = "Ожидание";
+
+
+/* Delete All Messages Action Sheet / Alert View */
+
+/* Title for the Action Sheet */
+"HockeyFeedbackListDeleteAllTitle" = "Этим действием будут стерты все сообщения на этом устройстве.";
+
+/* Button Title to perform delete action */
+"HockeyFeedbackListDeleteAllDelete" = "Удалить";
+
+/* Button Title to cancel delete action */
+"HockeyFeedbackListDeleteAllCancel" = "Отменить";
+
+
+/* Open Link In Safari Action Sheet / Alert View */
+
+/* Button Title to cancel */
+"HockeyFeedbackListLinkActionCancel" = "Отменить";
+
+/* Button Title to Open the Link */
+"HockeyFeedbackListLinkActionOpen" = "Открыть";
+
+/* Button Title to Copy the Link */
+"HockeyFeedbackListLinkActionCopy" = "Копировать";
+
+
+/* UIActivity */
+
+/* Activity Sharing Button Title, App Name will be inserted */
+"HockeyFeedbackActivityButtonTitle" = "Отклик на %@";
+
+/* if there can no app name be found, use this instead for HockeyFeedbackActivityButtonTitle */
+"HockeyFeedbackActivityAppPlaceholder" = "Программа";
+
+
+/* Compose Message */
+
+/* Title */
+"HockeyFeedbackComposeTitle" = "Новый";
+
+/* Send button */
+"HockeyFeedbackComposeSend" = "Отправить";
+
+
+/* Set User Data */
+
+/* Title */
+"HockeyFeedbackUserDataTitle" = "Мои данные";
+
+/* Description On What Should Be Entered */
+"HockeyFeedbackUserDataDescription" = "Перед отправкой отклика необходимо ввести ваши личные данные.";
+
+/* Name Field */
+"HockeyFeedbackUserDataName" = "Имя";
+
+/* Name Placeholder */
+"HockeyFeedbackUserDataNamePlaceHolder" = "Имя";
+
+/* Email Field */
+"HockeyFeedbackUserDataEmail" = "Email";
+
+/* Email Placeholder */
+"HockeyFeedbackUserDataEmailPlaceholder" = "example@email.com";
