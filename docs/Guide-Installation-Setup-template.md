@@ -1,6 +1,6 @@
-## Version 3.0.0 RC1
+## Version 3.0.0
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.0.0RC1/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.0.0/docs/docs/Changelog.html)
 
 ## Introduction
 
