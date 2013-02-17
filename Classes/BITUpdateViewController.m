@@ -49,7 +49,6 @@
 @implementation BITUpdateViewController {
   BOOL _kvoRegistered;
   BOOL _showAllVersions;
-  UIStatusBarStyle _statusBarStyle;
   BITAppStoreHeader *_appStoreHeader;
   BITStoreButton *_appStoreButton;
   
@@ -339,8 +338,6 @@
     self.appStoreButtonState = AppStoreButtonStateOffline;
   _updateManager.currentHockeyViewController = self;
   [super viewWillAppear:animated];
-  _statusBarStyle = [[UIApplication sharedApplication] statusBarStyle];
-  [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleBlackOpaque];
   [self redrawTableView];
 }
 
@@ -349,7 +346,6 @@
   //if the popover is still visible, dismiss it
   [_popOverController dismissPopoverAnimated:YES];
   [super viewWillDisappear:animated];
-  [[UIApplication sharedApplication] setStatusBarStyle:_statusBarStyle];
 }
 
 - (void)redrawTableView {

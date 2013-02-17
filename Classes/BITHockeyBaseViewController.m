@@ -7,6 +7,7 @@
 //
 
 #import "BITHockeyBaseViewController.h"
+#import "HockeySDKPrivate.h"
 
 
 @implementation BITHockeyBaseViewController {
@@ -65,13 +66,17 @@
   [super viewWillAppear:animated];
   
   _statusBarStyle = [[UIApplication sharedApplication] statusBarStyle];
-  [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleBlackOpaque];
+  if ([self.navigationController.navigationBar.tintColor isEqual:BIT_RGBCOLOR(25, 25, 25)]) {
+    [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleBlackOpaque];
+  }
 }
 
 - (void)viewWillDisappear:(BOOL)animated {
   [super viewWillDisappear:animated];
   
-  [[UIApplication sharedApplication] setStatusBarStyle:_statusBarStyle];
+  if ([self.navigationController.navigationBar.tintColor isEqual:BIT_RGBCOLOR(25, 25, 25)]) {
+    [[UIApplication sharedApplication] setStatusBarStyle:_statusBarStyle];
+  }
 }
 
 
