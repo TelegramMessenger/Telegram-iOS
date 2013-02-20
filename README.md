@@ -43,3 +43,9 @@ This documentation provides integrated help in Xcode for all public APIs and a s
 3. Copy the content into ~`/Library/Developer/Shared/Documentation/DocSet`
 
 The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.0.0/](http://hockeyapp.net/help/sdk/ios/3.0.0/)
+
+## Nightly Builds
+
+You can download nightly builds of the develop branch from [cisimple.com](https://www.cisimple.com/jobs/qsx70pbsrjlf60nlq). Builds are triggered at midnight (UTC) if we push commits to our repository in the past 24 hours.
+
+<a href="https://www.cisimple.com/jobs/qsx70pbsrjlf60nlq"><img src='https://www.cisimple.com/jobs/qsx70pbsrjlf60nlq/build_status.png'/></a>
