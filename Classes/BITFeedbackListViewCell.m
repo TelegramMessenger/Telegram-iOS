@@ -90,7 +90,7 @@
     self.labelText = [[BITAttributedLabel alloc] init];
     self.labelText.font = [UIFont systemFontOfSize:TEXT_FONTSIZE];
     self.labelText.numberOfLines = 0;
-    self.labelText.textAlignment = UITextAlignmentLeft;
+    self.labelText.textAlignment = kBITTextLabelAlignmentLeft;
     self.labelText.dataDetectorTypes = UIDataDetectorTypeAll;
   }
   return self;
@@ -162,11 +162,11 @@
   [self.labelTitle setFrame:CGRectMake(FRAME_SIDE_BORDER, FRAME_TOP_BORDER + LABEL_TITLE_Y, self.frame.size.width - (2 * FRAME_SIDE_BORDER), LABEL_TITLE_HEIGHT)];
     
   if (_message.userMessage) {
-    self.labelTitle.textAlignment = UITextAlignmentRight;
-    self.labelText.textAlignment = UITextAlignmentRight;
+    self.labelTitle.textAlignment = kBITTextLabelAlignmentRight;
+    self.labelText.textAlignment = kBITTextLabelAlignmentRight;
   } else {
-    self.labelTitle.textAlignment = UITextAlignmentLeft;
-    self.labelText.textAlignment = UITextAlignmentLeft;
+    self.labelTitle.textAlignment = kBITTextLabelAlignmentLeft;
+    self.labelText.textAlignment = kBITTextLabelAlignmentLeft;
   }
 
   [self addSubview:self.labelTitle];

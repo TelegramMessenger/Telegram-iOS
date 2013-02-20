@@ -377,7 +377,7 @@
       cell.textLabel.textColor = DEFAULT_TEXTCOLOR;
       cell.accessoryType = UITableViewCellAccessoryNone;
       cell.selectionStyle = UITableViewCellSelectionStyleNone;
-      cell.textLabel.textAlignment = UITextAlignmentCenter;
+      cell.textLabel.textAlignment = kBITTextLabelAlignmentCenter;
     }
     
     cell.textLabel.text = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListLastUpdated"),
@@ -474,7 +474,7 @@
       
       statusLabel.font = [UIFont systemFontOfSize:10];
       statusLabel.textColor = DEFAULT_TEXTCOLOR;
-      statusLabel.textAlignment = UITextAlignmentCenter;
+      statusLabel.textAlignment = kBITTextLabelAlignmentCenter;
       statusLabel.backgroundColor = DEFAULT_BACKGROUNDCOLOR;
       statusLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth;
 
