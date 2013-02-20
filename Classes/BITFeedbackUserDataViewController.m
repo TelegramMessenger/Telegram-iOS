@@ -230,7 +230,7 @@
     textField.backgroundColor = [UIColor whiteColor];
     textField.autocorrectionType = UITextAutocorrectionTypeNo;
     textField.autocapitalizationType = UITextAutocapitalizationTypeNone;
-    textField.textAlignment = UITextAlignmentLeft;
+    textField.textAlignment = kBITTextLabelAlignmentLeft;
     textField.delegate = self;
     textField.tag = indexPath.row;
     

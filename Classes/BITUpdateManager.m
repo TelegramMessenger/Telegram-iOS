@@ -518,7 +518,7 @@
     
     UILabel *label = [[UILabel alloc] initWithFrame:frame];
     label.text = message;
-    label.textAlignment = UITextAlignmentCenter;
+    label.textAlignment = kBITTextLabelAlignmentCenter;
     label.numberOfLines = 2;
     label.backgroundColor = [UIColor clearColor];
     
