@@ -50,7 +50,7 @@
     
     // If there is no presenting view controller just remove view
     if (presentingViewController && self.modalAnimated) {
-      [presentingViewController dismissModalViewControllerAnimated:YES];
+      [presentingViewController dismissViewControllerAnimated:YES completion:nil];
     } else {
       [self.navigationController.view removeFromSuperview];
     }

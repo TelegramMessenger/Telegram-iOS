@@ -222,7 +222,7 @@
   if (self.delegate && [self.delegate respondsToSelector:@selector(feedbackComposeViewControllerDidFinish:)]) {
     [self.delegate feedbackComposeViewControllerDidFinish:self];
   } else {
-    [self dismissModalViewControllerAnimated:YES];
+    [self dismissViewControllerAnimated:YES completion:nil];
   }
 }
 
@@ -263,21 +263,21 @@
     if ([self.navigationController respondsToSelector:@selector(dismissViewControllerAnimated:completion:)]) {
       [self.navigationController dismissViewControllerAnimated:YES
                                                     completion:^(void) {
-                                                      [self dismissModalViewControllerAnimated:YES];
+                                                      [self dismissViewControllerAnimated:YES completion:nil];
                                                     }];
     } else {
-      [self dismissModalViewControllerAnimated:YES];
+      [self dismissViewControllerAnimated:YES completion:nil];
       [self performSelector:@selector(dismissAction:) withObject:nil afterDelay:0.4];
     }
   } else {
-    [self.navigationController dismissModalViewControllerAnimated:YES];
+    [self.navigationController dismissViewControllerAnimated:YES completion:nil];
   }
 }
 
 - (void)userDataUpdateFinished {
   [self.manager saveMessages];
   
-  [self.navigationController dismissModalViewControllerAnimated:YES];
+  [self.navigationController dismissViewControllerAnimated:YES completion:nil];
 }
 
 
