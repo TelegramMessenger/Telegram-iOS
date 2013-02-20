@@ -46,6 +46,6 @@ The documentation is also available via the following URL: [http://hockeyapp.net
 
 ## Nightly Builds
 
-You can download nightly builds of the develop branch from [cisimple.com](https://www.cisimple.com/jobs/qsx70pbsrjlf60nlq). Builds are triggered at midnight (UTC) if we push commits to our repository in the past 24 hours.
+You can download nightly builds of the develop branch from [cisimple.com](https://www.cisimple.com/jobs/qsx70pbsrjlf60nlq). Builds are triggered at midnight (UTC) if we had pushed commits to our repository in the past 24 hours.
 
 <a href="https://www.cisimple.com/jobs/qsx70pbsrjlf60nlq"><img src='https://www.cisimple.com/jobs/qsx70pbsrjlf60nlq/build_status.png'/></a>
