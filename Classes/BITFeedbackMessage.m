@@ -72,7 +72,7 @@
     self.email = [decoder decodeObjectForKey:@"email"];
     self.date = [decoder decodeObjectForKey:@"date"];
     self.id = [decoder decodeObjectForKey:@"id"];
-    self.status = [decoder decodeIntegerForKey:@"status"];
+    self.status = (BITFeedbackMessageStatus)[decoder decodeIntegerForKey:@"status"];
     self.userMessage = [decoder decodeBoolForKey:@"userMessage"];
     self.token = [decoder decodeObjectForKey:@"token"];
   }
