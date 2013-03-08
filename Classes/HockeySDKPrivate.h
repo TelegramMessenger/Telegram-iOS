@@ -52,6 +52,10 @@
 #define kBITUpdateAuthorizedVersion         @"BITUpdateAuthorizedVersion"
 #define kBITUpdateAuthorizedToken           @"BITUpdateAuthorizedToken"
 
+#define kBITStoreUpdateDateOfLastCheck      @"BITStoreUpdateDateOfLastCheck"
+#define kBITStoreUpdateLastStoreVersion     @"BITStoreUpdateLastStoreVersion"
+#define kBITStoreUpdateLastUUID             @"BITStoreUpdateLastUUID"
+
 #define BITHOCKEYSDK_BUNDLE @"HockeySDKResources.bundle"
 #define BITHOCKEYSDK_URL @"https://sdk.hockeyapp.net/"
 

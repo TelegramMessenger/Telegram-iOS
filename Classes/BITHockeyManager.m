@@ -34,6 +34,7 @@
 #import "BITHockeyBaseManagerPrivate.h"
 #import "BITCrashManagerPrivate.h"
 #import "BITUpdateManagerPrivate.h"
+#import "BITStoreUpdateManagerPrivate.h"
 #import "BITFeedbackManagerPrivate.h"
 
 @interface BITHockeyManager ()
@@ -101,6 +102,7 @@
     
     _disableCrashManager = NO;
     _disableUpdateManager = NO;
+    _enableStoreUpdateManager = NO;
     _disableFeedbackManager = NO;
     
     _appStoreEnvironment = NO;
@@ -174,6 +176,15 @@
     }
     [_updateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
   }
+  
+  // start StoreUpdateManager
+  if ([self isStoreUpdateManagerEnabled]) {
+    BITHockeyLog(@"INFO: Start StoreUpdateManager");
+    if (_serverURL) {
+      [_storeUpdateManager setServerURL:_serverURL];
+    }
+    [_storeUpdateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
+  }
 
   // start FeedbackManager
   if (![self isFeedbackManagerDisabled]) {
@@ -200,6 +211,14 @@
     [_updateManager setDisableUpdateManager:disableUpdateManager];
   }
   _disableUpdateManager = disableUpdateManager;
+}
+
+
+- (void)setEnableStoreUpdateManager:(BOOL)enableStoreUpdateManager {
+  if (_storeUpdateManager) {
+    [_storeUpdateManager setEnableStoreUpdateManager:enableStoreUpdateManager];
+  }
+  _enableStoreUpdateManager = enableStoreUpdateManager;
 }
 
 
@@ -247,6 +266,9 @@
     BITHockeyLog(@"INFO: Setup UpdateManager");
     _updateManager = [[BITUpdateManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
     _updateManager.delegate = _delegate;
+
+    BITHockeyLog(@"INFO: Setup StoreUpdateManager");
+    _storeUpdateManager = [[BITStoreUpdateManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
     
     BITHockeyLog(@"INFO: Setup FeedbackManager");
     _feedbackManager = [[BITFeedbackManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];

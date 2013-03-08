@@ -1,0 +1,133 @@
+/*
+ * Author: Andreas Linde <mail@andreaslinde.de>
+ *
+ * Copyright (c) 2013 HockeyApp, Bit Stadium GmbH.
+ * All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+
+#import <UIKit/UIKit.h>
+#import "BITHockeyBaseManager.h"
+
+
+typedef enum {
+  BITStoreUpdateCheckDaily = 0,
+  BITStoreUpdateCheckWeekly = 1,
+  BITStoreUpdateCheckManually = 2
+} BITStoreUpdateSetting;
+
+/**
+ The store update manager module.
+ 
+ This is the HockeySDK module for handling app updates when having your app released in the App Store.
+ 
+ This module automatically disables itself when **NOT** running in an App Store build by default!
+ 
+ When an update is detected, it will open the apps store page.
+  
+ */
+
+@interface BITStoreUpdateManager : BITHockeyBaseManager <UIAlertViewDelegate>
+
+
+///-----------------------------------------------------------------------------
+/// @name Update Checking
+///-----------------------------------------------------------------------------
+
+// see BITHockeyStoreUpdateSetting-enum. Will be saved in user defaults.
+// default value: BITStoreUpdateCheckDaily
+/**
+ When to check for new updates.
+ 
+ Defines when a the SDK should check if there is a new update available on the
+ server. This must be assigned one of the following:
+ 
+ - `BITStoreUpdateCheckDaily`: Once a day
+ - `BITStoreUpdateCheckWeekly`: Once a week
+ - `BITStoreUpdateCheckManually`: Manually
+ 
+ **Default**: BITStoreUpdateCheckDaily
+ 
+ @warning When setting this to `BITStoreUpdateCheckManually` you need to either
+ invoke the update checking process yourself with `checkForUpdate` somehow, e.g. by
+ proving an update check button for the user or integrating the Update View into your
+ user interface.
+ @see countryCode
+ @see checkForUpdateOnLaunch
+ @see checkForUpdate
+ */
+@property (nonatomic, assign) BITStoreUpdateSetting updateSetting;
+
+
+/**
+ Defines the store country the app is always available in, otherwise uses the users locale
+ 
+ If this value is not defined, then it uses the device country if the current locale.
+ 
+ If you are pre-defining a country and are releasing a new version on a specific date,
+ it can happen that users get an alert but the update is not yet available in their country!
+ 
+ But if a user downloaded the app from another appstore than the locale is set and the app is not
+ available in the locales app store, then the user will never receive an update notification!
+ 
+ More information about possible country codes is available here: http://en.wikipedia.org/wiki/ISO_3166-1_alpha-2
+ 
+ @see updateSetting
+ @see checkForUpdateOnLaunch
+ @see checkForUpdate
+ */
+@property (nonatomic, strong) NSString *countryCode;
+
+
+/**
+ Flag that determines whether the automatic update checks should be done.
+ 
+ If this is enabled the update checks will be performed automatically depending on the
+ `updateSetting` property. If this is disabled the `updateSetting` property will have
+ no effect, and checking for updates is totally up to be done by yourself.
+ 
+ *Default*: _YES_
+
+ @warning When setting this to `NO` you need to invoke update checks yourself!
+ @see updateSetting
+ @see countryCode
+ @see checkForUpdate
+ */
+@property (nonatomic, assign, getter=isCheckingForUpdateOnLaunch) BOOL checkForUpdateOnLaunch;
+
+
+// manually start an update check
+/**
+ Check for an update
+ 
+ Call this to trigger a check if there is a new update available on the HockeyApp servers.
+ 
+ @see updateSetting
+ @see countryCode
+ @see checkForUpdateOnLaunch
+ */
+- (void)checkForUpdate;
+
+
+@end
