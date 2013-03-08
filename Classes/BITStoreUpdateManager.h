@@ -41,10 +41,12 @@ typedef enum {
  The store update manager module.
  
  This is the HockeySDK module for handling app updates when having your app released in the App Store.
+ By default the module uses the current users locale to define the app store to check for updates. You
+ can modify this using the `countryCode` property. See the property documentation for details on its usage.
  
  This module automatically disables itself when **NOT** running in an App Store build by default!
  
- When an update is detected, it will open the apps store page.
+ When an update is detected, it will open the apps page in the app store app.
   
  */
 
