@@ -213,7 +213,6 @@
   // TODO: problem with worldwide is timed releases!
   
   NSString *appBundleIdentifier = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"];
-  appBundleIdentifier = @"de.buzzworks.worldviewlive";
   
   NSString *url = [NSString stringWithFormat:@"http://itunes.apple.com/lookup?bundleId=%@%@",
                    bit_URLEncodedString(appBundleIdentifier),
