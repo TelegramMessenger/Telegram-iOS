@@ -973,7 +973,6 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 6.1;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/HockeySDKTests/OCMock\"",
 					"\"$(SRCROOT)/HockeySDKTests\"",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1005,7 +1004,6 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 6.1;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/HockeySDKTests/OCMock\"",
 					"\"$(SRCROOT)/HockeySDKTests\"",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
