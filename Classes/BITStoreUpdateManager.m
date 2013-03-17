@@ -261,14 +261,14 @@
 
 #pragma mark - Update Check
 
-- (void)checkForUpdate {
+- (void)checkForUpdateManual:(BOOL)manual {
   if ([self shouldCancelProcessing]) return;
 
   if (self.isCheckInProgress) return;
   self.checkInProgress = YES;
   
   // do we need to update?
-  if (![self shouldCheckForUpdates]) {
+  if (!manual && ![self shouldCheckForUpdates]) {
     BITHockeyLog(@"INFO: Update check not needed right now");
     self.checkInProgress = NO;
     return;
@@ -312,6 +312,14 @@
   }];
 }
 
+- (void)checkForUpdateDelayed {
+  [self checkForUpdateManual:NO];
+}
+
+- (void)checkForUpdate {
+  [self checkForUpdateManual:YES];
+}
+
 
 // begin the startup process
 - (void)startManager {
@@ -328,7 +336,7 @@
   }
   
   if ([self isCheckingForUpdateOnLaunch] && [self shouldCheckForUpdates]) {
-    [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0f];
+    [self performSelector:@selector(checkForUpdateDelayed) withObject:nil afterDelay:1.0f];
   }
 
   [self setupDidBecomeActiveNotifications];

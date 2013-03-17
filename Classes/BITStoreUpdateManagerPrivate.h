@@ -54,5 +54,6 @@
 
 - (BOOL)hasNewVersion:(NSDictionary *)dictionary;
 - (BOOL)processStoreResponseWithString:(NSString *)responseString;
+- (void)checkForUpdateDelayed;
 
 @end

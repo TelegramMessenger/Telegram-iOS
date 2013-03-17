@@ -63,7 +63,7 @@
 - (void)startManager {
   _storeUpdateManager.enableStoreUpdateManager = YES;
   [_storeUpdateManager startManager];
-  [NSObject cancelPreviousPerformRequestsWithTarget:_storeUpdateManager selector:@selector(checkForUpdate) object:nil];
+  [NSObject cancelPreviousPerformRequestsWithTarget:_storeUpdateManager selector:@selector(checkForUpdateDelayed) object:nil];
 }
 
 
