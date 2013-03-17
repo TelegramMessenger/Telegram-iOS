@@ -37,7 +37,6 @@
 
 
 @implementation BITStoreUpdateManager {
-  NSString *_lastStoreVersion;
   NSString *_newStoreVersion;
   NSString *_appStoreURL;
   NSString *_currentUUID;
@@ -88,28 +87,19 @@
     _enableStoreUpdateManager = NO;
     _didSetupDidBecomeActiveNotifications = NO;
     _updateAlertShowing = NO;
-    _lastStoreVersion = nil;
     _newStoreVersion = nil;
     _appStoreURL = nil;
     _currentUUID = [[self executableUUID] copy];
     _countryCode = nil;
     
+    _mainBundle = [NSBundle mainBundle];
+    _currentLocale = [NSLocale currentLocale];
+    _userDefaults = [NSUserDefaults standardUserDefaults];
+    
     // set defaults
     self.checkForUpdateOnLaunch = YES;
     self.updateSetting = BITStoreUpdateCheckDaily;
 
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:kBITStoreUpdateLastStoreVersion]) {
-      _lastStoreVersion = [[NSUserDefaults standardUserDefaults] objectForKey:kBITStoreUpdateLastStoreVersion];
-    }
-
-    if ([[NSUserDefaults standardUserDefaults] objectForKey:kBITStoreUpdateDateOfLastCheck]) {
-      self.lastCheck = [[NSUserDefaults standardUserDefaults] objectForKey:kBITStoreUpdateDateOfLastCheck];
-    }
-    
-    if (!_lastCheck) {
-      self.lastCheck = [NSDate distantPast];
-    }
-    
     if (!BITHockeyBundle()) {
       NSLog(@"[HockeySDK] WARNING: %@ is missing, make sure it is added!", BITHOCKEYSDK_BUNDLE);
     }
@@ -126,24 +116,66 @@
 
 #pragma mark - Version
 
+- (NSString *)lastStoreVersion {
+  NSString *versionString = nil;
+  
+  if ([self.userDefaults objectForKey:kBITStoreUpdateLastStoreVersion]) {
+    // get the last saved version string from the app store
+    versionString = [self.userDefaults objectForKey:kBITStoreUpdateLastStoreVersion];
+  }
+  
+  // if there is a UUID saved which doesn't match the current binary UUID
+  // then there is possibly a newer version in the store
+  NSString *lastSavedUUID = nil;
+  if ([self.userDefaults objectForKey:kBITStoreUpdateLastUUID]) {
+    lastSavedUUID = [self.userDefaults objectForKey:kBITStoreUpdateLastUUID];
+
+    if (lastSavedUUID && ![lastSavedUUID isEqualToString:_currentUUID]) {
+      // the UUIDs don't match, store the new one
+      [self.userDefaults setObject:_currentUUID forKey:kBITStoreUpdateLastUUID];
+      
+      if (versionString) {
+        // a new version has been installed, reset everything
+        // so we set versionString to nil to simulate that this is the very run
+        [self.userDefaults removeObjectForKey:kBITStoreUpdateLastStoreVersion];
+        versionString = nil;
+      }
+
+      [self.userDefaults synchronize];
+    }
+  }
+  
+  return versionString;
+}
+
 - (BOOL)hasNewVersion:(NSDictionary *)dictionary {
   _lastCheckFailed = YES;
   
-  if ( [(NSDictionary *)[dictionary objectForKey:@"results"] count] > 0 ) {
+  NSString *lastStoreVersion = [self lastStoreVersion];
+  
+  if ([[dictionary objectForKey:@"results"] isKindOfClass:[NSArray class]] &&
+      [(NSArray *)[dictionary objectForKey:@"results"] count] > 0 ) {
     _lastCheckFailed = NO;
 
-    _newStoreVersion = [(NSDictionary *)[[dictionary objectForKey:@"results"] objectAtIndex:0] objectForKey:@"version"];
-    _appStoreURL = [(NSDictionary *)[[dictionary objectForKey:@"results"] objectAtIndex:0] objectForKey:@"trackViewUrl"];
+    _newStoreVersion = [(NSDictionary *)[(NSArray *)[dictionary objectForKey:@"results"] objectAtIndex:0] objectForKey:@"version"];
+    _appStoreURL = [(NSDictionary *)[(NSArray *)[dictionary objectForKey:@"results"] objectAtIndex:0] objectForKey:@"trackViewUrl"];
     
     if (!_newStoreVersion || !_appStoreURL) {
       return NO;
-    } else if (!_lastStoreVersion) {
-      [[NSUserDefaults standardUserDefaults] setObject:_currentUUID forKey:kBITStoreUpdateLastUUID];
-      [[NSUserDefaults standardUserDefaults] setObject:_newStoreVersion forKey:kBITStoreUpdateLastStoreVersion];
-      [[NSUserDefaults standardUserDefaults] synchronize];
+    } else if (!lastStoreVersion) {
+      // this is the very first time we get a valid response and
+      // set the reference of the store result to be equal to the current installed version
+      // even though the current installed version could be older than the one in the app store
+      // but this ensures that we never have false alerts, since the version string in
+      // iTunes Connect doesn't have to match CFBundleVersion or CFBundleShortVersionString
+      // and even if it matches it is hard/impossible to 100% determine which one it is,
+      // since they could change at any time
+      [self.userDefaults setObject:_currentUUID forKey:kBITStoreUpdateLastUUID];
+      [self.userDefaults setObject:_newStoreVersion forKey:kBITStoreUpdateLastStoreVersion];
+      [self.userDefaults synchronize];
       return NO;
     } else {
-      NSComparisonResult comparissonResult = bit_versionCompare(_newStoreVersion, _lastStoreVersion);
+      NSComparisonResult comparissonResult = bit_versionCompare(_newStoreVersion, lastStoreVersion);
       
       if (comparissonResult == NSOrderedDescending) {
         return YES;
@@ -156,6 +188,9 @@
   
   return NO;
 }
+
+
+#pragma mark - Time
 
 - (BOOL)shouldCheckForUpdates {
   BOOL checkForUpdate = NO;
@@ -188,13 +223,48 @@
 }
 
 
+#pragma mark - Private
+
+- (BOOL)shouldCancelProcessing {
+  if (![self isAppStoreEnvironment]) return YES;
+  if (![self isStoreUpdateManagerEnabled]) return YES;
+  return NO;
+}
+
+
+- (BOOL)processStoreResponseWithString:(NSString *)responseString {
+  if (!responseString) return NO;
+  
+  NSData *data = [responseString dataUsingEncoding:NSUTF8StringEncoding];
+  
+  NSError *error = nil;
+  NSDictionary *json = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:data options:kNilOptions error:&error];
+  
+  if (error) {
+    BITHockeyLog(@"ERROR: Invalid JSON string. %@", [error localizedDescription]);
+    return NO;
+  }
+  
+  // remember that we just checked the server
+  self.lastCheck = [NSDate date];
+  
+  self.updateAvailable = [self hasNewVersion:json];
+  if (_lastCheckFailed) return NO;
+  
+  if ([self isUpdateAvailable]) {
+    [self showUpdateAlert];
+  }
+  
+  return YES;
+}
+
+
 #pragma mark - Update Check
 
 - (void)checkForUpdate {
-  if (![self isAppStoreEnvironment]) return;
-  if (![self isStoreUpdateManagerEnabled]) return;
+  if ([self shouldCancelProcessing]) return;
+
   if (self.isCheckInProgress) return;
-  
   self.checkInProgress = YES;
   
   // do we need to update?
@@ -208,11 +278,11 @@
   if (self.countryCode) {
     country = [NSString stringWithFormat:@"&country=%@", self.countryCode];
   } else {
-    country = [NSString stringWithFormat:@"&country=%@", [(NSDictionary *)[NSLocale currentLocale] objectForKey: NSLocaleCountryCode]];
+    country = [NSString stringWithFormat:@"&country=%@", [(NSDictionary *)self.currentLocale objectForKey: NSLocaleCountryCode]];
   }
   // TODO: problem with worldwide is timed releases!
   
-  NSString *appBundleIdentifier = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"];
+  NSString *appBundleIdentifier = [self.mainBundle objectForInfoDictionaryKey:@"CFBundleIdentifier"];
   
   NSString *url = [NSString stringWithFormat:@"http://itunes.apple.com/lookup?bundleId=%@%@",
                    bit_URLEncodedString(appBundleIdentifier),
@@ -237,18 +307,7 @@
         return;
       }
       
-      NSError *error = nil;
-      NSDictionary *json = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:kNilOptions error:&error];
-      
-      // remember that we just checked the server
-      self.lastCheck = [NSDate date];
-      
-      self.updateAvailable = [self hasNewVersion:json];
-      if (_lastCheckFailed) return;
-      
-      if ([self isUpdateAvailable]) {
-        [self showUpdateAlert];
-      }
+      [self processStoreResponseWithString:responseString];
     }
   }];
 }
@@ -256,25 +315,16 @@
 
 // begin the startup process
 - (void)startManager {
-  if (![self isAppStoreEnvironment]) return;
-  if (![self isStoreUpdateManagerEnabled]) return;
-
+  if ([self shouldCancelProcessing]) return;
+  
   BITHockeyLog(@"INFO: Start UpdateManager");
 
-  // did the user just update the version?
-  NSString *lastStoredUUID = nil;
-  if ([[NSUserDefaults standardUserDefaults] objectForKey:kBITStoreUpdateLastUUID]) {
-    lastStoredUUID = [[NSUserDefaults standardUserDefaults] objectForKey:kBITStoreUpdateLastUUID];
-    if (_lastStoreVersion && lastStoredUUID && ![lastStoredUUID isEqualToString:_currentUUID]) {
-      // a new version has been installed, reset everything
-      [[NSUserDefaults standardUserDefaults] removeObjectForKey:kBITStoreUpdateLastStoreVersion];
-      _lastStoreVersion = nil;
-    }
+  if ([self.userDefaults objectForKey:kBITStoreUpdateDateOfLastCheck]) {
+    self.lastCheck = [self.userDefaults objectForKey:kBITStoreUpdateDateOfLastCheck];
   }
   
-  if (lastStoredUUID && ![lastStoredUUID isEqualToString:_currentUUID]) {
-    [[NSUserDefaults standardUserDefaults] setObject:_currentUUID forKey:kBITStoreUpdateLastUUID];
-    [[NSUserDefaults standardUserDefaults] synchronize];
+  if (!_lastCheck) {
+    self.lastCheck = [NSDate distantPast];
   }
   
   if ([self isCheckingForUpdateOnLaunch] && [self shouldCheckForUpdates]) {
@@ -310,8 +360,8 @@
   if (_lastCheck != aLastCheck) {
     _lastCheck = [aLastCheck copy];
     
-    [[NSUserDefaults standardUserDefaults] setObject:self.lastCheck forKey:kBITStoreUpdateDateOfLastCheck];
-    [[NSUserDefaults standardUserDefaults] synchronize];
+    [self.userDefaults setObject:self.lastCheck forKey:kBITStoreUpdateDateOfLastCheck];
+    [self.userDefaults synchronize];
   }
 }
 
@@ -322,8 +372,8 @@
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
   _updateAlertShowing = NO;
   if (buttonIndex == [alertView cancelButtonIndex]) {
-    [[NSUserDefaults standardUserDefaults] setObject:self.lastCheck forKey:kBITStoreUpdateDateOfLastCheck];
-    [[NSUserDefaults standardUserDefaults] synchronize];
+    [self.userDefaults setObject:self.lastCheck forKey:kBITStoreUpdateDateOfLastCheck];
+    [self.userDefaults synchronize];
   } else if (buttonIndex == [alertView firstOtherButtonIndex]) {
     // Remind button
   } else if (buttonIndex == [alertView firstOtherButtonIndex] + 1) {

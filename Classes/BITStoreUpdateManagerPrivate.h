@@ -46,4 +46,13 @@
 // used by BITHockeyManager if disable status is changed
 @property (nonatomic, getter = isStoreUpdateManagerEnabled) BOOL enableStoreUpdateManager;
 
+#pragma mark - For Testing
+
+@property (nonatomic, assign) NSBundle *mainBundle;
+@property (nonatomic, assign) NSLocale *currentLocale;
+@property (nonatomic, assign) NSUserDefaults *userDefaults;
+
+- (BOOL)hasNewVersion:(NSDictionary *)dictionary;
+- (BOOL)processStoreResponseWithString:(NSString *)responseString;
+
 @end
