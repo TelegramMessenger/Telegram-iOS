@@ -594,6 +594,7 @@
 				1E5954CC15B6F24A00A03429 /* Sources */,
 				1E5954DB15B6F24A00A03429 /* Frameworks */,
 				1E59558B15B6FD8800A03429 /* Headers */,
+				1EE9071A16F6871F003DDE1D /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -770,6 +771,19 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "/usr/local/bin/appledoc \\\n  --output \"${SOURCE_ROOT}/../documentation\" \\\n  --ignore Vendor \\\n  --ignore Products \\\n  --ignore .m \\\n  --create-html \\\n  --create-docset \\\n  --install-docset \\\n  --keep-intermediate-files \\\n  --project-name \"${HOCKEYSDK_DOCSET_NAME} ${VERSION_STRING}\" \\\n  --project-version \"${VERSION_STRING}\" \\\n  --project-company \"BitStadium GmbH\" \\\n  --company-id \"de.bitstadium\" \\\n  --docset-bundle-name \"${HOCKEYSDK_DOCSET_NAME} ${VERSION_STRING}\" \\\n  --docset-feed-name \"${HOCKEYSDK_DOCSET_NAME}\" \\\n  --docset-desc \"\" \\\n  --docset-platform-family \"iphoneos\" \\\n  --index-desc \"${SOURCE_ROOT}/../docs/index.md\" \\\n  --include \"${SOURCE_ROOT}/../docs/index.html\" \\\n  --include \"${SOURCE_ROOT}/../docs/\" \\\n  --merge-categories \\\n  --no-repeat-first-par \\\n  --warn-undocumented-object \\\n  --warn-undocumented-member \\\n  --warn-empty-description \\\n  --warn-unknown-directive \\\n  --warn-invalid-crossref \\\n  --warn-missing-arg \\\n  --logformat xcode \\\n  --exit-threshold 2 \\\n  \"${SOURCE_ROOT}/../\"\n";
+		};
+		1EE9071A16F6871F003DDE1D /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${SRCROOT}/../Vendor/XcodeCoverage/exportenv.sh\"";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -1039,6 +1053,8 @@
 				DEAD_CODE_STRIPPING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_GENERATE_TEST_COVERAGE_FILES = YES;
+				GCC_INSTRUMENT_PROGRAM_FLOW_ARCS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"BITHOCKEY_STATIC_LIBRARY=1",
