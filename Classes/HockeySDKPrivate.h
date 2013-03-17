@@ -55,6 +55,7 @@
 #define kBITStoreUpdateDateOfLastCheck      @"BITStoreUpdateDateOfLastCheck"
 #define kBITStoreUpdateLastStoreVersion     @"BITStoreUpdateLastStoreVersion"
 #define kBITStoreUpdateLastUUID             @"BITStoreUpdateLastUUID"
+#define kBITStoreUpdateIgnoreVersion        @"BITStoreUpdateIgnoredVersion"
 
 #define BITHOCKEYSDK_BUNDLE @"HockeySDKResources.bundle"
 #define BITHOCKEYSDK_URL @"https://sdk.hockeyapp.net/"

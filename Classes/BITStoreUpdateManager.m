@@ -160,7 +160,14 @@
     _newStoreVersion = [(NSDictionary *)[(NSArray *)[dictionary objectForKey:@"results"] objectAtIndex:0] objectForKey:@"version"];
     _appStoreURL = [(NSDictionary *)[(NSArray *)[dictionary objectForKey:@"results"] objectAtIndex:0] objectForKey:@"trackViewUrl"];
     
+    NSString *ignoredVersion = nil;
+    if ([self.userDefaults objectForKey:kBITStoreUpdateIgnoreVersion]) {
+      ignoredVersion = [self.userDefaults objectForKey:kBITStoreUpdateIgnoreVersion];
+    }
+    
     if (!_newStoreVersion || !_appStoreURL) {
+      return NO;
+    } else if (ignoredVersion && [ignoredVersion isEqualToString:_newStoreVersion]) {
       return NO;
     } else if (!lastStoreVersion) {
       // this is the very first time we get a valid response and
@@ -355,7 +362,6 @@
                                               cancelButtonTitle:BITHockeyLocalizedString(@"UpdateIgnore")
                                               otherButtonTitles:BITHockeyLocalizedString(@"UpdateRemindMe"), BITHockeyLocalizedString(@"UpdateShow"), nil
                               ];
-    [alertView setTag:0];
     [alertView show];
     _updateAlertShowing = YES;
   }
@@ -380,12 +386,16 @@
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
   _updateAlertShowing = NO;
   if (buttonIndex == [alertView cancelButtonIndex]) {
-    [self.userDefaults setObject:self.lastCheck forKey:kBITStoreUpdateDateOfLastCheck];
+    // Ignore
+    [self.userDefaults setObject:_newStoreVersion forKey:kBITStoreUpdateIgnoreVersion];
     [self.userDefaults synchronize];
   } else if (buttonIndex == [alertView firstOtherButtonIndex]) {
     // Remind button
   } else if (buttonIndex == [alertView firstOtherButtonIndex] + 1) {
     // Show button
+    [self.userDefaults setObject:_newStoreVersion forKey:kBITStoreUpdateIgnoreVersion];
+    [self.userDefaults synchronize];
+    
     if (_appStoreURL) {
       [[UIApplication sharedApplication] openURL:[NSURL URLWithString:_appStoreURL]];
     }
