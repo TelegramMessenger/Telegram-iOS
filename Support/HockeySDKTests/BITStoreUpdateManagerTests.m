@@ -69,6 +69,104 @@
 
 #pragma mark - Time
 
+- (void)testUpdateCheckDailyFirstTimeEver {
+  NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
+  _storeUpdateManager.userDefaults = mockUserDefaults;
+  
+  [self startManager];
+  
+  BOOL result = [_storeUpdateManager shouldAutoCheckForUpdates];
+  
+  STAssertTrue(result, @"Checking daily first time ever");
+}
+
+- (void)testUpdateCheckDailyFirstTimeTodayLastCheckPreviousDay {
+  NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
+  _storeUpdateManager.userDefaults = mockUserDefaults;
+  _storeUpdateManager.lastCheck = [NSDate dateWithTimeIntervalSinceNow:-(60*60*24)];
+  
+  [self startManager];
+  
+  BOOL result = [_storeUpdateManager shouldAutoCheckForUpdates];
+  
+  STAssertTrue(result, @"Checking daily first time today with last check done previous day");
+}
+
+- (void)testUpdateCheckDailySecondTimeOfTheDay {
+  NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
+  _storeUpdateManager.userDefaults = mockUserDefaults;
+  _storeUpdateManager.lastCheck = [NSDate date];
+  
+  [self startManager];
+  
+  BOOL result = [_storeUpdateManager shouldAutoCheckForUpdates];
+  
+  STAssertFalse(result, @"Checking daily second time of the day");
+}
+
+- (void)testUpdateCheckWeeklyFirstTimeEver {
+  NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
+  _storeUpdateManager.userDefaults = mockUserDefaults;
+  _storeUpdateManager.updateSetting = BITStoreUpdateCheckWeekly;
+  
+  [self startManager];
+  
+  BOOL result = [_storeUpdateManager shouldAutoCheckForUpdates];
+  
+  STAssertTrue(result, @"Checking weekly first time ever");
+}
+
+- (void)testUpdateCheckWeeklyFirstTimeTodayLastCheckPreviousWeek {
+  NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
+  _storeUpdateManager.userDefaults = mockUserDefaults;
+  _storeUpdateManager.updateSetting = BITStoreUpdateCheckWeekly;
+  _storeUpdateManager.lastCheck = [NSDate dateWithTimeIntervalSinceNow:-(60*60*24*7)];
+  
+  [self startManager];
+  
+  BOOL result = [_storeUpdateManager shouldAutoCheckForUpdates];
+  
+  STAssertTrue(result, @"Checking weekly first time after one week");
+}
+
+- (void)testUpdateCheckWeeklyFirstTimeFiveDaysAfterPreviousCheck {
+  NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
+  _storeUpdateManager.userDefaults = mockUserDefaults;
+  _storeUpdateManager.updateSetting = BITStoreUpdateCheckWeekly;
+  _storeUpdateManager.lastCheck = [NSDate dateWithTimeIntervalSinceNow:-(60*60*24*5)];
+  
+  [self startManager];
+  
+  BOOL result = [_storeUpdateManager shouldAutoCheckForUpdates];
+  
+  STAssertFalse(result, @"Checking weekly first time five days after previous check");
+}
+
+- (void)testUpdateCheckManuallyFirstTimeEver {
+  NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
+  _storeUpdateManager.userDefaults = mockUserDefaults;
+  _storeUpdateManager.updateSetting = BITStoreUpdateCheckManually;
+  
+  [self startManager];
+  
+  BOOL result = [_storeUpdateManager shouldAutoCheckForUpdates];
+  
+  STAssertFalse(result, @"Checking manually first time ever");
+}
+
+- (void)testUpdateCheckManuallyFirstTimeTodayLastCheckDonePreviousDay {
+  NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
+  _storeUpdateManager.userDefaults = mockUserDefaults;
+  _storeUpdateManager.updateSetting = BITStoreUpdateCheckManually;
+  _storeUpdateManager.lastCheck = [NSDate dateWithTimeIntervalSinceNow:-(60*60*24)];
+  
+  [self startManager];
+  
+  BOOL result = [_storeUpdateManager shouldAutoCheckForUpdates];
+  
+  STAssertFalse(result, @"Checking manually first time ever");
+}
+
 
 #pragma mark - JSON Response Processing
 
@@ -177,6 +275,38 @@
   BOOL result = [_storeUpdateManager hasNewVersion:json];
   
   STAssertFalse(result, @"There is no udpate available");
+}
+
+- (void)testReportedVersionIsBeingIgnored {
+  NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
+  [given([mockUserDefaults objectForKey:@"BITStoreUpdateLastStoreVersion"]) willReturn:@"4.1.1"];
+  [given([mockUserDefaults objectForKey:@"BITStoreUpdateLastUUID"]) willReturn:@""];
+  [given([mockUserDefaults objectForKey:@"BITStoreUpdateIgnoredVersion"]) willReturn:@"4.1.2"];
+  _storeUpdateManager.userDefaults = mockUserDefaults;
+  
+  [self startManager];
+  
+  NSDictionary *json = [self jsonFromFixture:@"StoreBundleIdentifierKnown"];
+  
+  BOOL result = [_storeUpdateManager hasNewVersion:json];
+  
+  STAssertFalse(result, @"The newer version is being ignored");
+}
+
+- (void)testReportedVersionIsNewerThanTHeIgnoredVersion {
+  NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
+  [given([mockUserDefaults objectForKey:@"BITStoreUpdateLastStoreVersion"]) willReturn:@"4.1.1"];
+  [given([mockUserDefaults objectForKey:@"BITStoreUpdateLastUUID"]) willReturn:@""];
+  [given([mockUserDefaults objectForKey:@"BITStoreUpdateIgnoredVersion"]) willReturn:@"4.1.1"];
+  _storeUpdateManager.userDefaults = mockUserDefaults;
+  
+  [self startManager];
+  
+  NSDictionary *json = [self jsonFromFixture:@"StoreBundleIdentifierKnown"];
+  
+  BOOL result = [_storeUpdateManager hasNewVersion:json];
+  
+  STAssertTrue(result, @"The newer version is not ignored");
 }
 
 @end

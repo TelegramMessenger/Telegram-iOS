@@ -52,6 +52,7 @@
 @property (nonatomic, assign) NSLocale *currentLocale;
 @property (nonatomic, assign) NSUserDefaults *userDefaults;
 
+- (BOOL)shouldAutoCheckForUpdates;
 - (BOOL)hasNewVersion:(NSDictionary *)dictionary;
 - (BOOL)processStoreResponseWithString:(NSString *)responseString;
 - (void)checkForUpdateDelayed;

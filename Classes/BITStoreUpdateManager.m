@@ -199,7 +199,7 @@
 
 #pragma mark - Time
 
-- (BOOL)shouldCheckForUpdates {
+- (BOOL)shouldAutoCheckForUpdates {
   BOOL checkForUpdate = NO;
   
   switch (self.updateSetting) {
@@ -275,7 +275,7 @@
   self.checkInProgress = YES;
   
   // do we need to update?
-  if (!manual && ![self shouldCheckForUpdates]) {
+  if (!manual && ![self shouldAutoCheckForUpdates]) {
     BITHockeyLog(@"INFO: Update check not needed right now");
     self.checkInProgress = NO;
     return;
@@ -342,7 +342,7 @@
     self.lastCheck = [NSDate distantPast];
   }
   
-  if ([self isCheckingForUpdateOnLaunch] && [self shouldCheckForUpdates]) {
+  if ([self isCheckingForUpdateOnLaunch] && [self shouldAutoCheckForUpdates]) {
     [self performSelector:@selector(checkForUpdateDelayed) withObject:nil afterDelay:1.0f];
   }
 
