@@ -58,7 +58,7 @@
 
 - (void)didBecomeActiveActions {
   if ([self isStoreUpdateManagerEnabled] && [self isCheckingForUpdateOnLaunch]) {
-    [self checkForUpdate];
+    [self checkForUpdateDelayed];
   }
 }
 
