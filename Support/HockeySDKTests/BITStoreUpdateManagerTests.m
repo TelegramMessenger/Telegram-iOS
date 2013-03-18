@@ -82,8 +82,8 @@
 
 - (void)testUpdateCheckDailyFirstTimeTodayLastCheckPreviousDay {
   NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
+  [given([mockUserDefaults objectForKey:@"BITStoreUpdateDateOfLastCheck"]) willReturn:[NSDate dateWithTimeIntervalSinceNow:-(60*60*24)]];
   _storeUpdateManager.userDefaults = mockUserDefaults;
-  _storeUpdateManager.lastCheck = [NSDate dateWithTimeIntervalSinceNow:-(60*60*24)];
   
   [self startManager];
   
@@ -118,9 +118,9 @@
 
 - (void)testUpdateCheckWeeklyFirstTimeTodayLastCheckPreviousWeek {
   NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
+  [given([mockUserDefaults objectForKey:@"BITStoreUpdateDateOfLastCheck"]) willReturn:[NSDate dateWithTimeIntervalSinceNow:-(60*60*24*7)]];
   _storeUpdateManager.userDefaults = mockUserDefaults;
   _storeUpdateManager.updateSetting = BITStoreUpdateCheckWeekly;
-  _storeUpdateManager.lastCheck = [NSDate dateWithTimeIntervalSinceNow:-(60*60*24*7)];
   
   [self startManager];
   
@@ -131,9 +131,9 @@
 
 - (void)testUpdateCheckWeeklyFirstTimeFiveDaysAfterPreviousCheck {
   NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
+  [given([mockUserDefaults objectForKey:@"BITStoreUpdateDateOfLastCheck"]) willReturn:[NSDate dateWithTimeIntervalSinceNow:-(60*60*24*5)]];
   _storeUpdateManager.userDefaults = mockUserDefaults;
   _storeUpdateManager.updateSetting = BITStoreUpdateCheckWeekly;
-  _storeUpdateManager.lastCheck = [NSDate dateWithTimeIntervalSinceNow:-(60*60*24*5)];
   
   [self startManager];
   
@@ -156,9 +156,9 @@
 
 - (void)testUpdateCheckManuallyFirstTimeTodayLastCheckDonePreviousDay {
   NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
+  [given([mockUserDefaults objectForKey:@"BITStoreUpdateDateOfLastCheck"]) willReturn:[NSDate dateWithTimeIntervalSinceNow:-(60*60*24)]];
   _storeUpdateManager.userDefaults = mockUserDefaults;
   _storeUpdateManager.updateSetting = BITStoreUpdateCheckManually;
-  _storeUpdateManager.lastCheck = [NSDate dateWithTimeIntervalSinceNow:-(60*60*24)];
   
   [self startManager];
   
