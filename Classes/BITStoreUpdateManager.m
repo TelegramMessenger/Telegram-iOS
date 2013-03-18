@@ -101,7 +101,7 @@
     self.updateSetting = BITStoreUpdateCheckDaily;
 
     if (!BITHockeyBundle()) {
-      NSLog(@"[HockeySDK] WARNING: %@ is missing, make sure it is added!", BITHOCKEYSDK_BUNDLE);
+      NSLog(@"[HockeySDK] WARNING: %@ is missing, built in UI is deactivated!", BITHOCKEYSDK_BUNDLE);
     }
   }
   return self;
@@ -258,7 +258,7 @@
   self.updateAvailable = [self hasNewVersion:json];
   if (_lastCheckFailed) return NO;
   
-  if ([self isUpdateAvailable]) {
+  if ([self isUpdateAvailable] && BITHockeyBundle()) {
     [self showUpdateAlert];
   }
   
