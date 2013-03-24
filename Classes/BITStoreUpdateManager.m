@@ -163,6 +163,7 @@
     NSString *ignoredVersion = nil;
     if ([self.userDefaults objectForKey:kBITStoreUpdateIgnoreVersion]) {
       ignoredVersion = [self.userDefaults objectForKey:kBITStoreUpdateIgnoreVersion];
+      BITHockeyLog(@"INFO: Ignored version: %@", ignoredVersion);
     }
     
     if (!_newStoreVersion || !_appStoreURL) {
@@ -182,6 +183,8 @@
       [self.userDefaults synchronize];
       return NO;
     } else {
+      BITHockeyLog(@"INFO: Compare new version string %@ with %@", _newStoreVersion, lastStoreVersion);
+      
       NSComparisonResult comparissonResult = bit_versionCompare(_newStoreVersion, lastStoreVersion);
       
       if (comparissonResult == NSOrderedDescending) {
@@ -256,7 +259,12 @@
   self.lastCheck = [NSDate date];
   
   self.updateAvailable = [self hasNewVersion:json];
-  if (_lastCheckFailed) return NO;
+  BITHockeyLog(@"INFO: Update available: %i", self.updateAvailable);
+  
+  if (_lastCheckFailed) {
+    BITHockeyLog(@"ERROR: Last check failed");
+    return NO;
+  }
   
   if ([self isUpdateAvailable] && BITHockeyBundle()) {
     [self showUpdateAlert];
