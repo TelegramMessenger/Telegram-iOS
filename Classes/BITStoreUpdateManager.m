@@ -293,9 +293,16 @@
   if (self.countryCode) {
     country = [NSString stringWithFormat:@"&country=%@", self.countryCode];
   } else {
-    country = [NSString stringWithFormat:@"&country=%@", [(NSDictionary *)self.currentLocale objectForKey: NSLocaleCountryCode]];
+    // if the local is by any chance the systemLocale, it could happen that the NSLocaleCountryCode returns nil!
+    if ([(NSDictionary *)self.currentLocale objectForKey:NSLocaleCountryCode]) {
+      country = [NSString stringWithFormat:@"&country=%@", [(NSDictionary *)self.currentLocale objectForKey:NSLocaleCountryCode]];
+    } else {
+      // don't check, just to be save
+      BITHockeyLog(@"ERROR: Locale returned nil, can't determine the language!");
+      self.checkInProgress = NO;
+      return;
+    }
   }
-  // TODO: problem with worldwide is timed releases!
   
   NSString *appBundleIdentifier = [self.mainBundle objectForInfoDictionaryKey:@"CFBundleIdentifier"];
   
