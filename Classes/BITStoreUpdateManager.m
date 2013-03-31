@@ -268,8 +268,8 @@
   }
   
   if ([self isUpdateAvailable]) {
-    if (self.delegate && [self.delegate respondsToSelector:@selector(detectedUpdateFromStoreUpdateManager:newVersion:)]) {
-      [self.delegate detectedUpdateFromStoreUpdateManager:self newVersion:_newStoreVersion];
+    if (self.delegate && [self.delegate respondsToSelector:@selector(detectedUpdateFromStoreUpdateManager:newVersion:storeURL:)]) {
+      [self.delegate detectedUpdateFromStoreUpdateManager:self newVersion:_newStoreVersion storeURL:_appStoreURL];
     }
     
     if (self.updateUIEnabled && BITHockeyBundle()) {

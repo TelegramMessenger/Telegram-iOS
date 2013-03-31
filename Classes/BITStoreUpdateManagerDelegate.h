@@ -46,10 +46,13 @@
 
 /** Informs which new version has been reported to be available
  
+ @warning If this is invoked with a simulated new version, the storeURL could be _NIL_ if the current builds
+ bundle identifier is different to the bundle identifier used in the app store build.
  @param storeUpdateManager The `BITStoreUpdateManager` instance invoking this delegate
- @param version The new version string reported by the App Store
+ @param newVersion The new version string reported by the App Store
+ @param storeURL The App Store URL for this app that could be invoked to let them perform the update.
  */
--(void)detectedUpdateFromStoreUpdateManager:(BITStoreUpdateManager *)storeUpdateManager newVersion:(NSString *)newVersion;
+-(void)detectedUpdateFromStoreUpdateManager:(BITStoreUpdateManager *)storeUpdateManager newVersion:(NSString *)newVersion storeURL:(NSString *)storeURL;
 
 
 
