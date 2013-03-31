@@ -87,6 +87,7 @@
     _enableStoreUpdateManager = NO;
     _didSetupDidBecomeActiveNotifications = NO;
     _updateAlertShowing = NO;
+    _updateUIEnabled = YES;
     _newStoreVersion = nil;
     _appStoreURL = nil;
     _currentUUID = [[self executableUUID] copy];
@@ -271,8 +272,12 @@
       [self.delegate detectedUpdateFromStoreUpdateManager:self newVersion:_newStoreVersion];
     }
     
-    if (BITHockeyBundle()) {
+    if (self.updateUIEnabled && BITHockeyBundle()) {
       [self showUpdateAlert];
+    } else {
+      // Ignore this version
+      [self.userDefaults setObject:_newStoreVersion forKey:kBITStoreUpdateIgnoreVersion];
+      [self.userDefaults synchronize];
     }
   }
   

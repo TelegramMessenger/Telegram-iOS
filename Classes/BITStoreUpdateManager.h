@@ -131,6 +131,34 @@ typedef enum {
 @property (nonatomic, assign, getter=isCheckingForUpdateOnLaunch) BOOL checkForUpdateOnLaunch;
 
 
+///-----------------------------------------------------------------------------
+/// @name User Interface
+///-----------------------------------------------------------------------------
+
+
+/**
+ Flag that determines if the integrated update alert should be used
+ 
+ If enabled, the integrated UIAlert based update notification will be used to inform
+ the user about a new update being available in the App Store.
+ 
+ If disabled, you need to implement the `BITStoreUpdateManagerDelegate` protocol with
+ the method `[BITStoreUpdateManagerDelegate detectUpdateFromStoreUpdateManager:version:]`
+ to be notified about new version and proceed yourself.
+ The manager will consider this identical to an `Ignore` user action using the alert
+ and not inform about this particular version any more, unless the app is updated
+ and this very same version shows up at a later time again as a new version.
+ 
+ *Default*: _YES_
+ 
+ @warning If the HockeySDKResources bundle is missing in the application package, then the internal
+ update alert is also disabled and be treated identical to manually disabling this
+ property.
+ @see updateSetting
+ */
+@property (nonatomic, assign, getter=isUpdateUIEnabled) BOOL updateUIEnabled;
+
+
 // manually start an update check
 /**
  Check for an update
