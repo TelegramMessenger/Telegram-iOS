@@ -92,6 +92,7 @@
     _appStoreURL = nil;
     _currentUUID = [[self executableUUID] copy];
     _countryCode = nil;
+    _simulatedNewStoreVersion = nil;
     
     _mainBundle = [NSBundle mainBundle];
     _currentLocale = [NSLocale currentLocale];
@@ -237,6 +238,7 @@
 #pragma mark - Private
 
 - (BOOL)shouldCancelProcessing {
+  if (self.simulatedNewStoreVersion) return NO;
   if (![self isAppStoreEnvironment]) return YES;
   if (![self isStoreUpdateManagerEnabled]) return YES;
   return NO;
@@ -260,6 +262,13 @@
   self.lastCheck = [NSDate date];
   
   self.updateAvailable = [self hasNewVersion:json];
+  
+  if (self.simulatedNewStoreVersion) {
+    self.updateAvailable = YES;
+    _lastCheckFailed = NO;
+    _newStoreVersion = self.simulatedNewStoreVersion;
+  }
+  
   BITHockeyLog(@"INFO: Update available: %i", self.updateAvailable);
   
   if (_lastCheckFailed) {
@@ -405,6 +414,14 @@
   }
 }
 
+- (void)setSimulatedNewStoreVersion:(NSString *)aSimulatedNewStoreVersion {
+  if ([self isAppStoreEnvironment]) return;
+  
+  if (_simulatedNewStoreVersion != aSimulatedNewStoreVersion) {
+    _simulatedNewStoreVersion = [aSimulatedNewStoreVersion copy];
+  }
+}
+
 
 #pragma mark - UIAlertViewDelegate
 
@@ -424,6 +441,8 @@
     
     if (_appStoreURL) {
       [[UIApplication sharedApplication] openURL:[NSURL URLWithString:_appStoreURL]];
+    } else {
+      BITHockeyLog(@"WARNING: The app store page couldn't be opened, since we did not get a valid URL from the store API.");
     }
   }
 }

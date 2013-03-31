@@ -159,7 +159,29 @@ typedef enum {
 @property (nonatomic, assign, getter=isUpdateUIEnabled) BOOL updateUIEnabled;
 
 
-// manually start an update check
+///-----------------------------------------------------------------------------
+/// @name Tests
+///-----------------------------------------------------------------------------
+
+/**
+ Define the simulated new version avaialble from the App Store
+ 
+ Set the version string that should be used for a simulated new version being available
+ in the App Store.
+ 
+ *Default*: _NIL_
+ 
+ @warning This property is autoamtically disabled if accidentally being invoked in an
+ App Store build.
+ @see updateSetting
+ */
+@property (nonatomic, strong) NSString *simulatedNewStoreVersion;
+
+
+///-----------------------------------------------------------------------------
+/// @name Manual update checking
+///-----------------------------------------------------------------------------
+
 /**
  Check for an update
  
