@@ -266,8 +266,14 @@
     return NO;
   }
   
-  if ([self isUpdateAvailable] && BITHockeyBundle()) {
-    [self showUpdateAlert];
+  if ([self isUpdateAvailable]) {
+    if (self.delegate && [self.delegate respondsToSelector:@selector(detectedUpdateFromStoreUpdateManager:newVersion:)]) {
+      [self.delegate detectedUpdateFromStoreUpdateManager:self newVersion:_newStoreVersion];
+    }
+    
+    if (BITHockeyBundle()) {
+      [self showUpdateAlert];
+    }
   }
   
   return YES;

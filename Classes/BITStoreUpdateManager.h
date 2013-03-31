@@ -37,6 +37,8 @@ typedef enum {
   BITStoreUpdateCheckManually = 2
 } BITStoreUpdateSetting;
 
+@protocol BITStoreUpdateManagerDelegate;
+
 /**
  The store update manager module.
  
@@ -51,6 +53,16 @@ typedef enum {
  */
 
 @interface BITStoreUpdateManager : BITHockeyBaseManager <UIAlertViewDelegate>
+
+
+///-----------------------------------------------------------------------------
+/// @name Delegate
+///-----------------------------------------------------------------------------
+
+/**
+ Sets the optional `BITStoreUpdateManagerDelegate` delegate.
+ */
+@property (nonatomic, weak) id delegate;
 
 
 ///-----------------------------------------------------------------------------
