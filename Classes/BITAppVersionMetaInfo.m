@@ -100,19 +100,19 @@
 - (BOOL)isEqualToAppVersionMetaInfo:(BITAppVersionMetaInfo *)anAppVersionMetaInfo {
   if (self == anAppVersionMetaInfo)
     return YES;
-  if (self.name != anAppVersionMetaInfo.name && ![self isEqualComparingString:self.name withString:anAppVersionMetaInfo.name])
+  if (![self isEqualComparingString:self.name withString:anAppVersionMetaInfo.name])
     return NO;
-  if (self.version != anAppVersionMetaInfo.version && ![self isEqualComparingString:self.version withString:anAppVersionMetaInfo.version])
+  if (![self isEqualComparingString:self.version withString:anAppVersionMetaInfo.version])
     return NO;
-  if (self.shortVersion != anAppVersionMetaInfo.shortVersion && ![self isEqualComparingString:self.shortVersion withString:anAppVersionMetaInfo.shortVersion])
+  if (![self isEqualComparingString:self.shortVersion withString:anAppVersionMetaInfo.shortVersion])
     return NO;
-  if (self.notes != anAppVersionMetaInfo.notes && ![self isEqualComparingString:self.notes withString:anAppVersionMetaInfo.notes])
+  if (![self isEqualComparingString:self.notes withString:anAppVersionMetaInfo.notes])
     return NO;
-  if (self.date != anAppVersionMetaInfo.date && ![self isEqualComparingDate:self.date withDate:anAppVersionMetaInfo.date])
+  if (![self isEqualComparingDate:self.date withDate:anAppVersionMetaInfo.date])
     return NO;
-  if (self.size != anAppVersionMetaInfo.size && ![self isEqualComparingNumber:self.size withNumber:anAppVersionMetaInfo.size])
+  if (![self isEqualComparingNumber:self.size withNumber:anAppVersionMetaInfo.size])
     return NO;
-  if (self.mandatory != anAppVersionMetaInfo.mandatory && ![self isEqualComparingNumber:self.mandatory withNumber:anAppVersionMetaInfo.mandatory])
+  if (![self isEqualComparingNumber:self.mandatory withNumber:anAppVersionMetaInfo.mandatory])
     return NO;
   if (![self isEqualComparingDictionary:self.uuids withDate:anAppVersionMetaInfo.uuids])
     return NO;
