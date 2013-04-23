@@ -108,7 +108,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
     
     NSString *testValue = [[NSUserDefaults standardUserDefaults] stringForKey:kBITCrashManagerStatus];
     if (testValue) {
-      _crashManagerStatus = [[NSUserDefaults standardUserDefaults] integerForKey:kBITCrashManagerStatus];
+      _crashManagerStatus = (BITCrashManagerStatus) [[NSUserDefaults standardUserDefaults] integerForKey:kBITCrashManagerStatus];
     } else {
       // migrate previous setting if available
       if ([[NSUserDefaults standardUserDefaults] boolForKey:@"BITCrashAutomaticallySendReports"]) {
@@ -198,7 +198,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
     if ([rootObj objectForKey:kBITCrashApprovedReports])
       [_approvedCrashReports setDictionary:[rootObj objectForKey:kBITCrashApprovedReports]];
   } else {
-    BITHockeyLog(@"ERROR: Reading settings. %@", errorString);
+    BITHockeyLog(@"ERROR: Reading crash manager settings.");
   }
 }
 

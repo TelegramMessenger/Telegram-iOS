@@ -306,7 +306,7 @@ UIImage *bit_imageToFitSize(UIImage *inputImage, CGSize fitSize, BOOL honorScale
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
     CGContextRef context = CGBitmapContextCreate(NULL,  scaledWidth, scaledHeight, 8, (fitSize.width * 4),
                                                  colorSpace, kCGImageAlphaPremultipliedLast);
-    CGImageRef sourceImg = CGImageCreateWithImageInRect([inputImage CGImage], sourceRect);
+    sourceImg = CGImageCreateWithImageInRect([inputImage CGImage], sourceRect);
     CGContextDrawImage(context, destRect, sourceImg);
     CGImageRelease(sourceImg);
     CGImageRef finalImage = CGBitmapContextCreateImage(context);
@@ -409,13 +409,13 @@ UIImage *bit_roundedCornerImage(UIImage *inputImage, NSInteger cornerSize, NSInt
     UIImage *image = bit_imageWithAlpha(inputImage);
     
     // Build a context that's the same dimensions as the new size
-    CGContextRef context = CGBitmapContextCreate(NULL,
-                                                 image.size.width,
-                                                 image.size.height,
-                                                 CGImageGetBitsPerComponent(image.CGImage),
-                                                 0,
-                                                 CGImageGetColorSpace(image.CGImage),
-                                                 CGImageGetBitmapInfo(image.CGImage));
+    context = CGBitmapContextCreate(NULL,
+                                    image.size.width,
+                                    image.size.height,
+                                    CGImageGetBitsPerComponent(image.CGImage),
+                                    0,
+                                    CGImageGetColorSpace(image.CGImage),
+                                    CGImageGetBitmapInfo(image.CGImage));
     
     // Create a clipping path with rounded corners
     CGContextBeginPath(context);
