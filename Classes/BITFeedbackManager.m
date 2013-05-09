@@ -295,25 +295,37 @@
   }
 
   if (!userIDViaDelegate) {
-    if ([unarchiver containsValueForKey:kBITFeedbackUserID])
+    if ([unarchiver containsValueForKey:kBITFeedbackUserID]) {
       self.userID = [unarchiver decodeObjectForKey:kBITFeedbackUserID];
+      [self addStringValueToKeychain:self.userID forKey:kBITFeedbackUserID];
+    }
+    self.userID = [self stringValueFromKeychainForKey:kBITFeedbackUserID];
   }
   
   if (!userNameViaDelegate) {
-    if ([unarchiver containsValueForKey:kBITFeedbackName])
+    if ([unarchiver containsValueForKey:kBITFeedbackName]) {
       self.userName = [unarchiver decodeObjectForKey:kBITFeedbackName];
+      [self addStringValueToKeychain:self.userName forKey:kBITFeedbackName];
+    }
+    self.userName = [self stringValueFromKeychainForKey:kBITFeedbackName];
   }
 
   if (!userEmailViaDelegate) {
-    if ([unarchiver containsValueForKey:kBITFeedbackEmail])
+    if ([unarchiver containsValueForKey:kBITFeedbackEmail]) {
       self.userEmail = [unarchiver decodeObjectForKey:kBITFeedbackEmail];
+      [self addStringValueToKeychain:self.userEmail forKey:kBITFeedbackEmail];
+    }
+    self.userEmail = [self stringValueFromKeychainForKey:kBITFeedbackEmail];
   }
   
   if ([unarchiver containsValueForKey:kBITFeedbackUserDataAsked])
     _didAskUserData = YES;
   
-  if ([unarchiver containsValueForKey:kBITFeedbackToken])
+  if ([unarchiver containsValueForKey:kBITFeedbackToken]) {
     self.token = [unarchiver decodeObjectForKey:kBITFeedbackToken];
+    [self addStringValueToKeychain:self.token forKey:kBITFeedbackToken];
+  }
+  self.token = [self stringValueFromKeychainForKey:kBITFeedbackToken];
   
   if ([unarchiver containsValueForKey:kBITFeedbackAppID]) {
     NSString *appID = [unarchiver decodeObjectForKey:kBITFeedbackAppID];
@@ -359,19 +371,19 @@
     [archiver encodeObject:[NSNumber numberWithBool:YES] forKey:kBITFeedbackUserDataAsked];
   
   if (self.token)
-    [archiver encodeObject:self.token forKey:kBITFeedbackToken];
+    [self addStringValueToKeychain:self.token forKey:kBITFeedbackToken];
   
   if (self.appIdentifier)
     [archiver encodeObject:self.appIdentifier forKey:kBITFeedbackAppID];
   
   if (self.userID)
-    [archiver encodeObject:self.userID forKey:kBITFeedbackUserID];
+    [self addStringValueToKeychain:self.userID forKey:kBITFeedbackUserID];
   
   if (self.userName)
-    [archiver encodeObject:self.userName forKey:kBITFeedbackName];
+    [self addStringValueToKeychain:self.userName forKey:kBITFeedbackName];
   
   if (self.userEmail)
-    [archiver encodeObject:self.userEmail forKey:kBITFeedbackEmail];
+    [self addStringValueToKeychain:self.userEmail forKey:kBITFeedbackEmail];
   
   if (self.lastCheck)
     [archiver encodeObject:self.lastCheck forKey:kBITFeedbackDateOfLastCheck];

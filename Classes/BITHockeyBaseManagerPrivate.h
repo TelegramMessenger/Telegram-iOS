@@ -34,4 +34,8 @@
 
 - (NSDate *)parseRFC3339Date:(NSString *)dateString;
 
+- (BOOL)addStringValueToKeychain:(NSString *)stringValue forKey:(NSString *)key;
+- (NSString *)stringValueFromKeychainForKey:(NSString *)key;
+- (BOOL)removeKeyFromKeychain:(NSString *)key;
+
 @end

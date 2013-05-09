@@ -16,6 +16,7 @@
 #import "BITHockeyBaseViewController.h"
 
 #import "BITHockeyManagerPrivate.h"
+#import "BITKeychainUtils.h"
 
 #import <sys/sysctl.h>
 #if !TARGET_IPHONE_SIMULATOR
@@ -190,6 +191,33 @@
       [(BITHockeyBaseViewController *)viewController setModalAnimated:NO];
     [visibleWindow addSubview:_navController.view];
   }
+}
+
+- (BOOL)addStringValueToKeychain:(NSString *)stringValue forKey:(NSString *)key {
+	if (!key || !stringValue)
+		return NO;
+  
+  NSString *serviceName = [NSString stringWithFormat:@"%@.HockeySDK", [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"]];
+  
+  NSError *error = nil;
+  return [BITKeychainUtils storeUsername:key andPassword:stringValue forServiceName:serviceName updateExisting:YES error:&error];
+}
+
+- (NSString *)stringValueFromKeychainForKey:(NSString *)key {
+	if (!key)
+		return nil;
+  
+  NSString *serviceName = [NSString stringWithFormat:@"%@.HockeySDK", [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"]];
+
+  NSError *error = nil;
+  return [BITKeychainUtils getPasswordForUsername:key andServiceName:serviceName error:&error];
+}
+
+- (BOOL)removeKeyFromKeychain:(NSString *)key {
+  NSString *serviceName = [NSString stringWithFormat:@"%@.HockeySDK", [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"]];
+
+  NSError *error = nil;
+  return [BITKeychainUtils deleteItemForUsername:key andServiceName:serviceName error:&error];
 }
 
 

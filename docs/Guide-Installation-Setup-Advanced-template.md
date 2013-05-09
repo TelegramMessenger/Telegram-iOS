@@ -102,6 +102,7 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
     - `CoreGraphics`
     - `Foundation`
     - `QuartzCore`
+    - `Security`  
     - `SystemConfiguration`
     - `UIKit`  
 
