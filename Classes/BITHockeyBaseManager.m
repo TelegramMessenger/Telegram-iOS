@@ -78,6 +78,8 @@
   size_t size;
   sysctlbyname("hw.machine", NULL, &size, NULL, 0);
   char *answer = (char*)malloc(size);
+  if (answer == NULL)
+    return @"";
   sysctlbyname("hw.machine", answer, &size, NULL, 0);
   NSString *platform = [NSString stringWithCString:answer encoding: NSUTF8StringEncoding];
   free(answer);

@@ -232,17 +232,6 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   return uuidString;
 }
 
-- (NSString *)getDevicePlatform {
-  size_t size = 0;
-  sysctlbyname("hw.machine", NULL, &size, NULL, 0);
-  char *answer = (char*)malloc(size);
-  sysctlbyname("hw.machine", answer, &size, NULL, 0);
-  NSString *platform = [NSString stringWithCString:answer encoding: NSUTF8StringEncoding];
-  free(answer);
-  return platform;
-}
-
-
 - (NSString *)userIDForCrashReport {
   NSString *userID = @"";
   
