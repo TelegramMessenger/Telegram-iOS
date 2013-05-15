@@ -55,7 +55,7 @@
  
  Example:
     - (BOOL)shouldUseLiveIdentifierForHockeyManager:(BITHockeyManager *)hockeyManager {
-    #ifdef (CONFIGURATION_Release)
+    #ifdef (CONFIGURATION_AppStore)
       return YES;
     #endif
       return NO;
