@@ -167,6 +167,29 @@ typedef enum {
 
 
 /**
+ Indicates if an forced user data UI presentation is shown modal
+ 
+ If `requireUserName` and/or `requireUserEmail` are enabled, the first presentation
+ of `feedbackListViewController:` and subsequent `feedbackComposeViewController:`
+ will automatically present a UI that lets the user provide this data and compose
+ a message. By default this is shown (since SDK 3.1) as a modal sheet.
+ 
+ If you want the SDK to push this UI onto the navigation stack in this specific scenario,
+ then change the property to `NO`.
+ 
+ @warning If you presenting the `BITFeedbackListViewController` in a popover, this property should not be changed!
+ 
+ Default is `YES`
+ @see requireUserName
+ @see requireUserEmail
+ @see showFeedbackComposeView
+ @see feedbackComposeViewController:
+ @see showFeedbackListView
+ @see feedbackListViewController:
+ */
+@property (nonatomic, readwrite) BOOL showFirstRequiredPresentationModal;
+
+/**
  Present the modal feedback list user interface.
  */
 - (void)showFeedbackListView;

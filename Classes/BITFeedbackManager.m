@@ -71,6 +71,7 @@
     _requireUserName = BITFeedbackUserDataElementOptional;
     _requireUserEmail = BITFeedbackUserDataElementOptional;
     _showAlertOnIncomingMessages = YES;
+    _showFirstRequiredPresentationModal = YES;
     
     _disableFeedbackManager = NO;
     _didSetupDidBecomeActiveNotifications = NO;

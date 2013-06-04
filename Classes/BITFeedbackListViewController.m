@@ -197,12 +197,16 @@
       ) {
     self.userDataComposeFlow = YES;
     
-    // In case of presenting the feedback in a UIPopoverController it appears
-    // that the animation is not yet finished (though it should) and pushing
-    // the user data view on top of the navigation stack right away will
-    // cause the following warning to appear in the console:
-    // "nested push animation can result in corrupted navigation bar"
-    [self performSelector:@selector(showDelayedUserDataViewController) withObject:nil afterDelay:0.0];
+    if ([self.manager showFirstRequiredPresentationModal]) {
+      [self setUserDataAction:nil];
+    } else {
+      // In case of presenting the feedback in a UIPopoverController it appears
+      // that the animation is not yet finished (though it should) and pushing
+      // the user data view on top of the navigation stack right away will
+      // cause the following warning to appear in the console:
+      // "nested push animation can result in corrupted navigation bar"
+      [self performSelector:@selector(showDelayedUserDataViewController) withObject:nil afterDelay:0.0];
+    }
   } else {
     [self.tableView reloadData];
   }
@@ -299,7 +303,15 @@
 
 -(void)userDataUpdateCancelled {
   if (self.userDataComposeFlow) {
-    [self.navigationController popToViewController:self animated:YES];
+    if ([self.manager showFirstRequiredPresentationModal]) {
+      __weak typeof(self) weakSelf = self;
+      [self dismissViewControllerAnimated:YES completion:^(void){
+        typeof(self) strongSelf = weakSelf;
+        [strongSelf.tableView reloadData];
+      }];
+    } else {
+      [self.navigationController popToViewController:self animated:YES];
+    }
   } else {
     [self dismissViewControllerAnimated:YES completion:^(void){}];
   }
@@ -309,10 +321,18 @@
   [self.manager saveMessages];
   
   if (self.userDataComposeFlow) {
-    BITFeedbackComposeViewController *composeController = [[BITFeedbackComposeViewController alloc] init];
-    composeController.delegate = self;
-    
-    [self.navigationController pushViewController:composeController animated:YES];
+    if ([self.manager showFirstRequiredPresentationModal]) {
+      __weak typeof(self) weakSelf = self;
+      [self dismissViewControllerAnimated:YES completion:^(void){
+        typeof(self) strongSelf = weakSelf;
+        [strongSelf newFeedbackAction:nil];
+      }];
+    } else {
+      BITFeedbackComposeViewController *composeController = [[BITFeedbackComposeViewController alloc] init];
+      composeController.delegate = self;
+      
+      [self.navigationController pushViewController:composeController animated:YES];
+    }
   } else {
     [self dismissViewControllerAnimated:YES completion:^(void){}];
   }
@@ -323,7 +343,15 @@
 
 - (void)feedbackComposeViewControllerDidFinish:(BITFeedbackComposeViewController *)composeViewController {
   if (self.userDataComposeFlow) {
-    [self.navigationController popToViewController:self animated:YES];
+    if ([self.manager showFirstRequiredPresentationModal]) {
+      __weak typeof(self) weakSelf = self;
+      [self dismissViewControllerAnimated:YES completion:^(void){
+        typeof(self) strongSelf = weakSelf;
+        [strongSelf.tableView reloadData];
+      }];
+    } else {
+      [self.navigationController popToViewController:self animated:YES];
+    }
   } else {
     [self dismissViewControllerAnimated:YES completion:^(void){}];
   }
