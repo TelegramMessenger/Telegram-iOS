@@ -93,7 +93,7 @@
   [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyFeedbackMessagesLoadingStarted object:nil];
   [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyFeedbackMessagesLoadingFinished object:nil];
 
-  
+  [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(showDelayedUserDataViewController) object:nil];
 }
 
 
@@ -197,10 +197,12 @@
       ) {
     self.userDataComposeFlow = YES;
     
-    BITFeedbackUserDataViewController *userController = [[BITFeedbackUserDataViewController alloc] initWithStyle:UITableViewStyleGrouped];
-    userController.delegate = self;
-    
-    [self.navigationController pushViewController:userController animated:YES];
+    // In case of presenting the feedback in a UIPopoverController it appears
+    // that the animation is not yet finished (though it should) and pushing
+    // the user data view on top of the navigation stack right away will
+    // cause the following warning to appear in the console:
+    // "nested push animation can result in corrupted navigation bar"
+    [self performSelector:@selector(showDelayedUserDataViewController) withObject:nil afterDelay:0.0];
   } else {
     [self.tableView reloadData];
   }
@@ -216,6 +218,13 @@
 
 
 #pragma mark - Private methods
+
+- (void)showDelayedUserDataViewController {
+  BITFeedbackUserDataViewController *userController = [[BITFeedbackUserDataViewController alloc] initWithStyle:UITableViewStyleGrouped];
+  userController.delegate = self;
+  
+  [self.navigationController pushViewController:userController animated:YES];
+}
 
 - (void)setUserDataAction:(id)sender {
   BITFeedbackUserDataViewController *userController = [[BITFeedbackUserDataViewController alloc] initWithStyle:UITableViewStyleGrouped];
