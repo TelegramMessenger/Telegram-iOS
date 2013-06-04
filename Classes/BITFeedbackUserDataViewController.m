@@ -200,7 +200,10 @@
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
     cell.backgroundColor = [UIColor whiteColor];
     
-    UITextField *textField = [[UITextField alloc] initWithFrame:CGRectMake(110, 10, 185, 30)];
+    UITextField *textField = [[UITextField alloc] initWithFrame:CGRectMake(110, 10, self.view.frame.size.width - 110 - 35, 30)];
+    if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
+      textField.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    }
     textField.adjustsFontSizeToFitWidth = YES;
     textField.textColor = [UIColor blackColor];
     textField.backgroundColor = [UIColor lightGrayColor];
