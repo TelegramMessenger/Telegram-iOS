@@ -686,12 +686,15 @@ static inline NSAttributedString * NSAttributedStringBySettingColorFromContext(N
         [self setText:text afterInheritingLabelAttributesAndConfiguringWithBlock:nil];
         return;
     }
-    
-    self.attributedText = text;
+    NSAssert([text isKindOfClass:[NSAttributedString class]], @"TTTAttributedLabel accepts either NSStrings or NSAttributedStrings");
+    NSAttributedString *attributedString = text;
+    self.attributedText = attributedString;
 
     self.links = [NSArray array];
     if (self.dataDetectorTypes != UIDataDetectorTypeNone) {
-        for (NSTextCheckingResult *result in [self detectedLinksInString:[self.attributedText string] range:NSMakeRange(0, [text length]) error:nil]) {
+        for (NSTextCheckingResult *result in [self detectedLinksInString:[self.attributedText string]
+                                                                   range:NSMakeRange(0, [attributedString length])
+                                                                   error:nil]) {
             [self addLinkWithTextCheckingResult:result];
         }
     }
