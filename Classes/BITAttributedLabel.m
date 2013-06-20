@@ -271,11 +271,16 @@ static inline NSAttributedString * NSAttributedStringBySettingColorFromContext(N
 - (CTFramesetterRef)framesetter {
     if (_needsFramesetter) {
         @synchronized(self) {
-            if (_framesetter) CFRelease(_framesetter);
-            if (_highlightFramesetter) CFRelease(_highlightFramesetter);
+            if (_framesetter) {
+              CFRelease(_framesetter);
+              _framesetter = nil;
+            }
+            if (_highlightFramesetter) {
+              CFRelease(_highlightFramesetter);
+              _highlightFramesetter = nil;
+            }
             
-            self.framesetter = CTFramesetterCreateWithAttributedString((__bridge CFAttributedStringRef)self.renderedAttributedText);
-            self.highlightFramesetter = nil;
+            _framesetter = CTFramesetterCreateWithAttributedString((__bridge CFAttributedStringRef)self.renderedAttributedText);
             _needsFramesetter = NO;
         }
     }
