@@ -271,11 +271,16 @@ static inline NSAttributedString * NSAttributedStringBySettingColorFromContext(N
 - (CTFramesetterRef)framesetter {
     if (_needsFramesetter) {
         @synchronized(self) {
-            if (_framesetter) CFRelease(_framesetter);
-            if (_highlightFramesetter) CFRelease(_highlightFramesetter);
+            if (_framesetter) {
+              CFRelease(_framesetter);
+              _framesetter = nil;
+            }
+            if (_highlightFramesetter) {
+              CFRelease(_highlightFramesetter);
+              _highlightFramesetter = nil;
+            }
             
-            self.framesetter = CTFramesetterCreateWithAttributedString((__bridge CFAttributedStringRef)self.renderedAttributedText);
-            self.highlightFramesetter = nil;
+            _framesetter = CTFramesetterCreateWithAttributedString((__bridge CFAttributedStringRef)self.renderedAttributedText);
             _needsFramesetter = NO;
         }
     }
@@ -666,6 +671,7 @@ static inline NSAttributedString * NSAttributedStringBySettingColorFromContext(N
                 
                 CTFontRef font = CTFontCreateWithName((__bridge CFStringRef)self.font.fontName, self.font.pointSize, NULL);
                 CGContextSetLineWidth(c, CTFontGetUnderlineThickness(font));
+                CFRelease(font);
                 CGFloat y = roundf(runBounds.origin.y + runBounds.size.height / 2.0f);
                 CGContextMoveToPoint(c, runBounds.origin.x, y);
                 CGContextAddLineToPoint(c, runBounds.origin.x + runBounds.size.width, y);
@@ -685,12 +691,15 @@ static inline NSAttributedString * NSAttributedStringBySettingColorFromContext(N
         [self setText:text afterInheritingLabelAttributesAndConfiguringWithBlock:nil];
         return;
     }
-    
-    self.attributedText = text;
+    NSAssert([text isKindOfClass:[NSAttributedString class]], @"TTTAttributedLabel accepts either NSStrings or NSAttributedStrings");
+    NSAttributedString *attributedString = text;
+    self.attributedText = attributedString;
 
     self.links = [NSArray array];
     if (self.dataDetectorTypes != UIDataDetectorTypeNone) {
-        for (NSTextCheckingResult *result in [self detectedLinksInString:[self.attributedText string] range:NSMakeRange(0, [text length]) error:nil]) {
+        for (NSTextCheckingResult *result in [self detectedLinksInString:[self.attributedText string]
+                                                                   range:NSMakeRange(0, [attributedString length])
+                                                                   error:nil]) {
             [self addLinkWithTextCheckingResult:result];
         }
     }
@@ -822,8 +831,8 @@ static inline NSAttributedString * NSAttributedStringBySettingColorFromContext(N
         NSMutableAttributedString *highlightAttributedString = [self.renderedAttributedText mutableCopy];
         [highlightAttributedString addAttribute:(NSString *)kCTForegroundColorAttributeName value:(id)[self.highlightedTextColor CGColor] range:NSMakeRange(0, highlightAttributedString.length)];
         
-        if (!self.highlightFramesetter) {
-            self.highlightFramesetter = CTFramesetterCreateWithAttributedString((__bridge CFAttributedStringRef)highlightAttributedString);
+        if (!_highlightFramesetter) {
+            _highlightFramesetter = CTFramesetterCreateWithAttributedString((__bridge CFAttributedStringRef)highlightAttributedString);
         }
         
         [self drawFramesetter:self.highlightFramesetter attributedString:highlightAttributedString textRange:textRange inRect:textRect context:c];
