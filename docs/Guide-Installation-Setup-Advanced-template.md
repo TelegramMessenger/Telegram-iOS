@@ -34,7 +34,7 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
 
 3. If this is a new project, initialize Git: `git init`
 
-4. Add the submodule: `git submodule add git://github.com/BitStadium/HockeySDK-iOS.git Vendor/HockeySDK`. This would add the submodule into the `Vendor/HockeySDK` subfolder. Change this to the folder you prefer.
+4. Add the submodule: `git submodule add git://github.com/bitstadium/HockeySDK-iOS.git Vendor/HockeySDK`. This would add the submodule into the `Vendor/HockeySDK` subfolder. Change this to the folder you prefer.
 
 5. Releases are always in the `master` branch while the `develop` branch provides the latest in development source code (Using the git flow branching concept). We recommend using the `master` branch!
 
