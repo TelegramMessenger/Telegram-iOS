@@ -318,7 +318,7 @@
       country = [NSString stringWithFormat:@"&country=%@", [(NSDictionary *)self.currentLocale objectForKey:NSLocaleCountryCode]];
     } else {
       // don't check, just to be save
-      BITHockeyLog(@"ERROR: Locale returned nil, can't determine the language!");
+      BITHockeyLog(@"ERROR: Locale returned nil, can't determine the store to use!");
       self.checkInProgress = NO;
       return;
     }
