@@ -215,10 +215,8 @@
 
 
 - (void)setEnableStoreUpdateManager:(BOOL)enableStoreUpdateManager {
-  if (_storeUpdateManager) {
-    [_storeUpdateManager setEnableStoreUpdateManager:enableStoreUpdateManager];
-  }
   _enableStoreUpdateManager = enableStoreUpdateManager;
+  [_storeUpdateManager setEnableStoreUpdateManager:enableStoreUpdateManager];
 }
 
 
