@@ -48,9 +48,9 @@
 
 #pragma mark - For Testing
 
-@property (nonatomic, assign) NSBundle *mainBundle;
-@property (nonatomic, assign) NSLocale *currentLocale;
-@property (nonatomic, assign) NSUserDefaults *userDefaults;
+@property (nonatomic, strong) NSBundle *mainBundle;
+@property (nonatomic, strong) NSLocale *currentLocale;
+@property (nonatomic, strong) NSUserDefaults *userDefaults;
 
 - (BOOL)shouldAutoCheckForUpdates;
 - (BOOL)hasNewVersion:(NSDictionary *)dictionary;
