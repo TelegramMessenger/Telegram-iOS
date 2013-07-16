@@ -32,7 +32,7 @@
 #import <UIKit/UIKit.h>
 
 
-@interface BITStoreUpdateManager () {
+@interface BITStoreUpdateManager () <UIAlertViewDelegate> {
 }
 
 // is an update available?

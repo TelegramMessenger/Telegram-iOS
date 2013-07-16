@@ -52,7 +52,7 @@ typedef enum {
   
  */
 
-@interface BITStoreUpdateManager : BITHockeyBaseManager <UIAlertViewDelegate>
+@interface BITStoreUpdateManager : BITHockeyBaseManager
 
 
 ///-----------------------------------------------------------------------------
