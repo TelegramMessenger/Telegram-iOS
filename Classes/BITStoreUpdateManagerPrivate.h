@@ -41,7 +41,7 @@
 // are we currently checking for updates?
 @property (nonatomic, assign, getter=isCheckInProgress) BOOL checkInProgress;
 
-@property (nonatomic, copy) NSDate *lastCheck;
+@property (nonatomic, strong) NSDate *lastCheck;
 
 // used by BITHockeyManager if disable status is changed
 @property (nonatomic, getter = isStoreUpdateManagerEnabled) BOOL enableStoreUpdateManager;

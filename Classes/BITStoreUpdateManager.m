@@ -407,7 +407,7 @@
 
 - (void)setLastCheck:(NSDate *)aLastCheck {
   if (_lastCheck != aLastCheck) {
-    _lastCheck = [aLastCheck copy];
+    _lastCheck = aLastCheck;
     
     [self.userDefaults setObject:self.lastCheck forKey:kBITStoreUpdateDateOfLastCheck];
     [self.userDefaults synchronize];
