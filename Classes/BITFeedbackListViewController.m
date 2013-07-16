@@ -341,7 +341,8 @@
 
 #pragma mark - BITFeedbackComposeViewControllerDelegate
 
-- (void)feedbackComposeViewControllerDidFinish:(BITFeedbackComposeViewController *)composeViewController {
+- (void)feedbackComposeViewController:(BITFeedbackComposeViewController *)composeViewController
+                  didFinishWithResult:(BITFeedbackComposeResult)composeResult {
   if (self.userDataComposeFlow) {
     if ([self.manager showFirstRequiredPresentationModal]) {
       __weak typeof(self) weakSelf = self;
