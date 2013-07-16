@@ -254,7 +254,7 @@
 }
 
 
-#pragma mark - CNSFeedbackUserDataDelegate
+#pragma mark - BITFeedbackUserDataDelegate
 
 - (void)userDataUpdateCancelled {
   _blockUserDataScreen = YES;
