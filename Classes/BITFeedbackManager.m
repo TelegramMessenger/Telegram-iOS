@@ -859,6 +859,7 @@
 
 - (void)submitPendingMessages {
   if (_networkRequestInProgress) {
+    [[self class] cancelPreviousPerformRequestsWithTarget:self selector:@selector(submitPendingMessages) object:nil];
     [self performSelector:@selector(submitPendingMessages) withObject:nil afterDelay:2.0f];
     return;
   }
