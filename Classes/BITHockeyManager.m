@@ -150,6 +150,8 @@
 - (void)startManager {
   if (!_validAppIdentifier) return;
   
+  if (![self isSetUpOnMainThread]) return;
+  
   BITHockeyLog(@"INFO: Starting HockeyManager");
   _startManagerIsInvoked = YES;
   
@@ -225,6 +227,22 @@
 
 #pragma mark - Private Instance Methods
 
+- (BOOL)isSetUpOnMainThread {
+  NSString *errorString = @"ERROR: This SDK has to be setup on the main thread!";
+  
+  if (!NSThread.isMainThread) {
+    if (self.isAppStoreEnvironment) {
+      BITHockeyLog(@"%@", errorString);
+    } else {
+      NSAssert(NSThread.isMainThread, errorString);
+    }
+    
+    return NO;
+  }
+  
+  return YES;
+}
+
 - (BOOL)shouldUseLiveIdentifier {
   BOOL delegateResult = NO;
   if ([_delegate respondsToSelector:@selector(shouldUseLiveIdentifierForHockeyManager:)]) {
@@ -236,6 +254,8 @@
 
 - (void)initializeModules {
   _validAppIdentifier = [self checkValidityOfAppIdentifier:_appIdentifier];
+  
+  if (![self isSetUpOnMainThread]) return;
   
   _startManagerIsInvoked = NO;
   
