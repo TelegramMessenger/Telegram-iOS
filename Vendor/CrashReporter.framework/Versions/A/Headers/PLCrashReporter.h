@@ -27,6 +27,7 @@
  */
 
 #import <Foundation/Foundation.h>
+#import <mach/mach.h>
 
 /**
  * @ingroup functions
@@ -75,15 +76,6 @@ typedef struct PLCrashReporterCallbacks {
     /** Application version */
     NSString *_applicationVersion;
 
-    /** Application short version */
-    NSString *_applicationShortVersion;
-
-    /** Application startup timestamp */
-    time_t _applicationStartupTimestamp;
-  
-    /** GUID for the crash report */
-    NSString *_crashReportGUID;
-  
     /** Path to the crash reporter internal data directory */
     NSString *_crashReportDirectory;
 }
@@ -94,6 +86,12 @@ typedef struct PLCrashReporterCallbacks {
 
 - (NSData *) loadPendingCrashReportData;
 - (NSData *) loadPendingCrashReportDataAndReturnError: (NSError **) outError;
+
+- (NSData *) generateLiveReportWithThread: (thread_t) thread;
+- (NSData *) generateLiveReportWithThread: (thread_t) thread error: (NSError **) outError;
+
+- (NSData *) generateLiveReport;
+- (NSData *) generateLiveReportAndReturnError: (NSError **) outError;
 
 - (BOOL) purgePendingCrashReport;
 - (BOOL) purgePendingCrashReportAndReturnError: (NSError **) outError;

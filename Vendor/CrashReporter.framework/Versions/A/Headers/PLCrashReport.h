@@ -1,7 +1,7 @@
 /*
  * Author: Landon Fuller <landonf@plausiblelabs.com>
  *
- * Copyright (c) 2008-2010 Plausible Labs Cooperative, Inc.
+ * Copyright (c) 2008-2013 Plausible Labs Cooperative, Inc.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -27,15 +27,19 @@
  */
 
 #import <Foundation/Foundation.h>
-#import "PLCrashReportSystemInfo.h"
-#import "PLCrashReportMachineInfo.h"
+
 #import "PLCrashReportApplicationInfo.h"
-#import "PLCrashReportProcessInfo.h"
-#import "PLCrashReportSignalInfo.h"
-#import "PLCrashReportThreadInfo.h"
 #import "PLCrashReportBinaryImageInfo.h"
 #import "PLCrashReportExceptionInfo.h"
-#import "PLCrashReportReportInfo.h"
+#import "PLCrashReportMachineInfo.h"
+#import "PLCrashReportProcessInfo.h"
+#import "PLCrashReportProcessorInfo.h"
+#import "PLCrashReportRegisterInfo.h"
+#import "PLCrashReportSignalInfo.h"
+#import "PLCrashReportStackFrameInfo.h"
+#import "PLCrashReportSymbolInfo.h"
+#import "PLCrashReportSystemInfo.h"
+#import "PLCrashReportThreadInfo.h"
 
 /** 
  * @ingroup constants
@@ -79,9 +83,6 @@ typedef struct _PLCrashReportDecoder _PLCrashReportDecoder;
 @private
     /** Private implementation variables (used to hide the underlying protobuf parser) */
     _PLCrashReportDecoder *_decoder;
-    
-    /** Report info (may be nil) */
-    PLCrashReportReportInfo *_reportInfo;
 
     /** System info */
     PLCrashReportSystemInfo *_systemInfo;
@@ -106,6 +107,9 @@ typedef struct _PLCrashReportDecoder _PLCrashReportDecoder;
 
     /** Exception information (may be nil) */
     PLCrashReportExceptionInfo *_exceptionInfo;
+
+    /** Report UUID */
+    CFUUIDRef _uuid;
 }
 
 - (id) initWithData: (NSData *) encodedData error: (NSError **) outError;
@@ -171,13 +175,10 @@ typedef struct _PLCrashReportDecoder _PLCrashReportDecoder;
 @property(nonatomic, readonly) PLCrashReportExceptionInfo *exceptionInfo;
 
 /**
- * YES if report information is available.
+ * A client-generated 16-byte UUID. May be used to filter duplicate reports submitted or generated
+ * by a single client. Only available in later (v1.2+) crash report format versions. If not available,
+ * will be NULL.
  */
-@property(nonatomic, readonly) BOOL hasReportInfo;
-
-/**
- * Crash report information.
- */
-@property(nonatomic, readonly) PLCrashReportReportInfo *reportInfo;
+@property(nonatomic, readonly) CFUUIDRef uuidRef;
 
 @end

@@ -73,7 +73,8 @@ typedef enum {
 
     /**
      * ARMv6
-     * @deprecated
+     * @deprecated This value has been deprecated in favor of ARM subtype-specific
+     * values.
      * @sa PLCrashReportArchitectureARMv6
      */
     PLCrashReportArchitectureARM = PLCrashReportArchitectureARMv6,
@@ -87,11 +88,8 @@ typedef enum {
     /** ARMv7 */
     PLCrashReportArchitectureARMv7 = 5,
     
-    /** ARMv7s */
-    PLCrashReportArchitectureARMv7s = 6,
-    
     /** Unknown */
-    PLCrashReportArchitectureUnknown = 7
+    PLCrashReportArchitectureUnknown = 6
 } PLCrashReportArchitecture;
 
 
@@ -136,7 +134,9 @@ extern PLCrashReportArchitecture PLCrashReportHostArchitecture;
 /** The operating system's build identifier (eg, 10J869). This may be unavailable, and this property will be nil. */
 @property(nonatomic, readonly) NSString *operatingSystemBuild;
 
-/** Architecture. */
+/** Architecture. @deprecated The architecture value has been deprecated in v1.1 and later crash reports. All new reports
+ * include the CPU type as part of the crash report's machine info structure, using the PLCrashReportProcessorInfo
+ * extensible encoding. */
 @property(nonatomic, readonly) PLCrashReportArchitecture architecture;
 
 /** Date and time that the crash report was generated. This may be unavailable, and this property will be nil. */

@@ -32,6 +32,10 @@
 #import <AvailabilityMacros.h>
 #endif
 
+// This must be included before any other PLCrashReporter includes, as
+// it redefines symbol names
+#import "PLCrashReporterNamespace.h"
+
 #import "PLCrashReporter.h"
 #import "PLCrashReport.h"
 #import "PLCrashReportTextFormatter.h"
@@ -226,4 +230,65 @@ typedef enum {
  * handler.
  *
  * @sa PLCrashReporter::setCrashCallbacks:
+ */
+
+/**
+ * @page mach_exceptions Mach Exceptions on iOS
+ *
+ * The APIs required for Mach exception handling are not fully public on iOS. Unfortunately, there are a number
+ * of crash states that can only be handled with Mach exception handlers:
+ *
+ * - Stack overflow. sigaltstack() is broken in later iOS releases, and even if functional, must be configured
+ *   on a per-thread basis.
+ * - Internal Apple assertions that call libSystem's __assert. These include compiler-checked constraints
+ *   for built-in functions, such as strcpy_chk(). The __abort() implementation actually disables the SIGABRT
+ *   signal handler (resetting it to SIG_DFL) prior to to issueing a SIGABRT, bypassing signal-based crash
+ *   reporters entirely.
+ *
+ * After filing a request with Apple DTS to clarify the status of the Mach exception APIs on iOS, and implementing
+ * a Mach Exception handler using only supported API, they provided the following guidance:
+ *
+ *    Our engineers have reviewed your request and have determined that this would be best handled as a bug report,
+ *    which you have already filed. <em>There is no documented way of accomplishing this, nor is there a workaround
+ *    possible.</em>
+ *
+ * Due to user request, PLCrashReporter provides an optional implementation of Mach exception handling for both
+ * iOS and Mac OS X.
+ *
+ * This implementation uses only supported API on Mac OS X, and depends on limited private API on iOS. The reporter
+ * may be excluded entirely at build time by modifying the PLCRASH_FEATURE_MACH_EXCEPTIONS build configuration; it
+ * may also be disabled at runtime by configuring the PLCrashReporter instance appropriately (TODO - define
+ * configuration API).
+ *
+ * The iOS implementation is implemented almost entirely using public API, and links against no actual private API;
+ * the use of undocumented functionality is limited to assuming the use of specific msgh_id values (see below
+ * for details). As a result, it may be considered perfectly safe to include the Mach Exception code in the
+ * standard build, and enable/disable it at runtime.
+ *
+ * The following issues exist in the iOS implementation:
+ *  - The msgh_id values required for an exception reply message are not available from the available
+ *    headers and must be hard-coded. This prevents one from safely replying to exception messages, which
+ *    means that it is impossible to (correctly) inform the server that an exception has *not* been
+ *    handled.
+ *
+ *    Impact:
+ *      This can lead to the process locking up and not dispatching to the host exception handler (eg, Apple's
+ *      crash reporter), depending on the behavior of the kernel exception code.
+ *
+ *  - The mach_* structure/type variants required by MACH_EXCEPTION_CODES are not publicly defined (on Mac OS X,
+ *    these are provided by mach_exc.defs). This prevents one from forwarding exception messages to an existing
+ *    handler that was registered with a MACH_EXCEPTION_CODES behavior.
+ *
+ *    Impact:
+ *      This can break forwarding to any task exception handler that registers itself with MACH_EXCEPTION_CODES.
+ *      This is the case with LLDB; it will register a task exception handler with MACH_EXCEPTION_CODES set. Failure
+ *      to correctly forward these exceptions will result in the debugger breaking in interesting ways; for example,
+ *      changes to the set of dyld-loaded images are detected by setting a breakpoint on the dyld image registration
+ *      funtions, and this functionality will break if the exception is not correctly forwarded.
+ *
+ * Since Mach exception handling is important for a fully functional crash reporter, we have also filed a radar
+ * to request that the API be made public:
+ *  Radar: rdar://12939497 RFE: Provide mach_exc.defs for iOS
+ *
+ * At the time of this writing, the radar remains open/unresolved.
  */

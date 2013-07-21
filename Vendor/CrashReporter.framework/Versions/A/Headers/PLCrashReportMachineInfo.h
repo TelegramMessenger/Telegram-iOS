@@ -1,7 +1,7 @@
 /*
  * Author: Landon Fuller <landonf@plausible.coop>
  *
- * Copyright (c) 2008-2011 Plausible Labs Cooperative, Inc.
+ * Copyright (c) 2008-2013 Plausible Labs Cooperative, Inc.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -53,7 +53,7 @@
 /** The hardware model name (eg, MacBookPro6,1). This may be unavailable, and this property will be nil. */
 @property(nonatomic, readonly) NSString *modelName;
 
-/** The processor type. */
+/** The processor type. This will be unavailable in reports generated prior to PLCrashReporter 1.2, in which case this property will be nil. */
 @property(nonatomic, readonly) PLCrashReportProcessorInfo *processorInfo;
 
 /*
