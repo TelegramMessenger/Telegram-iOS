@@ -54,7 +54,6 @@ typedef enum {
 
 @interface BITStoreUpdateManager : BITHockeyBaseManager
 
-
 ///-----------------------------------------------------------------------------
 /// @name Delegate
 ///-----------------------------------------------------------------------------
@@ -157,29 +156,6 @@ typedef enum {
  @see updateSetting
  */
 @property (nonatomic, assign, getter=isUpdateUIEnabled) BOOL updateUIEnabled;
-
-
-///-----------------------------------------------------------------------------
-/// @name Tests
-///-----------------------------------------------------------------------------
-
-/**
- Define the simulated new version avaialble from the App Store
- 
- Set the version string that should be used for a simulated new version being available
- in the App Store.
- 
- `BITStoreUpdateManager` must be enabled in `BITHockeyManager` for this to work!
- 
- *Default*: _NIL_
- 
- @warning This property is autoamtically disabled if accidentally being invoked in an
- App Store build.
- @see updateSetting
- @see BITHockeyManager
- */
-@property (nonatomic, strong) NSString *simulatedNewStoreVersion;
-
 
 ///-----------------------------------------------------------------------------
 /// @name Manual update checking
