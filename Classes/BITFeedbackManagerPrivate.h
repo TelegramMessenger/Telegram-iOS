@@ -32,7 +32,7 @@
 #import "BITFeedbackMessage.h"
 
 
-@interface BITFeedbackManager () {
+@interface BITFeedbackManager () <UIAlertViewDelegate> {
 }
 
 

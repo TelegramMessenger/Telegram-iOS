@@ -94,7 +94,7 @@ typedef enum {
  feedback message.
  */
 
-@interface BITFeedbackManager : BITHockeyBaseManager <UIAlertViewDelegate>
+@interface BITFeedbackManager : BITHockeyBaseManager
 
 ///-----------------------------------------------------------------------------
 /// @name General settings
