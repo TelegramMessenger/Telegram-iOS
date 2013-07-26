@@ -49,7 +49,7 @@ typedef enum {
 
 
 @class BITFeedbackMessage;
-
+@class BITFeedbackManagerDelegate;
 
 /**
  The feedback module.
@@ -95,6 +95,18 @@ typedef enum {
  */
 
 @interface BITFeedbackManager : BITHockeyBaseManager
+
+///-----------------------------------------------------------------------------
+/// @name Delegate
+///-----------------------------------------------------------------------------
+
+/**
+ Sets the `BITFeedbackManagerDelegate` delegate.
+
+ Can be set to be notified when new feedback is received from the server.
+ */
+@property (nonatomic, weak) id<BITFeedbackManagerDelegate> delegate;
+
 
 ///-----------------------------------------------------------------------------
 /// @name General settings

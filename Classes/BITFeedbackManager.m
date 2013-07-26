@@ -670,17 +670,23 @@
       BITFeedbackMessage *latestMessage = [self lastMessageHavingID];
       if (self.userEmail && latestMessage.email && [self.userEmail compare:latestMessage.email] == NSOrderedSame)
         latestMessageFromUser = YES;
-      
-      if (!latestMessageFromUser && self.showAlertOnIncomingMessages && !self.currentFeedbackListViewController && !self.currentFeedbackComposeViewController) {
-        UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageTitle")
-                                                             message:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageText")
-                                                            delegate:self
-                                                   cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackIgnore")
-                                                   otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackShow"), nil
-                                   ];
-        [alertView setTag:0];
-        [alertView show];
-        _incomingMessagesAlertShowing = YES;
+
+      if (!latestMessageFromUser) {
+        if([self.delegate respondsToSelector:@selector(feedbackManagerDidReceiveNewFeedback:)]) {
+          [self.delegate feedbackManagerDidReceiveNewFeedback:self];
+        }
+
+        if(self.showAlertOnIncomingMessages && !self.currentFeedbackListViewController && !self.currentFeedbackComposeViewController) {
+          UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageTitle")
+                                                              message:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageText")
+                                                             delegate:self
+                                                    cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackIgnore")
+                                                    otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackShow"), nil
+                                    ];
+          [alertView setTag:0];
+          [alertView show];
+          _incomingMessagesAlertShowing = YES;
+        }
       }
     }
     
