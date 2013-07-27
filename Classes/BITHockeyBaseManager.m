@@ -34,11 +34,8 @@
 
 - (id)init {
   if ((self = [super init])) {
-    _isAppStoreEnvironment = NO;
-    _appIdentifier = nil;
     _serverURL = BITHOCKEYSDK_URL;
 
-    _navController = nil;
     _barStyle = UIBarStyleBlackOpaque;
     self.tintColor = BIT_RGBCOLOR(25, 25, 25);
     _modalPresentationStyle = UIModalPresentationFormSheet;
