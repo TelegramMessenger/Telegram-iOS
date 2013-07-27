@@ -31,7 +31,9 @@
 
 #import <UIKit/UIKit.h>
 
-
+/** TODO:
+  * if during startup the auth-state is pending, we get never rid of the nag-alertview
+ */
 @interface BITUpdateManager () {
 }
 

@@ -39,6 +39,11 @@
 #import "BITUpdateViewControllerPrivate.h"
 #import "BITAppVersionMetaInfo.h"
 
+typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
+  BITUpdateAlertViewTagDefaultUpdate = 0,
+  BITUpdateAlertViewTagNeverEndingAlertView = 1,
+  BITUpdateAlertViewTagMandatoryUpdate = 2,
+};
 
 @implementation BITUpdateManager {
   NSString *_currentAppVersion;
@@ -451,7 +456,7 @@
                                                  cancelButtonTitle:BITHockeyLocalizedString(@"UpdateInstall")
                                                  otherButtonTitles:nil
                                  ];
-      [alertView setTag:2];
+      [alertView setTag:BITUpdateAlertViewTagMandatoryUpdate];
       [alertView show];
       _updateAlertShowing = YES;
     } else {
@@ -464,24 +469,11 @@
       if (self.isShowingDirectInstallOption) {
         [alertView addButtonWithTitle:BITHockeyLocalizedString(@"UpdateInstall")];
       }
-      [alertView setTag:0];
+      [alertView setTag:BITUpdateAlertViewTagDefaultUpdate];
       [alertView show];
       _updateAlertShowing = YES;
     }
   }
-}
-
-
-// nag the user with neverending alerts if we cannot find out the window for presenting the covering sheet
-- (void)alertFallback:(NSString *)message {
-  UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil
-                                                       message:message
-                                                      delegate:self
-                                             cancelButtonTitle:BITHockeyLocalizedString(@"HockeyOK")
-                                             otherButtonTitles:nil
-                             ];
-  [alertView setTag:1];
-  [alertView show];    
 }
 
 
@@ -528,6 +520,18 @@
   [visibleWindow addSubview:self.blockingView];
 }
 
+
+// nag the user with neverending alerts if we cannot find out the window for presenting the covering sheet
+- (void)alertFallback:(NSString *)message {
+  UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil
+                                                      message:message
+                                                     delegate:self
+                                            cancelButtonTitle:BITHockeyLocalizedString(@"HockeyOK")
+                                            otherButtonTitles:nil
+                            ];
+  [alertView setTag:BITUpdateAlertViewTagNeverEndingAlertView];
+  [alertView show];
+}
 
 #pragma mark - RequestComments
 
@@ -1001,11 +1005,11 @@
 
 // invoke the selected action from the action sheet for a location element
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
-  if ([alertView tag] == 2) {
+  if ([alertView tag] == BITUpdateAlertViewTagMandatoryUpdate) {
     (void)[self initiateAppDownload];
     _updateAlertShowing = NO;
     return;
-  } else if ([alertView tag] == 1) {
+  } else if ([alertView tag] == BITUpdateAlertViewTagNeverEndingAlertView) {
     [self alertFallback:[alertView message]];
     return;
   }
