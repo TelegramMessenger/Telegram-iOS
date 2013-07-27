@@ -218,7 +218,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   [self saveSettings];
 }
 
-- (NSString *) extractAppUUIDs:(PLCrashReport *)report {
+- (NSString *) extractAppUUIDs:(BITPLCrashReport *)report {
   NSMutableString *uuidString = [NSMutableString string];
   NSArray *uuidArray = [BITCrashReportTextFormatter arrayOfAppUUIDsForCrashReport:report];
   
@@ -288,7 +288,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 
 // Called to handle a pending crash report.
 - (void) handleCrashReport {
-  PLCrashReporter *crashReporter = [PLCrashReporter sharedReporter];
+  BITPLCrashReporter *crashReporter = [BITPLCrashReporter sharedReporter];
   NSError *error = NULL;
 	
   [self loadSettings];
@@ -309,14 +309,14 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       BITHockeyLog(@"ERROR: Could not load crash report: %@", error);
     } else {
       // get the startup timestamp from the crash report, and the file timestamp to calculate the timeinterval when the crash happened after startup
-      PLCrashReport *report = [[PLCrashReport alloc] initWithData:crashData error:&error];
+      BITPLCrashReport *report = [[BITPLCrashReport alloc] initWithData:crashData error:&error];
       
-      if ([report.applicationInfo respondsToSelector:@selector(applicationStartupTimestamp)]) {
-        if (report.systemInfo.timestamp && report.applicationInfo.applicationStartupTimestamp) {
-          _timeintervalCrashInLastSessionOccured = [report.systemInfo.timestamp timeIntervalSinceDate:report.applicationInfo.applicationStartupTimestamp];
+      if ([report.processInfo respondsToSelector:@selector(processStartTime)]) {
+        if (report.systemInfo.timestamp && report.processInfo.processStartTime) {
+          _timeintervalCrashInLastSessionOccured = [report.systemInfo.timestamp timeIntervalSinceDate:report.processInfo.processStartTime];
         }
       }
-
+      
       [crashData writeToFile:[_crashesDir stringByAppendingPathComponent: cacheFilename] atomically:YES];
       
       // write the meta file
@@ -468,15 +468,8 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   if (_crashManagerStatus == BITCrashManagerStatusDisabled) return;
   
   if (!_isSetup) {
-    PLCrashReporter *crashReporter = [PLCrashReporter sharedReporter];
+    BITPLCrashReporter *crashReporter = [BITPLCrashReporter sharedReporter];
     NSError *error = NULL;
-    
-    // Make sure the correct version of PLCrashReporter is linked
-    id plCrashReportReportInfoClass = NSClassFromString(@"PLCrashReportReportInfo");
-    
-    if (!plCrashReportReportInfoClass) {
-      NSLog(@"[HockeySDK] ERROR: An old version of PLCrashReporter framework is linked! Please check the framework search path in the target build settings and remove references to folders that contain an older version of CrashReporter.framework and also delete these files.");
-    }
     
     // Check if we previously crashed
     if ([crashReporter hasPendingCrashReport]) {
@@ -544,7 +537,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
     NSData *crashData = [NSData dataWithContentsOfFile:filename];
 		
     if ([crashData length] > 0) {
-      PLCrashReport *report = [[PLCrashReport alloc] initWithData:crashData error:&error];
+      BITPLCrashReport *report = [[BITPLCrashReport alloc] initWithData:crashData error:&error];
 			
       if (report == nil) {
         BITHockeyLog(@"WARNING: Could not parse crash report");
@@ -559,8 +552,8 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       }
       
       NSString *crashUUID = @"";
-      if ([report respondsToSelector:@selector(reportInfo)]) {
-        crashUUID = report.reportInfo.reportGUID ?: @"";
+      if (report.uuidRef != NULL) {
+        crashUUID = (NSString *) CFBridgingRelease(CFUUIDCreateString(NULL, report.uuidRef));
       }
       NSString *installString = bit_appAnonID() ?: @"";
       NSString *crashLogString = [BITCrashReportTextFormatter stringValueForCrashReport:report crashReporterKey:installString];

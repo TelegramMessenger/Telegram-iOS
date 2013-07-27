@@ -1,8 +1,7 @@
 /*
- * Author: Andreas Linde <mail@andreaslinde.de>
+ * Author: Landon Fuller <landonf@plausible.coop>
  *
- * Copyright (c) 2012 Plausible Labs Cooperative, Inc.
- * Copyright (c) 2012 Andreas Linde
+ * Copyright (c) 2008-2013 Plausible Labs Cooperative, Inc.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -29,17 +28,25 @@
 
 #import <Foundation/Foundation.h>
 
-@interface PLCrashReportReportInfo : NSObject {
+@interface PLCrashReportRegisterInfo : NSObject {
 @private
-    /** Crash Report GUID */
-    NSString *_reportGUID;
+    /** Register name */
+    NSString *_registerName;
+    
+    /** Register value */
+    uint64_t _registerValue;
 }
 
-- (id) initWithReportGUID: (NSString *) reportGUID;
+- (id) initWithRegisterName: (NSString *) registerName registerValue: (uint64_t) registerValue;
 
 /**
- * The crash report GUID.
+ * Register name.
  */
-@property(nonatomic, readonly) NSString *reportGUID;
+@property(nonatomic, readonly) NSString *registerName;
+
+/**
+ * Register value.
+ */
+@property(nonatomic, readonly) uint64_t registerValue;
 
 @end

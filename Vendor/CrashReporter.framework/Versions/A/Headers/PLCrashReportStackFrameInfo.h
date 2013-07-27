@@ -27,48 +27,26 @@
  */
 
 #import <Foundation/Foundation.h>
-#import <mach/machine.h>
+#import "PLCrashReportSymbolInfo.h"
 
-/**
- * @ingroup constants
- *
- * The type encodings supported for CPU types and subtypes. Currently only Apple
- * Mach-O defined encodings are supported.
- *
- * @internal
- * These enum values match the protobuf values. Keep them synchronized.
- */
-typedef enum {
-    /** Unknown cpu type encoding. */
-    PLCrashReportProcessorTypeEncodingUnknown = 0,
-
-    /** Apple Mach-defined processor types. */
-    PLCrashReportProcessorTypeEncodingMach = 1
-} PLCrashReportProcessorTypeEncoding;
-
-@interface PLCrashReportProcessorInfo : NSObject {
+@interface PLCrashReportStackFrameInfo : NSObject {
 @private
-    /** Type encoding */
-    PLCrashReportProcessorTypeEncoding _typeEncoding;
+    /** Frame instruction pointer. */
+    uint64_t _instructionPointer;
 
-    /** CPU type */
-    uint64_t _type;
-
-    /** CPU subtype */
-    uint64_t _subtype;
+    /** Symbol information, if available. Otherwise, will be nil. */
+    PLCrashReportSymbolInfo *_symbolInfo;
 }
 
-- (id) initWithTypeEncoding: (PLCrashReportProcessorTypeEncoding) typeEncoding
-                       type: (uint64_t) type
-                    subtype: (uint64_t) subtype;
+- (id) initWithInstructionPointer: (uint64_t) instructionPointer symbolInfo: (PLCrashReportSymbolInfo *) symbolInfo;
 
-/** The CPU type encoding. */
-@property(nonatomic, readonly) PLCrashReportProcessorTypeEncoding typeEncoding;
+/**
+ * Frame's instruction pointer.
+ */
+@property(nonatomic, readonly) uint64_t instructionPointer;
 
-/** The CPU type. */
-@property(nonatomic, readonly) uint64_t type;
-
-/** The CPU subtype. */
-@property(nonatomic, readonly) uint64_t subtype;
+/** Symbol information for this frame.
+ * This may be unavailable, and this property will be nil. */
+@property(nonatomic, readonly) PLCrashReportSymbolInfo *symbolInfo;
 
 @end

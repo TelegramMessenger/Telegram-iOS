@@ -1,7 +1,7 @@
 /*
  * Author: Landon Fuller <landonf@plausible.coop>
  *
- * Copyright (c) 2008-2013 Plausible Labs Cooperative, Inc.
+ * Copyright (c) 2012-2013 Plausible Labs Cooperative, Inc.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -27,48 +27,35 @@
  */
 
 #import <Foundation/Foundation.h>
-#import <mach/machine.h>
 
-/**
- * @ingroup constants
- *
- * The type encodings supported for CPU types and subtypes. Currently only Apple
- * Mach-O defined encodings are supported.
- *
- * @internal
- * These enum values match the protobuf values. Keep them synchronized.
- */
-typedef enum {
-    /** Unknown cpu type encoding. */
-    PLCrashReportProcessorTypeEncodingUnknown = 0,
-
-    /** Apple Mach-defined processor types. */
-    PLCrashReportProcessorTypeEncodingMach = 1
-} PLCrashReportProcessorTypeEncoding;
-
-@interface PLCrashReportProcessorInfo : NSObject {
+@interface PLCrashReportSymbolInfo : NSObject {
 @private
-    /** Type encoding */
-    PLCrashReportProcessorTypeEncoding _typeEncoding;
-
-    /** CPU type */
-    uint64_t _type;
-
-    /** CPU subtype */
-    uint64_t _subtype;
+    /** The symbol name. */
+    NSString *_symbolName;
+    
+    /** The symbol start address. */
+    uint64_t _startAddress;
+    
+    /** The symbol end address, if explicitly defined. Will be 0 if unknown. */
+    uint64_t _endAddress;
 }
 
-- (id) initWithTypeEncoding: (PLCrashReportProcessorTypeEncoding) typeEncoding
-                       type: (uint64_t) type
-                    subtype: (uint64_t) subtype;
+- (id) initWithSymbolName: (NSString *) symbolName
+             startAddress: (uint64_t) startAddress
+               endAddress: (uint64_t) endAddress;
 
-/** The CPU type encoding. */
-@property(nonatomic, readonly) PLCrashReportProcessorTypeEncoding typeEncoding;
+/** The symbol name. */
+@property(nonatomic, readonly) NSString *symbolName;
 
-/** The CPU type. */
-@property(nonatomic, readonly) uint64_t type;
+/** The symbol start address. */
+@property(nonatomic, readonly) uint64_t startAddress;
 
-/** The CPU subtype. */
-@property(nonatomic, readonly) uint64_t subtype;
+/* The symbol end address, if explicitly defined. This will only be included if the end address is
+ * explicitly defined (eg, by DWARF debugging information), will not be derived by best-guess
+ * heuristics.
+ *
+ * If unknown, the address will be 0.
+ */
+@property(nonatomic, readonly) uint64_t endAddress;
 
 @end

@@ -26,28 +26,33 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import <Foundation/Foundation.h>
+#ifndef PLCRASH_ASYNC_SIGNAL_INFO_H
+#define PLCRASH_ASYNC_SIGNAL_INFO_H
 
-@interface PLCrashReportApplicationInfo : NSObject {
-@private
-    /** Application identifier */
-    NSString *_applicationIdentifier;
-    
-    /** Application version */
-    NSString *_applicationVersion;
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * @internal
+ *
+ * @defgroup plcrash_async_signal_info Signal Information
+ * @ingroup plcrash_async
+ *
+ * Provides mapping of signal number and code to strings.
+ *
+ * @{
+ */
+
+const char *plcrash_async_signal_signame (int signal);
+const char *plcrash_async_signal_sigcode (int signal, int si_code);
+
+/**
+ * @} plcrash_async_signal_info
+ */
+
+#ifdef __cplusplus
 }
+#endif
 
-- (id) initWithApplicationIdentifier: (NSString *) applicationIdentifier 
-                  applicationVersion: (NSString *) applicationVersion;
-
-/**
- * The application identifier. This is usually the application's CFBundleIdentifier value.
- */
-@property(nonatomic, readonly) NSString *applicationIdentifier;
-
-/**
- * The application version. This is usually the application's CFBundleVersion value.
- */
-@property(nonatomic, readonly) NSString *applicationVersion;
-
-@end
+#endif /* PLCRASH_ASYNC_SIGNAL_INFO_H */
