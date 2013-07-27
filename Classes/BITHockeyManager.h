@@ -36,6 +36,7 @@
 @class BITHockeyBaseManager;
 @class BITCrashManager;
 @class BITUpdateManager;
+@class BITStoreUpdateManager;
 @class BITFeedbackManager;
 
 /** 
@@ -237,6 +238,32 @@
  */
 @property (nonatomic, getter = isUpdateManagerDisabled) BOOL disableUpdateManager;
 
+
+/**
+ Reference to the initialized BITStoreUpdateManager module
+ 
+ Returns the BITStoreUpdateManager instance initialized by BITHockeyManager
+ 
+ @see configureWithIdentifier:delegate:
+ @see configureWithBetaIdentifier:liveIdentifier:delegate:
+ @see startManager
+ @see disableStoreUpdateManager
+ */
+@property (nonatomic, strong, readonly) BITStoreUpdateManager *storeUpdateManager;
+
+
+/**
+ Flag the determines whether the App Store Update Manager should be enabled
+ 
+ If this flag is enabled, then checking for updates when the app runs from the
+ app store will be turned on!
+ 
+ Please note that the Store Update Manager will be initialized anyway!
+ 
+ *Default*: _NO_
+ @see storeUpdateManager
+ */
+@property (nonatomic, getter = isStoreUpdateManagerEnabled) BOOL enableStoreUpdateManager;
 
 /**
  Reference to the initialized BITFeedbackManager module
