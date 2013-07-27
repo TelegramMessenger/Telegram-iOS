@@ -72,7 +72,7 @@
 }
 
 - (NSString *)encodedAppIdentifier {
-  return (_appIdentifier ? bit_URLEncodedString(_appIdentifier) : bit_URLEncodedString([[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"]));
+  return (_appIdentifier ? bit_URLEncodedString(_appIdentifier) : bit_URLEncodedString([self mainBundleIdentifier]));
 }
 
 - (NSString *)getDevicePlatform {
@@ -197,7 +197,7 @@
 	if (!key || !stringValue)
 		return NO;
   
-  NSString *serviceName = [NSString stringWithFormat:@"%@.HockeySDK", [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"]];
+  NSString *serviceName = [NSString stringWithFormat:@"%@.HockeySDK", [self mainBundleIdentifier]];
   
   NSError *error = nil;
   return [BITKeychainUtils storeUsername:key andPassword:stringValue forServiceName:serviceName updateExisting:YES error:&error];
@@ -207,19 +207,22 @@
 	if (!key)
 		return nil;
   
-  NSString *serviceName = [NSString stringWithFormat:@"%@.HockeySDK", [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"]];
+  NSString *serviceName = [NSString stringWithFormat:@"%@.HockeySDK", [self mainBundleIdentifier]];
 
   NSError *error = nil;
   return [BITKeychainUtils getPasswordForUsername:key andServiceName:serviceName error:&error];
 }
 
 - (BOOL)removeKeyFromKeychain:(NSString *)key {
-  NSString *serviceName = [NSString stringWithFormat:@"%@.HockeySDK", [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"]];
+  NSString *serviceName = [NSString stringWithFormat:@"%@.HockeySDK", [self mainBundleIdentifier]];
 
   NSError *error = nil;
   return [BITKeychainUtils deleteItemForUsername:key andServiceName:serviceName error:&error];
 }
 
+- (NSString*) mainBundleIdentifier {
+  return [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"];
+}
 
 #pragma mark - Manager Control
 
