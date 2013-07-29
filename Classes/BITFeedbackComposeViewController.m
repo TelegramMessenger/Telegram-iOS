@@ -218,14 +218,6 @@
 
 #pragma mark - Private methods
 
-- (void)dismiss {
-  if (self.delegate && [self.delegate respondsToSelector:@selector(feedbackComposeViewControllerDidFinish:)]) {
-    [self.delegate feedbackComposeViewControllerDidFinish:self];
-  } else {
-    [self dismissViewControllerAnimated:YES completion:nil];
-  }
-}
-
 - (void)setUserDataAction {
   BITFeedbackUserDataViewController *userController = [[BITFeedbackUserDataViewController alloc] initWithStyle:UITableViewStyleGrouped];
   userController.delegate = self;
@@ -238,8 +230,10 @@
   [self presentViewController:navController animated:YES completion:nil];
 }
 
+#pragma mark - Actions
+
 - (void)dismissAction:(id)sender {
-  [self dismiss];
+  [self dismissWithResult:BITFeedbackComposeResultCancelled];
 }
 
 - (void)sendAction:(id)sender {
@@ -250,11 +244,23 @@
   
   [self.manager submitMessageWithText:text];
   
-  [self dismiss];
+  [self dismissWithResult:BITFeedbackComposeResultSubmitted];
 }
 
+- (void)dismissWithResult:(BITFeedbackComposeResult) result {
+  if(self.delegate && [self.delegate respondsToSelector:@selector(feedbackComposeViewController:didFinishWithResult:)]) {
+    [self.delegate feedbackComposeViewController:self didFinishWithResult:result];
+  } else if (self.delegate && [self.delegate respondsToSelector:@selector(feedbackComposeViewControllerDidFinish:)]) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated"
+    [self.delegate feedbackComposeViewControllerDidFinish:self];
+#pragma clang diagnostic pop
+  } else {
+    [self dismissViewControllerAnimated:YES completion:nil];
+  }
+}
 
-#pragma mark - CNSFeedbackUserDataDelegate
+#pragma mark - BITFeedbackUserDataDelegate
 
 - (void)userDataUpdateCancelled {
   _blockUserDataScreen = YES;

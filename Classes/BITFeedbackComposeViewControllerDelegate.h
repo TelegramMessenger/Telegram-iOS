@@ -8,6 +8,11 @@
 
 #import <Foundation/Foundation.h>
 
+typedef NS_ENUM(NSUInteger, BITFeedbackComposeResult) {
+  BITFeedbackComposeResultCancelled, //user hit cancel
+  BITFeedbackComposeResultSubmitted, //user hit submit
+};
+
 @class BITFeedbackComposeViewController;
 
 /**
@@ -31,6 +36,11 @@
  
  @param composeViewController The `BITFeedbackComposeViewController` instance invoking this delegate
  */
-- (void)feedbackComposeViewControllerDidFinish:(BITFeedbackComposeViewController *)composeViewController;
+- (void)feedbackComposeViewController:(BITFeedbackComposeViewController *)composeViewController
+                  didFinishWithResult:(BITFeedbackComposeResult) composeResult;
 
+#pragma mark - Deprecated methods
+
+/** this method is deprecated. If feedbackComposeViewController:didFinishWithResult: is implemented, this will not be called */
+- (void)feedbackComposeViewControllerDidFinish:(BITFeedbackComposeViewController *)composeViewController __attribute__((deprecated("Use feedbackComposeViewController:didFinishWithResult: instead")));
 @end
