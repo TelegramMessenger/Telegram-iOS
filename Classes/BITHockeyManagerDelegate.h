@@ -27,17 +27,19 @@
  */
 
 #import <Foundation/Foundation.h>
-
+#import "BITCrashManagerDelegate.h"
+#import "BITUpdateManagerDelegate.h"
+#import "BITFeedbackManagerDelegate.h"
 
 @class BITHockeyManager;
 @class BITHockeyBaseManager;
 
 /**
  The `BITHockeyManagerDelegate` formal protocol defines methods further configuring
-  the behaviour of `BITHockeyManager`.
+  the behaviour of `BITHockeyManager`, as well as the delegate of the modules it manages.
  */
 
-@protocol BITHockeyManagerDelegate <NSObject>
+@protocol BITHockeyManagerDelegate <NSObject, BITCrashManagerDelegate, BITUpdateManagerDelegate, BITFeedbackManagerDelegate>
 
 @optional
 
