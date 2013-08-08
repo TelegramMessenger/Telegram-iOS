@@ -17,7 +17,7 @@ Pod::Spec.new do |s|
                   'yourself when the network becomse reachable.'
 
   s.source_files = 'Classes'
-  s.resource_bundle = { 'HockeySDKResources' => ['Resources/*.png', 'Resources/*.lproj/*'] }
+  s.resource_bundle = { 'HockeySDKResources' => ['Resources/*.png', 'Resources/*.lproj'] }
   s.requires_arc = true
   s.preserve_paths = 'Resources', 'Support', 'Vendor'
   s.frameworks   = 'CoreText', 'QuartzCore', 'SystemConfiguration', 'CrashReporter', 'CoreGraphics', 'UIKit'
