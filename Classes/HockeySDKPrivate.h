@@ -73,42 +73,6 @@
 NSBundle *BITHockeyBundle(void);
 NSString *BITHockeyLocalizedString(NSString *stringToken);
 NSString *BITHockeyMD5(NSString *str);
-id BITHockeyParseJSON(NSString *str, NSError **error);
-
-
-// compatibility helper
-#ifdef BITHOCKEY_STATIC_LIBRARY
-// If HockeySDK is built as a static library and linked into the project
-// we can't use this project's deployment target to statically decide if
-// native JSON is available
-#define BITHOCKEY_NATIVE_JSON_AVAILABLE 0
-#else
-#define BITHOCKEY_NATIVE_JSON_AVAILABLE __IPHONE_OS_VERSION_MIN_REQUIRED >= 50000
-#endif
-
-
-
-#ifndef kCFCoreFoundationVersionNumber_iPhoneOS_5_0
-#define kCFCoreFoundationVersionNumber_iPhoneOS_5_0 674.0
-#endif
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000
-#define BITHOCKEY_IF_IOS5_OR_GREATER(...) \
-if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iPhoneOS_5_0) \
-{ \
-__VA_ARGS__ \
-}
-#else
-#define BITHOCKEY_IF_IOS5_OR_GREATER(...)
-#endif
-
-#define BITHOCKEY_IF_PRE_IOS5(...)  \
-if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iPhoneOS_5_0)  \
-{ \
-__VA_ARGS__ \
-}
-
-
-#endif
 
 #if __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_6_0
 
@@ -126,3 +90,4 @@ __VA_ARGS__ \
 
 #endif
 
+#endif //HockeySDK_HockeySDKPrivate_h
