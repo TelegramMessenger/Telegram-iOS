@@ -86,6 +86,15 @@ typedef enum {
 } BITFeedbackErrorReason;
 extern NSString *const __attribute__((unused)) kBITFeedbackErrorDomain;
 
+// hockey Authenticator error domain
+typedef NS_ENUM(NSInteger, BITAuthenticatorReason) {
+  BITAuthenticatorErrorUnknown,
+  BITAuthenticatorNetworkError,
+  BITAuthenticatorAPIServerReturnedInvalidRespone,
+  BITAuthenticatorNotAuthorized,
+  BITAuthenticatorAuthenticationCancelled,
+};
+extern NSString *const __attribute__((unused)) kBITAuthenticatorErrorDomain;
 
 // HockeySDK
 

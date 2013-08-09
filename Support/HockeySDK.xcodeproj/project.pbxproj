@@ -33,9 +33,9 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		1E0829001708F69A0073050E /* BITStoreUpdateManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E0828FF1708F69A0073050E /* BITStoreUpdateManagerDelegate.h */; };
 		1E0FEE28173BDB260061331F /* BITKeychainUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E0FEE26173BDB260061331F /* BITKeychainUtils.h */; };
 		1E0FEE29173BDB260061331F /* BITKeychainUtils.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E0FEE27173BDB260061331F /* BITKeychainUtils.m */; };
-		1E0829001708F69A0073050E /* BITStoreUpdateManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E0828FF1708F69A0073050E /* BITStoreUpdateManagerDelegate.h */; };
 		1E1127C416580C87007067A2 /* buttonRoundedDelete.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E1127BC16580C87007067A2 /* buttonRoundedDelete.png */; };
 		1E1127C516580C87007067A2 /* buttonRoundedDelete@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E1127BD16580C87007067A2 /* buttonRoundedDelete@2x.png */; };
 		1E1127C616580C87007067A2 /* buttonRoundedDeleteHighlighted.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E1127BE16580C87007067A2 /* buttonRoundedDeleteHighlighted.png */; };
@@ -130,6 +130,11 @@
 		1EF95CA7162CB037000AE3AD /* BITFeedbackActivity.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EF95CA5162CB036000AE3AD /* BITFeedbackActivity.m */; };
 		1EF95CAA162CB314000AE3AD /* BITFeedbackComposeViewControllerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EF95CA9162CB313000AE3AD /* BITFeedbackComposeViewControllerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		E405266217A2AD300096359C /* BITFeedbackManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = E405266117A2AD300096359C /* BITFeedbackManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		E48A3DEC17B3ED1C00924C3D /* BITAuthenticator.h in Headers */ = {isa = PBXBuildFile; fileRef = E48A3DEA17B3ED1C00924C3D /* BITAuthenticator.h */; };
+		E48A3DED17B3ED1C00924C3D /* BITAuthenticator.m in Sources */ = {isa = PBXBuildFile; fileRef = E48A3DEB17B3ED1C00924C3D /* BITAuthenticator.m */; };
+		E48A3DEF17B3EFF100924C3D /* BITAuthenticatorTests.m in Sources */ = {isa = PBXBuildFile; fileRef = E48A3DEE17B3EFF100924C3D /* BITAuthenticatorTests.m */; };
+		E4B4DB7D17B435550099C67F /* BITAuthenticationViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = E4B4DB7B17B435550099C67F /* BITAuthenticationViewController.h */; };
+		E4B4DB7E17B435550099C67F /* BITAuthenticationViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = E4B4DB7C17B435550099C67F /* BITAuthenticationViewController.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -164,10 +169,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		1E0FEE22173BD9BB0061331F /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		1E0828FF1708F69A0073050E /* BITStoreUpdateManagerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITStoreUpdateManagerDelegate.h; sourceTree = "<group>"; };
 		1E0FEE26173BDB260061331F /* BITKeychainUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITKeychainUtils.h; sourceTree = "<group>"; };
 		1E0FEE27173BDB260061331F /* BITKeychainUtils.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITKeychainUtils.m; sourceTree = "<group>"; };
-		1E0828FF1708F69A0073050E /* BITStoreUpdateManagerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITStoreUpdateManagerDelegate.h; sourceTree = "<group>"; };
 		1E1127BC16580C87007067A2 /* buttonRoundedDelete.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = buttonRoundedDelete.png; sourceTree = "<group>"; };
 		1E1127BD16580C87007067A2 /* buttonRoundedDelete@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "buttonRoundedDelete@2x.png"; sourceTree = "<group>"; };
 		1E1127BE16580C87007067A2 /* buttonRoundedDeleteHighlighted.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = buttonRoundedDeleteHighlighted.png; sourceTree = "<group>"; };
@@ -279,6 +283,12 @@
 		E41EB465148D7BF50015DEDC /* BITHockeyManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITHockeyManager.h; sourceTree = "<group>"; };
 		E41EB466148D7BF50015DEDC /* BITHockeyManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITHockeyManager.m; sourceTree = "<group>"; };
 		E41EB48B148D7C4E0015DEDC /* CrashReporter.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CrashReporter.framework; path = ../Vendor/CrashReporter.framework; sourceTree = "<group>"; };
+		E48A3DEA17B3ED1C00924C3D /* BITAuthenticator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITAuthenticator.h; sourceTree = "<group>"; };
+		E48A3DEB17B3ED1C00924C3D /* BITAuthenticator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITAuthenticator.m; sourceTree = "<group>"; };
+		E48A3DEE17B3EFF100924C3D /* BITAuthenticatorTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITAuthenticatorTests.m; sourceTree = "<group>"; };
+		E48A3DF117B408F400924C3D /* BITAuthenticator_Private.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BITAuthenticator_Private.h; sourceTree = "<group>"; };
+		E4B4DB7B17B435550099C67F /* BITAuthenticationViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITAuthenticationViewController.h; sourceTree = "<group>"; };
+		E4B4DB7C17B435550099C67F /* BITAuthenticationViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITAuthenticationViewController.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -349,6 +359,7 @@
 				1EA1170216F53B49001C015C /* Fixtures */,
 				1E5A459716F0DFC200B55C04 /* Supporting Files */,
 				1E5A459D16F0DFC200B55C04 /* BITStoreUpdateManagerTests.m */,
+				E48A3DEE17B3EFF100924C3D /* BITAuthenticatorTests.m */,
 			);
 			path = HockeySDKTests;
 			sourceTree = "<group>";
@@ -522,6 +533,7 @@
 		E41EB458148D7BF50015DEDC /* Classes */ = {
 			isa = PBXGroup;
 			children = (
+				E48A3DE917B3ECF900924C3D /* Network */,
 				1E754E441621F95E0070AB92 /* Helper */,
 				1E754E551621FBAF0070AB92 /* CrashReports */,
 				1E754E461621FA9A0070AB92 /* Feedback */,
@@ -545,6 +557,26 @@
 			name = HockeySDK;
 			sourceTree = "<group>";
 		};
+		E48A3DE917B3ECF900924C3D /* Network */ = {
+			isa = PBXGroup;
+			children = (
+				E48A3DF017B408D800924C3D /* private */,
+				E48A3DEA17B3ED1C00924C3D /* BITAuthenticator.h */,
+				E48A3DEB17B3ED1C00924C3D /* BITAuthenticator.m */,
+			);
+			name = Network;
+			sourceTree = "<group>";
+		};
+		E48A3DF017B408D800924C3D /* private */ = {
+			isa = PBXGroup;
+			children = (
+				E48A3DF117B408F400924C3D /* BITAuthenticator_Private.h */,
+				E4B4DB7B17B435550099C67F /* BITAuthenticationViewController.h */,
+				E4B4DB7C17B435550099C67F /* BITAuthenticationViewController.m */,
+			);
+			name = private;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -560,6 +592,7 @@
 				1E49A4731612226D00463151 /* BITUpdateManager.h in Headers */,
 				1E49A4791612226D00463151 /* BITUpdateManagerDelegate.h in Headers */,
 				1E49A44E1612223B00463151 /* BITFeedbackManager.h in Headers */,
+				E4B4DB7D17B435550099C67F /* BITAuthenticationViewController.h in Headers */,
 				1E49A4481612223B00463151 /* BITFeedbackListViewController.h in Headers */,
 				1E49A47F1612226D00463151 /* BITUpdateViewController.h in Headers */,
 				1E49A43C1612223B00463151 /* BITFeedbackComposeViewController.h in Headers */,
@@ -583,6 +616,7 @@
 				1E49A4D8161222D400463151 /* HockeySDKPrivate.h in Headers */,
 				1EC69F601615001500808FD9 /* BITHockeyManagerPrivate.h in Headers */,
 				1E754E5F1621FBB70070AB92 /* BITCrashManagerPrivate.h in Headers */,
+				E48A3DEC17B3ED1C00924C3D /* BITAuthenticator.h in Headers */,
 				1E754E601621FBB70070AB92 /* BITCrashReportTextFormatter.h in Headers */,
 				1EACC97B162F041E007578C5 /* BITAttributedLabel.h in Headers */,
 				1E0FEE28173BDB260061331F /* BITKeychainUtils.h in Headers */,
@@ -796,12 +830,14 @@
 				1E49A4701612226D00463151 /* BITAppVersionMetaInfo.m in Sources */,
 				1E49A4761612226D00463151 /* BITUpdateManager.m in Sources */,
 				1E49A4821612226D00463151 /* BITUpdateViewController.m in Sources */,
+				E4B4DB7E17B435550099C67F /* BITAuthenticationViewController.m in Sources */,
 				1E49A4B2161222B900463151 /* BITHockeyBaseManager.m in Sources */,
 				1E49A4BB161222B900463151 /* BITHockeyBaseViewController.m in Sources */,
 				1E49A4C1161222B900463151 /* BITHockeyHelper.m in Sources */,
 				1E49A4C7161222B900463151 /* BITAppStoreHeader.m in Sources */,
 				1E49A4CD161222B900463151 /* BITStoreButton.m in Sources */,
 				1E49A4D3161222B900463151 /* BITWebTableViewCell.m in Sources */,
+				E48A3DED17B3ED1C00924C3D /* BITAuthenticator.m in Sources */,
 				1E49A4DB161222D400463151 /* HockeySDKPrivate.m in Sources */,
 				1E754E5D1621FBB70070AB92 /* BITCrashManager.m in Sources */,
 				1E754E611621FBB70070AB92 /* BITCrashReportTextFormatter.m in Sources */,
@@ -824,6 +860,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1E5A459E16F0DFC200B55C04 /* BITStoreUpdateManagerTests.m in Sources */,
+				E48A3DEF17B3EFF100924C3D /* BITAuthenticatorTests.m in Sources */,
 				1EA1170716F53B91001C015C /* BITTestHelper.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

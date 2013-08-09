@@ -35,6 +35,7 @@ NSString *const kBITCrashErrorDomain = @"BITCrashReporterErrorDomain";
 NSString *const kBITUpdateErrorDomain = @"BITUpdaterErrorDomain";
 NSString *const kBITFeedbackErrorDomain = @"BITFeedbackErrorDomain";
 NSString *const kBITHockeyErrorDomain = @"BITHockeyErrorDomain";
+NSString *const kBITAuthenticatorErrorDomain = @"BITAuthenticatorErrorDomain";
 
 // Load the framework bundle.
 NSBundle *BITHockeyBundle(void) {
