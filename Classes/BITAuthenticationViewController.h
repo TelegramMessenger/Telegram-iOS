@@ -8,8 +8,24 @@
 
 #import <UIKit/UIKit.h>
 @protocol BITAuthenticationViewControllerDelegate;
+@class BITAuthenticator;
 
-@interface BITAuthenticationViewController : UIViewController
+@interface BITAuthenticationViewController : UITableViewController
+
+/**
+ *	can be set to YES to also require the users password
+ *
+ *  defaults to NO
+ */
+@property (nonatomic, assign) BOOL requirePassword;
+
+/**
+ *	TODO: instead of passing the whole authenticator, we actually only need
+ *        something to create and enqueue BITHTTPOperations
+ */
+@property (nonatomic, weak) BITAuthenticator *authenticator;
+
+@property (nonatomic, weak) id<BITAuthenticationViewControllerDelegate> delegate;
 
 @end
 

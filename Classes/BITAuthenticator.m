@@ -159,12 +159,16 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
     BITHockeyLog(@"Already authenticating. Ignoring request");
     return;
   }
-  UIViewController *viewController = nil;
+  
+  BITAuthenticationViewController *viewController = [[BITAuthenticationViewController alloc] initWithStyle:UITableViewStyleGrouped];
+  viewController.delegate = self;
+  viewController.authenticator = self;
   switch (self.authenticationType) {
-    case BITAuthenticatorAuthTypeEmail:
     case BITAuthenticatorAuthTypeEmailAndPassword:
-      viewController = [UIViewController new];
-      //TODO
+      viewController.requirePassword = YES;
+      break;
+    case BITAuthenticatorAuthTypeEmail:
+      viewController.requirePassword = NO;
       break;
   }
   
@@ -173,13 +177,16 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
     _authenticationController = viewController;
     _authenticationCompletionBlock = completion;
     UIViewController *rootViewController = [self.findVisibleWindow rootViewController];
-    [rootViewController presentModalViewController:_authenticationController
+    UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:viewController];
+    [rootViewController presentModalViewController:navController
                                           animated:YES];
   }
 }
 
 #pragma mark - AuthenticationViewControllerDelegate
 - (void) authenticationViewControllerDidCancel:(UIViewController*) viewController {
+  [viewController dismissModalViewControllerAnimated:YES];
+  
   _authenticationController = nil;
   self.authenticationToken = nil;
   NSError *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
