@@ -99,15 +99,59 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
       }
     }];
   } else {
-    NSError *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                         code:BITAuthenticatorNetworkError
-                                     userInfo:nil];
-    if(completion) {
-      completion(NO, error);
-    } else {
-      [self.delegate authenticator:self failedToValidateInstallationWithError:error];
-    }
+    NSString *validationEndpoint = @"validate";
+    __weak typeof (self) weakSelf = self;
+    [self getPath:validationEndpoint
+       completion:^(BITHTTPOperation *operation, id response, NSError *error) {
+         typeof (self) strongSelf = weakSelf;
+         if(nil == response) {
+           NSDictionary *userInfo = nil;
+           if(error) {
+             userInfo = @{NSUnderlyingErrorKey : error};
+           }
+           NSError *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
+                                                code:BITAuthenticatorNetworkError
+                                            userInfo:userInfo];
+           [strongSelf validationFailedWithError:error];
+         } else {
+           NSError *validationParseError = nil;
+           BOOL isValidated = [strongSelf.class isValidationResponseValid:response error:&validationParseError];
+           if(isValidated) {
+             [strongSelf validationSucceeded];
+           } else {
+             [strongSelf validationFailedWithError:validationParseError];
+           }
+         }
+       }];
   }
+}
+
++ (BOOL) isValidationResponseValid:(id) response error:(NSError **) error {
+  NSParameterAssert(response);
+
+  NSError *jsonParseError = nil;
+  id jsonObject = [NSJSONSerialization JSONObjectWithData:response
+                                                  options:0
+                                                    error:&jsonParseError];
+  if(nil == jsonObject) {
+    if(error) {
+      *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
+                                   code:BITAuthenticatorAPIServerReturnedInvalidRespone
+                               userInfo:(jsonParseError ? @{NSUnderlyingErrorKey : jsonParseError} : nil)];
+    }
+    return NO;
+  }
+  if(![jsonObject isKindOfClass:[NSDictionary class]]) {
+    if(error) {
+      *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
+                                   code:BITAuthenticatorAPIServerReturnedInvalidRespone
+                               userInfo:nil];
+    }
+    return NO;
+  }
+  
+  //TODO: add proper validation
+  return [jsonObject[@"isValid"] boolValue];
 }
 
 - (void)authenticateWithCompletion:(tAuthenticationCompletion)completion {
