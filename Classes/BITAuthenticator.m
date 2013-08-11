@@ -10,6 +10,8 @@
 #import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
 #import "BITAuthenticator_Private.h"
+#import "BITHTTPOperation.h"
+
 static NSString* const kBITAuthenticatorAuthTokenKey = @"BITAuthenticatorAuthTokenKey";
 static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthenticatorLastAuthenticatedVersionKey";
 
@@ -21,6 +23,7 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
 
 - (void)dealloc {
   [self unregisterObservers];
+  [self cancelOperationsWithPath:nil method:nil];
 }
 
 - (instancetype) initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironemt:(BOOL)isAppStoreEnvironment {
@@ -251,4 +254,73 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
     [self validateInstallationWithCompletion:nil];
   }
 }
+
+#pragma mark - Networking 
+- (NSMutableURLRequest *) requestWithMethod:(NSString*) method
+                                       path:(NSString *) path {
+  NSParameterAssert(self.serverURL);
+  NSParameterAssert(method);
+  path = path ? : @"";
+  
+  NSURL *endpoint = [[NSURL URLWithString:self.serverURL] URLByAppendingPathComponent:path];
+  NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:endpoint];
+  request.HTTPMethod = method;
+  
+  return request;
+}
+
+- (BITHTTPOperation*) operationWithURLRequest:(NSURLRequest*) request
+                                   completion:(BITNetworkCompletionBlock) completion {
+  BITHTTPOperation *operation = [BITHTTPOperation operationWithRequest:request
+                                 ];
+  [operation setCompletion:completion];
+  
+  return operation;
+}
+
+- (void)getPath:(NSString *)path completion:(BITNetworkCompletionBlock)completion {
+  NSURLRequest *request = [self requestWithMethod:@"GET" path:path];
+  BITHTTPOperation *op = [self operationWithURLRequest:request
+                                            completion:completion];
+  [self enqeueHTTPOperation:op];
+}
+
+- (void) enqeueHTTPOperation:(BITHTTPOperation *) operation {
+  [self.operationQueue addOperation:operation];
+}
+
+- (NSUInteger) cancelOperationsWithPath:(NSString*) path
+                                 method:(NSString*) method {
+  NSUInteger cancelledOperations = 0;
+  for(BITHTTPOperation *operation in self.operationQueue.operations) {
+    NSURLRequest *request = operation.URLRequest;
+
+    BOOL matchedMethod = YES;
+    if(method && ![request.HTTPMethod isEqualToString:method]) {
+      matchedMethod = NO;
+    }
+
+    BOOL matchedPath = YES;
+    if(path) {
+      //method is not interesting here, we' just creating it to get the URL
+      NSURL *url = [self requestWithMethod:@"GET" path:path].URL;
+      matchedPath = [request.URL isEqual:url];
+    }
+  
+    if(matchedPath && matchedMethod) {
+      ++cancelledOperations;
+      [operation cancel];
+    }
+  }
+  return cancelledOperations;
+}
+
+- (NSOperationQueue *)operationQueue {
+  if(nil == _operationQueue) {
+    _operationQueue = [[NSOperationQueue alloc] init];
+    _operationQueue.maxConcurrentOperationCount = 1;
+  }
+  return _operationQueue;
+}
+
 @end

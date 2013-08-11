@@ -17,7 +17,7 @@
 #import "HockeySDK.h"
 #import "BITAuthenticator.h"
 #import "BITAuthenticator_Private.h"
-
+#import "BITHTTPOperation.h"
 #import "BITTestHelper.h"
 
 @interface MyDevice : NSObject
@@ -287,4 +287,138 @@
   [verifyCount(delegateMock, never()) authenticator:_sut failedToValidateInstallationWithError:(id)anything()];
   [verifyCount(delegateMock, times(1)) authenticatorDidValidateInstallation:_sut];
 }
+
+#pragma mark - Networking base tests
+- (void) testThatURLRequestHasBaseURLSet {
+  _sut.serverURL = @"http://myserver.com";
+  NSMutableURLRequest *request = [_sut requestWithMethod:@"GET" path:nil];
+  assertThat(request.URL, equalTo([NSURL URLWithString:@"http://myserver.com/"]));
+}
+
+- (void) testThatURLRequestHasPathAppended {
+  _sut.serverURL = @"http://myserver.com";
+  NSMutableURLRequest *request = [_sut requestWithMethod:@"GET" path:@"projects"];
+  assertThat(request.URL, equalTo([NSURL URLWithString:@"http://myserver.com/projects"]));
+}
+
+- (void) testThatURLRequestHasMethodSet {
+  NSMutableURLRequest *request = [_sut requestWithMethod:@"POST" path:nil];
+  
+  assertThat(request.HTTPMethod, equalTo(@"POST"));
+}
+
+- (void) testThatOperationHasURLRequestSet {
+  _sut.serverURL = @"http://myserver.com";
+  NSURLRequest *r = [_sut requestWithMethod:@"PUT" path:@"x"];
+  BITHTTPOperation *op = [_sut operationWithURLRequest:r
+                                            completion:nil];
+  assertThat(op.URLRequest, equalTo(r));
+}
+
+#pragma mark - Convenience methods
+- (void) testThatGetPathCreatesAndEnquesAnOperation {
+  assertThatUnsignedInt(_sut.operationQueue.operationCount, equalToUnsignedInt(0));
+  [given([_sut operationWithURLRequest:(id)anything()
+                            completion:(id)anything()]) willReturn:[NSOperation new]];
+
+  [_sut getPath:@"endpoint"
+     completion:nil];
+  assertThatUnsignedInt(_sut.operationQueue.operationCount, equalToUnsignedInt(1));
+}
+
+#pragma mark - Completion Tests
+- (void) testThatCompletionIsCalled {
+  //TODO
+}
+
+#pragma mark - HTTPOperation enqueuing / cancellation
+- (void) testThatOperationIsQueued {
+  assertThatUnsignedInt(_sut.operationQueue.operationCount, equalToUnsignedInt(0));
+  [_sut.operationQueue setSuspended:YES];
+  BITHTTPOperation *op = [BITHTTPOperation new];
+  [_sut enqeueHTTPOperation:op];
+  
+  assertThatUnsignedInt(_sut.operationQueue.operationCount, equalToUnsignedInt(1));
+}
+
+- (void) testThatOperationCancellingMatchesAllOperationsWithNilMethod {
+  [_sut.operationQueue setSuspended:YES];
+  NSURLRequest *requestGet = [_sut requestWithMethod:@"GET" path:nil];
+  NSURLRequest *requestPut = [_sut requestWithMethod:@"PUT" path:nil];
+  NSURLRequest *requestPost = [_sut requestWithMethod:@"POST" path:nil];
+  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestGet
+                                               completion:nil]];
+  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPut
+                                               completion:nil]];
+  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPost
+                                               completion:nil]];
+  assertThatUnsignedInt(_sut.operationQueue.operationCount, equalToUnsignedInt(3));
+  NSUInteger numCancelled = [_sut cancelOperationsWithPath:nil method:nil];
+  assertThatUnsignedInt(numCancelled, equalToUnsignedInt(3));
+}
+
+- (void) testThatOperationCancellingMatchesAllOperationsWithNilPath {
+  [_sut.operationQueue setSuspended:YES];
+  NSURLRequest *requestGet = [_sut requestWithMethod:@"GET" path:@"test"];
+  NSURLRequest *requestPut = [_sut requestWithMethod:@"PUT" path:@"Another/acas"];
+  NSURLRequest *requestPost = [_sut requestWithMethod:@"POST" path:nil];
+  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestGet
+                                               completion:nil]];
+  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPut
+                                               completion:nil]];
+  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPost
+                                               completion:nil]];
+  assertThatUnsignedInt(_sut.operationQueue.operationCount, equalToUnsignedInt(3));
+  NSUInteger numCancelled = [_sut cancelOperationsWithPath:nil method:nil];
+  assertThatUnsignedInt(numCancelled, equalToUnsignedInt(3));
+}
+
+
+- (void) testThatOperationCancellingMatchesAllOperationsWithSetPath {
+  NSURLRequest *requestGet = [_sut requestWithMethod:@"GET" path:@"test"];
+  NSURLRequest *requestPut = [_sut requestWithMethod:@"PUT" path:@"Another/acas"];
+  NSURLRequest *requestPost = [_sut requestWithMethod:@"POST" path:nil];
+  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestGet
+                                               completion:nil]];
+  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPut
+                                               completion:nil]];
+  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPost
+                                               completion:nil]];
+  assertThatUnsignedInt(_sut.operationQueue.operationCount, equalToUnsignedInt(3));
+  [_sut cancelOperationsWithPath:@"Another/acas" method:nil];
+  assertThatUnsignedInt(_sut.operationQueue.operationCount, equalToUnsignedInt(2));
+}
+
+- (void) testThatOperationCancellingMatchesAllOperationsWithSetMethod {
+  NSURLRequest *requestGet = [_sut requestWithMethod:@"GET" path:@"test"];
+  NSURLRequest *requestPut = [_sut requestWithMethod:@"PUT" path:@"Another/acas"];
+  NSURLRequest *requestPost = [_sut requestWithMethod:@"POST" path:nil];
+  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestGet
+                                               completion:nil]];
+  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPut
+                                               completion:nil]];
+  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPost
+                                               completion:nil]];
+  assertThatUnsignedInt(_sut.operationQueue.operationCount, equalToUnsignedInt(3));
+  NSUInteger numCancelled = [_sut cancelOperationsWithPath:nil method:@"POST"];
+  assertThatUnsignedInt(numCancelled, equalToUnsignedInt(1));
+}
+
+- (void) testThatOperationCancellingMatchesAllOperationsWithSetMethodAndPath {
+  NSURLRequest *requestGet = [_sut requestWithMethod:@"GET" path:@"test"];
+  NSURLRequest *requestPut = [_sut requestWithMethod:@"PUT" path:@"Another/acas"];
+  NSURLRequest *requestPost = [_sut requestWithMethod:@"POST" path:nil];
+  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestGet
+                                               completion:nil]];
+  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPut
+                                               completion:nil]];
+  [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPost
+                                               completion:nil]];
+  assertThatUnsignedInt(_sut.operationQueue.operationCount, equalToUnsignedInt(3));
+  NSUInteger numCancelled = [_sut cancelOperationsWithPath:@"Another/acas" method:@"PUT"];
+  assertThatUnsignedInt(numCancelled, equalToUnsignedInt(1));
+}
+
+#pragma mark - Operation Testing
+
 @end

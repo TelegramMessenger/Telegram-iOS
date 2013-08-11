@@ -133,6 +133,8 @@
 		E48A3DEC17B3ED1C00924C3D /* BITAuthenticator.h in Headers */ = {isa = PBXBuildFile; fileRef = E48A3DEA17B3ED1C00924C3D /* BITAuthenticator.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		E48A3DED17B3ED1C00924C3D /* BITAuthenticator.m in Sources */ = {isa = PBXBuildFile; fileRef = E48A3DEB17B3ED1C00924C3D /* BITAuthenticator.m */; };
 		E48A3DEF17B3EFF100924C3D /* BITAuthenticatorTests.m in Sources */ = {isa = PBXBuildFile; fileRef = E48A3DEE17B3EFF100924C3D /* BITAuthenticatorTests.m */; };
+		E4933E8017B66CDA00B11ACC /* BITHTTPOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = E4933E7E17B66CDA00B11ACC /* BITHTTPOperation.h */; };
+		E4933E8117B66CDA00B11ACC /* BITHTTPOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = E4933E7F17B66CDA00B11ACC /* BITHTTPOperation.m */; };
 		E4B4DB7D17B435550099C67F /* BITAuthenticationViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = E4B4DB7B17B435550099C67F /* BITAuthenticationViewController.h */; };
 		E4B4DB7E17B435550099C67F /* BITAuthenticationViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = E4B4DB7C17B435550099C67F /* BITAuthenticationViewController.m */; };
 /* End PBXBuildFile section */
@@ -287,6 +289,8 @@
 		E48A3DEB17B3ED1C00924C3D /* BITAuthenticator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITAuthenticator.m; sourceTree = "<group>"; };
 		E48A3DEE17B3EFF100924C3D /* BITAuthenticatorTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITAuthenticatorTests.m; sourceTree = "<group>"; };
 		E48A3DF117B408F400924C3D /* BITAuthenticator_Private.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BITAuthenticator_Private.h; sourceTree = "<group>"; };
+		E4933E7E17B66CDA00B11ACC /* BITHTTPOperation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITHTTPOperation.h; sourceTree = "<group>"; };
+		E4933E7F17B66CDA00B11ACC /* BITHTTPOperation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITHTTPOperation.m; sourceTree = "<group>"; };
 		E4B4DB7B17B435550099C67F /* BITAuthenticationViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITAuthenticationViewController.h; sourceTree = "<group>"; };
 		E4B4DB7C17B435550099C67F /* BITAuthenticationViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITAuthenticationViewController.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -573,6 +577,8 @@
 				E48A3DF117B408F400924C3D /* BITAuthenticator_Private.h */,
 				E4B4DB7B17B435550099C67F /* BITAuthenticationViewController.h */,
 				E4B4DB7C17B435550099C67F /* BITAuthenticationViewController.m */,
+				E4933E7E17B66CDA00B11ACC /* BITHTTPOperation.h */,
+				E4933E7F17B66CDA00B11ACC /* BITHTTPOperation.m */,
 			);
 			name = private;
 			sourceTree = "<group>";
@@ -608,6 +614,7 @@
 				1E49A47C1612226D00463151 /* BITUpdateManagerPrivate.h in Headers */,
 				1E49A4851612226D00463151 /* BITUpdateViewControllerPrivate.h in Headers */,
 				1E49A4B5161222B900463151 /* BITHockeyBaseManagerPrivate.h in Headers */,
+				E4933E8017B66CDA00B11ACC /* BITHTTPOperation.h in Headers */,
 				1E49A4BE161222B900463151 /* BITHockeyHelper.h in Headers */,
 				1E49A4C4161222B900463151 /* BITAppStoreHeader.h in Headers */,
 				1E49A4CA161222B900463151 /* BITStoreButton.h in Headers */,
@@ -825,6 +832,7 @@
 				1E49A4451612223B00463151 /* BITFeedbackListViewCell.m in Sources */,
 				1E49A44B1612223B00463151 /* BITFeedbackListViewController.m in Sources */,
 				1E49A4511612223B00463151 /* BITFeedbackManager.m in Sources */,
+				E4933E8117B66CDA00B11ACC /* BITHTTPOperation.m in Sources */,
 				1E49A45A1612223B00463151 /* BITFeedbackMessage.m in Sources */,
 				1E49A4601612223B00463151 /* BITFeedbackUserDataViewController.m in Sources */,
 				1E49A4701612226D00463151 /* BITAppVersionMetaInfo.m in Sources */,
