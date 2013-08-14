@@ -149,8 +149,8 @@
   }
   
   // use topmost modal view
-  while (parentViewController.modalViewController) {
-    parentViewController = parentViewController.modalViewController;
+  while (parentViewController.presentedViewController) {
+    parentViewController = parentViewController.presentedViewController;
   }
   
   // special addition to get rootViewController from three20 which has it's own controller handling
