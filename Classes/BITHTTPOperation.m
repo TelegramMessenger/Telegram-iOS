@@ -93,15 +93,16 @@
 }
 
 - (void)setCompletion:(BITNetworkCompletionBlock)completion {
-  __weak typeof(self) weakSelf = self;
-  if(nil == completion) {
+  if(!completion) {
     [super setCompletionBlock:nil];
   } else {
+    __weak typeof(self) weakSelf = self;
     [super setCompletionBlock:^{
       typeof(self) strongSelf = weakSelf;
       if(strongSelf) {
         dispatch_async(dispatch_get_main_queue(), ^{
           completion(strongSelf, strongSelf->_data, strongSelf->_error);
+          [strongSelf setCompletionBlock:nil];
         });
       }
     }];
