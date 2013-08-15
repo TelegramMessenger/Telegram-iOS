@@ -12,6 +12,15 @@
 
 @interface BITAuthenticationViewController : UITableViewController
 
+- (instancetype) initWithApplicationIdentifier:(NSString*) encodedApplicationIdentifier
+                               requirePassword:(BOOL) requiresPassword
+                                      delegate:(id<BITAuthenticationViewControllerDelegate>) delegate;
+
+/**
+ * The application's id to identifiy it in the backend
+ */
+@property (nonatomic, copy) NSString *encodedApplicationIdentifier;
+
 /**
  *	can be set to YES to also require the users password
  *
