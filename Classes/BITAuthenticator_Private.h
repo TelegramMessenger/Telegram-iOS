@@ -30,7 +30,6 @@
 @property (nonatomic, copy) NSString *lastAuthenticatedVersion;
 
 @property (nonatomic, copy) tAuthenticationCompletion authenticationCompletionBlock;
-@property (nonatomic, copy) tValidationCompletion validationCompletion;
 
 /**
  *	removes all previously stored authentication tokens, UDIDs, etc
@@ -44,8 +43,8 @@
 - (void) applicationDidBecomeActive:(NSNotification*) note;
 
 #pragma mark - Validation callbacks
-- (void) validationSucceeded;
-- (void) validationFailedWithError:(NSError *) validationError;
+- (void) validationSucceededWithCompletion:(tValidationCompletion) completion;
+- (void) validationFailedWithError:(NSError *) validationError completion:(tValidationCompletion) completion;
 
 
 #pragma mark - Networking helpers (TODO: move to base-class / networking component)

@@ -41,6 +41,7 @@
 }
 
 - (void)tearDown {
+  [_sut cancelOperationsWithPath:nil method:nil];
   [_sut cleanupInternalStorage];
   _sut = nil;
   
@@ -201,16 +202,6 @@
   [verify(delegateMock) authenticator:_sut willShowAuthenticationController:(id)anything()];
 }
 
-- (void) testThatValidationFailsWithoutAnURL {
-  id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
-  _sut.delegate = delegateMock;
-  _sut.authenticationToken = @"Test";
-  
-  [_sut validateInstallationWithCompletion:nil];
-  
-  [verify(delegateMock) authenticator:_sut failedToValidateInstallationWithError:(id)anything()];
-}
-
 #pragma mark - Lifetime checks
 - (void) testThatValidationDoesntTriggerIfDisabled {
   id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
@@ -270,7 +261,7 @@
   _sut.validationType = BITAuthenticatorValidationTypeOnFirstLaunch;
   
   [_sut validateInstallationWithCompletion:nil];
-  [_sut validationFailedWithError:nil];
+  [_sut validationFailedWithError:nil completion:nil];
   
   [verifyCount(delegateMock, times(1)) authenticator:_sut failedToValidateInstallationWithError:(id)anything()];
   [verifyCount(delegateMock, never()) authenticatorDidValidateInstallation:_sut];
@@ -282,7 +273,7 @@
   _sut.validationType = BITAuthenticatorValidationTypeOnFirstLaunch;
   
   [_sut validateInstallationWithCompletion:nil];
-  [_sut validationSucceeded];
+  [_sut validationSucceededWithCompletion:nil];
 
   [verifyCount(delegateMock, never()) authenticator:_sut failedToValidateInstallationWithError:(id)anything()];
   [verifyCount(delegateMock, times(1)) authenticatorDidValidateInstallation:_sut];
@@ -291,37 +282,75 @@
 #pragma mark - Networking base tests
 - (void) testThatURLRequestHasBaseURLSet {
   _sut.serverURL = @"http://myserver.com";
-  NSMutableURLRequest *request = [_sut requestWithMethod:@"GET" path:nil];
+  NSMutableURLRequest *request = [_sut requestWithMethod:@"GET" path:nil parameters:nil];
   assertThat(request.URL, equalTo([NSURL URLWithString:@"http://myserver.com/"]));
 }
 
 - (void) testThatURLRequestHasPathAppended {
   _sut.serverURL = @"http://myserver.com";
-  NSMutableURLRequest *request = [_sut requestWithMethod:@"GET" path:@"projects"];
+  NSMutableURLRequest *request = [_sut requestWithMethod:@"GET" path:@"projects" parameters:nil];
   assertThat(request.URL, equalTo([NSURL URLWithString:@"http://myserver.com/projects"]));
 }
 
 - (void) testThatURLRequestHasMethodSet {
-  NSMutableURLRequest *request = [_sut requestWithMethod:@"POST" path:nil];
+  NSMutableURLRequest *request = [_sut requestWithMethod:@"POST" path:nil parameters:nil];
   
   assertThat(request.HTTPMethod, equalTo(@"POST"));
 }
 
 - (void) testThatOperationHasURLRequestSet {
   _sut.serverURL = @"http://myserver.com";
-  NSURLRequest *r = [_sut requestWithMethod:@"PUT" path:@"x"];
+  NSURLRequest *r = [_sut requestWithMethod:@"PUT" path:@"x" parameters:nil];
   BITHTTPOperation *op = [_sut operationWithURLRequest:r
                                             completion:nil];
   assertThat(op.URLRequest, equalTo(r));
+}
+
+- (void) testThatURLRequestHasParametersInGetAppended {
+  NSDictionary *parameters = @{
+                               @"email" : @"peter@pan.de",
+                               @"push" : @"pop",
+                               };
+  NSMutableURLRequest *request = [_sut requestWithMethod:@"GET"
+                                                    path:@"something"
+                                              parameters:parameters];
+  NSURL *url = request.URL;
+  NSString *params = [url query];
+  NSArray *paramPairs = [params componentsSeparatedByString:@"&"];
+  assertThat(paramPairs, hasCountOf(2));
+  
+  NSMutableDictionary *dict = [NSMutableDictionary new];
+  for(NSString *paramPair in paramPairs) {
+    NSArray *a = [paramPair componentsSeparatedByString:@"="];
+    assertThat(a, hasCountOf(2));
+    dict[a[0]] = a[1];
+  }
+  assertThat(dict, equalTo(parameters));
+}
+
+- (void) testThatURLRequestHasParametersInPostInTheBody {
+  //pending
 }
 
 #pragma mark - Convenience methods
 - (void) testThatGetPathCreatesAndEnquesAnOperation {
   assertThatUnsignedInt(_sut.operationQueue.operationCount, equalToUnsignedInt(0));
   [given([_sut operationWithURLRequest:(id)anything()
-                            completion:(id)anything()]) willReturn:[NSOperation new]];
+                            completion:nil]) willReturn:[NSOperation new]];
 
   [_sut getPath:@"endpoint"
+     parameters:nil
+     completion:nil];
+  assertThatUnsignedInt(_sut.operationQueue.operationCount, equalToUnsignedInt(1));
+}
+
+- (void) testThatPostPathCreatesAndEnquesAnOperation {
+  assertThatUnsignedInt(_sut.operationQueue.operationCount, equalToUnsignedInt(0));
+  [given([_sut operationWithURLRequest:nil
+                            completion:nil]) willReturn:[NSOperation new]];
+  
+  [_sut postPath:@"endpoint"
+     parameters:nil
      completion:nil];
   assertThatUnsignedInt(_sut.operationQueue.operationCount, equalToUnsignedInt(1));
 }
@@ -343,9 +372,9 @@
 
 - (void) testThatOperationCancellingMatchesAllOperationsWithNilMethod {
   [_sut.operationQueue setSuspended:YES];
-  NSURLRequest *requestGet = [_sut requestWithMethod:@"GET" path:nil];
-  NSURLRequest *requestPut = [_sut requestWithMethod:@"PUT" path:nil];
-  NSURLRequest *requestPost = [_sut requestWithMethod:@"POST" path:nil];
+  NSURLRequest *requestGet = [_sut requestWithMethod:@"GET" path:nil parameters:nil];
+  NSURLRequest *requestPut = [_sut requestWithMethod:@"PUT" path:nil parameters:nil];
+  NSURLRequest *requestPost = [_sut requestWithMethod:@"POST" path:nil parameters:nil];
   [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestGet
                                                completion:nil]];
   [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPut
@@ -359,9 +388,9 @@
 
 - (void) testThatOperationCancellingMatchesAllOperationsWithNilPath {
   [_sut.operationQueue setSuspended:YES];
-  NSURLRequest *requestGet = [_sut requestWithMethod:@"GET" path:@"test"];
-  NSURLRequest *requestPut = [_sut requestWithMethod:@"PUT" path:@"Another/acas"];
-  NSURLRequest *requestPost = [_sut requestWithMethod:@"POST" path:nil];
+  NSURLRequest *requestGet = [_sut requestWithMethod:@"GET" path:@"test" parameters:nil];
+  NSURLRequest *requestPut = [_sut requestWithMethod:@"PUT" path:@"Another/acas" parameters:nil];
+  NSURLRequest *requestPost = [_sut requestWithMethod:@"POST" path:nil parameters:nil];
   [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestGet
                                                completion:nil]];
   [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPut
@@ -375,9 +404,11 @@
 
 
 - (void) testThatOperationCancellingMatchesAllOperationsWithSetPath {
-  NSURLRequest *requestGet = [_sut requestWithMethod:@"GET" path:@"test"];
-  NSURLRequest *requestPut = [_sut requestWithMethod:@"PUT" path:@"Another/acas"];
-  NSURLRequest *requestPost = [_sut requestWithMethod:@"POST" path:nil];
+  NSURLRequest *requestGet = [_sut requestWithMethod:@"GET" path:@"test" parameters:nil];
+  NSURLRequest *requestPut = [_sut requestWithMethod:@"PUT" path:@"Another/acas" parameters:nil];
+  NSURLRequest *requestPost = [_sut requestWithMethod:@"POST" path:nil parameters:nil];
+  [_sut.operationQueue setSuspended:YES];
+  
   [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestGet
                                                completion:nil]];
   [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPut
@@ -385,14 +416,14 @@
   [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPost
                                                completion:nil]];
   assertThatUnsignedInt(_sut.operationQueue.operationCount, equalToUnsignedInt(3));
-  [_sut cancelOperationsWithPath:@"Another/acas" method:nil];
-  assertThatUnsignedInt(_sut.operationQueue.operationCount, equalToUnsignedInt(2));
+  NSUInteger numCancelled = [_sut cancelOperationsWithPath:@"Another/acas" method:nil];
+  assertThatUnsignedInt(numCancelled, equalToUnsignedInt(1));
 }
 
 - (void) testThatOperationCancellingMatchesAllOperationsWithSetMethod {
-  NSURLRequest *requestGet = [_sut requestWithMethod:@"GET" path:@"test"];
-  NSURLRequest *requestPut = [_sut requestWithMethod:@"PUT" path:@"Another/acas"];
-  NSURLRequest *requestPost = [_sut requestWithMethod:@"POST" path:nil];
+  NSURLRequest *requestGet = [_sut requestWithMethod:@"GET" path:@"test" parameters:nil];
+  NSURLRequest *requestPut = [_sut requestWithMethod:@"PUT" path:@"Another/acas" parameters:nil];
+  NSURLRequest *requestPost = [_sut requestWithMethod:@"POST" path:nil parameters:nil];
   [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestGet
                                                completion:nil]];
   [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPut
@@ -405,9 +436,9 @@
 }
 
 - (void) testThatOperationCancellingMatchesAllOperationsWithSetMethodAndPath {
-  NSURLRequest *requestGet = [_sut requestWithMethod:@"GET" path:@"test"];
-  NSURLRequest *requestPut = [_sut requestWithMethod:@"PUT" path:@"Another/acas"];
-  NSURLRequest *requestPost = [_sut requestWithMethod:@"POST" path:nil];
+  NSURLRequest *requestGet = [_sut requestWithMethod:@"GET" path:@"test" parameters:nil];
+  NSURLRequest *requestPut = [_sut requestWithMethod:@"PUT" path:@"Another/acas" parameters:nil];
+  NSURLRequest *requestPost = [_sut requestWithMethod:@"POST" path:nil parameters:nil];
   [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestGet
                                                completion:nil]];
   [_sut enqeueHTTPOperation:[_sut operationWithURLRequest:requestPut

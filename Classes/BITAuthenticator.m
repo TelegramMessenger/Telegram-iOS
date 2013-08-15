@@ -40,15 +40,17 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
   
   switch (self.validationType) {
     case BITAuthenticatorValidationTypeOnAppActive:
-      [self validateInstallationWithCompletion:nil];
+      [self validateInstallationWithCompletion:[self defaultValidationCompletionBlock]];
       break;
     case BITAuthenticatorValidationTypeOnFirstLaunch:
       if(![self.lastAuthenticatedVersion isEqualToString:self.executableUUID]) {
-        [self validateInstallationWithCompletion:nil];
+        [self validateInstallationWithCompletion:[self defaultValidationCompletionBlock]];
       }
       break;
-    case BITAuthenticatorValidationTypeNever:
     case BITAuthenticatorValidationTypeOptional:
+      //TODO: what to do in optional case?
+      break;
+    case BITAuthenticatorValidationTypeNever:
       break;
   }
 }
@@ -99,9 +101,10 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
       }
     }];
   } else {
-    NSString *validationEndpoint = @"validate";
+    NSString *validationPath = [NSString stringWithFormat:@"api/3/apps/%@/identity/validate", self.encodedAppIdentifier];
     __weak typeof (self) weakSelf = self;
-    [self getPath:validationEndpoint
+    [self getPath:validationPath
+       parameters:[self validationParameters]
        completion:^(BITHTTPOperation *operation, id response, NSError *error) {
          typeof (self) strongSelf = weakSelf;
          if(nil == response) {
@@ -112,18 +115,32 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
            NSError *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                                 code:BITAuthenticatorNetworkError
                                             userInfo:userInfo];
-           [strongSelf validationFailedWithError:error];
+           [strongSelf validationFailedWithError:error completion:completion];
          } else {
            NSError *validationParseError = nil;
            BOOL isValidated = [strongSelf.class isValidationResponseValid:response error:&validationParseError];
            if(isValidated) {
-             [strongSelf validationSucceeded];
+             [strongSelf validationSucceededWithCompletion:completion];
            } else {
-             [strongSelf validationFailedWithError:validationParseError];
+             [strongSelf validationFailedWithError:validationParseError completion:completion];
            }
          }
        }];
   }
+}
+
+- (NSDictionary*) validationParameters {
+  NSParameterAssert(self.authenticationToken);
+  NSDictionary *params = nil;
+  switch (self.authenticationType) {
+    case BITAuthenticatorAuthTypeEmail:
+      params = @{@"iuid" : self.authenticationToken};
+      break;
+    case BITAuthenticatorAuthTypeEmailAndPassword:
+      params = @{@"auid" : self.authenticationToken};
+      break;
+  }
+  return params;
 }
 
 + (BOOL) isValidationResponseValid:(id) response error:(NSError **) error {
@@ -150,8 +167,31 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
     return NO;
   }
   
-  //TODO: add proper validation
-  return [jsonObject[@"isValid"] boolValue];
+  NSString *status = jsonObject[@"status"];
+  if([status isEqualToString:@"not authorized"]) {
+    if(error) {
+      *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
+                                   code:BITAuthenticatorNotAuthorized
+                               userInfo:nil];
+    }
+    return NO;
+  } else if([status isEqualToString:@"not found"]) {
+    if(error) {
+      *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
+                                   code:BITAuthenticatorNotAuthorized
+                               userInfo:nil];
+    }
+    return NO;
+  } else if([status isEqualToString:@"validated"]) {
+    return YES;
+  } else {
+    if(error) {
+      *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
+                                   code:BITAuthenticatorAPIServerReturnedInvalidRespone
+                               userInfo:nil];
+    }
+    return NO;
+  }
 }
 
 - (void)authenticateWithCompletion:(tAuthenticationCompletion)completion {
@@ -160,27 +200,39 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
     return;
   }
   
-  BITAuthenticationViewController *viewController = [[BITAuthenticationViewController alloc] initWithStyle:UITableViewStyleGrouped];
-  viewController.delegate = self;
-  viewController.authenticator = self;
+  BOOL requiresPassword;
   switch (self.authenticationType) {
     case BITAuthenticatorAuthTypeEmailAndPassword:
-      viewController.requirePassword = YES;
+      requiresPassword = YES;
       break;
     case BITAuthenticatorAuthTypeEmail:
-      viewController.requirePassword = NO;
+      requiresPassword = NO;
       break;
   }
   
-  if(viewController) {
-    [self.delegate authenticator:self willShowAuthenticationController:viewController];
-    _authenticationController = viewController;
-    _authenticationCompletionBlock = completion;
-    UIViewController *rootViewController = [self.findVisibleWindow rootViewController];
-    UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:viewController];
-    [rootViewController presentModalViewController:navController
-                                          animated:YES];
+  BITAuthenticationViewController *viewController = [[BITAuthenticationViewController alloc] initWithApplicationIdentifier:self.encodedAppIdentifier
+                                                                                                           requirePassword:requiresPassword
+                                                                                                                  delegate:self];
+  viewController.authenticator = self;
+  switch (self.validationType) {
+    case BITAuthenticatorValidationTypeNever:
+    case BITAuthenticatorValidationTypeOptional:
+      viewController.showsCancelButton = YES;
+      break;
+    case BITAuthenticatorValidationTypeOnAppActive:
+    case BITAuthenticatorValidationTypeOnFirstLaunch:
+      viewController.showsCancelButton = NO;
+      break;
   }
+  
+  [self.delegate authenticator:self willShowAuthenticationController:viewController];
+  
+  _authenticationController = viewController;
+  _authenticationCompletionBlock = completion;
+  UIViewController *rootViewController = [self.findVisibleWindow rootViewController];
+  UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:viewController];
+  [rootViewController presentModalViewController:navController
+                                        animated:YES];
 }
 
 #pragma mark - AuthenticationViewControllerDelegate
@@ -202,8 +254,10 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
 
 - (void) authenticationViewController:(UIViewController*) viewController
                authenticatedWithToken:(NSString*) token {
+  [viewController dismissModalViewControllerAnimated:YES];
   _authenticationController = nil;
   self.authenticationToken = token;
+  self.lastAuthenticatedVersion = [self executableUUID];
   if(self.authenticationCompletionBlock) {
     self.authenticationCompletionBlock(self.authenticationToken, nil);
     self.authenticationCompletionBlock = nil;
@@ -213,29 +267,17 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
 }
 
 #pragma mark - Validation Pseudo-Delegate
-- (void)validationFailedWithError:(NSError *)validationError {
-  if(self.validationCompletion) {
-    self.validationCompletion(NO, validationError);
-    self.validationCompletion = nil;
+- (void)validationFailedWithError:(NSError *)validationError completion:(tValidationCompletion) completion{
+  if(completion) {
+    completion(NO, validationError);
   } else {
     [self.delegate authenticator:self failedToValidateInstallationWithError:validationError];
   }
-
-  switch (self.validationType) {
-    case BITAuthenticatorValidationTypeNever:
-    case BITAuthenticatorValidationTypeOptional:
-      break;
-    case BITAuthenticatorValidationTypeOnAppActive:
-    case BITAuthenticatorValidationTypeOnFirstLaunch:
-      //TODO tell delegate and block the application
-      break;
-  }
 }
 
-- (void)validationSucceeded {
-  if(self.validationCompletion) {
-    self.validationCompletion(YES, nil);
-    self.validationCompletion = nil;
+- (void)validationSucceededWithCompletion:(tValidationCompletion) completion {
+  if(completion) {
+    completion(YES, nil);
   } else {
     [self.delegate authenticatorDidValidateInstallation:self];
   }
@@ -302,9 +344,23 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
 #pragma mark - Application Lifecycle
 - (void)applicationDidBecomeActive:(NSNotification *)note {
   if(BITAuthenticatorValidationTypeOnAppActive == self.validationType) {
-    [self validateInstallationWithCompletion:nil];
+    [self validateInstallationWithCompletion:[self defaultValidationCompletionBlock]];
   }
 }
+
+- (tValidationCompletion) defaultValidationCompletionBlock {
+  return ^(BOOL validated, NSError *error) {
+    switch (self.validationType) {
+      case BITAuthenticatorValidationTypeNever:
+      case BITAuthenticatorValidationTypeOptional:
+        break;
+      case BITAuthenticatorValidationTypeOnAppActive:
+      case BITAuthenticatorValidationTypeOnFirstLaunch:
+        [self authenticateWithCompletion:nil];
+        break;
+    }
+  };
+};
 
 #pragma mark - Networking 
 - (NSMutableURLRequest *) requestWithMethod:(NSString*) method

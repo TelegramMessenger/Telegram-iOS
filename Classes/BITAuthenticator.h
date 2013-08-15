@@ -46,6 +46,15 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
 
 @property (nonatomic, weak) id<BITAuthenticatorDelegate> delegate;
 
+/**
+ The authentication token from HockeyApp.
+ 
+ Set the token to the `Secret ID` which HockeyApp provides for every app.
+ 
+ When running the app from the App Store, this setting is ignored.
+ */
+@property (nonatomic, copy) NSString *authenticationSecret;
+
 #pragma mark - Identification
 /**
  *	Provides an identification for the current app installation
@@ -53,7 +62,7 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
  *  During Alpha and Beta-phase HockeyApp tries to uniquely identify each app installation
  *  to provide better error reporting & analytics. If authenticator is configured to login 
  *  (@see BITAuthenticatorValidationType), this identifier is retrieved from HockeyApp. In case
- *  it is disabled, it returns this the current vendorIdentifier provided by UIKit.
+ *  it is disabled, it returns the vendorIdentifier provided by UIKit.
  *
  *	@return	a string identifying this app installation
  */
@@ -77,8 +86,8 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
 /**
  *	Validate the app installation
  *
- *  Depending on @see loginOption, this is reset after the app becomes active and tries to revalidate
- *  the installation.
+ *  Depending on @see validationType, this is called by the manager after the app becomes active 
+ *  and tries to revalidate the installation.
  *  You should not need to call this, as it's done automatically once the manager has
  *  been started, depending on validationType.
  *
