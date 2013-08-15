@@ -19,6 +19,11 @@
  */
 @property (nonatomic, assign) BOOL requirePassword;
 
+/** configure if user can abort authentication or not
+ *
+ *  defaults to YES
+ */
+@property (nonatomic, assign) BOOL showsCancelButton;
 /**
  *	TODO: instead of passing the whole authenticator, we actually only need
  *        something to create and enqueue BITHTTPOperations

@@ -41,11 +41,8 @@
   
   _statusBarStyle = [[UIApplication sharedApplication] statusBarStyle];
   [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleBlackOpaque];
-  
-  // Do any additional setup after loading the view.
-  self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel
-                                                                                        target:self
-                                                                                        action:@selector(dismissAction:)];
+
+  [self updateCancelButton];
   
   self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemSave
                                                                                          target:self
@@ -58,6 +55,23 @@
 	[super viewWillDisappear:animated];
   
   [[UIApplication sharedApplication] setStatusBarStyle:_statusBarStyle];
+}
+
+- (void)setShowsCancelButton:(BOOL)showsCancelButton {
+  if(_showsCancelButton != showsCancelButton) {
+    _showsCancelButton = showsCancelButton;
+    [self updateCancelButton];
+  }
+}
+
+- (void) updateCancelButton {
+  if(self.showsCancelButton) {
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel
+                                                                                          target:self
+                                                                                          action:@selector(dismissAction:)];
+  } else {
+    self.navigationItem.leftBarButtonItem = nil;
+  }
 }
 
 #pragma mark - UIViewController Rotation
