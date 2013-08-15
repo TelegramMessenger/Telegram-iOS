@@ -38,6 +38,7 @@
 @class BITUpdateManager;
 @class BITStoreUpdateManager;
 @class BITFeedbackManager;
+@class BITAuthenticator;
 
 /** 
  The HockeySDK manager. Responsible for setup and management of all components
@@ -293,6 +294,16 @@
  */
 @property (nonatomic, getter = isFeedbackManagerDisabled) BOOL disableFeedbackManager;
 
+/**
+ Reference to the initialized BITAuthenticator module
+ 
+ Returns the BITAuthenticator instance initialized by BITHockeyManager
+ 
+ @see configureWithIdentifier:delegate:
+ @see configureWithBetaIdentifier:liveIdentifier:delegate:
+ @see startManager
+ */
+@property (nonatomic, strong, readonly) BITAuthenticator *authenticator;
 
 ///-----------------------------------------------------------------------------
 /// @name Environment

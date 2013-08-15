@@ -30,6 +30,7 @@
 #import "BITCrashManagerDelegate.h"
 #import "BITUpdateManagerDelegate.h"
 #import "BITFeedbackManagerDelegate.h"
+#import "BITAuthenticator.h"
 
 @class BITHockeyManager;
 @class BITHockeyBaseManager;
@@ -39,7 +40,7 @@
   the behaviour of `BITHockeyManager`, as well as the delegate of the modules it manages.
  */
 
-@protocol BITHockeyManagerDelegate <NSObject, BITCrashManagerDelegate, BITUpdateManagerDelegate, BITFeedbackManagerDelegate>
+@protocol BITHockeyManagerDelegate <NSObject, BITCrashManagerDelegate, BITUpdateManagerDelegate, BITFeedbackManagerDelegate, BITAuthenticatorDelegate>
 
 @optional
 

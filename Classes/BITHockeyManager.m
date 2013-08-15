@@ -36,6 +36,7 @@
 #import "BITUpdateManagerPrivate.h"
 #import "BITStoreUpdateManagerPrivate.h"
 #import "BITFeedbackManagerPrivate.h"
+#import "BITAuthenticator_Private.h"
 
 @interface BITHockeyManager ()
 
@@ -179,6 +180,15 @@
     [_updateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
   }
   
+  // start Authenticator
+  if ( YES /* ![self isAuthenticatorDisabled] */) {
+    BITHockeyLog(@"INFO: Start Authenticator");
+    if (_serverURL) {
+      [_authenticator setServerURL:_serverURL];
+    }
+    [_authenticator startManager];
+  }
+  
   // start StoreUpdateManager
   if ([self isStoreUpdateManagerEnabled]) {
     BITHockeyLog(@"INFO: Start StoreUpdateManager");
@@ -291,6 +301,10 @@
     BITHockeyLog(@"INFO: Setup FeedbackManager");
     _feedbackManager = [[BITFeedbackManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
     _feedbackManager.delegate = _delegate;
+
+    BITHockeyLog(@"INFO: Setup Authenticator");
+    _authenticator = [[BITAuthenticator alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
+    _authenticator.delegate = _delegate;
     
 #if JIRA_MOBILE_CONNECT_SUPPORT_ENABLED
     // Only if JMC is part of the project

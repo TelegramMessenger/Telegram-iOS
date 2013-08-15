@@ -90,13 +90,17 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
         if(completion) {
           completion(NO, error);
         } else {
-          [self.delegate authenticator:self failedToValidateInstallationWithError:error];
+          if([self.delegate respondsToSelector:@selector(authenticator:failedToValidateInstallationWithError:)]) {
+            [self.delegate authenticator:self failedToValidateInstallationWithError:error];
+          }
         }
       } else {
         if(completion) {
           completion(YES, nil);
         } else {
-          [self.delegate authenticatorDidValidateInstallation:self];
+          if([self.delegate respondsToSelector:@selector(authenticatorDidValidateInstallation:)]) {
+            [self.delegate authenticatorDidValidateInstallation:self];
+          }
         }
       }
     }];
@@ -225,7 +229,9 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
       break;
   }
   
-  [self.delegate authenticator:self willShowAuthenticationController:viewController];
+  if([self.delegate respondsToSelector:@selector(authenticator:willShowAuthenticationController:)]) {
+    [self.delegate authenticator:self willShowAuthenticationController:viewController];
+  }
   
   _authenticationController = viewController;
   _authenticationCompletionBlock = completion;
@@ -248,7 +254,9 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
     self.authenticationCompletionBlock(self.authenticationToken, error);
     self.authenticationCompletionBlock = nil;
   } else {
-    [self.delegate authenticator:self failedToAuthenticateWithError:error];
+    if([self.delegate respondsToSelector:@selector(authenticator:failedToAuthenticateWithError:)]) {
+      [self.delegate authenticator:self failedToAuthenticateWithError:error];
+    }
   }
 }
 
@@ -262,7 +270,9 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
     self.authenticationCompletionBlock(self.authenticationToken, nil);
     self.authenticationCompletionBlock = nil;
   } else {
-    [self.delegate authenticatorDidAuthenticate:self];
+    if([self.delegate respondsToSelector:@selector(authenticatorDidAuthenticate:)]) {
+      [self.delegate authenticatorDidAuthenticate:self];
+    }
   }
 }
 
@@ -271,7 +281,9 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
   if(completion) {
     completion(NO, validationError);
   } else {
-    [self.delegate authenticator:self failedToValidateInstallationWithError:validationError];
+    if([self.delegate respondsToSelector:@selector(authenticator:failedToValidateInstallationWithError:)]) {
+      [self.delegate authenticator:self failedToValidateInstallationWithError:validationError];
+    }
   }
 }
 
@@ -279,7 +291,9 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
   if(completion) {
     completion(YES, nil);
   } else {
-    [self.delegate authenticatorDidValidateInstallation:self];
+    if([self.delegate respondsToSelector:@selector(authenticatorDidValidateInstallation:)]) {
+      [self.delegate authenticatorDidValidateInstallation:self];
+    }
   }
 }
 

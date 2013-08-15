@@ -100,6 +100,7 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
 
 @protocol BITAuthenticatorDelegate <NSObject>
 
+@optional
 /**
  *	if the authentication (or validation) needs to authenticate the user, 
  *  this delegate method is called with the viewController that we'll present.
