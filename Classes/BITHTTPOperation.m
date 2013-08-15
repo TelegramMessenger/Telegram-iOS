@@ -38,22 +38,27 @@
 }
 
 - (void) start {
+  if(self.isCancelled) {
+    [self finish];
+    return;
+  }
+  
   if (![[NSThread currentThread] isMainThread]) {
     [self performSelector:@selector(start) onThread:NSThread.mainThread withObject:nil waitUntilDone:NO];
   }
   
+  if(self.isCancelled) {
+    [self finish];
+    return;
+  }
+
   [self willChangeValueForKey:@"isExecuting"];
   _isExecuting = YES;
   [self didChangeValueForKey:@"isExecuting"];
   
   _connection = [[NSURLConnection alloc] initWithRequest:_URLRequest
                                                 delegate:self
-                                        startImmediately:NO];
-
-  [_connection scheduleInRunLoop:[NSRunLoop currentRunLoop]
-                         forMode:NSDefaultRunLoopMode];
-  
-  [_connection start];
+                                        startImmediately:YES];
 }
 
 - (void) finish {
@@ -101,7 +106,9 @@
       typeof(self) strongSelf = weakSelf;
       if(strongSelf) {
         dispatch_async(dispatch_get_main_queue(), ^{
-          completion(strongSelf, strongSelf->_data, strongSelf->_error);
+          if(!strongSelf.isCancelled) {
+            completion(strongSelf, strongSelf->_data, strongSelf->_error);
+          }
           [strongSelf setCompletionBlock:nil];
         });
       }

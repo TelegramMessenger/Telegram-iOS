@@ -17,6 +17,7 @@ typedef void (^BITNetworkCompletionBlock)(BITHTTPOperation* operation, id respon
 
 @property (nonatomic, readonly) NSURLRequest *URLRequest;
 
+//the completion is only called if the operation wasn't cancelled
 - (void) setCompletion:(BITNetworkCompletionBlock) completionBlock;
 
 @property (nonatomic, readonly) NSHTTPURLResponse *response;
