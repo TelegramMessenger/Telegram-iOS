@@ -68,6 +68,7 @@
 #pragma mark - NSURLConnectionDelegate
 -(void)connection:(NSURLConnection*)connection didReceiveResponse:(NSURLResponse*)response {
   _data = [[NSMutableData alloc] init];
+  _response = (id)response;
 }
 
 -(void)connection:(NSURLConnection*)connection didReceiveData:(NSData*)data {
