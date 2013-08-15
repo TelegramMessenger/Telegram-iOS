@@ -56,12 +56,14 @@
  *  the internally stored baseURL.
  *
  *	@param	method	the HTTPMethod to check, must not be nil
+ *	@param	params	parameters for the request (only supported for GET and POST for now)
  *	@param	path	path to append to baseURL. can be nil in which case "/" is appended
  *
  *	@return	an NSMutableURLRequest for further configuration
  */
 - (NSMutableURLRequest *) requestWithMethod:(NSString*) method
-                                       path:(NSString *) path;
+                                       path:(NSString *) path
+                                 parameters:(NSDictionary *) params;
 /**
  *	Creates an operation for the given NSURLRequest
  *
@@ -77,12 +79,25 @@
  *	Creates an operation for the given path, and enqueues it
  *
  *	@param	path	the request path to check
+ *	@param	params parameters for the request
  *	@param	completion	completionBlock that is called once the operation finished
  *
  */
 - (void) getPath:(NSString*) path
+      parameters:(NSDictionary *) params
       completion:(BITNetworkCompletionBlock) completion;
 
+/**
+ *	Creates an operation for the given path, and enqueues it
+ *
+ *	@param	path	the request path to check
+ *	@param	params parameters for the request
+ *	@param	completion	completionBlock that is called once the operation finished
+ *
+ */
+- (void) postPath:(NSString*) path
+       parameters:(NSDictionary *) params
+       completion:(BITNetworkCompletionBlock) completion;
 /**
  *	adds the given operation to the internal queue
  *
