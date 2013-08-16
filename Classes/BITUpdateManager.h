@@ -34,12 +34,6 @@
 
 
 typedef enum {
-	BITUpdateAuthorizationDenied,
-	BITUpdateAuthorizationAllowed,
-	BITUpdateAuthorizationPending
-} BITUpdateAuthorizationState;
-
-typedef enum {
   BITUpdateCheckStartup = 0,
   BITUpdateCheckDaily = 1,
   BITUpdateCheckManually = 2
@@ -187,39 +181,6 @@ typedef enum {
  *Default*: _NO_
  */
 @property (nonatomic, assign, getter=isShowingDirectInstallOption) BOOL showDirectInstallOption;
-
-
-///-----------------------------------------------------------------------------
-/// @name Authorization
-///-----------------------------------------------------------------------------
-
-/**
- Flag that determines if each update should be authenticated
- 
- If enabled each update will be authenticated on startup against the HockeyApp servers.
- The process will basically validate if the current device is part of the provisioning
- profile on the server. If not, it will present a blocking view on top of the apps UI
- so that no interaction is possible.
- 
- When running the app from the App Store, this setting is ignored.
- 
- *Default*: _NO_
- @see authenticationSecret
- @warning This only works when using Ad-Hoc provisioning profiles!
- */
-@property (nonatomic, assign, getter=isRequireAuthorization) BOOL requireAuthorization;
-
-
-/**
- The authentication token from HockeyApp.
- 
- Set the token to the `Secret ID` which HockeyApp provides for every app.
- 
- When running the app from the App Store, this setting is ignored.
- 
- @see requireAuthorization
- */
-@property (nonatomic, strong) NSString *authenticationSecret;
 
 
 ///-----------------------------------------------------------------------------
