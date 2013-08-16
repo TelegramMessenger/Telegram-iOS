@@ -17,22 +17,10 @@ Pod::Spec.new do |s|
                   'yourself when the network becomse reachable.'
 
   s.source_files = 'Classes'
+  s.resource_bundle = { 'HockeySDKResources' => ['Resources/*.png', 'Resources/*.lproj'] }
   s.requires_arc = true
   s.preserve_paths = 'Resources', 'Support', 'Vendor'
   s.frameworks   = 'CoreText', 'QuartzCore', 'SystemConfiguration', 'CrashReporter', 'CoreGraphics', 'UIKit'
   s.xcconfig     = { 'FRAMEWORK_SEARCH_PATHS' => '"$(PODS_ROOT)/HockeySDK/Vendor"',
                      'GCC_PREPROCESSOR_DEFINITIONS' => %{$(inherited) BITHOCKEY_VERSION="@\\"#{s.version}\\""} }
-
-  s.post_install do |library_representation|
-    Dir.chdir File.join(library_representation.sandbox_dir, 'HockeySDK/Support') do
-      command = "xcodebuild -project HockeySDK.xcodeproj -target HockeySDKResources CONFIGURATION_BUILD_DIR=../Resources"
-      command << " 2>&1 > /dev/null"
-      unless system(command)
-        raise ::Pod::Informative, "Failed to generate HockeySDK resources bundle"
-      end
-    end
-    File.open(library_representation.copy_resources_script_path, 'a') do |file|
-      file.puts "install_resource 'HockeySDK/Resources/HockeySDKResources.bundle'"
-    end
-  end
 end
