@@ -224,7 +224,7 @@
   
   UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:userController];
   navController.navigationBar.barStyle = [self.manager barStyle];
-  navController.navigationBar.tintColor = [self.manager tintColor];
+  navController.navigationBar.tintColor = [self.manager navigationBarTintColor];
   navController.modalPresentationStyle = UIModalPresentationFormSheet;
   
   [self presentViewController:navController animated:YES completion:nil];
