@@ -33,9 +33,9 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		1E0829001708F69A0073050E /* BITStoreUpdateManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E0828FF1708F69A0073050E /* BITStoreUpdateManagerDelegate.h */; };
 		1E0FEE28173BDB260061331F /* BITKeychainUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E0FEE26173BDB260061331F /* BITKeychainUtils.h */; };
 		1E0FEE29173BDB260061331F /* BITKeychainUtils.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E0FEE27173BDB260061331F /* BITKeychainUtils.m */; };
-		1E0829001708F69A0073050E /* BITStoreUpdateManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E0828FF1708F69A0073050E /* BITStoreUpdateManagerDelegate.h */; };
 		1E1127C416580C87007067A2 /* buttonRoundedDelete.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E1127BC16580C87007067A2 /* buttonRoundedDelete.png */; };
 		1E1127C516580C87007067A2 /* buttonRoundedDelete@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E1127BD16580C87007067A2 /* buttonRoundedDelete@2x.png */; };
 		1E1127C616580C87007067A2 /* buttonRoundedDeleteHighlighted.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E1127BE16580C87007067A2 /* buttonRoundedDeleteHighlighted.png */; };
@@ -88,8 +88,6 @@
 		1E59559B15B6FDA500A03429 /* HockeySDK.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E71509A15B5C76F004E88FF /* HockeySDK.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E5955C615B71C8600A03429 /* authorize_denied.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955BB15B71C8600A03429 /* authorize_denied.png */; };
 		1E5955C715B71C8600A03429 /* authorize_denied@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955BC15B71C8600A03429 /* authorize_denied@2x.png */; };
-		1E5955C815B71C8600A03429 /* authorize_request.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955BD15B71C8600A03429 /* authorize_request.png */; };
-		1E5955C915B71C8600A03429 /* authorize_request@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955BE15B71C8600A03429 /* authorize_request@2x.png */; };
 		1E5955CA15B71C8600A03429 /* bg.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955BF15B71C8600A03429 /* bg.png */; };
 		1E5955CB15B71C8600A03429 /* buttonHighlight.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955C015B71C8600A03429 /* buttonHighlight.png */; };
 		1E5955CC15B71C8600A03429 /* buttonHighlight@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955C115B71C8600A03429 /* buttonHighlight@2x.png */; };
@@ -164,10 +162,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		1E0FEE22173BD9BB0061331F /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		1E0828FF1708F69A0073050E /* BITStoreUpdateManagerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITStoreUpdateManagerDelegate.h; sourceTree = "<group>"; };
 		1E0FEE26173BDB260061331F /* BITKeychainUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITKeychainUtils.h; sourceTree = "<group>"; };
 		1E0FEE27173BDB260061331F /* BITKeychainUtils.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITKeychainUtils.m; sourceTree = "<group>"; };
-		1E0828FF1708F69A0073050E /* BITStoreUpdateManagerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITStoreUpdateManagerDelegate.h; sourceTree = "<group>"; };
 		1E1127BC16580C87007067A2 /* buttonRoundedDelete.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = buttonRoundedDelete.png; sourceTree = "<group>"; };
 		1E1127BD16580C87007067A2 /* buttonRoundedDelete@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "buttonRoundedDelete@2x.png"; sourceTree = "<group>"; };
 		1E1127BE16580C87007067A2 /* buttonRoundedDeleteHighlighted.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = buttonRoundedDeleteHighlighted.png; sourceTree = "<group>"; };
@@ -225,8 +222,6 @@
 		1E59557215B6F84D00A03429 /* ru */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		1E5955BB15B71C8600A03429 /* authorize_denied.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = authorize_denied.png; sourceTree = "<group>"; };
 		1E5955BC15B71C8600A03429 /* authorize_denied@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "authorize_denied@2x.png"; sourceTree = "<group>"; };
-		1E5955BD15B71C8600A03429 /* authorize_request.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = authorize_request.png; sourceTree = "<group>"; };
-		1E5955BE15B71C8600A03429 /* authorize_request@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "authorize_request@2x.png"; sourceTree = "<group>"; };
 		1E5955BF15B71C8600A03429 /* bg.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = bg.png; sourceTree = "<group>"; };
 		1E5955C015B71C8600A03429 /* buttonHighlight.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = buttonHighlight.png; sourceTree = "<group>"; };
 		1E5955C115B71C8600A03429 /* buttonHighlight@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "buttonHighlight@2x.png"; sourceTree = "<group>"; };
@@ -320,8 +315,6 @@
 			children = (
 				1E5955BB15B71C8600A03429 /* authorize_denied.png */,
 				1E5955BC15B71C8600A03429 /* authorize_denied@2x.png */,
-				1E5955BD15B71C8600A03429 /* authorize_request.png */,
-				1E5955BE15B71C8600A03429 /* authorize_request@2x.png */,
 				1E5955BF15B71C8600A03429 /* bg.png */,
 				1E5955C015B71C8600A03429 /* buttonHighlight.png */,
 				1E5955C115B71C8600A03429 /* buttonHighlight@2x.png */,
@@ -702,8 +695,6 @@
 			files = (
 				1E5955C615B71C8600A03429 /* authorize_denied.png in Resources */,
 				1E5955C715B71C8600A03429 /* authorize_denied@2x.png in Resources */,
-				1E5955C815B71C8600A03429 /* authorize_request.png in Resources */,
-				1E5955C915B71C8600A03429 /* authorize_request@2x.png in Resources */,
 				1E5955CA15B71C8600A03429 /* bg.png in Resources */,
 				1E5955CB15B71C8600A03429 /* buttonHighlight.png in Resources */,
 				1E5955CC15B71C8600A03429 /* buttonHighlight@2x.png in Resources */,
