@@ -57,7 +57,7 @@
     _serverURL = BITHOCKEYSDK_URL;
 
     _barStyle = UIBarStyleBlackOpaque;
-    self.tintColor = BIT_RGBCOLOR(25, 25, 25);
+    self.navigationBarTintColor = BIT_RGBCOLOR(25, 25, 25);
     _modalPresentationStyle = UIModalPresentationFormSheet;
     
     NSLocale *enUSPOSIXLocale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"];
@@ -185,7 +185,7 @@
   
   _navController = [[UINavigationController alloc] initWithRootViewController:viewController];
   _navController.navigationBar.barStyle = _barStyle;
-  _navController.navigationBar.tintColor = _tintColor;
+  _navController.navigationBar.tintColor = _navigationBarTintColor;
   _navController.modalPresentationStyle = _modalPresentationStyle;
   
   if (parentViewController) {

@@ -59,20 +59,20 @@
  The UIBarStyle of the update user interface navigation bar.
  
  Default is UIBarStyleBlackOpaque
- @see tintColor
+ @see navigationBarTintColor
  */
 @property (nonatomic, assign) UIBarStyle barStyle;
 
 /**
- The tint color of the update user interface navigation bar.
+ The navigationbar tint color of the update user interface navigation bar.
  
- The tintColor is used by default, you can either overwrite it `tintColor`
+ The navigationBarTintColor is used by default, you can either overwrite it `navigationBarTintColor`
  or define another `barStyle` instead.
  
  Default is RGB(25, 25, 25)
  @see barStyle
  */
-@property (nonatomic, strong) UIColor *tintColor;
+@property (nonatomic, strong) UIColor *navigationBarTintColor;
 
 /**
  The UIModalPresentationStyle for showing the update user interface when invoked
