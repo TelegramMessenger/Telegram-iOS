@@ -58,7 +58,10 @@
 @end
 
 
-@implementation BITStoreButton
+@implementation BITStoreButton {
+  CALayer *_defaultBorderLayer;
+  CALayer *_inActiveBorderLayer;
+}
 
 #pragma mark - private
 
@@ -94,9 +97,15 @@
       [self setTitleColor:BIT_RGBCOLOR(106, 106, 106) forState:UIControlStateNormal];
     } else {
       [self setTitleColor:BIT_RGBCOLOR(35, 111, 251) forState:UIControlStateNormal];
+      [_defaultBorderLayer setHidden:NO];
+      [_inActiveBorderLayer setHidden:YES];
     }
   } else {
     [self setTitleColor:BIT_RGBCOLOR(148, 150, 151) forState:UIControlStateNormal];
+    if (self.style == BITStoreButtonStyleOS7) {
+      [_defaultBorderLayer setHidden:YES];
+      [_inActiveBorderLayer setHidden:NO];
+    }
   }
   
   // calculate optimal new size
@@ -176,17 +185,28 @@
     }
     
     // border layers for more sex!
-    CALayer *borderLayer = [CALayer layer];
+    _defaultBorderLayer = [CALayer layer];
     if (style == BITStoreButtonStyleDefault) {
-      borderLayer.borderColor = [BIT_RGBCOLOR(191, 191, 191) CGColor];
+      _defaultBorderLayer.borderColor = [BIT_RGBCOLOR(191, 191, 191) CGColor];
     } else {
-      borderLayer.borderColor = [BIT_RGBCOLOR(35, 111, 251) CGColor];
+      _defaultBorderLayer.borderColor = [BIT_RGBCOLOR(35, 111, 251) CGColor];
     }
-    borderLayer.borderWidth = 1.0;
-		borderLayer.frame = CGRectMake(0.0, 0.0, CGRectGetWidth(frame), CGRectGetHeight(frame));
-		borderLayer.cornerRadius = 2.5;
-		borderLayer.needsDisplayOnBoundsChange = YES;
-    [self.layer addSublayer:borderLayer];
+    _defaultBorderLayer.borderWidth = 1.0;
+		_defaultBorderLayer.frame = CGRectMake(0.0, 0.0, CGRectGetWidth(frame), CGRectGetHeight(frame));
+		_defaultBorderLayer.cornerRadius = 2.5;
+		_defaultBorderLayer.needsDisplayOnBoundsChange = YES;
+    [self.layer addSublayer:_defaultBorderLayer];
+    
+    if (style == BITStoreButtonStyleOS7) {
+      _inActiveBorderLayer = [CALayer layer];
+      _inActiveBorderLayer.borderColor = [BIT_RGBCOLOR(148, 150, 151) CGColor];
+      _inActiveBorderLayer.borderWidth = 1.0;
+      _inActiveBorderLayer.frame = CGRectMake(0.0, 0.0, CGRectGetWidth(frame), CGRectGetHeight(frame));
+      _inActiveBorderLayer.cornerRadius = 2.5;
+      _inActiveBorderLayer.needsDisplayOnBoundsChange = YES;
+      [self.layer addSublayer:_inActiveBorderLayer];
+      [_inActiveBorderLayer setHidden:YES];
+    }
   }
   return self;
 }
