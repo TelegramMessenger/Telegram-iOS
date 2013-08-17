@@ -163,6 +163,34 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 #pragma mark - Private
 
 /**
+ * Check if the debugger is attached
+ *
+ * Taken from https://github.com/plausiblelabs/plcrashreporter/blob/2dd862ce049e6f43feb355308dfc710f3af54c4d/Source/Crash%20Demo/main.m#L96
+ *
+ * @return `YES` if the debugger is attached to the current process, `NO` otherwise
+ */
+static bool isDebuggerAttached (void) {
+  struct kinfo_proc info;
+  size_t info_size = sizeof(info);
+  int name[4];
+  
+  name[0] = CTL_KERN;
+  name[1] = KERN_PROC;
+  name[2] = KERN_PROC_PID;
+  name[3] = getpid();
+  
+  if (sysctl(name, 4, &info, &info_size, NULL, 0) == -1) {
+    NSLog(@"sysctl() failed: %s", strerror(errno));
+    return false;
+  }
+  
+  if ((info.kp_proc.p_flag & P_TRACED) != 0)
+    return true;
+  
+  return false;
+}
+
+/**
  * Save all settings
  *
  * This saves the list of approved crash reports
@@ -535,45 +563,60 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       [self handleCrashReport];
     }
     
-    // Multiple exception handlers can be set, but we can only query the top level error handler (uncaught exception handler).
-    //
-    // To check if PLCrashReporter's error handler is successfully added, we compare the top
-    // level one that is set before and the one after PLCrashReporter sets up its own.
-    //
-    // With delayed processing we can then check if another error handler was set up afterwards
-    // and can show a debug warning log message, that the dev has to make sure the "newer" error handler
-    // doesn't exit the process itself, because then all subsequent handlers would never be invoked.
-    //
-    // Note: ANY error handler setup BEFORE HockeySDK initialization will not be processed!
+    // Don't enable PLCrashReporter exception and signal handlers if we are already running with the debugger
+    // attached. This will not solve the debugger being attached during runtime and then catching all the
+    // exceptions before PLCrashReporter has a chance to do so.
+    // We only check for this if we are not in the App Store environment
     
-    // get the current top level error handler
-    NSUncaughtExceptionHandler *initialHandler = NSGetUncaughtExceptionHandler();
-    
-    // PLCrashReporter may only be initialized once. So make sure the developer
-    // can't break this
-    static dispatch_once_t plcrPredicate;
-    dispatch_once(&plcrPredicate, ^{
-      NSError *error = NULL;
-      
-      // Enable the Crash Reporter
-      if (![crashReporter enableCrashReporterAndReturnError: &error])
-        NSLog(@"[HockeySDK] WARNING: Could not enable crash reporter: %@", [error localizedDescription]);
-    });
-    
-    // get the new current top level error handler, which should now be the one from PLCrashReporter
-    NSUncaughtExceptionHandler *currentHandler = NSGetUncaughtExceptionHandler();
-    
-    // do we have a new top level error handler? then we were successful
-    if (currentHandler && currentHandler != initialHandler) {
-      _exceptionHandler = currentHandler;
-      
-      BITHockeyLog(@"INFO: Exception handler successfully initialized.");
-    } else {
-      // this should never happen, theoretically only if NSSetUncaugtExceptionHandler() has some internal issues
-      NSLog(@"[HockeySDK] ERROR: Exception handler could not be set. Make sure there is no other exception handler set up!");
+    BOOL debuggerIsAttached = NO;
+    if (![self isAppStoreEnvironment]) {
+      if (isDebuggerAttached()) {
+        debuggerIsAttached = YES;
+        NSLog(@"[HockeSDK] WARNING: This app is running with the debugger being attached. Catching crashes is de-activated!");
+      }
     }
     
-    _isSetup = YES;
+    if (!debuggerIsAttached) {
+      // Multiple exception handlers can be set, but we can only query the top level error handler (uncaught exception handler).
+      //
+      // To check if PLCrashReporter's error handler is successfully added, we compare the top
+      // level one that is set before and the one after PLCrashReporter sets up its own.
+      //
+      // With delayed processing we can then check if another error handler was set up afterwards
+      // and can show a debug warning log message, that the dev has to make sure the "newer" error handler
+      // doesn't exit the process itself, because then all subsequent handlers would never be invoked.
+      //
+      // Note: ANY error handler setup BEFORE HockeySDK initialization will not be processed!
+      
+      // get the current top level error handler
+      NSUncaughtExceptionHandler *initialHandler = NSGetUncaughtExceptionHandler();
+      
+      // PLCrashReporter may only be initialized once. So make sure the developer
+      // can't break this
+      static dispatch_once_t plcrPredicate;
+      dispatch_once(&plcrPredicate, ^{
+        NSError *error = NULL;
+        
+        // Enable the Crash Reporter
+        if (![crashReporter enableCrashReporterAndReturnError: &error])
+          NSLog(@"[HockeySDK] WARNING: Could not enable crash reporter: %@", [error localizedDescription]);
+      });
+      
+      // get the new current top level error handler, which should now be the one from PLCrashReporter
+      NSUncaughtExceptionHandler *currentHandler = NSGetUncaughtExceptionHandler();
+      
+      // do we have a new top level error handler? then we were successful
+      if (currentHandler && currentHandler != initialHandler) {
+        _exceptionHandler = currentHandler;
+        
+        BITHockeyLog(@"INFO: Exception handler successfully initialized.");
+      } else {
+        // this should never happen, theoretically only if NSSetUncaugtExceptionHandler() has some internal issues
+        NSLog(@"[HockeySDK] ERROR: Exception handler could not be set. Make sure there is no other exception handler set up!");
+      }
+      
+      _isSetup = YES;
+    }
   }
 
   [self performSelector:@selector(invokeDelayedProcessing) withObject:nil afterDelay:0.5];
