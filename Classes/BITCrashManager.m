@@ -284,8 +284,6 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   NSString *username = @"";
   
   if (self.delegate && [self.delegate respondsToSelector:@selector(userNameForCrashManager:)]) {
-    if (!self.isAppStoreEnvironment)
-      NSLog(@"[HockeySDK] DEPRECATED: Please use BITHockeyManagerDelegate's userNameForHockeyManager:componentManager: or userIDForHockeyManager:componentManager: instead.");
     username = [self.delegate userNameForCrashManager:self] ?: @"";
   }
   if ([BITHockeyManager sharedHockeyManager].delegate &&
@@ -307,8 +305,6 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   NSString *useremail = @"";
 
   if (self.delegate && [self.delegate respondsToSelector:@selector(userEmailForCrashManager:)]) {
-    if (!self.isAppStoreEnvironment)
-      NSLog(@"[HockeySDK] DEPRECATED: Please use BITHockeyManagerDelegate's userEmailForHockeyManager:componentManager: instead.");
     useremail = [self.delegate userEmailForCrashManager:self] ?: @"";
   }
   if ([BITHockeyManager sharedHockeyManager].delegate &&
