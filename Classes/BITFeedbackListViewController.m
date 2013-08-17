@@ -45,6 +45,7 @@
 
 
 #define DEFAULT_BACKGROUNDCOLOR BIT_RGBCOLOR(245, 245, 245)
+#define DEFAULT_BACKGROUNDCOLOR_OS7 BIT_RGBCOLOR(255, 255, 255)
 #define DEFAULT_TEXTCOLOR BIT_RGBCOLOR(75, 75, 75)
 
 #define BUTTON_BORDERCOLOR BIT_RGBCOLOR(175, 175, 175)
@@ -120,11 +121,19 @@
   self.tableView.dataSource = self;
   self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
   [self.tableView setAutoresizingMask:UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth];
-  [self.tableView setBackgroundColor:[UIColor colorWithRed:0.82 green:0.84 blue:0.84 alpha:1]];
-  [self.tableView setSeparatorColor:[UIColor colorWithRed:0.79 green:0.79 blue:0.79 alpha:1]];
-
-  self.view.backgroundColor = DEFAULT_BACKGROUNDCOLOR;
-
+  if ([self.manager isPreiOS7Environment]) {
+    [self.tableView setBackgroundColor:[UIColor colorWithRed:0.82 green:0.84 blue:0.84 alpha:1]];
+    [self.tableView setSeparatorColor:[UIColor colorWithRed:0.79 green:0.79 blue:0.79 alpha:1]];
+  } else {
+    [self.tableView setBackgroundColor:[UIColor colorWithRed:1.0 green:1.0 blue:1.0 alpha:1]];
+  }
+  
+  if ([self.manager isPreiOS7Environment]) {
+    self.view.backgroundColor = DEFAULT_BACKGROUNDCOLOR;
+  } else {
+    self.view.backgroundColor = DEFAULT_BACKGROUNDCOLOR_OS7;
+  }
+  
   id refreshClass = NSClassFromString(@"UIRefreshControl");
   if (refreshClass) {
     self.refreshControl = [[UIRefreshControl alloc] init];
@@ -447,18 +456,24 @@
     }
     
     // button
-    UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
-    button.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    UIImage *stretchableButton = [bit_imageNamed(@"buttonRoundedRegular.png", BITHOCKEYSDK_BUNDLE) stretchableImageWithLeftCapWidth:10 topCapHeight:0];
-    UIImage *stretchableHighlightedButton = [bit_imageNamed(@"buttonRoundedRegularHighlighted.png", BITHOCKEYSDK_BUNDLE) stretchableImageWithLeftCapWidth:10 topCapHeight:0];
-    [button setBackgroundImage:stretchableButton forState:UIControlStateNormal];
-    [button setBackgroundImage:stretchableHighlightedButton forState:UIControlStateHighlighted];
+    UIButton *button = nil;
+    if ([self.manager isPreiOS7Environment]) {
+      button = [UIButton buttonWithType:UIButtonTypeCustom];
+      button.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+      UIImage *stretchableButton = [bit_imageNamed(@"buttonRoundedRegular.png", BITHOCKEYSDK_BUNDLE) stretchableImageWithLeftCapWidth:10 topCapHeight:0];
+      UIImage *stretchableHighlightedButton = [bit_imageNamed(@"buttonRoundedRegularHighlighted.png", BITHOCKEYSDK_BUNDLE) stretchableImageWithLeftCapWidth:10 topCapHeight:0];
+      [button setBackgroundImage:stretchableButton forState:UIControlStateNormal];
+      [button setBackgroundImage:stretchableHighlightedButton forState:UIControlStateHighlighted];
+      
+      [[button titleLabel] setShadowOffset:CGSizeMake(0, 1)];
+      [[button titleLabel] setFont:[UIFont boldSystemFontOfSize:14.0]];
+      
+      [button setTitleColor:BUTTON_TEXTCOLOR forState:UIControlStateNormal];
+      [button setTitleShadowColor:BUTTON_TEXTCOLOR_SHADOW forState:UIControlStateNormal];
+    } else {
+      button = [UIButton buttonWithType:UIButtonTypeSystem];
+    }
     
-    [[button titleLabel] setShadowOffset:CGSizeMake(0, 1)];
-    [[button titleLabel] setFont:[UIFont boldSystemFontOfSize:14.0]];
-    
-    [button setTitleColor:BUTTON_TEXTCOLOR forState:UIControlStateNormal];
-    [button setTitleShadowColor:BUTTON_TEXTCOLOR_SHADOW forState:UIControlStateNormal];
     if (indexPath.section == 0) {
       topGap = 22;
       if ([self.manager numberOfMessages] == 0) {
@@ -487,15 +502,19 @@
       [button addTarget:self action:@selector(setUserDataAction:) forControlEvents:UIControlEventTouchUpInside];
     } else {
       topGap = 0.0f;
-      [[button titleLabel] setShadowOffset:CGSizeMake(0, -1)];
-      UIImage *stretchableDeleteButton = [bit_imageNamed(@"buttonRoundedDelete.png", BITHOCKEYSDK_BUNDLE) stretchableImageWithLeftCapWidth:10 topCapHeight:0];
-      UIImage *stretchableDeleteHighlightedButton = [bit_imageNamed(@"buttonRoundedDeleteHighlighted.png", BITHOCKEYSDK_BUNDLE) stretchableImageWithLeftCapWidth:10 topCapHeight:0];
-      [button setBackgroundImage:stretchableDeleteButton forState:UIControlStateNormal];
-      [button setBackgroundImage:stretchableDeleteHighlightedButton forState:UIControlStateHighlighted];
-
-      [button setTitleColor:BUTTON_DELETE_TEXTCOLOR forState:UIControlStateNormal];
-      [button setTitleShadowColor:BUTTON_DELETE_TEXTCOLOR_SHADOW forState:UIControlStateNormal];
-
+      if ([self.manager isPreiOS7Environment]) {
+        [[button titleLabel] setShadowOffset:CGSizeMake(0, -1)];
+        UIImage *stretchableDeleteButton = [bit_imageNamed(@"buttonRoundedDelete.png", BITHOCKEYSDK_BUNDLE) stretchableImageWithLeftCapWidth:10 topCapHeight:0];
+        UIImage *stretchableDeleteHighlightedButton = [bit_imageNamed(@"buttonRoundedDeleteHighlighted.png", BITHOCKEYSDK_BUNDLE) stretchableImageWithLeftCapWidth:10 topCapHeight:0];
+        [button setBackgroundImage:stretchableDeleteButton forState:UIControlStateNormal];
+        [button setBackgroundImage:stretchableDeleteHighlightedButton forState:UIControlStateHighlighted];
+        
+        [button setTitleColor:BUTTON_DELETE_TEXTCOLOR forState:UIControlStateNormal];
+        [button setTitleShadowColor:BUTTON_DELETE_TEXTCOLOR_SHADOW forState:UIControlStateNormal];
+      } else {
+        [button setTitleColor:BUTTON_DELETE_BACKGROUNDCOLOR forState:UIControlStateNormal];
+      }
+      
       [button setTitle:BITHockeyLocalizedString(@"HockeyFeedbackListButonDeleteAllMessages") forState:UIControlStateNormal];
       [button addTarget:self action:@selector(deleteAllMessagesAction:) forControlEvents:UIControlEventTouchUpInside];
     }
@@ -511,7 +530,11 @@
       statusLabel.font = [UIFont systemFontOfSize:10];
       statusLabel.textColor = DEFAULT_TEXTCOLOR;
       statusLabel.textAlignment = kBITTextLabelAlignmentCenter;
-      statusLabel.backgroundColor = DEFAULT_BACKGROUNDCOLOR;
+      if ([self.manager isPreiOS7Environment]) {
+        statusLabel.backgroundColor = DEFAULT_BACKGROUNDCOLOR;
+      } else {
+        statusLabel.backgroundColor = DEFAULT_BACKGROUNDCOLOR_OS7;
+      }
       statusLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth;
 
       statusLabel.text = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListLastUpdated"),
@@ -539,6 +562,12 @@
       cell.backgroundStyle = BITFeedbackListViewCellBackgroundStyleAlternate;
     } else {
       cell.backgroundStyle = BITFeedbackListViewCellBackgroundStyleNormal;
+    }
+    
+    if ([self.manager isPreiOS7Environment]) {
+      cell.style = BITFeedbackListViewCellPresentatationStyleDefault;
+    } else {
+      cell.style = BITFeedbackListViewCellPresentatationStyleOS7;
     }
     
     BITFeedbackMessage *message = [self.manager messageAtIndex:indexPath.row];
