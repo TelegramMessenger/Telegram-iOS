@@ -64,8 +64,12 @@
   if ((self = [super init])) {
     _serverURL = BITHOCKEYSDK_URL;
 
-    _barStyle = UIBarStyleBlackOpaque;
-    self.navigationBarTintColor = BIT_RGBCOLOR(25, 25, 25);
+    if ([self isPreiOS7Environment]) {
+      _barStyle = UIBarStyleBlackOpaque;
+      self.navigationBarTintColor = BIT_RGBCOLOR(25, 25, 25);
+    } else {
+      _barStyle = UIBarStyleDefault;
+    }
     _modalPresentationStyle = UIModalPresentationFormSheet;
     
     NSLocale *enUSPOSIXLocale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"];
@@ -183,6 +187,24 @@
   }
   
   return visibleWindow;
+}
+
+/**
+ * Provide a custom UINavigationController with customized appearance settings
+ *
+ * @param viewController The root viewController
+ * @param modalPresentationStyle The modal presentation style
+ *
+ * @return A UINavigationController
+ */
+- (UINavigationController *)customNavigationControllerWithRootViewController:(UIViewController *)viewController presentationStyle:(UIModalPresentationStyle)modalPresentationStyle {
+  UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:viewController];
+  navController.navigationBar.barStyle = self.barStyle;
+  if (self.navigationBarTintColor)
+    navController.navigationBar.tintColor = self.navigationBarTintColor;
+  navController.modalPresentationStyle = self.modalPresentationStyle;
+  
+  return navController;
 }
 
 - (void)showView:(UIViewController *)viewController {

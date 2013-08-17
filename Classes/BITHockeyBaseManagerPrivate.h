@@ -45,6 +45,7 @@
 - (NSString *)executableUUID;
 
 /** UI helpers */
+- (UINavigationController *)customNavigationControllerWithRootViewController:(UIViewController *)viewController presentationStyle:(UIModalPresentationStyle)presentationStyle;
 - (UIWindow *)findVisibleWindow;
 - (void)showView:(UIViewController *)viewController;
 
