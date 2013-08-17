@@ -32,7 +32,6 @@
 
 #import "BITHockeyManagerPrivate.h"
 #import "BITHockeyBaseManagerPrivate.h"
-#import "BITCrashManagerPrivate.h"
 #import "BITUpdateManagerPrivate.h"
 #import "BITStoreUpdateManagerPrivate.h"
 #import "BITFeedbackManagerPrivate.h"

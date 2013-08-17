@@ -37,7 +37,6 @@
 
 #import "BITHockeyManagerPrivate.h"
 #import "BITHockeyBaseManagerPrivate.h"
-#import "BITCrashManagerPrivate.h"
 #import "BITCrashReportTextFormatter.h"
 
 #include <sys/sysctl.h>
