@@ -33,13 +33,23 @@
 #import "BITHockeyBaseManager.h"
 
 
-// hockey crash manager status
-typedef enum {
+/**
+ * Crash Manager status
+ */
+typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
+  /**
+   *	Crash reporting is disabled
+   */
   BITCrashManagerStatusDisabled = 0,
+  /**
+   *	User is asked each time before sending
+   */
   BITCrashManagerStatusAlwaysAsk = 1,
+  /**
+   *	Each crash report is send automatically
+   */
   BITCrashManagerStatusAutoSend = 2
-} BITCrashManagerStatus;
-extern NSString *const kBITCrashManagerStatus;
+};
 
 
 @protocol BITCrashManagerDelegate;
@@ -97,11 +107,7 @@ extern NSString *const kBITCrashManagerStatus;
  
  Defines if the crash reporting feature should be disabled, ask the user before
  sending each crash report or send crash reportings automatically without
- asking.. This must be assigned one of the following:
- 
- - `BITCrashManagerStatusDisabled`: Crash reporting is disabled
- - `BITCrashManagerStatusAlwaysAsk`: User is asked each time before sending
- - `BITCrashManagerStatusAutoSend`: Each crash report is send automatically
+ asking.
  
  The default value is `BITCrashManagerStatusAlwaysAsk`. You can allow the user
  to switch from `BITCrashManagerStatusAlwaysAsk` to
