@@ -63,6 +63,14 @@
 
 #pragma mark - Private
 
+- (UIColor *)backgroundColor {
+  if ([self.updateManager isPreiOS7Environment]) {
+    return BIT_RGBCOLOR(235, 235, 235);
+  } else {
+    return BIT_RGBCOLOR(255, 255, 255);
+  }
+}
+
 - (void)restoreStoreButtonStateAnimated:(BOOL)animated {
   if (_isAppStoreEnvironment) {
     [self setAppStoreButtonState:AppStoreButtonStateOffline animated:animated];
@@ -170,7 +178,7 @@
     [self realignPreviousVersionButton];
   } else {
     self.tableView.tableFooterView = nil;
-    self.tableView.backgroundColor = BIT_RGBCOLOR(235, 235, 235);
+    self.tableView.backgroundColor = [self backgroundColor];
   }
 }
 
@@ -201,8 +209,7 @@
   } else {
     cell.webViewContent = [NSString stringWithFormat:@"<p><b>%@</b>%@<br/><small>%@</small></p><p>%@</p>", [appVersion versionString], installed, dateAndSizeString, [appVersion notesOrEmptyString]];
   }
-  cell.cellBackgroundColor = BIT_RGBCOLOR(235, 235, 235);
-  
+  cell.cellBackgroundColor = [self backgroundColor];
   [cell addWebView];
   // hack
   cell.textLabel.text = @"";
@@ -440,7 +447,7 @@
   
   if (rowHeight == 0) {
     rowHeight = indexPath.row == 0 ? 250 : 44; // fill screen on startup
-    self.tableView.backgroundColor = BIT_RGBCOLOR(235, 235, 235);
+    self.tableView.backgroundColor = [self backgroundColor];
   }
   
   return rowHeight;
