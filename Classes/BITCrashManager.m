@@ -348,35 +348,39 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       // get the startup timestamp from the crash report, and the file timestamp to calculate the timeinterval when the crash happened after startup
       BITPLCrashReport *report = [[BITPLCrashReport alloc] initWithData:crashData error:&error];
       
-      if ([report.processInfo respondsToSelector:@selector(processStartTime)]) {
-        if (report.systemInfo.timestamp && report.processInfo.processStartTime) {
-          _timeintervalCrashInLastSessionOccured = [report.systemInfo.timestamp timeIntervalSinceDate:report.processInfo.processStartTime];
-        }
-      }
-      
-      [crashData writeToFile:[_crashesDir stringByAppendingPathComponent: cacheFilename] atomically:YES];
-      
-      // write the meta file
-      NSMutableDictionary *metaDict = [NSMutableDictionary dictionaryWithCapacity:4];
-      NSString *applicationLog = @"";
-      NSString *errorString = nil;
-      
-      [self addStringValueToKeychain:[self userNameForCrashReport] forKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserName]];
-      [self addStringValueToKeychain:[self userEmailForCrashReport] forKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserEmail]];
-      [self addStringValueToKeychain:[self userIDForCrashReport] forKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserID]];
-      
-      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(applicationLogForCrashManager:)]) {
-        applicationLog = [self.delegate applicationLogForCrashManager:self] ?: @"";
-      }
-      [metaDict setObject:applicationLog forKey:kBITCrashMetaApplicationLog];
-      
-      NSData *plist = [NSPropertyListSerialization dataFromPropertyList:(id)metaDict
-                                                                 format:NSPropertyListBinaryFormat_v1_0
-                                                       errorDescription:&errorString];
-      if (plist) {
-        [plist writeToFile:[NSString stringWithFormat:@"%@.meta", [_crashesDir stringByAppendingPathComponent: cacheFilename]] atomically:YES];
+      if (report == nil) {
+        BITHockeyLog(@"WARNING: Could not parse crash report");
       } else {
-        BITHockeyLog(@"ERROR: Writing crash meta data failed. %@", error);
+        if ([report.processInfo respondsToSelector:@selector(processStartTime)]) {
+          if (report.systemInfo.timestamp && report.processInfo.processStartTime) {
+            _timeintervalCrashInLastSessionOccured = [report.systemInfo.timestamp timeIntervalSinceDate:report.processInfo.processStartTime];
+          }
+        }
+        
+        [crashData writeToFile:[_crashesDir stringByAppendingPathComponent: cacheFilename] atomically:YES];
+        
+        // write the meta file
+        NSMutableDictionary *metaDict = [NSMutableDictionary dictionaryWithCapacity:4];
+        NSString *applicationLog = @"";
+        NSString *errorString = nil;
+        
+        [self addStringValueToKeychain:[self userNameForCrashReport] forKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserName]];
+        [self addStringValueToKeychain:[self userEmailForCrashReport] forKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserEmail]];
+        [self addStringValueToKeychain:[self userIDForCrashReport] forKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserID]];
+        
+        if (self.delegate != nil && [self.delegate respondsToSelector:@selector(applicationLogForCrashManager:)]) {
+          applicationLog = [self.delegate applicationLogForCrashManager:self] ?: @"";
+        }
+        [metaDict setObject:applicationLog forKey:kBITCrashMetaApplicationLog];
+        
+        NSData *plist = [NSPropertyListSerialization dataFromPropertyList:(id)metaDict
+                                                                   format:NSPropertyListBinaryFormat_v1_0
+                                                         errorDescription:&errorString];
+        if (plist) {
+          [plist writeToFile:[NSString stringWithFormat:@"%@.meta", [_crashesDir stringByAppendingPathComponent: cacheFilename]] atomically:YES];
+        } else {
+          BITHockeyLog(@"ERROR: Writing crash meta data failed. %@", error);
+        }
       }
     }
   }
