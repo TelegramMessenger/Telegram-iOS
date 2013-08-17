@@ -82,7 +82,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  very slow.
  
  More background information on this topic can be found in the following blog post by Landon Fuller, the
- developer of [PLCrashReporter](https://code.google.com/p/plcrashreporter/), about writing reliable and
+ developer of [PLCrashReporter](https://www.plcrashreporter.org), about writing reliable and
  safe crash reporting: [Reliable Crash Reporting](http://goo.gl/WvTBR)
  */
 
