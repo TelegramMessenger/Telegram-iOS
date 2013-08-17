@@ -43,6 +43,14 @@
 #import <mach-o/ldsyms.h>
 #endif
 
+#if __IPHONE_OS_VERSION_MIN_ALLOWED > __IPHONE_6_0
+#warning The following ifndef can be removed
+#endif
+
+#ifndef __IPHONE_6_1
+#define __IPHONE_6_1     60100
+#endif
+
 @implementation BITHockeyBaseManager {
   UINavigationController *_navController;
   
@@ -90,6 +98,31 @@
 
 - (NSString *)encodedAppIdentifier {
   return (_appIdentifier ? bit_URLEncodedString(_appIdentifier) : bit_URLEncodedString([self mainBundleIdentifier]));
+}
+
+#if __IPHONE_OS_VERSION_MIN_ALLOWED > __IPHONE_6_1
+#warning Support for pre iOS 7 systems can be removed!
+#endif
+- (BOOL)isPreiOS7Environment {
+  static BOOL isPreiOS7Environment = YES;
+  static dispatch_once_t checkOS;
+  
+  dispatch_once(&checkOS, ^{
+    // we only perform this runtime check if this is build against at least iOS7 base SDK
+#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
+    // runtime check according to
+    // https://developer.apple.com/library/prerelease/ios/documentation/UserExperience/Conceptual/TransitionGuide/SupportingEarlieriOS.html
+    if (floor(NSFoundationVersionNumber) <= NSFoundationVersionNumber_iOS_6_1) {
+      isPreiOS7Environment = YES;
+    } else {
+      isPreiOS7Environment = NO;
+    }
+#else
+    isPreiOS7Environment = YES;
+#endif
+  });
+  
+  return isPreiOS7Environment;
 }
 
 - (NSString *)getDevicePlatform {
