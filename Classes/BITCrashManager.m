@@ -528,52 +528,51 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   
   if (!_isSetup) {
     BITPLCrashReporter *crashReporter = [BITPLCrashReporter sharedReporter];
-    NSError *error = NULL;
     
     // Check if we previously crashed
     if ([crashReporter hasPendingCrashReport]) {
       _didCrashInLastSession = YES;
       [self handleCrashReport];
     }
-
-    // PLCrashReporter is throwing an NSException if it is being enabled again
-    // even though it already is enabled
-    @try {
-      // Multiple exception handlers can be set, but we can only query the top level error handler (uncaught exception handler).
-      //
-      // To check if PLCrashReporter's error handler is successfully added, we compare the top
-      // level one that is set before and the one after PLCrashReporter sets up its own.
-      //
-      // With delayed processing we can then check if another error handler was set up afterwards
-      // and can show a debug warning log message, that the dev has to make sure the "newer" error handler
-      // doesn't exit the process itself, because then all subsequent handlers would never be invoked.
-      // 
-      // Note: ANY error handler setup BEFORE HockeySDK initialization will not be processed!
-      
-      // get the current top level error handler
-      NSUncaughtExceptionHandler *initialHandler = NSGetUncaughtExceptionHandler();
+    
+    // Multiple exception handlers can be set, but we can only query the top level error handler (uncaught exception handler).
+    //
+    // To check if PLCrashReporter's error handler is successfully added, we compare the top
+    // level one that is set before and the one after PLCrashReporter sets up its own.
+    //
+    // With delayed processing we can then check if another error handler was set up afterwards
+    // and can show a debug warning log message, that the dev has to make sure the "newer" error handler
+    // doesn't exit the process itself, because then all subsequent handlers would never be invoked.
+    //
+    // Note: ANY error handler setup BEFORE HockeySDK initialization will not be processed!
+    
+    // get the current top level error handler
+    NSUncaughtExceptionHandler *initialHandler = NSGetUncaughtExceptionHandler();
+    
+    // PLCrashReporter may only be initialized once. So make sure the developer
+    // can't break this
+    static dispatch_once_t plcrPredicate;
+    dispatch_once(&plcrPredicate, ^{
+      NSError *error = NULL;
       
       // Enable the Crash Reporter
       if (![crashReporter enableCrashReporterAndReturnError: &error])
         NSLog(@"[HockeySDK] WARNING: Could not enable crash reporter: %@", [error localizedDescription]);
-
-      // get the new current top level error handler, which should now be the one from PLCrashReporter
-      NSUncaughtExceptionHandler *currentHandler = NSGetUncaughtExceptionHandler();
+    });
+    
+    // get the new current top level error handler, which should now be the one from PLCrashReporter
+    NSUncaughtExceptionHandler *currentHandler = NSGetUncaughtExceptionHandler();
+    
+    // do we have a new top level error handler? then we were successful
+    if (currentHandler && currentHandler != initialHandler) {
+      _exceptionHandler = currentHandler;
       
-      // do we have a new top level error handler? then we were successful
-      if (currentHandler && currentHandler != initialHandler) {
-        _exceptionHandler = currentHandler;
-        
-        BITHockeyLog(@"INFO: Exception handler successfully initialized.");
-      } else {
-        // this should never happen, theoretically only if NSSetUncaugtExceptionHandler() has some internal issues
-        NSLog(@"[HockeySDK] ERROR: Exception handler could not be set. Make sure there is no other exception handler set up!");
-      }
+      BITHockeyLog(@"INFO: Exception handler successfully initialized.");
+    } else {
+      // this should never happen, theoretically only if NSSetUncaugtExceptionHandler() has some internal issues
+      NSLog(@"[HockeySDK] ERROR: Exception handler could not be set. Make sure there is no other exception handler set up!");
     }
-    @catch (NSException * e) {
-      NSLog(@"[HockeySDK] WARNING: %@", [e reason]);
-    }
-
+    
     _isSetup = YES;
   }
 
