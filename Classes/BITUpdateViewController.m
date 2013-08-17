@@ -40,6 +40,7 @@
 
 #import "BITUpdateManagerPrivate.h"
 #import "BITUpdateViewControllerPrivate.h"
+#import "BITHockeyBaseManagerPrivate.h"
 
 
 #define kWebCellIdentifier @"PSWebTableViewCell"
@@ -323,7 +324,11 @@
   
   self.tableView.tableHeaderView = _appStoreHeader;
   
-  BITStoreButton *storeButton = [[BITStoreButton alloc] initWithPadding:CGPointMake(5, 58)];
+  BITStoreButtonStyle buttonStyle = BITStoreButtonStyleDefault;
+  if (![self.updateManager isPreiOS7Environment]) {
+    buttonStyle = BITStoreButtonStyleOS7;
+  }
+  BITStoreButton *storeButton = [[BITStoreButton alloc] initWithPadding:CGPointMake(5, 58) style:buttonStyle];
   storeButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
   storeButton.buttonDelegate = self;
   [self.tableView.tableHeaderView addSubview:storeButton];
