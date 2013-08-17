@@ -34,6 +34,8 @@
 #import "BITFeedbackComposeViewController.h"
 #import "BITFeedbackUserDataViewController.h"
 
+#import "BITHockeyBaseManagerPrivate.h"
+
 #import "BITHockeyHelper.h"
 
 
@@ -222,10 +224,8 @@
   BITFeedbackUserDataViewController *userController = [[BITFeedbackUserDataViewController alloc] initWithStyle:UITableViewStyleGrouped];
   userController.delegate = self;
   
-  UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:userController];
-  navController.navigationBar.barStyle = [self.manager barStyle];
-  navController.navigationBar.tintColor = [self.manager navigationBarTintColor];
-  navController.modalPresentationStyle = UIModalPresentationFormSheet;
+  UINavigationController *navController = [self.manager customNavigationControllerWithRootViewController:userController
+                                                                                       presentationStyle:UIModalPresentationFormSheet];
   
   [self presentViewController:navController animated:YES completion:nil];
 }

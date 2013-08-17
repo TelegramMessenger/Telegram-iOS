@@ -238,10 +238,7 @@
   
   if (_navController != nil) _navController = nil;
   
-  _navController = [[UINavigationController alloc] initWithRootViewController:viewController];
-  _navController.navigationBar.barStyle = _barStyle;
-  _navController.navigationBar.tintColor = _navigationBarTintColor;
-  _navController.modalPresentationStyle = _modalPresentationStyle;
+  _navController = [self customNavigationControllerWithRootViewController:viewController presentationStyle:_modalPresentationStyle];
   
   if (parentViewController) {
     _navController.modalTransitionStyle = UIModalTransitionStyleCoverVertical;
