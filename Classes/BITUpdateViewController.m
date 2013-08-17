@@ -270,6 +270,11 @@
   [self.tableView addSubview:topView];
   
   _appStoreHeader = [[BITAppStoreHeader alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, kAppStoreViewHeight)];
+  if ([self.updateManager isPreiOS7Environment]) {
+    _appStoreHeader.style = BITAppStoreHeaderStyleDefault;
+  } else {
+    _appStoreHeader.style = BITAppStoreHeaderStyleOS7;
+  }
   [self updateAppStoreHeader];
   
   NSString *iconString = nil;
