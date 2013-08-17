@@ -409,7 +409,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     return;
   }
   
-  self.barStyle = UIBarStyleBlack;
+  if ([self isPreiOS7Environment])
+    self.barStyle = UIBarStyleBlack;
   [self showView:[self hockeyViewController:YES]];
 }
 
