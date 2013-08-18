@@ -52,10 +52,6 @@
 #define __IPHONE_6_1     60100
 #endif
 
-#if __IPHONE_OS_VERSION_MIN_ALLOWED > __IPHONE_6_1
-#warning Remove the option to adjust the button style. We are now iOS 7 only.
-#endif
-
 /**
  * Button style depending on the iOS version
  */

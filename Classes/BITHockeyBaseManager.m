@@ -43,10 +43,6 @@
 #import <mach-o/ldsyms.h>
 #endif
 
-#if __IPHONE_OS_VERSION_MIN_ALLOWED > __IPHONE_6_0
-#warning The following ifndef can be removed
-#endif
-
 #ifndef __IPHONE_6_1
 #define __IPHONE_6_1     60100
 #endif
@@ -104,9 +100,6 @@
   return (_appIdentifier ? bit_URLEncodedString(_appIdentifier) : bit_URLEncodedString([self mainBundleIdentifier]));
 }
 
-#if __IPHONE_OS_VERSION_MIN_ALLOWED > __IPHONE_6_1
-#warning Support for pre iOS 7 systems can be removed!
-#endif
 - (BOOL)isPreiOS7Environment {
   static BOOL isPreiOS7Environment = YES;
   static dispatch_once_t checkOS;
