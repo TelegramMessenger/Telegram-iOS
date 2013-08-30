@@ -471,7 +471,9 @@
       [button setTitleColor:BUTTON_TEXTCOLOR forState:UIControlStateNormal];
       [button setTitleShadowColor:BUTTON_TEXTCOLOR_SHADOW forState:UIControlStateNormal];
     } else {
+#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
       button = [UIButton buttonWithType:UIButtonTypeSystem];
+#endif
     }
     
     if (indexPath.section == 0) {
