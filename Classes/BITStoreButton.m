@@ -146,10 +146,6 @@
     cr.origin.y = _customPadding.y;
     cr.origin.x = self.superview.frame.size.width - cr.size.width - _customPadding.x * 2;
     self.frame = cr;
-    NSLog(@"%@", NSStringFromCGRect(self.frame));
-    NSLog(@"%@", NSStringFromCGRect(self.titleLabel.frame));
-    NSLog(@"%@", [self.titleLabel.textColor description]);
-    NSLog(@"%@", [self.backgroundColor description]);
   }
 }
 
