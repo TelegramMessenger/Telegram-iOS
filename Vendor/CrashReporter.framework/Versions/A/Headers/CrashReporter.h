@@ -34,7 +34,7 @@
 
 // This must be included before any other PLCrashReporter includes, as
 // it redefines symbol names
-#import "PLCrashReporterNamespace.h"
+#import "PLCrashNamespace.h"
 
 #import "PLCrashReporter.h"
 #import "PLCrashReport.h"
@@ -93,6 +93,9 @@ typedef enum {
 
     /** The crash report log file is corrupt or invalid */
     PLCrashReporterErrorCrashReportInvalid = 2,
+
+    /** An attempt to use a resource which was in use at the time in a manner which would have conflicted with the request. */
+    PLCrashReporterErrorResourceBusy = 3
 } PLCrashReporterError;
 
 
@@ -233,7 +236,65 @@ typedef enum {
  */
 
 /**
- * @page mach_exceptions Mach Exceptions on iOS
+ * @page mach_exceptions Mach Exceptions on Mac OS X and iOS
+ *
+ * PLCrashReporter includes support for monitoring crashes via an in-process Mach exception handler. On Mac OS X, the
+ * Mach exception implementation is fully supported using entirely public API. On iOS, the APIs required are not fully
+ * public -- more details on the implications of this for exception handling on iOS may be found in
+ * @ref mach_exceptions_ios below.
+ *
+ * It is worth noting that even where the Mach exception APIs are fully supported, kernel-internal constants, as well
+ * as architecture-specific trap information, may be required to fully interpret a Mach exception's root cause.
+ *
+ * For example, the EXC_SOFTWARE exception is dispatched for four different failure types, using the exception
+ * code to differentiate failure types:
+ *   - Non-existent system call invoked (SIGSYS)
+ *   - Write on a pipe with no reader (SIGPIPE)
+ *   - Abort program (SIGABRT)
+ *   - Kill program (SIGKILL)
+ *
+ * Of those four types, only the constant required to interpret the SIGKILL behavior (EXC_SOFT_SIGNAL) is publicly defined.
+ * Of the remaining three failure types, the constant values are kernel implementation-private, defined only in the available
+ * kernel sources. On iOS, these sources are unavailable, and while they generally do match the Mac OS X implementation, there
+ * are no gaurantees that this is -- or will remain -- the case in the future.
+ *
+ * Likewise, interpretation of particular fault types requires information regarding the underlying machine traps
+ * that triggered the Mach exceptions. For example, a floating point trap on x86/x86-64 will trigger an EXC_ARITHMETIC,
+ * with a subcode value containing the value of the FPU status register. Determining the exact FPU cause requires
+ * extracting the actual exception flags from status register as per the x86 architecture documentation. The exact format
+ * of this subcode value is not actually documented outside the kernel, and may change in future releases.
+ *
+ * While we have the advantage of access to the x86 kernel sources, the situation on ARM is even less clear. The actual
+ * use of the Mach exception codes and subcodes is largely undefined by both headers and publicly available documentation,
+ * and the available x86 kernel sources are of little use in interpreting this data.
+ *
+ * As such, while Mach exceptions may catch some cases that BSD signals can not, they are not a perfect solution,
+ * and may also provide less insight into the actual failures that occur. By comparison, the BSD signal interface
+ * is both fully defined and architecture independent, with any necessary interpretation of the Mach exception
+ * codes handled in-kernel at the time of exception dispatch. It is generally recommended by Apple as the preferred
+ * interface, and should generally be preferred by PLCrashReporter API clients.
+ *
+ * @section mach_exceptions_compatibility Compatibility Issues
+ *
+ * @subsection Debuggers
+ *
+ * Enabling in-process Mach exception handlers will conflict with any attached debuggers; the debugger
+ * may suspend the processes Mach exception handling thread, which will result in any exception messages
+ * sent via the debugger being lost, as the in-process handler will be unable to receive and forward
+ * the messages.
+ *
+ * @subsection Managed Runtimes (Xamarin, Unity)
+ *
+ * A Mach exception handler may conflict with any managed runtime that registers a BSD signal handler that
+ * can safely handle otherwise fatal signals, allowing execution to proceed. This includes products
+ * such as Xamarin for iOS.
+ *
+ * In such a case, PLCrashReporter will write a crash report for non-fatal signals, as there is no
+ * immediate mechanism for determining whether a signal handler exists and that it can safely
+ * handle the failure. This can result in unexpected delays in application execution, increased I/O to
+ * disk, and other undesirable operations.
+ *
+ * @section mach_exceptions_ios Mach Exceptions on iOS
  *
  * The APIs required for Mach exception handling are not fully public on iOS. Unfortunately, there are a number
  * of crash states that can only be handled with Mach exception handlers:

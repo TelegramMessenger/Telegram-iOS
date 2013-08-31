@@ -84,6 +84,8 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  More background information on this topic can be found in the following blog post by Landon Fuller, the
  developer of [PLCrashReporter](https://www.plcrashreporter.org), about writing reliable and
  safe crash reporting: [Reliable Crash Reporting](http://goo.gl/WvTBR)
+ 
+ @warning If you start the app with the Xcode debugger attached, detecting crashes will _NOT_ be enabled!
  */
 
 @interface BITCrashManager : BITHockeyBaseManager
@@ -125,6 +127,27 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  @see showAlwaysButton
  */
 @property (nonatomic, assign) BITCrashManagerStatus crashManagerStatus;
+
+
+/**
+ *  Trap fatal signals via a Mach exception server.
+ *
+ *  By default the SDK is using the safe and proven in-process BSD Signals for catching crashes.
+ *  This option provides an option to enable catching fatal signals via a Mach exception server
+ *  instead.
+ *
+ *  We strongly advice _NOT_ to enable Mach exception handler in release versions of your apps!
+ *
+ *  Default: _NO_
+ *
+ * @warning The Mach exception handler executes in-process, and will interfere with debuggers when
+ *  they attempt to suspend all active threads (which will include the Mach exception handler).
+ *  Mach-based handling should _NOT_ be used when a debugger is attached. The SDK will not
+ *  enabled catching exceptions if the app is started with the debugger running. If you attach
+ *  the debugger during runtime, this may cause issues the Mach exception handler is enabled!
+ * @see isDebuggerAttached
+ */
+@property (nonatomic, assign, getter=isMachExceptionHandlerEnabled) BOOL enableMachExceptionHandler;
 
 
 /**
@@ -178,5 +201,20 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  @see BITCrashManagerDelegate
  */
 @property (nonatomic, readonly) NSTimeInterval timeintervalCrashInLastSessionOccured;
+
+
+///-----------------------------------------------------------------------------
+/// @name Helper
+///-----------------------------------------------------------------------------
+
+/**
+ *  Detect if a debugger is attached to the app process
+ *
+ *  This is only invoked once on app startup and can not detect if the debugger is being
+ *  attached during runtime!
+ *
+ *  @return BOOL if the debugger is attached on app startup
+ */
+- (BOOL)isDebuggerAttached;
 
 @end
