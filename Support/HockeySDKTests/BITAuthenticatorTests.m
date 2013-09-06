@@ -40,7 +40,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 - (void)setUp {
   [super setUp];
   
-  _sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil isAppStoreEnvironemt:YES];
+  _sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil isAppStoreEnvironemt:NO];
 }
 
 - (void)tearDown {
