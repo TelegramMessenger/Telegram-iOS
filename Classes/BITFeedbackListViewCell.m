@@ -33,6 +33,9 @@
 #define BACKGROUNDCOLOR_DEFAULT BIT_RGBCOLOR(245, 245, 245)
 #define BACKGROUNDCOLOR_ALTERNATE BIT_RGBCOLOR(235, 235, 235)
 
+#define BACKGROUNDCOLOR_DEFAULT_OS7 BIT_RGBCOLOR(255, 255, 255)
+#define BACKGROUNDCOLOR_ALTERNATE_OS7 BIT_RGBCOLOR(255, 255, 255)
+
 #define TEXTCOLOR_TITLE BIT_RGBCOLOR(75, 75, 75)
 
 #define TEXTCOLOR_DEFAULT BIT_RGBCOLOR(25, 25, 25)
@@ -69,6 +72,7 @@
   if (self) {
     // Initialization code
     _backgroundStyle = BITFeedbackListViewCellBackgroundStyleNormal;
+    _style = BITFeedbackListViewCellPresentatationStyleDefault;
     
     _message = nil;
     
@@ -99,6 +103,22 @@
 
 #pragma mark - Private
 
+- (UIColor *)backgroundColor {
+  if (self.backgroundStyle == BITFeedbackListViewCellBackgroundStyleNormal) {
+    if (self.style == BITFeedbackListViewCellPresentatationStyleDefault) {
+      return BACKGROUNDCOLOR_DEFAULT;
+    } else {
+      return BACKGROUNDCOLOR_DEFAULT_OS7;
+    }
+  } else {
+    if (self.style == BITFeedbackListViewCellPresentatationStyleDefault) {
+      return BACKGROUNDCOLOR_ALTERNATE;
+    } else {
+      return BACKGROUNDCOLOR_ALTERNATE_OS7;
+    }
+  }
+}
+
 - (BOOL)isSameDayWithDate1:(NSDate*)date1 date2:(NSDate*)date2 {
   NSCalendar* calendar = [NSCalendar currentCalendar];
   
@@ -126,17 +146,11 @@
   accessoryViewBackground.clipsToBounds = YES;
   
   // colors
-  if (_backgroundStyle == BITFeedbackListViewCellBackgroundStyleNormal) {
-    accessoryViewBackground.backgroundColor = BACKGROUNDCOLOR_DEFAULT;
-    self.contentView.backgroundColor = BACKGROUNDCOLOR_DEFAULT;
-    self.labelTitle.backgroundColor = BACKGROUNDCOLOR_DEFAULT;
-    self.labelText.backgroundColor = BACKGROUNDCOLOR_DEFAULT;
-  } else {
-    accessoryViewBackground.backgroundColor = BACKGROUNDCOLOR_ALTERNATE;
-    self.contentView.backgroundColor = BACKGROUNDCOLOR_ALTERNATE;
-    self.labelTitle.backgroundColor = BACKGROUNDCOLOR_ALTERNATE;
-    self.labelText.backgroundColor = BACKGROUNDCOLOR_ALTERNATE;
-  }
+  accessoryViewBackground.backgroundColor = [self backgroundColor];
+  self.contentView.backgroundColor = [self backgroundColor];
+  self.labelTitle.backgroundColor = [self backgroundColor];
+  self.labelText.backgroundColor = [self backgroundColor];
+  
   self.labelTitle.textColor = TEXTCOLOR_TITLE;
   if (_message.status == BITFeedbackMessageStatusSendPending || _message.status == BITFeedbackMessageStatusSendInProgress) {
     [self.labelText setTextColor:TEXTCOLOR_PENDING];

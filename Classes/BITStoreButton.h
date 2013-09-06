@@ -48,12 +48,31 @@
 @end
 
 
+#ifndef __IPHONE_6_1
+#define __IPHONE_6_1     60100
+#endif
+
+/**
+ * Button style depending on the iOS version
+ */
+typedef NS_ENUM(NSUInteger, BITStoreButtonStyle) {
+  /**
+   * Default is iOS 6 style
+   */
+  BITStoreButtonStyleDefault = 0,
+  /**
+   * Draw buttons in the iOS 7 style
+   */
+  BITStoreButtonStyleOS7 = 1
+};
+
+
 // Simulate the Paymeny-Button from the AppStore
 // The interface is flexible, so there is now fixed order
 @interface BITStoreButton : UIButton
 
 - (id)initWithFrame:(CGRect)frame;
-- (id)initWithPadding:(CGPoint)padding;
+- (id)initWithPadding:(CGPoint)padding style:(BITStoreButtonStyle)style;
 
 // action delegate
 @property (nonatomic, weak) id<BITStoreButtonDelegate> buttonDelegate;
@@ -64,6 +83,11 @@
 
 // align helper
 @property (nonatomic, assign) CGPoint customPadding;
+
+// align helper
+@property (nonatomic, assign) BITStoreButtonStyle style;
+
+
 - (void)alignToSuperview;
 
 @end

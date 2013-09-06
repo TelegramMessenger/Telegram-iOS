@@ -37,7 +37,6 @@
 
 #import "BITHockeyManagerPrivate.h"
 #import "BITHockeyBaseManagerPrivate.h"
-#import "BITCrashManagerPrivate.h"
 #import "BITCrashReportTextFormatter.h"
 
 #include <sys/sysctl.h>
@@ -79,6 +78,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   BOOL _sendingInProgress;
   BOOL _isSetup;
   
+  BITPLCrashReporter *_plCrashReporter;
   NSUncaughtExceptionHandler *_exceptionHandler;
 }
 
@@ -89,6 +89,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
     _showAlwaysButton = NO;
     _isSetup = NO;
     
+    _plCrashReporter = nil;
     _exceptionHandler = nil;
     
     _crashIdenticalCurrentVersion = YES;
@@ -163,6 +164,11 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 
 #pragma mark - Private
 
+/**
+ * Save all settings
+ *
+ * This saves the list of approved crash reports
+ */
 - (void)saveSettings {
   NSString *errorString = nil;
   
@@ -180,6 +186,11 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   }
 }
 
+/**
+ * Load all settings
+ *
+ * This contains the list of approved crash reports
+ */
 - (void)loadSettings {
   NSString *errorString = nil;
   NSPropertyListFormat format;
@@ -202,6 +213,9 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   }
 }
 
+/**
+ *	 Remove all crash reports and stored meta data for each from the file system and keychain
+ */
 - (void)cleanCrashReports {
   NSError *error = NULL;
   
@@ -218,6 +232,16 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   [self saveSettings];
 }
 
+/**
+ *	 Extract all app sepcific UUIDs from the crash reports
+ * 
+ * This allows us to send the UUIDs in the XML construct to the server, so the server does not need to parse the crash report for this data.
+ * The app specific UUIDs help to identify which dSYMs are needed to symbolicate this crash report.
+ *
+ *	@param	report The crash report from PLCrashReporter
+ *
+ *	@return XML structure with the app sepcific UUIDs
+ */
 - (NSString *) extractAppUUIDs:(BITPLCrashReport *)report {
   NSMutableString *uuidString = [NSMutableString string];
   NSArray *uuidArray = [BITCrashReportTextFormatter arrayOfAppUUIDsForCrashReport:report];
@@ -235,6 +259,11 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   return uuidString;
 }
 
+/**
+ *	 Get the userID from the delegate which should be stored with the crash report
+ *
+ *	@return The userID value
+ */
 - (NSString *)userIDForCrashReport {
   NSString *userID = @"";
   
@@ -248,12 +277,15 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   return userID;
 }
 
+/**
+ *	 Get the userName from the delegate which should be stored with the crash report
+ *
+ *	@return The userName value
+ */
 - (NSString *)userNameForCrashReport {
   NSString *username = @"";
   
   if (self.delegate && [self.delegate respondsToSelector:@selector(userNameForCrashManager:)]) {
-    if (!self.isAppStoreEnvironment)
-      NSLog(@"[HockeySDK] DEPRECATED: Please use BITHockeyManagerDelegate's userNameForHockeyManager:componentManager: or userIDForHockeyManager:componentManager: instead.");
     username = [self.delegate userNameForCrashManager:self] ?: @"";
   }
   if ([BITHockeyManager sharedHockeyManager].delegate &&
@@ -266,12 +298,15 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   return username;
 }
 
+/**
+ *	 Get the userEmail from the delegate which should be stored with the crash report
+ *
+ *	@return The userEmail value
+ */
 - (NSString *)userEmailForCrashReport {
   NSString *useremail = @"";
 
   if (self.delegate && [self.delegate respondsToSelector:@selector(userEmailForCrashManager:)]) {
-    if (!self.isAppStoreEnvironment)
-      NSLog(@"[HockeySDK] DEPRECATED: Please use BITHockeyManagerDelegate's userEmailForHockeyManager:componentManager: instead.");
     useremail = [self.delegate userEmailForCrashManager:self] ?: @"";
   }
   if ([BITHockeyManager sharedHockeyManager].delegate &&
@@ -284,13 +319,55 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   return useremail;
 }
 
+
+#pragma mark - Public
+
+/**
+ * Check if the debugger is attached
+ *
+ * Taken from https://github.com/plausiblelabs/plcrashreporter/blob/2dd862ce049e6f43feb355308dfc710f3af54c4d/Source/Crash%20Demo/main.m#L96
+ *
+ * @return `YES` if the debugger is attached to the current process, `NO` otherwise
+ */
+- (BOOL)isDebuggerAttached {
+  static BOOL debuggerIsAttached = NO;
+  
+  static dispatch_once_t debuggerPredicate;
+  dispatch_once(&debuggerPredicate, ^{
+    struct kinfo_proc info;
+    size_t info_size = sizeof(info);
+    int name[4];
+    
+    name[0] = CTL_KERN;
+    name[1] = KERN_PROC;
+    name[2] = KERN_PROC_PID;
+    name[3] = getpid();
+    
+    if (sysctl(name, 4, &info, &info_size, NULL, 0) == -1) {
+      NSLog(@"[HockeySDK] ERROR: Checking for a running debugger via sysctl() failed: %s", strerror(errno));
+      debuggerIsAttached = false;
+    }
+    
+    if (!debuggerIsAttached && (info.kp_proc.p_flag & P_TRACED) != 0)
+      debuggerIsAttached = true;
+  });
+  
+  return debuggerIsAttached;
+}
+
+
 #pragma mark - PLCrashReporter
 
-// Called to handle a pending crash report.
+/**
+ *	 Process new crash reports provided by PLCrashReporter
+ *
+ * Parse the new crash report and gather additional meta data from the app which will be stored along the crash report
+ */
 - (void) handleCrashReport {
-  BITPLCrashReporter *crashReporter = [BITPLCrashReporter sharedReporter];
   NSError *error = NULL;
 	
+  if (!_plCrashReporter) return;
+  
   [self loadSettings];
   
   // check if the next call ran successfully the last time
@@ -301,7 +378,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
     [self saveSettings];
     
     // Try loading the crash report
-    NSData *crashData = [[NSData alloc] initWithData:[crashReporter loadPendingCrashReportDataAndReturnError: &error]];
+    NSData *crashData = [[NSData alloc] initWithData:[_plCrashReporter loadPendingCrashReportDataAndReturnError: &error]];
     
     NSString *cacheFilename = [NSString stringWithFormat: @"%.0f", [NSDate timeIntervalSinceReferenceDate]];
     
@@ -311,35 +388,39 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       // get the startup timestamp from the crash report, and the file timestamp to calculate the timeinterval when the crash happened after startup
       BITPLCrashReport *report = [[BITPLCrashReport alloc] initWithData:crashData error:&error];
       
-      if ([report.processInfo respondsToSelector:@selector(processStartTime)]) {
-        if (report.systemInfo.timestamp && report.processInfo.processStartTime) {
-          _timeintervalCrashInLastSessionOccured = [report.systemInfo.timestamp timeIntervalSinceDate:report.processInfo.processStartTime];
-        }
-      }
-      
-      [crashData writeToFile:[_crashesDir stringByAppendingPathComponent: cacheFilename] atomically:YES];
-      
-      // write the meta file
-      NSMutableDictionary *metaDict = [NSMutableDictionary dictionaryWithCapacity:4];
-      NSString *applicationLog = @"";
-      NSString *errorString = nil;
-      
-      [self addStringValueToKeychain:[self userNameForCrashReport] forKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserName]];
-      [self addStringValueToKeychain:[self userEmailForCrashReport] forKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserEmail]];
-      [self addStringValueToKeychain:[self userIDForCrashReport] forKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserID]];
-      
-      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(applicationLogForCrashManager:)]) {
-        applicationLog = [self.delegate applicationLogForCrashManager:self] ?: @"";
-      }
-      [metaDict setObject:applicationLog forKey:kBITCrashMetaApplicationLog];
-      
-      NSData *plist = [NSPropertyListSerialization dataFromPropertyList:(id)metaDict
-                                                                 format:NSPropertyListBinaryFormat_v1_0
-                                                       errorDescription:&errorString];
-      if (plist) {
-        [plist writeToFile:[NSString stringWithFormat:@"%@.meta", [_crashesDir stringByAppendingPathComponent: cacheFilename]] atomically:YES];
+      if (report == nil) {
+        BITHockeyLog(@"WARNING: Could not parse crash report");
       } else {
-        BITHockeyLog(@"ERROR: Writing crash meta data failed. %@", error);
+        if ([report.processInfo respondsToSelector:@selector(processStartTime)]) {
+          if (report.systemInfo.timestamp && report.processInfo.processStartTime) {
+            _timeintervalCrashInLastSessionOccured = [report.systemInfo.timestamp timeIntervalSinceDate:report.processInfo.processStartTime];
+          }
+        }
+        
+        [crashData writeToFile:[_crashesDir stringByAppendingPathComponent: cacheFilename] atomically:YES];
+        
+        // write the meta file
+        NSMutableDictionary *metaDict = [NSMutableDictionary dictionaryWithCapacity:4];
+        NSString *applicationLog = @"";
+        NSString *errorString = nil;
+        
+        [self addStringValueToKeychain:[self userNameForCrashReport] forKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserName]];
+        [self addStringValueToKeychain:[self userEmailForCrashReport] forKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserEmail]];
+        [self addStringValueToKeychain:[self userIDForCrashReport] forKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserID]];
+        
+        if (self.delegate != nil && [self.delegate respondsToSelector:@selector(applicationLogForCrashManager:)]) {
+          applicationLog = [self.delegate applicationLogForCrashManager:self] ?: @"";
+        }
+        [metaDict setObject:applicationLog forKey:kBITCrashMetaApplicationLog];
+        
+        NSData *plist = [NSPropertyListSerialization dataFromPropertyList:(id)metaDict
+                                                                   format:NSPropertyListBinaryFormat_v1_0
+                                                         errorDescription:&errorString];
+        if (plist) {
+          [plist writeToFile:[NSString stringWithFormat:@"%@.meta", [_crashesDir stringByAppendingPathComponent: cacheFilename]] atomically:YES];
+        } else {
+          BITHockeyLog(@"ERROR: Writing crash meta data failed. %@", error);
+        }
       }
     }
   }
@@ -352,9 +433,14 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 
   [self saveSettings];
   
-  [crashReporter purgePendingCrashReport];
+  [_plCrashReporter purgePendingCrashReport];
 }
 
+/**
+ *	Check if there are any crash reports available which the user did not approve yet
+ *
+ *	@return `YES` if there are crash reports pending that are not approved, `NO` otherwise
+ */
 - (BOOL)hasNonApprovedCrashReports {
   if (!_approvedCrashReports || [_approvedCrashReports count] == 0) return YES;
   
@@ -367,6 +453,11 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   return NO;
 }
 
+/**
+ *	Check if there are any new crash reports that are not yet processed
+ *
+ *	@return	`YES` if ther eis at least one new crash report found, `NO` otherwise
+ */
 - (BOOL)hasPendingCrashReport {
   if (_crashManagerStatus == BITCrashManagerStatusDisabled) return NO;
     
@@ -406,7 +497,13 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 
 #pragma mark - Crash Report Processing
 
-// slightly delayed startup processing, so we don't keep the first runloop on startup busy for too long
+/**
+ * Delayed startup processing for everything that does not to be done in the app startup runloop
+ *
+ * - Checks if there is another exception handler installed that may block ours
+ * - Present UI if the user has to approve new crash reports
+ * - Send pending approved crash reports
+ */
 - (void)invokeDelayedProcessing {
   BITHockeyLog(@"INFO: Start delayed CrashManager processing");
   
@@ -463,70 +560,93 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   }
 }
 
-// begin the startup process
+/**
+ *	 Main startup sequence initializing PLCrashReporter if it wasn't disabled
+ */
 - (void)startManager {
   if (_crashManagerStatus == BITCrashManagerStatusDisabled) return;
   
   if (!_isSetup) {
-    BITPLCrashReporter *crashReporter = [BITPLCrashReporter sharedReporter];
-    NSError *error = NULL;
-    
-    // Check if we previously crashed
-    if ([crashReporter hasPendingCrashReport]) {
-      _didCrashInLastSession = YES;
-      [self handleCrashReport];
-    }
-
-    // PLCrashReporter is throwing an NSException if it is being enabled again
-    // even though it already is enabled
-    @try {
-      // Multiple exception handlers can be set, but we can only query the top level error handler (uncaught exception handler).
-      //
-      // To check if PLCrashReporter's error handler is successfully added, we compare the top
-      // level one that is set before and the one after PLCrashReporter sets up its own.
-      //
-      // With delayed processing we can then check if another error handler was set up afterwards
-      // and can show a debug warning log message, that the dev has to make sure the "newer" error handler
-      // doesn't exit the process itself, because then all subsequent handlers would never be invoked.
-      // 
-      // Note: ANY error handler setup BEFORE HockeySDK initialization will not be processed!
-      
-      // get the current top level error handler
-      NSUncaughtExceptionHandler *initialHandler = NSGetUncaughtExceptionHandler();
-      
-      // Enable the Crash Reporter
-      if (![crashReporter enableCrashReporterAndReturnError: &error])
-        NSLog(@"[HockeySDK] WARNING: Could not enable crash reporter: %@", [error localizedDescription]);
-
-      // get the new current top level error handler, which should now be the one from PLCrashReporter
-      NSUncaughtExceptionHandler *currentHandler = NSGetUncaughtExceptionHandler();
-      
-      // do we have a new top level error handler? then we were successful
-      if (currentHandler && currentHandler != initialHandler) {
-        _exceptionHandler = currentHandler;
+    static dispatch_once_t plcrPredicate;
+    dispatch_once(&plcrPredicate, ^{
+      /* Configure our reporter */
         
-        BITHockeyLog(@"INFO: Exception handler successfully initialized.");
-      } else {
-        // this should never happen, theoretically only if NSSetUncaugtExceptionHandler() has some internal issues
-        NSLog(@"[HockeySDK] ERROR: Exception handler could not be set. Make sure there is no other exception handler set up!");
+      PLCrashReporterSignalHandlerType signalHandlerType = PLCrashReporterSignalHandlerTypeBSD;
+      if (self.isMachExceptionHandlerEnabled) {
+        signalHandlerType = PLCrashReporterSignalHandlerTypeMach;
       }
-    }
-    @catch (NSException * e) {
-      NSLog(@"[HockeySDK] WARNING: %@", [e reason]);
-    }
-
-    _isSetup = YES;
+      BITPLCrashReporterConfig *config = [[BITPLCrashReporterConfig alloc] initWithSignalHandlerType: signalHandlerType
+                                                                               symbolicationStrategy: PLCrashReporterSymbolicationStrategyAll];
+      _plCrashReporter = [[BITPLCrashReporter alloc] initWithConfiguration: config];
+      
+      // Check if we previously crashed
+      if ([_plCrashReporter hasPendingCrashReport]) {
+        _didCrashInLastSession = YES;
+        [self handleCrashReport];
+      }
+      
+      // The actual signal and mach handlers are only registered when invoking `enableCrashReporterAndReturnError`
+      // So it is safe enough to only disable the following part when a debugger is attached no matter which
+      // signal handler type is set
+      // We only check for this if we are not in the App Store environment
+      
+      BOOL debuggerIsAttached = NO;
+      if (![self isAppStoreEnvironment]) {
+        if ([self isDebuggerAttached]) {
+          debuggerIsAttached = YES;
+          NSLog(@"[HockeySDK] WARNING: Detecting crashes is NOT enabled due to running the app with a debugger attached.");
+        }
+      }
+      
+      if (!debuggerIsAttached) {
+        // Multiple exception handlers can be set, but we can only query the top level error handler (uncaught exception handler).
+        //
+        // To check if PLCrashReporter's error handler is successfully added, we compare the top
+        // level one that is set before and the one after PLCrashReporter sets up its own.
+        //
+        // With delayed processing we can then check if another error handler was set up afterwards
+        // and can show a debug warning log message, that the dev has to make sure the "newer" error handler
+        // doesn't exit the process itself, because then all subsequent handlers would never be invoked.
+        //
+        // Note: ANY error handler setup BEFORE HockeySDK initialization will not be processed!
+        
+        // get the current top level error handler
+        NSUncaughtExceptionHandler *initialHandler = NSGetUncaughtExceptionHandler();
+        
+        // PLCrashReporter may only be initialized once. So make sure the developer
+        // can't break this
+        NSError *error = NULL;
+        
+        // Enable the Crash Reporter
+        if (![_plCrashReporter enableCrashReporterAndReturnError: &error])
+          NSLog(@"[HockeySDK] WARNING: Could not enable crash reporter: %@", [error localizedDescription]);
+        
+        // get the new current top level error handler, which should now be the one from PLCrashReporter
+        NSUncaughtExceptionHandler *currentHandler = NSGetUncaughtExceptionHandler();
+        
+        // do we have a new top level error handler? then we were successful
+        if (currentHandler && currentHandler != initialHandler) {
+          _exceptionHandler = currentHandler;
+          
+          BITHockeyLog(@"INFO: Exception handler successfully initialized.");
+        } else {
+          // this should never happen, theoretically only if NSSetUncaugtExceptionHandler() has some internal issues
+          NSLog(@"[HockeySDK] ERROR: Exception handler could not be set. Make sure there is no other exception handler set up!");
+        }
+      }
+      _isSetup = YES;
+    });
   }
 
   [self performSelector:@selector(invokeDelayedProcessing) withObject:nil afterDelay:0.5];
 }
 
+/**
+ *	 Send all approved crash reports
+ *
+ * Gathers all collected data and constructs the XML structure and starts the sending process
+ */
 - (void)sendCrashReports {
-  // send it to the next runloop
-  [self performSelector:@selector(performSendingCrashReports) withObject:nil afterDelay:1.0f];
-}
-
-- (void)performSendingCrashReports {
   NSError *error = NULL;
 	  
   NSMutableString *crashes = nil;
@@ -670,6 +790,13 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 
 #pragma mark - Networking
 
+/**
+ *	 Send the XML data to the server
+ *
+ * Wraps the XML structure into a POST body and starts sending the data asynchronously
+ *
+ *	@param	xml	The XML data that needs to be send to the server
+ */
 - (void)postXML:(NSString*)xml {
   NSMutableURLRequest *request = nil;
   NSString *boundary = @"----FOO";

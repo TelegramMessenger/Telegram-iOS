@@ -40,6 +40,7 @@
 
 #import "BITUpdateManagerPrivate.h"
 #import "BITUpdateViewControllerPrivate.h"
+#import "BITHockeyBaseManagerPrivate.h"
 
 
 #define kWebCellIdentifier @"PSWebTableViewCell"
@@ -61,6 +62,14 @@
 
 
 #pragma mark - Private
+
+- (UIColor *)backgroundColor {
+  if ([self.updateManager isPreiOS7Environment]) {
+    return BIT_RGBCOLOR(235, 235, 235);
+  } else {
+    return BIT_RGBCOLOR(255, 255, 255);
+  }
+}
 
 - (void)restoreStoreButtonStateAnimated:(BOOL)animated {
   if (_isAppStoreEnvironment) {
@@ -169,7 +178,7 @@
     [self realignPreviousVersionButton];
   } else {
     self.tableView.tableFooterView = nil;
-    self.tableView.backgroundColor = BIT_RGBCOLOR(235, 235, 235);
+    self.tableView.backgroundColor = [self backgroundColor];
   }
 }
 
@@ -200,8 +209,7 @@
   } else {
     cell.webViewContent = [NSString stringWithFormat:@"<p><b>%@</b>%@<br/><small>%@</small></p><p>%@</p>", [appVersion versionString], installed, dateAndSizeString, [appVersion notesOrEmptyString]];
   }
-  cell.cellBackgroundColor = BIT_RGBCOLOR(235, 235, 235);
-  
+  cell.cellBackgroundColor = [self backgroundColor];
   [cell addWebView];
   // hack
   cell.textLabel.text = @"";
@@ -269,6 +277,11 @@
   [self.tableView addSubview:topView];
   
   _appStoreHeader = [[BITAppStoreHeader alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, kAppStoreViewHeight)];
+  if ([self.updateManager isPreiOS7Environment]) {
+    _appStoreHeader.style = BITAppStoreHeaderStyleDefault;
+  } else {
+    _appStoreHeader.style = BITAppStoreHeaderStyleOS7;
+  }
   [self updateAppStoreHeader];
   
   NSString *iconString = nil;
@@ -323,7 +336,11 @@
   
   self.tableView.tableHeaderView = _appStoreHeader;
   
-  BITStoreButton *storeButton = [[BITStoreButton alloc] initWithPadding:CGPointMake(5, 58)];
+  BITStoreButtonStyle buttonStyle = BITStoreButtonStyleDefault;
+  if (![self.updateManager isPreiOS7Environment]) {
+    buttonStyle = BITStoreButtonStyleOS7;
+  }
+  BITStoreButton *storeButton = [[BITStoreButton alloc] initWithPadding:CGPointMake(5, 58) style:buttonStyle];
   storeButton.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
   storeButton.buttonDelegate = self;
   [self.tableView.tableHeaderView addSubview:storeButton];
@@ -430,7 +447,7 @@
   
   if (rowHeight == 0) {
     rowHeight = indexPath.row == 0 ? 250 : 44; // fill screen on startup
-    self.tableView.backgroundColor = BIT_RGBCOLOR(235, 235, 235);
+    self.tableView.backgroundColor = [self backgroundColor];
   }
   
   return rowHeight;

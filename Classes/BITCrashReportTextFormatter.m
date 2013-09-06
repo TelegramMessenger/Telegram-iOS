@@ -208,8 +208,9 @@ NSInteger binaryImageSort(id binary1, id binary2, void *context);
         processPath = report.processInfo.processPath;
         
         /* Remove username from the path */
-        processPath = [processPath stringByAbbreviatingWithTildeInPath];
-        if ([[processPath substringToIndex:1] isEqualToString:@"~"])
+        if ([processPath length] > 0)
+          processPath = [processPath stringByAbbreviatingWithTildeInPath];
+        if ([processPath length] > 0 && [[processPath substringToIndex:1] isEqualToString:@"~"])
           processPath = [NSString stringWithFormat:@"/Users/USER%@", [processPath substringFromIndex:1]];
       }
       
@@ -412,8 +413,10 @@ NSInteger binaryImageSort(id binary1, id binary2, void *context);
     }
     
     /* Remove username from the image path */
-    NSString *imageName = [imageInfo.imageName stringByAbbreviatingWithTildeInPath];
-    if ([[imageName substringToIndex:1] isEqualToString:@"~"])
+    NSString *imageName = @"";
+    if (imageInfo.imageName && [imageInfo.imageName length] > 0)
+      imageName = [imageInfo.imageName stringByAbbreviatingWithTildeInPath];
+    if ([imageName length] > 0 && [[imageName substringToIndex:1] isEqualToString:@"~"])
       imageName = [NSString stringWithFormat:@"/Users/USER%@", [imageName substringFromIndex:1]];
     
     [text appendFormat: fmt,

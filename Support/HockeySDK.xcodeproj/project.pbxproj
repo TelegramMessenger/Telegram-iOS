@@ -88,8 +88,6 @@
 		1E59559B15B6FDA500A03429 /* HockeySDK.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E71509A15B5C76F004E88FF /* HockeySDK.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E5955C615B71C8600A03429 /* authorize_denied.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955BB15B71C8600A03429 /* authorize_denied.png */; };
 		1E5955C715B71C8600A03429 /* authorize_denied@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955BC15B71C8600A03429 /* authorize_denied@2x.png */; };
-		1E5955C815B71C8600A03429 /* authorize_request.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955BD15B71C8600A03429 /* authorize_request.png */; };
-		1E5955C915B71C8600A03429 /* authorize_request@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955BE15B71C8600A03429 /* authorize_request@2x.png */; };
 		1E5955CA15B71C8600A03429 /* bg.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955BF15B71C8600A03429 /* bg.png */; };
 		1E5955CB15B71C8600A03429 /* buttonHighlight.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955C015B71C8600A03429 /* buttonHighlight.png */; };
 		1E5955CC15B71C8600A03429 /* buttonHighlight@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E5955C115B71C8600A03429 /* buttonHighlight@2x.png */; };
@@ -104,7 +102,6 @@
 		1E754E5C1621FBB70070AB92 /* BITCrashManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E754E561621FBB70070AB92 /* BITCrashManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E754E5D1621FBB70070AB92 /* BITCrashManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E754E571621FBB70070AB92 /* BITCrashManager.m */; };
 		1E754E5E1621FBB70070AB92 /* BITCrashManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E754E581621FBB70070AB92 /* BITCrashManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		1E754E5F1621FBB70070AB92 /* BITCrashManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E754E591621FBB70070AB92 /* BITCrashManagerPrivate.h */; };
 		1E754E601621FBB70070AB92 /* BITCrashReportTextFormatter.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E754E5A1621FBB70070AB92 /* BITCrashReportTextFormatter.h */; };
 		1E754E611621FBB70070AB92 /* BITCrashReportTextFormatter.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E754E5B1621FBB70070AB92 /* BITCrashReportTextFormatter.m */; };
 		1E7A45FC16F54FB5005B08F1 /* OCHamcrestIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E7A45FA16F54FB5005B08F1 /* OCHamcrestIOS.framework */; };
@@ -231,8 +228,6 @@
 		1E59557215B6F84D00A03429 /* ru */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		1E5955BB15B71C8600A03429 /* authorize_denied.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = authorize_denied.png; sourceTree = "<group>"; };
 		1E5955BC15B71C8600A03429 /* authorize_denied@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "authorize_denied@2x.png"; sourceTree = "<group>"; };
-		1E5955BD15B71C8600A03429 /* authorize_request.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = authorize_request.png; sourceTree = "<group>"; };
-		1E5955BE15B71C8600A03429 /* authorize_request@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "authorize_request@2x.png"; sourceTree = "<group>"; };
 		1E5955BF15B71C8600A03429 /* bg.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = bg.png; sourceTree = "<group>"; };
 		1E5955C015B71C8600A03429 /* buttonHighlight.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = buttonHighlight.png; sourceTree = "<group>"; };
 		1E5955C115B71C8600A03429 /* buttonHighlight@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "buttonHighlight@2x.png"; sourceTree = "<group>"; };
@@ -254,7 +249,6 @@
 		1E754E561621FBB70070AB92 /* BITCrashManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashManager.h; sourceTree = "<group>"; };
 		1E754E571621FBB70070AB92 /* BITCrashManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITCrashManager.m; sourceTree = "<group>"; };
 		1E754E581621FBB70070AB92 /* BITCrashManagerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashManagerDelegate.h; sourceTree = "<group>"; };
-		1E754E591621FBB70070AB92 /* BITCrashManagerPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashManagerPrivate.h; sourceTree = "<group>"; };
 		1E754E5A1621FBB70070AB92 /* BITCrashReportTextFormatter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashReportTextFormatter.h; sourceTree = "<group>"; };
 		1E754E5B1621FBB70070AB92 /* BITCrashReportTextFormatter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITCrashReportTextFormatter.m; sourceTree = "<group>"; };
 		1E7A45FA16F54FB5005B08F1 /* OCHamcrestIOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = OCHamcrestIOS.framework; sourceTree = "<group>"; };
@@ -334,8 +328,6 @@
 			children = (
 				1E5955BB15B71C8600A03429 /* authorize_denied.png */,
 				1E5955BC15B71C8600A03429 /* authorize_denied@2x.png */,
-				1E5955BD15B71C8600A03429 /* authorize_request.png */,
-				1E5955BE15B71C8600A03429 /* authorize_request@2x.png */,
 				1E5955BF15B71C8600A03429 /* bg.png */,
 				1E5955C015B71C8600A03429 /* buttonHighlight.png */,
 				1E5955C115B71C8600A03429 /* buttonHighlight@2x.png */,
@@ -463,7 +455,6 @@
 				1E754E561621FBB70070AB92 /* BITCrashManager.h */,
 				1E754E571621FBB70070AB92 /* BITCrashManager.m */,
 				1E754E581621FBB70070AB92 /* BITCrashManagerDelegate.h */,
-				1E754E591621FBB70070AB92 /* BITCrashManagerPrivate.h */,
 				1E754E5A1621FBB70070AB92 /* BITCrashReportTextFormatter.h */,
 				1E754E5B1621FBB70070AB92 /* BITCrashReportTextFormatter.m */,
 			);
@@ -622,7 +613,6 @@
 				1E49A4D0161222B900463151 /* BITWebTableViewCell.h in Headers */,
 				1E49A4D8161222D400463151 /* HockeySDKPrivate.h in Headers */,
 				1EC69F601615001500808FD9 /* BITHockeyManagerPrivate.h in Headers */,
-				1E754E5F1621FBB70070AB92 /* BITCrashManagerPrivate.h in Headers */,
 				E48A3DEC17B3ED1C00924C3D /* BITAuthenticator.h in Headers */,
 				1E754E601621FBB70070AB92 /* BITCrashReportTextFormatter.h in Headers */,
 				1EACC97B162F041E007578C5 /* BITAttributedLabel.h in Headers */,
@@ -743,8 +733,6 @@
 			files = (
 				1E5955C615B71C8600A03429 /* authorize_denied.png in Resources */,
 				1E5955C715B71C8600A03429 /* authorize_denied@2x.png in Resources */,
-				1E5955C815B71C8600A03429 /* authorize_request.png in Resources */,
-				1E5955C915B71C8600A03429 /* authorize_request@2x.png in Resources */,
 				1E5955CA15B71C8600A03429 /* bg.png in Resources */,
 				1E5955CB15B71C8600A03429 /* buttonHighlight.png in Resources */,
 				1E5955CC15B71C8600A03429 /* buttonHighlight@2x.png in Resources */,

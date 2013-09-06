@@ -13,6 +13,8 @@
 #import "BITHockeyHelper.h"
 #import "BITFeedbackManagerPrivate.h"
 
+#import "BITHockeyBaseManagerPrivate.h"
+
 
 @interface BITFeedbackActivity()
 
@@ -87,14 +89,14 @@
 
 - (UIViewController *)activityViewController {
   // TODO: return compose controller with activity content added
-  BITFeedbackComposeViewController *composeViewController = [[BITHockeyManager sharedHockeyManager].feedbackManager feedbackComposeViewController];
+  BITFeedbackManager *manager = [BITHockeyManager sharedHockeyManager].feedbackManager;
+  
+  BITFeedbackComposeViewController *composeViewController = [manager feedbackComposeViewController];
   composeViewController.delegate = self;
   [composeViewController prepareWithItems:_items];
   
-  UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController: composeViewController];
-  navController.navigationBar.barStyle = [[[BITHockeyManager sharedHockeyManager] feedbackManager] barStyle];
-  navController.navigationBar.tintColor = [[[BITHockeyManager sharedHockeyManager] feedbackManager] tintColor];
-  navController.modalPresentationStyle = UIModalPresentationFormSheet;
+  UINavigationController *navController = [manager customNavigationControllerWithRootViewController:composeViewController
+                                                                                  presentationStyle:UIModalPresentationFormSheet];
   navController.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
   
   return navController;

@@ -32,7 +32,6 @@
 
 #import "BITHockeyManagerPrivate.h"
 #import "BITHockeyBaseManagerPrivate.h"
-#import "BITCrashManagerPrivate.h"
 #import "BITUpdateManagerPrivate.h"
 #import "BITStoreUpdateManagerPrivate.h"
 #import "BITFeedbackManagerPrivate.h"
@@ -356,9 +355,11 @@
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wundeclared-selector"
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
 + (void)disableJMCCrashReporter {
   id jmcInstance = [self jmcInstance];
-  id jmcOptions = [jmcInstance performSelector:@selector(options)];
+  SEL optionsSelector = @selector(options);
+  id jmcOptions = [jmcInstance performSelector:optionsSelector];
   SEL crashReporterSelector = @selector(setCrashReportingEnabled:);
   
   BOOL value = NO;
@@ -374,13 +375,14 @@
 + (BOOL)checkJMCConfiguration:(NSDictionary *)configuration {
   return (([configuration isKindOfClass:[NSDictionary class]]) &&
           ([[configuration valueForKey:@"enabled"] boolValue]) &&
-          ([[configuration valueForKey:@"url"] length] > 0) &&
-          ([[configuration valueForKey:@"key"] length] > 0) &&
-          ([[configuration valueForKey:@"project"] length] > 0));
+          ([(NSString *)[configuration valueForKey:@"url"] length] > 0) &&
+          ([(NSString *)[configuration valueForKey:@"key"] length] > 0) &&
+          ([(NSString *)[configuration valueForKey:@"project"] length] > 0));
 }
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wundeclared-selector"
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
 + (void)applyJMCConfiguration:(NSDictionary *)configuration {
   id jmcInstance = [self jmcInstance];
   SEL configureSelector = @selector(configureJiraConnect:projectKey:apiKey:);

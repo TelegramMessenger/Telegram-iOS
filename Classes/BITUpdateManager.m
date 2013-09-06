@@ -216,34 +216,6 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   return @"invalid";
 }
 
-#pragma mark - Authorization
-
-- (NSString *)authenticationToken {
-  return [BITHockeyMD5([NSString stringWithFormat:@"%@%@%@%@",
-                 _authenticationSecret,
-                 [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"],
-                 [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"],
-                 [self deviceIdentifier]
-                 ]
-                ) lowercaseString];
-}
-
-- (BITUpdateAuthorizationState)authorizationState {
-  NSString *version = [[NSUserDefaults standardUserDefaults] objectForKey:kBITUpdateAuthorizedVersion];
-  NSString *token = [self stringValueFromKeychainForKey:kBITUpdateAuthorizedToken];
-  
-  if (version != nil && token != nil) {
-    if ([version compare:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]] == NSOrderedSame) {
-      // if it is denied, block the screen permanently
-      if ([token compare:[self authenticationToken]] != NSOrderedSame) {
-        return BITUpdateAuthorizationDenied;
-      } else {
-        return BITUpdateAuthorizationAllowed;
-      }
-    }
-  }
-  return BITUpdateAuthorizationPending;
-}
 
 #pragma mark - Cache
 
@@ -361,8 +333,6 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     _lastCheckFailed = NO;
     _currentAppVersion = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"];
     _blockingView = nil;
-    _requireAuthorization = NO;
-    _authenticationSecret = nil;
     _lastCheck = nil;
     _uuid = [[self executableUUID] copy];
     _versionUUID = nil;
@@ -439,7 +409,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     return;
   }
   
-  self.barStyle = UIBarStyleBlack;
+  if ([self isPreiOS7Environment])
+    self.barStyle = UIBarStyleBlack;
   [self showView:[self hockeyViewController:YES]];
 }
 
@@ -560,87 +531,9 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   return checkForUpdate;
 }
 
-- (void)checkForAuthorization {
-  NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@", [self encodedAppIdentifier]];
-  
-  [parameter appendFormat:@"?format=json&authorize=yes&app_version=%@&udid=%@&sdk=%@&sdk_version=%@&uuid=%@",
-   bit_URLEncodedString([[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]),
-   ([self isAppStoreEnvironment] ? @"appstore" : bit_URLEncodedString([self deviceIdentifier])),
-   BITHOCKEY_NAME,
-   BITHOCKEY_VERSION,
-   _uuid
-   ];
-  
-  // build request & send
-  NSString *url = [NSString stringWithFormat:@"%@%@", self.serverURL, parameter];
-  BITHockeyLog(@"INFO: Sending api request to %@", url);
-  
-  NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url] cachePolicy:1 timeoutInterval:10.0];
-  [request setHTTPMethod:@"GET"];
-  [request setValue:@"Hockey/iOS" forHTTPHeaderField:@"User-Agent"];
-  
-  NSURLResponse *response = nil;
-  NSError *error = NULL;
-  BOOL failed = YES;
-  
-  NSData *responseData = [NSURLConnection sendSynchronousRequest:request returningResponse:&response error:&error];
-  
-  if ([responseData length]) {
-    NSString *responseString = [[NSString alloc] initWithBytes:[responseData bytes] length:[responseData length] encoding: NSUTF8StringEncoding];
-    
-    if (responseString && [responseString dataUsingEncoding:NSUTF8StringEncoding]) {
-      NSDictionary *feedDict = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:kNilOptions error:&error];
-      
-      // server returned empty response?
-      if (![feedDict count]) {
-        [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
-                                              code:BITUpdateAPIServerReturnedEmptyResponse
-                                          userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Server returned empty response.", NSLocalizedDescriptionKey, nil]]];
-        return;
-      } else {
-        BITHockeyLog(@"INFO: Received API response: %@", responseString);
-        NSString *token = [[feedDict objectForKey:@"authcode"] lowercaseString];
-        failed = NO;
-        if ([[self authenticationToken] compare:token] == NSOrderedSame) {
-          // identical token, activate this version
-          
-          // store the new data
-          [[NSUserDefaults standardUserDefaults] setObject:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] forKey:kBITUpdateAuthorizedVersion];
-          [self addStringValueToKeychain:token forKey:kBITUpdateAuthorizedToken];
-          [[NSUserDefaults standardUserDefaults] synchronize];
-          
-          self.requireAuthorization = NO;
-          self.blockingView = nil;
-          
-          // now continue with an update check right away
-          if (self.checkForUpdateOnLaunch) {
-            [self checkForUpdate];
-          }
-        } else {
-          // different token, block this version
-          BITHockeyLog(@"INFO: AUTH FAILURE: %@", [self authenticationToken]);
-          
-          // store the new data
-          [[NSUserDefaults standardUserDefaults] setObject:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] forKey:kBITUpdateAuthorizedVersion];
-          [self addStringValueToKeychain:token forKey:kBITUpdateAuthorizedToken];
-          [[NSUserDefaults standardUserDefaults] synchronize];
-          
-          [self showBlockingScreen:BITHockeyLocalizedString(@"UpdateAuthorizationDenied") image:@"authorize_denied.png"];
-        }
-      }
-    }
-    
-  }
-  
-  if (failed) {
-    [self showBlockingScreen:BITHockeyLocalizedString(@"UpdateAuthorizationOffline") image:@"authorize_request.png"];
-  }
-}
-
 - (void)checkForUpdate {
   if (![self isAppStoreEnvironment] && ![self isUpdateManagerDisabled]) {
     if ([self expiryDateReached]) return;
-    if (self.requireAuthorization) return;
     
     if (self.isUpdateAvailable && [self hasNewerMandatoryVersion]) {
       [self showCheckForUpdateAlert];
@@ -735,38 +628,6 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 }
 
 
-// checks whether this app version is authorized
-- (BOOL)appVersionIsAuthorized {
-  if (self.requireAuthorization && !_authenticationSecret) {
-    [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
-                                          code:BITUpdateAPIClientAuthorizationMissingSecret
-                                      userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Authentication secret is not set but required.", NSLocalizedDescriptionKey, nil]]];
-    
-    return NO;
-  }
-  
-  if (!self.requireAuthorization) {
-    self.blockingView = nil;
-    return YES;
-  }
-
-#if TARGET_IPHONE_SIMULATOR
-  NSLog(@"Authentication checks only work on devices. Using the simulator will always return being authorized.");
-  return YES;
-#endif
-
-  BITUpdateAuthorizationState state = [self authorizationState];
-  if (state == BITUpdateAuthorizationDenied) {
-    [self showBlockingScreen:BITHockeyLocalizedString(@"UpdateAuthorizationDenied") image:@"authorize_denied.png"];
-  } else if (state == BITUpdateAuthorizationAllowed) {
-    self.requireAuthorization = NO;
-    return YES;
-  }
-  
-  return NO;
-}
-
-
 // begin the startup process
 - (void)startManager {
   if (![self isAppStoreEnvironment]) {
@@ -776,16 +637,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 
     [self checkExpiryDateReached];
     if (![self expiryDateReached]) {
-      if (![self appVersionIsAuthorized]) {
-        if ([self authorizationState] == BITUpdateAuthorizationPending) {
-          [self showBlockingScreen:BITHockeyLocalizedString(@"UpdateAuthorizationProgress") image:@"authorize_request.png"];
-          
-          [self performSelector:@selector(checkForAuthorization) withObject:nil afterDelay:0.0f];
-        }
-      } else {
-        if ([self checkForTracker] || ([self isCheckForUpdateOnLaunch] && [self shouldCheckForUpdates])) {
-          [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0f];
-        }
+      if ([self checkForTracker] || ([self isCheckForUpdateOnLaunch] && [self shouldCheckForUpdates])) {
+        [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0f];
       }
     }
   } else {

@@ -74,12 +74,6 @@
 // initiates app-download call. displays an system UIAlertView
 - (BOOL)initiateAppDownload;
 
-// checks whether this app version is authorized
-- (BOOL)appVersionIsAuthorized;
-
-// start checking for an authorization key
-- (void)checkForAuthorization;
-
 // get/set current active hockey view controller
 @property (nonatomic, strong) BITUpdateViewController *currentHockeyViewController;
 

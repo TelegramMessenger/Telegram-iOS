@@ -43,6 +43,10 @@
 #import <mach-o/ldsyms.h>
 #endif
 
+#ifndef __IPHONE_6_1
+#define __IPHONE_6_1     60100
+#endif
+
 @implementation BITHockeyBaseManager {
   UINavigationController *_navController;
   
@@ -56,8 +60,12 @@
   if ((self = [super init])) {
     _serverURL = BITHOCKEYSDK_URL;
 
-    _barStyle = UIBarStyleBlackOpaque;
-    self.tintColor = BIT_RGBCOLOR(25, 25, 25);
+    if ([self isPreiOS7Environment]) {
+      _barStyle = UIBarStyleBlackOpaque;
+      self.navigationBarTintColor = BIT_RGBCOLOR(25, 25, 25);
+    } else {
+      _barStyle = UIBarStyleDefault;
+    }
     _modalPresentationStyle = UIModalPresentationFormSheet;
     
     NSLocale *enUSPOSIXLocale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"];
@@ -90,6 +98,28 @@
 
 - (NSString *)encodedAppIdentifier {
   return (_appIdentifier ? bit_URLEncodedString(_appIdentifier) : bit_URLEncodedString([self mainBundleIdentifier]));
+}
+
+- (BOOL)isPreiOS7Environment {
+  static BOOL isPreiOS7Environment = YES;
+  static dispatch_once_t checkOS;
+  
+  dispatch_once(&checkOS, ^{
+    // we only perform this runtime check if this is build against at least iOS7 base SDK
+#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
+    // runtime check according to
+    // https://developer.apple.com/library/prerelease/ios/documentation/UserExperience/Conceptual/TransitionGuide/SupportingEarlieriOS.html
+    if (floor(NSFoundationVersionNumber) <= NSFoundationVersionNumber_iOS_6_1) {
+      isPreiOS7Environment = YES;
+    } else {
+      isPreiOS7Environment = NO;
+    }
+#else
+    isPreiOS7Environment = YES;
+#endif
+  });
+  
+  return isPreiOS7Environment;
 }
 
 - (NSString *)getDevicePlatform {
@@ -152,6 +182,24 @@
   return visibleWindow;
 }
 
+/**
+ * Provide a custom UINavigationController with customized appearance settings
+ *
+ * @param viewController The root viewController
+ * @param modalPresentationStyle The modal presentation style
+ *
+ * @return A UINavigationController
+ */
+- (UINavigationController *)customNavigationControllerWithRootViewController:(UIViewController *)viewController presentationStyle:(UIModalPresentationStyle)modalPresentationStyle {
+  UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:viewController];
+  navController.navigationBar.barStyle = self.barStyle;
+  if (self.navigationBarTintColor)
+    navController.navigationBar.tintColor = self.navigationBarTintColor;
+  navController.modalPresentationStyle = self.modalPresentationStyle;
+  
+  return navController;
+}
+
 - (void)showView:(UIViewController *)viewController {
   UIViewController *parentViewController = nil;
   
@@ -166,8 +214,8 @@
   }
   
   // use topmost modal view
-  while (parentViewController.modalViewController) {
-    parentViewController = parentViewController.modalViewController;
+  while (parentViewController.presentedViewController) {
+    parentViewController = parentViewController.presentedViewController;
   }
   
   // special addition to get rootViewController from three20 which has it's own controller handling
@@ -183,10 +231,7 @@
   
   if (_navController != nil) _navController = nil;
   
-  _navController = [[UINavigationController alloc] initWithRootViewController:viewController];
-  _navController.navigationBar.barStyle = _barStyle;
-  _navController.navigationBar.tintColor = _tintColor;
-  _navController.modalPresentationStyle = _modalPresentationStyle;
+  _navController = [self customNavigationControllerWithRootViewController:viewController presentationStyle:_modalPresentationStyle];
   
   if (parentViewController) {
     _navController.modalTransitionStyle = UIModalTransitionStyleCoverVertical;

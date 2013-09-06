@@ -23,6 +23,9 @@
 /** the value this object was initialized with */
 - (BOOL)isAppStoreEnvironment;
 
+/** Check if the device is running an iOS version previous to iOS 7 */
+- (BOOL)isPreiOS7Environment;
+
 /** by default, just logs the message
  
  can be overriden by subclasses to do their own error handling, 
@@ -42,6 +45,7 @@
 - (NSString *)executableUUID;
 
 /** UI helpers */
+- (UINavigationController *)customNavigationControllerWithRootViewController:(UIViewController *)viewController presentationStyle:(UIModalPresentationStyle)presentationStyle;
 - (UIWindow *)findVisibleWindow;
 - (void)showView:(UIViewController *)viewController;
 
