@@ -32,6 +32,24 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
 /**
  *	Authenticator module used to identify and optionally authenticate the current
  *  app installation
+ *
+ *  Authentication is actually a 2 step process:
+ *    1) authenticate
+ *       some kind of token is aquired depending on the authenticationType
+ *    2) verification
+ *       the aquired token from step 1 is verified dependong the validationType
+ *
+ *  There are currently 3 ways of authentication:
+ *    1) authenticate the user via email only
+ *    2) authenticate the user via email & passwort (needs to have a HockeyApp Account)
+ *    3) authenticate the device via its UDID
+ *
+ *  Additionally, verification can be required:
+ *    1) never
+ *    2) optional
+ *    3) on first launch of every app version, never again until the next version is installed
+ *    4) every time the app becomes active (needs data connection)
+ *
  */
 @interface BITAuthenticator : BITHockeyBaseManager
 
