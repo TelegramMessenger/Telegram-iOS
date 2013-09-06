@@ -37,7 +37,7 @@
 #import "BITHockeyManagerPrivate.h"
 
 #import "BITHockeyHelper.h"
-
+#import "BITHockeyAppClient.h"
 
 #define kBITFeedbackUserDataAsked   @"HockeyFeedbackUserDataAsked"
 #define kBITFeedbackDateOfLastCheck	@"HockeyFeedbackDateOfLastCheck"
@@ -749,27 +749,27 @@
     
     NSMutableData *postBody = [NSMutableData data];
     
-    [postBody appendData:[self appendPostValue:@"Apple" forKey:@"oem"]];
-    [postBody appendData:[self appendPostValue:[[UIDevice currentDevice] systemVersion] forKey:@"os_version"]];
-    [postBody appendData:[self appendPostValue:[self getDevicePlatform] forKey:@"model"]];
-    [postBody appendData:[self appendPostValue:[[[NSBundle mainBundle] preferredLocalizations] objectAtIndex:0] forKey:@"lang"]];
-    [postBody appendData:[self appendPostValue:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] forKey:@"bundle_version"]];
-    [postBody appendData:[self appendPostValue:[message text] forKey:@"text"]];
-    [postBody appendData:[self appendPostValue:[message token] forKey:@"message_token"]];
+    [postBody appendData:[BITHockeyAppClient dataWithPostValue:@"Apple" forKey:@"oem" boundary:boundary]];
+    [postBody appendData:[BITHockeyAppClient dataWithPostValue:[[UIDevice currentDevice] systemVersion] forKey:@"os_version" boundary:boundary]];
+    [postBody appendData:[BITHockeyAppClient dataWithPostValue:[self getDevicePlatform] forKey:@"model" boundary:boundary]];
+    [postBody appendData:[BITHockeyAppClient dataWithPostValue:[[[NSBundle mainBundle] preferredLocalizations] objectAtIndex:0] forKey:@"lang" boundary:boundary]];
+    [postBody appendData:[BITHockeyAppClient dataWithPostValue:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] forKey:@"bundle_version" boundary:boundary]];
+    [postBody appendData:[BITHockeyAppClient dataWithPostValue:[message text] forKey:@"text" boundary:boundary]];
+    [postBody appendData:[BITHockeyAppClient dataWithPostValue:[message token] forKey:@"message_token" boundary:boundary]];
     
     NSString *installString = bit_appAnonID();
     if (installString) {
-      [postBody appendData:[self appendPostValue:installString forKey:@"install_string"]];
+      [postBody appendData:[BITHockeyAppClient dataWithPostValue:installString forKey:@"install_string" boundary:boundary]];
     }
     
     if (self.userID) {
-      [postBody appendData:[self appendPostValue:self.userID forKey:@"user_string"]];
+      [postBody appendData:[BITHockeyAppClient dataWithPostValue:self.userID forKey:@"user_string" boundary:boundary]];
     }
     if (self.userName) {
-      [postBody appendData:[self appendPostValue:self.userName forKey:@"name"]];
+      [postBody appendData:[BITHockeyAppClient dataWithPostValue:self.userName forKey:@"name" boundary:boundary]];
     }
     if (self.userEmail) {
-      [postBody appendData:[self appendPostValue:self.userEmail forKey:@"email"]];
+      [postBody appendData:[BITHockeyAppClient dataWithPostValue:self.userEmail forKey:@"email" boundary:boundary]];
     }
     
     [postBody appendData:[[NSString stringWithFormat:@"--%@--\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];

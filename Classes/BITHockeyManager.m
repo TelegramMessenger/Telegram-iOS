@@ -36,6 +36,7 @@
 #import "BITStoreUpdateManagerPrivate.h"
 #import "BITFeedbackManagerPrivate.h"
 #import "BITAuthenticator_Private.h"
+#import "BITHockeyAppClient.h"
 
 @interface BITHockeyManager ()
 
@@ -247,6 +248,7 @@
   
   if (_serverURL != aServerURL) {
     _serverURL = [aServerURL copy];
+    _authenticator.hockeyAppClient.baseURL = [NSURL URLWithString:_serverURL ? _serverURL : BITHOCKEYSDK_URL];
   }
 }
 
@@ -302,7 +304,9 @@
     _feedbackManager.delegate = _delegate;
 
     BITHockeyLog(@"INFO: Setup Authenticator");
+    BITHockeyAppClient *client = [[BITHockeyAppClient alloc] initWithBaseURL:[NSURL URLWithString:_serverURL ? _serverURL : BITHOCKEYSDK_URL]];
     _authenticator = [[BITAuthenticator alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
+    _authenticator.hockeyAppClient = client;
     _authenticator.delegate = _delegate;
     
 #if JIRA_MOBILE_CONNECT_SUPPORT_ENABLED

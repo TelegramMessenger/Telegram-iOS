@@ -49,9 +49,6 @@
 - (UIWindow *)findVisibleWindow;
 - (void)showView:(UIViewController *)viewController;
 
-/** Network helpers */
-- (NSData *)appendPostValue:(NSString *)value forKey:(NSString *)key;
-
 /** Date helpers */
 - (NSDate *)parseRFC3339Date:(NSString *)dateString;
 

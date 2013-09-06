@@ -10,6 +10,7 @@
 #import "BITAuthenticator_Private.h"
 #import "HockeySDKPrivate.h"
 #import "HockeySDK.h"
+#import "BITHockeyAppClient.h"
 
 @interface BITAuthenticationViewController ()<UITextFieldDelegate> {
   UIStatusBarStyle _statusBarStyle;
@@ -244,41 +245,41 @@
   NSDictionary *params = [self parametersForAuthentication];
   
   __weak typeof (self) weakSelf = self;
-  [self.authenticator postPath:authenticationPath
-                    parameters:params
-                    completion:^(BITHTTPOperation *operation, id response, NSError *error) {
-                      typeof (self) strongSelf = weakSelf;
-                      if(nil == response) {
-                        //TODO think about alertview messages
-                        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil
-                                                                        message:@"Failed to authenticate"
-                                                                       delegate:nil
-                                                              cancelButtonTitle:BITHockeyLocalizedString(@"OK")
-                                                              otherButtonTitles:nil];
-                        [alert show];
-                      } else if(401 == operation.response.statusCode) {
-                        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil
-                                                                        message:@"Not authorized"
-                                                                       delegate:nil
-                                                              cancelButtonTitle:BITHockeyLocalizedString(@"OK")
-                                                              otherButtonTitles:nil];
-                        [alert show];
-                      } else {
-                        NSError *authParseError = nil;
-                        NSString *authToken = [strongSelf.class authenticationTokenFromReponse:response
-                                                                                         error:&authParseError];
-                        if(nil == authToken) {
+  [self.hockeyAppClient postPath:authenticationPath
+                      parameters:params
+                      completion:^(BITHTTPOperation *operation, id response, NSError *error) {
+                        typeof (self) strongSelf = weakSelf;
+                        if(nil == response) {
+                          //TODO think about alertview messages
                           UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil
                                                                           message:@"Failed to authenticate"
                                                                          delegate:nil
                                                                 cancelButtonTitle:BITHockeyLocalizedString(@"OK")
                                                                 otherButtonTitles:nil];
                           [alert show];
+                        } else if(401 == operation.response.statusCode) {
+                          UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil
+                                                                          message:@"Not authorized"
+                                                                         delegate:nil
+                                                                cancelButtonTitle:BITHockeyLocalizedString(@"OK")
+                                                                otherButtonTitles:nil];
+                          [alert show];
                         } else {
-                          [strongSelf.delegate authenticationViewController:strongSelf authenticatedWithToken:authToken];
+                          NSError *authParseError = nil;
+                          NSString *authToken = [strongSelf.class authenticationTokenFromReponse:response
+                                                                                           error:&authParseError];
+                          if(nil == authToken) {
+                            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil
+                                                                            message:@"Failed to authenticate"
+                                                                           delegate:nil
+                                                                  cancelButtonTitle:BITHockeyLocalizedString(@"OK")
+                                                                  otherButtonTitles:nil];
+                            [alert show];
+                          } else {
+                            [strongSelf.delegate authenticationViewController:strongSelf authenticatedWithToken:authToken];
+                          }
                         }
-                      }
-                      [self showLoginUI:NO];
+                        [self showLoginUI:NO];
                     }];
 }
 

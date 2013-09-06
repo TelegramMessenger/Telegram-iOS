@@ -9,12 +9,18 @@
 #import <UIKit/UIKit.h>
 @protocol BITAuthenticationViewControllerDelegate;
 @class BITAuthenticator;
+@class BITHockeyAppClient;
 
 @interface BITAuthenticationViewController : UITableViewController
 
 - (instancetype) initWithApplicationIdentifier:(NSString*) encodedApplicationIdentifier
                                requirePassword:(BOOL) requiresPassword
                                       delegate:(id<BITAuthenticationViewControllerDelegate>) delegate;
+
+/**
+ *	must be set
+ */
+@property (nonatomic, strong) BITHockeyAppClient *hockeyAppClient;
 
 /**
  * The application's id to identifiy it in the backend

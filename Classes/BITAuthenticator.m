@@ -11,6 +11,7 @@
 #import "HockeySDKPrivate.h"
 #import "BITAuthenticator_Private.h"
 #import "BITHTTPOperation.h"
+#import "BITHockeyAppClient.h"
 
 static NSString* const kBITAuthenticatorAuthTokenKey = @"BITAuthenticatorAuthTokenKey";
 static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthenticatorLastAuthenticatedVersionKey";
@@ -23,7 +24,6 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
 
 - (void)dealloc {
   [self unregisterObservers];
-  [self cancelOperationsWithPath:nil method:nil];
 }
 
 - (instancetype) initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironemt:(BOOL)isAppStoreEnvironment {
@@ -107,7 +107,7 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
   } else {
     NSString *validationPath = [NSString stringWithFormat:@"api/3/apps/%@/identity/validate", self.encodedAppIdentifier];
     __weak typeof (self) weakSelf = self;
-    [self getPath:validationPath
+    [self.hockeyAppClient getPath:validationPath
        parameters:[self validationParameters]
        completion:^(BITHTTPOperation *operation, id response, NSError *error) {
          typeof (self) strongSelf = weakSelf;
@@ -375,120 +375,5 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
     }
   };
 };
-
-#pragma mark - Networking 
-- (NSMutableURLRequest *) requestWithMethod:(NSString*) method
-                                       path:(NSString *) path
-                                 parameters:(NSDictionary *)params {
-  NSParameterAssert(self.serverURL);
-  NSParameterAssert(method);
-  NSParameterAssert(params == nil || [method isEqualToString:@"POST"] || [method isEqualToString:@"GET"]);
-  path = path ? : @"";
-  
-  NSURL *endpoint = [[NSURL URLWithString:self.serverURL] URLByAppendingPathComponent:path];
-  NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:endpoint];
-  request.HTTPMethod = method;
-  
-  if (params) {
-    if ([method isEqualToString:@"GET"]) {
-      NSString *absoluteURLString = [endpoint absoluteString];
-      //either path already has parameters, or not
-      NSString *appenderFormat = [path rangeOfString:@"?"].location == NSNotFound ? @"?%@" : @"&%@";
-      
-      endpoint = [NSURL URLWithString:[absoluteURLString stringByAppendingFormat:appenderFormat,
-                                       [self.class queryStringFromParameters:params withEncoding:NSUTF8StringEncoding]]];
-      [request setURL:endpoint];
-    } else {
-      //TODO: this is crap. Boundary must be the same as the one in appendData
-      //unify this!
-      NSString *boundary = @"----FOO";
-      NSString *contentType = [NSString stringWithFormat:@"multipart/form-data; boundary=%@", boundary];
-      [request setValue:contentType forHTTPHeaderField:@"Content-type"];
-      
-      NSMutableData *postBody = [NSMutableData data];
-      [params enumerateKeysAndObjectsUsingBlock:^(NSString *key, NSString *value, BOOL *stop) {
-        [postBody appendData:[self appendPostValue:value forKey:key]];
-      }];
-
-      [postBody appendData:[[NSString stringWithFormat:@"--%@--\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
-      
-      [request setHTTPBody:postBody];
-    }
-  }
-  
-  return request;
-}
-
-+ (NSString *) queryStringFromParameters:(NSDictionary *) params withEncoding:(NSStringEncoding) encoding {
-  NSMutableString *queryString = [NSMutableString new];
-  [params enumerateKeysAndObjectsUsingBlock:^(NSString* key, NSString* value, BOOL *stop) {
-    NSAssert([key isKindOfClass:[NSString class]], @"Query parameters can only be string-string pairs");
-    NSAssert([value isKindOfClass:[NSString class]], @"Query parameters can only be string-string pairs");
-    
-    [queryString appendFormat:queryString.length ? @"&%@=%@" : @"%@=%@", key, value];
-  }];
-  return queryString;
-}
-
-- (BITHTTPOperation*) operationWithURLRequest:(NSURLRequest*) request
-                                   completion:(BITNetworkCompletionBlock) completion {
-  BITHTTPOperation *operation = [BITHTTPOperation operationWithRequest:request
-                                 ];
-  [operation setCompletion:completion];
-  
-  return operation;
-}
-
-- (void)getPath:(NSString *)path parameters:(NSDictionary *)params completion:(BITNetworkCompletionBlock)completion {
-  NSURLRequest *request = [self requestWithMethod:@"GET" path:path parameters:params];
-  BITHTTPOperation *op = [self operationWithURLRequest:request
-                                            completion:completion];
-  [self enqeueHTTPOperation:op];
-}
-
-- (void)postPath:(NSString *)path parameters:(NSDictionary *)params completion:(BITNetworkCompletionBlock)completion {
-  NSURLRequest *request = [self requestWithMethod:@"POST" path:path parameters:params];
-  BITHTTPOperation *op = [self operationWithURLRequest:request
-                                            completion:completion];
-  [self enqeueHTTPOperation:op];
-}
-
-- (void) enqeueHTTPOperation:(BITHTTPOperation *) operation {
-  [self.operationQueue addOperation:operation];
-}
-
-- (NSUInteger) cancelOperationsWithPath:(NSString*) path
-                                 method:(NSString*) method {
-  NSUInteger cancelledOperations = 0;
-  for(BITHTTPOperation *operation in self.operationQueue.operations) {
-    NSURLRequest *request = operation.URLRequest;
-
-    BOOL matchedMethod = YES;
-    if(method && ![request.HTTPMethod isEqualToString:method]) {
-      matchedMethod = NO;
-    }
-
-    BOOL matchedPath = YES;
-    if(path) {
-      //method is not interesting here, we' just creating it to get the URL
-      NSURL *url = [self requestWithMethod:@"GET" path:path parameters:nil].URL;
-      matchedPath = [request.URL isEqual:url];
-    }
-  
-    if(matchedPath && matchedMethod) {
-      ++cancelledOperations;
-      [operation cancel];
-    }
-  }
-  return cancelledOperations;
-}
-
-- (NSOperationQueue *)operationQueue {
-  if(nil == _operationQueue) {
-    _operationQueue = [[NSOperationQueue alloc] init];
-    _operationQueue.maxConcurrentOperationCount = 1;
-  }
-  return _operationQueue;
-}
 
 @end
