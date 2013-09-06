@@ -47,6 +47,36 @@
  */
 - (void) applicationDidBecomeActive:(NSNotification*) note;
 
+
+#pragma mark - Authentication
+/**
+ *	Authenticate this app installation
+ *
+ *  Depending on 'authenticationType', this tries to authenticate the app installation
+ *  against the HockeyApp server.
+ *  You should not need to call this, as it's done automatically once the manager has
+ *  been started, depending on validationType.
+ *
+ *  @param completion if nil, success/failure is reported via the delegate, if not nil, the
+ *         delegate methods are not called.
+ */
+- (void) authenticateWithCompletion:(tAuthenticationCompletion) completion;
+
+#pragma mark - Validation
+/**
+ *	Validate the app installation
+ *
+ *  Depending on @see validationType, this is called by the manager after the app becomes active
+ *  and tries to revalidate the installation.
+ *  You should not need to call this, as it's done automatically once the manager has
+ *  been started, depending on validationType.
+ *
+ *  @param completion if nil, success/failure is reported via the delegate, if not nil, the
+ *         delegate methods are not called
+ */
+- (void) validateInstallationWithCompletion:(tValidationCompletion) completion;
+
+
 #pragma mark - Validation callbacks
 - (void) validationSucceededWithCompletion:(tValidationCompletion) completion;
 - (void) validationFailedWithError:(NSError *) validationError completion:(tValidationCompletion) completion;

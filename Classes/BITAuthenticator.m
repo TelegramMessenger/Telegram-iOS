@@ -87,21 +87,9 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
         NSError *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                              code:BITAuthenticatorNotAuthorized
                                          userInfo:nil];
-        if(completion) {
-          completion(NO, error);
-        } else {
-          if([self.delegate respondsToSelector:@selector(authenticator:failedToValidateInstallationWithError:)]) {
-            [self.delegate authenticator:self failedToValidateInstallationWithError:error];
-          }
-        }
+        if(completion) completion(NO, error);
       } else {
-        if(completion) {
-          completion(YES, nil);
-        } else {
-          if([self.delegate respondsToSelector:@selector(authenticatorDidValidateInstallation:)]) {
-            [self.delegate authenticatorDidValidateInstallation:self];
-          }
-        }
+        if(completion) completion(YES, nil);
       }
     }];
   } else {
@@ -253,10 +241,6 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
   if(self.authenticationCompletionBlock) {
     self.authenticationCompletionBlock(self.authenticationToken, error);
     self.authenticationCompletionBlock = nil;
-  } else {
-    if([self.delegate respondsToSelector:@selector(authenticator:failedToAuthenticateWithError:)]) {
-      [self.delegate authenticator:self failedToAuthenticateWithError:error];
-    }
   }
 }
 
@@ -269,10 +253,6 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
   if(self.authenticationCompletionBlock) {
     self.authenticationCompletionBlock(self.authenticationToken, nil);
     self.authenticationCompletionBlock = nil;
-  } else {
-    if([self.delegate respondsToSelector:@selector(authenticatorDidAuthenticate:)]) {
-      [self.delegate authenticatorDidAuthenticate:self];
-    }
   }
 }
 
@@ -280,20 +260,12 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
 - (void)validationFailedWithError:(NSError *)validationError completion:(tValidationCompletion) completion{
   if(completion) {
     completion(NO, validationError);
-  } else {
-    if([self.delegate respondsToSelector:@selector(authenticator:failedToValidateInstallationWithError:)]) {
-      [self.delegate authenticator:self failedToValidateInstallationWithError:validationError];
-    }
   }
 }
 
 - (void)validationSucceededWithCompletion:(tValidationCompletion) completion {
   if(completion) {
     completion(YES, nil);
-  } else {
-    if([self.delegate respondsToSelector:@selector(authenticatorDidValidateInstallation:)]) {
-      [self.delegate authenticatorDidValidateInstallation:self];
-    }
   }
 }
 

@@ -87,34 +87,6 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
  */
 @property (nonatomic, readonly) NSString *installationIdentification;
 
-#pragma mark - Authentication
-/**
- *	Authenticate this app installation
- *
- *  Depending on 'authenticationType', this tries to authenticate the app installation
- *  against the HockeyApp server.
- *  You should not need to call this, as it's done automatically once the manager has
- *  been started, depending on validationType.
- * 
- *  @param completion if nil, success/failure is reported via the delegate, if not nil, the
- *         delegate methods are not called.
- */
-- (void) authenticateWithCompletion:(tAuthenticationCompletion) completion;
-
-#pragma mark - Validation
-/**
- *	Validate the app installation
- *
- *  Depending on @see validationType, this is called by the manager after the app becomes active 
- *  and tries to revalidate the installation.
- *  You should not need to call this, as it's done automatically once the manager has
- *  been started, depending on validationType.
- *
- *  @param completion if nil, success/failure is reported via the delegate, if not nil, the
- *         delegate methods are not called
- */
-- (void) validateInstallationWithCompletion:(tValidationCompletion) completion;
-
 @end
 
 @protocol BITAuthenticatorDelegate <NSObject>
@@ -129,11 +101,5 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
  *
  */
 - (void) authenticator:(BITAuthenticator *)authenticator willShowAuthenticationController:(UIViewController*) viewController;
-- (void) authenticatorDidAuthenticate:(BITAuthenticator*) authenticator;
-- (void) authenticator:(BITAuthenticator*) authenticator failedToAuthenticateWithError:(NSError*) error;
-
-- (void) authenticatorDidValidateInstallation:(BITAuthenticator*) authenticator;
-- (void) authenticator:(BITAuthenticator*) authenticator failedToValidateInstallationWithError:(NSError*) error;
-
 
 @end

@@ -155,29 +155,38 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   assertThat(_sut.authenticationToken, equalTo(@"SuperToken"));
 }
 
-- (void) testThatSuccessfulAuthenticationCallsTheDelegate {
+- (void) testThatSuccessfulAuthenticationCallsTheBlock {
   id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
   _sut.delegate = delegateMock;
   _sut.authenticationToken = @"Test";
-  
-  [_sut authenticateWithCompletion:nil];
+  __block BOOL didAuthenticate = NO;
+  [_sut authenticateWithCompletion:^(NSString *authenticationToken, NSError *error) {
+    if(authenticationToken) didAuthenticate = YES;
+  }];
   [_sut authenticationViewController:nil authenticatedWithToken:@"SuperToken"];
   
-  [verify(delegateMock) authenticatorDidAuthenticate:_sut];
+  assertThatBool(didAuthenticate, equalToBool(YES));
 }
 
-- (void) testThatCancelledAuthenticationCallsTheErrorDelegate {
+- (void) testThatCancelledAuthenticationSetsProperError {
   id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
   _sut.delegate = delegateMock;
   
   //this will prepare everything and show the viewcontroller
-  [_sut authenticateWithCompletion:nil];
+  __block BOOL didAuthenticateCalled = NO;
+  __block NSError *authenticationError = nil;
+  [_sut authenticateWithCompletion:^(NSString *authenticationToken, NSError *error) {
+    didAuthenticateCalled = YES;
+    authenticationError = error;
+  }];
+
   //fake delegate call from the viewcontroller
   [_sut authenticationViewControllerDidCancel:nil];
-  
-  [verify(delegateMock) authenticator:_sut failedToAuthenticateWithError:[NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                                                                             code:BITAuthenticatorAuthenticationCancelled
-                                                                                         userInfo:nil]];
+
+  assertThatBool(didAuthenticateCalled, equalToBool(YES));
+  assertThat(authenticationError, equalTo([NSError errorWithDomain:kBITAuthenticatorErrorDomain
+                                                              code:BITAuthenticatorAuthenticationCancelled
+                                                          userInfo:nil]));
 }
 
 - (void) testThatCancelledAuthenticationResetsTheToken {
@@ -279,28 +288,41 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   [verifyCount(delegateMock, never()) authenticator:_sut willShowAuthenticationController:(id)anything()];
 }
 
-- (void) testThatFailedValidationCallsTheDelegate {
+- (void) testThatFailedValidationCallsTheCompletionBlock {
   id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
   _sut.delegate = delegateMock;
   _sut.validationType = BITAuthenticatorValidationTypeOnFirstLaunch;
   
-  [_sut validateInstallationWithCompletion:nil];
-  [_sut validationFailedWithError:nil completion:nil];
+  __block BOOL validated = YES;
+  __block NSError *error = nil;
+  tValidationCompletion completion = ^(BOOL validated_, NSError *error_) {
+    validated = validated_;
+    error = error_;
+  };
+  [_sut validateInstallationWithCompletion:completion];
+  [_sut validationFailedWithError:[NSError errorWithDomain:kBITAuthenticatorErrorDomain code:0 userInfo:nil]
+                       completion:completion];
   
-  [verifyCount(delegateMock, times(1)) authenticator:_sut failedToValidateInstallationWithError:(id)anything()];
-  [verifyCount(delegateMock, never()) authenticatorDidValidateInstallation:_sut];
+  assertThatBool(validated, equalToBool(NO));
+  assertThat(error, notNilValue());
 }
 
-- (void) testThatSuccessValidationCallsTheDelegate {
+- (void) testThatSuccessValidationCallsTheCompletionBlock {
   id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
   _sut.delegate = delegateMock;
   _sut.validationType = BITAuthenticatorValidationTypeOnFirstLaunch;
   
-  [_sut validateInstallationWithCompletion:nil];
-  [_sut validationSucceededWithCompletion:nil];
+  __block BOOL validated = NO;
+  __block NSError *error = nil;
+  tValidationCompletion completion = ^(BOOL validated_, NSError *error_) {
+    validated = validated_;
+    error = error_;
+  };
+  [_sut validateInstallationWithCompletion:completion];
+  [_sut validationSucceededWithCompletion:completion];
 
-  [verifyCount(delegateMock, never()) authenticator:_sut failedToValidateInstallationWithError:(id)anything()];
-  [verifyCount(delegateMock, times(1)) authenticatorDidValidateInstallation:_sut];
+  assertThatBool(validated, equalToBool(YES));
+  assertThat(error, nilValue());
 }
 
 @end
