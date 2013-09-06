@@ -62,6 +62,9 @@
  */
 - (void) authenticateWithCompletion:(tAuthenticationCompletion) completion;
 
+#pragma mark - Internal Auth callbacks
+- (void) didAuthenticateWithToken:(NSString*) token;
+
 #pragma mark - Validation
 /**
  *	Validate the app installation

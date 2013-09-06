@@ -23,14 +23,10 @@
 
 @implementation BITAuthenticationViewController
 
-- (instancetype) initWithApplicationIdentifier:(NSString*) encodedApplicationIdentifier
-                               requirePassword:(BOOL) requiresPassword
-                                      delegate:(id<BITAuthenticationViewControllerDelegate>) delegate {
+- (instancetype) initWithDelegate:(id<BITAuthenticationViewControllerDelegate>)delegate {
   self = [super initWithStyle:UITableViewStyleGrouped];
   if (self) {
     self.title = BITHockeyLocalizedString(@"HockeyAuthenticatorViewControllerTitle");
-    _encodedApplicationIdentifier = [encodedApplicationIdentifier copy];
-    _requirePassword = requiresPassword;
     _delegate = delegate;
     _showsCancelButton = YES;
   }
@@ -222,71 +218,25 @@
 
 - (void)saveAction:(id)sender {
   [self showLoginUI:YES];
-  NSParameterAssert(self.encodedApplicationIdentifier);
   
-
-  NSString *authenticationPath = [self authenticationPath];
-  NSDictionary *params = [self parametersForAuthentication];
-  
-  __weak typeof (self) weakSelf = self;
-  [self.hockeyAppClient postPath:authenticationPath
-                      parameters:params
-                      completion:^(BITHTTPOperation *operation, id response, NSError *error) {
-                        typeof (self) strongSelf = weakSelf;
-                        if(nil == response) {
-                          //TODO think about alertview messages
-                          UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil
-                                                                          message:@"Failed to authenticate"
-                                                                         delegate:nil
-                                                                cancelButtonTitle:BITHockeyLocalizedString(@"OK")
-                                                                otherButtonTitles:nil];
-                          [alert show];
-                        } else if(401 == operation.response.statusCode) {
-                          UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil
-                                                                          message:@"Not authorized"
-                                                                         delegate:nil
-                                                                cancelButtonTitle:BITHockeyLocalizedString(@"OK")
-                                                                otherButtonTitles:nil];
-                          [alert show];
-                        } else {
-                          NSError *authParseError = nil;
-                          NSString *authToken = [strongSelf.class authenticationTokenFromReponse:response
-                                                                                           error:&authParseError];
-                          if(nil == authToken) {
-                            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil
-                                                                            message:@"Failed to authenticate"
-                                                                           delegate:nil
-                                                                  cancelButtonTitle:BITHockeyLocalizedString(@"OK")
-                                                                  otherButtonTitles:nil];
-                            [alert show];
-                          } else {
-                            [strongSelf.delegate authenticationViewController:strongSelf authenticatedWithToken:authToken];
-                          }
-                        }
-                        [self showLoginUI:NO];
-                    }];
-}
-
-- (NSDictionary *) parametersForAuthentication {
-  if(self.requirePassword) {
-    return @{ @"user" : [NSString stringWithFormat:@"%@:%@", self.email, self.password] };
-  } else {
-    NSString *authCode = BITHockeyMD5([NSString stringWithFormat:@"%@%@",
-                                       self.authenticator.authenticationSecret ? : @"",
-                                       self.email ? : @""]);
-    return @{
-             @"email" : self.email,
-             @"authcode" : authCode.lowercaseString,
-             };
-  }
-}
-
-- (NSString *) authenticationPath {
-  if(self.requirePassword) {
-    return [NSString stringWithFormat:@"api/3/apps/%@/identity/authorize", self.encodedApplicationIdentifier];
-  } else {
-    return [NSString stringWithFormat:@"api/3/apps/%@/identity/check", self.encodedApplicationIdentifier];
-  }
+  __weak typeof(self) weakSelf = self;
+  [self.delegate authenticationViewController:self
+                handleAuthenticationWithEmail:self.email
+                                     password:self.password
+                                   completion:^(BOOL succeeded, NSError *error) {
+                                     if(succeeded) {
+                                       //controller shoud dismiss us shortly..
+                                     } else {
+                                       UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil
+                                                                                           message:error.localizedDescription
+                                                                                          delegate:nil
+                                                                                 cancelButtonTitle:BITHockeyLocalizedString(@"OK")
+                                                                                 otherButtonTitles:nil];
+                                       [alertView show];
+                                       typeof(self) strongSelf = weakSelf;
+                                       [strongSelf showLoginUI:NO];
+                                     }
+                                   }];
 }
 
 - (void) showLoginUI:(BOOL) enableLoginUI {
@@ -294,48 +244,4 @@
   self.tableView.userInteractionEnabled = !enableLoginUI;
 }
 
-+ (NSString *) authenticationTokenFromReponse:(id) response error:(NSError **) error {
-  NSParameterAssert(response);
-  
-  NSError *jsonParseError = nil;
-  id jsonObject = [NSJSONSerialization JSONObjectWithData:response
-                                                  options:0
-                                                    error:&jsonParseError];
-  if(nil == jsonObject) {
-    if(error) {
-      *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                   code:BITAuthenticatorAPIServerReturnedInvalidRespone
-                               userInfo:(jsonParseError ? @{NSUnderlyingErrorKey : jsonParseError} : nil)];
-    }
-    return nil;
-  }
-  if(![jsonObject isKindOfClass:[NSDictionary class]]) {
-    if(error) {
-      *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                   code:BITAuthenticatorAPIServerReturnedInvalidRespone
-                               userInfo:nil];
-    }
-    return nil;
-  }
-  NSString *status = jsonObject[@"status"];
-  if(nil == status) {
-    if(error) {
-      *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                   code:BITAuthenticatorAPIServerReturnedInvalidRespone
-                               userInfo:nil];
-    }
-    return nil;
-  } else if([status isEqualToString:@"identified"]) {
-    return jsonObject[@"iuid"];
-  } else if([status isEqualToString:@"authorized"]) {
-    return jsonObject[@"auid"];
-  } else {
-    if(error) {
-      *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                   code:BITAuthenticatorNotAuthorized
-                               userInfo:nil];
-    }
-    return nil;
-  }
-}
 @end

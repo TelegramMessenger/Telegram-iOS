@@ -13,19 +13,7 @@
 
 @interface BITAuthenticationViewController : UITableViewController
 
-- (instancetype) initWithApplicationIdentifier:(NSString*) encodedApplicationIdentifier
-                               requirePassword:(BOOL) requiresPassword
-                                      delegate:(id<BITAuthenticationViewControllerDelegate>) delegate;
-
-/**
- *	must be set
- */
-@property (nonatomic, strong) BITHockeyAppClient *hockeyAppClient;
-
-/**
- * The application's id to identifiy it in the backend
- */
-@property (nonatomic, copy) NSString *encodedApplicationIdentifier;
+- (instancetype) initWithDelegate:(id<BITAuthenticationViewControllerDelegate>) delegate;
 
 /**
  *	can be set to YES to also require the users password
@@ -39,11 +27,6 @@
  *  defaults to YES
  */
 @property (nonatomic, assign) BOOL showsCancelButton;
-/**
- *	TODO: instead of passing the whole authenticator, we actually only need
- *        something to create and enqueue BITHTTPOperations
- */
-@property (nonatomic, weak) BITAuthenticator *authenticator;
 
 @property (nonatomic, weak) id<BITAuthenticationViewControllerDelegate> delegate;
 
@@ -51,7 +34,27 @@
 
 @protocol BITAuthenticationViewControllerDelegate<NSObject>
 
+/**
+ *	called then the user cancelled
+ *
+ *	@param	viewController the delegating viewcontroller
+ */
 - (void) authenticationViewControllerDidCancel:(UIViewController*) viewController;
-- (void) authenticationViewController:(UIViewController*) viewController authenticatedWithToken:(NSString*) token;
+
+/**
+ *	called when the user wants to login
+ *
+ *	@param	viewController	the delegating viewcontroller
+ *	@param	email	the content of the email-field
+ *	@param	password	the content of the password-field (if existent)
+ *  @param  completion Must be called by the delegate once the auth-task completed
+ *                     This viewcontroller shows an activity-indicator in between and blocks
+ *                     the UI. if succeeded is NO, it shows an alertView presenting the error
+ *                     given by the completion block
+ */
+- (void) authenticationViewController:(UIViewController*) viewController
+        handleAuthenticationWithEmail:(NSString*) email
+                             password:(NSString*) password
+                           completion:(void(^)(BOOL succeeded, NSError *error)) completion;
 
 @end

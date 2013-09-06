@@ -150,7 +150,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   //this will prepare everything and show the viewcontroller
   [_sut authenticateWithCompletion:nil];
   //fake delegate call from the viewcontroller
-  [_sut authenticationViewController:nil authenticatedWithToken:@"SuperToken"];
+  [_sut didAuthenticateWithToken:@"SuperToken"];
   
   assertThat(_sut.authenticationToken, equalTo(@"SuperToken"));
 }
@@ -163,7 +163,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   [_sut authenticateWithCompletion:^(NSString *authenticationToken, NSError *error) {
     if(authenticationToken) didAuthenticate = YES;
   }];
-  [_sut authenticationViewController:nil authenticatedWithToken:@"SuperToken"];
+  [_sut didAuthenticateWithToken:@"SuperToken"];
   
   assertThatBool(didAuthenticate, equalToBool(YES));
 }
