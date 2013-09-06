@@ -36,6 +36,9 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
 
 #pragma mark - BITHockeyBaseManager overrides
 - (void)startManager {
+  //disabled in the appStore
+  if([self isAppStoreEnvironment]) return;
+  
   [self registerObservers];
   
   switch (self.validationType) {
