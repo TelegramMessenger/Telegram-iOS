@@ -27,11 +27,14 @@
 - (NSString*) uniqueIdentifier {return @"reallyUnique";}
 @end
 
+static void *kInstallationIdentification = &kInstallationIdentification;
+
 @interface BITAuthenticatorTests : SenTestCase
 @end
 
 @implementation BITAuthenticatorTests {
   BITAuthenticator *_sut;
+  BOOL _KVOCalled;
 }
 
 - (void)setUp {
@@ -188,6 +191,28 @@
   [_sut authenticationViewControllerDidCancel:nil];
   
   assertThat(_sut.authenticationToken, equalTo(nil));
+}
+
+- (void) testThatKVOWorksOnApplicationIdentification {
+  //this will prepare everything and show the viewcontroller
+  [_sut authenticateWithCompletion:nil];
+
+  [_sut addObserver:self forKeyPath:@"installationIdentification"
+            options:0
+            context:kInstallationIdentification];
+  
+  //fake delegate call from the viewcontroller
+  [_sut authenticationViewControllerDidCancel:nil];
+  assertThatBool(_KVOCalled, equalToBool(YES));
+  [_sut removeObserver:self forKeyPath:@"installationIdentification"];
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
+  if(kInstallationIdentification == context) {
+    _KVOCalled = YES;
+  } else {
+    [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
+  }
 }
 
 #pragma mark - validation tests

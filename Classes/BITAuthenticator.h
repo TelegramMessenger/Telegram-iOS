@@ -81,10 +81,11 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
  *  to provide better error reporting & analytics. If authenticator is configured to login 
  *  (@see BITAuthenticatorValidationType), this identifier is retrieved from HockeyApp. In case
  *  it is disabled, it returns the vendorIdentifier provided by UIKit.
+ *  KVO'able
  *
  *	@return	a string identifying this app installation
  */
-- (NSString *) installationIdentification;
+@property (nonatomic, readonly) NSString *installationIdentification;
 
 #pragma mark - Authentication
 /**

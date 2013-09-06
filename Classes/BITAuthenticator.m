@@ -328,11 +328,13 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
 #pragma mark - Property overrides
 - (void)setAuthenticationToken:(NSString *)authenticationToken {
   if(![self.authenticationToken isEqualToString:authenticationToken]) {
+    [self willChangeValueForKey:@"installationIdentification"];
     if(nil == authenticationToken) {
       [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenKey];
     } else {
       [self addStringValueToKeychain:authenticationToken forKey:kBITAuthenticatorAuthTokenKey];
     }
+    [self didChangeValueForKey:@"installationIdentification"];
   }
 }
 
