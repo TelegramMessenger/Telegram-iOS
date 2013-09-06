@@ -217,7 +217,7 @@
 }
 
 - (void)saveAction:(id)sender {
-  [self showLoginUI:YES];
+  [self setLoginUIEnabled:NO];
   
   __weak typeof(self) weakSelf = self;
   [self.delegate authenticationViewController:self
@@ -234,14 +234,14 @@
                                                                                  otherButtonTitles:nil];
                                        [alertView show];
                                        typeof(self) strongSelf = weakSelf;
-                                       [strongSelf showLoginUI:NO];
+                                       [strongSelf setLoginUIEnabled:YES];
                                      }
                                    }];
 }
 
-- (void) showLoginUI:(BOOL) enableLoginUI {
-  self.navigationItem.rightBarButtonItem.enabled = !enableLoginUI;
-  self.tableView.userInteractionEnabled = !enableLoginUI;
+- (void) setLoginUIEnabled:(BOOL) enabled {
+  self.navigationItem.rightBarButtonItem.enabled = !enabled;
+  self.tableView.userInteractionEnabled = !enabled;
 }
 
 @end
