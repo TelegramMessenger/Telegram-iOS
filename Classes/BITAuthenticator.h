@@ -13,6 +13,7 @@
 typedef NS_ENUM(NSUInteger, BITAuthenticatorAuthType) {
   BITAuthenticatorAuthTypeEmail,
   BITAuthenticatorAuthTypeEmailAndPassword,
+  BITAuthenticatorAuthTypeWebbased,
   //TODO: add Facebook?
 };
 
@@ -86,6 +87,35 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
  *	@return	a string identifying this app installation
  */
 @property (nonatomic, readonly) NSString *installationIdentification;
+
+#pragma mark - HandleURL Helper
+
+/**
+ *	should be used by the app-delegate to forward handle application:openURL:sourceApplication:annotation calls
+ *
+ *	@param	url	URL that was passed to the app
+ *	@param	sourceApplication	sourceApplication that was passed to the app
+ *	@param	annotation	annotation that was passed to the app
+ *
+ *	@return	YES if the URL request was handled, NO if the URL could not be handled/identified
+ *
+ *  Sample usage (in AppDelegate)
+ *  - (BOOL)application:(UIApplication *)application 
+ *              openURL:(NSURL *)url
+ *    sourceApplication:(NSString *)sourceApplication annotation:(id)annotation {
+ *    if ([[BITHockeyManager sharedHockeyManager].authenticator handleOpenURL:url
+ *                                                          sourceApplication:sourceApplication
+ *                                                                 annotation:annotation]) {
+ *      return YES;
+ *    } else {
+ *      //do your own URL handling, return appropriate valu
+ *    }
+ *    return NO;
+ }
+ */
+- (BOOL) handleOpenURL:(NSURL *) url
+     sourceApplication:(NSString *) sourceApplication
+            annotation:(id) annotation;
 
 @end
 

@@ -33,10 +33,14 @@
   return self;
 }
 
+#pragma mark - view lifecycle
+
 - (void)viewDidLoad {
   [super viewDidLoad];
   
   [self.tableView setScrollEnabled:NO];
+  
+  [self updateWebLoginButton];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -60,6 +64,7 @@
   [[UIApplication sharedApplication] setStatusBarStyle:_statusBarStyle];
 }
 
+#pragma mark - Property overrides
 - (void)setShowsCancelButton:(BOOL)showsCancelButton {
   if(_showsCancelButton != showsCancelButton) {
     _showsCancelButton = showsCancelButton;
@@ -77,6 +82,44 @@
   }
 }
 
+- (void)setShowsLoginViaWebButton:(BOOL)showsLoginViaWebButton {
+  if(_showsLoginViaWebButton != showsLoginViaWebButton) {
+    _showsLoginViaWebButton = showsLoginViaWebButton;
+    if(self.isViewLoaded) {
+      [self.tableView reloadData];
+      [self updateWebLoginButton];
+    }
+   }
+}
+
+- (void) updateWebLoginButton {
+  if(self.showsLoginViaWebButton) {
+    static const CGFloat kFooterHeight = 60.f;
+    UIView *containerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0,
+                                                                     CGRectGetWidth(self.tableView.bounds),
+                                                                     kFooterHeight)];
+    UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
+    [button setTitle:BITHockeyLocalizedString(@"Show login page") forState:UIControlStateNormal];
+    CGSize buttonSize = [button sizeThatFits:CGSizeMake(CGRectGetWidth(self.tableView.bounds),
+                                                        kFooterHeight)];
+    button.frame = CGRectMake(floorf((CGRectGetWidth(containerView.bounds) - buttonSize.width) / 2.f),
+                              floorf((kFooterHeight - buttonSize.height) / 2.f),
+                              buttonSize.width,
+                              buttonSize.height);
+    button.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
+    [containerView addSubview:button];
+    [button addTarget:self
+               action:@selector(handleWebLoginButton:)
+     forControlEvents:UIControlEventTouchUpInside];
+    self.tableView.tableFooterView = containerView;
+  } else {
+    self.tableView.tableFooterView = nil;
+  }
+}
+
+- (IBAction) handleWebLoginButton:(id)sender {
+  [self.delegate authenticationViewControllerDidTapWebButton:self];
+}
 #pragma mark - UIViewController Rotation
 
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)orientation {
@@ -101,16 +144,24 @@
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-  NSInteger rows = 1;
-  
-  if ([self requirePassword]) rows ++;
-  
-  return rows;
+  if(self.showsLoginViaWebButton) {
+    return 0;
+  } else {
+    NSInteger rows = 1;
+    
+    if ([self requirePassword]) rows ++;
+    
+    return rows;
+  }
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
   if (section == 0) {
-    return BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerDataDescription");
+    if(self.showsLoginViaWebButton) {
+      return BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerWebLoginDescription");
+    } else {
+      return BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerDataDescription");
+    }
   }
   
   return nil;

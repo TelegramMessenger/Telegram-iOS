@@ -135,6 +135,9 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
     case BITAuthenticatorAuthTypeEmailAndPassword:
       params = @{@"auid" : self.authenticationToken};
       break;
+    case BITAuthenticatorAuthTypeWebbased:
+      params = @{@"udid" : self.authenticationToken};
+      break;
   }
   return params;
 }
@@ -197,19 +200,21 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
     BITHockeyLog(@"Already authenticating. Ignoring request");
     return;
   }
-  
-  BOOL requiresPassword;
+
+  BITAuthenticationViewController *viewController = [[BITAuthenticationViewController alloc] initWithDelegate:self];
   switch (self.authenticationType) {
     case BITAuthenticatorAuthTypeEmailAndPassword:
-      requiresPassword = YES;
+      viewController.requirePassword = YES;
       break;
     case BITAuthenticatorAuthTypeEmail:
-      requiresPassword = NO;
+      viewController.requirePassword = NO;
+      break;
+    case BITAuthenticatorAuthTypeWebbased:
+      viewController.requirePassword = NO;
+      viewController.showsLoginViaWebButton = YES;
       break;
   }
   
-  BITAuthenticationViewController *viewController = [[BITAuthenticationViewController alloc] initWithDelegate:self];
-  viewController.requirePassword = requiresPassword;
   switch (self.validationType) {
     case BITAuthenticatorValidationTypeNever:
     case BITAuthenticatorValidationTypeOptional:
@@ -370,6 +375,65 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
       *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                    code:BITAuthenticatorNotAuthorized
                                userInfo:nil];
+    }
+    return nil;
+  }
+}
+
+
+- (void)authenticationViewControllerDidTapWebButton:(UIViewController *)viewController {
+  NSURL *hockeyWebbasedLoginURL = [self.hockeyAppClient.baseURL URLByAppendingPathComponent:[NSString stringWithFormat:@"apps/%@/authorize", self.encodedAppIdentifier]];
+  [[UIApplication sharedApplication] openURL:hockeyWebbasedLoginURL];
+}
+
+- (BOOL) handleOpenURL:(NSURL *) url
+     sourceApplication:(NSString *) sourceApplication
+            annotation:(id) annotation {
+  BOOL isValidURL = NO;
+  NSString *udid = [self UDIDFromOpenURL:url annotation:annotation isValidURL:&isValidURL];
+  if(NO == isValidURL) {
+    //do nothing, was not for us
+    return NO;
+  }
+  
+  if(udid){
+    [self didAuthenticateWithToken:udid];
+  } else {
+    //reset auth-token
+    self.authenticationToken = nil;
+    
+    if(self.validationType == BITAuthenticatorValidationTypeOptional) {
+      //dismiss view-controller if login was optional
+      [_authenticationController dismissModalViewControllerAnimated:YES];
+      _authenticationController = nil;
+    } else {
+      //keep the viewcontroller and thus block the app
+    }
+  }
+  return YES;
+}
+
+- (NSString *) UDIDFromOpenURL:(NSURL *) url annotation:(id) annotation isValidURL:(BOOL*) isValid{
+  NSString *urlScheme = [NSString stringWithFormat:@"ha%@", self.appIdentifier];
+  if([[url scheme] isEqualToString:urlScheme]) {
+    if(isValid) {
+      *isValid = YES;
+    }
+    NSString *query = [url query];
+    NSString *udid = nil;
+    //there should actually only one
+    static NSString * const UDIDQuerySpecifier = @"udid";
+    for(NSString *queryComponents in [query componentsSeparatedByString:@"&"]) {
+      NSArray *parameterComponents = [queryComponents componentsSeparatedByString:@"="];
+      if(2 == parameterComponents.count && [parameterComponents[0] isEqualToString:UDIDQuerySpecifier]) {
+        udid = parameterComponents[1];
+        break;
+      }
+    }
+    return udid;
+  } else {
+    if(isValid) {
+      *isValid = NO;
     }
     return nil;
   }
