@@ -27,6 +27,21 @@
 - (NSString*) uniqueIdentifier {return @"reallyUnique";}
 @end
 
+@interface MyDeviceWithIdentifierForVendor : MyDevice
+@property (copy) NSUUID *identifierForVendor;
+@end
+@implementation MyDeviceWithIdentifierForVendor
+
+- (id)init {
+  self = [super init];
+  if( self ) {
+    _identifierForVendor = [NSUUID UUID];
+  }
+  return self;
+}
+
+@end
+
 static void *kInstallationIdentification = &kInstallationIdentification;
 
 @interface BITAuthenticatorTests : SenTestCase
@@ -325,4 +340,14 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   assertThat(error, nilValue());
 }
 
+- (void) testThatAuthTokenIsResettingWhenVendorIdentifierChanged {
+  MyDeviceWithIdentifierForVendor *device = [MyDeviceWithIdentifierForVendor new];
+  _sut.currentDevice = (id)device;
+  [_sut didAuthenticateWithToken:@"SuperToken"];
+  NSString *ident = [_sut installationIdentification];
+  assertThat(ident, equalTo(@"SuperToken"));
+  device.identifierForVendor = [NSUUID UUID];
+  ident = [_sut installationIdentification];
+  assertThat(ident, isNot(equalTo(@"SuperToken")));
+}
 @end

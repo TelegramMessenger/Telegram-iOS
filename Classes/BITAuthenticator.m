@@ -14,6 +14,7 @@
 #import "BITHockeyAppClient.h"
 
 static NSString* const kBITAuthenticatorAuthTokenKey = @"BITAuthenticatorAuthTokenKey";
+static NSString* const kBITAuthenticatorAuthTokenVendorIdentifierKey = @"BITAuthenticatorAuthTokenVendorIdentifierKey";
 static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthenticatorLastAuthenticatedVersionKey";
 
 @implementation BITAuthenticator {
@@ -459,6 +460,7 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
 
 - (void) cleanupInternalStorage {
   [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenKey];
+  [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenVendorIdentifierKey];
   [self setLastAuthenticatedVersion:nil];
 }
 
@@ -486,15 +488,29 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
     [self willChangeValueForKey:@"installationIdentification"];
     if(nil == authenticationToken) {
       [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenKey];
+      [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenVendorIdentifierKey];
     } else {
       [self addStringValueToKeychain:authenticationToken forKey:kBITAuthenticatorAuthTokenKey];
+      NSString *identifierForVendor = self.currentDevice.identifierForVendor.UUIDString;
+      [self addStringValueToKeychain:identifierForVendor forKey:kBITAuthenticatorAuthTokenVendorIdentifierKey];
     }
     [self didChangeValueForKey:@"installationIdentification"];
   }
 }
 
 - (NSString *)authenticationToken {
-  return [self stringValueFromKeychainForKey:kBITAuthenticatorAuthTokenKey];
+  NSString *authToken = [self stringValueFromKeychainForKey:kBITAuthenticatorAuthTokenKey];
+  if(nil == authToken) return nil;
+  
+  //check if this was generated on the same device we're running now
+  NSString *currentVendorUUIDString = self.currentDevice.identifierForVendor.UUIDString;
+  if(![currentVendorUUIDString isEqualToString:[self stringValueFromKeychainForKey:kBITAuthenticatorAuthTokenVendorIdentifierKey]]) {
+    BITHockeyLog(@"Vendor identifier mismatch for stored auth-token. Resetting.");
+    [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenVendorIdentifierKey];
+    [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenKey];
+    return nil;
+  }
+  return authToken;
 }
 
 - (void)setLastAuthenticatedVersion:(NSString *)lastAuthenticatedVersion {
