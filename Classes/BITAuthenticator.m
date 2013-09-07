@@ -30,7 +30,7 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
 - (instancetype) initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironemt:(BOOL)isAppStoreEnvironment {
   self = [super initWithAppIdentifier:appIdentifier isAppStoreEnvironemt:isAppStoreEnvironment];
   if( self ) {
-    
+    _webpageURL = [NSURL URLWithString:@"https://rink.hockeyapp.net/"];
   }
   return self;
 }
@@ -383,7 +383,7 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
 
 
 - (void)authenticationViewControllerDidTapWebButton:(UIViewController *)viewController {
-  NSURL *hockeyWebbasedLoginURL = [self.hockeyAppClient.baseURL URLByAppendingPathComponent:[NSString stringWithFormat:@"apps/%@/authorize", self.encodedAppIdentifier]];
+  NSURL *hockeyWebbasedLoginURL = [self.webpageURL URLByAppendingPathComponent:[NSString stringWithFormat:@"apps/%@/authorize", self.encodedAppIdentifier]];
   [[UIApplication sharedApplication] openURL:hockeyWebbasedLoginURL];
 }
 

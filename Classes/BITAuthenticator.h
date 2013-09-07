@@ -88,7 +88,13 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
  */
 @property (nonatomic, readonly) NSString *installationIdentification;
 
-#pragma mark - HandleURL Helper
+#pragma mark - UDID auth
+
+/**
+ *	baseURL of the webpage the user is redirected to if authenticationType is BITAuthenticatorAuthTypeWebbased
+ *  defaults to https://rink.hockeyapp.net but can be overwritten if desired
+ */
+@property (nonatomic, strong) NSURL *webpageURL;
 
 /**
  *	should be used by the app-delegate to forward handle application:openURL:sourceApplication:annotation calls
