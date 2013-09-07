@@ -225,7 +225,7 @@
                                      password:self.password
                                    completion:^(BOOL succeeded, NSError *error) {
                                      if(succeeded) {
-                                       //controller shoud dismiss us shortly..
+                                       //controller should dismiss us shortly..
                                      } else {
                                        UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil
                                                                                            message:error.localizedDescription
