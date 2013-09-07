@@ -75,6 +75,7 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
 @property (nonatomic, copy) NSString *authenticationSecret;
 
 #pragma mark - Identification
+
 /**
  *	Provides an identification for the current app installation
  * 
