@@ -110,7 +110,7 @@
 
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
   if (section == 0) {
-    return BITHockeyLocalizedString(@"HockeyAuthenticationDataDescription");
+    return BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerDataDescription");
   }
   
   return nil;
@@ -136,7 +136,7 @@
     textField.backgroundColor = [UIColor lightGrayColor];
     
     if (0 == [indexPath row]) {
-      textField.placeholder = BITHockeyLocalizedString(@"HockeyFeedbackUserDataEmailPlaceholder");
+      textField.placeholder = BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerEmailPlaceholder");
       textField.text = self.email;
       
       textField.keyboardType = UIKeyboardTypeEmailAddress;
@@ -148,7 +148,7 @@
       [textField addTarget:self action:@selector(userEmailEntered:) forControlEvents:UIControlEventEditingChanged];
       [textField becomeFirstResponder];
     } else {
-      textField.placeholder = BITHockeyLocalizedString(@"HockeyAuthenticatorViewControllerPasswordPlaceHolder");
+      textField.placeholder = BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerPasswordPlaceholder");
       textField.text = self.password;
       
       textField.keyboardType = UIKeyboardTypeDefault;
@@ -171,9 +171,9 @@
   }
   
   if (0 == [indexPath row]) {
-    cell.textLabel.text = BITHockeyLocalizedString(@"HockeyFeedbackUserDataEmail");
+    cell.textLabel.text = BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerEmailDescription");
   } else {
-    cell.textLabel.text = BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerPassword");
+    cell.textLabel.text = BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerPasswordDescription");
   }
   
   return cell;
