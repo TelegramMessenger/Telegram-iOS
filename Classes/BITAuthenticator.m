@@ -136,7 +136,7 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
     case BITAuthenticatorAuthTypeEmailAndPassword:
       params = @{@"auid" : self.authenticationToken};
       break;
-    case BITAuthenticatorAuthTypeWebbased:
+    case BITAuthenticatorAuthTypeUDIDProvider:
       params = @{@"udid" : self.authenticationToken};
       break;
   }
@@ -210,7 +210,7 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
     case BITAuthenticatorAuthTypeEmail:
       viewController.requirePassword = NO;
       break;
-    case BITAuthenticatorAuthTypeWebbased:
+    case BITAuthenticatorAuthTypeUDIDProvider:
       viewController.requirePassword = NO;
       viewController.showsLoginViaWebButton = YES;
       break;

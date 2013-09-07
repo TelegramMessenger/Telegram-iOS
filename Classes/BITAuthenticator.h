@@ -13,7 +13,7 @@
 typedef NS_ENUM(NSUInteger, BITAuthenticatorAuthType) {
   BITAuthenticatorAuthTypeEmail,
   BITAuthenticatorAuthTypeEmailAndPassword,
-  BITAuthenticatorAuthTypeWebbased,
+  BITAuthenticatorAuthTypeUDIDProvider,
   //TODO: add Facebook?
 };
 
