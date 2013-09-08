@@ -735,7 +735,17 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
       for (NSDictionary *dict in feedArray) {
         BITAppVersionMetaInfo *appVersionMetaInfo = [BITAppVersionMetaInfo appVersionMetaInfoFromDict:dict];
         if ([appVersionMetaInfo isValid]) {
-          [tmpAppVersions addObject:appVersionMetaInfo];
+          // check if minOSVersion is set and this device qualifies
+          BOOL deviceOSVersionQualifies = YES;
+          if ([appVersionMetaInfo minOSVersion]) {
+            NSComparisonResult comparissonResult = bit_versionCompare(appVersionMetaInfo.minOSVersion, [[UIDevice currentDevice] systemVersion]);
+            if (comparissonResult == NSOrderedDescending) {
+              deviceOSVersionQualifies = NO;
+            }
+          }
+          
+          if (deviceOSVersionQualifies)
+            [tmpAppVersions addObject:appVersionMetaInfo];
         } else {
           [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
                                                 code:BITUpdateAPIServerReturnedInvalidData

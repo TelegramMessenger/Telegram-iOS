@@ -1,5 +1,6 @@
 /*
  * Author: Peter Steinberger
+ *         Andreas Linde
  *
  * Copyright (c) 2012-2013 HockeyApp, Bit Stadium GmbH.
  * Copyright (c) 2011 Andreas Linde, Peter Steinberger.
@@ -43,6 +44,7 @@
     appVersionMetaInfo.name = [dict objectForKey:@"title"];
     appVersionMetaInfo.version = [dict objectForKey:@"version"];
     appVersionMetaInfo.shortVersion = [dict objectForKey:@"shortversion"];
+    appVersionMetaInfo.minOSVersion = [dict objectForKey:@"minimum_os_version"];
     [appVersionMetaInfo setDateWithTimestamp:[[dict objectForKey:@"timestamp"] doubleValue]];
     appVersionMetaInfo.size = [dict objectForKey:@"appsize"];
     appVersionMetaInfo.notes = [dict objectForKey:@"notes"];
@@ -106,6 +108,8 @@
     return NO;
   if (![self isEqualComparingString:self.shortVersion withString:anAppVersionMetaInfo.shortVersion])
     return NO;
+  if (![self isEqualComparingString:self.minOSVersion withString:anAppVersionMetaInfo.minOSVersion])
+    return NO;
   if (![self isEqualComparingString:self.notes withString:anAppVersionMetaInfo.notes])
     return NO;
   if (![self isEqualComparingDate:self.date withDate:anAppVersionMetaInfo.date])
@@ -126,6 +130,7 @@
   [encoder encodeObject:self.name forKey:@"name"];
   [encoder encodeObject:self.version forKey:@"version"];
   [encoder encodeObject:self.shortVersion forKey:@"shortVersion"];
+  [encoder encodeObject:self.minOSVersion forKey:@"minOSVersion"];
   [encoder encodeObject:self.notes forKey:@"notes"];
   [encoder encodeObject:self.date forKey:@"date"];
   [encoder encodeObject:self.size forKey:@"size"];
@@ -139,6 +144,7 @@
     self.name = [decoder decodeObjectForKey:@"name"];
     self.version = [decoder decodeObjectForKey:@"version"];
     self.shortVersion = [decoder decodeObjectForKey:@"shortVersion"];
+    self.minOSVersion = [decoder decodeObjectForKey:@"minOSVersion"];
     self.notes = [decoder decodeObjectForKey:@"notes"];
     self.date = [decoder decodeObjectForKey:@"date"];
     self.size = [decoder decodeObjectForKey:@"size"];
@@ -197,9 +203,10 @@
   }
 }
 
-// a valid app needs at least following properties: name, version, date
+
+// A valid app needs at least following properties: name, version, date
 - (BOOL)isValid {
-  BOOL valid = [self.name length] && [self.version length] && self.date;
+  BOOL valid = [self.name length] && [self.version length] && self.date;  
   return valid;
 }
 

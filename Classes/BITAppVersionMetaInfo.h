@@ -1,5 +1,6 @@
 /*
  * Author: Peter Steinberger
+ *         Andreas Linde
  *
  * Copyright (c) 2012-2013 HockeyApp, Bit Stadium GmbH.
  * Copyright (c) 2011 Andreas Linde, Peter Steinberger.
@@ -34,6 +35,7 @@
 @property (nonatomic, copy) NSString *name;
 @property (nonatomic, copy) NSString *version;
 @property (nonatomic, copy) NSString *shortVersion;
+@property (nonatomic, copy) NSString *minOSVersion;
 @property (nonatomic, copy) NSString *notes;
 @property (nonatomic, copy) NSDate *date;
 @property (nonatomic, copy) NSNumber *size;
