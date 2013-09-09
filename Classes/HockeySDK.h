@@ -94,6 +94,7 @@ typedef NS_ENUM(NSInteger, BITAuthenticatorReason) {
   BITAuthenticatorAPIServerReturnedInvalidRespone,
   BITAuthenticatorNotAuthorized,
   BITAuthenticatorAuthenticationCancelled,
+  BITAuthenticatorAuthorizationSecretMissing,
 };
 extern NSString *const __attribute__((unused)) kBITAuthenticatorErrorDomain;
 

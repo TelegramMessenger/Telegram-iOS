@@ -56,6 +56,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   [super setUp];
   
   _sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil isAppStoreEnvironemt:NO];
+  _sut.authenticationType = BITAuthenticatorAuthTypeEmailAndPassword;
 }
 
 - (void)tearDown {
@@ -129,12 +130,25 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 - (void) testThatAuthenticateWithTypeEmailShowsAViewController {
   id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
   _sut.delegate = delegateMock;
+  _sut.authenticationSecret = @"myscret";
   _sut.authenticationType = BITAuthenticatorAuthTypeEmail;
   
   [_sut authenticateWithCompletion:nil];
   
   [verifyCount(delegateMock, times(1)) authenticator:_sut willShowAuthenticationController:(id)anything()];
 }
+
+- (void) testThatAuthenticateWithTypeEmailShowsAViewControllerOnlyIfAuthenticationSecretIsSet {
+  id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
+  _sut.delegate = delegateMock;
+  _sut.authenticationSecret = nil;
+  _sut.authenticationType = BITAuthenticatorAuthTypeEmail;
+  
+  [_sut authenticateWithCompletion:nil];
+  
+  [verifyCount(delegateMock, times(0)) authenticator:_sut willShowAuthenticationController:(id)anything()];
+}
+
 
 - (void) testThatAuthenticateWithTypeEmailAndPasswordShowsAViewController {
   id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));

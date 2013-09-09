@@ -201,6 +201,15 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
     BITHockeyLog(@"Already authenticating. Ignoring request");
     return;
   }
+  if(_authenticationType == BITAuthenticatorAuthTypeEmail && (nil == _authenticationSecret || !_authenticationSecret.length)) {
+    if(completion) {
+      NSError *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
+                                           code:BITAuthenticatorAuthorizationSecretMissing
+                                       userInfo:@{NSLocalizedDescriptionKey: @"Authentication secret is not set but required."}];
+      completion(nil, error);
+    }
+    return;
+  }
 
   BITAuthenticationViewController *viewController = [[BITAuthenticationViewController alloc] initWithDelegate:self];
   switch (self.authenticationType) {
