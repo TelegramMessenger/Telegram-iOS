@@ -314,7 +314,9 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
                                                                   cancelButtonTitle:BITHockeyLocalizedString(@"OK")
                                                                   otherButtonTitles:nil];
                             [alert show];
+                            completion(NO, error);
                           } else {
+                            //no need to call completion, we're dismissing it anyways
                             [self didAuthenticateWithToken:authToken];
                           }
                         }
