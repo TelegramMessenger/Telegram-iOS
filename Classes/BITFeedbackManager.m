@@ -150,7 +150,11 @@
 #pragma mark - Feedback Modal UI
 
 - (BITFeedbackListViewController *)feedbackListViewController:(BOOL)modal {
-  return [[BITFeedbackListViewController alloc] initWithModalStyle:modal];
+  if ([self isPreiOS7Environment]) {
+    return [[BITFeedbackListViewController alloc] initWithModalStyle:modal];
+  } else {
+    return [[BITFeedbackListViewController alloc] initWithStyle:UITableViewStyleGrouped modal:modal];
+  }
 }
 
 - (void)showFeedbackListView {

@@ -12,6 +12,7 @@
 
 @property (nonatomic, readwrite) BOOL modalAnimated;
 
-- (id)initWithModalStyle:(BOOL)modal;
+- (instancetype)initWithModalStyle:(BOOL)modal;
+- (instancetype)initWithStyle:(UITableViewStyle)style modal:(BOOL)modal;
 
 @end

@@ -75,8 +75,8 @@
   NSInteger _userButtonSection;
 }
 
-- (id)init {
-  if ((self = [super init])) {
+- (instancetype)initWithStyle:(UITableViewStyle)style {
+  if ((self = [super initWithStyle:style])) {
     _manager = [BITHockeyManager sharedHockeyManager].feedbackManager;
     
     _deleteButtonSection = -1;
@@ -125,13 +125,13 @@
     [self.tableView setBackgroundColor:[UIColor colorWithRed:0.82 green:0.84 blue:0.84 alpha:1]];
     [self.tableView setSeparatorColor:[UIColor colorWithRed:0.79 green:0.79 blue:0.79 alpha:1]];
   } else {
-    [self.tableView setBackgroundColor:[UIColor colorWithRed:1.0 green:1.0 blue:1.0 alpha:1]];
+//    [self.tableView setBackgroundColor:[UIColor colorWithRed:1.0 green:1.0 blue:1.0 alpha:1]];
   }
   
   if ([self.manager isPreiOS7Environment]) {
     self.view.backgroundColor = DEFAULT_BACKGROUNDCOLOR;
   } else {
-    self.view.backgroundColor = DEFAULT_BACKGROUNDCOLOR_OS7;
+//    self.view.backgroundColor = DEFAULT_BACKGROUNDCOLOR_OS7;
   }
   
   id refreshClass = NSClassFromString(@"UIRefreshControl");
@@ -381,21 +381,21 @@
 #pragma mark - Table view data source
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
-  NSInteger rows = 2;
+  NSInteger sections = 2;
   _deleteButtonSection = -1;
   _userButtonSection = -1;
   
   if ([self.manager isManualUserDataAvailable] || [self.manager didAskUserData]) {
-    _userButtonSection = rows;
-    rows++;
+    _userButtonSection = sections;
+    sections++;
   }
   
   if ([self.manager numberOfMessages] > 0) {
-    _deleteButtonSection = rows;
-    rows++;
+    _deleteButtonSection = sections;
+    sections++;
   }
   
-  return rows;
+  return sections;
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
@@ -406,6 +406,32 @@
   }
 }
 
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
+  if (![self.manager isPreiOS7Environment]) {
+    if (section == 0) {
+      return 30;
+    }
+  }
+  
+  return [super tableView:tableView heightForHeaderInSection:section];
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
+  if (![self.manager isPreiOS7Environment] && section == 0) {
+    UIView *containerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, 30.0f)];
+    UILabel *textLabel = [[UILabel alloc] initWithFrame:CGRectMake(16.0f, 5.0f, self.view.frame.size.width - 32.0f, 25.0f)];
+    textLabel.text = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListLastUpdated"),
+                      [self.manager lastCheck] ? [self.lastUpdateDateFormatter stringFromDate:[self.manager lastCheck]] : BITHockeyLocalizedString(@"HockeyFeedbackListNeverUpdated")];
+    textLabel.font = [UIFont systemFontOfSize:10];
+    textLabel.textColor = DEFAULT_TEXTCOLOR;
+    [containerView addSubview:textLabel];
+    
+    return containerView;
+  }
+  
+  return [super tableView:tableView viewForHeaderInSection:section];
+}
+
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
   static NSString *CellIdentifier = @"MessageCell";
   static NSString *LastUpdateIdentifier = @"LastUpdateCell";
@@ -413,7 +439,7 @@
   static NSString *ButtonBottomIdentifier = @"ButtonBottomCell";
   static NSString *ButtonDeleteIdentifier = @"ButtonDeleteCell";
   
-  if (indexPath.section == 0 && indexPath.row == 1) {
+  if (indexPath.section == 0 && indexPath.row == 1 && ![self.manager isPreiOS7Environment]) {
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:LastUpdateIdentifier];
     
     if (!cell) {
@@ -452,10 +478,19 @@
       cell.textLabel.font = [UIFont systemFontOfSize:14];
       cell.textLabel.numberOfLines = 0;
       cell.accessoryType = UITableViewCellAccessoryNone;
-      cell.selectionStyle = UITableViewCellSelectionStyleNone;
+      
+      if ([self.manager isPreiOS7Environment]) {
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+      } else {
+        cell.selectionStyle = UITableViewCellSelectionStyleGray;
+      }
     }
     
     // button
+    NSString *titleString = nil;
+    SEL actionSelector = nil;
+    UIColor *titleColor = BIT_RGBCOLOR(35, 111, 251);
+    
     UIButton *button = nil;
     if ([self.manager isPreiOS7Environment]) {
       button = [UIButton buttonWithType:UIButtonTypeCustom];
@@ -470,38 +505,32 @@
       
       [button setTitleColor:BUTTON_TEXTCOLOR forState:UIControlStateNormal];
       [button setTitleShadowColor:BUTTON_TEXTCOLOR_SHADOW forState:UIControlStateNormal];
-    } else {
-#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
-      button = [UIButton buttonWithType:UIButtonTypeSystem];
-#endif
     }
     
     if (indexPath.section == 0) {
       topGap = 22;
       if ([self.manager numberOfMessages] == 0) {
-        [button setTitle:BITHockeyLocalizedString(@"HockeyFeedbackListButonWriteFeedback") forState:UIControlStateNormal];
+        titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButonWriteFeedback");
       } else {
-        [button setTitle:BITHockeyLocalizedString(@"HockeyFeedbackListButonWriteResponse") forState:UIControlStateNormal];
+        titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButonWriteResponse");
       }
-      [button addTarget:self action:@selector(newFeedbackAction:) forControlEvents:UIControlEventTouchUpInside];
+      actionSelector = @selector(newFeedbackAction:);
     } else if (indexPath.section == _userButtonSection) {
       topGap = 6.0f;
-      NSString *title = @"";
       if ([self.manager requireUserName] == BITFeedbackUserDataElementRequired ||
           ([self.manager requireUserName] == BITFeedbackUserDataElementOptional && [self.manager userName] != nil)
           ) {
-        title = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListButonUserDataWithName"), [self.manager userName] ?: @"-"];
+        titleString = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListButonUserDataWithName"), [self.manager userName] ?: @"-"];
       } else if ([self.manager requireUserEmail] == BITFeedbackUserDataElementRequired ||
                  ([self.manager requireUserEmail] == BITFeedbackUserDataElementOptional && [self.manager userEmail] != nil)
                  ) {
-        title = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListButonUserDataWithEmail"), [self.manager userEmail] ?: @"-"];
+        titleString = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListButonUserDataWithEmail"), [self.manager userEmail] ?: @"-"];
       } else if ([self.manager requireUserName] == BITFeedbackUserDataElementOptional) {
-        title = BITHockeyLocalizedString(@"HockeyFeedbackListButonUserDataSetName");
+        titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButonUserDataSetName");
       } else {
-        title = BITHockeyLocalizedString(@"HockeyFeedbackListButonUserDataSetEmail");
+        titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButonUserDataSetEmail");
       }
-      [button setTitle:title forState:UIControlStateNormal];
-      [button addTarget:self action:@selector(setUserDataAction:) forControlEvents:UIControlEventTouchUpInside];
+      actionSelector = @selector(setUserDataAction:);
     } else {
       topGap = 0.0f;
       if ([self.manager isPreiOS7Environment]) {
@@ -513,41 +542,51 @@
         
         [button setTitleColor:BUTTON_DELETE_TEXTCOLOR forState:UIControlStateNormal];
         [button setTitleShadowColor:BUTTON_DELETE_TEXTCOLOR_SHADOW forState:UIControlStateNormal];
-      } else {
-        [button setTitleColor:BUTTON_DELETE_BACKGROUNDCOLOR forState:UIControlStateNormal];
       }
       
-      [button setTitle:BITHockeyLocalizedString(@"HockeyFeedbackListButonDeleteAllMessages") forState:UIControlStateNormal];
-      [button addTarget:self action:@selector(deleteAllMessagesAction:) forControlEvents:UIControlEventTouchUpInside];
+      titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButonDeleteAllMessages");
+      titleColor = BIT_RGBCOLOR(251, 35, 35);
+      actionSelector = @selector(deleteAllMessagesAction:);
     }
     
-    [button setFrame: CGRectMake( 10.0f, topGap + 12.0f, cell.frame.size.width - 20.0f, 42.0f)];
-    
-    [cell addSubview:button];
-    
-    // status label or shadow lines
-    if (indexPath.section == 0) {
-      UILabel *statusLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 6, cell.frame.size.width, 28)];
+    if ([self.manager isPreiOS7Environment]) {
+      if (titleString)
+        [button setTitle:titleString forState:UIControlStateNormal];
+      if (actionSelector)
+        [button addTarget:self action:actionSelector forControlEvents:UIControlEventTouchUpInside];
       
-      statusLabel.font = [UIFont systemFontOfSize:10];
-      statusLabel.textColor = DEFAULT_TEXTCOLOR;
-      statusLabel.textAlignment = kBITTextLabelAlignmentCenter;
-      if ([self.manager isPreiOS7Environment]) {
-        statusLabel.backgroundColor = DEFAULT_BACKGROUNDCOLOR;
-      } else {
-        statusLabel.backgroundColor = DEFAULT_BACKGROUNDCOLOR_OS7;
+      [button setFrame: CGRectMake( 10.0f, topGap + 12.0f, cell.frame.size.width - 20.0f, 42.0f)];
+      [cell addSubview:button];
+    } else {
+      cell.textLabel.text = titleString;
+      cell.textLabel.textColor = titleColor;
+    }
+    
+    if ([self.manager isPreiOS7Environment]) {
+      // status label or shadow lines
+      if (indexPath.section == 0) {
+        UILabel *statusLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 6, cell.frame.size.width, 28)];
+        
+        statusLabel.font = [UIFont systemFontOfSize:10];
+        statusLabel.textColor = DEFAULT_TEXTCOLOR;
+        statusLabel.textAlignment = kBITTextLabelAlignmentCenter;
+        if ([self.manager isPreiOS7Environment]) {
+          statusLabel.backgroundColor = DEFAULT_BACKGROUNDCOLOR;
+        } else {
+          statusLabel.backgroundColor = DEFAULT_BACKGROUNDCOLOR_OS7;
+        }
+        statusLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+        
+        statusLabel.text = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListLastUpdated"),
+                            [self.manager lastCheck] ? [self.lastUpdateDateFormatter stringFromDate:[self.manager lastCheck]] : BITHockeyLocalizedString(@"HockeyFeedbackListNeverUpdated")];
+        
+        [cell addSubview:statusLabel];
+      } else if (indexPath.section == 2) {
+        UIView *lineView1 = [[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.frame.size.width, 1)];
+        lineView1.backgroundColor = BORDER_COLOR;
+        lineView1.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+        [cell addSubview:lineView1];
       }
-      statusLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-
-      statusLabel.text = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListLastUpdated"),
-                             [self.manager lastCheck] ? [self.lastUpdateDateFormatter stringFromDate:[self.manager lastCheck]] : BITHockeyLocalizedString(@"HockeyFeedbackListNeverUpdated")];
-
-      [cell addSubview:statusLabel];
-    } else if (indexPath.section == 2) {
-      UIView *lineView1 = [[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.frame.size.width, 1)];
-      lineView1.backgroundColor = BORDER_COLOR;
-      lineView1.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-      [cell addSubview:lineView1];
     }
     
     return cell;
@@ -577,11 +616,16 @@
     cell.labelText.delegate = self;
     cell.labelText.userInteractionEnabled = YES;
 
-    UIView *lineView1 = [[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.frame.size.width, 1)];
-    lineView1.backgroundColor = BORDER_COLOR;
-    lineView1.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    [cell addSubview:lineView1];
-
+    if (
+        [self.manager isPreiOS7Environment] ||
+        (![self.manager isPreiOS7Environment] && indexPath.row != 0)
+        ) {
+      UIView *lineView1 = [[UIView alloc] initWithFrame:CGRectMake(0, 0, cell.frame.size.width, 1)];
+      lineView1.backgroundColor = BORDER_COLOR;
+      lineView1.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+      [cell addSubview:lineView1];
+    }
+    
     return cell;
   }
 }
@@ -611,10 +655,16 @@
 
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
   if (indexPath.section == 0 ) {
-    return 87;
+    if ([self.manager isPreiOS7Environment])
+      return 87;
+    else
+      return 44;
   }
   if (indexPath.section >= 2) {
-    return 65;
+    if ([self.manager isPreiOS7Environment])
+      return 65;
+    else
+      return 44;
   }
   
   BITFeedbackMessage *message = [self.manager messageAtIndex:indexPath.row];
@@ -623,6 +673,17 @@
   return [BITFeedbackListViewCell heightForRowWithMessage:message tableViewWidth:self.view.frame.size.width];
 }
 
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+  if (![self.manager isPreiOS7Environment]) {
+    if (indexPath.section == 0) {
+      [self newFeedbackAction:self];
+    } else if (indexPath.section == _userButtonSection) {
+      [self setUserDataAction:self];
+    } else if (indexPath.section == _deleteButtonSection) {
+      [self deleteAllMessagesAction:self];
+    }
+  }
+}
 
 #pragma mark - BITAttributedLabelDelegate
 
