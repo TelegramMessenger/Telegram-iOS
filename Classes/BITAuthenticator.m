@@ -12,6 +12,7 @@
 #import "BITAuthenticator_Private.h"
 #import "BITHTTPOperation.h"
 #import "BITHockeyAppClient.h"
+#import "BITHockeyHelper.h"
 
 static NSString* const kBITAuthenticatorAuthTokenKey = @"BITAuthenticatorAuthTokenKey";
 static NSString* const kBITAuthenticatorAuthTokenVendorIdentifierKey = @"BITAuthenticatorAuthTokenVendorIdentifierKey";
@@ -65,22 +66,7 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
   if(authToken) {
     return authToken;
   }
-  UIDevice *device = self.currentDevice;
-  if([device respondsToSelector:@selector(identifierForVendor)]) {
-    return self.currentDevice.identifierForVendor.UUIDString;
-  } else {
-    SEL uniqueIdentifier = NSSelectorFromString(@"uniqueIdentifier");
-    if([device respondsToSelector:uniqueIdentifier]) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-      NSString *uuid = [device performSelector:uniqueIdentifier];
-#pragma clang diagnostic pop
-      return uuid;
-    } else {
-      //TODO: what?
-      return nil;
-    }
-  }
+  return bit_appAnonID();
 }
 
 #pragma mark - Validation

@@ -111,16 +111,6 @@ static void *kInstallationIdentification = &kInstallationIdentification;
                        @"Freshly initialized, it should return the vendor identifier");
 }
 
-- (void) testIdentificationReturnsTheUniqueIdentifier {
-  //use a device that responds to the old -(NSString*)uniqueIdentifier, but not to -(NSUUID*)identifierForVendor
-  MyDevice *device = [MyDevice new];
-  _sut.currentDevice = (UIDevice*)device;
-  
-  NSString *hockeyUUID = [_sut installationIdentification];
-  STAssertEqualObjects(hockeyUUID, @"reallyUnique",
-                       @"If there is no vendorIdentifier, it should use the old uniqueIdentifier");
-}
-
 - (void) testIdentificationReturnsTheAuthTokenIfSet {
   _sut.authenticationToken = @"PeterPan";
   assertThat(_sut.installationIdentification, equalTo(@"PeterPan"));
