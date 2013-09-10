@@ -462,14 +462,16 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
 }
 
 - (void) registerObservers {
-  __weak typeof(self) weakSelf = self;
-  _appDidBecomeActiveObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
-                                                                                  object:nil
-                                                                                   queue:NSOperationQueue.mainQueue
-                                                                              usingBlock:^(NSNotification *note) {
-                                                                                typeof(self) strongSelf = weakSelf;
-                                                                                [strongSelf applicationDidBecomeActive:note];
-                                                                              }];
+  if(nil == _appDidBecomeActiveObserver) {
+    __weak typeof(self) weakSelf = self;
+    _appDidBecomeActiveObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
+                                                                                    object:nil
+                                                                                     queue:NSOperationQueue.mainQueue
+                                                                                usingBlock:^(NSNotification *note) {
+                                                                                  typeof(self) strongSelf = weakSelf;
+                                                                                  [strongSelf applicationDidBecomeActive:note];
+                                                                                }];
+  }
 }
 
 - (void) unregisterObservers {
