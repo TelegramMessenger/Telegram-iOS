@@ -38,7 +38,7 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
  *    1) authenticate
  *       some kind of token is aquired depending on the authenticationType
  *    2) verification
- *       the aquired token from step 1 is verified dependong the validationType
+ *       the aquired token from step 1 is verified depending the validationType
  *
  *  There are currently 3 ways of authentication:
  *    1) authenticate the user via email only
