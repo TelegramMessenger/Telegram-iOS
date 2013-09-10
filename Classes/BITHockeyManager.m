@@ -158,6 +158,15 @@
   BITHockeyLog(@"INFO: Starting HockeyManager");
   _startManagerIsInvoked = YES;
   
+  // start Authenticator
+  if ( YES /* ![self isAuthenticatorDisabled] */) {
+    BITHockeyLog(@"INFO: Start Authenticator");
+    if (_serverURL) {
+      [_authenticator setServerURL:_serverURL];
+    }
+    [_authenticator startManager];
+  }
+  
   // start CrashManager
   if (![self isCrashManagerDisabled]) {
     BITHockeyLog(@"INFO: Start CrashManager");
@@ -178,15 +187,6 @@
       [_updateManager setServerURL:_serverURL];
     }
     [_updateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
-  }
-  
-  // start Authenticator
-  if ( YES /* ![self isAuthenticatorDisabled] */) {
-    BITHockeyLog(@"INFO: Start Authenticator");
-    if (_serverURL) {
-      [_authenticator setServerURL:_serverURL];
-    }
-    [_authenticator startManager];
   }
   
   // start StoreUpdateManager
