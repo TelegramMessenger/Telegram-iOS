@@ -576,6 +576,13 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
   }
 }
 
+- (void)applicationWillResignActive:(NSNotification *)note {
+  if(BITAuthenticatorValidationTypeOnAppActive == self.validationType) {
+    self.installationIdentificationValidated = NO;
+  }
+}
+
+#pragma mark - 
 - (tValidationCompletion) defaultValidationCompletionBlock {
   return ^(BOOL validated, NSError *error) {
     switch (self.validationType) {
@@ -584,15 +591,11 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
         break;
       case BITAuthenticatorValidationTypeOnAppActive:
       case BITAuthenticatorValidationTypeOnFirstLaunch:
-        [self authenticateWithCompletion:nil];
+        if(!validated) {
+          [self authenticateWithCompletion:nil];
+        }
         break;
     }
   };
 };
-- (void)applicationWillResignActive:(NSNotification *)note {
-  if(BITAuthenticatorValidationTypeOnAppActive == self.validationType) {
-    self.installationIdentificationValidated = NO;
-  }
-}
-
 @end

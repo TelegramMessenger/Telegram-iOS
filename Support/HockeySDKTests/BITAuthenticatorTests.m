@@ -335,6 +335,26 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   assertThat(error, notNilValue());
 }
 
+- (void) testThatFailedRequiredValidationShowsAuthenticationViewController {
+  id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
+  _sut.delegate = delegateMock;
+  _sut.validationType = BITAuthenticatorValidationTypeOnAppActive;
+  
+  [_sut validationFailedWithError:[NSError errorWithDomain:kBITAuthenticatorErrorDomain code:0 userInfo:nil]
+                       completion:nil];
+  [verifyCount(delegateMock, times(1)) authenticator:_sut willShowAuthenticationController:(id)anything()];
+}
+
+- (void) testThatFailedOptionalValidationDoesNotShowAuthenticationViewController {
+  id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
+  _sut.delegate = delegateMock;
+  _sut.validationType = BITAuthenticatorValidationTypeOptional;
+  
+  [_sut validationFailedWithError:nil
+                       completion:nil];
+  [verifyCount(delegateMock, never()) authenticator:_sut willShowAuthenticationController:(id)anything()];
+}
+
 - (void) testThatSuccessValidationCallsTheCompletionBlock {
   id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
   _sut.delegate = delegateMock;
