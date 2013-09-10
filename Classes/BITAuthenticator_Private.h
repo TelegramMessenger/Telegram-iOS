@@ -47,6 +47,12 @@
  */
 - (void) applicationDidBecomeActive:(NSNotification*) note;
 
+/**
+ *	once the user skipped the optional login, this is set to YES
+ *  (and thus the optional login should never be shown again)
+ *  persisted to disk. Defaults to NO
+ */
+@property (nonatomic, assign) BOOL didSkipOptionalLogin;
 
 #pragma mark - Authentication
 /**

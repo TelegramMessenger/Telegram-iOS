@@ -105,6 +105,15 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   assertThat(_sut.lastAuthenticatedVersion, equalTo(nil));
 }
 
+- (void) testThatSkipLoginIsPersisted {
+  [_sut setDidSkipOptionalLogin:YES];
+  _sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil isAppStoreEnvironemt:YES];
+  assertThatBool(_sut.didSkipOptionalLogin, equalToBool(YES));
+  [_sut setDidSkipOptionalLogin:NO];
+  _sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil isAppStoreEnvironemt:YES];
+  assertThatBool(_sut.didSkipOptionalLogin, equalToBool(NO));
+}
+
 #pragma mark - Identification Tests
 - (void) testIdentificationReturnsTheVendorIdentifierIfAvailable {
   STAssertEqualObjects([_sut installationIdentification], [[UIDevice currentDevice] identifierForVendor].UUIDString,

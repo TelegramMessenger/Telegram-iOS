@@ -54,7 +54,9 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
       }
       break;
     case BITAuthenticatorValidationTypeOptional:
-      //TODO: what to do in optional case?
+      if(NO == self.didSkipOptionalLogin) {
+        [self validateInstallationWithCompletion:[self defaultValidationCompletionBlock]];
+      }
       break;
     case BITAuthenticatorValidationTypeNever:
       break;
@@ -251,6 +253,9 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
   
   _authenticationController = nil;
   self.authenticationToken = nil;
+  if(self.validationType == BITAuthenticatorValidationTypeOptional) {
+    self.didSkipOptionalLogin = YES;
+  }
   NSError *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                        code:BITAuthenticatorAuthenticationCancelled
                                    userInfo:nil];
@@ -459,6 +464,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
 - (void) cleanupInternalStorage {
   [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenKey];
   [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenVendorIdentifierKey];
+  [self removeKeyFromKeychain:kBITAuthenticatorDidSkipOptionalLogin];
   [self setLastAuthenticatedVersion:nil];
 }
 
@@ -526,6 +532,21 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
 
 - (NSString *)lastAuthenticatedVersion {
   return [[NSUserDefaults standardUserDefaults] objectForKey:kBITAuthenticatorLastAuthenticatedVersionKey];
+}
+
+- (void)setDidSkipOptionalLogin:(BOOL)didSkipOptionalLogin {
+  NSUserDefaults* defaults = [NSUserDefaults standardUserDefaults];
+  if(NO == didSkipOptionalLogin){
+    [defaults removeObjectForKey:kBITAuthenticatorDidSkipOptionalLogin];
+  } else {
+    [defaults setObject:@(YES)
+                 forKey:kBITAuthenticatorDidSkipOptionalLogin];
+    [defaults synchronize];
+  }
+}
+
+- (BOOL)didSkipOptionalLogin {
+  return [[NSUserDefaults standardUserDefaults] objectForKey:kBITAuthenticatorDidSkipOptionalLogin];
 }
 
 #pragma mark - Application Lifecycle
