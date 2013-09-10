@@ -363,4 +363,39 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   ident = [_sut installationIdentification];
   assertThat(ident, isNot(equalTo(@"SuperToken")));
 }
+
+#pragma mark - Test installationIdentificationValidated Flag
+- (void) testThatFlagIsResetOnFailedValidation {
+  _sut.validationType = BITAuthenticatorValidationTypeOnFirstLaunch;
+  assertThatBool(_sut.installationIdentificationValidated, equalToBool(NO));
+}
+
+- (void) testThatFlagIsSetOnFailedValidation {
+  _sut.validationType = BITAuthenticatorValidationTypeOnFirstLaunch;
+  [_sut validationSucceededWithCompletion:nil];
+  assertThatBool(_sut.installationIdentificationValidated, equalToBool(YES));
+}
+
+- (void) testThatApplicationBackgroundingResetsValidatedFlagInValidationTypeOnAppActive {
+  _sut.validationType = BITAuthenticatorValidationTypeOnAppActive;
+  //trigger flag set to YES
+  [_sut validationSucceededWithCompletion:nil];
+  [_sut applicationWillResignActive:nil];
+  assertThatBool(_sut.installationIdentificationValidated, equalToBool(NO));
+}
+
+- (void) testThatApplicationBackgroundingKeepValidatedFlag {
+  _sut.validationType = BITAuthenticatorValidationTypeOnFirstLaunch;
+  //trigger flag set to YES
+  [_sut validationSucceededWithCompletion:nil];
+  [_sut applicationWillResignActive:nil];
+  assertThatBool(_sut.installationIdentificationValidated, equalToBool(YES));
+}
+
+- (void) testThatInitialAuthSetsValidatedFlag {
+  _sut.validationType = BITAuthenticatorValidationTypeOnFirstLaunch;
+  [_sut didAuthenticateWithToken:@"MyToken"];
+  assertThatBool(_sut.installationIdentificationValidated, equalToBool(YES));
+}
+
 @end

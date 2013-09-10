@@ -41,6 +41,12 @@
  */
 - (void) cleanupInternalStorage;
 
+@property (nonatomic, readwrite) BOOL installationIdentificationValidated;
+
+/**
+ * method registered as observer for applicationWillBecomeInactive events
+ */
+- (void) applicationWillResignActive:(NSNotification*) note;
 
 /**
  * method registered as observer for applicationsDidBecomeActive events

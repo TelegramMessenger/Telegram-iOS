@@ -21,7 +21,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
 
 @implementation BITAuthenticator {
   id _appDidBecomeActiveObserver;
-  
+  id _appWillResignActiveObserver;
   UIViewController *_authenticationController;
 }
 
@@ -241,6 +241,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
   [_authenticationController dismissModalViewControllerAnimated:YES];
   _authenticationController = nil;
   self.authenticationToken = token;
+  self.installationIdentificationValidated = YES;
   self.lastAuthenticatedVersion = [self executableUUID];
   if(self.authenticationCompletionBlock) {
     self.authenticationCompletionBlock(self.authenticationToken, nil);
@@ -451,6 +452,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
 }
 
 - (void)validationSucceededWithCompletion:(tValidationCompletion) completion {
+  self.installationIdentificationValidated = YES;
   if(completion) {
     completion(YES, nil);
   }
@@ -469,8 +471,8 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
 }
 
 - (void) registerObservers {
+  __weak typeof(self) weakSelf = self;
   if(nil == _appDidBecomeActiveObserver) {
-    __weak typeof(self) weakSelf = self;
     _appDidBecomeActiveObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
                                                                                     object:nil
                                                                                      queue:NSOperationQueue.mainQueue
@@ -479,12 +481,25 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
                                                                                   [strongSelf applicationDidBecomeActive:note];
                                                                                 }];
   }
+  if(nil == _appWillResignActiveObserver) {
+    _appWillResignActiveObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationWillResignActiveNotification
+                                                                                    object:nil
+                                                                                     queue:NSOperationQueue.mainQueue
+                                                                                usingBlock:^(NSNotification *note) {
+                                                                                  typeof(self) strongSelf = weakSelf;
+                                                                                  [strongSelf applicationWillResignActive:note];
+                                                                                }];
+  }
 }
 
 - (void) unregisterObservers {
   if(_appDidBecomeActiveObserver) {
     [[NSNotificationCenter defaultCenter] removeObserver:_appDidBecomeActiveObserver];
     _appDidBecomeActiveObserver = nil;
+  }
+  if(_appWillResignActiveObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:_appWillResignActiveObserver];
+    _appWillResignActiveObserver = nil;
   }
 }
 
@@ -569,5 +584,10 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
     }
   };
 };
+- (void)applicationWillResignActive:(NSNotification *)note {
+  if(BITAuthenticatorValidationTypeOnAppActive == self.validationType) {
+    self.installationIdentificationValidated = NO;
+  }
+}
 
 @end

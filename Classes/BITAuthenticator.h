@@ -89,6 +89,17 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
  */
 @property (nonatomic, readonly) NSString *installationIdentification;
 
+/**
+ *	Specifies if the installationIdentification has been validated
+ *
+ *  Depending on authenticationType and validationType this flag switches between
+ *  YES/NO during application runtime. If it's YES, the installationIdentification has been
+ *  validated (either against the backend on app launch / initial run of this version) or validation
+ *  is not required. The flag is first updated (and stays NO) until the manager has been started.
+ *  KVO'able
+ */
+@property (nonatomic, readonly) BOOL installationIdentificationValidated;
+
 #pragma mark - UDID auth
 
 /**
