@@ -160,8 +160,10 @@
   if (section == 0) {
     if(self.showsLoginViaWebButton) {
       return BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerWebLoginDescription");
+    } else if(self.requirePassword) {
+      return BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription");
     } else {
-      return BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerDataDescription");
+      return BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerDataEmailDescription");
     }
   }
   
