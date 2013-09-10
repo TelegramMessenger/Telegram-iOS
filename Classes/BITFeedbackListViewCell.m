@@ -137,7 +137,7 @@
 + (CGFloat) heightForRowWithMessage:(BITFeedbackMessage *)message tableViewWidth:(CGFloat)width {
   CGFloat calculatedHeight = [message.text sizeWithFont:[UIFont systemFontOfSize:TEXT_FONTSIZE]
                               constrainedToSize:CGSizeMake(width - (2 * FRAME_SIDE_BORDER), CGFLOAT_MAX)].height + FRAME_TOP_BORDER + LABEL_TEXT_Y + FRAME_BOTTOM_BORDER;
-  return calculatedHeight;
+  return round(calculatedHeight);
 }
 
 - (void)layoutSubviews {
