@@ -50,15 +50,20 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
       break;
     case BITAuthenticatorValidationTypeOnFirstLaunch:
       if(![self.lastAuthenticatedVersion isEqualToString:self.executableUUID]) {
+        self.installationIdentificationValidated = NO;
         [self validateInstallationWithCompletion:[self defaultValidationCompletionBlock]];
+      } else {
+        self.installationIdentificationValidated = YES;
       }
       break;
     case BITAuthenticatorValidationTypeOptional:
+      self.installationIdentificationValidated = YES;
       if(NO == self.didSkipOptionalLogin) {
         [self validateInstallationWithCompletion:[self defaultValidationCompletionBlock]];
       }
       break;
     case BITAuthenticatorValidationTypeNever:
+      self.installationIdentificationValidated = YES;
       break;
   }
 }
