@@ -294,8 +294,8 @@
 }
 
 - (void) setLoginUIEnabled:(BOOL) enabled {
-  self.navigationItem.rightBarButtonItem.enabled = !enabled;
-  self.tableView.userInteractionEnabled = !enabled;
+  self.navigationItem.rightBarButtonItem.enabled = enabled;
+  self.tableView.userInteractionEnabled = enabled;
 }
 
 @end

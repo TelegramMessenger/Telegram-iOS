@@ -300,13 +300,18 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
                           NSError *authParseError = nil;
                           NSString *authToken = [strongSelf.class authenticationTokenFromReponse:response
                                                                                            error:&authParseError];
+                          NSError *error = nil;
                           if(nil == authToken) {
-                            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:nil
-                                                                            message:@"Failed to authenticate"
-                                                                           delegate:nil
-                                                                  cancelButtonTitle:BITHockeyLocalizedString(@"OK")
-                                                                  otherButtonTitles:nil];
-                            [alert show];
+                            if([authParseError.domain isEqualToString:kBITAuthenticatorErrorDomain] &&
+                               authParseError.code == BITAuthenticatorNotAuthorized) {
+                              error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
+                                                          code:BITAuthenticatorNotAuthorized
+                                                      userInfo:@{
+                                                                 //TODO localize
+                                                                 NSLocalizedDescriptionKey : @"Not authorized",
+                                                                 NSUnderlyingErrorKey : authParseError
+                                                                 }];
+                            }
                             completion(NO, error);
                           } else {
                             //no need to call completion, we're dismissing it anyways
