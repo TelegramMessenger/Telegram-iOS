@@ -28,7 +28,7 @@
   if (self) {
     self.title = BITHockeyLocalizedString(@"HockeyAuthenticatorViewControllerTitle");
     _delegate = delegate;
-    _showsCancelButton = YES;
+    _showsSkipButton = YES;
   }
   return self;
 }
@@ -49,7 +49,7 @@
   _statusBarStyle = [[UIApplication sharedApplication] statusBarStyle];
   [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleBlackOpaque];
 
-  [self updateCancelButton];
+  [self updateSkipButton];
   
   self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemSave
                                                                                          target:self
@@ -65,18 +65,19 @@
 }
 
 #pragma mark - Property overrides
-- (void)setShowsCancelButton:(BOOL)showsCancelButton {
-  if(_showsCancelButton != showsCancelButton) {
-    _showsCancelButton = showsCancelButton;
-    [self updateCancelButton];
+- (void)setShowsSkipButton:(BOOL)showsSkipButton {
+  if(_showsSkipButton != showsSkipButton) {
+    _showsSkipButton = showsSkipButton;
+    [self updateSkipButton];
   }
 }
 
-- (void) updateCancelButton {
-  if(self.showsCancelButton) {
-    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel
-                                                                                          target:self
-                                                                                          action:@selector(dismissAction:)];
+- (void) updateSkipButton {
+  if(self.showsSkipButton) {
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:BITHockeyLocalizedString(@"Skip")
+                                                                             style:UIBarButtonItemStyleBordered
+                                                                            target:self
+                                                                            action:@selector(dismissAction:)];
   } else {
     self.navigationItem.leftBarButtonItem = nil;
   }
@@ -264,7 +265,7 @@
 
 #pragma mark - Actions
 - (void)dismissAction:(id)sender {
-  [self.delegate authenticationViewControllerDidCancel:self];
+  [self.delegate authenticationViewControllerDidSkip:self];
 }
 
 - (void)saveAction:(id)sender {

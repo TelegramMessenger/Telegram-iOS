@@ -200,7 +200,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   }];
 
   //fake delegate call from the viewcontroller
-  [_sut authenticationViewControllerDidCancel:nil];
+  [_sut authenticationViewControllerDidSkip:nil];
 
   assertThatBool(didAuthenticateCalled, equalToBool(YES));
   assertThat(authenticationError, equalTo([NSError errorWithDomain:kBITAuthenticatorErrorDomain
@@ -216,7 +216,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   //this will prepare everything and show the viewcontroller
   [_sut authenticateWithCompletion:nil];
   //fake delegate call from the viewcontroller
-  [_sut authenticationViewControllerDidCancel:nil];
+  [_sut authenticationViewControllerDidSkip:nil];
   
   assertThat(_sut.authenticationToken, equalTo(nil));
 }
@@ -230,7 +230,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
             context:kInstallationIdentification];
   
   //fake delegate call from the viewcontroller
-  [_sut authenticationViewControllerDidCancel:nil];
+  [_sut authenticationViewControllerDidSkip:nil];
   assertThatBool(_KVOCalled, equalToBool(YES));
   [_sut removeObserver:self forKeyPath:@"installationIdentification"];
 }

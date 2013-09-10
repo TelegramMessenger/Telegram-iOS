@@ -17,6 +17,7 @@
 static NSString* const kBITAuthenticatorAuthTokenKey = @"BITAuthenticatorAuthTokenKey";
 static NSString* const kBITAuthenticatorAuthTokenVendorIdentifierKey = @"BITAuthenticatorAuthTokenVendorIdentifierKey";
 static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthenticatorLastAuthenticatedVersionKey";
+static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticatorDidSkipOptionalLogin";
 
 @implementation BITAuthenticator {
   id _appDidBecomeActiveObserver;
@@ -214,11 +215,11 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
   switch (self.validationType) {
     case BITAuthenticatorValidationTypeNever:
     case BITAuthenticatorValidationTypeOptional:
-      viewController.showsCancelButton = YES;
+      viewController.showsSkipButton = YES;
       break;
     case BITAuthenticatorValidationTypeOnAppActive:
     case BITAuthenticatorValidationTypeOnFirstLaunch:
-      viewController.showsCancelButton = NO;
+      viewController.showsSkipButton = NO;
       break;
   }
   
@@ -245,7 +246,7 @@ static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthe
   }
 }
 #pragma mark - AuthenticationViewControllerDelegate
-- (void) authenticationViewControllerDidCancel:(UIViewController*) viewController {
+- (void) authenticationViewControllerDidSkip:(UIViewController *)viewController {
   [viewController dismissModalViewControllerAnimated:YES];
   
   _authenticationController = nil;

@@ -31,11 +31,11 @@
  */
 @property (nonatomic, assign) BOOL requirePassword;
 
-/** configure if user can abort authentication or not
+/** configure if user can skip authentication or not
  *
  *  defaults to YES
  */
-@property (nonatomic, assign) BOOL showsCancelButton;
+@property (nonatomic, assign) BOOL showsSkipButton;
 
 @property (nonatomic, weak) id<BITAuthenticationViewControllerDelegate> delegate;
 
@@ -44,11 +44,11 @@
 @protocol BITAuthenticationViewControllerDelegate<NSObject>
 
 /**
- *	called then the user cancelled
+ *	called then the user skipped the auth-dialgo
  *
  *	@param	viewController the delegating viewcontroller
  */
-- (void) authenticationViewControllerDidCancel:(UIViewController*) viewController;
+- (void) authenticationViewControllerDidSkip:(UIViewController*) viewController;
 
 - (void) authenticationViewControllerDidTapWebButton:(UIViewController*) viewController;
 
