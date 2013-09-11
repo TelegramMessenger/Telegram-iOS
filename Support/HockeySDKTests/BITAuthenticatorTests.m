@@ -84,7 +84,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 
 #pragma mark - Persistence Tests
 - (void) testThatAuthenticationTokenIsPersisted {
-  _sut.authenticationToken = @"SuperToken";
+  [_sut setAuthenticationToken:@"SuperToken" withType:@"udid"];
   _sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil isAppStoreEnvironemt:YES];
   assertThat(_sut.authenticationToken, equalTo(@"SuperToken"));
 }
@@ -96,13 +96,15 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 }
 
 - (void) testThatCleanupWorks {
-  _sut.authenticationToken = @"MyToken";
+  [_sut setAuthenticationToken:@"MyToken" withType:@"udid"];
   _sut.lastAuthenticatedVersion = @"1.2";
   
   [_sut cleanupInternalStorage];
   
   assertThat(_sut.authenticationToken, equalTo(nil));
   assertThat(_sut.lastAuthenticatedVersion, equalTo(nil));
+  assertThat(_sut.installationIdentificationType, equalTo(@"udid"));
+  assertThatBool(_sut.didSkipOptionalLogin, equalToBool(NO));
 }
 
 - (void) testThatSkipLoginIsPersisted {
@@ -121,7 +123,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 }
 
 - (void) testIdentificationReturnsTheAuthTokenIfSet {
-  _sut.authenticationToken = @"PeterPan";
+  [_sut setAuthenticationToken:@"PeterPan" withType:@"udid"];
   assertThat(_sut.installationIdentification, equalTo(@"PeterPan"));
 }
 
@@ -186,7 +188,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 - (void) testThatSuccessfulAuthenticationCallsTheBlock {
   id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
   _sut.delegate = delegateMock;
-  _sut.authenticationToken = @"Test";
+  [_sut setAuthenticationToken:@"Test" withType:@"adid"];
   __block BOOL didAuthenticate = NO;
   [_sut authenticateWithCompletion:^(NSString *authenticationToken, NSError *error) {
     if(authenticationToken) didAuthenticate = YES;
@@ -220,7 +222,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 - (void) testThatCancelledAuthenticationResetsTheToken {
   id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
   _sut.delegate = delegateMock;
-  _sut.authenticationToken = @"Meh";
+  [_sut setAuthenticationToken:@"Meh" withType:@"bdid"];
   
   //this will prepare everything and show the viewcontroller
   [_sut authenticateWithCompletion:nil];
@@ -252,6 +254,38 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   }
 }
 
+#pragma mark - InstallationIdentificationType
+- (void) testThatEmailAuthSetsTheProperInstallationIdentificationType {
+  _sut.authenticationType = BITAuthenticatorAuthTypeEmail;
+  //fake delegate call from the viewcontroller
+  [_sut didAuthenticateWithToken:@"SuperToken"];
+  
+  assertThat(_sut.installationIdentificationType, equalTo(@"iuid"));
+}
+
+- (void) testThatPasswordAuthSetsTheProperInstallationIdentificationType {
+  _sut.authenticationType = BITAuthenticatorAuthTypeEmailAndPassword;
+  //fake delegate call from the viewcontroller
+  [_sut didAuthenticateWithToken:@"SuperToken"];
+  
+  assertThat(_sut.installationIdentificationType, equalTo(@"auid"));
+}
+
+- (void) testThatUDIDAuthSetsTheProperInstallationIdentificationType {
+  _sut.authenticationType = BITAuthenticatorAuthTypeUDIDProvider;
+  //fake delegate call from the viewcontroller
+  [_sut didAuthenticateWithToken:@"SuperToken"];
+  
+  assertThat(_sut.installationIdentificationType, equalTo(@"udid"));
+}
+
+- (void) testThatDefaultAuthReturnsProperInstallationIdentificationType {
+  _sut.authenticationType = BITAuthenticatorAuthTypeEmailAndPassword;
+  //fake delegate call from the viewcontroller
+  [_sut authenticationViewControllerDidSkip:nil];
+  
+  assertThat(_sut.installationIdentificationType, equalTo(@"udid"));
+}
 #pragma mark - validation tests
 - (void) testThatValidationWithoutTokenWantsToShowTheAuthenticationViewController {
   id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));

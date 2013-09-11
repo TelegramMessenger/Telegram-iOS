@@ -50,7 +50,13 @@
  *  This is retrieved from the hockeyApp backend
  *  @see installationIdentifier
  */
-@property (nonatomic, copy) NSString *authenticationToken;
+@property (nonatomic, readonly) NSString *authenticationToken;
+
+/**
+ *  store the authentication token with the given type
+ *  if authToken is not nil, authentikationTokenType must also be non nil
+ */
+- (void)setAuthenticationToken:(NSString *)authenticationToken withType:(NSString*) authenticationTokenType;
 
 /**
  *  holds the identifier of the last version that was authenticated
@@ -62,10 +68,8 @@
 
 /**
  *	Specifies the type of installation identification for the current app installation
- *
- *  KVO'able
  */
-@property (nonatomic, readonly) BOOL installationIdentificationType;
+@property (nonatomic, readonly) NSString *installationIdentificationType;
 
 /**
  *	removes all previously stored authentication tokens, UDIDs, etc

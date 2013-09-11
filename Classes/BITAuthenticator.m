@@ -36,6 +36,7 @@
 #import "BITHockeyHelper.h"
 
 static NSString* const kBITAuthenticatorAuthTokenKey = @"BITAuthenticatorAuthTokenKey";
+static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAuthTokenTypeKey";
 static NSString* const kBITAuthenticatorAuthTokenVendorIdentifierKey = @"BITAuthenticatorAuthTokenVendorIdentifierKey";
 static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthenticatorLastAuthenticatedVersionKey";
 static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticatorDidSkipOptionalLogin";
@@ -101,6 +102,15 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
   return bit_appAnonID();
 }
 
+- (NSString*) installationIdentificationType {
+  NSString *authToken = self.authenticationToken;
+  if(nil == authToken) {
+    return @"udid";
+  } else {
+    return [self authenticationTokenType];
+  }
+}
+
 #pragma mark - Validation
 - (void) validateInstallationWithCompletion:(tValidationCompletion) completion {
   if(nil == self.authenticationToken) {
@@ -146,19 +156,8 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
 
 - (NSDictionary*) validationParameters {
   NSParameterAssert(self.authenticationToken);
-  NSDictionary *params = nil;
-  switch (self.authenticationType) {
-    case BITAuthenticatorAuthTypeEmail:
-      params = @{@"iuid" : self.authenticationToken};
-      break;
-    case BITAuthenticatorAuthTypeEmailAndPassword:
-      params = @{@"auid" : self.authenticationToken};
-      break;
-    case BITAuthenticatorAuthTypeUDIDProvider:
-      params = @{@"udid" : self.authenticationToken};
-      break;
-  }
-  return params;
+  NSParameterAssert(self.installationIdentificationType);
+  return @{self.installationIdentificationType : self.authenticationToken};
 }
 
 + (BOOL) isValidationResponseValid:(id) response error:(NSError **) error {
@@ -269,7 +268,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
 - (void) didAuthenticateWithToken:(NSString*) token {
   [_authenticationController dismissModalViewControllerAnimated:YES];
   _authenticationController = nil;
-  self.authenticationToken = token;
+  [self setAuthenticationToken:token withType:[self.class stringForAuthenticationType:self.authenticationType]];
   self.installationIdentificationValidated = YES;
   self.lastAuthenticatedVersion = [self executableUUID];
   if(self.authenticationCompletionBlock) {
@@ -277,12 +276,24 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
     self.authenticationCompletionBlock = nil;
   }
 }
+
++ (NSString*) stringForAuthenticationType:(BITAuthenticatorAuthType) authType {
+  switch (authType) {
+    case BITAuthenticatorAuthTypeEmail: return @"iuid";
+    case BITAuthenticatorAuthTypeEmailAndPassword: return @"auid";
+    case BITAuthenticatorAuthTypeUDIDProvider:
+      //fallthrough
+    default:
+      return @"udid";
+      break;
+  }
+}
 #pragma mark - AuthenticationViewControllerDelegate
 - (void) authenticationViewControllerDidSkip:(UIViewController *)viewController {
   [viewController dismissModalViewControllerAnimated:YES];
   
   _authenticationController = nil;
-  self.authenticationToken = nil;
+  [self setAuthenticationToken:nil withType:nil];
   if(self.validationType == BITAuthenticatorValidationTypeOptional) {
     self.didSkipOptionalLogin = YES;
   }
@@ -439,7 +450,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
     [self didAuthenticateWithToken:udid];
   } else {
     //reset auth-token
-    self.authenticationToken = nil;
+    [self setAuthenticationToken:nil withType:nil];
     
     if(self.validationType == BITAuthenticatorValidationTypeOptional) {
       //dismiss view-controller if login was optional
@@ -499,6 +510,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
 
 - (void) cleanupInternalStorage {
   [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenKey];
+  [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenTypeKey];
   [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenVendorIdentifierKey];
   [self removeKeyFromKeychain:kBITAuthenticatorDidSkipOptionalLogin];
   [self setLastAuthenticatedVersion:nil];
@@ -538,14 +550,16 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
 }
 
 #pragma mark - Property overrides
-- (void)setAuthenticationToken:(NSString *)authenticationToken {
+- (void)setAuthenticationToken:(NSString *)authenticationToken withType:(NSString*) authenticationTokenType {
+  NSParameterAssert(nil == authenticationToken || nil != authenticationTokenType);
   if(![self.authenticationToken isEqualToString:authenticationToken]) {
     [self willChangeValueForKey:@"installationIdentification"];
     if(nil == authenticationToken) {
       [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenKey];
-      [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenVendorIdentifierKey];
+      [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenTypeKey];
     } else {
       [self addStringValueToKeychain:authenticationToken forKey:kBITAuthenticatorAuthTokenKey];
+      [self addStringValueToKeychain:authenticationTokenType forKey:kBITAuthenticatorAuthTokenTypeKey];
       NSString *identifierForVendor = self.currentDevice.identifierForVendor.UUIDString;
       [self addStringValueToKeychain:identifierForVendor forKey:kBITAuthenticatorAuthTokenVendorIdentifierKey];
     }
@@ -566,6 +580,11 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
     return nil;
   }
   return authToken;
+}
+
+- (NSString *)authenticationTokenType {
+  NSString *authTokenType = [self stringValueFromKeychainForKey:kBITAuthenticatorAuthTokenTypeKey];
+  return authTokenType;
 }
 
 - (void)setLastAuthenticatedVersion:(NSString *)lastAuthenticatedVersion {
