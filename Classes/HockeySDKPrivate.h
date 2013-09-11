@@ -41,21 +41,20 @@
 
 #define BITHOCKEY_FEEDBACK_SETTINGS @"BITFeedbackManager.plist"
 
-#define kBITUpdateInstalledUUID             @"BITUpdateInstalledUUID"
-#define kBITUpdateInstalledVersionID        @"BITUpdateInstalledVersionID"
-#define kBITUpdateCurrentCompanyName        @"BITUpdateCurrentCompanyName"
-#define kBITUpdateArrayOfLastCheck          @"BITUpdateArrayOfLastCheck"
-#define kBITUpdateDateOfLastCheck           @"BITUpdateDateOfLastCheck"
-#define kBITUpdateDateOfVersionInstallation @"BITUpdateDateOfVersionInstallation"
-#define kBITUpdateUsageTimeOfCurrentVersion @"BITUpdateUsageTimeOfCurrentVersion"
-#define kBITUpdateUsageTimeForUUID          @"BITUpdateUsageTimeForUUID"
-#define kBITUpdateAuthorizedVersion         @"BITUpdateAuthorizedVersion"
-#define kBITUpdateAuthorizedToken           @"BITUpdateAuthorizedToken"
+#define kBITUpdateInstalledUUID              @"BITUpdateInstalledUUID"
+#define kBITUpdateInstalledVersionID         @"BITUpdateInstalledVersionID"
+#define kBITUpdateCurrentCompanyName         @"BITUpdateCurrentCompanyName"
+#define kBITUpdateArrayOfLastCheck           @"BITUpdateArrayOfLastCheck"
+#define kBITUpdateDateOfLastCheck            @"BITUpdateDateOfLastCheck"
+#define kBITUpdateDateOfVersionInstallation  @"BITUpdateDateOfVersionInstallation"
+#define kBITUpdateUsageTimeOfCurrentVersion  @"BITUpdateUsageTimeOfCurrentVersion"
+#define kBITUpdateUsageTimeForUUID           @"BITUpdateUsageTimeForUUID"
+#define kBITUpdateInstallationIdentification @"BITUpdateInstallationIdentification"
 
-#define kBITStoreUpdateDateOfLastCheck      @"BITStoreUpdateDateOfLastCheck"
-#define kBITStoreUpdateLastStoreVersion     @"BITStoreUpdateLastStoreVersion"
-#define kBITStoreUpdateLastUUID             @"BITStoreUpdateLastUUID"
-#define kBITStoreUpdateIgnoreVersion        @"BITStoreUpdateIgnoredVersion"
+#define kBITStoreUpdateDateOfLastCheck       @"BITStoreUpdateDateOfLastCheck"
+#define kBITStoreUpdateLastStoreVersion      @"BITStoreUpdateLastStoreVersion"
+#define kBITStoreUpdateLastUUID              @"BITStoreUpdateLastUUID"
+#define kBITStoreUpdateIgnoreVersion         @"BITStoreUpdateIgnoredVersion"
 
 #define BITHOCKEYSDK_BUNDLE @"HockeySDKResources.bundle"
 #define BITHOCKEYSDK_URL @"https://sdk.hockeyapp.net/"
@@ -73,6 +72,7 @@
 NSBundle *BITHockeyBundle(void);
 NSString *BITHockeyLocalizedString(NSString *stringToken);
 NSString *BITHockeyMD5(NSString *str);
+BOOL BITValidateEmail(NSString *email);
 
 #if __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_6_0
 

@@ -101,6 +101,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     NSNotificationCenter *dnc = [NSNotificationCenter defaultCenter];
     [dnc addObserver:self selector:@selector(didBecomeActiveActions) name:UIApplicationDidBecomeActiveNotification object:nil];
     [dnc addObserver:self selector:@selector(didBecomeActiveActions) name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
+    _installationIdentification = [self stringValueFromKeychainForKey:kBITUpdateInstallationIdentification];
     _didSetupDidBecomeActiveNotifications = YES;
   }
 }
@@ -109,6 +110,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
   [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
 }
+
 
 #pragma mark - Expiry
 
@@ -166,9 +168,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   if (newVersion) {
     [[NSUserDefaults standardUserDefaults] setObject:[NSNumber numberWithDouble:[[NSDate date] timeIntervalSinceReferenceDate]] forKey:kBITUpdateDateOfVersionInstallation];
     [[NSUserDefaults standardUserDefaults] setObject:_uuid forKey:kBITUpdateUsageTimeForUUID];
-    [[NSUserDefaults standardUserDefaults] setObject:[NSNumber numberWithDouble:0] forKey:kBITUpdateUsageTimeOfCurrentVersion];
-    [[NSUserDefaults standardUserDefaults] synchronize];
-  }    
+    [self storeUsageTimeForCurrentVersion:[NSNumber numberWithDouble:0]];
+  }
 }
 
 - (void)stopUsage {
@@ -177,7 +178,11 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   double timeDifference = [[NSDate date] timeIntervalSinceReferenceDate] - [_usageStartTimestamp timeIntervalSinceReferenceDate];
   double previousTimeDifference = [(NSNumber *)[[NSUserDefaults standardUserDefaults] valueForKey:kBITUpdateUsageTimeOfCurrentVersion] doubleValue];
   
-  [[NSUserDefaults standardUserDefaults] setObject:[NSNumber numberWithDouble:previousTimeDifference + timeDifference] forKey:kBITUpdateUsageTimeOfCurrentVersion];
+  [self storeUsageTimeForCurrentVersion:[NSNumber numberWithDouble:previousTimeDifference + timeDifference]];
+}
+
+- (void) storeUsageTimeForCurrentVersion:(NSNumber *)usageTime {
+  [[NSUserDefaults standardUserDefaults] setObject:usageTime forKey:kBITUpdateUsageTimeOfCurrentVersion];
   [[NSUserDefaults standardUserDefaults] synchronize];
 }
 
@@ -534,6 +539,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 - (void)checkForUpdate {
   if (![self isAppStoreEnvironment] && ![self isUpdateManagerDisabled]) {
     if ([self expiryDateReached]) return;
+    if (![self installationIdentificationValidated]) return;
     
     if (self.isUpdateAvailable && [self hasNewerMandatoryVersion]) {
       [self showCheckForUpdateAlert];
@@ -564,6 +570,14 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
                                 BITHOCKEY_NAME,
                                 BITHOCKEY_VERSION,
                                 _uuid];
+  
+  // add installationIdentificationType and installationIdentifier if available
+  if (self.installationIdentification && self.installationIdentificationType) {
+    [parameter appendFormat:@"&%@=%@",
+     bit_URLEncodedString(self.installationIdentificationType),
+     bit_URLEncodedString(self.installationIdentification)
+     ];
+  }
   
   // add additional statistics if user didn't disable flag
   if (_sendUsageData) {
@@ -633,7 +647,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   if (![self isAppStoreEnvironment]) {
     if ([self isUpdateManagerDisabled]) return;
 
-    BITHockeyLog(@"INFO: Start UpdateManager");
+    BITHockeyLog(@"INFO: Starting UpdateManager");
 
     [self checkExpiryDateReached];
     if (![self expiryDateReached]) {
@@ -735,7 +749,17 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
       for (NSDictionary *dict in feedArray) {
         BITAppVersionMetaInfo *appVersionMetaInfo = [BITAppVersionMetaInfo appVersionMetaInfoFromDict:dict];
         if ([appVersionMetaInfo isValid]) {
-          [tmpAppVersions addObject:appVersionMetaInfo];
+          // check if minOSVersion is set and this device qualifies
+          BOOL deviceOSVersionQualifies = YES;
+          if ([appVersionMetaInfo minOSVersion]) {
+            NSComparisonResult comparissonResult = bit_versionCompare(appVersionMetaInfo.minOSVersion, [[UIDevice currentDevice] systemVersion]);
+            if (comparissonResult == NSOrderedDescending) {
+              deviceOSVersionQualifies = NO;
+            }
+          }
+          
+          if (deviceOSVersionQualifies)
+            [tmpAppVersions addObject:appVersionMetaInfo];
         } else {
           [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
                                                 code:BITUpdateAPIServerReturnedInvalidData
@@ -850,6 +874,26 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   if (_blockingView != anBlockingView) {
     [_blockingView removeFromSuperview];
     _blockingView = anBlockingView;
+  }
+}
+
+- (void)setInstallationIdentificationValidated:(BOOL)installationIdentificationValidated {
+  if (installationIdentificationValidated != _installationIdentificationValidated) {
+    _installationIdentificationValidated = installationIdentificationValidated;
+  }
+}
+
+- (void)setInstallationIdentification:(NSString *)installationIdentification {
+  if (![_installationIdentification isEqualToString:installationIdentification]) {
+    if (installationIdentification) {
+      [self addStringValueToKeychain:installationIdentification forKey:kBITUpdateInstallationIdentification];
+    } else {
+      [self removeKeyFromKeychain:kBITUpdateInstallationIdentification];
+    }
+    
+    // we need to reset the usage time, because the user/device may have changed
+    [self storeUsageTimeForCurrentVersion:[NSNumber numberWithDouble:0]];
+    self.usageStartTimestamp = [NSDate date];
   }
 }
 

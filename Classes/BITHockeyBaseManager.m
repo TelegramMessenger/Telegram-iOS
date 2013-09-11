@@ -291,24 +291,6 @@
 - (void)startManager {
 }
 
-
-#pragma mark - Networking
-
-- (NSData *)appendPostValue:(NSString *)value forKey:(NSString *)key {
-  NSString *boundary = @"----FOO";
-  
-  NSMutableData *postBody = [NSMutableData data];
-  
-  [postBody appendData:[[NSString stringWithFormat:@"--%@\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
-  [postBody appendData:[[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\";\r\n", key] dataUsingEncoding:NSUTF8StringEncoding]];
-  [postBody appendData:[[NSString stringWithFormat:@"Content-Type: text\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
-  [postBody appendData:[value dataUsingEncoding:NSUTF8StringEncoding]];    
-  [postBody appendData:[@"\r\n" dataUsingEncoding:NSUTF8StringEncoding]];
-  
-  return postBody;
-}
-
-
 #pragma mark - Helpers
 
 - (NSDate *)parseRFC3339Date:(NSString *)dateString {

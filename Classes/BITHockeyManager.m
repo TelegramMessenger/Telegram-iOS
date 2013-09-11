@@ -35,6 +35,8 @@
 #import "BITUpdateManagerPrivate.h"
 #import "BITStoreUpdateManagerPrivate.h"
 #import "BITFeedbackManagerPrivate.h"
+#import "BITAuthenticator_Private.h"
+#import "BITHockeyAppClient.h"
 
 @interface BITHockeyManager ()
 
@@ -53,6 +55,8 @@
   BOOL _validAppIdentifier;
   
   BOOL _startManagerIsInvoked;
+  
+  BOOL _startUpdateManagerIsInvoked;
 }
 
 #pragma mark - Private Class Methods
@@ -101,12 +105,14 @@
     
     _disableCrashManager = NO;
     _disableUpdateManager = NO;
-    _enableStoreUpdateManager = NO;
     _disableFeedbackManager = NO;
+
+    _enableStoreUpdateManager = NO;
     
     _appStoreEnvironment = NO;
     _startManagerIsInvoked = NO;
-
+    _startUpdateManagerIsInvoked = NO;
+    
 #if !TARGET_IPHONE_SIMULATOR
     // check if we are really in an app store environment
     if (![[NSBundle mainBundle] pathForResource:@"embedded" ofType:@"mobileprovision"]) {
@@ -165,19 +171,6 @@
     [_crashManager startManager];
   }
   
-  // Setup UpdateManager
-  if (![self isUpdateManagerDisabled]
-#if JIRA_MOBILE_CONNECT_SUPPORT_ENABLED
-      || [[self class] isJMCPresent]
-#endif
-      ) {
-    BITHockeyLog(@"INFO: Start UpdateManager with small delay");
-    if (_serverURL) {
-      [_updateManager setServerURL:_serverURL];
-    }
-    [_updateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
-  }
-  
   // start StoreUpdateManager
   if ([self isStoreUpdateManagerEnabled]) {
     BITHockeyLog(@"INFO: Start StoreUpdateManager");
@@ -186,7 +179,7 @@
     }
     [_storeUpdateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
   }
-
+  
   // start FeedbackManager
   if (![self isFeedbackManagerDisabled]) {
     BITHockeyLog(@"INFO: Start FeedbackManager");
@@ -195,13 +188,27 @@
     }
     [_feedbackManager performSelector:@selector(startManager) withObject:nil afterDelay:1.0f];
   }
-}
-
-
-- (void)validateStartManagerIsInvoked {
-  if (_validAppIdentifier && !_appStoreEnvironment) {
-    if (!_startManagerIsInvoked) {
-      NSLog(@"[HockeySDK] ERROR: You did not call [[BITHockeyManager sharedHockeyManager] startManager] to startup the HockeySDK! Please do so after setting up all properties. The SDK is NOT running.");
+  
+  // start Authenticator
+  if (![self isAppStoreEnvironment]) {
+    // hook into manager with kvo!
+    [_authenticator addObserver:self forKeyPath:@"installationIdentificationValidated" options:0 context:nil];
+    
+    BITHockeyLog(@"INFO: Start Authenticator");
+    if (_serverURL) {
+      [_authenticator setServerURL:_serverURL];
+    }
+    [_authenticator startManager];
+  }
+  
+  // Setup UpdateManager
+  if (![self isUpdateManagerDisabled]
+#if JIRA_MOBILE_CONNECT_SUPPORT_ENABLED
+      || [[self class] isJMCPresent]
+#endif
+      ) {
+    if ([self.authenticator installationIdentificationValidated]) {
+      [self invokeStartUpdateManager];
     }
   }
 }
@@ -216,8 +223,10 @@
 
 
 - (void)setEnableStoreUpdateManager:(BOOL)enableStoreUpdateManager {
+  if (_storeUpdateManager) {
+    [_storeUpdateManager setEnableStoreUpdateManager:enableStoreUpdateManager];
+  }
   _enableStoreUpdateManager = enableStoreUpdateManager;
-  [_storeUpdateManager setEnableStoreUpdateManager:enableStoreUpdateManager];
 }
 
 
@@ -237,11 +246,65 @@
   
   if (_serverURL != aServerURL) {
     _serverURL = [aServerURL copy];
+    _authenticator.hockeyAppClient.baseURL = [NSURL URLWithString:_serverURL ? _serverURL : BITHOCKEYSDK_URL];
+  }
+}
+
+
+#pragma mark - KVO
+
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
+  if ([keyPath isEqualToString:@"installationIdentificationValidated"] &&
+      [object valueForKey:@"installationIdentificationValidated"] ) {
+    if ((![self isAppStoreEnvironment] && ![self isUpdateManagerDisabled])) {
+      BOOL isValidated = [(NSNumber *)[object valueForKey:@"installationIdentificationValidated"] boolValue];
+      if (isValidated) {
+        [self invokeStartUpdateManager];
+      }
+    }
+#if JIRA_MOBILE_CONNECT_SUPPORT_ENABLED
+  } else if (([object trackerConfig]) && ([[object trackerConfig] isKindOfClass:[NSDictionary class]])) {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    NSMutableDictionary *trackerConfig = [[defaults valueForKey:@"BITTrackerConfigurations"] mutableCopy];
+    if (!trackerConfig) {
+      trackerConfig = [NSMutableDictionary dictionaryWithCapacity:1];
+    }
+    
+    [trackerConfig setValue:[object trackerConfig] forKey:_appIdentifier];
+    [defaults setValue:trackerConfig forKey:@"BITTrackerConfigurations"];
+    
+    [defaults synchronize];
+    [self configureJMC];
+#endif
   }
 }
 
 
 #pragma mark - Private Instance Methods
+
+- (void)validateStartManagerIsInvoked {
+  if (_validAppIdentifier && !_appStoreEnvironment) {
+    if (!_startManagerIsInvoked) {
+      NSLog(@"[HockeySDK] ERROR: You did not call [[BITHockeyManager sharedHockeyManager] startManager] to startup the HockeySDK! Please do so after setting up all properties. The SDK is NOT running.");
+    }
+  }
+}
+
+- (void)invokeStartUpdateManager {
+  if (_startUpdateManagerIsInvoked) return;
+  
+  _startUpdateManagerIsInvoked = YES;
+  BITHockeyLog(@"INFO: Start UpdateManager");
+  if (_serverURL) {
+    [_updateManager setServerURL:_serverURL];
+  }
+  if (_authenticator) {
+    [_updateManager setInstallationIdentification:[self.authenticator installationIdentification]];
+    [_updateManager setInstallationIdentificationType:[self.authenticator installationIdentificationType]];
+    [_updateManager setInstallationIdentificationValidated:[self.authenticator installationIdentificationValidated]];
+  }
+  [_updateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
+}
 
 - (BOOL)isSetUpOnMainThread {
   NSString *errorString = @"ERROR: This SDK has to be setup on the main thread!";
@@ -290,6 +353,12 @@
     BITHockeyLog(@"INFO: Setup FeedbackManager");
     _feedbackManager = [[BITFeedbackManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
     _feedbackManager.delegate = _delegate;
+
+    BITHockeyLog(@"INFO: Setup Authenticator");
+    BITHockeyAppClient *client = [[BITHockeyAppClient alloc] initWithBaseURL:[NSURL URLWithString:_serverURL ? _serverURL : BITHOCKEYSDK_URL]];
+    _authenticator = [[BITAuthenticator alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
+    _authenticator.hockeyAppClient = client;
+    _authenticator.delegate = _delegate;
     
 #if JIRA_MOBILE_CONNECT_SUPPORT_ENABLED
     // Only if JMC is part of the project
@@ -406,21 +475,6 @@
   }
 }
 
-- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
-  if (([object trackerConfig]) && ([[object trackerConfig] isKindOfClass:[NSDictionary class]])) {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    NSMutableDictionary *trackerConfig = [[defaults valueForKey:@"BITTrackerConfigurations"] mutableCopy];
-    if (!trackerConfig) {
-      trackerConfig = [NSMutableDictionary dictionaryWithCapacity:1];
-    }
-
-    [trackerConfig setValue:[object trackerConfig] forKey:_appIdentifier];
-    [defaults setValue:trackerConfig forKey:@"BITTrackerConfigurations"];
-    
-    [defaults synchronize];
-    [self configureJMC];
-  }
-}
 #endif
 
 @end

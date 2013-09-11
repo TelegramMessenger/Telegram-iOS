@@ -58,6 +58,12 @@
 
 @property (nonatomic, strong) NSString *companyName;
 
+@property (nonatomic, strong) NSString *installationIdentification;
+
+@property (nonatomic, strong) NSString *installationIdentificationType;
+
+@property (nonatomic) BOOL installationIdentificationValidated;
+
 // if YES, the API will return an existing JMC config
 // if NO, the API will return only version information
 @property (nonatomic, assign) BOOL checkForTracker;

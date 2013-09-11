@@ -38,6 +38,7 @@
 @class BITUpdateManager;
 @class BITStoreUpdateManager;
 @class BITFeedbackManager;
+@class BITAuthenticator;
 
 /** 
  The HockeySDK manager. Responsible for setup and management of all components
@@ -292,6 +293,20 @@
  @see feedbackManager
  */
 @property (nonatomic, getter = isFeedbackManagerDisabled) BOOL disableFeedbackManager;
+
+/**
+ Reference to the initialized BITAuthenticator module
+ 
+ The authenticator is disabled by default. To enable it you need to set
+ `[BITAuthenticator authenticationType]` and `[BITAuthenticator validationType]`
+ 
+ Returns the BITAuthenticator instance initialized by BITHockeyManager
+ 
+ @see configureWithIdentifier:delegate:
+ @see configureWithBetaIdentifier:liveIdentifier:delegate:
+ @see startManager
+ */
+@property (nonatomic, strong, readonly) BITAuthenticator *authenticator;
 
 
 ///-----------------------------------------------------------------------------

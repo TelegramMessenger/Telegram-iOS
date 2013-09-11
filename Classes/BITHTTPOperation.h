@@ -1,9 +1,7 @@
 /*
- * Author: Peter Steinberger
- *         Andreas Linde
+ * Author: Stephan Diederich
  *
- * Copyright (c) 2012-2013 HockeyApp, Bit Stadium GmbH.
- * Copyright (c) 2011 Andreas Linde, Peter Steinberger.
+ * Copyright (c) 2013 HockeyApp, Bit Stadium GmbH.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -30,29 +28,20 @@
 
 #import <Foundation/Foundation.h>
 
-@interface BITAppVersionMetaInfo : NSObject {
-}
-@property (nonatomic, copy) NSString *name;
-@property (nonatomic, copy) NSString *version;
-@property (nonatomic, copy) NSString *shortVersion;
-@property (nonatomic, copy) NSString *minOSVersion;
-@property (nonatomic, copy) NSString *notes;
-@property (nonatomic, copy) NSDate *date;
-@property (nonatomic, copy) NSNumber *size;
-@property (nonatomic, copy) NSNumber *mandatory;
-@property (nonatomic, copy) NSNumber *versionID;
-@property (nonatomic, copy) NSDictionary *uuids;
+@class BITHTTPOperation;
+typedef void (^BITNetworkCompletionBlock)(BITHTTPOperation* operation, id response, NSError* error);
 
-- (NSString *)nameAndVersionString;
-- (NSString *)versionString;
-- (NSString *)dateString;
-- (NSString *)sizeInMB;
-- (NSString *)notesOrEmptyString;
-- (void)setDateWithTimestamp:(NSTimeInterval)timestamp;
-- (BOOL)isValid;
-- (BOOL)hasUUID:(NSString *)uuid;
-- (BOOL)isEqualToAppVersionMetaInfo:(BITAppVersionMetaInfo *)anAppVersionMetaInfo;
+@interface BITHTTPOperation : NSOperation
 
-+ (BITAppVersionMetaInfo *)appVersionMetaInfoFromDict:(NSDictionary *)dict;
++ (instancetype) operationWithRequest:(NSURLRequest *) urlRequest;
+
+@property (nonatomic, readonly) NSURLRequest *URLRequest;
+
+//the completion is only called if the operation wasn't cancelled
+- (void) setCompletion:(BITNetworkCompletionBlock) completionBlock;
+
+@property (nonatomic, readonly) NSHTTPURLResponse *response;
+@property (nonatomic, readonly) NSData *data;
+@property (nonatomic, readonly) NSError *error;
 
 @end

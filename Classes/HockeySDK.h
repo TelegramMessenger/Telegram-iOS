@@ -49,6 +49,7 @@
 #import "BITFeedbackComposeViewControllerDelegate.h"
 #import "BITFeedbackListViewController.h"
 
+#import "BITAuthenticator.h"
 
 // Notification message which HockeyManager is listening to, to retry requesting updated from the server
 #define BITHockeyNetworkDidBecomeReachableNotification @"BITHockeyNetworkDidBecomeReachable"
@@ -86,6 +87,16 @@ typedef enum {
 } BITFeedbackErrorReason;
 extern NSString *const __attribute__((unused)) kBITFeedbackErrorDomain;
 
+// hockey Authenticator error domain
+typedef NS_ENUM(NSInteger, BITAuthenticatorReason) {
+  BITAuthenticatorErrorUnknown,
+  BITAuthenticatorNetworkError,
+  BITAuthenticatorAPIServerReturnedInvalidRespone,
+  BITAuthenticatorNotAuthorized,
+  BITAuthenticatorAuthenticationCancelled,
+  BITAuthenticatorAuthorizationSecretMissing,
+};
+extern NSString *const __attribute__((unused)) kBITAuthenticatorErrorDomain;
 
 // HockeySDK
 

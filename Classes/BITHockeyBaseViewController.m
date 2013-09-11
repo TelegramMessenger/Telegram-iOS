@@ -16,8 +16,8 @@
 }
 
 
-- (id)init {
-  self = [super init];
+- (instancetype)initWithStyle:(UITableViewStyle)style {
+  self = [super initWithStyle:style];
   if (self) {
     _modalAnimated = YES;
     _modal = NO;
@@ -25,19 +25,24 @@
   return self;
 }
 
-- (id)initWithModalStyle:(BOOL)modal {
-  self = [self init];
+- (instancetype)initWithStyle:(UITableViewStyle)style modal:(BOOL)modal {
+  self = [self initWithStyle:style];
   if (self) {
     _modal = modal;
-
+    
     //might be better in viewDidLoad, but to workaround rdar://12214613 and as it doesn't
     //hurt, we do it here
     if (_modal) {
       self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
-                                                                                             target:self
-                                                                                             action:@selector(onDismissModal:)];
+                                                                                            target:self
+                                                                                            action:@selector(onDismissModal:)];
     }
   }
+  return self;
+}
+
+- (instancetype)initWithModalStyle:(BOOL)modal {
+  self = [self initWithStyle:UITableViewStylePlain modal:modal];
   return self;
 }
 
