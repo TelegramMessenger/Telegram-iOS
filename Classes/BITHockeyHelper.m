@@ -89,22 +89,7 @@ NSString *bit_appName(NSString *placeHolderString) {
 }
 
 NSString *bit_appAnonID(void) {
-  // try to new iOS6 identifierForAdvertising
-  Class advertisingClass = NSClassFromString(@"ASIdentifierManager");
-	if (advertisingClass) {
-# pragma clang diagnostic push
-# pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-    id adInstance = [advertisingClass performSelector:NSSelectorFromString(@"sharedManager")];
-# pragma clang diagnostic pop
-    
-    SEL adidSelector = NSSelectorFromString(@"advertisingIdentifier");
-# pragma clang diagnostic push
-# pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-    return [[adInstance performSelector:adidSelector] performSelector:NSSelectorFromString(@"UUIDString")];
-# pragma clang diagnostic pop
-  }
-  
-  // try to new iOS6 identifierForVendor, in case ASIdentifierManager is not linked
+  // try iOS6 identifierForVendor
   SEL vendoridSelector = NSSelectorFromString(@"identifierForVendor");
   if ([[UIDevice currentDevice] respondsToSelector:vendoridSelector]) {
 # pragma clang diagnostic push
