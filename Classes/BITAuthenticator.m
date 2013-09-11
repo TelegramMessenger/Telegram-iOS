@@ -324,16 +324,14 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
                           NSError *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                                                code:BITAuthenticatorAPIServerReturnedInvalidRespone
                                                            userInfo:@{
-                                                                      //TODO localize
-                                                                      NSLocalizedDescriptionKey : @"Failed to authenticate"
+                                                                      NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"Failed to authenticate. Please try again later.")
                                                                       }];
                           completion(NO, error);
                         } else if(401 == operation.response.statusCode) {
                           NSError *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                                                code:BITAuthenticatorNotAuthorized
                                                            userInfo:@{
-                                                                      //TODO localize
-                                                                      NSLocalizedDescriptionKey : @"Not authorized"
+                                                                      NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"Not authorized")
                                                                       }];
                           completion(NO, error);
                         } else {
@@ -347,8 +345,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
                               error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                                           code:BITAuthenticatorNotAuthorized
                                                       userInfo:@{
-                                                                 //TODO localize
-                                                                 NSLocalizedDescriptionKey : @"Not authorized",
+                                                                 NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"Not authorized"),
                                                                  NSUnderlyingErrorKey : authParseError
                                                                  }];
                             }

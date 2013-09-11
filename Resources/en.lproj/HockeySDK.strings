@@ -242,4 +242,13 @@
 "HockeyAuthenticationViewControllerPasswordPlaceholder" = "Required";
 "HockeyAuthenticationViewControllerEmailDescription" = "Email";
 "HockeyAuthenticationViewControllerPasswordDescription" = "Password";
+"HockeyAuthenticationViewControllerPasswordDescription" = "Password";
+
+/* error presented to the user if authentication failed because of networking issues */
+"Failed to authenticate. Please try again later." = "Failed to authenticate. Please try again later.";
+
+/* error presented to the user if authentication failed */
+"Not authorized" = "Not authorized";
+
+/* BarButton item to skip auth */
 "Skip" = "Skip";
