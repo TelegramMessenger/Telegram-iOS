@@ -321,14 +321,14 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
                           NSError *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                                                code:BITAuthenticatorAPIServerReturnedInvalidRespone
                                                            userInfo:@{
-                                                                      NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"Failed to authenticate. Please try again later.")
+                                                                      NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerNetworkError")
                                                                       }];
                           completion(NO, error);
                         } else if(401 == operation.response.statusCode) {
                           NSError *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                                                code:BITAuthenticatorNotAuthorized
                                                            userInfo:@{
-                                                                      NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"Not authorized")
+                                                                      NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerNotauthorized")
                                                                       }];
                           completion(NO, error);
                         } else {
@@ -342,14 +342,14 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
                               error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                                           code:BITAuthenticatorNotAuthorized
                                                       userInfo:@{
-                                                                 NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"Not authorized"),
+                                                                 NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerNotauthorized"),
                                                                  NSUnderlyingErrorKey : authParseError
                                                                  }];
                             } else {
                               error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                                           code:BITAuthenticatorErrorUnknown
                                                       userInfo:@{
-                                                                 NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"Failed to authenticate. Please try again later."),
+                                                                 NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerNetworkError"),
                                                                  NSUnderlyingErrorKey : authParseError
                                                                  }];
                             }

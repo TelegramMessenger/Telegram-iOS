@@ -233,22 +233,30 @@
 /* Email Placeholder */
 "HockeyFeedbackUserDataEmailPlaceholder" = "example@email.com";
 
+
 /* Authenticator */
+
+
+/* View Controller Title*/
 "HockeyAuthenticatorViewControllerTitle" = "Authorize";
-"HockeyAuthenticationViewControllerWebLoginDescription" = "Allow this application to access this device's UDID to identify it.";
-"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Please provide email and password of your HockeyApp account.";
-"HockeyAuthenticationViewControllerDataEmailDescription" = "Please provide email of your HockeyApp account.";
+
+/* BITAuthenticatorAuthTypeUDIDProvider */
+"HockeyAuthenticationViewControllerWebLoginDescription" = "Please tap the following button to identify your device on HockeyApp.";
+"HockeyAuthenticationViewControllerWebLoginButtonTitle" = "Identify Device";
+
+/* BITAuthenticatorAuthTypeEmail and BITAuthenticatorAuthTypeEmailAndPassword */
+"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Please provide the email address and password of your HockeyApp account.";
+"HockeyAuthenticationViewControllerDataEmailDescription" = "Please provide the email address of your HockeyApp account.";
 "HockeyAuthenticationViewControllerEmailPlaceholder" = "example@email.com";
 "HockeyAuthenticationViewControllerPasswordPlaceholder" = "Required";
 "HockeyAuthenticationViewControllerEmailDescription" = "Email";
 "HockeyAuthenticationViewControllerPasswordDescription" = "Password";
-"HockeyAuthenticationViewControllerPasswordDescription" = "Password";
 
-/* error presented to the user if authentication failed because of networking issues */
-"Failed to authenticate. Please try again later." = "Failed to authenticate. Please try again later.";
+/* Error presented to the user if authentication failed because of networking issues */
+"HockeyAuthenticationViewControllerNetworkError" = "Failed to authenticate. A internet connection is required! Please try again.";
 
 /* error presented to the user if authentication failed */
-"Not authorized" = "Not authorized";
+"HockeyAuthenticationViewControllerNotauthorized" = "Not authorized";
 
 /* BarButton item to skip auth */
 "Skip" = "Skip";

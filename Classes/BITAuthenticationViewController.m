@@ -124,7 +124,7 @@
                                                                      CGRectGetWidth(self.tableView.bounds),
                                                                      kFooterHeight)];
     UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
-    [button setTitle:BITHockeyLocalizedString(@"Show login page") forState:UIControlStateNormal];
+    [button setTitle:BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerWebLoginButtonTitle") forState:UIControlStateNormal];
     CGSize buttonSize = [button sizeThatFits:CGSizeMake(CGRectGetWidth(self.tableView.bounds),
                                                         kFooterHeight)];
     button.frame = CGRectMake(floorf((CGRectGetWidth(containerView.bounds) - buttonSize.width) / 2.f),
