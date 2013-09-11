@@ -565,7 +565,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
 #pragma mark - Property overrides
 - (void)setAuthenticationToken:(NSString *)authenticationToken withType:(NSString*) authenticationTokenType {
   NSParameterAssert(nil == authenticationToken || nil != authenticationTokenType);
-  if(![self.authenticationToken isEqualToString:authenticationToken]) {
+  if(![self.authenticationToken isEqualToString:authenticationToken] || ![self.authenticationTokenType isEqualToString:authenticationTokenType]) {
     [self willChangeValueForKey:@"installationIdentification"];
     if(nil == authenticationToken) {
       [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenKey];
