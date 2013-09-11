@@ -375,7 +375,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   _sut.validationType = BITAuthenticatorValidationTypeOnAppActive;
   
   [_sut validationFailedWithError:[NSError errorWithDomain:kBITAuthenticatorErrorDomain code:0 userInfo:nil]
-                       completion:nil];
+                       completion:_sut.defaultValidationCompletionBlock];
   [verifyCount(delegateMock, times(1)) authenticator:_sut willShowAuthenticationController:(id)anything()];
 }
 
@@ -385,7 +385,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   _sut.validationType = BITAuthenticatorValidationTypeOptional;
   
   [_sut validationFailedWithError:nil
-                       completion:nil];
+                       completion:_sut.defaultValidationCompletionBlock];
   [verifyCount(delegateMock, never()) authenticator:_sut willShowAuthenticationController:(id)anything()];
 }
 

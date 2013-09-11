@@ -131,4 +131,6 @@
 - (void) validationSucceededWithCompletion:(tValidationCompletion) completion;
 - (void) validationFailedWithError:(NSError *) validationError completion:(tValidationCompletion) completion;
 
+#pragma mark - Helpers for testing
+- (tValidationCompletion) defaultValidationCompletionBlock;
 @end
