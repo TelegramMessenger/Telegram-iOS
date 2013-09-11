@@ -69,11 +69,7 @@
   _statusBarStyle = [[UIApplication sharedApplication] statusBarStyle];
   [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleBlackOpaque];
 
-  [self updateSkipButton];
-  
-  self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
-                                                                                         target:self
-                                                                                         action:@selector(saveAction:)];
+  [self updateBarButtons];
   
   self.navigationItem.rightBarButtonItem.enabled = [self allRequiredFieldsEntered];
 }
@@ -88,11 +84,11 @@
 - (void)setShowsSkipButton:(BOOL)showsSkipButton {
   if(_showsSkipButton != showsSkipButton) {
     _showsSkipButton = showsSkipButton;
-    [self updateSkipButton];
+    [self updateBarButtons];
   }
 }
 
-- (void) updateSkipButton {
+- (void) updateBarButtons {
   if(self.showsSkipButton) {
     self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:BITHockeyLocalizedString(@"Skip")
                                                                              style:UIBarButtonItemStyleBordered
@@ -101,6 +97,13 @@
   } else {
     self.navigationItem.leftBarButtonItem = nil;
   }
+  if(self.showsLoginViaWebButton) {
+    self.navigationItem.rightBarButtonItem = nil;
+  } else {
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
+                                                                                           target:self
+                                                                                           action:@selector(saveAction:)];
+  }
 }
 
 - (void)setShowsLoginViaWebButton:(BOOL)showsLoginViaWebButton {
@@ -108,6 +111,7 @@
     _showsLoginViaWebButton = showsLoginViaWebButton;
     if(self.isViewLoaded) {
       [self.tableView reloadData];
+      [self updateBarButtons];
       [self updateWebLoginButton];
     }
    }
