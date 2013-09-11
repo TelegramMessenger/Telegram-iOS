@@ -14,7 +14,7 @@ The binary distribution of HockeySDK does not provide this integration. You need
 4. Double tab in the `HockeySDKLib` column and add the following two values
 
         $(inherited)
-        JIRA_MOBILE_CONNECT_SUPPORT_ENABLED=1
+        HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT=1
 
 5. Setup JMC as described in the [JMC instructions](https://developer.atlassian.com/display/JMC/Enabling+JIRA+Mobile+Connect)
 6. Sign in to HockeyApp

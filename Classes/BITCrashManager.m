@@ -28,10 +28,14 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER
+
 #import <CrashReporter/CrashReporter.h>
 #import <SystemConfiguration/SystemConfiguration.h>
 #import <UIKit/UIKit.h>
-#import "HockeySDK.h"
+
 #import "HockeySDKPrivate.h"
 #import "BITHockeyHelper.h"
 
@@ -925,3 +929,6 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 
 
 @end
+
+#endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */
+

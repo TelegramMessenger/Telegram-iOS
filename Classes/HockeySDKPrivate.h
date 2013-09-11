@@ -59,12 +59,6 @@
 #define BITHOCKEYSDK_BUNDLE @"HockeySDKResources.bundle"
 #define BITHOCKEYSDK_URL @"https://sdk.hockeyapp.net/"
 
-// Whether to compile in support for Jira Mobile Connect
-// default is disabled
-#ifndef JIRA_MOBILE_CONNECT_SUPPORT_ENABLED
-  #define JIRA_MOBILE_CONNECT_SUPPORT_ENABLED 0
-#endif
-
 #define BITHockeyLog(fmt, ...) do { if([BITHockeyManager sharedHockeyManager].isDebugLogEnabled && ![BITHockeyManager sharedHockeyManager].isAppStoreEnvironment) { NSLog((@"[HockeySDK] %s/%d " fmt), __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__); }} while(0)
 
 #define BIT_RGBCOLOR(r,g,b) [UIColor colorWithRed:(r)/255.0 green:(g)/255.0 blue:(b)/255.0 alpha:1]
@@ -88,6 +82,6 @@ BOOL BITValidateEmail(NSString *email);
 #define kBITTextLabelAlignmentRight         NSTextAlignmentRight
 #define kBITLineBreakModeMiddleTruncation   NSLineBreakByTruncatingMiddle
 
-#endif
+#endif /* __IPHONE_OS_VERSION_MIN_REQUIRED */
 
 #endif //HockeySDK_HockeySDKPrivate_h

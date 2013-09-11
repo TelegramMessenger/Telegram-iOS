@@ -26,9 +26,12 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import <Foundation/Foundation.h>
-#import <sys/sysctl.h>
 #import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_STORE_UPDATES
+
+#import <sys/sysctl.h>
+
 #import "HockeySDKPrivate.h"
 #import "BITHockeyHelper.h"
 
@@ -431,3 +434,5 @@
 }
 
 @end
+
+#endif /* HOCKEYSDK_FEATURE_STORE_UPDATES */

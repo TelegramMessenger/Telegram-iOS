@@ -28,9 +28,12 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import <Foundation/Foundation.h>
-#import <sys/sysctl.h>
 #import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_UPDATES
+
+#import <sys/sysctl.h>
+
 #import "HockeySDKPrivate.h"
 #import "BITHockeyHelper.h"
 
@@ -922,3 +925,5 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 }
 
 @end
+
+#endif /* HOCKEYSDK_FEATURE_UPDATES */

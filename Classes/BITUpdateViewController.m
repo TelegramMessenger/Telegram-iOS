@@ -28,15 +28,17 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_UPDATES
+
+#import "HockeySDKPrivate.h"
 #import <QuartzCore/QuartzCore.h>
 #import "BITHockeyHelper.h"
 #import "BITAppVersionMetaInfo.h"
 #import "BITAppStoreHeader.h"
 #import "BITWebTableViewCell.h"
 #import "BITStoreButton.h"
-
-#import "HockeySDK.h"
-#import "HockeySDKPrivate.h"
 
 #import "BITUpdateManagerPrivate.h"
 #import "BITUpdateViewControllerPrivate.h"
@@ -548,3 +550,5 @@
 }
 
 @end
+
+#endif /* HOCKEYSDK_FEATURE_UPDATES */

@@ -29,8 +29,7 @@
  */
 
 
-#import <UIKit/UIKit.h>
-
+#if HOCKEYSDK_FEATURE_STORE_UPDATES
 
 @interface BITStoreUpdateManager () <UIAlertViewDelegate> {
 }
@@ -58,3 +57,5 @@
 - (void)checkForUpdateDelayed;
 
 @end
+
+#endif /* HOCKEYSDK_FEATURE_STORE_UPDATES */

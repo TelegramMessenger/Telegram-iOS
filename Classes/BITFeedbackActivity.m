@@ -6,10 +6,14 @@
 //
 //
 
-#import "BITFeedbackActivity.h"
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_FEEDBACK
 
 #import "HockeySDKPrivate.h"
-#import "HockeySDK.h"
+
+#import "BITFeedbackActivity.h"
+
 #import "BITHockeyHelper.h"
 #import "BITFeedbackManagerPrivate.h"
 
@@ -108,3 +112,5 @@
 
 
 @end
+
+#endif /* HOCKEYSDK_FEATURE_FEEDBACK */

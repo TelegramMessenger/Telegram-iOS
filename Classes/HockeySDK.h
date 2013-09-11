@@ -30,26 +30,38 @@
 #ifndef HockeySDK_h
 #define HockeySDK_h
 
+#import "HockeySDKFeatureConfig.h"
+
 #import "BITHockeyManager.h"
 #import "BITHockeyManagerDelegate.h"
 
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER
 #import "BITCrashManager.h"
 #import "BITCrashManagerDelegate.h"
+#endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */
 
+#if HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT
 #import "BITUpdateManager.h"
 #import "BITUpdateManagerDelegate.h"
 #import "BITUpdateViewController.h"
+#endif /* HOCKEYSDK_FEATURE_UPDATES */
 
+#if HOCKEYSDK_FEATURE_STORE_UPDATES
 #import "BITStoreUpdateManager.h"
 #import "BITStoreUpdateManagerDelegate.h"
+#endif /* HOCKEYSDK_FEATURE_STORE_UPDATES */
 
+#if HOCKEYSDK_FEATURE_FEEDBACK
 #import "BITFeedbackManager.h"
 #import "BITFeedbackActivity.h"
 #import "BITFeedbackComposeViewController.h"
 #import "BITFeedbackComposeViewControllerDelegate.h"
 #import "BITFeedbackListViewController.h"
+#endif /* HOCKEYSDK_FEATURE_FEEDBACK */
 
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
 #import "BITAuthenticator.h"
+#endif
 
 // Notification message which HockeyManager is listening to, to retry requesting updated from the server
 #define BITHockeyNetworkDidBecomeReachableNotification @"BITHockeyNetworkDidBecomeReachable"

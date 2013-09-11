@@ -29,7 +29,9 @@
  */
 
 
-#import <UIKit/UIKit.h>
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_UPDATES
 
 /** TODO:
   * if during startup the auth-state is pending, we get never rid of the nag-alertview
@@ -93,3 +95,5 @@
 - (BOOL)hasNewerMandatoryVersion;
 
 @end
+
+#endif /* HOCKEYSDK_FEATURE_UPDATES */

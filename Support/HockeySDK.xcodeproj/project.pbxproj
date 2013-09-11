@@ -106,6 +106,7 @@
 		1E754E611621FBB70070AB92 /* BITCrashReportTextFormatter.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E754E5B1621FBB70070AB92 /* BITCrashReportTextFormatter.m */; };
 		1E7A45FC16F54FB5005B08F1 /* OCHamcrestIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E7A45FA16F54FB5005B08F1 /* OCHamcrestIOS.framework */; };
 		1E7A45FD16F54FB5005B08F1 /* OCMockitoIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E7A45FB16F54FB5005B08F1 /* OCMockitoIOS.framework */; };
+		1E84DB3417E099BA00AC83FD /* HockeySDKFeatureConfig.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E84DB3317E0977C00AC83FD /* HockeySDKFeatureConfig.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E94F9E116E91330006570AD /* BITStoreUpdateManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E94F9DF16E91330006570AD /* BITStoreUpdateManager.h */; };
 		1E94F9E216E91330006570AD /* BITStoreUpdateManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E94F9E016E91330006570AD /* BITStoreUpdateManager.m */; };
 		1E94F9E416E9136B006570AD /* BITStoreUpdateManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E94F9E316E9136B006570AD /* BITStoreUpdateManagerPrivate.h */; };
@@ -256,6 +257,7 @@
 		1E754E5B1621FBB70070AB92 /* BITCrashReportTextFormatter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITCrashReportTextFormatter.m; sourceTree = "<group>"; };
 		1E7A45FA16F54FB5005B08F1 /* OCHamcrestIOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = OCHamcrestIOS.framework; sourceTree = "<group>"; };
 		1E7A45FB16F54FB5005B08F1 /* OCMockitoIOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = OCMockitoIOS.framework; sourceTree = "<group>"; };
+		1E84DB3317E0977C00AC83FD /* HockeySDKFeatureConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HockeySDKFeatureConfig.h; sourceTree = "<group>"; };
 		1E94F9DF16E91330006570AD /* BITStoreUpdateManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITStoreUpdateManager.h; sourceTree = "<group>"; };
 		1E94F9E016E91330006570AD /* BITStoreUpdateManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITStoreUpdateManager.m; sourceTree = "<group>"; };
 		1E94F9E316E9136B006570AD /* BITStoreUpdateManagerPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITStoreUpdateManagerPrivate.h; sourceTree = "<group>"; };
@@ -546,6 +548,7 @@
 				1EC69F5D1615001500808FD9 /* BITHockeyManagerPrivate.h */,
 				1E5955FA15B7877A00A03429 /* BITHockeyManagerDelegate.h */,
 				1E71509A15B5C76F004E88FF /* HockeySDK.h */,
+				1E84DB3317E0977C00AC83FD /* HockeySDKFeatureConfig.h */,
 			);
 			name = Classes;
 			path = ../Classes;
@@ -625,6 +628,7 @@
 				1EC69F601615001500808FD9 /* BITHockeyManagerPrivate.h in Headers */,
 				E48A3DEC17B3ED1C00924C3D /* BITAuthenticator.h in Headers */,
 				1E754E601621FBB70070AB92 /* BITCrashReportTextFormatter.h in Headers */,
+				1E84DB3417E099BA00AC83FD /* HockeySDKFeatureConfig.h in Headers */,
 				1EACC97B162F041E007578C5 /* BITAttributedLabel.h in Headers */,
 				1E0FEE28173BDB260061331F /* BITKeychainUtils.h in Headers */,
 				1E94F9E116E91330006570AD /* BITStoreUpdateManager.h in Headers */,

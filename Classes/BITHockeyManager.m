@@ -32,19 +32,31 @@
 
 #import "BITHockeyManagerPrivate.h"
 #import "BITHockeyBaseManagerPrivate.h"
+
+#if HOCKEYSDK_FEATURE_UPDATES
 #import "BITUpdateManagerPrivate.h"
+#endif /* HOCKEYSDK_FEATURE_UPDATES */
+
+#if HOCKEYSDK_FEATURE_STORE_UPDATES
 #import "BITStoreUpdateManagerPrivate.h"
+#endif /* HOCKEYSDK_FEATURE_STORE_UPDATES */
+
+#if HOCKEYSDK_FEATURE_FEEDBACK
 #import "BITFeedbackManagerPrivate.h"
+#endif /* HOCKEYSDK_FEATURE_FEEDBACK */
+
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
 #import "BITAuthenticator_Private.h"
 #import "BITHockeyAppClient.h"
+#endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
 
 @interface BITHockeyManager ()
 
 - (BOOL)shouldUseLiveIdentifier;
 
-#if JIRA_MOBILE_CONNECT_SUPPORT_ENABLED
+#if HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT
 - (void)configureJMC;
-#endif
+#endif /* HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT */
 
 @end
 
@@ -162,6 +174,7 @@
   BITHockeyLog(@"INFO: Starting HockeyManager");
   _startManagerIsInvoked = YES;
   
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER
   // start CrashManager
   if (![self isCrashManagerDisabled]) {
     BITHockeyLog(@"INFO: Start CrashManager");
@@ -170,7 +183,9 @@
     }
     [_crashManager startManager];
   }
+#endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */
   
+#if HOCKEYSDK_FEATURE_STORE_UPDATES
   // start StoreUpdateManager
   if ([self isStoreUpdateManagerEnabled]) {
     BITHockeyLog(@"INFO: Start StoreUpdateManager");
@@ -179,7 +194,9 @@
     }
     [_storeUpdateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
   }
-  
+#endif /* HOCKEYSDK_FEATURE_STORE_UPDATES */
+
+#if HOCKEYSDK_FEATURE_FEEDBACK
   // start FeedbackManager
   if (![self isFeedbackManagerDisabled]) {
     BITHockeyLog(@"INFO: Start FeedbackManager");
@@ -188,6 +205,7 @@
     }
     [_feedbackManager performSelector:@selector(startManager) withObject:nil afterDelay:1.0f];
   }
+#endif /* HOCKEYSDK_FEATURE_FEEDBACK */
   
   // start Authenticator
   if (![self isAppStoreEnvironment]) {
@@ -201,41 +219,49 @@
     [_authenticator startManager];
   }
   
+#if HOCKEYSDK_FEATURE_UPDATES
   // Setup UpdateManager
   if (![self isUpdateManagerDisabled]
-#if JIRA_MOBILE_CONNECT_SUPPORT_ENABLED
+#if HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT
       || [[self class] isJMCPresent]
-#endif
+#endif /* HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT */
       ) {
     if ([self.authenticator installationIdentificationValidated]) {
       [self invokeStartUpdateManager];
     }
   }
+#endif /* HOCKEYSDK_FEATURE_UPDATES */
 }
 
 
+#if HOCKEYSDK_FEATURE_UPDATES
 - (void)setDisableUpdateManager:(BOOL)disableUpdateManager {
   if (_updateManager) {
     [_updateManager setDisableUpdateManager:disableUpdateManager];
   }
   _disableUpdateManager = disableUpdateManager;
 }
+#endif /* HOCKEYSDK_FEATURE_UPDATES */
 
 
+#if HOCKEYSDK_FEATURE_STORE_UPDATES
 - (void)setEnableStoreUpdateManager:(BOOL)enableStoreUpdateManager {
   if (_storeUpdateManager) {
     [_storeUpdateManager setEnableStoreUpdateManager:enableStoreUpdateManager];
   }
   _enableStoreUpdateManager = enableStoreUpdateManager;
 }
+#endif /* HOCKEYSDK_FEATURE_STORE_UPDATES */
 
 
+#if HOCKEYSDK_FEATURE_FEEDBACK
 - (void)setDisableFeedbackManager:(BOOL)disableFeedbackManager {
   if (_feedbackManager) {
     [_feedbackManager setDisableFeedbackManager:disableFeedbackManager];
   }
   _disableFeedbackManager = disableFeedbackManager;
 }
+#endif /* HOCKEYSDK_FEATURE_FEEDBACK */
 
 
 - (void)setServerURL:(NSString *)aServerURL {
@@ -244,15 +270,18 @@
     aServerURL = [NSString stringWithFormat:@"%@/", aServerURL];
   }
   
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
   if (_serverURL != aServerURL) {
     _serverURL = [aServerURL copy];
     _authenticator.hockeyAppClient.baseURL = [NSURL URLWithString:_serverURL ? _serverURL : BITHOCKEYSDK_URL];
   }
+#endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
 }
 
 
 #pragma mark - KVO
 
+#if HOCKEYSDK_FEATURE_UPDATES
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
   if ([keyPath isEqualToString:@"installationIdentificationValidated"] &&
       [object valueForKey:@"installationIdentificationValidated"] ) {
@@ -262,7 +291,7 @@
         [self invokeStartUpdateManager];
       }
     }
-#if JIRA_MOBILE_CONNECT_SUPPORT_ENABLED
+#if HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT
   } else if (([object trackerConfig]) && ([[object trackerConfig] isKindOfClass:[NSDictionary class]])) {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     NSMutableDictionary *trackerConfig = [[defaults valueForKey:@"BITTrackerConfigurations"] mutableCopy];
@@ -275,9 +304,10 @@
     
     [defaults synchronize];
     [self configureJMC];
-#endif
+#endif /* HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT */
   }
 }
+#endif /* HOCKEYSDK_FEATURE_UPDATES */
 
 
 #pragma mark - Private Instance Methods
@@ -290,6 +320,7 @@
   }
 }
 
+#if HOCKEYSDK_FEATURE_UPDATES
 - (void)invokeStartUpdateManager {
   if (_startUpdateManagerIsInvoked) return;
   
@@ -305,6 +336,7 @@
   }
   [_updateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
 }
+#endif /* HOCKEYSDK_FEATURE_UPDATES */
 
 - (BOOL)isSetUpOnMainThread {
   NSString *errorString = @"ERROR: This SDK has to be setup on the main thread!";
@@ -339,20 +371,28 @@
   _startManagerIsInvoked = NO;
   
   if (_validAppIdentifier) {
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER
     BITHockeyLog(@"INFO: Setup CrashManager");
     _crashManager = [[BITCrashManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
     _crashManager.delegate = _delegate;
+#endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */
     
+#if HOCKEYSDK_FEATURE_UPDATES
     BITHockeyLog(@"INFO: Setup UpdateManager");
     _updateManager = [[BITUpdateManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
     _updateManager.delegate = _delegate;
+#endif /* HOCKEYSDK_FEATURE_UPDATES */
 
+#if HOCKEYSDK_FEATURE_STORE_UPDATES
     BITHockeyLog(@"INFO: Setup StoreUpdateManager");
     _storeUpdateManager = [[BITStoreUpdateManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
+#endif /* HOCKEYSDK_FEATURE_STORE_UPDATES */
     
+#if HOCKEYSDK_FEATURE_FEEDBACK
     BITHockeyLog(@"INFO: Setup FeedbackManager");
     _feedbackManager = [[BITFeedbackManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironemt:_appStoreEnvironment];
     _feedbackManager.delegate = _delegate;
+#endif /* HOCKEYSDK_FEATURE_FEEDBACK */
 
     BITHockeyLog(@"INFO: Setup Authenticator");
     BITHockeyAppClient *client = [[BITHockeyAppClient alloc] initWithBaseURL:[NSURL URLWithString:_serverURL ? _serverURL : BITHOCKEYSDK_URL]];
@@ -360,7 +400,7 @@
     _authenticator.hockeyAppClient = client;
     _authenticator.delegate = _delegate;
     
-#if JIRA_MOBILE_CONNECT_SUPPORT_ENABLED
+#if HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT
     // Only if JMC is part of the project
     if ([[self class] isJMCPresent]) {
       BITHockeyLog(@"INFO: Setup JMC");
@@ -369,14 +409,14 @@
       [[self class] disableJMCCrashReporter];
       [self performSelector:@selector(configureJMC) withObject:nil afterDelay:0];
     }
-#endif
+#endif /* HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT */
     
   } else {
     [self logInvalidIdentifier:@"app identifier"];
   }
 }
 
-#if JIRA_MOBILE_CONNECT_SUPPORT_ENABLED
+#if HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT
 
 #pragma mark - JMC
 
@@ -475,6 +515,6 @@
   }
 }
 
-#endif
+#endif /* HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT */
 
 @end
