@@ -54,6 +54,9 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
   self = [super initWithAppIdentifier:appIdentifier isAppStoreEnvironemt:isAppStoreEnvironment];
   if( self ) {
     _webpageURL = [NSURL URLWithString:@"https://rink.hockeyapp.net/"];
+    
+    _authenticationType = BITAuthenticatorAuthTypeUDIDProvider;
+    _validationType = BITAuthenticatorValidationTypeNever;
   }
   return self;
 }

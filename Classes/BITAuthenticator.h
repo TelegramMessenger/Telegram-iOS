@@ -51,35 +51,48 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
 @protocol BITAuthenticatorDelegate;
 
 /**
- *	Authenticator module used to identify and optionally authenticate the current
- *  app installation
+ * Authenticator module used to identify and optionally authenticate the current app installation
+ *
+ * This is the HockeySDK module for handling authentications when using Ad-Hoc or Enterprise provisioning profiles.
+ * This modul allows you to make sure the current app installation is done on an authorzied device by choosing from
+ * various authenticatoin and validation mechanisms which provide different levels of authentication.
+ *
+ * This does not provide DRM or copy protection in any form and each authentication type and validation type provide
+ * a different level of authentication.
+ *
+ * This module automatically disables itself when running in an App Store build by default!
  *
  *  Authentication is actually a 2 step process:
  *    1) authenticate
  *       some kind of token is aquired depending on the authenticationType
- *    2) verification
- *       the aquired token from step 1 is verified depending the validationType
+ *    2) validation
+ *       the aquired token from step 1 is validated depending the validationType
  *
  *  There are currently 3 ways of authentication:
- *    1) authenticate the user via email only
- *    2) authenticate the user via email & passwort (needs to have a HockeyApp Account)
- *    3) authenticate the device via its UDID
+ *    1) authenticate the user via email only (`BITAuthenticatorAuthTypeEmail`)
+ *    2) authenticate the user via email & passwort (needs to have a HockeyApp Account) (`BITAuthenticatorAuthTypeEmailAndPassword`)
+ *    3) authenticate the device via its UDID (_Default_) (`BITAuthenticatorAuthTypeUDIDProvider`)
  *
  *  Additionally, verification can be required:
- *    1) never
- *    2) optional
- *    3) on first launch of every app version, never again until the next version is installed
- *    4) every time the app becomes active (needs data connection)
+ *    1) never (`BITAuthenticatorValidationTypeNever`)
+ *    2) optional (`BITAuthenticatorValidationTypeOptional`)
+ *    3) on first launch of every app version, never again until the next version is installed (_Default_) (`BITAuthenticatorValidationTypeOnFirstLaunch`)
+ *    4) every time the app becomes active (needs data connection) (`BITAuthenticatorValidationTypeOnAppActive`)
  *
  */
 @interface BITAuthenticator : BITHockeyBaseManager
 
 #pragma mark - Configuration
 
+/**
+ * Defines the authentication mechanism to be used
+ * 
+ * _Default_: BITAuthenticatorAuthTypeUDIDProvider
+ */
 @property (nonatomic, assign) BITAuthenticatorAuthType authenticationType;
 
 /**
- *	defaults to BITAuthenticatorValidationTypeNever
+ *	_Default_: BITAuthenticatorValidationTypeNever
  */
 @property (nonatomic, assign) BITAuthenticatorValidationType validationType;
 

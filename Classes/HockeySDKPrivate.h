@@ -49,8 +49,7 @@
 #define kBITUpdateDateOfVersionInstallation @"BITUpdateDateOfVersionInstallation"
 #define kBITUpdateUsageTimeOfCurrentVersion @"BITUpdateUsageTimeOfCurrentVersion"
 #define kBITUpdateUsageTimeForUUID          @"BITUpdateUsageTimeForUUID"
-#define kBITUpdateAuthorizedVersion         @"BITUpdateAuthorizedVersion"
-#define kBITUpdateAuthorizedToken           @"BITUpdateAuthorizedToken"
+#define kBITUpdateInstallationIdentifier    @"BITUpdateInstallationIdentifier"
 
 #define kBITStoreUpdateDateOfLastCheck      @"BITStoreUpdateDateOfLastCheck"
 #define kBITStoreUpdateLastStoreVersion     @"BITStoreUpdateLastStoreVersion"

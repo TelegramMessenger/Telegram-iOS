@@ -61,6 +61,13 @@
 @property (nonatomic, copy) tAuthenticationCompletion authenticationCompletionBlock;
 
 /**
+ *	Specifies the type of installation identification for the current app installation
+ *
+ *  KVO'able
+ */
+@property (nonatomic, readonly) BOOL installationIdentificationType;
+
+/**
  *	removes all previously stored authentication tokens, UDIDs, etc
  */
 - (void) cleanupInternalStorage;
