@@ -701,7 +701,7 @@
 		E4005611148D79B500EB22B9 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0440;
+				LastUpgradeCheck = 0500;
 			};
 			buildConfigurationList = E4005614148D79B500EB22B9 /* Build configuration list for PBXProject "HockeySDK" */;
 			compatibilityVersion = "Xcode 3.2";
