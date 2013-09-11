@@ -42,9 +42,43 @@
  */
 @property (nonatomic, strong) BITHockeyAppClient *hockeyAppClient;
 
+#pragma mark - Identification
+
+/**
+ *	Provides an identification for the current app installation
+ *
+ *  During Alpha and Beta-phase HockeyApp tries to uniquely identify each app installation
+ *  to provide better error reporting & analytics. If authenticator is configured to login
+ *  (@see BITAuthenticatorValidationType), this identifier is retrieved from HockeyApp. In case
+ *  it is disabled, it returns the vendorIdentifier provided by UIKit.
+ *  KVO'able
+ *
+ *	@return	a string identifying this app installation
+ */
+@property (nonatomic, readonly) NSString *installationIdentification;
+
+/**
+ *	Specifies if the installationIdentification has been validated
+ *
+ *  Depending on authenticationType and validationType this flag switches between
+ *  YES/NO during application runtime. If it's YES, the installationIdentification has been
+ *  validated (either against the backend on app launch / initial run of this version) or validation
+ *  is not required. The flag is first updated (and stays NO) until the manager has been started.
+ *  KVO'able
+ */
+@property (nonatomic, readwrite) BOOL installationIdentificationValidated;
+
+/**
+ *	Specifies the type of installation identification for the current app installation
+ */
+@property (nonatomic, readonly) NSString *installationIdentificationType;
+
+#pragma mark -
+
 //can be set for testing
 @property (nonatomic) UIDevice *currentDevice;
 
+#pragma mark -
 /**
  *	if set, this serves as the installationIdentifier. 
  *  This is retrieved from the hockeyApp backend
@@ -67,16 +101,9 @@
 @property (nonatomic, copy) tAuthenticationCompletion authenticationCompletionBlock;
 
 /**
- *	Specifies the type of installation identification for the current app installation
- */
-@property (nonatomic, readonly) NSString *installationIdentificationType;
-
-/**
  *	removes all previously stored authentication tokens, UDIDs, etc
  */
 - (void) cleanupInternalStorage;
-
-@property (nonatomic, readwrite) BOOL installationIdentificationValidated;
 
 /**
  * method registered as observer for applicationWillBecomeInactive events
