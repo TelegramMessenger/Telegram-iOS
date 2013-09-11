@@ -53,21 +53,6 @@ typedef enum {
  This module automatically disables itself when running in an App Store build by default! If you integrate the
  Atlassian JMC client this module is used to automatically configure JMC, but will not do anything else.
  
- To use this module, it is important to implement set the `delegate` property and implement
- `[BITUpdateManagerDelegate customDeviceIdentifierForUpdateManager:]`.
- 
- Example implementation if your Xcode configuration for the App Store is called "AppStore":
-    - (NSString *)customDeviceIdentifierForUpdateManager:(BITUpdateManager *)updateManager {
-    #ifndef (CONFIGURATION_AppStore)
-      if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)])
-        return [[UIDevice currentDevice] performSelector:@selector(uniqueIdentifier)];
-    #endif
-    
-      return nil;
-    }
-  
-    [[BITHockeyManager sharedHockeyManager].updateManager setDelegate:self];
- 
  */
 
 @interface BITUpdateManager : BITHockeyBaseManager <UIAlertViewDelegate>
@@ -78,11 +63,7 @@ typedef enum {
 ///-----------------------------------------------------------------------------
 
 /**
- Sets the `BITUpdateManagerDelegate` delegate.
- 
- When using `BITUpdateManager` to distribute updates of your beta or enterprise
- application, it is _REQUIRED_ to set this delegate and implement
- `[BITUpdateManagerDelegate customDeviceIdentifierForUpdateManager:]`!
+ Sets the `BITUpdateManagerDelegate` delegate. 
  */
 @property (nonatomic, weak) id delegate;
 

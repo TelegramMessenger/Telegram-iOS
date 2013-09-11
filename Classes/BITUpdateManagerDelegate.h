@@ -37,29 +37,6 @@
 
 @protocol BITUpdateManagerDelegate <NSObject>
 
-///-----------------------------------------------------------------------------
-/// @name Configuration
-///-----------------------------------------------------------------------------
-
-/**
- Return the unique device identifier
- 
- Return the device UDID which is required for beta testing, should return nil for app store configuration!
- Example implementation if your Xcode configuration for the App Store is called "AppStore":
- 
-    - (NSString *)customDeviceIdentifierForUpdateManager:(BITUpdateManager *)updateManager {
-    #ifndef (CONFIGURATION_AppStore)
-      if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)])
-        return [[UIDevice currentDevice] performSelector:@selector(uniqueIdentifier)];
-    #endif
- 
-      return nil;
-    }
- 
- @param updateManager The `BITUpdateManager` instance invoking this delegate
- */
-- (NSString *)customDeviceIdentifierForUpdateManager:(BITUpdateManager *)updateManager;
-
 @optional
 
 

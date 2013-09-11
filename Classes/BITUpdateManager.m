@@ -211,19 +211,6 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   }
 }
 
-#pragma mark - Device identifier
-
-- (NSString *)deviceIdentifier {
-  if ([_delegate respondsToSelector:@selector(customDeviceIdentifierForUpdateManager:)]) {
-    NSString *identifier = [_delegate performSelector:@selector(customDeviceIdentifierForUpdateManager:) withObject:self];
-    if (identifier && [identifier length] > 0) {
-      return identifier;
-    }
-  }
-  
-  return @"invalid";
-}
-
 
 #pragma mark - Cache
 
@@ -567,9 +554,9 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     return;
   }
   
-  NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@?format=json&extended=true&udid=%@&sdk=%@&sdk_version=%@&uuid=%@", 
+  NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@?format=json&extended=true%@&sdk=%@&sdk_version=%@&uuid=%@",
                                 bit_URLEncodedString([self encodedAppIdentifier]),
-                                ([self isAppStoreEnvironment] ? @"appstore" : bit_URLEncodedString([self deviceIdentifier])),
+                                ([self isAppStoreEnvironment] ? @"&udid=appstore" : @""),
                                 BITHOCKEY_NAME,
                                 BITHOCKEY_VERSION,
                                 _uuid];
@@ -631,8 +618,11 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 #endif
   
   NSString *extraParameter = [NSString string];
-  if (_sendUsageData) {
-    extraParameter = [NSString stringWithFormat:@"&udid=%@", [self deviceIdentifier]];
+  if (_sendUsageData && self.installationIdentification && self.installationIdentificationType) {
+    extraParameter = [NSString stringWithFormat:@"&%@=%@",
+                      bit_URLEncodedString(self.installationIdentificationType),
+                      bit_URLEncodedString(self.installationIdentification)
+                      ];
   }
   
   NSString *hockeyAPIURL = [NSString stringWithFormat:@"%@api/2/apps/%@?format=plist%@", self.serverURL, [self encodedAppIdentifier], extraParameter];
