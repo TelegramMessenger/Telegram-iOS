@@ -312,13 +312,10 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
                           completion:(void (^)(BOOL, NSError *))completion {
   NSParameterAssert(email && email.length);
   NSParameterAssert(self.authenticationType == BITAuthenticatorAuthTypeEmail || (password && password.length));
-  NSString *authenticationPath = [self authenticationPath];
-  NSDictionary *params = [self parametersForAuthenticationEmail:email password:password];
-  
+  NSURLRequest* request = [self requestForAuthenticationEmail:email password:password];
   __weak typeof (self) weakSelf = self;
-  [self.hockeyAppClient postPath:authenticationPath
-                      parameters:params
-                      completion:^(BITHTTPOperation *operation, id response, NSError *error) {
+  BITHTTPOperation *operation = [self.hockeyAppClient operationWithURLRequest:request
+                                                                   completion:^(BITHTTPOperation *operation, id response, NSError *error) {
                         typeof (self) strongSelf = weakSelf;
                         if(nil == response) {
                           NSError *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
@@ -356,21 +353,33 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
                           }
                         }
                       }];
-  
+  [self.hockeyAppClient enqeueHTTPOperation:operation];
 }
 
-- (NSDictionary *) parametersForAuthenticationEmail:(NSString*) email password:(NSString*) password {
-  if(BITAuthenticatorAuthTypeEmailAndPassword == self.authenticationType) {
-    return @{ @"user" : [NSString stringWithFormat:@"%@:%@", email, password] };
-  } else {
+- (NSURLRequest *) requestForAuthenticationEmail:(NSString*) email password:(NSString*) password {
+  NSString *authenticationPath = [self authenticationPath];
+  NSDictionary *params = nil;
+  
+  if(BITAuthenticatorAuthTypeEmail == self.authenticationType) {
     NSString *authCode = BITHockeyMD5([NSString stringWithFormat:@"%@%@",
                                        self.authenticationSecret ? : @"",
                                        email ? : @""]);
-    return @{
+    params = @{
              @"email" : email ? : @"",
              @"authcode" : authCode.lowercaseString,
              };
   }
+
+  NSMutableURLRequest *request = [self.hockeyAppClient requestWithMethod:@"POST"
+                                                                    path:authenticationPath
+                                                              parameters:params];
+  if(BITAuthenticatorAuthTypeEmailAndPassword == self.authenticationType) {
+    NSString *authStr = [NSString stringWithFormat:@"%@:%@", email, password];
+    NSData *authData = [authStr dataUsingEncoding:NSASCIIStringEncoding];
+    NSString *authValue = [NSString stringWithFormat:@"Basic %@", bit_base64String(authData, authData.length)];
+    [request setValue:authValue forHTTPHeaderField:@"Authorization"];
+  }
+  return request;
 }
 
 - (NSString *) authenticationPath {
