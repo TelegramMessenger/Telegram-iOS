@@ -584,6 +584,14 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
   NSString *authToken = [self stringValueFromKeychainForKey:kBITAuthenticatorAuthTokenKey];
   if(nil == authToken) return nil;
   
+  //check if the auth token matches the current setting
+  if(![self.authenticationTokenType isEqualToString:[self.class stringForAuthenticationType:self.authenticationType]]) {
+    BITHockeyLog(@"Auth type mismatch for stored auth-token. Resetting.");
+    [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenVendorIdentifierKey];
+    [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenKey];
+    return nil;
+  }
+
   //check if this was generated on the same device we're running now
   NSString *currentVendorUUIDString = self.currentDevice.identifierForVendor.UUIDString;
   if(![currentVendorUUIDString isEqualToString:[self stringValueFromKeychainForKey:kBITAuthenticatorAuthTokenVendorIdentifierKey]]) {

@@ -123,6 +123,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 }
 
 - (void) testIdentificationReturnsTheAuthTokenIfSet {
+  [_sut setAuthenticationType:BITAuthenticatorAuthTypeUDIDProvider];
   [_sut setAuthenticationToken:@"PeterPan" withType:@"udid"];
   assertThat(_sut.installationIdentification, equalTo(@"PeterPan"));
 }
