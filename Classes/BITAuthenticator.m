@@ -345,6 +345,13 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
                                                                  NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"Not authorized"),
                                                                  NSUnderlyingErrorKey : authParseError
                                                                  }];
+                            } else {
+                              error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
+                                                          code:BITAuthenticatorErrorUnknown
+                                                      userInfo:@{
+                                                                 NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"Failed to authenticate. Please try again later."),
+                                                                 NSUnderlyingErrorKey : authParseError
+                                                                 }];
                             }
                             completion(NO, error);
                           } else {
