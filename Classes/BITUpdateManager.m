@@ -101,7 +101,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     NSNotificationCenter *dnc = [NSNotificationCenter defaultCenter];
     [dnc addObserver:self selector:@selector(didBecomeActiveActions) name:UIApplicationDidBecomeActiveNotification object:nil];
     [dnc addObserver:self selector:@selector(didBecomeActiveActions) name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
-    _installationIdentifier = [self stringValueFromKeychainForKey:kBITUpdateInstallationIdentifier];
+    _installationIdentification = [self stringValueFromKeychainForKey:kBITUpdateInstallationIdentification];
     _didSetupDidBecomeActiveNotifications = YES;
   }
 }
@@ -572,10 +572,10 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
                                 _uuid];
   
   // add installationIdentificationType and installationIdentifier if available
-  if (self.installationIdentifier && self.installationIdentificationType) {
+  if (self.installationIdentification && self.installationIdentificationType) {
     [parameter appendFormat:@"&%@=%@",
      bit_URLEncodedString(self.installationIdentificationType),
-     bit_URLEncodedString(self.installationIdentifier)
+     bit_URLEncodedString(self.installationIdentification)
      ];
   }
   
@@ -647,7 +647,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   if (![self isAppStoreEnvironment]) {
     if ([self isUpdateManagerDisabled]) return;
 
-    BITHockeyLog(@"INFO: Start UpdateManager");
+    BITHockeyLog(@"INFO: Starting UpdateManager");
 
     [self checkExpiryDateReached];
     if (![self expiryDateReached]) {
@@ -879,16 +879,16 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 
 - (void)setInstallationIdentificationValidated:(BOOL)installationIdentificationValidated {
   if (installationIdentificationValidated != _installationIdentificationValidated) {
-    
+    _installationIdentificationValidated = installationIdentificationValidated;
   }
 }
 
-- (void)setInstallationIdentifier:(NSString *)installationIdentifier {
-  if (![_installationIdentifier isEqualToString:installationIdentifier]) {
-    if (installationIdentifier) {
-      [self addStringValueToKeychain:installationIdentifier forKey:kBITUpdateInstallationIdentifier];
+- (void)setInstallationIdentification:(NSString *)installationIdentification {
+  if (![_installationIdentification isEqualToString:installationIdentification]) {
+    if (installationIdentification) {
+      [self addStringValueToKeychain:installationIdentification forKey:kBITUpdateInstallationIdentification];
     } else {
-      [self removeKeyFromKeychain:kBITUpdateInstallationIdentifier];
+      [self removeKeyFromKeychain:kBITUpdateInstallationIdentification];
     }
     
     // we need to reset the usage time, because the user/device may have changed

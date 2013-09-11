@@ -58,7 +58,7 @@
 
 @property (nonatomic, strong) NSString *companyName;
 
-@property (nonatomic, strong) NSString *installationIdentifier;
+@property (nonatomic, strong) NSString *installationIdentification;
 
 @property (nonatomic, strong) NSString *installationIdentificationType;
 

@@ -193,8 +193,6 @@
   if (![self isAppStoreEnvironment]) {
     // hook into manager with kvo!
     [_authenticator addObserver:self forKeyPath:@"installationIdentificationValidated" options:0 context:nil];
-    [_authenticator addObserver:self forKeyPath:@"installationIdentifier" options:0 context:nil];
-    [_authenticator addObserver:self forKeyPath:@"installationIdentificationType" options:0 context:nil];
     
     BITHockeyLog(@"INFO: Start Authenticator");
     if (_serverURL) {
@@ -256,28 +254,13 @@
 #pragma mark - KVO
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
-  BOOL updateManagerIsAvailable = (![self isAppStoreEnvironment] && ![self isUpdateManagerDisabled]);
-
-  // only make changes if we are visible
   if ([keyPath isEqualToString:@"installationIdentificationValidated"] &&
-      change[@"installationIdentificationValidated"] &&
-      [change[@"installationIdentificationValidated"] isKindOfClass:[NSNumber class]] ) {
-    if (updateManagerIsAvailable) {
-      BOOL isValidated = [(NSNumber *)change[@"installationIdentificationValidated"] boolValue];
-      [_updateManager setInstallationIdentificationValidated:isValidated];
+      [object valueForKey:@"installationIdentificationValidated"] ) {
+    if ((![self isAppStoreEnvironment] && ![self isUpdateManagerDisabled])) {
+      BOOL isValidated = [(NSNumber *)[object valueForKey:@"installationIdentificationValidated"] boolValue];
       if (isValidated) {
         [self invokeStartUpdateManager];
       }
-    }
-  } else if ([keyPath isEqualToString:@"installationIdentifier"] &&
-             change[@"installationIdentifier"]) {
-    if (updateManagerIsAvailable) {
-      [_updateManager setInstallationIdentifier:change[@"installationIdentifier"]];
-    }
-  } else if ([keyPath isEqualToString:@"installationIdentificationType"] &&
-             change[@"installationIdentificationType"]) {
-    if (updateManagerIsAvailable) {
-      [_updateManager setInstallationIdentificationType:change[@"installationIdentificationType"]];
     }
 #if JIRA_MOBILE_CONNECT_SUPPORT_ENABLED
   } else if (([object trackerConfig]) && ([[object trackerConfig] isKindOfClass:[NSDictionary class]])) {
@@ -314,6 +297,11 @@
   BITHockeyLog(@"INFO: Start UpdateManager");
   if (_serverURL) {
     [_updateManager setServerURL:_serverURL];
+  }
+  if (_authenticator) {
+    [_updateManager setInstallationIdentification:[self.authenticator installationIdentification]];
+    [_updateManager setInstallationIdentificationType:[self.authenticator installationIdentificationType]];
+    [_updateManager setInstallationIdentificationValidated:[self.authenticator installationIdentificationValidated]];
   }
   [_updateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
 }
