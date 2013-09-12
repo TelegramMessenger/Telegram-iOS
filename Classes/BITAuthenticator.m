@@ -130,9 +130,9 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
     __weak typeof (self) weakSelf = self;
     [self.hockeyAppClient getPath:validationPath
        parameters:[self validationParameters]
-       completion:^(BITHTTPOperation *operation, id response, NSError *error) {
+       completion:^(BITHTTPOperation *operation, NSData* responseData, NSError *error) {
          typeof (self) strongSelf = weakSelf;
-         if(nil == response) {
+         if(nil == responseData) {
            NSDictionary *userInfo = nil;
            if(error) {
              userInfo = @{NSUnderlyingErrorKey : error};
@@ -143,7 +143,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
            [strongSelf validationFailedWithError:error completion:completion];
          } else {
            NSError *validationParseError = nil;
-           BOOL isValidated = [strongSelf.class isValidationResponseValid:response error:&validationParseError];
+           BOOL isValidated = [strongSelf.class isValidationResponseValid:responseData error:&validationParseError];
            if(isValidated) {
              [strongSelf validationSucceededWithCompletion:completion];
            } else {
@@ -171,7 +171,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
     if(error) {
       *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                    code:BITAuthenticatorAPIServerReturnedInvalidResponse
-                               userInfo:(jsonParseError ? @{NSUnderlyingErrorKey : jsonParseError} : nil)];
+                               userInfo:@{NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"Failed to authenticate. Please try again later.")}];
     }
     return NO;
   }
@@ -179,7 +179,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
     if(error) {
       *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                    code:BITAuthenticatorAPIServerReturnedInvalidResponse
-                               userInfo:nil];
+                               userInfo:@{NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"Failed to authenticate. Please try again later.")}];
     }
     return NO;
   }
@@ -189,14 +189,14 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
     if(error) {
       *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                    code:BITAuthenticatorNotAuthorized
-                               userInfo:nil];
+                               userInfo:@{NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"You are not authorized to use this app. Please check that you are a member of this app.")}];
     }
     return NO;
   } else if([status isEqualToString:@"not found"]) {
     if(error) {
       *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                   code:BITAuthenticatorNotAuthorized
-                               userInfo:nil];
+                                   code:BITAuthenticatorUnknownApplicationID
+                               userInfo:@{NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"Authorization error. Please contact the developer of the app.")}];
     }
     return NO;
   } else if([status isEqualToString:@"validated"]) {
@@ -205,7 +205,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
     if(error) {
       *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                    code:BITAuthenticatorAPIServerReturnedInvalidResponse
-                               userInfo:nil];
+                               userInfo:@{NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"Failed to authenticate. Please try again later.")}];
     }
     return NO;
   }
@@ -317,51 +317,18 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
   NSURLRequest* request = [self requestForAuthenticationEmail:email password:password];
   __weak typeof (self) weakSelf = self;
   BITHTTPOperation *operation = [self.hockeyAppClient operationWithURLRequest:request
-                                                                   completion:^(BITHTTPOperation *operation, id response, NSError *error) {
-                        typeof (self) strongSelf = weakSelf;
-                        if(nil == response) {
-                          NSError *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                                               code:BITAuthenticatorAPIServerReturnedInvalidResponse
-                                                           userInfo:@{
-                                                                      NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerNetworkError")
-                                                                      }];
-                          completion(NO, error);
-                        } else if(401 == operation.response.statusCode) {
-                          NSError *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                                               code:BITAuthenticatorNotAuthorized
-                                                           userInfo:@{
-                                                                      NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerNotauthorized")
-                                                                      }];
-                          completion(NO, error);
-                        } else {
-                          NSError *authParseError = nil;
-                          NSString *authToken = [strongSelf.class authenticationTokenFromReponse:response
-                                                                                           error:&authParseError];
-                          NSError *error = nil;
-                          if(nil == authToken) {
-                            if([authParseError.domain isEqualToString:kBITAuthenticatorErrorDomain] &&
-                               authParseError.code == BITAuthenticatorNotAuthorized) {
-                              error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                                          code:BITAuthenticatorNotAuthorized
-                                                      userInfo:@{
-                                                                 NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerNotauthorized"),
-                                                                 NSUnderlyingErrorKey : authParseError
-                                                                 }];
-                            } else {
-                              error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                                          code:BITAuthenticatorErrorUnknown
-                                                      userInfo:@{
-                                                                 NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerNetworkError"),
-                                                                 NSUnderlyingErrorKey : authParseError
-                                                                 }];
-                            }
-                            completion(NO, error);
-                          } else {
-                            //no need to call completion, we're dismissing it anyways
-                            [self didAuthenticateWithToken:authToken];
-                          }
-                        }
-                      }];
+                                                                   completion:^(BITHTTPOperation *operation, NSData* responseData, NSError *error) {
+                                                                     typeof (self) strongSelf = weakSelf;
+                                                                     NSError *authParseError = nil;
+                                                                     NSString *authToken = [strongSelf.class authenticationTokenFromURLResponse:operation.response
+                                                                                                                                           data:responseData
+                                                                                                                                      error:&authParseError];
+                                                                     if(nil == authToken) {
+                                                                       completion(NO, authParseError);
+                                                                     } else {
+                                                                       //no need to call completion, we're dismissing it anyways
+                                                                       [self didAuthenticateWithToken:authToken];
+                                                                     }}];
   [self.hockeyAppClient enqeueHTTPOperation:operation];
 }
 
@@ -400,51 +367,90 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
 }
 
 
-+ (NSString *) authenticationTokenFromReponse:(id) response error:(NSError **) error {
-  NSParameterAssert(response);
++ (NSString *) authenticationTokenFromURLResponse:(NSHTTPURLResponse*) urlResponse data:(NSData*) data error:(NSError **) error {
+  NSParameterAssert(urlResponse);
+  if(nil == urlResponse) {
+    if(error) {
+      *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
+                                   code:BITAuthenticatorAPIServerReturnedInvalidResponse
+                               userInfo:@{ NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"Failed to authenticate. Please try again later.")}];
+    }
+    return nil;
+  }
+  
+  switch (urlResponse.statusCode) {
+    case 404:
+      if(error) {
+        *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
+                                     code:BITAuthenticatorUnknownApplicationID
+                                 userInfo:@{
+                                            NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"Authorization error. Please contact the developer of the app.")
+                                            }];
+      }
+      break;
+    case 401:
+      if(error) {
+        *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
+                                     code:BITAuthenticatorNotAuthorized
+                                 userInfo:@{
+                                            NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"Wrong email or password. Please check your credentials and try again.")
+                                            }];
+      }
+      break;
+    case 200:
+      //Do nothing, handled below
+      break;
+    default:
+      if(error) {
+        *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
+                                     code:BITAuthenticatorAPIServerReturnedInvalidResponse
+                                 userInfo:@{ NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"Failed to authenticate. Please try again later.")}];
+        
+      }
+      return nil;
+      break;
+  }
+  if(200 != urlResponse.statusCode) {
+    //make sure we have an error created if user wanted to have one
+    NSParameterAssert(0 == error || *error);
+    return nil;
+  }
+  NSAssert(urlResponse.statusCode == 200, @"Should be 200 now. Everything else should've been handled above");
   
   NSError *jsonParseError = nil;
-  id jsonObject = [NSJSONSerialization JSONObjectWithData:response
+  id jsonObject = [NSJSONSerialization JSONObjectWithData:data
                                                   options:0
                                                     error:&jsonParseError];
-  if(nil == jsonObject) {
+  //no json or unexpected json
+  if(nil == jsonObject || ![jsonObject isKindOfClass:[NSDictionary class]]) {
     if(error) {
+      NSDictionary *userInfo = @{NSLocalizedDescriptionKey: BITHockeyLocalizedString(@"Failed to authenticate. Please try again later.")};
+      if(jsonParseError) {
+        NSMutableDictionary *userInfoMutable = [userInfo mutableCopy];
+        userInfoMutable[NSUnderlyingErrorKey] = jsonParseError;
+        userInfo = userInfoMutable;
+      }
       *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                    code:BITAuthenticatorAPIServerReturnedInvalidResponse
-                               userInfo:(jsonParseError ? @{NSUnderlyingErrorKey : jsonParseError} : nil)];
+                               userInfo:userInfo];
     }
     return nil;
   }
-  if(![jsonObject isKindOfClass:[NSDictionary class]]) {
-    if(error) {
-      *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                   code:BITAuthenticatorAPIServerReturnedInvalidResponse
-                               userInfo:nil];
-    }
-    return nil;
-  }
+  
   NSString *status = jsonObject[@"status"];
-  if(nil == status) {
-    if(error) {
-      *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                   code:BITAuthenticatorAPIServerReturnedInvalidResponse
-                               userInfo:nil];
-    }
-    return nil;
-  } else if([status isEqualToString:@"identified"]) {
-    return jsonObject[@"iuid"];
+  NSString *authToken = nil;
+  if([status isEqualToString:@"identified"]) {
+    authToken = jsonObject[@"iuid"];
   } else if([status isEqualToString:@"authorized"]) {
-    return jsonObject[@"auid"];
-  } else {
-    if(error) {
-      *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                   code:BITAuthenticatorNotAuthorized
-                               userInfo:nil];
-    }
-    return nil;
+    authToken = jsonObject[@"auid"];
   }
+  if(nil == authToken && error) {
+    *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
+                                 code:BITAuthenticatorAPIServerReturnedInvalidResponse
+                             userInfo:@{NSLocalizedDescriptionKey: BITHockeyLocalizedString(@"Failed to authenticate. Please try again later.")}];
+  }
+  return authToken;
 }
-
 
 - (void)authenticationViewControllerDidTapWebButton:(UIViewController *)viewController {
   NSURL *hockeyWebbasedLoginURL = [self.webpageURL URLByAppendingPathComponent:[NSString stringWithFormat:@"apps/%@/authorize", self.encodedAppIdentifier]];

@@ -29,7 +29,7 @@
 #import <Foundation/Foundation.h>
 
 @class BITHTTPOperation;
-typedef void (^BITNetworkCompletionBlock)(BITHTTPOperation* operation, id response, NSError* error);
+typedef void (^BITNetworkCompletionBlock)(BITHTTPOperation* operation, NSData* data, NSError* error);
 
 @interface BITHTTPOperation : NSOperation
 

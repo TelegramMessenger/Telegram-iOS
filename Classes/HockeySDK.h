@@ -165,6 +165,7 @@ typedef NS_ENUM(NSInteger, BITAuthenticatorReason) {
    *  Network error
    */
   BITAuthenticatorNetworkError,
+  
   /**
    *  API Server returned invalid response
    */
@@ -178,7 +179,11 @@ typedef NS_ENUM(NSInteger, BITAuthenticatorReason) {
    */
   BITAuthenticatorAuthenticationCancelled,
   /**
-   *  Authoraization secret missing
+   *  Unknown Application ID (configuration error)
+   */
+  BITAuthenticatorUnknownApplicationID,
+  /**
+   *  Authorization secret missing
    */
   BITAuthenticatorAuthorizationSecretMissing,
 };
