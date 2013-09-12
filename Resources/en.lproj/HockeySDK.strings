@@ -255,8 +255,14 @@
 /* Error presented to the user if authentication failed because of networking issues */
 "HockeyAuthenticationViewControllerNetworkError" = "Failed to authenticate. A internet connection is required! Please try again.";
 
-/* error presented to the user if authentication failed */
-"HockeyAuthenticationViewControllerNotauthorized" = "Not authorized";
+
+"HockeyAuthenticationFailedAuthenticate" = "Failed to authenticate. Please try again later.";
+"HockeyAuthenticationNotMember" = "You are not authorized to use this app. Please check that you are a member of this app.";
+"HockeyAuthenticationContactDeveloper" = "Authorization error. Please contact the developer of the app.";
+"HockeyAuthenticationAuthorizationError" = "Authorization error. Please contact the developer of the app.";
+"HockeyAuthenticationWrongEmailPassword" = "Wrong email or password. Please check your credentials and try again.";
+"HockeyAuthenticationAuthSecretMissing" = "Authentication secret is not set but required.";
+
 
 /* BarButton item to skip auth */
 "Skip" = "Skip";
