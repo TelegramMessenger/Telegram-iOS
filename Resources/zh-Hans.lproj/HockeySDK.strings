@@ -232,3 +232,37 @@
 
 /* Email Placeholder */
 "HockeyFeedbackUserDataEmailPlaceholder" = "example@email.com";
+
+
+/* Authenticator */
+
+
+/* View Controller Title*/
+"HockeyAuthenticatorViewControllerTitle" = "Authorize";
+
+/* BITAuthenticatorAuthTypeUDIDProvider */
+"HockeyAuthenticationViewControllerWebLoginDescription" = "Please tap the following button to identify your device on HockeyApp.";
+"HockeyAuthenticationViewControllerWebLoginButtonTitle" = "Identify Device";
+
+/* BITAuthenticatorAuthTypeEmail and BITAuthenticatorAuthTypeEmailAndPassword */
+"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Please provide the email address and password of your HockeyApp account.";
+"HockeyAuthenticationViewControllerDataEmailDescription" = "Please provide the email address of your HockeyApp account.";
+"HockeyAuthenticationViewControllerEmailPlaceholder" = "example@email.com";
+"HockeyAuthenticationViewControllerPasswordPlaceholder" = "Required";
+"HockeyAuthenticationViewControllerEmailDescription" = "Email";
+"HockeyAuthenticationViewControllerPasswordDescription" = "Password";
+
+/* Error presented to the user if authentication failed because of networking issues */
+"HockeyAuthenticationViewControllerNetworkError" = "Failed to authenticate. A internet connection is required! Please try again.";
+
+
+"HockeyAuthenticationFailedAuthenticate" = "Failed to authenticate. Please try again later.";
+"HockeyAuthenticationNotMember" = "You are not authorized to use this app. Please check that you are a member of this app.";
+"HockeyAuthenticationContactDeveloper" = "Authorization error. Please contact the developer of the app.";
+"HockeyAuthenticationAuthorizationError" = "Authorization error. Please contact the developer of the app.";
+"HockeyAuthenticationWrongEmailPassword" = "Wrong email or password. Please check your credentials and try again.";
+"HockeyAuthenticationAuthSecretMissing" = "Authentication secret is not set but required.";
+
+
+/* BarButton item to skip auth */
+"Skip" = "Skip";
