@@ -731,7 +731,7 @@
     [self updateLastMessageID];
   }
   if (self.lastMessageID) {
-    lastMessageID = [NSString stringWithFormat:@"&last_message_id=%i", [self.lastMessageID integerValue]];
+    lastMessageID = [NSString stringWithFormat:@"&last_message_id=%li", (long)[self.lastMessageID integerValue]];
   }
   
   [parameter appendFormat:@"?format=json&bundle_version=%@&sdk=%@&sdk_version=%@%@",

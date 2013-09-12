@@ -483,7 +483,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   }
   
   if ([_crashFiles count] > 0) {
-    BITHockeyLog(@"INFO: %i pending crash reports found.", [_crashFiles count]);
+    BITHockeyLog(@"INFO: %lu pending crash reports found.", (unsigned long)[_crashFiles count]);
     return YES;
   } else {
     if (_didCrashInLastSession) {
@@ -911,7 +911,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
     } else {
       error = [NSError errorWithDomain:kBITCrashErrorDomain
                                   code:BITCrashAPIErrorWithStatusCode
-                              userInfo:[NSDictionary dictionaryWithObjectsAndKeys:[NSString stringWithFormat:@"Sending failed with status code: %i", _statusCode], NSLocalizedDescriptionKey, nil]];
+                              userInfo:[NSDictionary dictionaryWithObjectsAndKeys:[NSString stringWithFormat:@"Sending failed with status code: %li", (long)_statusCode], NSLocalizedDescriptionKey, nil]];
     }
 
     if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManager:didFailWithError:)]) {

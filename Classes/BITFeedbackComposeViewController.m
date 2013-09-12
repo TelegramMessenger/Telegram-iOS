@@ -172,7 +172,11 @@
   [super viewWillAppear:animated];
   
   _statusBarStyle = [[UIApplication sharedApplication] statusBarStyle];
+#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
+  [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleLightContent];
+#else
   [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleBlackOpaque];
+#endif
   
   [self.textView setFrame:self.view.frame];
 

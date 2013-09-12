@@ -72,7 +72,11 @@
   
   _statusBarStyle = [[UIApplication sharedApplication] statusBarStyle];
   if ([self.navigationController.navigationBar.tintColor isEqual:BIT_RGBCOLOR(25, 25, 25)]) {
+#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
+    [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleLightContent];
+#else
     [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleBlackOpaque];
+#endif
   }
 }
 

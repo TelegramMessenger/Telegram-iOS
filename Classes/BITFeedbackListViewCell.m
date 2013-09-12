@@ -135,9 +135,18 @@
 #pragma mark - Layout
 
 + (CGFloat) heightForRowWithMessage:(BITFeedbackMessage *)message tableViewWidth:(CGFloat)width {
+#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
+  CGRect calculatedRect = [message.text boundingRectWithSize:CGSizeMake(width - (2 * FRAME_SIDE_BORDER), CGFLOAT_MAX)
+                                                     options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingUsesFontLeading
+                                                  attributes:@{NSFontAttributeName:[UIFont systemFontOfSize:TEXT_FONTSIZE]}
+                                                     context:nil];
+  CGFloat calculatedHeight = calculatedRect.size.height + FRAME_TOP_BORDER + LABEL_TEXT_Y + FRAME_BOTTOM_BORDER;
+#else
   CGFloat calculatedHeight = [message.text sizeWithFont:[UIFont systemFontOfSize:TEXT_FONTSIZE]
-                              constrainedToSize:CGSizeMake(width - (2 * FRAME_SIDE_BORDER), CGFLOAT_MAX)].height + FRAME_TOP_BORDER + LABEL_TEXT_Y + FRAME_BOTTOM_BORDER;
-  return round(calculatedHeight);
+                              constrainedToSize:CGSizeMake(width - (2 * FRAME_SIDE_BORDER), CGFLOAT_MAX)
+                              ].height + FRAME_TOP_BORDER + LABEL_TEXT_Y + FRAME_BOTTOM_BORDER;
+#endif
+  return ceil(calculatedHeight);
 }
 
 - (void)layoutSubviews {

@@ -261,12 +261,14 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
   _authenticationCompletionBlock = completion;
   UIViewController *rootViewController = [self.findVisibleWindow rootViewController];
   UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:viewController];
-  [rootViewController presentModalViewController:navController
-                                        animated:YES];
+  rootViewController.modalPresentationStyle = UIModalPresentationFullScreen;
+  [rootViewController presentViewController:navController
+                                   animated:YES
+                                 completion:nil];
 }
 
 - (void) didAuthenticateWithToken:(NSString*) token {
-  [_authenticationController dismissModalViewControllerAnimated:YES];
+  [_authenticationController dismissViewControllerAnimated:YES completion:nil];
   _authenticationController = nil;
   [self setAuthenticationToken:token withType:[self.class stringForAuthenticationType:self.authenticationType]];
   self.installationIdentificationValidated = YES;
@@ -290,7 +292,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
 }
 #pragma mark - AuthenticationViewControllerDelegate
 - (void) authenticationViewControllerDidSkip:(UIViewController *)viewController {
-  [viewController dismissModalViewControllerAnimated:YES];
+  [viewController dismissViewControllerAnimated:YES completion:nil];
   
   _authenticationController = nil;
   [self setAuthenticationToken:nil withType:nil];
@@ -467,7 +469,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
     
     if(self.validationType == BITAuthenticatorValidationTypeOptional) {
       //dismiss view-controller if login was optional
-      [_authenticationController dismissModalViewControllerAnimated:YES];
+      [_authenticationController dismissViewControllerAnimated:YES completion:nil];
       _authenticationController = nil;
     } else {
       //keep the viewcontroller and thus block the app

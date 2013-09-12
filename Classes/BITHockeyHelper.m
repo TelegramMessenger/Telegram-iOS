@@ -371,12 +371,12 @@ UIImage *bit_reflectedImageWithHeight(UIImage *inputImage, NSUInteger height, fl
     return nil;
   
   // create a bitmap graphics context the size of the image
-  CGContextRef mainViewContentContext = bit_MyOpenBitmapContext(inputImage.size.width, height);
+  CGContextRef mainViewContentContext = bit_MyOpenBitmapContext(inputImage.size.width, (int)height);
   
   // create a 2 bit CGImage containing a gradient that will be used for masking the
   // main view content to create the 'fade' of the reflection.  The CGImageCreateWithMask
   // function will stretch the bitmap image as required, so we can create a 1 pixel wide gradient
-  CGImageRef gradientMaskImage = bit_CreateGradientImage(1, height, fromAlpha, toAlpha);
+  CGImageRef gradientMaskImage = bit_CreateGradientImage(1, (int)height, fromAlpha, toAlpha);
   
   // create an image by masking the bitmap of the mainView content with the gradient view
   // then release the  pre-masked content bitmap and the gradient bitmap
