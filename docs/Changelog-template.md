@@ -1,3 +1,54 @@
+## Version 3.1.0 Beta 1
+
+- General
+
+  - [NEW] Added support for iOS 7
+  - [NEW] Added support for arm64 architecture
+  - [NEW] Added `BITStoreUpdateManager` for alerting the user of available App Store updates (disabled by default)
+  - [NEW] Added `BITAuthenticator` class for authorizing installations (Ad-Hoc/Enterprise builds only!)
+  - [NEW] Added possibility to build custom frameworks including/excluding specific modules from the static library (see `HockeySDKFeatureConfig.h`)
+  - [UPDATE] User related data is now stored in the keychain instead of property files
+  - [UPDATE] SDK documentation improvements
+  - [BUGFIX] Fixed multiple compiler warnings
+  - [BUGFIX] Fixed a few UI glitches, e.g. adjusting status bar style
+	<br /><br/>
+
+- Crash Reporting
+
+  - [NEW] Integrated PLCrashReporter 1.2 beta 1
+  - [NEW] Added optional support for Mach exceptions
+  - [NEW] Experimental support for arm64 (will be tested and improved once devices are available)
+  - [UPDATE] PLCrashReporter build with `BIT` namespace to avoid collisions
+  - [UPDATE] Crash reporting is automatically disabled when the app is invoked with the debugger!
+	<br /><br/>
+
+- Feedback
+
+  -[NEW] New protocol to inform about incoming feedback messages, see `BITFeedbackManagerDelegate`
+  - [UPDATE] Added method in `BITFeedbackComposeViewControllerDelegate` to let the app know if the user submitted a new message or cancelled it
+	<br /><br/>
+
+- App Store Updates
+
+  - [NEW] Inform user when a new version is available in the App Store
+	<br /><br/>
+
+- Ad-Hoc/Enterprise Updates / Authentication
+
+  - [UPDATE] Removed delegate for getting the UDID, please migrate to the new `BITAuthenticator`
+  - [NEW] `BITAuthenticator` identifies app installations, automatically disabled in App Store environments
+  - [NEW] `BITAuthenticator` can identify the user through:
+    - The email address of his/her HockeyApp account
+    - Login with his/her HockeyApp account (does not work with Facebook accounts!)
+    - Installation of the HockeyApp web-clip to provide the UDID (requires the app to handle URL callbacks)
+  - [NEW] `BITAuthenticator` can require the authorization:
+    - Never
+    - Optionally, i.e. the user can skip the dialog
+    - On first app version launch
+    - Whenever the app comes into foreground (requires the device to have a working internet connection)
+	<br /><br/>
+
+
 ## Version 3.0.0
 
 - General
