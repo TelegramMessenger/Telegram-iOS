@@ -3,7 +3,7 @@
 - General
 
   - [NEW] Added support for iOS 7
-  - [NEW] Added support for arm64 architecture
+  - [NEW] Added experimental support for arm64 architecture
   - [NEW] Added `BITStoreUpdateManager` for alerting the user of available App Store updates (disabled by default)
   - [NEW] Added `BITAuthenticator` class for authorizing installations (Ad-Hoc/Enterprise builds only!)
   - [NEW] Added possibility to build custom frameworks including/excluding specific modules from the static library (see `HockeySDKFeatureConfig.h`)
