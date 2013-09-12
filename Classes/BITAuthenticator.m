@@ -407,7 +407,6 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
                                  userInfo:@{ NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"HockeyAuthenticationFailedAuthenticate")}];
         
       }
-      return nil;
       break;
   }
   if(200 != urlResponse.statusCode) {
