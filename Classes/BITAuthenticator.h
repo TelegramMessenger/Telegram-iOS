@@ -89,9 +89,9 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
  *
  * Authentication is a 2 step process:
  *    1) authenticate:
- *       a token is aquired depending on the authenticationType
+ *       a token is acquired depending on the authenticationType
  *    2) validation:
- *       the aquired token from step 1 is validated depending the validationType
+ *       the acquired token from step 1 is validated depending the validationType
  *
  * There are currently 3 ways of authentication:
  *    1) authenticate the user via email only (`BITAuthenticatorAuthTypeEmail`)
