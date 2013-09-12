@@ -35,7 +35,6 @@
  * This may be used to avoid symbol conflicts between multiple libraries
  * that may both incorporate PLCrashReporter.
  */
-// #define PLCRASHREPORTER_PREFIX AcmeCo
 #define PLCRASHREPORTER_PREFIX BIT
 
 #ifdef PLCRASHREPORTER_PREFIX
