@@ -33,7 +33,7 @@
   - [NEW] Inform user when a new version is available in the App Store
 	<br /><br/>
 
-- Ad-Hoc/Enterprise Updates / Authentication
+- Ad-Hoc/Enterprise Updates and Authentication
 
   - [UPDATE] Removed delegate for getting the UDID, please migrate to the new `BITAuthenticator`
   - [NEW] `BITAuthenticator` identifies app installations, automatically disabled in App Store environments
