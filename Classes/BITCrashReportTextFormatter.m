@@ -43,6 +43,14 @@
 # define CPU_SUBTYPE_ARM_V7S 11
 #endif
 
+/*
+ * XXX: The ARM_V64_ALL Mach-O CPU subtype is not defined in the Mac OS X 10.8
+ * headers.
+ */
+#ifndef CPU_SUBTYPE_ARM64_ALL
+# define CPU_SUBTYPE_ARM64_ALL 0
+#endif
+
 
 @interface BITCrashReportTextFormatter (PrivateAPI)
 NSInteger binaryImageSort(id binary1, id binary2, void *context);
