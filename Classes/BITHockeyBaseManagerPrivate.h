@@ -26,10 +26,13 @@
 /** Check if the device is running an iOS version previous to iOS 7 */
 - (BOOL)isPreiOS7Environment;
 
-/** by default, just logs the message
- 
- can be overriden by subclasses to do their own error handling, 
- e.g. to show UI
+/** 
+ * by default, just logs the message
+ *
+ * can be overriden by subclasses to do their own error handling,
+ * e.g. to show UI
+ *
+ * @param error NSError
  */
 - (void)reportError:(NSError *)error;
 
@@ -40,19 +43,19 @@
  */
 - (NSString *)encodedAppIdentifier;
 
-/** device / application helpers */
+// device / application helpers
 - (NSString *)getDevicePlatform;
 - (NSString *)executableUUID;
 
-/** UI helpers */
+// UI helpers
 - (UINavigationController *)customNavigationControllerWithRootViewController:(UIViewController *)viewController presentationStyle:(UIModalPresentationStyle)presentationStyle;
 - (UIWindow *)findVisibleWindow;
 - (void)showView:(UIViewController *)viewController;
 
-/** Date helpers */
+// Date helpers
 - (NSDate *)parseRFC3339Date:(NSString *)dateString;
 
-/** keychain helpers */
+// keychain helpers
 - (BOOL)addStringValueToKeychain:(NSString *)stringValue forKey:(NSString *)key;
 - (NSString *)stringValueFromKeychainForKey:(NSString *)key;
 - (BOOL)removeKeyFromKeychain:(NSString *)key;

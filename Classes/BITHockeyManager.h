@@ -68,7 +68,7 @@
     [[BITHockeyManager sharedHockeyManager] startManager];
  
  @warning When also using the SDK for updating app versions (AdHoc or Enterprise) and collecting
- beta usage analytics, you also have to use `[BITAuthenticator]`!
+ beta usage analytics, you also have to use `BITAuthenticator`!
  
  */
 
@@ -236,7 +236,7 @@
  @see configureWithIdentifier:delegate:
  @see configureWithBetaIdentifier:liveIdentifier:delegate:
  @see startManager
- @see disableStoreUpdateManager
+ @see enableStoreUpdateManager
  */
 @property (nonatomic, strong, readonly) BITStoreUpdateManager *storeUpdateManager;
 

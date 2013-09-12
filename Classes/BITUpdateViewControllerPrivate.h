@@ -34,13 +34,31 @@
 
 #import "BITStoreButton.h"
 
-typedef enum {
+/**
+ *  Button states
+ */
+typedef NS_ENUM(NSUInteger, AppStoreButtonState) {
+	/**
+	 *  Offline
+	 */
 	AppStoreButtonStateOffline,
+	/**
+	 *  Check
+	 */
 	AppStoreButtonStateCheck,
+	/**
+	 *  Searching
+	 */
 	AppStoreButtonStateSearching,
+	/**
+	 *  Update
+	 */
 	AppStoreButtonStateUpdate,
+	/**
+	 *  Installing
+	 */
 	AppStoreButtonStateInstalling
-} AppStoreButtonState;
+};
 
 
 @class BITUpdateManager;

@@ -8,16 +8,25 @@
 
 #import <Foundation/Foundation.h>
 
+/**
+ *  The users action when composing a message
+ */
 typedef NS_ENUM(NSUInteger, BITFeedbackComposeResult) {
-  BITFeedbackComposeResultCancelled, //user hit cancel
-  BITFeedbackComposeResultSubmitted, //user hit submit
+  /**
+   *  user hit cancel
+   */
+  BITFeedbackComposeResultCancelled,
+  /**
+   *  user hit submit
+   */
+  BITFeedbackComposeResultSubmitted,
 };
 
 @class BITFeedbackComposeViewController;
 
 /**
- The `BITFeedbackComposeViewControllerDelegate` formal protocol defines methods further configuring
- the behaviour of `BITFeedbackComposeViewController`.
+ * The `BITFeedbackComposeViewControllerDelegate` formal protocol defines methods further configuring
+ * the behaviour of `BITFeedbackComposeViewController`.
  */
 
 @protocol BITFeedbackComposeViewControllerDelegate <NSObject>
@@ -29,18 +38,23 @@ typedef NS_ENUM(NSUInteger, BITFeedbackComposeResult) {
 ///-----------------------------------------------------------------------------
 
 /**
- Invoked once the compose screen is finished via send or cancel
- 
- If this is implemented, it's the responsibility of this method to dismiss the presented
- `BITFeedbackComposeViewController`
- 
- @param composeViewController The `BITFeedbackComposeViewController` instance invoking this delegate
+ * Invoked once the compose screen is finished via send or cancel
+ *
+ * If this is implemented, it's the responsibility of this method to dismiss the presented
+ * `BITFeedbackComposeViewController`
+ *
+ * @param composeViewController The `BITFeedbackComposeViewController` instance invoking this delegate
+ * @param composeResult The user action the lead to closing the compose view
  */
 - (void)feedbackComposeViewController:(BITFeedbackComposeViewController *)composeViewController
                   didFinishWithResult:(BITFeedbackComposeResult) composeResult;
 
 #pragma mark - Deprecated methods
 
-/** this method is deprecated. If feedbackComposeViewController:didFinishWithResult: is implemented, this will not be called */
+/** 
+ * This method is deprecated. If feedbackComposeViewController:didFinishWithResult: is implemented, this will not be called
+ *
+ * @param composeViewController The `BITFeedbackComposeViewController` instance invoking this delegate
+ */
 - (void)feedbackComposeViewControllerDidFinish:(BITFeedbackComposeViewController *)composeViewController __attribute__((deprecated("Use feedbackComposeViewController:didFinishWithResult: instead")));
 @end

@@ -41,7 +41,7 @@
 
 @implementation BITStoreUpdateManager {
   NSString *_newStoreVersion;
-  NSString *_appStoreURL;
+  NSString *_appStoreURLString;
   NSString *_currentUUID;
   
   BOOL _updateAlertShowing;
@@ -92,7 +92,7 @@
     _updateAlertShowing = NO;
     _updateUIEnabled = YES;
     _newStoreVersion = nil;
-    _appStoreURL = nil;
+    _appStoreURLString = nil;
     _currentUUID = [[self executableUUID] copy];
     _countryCode = nil;
     
@@ -162,7 +162,7 @@
     _lastCheckFailed = NO;
 
     _newStoreVersion = [(NSDictionary *)[(NSArray *)[dictionary objectForKey:@"results"] objectAtIndex:0] objectForKey:@"version"];
-    _appStoreURL = [(NSDictionary *)[(NSArray *)[dictionary objectForKey:@"results"] objectAtIndex:0] objectForKey:@"trackViewUrl"];
+    _appStoreURLString = [(NSDictionary *)[(NSArray *)[dictionary objectForKey:@"results"] objectAtIndex:0] objectForKey:@"trackViewUrl"];
     
     NSString *ignoredVersion = nil;
     if ([self.userDefaults objectForKey:kBITStoreUpdateIgnoreVersion]) {
@@ -170,7 +170,7 @@
       BITHockeyLog(@"INFO: Ignored version: %@", ignoredVersion);
     }
     
-    if (!_newStoreVersion || !_appStoreURL) {
+    if (!_newStoreVersion || !_appStoreURLString) {
       return NO;
     } else if (ignoredVersion && [ignoredVersion isEqualToString:_newStoreVersion]) {
       return NO;
@@ -273,7 +273,7 @@
   
   if ([self isUpdateAvailable]) {
     if (self.delegate && [self.delegate respondsToSelector:@selector(detectedUpdateFromStoreUpdateManager:newVersion:storeURL:)]) {
-      [self.delegate detectedUpdateFromStoreUpdateManager:self newVersion:_newStoreVersion storeURL:_appStoreURL];
+      [self.delegate detectedUpdateFromStoreUpdateManager:self newVersion:_newStoreVersion storeURL:[NSURL URLWithString:_appStoreURLString]];
     }
     
     if (self.updateUIEnabled && BITHockeyBundle()) {
@@ -425,8 +425,8 @@
     [self.userDefaults setObject:_newStoreVersion forKey:kBITStoreUpdateIgnoreVersion];
     [self.userDefaults synchronize];
     
-    if (_appStoreURL) {
-      [[UIApplication sharedApplication] openURL:[NSURL URLWithString:_appStoreURL]];
+    if (_appStoreURLString) {
+      [[UIApplication sharedApplication] openURL:[NSURL URLWithString:_appStoreURLString]];
     } else {
       BITHockeyLog(@"WARNING: The app store page couldn't be opened, since we did not get a valid URL from the store API.");
     }

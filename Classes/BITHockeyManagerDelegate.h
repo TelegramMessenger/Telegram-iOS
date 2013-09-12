@@ -50,19 +50,21 @@
 ///-----------------------------------------------------------------------------
 
 /**
- Implement to force the usage of the live identifier
- 
- This is useful if you are e.g. distributing an enterprise app inside your company
- and want to use the `liveIdentifier` for that even though it is not running from
- the App Store.
- 
- Example:
-    - (BOOL)shouldUseLiveIdentifierForHockeyManager:(BITHockeyManager *)hockeyManager {
-    #ifdef (CONFIGURATION_AppStore)
-      return YES;
-    #endif
-      return NO;
-    }
+ * Implement to force the usage of the live identifier
+ *
+ * This is useful if you are e.g. distributing an enterprise app inside your company
+ * and want to use the `liveIdentifier` for that even though it is not running from
+ * the App Store.
+ *
+ * Example:
+ *    - (BOOL)shouldUseLiveIdentifierForHockeyManager:(BITHockeyManager *)hockeyManager {
+ *    #ifdef (CONFIGURATION_AppStore)
+ *      return YES;
+ *    #endif
+ *      return NO;
+ *    }
+ *
+ * @param hockeyManager BITHockeyManager instance
  */
 - (BOOL)shouldUseLiveIdentifierForHockeyManager:(BITHockeyManager *)hockeyManager;
 

@@ -170,7 +170,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
   if(nil == jsonObject) {
     if(error) {
       *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                   code:BITAuthenticatorAPIServerReturnedInvalidRespone
+                                   code:BITAuthenticatorAPIServerReturnedInvalidResponse
                                userInfo:(jsonParseError ? @{NSUnderlyingErrorKey : jsonParseError} : nil)];
     }
     return NO;
@@ -178,7 +178,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
   if(![jsonObject isKindOfClass:[NSDictionary class]]) {
     if(error) {
       *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                   code:BITAuthenticatorAPIServerReturnedInvalidRespone
+                                   code:BITAuthenticatorAPIServerReturnedInvalidResponse
                                userInfo:nil];
     }
     return NO;
@@ -204,7 +204,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
   } else {
     if(error) {
       *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                   code:BITAuthenticatorAPIServerReturnedInvalidRespone
+                                   code:BITAuthenticatorAPIServerReturnedInvalidResponse
                                userInfo:nil];
     }
     return NO;
@@ -321,7 +321,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
                         typeof (self) strongSelf = weakSelf;
                         if(nil == response) {
                           NSError *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                                               code:BITAuthenticatorAPIServerReturnedInvalidRespone
+                                                               code:BITAuthenticatorAPIServerReturnedInvalidResponse
                                                            userInfo:@{
                                                                       NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerNetworkError")
                                                                       }];
@@ -410,7 +410,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
   if(nil == jsonObject) {
     if(error) {
       *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                   code:BITAuthenticatorAPIServerReturnedInvalidRespone
+                                   code:BITAuthenticatorAPIServerReturnedInvalidResponse
                                userInfo:(jsonParseError ? @{NSUnderlyingErrorKey : jsonParseError} : nil)];
     }
     return nil;
@@ -418,7 +418,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
   if(![jsonObject isKindOfClass:[NSDictionary class]]) {
     if(error) {
       *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                   code:BITAuthenticatorAPIServerReturnedInvalidRespone
+                                   code:BITAuthenticatorAPIServerReturnedInvalidResponse
                                userInfo:nil];
     }
     return nil;
@@ -427,7 +427,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
   if(nil == status) {
     if(error) {
       *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                   code:BITAuthenticatorAPIServerReturnedInvalidRespone
+                                   code:BITAuthenticatorAPIServerReturnedInvalidResponse
                                userInfo:nil];
     }
     return nil;

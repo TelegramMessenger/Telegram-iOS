@@ -30,6 +30,9 @@
 
 #import "BITHTTPOperation.h" //needed for typedef
 
+/**
+ *  Generic Hockey API client
+ */
 @interface BITHockeyAppClient : NSObject
 
 /**

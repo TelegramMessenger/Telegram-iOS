@@ -82,13 +82,16 @@
 /**
  *	if set, this serves as the installationIdentifier. 
  *  This is retrieved from the hockeyApp backend
- *  @see installationIdentifier
+ *  @see installationIdentification
  */
 @property (nonatomic, readonly) NSString *authenticationToken;
 
 /**
  *  store the authentication token with the given type
  *  if authToken is not nil, authentikationTokenType must also be non nil
+ *
+ * @param authenticationToken The authentication token
+ * @param authenticationTokenType The authentication token type
  */
 - (void)setAuthenticationToken:(NSString *)authenticationToken withType:(NSString*) authenticationTokenType;
 
@@ -107,11 +110,15 @@
 
 /**
  * method registered as observer for applicationWillBecomeInactive events
+ *
+ * @param note NSNotification
  */
 - (void) applicationWillResignActive:(NSNotification*) note;
 
 /**
  * method registered as observer for applicationsDidBecomeActive events
+ *
+ * @param note NSNotification
  */
 - (void) applicationDidBecomeActive:(NSNotification*) note;
 

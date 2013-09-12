@@ -12,7 +12,6 @@ This document contains the following sections:
 - [Download & Extract](#download)
 - [Set up Xcode](#xcode)
 - [Modify Code](#modify)
-- [Submit the UDID](#udid)
 - [Mac Desktop Uploader](#mac)
 - [Xcode Documentation](#documentation)
 
@@ -106,22 +105,6 @@ If you need support for iOS 3.x, please check out [HockeyKit](http://support.hoc
 
 *Note:* The SDK is optimized to defer everything possible to a later time while making sure e.g. crashes on startup can also be caught and each module executes other code with a delay some seconds. This ensures that applicationDidFinishLaunching will process as fast as possible and the SDK will not block the startup sequence resulting in a possible kill by the watchdog process.
 
-
-<a id="udid"></a> 
-## Submit the UDID
-
-If you only want crash reporting, you can skip this step. If you want to use HockeyApp for beta distribution and analyze which testers have installed your app, you need to implement an additional delegate method in your AppDelegate.m:
-
-    #pragma mark - BITUpdateManagerDelegate
-    - (NSString *)customDeviceIdentifierForUpdateManager:(BITUpdateManager *)updateManager {
-    #ifndef CONFIGURATION_AppStore
-      if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)])
-        return [[UIDevice currentDevice] performSelector:@selector(uniqueIdentifier)];
-    #endif
-      return nil;
-    }
-  
-The method only returns the UDID when the build is not targeted to the App Sore. This assumes that a preprocessor macro name CONFIGURATION_AppStore exists and is set for App Store builds. The macros are already defined in `HockeySDK.xcconfig` or can be set manually by setting `GCC_PREPROCESSOR_DEFINITIONS` in your build configurations to `CONFIGURATION_$(CONFIGURATION)`.
 
 <a id="mac"></a> 
 ## Mac Desktop Uploader

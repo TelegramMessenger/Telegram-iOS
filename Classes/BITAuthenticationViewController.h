@@ -31,6 +31,9 @@
 @class BITAuthenticator;
 @class BITHockeyAppClient;
 
+/**
+ *  View controller handling user interaction for `BITAuthenticator`
+ */
 @interface BITAuthenticationViewController : UITableViewController
 
 - (instancetype) initWithDelegate:(id<BITAuthenticationViewControllerDelegate>) delegate;
@@ -61,6 +64,9 @@
 
 @end
 
+/**
+ *  BITAuthenticationViewController protocol
+ */
 @protocol BITAuthenticationViewControllerDelegate<NSObject>
 
 /**

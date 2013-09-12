@@ -31,11 +31,23 @@
 #import "BITHockeyBaseManager.h"
 
 
-typedef enum {
+/**
+ *  Defines the update check intervals
+ */
+typedef NS_ENUM(NSInteger, BITStoreUpdateSetting) {
+  /**
+   *  Check every day
+   */
   BITStoreUpdateCheckDaily = 0,
+  /**
+   *  Check every week
+   */
   BITStoreUpdateCheckWeekly = 1,
+  /**
+   *  Check manually
+   */
   BITStoreUpdateCheckManually = 2
-} BITStoreUpdateSetting;
+};
 
 @protocol BITStoreUpdateManagerDelegate;
 
@@ -142,7 +154,7 @@ typedef enum {
  the user about a new update being available in the App Store.
  
  If disabled, you need to implement the `BITStoreUpdateManagerDelegate` protocol with
- the method `[BITStoreUpdateManagerDelegate detectUpdateFromStoreUpdateManager:version:]`
+ the method `[BITStoreUpdateManagerDelegate detectedUpdateFromStoreUpdateManager:newVersion:storeURL:]`
  to be notified about new version and proceed yourself.
  The manager will consider this identical to an `Ignore` user action using the alert
  and not inform about this particular version any more, unless the app is updated

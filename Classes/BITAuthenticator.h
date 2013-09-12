@@ -30,19 +30,47 @@
 
 #import "BITHockeyBaseManager.h"
 
+/**
+ *  Auth types
+ */
 typedef NS_ENUM(NSUInteger, BITAuthenticatorAuthType) {
+  /**
+   *  Ask for the HockeyApp account email
+   */
   BITAuthenticatorAuthTypeEmail,
+  /**
+   *  Ask for the HockeyApp account email and password
+   */
   BITAuthenticatorAuthTypeEmailAndPassword,
+  /**
+   *  Request the device UDID
+   */
   BITAuthenticatorAuthTypeUDIDProvider,
   //TODO: add Facebook?
 };
 
 //TODO: think about name. call it registration?!
+
+/**
+ *  Validation types
+ */
 typedef NS_ENUM(NSUInteger, BITAuthenticatorValidationType) {
-  BITAuthenticatorValidationTypeNever = 0,     //never try to validate the current installation
-  BITAuthenticatorValidationTypeOptional,      //asks the user if he wants to authenticate himself
-  BITAuthenticatorValidationTypeOnFirstLaunch, //checks if the user is authenticated first time a new version is run
-  BITAuthenticatorValidationTypeOnAppActive,   //checks if the user is authenticated everytime the app becomes active
+  /**
+   *  never try to validate the current installation
+   */
+  BITAuthenticatorValidationTypeNever = 0,
+  /**
+   *  asks the user if he wants to authenticate himself
+   */
+  BITAuthenticatorValidationTypeOptional,
+  /**
+   *  checks if the user is authenticated first time a new version is run
+   */
+  BITAuthenticatorValidationTypeOnFirstLaunch,
+  /**
+   *  checks if the user is authenticated everytime the app becomes active
+   */
+  BITAuthenticatorValidationTypeOnAppActive,
 };
 
 typedef void(^tAuthenticationCompletion)(NSString* authenticationToken, NSError *error);
@@ -116,16 +144,10 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
 @property (nonatomic, strong) NSURL *webpageURL;
 
 /**
- *	should be used by the app-delegate to forward handle application:openURL:sourceApplication:annotation calls
- *
- *	@param	url	URL that was passed to the app
- *	@param	sourceApplication	sourceApplication that was passed to the app
- *	@param	annotation	annotation that was passed to the app
- *
- *	@return	YES if the URL request was handled, NO if the URL could not be handled/identified
- *
+ *	 should be used by the app-delegate to forward handle application:openURL:sourceApplication:annotation: calls
+*
  *  Sample usage (in AppDelegate)
- *  - (BOOL)application:(UIApplication *)application 
+ *  - (BOOL)application:(UIApplication *)application
  *              openURL:(NSURL *)url
  *    sourceApplication:(NSString *)sourceApplication annotation:(id)annotation {
  *    if ([[BITHockeyManager sharedHockeyManager].authenticator handleOpenURL:url
@@ -136,6 +158,12 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
  *      //do your own URL handling, return appropriate valu
  *    }
  *    return NO;
+ *
+ * @param url The URL that was passed to the app
+ *	 @param sourceApplication sourceApplication that was passed to the app
+ *	 @param annotation annotation that was passed to the app
+ *
+ * @return YES if the URL request was handled, NO if the URL could not be handled/identified
  }
  */
 - (BOOL) handleOpenURL:(NSURL *) url
@@ -144,6 +172,9 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
 
 @end
 
+/**
+ *  BITAuthenticator protocol
+ */
 @protocol BITAuthenticatorDelegate <NSObject>
 
 @optional

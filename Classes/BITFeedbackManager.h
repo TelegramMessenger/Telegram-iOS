@@ -41,11 +41,23 @@
 #define BITHockeyFeedbackMessagesLoadingFinished @"BITHockeyFeedbackMessagesLoadingFinished"
 
 
-typedef enum {
-  BITFeedbackUserDataElementDontShow = 0, // don't ask for this user data element at all
-  BITFeedbackUserDataElementOptional = 1, // the user may provide it, but does not have to
-  BITFeedbackUserDataElementRequired = 2 // the user has to provide this to continue
-} BITFeedbackUserDataElement;
+/**
+ *  Defines if behavior of the user data field
+ */
+typedef NS_ENUM(NSInteger, BITFeedbackUserDataElement) {
+  /**
+   *  don't ask for this user data element at all
+   */
+  BITFeedbackUserDataElementDontShow = 0,
+  /**
+   *  the user may provide it, but does not have to
+   */
+  BITFeedbackUserDataElementOptional = 1,
+  /**
+   *  the user has to provide this to continue
+   */
+  BITFeedbackUserDataElementRequired = 2
+};
 
 
 @class BITFeedbackMessage;
@@ -195,7 +207,7 @@ typedef enum {
  @see requireUserName
  @see requireUserEmail
  @see showFeedbackComposeView
- @see feedbackComposeViewController:
+ @see feedbackComposeViewController
  @see showFeedbackListView
  @see feedbackListViewController:
  */

@@ -32,11 +32,23 @@
 #import "BITHockeyBaseManager.h"
 
 
-typedef enum {
+/**
+ *  Update check interval
+ */
+typedef NS_ENUM (NSUInteger, BITUpdateSetting) {
+  /**
+   *  On every startup or or when the app comes to the foreground
+   */
   BITUpdateCheckStartup = 0,
+  /**
+   *  Once a day
+   */
   BITUpdateCheckDaily = 1,
+  /**
+   *  Manually
+   */
   BITUpdateCheckManually = 2
-} BITUpdateSetting;
+};
 
 @protocol BITUpdateManagerDelegate;
 

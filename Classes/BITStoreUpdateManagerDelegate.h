@@ -52,7 +52,7 @@
  @param newVersion The new version string reported by the App Store
  @param storeURL The App Store URL for this app that could be invoked to let them perform the update.
  */
--(void)detectedUpdateFromStoreUpdateManager:(BITStoreUpdateManager *)storeUpdateManager newVersion:(NSString *)newVersion storeURL:(NSString *)storeURL;
+-(void)detectedUpdateFromStoreUpdateManager:(BITStoreUpdateManager *)storeUpdateManager newVersion:(NSString *)newVersion storeURL:(NSURL *)storeURL;
 
 
 
