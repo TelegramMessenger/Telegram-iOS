@@ -124,11 +124,10 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
 @property (nonatomic, weak) id<BITAuthenticatorDelegate> delegate;
 
 /**
- * The authentication token from HockeyApp.
+ * The authentication secret from HockeyApp. To find the right secret, click on your app on the HockeyApp dashboard,
+ * then on Show next to "Secret:".
  *
- * Set the token to the `Secret ID` which HockeyApp provides for every app.
- 
- When running the app from the App Store, this setting is ignored.
+ * When running the app from the App Store, this setting is ignored.
  */
 @property (nonatomic, copy) NSString *authenticationSecret;
 
