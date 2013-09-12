@@ -91,8 +91,9 @@ extern NSString *const __attribute__((unused)) kBITFeedbackErrorDomain;
 typedef NS_ENUM(NSInteger, BITAuthenticatorReason) {
   BITAuthenticatorErrorUnknown,
   BITAuthenticatorNetworkError,
-  BITAuthenticatorAPIServerReturnedInvalidRespone,
+  BITAuthenticatorAPIServerReturnedInvalidResponse,
   BITAuthenticatorNotAuthorized,
+  BITAuthenticatorUnknownApplicationID,
   BITAuthenticatorAuthenticationCancelled,
   BITAuthenticatorAuthorizationSecretMissing,
 };
