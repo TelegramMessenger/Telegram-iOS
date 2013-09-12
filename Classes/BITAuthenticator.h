@@ -31,44 +31,41 @@
 #import "BITHockeyBaseManager.h"
 
 /**
- *  Auth types
+ * Auth types
  */
 typedef NS_ENUM(NSUInteger, BITAuthenticatorAuthType) {
   /**
-   *  Ask for the HockeyApp account email
+   * Ask for the HockeyApp account email
    */
   BITAuthenticatorAuthTypeEmail,
   /**
-   *  Ask for the HockeyApp account email and password
+   * Ask for the HockeyApp account email and password
    */
   BITAuthenticatorAuthTypeEmailAndPassword,
   /**
-   *  Request the device UDID
+   * Request the device UDID
    */
-  BITAuthenticatorAuthTypeUDIDProvider,
-  //TODO: add Facebook?
+  BITAuthenticatorAuthTypeUDIDProvider
 };
-
-//TODO: think about name. call it registration?!
 
 /**
  *  Validation types
  */
 typedef NS_ENUM(NSUInteger, BITAuthenticatorValidationType) {
   /**
-   *  never try to validate the current installation
+   * Never validate if the user is allowed to run the app
    */
   BITAuthenticatorValidationTypeNever = 0,
   /**
-   *  asks the user if he wants to authenticate himself
+   * Optionally validate if the user is authorized; user can skip the process
    */
   BITAuthenticatorValidationTypeOptional,
   /**
-   *  checks if the user is authenticated first time a new version is run
+   * Check if the user is authenticated at the first time a new version is started
    */
   BITAuthenticatorValidationTypeOnFirstLaunch,
   /**
-   *  checks if the user is authenticated everytime the app becomes active
+   * Check if the user is authenticated everytime the app becomes active
    */
   BITAuthenticatorValidationTypeOnAppActive,
 };
@@ -79,33 +76,33 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
 @protocol BITAuthenticatorDelegate;
 
 /**
- * Authenticator module used to identify and optionally authenticate the current app installation
+ * Authenticator module used to identify and optionally authenticate the current app user
  *
- * This is the HockeySDK module for handling authentications when using Ad-Hoc or Enterprise provisioning profiles.
- * This modul allows you to make sure the current app installation is done on an authorzied device by choosing from
- * various authenticatoin and validation mechanisms which provide different levels of authentication.
+ * This is the HockeySDK module for handling authentication when using Ad-Hoc or Enterprise provisioning profiles.
+ * This module allows you to make sure the current app installation is done on an authorzied device by choosing from
+ * various authentication and validation mechanisms which provide different levels of authentication.
  *
- * This does not provide DRM or copy protection in any form and each authentication type and validation type provide
- * a different level of authentication.
+ * This does not provide DRM or copy protection in any form. Each authentication type and validation type provide
+ * a different level of user authorization.
  *
  * This module automatically disables itself when running in an App Store build by default!
  *
- *  Authentication is actually a 2 step process:
- *    1) authenticate
- *       some kind of token is aquired depending on the authenticationType
- *    2) validation
+ * Authentication is a 2 step process:
+ *    1) authenticate:
+ *       a token is aquired depending on the authenticationType
+ *    2) validation:
  *       the aquired token from step 1 is validated depending the validationType
  *
- *  There are currently 3 ways of authentication:
+ * There are currently 3 ways of authentication:
  *    1) authenticate the user via email only (`BITAuthenticatorAuthTypeEmail`)
- *    2) authenticate the user via email & passwort (needs to have a HockeyApp Account) (`BITAuthenticatorAuthTypeEmailAndPassword`)
+ *    2) authenticate the user via email & password (`BITAuthenticatorAuthTypeEmailAndPassword`)
  *    3) authenticate the device via its UDID (_Default_) (`BITAuthenticatorAuthTypeUDIDProvider`)
  *
- *  Additionally, verification can be required:
- *    1) never (`BITAuthenticatorValidationTypeNever`)
+ * There are currently 4 ways of validation:
+ *    1) never (_Default_) (`BITAuthenticatorValidationTypeNever`)
  *    2) optional (`BITAuthenticatorValidationTypeOptional`)
- *    3) on first launch of every app version, never again until the next version is installed (_Default_) (`BITAuthenticatorValidationTypeOnFirstLaunch`)
- *    4) every time the app becomes active (needs data connection) (`BITAuthenticatorValidationTypeOnAppActive`)
+ *    3) on first launch of a new app version(`BITAuthenticatorValidationTypeOnFirstLaunch`)
+ *    4) every time the app becomes active (needs internet connection) (`BITAuthenticatorValidationTypeOnAppActive`)
  *
  */
 @interface BITAuthenticator : BITHockeyBaseManager
@@ -120,16 +117,16 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
 @property (nonatomic, assign) BITAuthenticatorAuthType authenticationType;
 
 /**
- *	_Default_: BITAuthenticatorValidationTypeNever
+ * _Default_: BITAuthenticatorValidationTypeNever
  */
 @property (nonatomic, assign) BITAuthenticatorValidationType validationType;
 
 @property (nonatomic, weak) id<BITAuthenticatorDelegate> delegate;
 
 /**
- The authentication token from HockeyApp.
- 
- Set the token to the `Secret ID` which HockeyApp provides for every app.
+ * The authentication token from HockeyApp.
+ *
+ * Set the token to the `Secret ID` which HockeyApp provides for every app.
  
  When running the app from the App Store, this setting is ignored.
  */
@@ -138,33 +135,34 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
 #pragma mark - UDID auth
 
 /**
- *	baseURL of the webpage the user is redirected to if authenticationType is BITAuthenticatorAuthTypeWebbased
- *  defaults to https://rink.hockeyapp.net but can be overwritten if desired
+ * baseURL of the webpage the user is redirected to if authenticationType is BITAuthenticatorAuthTypeUDIDProvider
+ * defaults to https://rink.hockeyapp.net
  */
 @property (nonatomic, strong) NSURL *webpageURL;
 
 /**
- *	 should be used by the app-delegate to forward handle application:openURL:sourceApplication:annotation: calls
-*
- *  Sample usage (in AppDelegate)
- *  - (BOOL)application:(UIApplication *)application
- *              openURL:(NSURL *)url
- *    sourceApplication:(NSString *)sourceApplication annotation:(id)annotation {
- *    if ([[BITHockeyManager sharedHockeyManager].authenticator handleOpenURL:url
- *                                                          sourceApplication:sourceApplication
- *                                                                 annotation:annotation]) {
- *      return YES;
- *    } else {
- *      //do your own URL handling, return appropriate valu
- *    }
- *    return NO;
+ * Should be used by the app-delegate to forward handle application:openURL:sourceApplication:annotation: calls
+ *
+ * Sample usage (in AppDelegate):
+ *   - (BOOL)application:(UIApplication *)application
+ *               openURL:(NSURL *)url
+ *     sourceApplication:(NSString *)sourceApplication annotation:(id)annotation {
+ *     if ([[BITHockeyManager sharedHockeyManager].authenticator handleOpenURL:url
+ *                                                           sourceApplication:sourceApplication
+ *                                                                  annotation:annotation]) {
+ *       return YES;
+ *     } else {
+ *       //do your own URL handling, return appropriate valu
+ *     }
+ *     return NO;
+ *   }
  *
  * @param url The URL that was passed to the app
- *	 @param sourceApplication sourceApplication that was passed to the app
- *	 @param annotation annotation that was passed to the app
+ * @param sourceApplication sourceApplication that was passed to the app
+ * @param annotation annotation that was passed to the app
  *
  * @return YES if the URL request was handled, NO if the URL could not be handled/identified
- }
+ *
  */
 - (BOOL) handleOpenURL:(NSURL *) url
      sourceApplication:(NSString *) sourceApplication
@@ -172,18 +170,20 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
 
 @end
 
+#pragma mark - Protocol
+
 /**
- *  BITAuthenticator protocol
+ * BITAuthenticator protocol
  */
 @protocol BITAuthenticatorDelegate <NSObject>
 
 @optional
 /**
- *	if the authentication (or validation) needs to authenticate the user, 
- *  this delegate method is called with the viewController that we'll present.
+ * If the authentication (or validation) needs to authenticate the user, 
+ * this delegate method is called with the viewController that we'll present.
  *
- *	@param	authenticator	authenticator object
- *	@param	viewController	viewcontroller used to authenticate the user
+ * @param	authenticator authenticator object
+ * @param	viewController viewcontroller used to authenticate the user
  *
  */
 - (void) authenticator:(BITAuthenticator *)authenticator willShowAuthenticationController:(UIViewController*) viewController;
