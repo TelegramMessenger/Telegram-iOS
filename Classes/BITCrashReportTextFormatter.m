@@ -41,8 +41,6 @@
  */
 #ifndef CPU_SUBTYPE_ARM_V7S
 # define CPU_SUBTYPE_ARM_V7S 11
-#elif !TARGET_OS_IPHONE
-# error CPU_SUBTYPE_ARM_V7S is now defined by the SDK. Please remove this define.
 #endif
 
 
@@ -372,6 +370,10 @@ NSInteger binaryImageSort(id binary1, id binary2, void *context);
               archName = @"armv7s";
               break;
               
+            case CPU_SUBTYPE_ARM64_ALL:
+              archName = @"arm64";
+              break;
+              
             default:
               archName = @"arm-unknown";
               break;
@@ -470,6 +472,10 @@ NSInteger binaryImageSort(id binary1, id binary2, void *context);
               
             case CPU_SUBTYPE_ARM_V7S:
               archName = @"armv7s";
+              break;
+              
+            case CPU_SUBTYPE_ARM64_ALL:
+              archName = @"arm64";
               break;
               
             default:
