@@ -216,7 +216,7 @@
     if (_serverURL) {
       [_authenticator setServerURL:_serverURL];
     }
-    [_authenticator startManager];
+    [_authenticator performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
   }
   
 #if HOCKEYSDK_FEATURE_UPDATES
