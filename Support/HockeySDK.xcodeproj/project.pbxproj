@@ -500,7 +500,9 @@
 				1E66CA8F15D40FF600F35BED /* Support */,
 				E400561B148D79B500EB22B9 /* Products */,
 			);
+			indentWidth = 2;
 			sourceTree = "<group>";
+			tabWidth = 2;
 		};
 		E400561B148D79B500EB22B9 /* Products */ = {
 			isa = PBXGroup;
