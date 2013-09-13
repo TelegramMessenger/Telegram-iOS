@@ -1,10 +1,10 @@
-## Version 3.0.0
+## Version 3.5.0b1
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.0.0/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.5.0b1/docs/docs/Changelog.html)
 
 ## Introduction
 
-This article describes how to integrate HockeyApp into your iOS apps using a Git submodule and Xcode subprojects. The SDK allows testers to update your app to another beta version right from within the application. It will notify the tester if a new update is available. The SDK also allows to send crash reports. If a crash has happened, it will ask the tester on the next start whether he wants to send information about the crash to the server.
+This article describes how to integrate HockeyApp into your iOS apps using a Git submodule and Xcode sub-projects. The SDK allows testers to update your app to another beta version right from within the application. It will notify the tester if a new update is available. The SDK also allows to send crash reports. If a crash has happened, it will ask the tester on the next start whether he wants to send information about the crash to the server.
 
 This document contains the following sections:
 
@@ -19,10 +19,6 @@ This document contains the following sections:
 ## Requirements
 
 The SDK runs on devices with iOS 5.0 or higher.
-
-If you need support for iOS 4.x, please check out [HockeySDK v2.5.5](http://hockeyapp.net/releases/)
-
-If you need support for iOS 3.x, please check out [HockeyKit](http://support.hockeyapp.net/kb/client-integration/beta-distribution-on-ios-hockeykit) and [QuincyKit](http://support.hockeyapp.net/kb/client-integration/crash-reporting-on-ios-quincykit)
 
 <a id="download"></a> 
 ## Set up Git submodule
@@ -151,4 +147,4 @@ This documentation provides integrated help in Xcode for all public APIs and a s
 
 3. Copy the content into ~`/Library/Developer/Shared/Documentation/DocSet`
 
-The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.0.0/](http://hockeyapp.net/help/sdk/ios/3.0.0/)
+The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.5.0b1/](http://hockeyapp.net/help/sdk/ios/3.5.0b1/)

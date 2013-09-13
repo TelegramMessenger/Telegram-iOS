@@ -88,21 +88,24 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
  * This module automatically disables itself when running in an App Store build by default!
  *
  * Authentication is a 2 step process:
- *    1) authenticate:
+ *
+ *    1. authenticate:
  *       a token is acquired depending on the authenticationType
- *    2) validation:
+ *    2. validation:
  *       the acquired token from step 1 is validated depending the validationType
  *
  * There are currently 3 ways of authentication:
- *    1) authenticate the user via email only (`BITAuthenticatorAuthTypeEmail`)
- *    2) authenticate the user via email & password (`BITAuthenticatorAuthTypeEmailAndPassword`)
- *    3) authenticate the device via its UDID (_Default_) (`BITAuthenticatorAuthTypeUDIDProvider`)
+ *
+ *    1. authenticate the user via email only (`BITAuthenticatorAuthTypeEmail`)
+ *    2. authenticate the user via email & password (`BITAuthenticatorAuthTypeEmailAndPassword`)
+ *    3. authenticate the device via its UDID (_Default_) (`BITAuthenticatorAuthTypeUDIDProvider`)
  *
  * There are currently 4 ways of validation:
- *    1) never (_Default_) (`BITAuthenticatorValidationTypeNever`)
- *    2) optional (`BITAuthenticatorValidationTypeOptional`)
- *    3) on first launch of a new app version(`BITAuthenticatorValidationTypeOnFirstLaunch`)
- *    4) every time the app becomes active (needs internet connection) (`BITAuthenticatorValidationTypeOnAppActive`)
+ *
+ *    1. never (_Default_) (`BITAuthenticatorValidationTypeNever`)
+ *    2. optional (`BITAuthenticatorValidationTypeOptional`)
+ *    3. on first launch of a new app version(`BITAuthenticatorValidationTypeOnFirstLaunch`)
+ *    4. every time the app becomes active (needs internet connection) (`BITAuthenticatorValidationTypeOnAppActive`)
  *
  */
 @interface BITAuthenticator : BITHockeyBaseManager
@@ -143,6 +146,7 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
  * Should be used by the app-delegate to forward handle application:openURL:sourceApplication:annotation: calls
  *
  * Sample usage (in AppDelegate):
+ *
  *   - (BOOL)application:(UIApplication *)application
  *               openURL:(NSURL *)url
  *     sourceApplication:(NSString *)sourceApplication annotation:(id)annotation {
@@ -181,8 +185,8 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
  * If the authentication (or validation) needs to authenticate the user, 
  * this delegate method is called with the viewController that we'll present.
  *
- * @param	authenticator authenticator object
- * @param	viewController viewcontroller used to authenticate the user
+ * @param authenticator authenticator object
+ * @param viewController viewcontroller used to authenticate the user
  *
  */
 - (void) authenticator:(BITAuthenticator *)authenticator willShowAuthenticationController:(UIViewController*) viewController;

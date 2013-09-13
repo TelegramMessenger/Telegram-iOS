@@ -33,7 +33,7 @@
 /**
  * If true, include support for handling crash reports
  *
- * _Default_: Disabled
+ * _Default_: Enabled
  */
 #ifndef HOCKEYSDK_FEATURE_CRASH_REPORTER
 #    define HOCKEYSDK_FEATURE_CRASH_REPORTER 1
@@ -43,7 +43,7 @@
 /**
  * If true, include support for managing user feedback
  *
- * _Default_: Disabled
+ * _Default_: Enabled
  */
 #ifndef HOCKEYSDK_FEATURE_FEEDBACK
 #    define HOCKEYSDK_FEATURE_FEEDBACK 1
@@ -53,7 +53,7 @@
 /**
  * If true, include support for informing the user about new updates pending in the App Store
  *
- * _Default_: Disabled
+ * _Default_: Enabled
  */
 #ifndef HOCKEYSDK_FEATURE_STORE_UPDATES
 #    define HOCKEYSDK_FEATURE_STORE_UPDATES 1
@@ -63,7 +63,7 @@
 /**
  * If true, include support for authentication installations for Ad-Hoc and Enterprise builds
  *
- * _Default_: Disabled
+ * _Default_: Enabled
  */
 #ifndef HOCKEYSDK_FEATURE_AUTHENTICATOR
 #    define HOCKEYSDK_FEATURE_AUTHENTICATOR 1
@@ -73,7 +73,7 @@
 /**
  * If true, include support for handling in-app udpates for Ad-Hoc and Enterprise builds
  *
- * _Default_: Disabled
+ * _Default_: Enabled
  */
 #ifndef HOCKEYSDK_FEATURE_UPDATES
 #    define HOCKEYSDK_FEATURE_UPDATES 1

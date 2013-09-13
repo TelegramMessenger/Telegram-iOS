@@ -38,14 +38,14 @@
 @interface BITAuthenticator ()<BITAuthenticationViewControllerDelegate>
 
 /**
- *	must be set
+ * must be set
  */
 @property (nonatomic, strong) BITHockeyAppClient *hockeyAppClient;
 
 #pragma mark - Identification
 
 /**
- *	Provides an identification for the current app installation
+ * Provides an identification for the current app installation
  *
  *  During Alpha and Beta-phase HockeyApp tries to uniquely identify each app installation
  *  to provide better error reporting & analytics. If authenticator is configured to login
@@ -53,12 +53,12 @@
  *  it is disabled, it returns the vendorIdentifier provided by UIKit.
  *  KVO'able
  *
- *	@return	a string identifying this app installation
+ * @return a string identifying this app installation
  */
 @property (nonatomic, readonly) NSString *installationIdentification;
 
 /**
- *	Specifies if the installationIdentification has been validated
+ * Specifies if the installationIdentification has been validated
  *
  *  Depending on authenticationType and validationType this flag switches between
  *  YES/NO during application runtime. If it's YES, the installationIdentification has been
@@ -69,7 +69,7 @@
 @property (nonatomic, readwrite) BOOL installationIdentificationValidated;
 
 /**
- *	Specifies the type of installation identification for the current app installation
+ * Specifies the type of installation identification for the current app installation
  */
 @property (nonatomic, readonly) NSString *installationIdentificationType;
 
@@ -80,9 +80,9 @@
 
 #pragma mark -
 /**
- *	if set, this serves as the installationIdentifier. 
- *  This is retrieved from the hockeyApp backend
- *  @see installationIdentification
+ * if set, this serves as the installationIdentifier.
+ * This is retrieved from the hockeyApp backend
+ * @see installationIdentification
  */
 @property (nonatomic, readonly) NSString *authenticationToken;
 
@@ -104,7 +104,7 @@
 @property (nonatomic, copy) tAuthenticationCompletion authenticationCompletionBlock;
 
 /**
- *	removes all previously stored authentication tokens, UDIDs, etc
+ * removes all previously stored authentication tokens, UDIDs, etc
  */
 - (void) cleanupInternalStorage;
 
@@ -123,15 +123,15 @@
 - (void) applicationDidBecomeActive:(NSNotification*) note;
 
 /**
- *	once the user skipped the optional login, this is set to YES
- *  (and thus the optional login should never be shown again)
- *  persisted to disk. Defaults to NO
+ * once the user skipped the optional login, this is set to YES
+ * (and thus the optional login should never be shown again)
+ * persisted to disk. Defaults to NO
  */
 @property (nonatomic, assign) BOOL didSkipOptionalLogin;
 
 #pragma mark - Authentication
 /**
- *	Authenticate this app installation
+ * Authenticate this app installation
  *
  *  Depending on 'authenticationType', this tries to authenticate the app installation
  *  against the HockeyApp server.
@@ -148,7 +148,7 @@
 
 #pragma mark - Validation
 /**
- *	Validate the app installation
+ * Validate the app installation
  *
  *  Depending on @see validationType, this is called by the manager after the app becomes active
  *  and tries to revalidate the installation.

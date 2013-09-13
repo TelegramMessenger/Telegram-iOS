@@ -66,10 +66,7 @@
       configureWithIdentifier:@"<AppIdentifierFromHockeyApp>"
                      delegate:nil];
     [[BITHockeyManager sharedHockeyManager] startManager];
- 
- @warning When also using the SDK for updating app versions (AdHoc or Enterprise) and collecting
- beta usage analytics, you also have to use `BITAuthenticator`!
- 
+  
  */
 
 @interface BITHockeyManager : NSObject

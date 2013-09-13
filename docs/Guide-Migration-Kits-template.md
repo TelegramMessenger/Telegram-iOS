@@ -35,6 +35,10 @@ In Xcode open the `Project Navigator` (⌘+1). In the search field at the bottom
 
 In Xcode open the `Project Navigator` (⌘+1). In the search field at the bottom enter `HockeySDK.framework`. If search returns any results you have the first release of our unified SDK added to your project. Even if you added it as a git submodule we would suggest you remove it first. Repeat the same for `CrashReporter.framework` and `HockeySDKResources.bundle`.
 
+### HockeySDK-iOS v3.0.x
+
+In Xcode open the `Project Navigator` (⌘+1). In the search field at the bottom enter `HockeySDK.embeddedFramework`. If search returns any results you have the first release of our unified SDK added to your project. Even if you added it as a git submodule we would suggest you remove it first.
+
 ### Final Steps
 
 Search again in the `Project Navigator` (⌘+1) for "CrashReporter.framework". You shouldn't get any results now. If not, remove the CrashReporter.framework from your project.
@@ -90,7 +94,7 @@ In your application delegate (for example `AppDelegate.m`) search for the follow
                                                        liveIdentifier:LIVE_IDENTIFIER
                                                              delegate:self];
 
-For now comment out all lines whith `[CNSHockeyManager sharedHockeyManager]`. Open the header file of your application delegate by pressing ^ + ⌘ + ↑. There should be a line like this: 
+For now comment out all lines with `[CNSHockeyManager sharedHockeyManager]`. Open the header file of your application delegate by pressing ^ + ⌘ + ↑. There should be a line like this: 
 
     @interface AppDelegate : NSObject <UIApplicationDelegate, CNSHockeyManagerDelegate> {
 
@@ -106,13 +110,22 @@ After you have finished the setup guide make sure everything works as expected a
 
 ### HockeySDK-iOS 2.5.x
 
-THere are no changes to the SDK setup code required. Some delegates methods are deprecated and should be replaced as soon as feasible.
+There are no changes to the SDK setup code required. Some delegates methods are deprecated and should be replaced as soon as feasible.
 
 The following delegates in `BITCrashManagerDelegate` moved to `BITHockeyManagerDelegate`:
 
 - `- (NSString *)userNameForCrashManager:(BITCrashManager *)crashManager;` is now `- (NSString *)userNameForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager;`
 - `- (NSString *)userEmailForCrashManager:(BITCrashManager *)crashManager;` is now `- (NSString *)userEmailForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager;`
 
+### HockeySDK-iOS 3.0.x
+
+Instead of implementing the individual protocols in your app delegate, you can now simply add `BITHockeyManagerDelegate` alone, e.g.:
+
+    @interface BITAppDelegate () <BITHockeyManagerDelegate> {}
+
+    @end
+
+The delegate `-(NSString *)customDeviceIdentifierForUpdateManager:(BITUpdateManager *)updateManager` has been removed. To identify the installation please use the new `BITAuthenticator` class.
 
 ## Troubleshooting
 

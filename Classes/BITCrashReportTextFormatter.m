@@ -36,19 +36,19 @@
 #import "BITCrashReportTextFormatter.h"
 
 /*
- * XXX: The ARM_V7S Mach-O CPU subtype is not defined in the Mac OS X 10.8
- * headers.
+ * XXX: The ARM64 CPU type, and ARM_V7S and ARM_V8 Mach-O CPU subtypes are not
+ * defined in the Mac OS X 10.8 headers.
  */
 #ifndef CPU_SUBTYPE_ARM_V7S
 # define CPU_SUBTYPE_ARM_V7S 11
 #endif
 
-/*
- * XXX: The ARM_V64_ALL Mach-O CPU subtype is not defined in the Mac OS X 10.8
- * headers.
- */
-#ifndef CPU_SUBTYPE_ARM64_ALL
-# define CPU_SUBTYPE_ARM64_ALL 0
+#ifndef CPU_TYPE_ARM64
+#define CPU_TYPE_ARM64 (CPU_TYPE_ARM | CPU_ARCH_ABI64)
+#endif
+
+#ifndef CPU_SUBTYPE_ARM_V8
+# define CPU_SUBTYPE_ARM_V8 13
 #endif
 
 
@@ -378,12 +378,20 @@ NSInteger binaryImageSort(id binary1, id binary2, void *context);
               archName = @"armv7s";
               break;
               
-            case CPU_SUBTYPE_ARM64_ALL:
-              archName = @"arm64";
-              break;
-              
             default:
               archName = @"arm-unknown";
+              break;
+          }
+          break;
+
+        case CPU_TYPE_ARM64:
+          /* Apple includes subtype for ARM64 binaries. */
+          switch (imageInfo.codeType.subtype) {
+            case CPU_SUBTYPE_ARM_V8:
+              archName = @"arm64";
+              
+            default:
+              archName = @"arm64-unknown";
               break;
           }
           break;
@@ -482,16 +490,24 @@ NSInteger binaryImageSort(id binary1, id binary2, void *context);
               archName = @"armv7s";
               break;
               
-            case CPU_SUBTYPE_ARM64_ALL:
-              archName = @"arm64";
-              break;
-              
             default:
               archName = @"arm-unknown";
               break;
           }
           break;
           
+        case CPU_TYPE_ARM64:
+          /* Apple includes subtype for ARM64 binaries. */
+          switch (imageInfo.codeType.subtype) {
+            case CPU_SUBTYPE_ARM_V8:
+              archName = @"arm64";
+              
+            default:
+              archName = @"arm64-unknown";
+              break;
+          }
+          break;
+
         case CPU_TYPE_X86:
           archName = @"i386";
           break;
