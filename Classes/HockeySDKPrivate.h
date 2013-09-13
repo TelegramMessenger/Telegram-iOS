@@ -84,4 +84,14 @@ BOOL BITValidateEmail(NSString *email);
 
 #endif /* __IPHONE_OS_VERSION_MIN_REQUIRED */
 
+#if __IPHONE_OS_VERSION_MIN_REQUIRED > __IPHONE_6_1
+
+#define kBITButtonTypeSystem                UIButtonTypeSystem
+
+#else
+
+#define kBITButtonTypeSystem                UIButtonTypeRoundedRect
+
+#endif
+
 #endif //HockeySDK_HockeySDKPrivate_h

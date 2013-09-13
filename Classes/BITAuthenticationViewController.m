@@ -127,7 +127,7 @@
     UIView *containerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0,
                                                                      CGRectGetWidth(self.tableView.bounds),
                                                                      kFooterHeight)];
-    UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
+    UIButton *button = [UIButton buttonWithType:kBITButtonTypeSystem];
     [button setTitle:BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerWebLoginButtonTitle") forState:UIControlStateNormal];
     CGSize buttonSize = [button sizeThatFits:CGSizeMake(CGRectGetWidth(self.tableView.bounds),
                                                         kFooterHeight)];
