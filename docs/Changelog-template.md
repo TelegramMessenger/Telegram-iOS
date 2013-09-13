@@ -24,7 +24,7 @@
 
 - Feedback
 
-  -[NEW] New protocol to inform about incoming feedback messages, see `BITFeedbackManagerDelegate`
+  - [NEW] New protocol to inform about incoming feedback messages, see `BITFeedbackManagerDelegate`
   - [UPDATE] Added method in `BITFeedbackComposeViewControllerDelegate` to let the app know if the user submitted a new message or cancelled it
 	<br /><br/>
 
@@ -36,6 +36,7 @@
 - Ad-Hoc/Enterprise Updates and Authentication
 
   - [UPDATE] Removed delegate for getting the UDID, please migrate to the new `BITAuthenticator`
+  - [NEW] In-app updates are now only offered if the device matches the minimum OS version requirement
   - [NEW] `BITAuthenticator` identifies app installations, automatically disabled in App Store environments
   - [NEW] `BITAuthenticator` can identify the user through:
     - The email address of his/her HockeyApp account
