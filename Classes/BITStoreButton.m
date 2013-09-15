@@ -219,17 +219,25 @@
 
 - (CGSize)sizeThatFits:(CGSize)size {
   CGSize constr = (CGSize){.height = self.frame.size.height, .width = BIT_MAX_WIDTH};
+  CGSize newSize;
   
 #if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
-  CGRect calculatedRect = [self.buttonData.label boundingRectWithSize:constr
-                                                              options:NSStringDrawingUsesFontLeading
-                                                           attributes:@{NSFontAttributeName:self.titleLabel.font}
-                                                              context:nil];
-  CGSize newSize = calculatedRect.size;
-#else
-  CGSize newSize = [self.buttonData.label sizeWithFont:self.titleLabel.font
-                                     constrainedToSize:constr
-                                         lineBreakMode:kBITLineBreakModeMiddleTruncation];
+  if ([self.buttonData.label respondsToSelector:@selector(boundingRectWithSize:options:attributes:context:)]) {
+    CGRect calculatedRect = [self.buttonData.label boundingRectWithSize:constr
+                                                                options:NSStringDrawingUsesFontLeading
+                                                             attributes:@{NSFontAttributeName:self.titleLabel.font}
+                                                                context:nil];
+    newSize = calculatedRect.size;
+  } else {
+#endif
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    newSize = [self.buttonData.label sizeWithFont:self.titleLabel.font
+                                constrainedToSize:constr
+                                    lineBreakMode:kBITLineBreakModeMiddleTruncation];
+#pragma clang diagnostic pop
+#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
+  }
 #endif
   
   CGFloat newWidth = newSize.width + (BIT_PADDING * 2);
