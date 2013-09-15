@@ -69,6 +69,18 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
   
   [self registerObservers];
   
+  switch ([[UIApplication sharedApplication] applicationState]) {
+    case UIApplicationStateActive:
+      [self triggerAuthentication];
+      break;
+    case UIApplicationStateBackground:
+    case UIApplicationStateInactive:
+      // do nothing, wait for active state
+      break;
+  }
+}
+
+- (void) triggerAuthentication {
   switch (self.validationType) {
     case BITAuthenticatorValidationTypeOnAppActive:
       [self validateInstallationWithCompletion:[self defaultValidationCompletionBlock]];
@@ -649,9 +661,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
 
 #pragma mark - Application Lifecycle
 - (void)applicationDidBecomeActive:(NSNotification *)note {
-  if(BITAuthenticatorValidationTypeOnAppActive == self.validationType) {
-    [self validateInstallationWithCompletion:[self defaultValidationCompletionBlock]];
-  }
+  [self triggerAuthentication];
 }
 
 - (void)applicationWillResignActive:(NSNotification *)note {
