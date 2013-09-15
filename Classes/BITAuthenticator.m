@@ -82,9 +82,10 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
       }
       break;
     case BITAuthenticatorValidationTypeOptional:
-      self.installationIdentificationValidated = YES;
       if(NO == self.didSkipOptionalLogin) {
         [self validateInstallationWithCompletion:[self defaultValidationCompletionBlock]];
+      } else {
+        self.installationIdentificationValidated = YES;
       }
       break;
     case BITAuthenticatorValidationTypeNever:
@@ -298,6 +299,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
   [self setAuthenticationToken:nil withType:nil];
   if(self.validationType == BITAuthenticatorValidationTypeOptional) {
     self.didSkipOptionalLogin = YES;
+    self.installationIdentificationValidated = YES;
   }
   NSError *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                        code:BITAuthenticatorAuthenticationCancelled
