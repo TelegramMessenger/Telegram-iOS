@@ -1,3 +1,20 @@
+## Version 3.5.0 Beta 2
+
+- General
+
+  - [NEW] Added support for apps starting in the background
+  - [UPDATE] Added updated CocoaSpec
+  - [BUGFIX] Various documentation improvements
+
+- Ad-Hoc/Enterprise Authentication
+
+  - [BUGFIX] Fix duplicate count of installations
+
+- Ad-Hoc/Enterprise Updates
+
+  - [BUGFIX] Update view not showing any versions
+  - [BUGFIX] Fix a crash presenting the update view on iOS 5 and iOS 6
+
 ## Version 3.5.0 Beta 1
 
 - General
