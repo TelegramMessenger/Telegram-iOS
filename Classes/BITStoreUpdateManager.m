@@ -60,8 +60,10 @@
 
 
 - (void)didBecomeActiveActions {
-  if ([self isStoreUpdateManagerEnabled] && [self isCheckingForUpdateOnLaunch]) {
-    [self checkForUpdateDelayed];
+  if ([self shouldCancelProcessing]) return;
+  
+  if ([self isCheckingForUpdateOnLaunch] && [self shouldAutoCheckForUpdates]) {
+    [self performSelector:@selector(checkForUpdateDelayed) withObject:nil afterDelay:1.0f];
   }
 }
 
@@ -372,11 +374,18 @@
     self.lastCheck = [NSDate distantPast];
   }
   
-  if ([self isCheckingForUpdateOnLaunch] && [self shouldAutoCheckForUpdates]) {
-    [self performSelector:@selector(checkForUpdateDelayed) withObject:nil afterDelay:1.0f];
-  }
-
   [self setupDidBecomeActiveNotifications];
+  
+  // we are already delayed, so the notification already came in and this won't invoked twice
+  switch ([[UIApplication sharedApplication] applicationState]) {
+    case UIApplicationStateActive:
+      [self didBecomeActiveActions];
+      break;
+    case UIApplicationStateBackground:
+    case UIApplicationStateInactive:
+      // do nothing, wait for active state
+      break;
+  }
 }
 
 
