@@ -115,7 +115,11 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
 /**
  * Defines the authentication mechanism to be used
  *
- * The values are listed here: `BITAuthenticatorAuthType`
+ * The values are listed here: `BITAuthenticatorAuthType`:
+ *
+ *    1. `BITAuthenticatorAuthTypeEmail`: authenticate the user via email only
+ *    2. `BITAuthenticatorAuthTypeEmailAndPassword`: authenticate the user via email & password
+ *    3. `BITAuthenticatorAuthTypeUDIDProvider`: authenticate the device via its UDID (_Default_)
  *
  * _Default_: `BITAuthenticatorAuthTypeUDIDProvider`
  */
@@ -124,7 +128,12 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
 /**
  * Defines the validation mechanism to be used
  *
- * The values are listed here: `BITAuthenticatorValidationType`
+ * The values are listed here: `BITAuthenticatorValidationType`:
+ *
+ *    1. `BITAuthenticatorValidationTypeNever`: never (_Default_)
+ *    2. `BITAuthenticatorValidationTypeOptional`: optional
+ *    3. `BITAuthenticatorValidationTypeOnFirstLaunch`: on first launch of a new app version
+ *    4. `BITAuthenticatorValidationTypeOnAppActive`: every time the app becomes active (needs internet connection)
  *
  * _Default_: `BITAuthenticatorValidationTypeNever`
  */

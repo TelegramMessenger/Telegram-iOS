@@ -117,12 +117,12 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  to _YES_.
  
  The current value is always stored in User Defaults with the key
- "BITCrashManagerStatus".
+ `BITCrashManagerStatus`.
  
  If you intend to implement a user setting to let them enable or disable
  crash reporting, this delegate should be used to return that value. You also
  have to make sure the new value is stored in the UserDefaults with the key
- "BITCrashManagerStatus".
+ `BITCrashManagerStatus`.
  
  @see showAlwaysButton
  */

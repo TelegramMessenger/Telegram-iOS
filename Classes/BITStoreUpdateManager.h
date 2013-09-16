@@ -86,7 +86,7 @@ typedef NS_ENUM(NSInteger, BITStoreUpdateSetting) {
  When to check for new updates.
  
  Defines when a the SDK should check if there is a new update available on the
- server. This must be assigned one of the following:
+ server. This must be assigned one of the following, see `BITStoreUpdateSetting`:
  
  - `BITStoreUpdateCheckDaily`: Once a day
  - `BITStoreUpdateCheckWeekly`: Once a week
