@@ -116,10 +116,14 @@
 
 
 - (void)didBecomeActiveActions {
-  if (![self isFeedbackManagerDisabled]) {
+  if ([self isFeedbackManagerDisabled]) return;
+
+  if ([_feedbackList count] == 0) {
+    [self loadMessages];
+  } else {
     [self updateAppDefinedUserData];
-    [self updateMessagesList];
   }
+  [self updateMessagesList];
 }
 
 - (void)setupDidBecomeActiveNotifications {
@@ -187,14 +191,20 @@
 #pragma mark - Manager Control
 
 - (void)startManager {
-  if ([_feedbackList count] == 0) {
-    [self loadMessages];
-  } else {
-    [self updateAppDefinedUserData];
-  }
-  [self updateMessagesList];
+  if ([self isFeedbackManagerDisabled]) return;
 
   [self setupDidBecomeActiveNotifications];
+  
+  // we are already delayed, so the notification already came in and this won't invoked twice
+  switch ([[UIApplication sharedApplication] applicationState]) {
+    case UIApplicationStateActive:
+      [self didBecomeActiveActions];
+      break;
+    case UIApplicationStateBackground:
+    case UIApplicationStateInactive:
+      // do nothing, wait for active state
+      break;
+  }
 }
 
 - (void)updateMessagesList {
