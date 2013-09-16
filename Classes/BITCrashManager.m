@@ -84,6 +84,9 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   
   BITPLCrashReporter *_plCrashReporter;
   NSUncaughtExceptionHandler *_exceptionHandler;
+
+  id _appDidBecomeActiveObserver;
+  id _networkDidBecomeReachableObserver;
 }
 
 
@@ -142,8 +145,6 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       [_fileManager removeItemAtPath:_analyzerInProgressFile error:&error];
     }
     
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(invokeDelayedProcessing) name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
-    
     if (!BITHockeyBundle()) {
       NSLog(@"[HockeySDK] WARNING: %@ is missing, will send reports automatically!", BITHOCKEYSDK_BUNDLE);
     }
@@ -153,7 +154,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 
 
 - (void) dealloc {
-  [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
+  [self unregisterObservers];
   
   [_urlConnection cancel];
 }
@@ -262,6 +263,43 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   
   return uuidString;
 }
+
+- (void) registerObservers {
+  __weak typeof(self) weakSelf = self;
+  
+  if(nil == _appDidBecomeActiveObserver) {
+    _appDidBecomeActiveObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
+                                                                                    object:nil
+                                                                                     queue:NSOperationQueue.mainQueue
+                                                                                usingBlock:^(NSNotification *note) {
+                                                                                  typeof(self) strongSelf = weakSelf;
+                                                                                  [strongSelf triggerDelayedProcessing];
+                                                                                }];
+  }
+  
+  if(nil == _networkDidBecomeReachableObserver) {
+    _networkDidBecomeReachableObserver = [[NSNotificationCenter defaultCenter] addObserverForName:BITHockeyNetworkDidBecomeReachableNotification
+                                                                                           object:nil
+                                                                                            queue:NSOperationQueue.mainQueue
+                                                                                       usingBlock:^(NSNotification *note) {
+                                                                                         typeof(self) strongSelf = weakSelf;
+                                                                                         [strongSelf triggerDelayedProcessing];
+                                                                                       }];
+  }
+}
+
+- (void) unregisterObservers {
+  if(_appDidBecomeActiveObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:_appDidBecomeActiveObserver];
+    _appDidBecomeActiveObserver = nil;
+  }
+  
+  if(_networkDidBecomeReachableObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:_networkDidBecomeReachableObserver];
+    _networkDidBecomeReachableObserver = nil;
+  }
+}
+
 
 /**
  *	 Get the userID from the delegate which should be stored with the crash report
@@ -501,6 +539,11 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 
 #pragma mark - Crash Report Processing
 
+- (void)triggerDelayedProcessing {
+  [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(invokeDelayedProcessing) object:nil];
+  [self performSelector:@selector(invokeDelayedProcessing) withObject:nil afterDelay:0.5];
+}
+
 /**
  * Delayed startup processing for everything that does not to be done in the app startup runloop
  *
@@ -509,6 +552,8 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
  * - Send pending approved crash reports
  */
 - (void)invokeDelayedProcessing {
+  if ([[UIApplication sharedApplication] applicationState] != UIApplicationStateActive) return;
+  
   BITHockeyLog(@"INFO: Start delayed CrashManager processing");
   
   // was our own exception handler successfully added?
@@ -569,6 +614,8 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
  */
 - (void)startManager {
   if (_crashManagerStatus == BITCrashManagerStatusDisabled) return;
+  
+  [self registerObservers];
   
   if (!_isSetup) {
     static dispatch_once_t plcrPredicate;
@@ -641,8 +688,8 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       _isSetup = YES;
     });
   }
-
-  [self performSelector:@selector(invokeDelayedProcessing) withObject:nil afterDelay:0.5];
+  
+  [self triggerDelayedProcessing];
 }
 
 /**
