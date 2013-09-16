@@ -88,14 +88,14 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 
 
 - (void)didBecomeActiveActions {
-  if (![self isUpdateManagerDisabled]) {
-    [self checkExpiryDateReached];
-    if (![self expiryDateReached]) {
-      [self startUsage];
-      if (_checkForUpdateOnLaunch) {
-        [self checkForUpdate];
-      }
-    }
+  if ([self isUpdateManagerDisabled]) return;
+  
+  [self checkExpiryDateReached];
+  if ([self expiryDateReached]) return;
+  
+  [self startUsage];
+  if (_checkForUpdateOnLaunch) {
+    [self checkForUpdate];
   }
 }
 
@@ -639,12 +639,14 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 - (void)startManager {
   if (![self isAppStoreEnvironment]) {
     if ([self isUpdateManagerDisabled]) return;
-
+    
     BITHockeyLog(@"INFO: Starting UpdateManager");
-
+    
     [self checkExpiryDateReached];
     if (![self expiryDateReached]) {
       if ([self checkForTracker] || ([self isCheckForUpdateOnLaunch] && [self shouldCheckForUpdates])) {
+        if ([[UIApplication sharedApplication] applicationState] != UIApplicationStateActive) return;
+        
         [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0f];
       }
     }
@@ -652,6 +654,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     if ([self checkForTracker]) {
       // if we are in the app store, make sure not to send usage information in any case for now
       _sendUsageData = NO;
+
+      if ([[UIApplication sharedApplication] applicationState] != UIApplicationStateActive) return;
       
       [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0f];
     }
