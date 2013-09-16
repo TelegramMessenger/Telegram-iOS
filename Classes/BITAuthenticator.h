@@ -90,21 +90,21 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
  * Authentication is a 2 step process:
  *
  *    1. authenticate:
- *       a token is acquired depending on the authenticationType
+ *       a token is acquired depending on the `authenticationType`
  *    2. validation:
- *       the acquired token from step 1 is validated depending the validationType
+ *       the acquired token from step 1 is validated depending the `validationType`
  *
- * There are currently 3 ways of authentication:
+ * There are currently 3 ways of authentication (`BITAuthenticatorAuthType`):
  *
  *    1. authenticate the user via email only (`BITAuthenticatorAuthTypeEmail`)
  *    2. authenticate the user via email & password (`BITAuthenticatorAuthTypeEmailAndPassword`)
  *    3. authenticate the device via its UDID (_Default_) (`BITAuthenticatorAuthTypeUDIDProvider`)
  *
- * There are currently 4 ways of validation:
+ * There are currently 4 ways of validation (`BITAuthenticatorValidationType`):
  *
  *    1. never (_Default_) (`BITAuthenticatorValidationTypeNever`)
  *    2. optional (`BITAuthenticatorValidationTypeOptional`)
- *    3. on first launch of a new app version(`BITAuthenticatorValidationTypeOnFirstLaunch`)
+ *    3. on first launch of a new app version (`BITAuthenticatorValidationTypeOnFirstLaunch`)
  *    4. every time the app becomes active (needs internet connection) (`BITAuthenticatorValidationTypeOnAppActive`)
  *
  */
@@ -114,13 +114,19 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
 
 /**
  * Defines the authentication mechanism to be used
- * 
- * _Default_: BITAuthenticatorAuthTypeUDIDProvider
+ *
+ * The values are listed here: `BITAuthenticatorAuthType`
+ *
+ * _Default_: `BITAuthenticatorAuthTypeUDIDProvider`
  */
 @property (nonatomic, assign) BITAuthenticatorAuthType authenticationType;
 
 /**
- * _Default_: BITAuthenticatorValidationTypeNever
+ * Defines the validation mechanism to be used
+ *
+ * The values are listed here: `BITAuthenticatorValidationType`
+ *
+ * _Default_: `BITAuthenticatorValidationTypeNever`
  */
 @property (nonatomic, assign) BITAuthenticatorValidationType validationType;
 
