@@ -104,6 +104,7 @@ typedef NS_ENUM (NSUInteger, BITUpdateSetting) {
  invoke the update checking process yourself with `checkForUpdate` somehow, e.g. by
  proving an update check button for the user or integrating the Update View into your
  user interface.
+ @see BITUpdateSetting
  @see checkForUpdateOnLaunch
  @see checkForUpdate
  */

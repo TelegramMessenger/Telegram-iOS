@@ -124,6 +124,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  have to make sure the new value is stored in the UserDefaults with the key
  `BITCrashManagerStatus`.
  
+ @see BITCrashManagerStatus
  @see showAlwaysButton
  */
 @property (nonatomic, assign) BITCrashManagerStatus crashManagerStatus;

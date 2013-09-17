@@ -122,6 +122,8 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
  *    3. `BITAuthenticatorAuthTypeUDIDProvider`: authenticate the device via its UDID (_Default_)
  *
  * _Default_: `BITAuthenticatorAuthTypeUDIDProvider`
+ *
+ * @see BITAuthenticatorAuthType
  */
 @property (nonatomic, assign) BITAuthenticatorAuthType authenticationType;
 
@@ -136,6 +138,8 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
  *    4. `BITAuthenticatorValidationTypeOnAppActive`: every time the app becomes active (needs internet connection)
  *
  * _Default_: `BITAuthenticatorValidationTypeNever`
+ *
+ * @see BITAuthenticatorValidationType
  */
 @property (nonatomic, assign) BITAuthenticatorValidationType validationType;
 

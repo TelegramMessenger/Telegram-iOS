@@ -138,6 +138,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackUserDataElement) {
  `[BITHockeyManagerDelegate userNameForHockeyManager:componentManager:]` then this
  property will automatically be set to `BITFeedbackUserDataElementDontShow`
 
+ @see BITFeedbackUserDataElement
  @see requireUserEmail
  @see `[BITHockeyManagerDelegate userNameForHockeyManager:componentManager:]`
  */
@@ -160,6 +161,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackUserDataElement) {
  `[BITHockeyManagerDelegate userEmailForHockeyManager:componentManager:]` then this
  property will automatically be set to `BITFeedbackUserDataElementDontShow`
  
+ @see BITFeedbackUserDataElement
  @see requireUserName
  @see `[BITHockeyManagerDelegate userEmailForHockeyManager:componentManager:]`
  */

@@ -61,7 +61,10 @@ typedef NS_ENUM(NSInteger, BITStoreUpdateSetting) {
  This module automatically disables itself when **NOT** running in an App Store build by default!
  
  When an update is detected, it will open the apps page in the app store app.
-  
+ 
+ @warning This module can **NOT** check if the current device and OS version match the minimum requirements of
+ the new app version!
+ 
  */
 
 @interface BITStoreUpdateManager : BITHockeyBaseManager
@@ -80,8 +83,6 @@ typedef NS_ENUM(NSInteger, BITStoreUpdateSetting) {
 /// @name Update Checking
 ///-----------------------------------------------------------------------------
 
-// see BITHockeyStoreUpdateSetting-enum. Will be saved in user defaults.
-// default value: BITStoreUpdateCheckDaily
 /**
  When to check for new updates.
  
@@ -98,6 +99,7 @@ typedef NS_ENUM(NSInteger, BITStoreUpdateSetting) {
  invoke the update checking process yourself with `checkForUpdate` somehow, e.g. by
  proving an update check button for the user or integrating the Update View into your
  user interface.
+ @see BITStoreUpdateSetting
  @see countryCode
  @see checkForUpdateOnLaunch
  @see checkForUpdate
