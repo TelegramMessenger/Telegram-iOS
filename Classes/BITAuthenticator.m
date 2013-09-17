@@ -585,13 +585,9 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
 
 #pragma mark - Property overrides
 
+// Return value is used to invalidate the authentication on a clean install
 - (NSString *)installationIdentifier {
-  if ([self.currentDevice respondsToSelector:@selector(identifierForVendor)]) {
-    return self.currentDevice.identifierForVendor.UUIDString;
-  }
-  else {
-    return bit_appAnonID();
-  }
+  return bit_appAnonID();
 }
 
 - (void)setAuthenticationToken:(NSString *)authenticationToken withType:(NSString*) authenticationTokenType {
