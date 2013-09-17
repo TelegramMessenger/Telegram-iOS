@@ -584,6 +584,16 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
 }
 
 #pragma mark - Property overrides
+
+- (NSString *)installationIdentifier {
+  if ([self.currentDevice respondsToSelector:@selector(identifierForVendor)]) {
+    return self.currentDevice.identifierForVendor.UUIDString;
+  }
+  else {
+    return bit_appAnonID();
+  }
+}
+
 - (void)setAuthenticationToken:(NSString *)authenticationToken withType:(NSString*) authenticationTokenType {
   NSParameterAssert(nil == authenticationToken || nil != authenticationTokenType);
   if(![self.authenticationToken isEqualToString:authenticationToken] || ![self.authenticationTokenType isEqualToString:authenticationTokenType]) {
@@ -594,7 +604,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
     } else {
       [self addStringValueToKeychain:authenticationToken forKey:kBITAuthenticatorAuthTokenKey];
       [self addStringValueToKeychain:authenticationTokenType forKey:kBITAuthenticatorAuthTokenTypeKey];
-      NSString *identifierForVendor = self.currentDevice.identifierForVendor.UUIDString;
+      NSString *identifierForVendor = self.installationIdentifier;
       [self addStringValueToKeychain:identifierForVendor forKey:kBITAuthenticatorAuthTokenVendorIdentifierKey];
     }
     [self didChangeValueForKey:@"installationIdentification"];
@@ -614,7 +624,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
   }
 
   //check if this was generated on the same device we're running now
-  NSString *currentVendorUUIDString = self.currentDevice.identifierForVendor.UUIDString;
+  NSString *currentVendorUUIDString = self.installationIdentifier;
   if(![currentVendorUUIDString isEqualToString:[self stringValueFromKeychainForKey:kBITAuthenticatorAuthTokenVendorIdentifierKey]]) {
     BITHockeyLog(@"Vendor identifier mismatch for stored auth-token. Resetting.");
     [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenVendorIdentifierKey];
