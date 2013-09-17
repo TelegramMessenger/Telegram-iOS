@@ -104,7 +104,7 @@
     
     // set defaults
     self.checkForUpdateOnLaunch = YES;
-    self.updateSetting = BITStoreUpdateCheckDaily;
+    self.updateSetting = BITStoreUpdateCheckWeekly;
 
     if (!BITHockeyBundle()) {
       NSLog(@"[HockeySDK] WARNING: %@ is missing, built in UI is deactivated!", BITHOCKEYSDK_BUNDLE);

@@ -93,7 +93,7 @@ typedef NS_ENUM(NSInteger, BITStoreUpdateSetting) {
  - `BITStoreUpdateCheckWeekly`: Once a week
  - `BITStoreUpdateCheckManually`: Manually
  
- **Default**: BITStoreUpdateCheckDaily
+ **Default**: BITStoreUpdateCheckWeekly
  
  @warning When setting this to `BITStoreUpdateCheckManually` you need to either
  invoke the update checking process yourself with `checkForUpdate` somehow, e.g. by
