@@ -1,6 +1,6 @@
-## Version 3.5.0b5
+## Version 3.5.0b3
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.5.0b2/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.5.0b3/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -147,4 +147,4 @@ This documentation provides integrated help in Xcode for all public APIs and a s
 
 3. Copy the content into ~`/Library/Developer/Shared/Documentation/DocSet`
 
-The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.5.0b2/](http://hockeyapp.net/help/sdk/ios/3.5.0b2/)
+The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.5.0b3/](http://hockeyapp.net/help/sdk/ios/3.5.0b3/)

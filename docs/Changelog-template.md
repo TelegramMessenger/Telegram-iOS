@@ -1,3 +1,16 @@
+## Version 3.5.0 Beta 3
+
+- Feedback
+
+  - [BUGFIX] Fix a layout issue with the compose feedback UI on the iPad with iOS 7 in landscape orientation
+	<br /><br/>
+
+- Ad-Hoc/Enterprise Authentication
+
+  - [BUGFIX] Fix a possible crash in iOS 5
+	<br /><br/>
+
+
 ## Version 3.5.0 Beta 2
 
 - General
@@ -5,15 +18,19 @@
   - [NEW] Added support for apps starting in the background
   - [UPDATE] Added updated CocoaSpec
   - [BUGFIX] Various documentation improvements
+	<br /><br/>
 
 - Ad-Hoc/Enterprise Authentication
 
   - [BUGFIX] Fix duplicate count of installations
+	<br /><br/>
 
 - Ad-Hoc/Enterprise Updates
 
   - [BUGFIX] Update view not showing any versions
   - [BUGFIX] Fix a crash presenting the update view on iOS 5 and iOS 6
+	<br /><br/>
+
 
 ## Version 3.5.0 Beta 1
 
