@@ -106,6 +106,8 @@
 - (BOOL)updateManagerShouldSendUsageData:(BITUpdateManager *)updateManager;
 
 
+#pragma mark - Deprecated
+
 ///-----------------------------------------------------------------------------
 /// @name Update View Presentation Helper
 ///-----------------------------------------------------------------------------
@@ -118,7 +120,9 @@
  `UIViewController` that should be used to present the update user interface modal.
 
  @param updateManager The `BITUpdateManager` instance invoking this delegate
+ 
+ @deprecated Please use `BITHockeyManagerDelegate viewControllerForHockeyManager:componentManager:` instead
  */
-- (UIViewController *)viewControllerForUpdateManager:(BITUpdateManager *)updateManager;
+- (UIViewController *)viewControllerForUpdateManager:(BITUpdateManager *)updateManager DEPRECATED_ATTRIBUTE;
 
 @end
