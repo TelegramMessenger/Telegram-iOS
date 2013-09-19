@@ -26,6 +26,7 @@ The main SDK class is `BITHockeyManager`. It initializes all modules and provide
 
 - [Installation & Setup](Guide-Installation-Setup)
 - [Installation & Setup Advanced](Guide-Installation-Setup-Advanced) (Using Git submodule and Xcode sub-project)
+- [Authenticating Users on iOS](HowTo-Authenticating-Users-on-iOS)
 - [Migration from previous SDK Versions](Guide-Migration-Kits)
 - [Mac Desktop Uploader](Guide-Installation-Mac-App)
 

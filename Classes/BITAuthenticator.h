@@ -83,7 +83,8 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
  * various authentication and validation mechanisms which provide different levels of authentication.
  *
  * This does not provide DRM or copy protection in any form. Each authentication type and validation type provide
- * a different level of user authorization.
+ * a different level of user authorization. Validation is the process of checking against the HockeyApp server if
+ * the provided/existing authorization is still valid.
  *
  * This module automatically disables itself when running in an App Store build by default!
  *
@@ -106,6 +107,8 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
  *    2. optional (`BITAuthenticatorValidationTypeOptional`)
  *    3. on first launch of a new app version (`BITAuthenticatorValidationTypeOnFirstLaunch`)
  *    4. every time the app becomes active (needs internet connection) (`BITAuthenticatorValidationTypeOnAppActive`)
+ *
+ * We have created a detailed guide on how to use this class: [Authenticating Users on iOS](HowTo-Authenticating-Users-on-iOS)
  *
  */
 @interface BITAuthenticator : BITHockeyBaseManager
