@@ -101,12 +101,12 @@
  In addition, if this returns not nil for `BITFeedbackManager` the user will
  not be asked for any user details by the component, including useerName or userEmail.
  
- You can find out the component requesting the user name like this:
-    - (NSString *)userNameForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager {
+ You can find out the component requesting the userID like this:
+    - (NSString *)userIDForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager {
       if (componentManager == hockeyManager.feedbackManager) {
-        return UserNameForFeedback;
+        return UserIDForFeedback;
       } else if (componentManager == hockeyManager.crashManager) {
-        return UserNameForCrashReports;
+        return UserIDForCrashReports;
       } else {
         return nil;
       }
@@ -162,12 +162,12 @@
  In addition, if this returns not nil for `BITFeedbackManager` the user will
  not be asked for any user details by the component, including useerName or userEmail.
  
- You can find out the component requesting the user name like this:
-    - (NSString *)userNameForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager {
+ You can find out the component requesting the user email like this:
+    - (NSString *)userEmailForHockeyManager:(BITHockeyManager *)hockeyManager componentManager:(BITHockeyBaseManager *)componentManager {
       if (componentManager == hockeyManager.feedbackManager) {
-        return UserNameForFeedback;
+        return UserEmailForFeedback;
       } else if (componentManager == hockeyManager.crashManager) {
-        return UserNameForCrashReports;
+        return UserEmailForCrashReports;
        } else {
         return nil;
        }
