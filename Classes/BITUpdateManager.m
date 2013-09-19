@@ -392,7 +392,9 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 - (BITUpdateViewController *)hockeyViewController:(BOOL)modal {
   if ([self isAppStoreEnvironment]) {
     NSLog(@"[HockeySDK] This should not be called from an app store build!");
-    return nil;
+    // return an empty view controller instead
+    BITHockeyBaseViewController *blankViewController = [[BITHockeyBaseViewController alloc] initWithModalStyle:modal];
+    return (BITUpdateViewController *)blankViewController;
   }
   return [[BITUpdateViewController alloc] initWithModalStyle:modal];
 }
