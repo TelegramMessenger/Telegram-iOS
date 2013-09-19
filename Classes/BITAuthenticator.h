@@ -174,7 +174,7 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
                                                                    annotation:annotation]) {
         return YES;
       } else {
-        //do your own URL handling, return appropriate valu
+        //do your own URL handling, return appropriate value
       }
       return NO;
     }
