@@ -272,12 +272,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
   
   _authenticationController = viewController;
   _authenticationCompletionBlock = completion;
-  UIViewController *rootViewController = [self.findVisibleWindow rootViewController];
-  UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:viewController];
-  rootViewController.modalPresentationStyle = UIModalPresentationFullScreen;
-  [rootViewController presentViewController:navController
-                                   animated:YES
-                                 completion:nil];
+  [self showView:viewController];
 }
 
 - (void) didAuthenticateWithToken:(NSString*) token {
