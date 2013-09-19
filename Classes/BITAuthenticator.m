@@ -67,8 +67,6 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
   //disabled in the appStore
   if([self isAppStoreEnvironment]) return;
   
-  [self registerObservers];
-  
   switch ([[UIApplication sharedApplication] applicationState]) {
     case UIApplicationStateActive:
       [self triggerAuthentication];
@@ -78,8 +76,11 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
       // do nothing, wait for active state
       break;
   }
+
+  [self registerObservers];
 }
 
+#pragma mark -
 - (void) triggerAuthentication {
   switch (self.validationType) {
     case BITAuthenticatorValidationTypeOnAppActive:
