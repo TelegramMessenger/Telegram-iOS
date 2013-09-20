@@ -175,7 +175,7 @@ typedef NS_ENUM(NSInteger, BITAuthenticatorReason) {
    */
   BITAuthenticatorNotAuthorized,
   /**
-   *  Authorization canceleed
+   *  Authorization cancelled
    */
   BITAuthenticatorAuthenticationCancelled,
   /**
