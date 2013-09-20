@@ -227,9 +227,11 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   for (NSUInteger i=0; i < [_crashFiles count]; i++) {
     [_fileManager removeItemAtPath:[_crashFiles objectAtIndex:i] error:&error];
     [_fileManager removeItemAtPath:[[_crashFiles objectAtIndex:i] stringByAppendingString:@".meta"] error:&error];
-    [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", [_crashFiles objectAtIndex:i], kBITCrashMetaUserName]];
-    [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", [_crashFiles objectAtIndex:i], kBITCrashMetaUserEmail]];
-    [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", [_crashFiles objectAtIndex:i], kBITCrashMetaUserID]];
+    
+    NSString *cacheFilename = [[_crashFiles objectAtIndex:i] lastPathComponent];
+    [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserName]];
+    [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserEmail]];
+    [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserID]];
   }
   [_crashFiles removeAllObjects];
   [_approvedCrashReports removeAllObjects];
@@ -705,6 +707,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   
   for (NSUInteger i=0; i < [_crashFiles count]; i++) {
     NSString *filename = [_crashFiles objectAtIndex:i];
+    NSString *cacheFilename = [filename lastPathComponent];
     NSData *crashData = [NSData dataWithContentsOfFile:filename];
 		
     if ([crashData length] > 0) {
@@ -716,9 +719,9 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
         [_fileManager removeItemAtPath:filename error:&error];
         [_fileManager removeItemAtPath:[NSString stringWithFormat:@"%@.meta", filename] error:&error];
 
-        [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", filename, kBITCrashMetaUserName]];
-        [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", filename, kBITCrashMetaUserEmail]];
-        [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", filename, kBITCrashMetaUserID]];
+        [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserName]];
+        [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserEmail]];
+        [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserID]];
         continue;
       }
       
@@ -754,9 +757,9 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
                                                   format:&format
                                                   errorDescription:&errorString];
         
-        username = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", filename, kBITCrashMetaUserName]] ?: @"";
-        useremail = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", filename, kBITCrashMetaUserEmail]] ?: @"";
-        userid = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", filename, kBITCrashMetaUserID]] ?: @"";
+        username = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserName]] ?: @"";
+        useremail = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserEmail]] ?: @"";
+        userid = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserID]] ?: @"";
         applicationLog = [metaDict objectForKey:kBITCrashMetaApplicationLog] ?: @"";
       } else {
         BITHockeyLog(@"ERROR: Reading crash meta data. %@", error);
@@ -790,9 +793,9 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       [_fileManager removeItemAtPath:filename error:&error];
       [_fileManager removeItemAtPath:[NSString stringWithFormat:@"%@.meta", filename] error:&error];
       
-      [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", filename, kBITCrashMetaUserName]];
-      [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", filename, kBITCrashMetaUserEmail]];
-      [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", filename, kBITCrashMetaUserID]];
+      [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserName]];
+      [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserEmail]];
+      [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserID]];
     }
   }
 	
