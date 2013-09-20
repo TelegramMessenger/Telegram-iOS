@@ -477,18 +477,18 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
   }
   
   if(udid){
-    [self didAuthenticateWithToken:udid];
+    [self setAuthenticationToken:udid withType:[self.class stringForAuthenticationType:BITAuthenticatorAuthTypeUDIDProvider]];
+    [self validateInstallationWithCompletion:^(BOOL validated, NSError *error) {
+      if(validated) {
+        [_authenticationController dismissViewControllerAnimated:YES completion:nil];
+        _authenticationController = nil;
+      } else {
+        //TODO: show why validation failed
+      }
+    }];
   } else {
     //reset auth-token
     [self setAuthenticationToken:nil withType:nil];
-    
-    if(self.validationType == BITAuthenticatorValidationTypeOptional) {
-      //dismiss view-controller if login was optional
-      [_authenticationController dismissViewControllerAnimated:YES completion:nil];
-      _authenticationController = nil;
-    } else {
-      //keep the viewcontroller and thus block the app
-    }
   }
   return YES;
 }
