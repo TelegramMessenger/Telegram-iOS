@@ -265,6 +265,16 @@
   return [BITKeychainUtils storeUsername:key andPassword:stringValue forServiceName:serviceName updateExisting:YES error:&error];
 }
 
+- (BOOL)addStringValueToKeychainForThisDeviceOnly:(NSString *)stringValue forKey:(NSString *)key {
+	if (!key || !stringValue)
+		return NO;
+  
+  NSString *serviceName = [NSString stringWithFormat:@"%@.HockeySDK", [self mainBundleIdentifier]];
+  
+  NSError *error = nil;
+  return [BITKeychainUtils storeUsername:key andPassword:stringValue forServiceName:serviceName updateExisting:YES accessibility:kSecAttrAccessibleWhenUnlockedThisDeviceOnly error:&error];
+}
+
 - (NSString *)stringValueFromKeychainForKey:(NSString *)key {
 	if (!key)
 		return nil;

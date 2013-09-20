@@ -37,7 +37,6 @@
 
 static NSString* const kBITAuthenticatorAuthTokenKey = @"BITAuthenticatorAuthTokenKey";
 static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAuthTokenTypeKey";
-static NSString* const kBITAuthenticatorAuthTokenVendorIdentifierKey = @"BITAuthenticatorAuthTokenVendorIdentifierKey";
 static NSString* const kBITAuthenticatorLastAuthenticatedVersionKey = @"BITAuthenticatorLastAuthenticatedVersionKey";
 static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticatorDidSkipOptionalLogin";
 
@@ -541,7 +540,6 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
 - (void) cleanupInternalStorage {
   [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenKey];
   [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenTypeKey];
-  [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenVendorIdentifierKey];
   [self removeKeyFromKeychain:kBITAuthenticatorDidSkipOptionalLogin];
   [self setLastAuthenticatedVersion:nil];
 }
@@ -580,12 +578,6 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
 }
 
 #pragma mark - Property overrides
-
-// Return value is used to invalidate the authentication on a clean install
-- (NSString *)installationIdentifier {
-  return bit_appAnonID();
-}
-
 - (void)setAuthenticationToken:(NSString *)authenticationToken withType:(NSString*) authenticationTokenType {
   NSParameterAssert(nil == authenticationToken || nil != authenticationTokenType);
   if(![self.authenticationToken isEqualToString:authenticationToken] || ![self.authenticationTokenType isEqualToString:authenticationTokenType]) {
@@ -594,10 +586,8 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
       [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenKey];
       [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenTypeKey];
     } else {
-      [self addStringValueToKeychain:authenticationToken forKey:kBITAuthenticatorAuthTokenKey];
-      [self addStringValueToKeychain:authenticationTokenType forKey:kBITAuthenticatorAuthTokenTypeKey];
-      NSString *identifierForVendor = self.installationIdentifier;
-      [self addStringValueToKeychain:identifierForVendor forKey:kBITAuthenticatorAuthTokenVendorIdentifierKey];
+      [self addStringValueToKeychainForThisDeviceOnly:authenticationToken forKey:kBITAuthenticatorAuthTokenKey];
+      [self addStringValueToKeychainForThisDeviceOnly:authenticationTokenType forKey:kBITAuthenticatorAuthTokenTypeKey];
     }
     [self didChangeValueForKey:@"installationIdentification"];
   }
@@ -610,19 +600,10 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
   //check if the auth token matches the current setting
   if(![self.authenticationTokenType isEqualToString:[self.class stringForAuthenticationType:self.authenticationType]]) {
     BITHockeyLog(@"Auth type mismatch for stored auth-token. Resetting.");
-    [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenVendorIdentifierKey];
     [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenKey];
     return nil;
   }
 
-  //check if this was generated on the same device we're running now
-  NSString *currentVendorUUIDString = self.installationIdentifier;
-  if(![currentVendorUUIDString isEqualToString:[self stringValueFromKeychainForKey:kBITAuthenticatorAuthTokenVendorIdentifierKey]]) {
-    BITHockeyLog(@"Vendor identifier mismatch for stored auth-token. Resetting.");
-    [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenVendorIdentifierKey];
-    [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenKey];
-    return nil;
-  }
   return authToken;
 }
 
