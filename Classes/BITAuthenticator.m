@@ -388,15 +388,6 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
   }
   
   switch (urlResponse.statusCode) {
-    case 404:
-      if(error) {
-        *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                     code:BITAuthenticatorUnknownApplicationID
-                                 userInfo:@{
-                                            NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"HockeyAuthenticationAuthorizationError")
-                                            }];
-      }
-      break;
     case 401:
       if(error) {
         *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
@@ -407,6 +398,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
       }
       break;
     case 200:
+    case 404:
       //Do nothing, handled below
       break;
     default:
@@ -418,12 +410,11 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
       }
       break;
   }
-  if(200 != urlResponse.statusCode) {
+  if(200 != urlResponse.statusCode && 404 != urlResponse.statusCode) {
     //make sure we have an error created if user wanted to have one
     NSParameterAssert(0 == error || *error);
     return nil;
   }
-  NSAssert(urlResponse.statusCode == 200, @"Should be 200 now. Everything else should've been handled above");
   
   NSError *jsonParseError = nil;
   id jsonObject = [NSJSONSerialization JSONObjectWithData:data
@@ -451,8 +442,16 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
     authToken = jsonObject[@"iuid"];
   } else if([status isEqualToString:@"authorized"]) {
     authToken = jsonObject[@"auid"];
+  } else if([status isEqualToString:@"not authorized"]) {
+    if(error) {
+      *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
+                                   code:BITAuthenticatorNotAuthorized
+                               userInfo:@{NSLocalizedDescriptionKey: BITHockeyLocalizedString(@"HockeyAuthenticationNotMember")}];
+      
+    }
   }
-  if(nil == authToken && error) {
+  //if no error is set yet, but error parameter is given, return a generic error
+  if(nil == authToken && error && nil == *error) {
     *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                  code:BITAuthenticatorAPIServerReturnedInvalidResponse
                              userInfo:@{NSLocalizedDescriptionKey: BITHockeyLocalizedString(@"HockeyAuthenticationFailedAuthenticate")}];
