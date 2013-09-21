@@ -98,6 +98,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 - (void) testThatCleanupWorks {
   [_sut setAuthenticationToken:@"MyToken" withType:@"udid"];
   _sut.lastAuthenticatedVersion = @"1.2";
+  [_sut setDidSkipOptionalLogin:YES];
   
   [_sut cleanupInternalStorage];
   

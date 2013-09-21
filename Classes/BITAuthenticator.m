@@ -539,7 +539,7 @@ static NSString* const kBITAuthenticatorDidSkipOptionalLogin = @"BITAuthenticato
 - (void) cleanupInternalStorage {
   [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenKey];
   [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenTypeKey];
-  [self removeKeyFromKeychain:kBITAuthenticatorDidSkipOptionalLogin];
+  [[NSUserDefaults standardUserDefaults] removeObjectForKey:kBITAuthenticatorDidSkipOptionalLogin];
   [self setLastAuthenticatedVersion:nil];
 }
 
