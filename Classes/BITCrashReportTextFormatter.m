@@ -118,6 +118,11 @@ NSInteger binaryImageSort(id binary1, id binary2, void *context);
           lp64 = false;
           break;
           
+        case CPU_TYPE_ARM64:
+          codeType = @"ARM-64";
+          lp64 = true;
+          break;
+          
         case CPU_TYPE_X86:
           codeType = @"X86";
           lp64 = false;
