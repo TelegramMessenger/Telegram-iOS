@@ -79,7 +79,7 @@ typedef void(^tValidationCompletion)(BOOL validated, NSError *error);
  * Authenticator module used to identify and optionally authenticate the current app user
  *
  * This is the HockeySDK module for handling authentication when using Ad-Hoc or Enterprise provisioning profiles.
- * This module allows you to make sure the current app installation is done on an authorzied device by choosing from
+ * This module allows you to make sure the current app installation is done on an authorized device by choosing from
  * various authentication and validation mechanisms which provide different levels of authentication.
  *
  * This does not provide DRM or copy protection in any form. Each authentication type and validation type provide
