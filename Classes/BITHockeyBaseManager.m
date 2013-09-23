@@ -77,7 +77,7 @@
   return self;
 }
 
-- (id)initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironemt:(BOOL)isAppStoreEnvironment {
+- (id)initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironment:(BOOL)isAppStoreEnvironment {
   if ((self = [self init])) {
     _appIdentifier = appIdentifier;
     _isAppStoreEnvironment = isAppStoreEnvironment;
