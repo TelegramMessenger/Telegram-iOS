@@ -1,6 +1,6 @@
 //
 //  OCHamcrest - HCIsEqual.h
-//  Copyright 2012 hamcrest.org. See LICENSE.txt
+//  Copyright 2013 hamcrest.org. See LICENSE.txt
 //
 //  Created by: Jon Reid, http://qualitycoding.org/
 //  Docs: http://hamcrest.github.com/OCHamcrest/
@@ -15,8 +15,8 @@
     id object;
 }
 
-+ (id)isEqualTo:(id)anObject;
-- (id)initEqualTo:(id)anObject;
++ (instancetype)isEqualTo:(id)anObject;
+- (instancetype)initEqualTo:(id)anObject;
 
 @end
 

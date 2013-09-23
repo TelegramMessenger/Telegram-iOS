@@ -1,6 +1,6 @@
 //
 //  OCHamcrest - HCIsCollectionContainingInOrder.h
-//  Copyright 2012 hamcrest.org. See LICENSE.txt
+//  Copyright 2013 hamcrest.org. See LICENSE.txt
 //
 //  Created by: Jon Reid, http://qualitycoding.org/
 //  Docs: http://hamcrest.github.com/OCHamcrest/
@@ -15,8 +15,8 @@
     NSArray *matchers;
 }
 
-+ (id)isCollectionContainingInOrder:(NSArray *)itemMatchers;
-- (id)initWithMatchers:(NSArray *)itemMatchers;
++ (instancetype)isCollectionContainingInOrder:(NSArray *)itemMatchers;
+- (instancetype)initWithMatchers:(NSArray *)itemMatchers;
 
 @end
 

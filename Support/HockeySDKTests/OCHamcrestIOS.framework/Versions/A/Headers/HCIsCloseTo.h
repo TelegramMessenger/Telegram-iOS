@@ -1,6 +1,6 @@
 //
 //  OCHamcrest - HCIsCloseTo.h
-//  Copyright 2012 hamcrest.org. See LICENSE.txt
+//  Copyright 2013 hamcrest.org. See LICENSE.txt
 //
 //  Created by: Jon Reid, http://qualitycoding.org/
 //  Docs: http://hamcrest.github.com/OCHamcrest/
@@ -16,8 +16,8 @@
     double delta;
 }
 
-+ (id)isCloseTo:(double)aValue within:(double)aDelta;
-- (id)initWithValue:(double)aValue delta:(double)aDelta;
++ (instancetype)isCloseTo:(double)aValue within:(double)aDelta;
+- (instancetype)initWithValue:(double)aValue delta:(double)aDelta;
 
 @end
 

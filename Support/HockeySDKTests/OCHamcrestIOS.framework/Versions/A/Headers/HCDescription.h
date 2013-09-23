@@ -1,6 +1,6 @@
 //
 //  OCHamcrest - HCDescription.h
-//  Copyright 2012 hamcrest.org. See LICENSE.txt
+//  Copyright 2013 hamcrest.org. See LICENSE.txt
 //
 //  Created by: Jon Reid, http://qualitycoding.org/
 //  Docs: http://hamcrest.github.com/OCHamcrest/
@@ -17,7 +17,7 @@
 
     @ingroup core
  */
-@protocol HCDescription
+@protocol HCDescription <NSObject>
 
 /**
     Appends some plain text to the description.

@@ -1,6 +1,6 @@
 //
 //  OCHamcrest - HCConformsToProtocol.h
-//  Copyright 2012 hamcrest.org. See LICENSE.txt
+//  Copyright 2013 hamcrest.org. See LICENSE.txt
 //
 //  Created by: Todd Farrell
 //
@@ -13,14 +13,13 @@
     Protocol *theProtocol;
 }
 
-+ (id)conformsToProtocol:(Protocol *)protocol;
-- (id)initWithProtocol:(Protocol *)protocol;
++ (instancetype)conformsTo:(Protocol *)protocol;
+- (instancetype)initWithProtocol:(Protocol *)protocol;
 
 @end
 
 
 OBJC_EXPORT id<HCMatcher> HC_conformsTo(Protocol *aProtocol);
-OBJC_EXPORT id<HCMatcher> HC_conformsToProtocol(Protocol *aProtocol)    __attribute__((deprecated));
 
 /**
     conformsTo(aProtocol) -

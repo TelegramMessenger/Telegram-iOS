@@ -1,6 +1,6 @@
 //
 //  OCHamcrest - HCIsAnything.h
-//  Copyright 2012 hamcrest.org. See LICENSE.txt
+//  Copyright 2013 hamcrest.org. See LICENSE.txt
 //
 //  Created by: Jon Reid, http://qualitycoding.org/
 //  Docs: http://hamcrest.github.com/OCHamcrest/
@@ -15,11 +15,11 @@
     NSString *description;
 }
 
-+ (id)isAnything;
-+ (id)isAnythingWithDescription:(NSString *)aDescription;
++ (instancetype)isAnything;
++ (instancetype)isAnythingWithDescription:(NSString *)aDescription;
 
-- (id)init;
-- (id)initWithDescription:(NSString *)aDescription;
+- (instancetype)init;
+- (instancetype)initWithDescription:(NSString *)aDescription;
 
 @end
 

@@ -1,6 +1,6 @@
 //
 //  OCHamcrest - HCIsEqualIgnoringCase.h
-//  Copyright 2012 hamcrest.org. See LICENSE.txt
+//  Copyright 2013 hamcrest.org. See LICENSE.txt
 //
 //  Created by: Jon Reid, http://qualitycoding.org/
 //  Docs: http://hamcrest.github.com/OCHamcrest/
@@ -15,8 +15,8 @@
     NSString *string;
 }
 
-+ (id)isEqualIgnoringCase:(NSString *)aString;
-- (id)initWithString:(NSString *)aString;
++ (instancetype)isEqualIgnoringCase:(NSString *)aString;
+- (instancetype)initWithString:(NSString *)aString;
 
 @end
 

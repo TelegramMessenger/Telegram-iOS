@@ -1,6 +1,6 @@
 //
 //  OCHamcrest - HCIsCollectionContainingInAnyOrder.h
-//  Copyright 2012 hamcrest.org. See LICENSE.txt
+//  Copyright 2013 hamcrest.org. See LICENSE.txt
 //
 //  Created by: Jon Reid, http://qualitycoding.org/
 //  Docs: http://hamcrest.github.com/OCHamcrest/
@@ -12,11 +12,11 @@
 
 @interface HCIsCollectionContainingInAnyOrder : HCBaseMatcher
 {
-    NSMutableArray *matchers;
+    NSArray *matchers;
 }
 
-+ (id)isCollectionContainingInAnyOrder:(NSMutableArray *)itemMatchers;
-- (id)initWithMatchers:(NSMutableArray *)itemMatchers;
++ (instancetype)isCollectionContainingInAnyOrder:(NSArray *)itemMatchers;
+- (instancetype)initWithMatchers:(NSArray *)itemMatchers;
 
 @end
 

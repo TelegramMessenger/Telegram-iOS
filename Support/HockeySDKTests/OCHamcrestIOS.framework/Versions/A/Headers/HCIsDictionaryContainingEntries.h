@@ -1,6 +1,6 @@
 //
 //  OCHamcrest - HCIsDictionaryContainingEntries.h
-//  Copyright 2012 hamcrest.org. See LICENSE.txt
+//  Copyright 2013 hamcrest.org. See LICENSE.txt
 //
 //  Created by: Jon Reid, http://qualitycoding.org/
 //  Docs: http://hamcrest.github.com/OCHamcrest/
@@ -16,11 +16,11 @@
     NSArray *valueMatchers;
 }
 
-+ (id)isDictionaryContainingKeys:(NSArray *)theKeys
-                   valueMatchers:(NSArray *)theValueMatchers;
++ (instancetype)isDictionaryContainingKeys:(NSArray *)theKeys
+                             valueMatchers:(NSArray *)theValueMatchers;
 
-- (id)initWithKeys:(NSArray *)theKeys
-     valueMatchers:(NSArray *)theValueMatchers;
+- (instancetype)initWithKeys:(NSArray *)theKeys
+               valueMatchers:(NSArray *)theValueMatchers;
 
 @end
 

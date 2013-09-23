@@ -1,6 +1,6 @@
 //
 //  OCHamcrest - HCHasProperty.h
-//  Copyright 2012 hamcrest.org. See LICENSE.txt
+//  Copyright 2013 hamcrest.org. See LICENSE.txt
 //
 //  Created by: Justin Shacklette
 //
@@ -14,8 +14,8 @@
     id<HCMatcher> valueMatcher;
 }
 
-+ (id)hasProperty:(NSString *)property value:(id<HCMatcher>)aValueMatcher;
-- (id)initWithProperty:(NSString *)property value:(id<HCMatcher>)aValueMatcher;
++ (instancetype)hasProperty:(NSString *)property value:(id<HCMatcher>)aValueMatcher;
+- (instancetype)initWithProperty:(NSString *)property value:(id<HCMatcher>)aValueMatcher;
 
 @end
 

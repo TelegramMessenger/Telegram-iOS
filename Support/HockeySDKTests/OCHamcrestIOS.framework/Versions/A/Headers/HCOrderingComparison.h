@@ -1,6 +1,6 @@
 //
 //  OCHamcrest - HCOrderingComparison.h
-//  Copyright 2012 hamcrest.org. See LICENSE.txt
+//  Copyright 2013 hamcrest.org. See LICENSE.txt
 //
 //  Created by: Jon Reid, http://qualitycoding.org/
 //  Docs: http://hamcrest.github.com/OCHamcrest/
@@ -18,15 +18,15 @@
     NSString *comparisonDescription;
 }
 
-+ (id)compare:(id)expectedValue
-   minCompare:(NSComparisonResult)min
-   maxCompare:(NSComparisonResult)max
-   comparisonDescription:(NSString *)comparisonDescription;
++ (instancetype)compare:(id)expectedValue
+             minCompare:(NSComparisonResult)min
+             maxCompare:(NSComparisonResult)max
+  comparisonDescription:(NSString *)comparisonDescription;
 
-- (id)initComparing:(id)expectedValue
-         minCompare:(NSComparisonResult)min
-         maxCompare:(NSComparisonResult)max
-         comparisonDescription:(NSString *)comparisonDescription;
+- (instancetype)initComparing:(id)expectedValue
+                   minCompare:(NSComparisonResult)min
+                   maxCompare:(NSComparisonResult)max
+        comparisonDescription:(NSString *)comparisonDescription;
 
 @end
 

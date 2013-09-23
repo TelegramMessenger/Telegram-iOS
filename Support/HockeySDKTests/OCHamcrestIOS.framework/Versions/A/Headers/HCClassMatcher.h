@@ -1,5 +1,5 @@
 //
-//  OCHamcrest - HCSubstringMatcher.h
+//  OCHamcrest - HCClassMatcher.h
 //  Copyright 2013 hamcrest.org. See LICENSE.txt
 //
 //  Created by: Jon Reid, http://qualitycoding.org/
@@ -10,11 +10,11 @@
 #import <OCHamcrestIOS/HCBaseMatcher.h>
 
 
-@interface HCSubstringMatcher : HCBaseMatcher
+@interface HCClassMatcher : HCBaseMatcher
 {
-    NSString *substring;
+    Class theClass;
 }
 
-- (instancetype)initWithSubstring:(NSString *)aString;
+- (instancetype)initWithType:(Class)type;
 
 @end

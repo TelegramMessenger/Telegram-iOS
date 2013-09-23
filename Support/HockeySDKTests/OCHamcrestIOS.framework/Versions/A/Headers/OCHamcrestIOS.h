@@ -1,6 +1,6 @@
 //
 //  OCHamcrest - OCHamcrest.h
-//  Copyright 2012 hamcrest.org. See LICENSE.txt
+//  Copyright 2013 hamcrest.org. See LICENSE.txt
 //
 //  Created by: Jon Reid, http://qualitycoding.org/
 //  Docs: http://hamcrest.github.com/OCHamcrest/
@@ -27,6 +27,7 @@
 #import <OCHamcrestIOS/HCIsInstanceOf.h>
 #import <OCHamcrestIOS/HCIsNil.h>
 #import <OCHamcrestIOS/HCIsSame.h>
+#import <OCHamcrestIOS/HCIsTypeOf.h>
 
 /**
     @defgroup collection_matchers Collection Matchers
@@ -106,6 +107,9 @@
     @defgroup integration Unit Test Integration
  */
 #import <OCHamcrestIOS/HCAssertThat.h>
+#import <OCHamcrestIOS/HCTestFailure.h>
+#import <OCHamcrestIOS/HCTestFailureHandler.h>
+#import <OCHamcrestIOS/HCTestFailureHandlerChain.h>
 
 /**
     @defgroup integration_numeric Unit Tests of Primitive Numbers

@@ -1,6 +1,6 @@
 //
 //  OCHamcrest - HCInvocationMatcher.h
-//  Copyright 2012 hamcrest.org. See LICENSE.txt
+//  Copyright 2013 hamcrest.org. See LICENSE.txt
 //
 //  Created by: Jon Reid, http://qualitycoding.org/
 //  Docs: http://hamcrest.github.com/OCHamcrest/
@@ -42,7 +42,7 @@
 /**
     Returns an HCInvocationMatcher object initialized with an invocation and a matcher.
  */
-- (id)initWithInvocation:(NSInvocation *)anInvocation matching:(id<HCMatcher>)aMatcher;
+- (instancetype)initWithInvocation:(NSInvocation *)anInvocation matching:(id<HCMatcher>)aMatcher;
 
 /**
     Invokes stored invocation on given item and returns the result.

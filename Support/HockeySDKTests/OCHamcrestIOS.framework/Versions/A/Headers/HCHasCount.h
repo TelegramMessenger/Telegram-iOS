@@ -1,6 +1,6 @@
 //
 //  OCHamcrest - HCHasCount.h
-//  Copyright 2012 hamcrest.org. See LICENSE.txt
+//  Copyright 2013 hamcrest.org. See LICENSE.txt
 //
 //  Created by: Jon Reid, http://qualitycoding.org/
 //  Docs: http://hamcrest.github.com/OCHamcrest/
@@ -15,8 +15,8 @@
     id<HCMatcher> countMatcher;
 }
 
-+ (id)hasCount:(id<HCMatcher>)matcher;
-- (id)initWithCount:(id<HCMatcher>)matcher;
++ (instancetype)hasCount:(id<HCMatcher>)matcher;
+- (instancetype)initWithCount:(id<HCMatcher>)matcher;
 
 @end
 

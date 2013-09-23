@@ -1,6 +1,6 @@
 //
 //  OCHamcrest - HCIsEqualIgnoringWhiteSpace.h
-//  Copyright 2012 hamcrest.org. See LICENSE.txt
+//  Copyright 2013 hamcrest.org. See LICENSE.txt
 //
 //  Created by: Jon Reid, http://qualitycoding.org/
 //  Docs: http://hamcrest.github.com/OCHamcrest/
@@ -16,8 +16,8 @@
     NSString *strippedString;
 }
 
-+ (id)isEqualIgnoringWhiteSpace:(NSString *)aString;
-- (id)initWithString:(NSString *)aString;
++ (instancetype)isEqualIgnoringWhiteSpace:(NSString *)aString;
+- (instancetype)initWithString:(NSString *)aString;
 
 @end
 
