@@ -64,7 +64,7 @@
 
 @property (nonatomic, strong) NSString *installationIdentificationType;
 
-@property (nonatomic) BOOL installationIdentificationValidated;
+@property (nonatomic) BOOL installationIdentified;
 
 // if YES, the API will return an existing JMC config
 // if NO, the API will return only version information

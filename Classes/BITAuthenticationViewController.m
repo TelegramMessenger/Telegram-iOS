@@ -34,9 +34,9 @@
 
 @interface BITAuthenticationViewController ()<UITextFieldDelegate> {
   UIStatusBarStyle _statusBarStyle;
+  __weak UITextField *_emailField;
 }
 
-@property (nonatomic, copy) NSString *email;
 @property (nonatomic, copy) NSString *password;
 
 @end
@@ -48,7 +48,6 @@
   if (self) {
     self.title = BITHockeyLocalizedString(@"HockeyAuthenticatorViewControllerTitle");
     _delegate = delegate;
-    _showsSkipButton = YES;
   }
   return self;
 }
@@ -85,22 +84,8 @@
 }
 
 #pragma mark - Property overrides
-- (void)setShowsSkipButton:(BOOL)showsSkipButton {
-  if(_showsSkipButton != showsSkipButton) {
-    _showsSkipButton = showsSkipButton;
-    [self updateBarButtons];
-  }
-}
 
 - (void) updateBarButtons {
-  if(self.showsSkipButton) {
-    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:BITHockeyLocalizedString(@"Skip")
-                                                                             style:UIBarButtonItemStyleBordered
-                                                                            target:self
-                                                                            action:@selector(dismissAction:)];
-  } else {
-    self.navigationItem.leftBarButtonItem = nil;
-  }
   if(self.showsLoginViaWebButton) {
     self.navigationItem.rightBarButtonItem = nil;
   } else {
@@ -148,6 +133,13 @@
 
 - (IBAction) handleWebLoginButton:(id)sender {
   [self.delegate authenticationViewControllerDidTapWebButton:self];
+}
+
+- (void)setEmail:(NSString *)email {
+  _email = email;
+  if(self.isViewLoaded) {
+    _emailField.text = email;
+  }
 }
 #pragma mark - UIViewController Rotation
 
@@ -222,6 +214,7 @@
     if (0 == [indexPath row]) {
       textField.placeholder = BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerEmailPlaceholder");
       textField.text = self.email;
+      _emailField = textField;
       
       textField.keyboardType = UIKeyboardTypeEmailAddress;
       if ([self requirePassword])
@@ -296,10 +289,6 @@
 }
 
 #pragma mark - Actions
-- (void)dismissAction:(id)sender {
-  [self.delegate authenticationViewControllerDidSkip:self];
-}
-
 - (void)saveAction:(id)sender {
   [self setLoginUIEnabled:NO];
   

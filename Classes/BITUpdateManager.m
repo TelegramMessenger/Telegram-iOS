@@ -535,7 +535,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 - (void)checkForUpdate {
   if (![self isAppStoreEnvironment] && ![self isUpdateManagerDisabled]) {
     if ([self expiryDateReached]) return;
-    if (![self installationIdentificationValidated]) return;
+    if (![self installationIdentified]) return;
     
     if (self.isUpdateAvailable && [self hasNewerMandatoryVersion]) {
       [self showCheckForUpdateAlert];
@@ -878,12 +878,6 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   if (_blockingView != anBlockingView) {
     [_blockingView removeFromSuperview];
     _blockingView = anBlockingView;
-  }
-}
-
-- (void)setInstallationIdentificationValidated:(BOOL)installationIdentificationValidated {
-  if (installationIdentificationValidated != _installationIdentificationValidated) {
-    _installationIdentificationValidated = installationIdentificationValidated;
   }
 }
 

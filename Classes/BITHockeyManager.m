@@ -210,7 +210,7 @@
   // start Authenticator
   if (![self isAppStoreEnvironment]) {
     // hook into manager with kvo!
-    [_authenticator addObserver:self forKeyPath:@"installationIdentificationValidated" options:0 context:nil];
+    [_authenticator addObserver:self forKeyPath:@"identified" options:0 context:nil];
     
     BITHockeyLog(@"INFO: Start Authenticator");
     if (_serverURL) {
@@ -226,7 +226,7 @@
       || [[self class] isJMCPresent]
 #endif /* HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT */
       ) {
-    if ([self.authenticator installationIdentificationValidated]) {
+    if ([self.authenticator isIdentified]) {
       [self invokeStartUpdateManager];
     }
   }
@@ -283,11 +283,11 @@
 
 #if HOCKEYSDK_FEATURE_UPDATES
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
-  if ([keyPath isEqualToString:@"installationIdentificationValidated"] &&
-      [object valueForKey:@"installationIdentificationValidated"] ) {
+  if ([keyPath isEqualToString:@"identified"] &&
+      [object valueForKey:@"isIdentified"] ) {
     if ((![self isAppStoreEnvironment] && ![self isUpdateManagerDisabled])) {
-      BOOL isValidated = [(NSNumber *)[object valueForKey:@"installationIdentificationValidated"] boolValue];
-      if (isValidated) {
+      BOOL identified = [(NSNumber *)[object valueForKey:@"isIdentified"] boolValue];
+      if (identified) {
         [self invokeStartUpdateManager];
       }
     }
@@ -330,9 +330,9 @@
     [_updateManager setServerURL:_serverURL];
   }
   if (_authenticator) {
-    [_updateManager setInstallationIdentification:[self.authenticator installationIdentification]];
-    [_updateManager setInstallationIdentificationType:[self.authenticator installationIdentificationType]];
-    [_updateManager setInstallationIdentificationValidated:[self.authenticator installationIdentificationValidated]];
+    [_updateManager setInstallationIdentification:[self.authenticator installationIdentifier]];
+    [_updateManager setInstallationIdentificationType:[self.authenticator installationIdentifierTypeString]];
+    [_updateManager setInstallationIdentified:[self.authenticator isIdentified]];
   }
   [_updateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
 }

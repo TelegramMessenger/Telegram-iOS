@@ -175,10 +175,6 @@ typedef NS_ENUM(NSInteger, BITAuthenticatorReason) {
    */
   BITAuthenticatorNotAuthorized,
   /**
-   *  Authorization cancelled
-   */
-  BITAuthenticatorAuthenticationCancelled,
-  /**
    *  Unknown Application ID (configuration error)
    */
   BITAuthenticatorUnknownApplicationID,
@@ -186,6 +182,10 @@ typedef NS_ENUM(NSInteger, BITAuthenticatorReason) {
    *  Authorization secret missing
    */
   BITAuthenticatorAuthorizationSecretMissing,
+  /**
+   *  Not yet identified
+   */
+  BITAuthenticatorNotIdentified,
 };
 extern NSString *const __attribute__((unused)) kBITAuthenticatorErrorDomain;
 
