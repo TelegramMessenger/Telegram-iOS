@@ -158,6 +158,24 @@ NSString *bit_appName(NSString *placeHolderString) {
   return appName;
 }
 
+NSString *bit_UUID(void) {
+  NSString *resultUUID = nil;
+  
+  id uuidClass = NSClassFromString(@"NSUUID");
+  if (uuidClass) {
+    resultUUID = [NSUUID UUID];
+  } else {
+    // Create a new UUID
+    CFUUIDRef uuidObj = CFUUIDCreate(nil);
+    
+    // Get the string representation of the UUID
+    resultUUID = (NSString*)CFBridgingRelease(CFUUIDCreateString(nil, uuidObj));
+    CFRelease(uuidObj);
+  }
+  
+  return resultUUID;
+}
+
 NSString *bit_appAnonID(void) {
   // try iOS6 identifierForVendor
   SEL vendoridSelector = NSSelectorFromString(@"identifierForVendor");
