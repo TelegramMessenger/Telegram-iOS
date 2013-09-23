@@ -97,7 +97,7 @@
 }
 
 - (NSString *)encodedAppIdentifier {
-  return (_appIdentifier ? bit_URLEncodedString(_appIdentifier) : bit_URLEncodedString([self mainBundleIdentifier]));
+  return bit_encodeAppIdentifier(_appIdentifier);
 }
 
 - (BOOL)isPreiOS7Environment {
@@ -259,42 +259,44 @@
 	if (!key || !stringValue)
 		return NO;
   
-  NSString *serviceName = [NSString stringWithFormat:@"%@.HockeySDK", [self mainBundleIdentifier]];
-  
   NSError *error = nil;
-  return [BITKeychainUtils storeUsername:key andPassword:stringValue forServiceName:serviceName updateExisting:YES error:&error];
+  return [BITKeychainUtils storeUsername:key
+                             andPassword:stringValue
+                          forServiceName:bit_keychainHockeySDKServiceName()
+                          updateExisting:YES
+                                   error:&error];
 }
 
 - (BOOL)addStringValueToKeychainForThisDeviceOnly:(NSString *)stringValue forKey:(NSString *)key {
 	if (!key || !stringValue)
 		return NO;
   
-  NSString *serviceName = [NSString stringWithFormat:@"%@.HockeySDK", [self mainBundleIdentifier]];
-  
   NSError *error = nil;
-  return [BITKeychainUtils storeUsername:key andPassword:stringValue forServiceName:serviceName updateExisting:YES accessibility:kSecAttrAccessibleWhenUnlockedThisDeviceOnly error:&error];
+  return [BITKeychainUtils storeUsername:key
+                             andPassword:stringValue
+                          forServiceName:bit_keychainHockeySDKServiceName()
+                          updateExisting:YES
+                           accessibility:kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+                                   error:&error];
 }
 
 - (NSString *)stringValueFromKeychainForKey:(NSString *)key {
 	if (!key)
 		return nil;
   
-  NSString *serviceName = [NSString stringWithFormat:@"%@.HockeySDK", [self mainBundleIdentifier]];
-
   NSError *error = nil;
-  return [BITKeychainUtils getPasswordForUsername:key andServiceName:serviceName error:&error];
+  return [BITKeychainUtils getPasswordForUsername:key
+                                   andServiceName:bit_keychainHockeySDKServiceName()
+                                            error:&error];
 }
 
 - (BOOL)removeKeyFromKeychain:(NSString *)key {
-  NSString *serviceName = [NSString stringWithFormat:@"%@.HockeySDK", [self mainBundleIdentifier]];
-
   NSError *error = nil;
-  return [BITKeychainUtils deleteItemForUsername:key andServiceName:serviceName error:&error];
+  return [BITKeychainUtils deleteItemForUsername:key
+                                  andServiceName:bit_keychainHockeySDKServiceName()
+                                           error:&error];
 }
 
-- (NSString*) mainBundleIdentifier {
-  return [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"];
-}
 
 #pragma mark - Manager Control
 

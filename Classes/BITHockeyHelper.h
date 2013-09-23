@@ -34,7 +34,10 @@ NSString *bit_URLEncodedString(NSString *inputString);
 NSString *bit_URLDecodedString(NSString *inputString);
 NSString *bit_base64String(NSData * data, unsigned long length);
 
+NSString *bit_keychainHockeySDKServiceName(void);
+
 NSComparisonResult bit_versionCompare(NSString *stringA, NSString *stringB);
+NSString *bit_mainBundleIdentifier(void);
 NSString *bit_encodeAppIdentifier(NSString *inputString);
 NSString *bit_appName(NSString *placeHolderString);
 NSString *bit_appAnonID(void);

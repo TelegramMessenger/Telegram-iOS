@@ -113,6 +113,11 @@ NSString *bit_base64String(NSData * data, unsigned long length) {
   return result;
 }
 
+NSString *bit_keychainHockeySDKServiceName(void) {
+  NSString *serviceName = [NSString stringWithFormat:@"%@.HockeySDK", bit_mainBundleIdentifier()];
+  return serviceName;
+}
+
 NSComparisonResult bit_versionCompare(NSString *stringA, NSString *stringB) {
   // Extract plain version number from self
   NSString *plainSelf = stringA;
@@ -137,8 +142,12 @@ NSComparisonResult bit_versionCompare(NSString *stringA, NSString *stringB) {
   return result;
 }
 
+NSString *bit_mainBundleIdentifier(void) {
+  return [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"];
+}
+
 NSString *bit_encodeAppIdentifier(NSString *inputString) {
-  return (inputString ? bit_URLEncodedString(inputString) : bit_URLEncodedString([[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"]));
+  return (inputString ? bit_URLEncodedString(inputString) : bit_URLEncodedString(bit_mainBundleIdentifier()));
 }
 
 NSString *bit_appName(NSString *placeHolderString) {
