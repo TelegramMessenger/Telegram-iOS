@@ -1038,6 +1038,7 @@
 					"$(inherited)",
 					"\"$(SRCROOT)/HockeySDKTests\"",
 				);
+				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = octest;
 			};
@@ -1069,6 +1070,7 @@
 					"$(inherited)",
 					"\"$(SRCROOT)/HockeySDKTests\"",
 				);
+				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VALIDATE_PRODUCT = YES;
 				WRAPPER_EXTENSION = octest;
@@ -1182,6 +1184,7 @@
 					"$(inherited)",
 					"\"$(SRCROOT)/HockeySDKTests\"",
 				);
+				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = octest;
 			};
