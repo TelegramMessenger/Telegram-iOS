@@ -85,6 +85,7 @@
   NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
   [given([mockUserDefaults objectForKey:@"BITStoreUpdateDateOfLastCheck"]) willReturn:[NSDate dateWithTimeIntervalSinceNow:-(60*60*24)]];
   _storeUpdateManager.userDefaults = mockUserDefaults;
+  _storeUpdateManager.updateSetting = BITStoreUpdateCheckDaily;
   
   [self startManager];
   
