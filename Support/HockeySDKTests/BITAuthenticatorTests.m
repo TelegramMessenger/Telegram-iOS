@@ -55,7 +55,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 - (void)setUp {
   [super setUp];
   
-  _sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil isAppStoreEnvironemt:NO];
+  _sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil isAppStoreEnvironment:NO];
   _sut.authenticationType = BITAuthenticatorAuthTypeEmailAndPassword;
 }
 
@@ -90,13 +90,13 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 #pragma mark - Persistence Tests
 - (void) testThatAuthenticationTokenIsPersisted {
   [_sut setAuthenticationToken:@"SuperToken" withType:@"udid"];
-  _sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil isAppStoreEnvironemt:YES];
+  _sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil isAppStoreEnvironment:YES];
   assertThat(_sut.authenticationToken, equalTo(@"SuperToken"));
 }
 
 - (void) testThatLastAuthenticatedVersionIsPersisted {
   _sut.lastAuthenticatedVersion = @"1.2.1";
-  _sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil isAppStoreEnvironemt:YES];
+  _sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil isAppStoreEnvironment:YES];
   assertThat(_sut.lastAuthenticatedVersion, equalTo(@"1.2.1"));
 }
 
@@ -115,10 +115,10 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 
 - (void) testThatSkipLoginIsPersisted {
   [_sut setDidSkipOptionalLogin:YES];
-  _sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil isAppStoreEnvironemt:YES];
+  _sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil isAppStoreEnvironment:YES];
   assertThatBool(_sut.didSkipOptionalLogin, equalToBool(YES));
   [_sut setDidSkipOptionalLogin:NO];
-  _sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil isAppStoreEnvironemt:YES];
+  _sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil isAppStoreEnvironment:YES];
   assertThatBool(_sut.didSkipOptionalLogin, equalToBool(NO));
 }
 

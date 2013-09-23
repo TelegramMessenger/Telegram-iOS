@@ -16,7 +16,7 @@
 
 @property (nonatomic, strong) NSString *appIdentifier;
 
-- (id)initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironemt:(BOOL)isAppStoreEnvironment;
+- (id)initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironment:(BOOL)isAppStoreEnvironment;
 
 - (void)startManager;
 
