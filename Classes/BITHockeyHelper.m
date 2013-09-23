@@ -164,7 +164,7 @@ NSString *bit_UUID(void) {
   
   id uuidClass = NSClassFromString(@"NSUUID");
   if (uuidClass) {
-    resultUUID = [NSUUID UUID];
+    resultUUID = [[NSUUID UUID] UUIDString];
   } else {
     // Create a new UUID
     CFUUIDRef uuidObj = CFUUIDCreate(nil);
