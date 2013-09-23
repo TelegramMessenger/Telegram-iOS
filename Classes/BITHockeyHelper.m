@@ -28,6 +28,7 @@
 
 
 #import "BITHockeyHelper.h"
+#import "BITKeychainUtils.h"
 #import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
 #import <QuartzCore/QuartzCore.h>
@@ -177,23 +178,57 @@ NSString *bit_UUID(void) {
 }
 
 NSString *bit_appAnonID(void) {
-  // try iOS6 identifierForVendor
-  SEL vendoridSelector = NSSelectorFromString(@"identifierForVendor");
-  if ([[UIDevice currentDevice] respondsToSelector:vendoridSelector]) {
+  static NSString *appAnonID = nil;
+  static dispatch_once_t predAppAnonID;
+  
+  dispatch_once(&predAppAnonID, ^{
+    // first check if we already have an install string in the keychain
+    NSString *appAnonIDKey = @"appAnonID";
+    
+    NSError *error = nil;
+    appAnonID = [BITKeychainUtils getPasswordForUsername:appAnonIDKey andServiceName:bit_keychainHockeySDKServiceName() error:&error];
+    
+    if (!appAnonID) {
+      // try iOS6 identifierForVendor
+      SEL vendoridSelector = NSSelectorFromString(@"identifierForVendor");
+      if ([[UIDevice currentDevice] respondsToSelector:vendoridSelector]) {
 # pragma clang diagnostic push
 # pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-    return [[[UIDevice currentDevice] performSelector:vendoridSelector] performSelector:NSSelectorFromString(@"UUIDString")];
+        appAnonID = [[[UIDevice currentDevice] performSelector:vendoridSelector] performSelector:NSSelectorFromString(@"UUIDString")];
 # pragma clang diagnostic pop
-  }
+      }
+    }
+    
+    if (!appAnonID) {
+      // use app bundle path
+      NSArray *pathComponents = [[[NSBundle mainBundle] bundlePath] pathComponents];
+      
+      if ([pathComponents count] > 1) {
+        appAnonID = [pathComponents objectAtIndex:(pathComponents.count - 2)];
+      }
+      
+      // make sure we don't have a generic user string which seems to happen sometimes
+      if ([[appAnonID lowercaseString] isEqualToString:@"user"])
+        appAnonID = nil;
+    }
+    
+    // we still don't have a UUID, so generate our own. but this is now dynamic every time the app starts fresh!
+    if (!appAnonID) {
+      appAnonID = bit_UUID();
+    }
+    
+    // store this UUID in the keychain (on this device only) so we can be sure to always have the same ID upon app startups
+    if (appAnonID) {
+      [BITKeychainUtils storeUsername:appAnonIDKey
+                          andPassword:appAnonID
+                       forServiceName:bit_keychainHockeySDKServiceName()
+                       updateExisting:YES
+                        accessibility:kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+                                error:&error];
+    }
+  });
   
-  // use app bundle path
-  NSArray *pathComponents = [[[NSBundle mainBundle] bundlePath] pathComponents];
-  
-  if ([pathComponents count] > 1) {
-    return [pathComponents objectAtIndex:(pathComponents.count - 2)];
-  }
-  
-  return nil;
+  return appAnonID;
 }
 
 
