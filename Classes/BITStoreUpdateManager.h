@@ -58,9 +58,13 @@ typedef NS_ENUM(NSInteger, BITStoreUpdateSetting) {
  By default the module uses the current users locale to define the app store to check for updates. You
  can modify this using the `countryCode` property. See the property documentation for details on its usage.
  
- This module automatically disables itself when **NOT** running in an App Store build by default!
- 
- When an update is detected, it will open the apps page in the app store app.
+ When an update is detected, this module will show an alert asking the user if he/she wants to update or
+ ignore this version. If update was chosen, it will open the apps page in the app store app.
+
+ You need to enable this module using `[BITHockeyManager enableStoreUpdateManager]` if you want to use this
+ feature. By default this module is disabled!
+  
+ When this module is enabled and **NOT** running in an App Store build/environment, it won't do any checks!
  
  @warning This module can **NOT** check if the current device and OS version match the minimum requirements of
  the new app version!
