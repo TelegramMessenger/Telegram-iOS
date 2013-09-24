@@ -895,6 +895,18 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   }
 }
 
+- (void)setInstallationIdentificationType:(NSString *)installationIdentificationType {
+  if (![_installationIdentificationType isEqualToString:installationIdentificationType]) {
+    // we already use "uuid" in our requests for providing the binary UUID to the server
+    // so we need to stick to "udid" even when BITAuthenticator is providing a plain uuid
+    if ([installationIdentificationType isEqualToString:@"uuid"]) {
+      _installationIdentificationType = @"udid";
+    } else {
+      _installationIdentificationType = installationIdentificationType;
+    }
+  }
+}
+
 - (void)setInstallationIdentification:(NSString *)installationIdentification {
   if (![_installationIdentification isEqualToString:installationIdentification]) {
     if (installationIdentification) {
