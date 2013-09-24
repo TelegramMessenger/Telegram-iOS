@@ -605,6 +605,7 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
     success = [self addStringValueToKeychainForThisDeviceOnly:[self.class stringForIdentificationType:type]
                                                        forKey:kBITAuthenticatorIdentifierTypeKey];
     NSParameterAssert(success);
+#pragma unused(success)
   }
 }
 
