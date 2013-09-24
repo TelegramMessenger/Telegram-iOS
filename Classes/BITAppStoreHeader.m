@@ -40,6 +40,7 @@
 #define kWhiteBackgroundColorOS7  BIT_RGBCOLOR(255, 255, 255)
 #define kImageHeight 72
 #define kImageBorderRadius 12
+#define kImageBorderRadiusiOS7 13.5
 #define kImageLeftMargin 14
 #define kImageTopMargin 12
 #define kTextRow kImageTopMargin*2 + kImageHeight
@@ -147,6 +148,9 @@
     
     // scale, make borders and reflection
     _iconImage = bit_imageToFitSize(anIconImage, CGSizeMake(kImageHeight, kImageHeight), YES);
+    CGFloat radius = kImageBorderRadius;
+    if (self.style == BITAppStoreHeaderStyleOS7)
+      radius = kImageBorderRadiusiOS7;
     _iconImage = bit_roundedCornerImage(_iconImage, kImageBorderRadius, 0.0);
     
     [self setNeedsDisplay];
