@@ -92,6 +92,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   if ([self isUpdateManagerDisabled]) return;
   if (!_didEnterBackgroundState) return;
   
+  _didEnterBackgroundState = NO;
+  
   [self checkExpiryDateReached];
   if ([self expiryDateReached]) return;
   

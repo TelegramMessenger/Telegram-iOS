@@ -120,6 +120,8 @@
   if ([self isFeedbackManagerDisabled]) return;
   if (!_didEnterBackgroundState) return;
   
+  _didEnterBackgroundState = NO;
+  
   if ([_feedbackList count] == 0) {
     [self loadMessages];
   } else {
