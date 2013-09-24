@@ -119,6 +119,10 @@
     tableViewContentHeight += [self tableView:self.tableView heightForRowAtIndexPath:[NSIndexPath indexPathForRow:i inSection:0]];
   }
   tableViewContentHeight += self.tableView.tableHeaderView.frame.size.height;
+  if (![self.updateManager isPreiOS7Environment]) {
+    tableViewContentHeight += self.navigationController.navigationBar.frame.size.height;
+    tableViewContentHeight += [UIApplication sharedApplication].statusBarFrame.size.height;
+  }
   
   NSUInteger footerViewSize = kMinPreviousVersionButtonHeight;
   NSUInteger frameHeight = self.view.frame.size.height;
@@ -206,7 +210,11 @@
     if ([appVersion.notes length] > 0) {
       cell.webViewContent = [NSString stringWithFormat:@"<p><b>%@</b>%@<br/><small>%@</small></p><p>%@</p>", [appVersion versionString], installed, dateAndSizeString, appVersion.notes];
     } else {
-      cell.webViewContent = [NSString stringWithFormat:@"<div style=\"min-height:200px;vertical-align:middle;text-align:center;\">%@</div>", BITHockeyLocalizedString(@"UpdateNoReleaseNotesAvailable")];
+      if ([self.updateManager isPreiOS7Environment]) {
+        cell.webViewContent = [NSString stringWithFormat:@"<div style=\"min-height:200px;vertical-align:middle;text-align:center;\">%@</div>", BITHockeyLocalizedString(@"UpdateNoReleaseNotesAvailable")];
+      } else {
+        cell.webViewContent = [NSString stringWithFormat:@"<div style=\"min-height:130px;vertical-align:middle;text-align:center;\">%@</div>", BITHockeyLocalizedString(@"UpdateNoReleaseNotesAvailable")];
+      }
     }
   } else {
     cell.webViewContent = [NSString stringWithFormat:@"<p><b>%@</b>%@<br/><small>%@</small></p><p>%@</p>", [appVersion versionString], installed, dateAndSizeString, [appVersion notesOrEmptyString]];
