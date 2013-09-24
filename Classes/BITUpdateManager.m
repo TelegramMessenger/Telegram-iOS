@@ -902,6 +902,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     } else {
       [self removeKeyFromKeychain:kBITUpdateInstallationIdentification];
     }
+    _installationIdentification = installationIdentification;
     
     // we need to reset the usage time, because the user/device may have changed
     [self storeUsageTimeForCurrentVersion:[NSNumber numberWithDouble:0]];
