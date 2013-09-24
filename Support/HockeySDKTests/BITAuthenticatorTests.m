@@ -316,6 +316,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 - (void) testThatValidationTriggersOnNewVersion {
   _sut.restrictApplicationUsage = YES;
   _sut.restrictionEnforcementFrequency = BITAuthenticatorAppRestrictionEnforcementOnFirstLaunch;
+  _sut.identificationType = BITAuthenticatorIdentificationTypeDevice;
   _sut.validated = YES;
   _sut.lastAuthenticatedVersion = @"111xxx";
   assertThatBool(_sut.needsValidation, equalToBool(YES));

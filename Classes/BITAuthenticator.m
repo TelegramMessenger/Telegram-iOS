@@ -129,14 +129,11 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
   if(NO == self.restrictApplicationUsage) {
     return NO;
   }
-  if(YES == self.isValidated) {
-    return NO;
-  }
   if(self.restrictionEnforcementFrequency == BITAuthenticatorAppRestrictionEnforcementOnFirstLaunch &&
      ![self.executableUUID isEqualToString:self.lastAuthenticatedVersion]) {
     return YES;
   }
-  if(self.restrictionEnforcementFrequency == BITAuthenticatorAppRestrictionEnforcementOnAppActive) {
+  if(NO == self.isValidated && self.restrictionEnforcementFrequency == BITAuthenticatorAppRestrictionEnforcementOnAppActive) {
     return YES;
   }
   return NO;
