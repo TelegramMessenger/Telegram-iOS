@@ -495,6 +495,26 @@
 			path = Fixtures;
 			sourceTree = "<group>";
 		};
+		1EFF03DB17F2212E00A5F13C /* Authenticator */ = {
+			isa = PBXGroup;
+			children = (
+				1EFF03DC17F2214700A5F13C /* Private */,
+				E48A3DEA17B3ED1C00924C3D /* BITAuthenticator.h */,
+				E48A3DEB17B3ED1C00924C3D /* BITAuthenticator.m */,
+			);
+			name = Authenticator;
+			sourceTree = "<group>";
+		};
+		1EFF03DC17F2214700A5F13C /* Private */ = {
+			isa = PBXGroup;
+			children = (
+				E48A3DF117B408F400924C3D /* BITAuthenticator_Private.h */,
+				E4B4DB7B17B435550099C67F /* BITAuthenticationViewController.h */,
+				E4B4DB7C17B435550099C67F /* BITAuthenticationViewController.m */,
+			);
+			name = Private;
+			sourceTree = "<group>";
+		};
 		E400560F148D79B500EB22B9 = {
 			isa = PBXGroup;
 			children = (
@@ -546,6 +566,7 @@
 			children = (
 				E48A3DE917B3ECF900924C3D /* Network */,
 				1E754E441621F95E0070AB92 /* Helper */,
+				1EFF03DB17F2212E00A5F13C /* Authenticator */,
 				1E754E551621FBAF0070AB92 /* CrashReports */,
 				1E754E461621FA9A0070AB92 /* Feedback */,
 				1E754E471621FAD00070AB92 /* Update */,
@@ -573,8 +594,6 @@
 			isa = PBXGroup;
 			children = (
 				E48A3DF017B408D800924C3D /* private */,
-				E48A3DEA17B3ED1C00924C3D /* BITAuthenticator.h */,
-				E48A3DEB17B3ED1C00924C3D /* BITAuthenticator.m */,
 				E40E0B0A17DA1AFF005E38C1 /* BITHockeyAppClient.h */,
 				E40E0B0B17DA1AFF005E38C1 /* BITHockeyAppClient.m */,
 			);
@@ -584,9 +603,6 @@
 		E48A3DF017B408D800924C3D /* private */ = {
 			isa = PBXGroup;
 			children = (
-				E48A3DF117B408F400924C3D /* BITAuthenticator_Private.h */,
-				E4B4DB7B17B435550099C67F /* BITAuthenticationViewController.h */,
-				E4B4DB7C17B435550099C67F /* BITAuthenticationViewController.m */,
 				E4933E7E17B66CDA00B11ACC /* BITHTTPOperation.h */,
 				E4933E7F17B66CDA00B11ACC /* BITHTTPOperation.m */,
 			);
