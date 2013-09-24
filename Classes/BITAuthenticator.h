@@ -131,6 +131,13 @@ typedef NS_ENUM(NSUInteger, BITAuthenticatorAppRestrictionEnforcementFrequency) 
 @property (nonatomic, strong) NSURL *webpageURL;
 
 /**
+ * url-scheme used to do idenfify via `BITAuthenticatorAuthTypeUDIDProvider`
+ *
+ * If set to nil, the default scheme is used which is ha<APP_ID>.
+ */
+@property (nonatomic, strong) NSString *urlScheme;
+
+/**
  Should be used by the app-delegate to forward handle application:openURL:sourceApplication:annotation: calls
  
  Sample usage (in AppDelegate):

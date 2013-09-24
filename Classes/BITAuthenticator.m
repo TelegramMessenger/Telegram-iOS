@@ -521,7 +521,7 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
 }
 
 - (NSString *) UDIDFromOpenURL:(NSURL *) url annotation:(id) annotation isValidURL:(BOOL*) isValid{
-  NSString *urlScheme = [NSString stringWithFormat:@"ha%@", self.appIdentifier];
+  NSString *urlScheme = _urlScheme ? : [NSString stringWithFormat:@"ha%@", self.appIdentifier];
   if([[url scheme] isEqualToString:urlScheme]) {
     if(isValid) {
       *isValid = YES;
