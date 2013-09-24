@@ -60,7 +60,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   BOOL _sendUsageData;
   
   BOOL _didSetupDidBecomeActiveNotifications;
-
+  BOOL _didEnterBackgroundState;
+  
   BOOL _firstStartAfterInstall;
   
   NSNumber *_versionID;
@@ -89,6 +90,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 
 - (void)didBecomeActiveActions {
   if ([self isUpdateManagerDisabled]) return;
+  if (!_didEnterBackgroundState) return;
   
   [self checkExpiryDateReached];
   if ([self expiryDateReached]) return;
@@ -99,9 +101,18 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   }
 }
 
+- (void)didEnterBackgroundActions {
+  _didEnterBackgroundState = NO;
+  
+  if ([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground) {
+    _didEnterBackgroundState = YES;
+  }
+}
+
 - (void)setupDidBecomeActiveNotifications {
   if (!_didSetupDidBecomeActiveNotifications) {
     NSNotificationCenter *dnc = [NSNotificationCenter defaultCenter];
+    [dnc addObserver:self selector:@selector(didEnterBackgroundActions) name:UIApplicationDidEnterBackgroundNotification object:nil];
     [dnc addObserver:self selector:@selector(didBecomeActiveActions) name:UIApplicationDidBecomeActiveNotification object:nil];
     [dnc addObserver:self selector:@selector(didBecomeActiveActions) name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
     _installationIdentification = [self stringValueFromKeychainForKey:kBITUpdateInstallationIdentification];
@@ -112,6 +123,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 - (void)cleanupDidBecomeActiveNotifications {
   [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
   [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
+  [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidEnterBackgroundNotification object:nil];
 }
 
 
