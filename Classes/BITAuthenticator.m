@@ -479,9 +479,15 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
   return authToken;
 }
 
+- (NSURL *)deviceAuthenticationURL {
+  return [self.webpageURL URLByAppendingPathComponent:[NSString stringWithFormat:@"apps/%@/authorize", self.encodedAppIdentifier]];
+}
+
 - (void)authenticationViewControllerDidTapWebButton:(UIViewController *)viewController {
-  NSURL *hockeyWebbasedLoginURL = [self.webpageURL URLByAppendingPathComponent:[NSString stringWithFormat:@"apps/%@/authorize", self.encodedAppIdentifier]];
-  [[UIApplication sharedApplication] openURL:hockeyWebbasedLoginURL];
+  NSURL *url = [self deviceAuthenticationURL];
+  if(url) {
+    [[UIApplication sharedApplication] openURL:url];
+  }
 }
 
 - (BOOL) handleOpenURL:(NSURL *) url

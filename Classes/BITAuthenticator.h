@@ -221,6 +221,12 @@ typedef NS_ENUM(NSUInteger, BITAuthenticatorAppRestrictionEnforcementFrequency) 
 @property (nonatomic, strong) NSURL *webpageURL;
 
 /**
+ * URL to query the device's id via external webpage
+ * Built with the baseURL set in `webpageURL`.
+ */
+- (NSURL*) deviceAuthenticationURL;
+
+/**
  * The url-scheme used to idenfify via `BITAuthenticatorIdentificationTypeDevice`
  *
  * Please make sure that the URL scheme is unique and not shared with other apps.
