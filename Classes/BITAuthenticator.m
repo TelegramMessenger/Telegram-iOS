@@ -666,7 +666,10 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
 }
 
 - (void)applicationWillResignActive:(NSNotification *)note {
-  if(BITAuthenticatorAppRestrictionEnforcementOnAppActive == self.restrictionEnforcementFrequency) {
+  //only reset if app is really going into the background, e.g not when pulling down
+  //the notification center
+  if(BITAuthenticatorAppRestrictionEnforcementOnAppActive == self.restrictionEnforcementFrequency &&
+     [[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground) {
     self.validated = NO;
   }
 }
