@@ -151,7 +151,7 @@
     CGFloat radius = kImageBorderRadius;
     if (self.style == BITAppStoreHeaderStyleOS7)
       radius = kImageBorderRadiusiOS7;
-    _iconImage = bit_roundedCornerImage(_iconImage, kImageBorderRadius, 0.0);
+    _iconImage = bit_roundedCornerImage(_iconImage, radius, 0.0);
     
     [self setNeedsDisplay];
   }
