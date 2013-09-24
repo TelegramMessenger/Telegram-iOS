@@ -64,7 +64,7 @@
 
 - App Store Updates
 
-  - [NEW] Inform user when a new version is available in the App Store
+  - [NEW] Inform user when a new version is available in the App Store (optional, disabled by default)
 	<br /><br/>
 
 - Ad-Hoc/Enterprise Updates and Authentication
