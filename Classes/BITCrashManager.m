@@ -41,6 +41,7 @@
 
 #import "BITHockeyManagerPrivate.h"
 #import "BITHockeyBaseManagerPrivate.h"
+#import "BITCrashManagerPrivate.h"
 #import "BITCrashReportTextFormatter.h"
 
 #include <sys/sysctl.h>
@@ -311,6 +312,17 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 - (NSString *)userIDForCrashReport {
   NSString *userID = @"";
   
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
+  // if we have an identification from BITAuthenticator, use this as a default.
+  if ((
+       self.installationIdentificationType == BITAuthenticatorIdentificationTypeAnonymous ||
+       self.installationIdentificationType == BITAuthenticatorIdentificationTypeDevice
+       ) &&
+      self.installationIdentification) {
+    userID = self.installationIdentification;
+  }
+#endif
+  
   if ([BITHockeyManager sharedHockeyManager].delegate &&
       [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
     userID = [[BITHockeyManager sharedHockeyManager].delegate
@@ -349,7 +361,18 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
  */
 - (NSString *)userEmailForCrashReport {
   NSString *useremail = @"";
-
+  
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
+  // if we have an identification from BITAuthenticator, use this as a default.
+  if ((
+       self.installationIdentificationType == BITAuthenticatorIdentificationTypeHockeyAppEmail ||
+       self.installationIdentificationType == BITAuthenticatorIdentificationTypeHockeyAppUser
+       ) &&
+      self.installationIdentification) {
+    useremail = self.installationIdentification;
+  }
+#endif
+  
   if (self.delegate && [self.delegate respondsToSelector:@selector(userEmailForCrashManager:)]) {
     useremail = [self.delegate userEmailForCrashManager:self] ?: @"";
   }
@@ -769,6 +792,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
         description = [NSString stringWithFormat:@"%@", applicationLog];
       }
       
+      NSLog(@"%@", userid);
       [crashes appendFormat:@"<crash><applicationname>%s</applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><username>%@</username><contact>%@</contact><installstring>%@</installstring><description><![CDATA[%@]]></description></crash>",
        [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleExecutable"] UTF8String],
        [self extractAppUUIDs:report],

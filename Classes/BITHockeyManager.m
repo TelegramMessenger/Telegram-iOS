@@ -33,6 +33,10 @@
 #import "BITHockeyManagerPrivate.h"
 #import "BITHockeyBaseManagerPrivate.h"
 
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER
+#import "BITCrashManagerPrivate.h"
+#endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */
+
 #if HOCKEYSDK_FEATURE_UPDATES
 #import "BITUpdateManagerPrivate.h"
 #endif /* HOCKEYSDK_FEATURE_UPDATES */
@@ -181,6 +185,15 @@
     if (_serverURL) {
       [_crashManager setServerURL:_serverURL];
     }
+    
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
+    if (_authenticator) {
+      [_crashManager setInstallationIdentification:[self.authenticator publicInstallationIdentifier]];
+      [_crashManager setInstallationIdentificationType:[self.authenticator identificationType]];
+      [_crashManager setInstallationIdentified:[self.authenticator isIdentified]];
+    }
+#endif
+
     [_crashManager startManager];
   }
 #endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */
@@ -207,6 +220,7 @@
   }
 #endif /* HOCKEYSDK_FEATURE_FEEDBACK */
   
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
   // start Authenticator
   if (![self isAppStoreEnvironment]) {
     // hook into manager with kvo!
@@ -218,6 +232,7 @@
     }
     [_authenticator performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
   }
+#endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
   
 #if HOCKEYSDK_FEATURE_UPDATES
   // Setup UpdateManager
@@ -285,10 +300,14 @@
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
   if ([keyPath isEqualToString:@"identified"] &&
       [object valueForKey:@"isIdentified"] ) {
-    if ((![self isAppStoreEnvironment] && ![self isUpdateManagerDisabled])) {
+    if (![self isAppStoreEnvironment]) {
       BOOL identified = [(NSNumber *)[object valueForKey:@"isIdentified"] boolValue];
       if (identified) {
-        [self invokeStartUpdateManager];
+#if HOCKEYSDK_FEATURE_UPDATES
+        if (![self isUpdateManagerDisabled]) {
+          [self invokeStartUpdateManager];
+        }
+#endif
       }
     }
 #if HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT
@@ -329,11 +348,13 @@
   if (_serverURL) {
     [_updateManager setServerURL:_serverURL];
   }
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
   if (_authenticator) {
     [_updateManager setInstallationIdentification:[self.authenticator installationIdentifier]];
     [_updateManager setInstallationIdentificationType:[self.authenticator installationIdentifierTypeString]];
     [_updateManager setInstallationIdentified:[self.authenticator isIdentified]];
   }
+#endif
   [_updateManager performSelector:@selector(startManager) withObject:nil afterDelay:0.5f];
 }
 #endif /* HOCKEYSDK_FEATURE_UPDATES */
