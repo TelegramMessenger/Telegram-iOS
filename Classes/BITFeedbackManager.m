@@ -60,6 +60,7 @@
   
   BOOL _incomingMessagesAlertShowing;
   BOOL _didSetupDidBecomeActiveNotifications;
+  BOOL _didEnterBackgroundState;
   BOOL _networkRequestInProgress;
 }
 
@@ -75,7 +76,7 @@
     _requireUserEmail = BITFeedbackUserDataElementOptional;
     _showAlertOnIncomingMessages = YES;
     _showFirstRequiredPresentationModal = YES;
-    
+
     _disableFeedbackManager = NO;
     _didSetupDidBecomeActiveNotifications = NO;
     _networkRequestInProgress = NO;
@@ -117,7 +118,8 @@
 
 - (void)didBecomeActiveActions {
   if ([self isFeedbackManagerDisabled]) return;
-
+  if (!_didEnterBackgroundState) return;
+  
   if ([_feedbackList count] == 0) {
     [self loadMessages];
   } else {
@@ -126,9 +128,18 @@
   [self updateMessagesList];
 }
 
+- (void)didEnterBackgroundActions {
+  _didEnterBackgroundState = NO;
+  
+  if ([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground) {
+    _didEnterBackgroundState = YES;
+  }
+}
+
 - (void)setupDidBecomeActiveNotifications {
   if (!_didSetupDidBecomeActiveNotifications) {
     NSNotificationCenter *dnc = [NSNotificationCenter defaultCenter];
+    [dnc addObserver:self selector:@selector(didEnterBackgroundActions) name:UIApplicationDidEnterBackgroundNotification object:nil];
     [dnc addObserver:self selector:@selector(didBecomeActiveActions) name:UIApplicationDidBecomeActiveNotification object:nil];
     [dnc addObserver:self selector:@selector(didBecomeActiveActions) name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
     _didSetupDidBecomeActiveNotifications = YES;
@@ -198,6 +209,9 @@
   // we are already delayed, so the notification already came in and this won't invoked twice
   switch ([[UIApplication sharedApplication] applicationState]) {
     case UIApplicationStateActive:
+      // we did startup, so yes we are coming from background
+      _didEnterBackgroundState = YES;
+      
       [self didBecomeActiveActions];
       break;
     case UIApplicationStateBackground:
