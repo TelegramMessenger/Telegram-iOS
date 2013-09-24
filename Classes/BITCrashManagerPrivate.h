@@ -30,10 +30,17 @@
 #import "HockeySDK.h"
 
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
-#if HOCKEYSDK_FEATURE_AUTHENTICATOR
+
+#import <CrashReporter/CrashReporter.h>
 
 @interface BITCrashManager () {
 }
+
+@property (nonatomic) NSUncaughtExceptionHandler *exceptionHandler;
+
+@property (nonatomic, strong) BITPLCrashReporter *plCrashReporter;
+
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
 
 // Only set via BITAuthenticator
 @property (nonatomic, strong) NSString *installationIdentification;
@@ -44,7 +51,17 @@
 // Only set via BITAuthenticator
 @property (nonatomic) BOOL installationIdentified;
 
+#endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
+
+- (NSString *)userIDForCrashReport;
+- (NSString *)userEmailForCrashReport;
+- (NSString *)userNameForCrashReport;
+
+- (BOOL)hasPendingCrashReport;
+- (BOOL)hasNonApprovedCrashReports;
+- (void)invokeDelayedProcessing;
+
 @end
 
-#endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
+
 #endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */

@@ -32,7 +32,6 @@
 
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
 
-#import <CrashReporter/CrashReporter.h>
 #import <SystemConfiguration/SystemConfiguration.h>
 #import <UIKit/UIKit.h>
 
@@ -83,9 +82,6 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   BOOL _sendingInProgress;
   BOOL _isSetup;
   
-  BITPLCrashReporter *_plCrashReporter;
-  NSUncaughtExceptionHandler *_exceptionHandler;
-
   id _appDidBecomeActiveObserver;
   id _networkDidBecomeReachableObserver;
 }
@@ -433,7 +429,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 - (void) handleCrashReport {
   NSError *error = NULL;
 	
-  if (!_plCrashReporter) return;
+  if (!self.plCrashReporter) return;
   
   [self loadSettings];
   
@@ -445,7 +441,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
     [self saveSettings];
     
     // Try loading the crash report
-    NSData *crashData = [[NSData alloc] initWithData:[_plCrashReporter loadPendingCrashReportDataAndReturnError: &error]];
+    NSData *crashData = [[NSData alloc] initWithData:[self.plCrashReporter loadPendingCrashReportDataAndReturnError: &error]];
     
     NSString *cacheFilename = [NSString stringWithFormat: @"%.0f", [NSDate timeIntervalSinceReferenceDate]];
     
@@ -500,7 +496,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 
   [self saveSettings];
   
-  [_plCrashReporter purgePendingCrashReport];
+  [self.plCrashReporter purgePendingCrashReport];
 }
 
 /**
@@ -509,7 +505,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
  *	@return `YES` if there are crash reports pending that are not approved, `NO` otherwise
  */
 - (BOOL)hasNonApprovedCrashReports {
-  if (!_approvedCrashReports || [_approvedCrashReports count] == 0) return YES;
+  if ((!_approvedCrashReports || [_approvedCrashReports count] == 0) && [_crashFiles count] > 0) return YES;
   
   for (NSUInteger i=0; i < [_crashFiles count]; i++) {
     NSString *filename = [_crashFiles objectAtIndex:i];
@@ -582,13 +578,13 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   BITHockeyLog(@"INFO: Start delayed CrashManager processing");
   
   // was our own exception handler successfully added?
-  if (_exceptionHandler) {
+  if (self.exceptionHandler) {
     // get the current top level error handler
     NSUncaughtExceptionHandler *currentHandler = NSGetUncaughtExceptionHandler();
   
     // If the top level error handler differs from our own, then at least another one was added.
     // This could cause exception crashes not to be reported to HockeyApp. See log message for details.
-    if (_exceptionHandler != currentHandler) {
+    if (self.exceptionHandler != currentHandler) {
       BITHockeyLog(@"[HockeySDK] WARNING: Another exception handler was added. If this invokes any kind exit() after processing the exception, which causes any subsequent error handler not to be invoked, these crashes will NOT be reported to HockeyApp!");
     }
   }
@@ -653,10 +649,10 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       }
       BITPLCrashReporterConfig *config = [[BITPLCrashReporterConfig alloc] initWithSignalHandlerType: signalHandlerType
                                                                                symbolicationStrategy: PLCrashReporterSymbolicationStrategyAll];
-      _plCrashReporter = [[BITPLCrashReporter alloc] initWithConfiguration: config];
+      self.plCrashReporter = [[BITPLCrashReporter alloc] initWithConfiguration: config];
       
       // Check if we previously crashed
-      if ([_plCrashReporter hasPendingCrashReport]) {
+      if ([self.plCrashReporter hasPendingCrashReport]) {
         _didCrashInLastSession = YES;
         [self handleCrashReport];
       }
@@ -694,7 +690,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
         NSError *error = NULL;
         
         // Enable the Crash Reporter
-        if (![_plCrashReporter enableCrashReporterAndReturnError: &error])
+        if (![self.plCrashReporter enableCrashReporterAndReturnError: &error])
           NSLog(@"[HockeySDK] WARNING: Could not enable crash reporter: %@", [error localizedDescription]);
         
         // get the new current top level error handler, which should now be the one from PLCrashReporter
@@ -702,7 +698,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
         
         // do we have a new top level error handler? then we were successful
         if (currentHandler && currentHandler != initialHandler) {
-          _exceptionHandler = currentHandler;
+          self.exceptionHandler = currentHandler;
           
           BITHockeyLog(@"INFO: Exception handler successfully initialized.");
         } else {
