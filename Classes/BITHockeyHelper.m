@@ -59,7 +59,7 @@ NSString *bit_URLDecodedString(NSString *inputString) {
                            );
 }
 
-NSString *bit_base64String(NSData * data, unsigned long length) {
+NSString *bit_base64StringPreiOS7(NSData * data, unsigned long length) {
   unsigned long ixtext, lentext;
   long ctremaining;
   unsigned char input[3], output[4];
@@ -112,6 +112,15 @@ NSString *bit_base64String(NSData * data, unsigned long length) {
       charsonline = 0;
   }
   return result;
+}
+
+NSString *bit_base64String(NSData * data, unsigned long length) {
+  SEL base64EncodingSelector = NSSelectorFromString(@"base64EncodedStringWithOptions:");
+  if ([data respondsToSelector:base64EncodingSelector]) {
+    return [data base64EncodedStringWithOptions:0];
+  } else {
+    return bit_base64StringPreiOS7(data, length);
+  }
 }
 
 BOOL bit_validateEmail(NSString *email) {
