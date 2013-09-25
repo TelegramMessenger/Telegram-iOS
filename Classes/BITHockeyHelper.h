@@ -42,6 +42,7 @@ NSComparisonResult bit_versionCompare(NSString *stringA, NSString *stringB);
 NSString *bit_mainBundleIdentifier(void);
 NSString *bit_encodeAppIdentifier(NSString *inputString);
 NSString *bit_appName(NSString *placeHolderString);
+NSString *bit_UUIDPreiOS6(void);
 NSString *bit_UUID(void);
 NSString *bit_appAnonID(void);
 

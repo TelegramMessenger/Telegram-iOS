@@ -49,6 +49,13 @@
   assertThatBool([encodedString isEqualToString:@"TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQu"], equalToBool(YES));
 }
 
+- (void)testBase64EncodingPreiOS7EmptyString {
+  NSString *string = @"";
+  NSData *stringData = [string dataUsingEncoding:NSUTF8StringEncoding];
+  NSString *encodedString = bit_base64StringPreiOS7(stringData, stringData.length);
+  assertThatBool([encodedString isEqualToString:@""], equalToBool(YES));
+}
+
 - (void)testBase64EncodingCompareToiOS7Implementation {
   // this requires iOS 7
   BOOL result = YES;
@@ -86,6 +93,23 @@
   result = bit_validateEmail(@"mail.com");
   assertThatBool(result, equalToBool(NO));
 
+}
+
+- (void)testAppName {
+  NSString *resultString = bit_appName(@"Placeholder");
+  assertThatBool([resultString isEqualToString:@"Placeholder"], equalToBool(YES));
+}
+
+- (void)testUUIDPreiOS6 {
+  NSString *resultString = bit_UUIDPreiOS6();
+  assertThat(resultString, notNilValue());
+  assertThatInteger([resultString length], equalToInteger(36));
+}
+
+- (void)testUUID {
+  NSString *resultString = bit_UUID();
+  assertThat(resultString, notNilValue());
+  assertThatInteger([resultString length], equalToInteger(36));
 }
 
 @end
