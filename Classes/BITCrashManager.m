@@ -533,6 +533,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
     while ((file = [dirEnum nextObject])) {
       NSDictionary *fileAttributes = [self.fileManager attributesOfItemAtPath:[_crashesDir stringByAppendingPathComponent:file] error:&error];
       if ([[fileAttributes objectForKey:NSFileSize] intValue] > 0 &&
+          ![file hasSuffix:@".DS_Store"] &&
           ![file hasSuffix:@".analyzer"] &&
           ![file hasSuffix:@".plist"] &&
           ![file hasSuffix:@".meta"]) {

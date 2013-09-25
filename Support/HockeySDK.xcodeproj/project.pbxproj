@@ -99,6 +99,9 @@
 		1E5A459516F0DFC200B55C04 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E400561D148D79B500EB22B9 /* Foundation.framework */; };
 		1E5A459B16F0DFC200B55C04 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E5A459916F0DFC200B55C04 /* InfoPlist.strings */; };
 		1E5A459E16F0DFC200B55C04 /* BITStoreUpdateManagerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E5A459D16F0DFC200B55C04 /* BITStoreUpdateManagerTests.m */; };
+		1E70A23217F2F982001BB32D /* live_report_empty.plcrash in Resources */ = {isa = PBXBuildFile; fileRef = 1E70A22F17F2F982001BB32D /* live_report_empty.plcrash */; };
+		1E70A23317F2F982001BB32D /* live_report_exception.plcrash in Resources */ = {isa = PBXBuildFile; fileRef = 1E70A23017F2F982001BB32D /* live_report_exception.plcrash */; };
+		1E70A23417F2F982001BB32D /* live_report_signal.plcrash in Resources */ = {isa = PBXBuildFile; fileRef = 1E70A23117F2F982001BB32D /* live_report_signal.plcrash */; };
 		1E754E5C1621FBB70070AB92 /* BITCrashManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E754E561621FBB70070AB92 /* BITCrashManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E754E5D1621FBB70070AB92 /* BITCrashManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E754E571621FBB70070AB92 /* BITCrashManager.m */; };
 		1E754E5E1621FBB70070AB92 /* BITCrashManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E754E581621FBB70070AB92 /* BITCrashManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -250,6 +253,9 @@
 		1E66CA9115D4100500F35BED /* buildnumber.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = buildnumber.xcconfig; sourceTree = "<group>"; };
 		1E6DDCEE169E290C0076C65D /* ro */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ro; path = ro.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		1E6F0450167B5E5600ED1C86 /* pt-PT */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-PT"; path = "pt-PT.lproj/HockeySDK.strings"; sourceTree = "<group>"; };
+		1E70A22F17F2F982001BB32D /* live_report_empty.plcrash */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = live_report_empty.plcrash; sourceTree = "<group>"; };
+		1E70A23017F2F982001BB32D /* live_report_exception.plcrash */ = {isa = PBXFileReference; lastKnownFileType = file; path = live_report_exception.plcrash; sourceTree = "<group>"; };
+		1E70A23117F2F982001BB32D /* live_report_signal.plcrash */ = {isa = PBXFileReference; lastKnownFileType = file; path = live_report_signal.plcrash; sourceTree = "<group>"; };
 		1E71509A15B5C76F004E88FF /* HockeySDK.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HockeySDK.h; sourceTree = "<group>"; };
 		1E754DC61621BC170070AB92 /* HockeySDK.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = HockeySDK.xcconfig; sourceTree = "<group>"; };
 		1E754E561621FBB70070AB92 /* BITCrashManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashManager.h; sourceTree = "<group>"; };
@@ -494,6 +500,9 @@
 			children = (
 				1EA1170316F53B49001C015C /* StoreBundleIdentifierUnknown.json */,
 				1EA1170816F53E3A001C015C /* StoreBundleIdentifierKnown.json */,
+				1E70A22F17F2F982001BB32D /* live_report_empty.plcrash */,
+				1E70A23017F2F982001BB32D /* live_report_exception.plcrash */,
+				1E70A23117F2F982001BB32D /* live_report_signal.plcrash */,
 			);
 			path = Fixtures;
 			sourceTree = "<group>";
@@ -800,7 +809,10 @@
 			files = (
 				1EA1170C16F54A64001C015C /* HockeySDKResources.bundle in Resources */,
 				1E5A459B16F0DFC200B55C04 /* InfoPlist.strings in Resources */,
+				1E70A23417F2F982001BB32D /* live_report_signal.plcrash in Resources */,
 				1EA1170416F53B49001C015C /* StoreBundleIdentifierUnknown.json in Resources */,
+				1E70A23317F2F982001BB32D /* live_report_exception.plcrash in Resources */,
+				1E70A23217F2F982001BB32D /* live_report_empty.plcrash in Resources */,
 				1EA1170916F53E3A001C015C /* StoreBundleIdentifierKnown.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

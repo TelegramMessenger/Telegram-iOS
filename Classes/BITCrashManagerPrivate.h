@@ -53,13 +53,18 @@
 
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
 
+- (void)cleanCrashReports;
+
 - (NSString *)userIDForCrashReport;
 - (NSString *)userEmailForCrashReport;
 - (NSString *)userNameForCrashReport;
 
+- (void)handleCrashReport;
 - (BOOL)hasPendingCrashReport;
 - (BOOL)hasNonApprovedCrashReports;
+
 - (void)invokeDelayedProcessing;
+- (void)sendCrashReports;
 
 @end
 

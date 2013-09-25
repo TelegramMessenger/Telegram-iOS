@@ -15,6 +15,7 @@
 #import <OCMockitoIOS/OCMockitoIOS.h>
 
 #import "HockeySDK.h"
+#import "HockeySDKPrivate.h"
 #import "BITCrashManager.h"
 #import "BITCrashManagerPrivate.h"
 #import "BITHockeyBaseManager.h"
@@ -47,7 +48,7 @@
   __gcov_flush();
 # pragma clang diagnostic pop
   
-  _sut = nil;
+  [_sut cleanCrashReports];
   [super tearDown];
 }
 
@@ -137,14 +138,14 @@
 
 #pragma mark - Helper
 
-- (void)testHasPendingCrashReports {
+- (void)testHasPendingCrashReportWithNoFiles {
   _sut.crashManagerStatus = BITCrashManagerStatusAutoSend;
-  
-  // No files
   assertThatBool([_sut hasPendingCrashReport], equalToBool(NO));
+}
+
+- (void)testHasNonApprovedCrashReportsWithNoFiles {
+  _sut.crashManagerStatus = BITCrashManagerStatusAutoSend;
   assertThatBool([_sut hasNonApprovedCrashReports], equalToBool(NO));
-  
-  // TODO: add some test files
 }
 
 
@@ -157,8 +158,18 @@
 }
 
 - (void)testStartManagerWithAutoSend {
-  [self startManagerAutoSend];
+  // since PLCR is only initialized once ever, we need to pack all tests that rely on a PLCR instance
+  // in this test method. Ugly but otherwise this would require a major redesign of BITCrashManager
+  // which we can't do at this moment
+  // This also limits us not being able to test various scenarios having a custom exception handler
+  // which would require us to run without a debugger anyway and which would also require a redesign
+  // to make this better testable with unit tests
+  
+  id delegateMock = mockProtocol(@protocol(BITCrashManagerDelegate));
+  _sut.delegate = delegateMock;
 
+  [self startManagerAutoSend];
+  
   assertThat(_sut.plCrashReporter, notNilValue());
   
   // When running from the debugger this is always nil and not the exception handler from PLCR
@@ -167,10 +178,51 @@
   BOOL result = (_sut.exceptionHandler == currentHandler);
   
   assertThatBool(result, equalToBool(YES));
+  
+  // No files at startup
+  assertThatBool([_sut hasPendingCrashReport], equalToBool(NO));
+  assertThatBool([_sut hasNonApprovedCrashReports], equalToBool(NO));
+  
+  [_sut invokeDelayedProcessing];
+  
+  // handle a new empty crash report
+  assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_empty"], equalToBool(YES));
+  
+  [_sut handleCrashReport];
+  
+  // we should have 0 pending crash report
+  assertThatBool([_sut hasPendingCrashReport], equalToBool(NO));
+  assertThatBool([_sut hasNonApprovedCrashReports], equalToBool(NO));
+  
+  [_sut cleanCrashReports];
+  
+  // handle a new signal crash report
+  assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_signal"], equalToBool(YES));
+  
+  [_sut handleCrashReport];
+  
+  [verifyCount(delegateMock, times(1)) applicationLogForCrashManager:_sut];
+  
+  // we should have now 1 pending crash report
+  assertThatBool([_sut hasPendingCrashReport], equalToBool(YES));
+  assertThatBool([_sut hasNonApprovedCrashReports], equalToBool(YES));
+  
+  // this is currently sending blindly, needs refactoring to test properly
+  [_sut sendCrashReports];
+  [verifyCount(delegateMock, times(1)) crashManagerWillSendCrashReport:_sut];
+  
+  [_sut cleanCrashReports];
 
-
-//  [_sut invokeDelayedProcessing];
-
+  // handle a new signal crash report
+  assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_exception"], equalToBool(YES));
+  
+  [_sut handleCrashReport];
+  
+  // we should have now 1 pending crash report
+  assertThatBool([_sut hasPendingCrashReport], equalToBool(YES));
+  assertThatBool([_sut hasNonApprovedCrashReports], equalToBool(YES));
+  
+  [_sut cleanCrashReports];
 }
 
 @end
