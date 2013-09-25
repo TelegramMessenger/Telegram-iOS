@@ -338,7 +338,7 @@
     addGloss = ![prerendered boolValue];
   }
   
-  if (addGloss && ![self.updateManager isPreiOS7Environment]) {
+  if (addGloss && [self.updateManager isPreiOS7Environment]) {
     _appStoreHeader.iconImage = [self addGlossToImage:[UIImage imageNamed:iconString]];
   } else {
     _appStoreHeader.iconImage = [UIImage imageNamed:iconString];
