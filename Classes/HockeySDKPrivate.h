@@ -66,7 +66,6 @@
 NSBundle *BITHockeyBundle(void);
 NSString *BITHockeyLocalizedString(NSString *stringToken);
 NSString *BITHockeyMD5(NSString *str);
-BOOL BITValidateEmail(NSString *email);
 
 #if __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_6_0
 

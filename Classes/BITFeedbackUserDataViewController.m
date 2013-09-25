@@ -32,6 +32,7 @@
 #if HOCKEYSDK_FEATURE_FEEDBACK
 
 #import "HockeySDKPrivate.h"
+#import "BITHockeyHelper.h"
 
 #import "BITFeedbackUserDataViewController.h"
 #import "BITFeedbackManagerPrivate.h"
@@ -120,7 +121,7 @@
   if ([self.manager requireUserEmail] == BITFeedbackUserDataElementRequired && [self.email length] == 0)
     return NO;
 
-  if ([self.email length] > 0 && !BITValidateEmail(self.email))
+  if ([self.email length] > 0 && !bit_validateEmail(self.email))
     return NO;
   
   return YES;

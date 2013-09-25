@@ -30,6 +30,7 @@
 #import "BITAuthenticator_Private.h"
 #import "HockeySDKPrivate.h"
 #import "HockeySDK.h"
+#import "BITHockeyHelper.h"
 #import "BITHockeyAppClient.h"
 
 @interface BITAuthenticationViewController ()<UITextFieldDelegate> {
@@ -152,7 +153,7 @@
   if (self.requirePassword && [self.password length] == 0)
     return NO;
   
-  if (![self.email length] || !BITValidateEmail(self.email))
+  if (![self.email length] || !bit_validateEmail(self.email))
     return NO;
   
   return YES;
