@@ -1,3 +1,37 @@
+## Version 3.5.0 RC 1
+
+- General
+
+  - [UPDATE] Documentation improvements nearly everywhere
+
+- Crash Reporting
+
+  - [UPDATE] Integrated PLCrashReporter 1.2 beta 2
+  - [UPDATE] 64 bit crash reports now contain the correct architecture string
+  - [UPDATE] Automatically add the users UDID or email to crash reports in Ad-Hoc/Enterprise builds if they are provided by BITAuthenticator
+  - [BUGFIX] Fix userName, userEmail and userID not being added to crash reports
+
+- App Store Updates
+
+  - [UPDATE] Changed default update check interval to weekly
+	<br /><br/>
+
+- Ad-Hoc/Enterprise Authentication
+
+  - [NEW] Redesigned API for easier usage and more flexibility (please check the documentation!)
+  - [NEW] Added option to customize the authentication flow
+  - [NEW] Added option to provide a custom parentViewController for presenting the UI
+  - [NEW] Added possibility to use an existing URL scheme
+  - [BUGFIX] Fixed authentication UI appearing after updating apps without changing the authentication settings
+	<br /><br/>
+
+- Ad-Hoc/Enterprise Updates
+
+  - [UPDATE] Don't add icon gloss to icons when running on iOS 7
+  - [BUGFIX] Fixed a few iOS 7 related UI problems in the update view
+	<br /><br/>
+
+
 ## Version 3.5.0 Beta 3
 
 - Feedback
