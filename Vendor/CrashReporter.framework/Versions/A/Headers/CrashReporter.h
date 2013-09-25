@@ -238,19 +238,32 @@ typedef enum {
 /**
  * @page mach_exceptions Mach Exceptions on Mac OS X and iOS
  *
- * PLCrashReporter includes support for monitoring crashes via an in-process Mach exception handler. On Mac OS X, the
- * Mach exception implementation is fully supported using entirely public API. On iOS, the APIs required are not fully
- * public -- more details on the implications of this for exception handling on iOS may be found in
- * @ref mach_exceptions_ios below.
+ * PLCrashReporter includes support for monitoring crashes via an in-process Mach exception handler. There are a small
+ * number of crash cases that will not be caught with via a POSIX signal handler, but can be caught via a Mach
+ * exception handler:
  *
- * It is worth noting that even where the Mach exception APIs are fully supported, kernel-internal constants, as well
+ * - Stack overflow. sigaltstack() is broken in later iOS releases, and even if functional, must be configured
+ *   on a per-thread basis.
+ * - Internal Apple assertions that call libSystem's __assert. These include compiler-checked constraints
+ *   for built-in functions, such as strcpy_chk(). The __abort() implementation actually disables the SIGABRT
+ *   signal handler (resetting it to SIG_DFL) prior to to issueing a SIGABRT, bypassing signal-based crash
+ *   reporters entirely.
+ *
+ * Unfortunately, the latter issue (__assert) can not be handled on iOS; trapping abort requires that
+ * a Mach exception handler operate out-of-process, which is impossible on iOS. On Mac OS X, this will
+ * only be handled once we've implemented fully out-of-process crash excution.
+ *
+ * On Mac OS X, the Mach exception implementation is fully supported using entirely public API. On iOS,
+ * the APIs required are not fully public -- more details on the implications of this for exception handling on
+ * iOS may be found in @ref mach_exceptions_ios below. It is worth noting that even where the Mach exception APIs
+ * are fully supported, kernel-internal constants, as well
  * as architecture-specific trap information, may be required to fully interpret a Mach exception's root cause.
  *
  * For example, the EXC_SOFTWARE exception is dispatched for four different failure types, using the exception
  * code to differentiate failure types:
  *   - Non-existent system call invoked (SIGSYS)
  *   - Write on a pipe with no reader (SIGPIPE)
- *   - Abort program (SIGABRT)
+ *   - Abort program (SIGABRT -- unused)
  *   - Kill program (SIGKILL)
  *
  * Of those four types, only the constant required to interpret the SIGKILL behavior (EXC_SOFT_SIGNAL) is publicly defined.
@@ -296,32 +309,22 @@ typedef enum {
  *
  * @section mach_exceptions_ios Mach Exceptions on iOS
  *
- * The APIs required for Mach exception handling are not fully public on iOS. Unfortunately, there are a number
- * of crash states that can only be handled with Mach exception handlers:
+ * The APIs required for Mach exception handling are not fully public on iOS. After filing a request with
+ * Apple DTS to clarify the status of the Mach exception APIs on iOS, and implementing a Mach Exception
+ * handler using only supported API, they provided the following guidance:
  *
- * - Stack overflow. sigaltstack() is broken in later iOS releases, and even if functional, must be configured
- *   on a per-thread basis.
- * - Internal Apple assertions that call libSystem's __assert. These include compiler-checked constraints
- *   for built-in functions, such as strcpy_chk(). The __abort() implementation actually disables the SIGABRT
- *   signal handler (resetting it to SIG_DFL) prior to to issueing a SIGABRT, bypassing signal-based crash
- *   reporters entirely.
- *
- * After filing a request with Apple DTS to clarify the status of the Mach exception APIs on iOS, and implementing
- * a Mach Exception handler using only supported API, they provided the following guidance:
- *
- *    Our engineers have reviewed your request and have determined that this would be best handled as a bug report,
- *    which you have already filed. <em>There is no documented way of accomplishing this, nor is there a workaround
+ *    <em>Our engineers have reviewed your request and have determined that this would be best handled as a bug report,
+ *    which you have already filed. There is no documented way of accomplishing this, nor is there a workaround
  *    possible.</em>
  *
  * Due to user request, PLCrashReporter provides an optional implementation of Mach exception handling for both
  * iOS and Mac OS X.
  *
- * This implementation uses only supported API on Mac OS X, and depends on limited private API on iOS. The reporter
+ * This implementation uses only supported API on Mac OS X, and depends on limited undefined API on iOS. The reporter
  * may be excluded entirely at build time by modifying the PLCRASH_FEATURE_MACH_EXCEPTIONS build configuration; it
- * may also be disabled at runtime by configuring the PLCrashReporter instance appropriately (TODO - define
- * configuration API).
+ * may also be disabled at runtime by configuring the PLCrashReporter instance appropriately via PLCrashReporterConfig.
  *
- * The iOS implementation is implemented almost entirely using public API, and links against no actual private API;
+ * The iOS implementation is implemented almost entirely using public API, and links against no actual private symbols;
  * the use of undocumented functionality is limited to assuming the use of specific msgh_id values (see below
  * for details). As a result, it may be considered perfectly safe to include the Mach Exception code in the
  * standard build, and enable/disable it at runtime.
@@ -338,10 +341,15 @@ typedef enum {
  *
  *  - The mach_* structure/type variants required by MACH_EXCEPTION_CODES are not publicly defined (on Mac OS X,
  *    these are provided by mach_exc.defs). This prevents one from forwarding exception messages to an existing
- *    handler that was registered with a MACH_EXCEPTION_CODES behavior.
+ *    handler that was registered with a MACH_EXCEPTION_CODES behavior (eg, forwarding is entirely non-functional
+ *    on ARM64 devices).
  *
  *    Impact:
- *      This can break forwarding to any task exception handler that registers itself with MACH_EXCEPTION_CODES.
+ *      This can break forwarding to any task exception handler that registers itself with MACH_EXCEPTION_CODES,
+ *      including other handlers registered within the current process, eg, by a managed runtime. This could
+ *      also result in misinterpretation of a Mach exception message, in the case where the message format is
+ *      modified by Apple to be incompatible with the existing 32-bit format.
+ *
  *      This is the case with LLDB; it will register a task exception handler with MACH_EXCEPTION_CODES set. Failure
  *      to correctly forward these exceptions will result in the debugger breaking in interesting ways; for example,
  *      changes to the set of dyld-loaded images are detected by setting a breakpoint on the dyld image registration
