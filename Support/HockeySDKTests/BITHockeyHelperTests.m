@@ -16,6 +16,7 @@
 
 #import "HockeySDK.h"
 #import "BITHockeyHelper.h"
+#import "BITKeychainUtils.h"
 
 
 @interface BITHockeyHelperTests : SenTestCase
@@ -111,5 +112,18 @@
   assertThat(resultString, notNilValue());
   assertThatInteger([resultString length], equalToInteger(36));
 }
+
+- (void)testAppAnonID {
+  // clean keychain cache
+  NSError *error = NULL;
+  [BITKeychainUtils deleteItemForUsername:@"appAnonID"
+                           andServiceName:bit_keychainHockeySDKServiceName()
+                                    error:&error];
+  
+  NSString *resultString = bit_appAnonID();
+  assertThat(resultString, notNilValue());
+  assertThatInteger([resultString length], equalToInteger(36));
+}
+
 
 @end
