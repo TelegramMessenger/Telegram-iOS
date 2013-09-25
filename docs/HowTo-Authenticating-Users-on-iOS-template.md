@@ -2,37 +2,23 @@
 
 Previous versions of HockeySDK for iOS used the response of the method `UIDevice#uniqueIdentifier` (aka the UDID) to identify which user was testing an app and which versions are installable on the user's device. `UIDevice#uniqueIdentifier` was deprecated with iOS 5 and we expect Apple to remove it from future versions of iOS.
 
-HockeySDK 3.5 for iOS includes a new class called `BITAuthenticator` which offers three strategies for authentication:
+HockeySDK 3.5 for iOS includes a new class called `BITAuthenticator` which offers four strategies for authentication:
 
-* **BITAuthenticatorAuthTypeUDIDProvider** (_Default_)
+* **BITAuthenticatorIdentificationTypeAnonymous** (_Default_)
+
+    An anonymous ID will be generated.
+
+* **BITAuthenticatorIdentificationTypeDevice**
 
     The app opens Safari to request the UDID from the HockeyApp web clip.
 
-* **BITAuthenticatorAuthTypeEmail**
+* **BITAuthenticatorIdentificationTypeHockeyAppUser**
 
     The user needs to enter the email address of his HockeyApp account.
 
-* **BITAuthenticatorAuthTypeEmailAndPassword**
+* **BITAuthenticatorIdentificationTypeHockeyAppEmail**
 
     The user needs to enter the email address and password of his HockeyApp account.
-
-The time when one of those strategies is enabled in the app's lifecycle is determined by the validation type:
-
-* **BITAuthenticatorValidationTypeNever** (_Default_)
-
-    Authentication is never executed (see [below](#no-authentication))
-
-* **BITAuthenticatorValidationTypeOptional**
-
-    Authentication is shown at the first start, but can be skipped by the user.
-
-* **BITAuthenticatorValidationTypeOnFirstLaunch**
-
-    Authentication is shown at the first start and validated with a new version.
-
-* **BITAuthenticatorValidationTypeOnAppActive**
-
-    Authentication is shown at the first start and validated at each start of the app.
 
 The following sections explain the different strategies and their advantages / disadvantages.
 
@@ -46,7 +32,7 @@ Initialize HockeySDK with the following code:
 
 Replace APP_ID with the your App ID (can be found on the app page). 
 
-The SDK will use `UIDevice#identifierForVendor` on iOS 6 or newer or a generated unique ID on iOS 5.
+The SDK will use a generated unique ID to identify the installation.
 
 Advantages:
 
@@ -63,8 +49,7 @@ Disadvantages:
 Initialize HockeySDK with the following code:
 
     [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"<#APP_ID#>" delegate:self];
-    [[BITHockeyManager sharedHockeyManager].authenticator setAuthenticationType:BITAuthenticatorAuthTypeUDIDProvider];
-    [[BITHockeyManager sharedHockeyManager].authenticator setValidationType:BITAuthenticatorValidationTypeOptional];
+    [[BITHockeyManager sharedHockeyManager].authenticator setIdentificationType:BITAuthenticatorIdentificationTypeDevice];
     [[BITHockeyManager sharedHockeyManager] startManager];
 
 Replace APP_ID with the your App ID (can be found on the app page). 
@@ -111,8 +96,7 @@ Initialize HockeySDK with the following code:
 
     [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"<#APP_ID#>" delegate:self];
     [[BITHockeyManager sharedHockeyManager].authenticator setAuthenticationSecret:@"<#SECRET#>"];
-    [[BITHockeyManager sharedHockeyManager].authenticator setAuthenticationType:BITAuthenticatorAuthTypeEmail];
-    [[BITHockeyManager sharedHockeyManager].authenticator setValidationType:BITAuthenticatorValidationTypeOptional];
+    [[BITHockeyManager sharedHockeyManager].authenticator setIdentificationType:BITAuthenticatorIdentificationTypeHockeyAppEmail];
     [[BITHockeyManager sharedHockeyManager] startManager];
 
 Replace APP_ID with the your App ID and SECRET with the Secret (both values can be found on the app page). 
@@ -123,7 +107,7 @@ Advantages:
 
 * HockeyApp can show which user has installed your app and how long he used it.
 * The SDK only offers installable builds, i.e. with the UDID in the provisioning profile (if all devices of this user are in the provisioning profile).
-* If you remove a user from your app, he will not be able to use it anymore (depending on validationType)
+* If you remove a user from your app, he will not be able to use it anymore (see documentation for `restrictApplicationUsage`)
 
 Disadvantages:
 
@@ -135,8 +119,7 @@ Disadvantages:
 Initialize HockeySDK with the following code:
 
     [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_ID" delegate:self];
-    [[BITHockeyManager sharedHockeyManager].authenticator setAuthenticationType:BITAuthenticatorAuthTypeEmailAndPassword];
-    [[BITHockeyManager sharedHockeyManager].authenticator setValidationType:BITAuthenticatorValidationTypeOptional];
+    [[BITHockeyManager sharedHockeyManager].authenticator setIdentificationType:BITAuthenticatorIdentificationTypeHockeyAppUser];
     [[BITHockeyManager sharedHockeyManager] startManager];
 
 Replace APP_ID with the your App ID (can be found on the app page). 
@@ -147,7 +130,7 @@ Advantages:
 
 * HockeyApp can show which user has installed your app and how long he used it.
 * The SDK only offers installable builds, i.e. with the UDID in the provisioning profile (if all devices of this user are in the provisioning profile).
-* If you remove a user from your app, he will not be able to use it anymore (depending on validationType)
+* If you remove a user from your app, he will not be able to use it anymore (see documentation for `restrictApplicationUsage`)
 
 Disadvantages:
 
