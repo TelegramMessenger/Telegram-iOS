@@ -1,3 +1,14 @@
+## Version 3.5.0 RC 2
+
+- General
+
+  - [BUGFIX] Remove assertions from release build
+	<br /><br/>
+- Ad-Hoc/Enterprise Updates
+
+  - [BUGFIX] Add new iOS 7 icon sizes detection and adjust corner radius
+	<br /><br/>
+
 ## Version 3.5.0 RC 1
 
 - General
