@@ -330,19 +330,4 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   assertThatBool(_sut.needsValidation, equalToBool(NO));
 }
 
-#pragma mark - Test installationIdentificationValidated Flag
-- (void) testThatApplicationBackgroundingResetsValidatedFlagInValidationTypeOnAppActive {
-  _sut.restrictionEnforcementFrequency = BITAuthenticatorAppRestrictionEnforcementOnAppActive;
-  _sut.validated = YES;
-  [_sut applicationWillResignActive:nil];
-  assertThatBool(_sut.isValidated, equalToBool(NO));
-}
-
-- (void) testThatApplicationBackgroundingKeepValidatedFlag {
-  _sut.restrictApplicationUsage = BITAuthenticatorAppRestrictionEnforcementOnFirstLaunch;
-  _sut.validated = YES;
-  [_sut applicationWillResignActive:nil];
-  assertThatBool(_sut.isValidated, equalToBool(YES));
-}
-
 @end
