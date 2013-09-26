@@ -1,8 +1,14 @@
-## Authenticating Users on iOS
+## Identify and authenticate users of iOS Ad-Hoc or Enterprise builds
+
+HockeySDK 3.5 for iOS includes a new class called `BITAuthenticator` which serves 2 purposes:
+
+1. Identifying who is running your Ad-Hoc or Enterprise builds. The authenticator provides an identifier for the rest of HockeySDK to work with, e.g. in-app update checks and crash reports.
+
+2. Optional regular checking if an identified user is still allowed to run this application. The authenticator can be configured to make sure only users who are testers of your app are allowed to run it.
 
 Previous versions of HockeySDK for iOS used the response of the method `UIDevice#uniqueIdentifier` (aka the UDID) to identify which user was testing an app and which versions are installable on the user's device. `UIDevice#uniqueIdentifier` was deprecated with iOS 5 and we expect Apple to remove it from future versions of iOS.
 
-HockeySDK 3.5 for iOS includes a new class called `BITAuthenticator` which offers four strategies for authentication:
+`BITAuthenticator` offers four strategies for authentication:
 
 * **BITAuthenticatorIdentificationTypeAnonymous** (_Default_)
 
