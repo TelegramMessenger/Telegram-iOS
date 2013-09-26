@@ -397,7 +397,6 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
 }
 
 + (NSString *) authenticationTokenFromURLResponse:(NSHTTPURLResponse*) urlResponse data:(NSData*) data error:(NSError **) error {
-  NSParameterAssert(urlResponse);
   if(nil == urlResponse) {
     if(error) {
       *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
