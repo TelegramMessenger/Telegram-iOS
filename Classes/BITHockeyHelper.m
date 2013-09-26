@@ -115,12 +115,16 @@ NSString *bit_base64StringPreiOS7(NSData * data, unsigned long length) {
 }
 
 NSString *bit_base64String(NSData * data, unsigned long length) {
+#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
   SEL base64EncodingSelector = NSSelectorFromString(@"base64EncodedStringWithOptions:");
   if ([data respondsToSelector:base64EncodingSelector]) {
     return [data base64EncodedStringWithOptions:0];
   } else {
+#endif
     return bit_base64StringPreiOS7(data, length);
+#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
   }
+#endif
 }
 
 BOOL bit_validateEmail(NSString *email) {
