@@ -323,8 +323,11 @@
       if (
           (iconImage.size.height == 57 && !useHighResIcon && !useiPadIcon) ||
           (iconImage.size.height == 114 && useHighResIcon && !useiPadIcon) ||
+          (iconImage.size.height == 120 && useHighResIcon && !useiPadIcon) ||
           (iconImage.size.height == 72 && !useHighResIcon && useiPadIcon) ||
-          (iconImage.size.height == 144 && useHighResIcon && useiPadIcon)
+          (iconImage.size.height == 76 && !useHighResIcon && useiPadIcon) ||
+          (iconImage.size.height == 144 && !useHighResIcon && useiPadIcon) ||
+          (iconImage.size.height == 152 && useHighResIcon && useiPadIcon)
           ) {
         // found!
         break;
