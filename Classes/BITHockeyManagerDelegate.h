@@ -27,10 +27,23 @@
  */
 
 #import <Foundation/Foundation.h>
+#import "HockeySDKFeatureConfig.h"
+
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER
 #import "BITCrashManagerDelegate.h"
+#endif
+
+#if HOCKEYSDK_FEATURE_UPDATES
 #import "BITUpdateManagerDelegate.h"
+#endif
+
+#if HOCKEYSDK_FEATURE_FEEDBACK
 #import "BITFeedbackManagerDelegate.h"
+#endif
+
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
 #import "BITAuthenticator.h"
+#endif
 
 @class BITHockeyManager;
 @class BITHockeyBaseManager;
@@ -40,7 +53,20 @@
   the behaviour of `BITHockeyManager`, as well as the delegate of the modules it manages.
  */
 
-@protocol BITHockeyManagerDelegate <NSObject, BITCrashManagerDelegate, BITUpdateManagerDelegate, BITFeedbackManagerDelegate, BITAuthenticatorDelegate>
+@protocol BITHockeyManagerDelegate <NSObject
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER
+  , BITCrashManagerDelegate
+#endif
+#if HOCKEYSDK_FEATURE_UPDATES
+  , BITUpdateManagerDelegate
+#endif
+#if HOCKEYSDK_FEATURE_FEEDBACK
+  , BITFeedbackManagerDelegate
+#endif
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
+  , BITAuthenticatorDelegate
+#endif
+  >
 
 @optional
 
