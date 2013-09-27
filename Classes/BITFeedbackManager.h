@@ -61,7 +61,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackUserDataElement) {
 
 
 @class BITFeedbackMessage;
-@class BITFeedbackManagerDelegate;
+@protocol BITFeedbackManagerDelegate;
 
 /**
  The feedback module.

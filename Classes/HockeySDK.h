@@ -53,6 +53,7 @@
 
 #if HOCKEYSDK_FEATURE_FEEDBACK
 #import "BITFeedbackManager.h"
+#import "BITFeedbackManagerDelegate.h"
 #import "BITFeedbackActivity.h"
 #import "BITFeedbackComposeViewController.h"
 #import "BITFeedbackComposeViewControllerDelegate.h"
