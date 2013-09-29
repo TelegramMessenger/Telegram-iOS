@@ -59,6 +59,10 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   BOOL _lastCheckFailed;
   BOOL _sendUsageData;
   
+  id _appDidBecomeActiveObserver;
+  id _appDidEnterBackgroundObserver;
+  id _networkDidBecomeReachableObserver;
+
   BOOL _didSetupDidBecomeActiveNotifications;
   BOOL _didEnterBackgroundState;
   
@@ -111,21 +115,55 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   }
 }
 
-- (void)setupDidBecomeActiveNotifications {
+#pragma mark - Observers
+- (void) registerObservers {
+  __weak typeof(self) weakSelf = self;
+  if(nil == _appDidEnterBackgroundObserver) {
+    _appDidEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification
+                                                                                    object:nil
+                                                                                     queue:NSOperationQueue.mainQueue
+                                                                                usingBlock:^(NSNotification *note) {
+                                                                                  typeof(self) strongSelf = weakSelf;
+                                                                                  [strongSelf didEnterBackgroundActions];
+                                                                                }];
+  }
+  if(nil == _appDidBecomeActiveObserver) {
+    _appDidBecomeActiveObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
+                                                                                     object:nil
+                                                                                      queue:NSOperationQueue.mainQueue
+                                                                                 usingBlock:^(NSNotification *note) {
+                                                                                   typeof(self) strongSelf = weakSelf;
+                                                                                   [strongSelf didBecomeActiveActions];
+                                                                                 }];
+  }
+  if(nil == _networkDidBecomeReachableObserver) {
+    _networkDidBecomeReachableObserver = [[NSNotificationCenter defaultCenter] addObserverForName:BITHockeyNetworkDidBecomeReachableNotification
+                                                                                     object:nil
+                                                                                      queue:NSOperationQueue.mainQueue
+                                                                                 usingBlock:^(NSNotification *note) {
+                                                                                   typeof(self) strongSelf = weakSelf;
+                                                                                   [strongSelf didBecomeActiveActions];
+                                                                                 }];
+  }
   if (!_didSetupDidBecomeActiveNotifications) {
-    NSNotificationCenter *dnc = [NSNotificationCenter defaultCenter];
-    [dnc addObserver:self selector:@selector(didEnterBackgroundActions) name:UIApplicationDidEnterBackgroundNotification object:nil];
-    [dnc addObserver:self selector:@selector(didBecomeActiveActions) name:UIApplicationDidBecomeActiveNotification object:nil];
-    [dnc addObserver:self selector:@selector(didBecomeActiveActions) name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
     _installationIdentification = [self stringValueFromKeychainForKey:kBITUpdateInstallationIdentification];
     _didSetupDidBecomeActiveNotifications = YES;
   }
 }
 
-- (void)cleanupDidBecomeActiveNotifications {
-  [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
-  [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
-  [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidEnterBackgroundNotification object:nil];
+- (void) unregisterObservers {
+  if(_appDidEnterBackgroundObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:_appDidEnterBackgroundObserver];
+    _appDidEnterBackgroundObserver = nil;
+  }
+  if(_appDidBecomeActiveObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:_appDidBecomeActiveObserver];
+    _appDidBecomeActiveObserver = nil;
+  }
+  if(_networkDidBecomeReachableObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:_networkDidBecomeReachableObserver];
+    _networkDidBecomeReachableObserver = nil;
+  }
 }
 
 
@@ -161,7 +199,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     }
     
     // the UI is now blocked, make sure we don't add our UI on top of it over and over again
-    [self cleanupDidBecomeActiveNotifications];
+    [self unregisterObservers];
   }
 }
 
@@ -391,10 +429,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 }
 
 - (void)dealloc {
-  [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
-  
+  [self unregisterObservers];
   [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationWillTerminateNotification object:nil];
-  [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
   [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationWillResignActiveNotification object:nil];
   
   [_urlConnection cancel];
@@ -681,7 +717,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
       [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0f];
     }
   }
-  [self setupDidBecomeActiveNotifications];
+  [self registerObservers];
 }
 
 

@@ -47,7 +47,8 @@
   BOOL _updateAlertShowing;
   BOOL _lastCheckFailed;
   
-  BOOL _didSetupDidBecomeActiveNotifications;
+  id _appDidBecomeActiveObserver;
+  id _networkDidBecomeReachableObserver;
 }
 
 
@@ -67,18 +68,39 @@
   }
 }
 
-- (void)setupDidBecomeActiveNotifications {
-  if (!_didSetupDidBecomeActiveNotifications) {
-    NSNotificationCenter *dnc = [NSNotificationCenter defaultCenter];
-    [dnc addObserver:self selector:@selector(didBecomeActiveActions) name:UIApplicationDidBecomeActiveNotification object:nil];
-    [dnc addObserver:self selector:@selector(didBecomeActiveActions) name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
-    _didSetupDidBecomeActiveNotifications = YES;
+#pragma mark - Observers
+
+- (void) registerObservers {
+  __weak typeof(self) weakSelf = self;
+  if(nil == _appDidBecomeActiveObserver) {
+    _appDidBecomeActiveObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
+                                                                                    object:nil
+                                                                                     queue:NSOperationQueue.mainQueue
+                                                                                usingBlock:^(NSNotification *note) {
+                                                                                  typeof(self) strongSelf = weakSelf;
+                                                                                  [strongSelf didBecomeActiveActions];
+                                                                                }];
+  }
+  if(nil == _networkDidBecomeReachableObserver) {
+    _networkDidBecomeReachableObserver = [[NSNotificationCenter defaultCenter] addObserverForName:BITHockeyNetworkDidBecomeReachableNotification
+                                                                                     object:nil
+                                                                                      queue:NSOperationQueue.mainQueue
+                                                                                 usingBlock:^(NSNotification *note) {
+                                                                                   typeof(self) strongSelf = weakSelf;
+                                                                                   [strongSelf didBecomeActiveActions];
+                                                                                 }];
   }
 }
 
-- (void)cleanupDidBecomeActiveNotifications {
-  [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
-  [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
+- (void) unregisterObservers {
+  if(_appDidBecomeActiveObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:_appDidBecomeActiveObserver];
+    _appDidBecomeActiveObserver = nil;
+  }
+  if(_networkDidBecomeReachableObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:_networkDidBecomeReachableObserver];
+    _networkDidBecomeReachableObserver = nil;
+  }
 }
 
 
@@ -90,7 +112,6 @@
     _updateAvailable = NO;
     _lastCheckFailed = NO;
     _enableStoreUpdateManager = NO;
-    _didSetupDidBecomeActiveNotifications = NO;
     _updateAlertShowing = NO;
     _updateUIEnabled = YES;
     _newStoreVersion = nil;
@@ -114,9 +135,7 @@
 }
 
 - (void)dealloc {
-  [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
-  
-  [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
+  [self unregisterObservers];
 }
 
 
@@ -374,7 +393,7 @@
     self.lastCheck = [NSDate distantPast];
   }
   
-  [self setupDidBecomeActiveNotifications];
+  [self registerObservers];
   
   // we are already delayed, so the notification already came in and this won't invoked twice
   switch ([[UIApplication sharedApplication] applicationState]) {
