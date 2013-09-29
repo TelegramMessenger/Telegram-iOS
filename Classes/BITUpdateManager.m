@@ -63,7 +63,6 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   id _appDidEnterBackgroundObserver;
   id _networkDidBecomeReachableObserver;
 
-  BOOL _didSetupDidBecomeActiveNotifications;
   BOOL _didEnterBackgroundState;
   
   BOOL _firstStartAfterInstall;
@@ -144,10 +143,6 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
                                                                                    typeof(self) strongSelf = weakSelf;
                                                                                    [strongSelf didBecomeActiveActions];
                                                                                  }];
-  }
-  if (!_didSetupDidBecomeActiveNotifications) {
-    _installationIdentification = [self stringValueFromKeychainForKey:kBITUpdateInstallationIdentification];
-    _didSetupDidBecomeActiveNotifications = YES;
   }
 }
 
@@ -387,7 +382,6 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     _sendUsageData = YES;
     _disableUpdateManager = NO;
     _checkForTracker = NO;
-    _didSetupDidBecomeActiveNotifications = NO;
     _firstStartAfterInstall = NO;
     _companyName = nil;
     
@@ -418,6 +412,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     }
     
     [self loadAppCache];
+    
+    _installationIdentification = [self stringValueFromKeychainForKey:kBITUpdateInstallationIdentification];
     
     [self startUsage];
 
