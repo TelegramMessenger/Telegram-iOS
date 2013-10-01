@@ -218,6 +218,8 @@
     parentViewController = parentViewController.presentedViewController;
   }
   
+  // as per documentation this only works if called from within viewWillAppear: or viewDidAppear:
+  // in tests this also worked fine on iOS 6 and 7 but not on iOS 5 so we are still trying this
   if ([parentViewController isBeingPresented]) {
     [self performSelector:@selector(showView:) withObject:viewController afterDelay:0.5];
     return;
