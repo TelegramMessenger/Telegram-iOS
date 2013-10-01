@@ -218,6 +218,10 @@
     parentViewController = parentViewController.presentedViewController;
   }
   
+  if ([parentViewController isBeingPresented]) {
+    [self performSelector:@selector(showView:) withObject:viewController afterDelay:0.5];
+    return;
+  }
   // special addition to get rootViewController from three20 which has it's own controller handling
   if (NSClassFromString(@"TTNavigator")) {
 #pragma clang diagnostic push
