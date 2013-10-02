@@ -65,9 +65,10 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  detect new crashes, queues them if networking is not available, present a user interface to approve sending
  the reports to the HockeyApp servers and more.
  
- It also provides options to add additional meta information to each crash report, like `userName`, `userEmail`,
- additional textual log information via `BITCrashManagerDelegate` protocol and a way to detect startup crashes so
- you can adjust your startup process to get these crash reports too and delay your app initialization.
+ It also provides options to add additional meta information to each crash report, like `userName`, `userEmail`
+ via `BITHockeyManagerDelegate` protocol, and additional textual log information via `BITCrashManagerDelegate`
+ protocol and a way to detect startup crashes so you can adjust your startup process to get these crash reports
+ too and delay your app initialization.
  
  Crashes are send the next time the app starts. If `crashManagerStatus` is set to `BITCrashManagerStatusAutoSend`,
  crashes will be send without any user interaction, otherwise an alert will appear allowing the users to decide
@@ -80,6 +81,14 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  that the app won't be possibly killed by the iOS watchdog process, because startup could take too long
  and the app could not react to any user input when network conditions are bad or connectivity might be
  very slow.
+ 
+ It is possible to check upon startup if the app crashed before using `didCrashInLastSession` and also how much
+ time passed between the app launch and the crash using `timeintervalCrashInLastSessionOccured`. This allows you
+ to add additional code to your app delaying the app start until the crash has been successfully send if the crash
+ occured within a critical startup timeframe, e.g. after 10 seconds. The `BITCrashManagerDelegate` protocol provides
+ various delegates to inform the app about it's current status so you can continue the remaining app startup setup
+ after sending has been completed. The documentation contains a guide
+ [How to handle Crashes on startup](HowTo-Handle-Crashes-On-Startup) with an example on how to do that.
  
  More background information on this topic can be found in the following blog post by Landon Fuller, the
  developer of [PLCrashReporter](https://www.plcrashreporter.org), about writing reliable and
