@@ -61,7 +61,9 @@ static NSString *BITKeychainUtilsErrorDomain = @"BITKeychainUtilsErrorDomain";
 	[attributeQuery setObject: (id) kCFBooleanTrue forKey:(__bridge_transfer id) kSecReturnAttributes];
   CFTypeRef attrResult = NULL;
 	OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef) attributeQuery, &attrResult);
-	//NSDictionary *attributeResult = (__bridge_transfer NSDictionary *)attrResult;
+//  NSDictionary *attributeResult = (__bridge_transfer NSDictionary *)attrResult;
+  if (attrResult)
+    CFRelease(attrResult);
   
 	if (status != noErr) {
 		// No existing item found--simply return nil for the password
