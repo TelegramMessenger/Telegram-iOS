@@ -244,6 +244,12 @@ typedef NS_ENUM(NSUInteger, BITAuthenticatorAppRestrictionEnforcementFrequency) 
  This is required if `identificationType` is set to `BITAuthenticatorIdentificationTypeDevice`.
  Your app needs to implement the default `ha<APP_ID>` URL scheme or register its own scheme
  via `urlScheme`.
+ BITAuthenticator checks if the given URL is actually meant to be parsed by it and will
+ return NO if it doesn't think so. It does this by checking the 'host'-part of the URL to be 'authorize', as well
+ as checking the protocol part.
+ Please make sure that if you're using a custom URL scheme, it does _not_ conflict with BITAuthenticator's.
+ If BITAuthenticator thinks the URL was meant to be an authorization URL, but could not find a valid token, it will
+ reset the stored identification token and state.
  
  Sample usage (in AppDelegate):
  
