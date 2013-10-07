@@ -65,6 +65,12 @@ typedef NS_ENUM (NSUInteger, BITUpdateSetting) {
  This module automatically disables itself when running in an App Store build by default! If you integrate the
  Atlassian JMC client this module is used to automatically configure JMC, but will not do anything else.
  
+ The protocol `BITUpdateManagerDelegate` provides delegates to inform about events and adjust a few behaviors.
+ 
+ To use the server side restriction feature, to provide updates only to specific users, you need to setup the
+ `BITAuthenticator` class. This allows the update request to tell the server which user is using the app on the
+ current device and then let the server decide which updates the device may see.
+ 
  */
 
 @interface BITUpdateManager : BITHockeyBaseManager <UIAlertViewDelegate>

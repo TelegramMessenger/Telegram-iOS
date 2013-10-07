@@ -104,6 +104,11 @@ typedef NS_ENUM(NSInteger, BITFeedbackUserDataElement) {
  or when the notification `BITHockeyNetworkDidBecomeReachableNotification` is fired. This
  only happens if the user ever did initiate a conversation by writing the first
  feedback message.
+ 
+ Implementing the `BITFeedbackManagerDelegate` protocol will notify your app when a new
+ message was received from the server. The `BITFeedbackComposeViewControllerDelegate`
+ protocol informs your app about events related to sending feedback messages.
+ 
  */
 
 @interface BITFeedbackManager : BITHockeyBaseManager

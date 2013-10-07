@@ -66,6 +66,8 @@ typedef NS_ENUM(NSInteger, BITStoreUpdateSetting) {
   
  When this module is enabled and **NOT** running in an App Store build/environment, it won't do any checks!
  
+ The `BITStoreUpdateManagerDelegate` protocol informs the app about new detected app versions.
+ 
  @warning This module can **NOT** check if the current device and OS version match the minimum requirements of
  the new app version!
  
