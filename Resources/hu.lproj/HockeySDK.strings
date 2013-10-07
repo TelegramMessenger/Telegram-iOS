@@ -234,33 +234,27 @@
 
 /* Authenticator */
 
-
 /* View Controller Title*/
-"HockeyAuthenticatorViewControllerTitle" = "Authorize";
+"HockeyAuthenticatorViewControllerTitle" = "HockeyApp";
 
 /* BITAuthenticatorAuthTypeUDIDProvider */
-"HockeyAuthenticationViewControllerWebLoginDescription" = "Please tap the following button to identify your device on HockeyApp.";
-"HockeyAuthenticationViewControllerWebLoginButtonTitle" = "Identify Device";
+"HockeyAuthenticationViewControllerWebLoginDescription" = "The developer has requested this device's UDID. Tap below to open the HockeyApp website and authorize access.";
+"HockeyAuthenticationViewControllerWebLoginButtonTitle" = "Open HockeyApp";
 
 /* BITAuthenticatorAuthTypeEmail and BITAuthenticatorAuthTypeEmailAndPassword */
-"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Please provide the email address and password of your HockeyApp account.";
-"HockeyAuthenticationViewControllerDataEmailDescription" = "Please provide the email address of your HockeyApp account.";
+"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Please enter your HockeyApp account's email address and password to authorize access to this app.";
+"HockeyAuthenticationViewControllerDataEmailDescription" = "Please enter your HockeyApp account's email address to authorize access to this app.";
 "HockeyAuthenticationViewControllerEmailPlaceholder" = "example@email.com";
 "HockeyAuthenticationViewControllerPasswordPlaceholder" = "Required";
 "HockeyAuthenticationViewControllerEmailDescription" = "Email";
 "HockeyAuthenticationViewControllerPasswordDescription" = "Password";
 
 /* Error presented to the user if authentication failed because of networking issues */
-"HockeyAuthenticationViewControllerNetworkError" = "Failed to authenticate. A internet connection is required! Please try again.";
+"HockeyAuthenticationViewControllerNetworkError" = "Failed to authorize because your device appears to be disconnected from the Internet. Please try again.";
 
 
-"HockeyAuthenticationFailedAuthenticate" = "Failed to authenticate. Please try again later.";
-"HockeyAuthenticationNotMember" = "You are not authorized to use this app. Please check that you are a member of this app.";
-"HockeyAuthenticationContactDeveloper" = "Authorization error. Please contact the developer of the app.";
-"HockeyAuthenticationAuthorizationError" = "Authorization error. Please contact the developer of the app.";
-"HockeyAuthenticationWrongEmailPassword" = "Wrong email or password. Please check your credentials and try again.";
-"HockeyAuthenticationAuthSecretMissing" = "Authentication secret is not set but required.";
-
-
-/* BarButton item to skip auth */
-"Skip" = "Skip";
+"HockeyAuthenticationFailedAuthenticate" = "Failed to authorize. Please try again or contact the developer of this app.";
+"HockeyAuthenticationNotMember" = "You are not authorized to use this app. Please contact the developer of this app.";
+"HockeyAuthenticationContactDeveloper" = "Authorization error. Please contact the developer of this app.";
+"HockeyAuthenticationWrongEmailPassword" = "You have entered an invalid email or password. Please check your input and try again.";
+"HockeyAuthenticationAuthSecretMissing" = "The HockeySDK authorization secret has not been set. Please contact the developer of this app.";
