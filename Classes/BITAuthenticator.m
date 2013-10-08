@@ -172,11 +172,14 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
     case BITAuthenticatorIdentificationTypeHockeyAppUser:
       viewController = [[BITAuthenticationViewController alloc] initWithDelegate:self];
       viewController.requirePassword = YES;
+      viewController.tableViewTitle = BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription");
       break;
     case BITAuthenticatorIdentificationTypeDevice:
       viewController = [[BITAuthenticationViewController alloc] initWithDelegate:self];
       viewController.requirePassword = NO;
       viewController.showsLoginViaWebButton = YES;
+      viewController.tableViewTitle = BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerWebLoginDescription");
+      break;
       break;
     case BITAuthenticatorIdentificationTypeHockeyAppEmail:
       if(nil == self.authenticationSecret) {
@@ -188,6 +191,7 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
       }
       viewController = [[BITAuthenticationViewController alloc] initWithDelegate:self];
       viewController.requirePassword = NO;
+      viewController.tableViewTitle = BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerDataEmailDescription");
       break;
   }
   
