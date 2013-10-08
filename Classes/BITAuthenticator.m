@@ -180,6 +180,11 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
       viewController.showsLoginViaWebButton = YES;
       viewController.tableViewTitle = BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerWebUDIDLoginDescription");
       break;
+    case BITAuthenticatorIdentificationTypeWebAuth:
+      viewController = [[BITAuthenticationViewController alloc] initWithDelegate:self];
+      viewController.requirePassword = NO;
+      viewController.showsLoginViaWebButton = YES;
+      viewController.tableViewTitle = BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerWebAuthLoginDescription");
       break;
     case BITAuthenticatorIdentificationTypeHockeyAppEmail:
       if(nil == self.authenticationSecret) {
@@ -230,6 +235,7 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
       //no break
     case BITAuthenticatorIdentificationTypeDevice:
     case BITAuthenticatorIdentificationTypeHockeyAppUser:
+    case BITAuthenticatorIdentificationTypeWebAuth:
       if(nil == self.installationIdentifier) {
         error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                     code:BITAuthenticatorNotIdentified
@@ -483,7 +489,25 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
 }
 
 - (NSURL *)deviceAuthenticationURL {
-  return [self.webpageURL URLByAppendingPathComponent:[NSString stringWithFormat:@"apps/%@/authorize", self.encodedAppIdentifier]];
+  NSString *whatParameter = nil;
+  switch (self.identificationType) {
+    case BITAuthenticatorIdentificationTypeWebAuth:
+      whatParameter = @"email";
+      break;
+    case BITAuthenticatorIdentificationTypeDevice:
+      whatParameter = @"udid";
+      break;
+    case BITAuthenticatorIdentificationTypeAnonymous:
+    case BITAuthenticatorIdentificationTypeHockeyAppEmail:
+    case BITAuthenticatorIdentificationTypeHockeyAppUser:
+      NSAssert(NO,@"Should not happen. Those identification types don't need an authentication URL");
+      return nil;
+      break;
+  }
+  NSURL *url = [self.webpageURL URLByAppendingPathComponent:[NSString stringWithFormat:@"apps/%@/authorize", self.encodedAppIdentifier]];
+  NSParameterAssert(whatParameter && url.absoluteString);
+  url = [NSURL URLWithString:[NSString stringWithFormat:@"%@?what=%@", url.absoluteString, whatParameter]];
+  return url;
 }
 
 - (void)authenticationViewControllerDidTapWebButton:(UIViewController *)viewController {
@@ -496,19 +520,46 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
 - (BOOL) handleOpenURL:(NSURL *) url
      sourceApplication:(NSString *) sourceApplication
             annotation:(id) annotation {
-  BOOL isValidURL = NO;
-  NSString *udid = [self UDIDFromOpenURL:url annotation:annotation isValidURL:&isValidURL];
-  if(NO == isValidURL) {
-    //do nothing, was not for us
+  //check if this URL was meant for us, if not return NO so the user can
+  //handle it
+  NSString *const kAuthorizationHost = @"authorize";
+  NSString *urlScheme = _urlScheme ? : [NSString stringWithFormat:@"ha%@", self.appIdentifier];
+  if(!([[url scheme] isEqualToString:urlScheme] && [[url host] isEqualToString:kAuthorizationHost])) {
     return NO;
   }
+
+  NSString *installationIdentifier = nil;
+  NSString *localizedErrorDescription = nil;
+  switch (self.identificationType) {
+    case BITAuthenticatorIdentificationTypeWebAuth: {
+      NSString *email = nil;
+      [self.class email:&email andIUID:&installationIdentifier fromOpenURL:url];
+      if(email) {
+        [self addStringValueToKeychain:email forKey:kBITAuthenticatorUserEmailKey];
+      } else {
+        BITHockeyLog(@"No email found in URL: %@", url);
+      }
+      localizedErrorDescription = @"Failed to retrieve parameters from URL.";
+      break;
+    }
+    case BITAuthenticatorIdentificationTypeDevice: {
+      installationIdentifier = [self.class UDIDFromOpenURL:url annotation:annotation];
+      localizedErrorDescription = @"Failed to retrieve UDID from URL.";
+      break;
+    }
+    case BITAuthenticatorIdentificationTypeHockeyAppEmail:
+    case BITAuthenticatorIdentificationTypeAnonymous:
+    case BITAuthenticatorIdentificationTypeHockeyAppUser:
+      NSAssert(NO, @"Should only be called for Device and WebAuth identificationType");
+      return NO;
+  }
   
-  if(udid){
+  if(installationIdentifier){
     if(NO == self.restrictApplicationUsage) {
       [_authenticationController dismissViewControllerAnimated:YES completion:nil];
       _authenticationController = nil;
     }
-    [self storeInstallationIdentifier:udid withType:BITAuthenticatorIdentificationTypeDevice];
+    [self storeInstallationIdentifier:installationIdentifier withType:self.identificationType];
     self.identified = YES;
     if(self.identificationCompletion) {
       self.identificationCompletion(YES, nil);
@@ -516,12 +567,12 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
     }
   } else {
     //reset token
-    [self storeInstallationIdentifier:nil withType:BITAuthenticatorIdentificationTypeDevice];
+    [self storeInstallationIdentifier:nil withType:self.identificationType];
     self.identified = NO;
     if(self.identificationCompletion) {
       NSError *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                            code:BITAuthenticatorErrorUnknown
-                                       userInfo:@{NSLocalizedDescriptionKey : @"Failed to retrieve UDID from URL"}];
+                                       userInfo:@{NSLocalizedDescriptionKey : localizedErrorDescription}];
       self.identificationCompletion(NO, error);
       self.identificationCompletion = nil;
     }
@@ -529,30 +580,33 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
   return YES;
 }
 
-- (NSString *) UDIDFromOpenURL:(NSURL *) url annotation:(id) annotation isValidURL:(BOOL*) isValid{
-  NSString *const kAuthorizationHost = @"authorize";
-  NSString *urlScheme = _urlScheme ? : [NSString stringWithFormat:@"ha%@", self.appIdentifier];
-  if([[url scheme] isEqualToString:urlScheme] && [[url host] isEqualToString:kAuthorizationHost]) {
-    if(isValid) {
-      *isValid = YES;
++ (NSString *) UDIDFromOpenURL:(NSURL *) url annotation:(id) annotation {
+  NSString *query = [url query];
+  NSString *udid = nil;
+  //there should actually only one
+  static NSString * const UDIDQuerySpecifier = @"udid";
+  for(NSString *queryComponents in [query componentsSeparatedByString:@"&"]) {
+    NSArray *parameterComponents = [queryComponents componentsSeparatedByString:@"="];
+    if(2 == parameterComponents.count && [parameterComponents[0] isEqualToString:UDIDQuerySpecifier]) {
+      udid = parameterComponents[1];
+      break;
     }
-    NSString *query = [url query];
-    NSString *udid = nil;
-    //there should actually only one
-    static NSString * const UDIDQuerySpecifier = @"udid";
-    for(NSString *queryComponents in [query componentsSeparatedByString:@"&"]) {
-      NSArray *parameterComponents = [queryComponents componentsSeparatedByString:@"="];
-      if(2 == parameterComponents.count && [parameterComponents[0] isEqualToString:UDIDQuerySpecifier]) {
-        udid = parameterComponents[1];
-        break;
-      }
+  }
+  return udid;
+}
+
++ (void) email:(NSString**) email andIUID:(NSString**) iuid fromOpenURL:(NSURL *) url {
+  NSString *query = [url query];
+  //there should actually only one
+  static NSString * const EmailQuerySpecifier = @"email";
+  static NSString * const IUIDQuerySpecifier = @"iuid";
+  for(NSString *queryComponents in [query componentsSeparatedByString:@"&"]) {
+    NSArray *parameterComponents = [queryComponents componentsSeparatedByString:@"="];
+    if(email && 2 == parameterComponents.count && [parameterComponents[0] isEqualToString:EmailQuerySpecifier]) {
+      *email = parameterComponents[1];
+    } else if(iuid && 2 == parameterComponents.count && [parameterComponents[0] isEqualToString:IUIDQuerySpecifier]) {
+      *iuid = parameterComponents[1];
     }
-    return udid;
-  } else {
-    if(isValid) {
-      *isValid = NO;
-    }
-    return nil;
   }
 }
 
@@ -642,6 +696,7 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
 - (NSString *)installationIdentifierParameterString {
   switch(self.identificationType) {
     case BITAuthenticatorIdentificationTypeHockeyAppEmail:
+    case BITAuthenticatorIdentificationTypeWebAuth:
       return @"iuid";
     case BITAuthenticatorIdentificationTypeHockeyAppUser: return @"auid";
     case BITAuthenticatorIdentificationTypeDevice: return @"udid";
@@ -652,6 +707,7 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
 + (NSString *)stringForIdentificationType:(BITAuthenticatorIdentificationType) identificationType {
   switch(identificationType) {
     case BITAuthenticatorIdentificationTypeHockeyAppEmail: return @"iuid";
+    case BITAuthenticatorIdentificationTypeWebAuth: return @"webAuth";
     case BITAuthenticatorIdentificationTypeHockeyAppUser: return @"auid";
     case BITAuthenticatorIdentificationTypeDevice: return @"udid";
     case BITAuthenticatorIdentificationTypeAnonymous: return @"uuid";
@@ -670,6 +726,7 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
   switch (self.identificationType) {
     case BITAuthenticatorIdentificationTypeHockeyAppEmail:
     case BITAuthenticatorIdentificationTypeHockeyAppUser:
+    case BITAuthenticatorIdentificationTypeWebAuth:
       return [self stringValueFromKeychainForKey:kBITAuthenticatorUserEmailKey];
     case BITAuthenticatorIdentificationTypeAnonymous:
     case BITAuthenticatorIdentificationTypeDevice:

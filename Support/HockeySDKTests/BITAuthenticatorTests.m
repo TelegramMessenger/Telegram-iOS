@@ -189,6 +189,16 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   
   [verifyCount(delegateMock, times(1)) authenticator:_sut willShowAuthenticationController:(id)anything()];
 }
+#pragma mark - Web auth identification type
+- (void) testWebAuthIdentificationShowsViewController {
+  _sut.identificationType = BITAuthenticatorIdentificationTypeWebAuth;
+  id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
+  _sut.delegate = delegateMock;
+  
+  [_sut identifyWithCompletion:nil];
+  
+  [verifyCount(delegateMock, times(1)) authenticator:_sut willShowAuthenticationController:(id)anything()];
+}
 
 #pragma mark - Email identification type
 - (void) testEmailIdentificationFailsWithMissingSecret {
