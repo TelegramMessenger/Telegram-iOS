@@ -178,7 +178,7 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
       viewController = [[BITAuthenticationViewController alloc] initWithDelegate:self];
       viewController.requirePassword = NO;
       viewController.showsLoginViaWebButton = YES;
-      viewController.tableViewTitle = BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerWebLoginDescription");
+      viewController.tableViewTitle = BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerWebUDIDLoginDescription");
       break;
       break;
     case BITAuthenticatorIdentificationTypeHockeyAppEmail:

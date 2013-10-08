@@ -240,7 +240,7 @@
 "HockeyAuthenticatorViewControllerTitle" = "HockeyApp";
 
 /* BITAuthenticatorAuthTypeUDIDProvider */
-"HockeyAuthenticationViewControllerWebLoginDescription" = "The developer has requested this device's UDID. Tap below to open the HockeyApp website and authorize access.";
+"HockeyAuthenticationViewControllerWebUDIDLoginDescription" = "The developer has requested this device's UDID. Tap below to open the HockeyApp website and authorize access.";
 "HockeyAuthenticationViewControllerWebLoginButtonTitle" = "Open HockeyApp";
 
 /* BITAuthenticatorAuthTypeEmail and BITAuthenticatorAuthTypeEmailAndPassword */
