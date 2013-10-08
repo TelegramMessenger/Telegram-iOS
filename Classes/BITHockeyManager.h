@@ -307,6 +307,19 @@
 @property (nonatomic, readonly, getter=isAppStoreEnvironment) BOOL appStoreEnvironment;
 
 
+/**
+ Returns the app installation specific anonymous UUID
+ 
+ The value returned by this method is unique and persisted per app installation
+ in the keychain.  It is also being used in crash reports as `CrashReporter Key`
+ and internally when sending crash reports and feedback messages.
+ 
+ This is not identical to the `[ASIdentifierManager advertisingIdentifier]` or
+ the `[UIDevice identifierForVendor]`!
+ */
+@property (nonatomic, readonly) NSString *installString;
+
+
 ///-----------------------------------------------------------------------------
 /// @name Debug Logging
 ///-----------------------------------------------------------------------------

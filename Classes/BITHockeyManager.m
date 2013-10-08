@@ -33,6 +33,9 @@
 #import "BITHockeyManagerPrivate.h"
 #import "BITHockeyBaseManagerPrivate.h"
 
+#import "BITHockeyHelper.h"
+
+
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
 #import "BITCrashManagerPrivate.h"
 #endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */
@@ -128,6 +131,8 @@
     _appStoreEnvironment = NO;
     _startManagerIsInvoked = NO;
     _startUpdateManagerIsInvoked = NO;
+    
+    _installString = bit_appAnonID();
     
 #if !TARGET_IPHONE_SIMULATOR
     // check if we are really in an app store environment
