@@ -251,7 +251,7 @@
     [_updateManager removeObserver:self forKeyPath:@"checkInProgress"];
     [_updateManager removeObserver:self forKeyPath:@"isUpdateURLOffline"];
     [_updateManager removeObserver:self forKeyPath:@"updateAvailable"];
-    [_updateManager removeObserver:self forKeyPath:@"apps"];
+    [_updateManager removeObserver:self forKeyPath:@"appVersions"];
     _kvoRegistered = NO;
   }
   
@@ -275,7 +275,7 @@
   [_updateManager addObserver:self forKeyPath:@"checkInProgress" options:0 context:nil];
   [_updateManager addObserver:self forKeyPath:@"isUpdateURLOffline" options:0 context:nil];
   [_updateManager addObserver:self forKeyPath:@"updateAvailable" options:0 context:nil];
-  [_updateManager addObserver:self forKeyPath:@"apps" options:0 context:nil];
+  [_updateManager addObserver:self forKeyPath:@"appVersions" options:0 context:nil];
   _kvoRegistered = YES;
   
   self.tableView.backgroundColor = BIT_RGBCOLOR(245, 245, 245);
@@ -490,7 +490,7 @@
       [self restoreStoreButtonStateAnimated:YES];
     } else if ([keyPath isEqualToString:@"updateAvailable"]) {
       [self restoreStoreButtonStateAnimated:YES];
-    } else if ([keyPath isEqualToString:@"apps"]) {
+    } else if ([keyPath isEqualToString:@"appVersions"]) {
       [self redrawTableView];
     }
   }
