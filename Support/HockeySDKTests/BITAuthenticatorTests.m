@@ -111,7 +111,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   assertThatBool(_sut.isValidated, equalToBool(NO));
   assertThat(_sut.authenticationSecret, equalTo(nil));
   assertThat(_sut.installationIdentifier, equalTo(nil));
-  assertThat(_sut.installationIdentifierTypeString, equalTo(@"uuid"));
+  assertThat(_sut.installationIdentifierParameterString, equalTo(@"uuid"));
 }
 
 #pragma mark - General identification tests

@@ -50,9 +50,9 @@
 @property (nonatomic, copy) NSString *lastAuthenticatedVersion;
 
 /**
- *  return the string used to identify this app against the HockeyApp backend.
+ *  returns the type of the string stored in installationIdentifierParameterString
  */
-@property (nonatomic, copy, readonly) NSString *installationIdentifierTypeString;
+@property (nonatomic, copy, readonly) NSString *installationIdentifierParameterString;
 
 /**
  *  returns the string used to identify this app against the HockeyApp backend.

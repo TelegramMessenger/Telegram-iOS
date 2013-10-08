@@ -275,8 +275,8 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
 
 - (NSDictionary*) validationParameters {
   NSParameterAssert(self.installationIdentifier);
-  NSParameterAssert(self.installationIdentifierTypeString);
-  return @{self.installationIdentifierTypeString : self.installationIdentifier};
+  NSParameterAssert(self.installationIdentifierParameterString);
+  return @{self.installationIdentifierParameterString : self.installationIdentifier};
 }
 
 + (BOOL) isValidationResponseValid:(id) response error:(NSError **) error {
@@ -639,8 +639,14 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
   return [[NSUserDefaults standardUserDefaults] objectForKey:kBITAuthenticatorLastAuthenticatedVersionKey];
 }
 
-- (NSString *)installationIdentifierTypeString {
-  return [self.class stringForIdentificationType:self.identificationType];
+- (NSString *)installationIdentifierParameterString {
+  switch(self.identificationType) {
+    case BITAuthenticatorIdentificationTypeHockeyAppEmail:
+      return @"iuid";
+    case BITAuthenticatorIdentificationTypeHockeyAppUser: return @"auid";
+    case BITAuthenticatorIdentificationTypeDevice: return @"udid";
+    case BITAuthenticatorIdentificationTypeAnonymous: return @"uuid";
+  }
 }
 
 + (NSString *)stringForIdentificationType:(BITAuthenticatorIdentificationType) identificationType {

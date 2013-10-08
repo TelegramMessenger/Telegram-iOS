@@ -356,7 +356,7 @@
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
   if (_authenticator) {
     [_updateManager setInstallationIdentification:[self.authenticator installationIdentifier]];
-    [_updateManager setInstallationIdentificationType:[self.authenticator installationIdentifierTypeString]];
+    [_updateManager setInstallationIdentificationType:[self.authenticator installationIdentifierParameterString]];
     [_updateManager setInstallationIdentified:[self.authenticator isIdentified]];
   }
 #endif
