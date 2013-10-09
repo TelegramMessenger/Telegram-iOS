@@ -801,7 +801,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
         if ([appVersionMetaInfo isValid]) {
           // check if minOSVersion is set and this device qualifies
           BOOL deviceOSVersionQualifies = YES;
-          if ([appVersionMetaInfo minOSVersion]) {
+          if ([appVersionMetaInfo minOSVersion] && ![[appVersionMetaInfo minOSVersion] isKindOfClass:[NSNull class]]) {
             NSComparisonResult comparissonResult = bit_versionCompare(appVersionMetaInfo.minOSVersion, [[UIDevice currentDevice] systemVersion]);
             if (comparissonResult == NSOrderedDescending) {
               deviceOSVersionQualifies = NO;
