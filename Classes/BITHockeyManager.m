@@ -240,15 +240,23 @@
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
   
 #if HOCKEYSDK_FEATURE_UPDATES
-  // Setup UpdateManager
-  if (![self isUpdateManagerDisabled]
+  BOOL jmcIsPresent = NO;
+  BOOL isIdentified = NO;
+
 #if HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT
-      || [[self class] isJMCPresent]
+  jmcIsPresent = [[self class] isJMCPresent]
 #endif /* HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT */
-      ) {
-    if ([self.authenticator isIdentified]) {
-      [self invokeStartUpdateManager];
-    }
+
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
+  if (![self isAppStoreEnvironment])
+    isIdentified = [self.authenticator isIdentified];
+#endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
+
+  // Setup UpdateManager
+  if (
+      (![self isUpdateManagerDisabled] && isIdentified) ||
+      jmcIsPresent) {
+    [self invokeStartUpdateManager];
   }
 #endif /* HOCKEYSDK_FEATURE_UPDATES */
 }
@@ -307,12 +315,8 @@
       [object valueForKey:@"isIdentified"] ) {
     if (![self isAppStoreEnvironment]) {
       BOOL identified = [(NSNumber *)[object valueForKey:@"isIdentified"] boolValue];
-      if (identified) {
-#if HOCKEYSDK_FEATURE_UPDATES
-        if (![self isUpdateManagerDisabled]) {
-          [self invokeStartUpdateManager];
-        }
-#endif
+      if (identified && ![self isUpdateManagerDisabled]) {
+        [self invokeStartUpdateManager];
       }
     }
 #if HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT
