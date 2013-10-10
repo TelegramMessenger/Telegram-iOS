@@ -28,11 +28,11 @@ Previous versions of HockeySDK for iOS used the response of the method `UIDevice
 
 The `BITAuthenticator` class doesn't do anything on its own. In addition to setting up the behavior, you also need to trigger the process yourself.
 
-If `automaticMode` is enabled (default), you simply need to place a call to `[[BITHockeyManager sharedHockeyManager] authenticateInstallation]` in your code. This will show a UI asking for identification details according to the chosen strategy.
+The most simple option is to place a call to `[[BITHockeyManager sharedHockeyManager] authenticateInstallation]` in your code. This will show a UI asking for identification details according to the chosen strategy.
 
 **IMPORTANT**: If your app shows a modal view on startup, make sure to call `authenticateInstallation` either once your modal view is fully presented (e.g. its `viewDidLoad:` method is processed) or once your modal view is dismissed.
 
-If `automaticMode` is disabled, you need to implement your own workflow by using
+The second option is to implement your own workflow by using
 
     - (void) identifyWithCompletion:(void(^)(BOOL identified, NSError *error)) completion;
 

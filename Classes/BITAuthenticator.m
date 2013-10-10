@@ -64,7 +64,6 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
     _webpageURL = [NSURL URLWithString:@"https://rink.hockeyapp.net/"];
     
     _identificationType = BITAuthenticatorIdentificationTypeAnonymous;
-    _automaticMode = YES;
     _isSetup = NO;
     _restrictApplicationUsage = NO;
     _restrictionEnforcementFrequency = BITAuthenticatorAppRestrictionEnforcementOnFirstLaunch;
@@ -108,9 +107,6 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
 }
 
 - (void) authenticate {
-  //when running in manual mode, we don't actually do anything ourselves
-  if(!self.automaticMode) return;
-  
   [self identifyWithCompletion:^(BOOL identified, NSError *error) {
     if(identified) {
       if([self needsValidation]) {

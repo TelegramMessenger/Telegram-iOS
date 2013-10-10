@@ -113,8 +113,8 @@ typedef NS_ENUM(NSUInteger, BITAuthenticatorAppRestrictionEnforcementFrequency) 
  * This module automatically disables itself when running in an App Store build by default!
  *
  * @warning It is mandatory to call `authenticateInstallation` somewhen after calling
- * `[[BITHockeyManager sharedHockeyManager] startManager]` or disable `automaticMode`
- * and fully customize the identification and validation workflow yourself.
+ * `[[BITHockeyManager sharedHockeyManager] startManager]` or fully customize the identification
+ * and validation workflow yourself.
  * If your app shows a modal view on startup, make sure to call `authenticateInstallation`
  * either once your modal view is fully presented (e.g. its `viewDidLoad:` method is processed)
  * or once your modal view is dismissed.
@@ -138,23 +138,6 @@ typedef NS_ENUM(NSUInteger, BITAuthenticatorAppRestrictionEnforcementFrequency) 
  */
 @property (nonatomic, assign) BITAuthenticatorIdentificationType identificationType;
 
-/**
- Defines if the BITAuthenticator automatically identifies the user and also
- checks if he's still allowed to use the app (depending on `restrictApplicationUsage`)
- 
- If this is set to NO, it's your responsiblity to call
- 
-    - (void) identifyWithCompletion:(void(^)(BOOL identified, NSError *error)) completion;
- 
- and
- 
-    - (void) validateWithCompletion:(void(^)(BOOL identified, NSError *error)) completion;
- 
- at approciate times and also block the application or re-identify the user if validation failed.
- 
- _Default_: `YES`
- */
-@property (nonatomic, assign) BOOL automaticMode;
 
 /**
  * Enables or disables checking if the user is allowed to run this app
@@ -309,7 +292,6 @@ typedef NS_ENUM(NSUInteger, BITAuthenticatorAppRestrictionEnforcementFrequency) 
  * @warning You need to call this method in your code even if automatic mode is enabled!
  *
  * @see identificationType
- * @see automaticMode
  */
 - (void) authenticateInstallation;
 
@@ -324,7 +306,8 @@ typedef NS_ENUM(NSUInteger, BITAuthenticatorAppRestrictionEnforcementFrequency) 
  * once needed.
  *
  * @see identificationType
- * @see automaticMode
+ * @see authenticateInstallation
+ * @see validateWithCompletion:
  *
  * @param completion Block being executed once identification completed
  */
@@ -349,7 +332,8 @@ typedef NS_ENUM(NSUInteger, BITAuthenticatorAppRestrictionEnforcementFrequency) 
  * once needed.
  *
  * @see identificationType
- * @see automaticMode
+ * @see authenticateInstallation
+ * @see identifyWithCompletion:
  *
  * @param completion Block being executed once validation completed
  */
