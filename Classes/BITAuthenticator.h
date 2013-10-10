@@ -111,6 +111,13 @@ typedef NS_ENUM(NSUInteger, BITAuthenticatorAppRestrictionEnforcementFrequency) 
  *    sure only users who are testers of your app are allowed to run it.
  *
  * This module automatically disables itself when running in an App Store build by default!
+ *
+ * @warning It is mandatory to call `authenticateInstallation` somewhen after calling
+ * `[[BITHockeyManager sharedHockeyManager] startManager]` or disable `automaticMode`
+ * and fully customize the identification and validation workflow yourself.
+ * If your app shows a modal view on startup, make sure to call `authenticateInstallation`
+ * either once your modal view is fully presented (e.g. its `viewDidLoad:` method is processed)
+ * or once your modal view is dismissed.
  */
 @interface BITAuthenticator : BITHockeyBaseManager
 
@@ -284,6 +291,27 @@ typedef NS_ENUM(NSUInteger, BITAuthenticatorAppRestrictionEnforcementFrequency) 
 ///-----------------------------------------------------------------------------
 /// @name Authentication
 ///-----------------------------------------------------------------------------
+
+/**
+ * Invoked automatic identification and validation
+ *
+ * If the `BITAuthenticator` is in automatic mode this will initiate identifying
+ * the current user according to the type specified in `identificationType` and
+ * validate if the identified user is allowed to run this application.
+ *
+ * If the user is not yet identified it will present a modal view asking the user to
+ * provide the required information.
+ *
+ * If your app provides it's own startup modal screen, e.g. a guide or a login, then
+ * you might either call this method once that UI is fully presented or once
+ * the user e.g. did actually login already.
+ *
+ * @warning You need to call this method in your code even if automatic mode is enabled!
+ *
+ * @see identificationType
+ * @see automaticMode
+ */
+- (void) authenticateInstallation;
 
 /**
  * Identifies the user according to the type specified in `identificationType`.

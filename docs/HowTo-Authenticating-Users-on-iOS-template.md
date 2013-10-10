@@ -26,6 +26,22 @@ Previous versions of HockeySDK for iOS used the response of the method `UIDevice
 
     The user needs to enter the email address and password of his HockeyApp account.
 
+The `BITAuthenticator` class doesn't do anything on its own. In addition to setting up the behavior, you also need to trigger the process yourself.
+
+If `automaticMode` is enabled (default), you simply need to place a call to `[[BITHockeyManager sharedHockeyManager] authenticateInstallation]` in your code. This will show a UI asking for identification details according to the chosen strategy.
+
+**IMPORTANT**: If your app shows a modal view on startup, make sure to call `authenticateInstallation` either once your modal view is fully presented (e.g. its `viewDidLoad:` method is processed) or once your modal view is dismissed.
+
+If `automaticMode` is disabled, you need to implement your own workflow by using
+
+    - (void) identifyWithCompletion:(void(^)(BOOL identified, NSError *error)) completion;
+
+to identify the current user depending on your strategy and 
+
+    - (void) validateWithCompletion:(void(^)(BOOL validated, NSError *error)) completion;
+
+to validate the user may still use the app if required.
+
 The following sections explain the different strategies and their advantages / disadvantages.
 
 <a name="no-authentication"></a>
@@ -35,6 +51,7 @@ Initialize HockeySDK with the following code:
 
     [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"<#APP_ID#>" delegate:self];
     [[BITHockeyManager sharedHockeyManager] startManager];
+    [[BITHockeyManager sharedHockeyManager] authenticateInstallation];
 
 Replace APP_ID with the your App ID (can be found on the app page). 
 
@@ -57,6 +74,7 @@ Initialize HockeySDK with the following code:
     [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"<#APP_ID#>" delegate:self];
     [[BITHockeyManager sharedHockeyManager].authenticator setIdentificationType:BITAuthenticatorIdentificationTypeDevice];
     [[BITHockeyManager sharedHockeyManager] startManager];
+    [[BITHockeyManager sharedHockeyManager] authenticateInstallation];
 
 Replace APP_ID with the your App ID (can be found on the app page). 
 
@@ -104,6 +122,7 @@ Initialize HockeySDK with the following code:
     [[BITHockeyManager sharedHockeyManager].authenticator setAuthenticationSecret:@"<#SECRET#>"];
     [[BITHockeyManager sharedHockeyManager].authenticator setIdentificationType:BITAuthenticatorIdentificationTypeHockeyAppEmail];
     [[BITHockeyManager sharedHockeyManager] startManager];
+    [[BITHockeyManager sharedHockeyManager] authenticateInstallation];
 
 Replace APP_ID with the your App ID and SECRET with the Secret (both values can be found on the app page). 
 
@@ -127,6 +146,7 @@ Initialize HockeySDK with the following code:
     [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_ID" delegate:self];
     [[BITHockeyManager sharedHockeyManager].authenticator setIdentificationType:BITAuthenticatorIdentificationTypeHockeyAppUser];
     [[BITHockeyManager sharedHockeyManager] startManager];
+    [[BITHockeyManager sharedHockeyManager] authenticateInstallation];
 
 Replace APP_ID with the your App ID (can be found on the app page). 
 
