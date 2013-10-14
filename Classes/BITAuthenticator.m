@@ -110,23 +110,7 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
   [self identifyWithCompletion:^(BOOL identified, NSError *error) {
     if(identified) {
       if([self needsValidation]) {
-        [self validateWithCompletion:^(BOOL validated, NSError *error) {
-          if(validated) {
-            [_authenticationController dismissViewControllerAnimated:YES completion:nil];
-            _authenticationController = nil;
-          } else {
-            [self storeInstallationIdentifier:nil withType:self.identificationType];
-            UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil
-                                                                message:error.localizedDescription
-                                                               delegate:nil
-                                                      cancelButtonTitle:BITHockeyLocalizedString(@"HockeyOK")
-                                                      otherButtonTitles:nil];
-            [alertView show];
-            dispatch_async(dispatch_get_main_queue(), ^{
-              [self authenticate];
-            });
-          }
-        }];
+        [self validate];
       } else {
         [_authenticationController dismissViewControllerAnimated:YES completion:nil];
         _authenticationController = nil;
@@ -219,6 +203,23 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
 }
 
 #pragma mark - Validation
+
+- (void) validate {
+  [self validateWithCompletion:^(BOOL validated, NSError *error) {
+    if(validated) {
+      [_authenticationController dismissViewControllerAnimated:YES completion:nil];
+      _authenticationController = nil;
+    } else {
+      UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil
+                                                          message:error.localizedDescription
+                                                         delegate:self
+                                                cancelButtonTitle:BITHockeyLocalizedString(@"HockeyOK")
+                                                otherButtonTitles:nil];
+      [alertView show];
+    }
+  }];
+}
+
 - (void) validateWithCompletion:(void (^)(BOOL validated, NSError *))completion {
   BOOL requirementsFulfilled = YES;
   NSError *error = nil;
@@ -694,5 +695,10 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
      [[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground) {
     self.validated = NO;
   }
+}
+
+#pragma mark - UIAlertViewDelegate
+- (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
+  [self validate];
 }
 @end

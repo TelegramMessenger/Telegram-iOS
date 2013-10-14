@@ -35,7 +35,7 @@
 #import "BITAuthenticationViewController.h"
 @class BITHockeyAppClient;
 
-@interface BITAuthenticator ()<BITAuthenticationViewControllerDelegate>
+@interface BITAuthenticator ()<BITAuthenticationViewControllerDelegate, UIAlertViewDelegate>
 
 /**
  * must be set
