@@ -50,6 +50,8 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
   id _appDidBecomeActiveObserver;
   id _appWillResignActiveObserver;
   UIViewController *_authenticationController;
+
+  BOOL _isSetup;
 }
 
 - (void)dealloc {
@@ -62,7 +64,7 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
     _webpageURL = [NSURL URLWithString:@"https://rink.hockeyapp.net/"];
     
     _identificationType = BITAuthenticatorIdentificationTypeAnonymous;
-    _automaticMode = YES;
+    _isSetup = NO;
     _restrictApplicationUsage = NO;
     _restrictionEnforcementFrequency = BITAuthenticatorAppRestrictionEnforcementOnFirstLaunch;
   }
@@ -74,24 +76,37 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
   //disabled in the appStore
   if([self isAppStoreEnvironment]) return;
   
-  switch ([[UIApplication sharedApplication] applicationState]) {
-    case UIApplicationStateActive:
-      [self authenticate];
-      break;
-    case UIApplicationStateBackground:
-    case UIApplicationStateInactive:
-      // do nothing, wait for active state
-      break;
-  }
-  
-  [self registerObservers];
+  _isSetup = YES;
 }
 
 #pragma mark -
-- (void) authenticate {
-  //when running in manual mode, we don't actually do anything ourselves
-  if(!self.automaticMode) return;
+- (void)authenticateInstallation {
+  //disabled in the appStore
+  if([self isAppStoreEnvironment]) return;
   
+  // make sure this is called after startManager so all modules are fully setup
+  if (!_isSetup) {
+    [self performSelector:@selector(authenticateInstallation) withObject:nil afterDelay:0.1];
+  }
+  
+  static dispatch_once_t authenticatePredicate;
+  dispatch_once(&authenticatePredicate, ^{
+    
+    switch ([[UIApplication sharedApplication] applicationState]) {
+      case UIApplicationStateActive:
+        [self authenticate];
+        break;
+      case UIApplicationStateBackground:
+      case UIApplicationStateInactive:
+        // do nothing, wait for active state
+        break;
+    }
+    
+    [self registerObservers];
+  });
+}
+
+- (void) authenticate {
   [self identifyWithCompletion:^(BOOL identified, NSError *error) {
     if(identified) {
       if([self needsValidation]) {
