@@ -264,9 +264,13 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
                      completion:^(BITHTTPOperation *operation, NSData* responseData, NSError *error) {
                        typeof (self) strongSelf = weakSelf;
                        if(nil == responseData) {
-                         NSDictionary *userInfo = nil;
+                         NSDictionary *userInfo = @{
+                           NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"HockeyAuthenticationFailedAuthenticate"),
+                           };
                          if(error) {
-                           userInfo = @{NSUnderlyingErrorKey : error};
+                           NSMutableDictionary *dict = [userInfo mutableCopy];
+                           dict[NSUnderlyingErrorKey] = error;
+                           userInfo = dict;
                          }
                          NSError *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                                               code:BITAuthenticatorNetworkError
