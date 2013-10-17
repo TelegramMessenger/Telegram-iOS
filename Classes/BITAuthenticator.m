@@ -89,21 +89,17 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
     [self performSelector:@selector(authenticateInstallation) withObject:nil afterDelay:0.1];
   }
   
-  static dispatch_once_t authenticatePredicate;
-  dispatch_once(&authenticatePredicate, ^{
-    
-    switch ([[UIApplication sharedApplication] applicationState]) {
-      case UIApplicationStateActive:
-        [self authenticate];
-        break;
-      case UIApplicationStateBackground:
-      case UIApplicationStateInactive:
-        // do nothing, wait for active state
-        break;
-    }
-    
-    [self registerObservers];
-  });
+  switch ([[UIApplication sharedApplication] applicationState]) {
+    case UIApplicationStateActive:
+      [self authenticate];
+      break;
+    case UIApplicationStateBackground:
+    case UIApplicationStateInactive:
+      // do nothing, wait for active state
+      break;
+  }
+  
+  [self registerObservers];
 }
 
 - (void) authenticate {
