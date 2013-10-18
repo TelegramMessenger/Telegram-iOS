@@ -193,9 +193,9 @@
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
     cell.backgroundColor = [UIColor whiteColor];
     
-    UITextField *textField = [[UITextField alloc] initWithFrame:CGRectMake(110, 10, self.view.frame.size.width - 110 - 35, 30)];
+    UITextField *textField = [[UITextField alloc] initWithFrame:CGRectMake(110, 11, self.view.frame.size.width - 110 - 35, 24)];
     if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
-      textField.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+      textField.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin;
     }
     textField.adjustsFontSizeToFitWidth = YES;
     textField.textColor = [UIColor blackColor];
@@ -210,6 +210,7 @@
         textField.returnKeyType = UIReturnKeyNext;
       else
         textField.returnKeyType = UIReturnKeyDone;
+      textField.autocapitalizationType = UITextAutocapitalizationTypeWords;
       [textField addTarget:self action:@selector(userNameEntered:) forControlEvents:UIControlEventEditingChanged];
       [textField becomeFirstResponder];
     } else {
@@ -218,6 +219,7 @@
       
       textField.keyboardType = UIKeyboardTypeEmailAddress;
       textField.returnKeyType = UIReturnKeyDone;
+      textField.autocapitalizationType = UITextAutocapitalizationTypeNone;
       [textField addTarget:self action:@selector(userEmailEntered:) forControlEvents:UIControlEventEditingChanged];
       if (![self.manager requireUserName])
         [textField becomeFirstResponder];
@@ -225,7 +227,6 @@
     
     textField.backgroundColor = [UIColor whiteColor];
     textField.autocorrectionType = UITextAutocorrectionTypeNo;
-    textField.autocapitalizationType = UITextAutocapitalizationTypeNone;
     textField.textAlignment = kBITTextLabelAlignmentLeft;
     textField.delegate = self;
     textField.tag = indexPath.row;
