@@ -111,7 +111,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   assertThatBool(_sut.isValidated, equalToBool(NO));
   assertThat(_sut.authenticationSecret, equalTo(nil));
   assertThat(_sut.installationIdentifier, equalTo(nil));
-  assertThat(_sut.installationIdentifierTypeString, equalTo(@"uuid"));
+  assertThat(_sut.installationIdentifierParameterString, equalTo(@"uuid"));
 }
 
 #pragma mark - General identification tests
@@ -185,6 +185,16 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
   _sut.delegate = delegateMock;
 
+  [_sut identifyWithCompletion:nil];
+  
+  [verifyCount(delegateMock, times(1)) authenticator:_sut willShowAuthenticationController:(id)anything()];
+}
+#pragma mark - Web auth identification type
+- (void) testWebAuthIdentificationShowsViewController {
+  _sut.identificationType = BITAuthenticatorIdentificationTypeWebAuth;
+  id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
+  _sut.delegate = delegateMock;
+  
   [_sut identifyWithCompletion:nil];
   
   [verifyCount(delegateMock, times(1)) authenticator:_sut willShowAuthenticationController:(id)anything()];

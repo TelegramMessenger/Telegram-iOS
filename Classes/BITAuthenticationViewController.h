@@ -48,6 +48,12 @@
 @property (nonatomic, assign) BOOL showsLoginViaWebButton;
 
 /**
+ *  Description shown on top of view. Should tell why this view 
+ *  was presented and what's next.
+ */
+@property (nonatomic, copy) NSString* tableViewTitle;
+
+/**
  *	can be set to YES to also require the users password
  *
  *  defaults to NO

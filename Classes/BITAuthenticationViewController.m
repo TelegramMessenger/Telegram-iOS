@@ -142,6 +142,13 @@
     _emailField.text = email;
   }
 }
+
+- (void)setTableViewTitle:(NSString *)viewDescription {
+  _tableViewTitle = [viewDescription copy];
+  if(self.isViewLoaded) {
+    [self.tableView reloadData];
+  }
+}
 #pragma mark - UIViewController Rotation
 
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)orientation {
@@ -181,13 +188,7 @@
 
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
   if (section == 0) {
-    if(self.showsLoginViaWebButton) {
-      return BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerWebLoginDescription");
-    } else if(self.requirePassword) {
-      return BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription");
-    } else {
-      return BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerDataEmailDescription");
-    }
+    return self.tableViewTitle;
   }
   
   return nil;
