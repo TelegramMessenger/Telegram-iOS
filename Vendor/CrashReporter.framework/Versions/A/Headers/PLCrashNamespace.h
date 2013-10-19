@@ -50,6 +50,7 @@
 #define PLCrashReportApplicationInfo        PLNS(PLCrashReportApplicationInfo)
 #define PLCrashReportBinaryImageInfo        PLNS(PLCrashReportBinaryImageInfo)
 #define PLCrashReportExceptionInfo          PLNS(PLCrashReportExceptionInfo)
+#define PLCrashReportMachExceptionInfo      PLNS(PLCrashReportMachExceptionInfo)
 #define PLCrashReportMachineInfo            PLNS(PLCrashReportMachineInfo)
 #define PLCrashReportProcessInfo            PLNS(PLCrashReportProcessInfo)
 #define PLCrashReportProcessorInfo          PLNS(PLCrashReportProcessorInfo)
