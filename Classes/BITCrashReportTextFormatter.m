@@ -331,7 +331,7 @@ static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context);
       /* Remap register names to match Apple's crash reports */
       NSString *regName = reg.registerName;
       if (report.machineInfo != nil && report.machineInfo.processorInfo.typeEncoding == PLCrashReportProcessorTypeEncodingMach) {
-        PLCrashReportProcessorInfo *pinfo = report.machineInfo.processorInfo;
+        BITPLCrashReportProcessorInfo *pinfo = report.machineInfo.processorInfo;
         cpu_type_t arch_type = pinfo.type & ~CPU_ARCH_MASK;
         
         /* Apple uses 'ip' rather than 'r12' on ARM */
