@@ -1,9 +1,46 @@
+## Version 3.5.0 RC 3
+
+- General
+
+  - [NEW] Added public access to the anonymous UUID that the SDK generates per app installation
+  - [NEW] Added possibility to overwrite SDK specific localization strings in the apps localization files
+  - [UPDATE] Podspec updates
+  - [BUGFIX] Fixed memory leaks
+  - [BUGFIX] Various minor bugfixes
+  <br /><br/>
+
+- Crash Reporting
+
+  - [UPDATE] Integrated PLCrashReporter 1.2 beta 3
+  - [BUGFIX] Fixed crash if minimum OS version isn't provided
+  - [BUGFIX] Update private C function to use BIT namespace
+  <br /><br/>
+  
+- Feedback
+
+  - [BUGFIX] Fixed some layout issues in the user info screen
+  <br /><br/>
+
+- Ad-Hoc/Enterprise Updates
+
+  - [BUGFIX] Fixed update view controller not showing updated content after using the check button
+  - [BUGFIX] Fixed usage value being reset on every app cold start
+  <br /><br/>
+
+- Ad-Hoc/Enterprise Authentication
+
+  - [NEW] Added web based user authentication
+  - [UPDATE] IMPORTANT: You need to call `[[BITHockeyManager sharedHockeyManager].authenticator authenticateInstallation];` yourself after startup when the authentication and/or verification should be performed and when it is safe to present a modal view controller!
+  - [UPDATE] Removed `automaticMode`. You now need to call `authenticateInstallation` when it is safe to do so or handle the complete process yourself.
+  <br /><br/>
+
 ## Version 3.5.0 RC 2
 
 - General
 
   - [BUGFIX] Remove assertions from release build
 	<br /><br/>
+	
 - Ad-Hoc/Enterprise Updates
 
   - [BUGFIX] Add new iOS 7 icon sizes detection and adjust corner radius
@@ -14,13 +51,15 @@
 - General
 
   - [UPDATE] Documentation improvements nearly everywhere
+	<br /><br/>
 
 - Crash Reporting
 
   - [UPDATE] Integrated PLCrashReporter 1.2 beta 2
   - [UPDATE] 64 bit crash reports now contain the correct architecture string
   - [UPDATE] Automatically add the users UDID or email to crash reports in Ad-Hoc/Enterprise builds if they are provided by BITAuthenticator
-  - [BUGFIX] Fix userName, userEmail and userID not being added to crash reports
+  - [BUGFIX] Fixed userName, userEmail and userID not being added to crash reports
+	<br /><br/>
 
 - App Store Updates
 
