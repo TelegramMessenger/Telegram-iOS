@@ -11,7 +11,7 @@
 "HockeyYes" = "Sì";
 
 /* For dialogs no buttons */
-"HockeyNo" = "No";
+"HockeyNo" = "Non inviare";
 
 /* For dialogs ok buttons */
 "HockeyOK" = "OK";
@@ -28,16 +28,16 @@
 "CrashDataFoundTitle" = "%@ si è chiusa inaspettatamente";
 
 /* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
-"CrashDataFoundAnonymousDescription" = "Vuoi inviare una segnalazione anonima per aiutarci a risolvere il problema?";
+"CrashDataFoundAnonymousDescription" = "Vuoi inviare un report anonimo per aiutarci a risolvere il problema?";
 
 /* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
-"CrashDataFoundDescription" = "Vuoi inviare una segnalazione con i dettagli del crash per aiutarci a risolvere il problema?";
+"CrashDataFoundDescription" = "Vuoi inviare un report con i dettagli del crash per aiutarci a risolvere il problema?";
 
 /* Alert box button if the users wants to send crash data always automatically */
 "CrashSendReportAlways" = "Invia sempre";
 
 /* Alert box button to send the crash report once */
-"CrashSendReport" = "Invia segnalazione";
+"CrashSendReport" = "Invia";
 
 /* Alert box button to decline sending the report */
 "CrashDontSendReport" = "Non inviare";
@@ -64,14 +64,14 @@
 
 "UpdateInstall" = "Installa";
 
-"UpdateRemindMe" = "Remind me";
+"UpdateRemindMe" = "Ricordamelo";
 
 
 /* Update Details */
 
 "UpdateScreenTitle" = "Aggiornamento";
 
-"UpdateButtonCheck" = "VERIFICO";
+"UpdateButtonCheck" = "VERIFICA";
 
 "UpdateButtonSearching" = "VERIFICO";
 
@@ -87,7 +87,7 @@
 
 "UpdateShowPreviousVersions" = "Visualizzo versioni precedenti...";
 
-"UpdateNoUpdateAvailableTitle" = "Non sono presenti aggiornamenti";
+"UpdateNoUpdateAvailableTitle" = "Non sono disponibili aggiornamenti";
 
 "UpdateNoUpdateAvailableMessage" = "%@ è già la versione attuale.";
 
@@ -240,23 +240,26 @@
 "HockeyAuthenticatorViewControllerTitle" = "HockeyApp";
 
 /* BITAuthenticatorAuthTypeUDIDProvider */
-"HockeyAuthenticationViewControllerWebUDIDLoginDescription" = "The developer has requested this device's UDID. Tap below to open the HockeyApp website and authorize access.";
-"HockeyAuthenticationViewControllerWebLoginButtonTitle" = "Open HockeyApp";
+"HockeyAuthenticationViewControllerWebUDIDLoginDescription" = "Lo sviluppatore ha richiesto l'UDID di questo dispositivo. Tocca in basso per aprire il sito di HockeyApp e autorizza l'accesso.";
+"HockeyAuthenticationViewControllerWebLoginButtonTitle" = "Apri HockeyApp";
+
+/* BITAuthenticatorIdentificationTypeWebAuth */
+"HockeyAuthenticationViewControllerWebAuthLoginDescription" = "Lo sviluppatore ha richiesto l'indirizzo e-mail del tuo account HockeyApp. Tocca in basso per aprire il sito di HockeyApp e autorizza l'accesso.";
 
 /* BITAuthenticatorAuthTypeEmail and BITAuthenticatorAuthTypeEmailAndPassword */
-"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Please enter your HockeyApp account's email address and password to authorize access to this app.";
-"HockeyAuthenticationViewControllerDataEmailDescription" = "Please enter your HockeyApp account's email address to authorize access to this app.";
-"HockeyAuthenticationViewControllerEmailPlaceholder" = "example@email.com";
-"HockeyAuthenticationViewControllerPasswordPlaceholder" = "Required";
-"HockeyAuthenticationViewControllerEmailDescription" = "Email";
+"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Inserisci l'indirizzo e-mail e la password del tuo account HockeyApp per autorizzare l'accesso a questa app.";
+"HockeyAuthenticationViewControllerDataEmailDescription" = "Inserisci l'indirizzo e-mail del tuo account HockeyApp per autorizzare l'accesso a questa app.";
+"HockeyAuthenticationViewControllerEmailPlaceholder" = "esempio@email.com";
+"HockeyAuthenticationViewControllerPasswordPlaceholder" = "Richiesto";
+"HockeyAuthenticationViewControllerEmailDescription" = "E-mail";
 "HockeyAuthenticationViewControllerPasswordDescription" = "Password";
 
 /* Error presented to the user if authentication failed because of networking issues */
-"HockeyAuthenticationViewControllerNetworkError" = "Failed to authorize because your device appears to be disconnected from the Internet. Please try again.";
+"HockeyAuthenticationViewControllerNetworkError" = "Autorizzazione non riuscita. Pare che il dispositivo non sia connesso a Internet. Riprova.";
 
 
-"HockeyAuthenticationFailedAuthenticate" = "Failed to authorize. Please try again or contact the developer of this app.";
-"HockeyAuthenticationNotMember" = "You are not authorized to use this app. Please contact the developer of this app.";
-"HockeyAuthenticationContactDeveloper" = "Authorization error. Please contact the developer of this app.";
-"HockeyAuthenticationWrongEmailPassword" = "You have entered an invalid email or password. Please check your input and try again.";
-"HockeyAuthenticationAuthSecretMissing" = "The HockeySDK authorization secret has not been set. Please contact the developer of this app.";
+"HockeyAuthenticationFailedAuthenticate" = "Autorizzazione non riuscita. Riprova o contatta lo sviluppatore di questa app.";
+"HockeyAuthenticationNotMember" = "Non sei autorizzato a usare questa app. Contatta lo sviluppatore di questa app.";
+"HockeyAuthenticationContactDeveloper" = "Errore di autorizzazione. Contatta lo sviluppatore di questa app.";
+"HockeyAuthenticationWrongEmailPassword" = "L'indirizzo e-mail o la password non sono corretti. Controlla i dati inseriti e riprova.";
+"HockeyAuthenticationAuthSecretMissing" = "Non è stato impostato l'\"authorization secret\" HockeySDK. Contatta lo sviluppatore di questa app.";

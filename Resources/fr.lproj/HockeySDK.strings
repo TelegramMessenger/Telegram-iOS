@@ -37,7 +37,7 @@
 "CrashSendReportAlways" = "Toujours envoyer";
 
 /* Alert box button to send the crash report once */
-"CrashSendReport" = "Envoyer un rapport";
+"CrashSendReport" = "Envoyer";
 
 /* Alert box button to decline sending the report */
 "CrashDontSendReport" = "Ne pas envoyer";
@@ -64,7 +64,7 @@
 
 "UpdateInstall" = "Installer";
 
-"UpdateRemindMe" = "Remind me";
+"UpdateRemindMe" = "M'avertir";
 
 
 /* Update Details */
@@ -240,23 +240,26 @@
 "HockeyAuthenticatorViewControllerTitle" = "HockeyApp";
 
 /* BITAuthenticatorAuthTypeUDIDProvider */
-"HockeyAuthenticationViewControllerWebUDIDLoginDescription" = "The developer has requested this device's UDID. Tap below to open the HockeyApp website and authorize access.";
-"HockeyAuthenticationViewControllerWebLoginButtonTitle" = "Open HockeyApp";
+"HockeyAuthenticationViewControllerWebUDIDLoginDescription" = "Le développeur a demandé l'identifiant unique de l'appareil. Touchez ci-dessous pour accéder au site Web de HockeyApp et autoriser l'accès.";
+"HockeyAuthenticationViewControllerWebLoginButtonTitle" = "Ouvrir HockeyApp";
+
+/* BITAuthenticatorIdentificationTypeWebAuth */
+"HockeyAuthenticationViewControllerWebAuthLoginDescription" = "Le développeur a demandé l'adresse électronique de votre compte HockeyApp. Touchez ci-dessous pour accéder au site Web de HockeyApp et autoriser l'accès.";
 
 /* BITAuthenticatorAuthTypeEmail and BITAuthenticatorAuthTypeEmailAndPassword */
-"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Please enter your HockeyApp account's email address and password to authorize access to this app.";
-"HockeyAuthenticationViewControllerDataEmailDescription" = "Please enter your HockeyApp account's email address to authorize access to this app.";
-"HockeyAuthenticationViewControllerEmailPlaceholder" = "example@email.com";
-"HockeyAuthenticationViewControllerPasswordPlaceholder" = "Required";
-"HockeyAuthenticationViewControllerEmailDescription" = "Email";
-"HockeyAuthenticationViewControllerPasswordDescription" = "Password";
+"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Saisissez l'adresse électronique et le mot de passe de votre compte HockeyApp pour autoriser l'accès à cette application.";
+"HockeyAuthenticationViewControllerDataEmailDescription" = "Saisissez l'adresse électronique de votre compte HockeyApp pour autoriser l'accès à cette application.";
+"HockeyAuthenticationViewControllerEmailPlaceholder" = "exemple@email.com";
+"HockeyAuthenticationViewControllerPasswordPlaceholder" = "Requis";
+"HockeyAuthenticationViewControllerEmailDescription" = "Adresse";
+"HockeyAuthenticationViewControllerPasswordDescription" = "Mot de passe";
 
 /* Error presented to the user if authentication failed because of networking issues */
-"HockeyAuthenticationViewControllerNetworkError" = "Failed to authorize because your device appears to be disconnected from the Internet. Please try again.";
+"HockeyAuthenticationViewControllerNetworkError" = "Échec de l'autorisation. Votre appareil semble déconnecté d'Internet. Réessayez.";
 
 
-"HockeyAuthenticationFailedAuthenticate" = "Failed to authorize. Please try again or contact the developer of this app.";
-"HockeyAuthenticationNotMember" = "You are not authorized to use this app. Please contact the developer of this app.";
-"HockeyAuthenticationContactDeveloper" = "Authorization error. Please contact the developer of this app.";
-"HockeyAuthenticationWrongEmailPassword" = "You have entered an invalid email or password. Please check your input and try again.";
-"HockeyAuthenticationAuthSecretMissing" = "The HockeySDK authorization secret has not been set. Please contact the developer of this app.";
+"HockeyAuthenticationFailedAuthenticate" = "Échec de l'autorisation. Réessayez ou contactez le développeur de l'application.";
+"HockeyAuthenticationNotMember" = "Vous n'êtes pas autorisé à utiliser cette application. Contactez le développeur de l'application.";
+"HockeyAuthenticationContactDeveloper" = "Erreur d'autorisation. Contactez le développeur de l'application.";
+"HockeyAuthenticationWrongEmailPassword" = "L'adresse électronique ou le mot de passe sont incorrects. Vérifiez votre saisie et réessayez.";
+"HockeyAuthenticationAuthSecretMissing" = "« HockeySDK authorization secret » non défini. Contactez le développeur de l'application.";

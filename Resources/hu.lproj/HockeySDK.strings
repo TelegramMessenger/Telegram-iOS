@@ -1,5 +1,7 @@
-﻿/*
- Hungarian localization provided by Gábor Varga at Sanoma Media Budapest Zrt.
+/*
+ Localization provided by Wordcrafts
+ The Mac OS X and iOS localization experts.
+ http://www.wordcrafts.de
  */
 
 
@@ -62,7 +64,7 @@
 
 "UpdateInstall" = "Telepítés";
 
-"UpdateRemindMe" = "Remind me";
+"UpdateRemindMe" = "Emlékeztessen később";
 
 
 /* Update Details */
@@ -238,23 +240,26 @@
 "HockeyAuthenticatorViewControllerTitle" = "HockeyApp";
 
 /* BITAuthenticatorAuthTypeUDIDProvider */
-"HockeyAuthenticationViewControllerWebUDIDLoginDescription" = "The developer has requested this device's UDID. Tap below to open the HockeyApp website and authorize access.";
-"HockeyAuthenticationViewControllerWebLoginButtonTitle" = "Open HockeyApp";
+"HockeyAuthenticationViewControllerWebUDIDLoginDescription" = "A fejlesztő szeretné hozzáférni készüléke UDID azonosítójához. Kattintással nyissa meg a HockeyApp weblapot és engedélyezze a hozzáférést.";
+"HockeyAuthenticationViewControllerWebLoginButtonTitle" = "HockeyApp megnyitása";
+
+/* BITAuthenticatorIdentificationTypeWebAuth */
+"HockeyAuthenticationViewControllerWebAuthLoginDescription" = "A fejlesztő szeretné hozzáférni a HockeyApp fiókjának e-mail címéhez. Kattintással nyissa meg a HockeyApp weblapot és engedélyezze a hozzáférést.";
 
 /* BITAuthenticatorAuthTypeEmail and BITAuthenticatorAuthTypeEmailAndPassword */
-"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Please enter your HockeyApp account's email address and password to authorize access to this app.";
-"HockeyAuthenticationViewControllerDataEmailDescription" = "Please enter your HockeyApp account's email address to authorize access to this app.";
+"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Kérjük, adja meg HockeyApp fiókjához tartozó e-mail címét és jelszavát az alkalmazáshoz történő hozzáférés engedélyezéséhez.";
+"HockeyAuthenticationViewControllerDataEmailDescription" = "Kérjük, adja meg HockeyApp fiókjához tartozó e-mail címét az alkalmazáshoz történő hozzáférés engedélyezéséhez.";
 "HockeyAuthenticationViewControllerEmailPlaceholder" = "example@email.com";
-"HockeyAuthenticationViewControllerPasswordPlaceholder" = "Required";
-"HockeyAuthenticationViewControllerEmailDescription" = "Email";
-"HockeyAuthenticationViewControllerPasswordDescription" = "Password";
+"HockeyAuthenticationViewControllerPasswordPlaceholder" = "Szükséges mező";
+"HockeyAuthenticationViewControllerEmailDescription" = "E-mail";
+"HockeyAuthenticationViewControllerPasswordDescription" = "Jelszó";
 
 /* Error presented to the user if authentication failed because of networking issues */
-"HockeyAuthenticationViewControllerNetworkError" = "Failed to authorize because your device appears to be disconnected from the Internet. Please try again.";
+"HockeyAuthenticationViewControllerNetworkError" = "A hitelesítés sikertelen, mert készüléke nem csatlakozik az internethez. Kérjük, próbálja meg később újra.";
 
 
-"HockeyAuthenticationFailedAuthenticate" = "Failed to authorize. Please try again or contact the developer of this app.";
-"HockeyAuthenticationNotMember" = "You are not authorized to use this app. Please contact the developer of this app.";
-"HockeyAuthenticationContactDeveloper" = "Authorization error. Please contact the developer of this app.";
-"HockeyAuthenticationWrongEmailPassword" = "You have entered an invalid email or password. Please check your input and try again.";
-"HockeyAuthenticationAuthSecretMissing" = "The HockeySDK authorization secret has not been set. Please contact the developer of this app.";
+"HockeyAuthenticationFailedAuthenticate" = "A hitelesítés sikertelen. Kérjük, próbálja meg később újra vagy lépjen kapcsolatba az alkalmazás fejlesztőjével.";
+"HockeyAuthenticationNotMember" = "Nem jogosult az alkalmazás használatára. Kérjük, lépjen kapcsolatba az alkalmazás fejlesztőjével.";
+"HockeyAuthenticationContactDeveloper" = "Hitelesítési hiba. Kérjük, lépjen kapcsolatba az alkalmazás fejlesztőjével.";
+"HockeyAuthenticationWrongEmailPassword" = "Érvénytelen e-mail címet vagy jelszót adott meg. Kérjük, ellenőrizze a bevitelt és adja meg az adatokat újra.";
+"HockeyAuthenticationAuthSecretMissing" = "A HockeySDK \"authorization secret\" még nincs beállítva. Kérjük, lépjen kapcsolatba az alkalmazás fejlesztőjével.";

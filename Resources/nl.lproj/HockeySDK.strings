@@ -1,4 +1,11 @@
-﻿/* General */
+/*
+ Localization provided by Wordcrafts
+ The Mac OS X and iOS localization experts.
+ http://www.wordcrafts.de
+ */
+
+
+/* General */
 
 /* For dialogs yes buttons */
 "HockeyYes" = "Ja";
@@ -10,8 +17,7 @@
 "HockeyOK" = "OK";
 
 /* Replacement for app name, if it could not be detected */
-"HockeyAppNamePlaceholder" = "This app";
-
+"HockeyAppNamePlaceholder" = "Deze app";
 
 /* Crash */
 
@@ -19,25 +25,25 @@
 /* Crash dialog */
 
 /* Title showing in the alert box when crash report data has been found */
-"CrashDataFoundTitle" = "Crashdata gevonden";
+"CrashDataFoundTitle" = "%@ is onverwacht gestopt";
 
 /* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
-"CrashDataFoundAnonymousDescription" = "De applicatie is gecrasht. Wilt u de ontwikkelaars anonieme data sturen zodat zij kunnen proberen de problemen op te lossen?";
+"CrashDataFoundAnonymousDescription" = "Wilt u een anoniem rapport versturen zodat we het probleem kunnen oplossen?";
 
 /* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
-"CrashDataFoundDescription" = "De applicatie is gecrasht. Wilt u de ontwikkelaars data sturen zodat zij kunnen proberen de problemen op te lossen?";
+"CrashDataFoundDescription" = "Wilt u een rapport versturen zodat we het probleem kunnen oplossen?";
 
 /* Alert box button if the users wants to send crash data always automatically */
-"CrashSendReportAlways" = "Altijd";
+"CrashSendReportAlways" = "Verstuur altijd";
 
 /* Alert box button to send the crash report once */
-"CrashSendReport" = "Ja";
+"CrashSendReport" = "Verstuur rapport";
 
 /* Alert box button to decline sending the report */
-"CrashDontSendReport" = "Nee";
+"CrashDontSendReport" = "Verstuur niet";
 
 /* Text showing in a processing box that the crash data is being uploaded to the server */
-"CrashReportSending" = "Zenden…";
+"CrashReportSending" = "Versturen…";
 
 
 /* Update */
@@ -46,67 +52,69 @@
 /* Update Alert view */
 
 /* Update available */
-"UpdateAvailable" = "Update available";
+"UpdateAvailable" = "Update beschikbaar";
 
-"UpdateAlertTextWithAppVersion" = "%@ is available.";
+"UpdateAlertTextWithAppVersion" = "%@ is beschikbaar.";
 
-"UpdateAlertMandatoryTextWithAppVersion" = "%@ is available and is a mandatory update!";
+"UpdateAlertMandatoryTextWithAppVersion" = "%@ is beschikbaar en is een verplichte update!";
 
-"UpdateIgnore" = "Ignore";
+"UpdateIgnore" = "Negeer";
 
-"UpdateShow" = "Show";
+"UpdateShow" = "Toon";
 
-"UpdateInstall" = "Install";
+"UpdateInstall" = "Installeer";
+
+"UpdateRemindMe" = "Herinner me";
 
 
 /* Update Details */
 
 "UpdateScreenTitle" = "Update";
 
-"UpdateButtonCheck" = "CHECK";
+"UpdateButtonCheck" = "CONTROLEER";
 
-"UpdateButtonSearching" = "CHECKING";
+"UpdateButtonSearching" = "CONTROLEREN";
 
-"UpdateButtonUpdate" = "UPDATE";
+"UpdateButtonUpdate" = "WERK BIJ";
 
-"UpdateButtonInstalling" = "INSTALLING";
+"UpdateButtonInstalling" = "INSTALLEREN";
 
 "UpdateButtonOffline" = "OFFLINE";
 
-"UpdateInstalled" = "INSTALLED";
+"UpdateInstalled" = "GEÏNSTALLEERD";
 
-"UpdateVersion" = "Version";
+"UpdateVersion" = "Versie";
 
-"UpdateShowPreviousVersions" = "Show previous versions...";
+"UpdateShowPreviousVersions" = "Toon vorige versies...";
 
-"UpdateNoUpdateAvailableTitle" = "No Update Available";
+"UpdateNoUpdateAvailableTitle" = "Geen update beschikbaar";
 
-"UpdateNoUpdateAvailableMessage" = "%@ is already the latest version.";
+"UpdateNoUpdateAvailableMessage" = "%@ is al de nieuwste versie.";
 
-"UpdateError" = "Error";
+"UpdateError" = "Fout";
 
-"UpdateWarning" = "Warning";
+"UpdateWarning" = "Waarschuwing";
 
-"UpdateNoReleaseNotesAvailable" = "No release notes available.";
+"UpdateNoReleaseNotesAvailable" = "Geen versiebeschrijvingen beschikbaar.";
 
 
 /* Update Authorization  */
 
-"UpdateAuthorizationProgress" = "Authorizing...";
+"UpdateAuthorizationProgress" = "Identiteit controleren...";
 
-"UpdateAuthorizationOffline" = "Internet connection required!";
+"UpdateAuthorizationOffline" = "Internetverbinding vereist!";
 
-"UpdateAuthorizationDenied" = "Authorizing denied. Please contact the developer.";
+"UpdateAuthorizationDenied" = "Identiteitscontrole geweigerd. Neem contact op met de ontwikkelaar.";
 
 
 /* Update Expiry  */
 
-"UpdateExpired" = "%@ is expired and can not be used any longer.";
+"UpdateExpired" = "%@ is verlopen en kan niet langer worden gebruikt.";
 
 
 /* Update Simulator Warning */
 
-"UpdateSimulatorMessage" = "Hockey Update does not work in the Simulator.\nThe itms-services:// url scheme is implemented but nonfunctional.";
+"UpdateSimulatorMessage" = "Hockey Update werkt niet in de Simulator.\nHet URL-schema voor itms-voorzieningen:// is geïmplementeerd maar niet functioneel.";
 
 
 /* Feedback */
@@ -115,16 +123,16 @@
 /* New Message Alert */
 
 /* Alert Title */
-"HockeyFeedbackNewMessageTitle" = "New Feedback Response";
+"HockeyFeedbackNewMessageTitle" = "Nieuwe reactie op feedback";
 
 /* Alert Text */
-"HockeyFeedbackNewMessageText" = "A new response to your feedback is available. Would you like to view it?";
+"HockeyFeedbackNewMessageText" = "Er is een nieuwe reactie op uw feedback. Wilt u deze bekijken?";
 
 /* Alert Ignore Button */
-"HockeyFeedbackIgnore" = "Ignore";
+"HockeyFeedbackIgnore" = "Negeer";
 
 /* Alert Show Button */
-"HockeyFeedbackShow" = "Show";
+"HockeyFeedbackShow" = "Toon";
 
 
 /* List View */
@@ -133,64 +141,64 @@
 "HockeyFeedbackListTitle" = "Feedback";
 
 /* Last Updated */
-"HockeyFeedbackListLastUpdated" = "Last Updated: %@";
+"HockeyFeedbackListLastUpdated" = "Laatst bijgewerkt: %@";
 
 /* Never Updated */
-"HockeyFeedbackListNeverUpdated" = "Never";
+"HockeyFeedbackListNeverUpdated" = "Nooit";
 
 /* Provide Feedback Button Title */
-"HockeyFeedbackListButonWriteFeedback" = "Provide Feedback";
+"HockeyFeedbackListButonWriteFeedback" = "Stuur feedback";
 
 /* Add a Response Button Title */
-"HockeyFeedbackListButonWriteResponse" = "Add a Response";
+"HockeyFeedbackListButonWriteResponse" = "Voeg een reactie toe";
 
 /* User Data Set Name Button Title */
-"HockeyFeedbackListButonUserDataSetName" = "Set Your Name";
+"HockeyFeedbackListButonUserDataSetName" = "Stel uw naam in";
 
 /* User Data Set Email Button Title */
-"HockeyFeedbackListButonUserDataSetEmail" = "Set Your Email";
+"HockeyFeedbackListButonUserDataSetEmail" = "Stel uw e-mail in";
 
 /* User Data With Name Button Title */
-"HockeyFeedbackListButonUserDataWithName" = "Name: %@";
+"HockeyFeedbackListButonUserDataWithName" = "Naam: %@";
 
 /* User Data With Email Button Title */
-"HockeyFeedbackListButonUserDataWithEmail" = "Email: %@";
+"HockeyFeedbackListButonUserDataWithEmail" = "E-mail: %@";
 
 /* Button title for deleting all local messages*/
-"HockeyFeedbackListButonDeleteAllMessages" = "Delete All Messages";
+"HockeyFeedbackListButonDeleteAllMessages" = "Verwijder alle berichten";
 
 /* Message pending to be send */
-"HockeyFeedbackListMessagePending" = "Pending";
+"HockeyFeedbackListMessagePending" = "In wachtrij";
 
 
 /* Delete All Messages Action Sheet / Alert View */
 
 /* Title for the Action Sheet */
-"HockeyFeedbackListDeleteAllTitle" = "This will delete all messages on this device.";
+"HockeyFeedbackListDeleteAllTitle" = "Dit verwijdert alle berichten op dit apparaat.";
 
 /* Button Title to perform delete action */
-"HockeyFeedbackListDeleteAllDelete" = "Delete";
+"HockeyFeedbackListDeleteAllDelete" = "Verwijder";
 
 /* Button Title to cancel delete action */
-"HockeyFeedbackListDeleteAllCancel" = "Cancel";
+"HockeyFeedbackListDeleteAllCancel" = "Annuleer";
 
 
 /* Open Link In Safari Action Sheet / Alert View */
 
 /* Button Title to cancel */
-"HockeyFeedbackListLinkActionCancel" = "Cancel";
+"HockeyFeedbackListLinkActionCancel" = "Annuleer";
 
 /* Button Title to Open the Link */
 "HockeyFeedbackListLinkActionOpen" = "Open";
 
 /* Button Title to Copy the Link */
-"HockeyFeedbackListLinkActionCopy" = "Copy";
+"HockeyFeedbackListLinkActionCopy" = "Kopieer";
 
 
 /* UIActivity */
 
 /* Activity Sharing Button Title, App Name will be inserted */
-"HockeyFeedbackActivityButtonTitle" = "%@ Feedback";
+"HockeyFeedbackActivityButtonTitle" = "Feedback over %@";
 
 /* if there can no app name be found, use this instead for HockeyFeedbackActivityButtonTitle */
 "HockeyFeedbackActivityAppPlaceholder" = "App";
@@ -199,28 +207,59 @@
 /* Compose Message */
 
 /* Title */
-"HockeyFeedbackComposeTitle" = "New Feedback";
+"HockeyFeedbackComposeTitle" = "Nieuwe feedback";
 
 /* Send button */
-"HockeyFeedbackComposeSend" = "Send";
+"HockeyFeedbackComposeSend" = "Verstuur";
 
 
 /* Set User Data */
 
 /* Title */
-"HockeyFeedbackUserDataTitle" = "My Info";
+"HockeyFeedbackUserDataTitle" = "Mijn info";
 
 /* Description On What Should Be Entered */
-"HockeyFeedbackUserDataDescription" = "Please provide your information before writing your feedback.";
+"HockeyFeedbackUserDataDescription" = "Geef uw gegevens op alvorens uw feedback te schrijven.";
 
 /* Name Field */
-"HockeyFeedbackUserDataName" = "Name";
+"HockeyFeedbackUserDataName" = "Naam";
 
 /* Name Placeholder */
-"HockeyFeedbackUserDataNamePlaceHolder" = "John Doe";
+"HockeyFeedbackUserDataNamePlaceHolder" = "Jan Smit";
 
 /* Email Field */
-"HockeyFeedbackUserDataEmail" = "Email";
+"HockeyFeedbackUserDataEmail" = "E-mail";
 
 /* Email Placeholder */
-"HockeyFeedbackUserDataEmailPlaceholder" = "example@email.com";
+"HockeyFeedbackUserDataEmailPlaceholder" = "voorbeeld@e-mail.com";
+
+
+/* Authenticator */
+
+/* View Controller Title*/
+"HockeyAuthenticatorViewControllerTitle" = "HockeyApp";
+
+/* BITAuthenticatorAuthTypeUDIDProvider */
+"HockeyAuthenticationViewControllerWebUDIDLoginDescription" = "De ontwikkelaar heeft de UDID van dit apparaat gevraagd. Tik hieronder om de website van HockeyApp te openen en toegang te verlenen.";
+"HockeyAuthenticationViewControllerWebLoginButtonTitle" = "Open HockeyApp";
+
+/* BITAuthenticatorIdentificationTypeWebAuth */
+"HockeyAuthenticationViewControllerWebAuthLoginDescription" = "De ontwikkelaar heeft het e-mailadres van uw HockeyApp-account gevraagd. Tik hieronder om de website van HockeyApp te openen en toegang te verlenen.";
+
+/* BITAuthenticatorAuthTypeEmail and BITAuthenticatorAuthTypeEmailAndPassword */
+"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Voer het e-mailadres en wachtwoord van uw HockeyApp-account in om toegang tot deze app te verlenen.";
+"HockeyAuthenticationViewControllerDataEmailDescription" = "Voer het e-mailadres van uw HockeyApp-account in om toegang tot deze app te verlenen.";
+"HockeyAuthenticationViewControllerEmailPlaceholder" = "voorbeeld@e-mail.com";
+"HockeyAuthenticationViewControllerPasswordPlaceholder" = "Verplicht";
+"HockeyAuthenticationViewControllerEmailDescription" = "E-mail";
+"HockeyAuthenticationViewControllerPasswordDescription" = "Wachtwoord";
+
+/* Error presented to the user if authentication failed because of networking issues */
+"HockeyAuthenticationViewControllerNetworkError" = "Identiteitscontrole mislukt omdat uw apparaat niet is verbonden met het internet. Probeer opnieuw.";
+
+
+"HockeyAuthenticationFailedAuthenticate" = "Identiteitscontrole mislukt. Probeer opnieuw of neem contact op met de ontwikkelaar van deze app.";
+"HockeyAuthenticationNotMember" = "U bent niet gemachtigd om deze app te gebruiken. Neem contact op met de ontwikkelaar van deze app.";
+"HockeyAuthenticationContactDeveloper" = "Fout bij identiteitscontrole. Neem contact op met de ontwikkelaar van deze app.";
+"HockeyAuthenticationWrongEmailPassword" = "U hebt een ongeldig e-mailadres of wachtwoord ingevoerd. Controleer uw gegevens en probeer opnieuw.";
+"HockeyAuthenticationAuthSecretMissing" = "Het 'Authorization secret' van HockeySDK is nog niet ingesteld. Neem contact op met de ontwikkelaar van deze app.";

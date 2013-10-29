@@ -28,10 +28,10 @@
 "CrashDataFoundTitle" = "%@ 意外退出";
 
 /* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
-"CrashDataFoundAnonymousDescription" = "你想发送一个匿名报告，以便我们能够解决这个问题吗？";
+"CrashDataFoundAnonymousDescription" = "你想要发送一个匿名报告来帮助我们解决这个问题吗？";
 
 /* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
-"CrashDataFoundDescription" = "你想发送一个报告，以便我们能够解决这个问题吗？";
+"CrashDataFoundDescription" = "你想要发送一个报告来帮助我们解决这个问题吗？";
 
 /* Alert box button if the users wants to send crash data always automatically */
 "CrashSendReportAlways" = "总是发送";
@@ -64,7 +64,7 @@
 
 "UpdateInstall" = "安装";
 
-"UpdateRemindMe" = "Remind me";
+"UpdateRemindMe" = "提醒我";
 
 
 /* Update Details */
@@ -89,7 +89,7 @@
 
 "UpdateNoUpdateAvailableTitle" = "无可用更新";
 
-"UpdateNoUpdateAvailableMessage" = "%@ 已经是最新的版本了。";
+"UpdateNoUpdateAvailableMessage" = "%@是最新版本。";
 
 "UpdateError" = "错误";
 
@@ -104,7 +104,7 @@
 
 "UpdateAuthorizationOffline" = "需要 Internet 连接！";
 
-"UpdateAuthorizationDenied" = "授权被拒绝。请与开发商联系。";
+"UpdateAuthorizationDenied" = "授权被拒绝。请与开发人员联系。";
 
 
 /* Update Expiry  */
@@ -123,10 +123,10 @@
 /* New Message Alert */
 
 /* Alert Title */
-"HockeyFeedbackNewMessageTitle" = "新的意见反馈回应";
+"HockeyFeedbackNewMessageTitle" = "新的意见反馈响应";
 
 /* Alert Text */
-"HockeyFeedbackNewMessageText" = "你的反馈已有一个新的回应，想查看它吗？";
+"HockeyFeedbackNewMessageText" = "你的意见反馈已有一个新的响应，想查看它吗？";
 
 /* Alert Ignore Button */
 "HockeyFeedbackIgnore" = "忽略";
@@ -150,7 +150,7 @@
 "HockeyFeedbackListButonWriteFeedback" = "提供意见反馈";
 
 /* Add a Response Button Title */
-"HockeyFeedbackListButonWriteResponse" = "添加一个回应";
+"HockeyFeedbackListButonWriteResponse" = "添加一个响应";
 
 /* User Data Set Name Button Title */
 "HockeyFeedbackListButonUserDataSetName" = "设置你的姓名";
@@ -240,23 +240,26 @@
 "HockeyAuthenticatorViewControllerTitle" = "HockeyApp";
 
 /* BITAuthenticatorAuthTypeUDIDProvider */
-"HockeyAuthenticationViewControllerWebUDIDLoginDescription" = "The developer has requested this device's UDID. Tap below to open the HockeyApp website and authorize access.";
-"HockeyAuthenticationViewControllerWebLoginButtonTitle" = "Open HockeyApp";
+"HockeyAuthenticationViewControllerWebUDIDLoginDescription" = "开发人员已经要求该设备的 UDID。点击下面来打开 HockeyApp 网站并授权访问。";
+"HockeyAuthenticationViewControllerWebLoginButtonTitle" = "打开 HockeyApp";
+
+/* BITAuthenticatorIdentificationTypeWebAuth */
+"HockeyAuthenticationViewControllerWebAuthLoginDescription" = "开发人员已经要求你的 HockeyApp 帐户的电子邮件。点击下面来打开 HockeyApp 网站并授权访问。";
 
 /* BITAuthenticatorAuthTypeEmail and BITAuthenticatorAuthTypeEmailAndPassword */
-"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Please enter your HockeyApp account's email address and password to authorize access to this app.";
-"HockeyAuthenticationViewControllerDataEmailDescription" = "Please enter your HockeyApp account's email address to authorize access to this app.";
+"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "请输入你的 HockeyApp 帐户的电子邮件和密码来授权访问这个 app。";
+"HockeyAuthenticationViewControllerDataEmailDescription" = "请输入你的 HockeyApp 帐户的电子邮件来授权访问这个 app。";
 "HockeyAuthenticationViewControllerEmailPlaceholder" = "example@email.com";
-"HockeyAuthenticationViewControllerPasswordPlaceholder" = "Required";
-"HockeyAuthenticationViewControllerEmailDescription" = "Email";
-"HockeyAuthenticationViewControllerPasswordDescription" = "Password";
+"HockeyAuthenticationViewControllerPasswordPlaceholder" = "必需的";
+"HockeyAuthenticationViewControllerEmailDescription" = "邮件";
+"HockeyAuthenticationViewControllerPasswordDescription" = "密码";
 
 /* Error presented to the user if authentication failed because of networking issues */
-"HockeyAuthenticationViewControllerNetworkError" = "Failed to authorize because your device appears to be disconnected from the Internet. Please try again.";
+"HockeyAuthenticationViewControllerNetworkError" = "你设备的 Internet 连接似乎已断开，导致授权失败。请再试一次。";
 
 
-"HockeyAuthenticationFailedAuthenticate" = "Failed to authorize. Please try again or contact the developer of this app.";
-"HockeyAuthenticationNotMember" = "You are not authorized to use this app. Please contact the developer of this app.";
-"HockeyAuthenticationContactDeveloper" = "Authorization error. Please contact the developer of this app.";
-"HockeyAuthenticationWrongEmailPassword" = "You have entered an invalid email or password. Please check your input and try again.";
-"HockeyAuthenticationAuthSecretMissing" = "The HockeySDK authorization secret has not been set. Please contact the developer of this app.";
+"HockeyAuthenticationFailedAuthenticate" = "授权错误。请再试一次或联系这个 app 的开发人员。";
+"HockeyAuthenticationNotMember" = "你未获授权使用这个程序。请联系这个 app 的开发人员。";
+"HockeyAuthenticationContactDeveloper" = "授权错误。请联系这个 app 开发人员。";
+"HockeyAuthenticationWrongEmailPassword" = "你输入了一个无效的电子邮件或密码，请检查后再试一次。";
+"HockeyAuthenticationAuthSecretMissing" = "尚未设置 HockeySDK  authorization secret。请联系这个 app 的开发人员。";

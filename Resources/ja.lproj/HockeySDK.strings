@@ -17,7 +17,7 @@
 "HockeyOK" = "OK";
 
 /* Replacement for app name, if it could not be detected */
-"HockeyAppNamePlaceholder" = "この App";
+"HockeyAppNamePlaceholder" = "このApp";
 
 /* Crash */
 
@@ -25,7 +25,7 @@
 /* Crash dialog */
 
 /* Title showing in the alert box when crash report data has been found */
-"CrashDataFoundTitle" = "%@ が予期しない理由で終了";
+"CrashDataFoundTitle" = "%@が予期しない理由で終了";
 
 /* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
 "CrashDataFoundAnonymousDescription" = "問題が修正できるよう、匿名のレポートを送信しますか。";
@@ -54,9 +54,9 @@
 /* Update available */
 "UpdateAvailable" = "アップデートあり";
 
-"UpdateAlertTextWithAppVersion" = "%@ が入手できます。";
+"UpdateAlertTextWithAppVersion" = "%@が入手できます。";
 
-"UpdateAlertMandatoryTextWithAppVersion" = "必須アップデート %@ が利用可能です！";
+"UpdateAlertMandatoryTextWithAppVersion" = "必須アップデート%@が利用可能です！";
 
 "UpdateIgnore" = "無視";
 
@@ -64,7 +64,7 @@
 
 "UpdateInstall" = "インストール";
 
-"UpdateRemindMe" = "Remind me";
+"UpdateRemindMe" = "後で通知";
 
 
 /* Update Details */
@@ -89,7 +89,7 @@
 
 "UpdateNoUpdateAvailableTitle" = "アップデートなし";
 
-"UpdateNoUpdateAvailableMessage" = "%@ は現在入手できる最新バージョンです。";
+"UpdateNoUpdateAvailableMessage" = "%@は現在入手できる最新バージョンです。";
 
 "UpdateError" = "エラー";
 
@@ -102,19 +102,19 @@
 
 "UpdateAuthorizationProgress" = "認証中…";
 
-"UpdateAuthorizationOffline" = "インターネットへの接続が必要です。";
+"UpdateAuthorizationOffline" = "インターネット接続が必要です！";
 
 "UpdateAuthorizationDenied" = "認証が拒否されました。デベロッパに連絡してください。";
 
 
 /* Update Expiry  */
 
-"UpdateExpired" = "%@ の有効期限が切れたため、これ以上使用できません。";
+"UpdateExpired" = "%@の有効期限が切れたため、これ以上使用できません。";
 
 
 /* Update Simulator Warning */
 
-"UpdateSimulatorMessage" = "Hockey のアップデートは Simulator では作動しません。\nitms-services:// のURL方式は実装されていますが、機能しません。";
+"UpdateSimulatorMessage" = "HockeyのアップデートはSimulatorでは作動しません。\nitms-services:// のURL方式は実装されていますが、機能しません。";
 
 
 /* Feedback */
@@ -198,7 +198,7 @@
 /* UIActivity */
 
 /* Activity Sharing Button Title, App Name will be inserted */
-"HockeyFeedbackActivityButtonTitle" = "%@ フィードバック";
+"HockeyFeedbackActivityButtonTitle" = "%@フィードバック";
 
 /* if there can no app name be found, use this instead for HockeyFeedbackActivityButtonTitle */
 "HockeyFeedbackActivityAppPlaceholder" = "App";
@@ -240,23 +240,26 @@
 "HockeyAuthenticatorViewControllerTitle" = "HockeyApp";
 
 /* BITAuthenticatorAuthTypeUDIDProvider */
-"HockeyAuthenticationViewControllerWebUDIDLoginDescription" = "The developer has requested this device's UDID. Tap below to open the HockeyApp website and authorize access.";
-"HockeyAuthenticationViewControllerWebLoginButtonTitle" = "Open HockeyApp";
+"HockeyAuthenticationViewControllerWebUDIDLoginDescription" = "デベロッパからこのデバイスのUDIDを要求されています。以下をタップしてHockeyAppウェブサイトを開き、アクセスを認証してください。";
+"HockeyAuthenticationViewControllerWebLoginButtonTitle" = "HockeyAppを開く";
+
+/* BITAuthenticatorIdentificationTypeWebAuth */
+"HockeyAuthenticationViewControllerWebAuthLoginDescription" = "デベロッパからHockeyAppアカウントのメールアドレスを要求されています。以下をタップしてHockeyAppウェブサイトを開き、アクセスを認証してください。";
 
 /* BITAuthenticatorAuthTypeEmail and BITAuthenticatorAuthTypeEmailAndPassword */
-"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Please enter your HockeyApp account's email address and password to authorize access to this app.";
-"HockeyAuthenticationViewControllerDataEmailDescription" = "Please enter your HockeyApp account's email address to authorize access to this app.";
+"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "HockeyAppアカウントのメールアドレスとパスワードを入力し、このAppへのアクセスを認証してください。";
+"HockeyAuthenticationViewControllerDataEmailDescription" = "HockeyAppアカウントのメールアドレスを入力し、このAppへのアクセスを認証してください。";
 "HockeyAuthenticationViewControllerEmailPlaceholder" = "example@email.com";
-"HockeyAuthenticationViewControllerPasswordPlaceholder" = "Required";
-"HockeyAuthenticationViewControllerEmailDescription" = "Email";
-"HockeyAuthenticationViewControllerPasswordDescription" = "Password";
+"HockeyAuthenticationViewControllerPasswordPlaceholder" = "必須";
+"HockeyAuthenticationViewControllerEmailDescription" = "メール";
+"HockeyAuthenticationViewControllerPasswordDescription" = "パスワード";
 
 /* Error presented to the user if authentication failed because of networking issues */
-"HockeyAuthenticationViewControllerNetworkError" = "Failed to authorize because your device appears to be disconnected from the Internet. Please try again.";
+"HockeyAuthenticationViewControllerNetworkError" = "デバイスがインターネットに接続されていないため、認証できません。やり直してください。";
 
 
-"HockeyAuthenticationFailedAuthenticate" = "Failed to authorize. Please try again or contact the developer of this app.";
-"HockeyAuthenticationNotMember" = "You are not authorized to use this app. Please contact the developer of this app.";
-"HockeyAuthenticationContactDeveloper" = "Authorization error. Please contact the developer of this app.";
-"HockeyAuthenticationWrongEmailPassword" = "You have entered an invalid email or password. Please check your input and try again.";
-"HockeyAuthenticationAuthSecretMissing" = "The HockeySDK authorization secret has not been set. Please contact the developer of this app.";
+"HockeyAuthenticationFailedAuthenticate" = "認証できませんでした。やり直すか、このAppのデベロッパに連絡してください。";
+"HockeyAuthenticationNotMember" = "このAppの使用を認証されていません。このAppのデベロッパに連絡してください。";
+"HockeyAuthenticationContactDeveloper" = "認証エラー。このAppのデベロッパに連絡してください。";
+"HockeyAuthenticationWrongEmailPassword" = "無効なメールアドレスまたはパスワードが入力されました。入力を確認し、やり直してください。";
+"HockeyAuthenticationAuthSecretMissing" = "HockeySDK “authorization secret” が設定されていません。このAppのデベロッパに連絡してください。";

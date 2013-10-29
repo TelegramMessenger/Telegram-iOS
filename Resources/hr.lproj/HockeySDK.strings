@@ -1,5 +1,7 @@
 /*
- Localization provided by Alen Bajo
+ Localization provided by Wordcrafts
+ The Mac OS X and iOS localization experts.
+ http://www.wordcrafts.de
  */
 
 
@@ -23,7 +25,7 @@
 /* Crash dialog */
 
 /* Title showing in the alert box when crash report data has been found */
-"CrashDataFoundTitle" = "%@ Neočekivani završetak";
+"CrashDataFoundTitle" = "%@ Neočekivani Završetak";
 
 /* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
 "CrashDataFoundAnonymousDescription" = "Želite li poslati anonimno izviješće da možemo riješiti problem?";
@@ -32,13 +34,13 @@
 "CrashDataFoundDescription" = "Želite li poslati izviješće da možemo riješiti problem?";
 
 /* Alert box button if the users wants to send crash data always automatically */
-"CrashSendReportAlways" = "Uvijek šalji";
+"CrashSendReportAlways" = "Uvijek Šalji";
 
 /* Alert box button to send the crash report once */
-"CrashSendReport" = "Pošalji izvijeće";
+"CrashSendReport" = "Pošalji Izvijeće";
 
 /* Alert box button to decline sending the report */
-"CrashDontSendReport" = "Ne šalji";
+"CrashDontSendReport" = "Ne Šalji";
 
 /* Text showing in a processing box that the crash data is being uploaded to the server */
 "CrashReportSending" = "Slanje…";
@@ -50,11 +52,11 @@
 /* Update Alert view */
 
 /* Update available */
-"UpdateAvailable" = "Dostupno je ažuriranje";
+"UpdateAvailable" = "Ažuriranje je dostupno";
 
-"UpdateAlertTextWithAppVersion" = "%@ je dostupno.";
+"UpdateAlertTextWithAppVersion" = "%@ je dostupna.";
 
-"UpdateAlertMandatoryTextWithAppVersion" = "%@ je dostupno i obavezno je ažuriranje!";
+"UpdateAlertMandatoryTextWithAppVersion" = "%@ je dostupna i obavezno je ažuriranje!";
 
 "UpdateIgnore" = "Zanemari";
 
@@ -62,7 +64,7 @@
 
 "UpdateInstall" = "Instaliraj";
 
-"UpdateRemindMe" = "Remind me";
+"UpdateRemindMe" = "Podsjeti me";
 
 
 /* Update Details */
@@ -100,9 +102,9 @@
 
 "UpdateAuthorizationProgress" = "Autorizacija...";
 
-"UpdateAuthorizationOffline" = "Potrebna je internet veza!";
+"UpdateAuthorizationOffline" = "Potrebna je internetska veza!";
 
-"UpdateAuthorizationDenied" = "Autorizacija je odbijena. Molimo obratite se developeru.";
+"UpdateAuthorizationDenied" = "Autorizacija je odbijena. Molimo obratite se razvojnom programeru.";
 
 
 /* Update Expiry  */
@@ -121,7 +123,7 @@
 /* New Message Alert */
 
 /* Alert Title */
-"HockeyFeedbackNewMessageTitle" = "Novi odgovor na povratnu informaciju";
+"HockeyFeedbackNewMessageTitle" = "Novi Odgovor na Povratnu Informaciju";
 
 /* Alert Text */
 "HockeyFeedbackNewMessageText" = "Dostupan je novi odgovor na Vašu povratnu informaciju. Želite li ga pogledati?";
@@ -136,34 +138,34 @@
 /* List View */
 
 /* Title */
-"HockeyFeedbackListTitle" = "Povratna informacija";
+"HockeyFeedbackListTitle" = "Povratna Informacija";
 
 /* Last Updated */
-"HockeyFeedbackListLastUpdated" = "Zadnje ažuriranje: %@";
+"HockeyFeedbackListLastUpdated" = "Zadnje Ažuriranje: %@";
 
 /* Never Updated */
 "HockeyFeedbackListNeverUpdated" = "Nikada";
 
 /* Provide Feedback Button Title */
-"HockeyFeedbackListButonWriteFeedback" = "Osigurajte povratnu informaciju";
+"HockeyFeedbackListButonWriteFeedback" = "Osigurajte Povratnu Informaciju";
 
 /* Add a Response Button Title */
-"HockeyFeedbackListButonWriteResponse" = "Dodaj odgovor";
+"HockeyFeedbackListButonWriteResponse" = "Dodaj Odgovor";
 
 /* User Data Set Name Button Title */
-"HockeyFeedbackListButonUserDataSetName" = "Postavite Vaše ime";
+"HockeyFeedbackListButonUserDataSetName" = "Postavite Vaše Ime";
 
 /* User Data Set Email Button Title */
-"HockeyFeedbackListButonUserDataSetEmail" = "Postavite Vaš Email";
+"HockeyFeedbackListButonUserDataSetEmail" = "Postavite Vaš E-mail";
 
 /* User Data With Name Button Title */
 "HockeyFeedbackListButonUserDataWithName" = "Ime: %@";
 
 /* User Data With Email Button Title */
-"HockeyFeedbackListButonUserDataWithEmail" = "Email: %@";
+"HockeyFeedbackListButonUserDataWithEmail" = "E-mail:  %@";
 
 /* Button title for deleting all local messages*/
-"HockeyFeedbackListButonDeleteAllMessages" = "Obriši sve poruke";
+"HockeyFeedbackListButonDeleteAllMessages" = "Obriši Sve Poruke";
 
 /* Message pending to be send */
 "HockeyFeedbackListMessagePending" = "Čekanje";
@@ -196,7 +198,7 @@
 /* UIActivity */
 
 /* Activity Sharing Button Title, App Name will be inserted */
-"HockeyFeedbackActivityButtonTitle" = "%@ Povratna informacija";
+"HockeyFeedbackActivityButtonTitle" = "%@ Povratna Informacija";
 
 /* if there can no app name be found, use this instead for HockeyFeedbackActivityButtonTitle */
 "HockeyFeedbackActivityAppPlaceholder" = "Aplikacija";
@@ -205,7 +207,7 @@
 /* Compose Message */
 
 /* Title */
-"HockeyFeedbackComposeTitle" = "Nova povratna informacija";
+"HockeyFeedbackComposeTitle" = "Nova Povratna Informacija";
 
 /* Send button */
 "HockeyFeedbackComposeSend" = "Šalji";
@@ -214,7 +216,7 @@
 /* Set User Data */
 
 /* Title */
-"HockeyFeedbackUserDataTitle" = "Moj info";
+"HockeyFeedbackUserDataTitle" = "Moj Info";
 
 /* Description On What Should Be Entered */
 "HockeyFeedbackUserDataDescription" = "Prije pisanja povratne informacije navedite svoje podatke.";
@@ -223,13 +225,13 @@
 "HockeyFeedbackUserDataName" = "Ime";
 
 /* Name Placeholder */
-"HockeyFeedbackUserDataNamePlaceHolder" = "John Doe";
+"HockeyFeedbackUserDataNamePlaceHolder" = "Ivan Horvat";
 
 /* Email Field */
-"HockeyFeedbackUserDataEmail" = "Email";
+"HockeyFeedbackUserDataEmail" = "E-mail";
 
 /* Email Placeholder */
-"HockeyFeedbackUserDataEmailPlaceholder" = "example@email.com";
+"HockeyFeedbackUserDataEmailPlaceholder" = "primjer@email.com";
 
 
 /* Authenticator */
@@ -238,23 +240,26 @@
 "HockeyAuthenticatorViewControllerTitle" = "HockeyApp";
 
 /* BITAuthenticatorAuthTypeUDIDProvider */
-"HockeyAuthenticationViewControllerWebUDIDLoginDescription" = "The developer has requested this device's UDID. Tap below to open the HockeyApp website and authorize access.";
-"HockeyAuthenticationViewControllerWebLoginButtonTitle" = "Open HockeyApp";
+"HockeyAuthenticationViewControllerWebUDIDLoginDescription" = "Razvojni programer je zatražio UDID Vašeg uređaja. Dodirnite ispod kako biste otvorili HockeyApp web stranicu i autorizirali pristup.";
+"HockeyAuthenticationViewControllerWebLoginButtonTitle" = "Otvori HockeyApp";
+
+/* BITAuthenticatorIdentificationTypeWebAuth */
+"HockeyAuthenticationViewControllerWebAuthLoginDescription" = "Razvojni programer je zatražio e-mail adresu Vašeg HockeyApp računa. Dodirnite ispod kako biste otvorili HockeyApp web stranicu i autorizirali pristup.";
 
 /* BITAuthenticatorAuthTypeEmail and BITAuthenticatorAuthTypeEmailAndPassword */
-"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Please enter your HockeyApp account's email address and password to authorize access to this app.";
-"HockeyAuthenticationViewControllerDataEmailDescription" = "Please enter your HockeyApp account's email address to authorize access to this app.";
-"HockeyAuthenticationViewControllerEmailPlaceholder" = "example@email.com";
-"HockeyAuthenticationViewControllerPasswordPlaceholder" = "Required";
-"HockeyAuthenticationViewControllerEmailDescription" = "Email";
-"HockeyAuthenticationViewControllerPasswordDescription" = "Password";
+"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Unesite molimo Vas e-mail adresu i lozinku Vašeg HockeyApp računa kako biste autorizirali pristup ovoj aplikaciji.";
+"HockeyAuthenticationViewControllerDataEmailDescription" = "Molimo Vas unesite e-mail adresu Vašeg HockeyApp računa za autorizaciju pristupa aplikaciji.";
+"HockeyAuthenticationViewControllerEmailPlaceholder" = "primjer@email.com";
+"HockeyAuthenticationViewControllerPasswordPlaceholder" = "Obavezno";
+"HockeyAuthenticationViewControllerEmailDescription" = "E-mail";
+"HockeyAuthenticationViewControllerPasswordDescription" = "Lozinka";
 
 /* Error presented to the user if authentication failed because of networking issues */
-"HockeyAuthenticationViewControllerNetworkError" = "Failed to authorize because your device appears to be disconnected from the Internet. Please try again.";
+"HockeyAuthenticationViewControllerNetworkError" = "Autorizacija nije uspjela. Vaš uređaj nema pristup internetu. Molimo Vas pokušajte iznova.";
 
 
-"HockeyAuthenticationFailedAuthenticate" = "Failed to authorize. Please try again or contact the developer of this app.";
-"HockeyAuthenticationNotMember" = "You are not authorized to use this app. Please contact the developer of this app.";
-"HockeyAuthenticationContactDeveloper" = "Authorization error. Please contact the developer of this app.";
-"HockeyAuthenticationWrongEmailPassword" = "You have entered an invalid email or password. Please check your input and try again.";
-"HockeyAuthenticationAuthSecretMissing" = "The HockeySDK authorization secret has not been set. Please contact the developer of this app.";
+"HockeyAuthenticationFailedAuthenticate" = "Autorizacija nije uspjela. Molimo Vas pokušajte iznova ili kontaktirajte razvojnog programera ove aplikacije.";
+"HockeyAuthenticationNotMember" = "Vi niste autorizirani za korištenje ove aplikacije. Molimo Vas kontaktirajte razvojnog programera ove aplikacije.";
+"HockeyAuthenticationContactDeveloper" = "Pogreška u autoriziranju. Molimo Vas kontaktirajte razvojnog programera ove aplikacije.";
+"HockeyAuthenticationWrongEmailPassword" = "E-mail adresa ili lozinka koju ste unijeli nije ispravna. Molimo Vas provjerite Vaš unos i pokušajte iznova.";
+"HockeyAuthenticationAuthSecretMissing" = "HockeySDK \"authorization secret\" nije postavljen. Molimo Vas kontaktirajte razvojnog programera ove aplikacije.";
