@@ -1,3 +1,69 @@
+## Version 3.5.0
+
+- General
+
+  - [NEW] Added support for iOS 7
+  - [NEW] Added support for arm64 architecture
+  - [NEW] Added `BITStoreUpdateManager` for alerting the user of available App Store updates (disabled by default)
+  - [NEW] Added `BITAuthenticator` class for authorizing installations (Ad-Hoc/Enterprise builds only!)
+  - [NEW] Added support for apps starting in the background
+  - [NEW] Added possibility to build custom frameworks including/excluding specific modules from the static library (see `HockeySDKFeatureConfig.h`)
+  - [NEW] Added public access to the anonymous UUID that the SDK generates per app installation
+  - [NEW] Added possibility to overwrite SDK specific localization strings in the apps localization files
+  - [UPDATE] Updated localizations provided by [Wordcrafts.de](http://wordcrafts.de):
+	Chinese, Dutch, English, French, German, Hungarian, Italian, Japanese, Portuguese, Brazilian-Portuguese, Romanian, Russian, Spanish
+  - [UPDATE] User related data is now stored in the keychain instead of property files
+  - [UPDATE] SDK documentation improvements
+  - [BUGFIX] Fixed multiple compiler warnings
+  - [BUGFIX] Various UI updates and fixes
+  <br /><br/>
+
+- Crash Reporting
+
+  - [NEW] Integrated PLCrashReporter 1.2 beta 3
+  - [NEW] Added optional support for Mach exceptions
+  - [NEW] Added support for arm64
+  - [UPDATE] PLCrashReporter build with `BIT` namespace to avoid collisions
+  - [UPDATE] Crash reporting is automatically disabled when the app is invoked with the debugger!
+  - [UPDATE] Automatically add the users UDID or email to crash reports in Ad-Hoc/Enterprise builds if they are provided by BITAuthenticator
+	<br /><br/>
+
+- Feedback
+
+  - [NEW] New protocol to inform about incoming feedback messages, see `BITFeedbackManagerDelegate`
+  - [UPDATE] Added method in `BITFeedbackComposeViewControllerDelegate` to let the app know if the user submitted a new message or cancelled it
+	<br /><br/>
+
+- App Store Updates
+
+  - [NEW] Inform user when a new version is available in the App Store (optional, disabled by default)
+	<br /><br/>
+
+
+- Ad-Hoc/Enterprise Authentication
+
+  - [NEW] `BITAuthenticator` identifies app installations, automatically disabled in App Store environments
+  - [NEW] `BITAuthenticator` can identify the user through:
+    - The email address of their HockeyApp account
+    - Login with their HockeyApp account (does not work with Facebook accounts!)
+    - Installation of the HockeyApp web-clip to provide the UDID (requires the app to handle URL callbacks)
+    - Web based login with their HockeyApp account
+  - [NEW] `BITAuthenticator` can require the authorization:
+    - Never
+    - On first app version launch
+    - Whenever the app comes into foreground (requires the device to have a working internet connection)
+  - [NEW] Option to customize the authentication flow
+  - [NEW] Possibility to use an existing URL scheme
+	<br /><br/>
+
+- Ad-Hoc/Enterprise Updates
+
+  - [UPDATE] Removed delegate for getting the UDID, please migrate to the new `BITAuthenticator`
+  - [NEW] In-app updates are now only offered if the device matches the minimum OS version requirement
+	<br /><br/>
+
+---
+
 ## Version 3.5.0 RC 3
 
 - General

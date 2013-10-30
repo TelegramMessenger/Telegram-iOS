@@ -1,6 +1,6 @@
-## Version 3.5.0 RC 3
+## Version 3.5.0
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.5.0rc3/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.5.0/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -12,8 +12,7 @@ This document contains the following sections:
 - [Set up Git submodule](#download)
 - [Set up Xcode](#xcode)
 - [Modify Code](#modify)
-- [Mac Desktop Uploader](#mac)
-- [Xcode Documentation](#documentation)
+- [Additional Options](#options)
 
 <a id="requirements"></a> 
 ## Requirements
@@ -42,7 +41,7 @@ The SDK runs on devices with iOS 5.0 or higher.
 
 3. Select your project in the `Project Navigator` (⌘+1).
 
-4. Select your target. 
+4. Select your app target. 
 
 5. Select the tab `Build Phases`.
 
@@ -58,49 +57,24 @@ The SDK runs on devices with iOS 5.0 or higher.
 
     <img src="XcodeFrameworks4_normal.png"/>
 
-10. Expand `Copy Bundle Resource`.
-
-11. Drag `HockeySDKResources.bundle` from the `HockeySDK` sub-projects `Products` folder and drop into the `Copy Bundle Resource` section
-
-12. Select `Build Settings`
-
-13. Add the following `Header Search Path`
-
-    `$(SRCROOT)/Vendor/HockeySDK/Classes`
-
-14. Create a new `Project.xcconfig` file, if you don't already have one (You can give it any name)
-
-    **Note:** You can also add the required frameworks manually to your targets `Build Phases` an continue with step `17.` instead.
-
-    a. Select your project.
-
-    b. Select the tab `Info`.
-
-    c. Expand `Configurations`.
-
-    d. Select `Project.xcconfig` for all your configurations
-    
-        <img src="XcodeFrameworks1_normal.png"/>
-
-15. Open `Project.xcconfig` in the editor
-
-16. Add the following line:
-
-    `#include "../Vendor/HockeySDK/Support/HockeySDK.xcconfig"`
-    
-    (Adjust the path depending where the `Project.xcconfig` file is located related to the Xcode project package)
-    
-    **Important note:** Check if you overwrite any of the build settings and add a missing `$(inherited)` entry on the projects build settings level, so the `HockeySDK.xcconfig` settings will be passed through successfully.
-    
-17. If you are getting build warnings, then the `.xcconfig` setting wasn't included successfully or its settings in `Other Linker Flags` get ignored because `$(interited)` is missing on project or target level. Either add `$(inherited)` or link the following frameworks manually in `Link Binary With Libraries` under `Build Phases`:
+10. Add the following system frameworks, if they are missing:
     - `CoreText`
     - `CoreGraphics`
     - `Foundation`
     - `QuartzCore`
-    - `Security`  
+    - `Security`
     - `SystemConfiguration`
-    - `UIKit`  
+    - `UIKit`
 
+11. Expand `Copy Bundle Resource`.
+
+12. Drag `HockeySDKResources.bundle` from the `HockeySDK` sub-projects `Products` folder and drop into the `Copy Bundle Resource` section
+
+13. Select `Build Settings`
+
+14. Add the following `Header Search Path`
+
+    `$(SRCROOT)/Vendor/HockeySDK/Classes`
 
 <a id="modify"></a> 
 ## Modify Code
@@ -113,8 +87,8 @@ The SDK runs on devices with iOS 5.0 or higher.
 
 3. Let the AppDelegate implement the protocols `BITHockeyManagerDelegate`:
 
-        @interface AppDelegate(HockeyProtocols) <BITHockeyManagerDelegate> {}
-        @end
+   <pre><code>@interface AppDelegate(HockeyProtocols) < BITHockeyManagerDelegate > {}
+   @end</code></pre>
 
 4. Search for the method `application:didFinishLaunchingWithOptions:`
 
@@ -133,13 +107,14 @@ The SDK runs on devices with iOS 5.0 or higher.
 
 *Note:* The SDK is optimized to defer everything possible to a later time while making sure e.g. crashes on startup can also be caught and each module executes other code with a delay some seconds. This ensures that applicationDidFinishLaunching will process as fast as possible and the SDK will not block the startup sequence resulting in a possible kill by the watchdog process.
 
-<a id="mac"></a> 
-## Mac Desktop Uploader
+<a id="options"></a> 
+## Additional Options
+
+### Mac Desktop Uploader
 
 The Mac Desktop Uploader can provide easy uploading of your app versions to HockeyApp. Check out the [installation tutorial](Guide-Installation-Mac-App).
 
-<a id="documentation"></a> 
-## Xcode Documentation
+### Xcode Documentation
 
 This documentation provides integrated help in Xcode for all public APIs and a set of additional tutorials and HowTos.
 
@@ -149,4 +124,41 @@ This documentation provides integrated help in Xcode for all public APIs and a s
 
 3. Copy the content into ~`/Library/Developer/Shared/Documentation/DocSet`
 
-The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.5.0rc3/](http://hockeyapp.net/help/sdk/ios/3.5.0rc3/)
+The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.5.0/](http://hockeyapp.net/help/sdk/ios/3.5.0/)
+
+### Set up with xcconfig
+
+Instead of manually adding the missing frameworks, you can also use our bundled xcconfig file.
+
+1. Create a new `Project.xcconfig` file, if you don't already have one (You can give it any name)
+ 
+    **Note:** You can also add the required frameworks manually to your targets `Build Phases` an continue with step `4.` instead.
+ 
+    a. Select your project in the `Project Navigator` (⌘+1).
+ 
+    b. Select the tab `Info`.
+ 
+    c. Expand `Configurations`.
+ 
+    d. Select `Project.xcconfig` for all your configurations
+    
+        <img src="XcodeFrameworks1_normal.png"/>
+ 
+2. Open `Project.xcconfig` in the editor
+ 
+3. Add the following line:
+ 
+    `#include "../Vendor/HockeySDK/Support/HockeySDK.xcconfig"`
+    
+    (Adjust the path depending where the `Project.xcconfig` file is located related to the Xcode project package)
+    
+    **Important note:** Check if you overwrite any of the build settings and add a missing `$(inherited)` entry on the projects build settings level, so the `HockeySDK.xcconfig` settings will be passed through successfully.
+    
+4. If you are getting build warnings, then the `.xcconfig` setting wasn't included successfully or its settings in `Other Linker Flags` get ignored because `$(inherited)` is missing on project or target level. Either add `$(inherited)` or link the following frameworks manually in `Link Binary With Libraries` under `Build Phases`:
+    - `CoreText`
+    - `CoreGraphics`
+    - `Foundation`
+    - `QuartzCore`
+    - `Security`
+    - `SystemConfiguration`
+    - `UIKit`
