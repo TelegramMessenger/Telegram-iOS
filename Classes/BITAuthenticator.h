@@ -328,6 +328,9 @@ typedef NS_ENUM(NSUInteger, BITAuthenticatorAppRestrictionEnforcementFrequency) 
 /**
  * Returns YES if this app is identified according to the setting in `identificationType`.
  *
+ * Since the identification process is done asynchronously (contacting the server),
+ * you need to observe the value change via KVO.
+ *
  * @see identificationType
  */
 @property (nonatomic, assign, readonly, getter = isIdentified) BOOL identified;
