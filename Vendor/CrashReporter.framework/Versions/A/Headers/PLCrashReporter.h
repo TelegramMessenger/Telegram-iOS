@@ -27,6 +27,12 @@
  */
 
 #import <Foundation/Foundation.h>
+#import <mach/mach.h>
+
+#import "PLCrashReporterConfig.h"
+
+@class PLCrashMachExceptionServer;
+@class PLCrashMachExceptionPortSet;
 
 /**
  * @ingroup functions
@@ -59,15 +65,37 @@ typedef struct PLCrashReporterCallbacks {
     /** An arbitrary user-supplied context value. This value may be NULL. */
     void *context;
 
-    /** The callback used to report caught signal information. In version 0 of this structure, all crashes will be
-     * reported via this function. */
+    /**
+     * The callback used to report caught signal information. In version 0 of this structure, all crashes will be
+     * reported via this function.
+     *
+     * @warning When using PLCrashReporterSignalHandlerTypeMach, the siginfo_t argument to this function will be derived
+     * from the Mach exception data, and may be incorrect, or may otherwise not match the expected data as provided via
+     * PLCrashReporterSignalHandlerTypeBSD. In addition, the provided ucontext_t value will be zero-initialized, and will
+     * not provide valid thread state.
+     *
+     * This callback will be deprecated in favor of a Mach-compatible replacement in a future release; support is maintained
+     * here to allow clients that rely on post-crash callbacks without thread state to make use of Mach exceptions.
+     */
     PLCrashReporterPostCrashSignalCallback handleSignal;
 } PLCrashReporterCallbacks;
 
 @interface PLCrashReporter : NSObject {
 @private
+    /** Reporter configuration */
+    PLCrashReporterConfig *_config;
+
     /** YES if the crash reporter has been enabled */
     BOOL _enabled;
+    
+#if PLCRASH_FEATURE_MACH_EXCEPTIONS
+    /** The backing Mach exception server, if any. Nil if the reporter has not been enabled, or if
+     * the configured signal handler type is not PLCrashReporterSignalHandlerTypeMach. */
+    PLCrashMachExceptionServer *_machServer;
+    
+    /** Previously registered Mach exception ports, if any. */
+    PLCrashMachExceptionPortSet *_previousMachPorts;
+#endif /* PLCRASH_FEATURE_MACH_EXCEPTIONS */
 
     /** Application identifier */
     NSString *_applicationIdentifier;
@@ -75,25 +103,24 @@ typedef struct PLCrashReporterCallbacks {
     /** Application version */
     NSString *_applicationVersion;
 
-    /** Application short version */
-    NSString *_applicationShortVersion;
-
-    /** Application startup timestamp */
-    time_t _applicationStartupTimestamp;
-  
-    /** GUID for the crash report */
-    NSString *_crashReportGUID;
-  
     /** Path to the crash reporter internal data directory */
     NSString *_crashReportDirectory;
 }
 
 + (PLCrashReporter *) sharedReporter;
 
+- (instancetype) initWithConfiguration: (PLCrashReporterConfig *) config;
+
 - (BOOL) hasPendingCrashReport;
 
 - (NSData *) loadPendingCrashReportData;
 - (NSData *) loadPendingCrashReportDataAndReturnError: (NSError **) outError;
+
+- (NSData *) generateLiveReportWithThread: (thread_t) thread;
+- (NSData *) generateLiveReportWithThread: (thread_t) thread error: (NSError **) outError;
+
+- (NSData *) generateLiveReport;
+- (NSData *) generateLiveReportAndReturnError: (NSError **) outError;
 
 - (BOOL) purgePendingCrashReport;
 - (BOOL) purgePendingCrashReportAndReturnError: (NSError **) outError;

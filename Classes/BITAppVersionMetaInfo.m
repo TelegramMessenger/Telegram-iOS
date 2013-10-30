@@ -1,5 +1,6 @@
 /*
  * Author: Peter Steinberger
+ *         Andreas Linde
  *
  * Copyright (c) 2012-2013 HockeyApp, Bit Stadium GmbH.
  * Copyright (c) 2011 Andreas Linde, Peter Steinberger.
@@ -43,6 +44,7 @@
     appVersionMetaInfo.name = [dict objectForKey:@"title"];
     appVersionMetaInfo.version = [dict objectForKey:@"version"];
     appVersionMetaInfo.shortVersion = [dict objectForKey:@"shortversion"];
+    appVersionMetaInfo.minOSVersion = [dict objectForKey:@"minimum_os_version"];
     [appVersionMetaInfo setDateWithTimestamp:[[dict objectForKey:@"timestamp"] doubleValue]];
     appVersionMetaInfo.size = [dict objectForKey:@"appsize"];
     appVersionMetaInfo.notes = [dict objectForKey:@"notes"];
@@ -57,7 +59,6 @@
 
 #pragma mark - NSObject
 
-
 - (BOOL)isEqual:(id)other {
   if (other == self)
     return YES;
@@ -66,24 +67,58 @@
   return [self isEqualToAppVersionMetaInfo:other];
 }
 
+- (BOOL)isEqualComparingString:(NSString *)stringA withString:(NSString *)stringB {
+  if ([stringA isKindOfClass:[NSString class]] && [stringB isKindOfClass:[NSString class]]) {
+    return [stringA isEqualToString:stringB];
+  }
+
+  return NO;
+}
+
+- (BOOL)isEqualComparingNumber:(NSNumber *)numberA withNumber:(NSNumber *)numberB {
+  if ([numberA isKindOfClass:[NSNumber class]] && [numberB isKindOfClass:[NSNumber class]]) {
+    return [numberA isEqualToNumber:numberB];
+  }
+
+  return NO;
+}
+
+- (BOOL)isEqualComparingDate:(NSDate *)dateA withDate:(NSDate *)dateB {
+  if ([dateA isKindOfClass:[NSDate class]] && [dateB isKindOfClass:[NSDate class]]) {
+    return [dateA isEqualToDate:dateB];
+  }
+
+  return NO;
+}
+
+- (BOOL)isEqualComparingDictionary:(NSDictionary *)dictA withDate:(NSDictionary *)dictB {
+  if ([dictA isKindOfClass:[NSDictionary class]] && [dictB isKindOfClass:[NSDictionary class]]) {
+    return [dictA isEqualToDictionary:dictB];
+  }
+  
+  return NO;
+}
+
 - (BOOL)isEqualToAppVersionMetaInfo:(BITAppVersionMetaInfo *)anAppVersionMetaInfo {
   if (self == anAppVersionMetaInfo)
     return YES;
-  if (self.name != anAppVersionMetaInfo.name && ![self.name isEqualToString:anAppVersionMetaInfo.name])
+  if (![self isEqualComparingString:self.name withString:anAppVersionMetaInfo.name])
     return NO;
-  if (self.version != anAppVersionMetaInfo.version && ![self.version isEqualToString:anAppVersionMetaInfo.version])
+  if (![self isEqualComparingString:self.version withString:anAppVersionMetaInfo.version])
     return NO;
-  if (self.shortVersion != anAppVersionMetaInfo.shortVersion && ![self.shortVersion isEqualToString:anAppVersionMetaInfo.shortVersion])
+  if (![self isEqualComparingString:self.shortVersion withString:anAppVersionMetaInfo.shortVersion])
     return NO;
-  if (self.notes != anAppVersionMetaInfo.notes && ![self.notes isEqualToString:anAppVersionMetaInfo.notes])
+  if (![self isEqualComparingString:self.minOSVersion withString:anAppVersionMetaInfo.minOSVersion])
     return NO;
-  if (self.date != anAppVersionMetaInfo.date && ![self.date isEqualToDate:anAppVersionMetaInfo.date])
+  if (![self isEqualComparingString:self.notes withString:anAppVersionMetaInfo.notes])
     return NO;
-  if (self.size != anAppVersionMetaInfo.size && ![self.size isEqualToNumber:anAppVersionMetaInfo.size])
+  if (![self isEqualComparingDate:self.date withDate:anAppVersionMetaInfo.date])
     return NO;
-  if (self.mandatory != anAppVersionMetaInfo.mandatory && ![self.mandatory isEqualToNumber:anAppVersionMetaInfo.mandatory])
+  if (![self isEqualComparingNumber:self.size withNumber:anAppVersionMetaInfo.size])
     return NO;
-  if (![self.uuids isEqualToDictionary:anAppVersionMetaInfo.uuids])
+  if (![self isEqualComparingNumber:self.mandatory withNumber:anAppVersionMetaInfo.mandatory])
+    return NO;
+  if (![self isEqualComparingDictionary:self.uuids withDate:anAppVersionMetaInfo.uuids])
     return NO;
   return YES;
 }
@@ -95,6 +130,7 @@
   [encoder encodeObject:self.name forKey:@"name"];
   [encoder encodeObject:self.version forKey:@"version"];
   [encoder encodeObject:self.shortVersion forKey:@"shortVersion"];
+  [encoder encodeObject:self.minOSVersion forKey:@"minOSVersion"];
   [encoder encodeObject:self.notes forKey:@"notes"];
   [encoder encodeObject:self.date forKey:@"date"];
   [encoder encodeObject:self.size forKey:@"size"];
@@ -108,6 +144,7 @@
     self.name = [decoder decodeObjectForKey:@"name"];
     self.version = [decoder decodeObjectForKey:@"version"];
     self.shortVersion = [decoder decodeObjectForKey:@"shortVersion"];
+    self.minOSVersion = [decoder decodeObjectForKey:@"minOSVersion"];
     self.notes = [decoder decodeObjectForKey:@"notes"];
     self.date = [decoder decodeObjectForKey:@"date"];
     self.size = [decoder decodeObjectForKey:@"size"];
@@ -166,9 +203,10 @@
   }
 }
 
-// a valid app needs at least following properties: name, version, date
+
+// A valid app needs at least following properties: name, version, date
 - (BOOL)isValid {
-  BOOL valid = [self.name length] && [self.version length] && self.date;
+  BOOL valid = [self.name length] && [self.version length] && self.date;  
   return valid;
 }
 

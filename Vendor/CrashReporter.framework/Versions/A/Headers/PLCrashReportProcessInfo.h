@@ -2,7 +2,7 @@
  * Author: Damian Morris <damian@moso.com.au>
  *
  * Copyright (c) 2010 MOSO Corporation, Pty Ltd.
- * Copyright (c) 2010 Plausible Labs Cooperative, Inc.
+ * Copyright (c) 2010-2013 Plausible Labs Cooperative, Inc.
  *
  * All rights reserved.
  *
@@ -40,7 +40,11 @@
     
     /** Process path */
     NSString* _processPath;
-    
+
+    /** Date and time that the crashing process was started. This may be unavailable, and this property
+     * will be nil. */
+    NSDate *_processStartTime;
+
     /** Parent process name */
     NSString *_parentProcessName;
     
@@ -54,6 +58,7 @@
 - (id) initWithProcessName: (NSString *) processName
                  processID: (NSUInteger) processID
                processPath: (NSString *) processPath
+          processStartTime: (NSDate *) processStartTime
          parentProcessName: (NSString *) parentProcessName
            parentProcessID: (NSUInteger) parentProcessID
                     native: (BOOL) native;
@@ -74,6 +79,12 @@
  * will be nil.
  */
 @property(nonatomic, readonly) NSString *processPath;
+
+/**
+ * Date and time that the crashing process was started. This value may not be included in the crash report, in which case this property
+ * will be nil.
+ */
+@property(nonatomic, readonly) NSDate *processStartTime;
 
 /**
  * The parent process name. This value may not be included in the crash report, in which case this property

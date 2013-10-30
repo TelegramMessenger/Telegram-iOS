@@ -33,13 +33,23 @@
 #import "BITHockeyBaseManager.h"
 
 
-// hockey crash manager status
-typedef enum {
+/**
+ * Crash Manager status
+ */
+typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
+  /**
+   *	Crash reporting is disabled
+   */
   BITCrashManagerStatusDisabled = 0,
+  /**
+   *	User is asked each time before sending
+   */
   BITCrashManagerStatusAlwaysAsk = 1,
+  /**
+   *	Each crash report is send automatically
+   */
   BITCrashManagerStatusAutoSend = 2
-} BITCrashManagerStatus;
-extern NSString *const kBITCrashManagerStatus;
+};
 
 
 @protocol BITCrashManagerDelegate;
@@ -55,9 +65,10 @@ extern NSString *const kBITCrashManagerStatus;
  detect new crashes, queues them if networking is not available, present a user interface to approve sending
  the reports to the HockeyApp servers and more.
  
- It also provides options to add additional meta information to each crash report, like `userName`, `userEmail`,
- additional textual log information via `BITCrashManagerDelegate` protocol and a way to detect startup crashes so
- you can adjust your startup process to get these crash reports too and delay your app initialization.
+ It also provides options to add additional meta information to each crash report, like `userName`, `userEmail`
+ via `BITHockeyManagerDelegate` protocol, and additional textual log information via `BITCrashManagerDelegate`
+ protocol and a way to detect startup crashes so you can adjust your startup process to get these crash reports
+ too and delay your app initialization.
  
  Crashes are send the next time the app starts. If `crashManagerStatus` is set to `BITCrashManagerStatusAutoSend`,
  crashes will be send without any user interaction, otherwise an alert will appear allowing the users to decide
@@ -71,9 +82,19 @@ extern NSString *const kBITCrashManagerStatus;
  and the app could not react to any user input when network conditions are bad or connectivity might be
  very slow.
  
+ It is possible to check upon startup if the app crashed before using `didCrashInLastSession` and also how much
+ time passed between the app launch and the crash using `timeintervalCrashInLastSessionOccured`. This allows you
+ to add additional code to your app delaying the app start until the crash has been successfully send if the crash
+ occured within a critical startup timeframe, e.g. after 10 seconds. The `BITCrashManagerDelegate` protocol provides
+ various delegates to inform the app about it's current status so you can continue the remaining app startup setup
+ after sending has been completed. The documentation contains a guide
+ [How to handle Crashes on startup](HowTo-Handle-Crashes-On-Startup) with an example on how to do that.
+ 
  More background information on this topic can be found in the following blog post by Landon Fuller, the
- developer of [PLCrashReporter](https://code.google.com/p/plcrashreporter/), about writing reliable and
+ developer of [PLCrashReporter](https://www.plcrashreporter.org), about writing reliable and
  safe crash reporting: [Reliable Crash Reporting](http://goo.gl/WvTBR)
+ 
+ @warning If you start the app with the Xcode debugger attached, detecting crashes will _NOT_ be enabled!
  */
 
 @interface BITCrashManager : BITHockeyBaseManager
@@ -97,11 +118,7 @@ extern NSString *const kBITCrashManagerStatus;
  
  Defines if the crash reporting feature should be disabled, ask the user before
  sending each crash report or send crash reportings automatically without
- asking.. This must be assigned one of the following:
- 
- - `BITCrashManagerStatusDisabled`: Crash reporting is disabled
- - `BITCrashManagerStatusAlwaysAsk`: User is asked each time before sending
- - `BITCrashManagerStatusAutoSend`: Each crash report is send automatically
+ asking.
  
  The default value is `BITCrashManagerStatusAlwaysAsk`. You can allow the user
  to switch from `BITCrashManagerStatusAlwaysAsk` to
@@ -109,16 +126,38 @@ extern NSString *const kBITCrashManagerStatus;
  to _YES_.
  
  The current value is always stored in User Defaults with the key
- "BITCrashManagerStatus".
+ `BITCrashManagerStatus`.
  
  If you intend to implement a user setting to let them enable or disable
  crash reporting, this delegate should be used to return that value. You also
  have to make sure the new value is stored in the UserDefaults with the key
- "BITCrashManagerStatus".
+ `BITCrashManagerStatus`.
  
+ @see BITCrashManagerStatus
  @see showAlwaysButton
  */
 @property (nonatomic, assign) BITCrashManagerStatus crashManagerStatus;
+
+
+/**
+ *  Trap fatal signals via a Mach exception server.
+ *
+ *  By default the SDK is using the safe and proven in-process BSD Signals for catching crashes.
+ *  This option provides an option to enable catching fatal signals via a Mach exception server
+ *  instead.
+ *
+ *  We strongly advice _NOT_ to enable Mach exception handler in release versions of your apps!
+ *
+ *  Default: _NO_
+ *
+ * @warning The Mach exception handler executes in-process, and will interfere with debuggers when
+ *  they attempt to suspend all active threads (which will include the Mach exception handler).
+ *  Mach-based handling should _NOT_ be used when a debugger is attached. The SDK will not
+ *  enabled catching exceptions if the app is started with the debugger running. If you attach
+ *  the debugger during runtime, this may cause issues the Mach exception handler is enabled!
+ * @see isDebuggerAttached
+ */
+@property (nonatomic, assign, getter=isMachExceptionHandlerEnabled) BOOL enableMachExceptionHandler;
 
 
 /**
@@ -172,5 +211,20 @@ extern NSString *const kBITCrashManagerStatus;
  @see BITCrashManagerDelegate
  */
 @property (nonatomic, readonly) NSTimeInterval timeintervalCrashInLastSessionOccured;
+
+
+///-----------------------------------------------------------------------------
+/// @name Helper
+///-----------------------------------------------------------------------------
+
+/**
+ *  Detect if a debugger is attached to the app process
+ *
+ *  This is only invoked once on app startup and can not detect if the debugger is being
+ *  attached during runtime!
+ *
+ *  @return BOOL if the debugger is attached on app startup
+ */
+- (BOOL)isDebuggerAttached;
 
 @end

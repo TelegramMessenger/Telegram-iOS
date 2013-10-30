@@ -1,5 +1,7 @@
-﻿/*
- Hungarian localization provided by Gábor Varga at Sanoma Media Budapest Zrt.
+/*
+ Localization provided by Wordcrafts
+ The Mac OS X and iOS localization experts.
+ http://www.wordcrafts.de
  */
 
 
@@ -61,6 +63,8 @@
 "UpdateShow" = "Megjelenítés";
 
 "UpdateInstall" = "Telepítés";
+
+"UpdateRemindMe" = "Emlékeztessen később";
 
 
 /* Update Details */
@@ -228,3 +232,34 @@
 
 /* Email Placeholder */
 "HockeyFeedbackUserDataEmailPlaceholder" = "example@email.com";
+
+
+/* Authenticator */
+
+/* View Controller Title*/
+"HockeyAuthenticatorViewControllerTitle" = "HockeyApp";
+
+/* BITAuthenticatorAuthTypeUDIDProvider */
+"HockeyAuthenticationViewControllerWebUDIDLoginDescription" = "A fejlesztő szeretné hozzáférni készüléke UDID azonosítójához. Kattintással nyissa meg a HockeyApp weblapot és engedélyezze a hozzáférést.";
+"HockeyAuthenticationViewControllerWebLoginButtonTitle" = "HockeyApp megnyitása";
+
+/* BITAuthenticatorIdentificationTypeWebAuth */
+"HockeyAuthenticationViewControllerWebAuthLoginDescription" = "A fejlesztő szeretné hozzáférni a HockeyApp fiókjának e-mail címéhez. Kattintással nyissa meg a HockeyApp weblapot és engedélyezze a hozzáférést.";
+
+/* BITAuthenticatorAuthTypeEmail and BITAuthenticatorAuthTypeEmailAndPassword */
+"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Kérjük, adja meg HockeyApp fiókjához tartozó e-mail címét és jelszavát az alkalmazáshoz történő hozzáférés engedélyezéséhez.";
+"HockeyAuthenticationViewControllerDataEmailDescription" = "Kérjük, adja meg HockeyApp fiókjához tartozó e-mail címét az alkalmazáshoz történő hozzáférés engedélyezéséhez.";
+"HockeyAuthenticationViewControllerEmailPlaceholder" = "example@email.com";
+"HockeyAuthenticationViewControllerPasswordPlaceholder" = "Szükséges mező";
+"HockeyAuthenticationViewControllerEmailDescription" = "E-mail";
+"HockeyAuthenticationViewControllerPasswordDescription" = "Jelszó";
+
+/* Error presented to the user if authentication failed because of networking issues */
+"HockeyAuthenticationViewControllerNetworkError" = "A hitelesítés sikertelen, mert készüléke nem csatlakozik az internethez. Kérjük, próbálja meg később újra.";
+
+
+"HockeyAuthenticationFailedAuthenticate" = "A hitelesítés sikertelen. Kérjük, próbálja meg később újra vagy lépjen kapcsolatba az alkalmazás fejlesztőjével.";
+"HockeyAuthenticationNotMember" = "Nem jogosult az alkalmazás használatára. Kérjük, lépjen kapcsolatba az alkalmazás fejlesztőjével.";
+"HockeyAuthenticationContactDeveloper" = "Hitelesítési hiba. Kérjük, lépjen kapcsolatba az alkalmazás fejlesztőjével.";
+"HockeyAuthenticationWrongEmailPassword" = "Érvénytelen e-mail címet vagy jelszót adott meg. Kérjük, ellenőrizze a bevitelt és adja meg az adatokat újra.";
+"HockeyAuthenticationAuthSecretMissing" = "A HockeySDK \"authorization secret\" még nincs beállítva. Kérjük, lépjen kapcsolatba az alkalmazás fejlesztőjével.";

@@ -28,6 +28,9 @@
 
 
 #import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_FEEDBACK
+
 #import "HockeySDKPrivate.h"
 
 #import "BITFeedbackManager.h"
@@ -37,7 +40,7 @@
 #import "BITHockeyManagerPrivate.h"
 
 #import "BITHockeyHelper.h"
-
+#import "BITHockeyAppClient.h"
 
 #define kBITFeedbackUserDataAsked   @"HockeyFeedbackUserDataAsked"
 #define kBITFeedbackDateOfLastCheck	@"HockeyFeedbackDateOfLastCheck"
@@ -55,8 +58,12 @@
   NSString       *_feedbackDir;
   NSString       *_settingsFile;
   
+  id _appDidBecomeActiveObserver;
+  id _appDidEnterBackgroundObserver;
+  id _networkDidBecomeReachableObserver;
+  
   BOOL _incomingMessagesAlertShowing;
-  BOOL _didSetupDidBecomeActiveNotifications;
+  BOOL _didEnterBackgroundState;
   BOOL _networkRequestInProgress;
 }
 
@@ -71,9 +78,9 @@
     _requireUserName = BITFeedbackUserDataElementOptional;
     _requireUserEmail = BITFeedbackUserDataElementOptional;
     _showAlertOnIncomingMessages = YES;
-    
+    _showFirstRequiredPresentationModal = YES;
+
     _disableFeedbackManager = NO;
-    _didSetupDidBecomeActiveNotifications = NO;
     _networkRequestInProgress = NO;
     _incomingMessagesAlertShowing = NO;
     _lastCheck = nil;
@@ -105,31 +112,77 @@
 }
 
 - (void)dealloc {
-  [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
-  
-  [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
+  [self unregisterObservers];
 }
 
 
 - (void)didBecomeActiveActions {
-  if (![self isFeedbackManagerDisabled]) {
+  if ([self isFeedbackManagerDisabled]) return;
+  if (!_didEnterBackgroundState) return;
+  
+  _didEnterBackgroundState = NO;
+  
+  if ([_feedbackList count] == 0) {
+    [self loadMessages];
+  } else {
     [self updateAppDefinedUserData];
-    [self updateMessagesList];
+  }
+  [self updateMessagesList];
+}
+
+- (void)didEnterBackgroundActions {
+  _didEnterBackgroundState = NO;
+  
+  if ([[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground) {
+    _didEnterBackgroundState = YES;
   }
 }
 
-- (void)setupDidBecomeActiveNotifications {
-  if (!_didSetupDidBecomeActiveNotifications) {
-    NSNotificationCenter *dnc = [NSNotificationCenter defaultCenter];
-    [dnc addObserver:self selector:@selector(didBecomeActiveActions) name:UIApplicationDidBecomeActiveNotification object:nil];
-    [dnc addObserver:self selector:@selector(didBecomeActiveActions) name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
-    _didSetupDidBecomeActiveNotifications = YES;
+#pragma mark - Observers
+- (void) registerObservers {
+  __weak typeof(self) weakSelf = self;
+  if(nil == _appDidEnterBackgroundObserver) {
+    _appDidEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification
+                                                                                       object:nil
+                                                                                        queue:NSOperationQueue.mainQueue
+                                                                                   usingBlock:^(NSNotification *note) {
+                                                                                     typeof(self) strongSelf = weakSelf;
+                                                                                     [strongSelf didEnterBackgroundActions];
+                                                                                   }];
+  }
+  if(nil == _appDidBecomeActiveObserver) {
+    _appDidBecomeActiveObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
+                                                                                    object:nil
+                                                                                     queue:NSOperationQueue.mainQueue
+                                                                                usingBlock:^(NSNotification *note) {
+                                                                                  typeof(self) strongSelf = weakSelf;
+                                                                                  [strongSelf didBecomeActiveActions];
+                                                                                }];
+  }
+  if(nil == _networkDidBecomeReachableObserver) {
+    _networkDidBecomeReachableObserver = [[NSNotificationCenter defaultCenter] addObserverForName:BITHockeyNetworkDidBecomeReachableNotification
+                                                                                       object:nil
+                                                                                        queue:NSOperationQueue.mainQueue
+                                                                                   usingBlock:^(NSNotification *note) {
+                                                                                     typeof(self) strongSelf = weakSelf;
+                                                                                     [strongSelf didBecomeActiveActions];
+                                                                                   }];
   }
 }
 
-- (void)cleanupDidBecomeActiveNotifications {
-  [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyNetworkDidBecomeReachableNotification object:nil];
-  [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
+- (void) unregisterObservers {
+  if(_appDidEnterBackgroundObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:_appDidEnterBackgroundObserver];
+    _appDidEnterBackgroundObserver = nil;
+  }
+  if(_appDidBecomeActiveObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:_appDidBecomeActiveObserver];
+    _appDidBecomeActiveObserver = nil;
+  }
+  if(_networkDidBecomeReachableObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:_networkDidBecomeReachableObserver];
+    _networkDidBecomeReachableObserver = nil;
+  }
 }
 
 #pragma mark - Private methods
@@ -149,7 +202,11 @@
 #pragma mark - Feedback Modal UI
 
 - (BITFeedbackListViewController *)feedbackListViewController:(BOOL)modal {
-  return [[BITFeedbackListViewController alloc] initWithModalStyle:modal];
+  if ([self isPreiOS7Environment]) {
+    return [[BITFeedbackListViewController alloc] initWithModalStyle:modal];
+  } else {
+    return [[BITFeedbackListViewController alloc] initWithStyle:UITableViewStyleGrouped modal:modal];
+  }
 }
 
 - (void)showFeedbackListView {
@@ -179,14 +236,23 @@
 #pragma mark - Manager Control
 
 - (void)startManager {
-  if ([_feedbackList count] == 0) {
-    [self loadMessages];
-  } else {
-    [self updateAppDefinedUserData];
-  }
-  [self updateMessagesList];
+  if ([self isFeedbackManagerDisabled]) return;
 
-  [self setupDidBecomeActiveNotifications];
+  [self registerObservers];
+  
+  // we are already delayed, so the notification already came in and this won't invoked twice
+  switch ([[UIApplication sharedApplication] applicationState]) {
+    case UIApplicationStateActive:
+      // we did startup, so yes we are coming from background
+      _didEnterBackgroundState = YES;
+      
+      [self didBecomeActiveActions];
+      break;
+    case UIApplicationStateBackground:
+    case UIApplicationStateInactive:
+      // do nothing, wait for active state
+      break;
+  }
 }
 
 - (void)updateMessagesList {
@@ -295,25 +361,37 @@
   }
 
   if (!userIDViaDelegate) {
-    if ([unarchiver containsValueForKey:kBITFeedbackUserID])
+    if ([unarchiver containsValueForKey:kBITFeedbackUserID]) {
       self.userID = [unarchiver decodeObjectForKey:kBITFeedbackUserID];
+      [self addStringValueToKeychain:self.userID forKey:kBITFeedbackUserID];
+    }
+    self.userID = [self stringValueFromKeychainForKey:kBITFeedbackUserID];
   }
   
   if (!userNameViaDelegate) {
-    if ([unarchiver containsValueForKey:kBITFeedbackName])
+    if ([unarchiver containsValueForKey:kBITFeedbackName]) {
       self.userName = [unarchiver decodeObjectForKey:kBITFeedbackName];
+      [self addStringValueToKeychain:self.userName forKey:kBITFeedbackName];
+    }
+    self.userName = [self stringValueFromKeychainForKey:kBITFeedbackName];
   }
 
   if (!userEmailViaDelegate) {
-    if ([unarchiver containsValueForKey:kBITFeedbackEmail])
+    if ([unarchiver containsValueForKey:kBITFeedbackEmail]) {
       self.userEmail = [unarchiver decodeObjectForKey:kBITFeedbackEmail];
+      [self addStringValueToKeychain:self.userEmail forKey:kBITFeedbackEmail];
+    }
+    self.userEmail = [self stringValueFromKeychainForKey:kBITFeedbackEmail];
   }
   
   if ([unarchiver containsValueForKey:kBITFeedbackUserDataAsked])
     _didAskUserData = YES;
   
-  if ([unarchiver containsValueForKey:kBITFeedbackToken])
+  if ([unarchiver containsValueForKey:kBITFeedbackToken]) {
     self.token = [unarchiver decodeObjectForKey:kBITFeedbackToken];
+    [self addStringValueToKeychain:self.token forKey:kBITFeedbackToken];
+  }
+  self.token = [self stringValueFromKeychainForKey:kBITFeedbackToken];
   
   if ([unarchiver containsValueForKey:kBITFeedbackAppID]) {
     NSString *appID = [unarchiver decodeObjectForKey:kBITFeedbackAppID];
@@ -359,19 +437,19 @@
     [archiver encodeObject:[NSNumber numberWithBool:YES] forKey:kBITFeedbackUserDataAsked];
   
   if (self.token)
-    [archiver encodeObject:self.token forKey:kBITFeedbackToken];
+    [self addStringValueToKeychain:self.token forKey:kBITFeedbackToken];
   
   if (self.appIdentifier)
     [archiver encodeObject:self.appIdentifier forKey:kBITFeedbackAppID];
   
   if (self.userID)
-    [archiver encodeObject:self.userID forKey:kBITFeedbackUserID];
+    [self addStringValueToKeychain:self.userID forKey:kBITFeedbackUserID];
   
   if (self.userName)
-    [archiver encodeObject:self.userName forKey:kBITFeedbackName];
+    [self addStringValueToKeychain:self.userName forKey:kBITFeedbackName];
   
   if (self.userEmail)
-    [archiver encodeObject:self.userEmail forKey:kBITFeedbackEmail];
+    [self addStringValueToKeychain:self.userEmail forKey:kBITFeedbackEmail];
   
   if (self.lastCheck)
     [archiver encodeObject:self.lastCheck forKey:kBITFeedbackDateOfLastCheck];
@@ -657,17 +735,23 @@
       BITFeedbackMessage *latestMessage = [self lastMessageHavingID];
       if (self.userEmail && latestMessage.email && [self.userEmail compare:latestMessage.email] == NSOrderedSame)
         latestMessageFromUser = YES;
-      
-      if (!latestMessageFromUser && self.showAlertOnIncomingMessages && !self.currentFeedbackListViewController && !self.currentFeedbackComposeViewController) {
-        UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageTitle")
-                                                             message:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageText")
-                                                            delegate:self
-                                                   cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackIgnore")
-                                                   otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackShow"), nil
-                                   ];
-        [alertView setTag:0];
-        [alertView show];
-        _incomingMessagesAlertShowing = YES;
+
+      if (!latestMessageFromUser) {
+        if([self.delegate respondsToSelector:@selector(feedbackManagerDidReceiveNewFeedback:)]) {
+          [self.delegate feedbackManagerDidReceiveNewFeedback:self];
+        }
+
+        if(self.showAlertOnIncomingMessages && !self.currentFeedbackListViewController && !self.currentFeedbackComposeViewController) {
+          UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageTitle")
+                                                              message:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageText")
+                                                             delegate:self
+                                                    cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackIgnore")
+                                                    otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackShow"), nil
+                                    ];
+          [alertView setTag:0];
+          [alertView show];
+          _incomingMessagesAlertShowing = YES;
+        }
       }
     }
     
@@ -705,7 +789,7 @@
     [self updateLastMessageID];
   }
   if (self.lastMessageID) {
-    lastMessageID = [NSString stringWithFormat:@"&last_message_id=%i", [self.lastMessageID integerValue]];
+    lastMessageID = [NSString stringWithFormat:@"&last_message_id=%li", (long)[self.lastMessageID integerValue]];
   }
   
   [parameter appendFormat:@"?format=json&bundle_version=%@&sdk=%@&sdk_version=%@%@",
@@ -730,27 +814,27 @@
     
     NSMutableData *postBody = [NSMutableData data];
     
-    [postBody appendData:[self appendPostValue:@"Apple" forKey:@"oem"]];
-    [postBody appendData:[self appendPostValue:[[UIDevice currentDevice] systemVersion] forKey:@"os_version"]];
-    [postBody appendData:[self appendPostValue:[self getDevicePlatform] forKey:@"model"]];
-    [postBody appendData:[self appendPostValue:[[[NSBundle mainBundle] preferredLocalizations] objectAtIndex:0] forKey:@"lang"]];
-    [postBody appendData:[self appendPostValue:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] forKey:@"bundle_version"]];
-    [postBody appendData:[self appendPostValue:[message text] forKey:@"text"]];
-    [postBody appendData:[self appendPostValue:[message token] forKey:@"message_token"]];
+    [postBody appendData:[BITHockeyAppClient dataWithPostValue:@"Apple" forKey:@"oem" boundary:boundary]];
+    [postBody appendData:[BITHockeyAppClient dataWithPostValue:[[UIDevice currentDevice] systemVersion] forKey:@"os_version" boundary:boundary]];
+    [postBody appendData:[BITHockeyAppClient dataWithPostValue:[self getDevicePlatform] forKey:@"model" boundary:boundary]];
+    [postBody appendData:[BITHockeyAppClient dataWithPostValue:[[[NSBundle mainBundle] preferredLocalizations] objectAtIndex:0] forKey:@"lang" boundary:boundary]];
+    [postBody appendData:[BITHockeyAppClient dataWithPostValue:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"] forKey:@"bundle_version" boundary:boundary]];
+    [postBody appendData:[BITHockeyAppClient dataWithPostValue:[message text] forKey:@"text" boundary:boundary]];
+    [postBody appendData:[BITHockeyAppClient dataWithPostValue:[message token] forKey:@"message_token" boundary:boundary]];
     
     NSString *installString = bit_appAnonID();
     if (installString) {
-      [postBody appendData:[self appendPostValue:installString forKey:@"install_string"]];
+      [postBody appendData:[BITHockeyAppClient dataWithPostValue:installString forKey:@"install_string" boundary:boundary]];
     }
     
     if (self.userID) {
-      [postBody appendData:[self appendPostValue:self.userID forKey:@"user_string"]];
+      [postBody appendData:[BITHockeyAppClient dataWithPostValue:self.userID forKey:@"user_string" boundary:boundary]];
     }
     if (self.userName) {
-      [postBody appendData:[self appendPostValue:self.userName forKey:@"name"]];
+      [postBody appendData:[BITHockeyAppClient dataWithPostValue:self.userName forKey:@"name" boundary:boundary]];
     }
     if (self.userEmail) {
-      [postBody appendData:[self appendPostValue:self.userEmail forKey:@"email"]];
+      [postBody appendData:[BITHockeyAppClient dataWithPostValue:self.userEmail forKey:@"email" boundary:boundary]];
     }
     
     [postBody appendData:[[NSString stringWithFormat:@"--%@--\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
@@ -846,6 +930,7 @@
 
 - (void)submitPendingMessages {
   if (_networkRequestInProgress) {
+    [[self class] cancelPreviousPerformRequestsWithTarget:self selector:@selector(submitPendingMessages) object:nil];
     [self performSelector:@selector(submitPendingMessages) withObject:nil afterDelay:2.0f];
     return;
   }
@@ -914,3 +999,5 @@
 }
 
 @end
+
+#endif /* HOCKEYSDK_FEATURE_FEEDBACK */

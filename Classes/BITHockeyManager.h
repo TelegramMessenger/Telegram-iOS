@@ -36,7 +36,9 @@
 @class BITHockeyBaseManager;
 @class BITCrashManager;
 @class BITUpdateManager;
+@class BITStoreUpdateManager;
 @class BITFeedbackManager;
+@class BITAuthenticator;
 
 /** 
  The HockeySDK manager. Responsible for setup and management of all components
@@ -55,30 +57,16 @@
  `BITUpdateManager`: Is automatically deactivated when the SDK detects it is running from a build distributed via the App Store. Otherwise if it is not deactivated manually, it will show an alert after startup informing the user about a pending update, if one is available. If the user then decides to view the update another screen is presented with further details and an option to install the update.
  `BITFeedbackManager`: If this module is deactivated or the user interface is nowhere added into the app, this module will not do anything. It will not fetch the server for data or show any user interface. If it is integrated, activated, and the user already used it to provide feedback, it will show an alert after startup if a new answer has been received from the server with the option to view it.
  
- @warning You should **NOT** change any module configuration after calling `startManager`!
- 
  Example:
+ 
     [[BITHockeyManager sharedHockeyManager]
       configureWithIdentifier:@"<AppIdentifierFromHockeyApp>"
                      delegate:nil];
     [[BITHockeyManager sharedHockeyManager] startManager];
  
- @warning When also using the SDK for updating app versions (AdHoc or Enterprise) and collecting
- beta usage analytics, you also have to to set  `[BITUpdateManager delegate]` and
- implement `[BITUpdateManagerDelegate customDeviceIdentifierForUpdateManager:]`!
+ @warning The SDK is **NOT** thread safe and has to be set up on the main thread!
  
- 
- Example implementation if your Xcode configuration for the App Store is called "AppStore":
-    - (NSString *)customDeviceIdentifierForUpdateManager:(BITUpdateManager *)updateManager {
-    #ifndef (CONFIGURATION_AppStore)
-      if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)])
-        return [[UIDevice currentDevice] performSelector:@selector(uniqueIdentifier)];
-    #endif
-      return nil;
-    }
-    
-    [[BITHockeyManager sharedHockeyManager].updateManager setDelegate:self];
-
+ @warning You should **NOT** change any module configuration after calling `startManager`!
 
  */
 
@@ -118,7 +106,7 @@
  @param appIdentifier The app identifier that should be used.
  @param delegate `nil` or the class implementing the option protocols
  */
-- (void)configureWithIdentifier:(NSString *)appIdentifier delegate:(id)delegate;
+- (void)configureWithIdentifier:(NSString *)appIdentifier delegate:(id<BITHockeyManagerDelegate>)delegate;
 
 
 /**
@@ -154,7 +142,7 @@
  @param liveIdentifier The app identifier for the app store configurations.
  @param delegate `nil` or the class implementing the optional protocols
  */
-- (void)configureWithBetaIdentifier:(NSString *)betaIdentifier liveIdentifier:(NSString *)liveIdentifier delegate:(id)delegate;
+- (void)configureWithBetaIdentifier:(NSString *)betaIdentifier liveIdentifier:(NSString *)liveIdentifier delegate:(id<BITHockeyManagerDelegate>)delegate;
 
 
 /**
@@ -239,6 +227,32 @@
 
 
 /**
+ Reference to the initialized BITStoreUpdateManager module
+ 
+ Returns the BITStoreUpdateManager instance initialized by BITHockeyManager
+ 
+ @see configureWithIdentifier:delegate:
+ @see configureWithBetaIdentifier:liveIdentifier:delegate:
+ @see startManager
+ @see enableStoreUpdateManager
+ */
+@property (nonatomic, strong, readonly) BITStoreUpdateManager *storeUpdateManager;
+
+
+/**
+ Flag the determines whether the App Store Update Manager should be enabled
+ 
+ If this flag is enabled, then checking for updates when the app runs from the
+ app store will be turned on!
+ 
+ Please note that the Store Update Manager will be initialized anyway!
+ 
+ *Default*: _NO_
+ @see storeUpdateManager
+ */
+@property (nonatomic, getter = isStoreUpdateManagerEnabled) BOOL enableStoreUpdateManager;
+
+/**
  Reference to the initialized BITFeedbackManager module
  
  Returns the BITFeedbackManager instance initialized by BITHockeyManager
@@ -264,6 +278,20 @@
  */
 @property (nonatomic, getter = isFeedbackManagerDisabled) BOOL disableFeedbackManager;
 
+/**
+ Reference to the initialized BITAuthenticator module
+ 
+ The authenticator is disabled by default. To enable it you need to set
+ `[BITAuthenticator authenticationType]` and `[BITAuthenticator validationType]`
+ 
+ Returns the BITAuthenticator instance initialized by BITHockeyManager
+ 
+ @see configureWithIdentifier:delegate:
+ @see configureWithBetaIdentifier:liveIdentifier:delegate:
+ @see startManager
+ */
+@property (nonatomic, strong, readonly) BITAuthenticator *authenticator;
+
 
 ///-----------------------------------------------------------------------------
 /// @name Environment
@@ -277,6 +305,19 @@
  Returns _NO_ if the app is installed via debug, ad-hoc or enterprise distribution
  */
 @property (nonatomic, readonly, getter=isAppStoreEnvironment) BOOL appStoreEnvironment;
+
+
+/**
+ Returns the app installation specific anonymous UUID
+ 
+ The value returned by this method is unique and persisted per app installation
+ in the keychain.  It is also being used in crash reports as `CrashReporter Key`
+ and internally when sending crash reports and feedback messages.
+ 
+ This is not identical to the `[ASIdentifierManager advertisingIdentifier]` or
+ the `[UIDevice identifierForVendor]`!
+ */
+@property (nonatomic, readonly) NSString *installString;
 
 
 ///-----------------------------------------------------------------------------

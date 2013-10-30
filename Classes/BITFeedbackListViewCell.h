@@ -31,14 +31,39 @@
 #import "BITFeedbackMessage.h"
 #import "BITAttributedLabel.h"
 
-typedef enum {
+/**
+ * Cell style depending on the iOS version
+ */
+typedef NS_ENUM(NSUInteger, BITFeedbackListViewCellPresentatationStyle) {
+  /**
+   * Default is iOS 6 style
+   */
+  BITFeedbackListViewCellPresentatationStyleDefault = 0,
+  /**
+   * Draw cells in the iOS 7 style
+   */
+  BITFeedbackListViewCellPresentatationStyleOS7 = 1
+};
+
+/**
+ * Cell background style
+ */
+typedef NS_ENUM(NSUInteger, BITFeedbackListViewCellBackgroundStyle) {
+  /**
+   * For even rows
+   */
   BITFeedbackListViewCellBackgroundStyleNormal = 0,
+  /**
+   * For uneven rows
+   */
   BITFeedbackListViewCellBackgroundStyleAlternate = 1
-} BITFeedbackListViewCellBackgroundStyle;
+};
 
 @interface BITFeedbackListViewCell : UITableViewCell
 
 @property (nonatomic, strong) BITFeedbackMessage *message;
+
+@property (nonatomic) BITFeedbackListViewCellPresentatationStyle style;
 
 @property (nonatomic) BITFeedbackListViewCellBackgroundStyle backgroundStyle;
 

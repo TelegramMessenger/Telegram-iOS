@@ -28,11 +28,11 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import <Foundation/Foundation.h>
+#if HOCKEYSDK_FEATURE_FEEDBACK
+
 #import "BITFeedbackMessage.h"
 
-
-@interface BITFeedbackManager () {
+@interface BITFeedbackManager () <UIAlertViewDelegate> {
 }
 
 
@@ -94,3 +94,5 @@
 - (void)deleteAllMessages;
 
 @end
+
+#endif /* HOCKEYSDK_FEATURE_FEEDBACK */

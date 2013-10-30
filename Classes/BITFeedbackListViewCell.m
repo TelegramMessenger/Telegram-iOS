@@ -33,6 +33,9 @@
 #define BACKGROUNDCOLOR_DEFAULT BIT_RGBCOLOR(245, 245, 245)
 #define BACKGROUNDCOLOR_ALTERNATE BIT_RGBCOLOR(235, 235, 235)
 
+#define BACKGROUNDCOLOR_DEFAULT_OS7 BIT_RGBCOLOR(255, 255, 255)
+#define BACKGROUNDCOLOR_ALTERNATE_OS7 BIT_RGBCOLOR(255, 255, 255)
+
 #define TEXTCOLOR_TITLE BIT_RGBCOLOR(75, 75, 75)
 
 #define TEXTCOLOR_DEFAULT BIT_RGBCOLOR(25, 25, 25)
@@ -69,6 +72,7 @@
   if (self) {
     // Initialization code
     _backgroundStyle = BITFeedbackListViewCellBackgroundStyleNormal;
+    _style = BITFeedbackListViewCellPresentatationStyleDefault;
     
     _message = nil;
     
@@ -90,7 +94,7 @@
     self.labelText = [[BITAttributedLabel alloc] init];
     self.labelText.font = [UIFont systemFontOfSize:TEXT_FONTSIZE];
     self.labelText.numberOfLines = 0;
-    self.labelText.textAlignment = UITextAlignmentLeft;
+    self.labelText.textAlignment = kBITTextLabelAlignmentLeft;
     self.labelText.dataDetectorTypes = UIDataDetectorTypeAll;
   }
   return self;
@@ -98,6 +102,22 @@
 
 
 #pragma mark - Private
+
+- (UIColor *)backgroundColor {
+  if (self.backgroundStyle == BITFeedbackListViewCellBackgroundStyleNormal) {
+    if (self.style == BITFeedbackListViewCellPresentatationStyleDefault) {
+      return BACKGROUNDCOLOR_DEFAULT;
+    } else {
+      return BACKGROUNDCOLOR_DEFAULT_OS7;
+    }
+  } else {
+    if (self.style == BITFeedbackListViewCellPresentatationStyleDefault) {
+      return BACKGROUNDCOLOR_ALTERNATE;
+    } else {
+      return BACKGROUNDCOLOR_ALTERNATE_OS7;
+    }
+  }
+}
 
 - (BOOL)isSameDayWithDate1:(NSDate*)date1 date2:(NSDate*)date2 {
   NSCalendar* calendar = [NSCalendar currentCalendar];
@@ -115,9 +135,28 @@
 #pragma mark - Layout
 
 + (CGFloat) heightForRowWithMessage:(BITFeedbackMessage *)message tableViewWidth:(CGFloat)width {
-  CGFloat calculatedHeight = [message.text sizeWithFont:[UIFont systemFontOfSize:TEXT_FONTSIZE]
-                              constrainedToSize:CGSizeMake(width - (2 * FRAME_SIDE_BORDER), CGFLOAT_MAX)].height + FRAME_TOP_BORDER + LABEL_TEXT_Y + FRAME_BOTTOM_BORDER;
-  return calculatedHeight;
+  CGFloat calculatedHeight;
+  
+#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
+  if ([message.text respondsToSelector:@selector(boundingRectWithSize:options:attributes:context:)]) {
+    CGRect calculatedRect = [message.text boundingRectWithSize:CGSizeMake(width - (2 * FRAME_SIDE_BORDER), CGFLOAT_MAX)
+                                                       options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingUsesFontLeading
+                                                    attributes:@{NSFontAttributeName:[UIFont systemFontOfSize:TEXT_FONTSIZE]}
+                                                       context:nil];
+     calculatedHeight = calculatedRect.size.height + FRAME_TOP_BORDER + LABEL_TEXT_Y + FRAME_BOTTOM_BORDER;
+  } else {
+#endif
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    calculatedHeight = [message.text sizeWithFont:[UIFont systemFontOfSize:TEXT_FONTSIZE]
+                                constrainedToSize:CGSizeMake(width - (2 * FRAME_SIDE_BORDER), CGFLOAT_MAX)
+                        ].height + FRAME_TOP_BORDER + LABEL_TEXT_Y + FRAME_BOTTOM_BORDER;
+#pragma clang diagnostic pop
+#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
+  }
+#endif
+  
+  return ceil(calculatedHeight);
 }
 
 - (void)layoutSubviews {
@@ -126,17 +165,11 @@
   accessoryViewBackground.clipsToBounds = YES;
   
   // colors
-  if (_backgroundStyle == BITFeedbackListViewCellBackgroundStyleNormal) {
-    accessoryViewBackground.backgroundColor = BACKGROUNDCOLOR_DEFAULT;
-    self.contentView.backgroundColor = BACKGROUNDCOLOR_DEFAULT;
-    self.labelTitle.backgroundColor = BACKGROUNDCOLOR_DEFAULT;
-    self.labelText.backgroundColor = BACKGROUNDCOLOR_DEFAULT;
-  } else {
-    accessoryViewBackground.backgroundColor = BACKGROUNDCOLOR_ALTERNATE;
-    self.contentView.backgroundColor = BACKGROUNDCOLOR_ALTERNATE;
-    self.labelTitle.backgroundColor = BACKGROUNDCOLOR_ALTERNATE;
-    self.labelText.backgroundColor = BACKGROUNDCOLOR_ALTERNATE;
-  }
+  accessoryViewBackground.backgroundColor = [self backgroundColor];
+  self.contentView.backgroundColor = [self backgroundColor];
+  self.labelTitle.backgroundColor = [self backgroundColor];
+  self.labelText.backgroundColor = [self backgroundColor];
+  
   self.labelTitle.textColor = TEXTCOLOR_TITLE;
   if (_message.status == BITFeedbackMessageStatusSendPending || _message.status == BITFeedbackMessageStatusSendInProgress) {
     [self.labelText setTextColor:TEXTCOLOR_PENDING];
@@ -162,11 +195,11 @@
   [self.labelTitle setFrame:CGRectMake(FRAME_SIDE_BORDER, FRAME_TOP_BORDER + LABEL_TITLE_Y, self.frame.size.width - (2 * FRAME_SIDE_BORDER), LABEL_TITLE_HEIGHT)];
     
   if (_message.userMessage) {
-    self.labelTitle.textAlignment = UITextAlignmentRight;
-    self.labelText.textAlignment = UITextAlignmentRight;
+    self.labelTitle.textAlignment = kBITTextLabelAlignmentRight;
+    self.labelText.textAlignment = kBITTextLabelAlignmentRight;
   } else {
-    self.labelTitle.textAlignment = UITextAlignmentLeft;
-    self.labelText.textAlignment = UITextAlignmentLeft;
+    self.labelTitle.textAlignment = kBITTextLabelAlignmentLeft;
+    self.labelText.textAlignment = kBITTextLabelAlignmentLeft;
   }
 
   [self addSubview:self.labelTitle];

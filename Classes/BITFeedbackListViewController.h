@@ -41,6 +41,17 @@
  It is also integrates actions to invoke the user interface to compose a new messages,
  reload the list content from the server and changing the users name or email if these
  are allowed to be set.
+ 
+ To add this view controller to your own app and push it onto a navigation stack,
+ don't create the intance yourself, but use the following code to get a correct instance:
+ 
+     [[BITHockeyManager sharedHockeyManager].feedbackManager feedbackListViewController:NO]
+ 
+ To show it modally, use the following code instead:
+
+     [[BITHockeyManager sharedHockeyManager].feedbackManager feedbackListViewController:YES]
+ 
+ This ensures that the presentation on iOS 6 and iOS 7 will use the corret design on each OS Version.
  */
 
 @interface BITFeedbackListViewController : BITHockeyBaseViewController <UITableViewDelegate, UITableViewDataSource, UIActionSheetDelegate, UIAlertViewDelegate> {

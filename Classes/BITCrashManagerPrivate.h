@@ -1,9 +1,7 @@
 /*
  * Author: Andreas Linde <mail@andreaslinde.de>
- *         Kent Sutherland
  *
- * Copyright (c) 2012-2013 HockeyApp, Bit Stadium GmbH.
- * Copyright (c) 2011 Andreas Linde & Kent Sutherland.
+ * Copyright (c) 2013 HockeyApp, Bit Stadium GmbH.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -28,17 +26,47 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import <Foundation/Foundation.h>
 
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER
+
+#import <CrashReporter/CrashReporter.h>
 
 @interface BITCrashManager () {
 }
 
-//// set the server URL
-//@property (nonatomic, retain) NSString *serverURL;
-//
-//- (id)initWithAppIdentifier:(NSString *)appIdentifier;
-//
-//- (void)startManager;
+@property (nonatomic) NSUncaughtExceptionHandler *exceptionHandler;
+
+@property (nonatomic, strong) BITPLCrashReporter *plCrashReporter;
+
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
+
+// Only set via BITAuthenticator
+@property (nonatomic, strong) NSString *installationIdentification;
+
+// Only set via BITAuthenticator
+@property (nonatomic) BITAuthenticatorIdentificationType installationIdentificationType;
+
+// Only set via BITAuthenticator
+@property (nonatomic) BOOL installationIdentified;
+
+#endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
+
+- (void)cleanCrashReports;
+
+- (NSString *)userIDForCrashReport;
+- (NSString *)userEmailForCrashReport;
+- (NSString *)userNameForCrashReport;
+
+- (void)handleCrashReport;
+- (BOOL)hasPendingCrashReport;
+- (BOOL)hasNonApprovedCrashReports;
+
+- (void)invokeDelayedProcessing;
+- (void)sendCrashReports;
 
 @end
+
+
+#endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */

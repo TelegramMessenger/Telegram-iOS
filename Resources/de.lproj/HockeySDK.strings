@@ -1,7 +1,7 @@
 /*
-  Localization provided by Wordcrafts
-  The Mac OS X and iOS localization experts.
-  http://www.wordcrafts.de
+ Localization provided by Wordcrafts
+ The Mac OS X and iOS localization experts.
+ http://www.wordcrafts.de
  */
 
 
@@ -64,10 +64,12 @@
 
 "UpdateInstall" = "Installieren";
 
+"UpdateRemindMe" = "Erinnerung";
+
 
 /* Update Details */
 
-"UpdateScreenTitle" = "Update";
+"UpdateScreenTitle" = "Aktualisieren";
 
 "UpdateButtonCheck" = "PRÜFEN";
 
@@ -230,3 +232,34 @@
 
 /* Email Placeholder */
 "HockeyFeedbackUserDataEmailPlaceholder" = "beispiel@email.de";
+
+
+/* Authenticator */
+
+/* View Controller Title*/
+"HockeyAuthenticatorViewControllerTitle" = "HockeyApp";
+
+/* BITAuthenticatorAuthTypeUDIDProvider */
+"HockeyAuthenticationViewControllerWebUDIDLoginDescription" = "Der Entwickler hat die UDID dieses Geräts angefordert. Unten tippen, um die HockeyApp Website zu öffnen und den Zugriff darauf zu erlauben.";
+"HockeyAuthenticationViewControllerWebLoginButtonTitle" = "HockeyApp öffnen";
+
+/* BITAuthenticatorIdentificationTypeWebAuth */
+"HockeyAuthenticationViewControllerWebAuthLoginDescription" = "Der Entwickler hat die die E-Mail-Adresse Ihres HockeyApp-Accounts angefordert. Unten tippen, um die HockeyApp Website zu öffnen und den Zugriff darauf zu erlauben.";
+
+/* BITAuthenticatorAuthTypeEmail and BITAuthenticatorAuthTypeEmailAndPassword */
+"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Geben Sie die E-Mail-Adresse und das Kennwort Ihres HockeyApp-Accounts ein, um Zugriff auf diese App zu erhalten.";
+"HockeyAuthenticationViewControllerDataEmailDescription" = "Geben Sie die E-Mail-Adresse Ihres HockeyApp-Accounts ein, um Zugriff auf diese App zu erhalten.";
+"HockeyAuthenticationViewControllerEmailPlaceholder" = "beispiel@email.de";
+"HockeyAuthenticationViewControllerPasswordPlaceholder" = "Erforderlich";
+"HockeyAuthenticationViewControllerEmailDescription" = "E-Mail";
+"HockeyAuthenticationViewControllerPasswordDescription" = "Kennwort";
+
+/* Error presented to the user if authentication failed because of networking issues */
+"HockeyAuthenticationViewControllerNetworkError" = "Die Autorisierung ist fehlgeschlagen, da Ihr Gerät anscheinend nicht mit dem Internet verbunden ist. Bitte erneut versuchen.";
+
+
+"HockeyAuthenticationFailedAuthenticate" = "Autorisierung fehlgeschlagen. Bitte erneut versuchen oder an den Entwickler dieser App wenden.";
+"HockeyAuthenticationNotMember" = "Sie sind nicht berechtigt, diese App zu nutzen. Bitte wenden Sie sich an den Entwickler dieser App.";
+"HockeyAuthenticationContactDeveloper" = "Autorisierungsfehler. Bitte wenden Sie sich an den Entwickler dieser App.";
+"HockeyAuthenticationWrongEmailPassword" = "E-Mail-Adresse oder Kennwort sind nicht korrekt. Bitte Eingaben prüfen und erneut versuchen.";
+"HockeyAuthenticationAuthSecretMissing" = "Das HockeyApp „Authorization Secret“ wurde nicht hinterlegt. Bitte wenden Sie sich an den Entwickler dieser App.";

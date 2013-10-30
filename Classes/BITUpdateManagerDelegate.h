@@ -37,29 +37,6 @@
 
 @protocol BITUpdateManagerDelegate <NSObject>
 
-///-----------------------------------------------------------------------------
-/// @name Configuration
-///-----------------------------------------------------------------------------
-
-/**
- Return the unique device identifier
- 
- Return the device UDID which is required for beta testing, should return nil for app store configuration!
- Example implementation if your Xcode configuration for the App Store is called "AppStore":
- 
-    - (NSString *)customDeviceIdentifierForUpdateManager:(BITUpdateManager *)updateManager {
-    #ifndef (CONFIGURATION_AppStore)
-      if ([[UIDevice currentDevice] respondsToSelector:@selector(uniqueIdentifier)])
-        return [[UIDevice currentDevice] performSelector:@selector(uniqueIdentifier)];
-    #endif
- 
-      return nil;
-    }
- 
- @param updateManager The `BITUpdateManager` instance invoking this delegate
- */
-- (NSString *)customDeviceIdentifierForUpdateManager:(BITUpdateManager *)updateManager;
-
 @optional
 
 
@@ -129,6 +106,8 @@
 - (BOOL)updateManagerShouldSendUsageData:(BITUpdateManager *)updateManager;
 
 
+#pragma mark - Deprecated
+
 ///-----------------------------------------------------------------------------
 /// @name Update View Presentation Helper
 ///-----------------------------------------------------------------------------
@@ -141,7 +120,9 @@
  `UIViewController` that should be used to present the update user interface modal.
 
  @param updateManager The `BITUpdateManager` instance invoking this delegate
+ 
+ @deprecated Please use `BITHockeyManagerDelegate viewControllerForHockeyManager:componentManager:` instead
  */
-- (UIViewController *)viewControllerForUpdateManager:(BITUpdateManager *)updateManager;
+- (UIViewController *)viewControllerForUpdateManager:(BITUpdateManager *)updateManager DEPRECATED_ATTRIBUTE;
 
 @end

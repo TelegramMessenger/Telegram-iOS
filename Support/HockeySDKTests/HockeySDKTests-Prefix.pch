@@ -1,0 +1,8 @@
+//
+// Prefix header for all source files of the 'HockeySDKTests' target in the 'HockeySDKTests' project
+//
+
+#ifdef __OBJC__
+  #import <UIKit/UIKit.h>
+  #import <Foundation/Foundation.h>
+#endif

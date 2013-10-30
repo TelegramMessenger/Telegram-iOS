@@ -28,16 +28,37 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import <UIKit/UIKit.h>
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_UPDATES
+
 #import "BITStoreButton.h"
 
-typedef enum {
+/**
+ *  Button states
+ */
+typedef NS_ENUM(NSUInteger, AppStoreButtonState) {
+	/**
+	 *  Offline
+	 */
 	AppStoreButtonStateOffline,
+	/**
+	 *  Check
+	 */
 	AppStoreButtonStateCheck,
+	/**
+	 *  Searching
+	 */
 	AppStoreButtonStateSearching,
+	/**
+	 *  Update
+	 */
 	AppStoreButtonStateUpdate,
+	/**
+	 *  Installing
+	 */
 	AppStoreButtonStateInstalling
-} AppStoreButtonState;
+};
 
 
 @class BITUpdateManager;
@@ -53,3 +74,5 @@ typedef enum {
 @property (nonatomic, assign) AppStoreButtonState appStoreButtonState;
 
 @end
+
+#endif /* HOCKEYSDK_FEATURE_UPDATES */

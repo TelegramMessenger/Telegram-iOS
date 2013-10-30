@@ -3,7 +3,7 @@
  *  Landon Fuller <landonf@plausiblelabs.com>
  *  Damian Morris <damian@moso.com.au>
  *
- * Copyright (c) 2008-2010 Plausible Labs Cooperative, Inc.
+ * Copyright (c) 2008-2013 Plausible Labs Cooperative, Inc.
  * Copyright (c) 2010 MOSO Corporation, Pty Ltd.
  * All rights reserved.
  *

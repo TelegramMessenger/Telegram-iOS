@@ -36,9 +36,11 @@
 
 #define kLightGrayColor BIT_RGBCOLOR(235, 235, 235)
 #define kDarkGrayColor  BIT_RGBCOLOR(186, 186, 186)
-#define kWhiteBackgroundColor  BIT_RGBCOLOR(245, 245, 245)
+#define kWhiteBackgroundColorDefault  BIT_RGBCOLOR(245, 245, 245)
+#define kWhiteBackgroundColorOS7  BIT_RGBCOLOR(255, 255, 255)
 #define kImageHeight 72
 #define kImageBorderRadius 12
+#define kImageBorderRadiusiOS7 16.5
 #define kImageLeftMargin 14
 #define kImageTopMargin 12
 #define kTextRow kImageTopMargin*2 + kImageHeight
@@ -54,7 +56,8 @@
 - (id)initWithFrame:(CGRect)frame {
   if ((self = [super initWithFrame:frame])) {
     self.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-    self.backgroundColor = kWhiteBackgroundColor;
+    self.backgroundColor = kWhiteBackgroundColorDefault;
+    self.style = BITAppStoreHeaderStyleDefault;
   }
   return self;
 }
@@ -66,20 +69,35 @@
   CGRect bounds = self.bounds;
   CGContextRef context = UIGraphicsGetCurrentContext();
   
-  // draw the gradient
-  NSArray *colors = [NSArray arrayWithObjects:(id)kDarkGrayColor.CGColor, (id)kLightGrayColor.CGColor, nil];
-  CGGradientRef gradient = CGGradientCreateWithColors(CGColorGetColorSpace((__bridge CGColorRef)[colors objectAtIndex:0]), (__bridge CFArrayRef)colors, (CGFloat[2]){0, 1});
-  CGPoint top = CGPointMake(CGRectGetMidX(bounds), bounds.size.height - 3);
-  CGPoint bottom = CGPointMake(CGRectGetMidX(bounds), CGRectGetMaxY(bounds));
-  CGContextDrawLinearGradient(context, gradient, top, bottom, 0);
-  CGGradientRelease(gradient);
+  if (self.style == BITAppStoreHeaderStyleDefault) {
+    // draw the gradient
+    NSArray *colors = [NSArray arrayWithObjects:(id)kDarkGrayColor.CGColor, (id)kLightGrayColor.CGColor, nil];
+    CGGradientRef gradient = CGGradientCreateWithColors(CGColorGetColorSpace((__bridge CGColorRef)[colors objectAtIndex:0]), (__bridge CFArrayRef)colors, (CGFloat[2]){0, 1});
+    CGPoint top = CGPointMake(CGRectGetMidX(bounds), bounds.size.height - 3);
+    CGPoint bottom = CGPointMake(CGRectGetMidX(bounds), CGRectGetMaxY(bounds));
+    CGContextDrawLinearGradient(context, gradient, top, bottom, 0);
+    CGGradientRelease(gradient);
+  } else {
+    // draw the line
+    CGContextRef ctx = UIGraphicsGetCurrentContext();
+    CGContextSetLineWidth(ctx, 1.0);
+    CGContextSetStrokeColorWithColor(ctx, kDarkGrayColor.CGColor);
+    CGContextMoveToPoint(ctx, 0, CGRectGetMaxY(bounds));
+    CGContextAddLineToPoint( ctx, CGRectGetMaxX(bounds), CGRectGetMaxY(bounds));
+    CGContextStrokePath(ctx);
+  }
   
   // icon
   [_iconImage drawAtPoint:CGPointMake(kImageLeftMargin, kImageTopMargin)];
+  
+  [super drawRect:rect];
 }
 
 
 - (void)layoutSubviews {
+  if (self.style == BITAppStoreHeaderStyleOS7)
+    self.backgroundColor = kWhiteBackgroundColorOS7;
+
   [super layoutSubviews];
   
   CGFloat globalWidth = self.frame.size.width;
@@ -130,7 +148,10 @@
     
     // scale, make borders and reflection
     _iconImage = bit_imageToFitSize(anIconImage, CGSizeMake(kImageHeight, kImageHeight), YES);
-    _iconImage = bit_roundedCornerImage(_iconImage, kImageBorderRadius, 0.0);
+    CGFloat radius = kImageBorderRadius;
+    if (self.style == BITAppStoreHeaderStyleOS7)
+      radius = kImageBorderRadiusiOS7;
+    _iconImage = bit_roundedCornerImage(_iconImage, radius, 0.0);
     
     [self setNeedsDisplay];
   }

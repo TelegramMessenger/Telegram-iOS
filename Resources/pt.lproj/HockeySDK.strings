@@ -64,6 +64,8 @@
 
 "UpdateInstall" = "Instalar";
 
+"UpdateRemindMe" = "Lembrar";
+
 
 /* Update Details */
 
@@ -230,3 +232,34 @@
 
 /* Email Placeholder */
 "HockeyFeedbackUserDataEmailPlaceholder" = "exemplo@email.com";
+
+
+/* Authenticator */
+
+/* View Controller Title*/
+"HockeyAuthenticatorViewControllerTitle" = "HockeyApp";
+
+/* BITAuthenticatorAuthTypeUDIDProvider */
+"HockeyAuthenticationViewControllerWebUDIDLoginDescription" = "O desenvolvedor solicitou a UDID deste dispositivo. Toque abaixo para abrir o site do HockeyApp e autorizar o acesso.";
+"HockeyAuthenticationViewControllerWebLoginButtonTitle" = "Abrir HockeyApp";
+
+/* BITAuthenticatorIdentificationTypeWebAuth */
+"HockeyAuthenticationViewControllerWebAuthLoginDescription" = "O desenvolvedor solicitou o endereço de e-mail de sua conta do HockeyApp. Toque abaixo para abrir o site do HockeyApp e autorizar o acesso.";
+
+/* BITAuthenticatorAuthTypeEmail and BITAuthenticatorAuthTypeEmailAndPassword */
+"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Informe seu e-mail e senha da conta do HockeyApp para autorizar o acesso a este aplicativo.";
+"HockeyAuthenticationViewControllerDataEmailDescription" = "Informe seu e-mail da conta do HockeyApp para autorizar o acesso a este aplicativo.";
+"HockeyAuthenticationViewControllerEmailPlaceholder" = "exemplo@email.com";
+"HockeyAuthenticationViewControllerPasswordPlaceholder" = "Necessário";
+"HockeyAuthenticationViewControllerEmailDescription" = "E-mail";
+"HockeyAuthenticationViewControllerPasswordDescription" = "Senha";
+
+/* Error presented to the user if authentication failed because of networking issues */
+"HockeyAuthenticationViewControllerNetworkError" = "Não foi possível autorizar porque seu dispositivo parece estar desconectado da Internet. Tente novamente.";
+
+
+"HockeyAuthenticationFailedAuthenticate" = "Falha ao autorizar. Tente novamente ou contate o desenvolvedor deste aplicativo.";
+"HockeyAuthenticationNotMember" = "Você não tem autorização para usar este aplicativo. Contate o desenvolvedor deste aplicativo.";
+"HockeyAuthenticationContactDeveloper" = "Erro de autorização. Contate o desenvolvedor deste aplicativo.";
+"HockeyAuthenticationWrongEmailPassword" = "Você informou um e-mail ou senha inválidos. Verifique os dados e tente  novamente.";
+"HockeyAuthenticationAuthSecretMissing" = "O “authorization secret” do HockeySDK não foi definido. Contate o desenvolvedor deste aplicativo.";

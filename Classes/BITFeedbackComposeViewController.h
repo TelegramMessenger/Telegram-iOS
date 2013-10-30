@@ -33,6 +33,16 @@
 
 /**
  View controller allowing the user to write and send new feedback
+ 
+ To add this view controller to your own app and push it onto a navigation stack,
+ don't create the intance yourself, but use the following code to get a correct instance:
+ 
+     [[BITHockeyManager sharedHockeyManager].feedbackManager feedbackComposeViewController]
+ 
+ To show it modally, use the following code instead:
+ 
+     [[BITHockeyManager sharedHockeyManager].feedbackManager showFeedbackComposeView]
+
  */
 
 @interface BITFeedbackComposeViewController : UIViewController <UITextViewDelegate>
@@ -44,11 +54,7 @@
 
 
 /**
- Sets the `BITUpdateManagerDelegate` delegate.
- 
- When using `BITUpdateManager` to distribute updates of your beta or enterprise
- application, it is _REQUIRED_ to set this delegate and implement
- `[BITUpdateManagerDelegate customDeviceIdentifierForUpdateManager:]`!
+ Sets the `BITFeedbackComposeViewControllerDelegate` delegate.
  */
 @property (nonatomic, weak) id<BITFeedbackComposeViewControllerDelegate> delegate;
 

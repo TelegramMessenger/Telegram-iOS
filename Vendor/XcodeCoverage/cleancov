@@ -1,0 +1,10 @@
+#!/bin/sh
+#
+#   Copyright 2012 Jonathan M. Reid. See LICENSE.txt
+#   Created by: Jon Reid, http://qualitycoding.org/
+#   Source: https://github.com/jonreid/XcodeCoverage
+#
+
+source envcov.sh
+
+"${LCOV}" --zerocounters -d "${OBJ_DIR}"

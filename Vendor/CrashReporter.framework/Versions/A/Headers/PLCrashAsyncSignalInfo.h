@@ -1,8 +1,7 @@
 /*
- * Author: Andreas Linde <mail@andreaslinde.de>
+ * Author: Landon Fuller <landonf@plausiblelabs.com>
  *
- * Copyright (c) 2012 Plausible Labs Cooperative, Inc.
- * Copyright (c) 2012 Andreas Linde
+ * Copyright (c) 2008-2009 Plausible Labs Cooperative, Inc.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -27,19 +26,33 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import <Foundation/Foundation.h>
+#ifndef PLCRASH_ASYNC_SIGNAL_INFO_H
+#define PLCRASH_ASYNC_SIGNAL_INFO_H
 
-@interface PLCrashReportReportInfo : NSObject {
-@private
-    /** Crash Report GUID */
-    NSString *_reportGUID;
-}
-
-- (id) initWithReportGUID: (NSString *) reportGUID;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
- * The crash report GUID.
+ * @internal
+ *
+ * @defgroup plcrash_async_signal_info Signal Information
+ * @ingroup plcrash_async
+ *
+ * Provides mapping of signal number and code to strings.
+ *
+ * @{
  */
-@property(nonatomic, readonly) NSString *reportGUID;
 
-@end
+const char *plcrash_async_signal_signame (int signal);
+const char *plcrash_async_signal_sigcode (int signal, int si_code);
+
+/**
+ * @} plcrash_async_signal_info
+ */
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* PLCRASH_ASYNC_SIGNAL_INFO_H */

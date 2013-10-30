@@ -7,6 +7,7 @@
 //
 
 #import "BITHockeyBaseViewController.h"
+#import "HockeySDKPrivate.h"
 
 
 @implementation BITHockeyBaseViewController {
@@ -15,8 +16,8 @@
 }
 
 
-- (id)init {
-  self = [super init];
+- (instancetype)initWithStyle:(UITableViewStyle)style {
+  self = [super initWithStyle:style];
   if (self) {
     _modalAnimated = YES;
     _modal = NO;
@@ -24,19 +25,24 @@
   return self;
 }
 
-- (id)initWithModalStyle:(BOOL)modal {
-  self = [self init];
+- (instancetype)initWithStyle:(UITableViewStyle)style modal:(BOOL)modal {
+  self = [self initWithStyle:style];
   if (self) {
     _modal = modal;
-
+    
     //might be better in viewDidLoad, but to workaround rdar://12214613 and as it doesn't
     //hurt, we do it here
     if (_modal) {
       self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
-                                                                                             target:self
-                                                                                             action:@selector(onDismissModal:)];
+                                                                                            target:self
+                                                                                            action:@selector(onDismissModal:)];
     }
   }
+  return self;
+}
+
+- (instancetype)initWithModalStyle:(BOOL)modal {
+  self = [self initWithStyle:UITableViewStylePlain modal:modal];
   return self;
 }
 
@@ -49,7 +55,7 @@
     
     // If there is no presenting view controller just remove view
     if (presentingViewController && self.modalAnimated) {
-      [presentingViewController dismissModalViewControllerAnimated:YES];
+      [presentingViewController dismissViewControllerAnimated:YES completion:nil];
     } else {
       [self.navigationController.view removeFromSuperview];
     }
@@ -65,13 +71,21 @@
   [super viewWillAppear:animated];
   
   _statusBarStyle = [[UIApplication sharedApplication] statusBarStyle];
-  [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleBlackOpaque];
+  if ([self.navigationController.navigationBar.tintColor isEqual:BIT_RGBCOLOR(25, 25, 25)]) {
+#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
+    [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleLightContent];
+#else
+    [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleBlackOpaque];
+#endif
+  }
 }
 
 - (void)viewWillDisappear:(BOOL)animated {
   [super viewWillDisappear:animated];
   
-  [[UIApplication sharedApplication] setStatusBarStyle:_statusBarStyle];
+  if ([self.navigationController.navigationBar.tintColor isEqual:BIT_RGBCOLOR(25, 25, 25)]) {
+    [[UIApplication sharedApplication] setStatusBarStyle:_statusBarStyle];
+  }
 }
 
 

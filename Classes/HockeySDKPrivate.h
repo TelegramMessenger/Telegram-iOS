@@ -41,25 +41,23 @@
 
 #define BITHOCKEY_FEEDBACK_SETTINGS @"BITFeedbackManager.plist"
 
-#define kBITUpdateInstalledUUID             @"BITUpdateInstalledUUID"
-#define kBITUpdateInstalledVersionID        @"BITUpdateInstalledVersionID"
-#define kBITUpdateCurrentCompanyName        @"BITUpdateCurrentCompanyName"
-#define kBITUpdateArrayOfLastCheck          @"BITUpdateArrayOfLastCheck"
-#define kBITUpdateDateOfLastCheck           @"BITUpdateDateOfLastCheck"
-#define kBITUpdateDateOfVersionInstallation @"BITUpdateDateOfVersionInstallation"
-#define kBITUpdateUsageTimeOfCurrentVersion @"BITUpdateUsageTimeOfCurrentVersion"
-#define kBITUpdateUsageTimeForUUID          @"BITUpdateUsageTimeForUUID"
-#define kBITUpdateAuthorizedVersion         @"BITUpdateAuthorizedVersion"
-#define kBITUpdateAuthorizedToken           @"BITUpdateAuthorizedToken"
+#define kBITUpdateInstalledUUID              @"BITUpdateInstalledUUID"
+#define kBITUpdateInstalledVersionID         @"BITUpdateInstalledVersionID"
+#define kBITUpdateCurrentCompanyName         @"BITUpdateCurrentCompanyName"
+#define kBITUpdateArrayOfLastCheck           @"BITUpdateArrayOfLastCheck"
+#define kBITUpdateDateOfLastCheck            @"BITUpdateDateOfLastCheck"
+#define kBITUpdateDateOfVersionInstallation  @"BITUpdateDateOfVersionInstallation"
+#define kBITUpdateUsageTimeOfCurrentVersion  @"BITUpdateUsageTimeOfCurrentVersion"
+#define kBITUpdateUsageTimeForUUID           @"BITUpdateUsageTimeForUUID"
+#define kBITUpdateInstallationIdentification @"BITUpdateInstallationIdentification"
+
+#define kBITStoreUpdateDateOfLastCheck       @"BITStoreUpdateDateOfLastCheck"
+#define kBITStoreUpdateLastStoreVersion      @"BITStoreUpdateLastStoreVersion"
+#define kBITStoreUpdateLastUUID              @"BITStoreUpdateLastUUID"
+#define kBITStoreUpdateIgnoreVersion         @"BITStoreUpdateIgnoredVersion"
 
 #define BITHOCKEYSDK_BUNDLE @"HockeySDKResources.bundle"
 #define BITHOCKEYSDK_URL @"https://sdk.hockeyapp.net/"
-
-// Whether to compile in support for Jira Mobile Connect
-// default is disabled
-#ifndef JIRA_MOBILE_CONNECT_SUPPORT_ENABLED
-  #define JIRA_MOBILE_CONNECT_SUPPORT_ENABLED 0
-#endif
 
 #define BITHockeyLog(fmt, ...) do { if([BITHockeyManager sharedHockeyManager].isDebugLogEnabled && ![BITHockeyManager sharedHockeyManager].isAppStoreEnvironment) { NSLog((@"[HockeySDK] %s/%d " fmt), __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__); }} while(0)
 
@@ -68,39 +66,31 @@
 NSBundle *BITHockeyBundle(void);
 NSString *BITHockeyLocalizedString(NSString *stringToken);
 NSString *BITHockeyMD5(NSString *str);
-id BITHockeyParseJSON(NSString *str, NSError **error);
 
+#if __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_6_0
 
-// compatibility helper
-#ifdef BITHOCKEY_STATIC_LIBRARY
-// If HockeySDK is built as a static library and linked into the project
-// we can't use this project's deployment target to statically decide if
-// native JSON is available
-#define BITHOCKEY_NATIVE_JSON_AVAILABLE 0
+#define kBITTextLabelAlignmentCenter        UITextAlignmentCenter
+#define kBITTextLabelAlignmentLeft          UITextAlignmentLeft
+#define kBITTextLabelAlignmentRight         UITextAlignmentRight
+#define kBITLineBreakModeMiddleTruncation   UILineBreakModeMiddleTruncation
+
 #else
-#define BITHOCKEY_NATIVE_JSON_AVAILABLE __IPHONE_OS_VERSION_MIN_REQUIRED >= 50000
-#endif
 
+#define kBITTextLabelAlignmentCenter        NSTextAlignmentCenter
+#define kBITTextLabelAlignmentLeft          NSTextAlignmentLeft
+#define kBITTextLabelAlignmentRight         NSTextAlignmentRight
+#define kBITLineBreakModeMiddleTruncation   NSLineBreakByTruncatingMiddle
 
+#endif /* __IPHONE_OS_VERSION_MIN_REQUIRED */
 
-#ifndef kCFCoreFoundationVersionNumber_iPhoneOS_5_0
-#define kCFCoreFoundationVersionNumber_iPhoneOS_5_0 674.0
-#endif
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 50000
-#define BITHOCKEY_IF_IOS5_OR_GREATER(...) \
-if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iPhoneOS_5_0) \
-{ \
-__VA_ARGS__ \
-}
+#if __IPHONE_OS_VERSION_MIN_REQUIRED > __IPHONE_6_1
+
+#define kBITButtonTypeSystem                UIButtonTypeSystem
+
 #else
-#define BITHOCKEY_IF_IOS5_OR_GREATER(...)
-#endif
 
-#define BITHOCKEY_IF_PRE_IOS5(...)  \
-if (kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iPhoneOS_5_0)  \
-{ \
-__VA_ARGS__ \
-}
-
+#define kBITButtonTypeSystem                UIButtonTypeRoundedRect
 
 #endif
+
+#endif //HockeySDK_HockeySDKPrivate_h
