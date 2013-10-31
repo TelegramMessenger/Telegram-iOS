@@ -67,21 +67,21 @@ NSBundle *BITHockeyBundle(void);
 NSString *BITHockeyLocalizedString(NSString *stringToken);
 NSString *BITHockeyMD5(NSString *str);
 
-#if __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_6_0
-
-#define kBITTextLabelAlignmentCenter        UITextAlignmentCenter
-#define kBITTextLabelAlignmentLeft          UITextAlignmentLeft
-#define kBITTextLabelAlignmentRight         UITextAlignmentRight
-#define kBITLineBreakModeMiddleTruncation   UILineBreakModeMiddleTruncation
-
-#else
+#ifdef __IPHONE_6_0
 
 #define kBITTextLabelAlignmentCenter        NSTextAlignmentCenter
 #define kBITTextLabelAlignmentLeft          NSTextAlignmentLeft
 #define kBITTextLabelAlignmentRight         NSTextAlignmentRight
 #define kBITLineBreakModeMiddleTruncation   NSLineBreakByTruncatingMiddle
 
-#endif /* __IPHONE_OS_VERSION_MIN_REQUIRED */
+#else
+
+#define kBITTextLabelAlignmentCenter        UITextAlignmentCenter
+#define kBITTextLabelAlignmentLeft          UITextAlignmentLeft
+#define kBITTextLabelAlignmentRight         UITextAlignmentRight
+#define kBITLineBreakModeMiddleTruncation   UILineBreakModeMiddleTruncation
+
+#endif /* __IPHONE_6_0 */
 
 #if __IPHONE_OS_VERSION_MIN_REQUIRED > __IPHONE_6_1
 
