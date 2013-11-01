@@ -111,7 +111,7 @@
 }
 
 - (void)feedbackComposeViewController:(BITFeedbackComposeViewController *)composeViewController didFinishWithResult:(BITFeedbackComposeResult)composeResult {
-  [self activityDidFinish:YES];
+  [self activityDidFinish:composeResult == BITFeedbackComposeResultSubmitted];
 }
 
 
