@@ -106,7 +106,7 @@
   return navController;
 }
 
--(void)feedbackComposeViewControllerDidFinish:(BITFeedbackComposeViewController *)composeViewController {
+- (void)feedbackComposeViewController:(BITFeedbackComposeViewController *)composeViewController didFinishWithResult:(BITFeedbackComposeResult)composeResult {
   [self activityDidFinish:YES];
 }
 
