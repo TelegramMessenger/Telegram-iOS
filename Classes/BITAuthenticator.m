@@ -35,6 +35,12 @@
 #import "BITHockeyAppClient.h"
 #import "BITHockeyHelper.h"
 
+#if __IPHONE_OS_VERSION_MAX_ALLOWED < 70000
+@interface NSData (iOS7)
+- (NSString *)base64Encoding;
+@end
+#endif
+
 static NSString* const kBITAuthenticatorUUIDKey = @"BITAuthenticatorUUIDKey";
 static NSString* const kBITAuthenticatorIdentifierKey = @"BITAuthenticatorIdentifierKey";
 static NSString* const kBITAuthenticatorIdentifierTypeKey = @"BITAuthenticatorIdentifierTypeKey";
@@ -408,7 +414,7 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
   if(BITAuthenticatorIdentificationTypeHockeyAppUser == self.identificationType) {
     NSString *authStr = [NSString stringWithFormat:@"%@:%@", email, password];
     NSData *authData = [authStr dataUsingEncoding:NSASCIIStringEncoding];
-    NSString *authValue = [NSString stringWithFormat:@"Basic %@", bit_base64String(authData, authData.length)];
+    NSString *authValue = [NSString stringWithFormat:@"Basic %@", [authData base64Encoding]];
     [request setValue:authValue forHTTPHeaderField:@"Authorization"];
   }
   return request;
