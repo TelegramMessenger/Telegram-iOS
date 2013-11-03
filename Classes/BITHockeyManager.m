@@ -298,12 +298,12 @@
     aServerURL = [NSString stringWithFormat:@"%@/", aServerURL];
   }
   
-#if HOCKEYSDK_FEATURE_AUTHENTICATOR
   if (_serverURL != aServerURL) {
     _serverURL = [aServerURL copy];
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
     _authenticator.hockeyAppClient.baseURL = [NSURL URLWithString:_serverURL ? _serverURL : BITHOCKEYSDK_URL];
-  }
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
+  }
 }
 
 
@@ -424,11 +424,15 @@
     _feedbackManager.delegate = _delegate;
 #endif /* HOCKEYSDK_FEATURE_FEEDBACK */
 
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
     BITHockeyLog(@"INFO: Setup Authenticator");
     BITHockeyAppClient *client = [[BITHockeyAppClient alloc] initWithBaseURL:[NSURL URLWithString:_serverURL ? _serverURL : BITHOCKEYSDK_URL]];
     _authenticator = [[BITAuthenticator alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironment:_appStoreEnvironment];
     _authenticator.hockeyAppClient = client;
     _authenticator.delegate = _delegate;
+#endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
+
+#if HOCKEYSDK_FEATURE_UPDATES
     
 #if HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT
     // Only if JMC is part of the project
@@ -440,7 +444,9 @@
       [self performSelector:@selector(configureJMC) withObject:nil afterDelay:0];
     }
 #endif /* HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT */
-    
+
+#endif /* HOCKEYSDK_FEATURE_UPDATES */
+
   } else {
     [self logInvalidIdentifier:@"app identifier"];
   }
