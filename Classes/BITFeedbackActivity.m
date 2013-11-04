@@ -28,6 +28,9 @@
 
 
 @implementation BITFeedbackActivity
+{
+  UIViewController *_activityViewController;
+}
 
 #pragma mark - NSObject
 
@@ -92,22 +95,23 @@
 }
 
 - (UIViewController *)activityViewController {
-  // TODO: return compose controller with activity content added
-  BITFeedbackManager *manager = [BITHockeyManager sharedHockeyManager].feedbackManager;
-  
-  BITFeedbackComposeViewController *composeViewController = [manager feedbackComposeViewController];
-  composeViewController.delegate = self;
-  [composeViewController prepareWithItems:_items];
-  
-  UINavigationController *navController = [manager customNavigationControllerWithRootViewController:composeViewController
-                                                                                  presentationStyle:UIModalPresentationFormSheet];
-  navController.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
-  
-  return navController;
+  if (!_activityViewController) {
+    // TODO: return compose controller with activity content added
+    BITFeedbackManager *manager = [BITHockeyManager sharedHockeyManager].feedbackManager;
+    
+    BITFeedbackComposeViewController *composeViewController = [manager feedbackComposeViewController];
+    composeViewController.delegate = self;
+    [composeViewController prepareWithItems:_items];
+    
+    _activityViewController = [manager customNavigationControllerWithRootViewController:composeViewController
+                                                                      presentationStyle:UIModalPresentationFormSheet];
+    _activityViewController.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
+  }
+  return _activityViewController;
 }
 
--(void)feedbackComposeViewControllerDidFinish:(BITFeedbackComposeViewController *)composeViewController {
-  [self activityDidFinish:YES];
+- (void)feedbackComposeViewController:(BITFeedbackComposeViewController *)composeViewController didFinishWithResult:(BITFeedbackComposeResult)composeResult {
+  [self activityDidFinish:composeResult == BITFeedbackComposeResultSubmitted];
 }
 
 
