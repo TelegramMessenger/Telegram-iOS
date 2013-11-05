@@ -289,7 +289,7 @@ static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context);
      * post-processed report, Apple writes this out as full frame entries. We use the latter format. */
     for (NSUInteger frame_idx = 0; frame_idx < [exception.stackFrames count]; frame_idx++) {
       BITPLCrashReportStackFrameInfo *frameInfo = [exception.stackFrames objectAtIndex: frame_idx];
-      [text appendString: [self bit_formatStackFrame: frameInfo frameIndex: frame_idx report: report lp64: lp64]];
+      [text appendString: [[self class] bit_formatStackFrame: frameInfo frameIndex: frame_idx report: report lp64: lp64]];
     }
     [text appendString: @"\n"];
   }
@@ -306,7 +306,7 @@ static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context);
     }
     for (NSUInteger frame_idx = 0; frame_idx < [thread.stackFrames count]; frame_idx++) {
       BITPLCrashReportStackFrameInfo *frameInfo = [thread.stackFrames objectAtIndex: frame_idx];
-      [text appendString: [self bit_formatStackFrame: frameInfo frameIndex: frame_idx report: report lp64: lp64]];
+      [text appendString: [[self class] bit_formatStackFrame: frameInfo frameIndex: frame_idx report: report lp64: lp64]];
     }
     [text appendString: @"\n"];
     
@@ -365,7 +365,7 @@ static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context);
       uuid = @"???";
     
     /* Determine the architecture string */
-    NSString *archName = [self bit_archNameFromImageInfo:imageInfo];
+    NSString *archName = [[self class] bit_archNameFromImageInfo:imageInfo];
     
     /* Determine if this is the main executable or an app specific framework*/
     NSString *binaryDesignator = @" ";
@@ -425,7 +425,7 @@ static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context);
       uuid = @"???";
     
     /* Determine the architecture string */
-    NSString *archName = [self bit_archNameFromImageInfo:imageInfo];
+    NSString *archName = [[self class] bit_archNameFromImageInfo:imageInfo];
     
     /* Determine if this is the app executable or app specific framework */
     NSString *imagePath = [imageInfo.imageName stringByStandardizingPath];
