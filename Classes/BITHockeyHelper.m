@@ -67,7 +67,10 @@ NSString *bit_base64String(NSData * data, unsigned long length) {
     return [data base64EncodedStringWithOptions:0];
   } else {
 #endif
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     return [data base64Encoding];
+#pragma clang diagnostic pop
 #if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
   }
 #endif
