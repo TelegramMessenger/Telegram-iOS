@@ -36,46 +36,6 @@
   [super tearDown];
 }
 
-- (void)testBase64Encoding {
-  NSString *string = @"Lorem ipsum dolor sit amet.";
-  NSData *stringData = [string dataUsingEncoding:NSUTF8StringEncoding];
-  NSString *encodedString = bit_base64String(stringData, stringData.length);
-  assertThatBool([encodedString isEqualToString:@"TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQu"], equalToBool(YES));
-}
-
-- (void)testBase64EncodingPreiOS7 {
-  NSString *string = @"Lorem ipsum dolor sit amet.";
-  NSData *stringData = [string dataUsingEncoding:NSUTF8StringEncoding];
-  NSString *encodedString = bit_base64StringPreiOS7(stringData, stringData.length);
-  assertThatBool([encodedString isEqualToString:@"TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQu"], equalToBool(YES));
-}
-
-- (void)testBase64EncodingPreiOS7EmptyString {
-  NSString *string = @"";
-  NSData *stringData = [string dataUsingEncoding:NSUTF8StringEncoding];
-  NSString *encodedString = bit_base64StringPreiOS7(stringData, stringData.length);
-  assertThatBool([encodedString isEqualToString:@""], equalToBool(YES));
-}
-
-- (void)testBase64EncodingCompareToiOS7Implementation {
-  // this requires iOS 7
-  BOOL result = YES;
-  SEL base64EncodingSelector = NSSelectorFromString(@"base64EncodedStringWithOptions:");
-  NSData *dataInstance = [NSData data];
-  if ([dataInstance respondsToSelector:base64EncodingSelector]) {
-    
-    NSString *string = @"A dummy whatever strange !* char : test &# more";
-    NSData *stringData = [string dataUsingEncoding:NSUTF8StringEncoding];
-  
-    NSString *encodedString = bit_base64String(stringData, stringData.length);
-  
-    NSString *base64EncodedString = [[string dataUsingEncoding:NSUTF8StringEncoding] base64EncodedStringWithOptions:0];
-    
-    result = [base64EncodedString isEqualToString:encodedString];
-  }
-  assertThatBool(result, equalToBool(YES));
-}
-
 - (void)testValidateEmail {
   BOOL result = NO;
   
