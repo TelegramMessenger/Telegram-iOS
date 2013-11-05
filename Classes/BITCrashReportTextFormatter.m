@@ -52,13 +52,20 @@
 #endif
 
 
-@interface BITCrashReportTextFormatter (PrivateAPI)
-static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context);
-+ (NSString *)bit_formatStackFrame:(BITPLCrashReportStackFrameInfo *)frameInfo
-                        frameIndex:(NSUInteger)frameIndex
-                            report:(BITPLCrashReport *)report
-                              lp64: (BOOL) lp64;
-@end
+/**
+ * Sort PLCrashReportBinaryImageInfo instances by their starting address.
+ */
+static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context) {
+  uint64_t addr1 = [binary1 imageBaseAddress];
+  uint64_t addr2 = [binary2 imageBaseAddress];
+  
+  if (addr1 < addr2)
+    return NSOrderedAscending;
+  else if (addr1 > addr2)
+    return NSOrderedDescending;
+  else
+    return NSOrderedSame;
+}
 
 
 /**
@@ -511,11 +518,6 @@ static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context);
   return archName;
 }
 
-@end
-
-
-@implementation BITCrashReportTextFormatter (PrivateAPI)
-
 
 /**
  * Format a stack frame for display in a thread backtrace.
@@ -606,21 +608,6 @@ static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context);
           (const uint16_t *)[imageName cStringUsingEncoding: NSUTF16StringEncoding],
           lp64 ? 16 : 8, frameInfo.instructionPointer,
           symbolString];
-}
-
-/**
- * Sort PLCrashReportBinaryImageInfo instances by their starting address.
- */
-static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context) {
-  uint64_t addr1 = [binary1 imageBaseAddress];
-  uint64_t addr2 = [binary2 imageBaseAddress];
-  
-  if (addr1 < addr2)
-    return NSOrderedAscending;
-  else if (addr1 > addr2)
-    return NSOrderedDescending;
-  else
-    return NSOrderedSame;
 }
 
 @end
