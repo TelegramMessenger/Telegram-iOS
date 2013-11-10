@@ -281,7 +281,7 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
                          NSError *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
                                                               code:BITAuthenticatorNetworkError
                                                           userInfo:userInfo];
-                         self.validated = NO;
+                         strongSelf.validated = NO;
                          if(completion) completion(NO, error);
                        } else {
                          NSError *validationParseError = nil;
@@ -379,7 +379,7 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
                                                                      } else {
                                                                        identified = NO;
                                                                      }
-                                                                     self.identified = identified;
+                                                                     strongSelf.identified = identified;
                                                                      completion(identified, authParseError);
                                                                      if(strongSelf.identificationCompletion) strongSelf.identificationCompletion(identified, authParseError);
                                                                      strongSelf.identificationCompletion = nil;
