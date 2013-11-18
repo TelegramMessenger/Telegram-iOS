@@ -524,12 +524,13 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     frame.origin.x = 20;
     frame.origin.y = frame.size.height - 140;
     frame.size.width -= 40;
-    frame.size.height = 50;
+    frame.size.height = 70;
     
     UILabel *label = [[UILabel alloc] initWithFrame:frame];
     label.text = message;
     label.textAlignment = kBITTextLabelAlignmentCenter;
-    label.numberOfLines = 2;
+    label.numberOfLines = 3;
+    label.adjustsFontSizeToFitWidth = YES;
     label.backgroundColor = [UIColor clearColor];
     
     [self.blockingView addSubview:label];
