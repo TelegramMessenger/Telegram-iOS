@@ -419,6 +419,18 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 }
 
 
+- (void)generateTestCrash {
+  if (![self isAppStoreEnvironment]) {
+    
+    if ([self isDebuggerAttached]) {
+      NSLog(@"[HockeySDK] WARNING: The debugger is attached. The following crash cannot be detected by the SDK!");
+    }
+    
+    __builtin_trap();
+  }
+}
+
+
 #pragma mark - PLCrashReporter
 
 /**
