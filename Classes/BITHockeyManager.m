@@ -30,7 +30,6 @@
 #import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
 
-#import "BITHockeyManagerPrivate.h"
 #import "BITHockeyBaseManagerPrivate.h"
 
 #import "BITHockeyHelper.h"
@@ -148,6 +147,12 @@
 
 
 #pragma mark - Public Instance Methods (Configuration)
+
+- (void)configureWithIdentifier:(NSString *)appIdentifier {
+  _appIdentifier = [appIdentifier copy];
+  
+  [self initializeModules];
+}
 
 - (void)configureWithIdentifier:(NSString *)appIdentifier delegate:(id)delegate {
   _delegate = delegate;
@@ -306,6 +311,36 @@
   }
 }
 
+
+- (void)setDelegate:(id<BITHockeyManagerDelegate>)delegate {
+  if (_delegate != delegate) {
+    _delegate = delegate;
+    
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER
+    if (_crashManager) {
+      _crashManager.delegate = _delegate;
+    }
+#endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */
+    
+#if HOCKEYSDK_FEATURE_UPDATES
+    if (_updateManager) {
+      _updateManager.delegate = _delegate;
+    }
+#endif /* HOCKEYSDK_FEATURE_UPDATES */
+    
+#if HOCKEYSDK_FEATURE_FEEDBACK
+    if (_feedbackManager) {
+      _feedbackManager.delegate = _delegate;
+    }
+#endif /* HOCKEYSDK_FEATURE_FEEDBACK */
+    
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
+    if (_authenticator) {
+      _authenticator.delegate = _delegate;
+    }
+#endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
+  }
+}
 
 #pragma mark - KVO
 

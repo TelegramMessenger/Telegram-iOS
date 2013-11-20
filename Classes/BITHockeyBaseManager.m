@@ -35,7 +35,6 @@
 #import "BITHockeyBaseManagerPrivate.h"
 #import "BITHockeyBaseViewController.h"
 
-#import "BITHockeyManagerPrivate.h"
 #import "BITKeychainUtils.h"
 
 #import <sys/sysctl.h>

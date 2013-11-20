@@ -38,7 +38,6 @@
 #import "HockeySDKPrivate.h"
 #import "BITHockeyHelper.h"
 
-#import "BITHockeyManagerPrivate.h"
 #import "BITHockeyBaseManagerPrivate.h"
 #import "BITCrashManagerPrivate.h"
 #import "BITCrashReportTextFormatter.h"

@@ -87,6 +87,22 @@
 
 
 /**
+ Initializes the manager with a particular app identifier
+ 
+ Initialize the manager with a HockeyApp app identifier.
+ 
+    [[BITHockeyManager sharedHockeyManager]
+      configureWithIdentifier:@"<AppIdentifierFromHockeyApp>"];
+ 
+ @see configureWithIdentifier:delegate:
+ @see configureWithBetaIdentifier:liveIdentifier:delegate:
+ @see startManager
+ @param appIdentifier The app identifier that should be used.
+ */
+- (void)configureWithIdentifier:(NSString *)appIdentifier;
+
+
+/**
  Initializes the manager with a particular app identifier and delegate
  
  Initialize the manager with a HockeyApp app identifier and assign the class that
@@ -97,6 +113,7 @@
       configureWithIdentifier:@"<AppIdentifierFromHockeyApp>"
                      delegate:nil];
 
+ @see configureWithIdentifier:
  @see configureWithBetaIdentifier:liveIdentifier:delegate:
  @see startManager
  @see BITHockeyManagerDelegate
@@ -132,6 +149,7 @@
  you to upload any IPA files, uploading only the dSYM package for crash reporting is
  just fine.
 
+ @see configureWithIdentifier:
  @see configureWithIdentifier:delegate:
  @see startManager
  @see BITHockeyManagerDelegate
@@ -161,6 +179,19 @@
 ///-----------------------------------------------------------------------------
 /// @name Modules
 ///-----------------------------------------------------------------------------
+
+
+/**
+ * Set the delegate
+ *
+ * Defines the class that implements the optional protocol `BITHockeyManagerDelegate`.
+ *
+ * @see BITHockeyManagerDelegate
+ * @see BITCrashManagerDelegate
+ * @see BITUpdateManagerDelegate
+ * @see BITFeedbackManagerDelegate
+ */
+@property (nonatomic, weak) id<BITHockeyManagerDelegate> delegate;
 
 
 /**
