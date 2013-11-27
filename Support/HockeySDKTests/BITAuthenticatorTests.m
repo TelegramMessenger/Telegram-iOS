@@ -105,7 +105,6 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 
 #pragma mark - Initial defaults
 - (void) testDefaultValues {
-  assertThatBool(_sut.automaticMode, equalToBool(YES));
   assertThatBool(_sut.restrictApplicationUsage, equalToBool(NO));
   assertThatBool(_sut.isIdentified, equalToBool(NO));
   assertThatBool(_sut.isValidated, equalToBool(NO));
