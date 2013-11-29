@@ -33,6 +33,7 @@
 #import "BITHockeyBaseManagerPrivate.h"
 
 #import "BITHockeyHelper.h"
+#import "BITHockeyAppClient.h"
 
 
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
@@ -53,7 +54,6 @@
 
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
 #import "BITAuthenticator_Private.h"
-#import "BITHockeyAppClient.h"
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
 
 @interface BITHockeyManager ()
@@ -75,6 +75,8 @@
   BOOL _startManagerIsInvoked;
   
   BOOL _startUpdateManagerIsInvoked;
+  
+  BITHockeyAppClient *_hockeyAppClient;
 }
 
 #pragma mark - Private Class Methods
@@ -120,6 +122,8 @@
   if ((self = [super init])) {
     _serverURL = nil;
     _delegate = nil;
+    
+    _hockeyAppClient = nil;
     
     _disableCrashManager = NO;
     _disableUpdateManager = NO;
@@ -305,9 +309,10 @@
   
   if (_serverURL != aServerURL) {
     _serverURL = [aServerURL copy];
-#if HOCKEYSDK_FEATURE_AUTHENTICATOR
-    _authenticator.hockeyAppClient.baseURL = [NSURL URLWithString:_serverURL ? _serverURL : BITHOCKEYSDK_URL];
-#endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
+    
+    if (_hockeyAppClient) {
+      _hockeyAppClient.baseURL = [NSURL URLWithString:_serverURL ? _serverURL : BITHOCKEYSDK_URL];
+    }
   }
 }
 
@@ -374,6 +379,69 @@
 
 
 #pragma mark - Private Instance Methods
+
+- (BITHockeyAppClient *)hockeyAppClient {
+  if (!_hockeyAppClient) {
+    _hockeyAppClient = [[BITHockeyAppClient alloc] initWithBaseURL:[NSURL URLWithString:_serverURL ? _serverURL : BITHOCKEYSDK_URL]];
+    
+    _hockeyAppClient.baseURL = [NSURL URLWithString:_serverURL ? _serverURL : BITHOCKEYSDK_URL];
+  }
+  
+  return _hockeyAppClient;
+}
+
+- (NSString *)integrationFlowTimeString {
+  NSString *timeString = [[NSBundle mainBundle] objectForInfoDictionaryKey:BITHOCKEY_INTEGRATIONFLOW_TIMESTAMP];
+  
+  return timeString;
+}
+
+- (BOOL)integrationFlowStartedWithTimeString:(NSString *)timeString {
+  if (timeString == nil || [self isAppStoreEnvironment]) {
+    return NO;
+  }
+  
+  NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+  NSLocale *enUSPOSIXLocale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"];
+  [dateFormatter setLocale:enUSPOSIXLocale];
+  [dateFormatter setDateFormat:@"yyyy-MM-dd'T'HH:mm:ssZ"];
+  NSDate *integrationFlowStartDate = [dateFormatter dateFromString:timeString];
+  
+  if (integrationFlowStartDate && [integrationFlowStartDate timeIntervalSince1970] > [[NSDate date] timeIntervalSince1970] - (60 * 10) ) {
+    return YES;
+  }
+  
+  return NO;
+}
+
+- (void)pingServerForIntegrationStartWorkflowWithTimeString:(NSString *)timeString {
+  if (!_appIdentifier || [self isAppStoreEnvironment]) {
+    return;
+  }
+  
+  NSString *integrationPath = [NSString stringWithFormat:@"api/3/apps/%@/integration", bit_encodeAppIdentifier(_appIdentifier)];
+  
+  BITHockeyLog(@"INFO: Sending integration workflow ping to %@", integrationPath);
+  
+  [[self hockeyAppClient] postPath:integrationPath
+                        parameters:@{@"timestamp": timeString}
+                        completion:^(BITHTTPOperation *operation, NSData* responseData, NSError *error) {
+                          switch (operation.response.statusCode) {
+                            case 400:
+                              BITHockeyLog(@"ERROR: App ID not found");
+                              break;
+                            case 201:
+                              BITHockeyLog(@"INFO: Ping accepted.");
+                              break;
+                            case 200:
+                              BITHockeyLog(@"INFO: Ping accepted. Server already knows.");
+                              break;
+                            default:
+                              BITHockeyLog(@"ERROR: Unknown error");
+                              break;
+                          }
+                        }];
+}
 
 - (void)validateStartManagerIsInvoked {
   if (_validAppIdentifier && !_appStoreEnvironment) {
@@ -461,9 +529,8 @@
 
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
     BITHockeyLog(@"INFO: Setup Authenticator");
-    BITHockeyAppClient *client = [[BITHockeyAppClient alloc] initWithBaseURL:[NSURL URLWithString:_serverURL ? _serverURL : BITHOCKEYSDK_URL]];
     _authenticator = [[BITAuthenticator alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironment:_appStoreEnvironment];
-    _authenticator.hockeyAppClient = client;
+    _authenticator.hockeyAppClient = [self hockeyAppClient];
     _authenticator.delegate = _delegate;
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
 
@@ -482,6 +549,12 @@
 
 #endif /* HOCKEYSDK_FEATURE_UPDATES */
 
+    if (![self isAppStoreEnvironment]) {
+      NSString *integrationFlowTime = [self integrationFlowTimeString];
+      if (integrationFlowTime && [self integrationFlowStartedWithTimeString:integrationFlowTime]) {
+        [self pingServerForIntegrationStartWorkflowWithTimeString:integrationFlowTime];
+      }
+    }
   } else {
     [self logInvalidIdentifier:@"app identifier"];
   }
