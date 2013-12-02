@@ -300,16 +300,6 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 }
 
 #pragma mark - Lifetime checks
-- (void) testThatAuthenticationTriggersOnStart {
-  id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
-  _sut.delegate = delegateMock;
-  _sut.identificationType = BITAuthenticatorIdentificationTypeDevice;
-  
-  [_sut startManager];
-  
-  [verify(delegateMock) authenticator:_sut willShowAuthenticationController:(id)anything()];
-}
-
 - (void) testThatValidationTriggersOnDidBecomeActive {
   id delegateMock = mockProtocol(@protocol(BITAuthenticatorDelegate));
   _sut.delegate = delegateMock;
