@@ -60,11 +60,11 @@
 @property (nonatomic, copy, readonly) NSString *installationIdentifier;
 
 /**
- * method registered as observer for applicationWillBecomeInactive events
+ * method registered as observer for applicationDidEnterBackground events
  *
  * @param note NSNotification
  */
-- (void) applicationWillResignActive:(NSNotification*) note;
+- (void) applicationDidEnterBackground:(NSNotification*) note;
 
 /**
  * method registered as observer for applicationsDidBecomeActive events
