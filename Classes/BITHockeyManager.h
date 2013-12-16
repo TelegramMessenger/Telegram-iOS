@@ -367,4 +367,22 @@
 @property (nonatomic, assign, getter=isDebugLogEnabled) BOOL debugLogEnabled;
 
 
+///-----------------------------------------------------------------------------
+/// @name Integration test
+///-----------------------------------------------------------------------------
+
+/**
+ Pings the server with the HockeyApp app identifiers used for initialization
+ 
+ Call this method once for debugging purposes to test if your SDK setup code
+ reaches the server successfully.
+ 
+ Once invoked, check the apps page on HockeyApp for a verification.
+ 
+ If you setup the SDK with a beta and live identifier, a call to both app IDs will be done.
+
+ This call is ignored if the app is running in the App Store!.
+ */
+- (void)testIdentifier;
+
 @end

@@ -69,6 +69,7 @@
 
 @implementation BITHockeyManager {
   NSString *_appIdentifier;
+  NSString *_liveIdentifier;
   
   BOOL _validAppIdentifier;
   
@@ -135,6 +136,7 @@
     _startManagerIsInvoked = NO;
     _startUpdateManagerIsInvoked = NO;
     
+    _liveIdentifier = nil;
     _installString = bit_appAnonID();
     
 #if !TARGET_IPHONE_SIMULATOR
@@ -171,6 +173,7 @@
   // check the live identifier now, because otherwise invalid identifier would only be logged when the app is already in the store
   if (![self checkValidityOfAppIdentifier:liveIdentifier]) {
     [self logInvalidIdentifier:@"liveIdentifier"];
+    _liveIdentifier = [liveIdentifier copy];
   }
 
   if ([self shouldUseLiveIdentifier]) {
@@ -347,6 +350,21 @@
   }
 }
 
+- (void)testIdentifier {
+  if (!_appIdentifier || [self isAppStoreEnvironment]) {
+    return;
+  }
+  
+  NSDate *now = [NSDate date];
+  NSString *timeString = [NSString stringWithFormat:@"%.0f", [now timeIntervalSince1970]];
+  [self pingServerForIntegrationStartWorkflowWithTimeString:timeString appIdentifier:_appIdentifier];
+  
+  if (_liveIdentifier) {
+    [self pingServerForIntegrationStartWorkflowWithTimeString:timeString appIdentifier:_liveIdentifier];
+  }
+}
+
+
 #pragma mark - KVO
 
 #if HOCKEYSDK_FEATURE_UPDATES
@@ -414,12 +432,12 @@
   return NO;
 }
 
-- (void)pingServerForIntegrationStartWorkflowWithTimeString:(NSString *)timeString {
-  if (!_appIdentifier || [self isAppStoreEnvironment]) {
+- (void)pingServerForIntegrationStartWorkflowWithTimeString:(NSString *)timeString appIdentifier:(NSString *)appIdentifier {
+  if (!appIdentifier || [self isAppStoreEnvironment]) {
     return;
   }
   
-  NSString *integrationPath = [NSString stringWithFormat:@"api/3/apps/%@/integration", bit_encodeAppIdentifier(_appIdentifier)];
+  NSString *integrationPath = [NSString stringWithFormat:@"api/3/apps/%@/integration", bit_encodeAppIdentifier(appIdentifier)];
   
   BITHockeyLog(@"INFO: Sending integration workflow ping to %@", integrationPath);
   
@@ -552,7 +570,7 @@
     if (![self isAppStoreEnvironment]) {
       NSString *integrationFlowTime = [self integrationFlowTimeString];
       if (integrationFlowTime && [self integrationFlowStartedWithTimeString:integrationFlowTime]) {
-        [self pingServerForIntegrationStartWorkflowWithTimeString:integrationFlowTime];
+        [self pingServerForIntegrationStartWorkflowWithTimeString:integrationFlowTime appIdentifier:_appIdentifier];
       }
     }
   } else {
