@@ -178,7 +178,9 @@
   }
 
   // background for deletion accessory view
-  [self addSubview:accessoryViewBackground];
+  if (self.style == BITFeedbackListViewCellPresentatationStyleDefault) {
+    [self addSubview:accessoryViewBackground];
+  }
   
   // header
   NSString *dateString = @"";

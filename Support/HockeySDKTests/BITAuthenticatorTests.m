@@ -258,7 +258,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   _sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppUser;
   [_sut validateWithCompletion:^(BOOL validated, NSError *error) {
     assertThatBool(validated, equalToBool(NO));
-    assertThatInt(error.code, equalToInt(BITAuthenticatorNotIdentified));
+    assertThatLong(error.code, equalToLong(BITAuthenticatorNotIdentified));
   }];
 }
 

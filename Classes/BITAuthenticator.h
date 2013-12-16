@@ -160,9 +160,9 @@ typedef NS_ENUM(NSUInteger, BITAuthenticatorAppRestrictionEnforcementFrequency) 
  * If enabled, the Authenticator checks depending on `restrictionEnforcementFrequency`
  * if the user is allowed to use this application.
  *
- * Enabling this property and setting `identificationType` to `BITAuthenticatorIdentificationTypeHockeyAppEmail`
- * or `BITAuthenticatorIdentificationTypeHockeyAppUser` also allows to remove access for users
- * by removing them from the app's users list on HockeyApp.
+ * Enabling this property and setting `identificationType` to `BITAuthenticatorIdentificationTypeHockeyAppEmail`,
+ * `BITAuthenticatorIdentificationTypeHockeyAppUser` or `BITAuthenticatorIdentificationTypeWebAuth` also allows
+ * to remove access for users by removing them from the app's users list on HockeyApp.
  *
  *  _Default_: `NO`
  *
