@@ -256,7 +256,13 @@ static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context) {
     if (report.systemInfo.operatingSystemBuild != nil)
       osBuild = report.systemInfo.operatingSystemBuild;
     
-    [text appendFormat: @"Date/Time:       %@\n", report.systemInfo.timestamp];
+    NSLocale *enUSPOSIXLocale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"];
+    NSDateFormatter *rfc3339Formatter = [[NSDateFormatter alloc] init];
+    [rfc3339Formatter setLocale:enUSPOSIXLocale];
+    [rfc3339Formatter setDateFormat:@"yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'"];
+    [rfc3339Formatter setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:0]];
+    
+    [text appendFormat: @"Date/Time:       %@\n", [rfc3339Formatter stringFromDate:report.systemInfo.timestamp]];
     [text appendFormat: @"OS Version:      %@ %@ (%@)\n", osName, report.systemInfo.operatingSystemVersion, osBuild];
     [text appendFormat: @"Report Version:  104\n"];
   }
