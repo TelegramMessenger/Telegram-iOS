@@ -52,6 +52,8 @@
 // get array of all available versions
 @property (nonatomic, copy) NSArray *appVersions;
 
+@property (nonatomic, strong) NSNumber *currentAppVersionUsageTime;
+
 @property (nonatomic, strong) NSURLConnection *urlConnection;
 
 @property (nonatomic, copy) NSDate *usageStartTimestamp;

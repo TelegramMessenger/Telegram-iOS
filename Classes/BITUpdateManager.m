@@ -59,6 +59,10 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   BOOL _lastCheckFailed;
   BOOL _sendUsageData;
   
+  NSFileManager  *_fileManager;
+  NSString       *_updateDir;
+  NSString       *_usageDataFile;
+
   id _appDidBecomeActiveObserver;
   id _appDidEnterBackgroundObserver;
   id _networkDidBecomeReachableObserver;
@@ -200,10 +204,10 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 
 #pragma mark - Usage
 
-- (void)startUsage {
+- (void)loadAppVersionUsageData {
+  self.currentAppVersionUsageTime = @0;
+  
   if ([self expiryDateReached]) return;
-
-  self.usageStartTimestamp = [NSDate date];
   
   BOOL newVersion = NO;
   
@@ -219,21 +223,55 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     [[NSUserDefaults standardUserDefaults] setObject:[NSNumber numberWithDouble:[[NSDate date] timeIntervalSinceReferenceDate]] forKey:kBITUpdateDateOfVersionInstallation];
     [[NSUserDefaults standardUserDefaults] setObject:_uuid forKey:kBITUpdateUsageTimeForUUID];
     [self storeUsageTimeForCurrentVersion:[NSNumber numberWithDouble:0]];
+  } else {
+    if (![_fileManager fileExistsAtPath:_usageDataFile])
+      return;
+    
+    NSData *codedData = [[NSData alloc] initWithContentsOfFile:_usageDataFile];
+    if (codedData == nil) return;
+    
+    NSKeyedUnarchiver *unarchiver = nil;
+    
+    @try {
+      unarchiver = [[NSKeyedUnarchiver alloc] initForReadingWithData:codedData];
+    }
+    @catch (NSException *exception) {
+      return;
+    }
+    
+    if ([unarchiver containsValueForKey:kBITUpdateUsageTimeOfCurrentVersion]) {
+      self.currentAppVersionUsageTime = [unarchiver decodeObjectForKey:kBITUpdateUsageTimeOfCurrentVersion];
+    }
+    
+    [unarchiver finishDecoding];
   }
+}
+
+- (void)startUsage {
+  if ([self expiryDateReached]) return;
+  
+  self.usageStartTimestamp = [NSDate date];
 }
 
 - (void)stopUsage {
   if ([self expiryDateReached]) return;
   
   double timeDifference = [[NSDate date] timeIntervalSinceReferenceDate] - [_usageStartTimestamp timeIntervalSinceReferenceDate];
-  double previousTimeDifference = [(NSNumber *)[[NSUserDefaults standardUserDefaults] valueForKey:kBITUpdateUsageTimeOfCurrentVersion] doubleValue];
+  double previousTimeDifference = [self.currentAppVersionUsageTime doubleValue];
   
   [self storeUsageTimeForCurrentVersion:[NSNumber numberWithDouble:previousTimeDifference + timeDifference]];
 }
 
 - (void) storeUsageTimeForCurrentVersion:(NSNumber *)usageTime {
-  [[NSUserDefaults standardUserDefaults] setObject:usageTime forKey:kBITUpdateUsageTimeOfCurrentVersion];
-  [[NSUserDefaults standardUserDefaults] synchronize];
+  NSMutableData *data = [[NSMutableData alloc] init];
+  NSKeyedArchiver *archiver = [[NSKeyedArchiver alloc] initForWritingWithMutableData:data];
+  
+  [archiver encodeObject:usageTime forKey:kBITUpdateUsageTimeOfCurrentVersion];
+  
+  [archiver finishEncoding];
+  [data writeToFile:_usageDataFile atomically:YES];
+  
+  self.currentAppVersionUsageTime = usageTime;
 }
 
 - (NSString *)currentUsageString {
@@ -384,6 +422,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     _checkForTracker = NO;
     _firstStartAfterInstall = NO;
     _companyName = nil;
+    _currentAppVersionUsageTime = @0;
     
     // set defaults
     self.showDirectInstallOption = NO;
@@ -411,10 +450,26 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
       NSLog(@"[HockeySDK] WARNING: %@ is missing, make sure it is added!", BITHOCKEYSDK_BUNDLE);
     }
     
+    _fileManager = [[NSFileManager alloc] init];
+    
+    // temporary directory for crashes grabbed from PLCrashReporter
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
+    _updateDir = [[paths objectAtIndex:0] stringByAppendingPathComponent:BITHOCKEY_IDENTIFIER];
+    
+    if (![_fileManager fileExistsAtPath:_updateDir]) {
+      NSDictionary *attributes = [NSDictionary dictionaryWithObject: [NSNumber numberWithUnsignedLong: 0755] forKey: NSFilePosixPermissions];
+      NSError *theError = NULL;
+      
+      [_fileManager createDirectoryAtPath:_updateDir withIntermediateDirectories: YES attributes: attributes error: &theError];
+    }
+    
+    _usageDataFile = [_updateDir stringByAppendingPathComponent:BITHOCKEY_USAGE_DATA];
+    
     [self loadAppCache];
     
     _installationIdentification = [self stringValueFromKeychainForKey:kBITUpdateInstallationIdentification];
     
+    [self loadAppVersionUsageData];
     [self startUsage];
 
     NSNotificationCenter *dnc = [NSNotificationCenter defaultCenter];

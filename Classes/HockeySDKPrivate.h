@@ -41,6 +41,8 @@
 
 #define BITHOCKEY_FEEDBACK_SETTINGS @"BITFeedbackManager.plist"
 
+#define BITHOCKEY_USAGE_DATA @"BITUpdateManager.plist"
+
 #define kBITUpdateInstalledUUID              @"BITUpdateInstalledUUID"
 #define kBITUpdateInstalledVersionID         @"BITUpdateInstalledVersionID"
 #define kBITUpdateCurrentCompanyName         @"BITUpdateCurrentCompanyName"
