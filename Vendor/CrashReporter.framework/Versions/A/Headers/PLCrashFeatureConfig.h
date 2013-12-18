@@ -50,11 +50,10 @@
 
 /*
  * For release builds, disable unused unwind implementations on targets that do not use them. For non-release
- * builds, we include the unwind implementations to allow testing on a broader range of targets; it's possible
- * that both compact and/or DWARF unwinding could be implemented by Apple for iOS/ARM in the future.
+ * builds, we include the unwind implementations to allow testing on a broader range of targets.
  */
 #ifdef PLCF_RELEASE_BUILD
-#  if TARGET_OS_IPHONE && !TARGET_IPHONE_SIMULATOR
+#  if defined(__arm__)
 #    ifndef PLCRASH_FEATURE_UNWIND_DWARF
 #      define PLCRASH_FEATURE_UNWIND_DWARF 0
 #    endif
@@ -88,13 +87,13 @@
 #endif
 
 #ifndef PLCRASH_FEATURE_UNWIND_DWARF
-/** If true, enable DWARF unwinding support. DWARF unwinding is currently only used by Mac OS X. */
+/** If true, enable DWARF unwinding support. */
 #    define PLCRASH_FEATURE_UNWIND_DWARF 1
 #endif
 
 
 #ifndef PLCRASH_FEATURE_UNWIND_COMPACT
-/** If true, enable compact unwinding support. This is only used by Mac OS X. */
+/** If true, enable compact unwinding support. */
 #    define PLCRASH_FEATURE_UNWIND_COMPACT 1
 #endif
 
