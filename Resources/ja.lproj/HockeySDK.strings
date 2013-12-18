@@ -231,7 +231,7 @@
 "HockeyFeedbackUserDataEmail" = "メール";
 
 /* Email Placeholder */
-"HockeyFeedbackUserDataEmailPlaceholder" = "example@email.com";
+"HockeyFeedbackUserDataEmailPlaceholder" = "email@example.com";
 
 
 /* Authenticator */
@@ -249,7 +249,7 @@
 /* BITAuthenticatorAuthTypeEmail and BITAuthenticatorAuthTypeEmailAndPassword */
 "HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "HockeyAppアカウントのメールアドレスとパスワードを入力し、このAppへのアクセスを認証してください。";
 "HockeyAuthenticationViewControllerDataEmailDescription" = "HockeyAppアカウントのメールアドレスを入力し、このAppへのアクセスを認証してください。";
-"HockeyAuthenticationViewControllerEmailPlaceholder" = "example@email.com";
+"HockeyAuthenticationViewControllerEmailPlaceholder" = "email@example.com";
 "HockeyAuthenticationViewControllerPasswordPlaceholder" = "必須";
 "HockeyAuthenticationViewControllerEmailDescription" = "メール";
 "HockeyAuthenticationViewControllerPasswordDescription" = "パスワード";
