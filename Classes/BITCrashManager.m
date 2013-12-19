@@ -72,6 +72,8 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   NSString       *_analyzerInProgressFile;
   NSFileManager  *_fileManager;
   
+  PLCrashReporterCallbacks *_crashCallBacks;
+  
   BOOL _crashIdenticalCurrentVersion;
   
   NSMutableData *_responseData;
@@ -95,6 +97,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
     
     _plCrashReporter = nil;
     _exceptionHandler = nil;
+    _crashCallBacks = nil;
     
     _crashIdenticalCurrentVersion = YES;
     _urlConnection = nil;
@@ -384,6 +387,11 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 
 
 #pragma mark - Public
+
+
+- (void)setCrashCallbacks: (PLCrashReporterCallbacks *) callbacks {
+  _crashCallBacks = callbacks;
+}
 
 /**
  * Check if the debugger is attached
@@ -701,6 +709,11 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
         // PLCrashReporter may only be initialized once. So make sure the developer
         // can't break this
         NSError *error = NULL;
+        
+        // set any user defined callbacks, hopefully the users knows what they do
+        if (_crashCallBacks) {
+          [self.plCrashReporter setCrashCallbacks:_crashCallBacks];
+        }
         
         // Enable the Crash Reporter
         if (![self.plCrashReporter enableCrashReporterAndReturnError: &error])

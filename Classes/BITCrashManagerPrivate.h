@@ -31,8 +31,6 @@
 
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
 
-#import <CrashReporter/CrashReporter.h>
-
 @interface BITCrashManager () {
 }
 
