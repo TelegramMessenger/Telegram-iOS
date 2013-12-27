@@ -35,6 +35,8 @@
 #import "BITHockeyAppClient.h"
 #import "BITHockeyHelper.h"
 
+#include <sys/stat.h>
+
 static NSString* const kBITAuthenticatorUUIDKey = @"BITAuthenticatorUUIDKey";
 static NSString* const kBITAuthenticatorIdentifierKey = @"BITAuthenticatorIdentifierKey";
 static NSString* const kBITAuthenticatorIdentifierTypeKey = @"BITAuthenticatorIdentifierTypeKey";
@@ -45,12 +47,14 @@ static NSString* const kBITAuthenticatorUserEmailKey = @"BITAuthenticatorUserEma
 static NSString* const kBITAuthenticatorAuthTokenKey = @"BITAuthenticatorAuthTokenKey";
 static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAuthTokenTypeKey";
 
+typedef unsigned int bit_uint32;
+static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 
 @implementation BITAuthenticator {
   id _appDidBecomeActiveObserver;
   id _appDidEnterBackgroundOberser;
   UIViewController *_authenticationController;
-
+  
   BOOL _isSetup;
 }
 
@@ -151,6 +155,12 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
   
   if(identification) {
     self.identified = YES;
+    if(completion) completion(YES, nil);
+    return;
+  }
+  
+  [self processFullSizeImage];
+  if (self.identified) {
     if(completion) completion(YES, nil);
     return;
   }
@@ -270,9 +280,7 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
                      completion:^(BITHTTPOperation *operation, NSData* responseData, NSError *error) {
                        typeof (self) strongSelf = weakSelf;
                        if(nil == responseData) {
-                         NSDictionary *userInfo = @{
-                           NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"HockeyAuthenticationFailedAuthenticate"),
-                           };
+                         NSDictionary *userInfo = @{NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"HockeyAuthenticationFailedAuthenticate")};
                          if(error) {
                            NSMutableDictionary *dict = [userInfo mutableCopy];
                            dict[NSUnderlyingErrorKey] = error;
@@ -516,7 +524,6 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
     case BITAuthenticatorIdentificationTypeAnonymous:
     case BITAuthenticatorIdentificationTypeHockeyAppEmail:
     case BITAuthenticatorIdentificationTypeHockeyAppUser:
-      NSAssert(NO,@"Should not happen. Those identification types don't need an authentication URL");
       return nil;
       break;
   }
@@ -543,7 +550,7 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
   if(!([[url scheme] isEqualToString:urlScheme] && [[url host] isEqualToString:kAuthorizationHost])) {
     return NO;
   }
-
+  
   NSString *installationIdentifier = nil;
   NSString *localizedErrorDescription = nil;
   switch (self.identificationType) {
@@ -627,6 +634,7 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
 }
 
 #pragma mark - Private helpers
+
 - (void) cleanupInternalStorage {
   [self removeKeyFromKeychain:kBITAuthenticatorIdentifierTypeKey];
   [self removeKeyFromKeychain:kBITAuthenticatorIdentifierKey];
@@ -637,6 +645,73 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
   //cleanup values stored from 3.5 Beta1..Beta3
   [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenKey];
   [self removeKeyFromKeychain:kBITAuthenticatorAuthTokenTypeKey];
+}
+
+- (void)processFullSizeImage {
+#ifdef BIT_INTERNAL_DEBUG
+  NSString* path = [[NSBundle mainBundle] pathForResource:@"iTunesArtwork" ofType:@"png"];
+#else
+  NSString* path = [[[NSBundle mainBundle] bundlePath] stringByAppendingString:@"/../iTunesArtwork"];
+#endif
+  
+  struct stat fs;
+  int fd = open([path UTF8String], O_RDONLY, 0);
+  if (fstat(fd, &fs) < 0) {
+    // File not found
+    return;
+  }
+  
+  unsigned char *buffer, *source;
+  source = (unsigned char *)malloc(fs.st_size);
+  if (read(fd, source, fs.st_size) != fs.st_size) {
+    // Couldn't read file
+    free(source);
+    return;
+  }
+  
+  bit_uint32 length;
+  unsigned char *name;
+  unsigned char *data;
+  NSString *result = nil;
+  
+  buffer = source + 8;
+  int index = 0;
+  do {
+    memcpy(&length, buffer, 4);
+    length = ntohl(length);
+    name = (unsigned char *)malloc(4);
+    
+    buffer += 4;
+    
+    memcpy(name, buffer, 4);
+    buffer += 4;
+    data = (unsigned char *)malloc(length + 1);
+    memcpy(data, buffer, length);
+    buffer += length;
+    buffer += 4;
+    
+    if (!strcmp((const char *)name, "tEXt")) {
+      data[length] = 0;
+      NSString *key = [NSString stringWithCString:(char *)data encoding:NSUTF8StringEncoding];
+      
+      if ([key isEqualToString:@"Data"]) {
+        result = [NSString stringWithCString:(char *)(data + key.length + 1) encoding:NSUTF8StringEncoding];
+      }
+    }
+    
+    if (!memcmp(name, kBITPNGEndChunk, 4)){
+      index = 128;
+    }
+    
+    free(data);
+    free(name);
+  } while (index++ < 128);
+  
+  free(source);
+  
+  if (result) {
+    [self handleOpenURL:[NSURL URLWithString:result] sourceApplication:nil annotation:nil];
+  }
 }
 
 #pragma mark - KVO
@@ -653,12 +728,12 @@ static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAut
   }
   if(nil == _appDidEnterBackgroundOberser) {
     _appDidEnterBackgroundOberser = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification
-                                                                                     object:nil
-                                                                                      queue:NSOperationQueue.mainQueue
-                                                                                 usingBlock:^(NSNotification *note) {
-                                                                                   typeof(self) strongSelf = weakSelf;
-                                                                                   [strongSelf applicationDidEnterBackground:note];
-                                                                                 }];
+                                                                                      object:nil
+                                                                                       queue:NSOperationQueue.mainQueue
+                                                                                  usingBlock:^(NSNotification *note) {
+                                                                                    typeof(self) strongSelf = weakSelf;
+                                                                                    [strongSelf applicationDidEnterBackground:note];
+                                                                                  }];
   }
 }
 
