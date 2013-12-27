@@ -231,7 +231,7 @@
 "HockeyFeedbackUserDataEmail" = "E-mail";
 
 /* Email Placeholder */
-"HockeyFeedbackUserDataEmailPlaceholder" = "exemplo@email.com";
+"HockeyFeedbackUserDataEmailPlaceholder" = "email@exemplo.com";
 
 
 /* Authenticator */
@@ -249,7 +249,7 @@
 /* BITAuthenticatorAuthTypeEmail and BITAuthenticatorAuthTypeEmailAndPassword */
 "HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Informe seu e-mail e senha da conta do HockeyApp para autorizar o acesso a este aplicativo.";
 "HockeyAuthenticationViewControllerDataEmailDescription" = "Informe seu e-mail da conta do HockeyApp para autorizar o acesso a este aplicativo.";
-"HockeyAuthenticationViewControllerEmailPlaceholder" = "exemplo@email.com";
+"HockeyAuthenticationViewControllerEmailPlaceholder" = "email@exemplo.com";
 "HockeyAuthenticationViewControllerPasswordPlaceholder" = "Necessário";
 "HockeyAuthenticationViewControllerEmailDescription" = "E-mail";
 "HockeyAuthenticationViewControllerPasswordDescription" = "Senha";

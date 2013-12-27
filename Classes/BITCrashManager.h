@@ -32,6 +32,7 @@
 
 #import "BITHockeyBaseManager.h"
 
+#import <CrashReporter/CrashReporter.h>
 
 /**
  * Crash Manager status
@@ -158,6 +159,31 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  * @see isDebuggerAttached
  */
 @property (nonatomic, assign, getter=isMachExceptionHandlerEnabled) BOOL enableMachExceptionHandler;
+
+
+/**
+ * Set the callbacks that will be executed prior to program termination after a crash has occurred
+ *
+ * PLCrashReporter provides support for executing an application specified function in the context
+ * of the crash reporter's signal handler, after the crash report has been written to disk.
+ *
+ * Writing code intended for execution inside of a signal handler is exceptionally difficult, and is _NOT_ recommended!
+ *
+ * _Program Flow and Signal Handlers_
+ *
+ * When the signal handler is called the normal flow of the program is interrupted, and your program is an unknown state. Locks may be held, the heap may be corrupt (or in the process of being updated), and your signal handler may invoke a function that was being executed at the time of the signal. This may result in deadlocks, data corruption, and program termination.
+ *
+ * _Async-Safe Functions_
+ *
+ * A subset of functions are defined to be async-safe by the OS, and are safely callable from within a signal handler. If you do implement a custom post-crash handler, it must be async-safe. A table of POSIX-defined async-safe functions and additional information is available from the CERT programming guide - SIG30-C, see https://www.securecoding.cert.org/confluence/display/seccode/SIG30-C.+Call+only+asynchronous-safe+functions+within+signal+handlers
+ *
+ * Most notably, the Objective-C runtime itself is not async-safe, and Objective-C may not be used within a signal handler.
+ *
+ * Documentation taken from PLCrashReporter: https://www.plcrashreporter.org/documentation/api/v1.2-rc2/async_safety.html
+ *
+ * @param callbacks A pointer to an initialized PLCrashReporterCallback structure, see https://www.plcrashreporter.org/documentation/api/v1.2-rc2/struct_p_l_crash_reporter_callbacks.html
+ */
+- (void)setCrashCallbacks: (PLCrashReporterCallbacks *) callbacks;
 
 
 /**

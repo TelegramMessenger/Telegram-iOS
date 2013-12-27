@@ -50,11 +50,16 @@ NSBundle *BITHockeyBundle(void) {
 }
 
 NSString *BITHockeyLocalizedString(NSString *stringToken) {
+  if (!stringToken) return @"";
+  
   NSString *appSpecificLocalizationString = NSLocalizedString(stringToken, @"");
   if (appSpecificLocalizationString && ![stringToken isEqualToString:appSpecificLocalizationString]) {
     return appSpecificLocalizationString;
   } else if (BITHockeyBundle()) {
-    return NSLocalizedStringFromTableInBundle(stringToken, @"HockeySDK", BITHockeyBundle(), @"");
+    NSString *bundleSpecificLocalizationString = NSLocalizedStringFromTableInBundle(stringToken, @"HockeySDK", BITHockeyBundle(), @"");
+    if (bundleSpecificLocalizationString)
+      return bundleSpecificLocalizationString;
+    return stringToken;
   } else {
     return stringToken;
   }
