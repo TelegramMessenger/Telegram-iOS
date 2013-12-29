@@ -336,4 +336,19 @@
 @property (nonatomic, assign, getter=isDebugLogEnabled) BOOL debugLogEnabled;
 
 
+///-----------------------------------------------------------------------------
+/// @name Meta
+///-----------------------------------------------------------------------------
+
+/**
+ Returns the SDK Version (CFBundleShortVersionString).
+ */
+- (NSString *)version;
+
+/**
+ Returns the SDK Build (CFBundleVersion) as a string.
+ */
+- (NSString *)build;
+
+
 @end
