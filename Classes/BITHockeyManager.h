@@ -385,4 +385,19 @@
  */
 - (void)testIdentifier;
 
+
+///-----------------------------------------------------------------------------
+/// @name Meta
+///-----------------------------------------------------------------------------
+
+/**
+ Returns the SDK Version (CFBundleShortVersionString).
+ */
+- (NSString *)version;
+
+/**
+ Returns the SDK Build (CFBundleVersion) as a string.
+ */
+- (NSString *)build;
+
 @end

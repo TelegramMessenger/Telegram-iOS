@@ -365,6 +365,15 @@
 }
 
 
+- (NSString *)version {
+  return BITHOCKEY_VERSION;
+}
+
+- (NSString *)build {
+  return BITHOCKEY_BUILD;
+}
+
+
 #pragma mark - KVO
 
 #if HOCKEYSDK_FEATURE_UPDATES
