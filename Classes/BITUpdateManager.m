@@ -74,6 +74,9 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   NSNumber *_versionID;
   NSString *_versionUUID;
   NSString *_uuid;
+  
+  NSString *_blockingScreenMessage;
+  NSDate *_lastUpdateCheckFromBlockingScreen;
 }
 
 
@@ -191,7 +194,9 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   
   if (shouldShowDefaultAlert) {
     NSString *appName = bit_appName(BITHockeyLocalizedString(@"HockeyAppNamePlaceholder"));
-    [self showBlockingScreen:[NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateExpired"), appName] image:@"authorize_denied.png"];
+    if (!_blockingScreenMessage)
+      _blockingScreenMessage = [NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateExpired"), appName];
+    [self showBlockingScreen:_blockingScreenMessage image:@"authorize_denied.png"];
 
     if (self.delegate != nil && [self.delegate respondsToSelector:@selector(didDisplayExpiryAlertForUpdateManager:)]) {
       [self.delegate didDisplayExpiryAlertForUpdateManager:self];
@@ -377,29 +382,6 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   [[NSUserDefaults standardUserDefaults] synchronize];
 }
 
-#pragma mark - Window Helper
-
-- (UIWindow *)findVisibleWindow {
-  UIWindow *visibleWindow = nil;
-  
-  // if the rootViewController property (available >= iOS 4.0) of the main window is set, we present the modal view controller on top of the rootViewController
-  NSArray *windows = [[UIApplication sharedApplication] windows];
-  for (UIWindow *window in windows) {
-    if (!window.hidden && !visibleWindow) {
-      visibleWindow = window;
-    }
-    if ([UIWindow instancesRespondToSelector:@selector(rootViewController)]) {
-      if ([window rootViewController]) {
-        visibleWindow = window;
-        BITHockeyLog(@"INFO: UIWindow with rootViewController found: %@", visibleWindow);
-        break;
-      }
-    }
-  }
-  
-  return visibleWindow;
-}
-
 
 #pragma mark - Init
 
@@ -513,7 +495,12 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   
   if ([self isPreiOS7Environment])
     self.barStyle = UIBarStyleBlack;
-  [self showView:[self hockeyViewController:YES]];
+  
+  BITUpdateViewController *updateViewController = [self hockeyViewController:YES];
+  if ([self hasNewerMandatoryVersion] || [self expiryDateReached]) {
+    [updateViewController setMandatoryUpdate: YES];
+  }
+  [self showView:updateViewController];
 }
 
 
@@ -527,7 +514,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
                                                            message:[NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateAlertMandatoryTextWithAppVersion"), [self.newestAppVersion nameAndVersionString]]
                                                           delegate:self
                                                  cancelButtonTitle:BITHockeyLocalizedString(@"UpdateInstall")
-                                                 otherButtonTitles:nil
+                                                 otherButtonTitles:BITHockeyLocalizedString(@"UpdateShow"), nil
                                  ];
       [alertView setTag:BITUpdateAlertViewTagMandatoryUpdate];
       [alertView show];
@@ -575,9 +562,19 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     [self.blockingView addSubview:imageView];
   }
   
+  if (!self.disableUpdateCheckOptionWhenExpired) {
+    UIButton *checkForUpdateButton = [UIButton buttonWithType:kBITButtonTypeSystem];
+    checkForUpdateButton.frame = CGRectMake((frame.size.width - 140) / 2.f, frame.size.height - 100, 140, 25);
+    [checkForUpdateButton setTitle:BITHockeyLocalizedString(@"UpdateButtonCheck") forState:UIControlStateNormal];
+    [checkForUpdateButton addTarget:self
+                             action:@selector(checkForUpdateForExpiredVersion)
+                   forControlEvents:UIControlEventTouchUpInside];
+    [self.blockingView addSubview:checkForUpdateButton];
+  }
+  
   if (message != nil) {
     frame.origin.x = 20;
-    frame.origin.y = frame.size.height - 140;
+    frame.origin.y = frame.size.height - 180;
     frame.size.width -= 40;
     frame.size.height = 70;
     
@@ -594,6 +591,16 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   [visibleWindow addSubview:self.blockingView];
 }
 
+- (void)checkForUpdateForExpiredVersion {
+  if (!self.checkInProgress) {
+    
+    if (!_lastUpdateCheckFromBlockingScreen ||
+        abs([NSDate timeIntervalSinceReferenceDate] - [_lastUpdateCheckFromBlockingScreen timeIntervalSinceReferenceDate]) > 60) {
+      _lastUpdateCheckFromBlockingScreen = [NSDate date];
+      [self checkForUpdateShowFeedback:NO];
+    }
+  }
+}
 
 // nag the user with neverending alerts if we cannot find out the window for presenting the covering sheet
 - (void)alertFallback:(NSString *)message {
@@ -603,6 +610,11 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
                                             cancelButtonTitle:BITHockeyLocalizedString(@"HockeyOK")
                                             otherButtonTitles:nil
                             ];
+  
+  if (!self.disableUpdateCheckOptionWhenExpired && [message isEqualToString:_blockingScreenMessage]) {
+    [alertView addButtonWithTitle:BITHockeyLocalizedString(@"UpdateButtonCheck")];
+  }
+  
   [alertView setTag:BITUpdateAlertViewTagNeverEndingAlertView];
   [alertView show];
 }
@@ -808,7 +820,13 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   self.receivedData = nil;
   self.urlConnection = nil;
   self.checkInProgress = NO;
-  [self reportError:error];
+  if ([self expiryDateReached]) {
+    if (!self.blockingView) {
+      [self alertFallback:_blockingScreenMessage];
+    }
+  } else {
+    [self reportError:error];
+  }
 }
 
 // api call returned, parsing
@@ -905,11 +923,16 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
       }
       _showFeedback = NO;
     }
-  } else {
+  } else if (![self expiryDateReached]) {
     [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
                                           code:BITUpdateAPIServerReturnedEmptyResponse
                                       userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Server returned an empty response.", NSLocalizedDescriptionKey, nil]]];
   }
+  
+  if (!_updateAlertShowing && [self expiryDateReached] && !self.blockingView) {
+    [self alertFallback:_blockingScreenMessage];
+  }
+    
   self.receivedData = nil;
   self.urlConnection = nil;
 }
@@ -1015,22 +1038,29 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 
 // invoke the selected action from the action sheet for a location element
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
-  if ([alertView tag] == BITUpdateAlertViewTagMandatoryUpdate) {
-    (void)[self initiateAppDownload];
-    _updateAlertShowing = NO;
-    return;
-  } else if ([alertView tag] == BITUpdateAlertViewTagNeverEndingAlertView) {
-    [self alertFallback:[alertView message]];
+  if ([alertView tag] == BITUpdateAlertViewTagNeverEndingAlertView) {
+    if (buttonIndex == 1) {
+      [self checkForUpdateForExpiredVersion];
+    } else {
+      [self alertFallback:_blockingScreenMessage];
+    }
     return;
   }
   
   _updateAlertShowing = NO;
   if (buttonIndex == [alertView firstOtherButtonIndex]) {
     // YES button has been clicked
+    if (self.blockingView) {
+      [self.blockingView removeFromSuperview];
+    }
     [self showUpdateView];
   } else if (buttonIndex == [alertView firstOtherButtonIndex] + 1) {
     // YES button has been clicked
     (void)[self initiateAppDownload];
+  } else {
+    if ([self expiryDateReached] && !self.blockingView) {
+      [self alertFallback:_blockingScreenMessage];
+    }
   }
 }
 

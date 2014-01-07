@@ -364,8 +364,11 @@
 }
 
 - (void)viewWillAppear:(BOOL)animated {
-  if (_isAppStoreEnvironment)
+  if (_isAppStoreEnvironment) {
     self.appStoreButtonState = AppStoreButtonStateOffline;
+  } else if (self.mandatoryUpdate) {
+    self.navigationItem.leftBarButtonItem = nil;
+  }
   _updateManager.currentHockeyViewController = self;
   [super viewWillAppear:animated];
   [self redrawTableView];
