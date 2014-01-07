@@ -69,7 +69,8 @@ typedef NS_ENUM(NSUInteger, AppStoreButtonState) {
 }
 
 @property (nonatomic, weak) BITUpdateManager *updateManager;
-@property (nonatomic, readwrite) BOOL modal;
+
+@property (nonatomic, readwrite) BOOL mandatoryUpdate;
 
 @property (nonatomic, assign) AppStoreButtonState appStoreButtonState;
 

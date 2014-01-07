@@ -513,7 +513,12 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   
   if ([self isPreiOS7Environment])
     self.barStyle = UIBarStyleBlack;
-  [self showView:[self hockeyViewController:YES]];
+  
+  BITUpdateViewController *updateViewController = [self hockeyViewController:YES];
+  if ([self hasNewerMandatoryVersion]) {
+    [updateViewController setMandatoryUpdate: YES];
+  }
+  [self showView:updateViewController];
 }
 
 
@@ -527,7 +532,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
                                                            message:[NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateAlertMandatoryTextWithAppVersion"), [self.newestAppVersion nameAndVersionString]]
                                                           delegate:self
                                                  cancelButtonTitle:BITHockeyLocalizedString(@"UpdateInstall")
-                                                 otherButtonTitles:nil
+                                                 otherButtonTitles:BITHockeyLocalizedString(@"UpdateShow"), nil
                                  ];
       [alertView setTag:BITUpdateAlertViewTagMandatoryUpdate];
       [alertView show];
@@ -1015,11 +1020,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 
 // invoke the selected action from the action sheet for a location element
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
-  if ([alertView tag] == BITUpdateAlertViewTagMandatoryUpdate) {
-    (void)[self initiateAppDownload];
-    _updateAlertShowing = NO;
-    return;
-  } else if ([alertView tag] == BITUpdateAlertViewTagNeverEndingAlertView) {
+  if ([alertView tag] == BITUpdateAlertViewTagNeverEndingAlertView) {
     [self alertFallback:[alertView message]];
     return;
   }
