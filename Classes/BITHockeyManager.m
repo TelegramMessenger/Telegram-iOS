@@ -451,7 +451,9 @@
   BITHockeyLog(@"INFO: Sending integration workflow ping to %@", integrationPath);
   
   [[self hockeyAppClient] postPath:integrationPath
-                        parameters:@{@"timestamp": timeString}
+                        parameters:@{@"timestamp": timeString,
+                                     @"sdk": BITHOCKEY_NAME,
+                                     @"sdk_version": BITHOCKEY_VERSION}
                         completion:^(BITHTTPOperation *operation, NSData* responseData, NSError *error) {
                           switch (operation.response.statusCode) {
                             case 400:
