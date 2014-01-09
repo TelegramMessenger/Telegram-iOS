@@ -122,6 +122,9 @@
                               buttonSize.width,
                               buttonSize.height);
     button.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
+    if ([UIButton instancesRespondToSelector:(NSSelectorFromString(@"setTintColor:"))]) {
+      [button setTitleColor:BIT_RGBCOLOR(0, 122, 255) forState:UIControlStateNormal];
+    }
     [containerView addSubview:button];
     [button addTarget:self
                action:@selector(handleWebLoginButton:)

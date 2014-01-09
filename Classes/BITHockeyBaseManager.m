@@ -196,8 +196,16 @@
 - (UINavigationController *)customNavigationControllerWithRootViewController:(UIViewController *)viewController presentationStyle:(UIModalPresentationStyle)modalPresentationStyle {
   UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:viewController];
   navController.navigationBar.barStyle = self.barStyle;
-  if (self.navigationBarTintColor)
+  if (self.navigationBarTintColor) {
     navController.navigationBar.tintColor = self.navigationBarTintColor;
+  } else {
+    // in case of iOS 7 we overwrite the tint color on the navigation bar
+    if (![self isPreiOS7Environment]) {
+      if ([UIWindow instancesRespondToSelector:NSSelectorFromString(@"tintColor")]) {
+        [navController.navigationBar setTintColor:BIT_RGBCOLOR(0, 122, 255)];
+      }
+    }
+  }
   navController.modalPresentationStyle = self.modalPresentationStyle;
   
   return navController;
@@ -205,7 +213,7 @@
 
 - (void)showView:(UIViewController *)viewController {
   UIViewController *parentViewController = nil;
-  
+    
   if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(viewControllerForHockeyManager:componentManager:)]) {
     parentViewController = [[BITHockeyManager sharedHockeyManager].delegate viewControllerForHockeyManager:[BITHockeyManager sharedHockeyManager] componentManager:self];
   }
