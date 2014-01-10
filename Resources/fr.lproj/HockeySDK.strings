@@ -257,6 +257,9 @@
 /* Error presented to the user if authentication failed because of networking issues */
 "HockeyAuthenticationViewControllerNetworkError" = "Échec de l'autorisation. Votre appareil semble déconnecté d'Internet. Réessayez.";
 
+/* Error presented to the user if authentication could not be stored on the device */
+"HockeyAuthenticationViewControllerStorageError" = "Your authentication token could not be stored due to a keychain error. Please contact the developer of the app.";
+
 
 "HockeyAuthenticationFailedAuthenticate" = "Échec de l'autorisation. Réessayez ou contactez le développeur de l'application.";
 "HockeyAuthenticationNotMember" = "Vous n'êtes pas autorisé à utiliser cette application. Contactez le développeur de l'application.";

@@ -257,6 +257,9 @@
 /* Error presented to the user if authentication failed because of networking issues */
 "HockeyAuthenticationViewControllerNetworkError" = "Failed to authorize because your device appears to be disconnected from the Internet. Please try again.";
 
+/* Error presented to the user if authentication could not be stored on the device */
+"HockeyAuthenticationViewControllerStorageError" = "Your authentication token could not be stored due to a keychain error. Please contact the developer of the app.";
+
 
 "HockeyAuthenticationFailedAuthenticate" = "Failed to authorize. Please try again or contact the developer of this app.";
 "HockeyAuthenticationNotMember" = "You are not authorized to use this app. Please contact the developer of this app.";

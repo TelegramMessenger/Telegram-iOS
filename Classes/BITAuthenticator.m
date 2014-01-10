@@ -153,6 +153,17 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   }
   return NO;
 }
+
+- (void)alertOnFailureStoringTokenInKeychain {
+  UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil
+                                                      message:BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerStorageError")
+                                                     delegate:self
+                                            cancelButtonTitle:BITHockeyLocalizedString(@"HockeyOK")
+                                            otherButtonTitles:nil];
+  [alertView setTag:1];
+  [alertView show];
+}
+
 - (void) identifyWithCompletion:(void (^)(BOOL identified, NSError *))completion {
   if(_authenticationController) {
     BITHockeyLog(@"Authentication controller already visible. Ingoring identify request");
@@ -245,6 +256,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
                                                          delegate:self
                                                 cancelButtonTitle:BITHockeyLocalizedString(@"HockeyOK")
                                                 otherButtonTitles:nil];
+      [alertView setTag:0];
       [alertView show];
     }
   }];
@@ -397,7 +409,10 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
                                                                        [strongSelf storeInstallationIdentifier:authToken withType:strongSelf.identificationType];
                                                                        [strongSelf dismissAuthenticationControllerAnimated:YES completion:nil];
                                                                        strongSelf->_authenticationController = nil;
-                                                                       [self addStringValueToKeychain:email forKey:kBITAuthenticatorUserEmailKey];
+                                                                       BOOL success = [self addStringValueToKeychain:email forKey:kBITAuthenticatorUserEmailKey];
+                                                                       if (!success) {
+                                                                         [strongSelf alertOnFailureStoringTokenInKeychain];
+                                                                       }
                                                                      } else {
                                                                        identified = NO;
                                                                      }
@@ -572,7 +587,10 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
       NSString *email = nil;
       [self.class email:&email andIUID:&installationIdentifier fromOpenURL:url];
       if(email) {
-        [self addStringValueToKeychain:email forKey:kBITAuthenticatorUserEmailKey];
+        BOOL success = [self addStringValueToKeychain:email forKey:kBITAuthenticatorUserEmailKey];
+        if (!success) {
+          [self alertOnFailureStoringTokenInKeychain];
+        }
       } else {
         BITHockeyLog(@"No email found in URL: %@", url);
       }
@@ -767,13 +785,15 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     [self removeKeyFromKeychain:kBITAuthenticatorIdentifierKey];
     [self removeKeyFromKeychain:kBITAuthenticatorIdentifierTypeKey];
   } else {
-    BOOL success = [self addStringValueToKeychainForThisDeviceOnly:installationIdentifier
+    BOOL success1 = [self addStringValueToKeychainForThisDeviceOnly:installationIdentifier
                                                             forKey:kBITAuthenticatorIdentifierKey];
-    NSParameterAssert(success);
-    success = [self addStringValueToKeychainForThisDeviceOnly:[self.class stringForIdentificationType:type]
+    NSParameterAssert(success1);
+    BOOL success2 = [self addStringValueToKeychainForThisDeviceOnly:[self.class stringForIdentificationType:type]
                                                        forKey:kBITAuthenticatorIdentifierTypeKey];
-    NSParameterAssert(success);
-#pragma unused(success)
+    NSParameterAssert(success2);
+    if (!success1 || !success2) {
+      [self alertOnFailureStoringTokenInKeychain];
+    }
   }
 }
 
@@ -851,6 +871,8 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 
 #pragma mark - UIAlertViewDelegate
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
-  [self validate];
+  if (alertView.tag == 0) {
+    [self validate];
+  }
 }
 @end
