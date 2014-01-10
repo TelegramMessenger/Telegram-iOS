@@ -84,6 +84,23 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 }
 
 #pragma mark -
+- (void)dismissAuthenticationControllerAnimated:(BOOL)animated completion:(void (^)(void))completion {
+  if (!_authenticationController) return;
+  
+  UIViewController *presentingViewController = [_authenticationController presentingViewController];
+  
+  // If there is no presenting view controller just remove view
+  if (presentingViewController) {
+    [_authenticationController dismissViewControllerAnimated:animated completion:completion];
+  } else {
+    [_authenticationController.navigationController.view removeFromSuperview];
+    if (completion) {
+      completion();
+    }
+  }
+  _authenticationController = nil;
+}
+
 - (void)authenticateInstallation {
   //disabled in the appStore
   if([self isAppStoreEnvironment]) return;
@@ -112,8 +129,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
       if([self needsValidation]) {
         [self validate];
       } else {
-        [_authenticationController dismissViewControllerAnimated:YES completion:nil];
-        _authenticationController = nil;
+        [self dismissAuthenticationControllerAnimated:YES completion:nil];
       }
     } else {
       BITHockeyLog(@"Failed to identify. Error: %@", error);
@@ -222,8 +238,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 - (void) validate {
   [self validateWithCompletion:^(BOOL validated, NSError *error) {
     if(validated) {
-      [_authenticationController dismissViewControllerAnimated:YES completion:nil];
-      _authenticationController = nil;
+      [self dismissAuthenticationControllerAnimated:YES completion:nil];
     } else {
       UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil
                                                           message:error.localizedDescription
@@ -380,8 +395,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
                                                                      if(authToken) {
                                                                        identified = YES;
                                                                        [strongSelf storeInstallationIdentifier:authToken withType:strongSelf.identificationType];
-                                                                       [strongSelf->_authenticationController dismissViewControllerAnimated:YES
-                                                                                                                                 completion:nil];
+                                                                       [strongSelf dismissAuthenticationControllerAnimated:YES completion:nil];
                                                                        strongSelf->_authenticationController = nil;
                                                                        [self addStringValueToKeychain:email forKey:kBITAuthenticatorUserEmailKey];
                                                                      } else {
@@ -579,8 +593,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   
   if(installationIdentifier){
     if(NO == self.restrictApplicationUsage) {
-      [_authenticationController dismissViewControllerAnimated:YES completion:nil];
-      _authenticationController = nil;
+      [self dismissAuthenticationControllerAnimated:YES completion:nil];
     }
     [self storeInstallationIdentifier:installationIdentifier withType:self.identificationType];
     self.identified = YES;
