@@ -881,7 +881,7 @@
         if (responseString && [responseString dataUsingEncoding:NSUTF8StringEncoding]) {
           NSError *error = NULL;
           
-          NSDictionary *feedDict = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:kNilOptions error:&error];
+          NSDictionary *feedDict = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:0 error:&error];
           
           // server returned empty response?
           if (error) {
