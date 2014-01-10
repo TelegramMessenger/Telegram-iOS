@@ -453,7 +453,9 @@
   [[self hockeyAppClient] postPath:integrationPath
                         parameters:@{@"timestamp": timeString,
                                      @"sdk": BITHOCKEY_NAME,
-                                     @"sdk_version": BITHOCKEY_VERSION}
+                                     @"sdk_version": BITHOCKEY_VERSION,
+                                     @"bundle_version": [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]
+                                     }
                         completion:^(BITHTTPOperation *operation, NSData* responseData, NSError *error) {
                           switch (operation.response.statusCode) {
                             case 400:
