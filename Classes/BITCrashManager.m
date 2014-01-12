@@ -909,7 +909,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
               ]];
   
   [request setCachePolicy: NSURLRequestReloadIgnoringLocalCacheData];
-  [request setValue:@"Quincy/iOS" forHTTPHeaderField:@"User-Agent"];
+  [request setValue:@"HockeySDK/iOS" forHTTPHeaderField:@"User-Agent"];
   [request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];
   [request setTimeoutInterval: 15];
   [request setHTTPMethod:@"POST"];
