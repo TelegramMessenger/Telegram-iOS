@@ -91,7 +91,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 - (id)init {
   if ((self = [super init])) {
     _delegate = nil;
-    _showAlwaysButton = NO;
+    _showAlwaysButton = YES;
     _isSetup = NO;
     
     _plCrashReporter = nil;

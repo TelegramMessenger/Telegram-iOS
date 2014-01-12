@@ -127,10 +127,9 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  sending each crash report or send crash reportings automatically without
  asking.
  
- The default value is `BITCrashManagerStatusAlwaysAsk`. You can allow the user
- to switch from `BITCrashManagerStatusAlwaysAsk` to
- `BITCrashManagerStatusAutoSend` by setting `showAlwaysButton`
- to _YES_.
+ The default value is `BITCrashManagerStatusAlwaysAsk`. The user can switch to
+ `BITCrashManagerStatusAutoSend` by choosing "Always" in the dialog (since 
+ `showAlwaysButton` default is _YES_).
  
  The current value is always stored in User Defaults with the key
  `BITCrashManagerStatus`.
@@ -200,8 +199,9 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  
  If If `crashManagerStatus` is set to `BITCrashManagerStatusAutoSend`, this property
  has no effect, since no alert will be presented.
+
+ Default: _YES_
  
- @warning This will cause the dialog not to show the alert description text landscape mode!
  @see crashManagerStatus
  */
 @property (nonatomic, assign, getter=shouldShowAlwaysButton) BOOL showAlwaysButton;
