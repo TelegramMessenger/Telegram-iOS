@@ -1,6 +1,6 @@
-## Version 3.5.0
+## Version 3.5.1
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.5.0/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.5.1/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -65,25 +65,17 @@ The SDK runs on devices with iOS 5.0 or higher.
 
         #import <HockeySDK/HockeySDK.h>
 
-3. Let the AppDelegate implement the protocols `BITHockeyManagerDelegate`:
+3. Search for the method `application:didFinishLaunchingWithOptions:`
 
-   <pre><code>@interface AppDelegate(HockeyProtocols) < BITHockeyManagerDelegate > {}
-   @end</code></pre>
+4. Add the following lines:
 
-4. Search for the method `application:didFinishLaunchingWithOptions:`
-
-5. Add the following lines:
-
-        [[BITHockeyManager sharedHockeyManager] configureWithBetaIdentifier:@"BETA_IDENTIFIER"
-                                                             liveIdentifier:@"LIVE_IDENTIFIER"
-                                                                   delegate:self];
+        [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
         [[BITHockeyManager sharedHockeyManager] startManager];
+        [[BITHockeyManager sharedHockeyManager].authenticator authenticateInstallation];
 
-6. Replace `BETA_IDENTIFIER` with the app identifier of your beta app. If you don't know what the app identifier is or how to find it, please read [this how-to](http://support.hockeyapp.net/kb/how-tos/how-to-find-the-app-identifier). 
+5. Replace `APP_IDENTIFIER` with the app identifier of your app. If you don't know what the app identifier is or how to find it, please read [this how-to](http://support.hockeyapp.net/kb/how-tos/how-to-find-the-app-identifier). 
 
-7. Replace `LIVE_IDENTIFIER` with the app identifier of your release app. We suggest to setup different apps on HockeyApp for your test and production builds. You usually will have way more test versions, but your production version usually has way more crash reports. This helps to keep data separated, getting a better overview and less trouble setting the right app versions downloadable for your beta users.
-
-8. If you want to use the beta distribution feature on iOS 7 or later with In-App Updates, restrict versions to specific users or want to know who is actually testing your app, you need to follow the instructions on our guide [Identify and authenticate users of Ad-Hoc or Enterprise builds](HowTo-Authenticating-Users-on-iOS)
+6. If you want to see beta analytics, use the beta distribution feature with in-app updates, restrict versions to specific users, or want to know who is actually testing your app, you need to follow the instructions on our guide [Identify and authenticate users of Ad-Hoc or Enterprise builds](HowTo-Authenticating-Users-on-iOS)
 
 *Note:* The SDK is optimized to defer everything possible to a later time while making sure e.g. crashes on startup can also be caught and each module executes other code with a delay some seconds. This ensures that applicationDidFinishLaunching will process as fast as possible and the SDK will not block the startup sequence resulting in a possible kill by the watchdog process.
 
@@ -96,11 +88,11 @@ The Mac Desktop Uploader can provide easy uploading of your app versions to Hock
 
 ### Xcode Documentation
 
-This documentation provides integrated help in Xcode for all public APIs and a set of additional tutorials and HowTos.
+This documentation provides integrated help in Xcode for all public APIs and a set of additional tutorials and how-tos.
 
-1. Copy `de.bitstadium.HockeySDK-iOS-3.5.0.docset` into ~`/Library/Developer/Shared/Documentation/DocSet`
+1. Copy `de.bitstadium.HockeySDK-iOS-3.5.1.docset` into ~`/Library/Developer/Shared/Documentation/DocSet`
 
-The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.5.0/](http://hockeyapp.net/help/sdk/ios/3.5.0/)
+The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.5.1/](http://hockeyapp.net/help/sdk/ios/3.5.1/)
 
 ### Set up with xcconfig
 
