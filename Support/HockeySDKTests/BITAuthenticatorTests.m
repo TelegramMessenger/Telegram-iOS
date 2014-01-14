@@ -77,7 +77,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   
   NSData *data = [dataString dataUsingEncoding:NSUTF8StringEncoding];
   NSError *error = nil;
-  NSDictionary *json = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:data options:kNilOptions error:&error];
+  NSDictionary *json = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:data options:0 error:&error];
   
   return json;
 }
@@ -258,7 +258,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   _sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppUser;
   [_sut validateWithCompletion:^(BOOL validated, NSError *error) {
     assertThatBool(validated, equalToBool(NO));
-    assertThatInt(error.code, equalToInt(BITAuthenticatorNotIdentified));
+    assertThatLong(error.code, equalToLong(BITAuthenticatorNotIdentified));
   }];
 }
 

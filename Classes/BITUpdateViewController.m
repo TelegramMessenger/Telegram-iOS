@@ -2,7 +2,7 @@
  * Author: Andreas Linde <mail@andreaslinde.de>
  *         Peter Steinberger
  *
- * Copyright (c) 2012-2013 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2012-2014 HockeyApp, Bit Stadium GmbH.
  * Copyright (c) 2011 Andreas Linde, Peter Steinberger.
  * All rights reserved.
  *
@@ -364,8 +364,11 @@
 }
 
 - (void)viewWillAppear:(BOOL)animated {
-  if (_isAppStoreEnvironment)
+  if (_isAppStoreEnvironment) {
     self.appStoreButtonState = AppStoreButtonStateOffline;
+  } else if (self.mandatoryUpdate) {
+    self.navigationItem.leftBarButtonItem = nil;
+  }
   _updateManager.currentHockeyViewController = self;
   [super viewWillAppear:animated];
   [self redrawTableView];

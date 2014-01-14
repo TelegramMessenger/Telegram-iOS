@@ -231,7 +231,7 @@
 "HockeyFeedbackUserDataEmail" = "E-mail";
 
 /* Email Placeholder */
-"HockeyFeedbackUserDataEmailPlaceholder" = "example@email.com";
+"HockeyFeedbackUserDataEmailPlaceholder" = "email@example.com";
 
 
 /* Authenticator */
@@ -249,13 +249,16 @@
 /* BITAuthenticatorAuthTypeEmail and BITAuthenticatorAuthTypeEmailAndPassword */
 "HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Kérjük, adja meg HockeyApp fiókjához tartozó e-mail címét és jelszavát az alkalmazáshoz történő hozzáférés engedélyezéséhez.";
 "HockeyAuthenticationViewControllerDataEmailDescription" = "Kérjük, adja meg HockeyApp fiókjához tartozó e-mail címét az alkalmazáshoz történő hozzáférés engedélyezéséhez.";
-"HockeyAuthenticationViewControllerEmailPlaceholder" = "example@email.com";
+"HockeyAuthenticationViewControllerEmailPlaceholder" = "email@example.com";
 "HockeyAuthenticationViewControllerPasswordPlaceholder" = "Szükséges mező";
 "HockeyAuthenticationViewControllerEmailDescription" = "E-mail";
 "HockeyAuthenticationViewControllerPasswordDescription" = "Jelszó";
 
 /* Error presented to the user if authentication failed because of networking issues */
 "HockeyAuthenticationViewControllerNetworkError" = "A hitelesítés sikertelen, mert készüléke nem csatlakozik az internethez. Kérjük, próbálja meg később újra.";
+
+/* Error presented to the user if authentication could not be stored on the device */
+"HockeyAuthenticationViewControllerStorageError" = "Your authentication token could not be stored due to a keychain error. Please contact the developer of the app.";
 
 
 "HockeyAuthenticationFailedAuthenticate" = "A hitelesítés sikertelen. Kérjük, próbálja meg később újra vagy lépjen kapcsolatba az alkalmazás fejlesztőjével.";

@@ -1,7 +1,7 @@
 /*
  * Author: Andreas Linde <mail@andreaslinde.de>
  *
- * Copyright (c) 2012-2013 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2012-2014 HockeyApp, Bit Stadium GmbH.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -35,7 +35,6 @@
 #import "BITHockeyBaseManagerPrivate.h"
 #import "BITHockeyBaseViewController.h"
 
-#import "BITHockeyManagerPrivate.h"
 #import "BITKeychainUtils.h"
 
 #import <sys/sysctl.h>
@@ -162,7 +161,11 @@
 }
 
 - (UIWindow *)findVisibleWindow {
-  UIWindow *visibleWindow = nil;
+  UIWindow *visibleWindow = [UIApplication sharedApplication].keyWindow;
+  
+  if (!(visibleWindow.hidden)) {
+    return visibleWindow;
+  }
   
   // if the rootViewController property (available >= iOS 4.0) of the main window is set, we present the modal view controller on top of the rootViewController
   NSArray *windows = [[UIApplication sharedApplication] windows];
@@ -171,7 +174,7 @@
       visibleWindow = window;
     }
     if ([UIWindow instancesRespondToSelector:@selector(rootViewController)]) {
-      if ([window rootViewController]) {
+      if (!(window.hidden) && ([window rootViewController])) {
         visibleWindow = window;
         BITHockeyLog(@"INFO: UIWindow with rootViewController found: %@", visibleWindow);
         break;
@@ -193,8 +196,16 @@
 - (UINavigationController *)customNavigationControllerWithRootViewController:(UIViewController *)viewController presentationStyle:(UIModalPresentationStyle)modalPresentationStyle {
   UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:viewController];
   navController.navigationBar.barStyle = self.barStyle;
-  if (self.navigationBarTintColor)
+  if (self.navigationBarTintColor) {
     navController.navigationBar.tintColor = self.navigationBarTintColor;
+  } else {
+    // in case of iOS 7 we overwrite the tint color on the navigation bar
+    if (![self isPreiOS7Environment]) {
+      if ([UIWindow instancesRespondToSelector:NSSelectorFromString(@"tintColor")]) {
+        [navController.navigationBar setTintColor:BIT_RGBCOLOR(0, 122, 255)];
+      }
+    }
+  }
   navController.modalPresentationStyle = self.modalPresentationStyle;
   
   return navController;
@@ -202,7 +213,7 @@
 
 - (void)showView:(UIViewController *)viewController {
   UIViewController *parentViewController = nil;
-  
+    
   if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(viewControllerForHockeyManager:componentManager:)]) {
     parentViewController = [[BITHockeyManager sharedHockeyManager].delegate viewControllerForHockeyManager:[BITHockeyManager sharedHockeyManager] componentManager:self];
   }

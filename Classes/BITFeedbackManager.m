@@ -1,7 +1,7 @@
 /*
  * Author: Andreas Linde <mail@andreaslinde.de>
  *
- * Copyright (c) 2012-2013 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2012-2014 HockeyApp, Bit Stadium GmbH.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -36,8 +36,6 @@
 #import "BITFeedbackManager.h"
 #import "BITFeedbackManagerPrivate.h"
 #import "BITHockeyBaseManagerPrivate.h"
-
-#import "BITHockeyManagerPrivate.h"
 
 #import "BITHockeyHelper.h"
 #import "BITHockeyAppClient.h"
@@ -883,7 +881,7 @@
         if (responseString && [responseString dataUsingEncoding:NSUTF8StringEncoding]) {
           NSError *error = NULL;
           
-          NSDictionary *feedDict = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:kNilOptions error:&error];
+          NSDictionary *feedDict = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:0 error:&error];
           
           // server returned empty response?
           if (error) {

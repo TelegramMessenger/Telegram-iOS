@@ -1,7 +1,7 @@
 /*
  * Author: Andreas Linde <mail@andreaslinde.de>
  *
- * Copyright (c) 2013 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2013-2014 HockeyApp, Bit Stadium GmbH.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -30,8 +30,6 @@
 #import "HockeySDK.h"
 
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
-
-#import <CrashReporter/CrashReporter.h>
 
 @interface BITCrashManager () {
 }
