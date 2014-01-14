@@ -48,6 +48,7 @@ static NSString* const kBITAuthenticatorAuthTokenKey = @"BITAuthenticatorAuthTok
 static NSString* const kBITAuthenticatorAuthTokenTypeKey = @"BITAuthenticatorAuthTokenTypeKey";
 
 typedef unsigned int bit_uint32;
+static unsigned char kBITPNGHeader[8] = {137, 80, 78, 71, 13, 10, 26, 10};
 static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 
 @implementation BITAuthenticator {
@@ -699,44 +700,56 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     free(source);
     return;
   }
+    
+  if ((fs.st_size < 20) || (memcmp(source, kBITPNGHeader, 8))) {
+    // Not a PNG
+    free(source);
+    return;
+  }
   
+  buffer = source + 8;
+
+  NSString *result = nil;
   bit_uint32 length;
   unsigned char *name;
   unsigned char *data;
-  NSString *result = nil;
-  
-  buffer = source + 8;
-  int index = 0;
+  int chunk_index = 0;
+  long long bytes_left = fs.st_size - 8;
   do {
     memcpy(&length, buffer, 4);
     length = ntohl(length);
-    name = (unsigned char *)malloc(4);
     
     buffer += 4;
-    
+    name = (unsigned char *)malloc(4);
     memcpy(name, buffer, 4);
+    
     buffer += 4;
     data = (unsigned char *)malloc(length + 1);
-    memcpy(data, buffer, length);
-    buffer += length;
-    buffer += 4;
     
-    if (!strcmp((const char *)name, "tEXt")) {
-      data[length] = 0;
-      NSString *key = [NSString stringWithCString:(char *)data encoding:NSUTF8StringEncoding];
+    if (bytes_left >= length) {
+      memcpy(data, buffer, length);
+    
+      buffer += length;
+      buffer += 4;
+      if (!strcmp((const char *)name, "tEXt")) {
+        data[length] = 0;
+        NSString *key = [NSString stringWithCString:(char *)data encoding:NSUTF8StringEncoding];
+        
+        if ([key isEqualToString:@"Data"]) {
+          result = [NSString stringWithCString:(char *)(data + key.length + 1) encoding:NSUTF8StringEncoding];
+        }
+      }
       
-      if ([key isEqualToString:@"Data"]) {
-        result = [NSString stringWithCString:(char *)(data + key.length + 1) encoding:NSUTF8StringEncoding];
+      if (!memcmp(name, kBITPNGEndChunk, 4)){
+        chunk_index = 128;
       }
     }
-    
-    if (!memcmp(name, kBITPNGEndChunk, 4)){
-      index = 128;
-    }
-    
+
     free(data);
     free(name);
-  } while (index++ < 128);
+    
+    bytes_left -= (length + 3 * 4);
+  } while ((chunk_index++ < 128) && (bytes_left > 8));
   
   free(source);
   
