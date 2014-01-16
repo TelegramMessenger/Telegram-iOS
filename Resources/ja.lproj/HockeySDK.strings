@@ -231,7 +231,7 @@
 "HockeyFeedbackUserDataEmail" = "メール";
 
 /* Email Placeholder */
-"HockeyFeedbackUserDataEmailPlaceholder" = "example@email.com";
+"HockeyFeedbackUserDataEmailPlaceholder" = "email@example.com";
 
 
 /* Authenticator */
@@ -249,13 +249,16 @@
 /* BITAuthenticatorAuthTypeEmail and BITAuthenticatorAuthTypeEmailAndPassword */
 "HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "HockeyAppアカウントのメールアドレスとパスワードを入力し、このAppへのアクセスを認証してください。";
 "HockeyAuthenticationViewControllerDataEmailDescription" = "HockeyAppアカウントのメールアドレスを入力し、このAppへのアクセスを認証してください。";
-"HockeyAuthenticationViewControllerEmailPlaceholder" = "example@email.com";
+"HockeyAuthenticationViewControllerEmailPlaceholder" = "email@example.com";
 "HockeyAuthenticationViewControllerPasswordPlaceholder" = "必須";
 "HockeyAuthenticationViewControllerEmailDescription" = "メール";
 "HockeyAuthenticationViewControllerPasswordDescription" = "パスワード";
 
 /* Error presented to the user if authentication failed because of networking issues */
 "HockeyAuthenticationViewControllerNetworkError" = "デバイスがインターネットに接続されていないため、認証できません。やり直してください。";
+
+/* Error presented to the user if authentication could not be stored on the device */
+"HockeyAuthenticationViewControllerStorageError" = "Your authentication token could not be stored due to a keychain error. Please contact the developer of the app.";
 
 
 "HockeyAuthenticationFailedAuthenticate" = "認証できませんでした。やり直すか、このAppのデベロッパに連絡してください。";

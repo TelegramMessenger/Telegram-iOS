@@ -6,7 +6,7 @@
  *
  * Copyright (c) 2008-2013 Plausible Labs Cooperative, Inc.
  * Copyright (c) 2010 MOSO Corporation, Pty Ltd.
- * Copyright (c) 2012-2013 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2012-2014 HockeyApp, Bit Stadium GmbH.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -52,13 +52,20 @@
 #endif
 
 
-@interface BITCrashReportTextFormatter (PrivateAPI)
-static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context);
-+ (NSString *)bit_formatStackFrame:(BITPLCrashReportStackFrameInfo *)frameInfo
-                        frameIndex:(NSUInteger)frameIndex
-                            report:(BITPLCrashReport *)report
-                              lp64: (BOOL) lp64;
-@end
+/**
+ * Sort PLCrashReportBinaryImageInfo instances by their starting address.
+ */
+static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context) {
+  uint64_t addr1 = [binary1 imageBaseAddress];
+  uint64_t addr2 = [binary2 imageBaseAddress];
+  
+  if (addr1 < addr2)
+    return NSOrderedAscending;
+  else if (addr1 > addr2)
+    return NSOrderedDescending;
+  else
+    return NSOrderedSame;
+}
 
 
 /**
@@ -249,7 +256,13 @@ static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context);
     if (report.systemInfo.operatingSystemBuild != nil)
       osBuild = report.systemInfo.operatingSystemBuild;
     
-    [text appendFormat: @"Date/Time:       %@\n", report.systemInfo.timestamp];
+    NSLocale *enUSPOSIXLocale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"];
+    NSDateFormatter *rfc3339Formatter = [[NSDateFormatter alloc] init];
+    [rfc3339Formatter setLocale:enUSPOSIXLocale];
+    [rfc3339Formatter setDateFormat:@"yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'"];
+    [rfc3339Formatter setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:0]];
+    
+    [text appendFormat: @"Date/Time:       %@\n", [rfc3339Formatter stringFromDate:report.systemInfo.timestamp]];
     [text appendFormat: @"OS Version:      %@ %@ (%@)\n", osName, report.systemInfo.operatingSystemVersion, osBuild];
     [text appendFormat: @"Report Version:  104\n"];
   }
@@ -289,7 +302,7 @@ static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context);
      * post-processed report, Apple writes this out as full frame entries. We use the latter format. */
     for (NSUInteger frame_idx = 0; frame_idx < [exception.stackFrames count]; frame_idx++) {
       BITPLCrashReportStackFrameInfo *frameInfo = [exception.stackFrames objectAtIndex: frame_idx];
-      [text appendString: [self bit_formatStackFrame: frameInfo frameIndex: frame_idx report: report lp64: lp64]];
+      [text appendString: [[self class] bit_formatStackFrame: frameInfo frameIndex: frame_idx report: report lp64: lp64]];
     }
     [text appendString: @"\n"];
   }
@@ -306,7 +319,7 @@ static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context);
     }
     for (NSUInteger frame_idx = 0; frame_idx < [thread.stackFrames count]; frame_idx++) {
       BITPLCrashReportStackFrameInfo *frameInfo = [thread.stackFrames objectAtIndex: frame_idx];
-      [text appendString: [self bit_formatStackFrame: frameInfo frameIndex: frame_idx report: report lp64: lp64]];
+      [text appendString: [[self class] bit_formatStackFrame: frameInfo frameIndex: frame_idx report: report lp64: lp64]];
     }
     [text appendString: @"\n"];
     
@@ -365,7 +378,7 @@ static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context);
       uuid = @"???";
     
     /* Determine the architecture string */
-    NSString *archName = [self bit_archNameFromImageInfo:imageInfo];
+    NSString *archName = [[self class] bit_archNameFromImageInfo:imageInfo];
     
     /* Determine if this is the main executable or an app specific framework*/
     NSString *binaryDesignator = @" ";
@@ -425,7 +438,7 @@ static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context);
       uuid = @"???";
     
     /* Determine the architecture string */
-    NSString *archName = [self bit_archNameFromImageInfo:imageInfo];
+    NSString *archName = [[self class] bit_archNameFromImageInfo:imageInfo];
     
     /* Determine if this is the app executable or app specific framework */
     NSString *imagePath = [imageInfo.imageName stringByStandardizingPath];
@@ -510,11 +523,6 @@ static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context);
   
   return archName;
 }
-
-@end
-
-
-@implementation BITCrashReportTextFormatter (PrivateAPI)
 
 
 /**
@@ -606,21 +614,6 @@ static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context);
           (const uint16_t *)[imageName cStringUsingEncoding: NSUTF16StringEncoding],
           lp64 ? 16 : 8, frameInfo.instructionPointer,
           symbolString];
-}
-
-/**
- * Sort PLCrashReportBinaryImageInfo instances by their starting address.
- */
-static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context) {
-  uint64_t addr1 = [binary1 imageBaseAddress];
-  uint64_t addr2 = [binary2 imageBaseAddress];
-  
-  if (addr1 < addr2)
-    return NSOrderedAscending;
-  else if (addr1 > addr2)
-    return NSOrderedDescending;
-  else
-    return NSOrderedSame;
 }
 
 @end

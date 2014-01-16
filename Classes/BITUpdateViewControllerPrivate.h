@@ -2,7 +2,7 @@
  * Author: Andreas Linde <mail@andreaslinde.de>
  *         Peter Steinberger
  *
- * Copyright (c) 2012-2013 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2012-2014 HockeyApp, Bit Stadium GmbH.
  * Copyright (c) 2011 Andreas Linde, Peter Steinberger.
  * All rights reserved.
  *
@@ -69,7 +69,8 @@ typedef NS_ENUM(NSUInteger, AppStoreButtonState) {
 }
 
 @property (nonatomic, weak) BITUpdateManager *updateManager;
-@property (nonatomic, readwrite) BOOL modal;
+
+@property (nonatomic, readwrite) BOOL mandatoryUpdate;
 
 @property (nonatomic, assign) AppStoreButtonState appStoreButtonState;
 

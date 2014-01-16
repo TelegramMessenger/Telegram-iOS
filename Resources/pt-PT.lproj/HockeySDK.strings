@@ -231,7 +231,7 @@
 "HockeyFeedbackUserDataEmail" = "E-mail";
 
 /* Email Placeholder */
-"HockeyFeedbackUserDataEmailPlaceholder" = "exemplo@email.com";
+"HockeyFeedbackUserDataEmailPlaceholder" = "email@exemplo.com";
 
 
 /* Authenticator */
@@ -249,13 +249,16 @@
 /* BITAuthenticatorAuthTypeEmail and BITAuthenticatorAuthTypeEmailAndPassword */
 "HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Introduza o endereço de e-mail e a palavra-passe da sua conta HockeyApp para autorizar o acesso a esta aplicação.";
 "HockeyAuthenticationViewControllerDataEmailDescription" = "Introduza o endereço de e-mail da sua conta HockeyApp para autorizar o acesso a esta aplicação.";
-"HockeyAuthenticationViewControllerEmailPlaceholder" = "exemplo@email.com";
+"HockeyAuthenticationViewControllerEmailPlaceholder" = "email@exemplo.com";
 "HockeyAuthenticationViewControllerPasswordPlaceholder" = "Necessário";
 "HockeyAuthenticationViewControllerEmailDescription" = "E-mail";
 "HockeyAuthenticationViewControllerPasswordDescription" = "Palavra-passe";
 
 /* Error presented to the user if authentication failed because of networking issues */
 "HockeyAuthenticationViewControllerNetworkError" = "Falha ao autorizar porque provavelmente o dispositivo não tem ligação à Internet. Tente novamente.";
+
+/* Error presented to the user if authentication could not be stored on the device */
+"HockeyAuthenticationViewControllerStorageError" = "Your authentication token could not be stored due to a keychain error. Please contact the developer of the app.";
 
 
 "HockeyAuthenticationFailedAuthenticate" = "Falha ao autorizar. Tente novamente ou contacte o programador desta aplicação.";

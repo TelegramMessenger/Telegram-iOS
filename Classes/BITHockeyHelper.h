@@ -1,7 +1,7 @@
 /*
  * Author: Andreas Linde <mail@andreaslinde.de>
  *
- * Copyright (c) 2012-2013 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2012-2014 HockeyApp, Bit Stadium GmbH.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -32,7 +32,6 @@
 /* NSString helpers */
 NSString *bit_URLEncodedString(NSString *inputString);
 NSString *bit_URLDecodedString(NSString *inputString);
-NSString *bit_base64StringPreiOS7(NSData * data, unsigned long length);
 NSString *bit_base64String(NSData * data, unsigned long length);
 
 BOOL bit_validateEmail(NSString *email);

@@ -2,7 +2,7 @@
  * Author: Andreas Linde <mail@andreaslinde.de>
  *         Peter Steinberger
  *
- * Copyright (c) 2012-2013 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2012-2014 HockeyApp, Bit Stadium GmbH.
  * Copyright (c) 2011 Andreas Linde.
  * All rights reserved.
  *
@@ -200,11 +200,29 @@ typedef NS_ENUM (NSUInteger, BITUpdateSetting) {
  When running the app from the App Store, this setting is ignored.
  
  *Default*: nil
+ @see disableUpdateCheckOptionWhenExpired
  @see [BITUpdateManagerDelegate shouldDisplayExpiryAlertForUpdateManager:]
  @see [BITUpdateManagerDelegate didDisplayExpiryAlertForUpdateManager:]
  @warning This only works when using Ad-Hoc provisioning profiles!
  */
 @property (nonatomic, strong) NSDate *expiryDate;
+
+/**
+ Disable the update check button from expiry screen or alerts
+
+ If do not want your users to be able to check for updates once a version is expired,
+ then enable this property.
+ 
+ If this is not enabled, the users will be able to check for updates and install them
+ if any is available for the current device.
+
+ *Default*: NO
+ @see expiryDate
+ @see [BITUpdateManagerDelegate shouldDisplayExpiryAlertForUpdateManager:]
+ @see [BITUpdateManagerDelegate didDisplayExpiryAlertForUpdateManager:]
+ @warning This only works when using Ad-Hoc provisioning profiles!
+*/
+@property (nonatomic) BOOL disableUpdateCheckOptionWhenExpired;
 
 
 ///-----------------------------------------------------------------------------

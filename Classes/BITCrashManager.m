@@ -2,7 +2,7 @@
  * Author: Andreas Linde <mail@andreaslinde.de>
  *         Kent Sutherland
  *
- * Copyright (c) 2012-2013 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2012-2014 HockeyApp, Bit Stadium GmbH.
  * Copyright (c) 2011 Andreas Linde & Kent Sutherland.
  * All rights reserved.
  *
@@ -38,7 +38,6 @@
 #import "HockeySDKPrivate.h"
 #import "BITHockeyHelper.h"
 
-#import "BITHockeyManagerPrivate.h"
 #import "BITHockeyBaseManagerPrivate.h"
 #import "BITCrashManagerPrivate.h"
 #import "BITCrashReportTextFormatter.h"
@@ -72,6 +71,8 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   NSString       *_analyzerInProgressFile;
   NSFileManager  *_fileManager;
   
+  PLCrashReporterCallbacks *_crashCallBacks;
+  
   BOOL _crashIdenticalCurrentVersion;
   
   NSMutableData *_responseData;
@@ -90,11 +91,12 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 - (id)init {
   if ((self = [super init])) {
     _delegate = nil;
-    _showAlwaysButton = NO;
+    _showAlwaysButton = YES;
     _isSetup = NO;
     
     _plCrashReporter = nil;
     _exceptionHandler = nil;
+    _crashCallBacks = nil;
     
     _crashIdenticalCurrentVersion = YES;
     _urlConnection = nil;
@@ -385,6 +387,11 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 
 #pragma mark - Public
 
+
+- (void)setCrashCallbacks: (PLCrashReporterCallbacks *) callbacks {
+  _crashCallBacks = callbacks;
+}
+
 /**
  * Check if the debugger is attached
  *
@@ -416,6 +423,18 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   });
   
   return debuggerIsAttached;
+}
+
+
+- (void)generateTestCrash {
+  if (![self isAppStoreEnvironment]) {
+    
+    if ([self isDebuggerAttached]) {
+      NSLog(@"[HockeySDK] WARNING: The debugger is attached. The following crash cannot be detected by the SDK!");
+    }
+    
+    __builtin_trap();
+  }
 }
 
 
@@ -690,6 +709,11 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
         // can't break this
         NSError *error = NULL;
         
+        // set any user defined callbacks, hopefully the users knows what they do
+        if (_crashCallBacks) {
+          [self.plCrashReporter setCrashCallbacks:_crashCallBacks];
+        }
+        
         // Enable the Crash Reporter
         if (![self.plCrashReporter enableCrashReporterAndReturnError: &error])
           NSLog(@"[HockeySDK] WARNING: Could not enable crash reporter: %@", [error localizedDescription]);
@@ -885,7 +909,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
               ]];
   
   [request setCachePolicy: NSURLRequestReloadIgnoringLocalCacheData];
-  [request setValue:@"Quincy/iOS" forHTTPHeaderField:@"User-Agent"];
+  [request setValue:@"HockeySDK/iOS" forHTTPHeaderField:@"User-Agent"];
   [request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];
   [request setTimeoutInterval: 15];
   [request setHTTPMethod:@"POST"];

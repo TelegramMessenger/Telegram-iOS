@@ -2,7 +2,7 @@
  * Author: Andreas Linde <mail@andreaslinde.de>
  *         Kent Sutherland
  *
- * Copyright (c) 2012-2013 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2012-2014 HockeyApp, Bit Stadium GmbH.
  * Copyright (c) 2011 Andreas Linde & Kent Sutherland.
  * All rights reserved.
  *
@@ -31,6 +31,13 @@
 #import <Foundation/Foundation.h>
 
 #import "BITHockeyBaseManager.h"
+
+// We need this check depending on integrating as a subproject or using the binary distribution
+#if __has_include("CrashReporter.h")
+#import "CrashReporter.h"
+#else
+#import <CrashReporter/CrashReporter.h>
+#endif
 
 
 /**
@@ -120,10 +127,9 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  sending each crash report or send crash reportings automatically without
  asking.
  
- The default value is `BITCrashManagerStatusAlwaysAsk`. You can allow the user
- to switch from `BITCrashManagerStatusAlwaysAsk` to
- `BITCrashManagerStatusAutoSend` by setting `showAlwaysButton`
- to _YES_.
+ The default value is `BITCrashManagerStatusAlwaysAsk`. The user can switch to
+ `BITCrashManagerStatusAutoSend` by choosing "Always" in the dialog (since 
+ `showAlwaysButton` default is _YES_).
  
  The current value is always stored in User Defaults with the key
  `BITCrashManagerStatus`.
@@ -161,6 +167,31 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
 
 
 /**
+ * Set the callbacks that will be executed prior to program termination after a crash has occurred
+ *
+ * PLCrashReporter provides support for executing an application specified function in the context
+ * of the crash reporter's signal handler, after the crash report has been written to disk.
+ *
+ * Writing code intended for execution inside of a signal handler is exceptionally difficult, and is _NOT_ recommended!
+ *
+ * _Program Flow and Signal Handlers_
+ *
+ * When the signal handler is called the normal flow of the program is interrupted, and your program is an unknown state. Locks may be held, the heap may be corrupt (or in the process of being updated), and your signal handler may invoke a function that was being executed at the time of the signal. This may result in deadlocks, data corruption, and program termination.
+ *
+ * _Async-Safe Functions_
+ *
+ * A subset of functions are defined to be async-safe by the OS, and are safely callable from within a signal handler. If you do implement a custom post-crash handler, it must be async-safe. A table of POSIX-defined async-safe functions and additional information is available from the CERT programming guide - SIG30-C, see https://www.securecoding.cert.org/confluence/display/seccode/SIG30-C.+Call+only+asynchronous-safe+functions+within+signal+handlers
+ *
+ * Most notably, the Objective-C runtime itself is not async-safe, and Objective-C may not be used within a signal handler.
+ *
+ * Documentation taken from PLCrashReporter: https://www.plcrashreporter.org/documentation/api/v1.2-rc2/async_safety.html
+ *
+ * @param callbacks A pointer to an initialized PLCrashReporterCallback structure, see https://www.plcrashreporter.org/documentation/api/v1.2-rc2/struct_p_l_crash_reporter_callbacks.html
+ */
+- (void)setCrashCallbacks: (PLCrashReporterCallbacks *) callbacks;
+
+
+/**
  Flag that determines if an "Always" option should be shown
  
  If enabled the crash reporting alert will also present an "Always" option, so
@@ -168,8 +199,9 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  
  If If `crashManagerStatus` is set to `BITCrashManagerStatusAutoSend`, this property
  has no effect, since no alert will be presented.
+
+ Default: _YES_
  
- @warning This will cause the dialog not to show the alert description text landscape mode!
  @see crashManagerStatus
  */
 @property (nonatomic, assign, getter=shouldShowAlwaysButton) BOOL showAlwaysButton;
@@ -226,5 +258,21 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  *  @return BOOL if the debugger is attached on app startup
  */
 - (BOOL)isDebuggerAttached;
+
+
+/**
+ * Lets the app crash for easy testing of the SDK
+ *
+ * The best way to use this is to trigger the crash with a button action.
+ *
+ * Make sure not to let the app crash in `applicationDidFinishLaunching` or any other
+ * startup method! Since otherwise the app would crash before the SDK could process it.
+ *
+ * Note that our SDK provides support for handling crashes that happen early on startup.
+ * Check the documentation for more information on how to use this.
+ *
+ * If the SDK detects an App Store environment, it will _NOT_ cause the app to crash!
+ */
+- (void)generateTestCrash;
 
 @end

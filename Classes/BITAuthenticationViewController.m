@@ -1,7 +1,7 @@
 /*
  * Author: Stephan Diederich
  *
- * Copyright (c) 2013 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2013-2014 HockeyApp, Bit Stadium GmbH.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -122,6 +122,9 @@
                               buttonSize.width,
                               buttonSize.height);
     button.autoresizingMask = UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
+    if ([UIButton instancesRespondToSelector:(NSSelectorFromString(@"setTintColor:"))]) {
+      [button setTitleColor:BIT_RGBCOLOR(0, 122, 255) forState:UIControlStateNormal];
+    }
     [containerView addSubview:button];
     [button addTarget:self
                action:@selector(handleWebLoginButton:)

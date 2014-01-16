@@ -231,7 +231,7 @@
 "HockeyFeedbackUserDataEmail" = "E-mail";
 
 /* Email Placeholder */
-"HockeyFeedbackUserDataEmailPlaceholder" = "voorbeeld@e-mail.com";
+"HockeyFeedbackUserDataEmailPlaceholder" = "e-mail@voorbeeld.com";
 
 
 /* Authenticator */
@@ -249,13 +249,16 @@
 /* BITAuthenticatorAuthTypeEmail and BITAuthenticatorAuthTypeEmailAndPassword */
 "HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Voer het e-mailadres en wachtwoord van uw HockeyApp-account in om toegang tot deze app te verlenen.";
 "HockeyAuthenticationViewControllerDataEmailDescription" = "Voer het e-mailadres van uw HockeyApp-account in om toegang tot deze app te verlenen.";
-"HockeyAuthenticationViewControllerEmailPlaceholder" = "voorbeeld@e-mail.com";
+"HockeyAuthenticationViewControllerEmailPlaceholder" = "mail@voorbeeld.com";
 "HockeyAuthenticationViewControllerPasswordPlaceholder" = "Verplicht";
 "HockeyAuthenticationViewControllerEmailDescription" = "E-mail";
 "HockeyAuthenticationViewControllerPasswordDescription" = "Wachtwoord";
 
 /* Error presented to the user if authentication failed because of networking issues */
 "HockeyAuthenticationViewControllerNetworkError" = "Identiteitscontrole mislukt omdat uw apparaat niet is verbonden met het internet. Probeer opnieuw.";
+
+/* Error presented to the user if authentication could not be stored on the device */
+"HockeyAuthenticationViewControllerStorageError" = "Your authentication token could not be stored due to a keychain error. Please contact the developer of the app.";
 
 
 "HockeyAuthenticationFailedAuthenticate" = "Identiteitscontrole mislukt. Probeer opnieuw of neem contact op met de ontwikkelaar van deze app.";
