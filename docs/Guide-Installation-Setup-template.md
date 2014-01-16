@@ -90,7 +90,7 @@ The Mac Desktop Uploader can provide easy uploading of your app versions to Hock
 
 This documentation provides integrated help in Xcode for all public APIs and a set of additional tutorials and how-tos.
 
-1. Copy `de.bitstadium.HockeySDK-iOS-3.5.1.docset` into ~`/Library/Developer/Shared/Documentation/DocSet`
+1. Copy `de.bitstadium.HockeySDK-iOS-3.5.1.docset` into ~`/Library/Developer/Shared/Documentation/DocSets`
 
 The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.5.1/](http://hockeyapp.net/help/sdk/ios/3.5.1/)
 
