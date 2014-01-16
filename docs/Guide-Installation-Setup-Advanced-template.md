@@ -114,7 +114,7 @@ This documentation provides integrated help in Xcode for all public APIs and a s
 
 2. Unzip the file. A new folder `HockeySDK-iOS-documentation` is created.
 
-3. Copy the content into ~`/Library/Developer/Shared/Documentation/DocSet`
+3. Copy the content into ~`/Library/Developer/Shared/Documentation/DocSets`
 
 The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.5.1/](http://hockeyapp.net/help/sdk/ios/3.5.1/)
 
