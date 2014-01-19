@@ -33,7 +33,7 @@ NSString * const kBITBackgroundStrokeColorAttributeName = @"BITBackgroundStrokeC
 NSString * const kBITBackgroundLineWidthAttributeName = @"BITBackgroundLineWidth";
 NSString * const kBITBackgroundCornerRadiusAttributeName = @"BITBackgroundCornerRadius";
 
-static inline CTTextAlignment CTTextAlignmentFromUITextAlignment(UITextAlignment alignment) {
+static inline __attribute__((unused)) CTTextAlignment CTTextAlignmentFromUITextAlignment(UITextAlignment alignment) {
     switch (alignment) {
         case UITextAlignmentLeft: return kCTLeftTextAlignment;
         case UITextAlignmentCenter: return kCTCenterTextAlignment;
@@ -42,7 +42,7 @@ static inline CTTextAlignment CTTextAlignmentFromUITextAlignment(UITextAlignment
     }
 }
 
-static inline CTTextAlignment CTTextAlignmentFromNSTextAlignment(NSTextAlignment alignment) {
+static __attribute__((unused)) inline CTTextAlignment CTTextAlignmentFromNSTextAlignment(NSTextAlignment alignment) {
     switch (alignment) {
         case NSTextAlignmentLeft: return kCTLeftTextAlignment;
         case NSTextAlignmentCenter: return kCTCenterTextAlignment;
@@ -63,7 +63,7 @@ static inline CTLineBreakMode CTLineBreakModeFromUILineBreakMode(UILineBreakMode
     }
 }
 
-static inline CTLineBreakMode CTLineBreakModeFromNSLineBreakMode(NSLineBreakMode lineBreakMode) {
+static inline __attribute__((unused)) CTLineBreakMode CTLineBreakModeFromNSLineBreakMode(NSLineBreakMode lineBreakMode) {
     switch (lineBreakMode) {
         case NSLineBreakByWordWrapping: return kCTLineBreakByWordWrapping;
         case NSLineBreakByCharWrapping: return kCTLineBreakByCharWrapping;
@@ -75,7 +75,7 @@ static inline CTLineBreakMode CTLineBreakModeFromNSLineBreakMode(NSLineBreakMode
     }
 }
 
-static inline UILineBreakMode UILineBreakModeFromNSLineBreakMode(NSLineBreakMode lineBreakMode) {
+static inline __attribute__((unused)) UILineBreakMode UILineBreakModeFromNSLineBreakMode(NSLineBreakMode lineBreakMode) {
     switch (lineBreakMode) {
         case NSLineBreakByWordWrapping: return UILineBreakModeWordWrap;
         case NSLineBreakByCharWrapping: return UILineBreakModeCharacterWrap;
