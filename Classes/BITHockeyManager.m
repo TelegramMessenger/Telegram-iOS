@@ -503,12 +503,13 @@
 #endif /* HOCKEYSDK_FEATURE_UPDATES */
 
 - (BOOL)isSetUpOnMainThread {
-  NSString *errorString = @"ERROR: This SDK has to be setup on the main thread!";
+  NSString *errorString = @"ERROR: HockeySDK has to be setup on the main thread!";
   
   if (!NSThread.isMainThread) {
     if (self.isAppStoreEnvironment) {
       BITHockeyLog(@"%@", errorString);
     } else {
+      NSLog(@"%@", errorString);
       NSAssert(NSThread.isMainThread, errorString);
     }
     
