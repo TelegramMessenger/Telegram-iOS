@@ -513,8 +513,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
       UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateAvailable")
                                                            message:[NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateAlertMandatoryTextWithAppVersion"), [self.newestAppVersion nameAndVersionString]]
                                                           delegate:self
-                                                 cancelButtonTitle:BITHockeyLocalizedString(@"UpdateInstall")
-                                                 otherButtonTitles:BITHockeyLocalizedString(@"UpdateShow"), nil
+                                                 cancelButtonTitle:nil
+                                                 otherButtonTitles:BITHockeyLocalizedString(@"UpdateShow"), BITHockeyLocalizedString(@"UpdateInstall"), nil
                                  ];
       [alertView setTag:BITUpdateAlertViewTagMandatoryUpdate];
       [alertView show];
