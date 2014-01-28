@@ -280,7 +280,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 }
 
 - (NSString *)currentUsageString {
-  double currentUsageTime = [[NSUserDefaults standardUserDefaults] doubleForKey:kBITUpdateUsageTimeOfCurrentVersion];
+  double currentUsageTime = [self.currentAppVersionUsageTime doubleValue];
   
   if (currentUsageTime > 0) {
     // round (up) to 1 minute
