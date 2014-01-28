@@ -1,3 +1,13 @@
+## Version 3.5.2
+
+- [UPDATE] Make sure a log message appears in the console if the SDK is not setup on the main thread
+- [BUGFIX] Fix usage time always being send as `0` instead of sending the actual usage time
+- [BUGFIX] Fix "Install" button in the mandatory update alert not working and forcing users to use the "show" button and then install from the update view instead
+- [BUGFIX] Fix possible unused function warnings
+- [BUGFIX] Fix two warnings when `-Wshorten-64-to-32` is set.
+- [BUGFIX] Fix typos in documentation
+<br /><br/>
+
 ## Version 3.5.1
 
 - General
