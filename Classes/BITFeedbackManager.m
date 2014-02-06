@@ -218,7 +218,10 @@
 
 
 - (BITFeedbackComposeViewController *)feedbackComposeViewController {
-  return [[BITFeedbackComposeViewController alloc] init];
+  BITFeedbackComposeViewController *composeViewController = [[BITFeedbackComposeViewController alloc] init];
+  // by default set the delegate to be identical to the one of BITFeedbackManager
+  [composeViewController setDelegate:self.delegate];
+  return composeViewController;
 }
 
 - (void)showFeedbackComposeView {
