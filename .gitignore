@@ -10,6 +10,7 @@ build
 !default.xcworkspace
 !project.xcworkspace
 xcuserdata
+xccheckout
 profile
 *.moved-aside
 
