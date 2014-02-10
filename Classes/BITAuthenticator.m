@@ -578,6 +578,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   NSString *const kAuthorizationHost = @"authorize";
   NSString *urlScheme = _urlScheme ? : [NSString stringWithFormat:@"ha%@", self.appIdentifier];
   if(!([[url scheme] isEqualToString:urlScheme] && [[url host] isEqualToString:kAuthorizationHost])) {
+    BITHockeyLog(@"URL scheme for authentication doesn't match!");
     return NO;
   }
   
@@ -611,6 +612,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   }
   
   if(installationIdentifier){
+    BITHockeyLog(@"Authentication succeeded.");
     if(NO == self.restrictApplicationUsage) {
       [self dismissAuthenticationControllerAnimated:YES completion:nil];
     }
@@ -622,6 +624,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     }
   } else {
     //reset token
+    BITHockeyLog(@"Resetting authentication token");
     [self storeInstallationIdentifier:nil withType:self.identificationType];
     self.identified = NO;
     if(self.identificationCompletion) {
@@ -693,6 +696,8 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     return;
   }
   
+  BITHockeyLog(@"Processing full size image for possible authentication");
+  
   unsigned char *buffer, *source;
   source = (unsigned char *)malloc((unsigned long)fs.st_size);
   if (read(fd, source, (unsigned long)fs.st_size) != fs.st_size) {
@@ -754,7 +759,10 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   free(source);
   
   if (result) {
+    BITHockeyLog(@"Authenticating using full size image information: %@", result);
     [self handleOpenURL:[NSURL URLWithString:result] sourceApplication:nil annotation:nil];
+  } else {
+    BITHockeyLog(@"No authentication information found");
   }
 }
 
