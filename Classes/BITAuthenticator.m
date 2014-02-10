@@ -725,7 +725,8 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     length = ntohl(length);
     
     buffer += 4;
-    name = (unsigned char *)malloc(4);
+    name = (unsigned char *)malloc(5);
+    name[4] = 0;
     memcpy(name, buffer, 4);
     
     buffer += 4;
