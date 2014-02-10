@@ -167,6 +167,38 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
 
 
 /**
+ *  Enables heuristics to detect the app getting killed while being in the foreground
+ *
+ *  This allows it to get a crash report if the app got killed while being in the foreground
+ *  because of now of the following reasons:
+ *  - The main thread was blocked for too long
+ *  - The app took too long to start up
+ *  - The app tried to allocate too much memory. If iOS did send a memory warning before killing the app because of this reason, `didReceiveMemoryWarningInLastSession` returns `YES`.
+ *  - Permitted background duration if main thread is running in an endless loop
+ *  - App failed to resume in time if main thread is running in an endless loop
+ *
+ *  The following kills can _NOT_ be detected:
+ *  - Terminating the app takes too long
+ *  - Permitted background duration too long for all other cases
+ *  - App failed to resume in time for all other cases
+ *  - possibly more cases
+ *
+ *  Crash reports triggered by this mechanisms do _NOT_ contain any stack traces since the time of the kill
+ *  cannot be intercepted and hence no stack trace of the time of the kill event can't be gathered.
+ *
+ *  Default: _NO_
+ *
+ * @warning This is a heuristic and it _MAY_ report false positives!
+ *
+ * @see wasKilledInLastSession
+ * @see didReceiveMemoryWarningInLastSession
+ * @see [Apple Technical Note TN2151](https://developer.apple.com/library/ios/technotes/tn2151/_index.html)
+ * @see [Apple Technical Q&A QA1693](https://developer.apple.com/library/ios/qa/qa1693/_index.html)
+ */
+@property (nonatomic, assign, getter = isAppKillDetectionWhileInForegroundEnabled) BOOL enableAppKillDetectionWhileInForeground;
+
+
+/**
  * Set the callbacks that will be executed prior to program termination after a crash has occurred
  *
  * PLCrashReporter provides support for executing an application specified function in the context
@@ -222,6 +254,48 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  invoked!
  */
 @property (nonatomic, readonly) BOOL didCrashInLastSession;
+
+
+/**
+ Indicates if the app was killed while being in foreground from the iOS
+ 
+ If `enableDectionAppKillWhileInForeground` is enabled, use this on startup to check if the
+ app starts the first time after it was killed by iOS in the previous session.
+ 
+ This can happen if it consumed too much memory or the watchdog killed the app because it
+ took too long to startup or blocks the main thread for too long, or other reasons. See Apple
+ documentation: https://developer.apple.com/library/ios/qa/qa1693/_index.html
+ 
+ See `enableDectionAppKillWhileInForeground` for more details about which kind of kills can be detected.
+ 
+ @warning This property only has a correct value, once `[BITHockeyManager startManager]` was
+ invoked! In addition, it is automatically disabled while a debugger session is active!
+ 
+ @see enableAppKillDetectionWhileInForeground
+ @see didReceiveMemoryWarningInLastSession
+ */
+@property (nonatomic, readonly) BOOL wasKilledInLastSession;
+
+
+/**
+ Indicates if the app did receive a low memory warning in the last session
+ 
+ It may happen that low memory warning where send but couldn't be logged, since iOS
+ killed the app before updating the flag in the filesystem did complete.
+ 
+ This property may be true in case of low memory kills, but it doesn't have to be! Apps
+ can also be killed without the app ever receiving a low memory warning.
+ 
+ Also the app could have received a low memory warning, but the reason for being killed was
+ actually different.
+ 
+ @warning This property only has a correct value, once `[BITHockeyManager startManager]` was
+ invoked!
+ 
+ @see enableAppKillDetectionWhileInForeground
+ @see wasKilledInLastSession
+ */
+@property (nonatomic, readonly) BOOL didReceiveMemoryWarningInLastSession;
 
 
 /**

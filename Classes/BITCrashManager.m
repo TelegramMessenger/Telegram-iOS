@@ -55,6 +55,19 @@
 
 NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 
+NSString *const kBITAppWentIntoBackgroundSafely = @"BITAppWentIntoBackgroundSafely";
+NSString *const kBITAppDidReceiveLowMemoryNotification = @"BITAppDidReceiveLowMemoryNotification";
+NSString *const kBITAppVersion = @"BITAppVersion";
+NSString *const kBITAppOSVersion = @"BITAppOSVersion";
+NSString *const kBITAppUUIDs = @"BITAppUUIDs";
+
+NSString *const kBITFakeCrashUUID = @"BITFakeCrashUUID";
+NSString *const kBITFakeCrashAppVersion = @"BITFakeCrashAppVersion";
+NSString *const kBITFakeCrashAppBundleIdentifier = @"BITFakeCrashAppBundleIdentifier";
+NSString *const kBITFakeCrashOSVersion = @"BITFakeCrashOSVersion";
+NSString *const kBITFakeCrashDeviceModel = @"BITFakeCrashDeviceModel";
+NSString *const kBITFakeCrashAppBinaryUUID = @"BITFakeCrashAppBinaryUUID";
+NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
 
 @interface BITCrashManager ()
 
@@ -83,7 +96,13 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   BOOL _sendingInProgress;
   BOOL _isSetup;
   
+  BOOL _didLogLowMemoryWarning;
+  
   id _appDidBecomeActiveObserver;
+  id _appWillTerminateObserver;
+  id _appDidEnterBackgroundObserver;
+  id _appWillEnterForegroundObserver;
+  id _appDidReceiveLowMemoryWarningObserver;
   id _networkDidBecomeReachableObserver;
 }
 
@@ -105,6 +124,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
     
     _didCrashInLastSession = NO;
     _timeintervalCrashInLastSessionOccured = -1;
+    _didLogLowMemoryWarning = NO;
     
     _approvedCrashReports = [[NSMutableDictionary alloc] init];
 
@@ -287,20 +307,116 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
                                                                                          [strongSelf triggerDelayedProcessing];
                                                                                        }];
   }
+  
+  if (nil ==  _appWillTerminateObserver) {
+    _appWillTerminateObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationWillTerminateNotification
+                                                                                  object:nil
+                                                                                   queue:NSOperationQueue.mainQueue
+                                                                              usingBlock:^(NSNotification *note) {
+                                                                                typeof(self) strongSelf = weakSelf;
+                                                                                [strongSelf leavingAppSafely];
+                                                                              }];
+  }
+  
+  if (nil ==  _appDidEnterBackgroundObserver) {
+    _appDidEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification
+                                                                                       object:nil
+                                                                                        queue:NSOperationQueue.mainQueue
+                                                                                   usingBlock:^(NSNotification *note) {
+                                                                                     typeof(self) strongSelf = weakSelf;
+                                                                                     [strongSelf leavingAppSafely];
+                                                                                   }];
+  }
+  
+  if (nil == _appWillEnterForegroundObserver) {
+    _appWillEnterForegroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationWillEnterForegroundNotification
+                                                                                        object:nil
+                                                                                         queue:NSOperationQueue.mainQueue
+                                                                                    usingBlock:^(NSNotification *note) {
+                                                                                      typeof(self) strongSelf = weakSelf;
+                                                                                      [strongSelf appEnteredForeground];
+                                                                                    }];
+  }
+
+  if (nil == _appDidReceiveLowMemoryWarningObserver) {
+    _appDidReceiveLowMemoryWarningObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidReceiveMemoryWarningNotification
+                                                                                               object:nil
+                                                                                                queue:NSOperationQueue.mainQueue
+                                                                                           usingBlock:^(NSNotification *note) {
+                                                                                             // we only need to log this once
+                                                                                             if (!_didLogLowMemoryWarning) {
+                                                                                               [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITAppDidReceiveLowMemoryNotification];
+                                                                                               _didLogLowMemoryWarning = YES;
+                                                                                             }
+                                                                                           }];
+  }
 }
 
 - (void) unregisterObservers {
-  if(_appDidBecomeActiveObserver) {
-    [[NSNotificationCenter defaultCenter] removeObserver:_appDidBecomeActiveObserver];
-    _appDidBecomeActiveObserver = nil;
-  }
+  [self unregisterObserver:_appDidBecomeActiveObserver];
+  [self unregisterObserver:_appWillTerminateObserver];
+  [self unregisterObserver:_appDidEnterBackgroundObserver];
+  [self unregisterObserver:_appWillEnterForegroundObserver];
+  [self unregisterObserver:_appDidReceiveLowMemoryWarningObserver];
   
-  if(_networkDidBecomeReachableObserver) {
-    [[NSNotificationCenter defaultCenter] removeObserver:_networkDidBecomeReachableObserver];
-    _networkDidBecomeReachableObserver = nil;
+  [self unregisterObserver:_networkDidBecomeReachableObserver];
+}
+
+- (void) unregisterObserver:(id)observer {
+  if (observer) {
+    [[NSNotificationCenter defaultCenter] removeObserver:observer];
+    observer = nil;
   }
 }
 
+- (void)leavingAppSafely {
+  if (self.isAppKillDetectionWhileInForegroundEnabled)
+    [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITAppWentIntoBackgroundSafely];
+}
+
+- (void)appEnteredForeground {
+  // we disable kill detection while the debugger is running, since we'd get only false positives if the app is terminated by the user using the debugger
+  if (self.isDebuggerAttached) {
+    [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITAppWentIntoBackgroundSafely];
+  } else if (self.isAppKillDetectionWhileInForegroundEnabled) {
+    [[NSUserDefaults standardUserDefaults] setBool:NO forKey:kBITAppWentIntoBackgroundSafely];
+    
+    static dispatch_once_t predAppData;
+      
+    dispatch_once(&predAppData, ^{
+      id bundleVersion = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"];
+      if (bundleVersion && [bundleVersion isKindOfClass:[NSString class]])
+        [[NSUserDefaults standardUserDefaults] setObject:bundleVersion forKey:kBITAppVersion];
+      [[NSUserDefaults standardUserDefaults] setObject:[[UIDevice currentDevice] systemVersion] forKey:kBITAppOSVersion];
+      
+      NSString *uuidString =[NSString stringWithFormat:@"<uuid type=\"app\" arch=\"%@\">%@</uuid>",
+                             [self deviceArchitecture],
+                             [self executableUUID]
+                             ];
+
+      [[NSUserDefaults standardUserDefaults] setObject:uuidString forKey:kBITAppUUIDs];
+    });
+  }
+}
+
+- (NSString *)deviceArchitecture {
+  NSString *archName = @"???";
+  
+  size_t size;
+  cpu_type_t type;
+  cpu_subtype_t subtype;
+  size = sizeof(type);
+  if (sysctlbyname("hw.cputype", &type, &size, NULL, 0))
+    return archName;
+
+  size = sizeof(subtype);
+  if (sysctlbyname("hw.cpusubtype", &subtype, &size, NULL, 0))
+    return archName;
+
+  archName = [BITCrashReportTextFormatter bit_archNameFromCPUType:type subType:subtype] ?: @"???";
+  
+  return archName;
+}
 
 /**
  *	 Get the userID from the delegate which should be stored with the crash report
@@ -437,6 +553,35 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   }
 }
 
+/**
+ *  Write a meta file for a new crash report
+ *
+ *  @param filename the crash reports temp filename
+ */
+- (void)storeMetaDataForCrashReportFilename:(NSString *)filename {
+  NSError *error = NULL;
+  NSMutableDictionary *metaDict = [NSMutableDictionary dictionaryWithCapacity:4];
+  NSString *applicationLog = @"";
+  NSString *errorString = nil;
+  
+  [self addStringValueToKeychain:[self userNameForCrashReport] forKey:[NSString stringWithFormat:@"%@.%@", filename, kBITCrashMetaUserName]];
+  [self addStringValueToKeychain:[self userEmailForCrashReport] forKey:[NSString stringWithFormat:@"%@.%@", filename, kBITCrashMetaUserEmail]];
+  [self addStringValueToKeychain:[self userIDForCrashReport] forKey:[NSString stringWithFormat:@"%@.%@", filename, kBITCrashMetaUserID]];
+  
+  if (self.delegate != nil && [self.delegate respondsToSelector:@selector(applicationLogForCrashManager:)]) {
+    applicationLog = [self.delegate applicationLogForCrashManager:self] ?: @"";
+  }
+  [metaDict setObject:applicationLog forKey:kBITCrashMetaApplicationLog];
+  
+  NSData *plist = [NSPropertyListSerialization dataFromPropertyList:(id)metaDict
+                                                             format:NSPropertyListBinaryFormat_v1_0
+                                                   errorDescription:&errorString];
+  if (plist) {
+    [plist writeToFile:[_crashesDir stringByAppendingPathComponent: [filename stringByAppendingPathExtension:@"meta"]] atomically:YES];
+  } else {
+    BITHockeyLog(@"ERROR: Writing crash meta data failed. %@", error);
+  }
+}
 
 #pragma mark - PLCrashReporter
 
@@ -481,28 +626,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
         
         [crashData writeToFile:[_crashesDir stringByAppendingPathComponent: cacheFilename] atomically:YES];
         
-        // write the meta file
-        NSMutableDictionary *metaDict = [NSMutableDictionary dictionaryWithCapacity:4];
-        NSString *applicationLog = @"";
-        NSString *errorString = nil;
-        
-        [self addStringValueToKeychain:[self userNameForCrashReport] forKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserName]];
-        [self addStringValueToKeychain:[self userEmailForCrashReport] forKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserEmail]];
-        [self addStringValueToKeychain:[self userIDForCrashReport] forKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserID]];
-        
-        if (self.delegate != nil && [self.delegate respondsToSelector:@selector(applicationLogForCrashManager:)]) {
-          applicationLog = [self.delegate applicationLogForCrashManager:self] ?: @"";
-        }
-        [metaDict setObject:applicationLog forKey:kBITCrashMetaApplicationLog];
-        
-        NSData *plist = [NSPropertyListSerialization dataFromPropertyList:(id)metaDict
-                                                                   format:NSPropertyListBinaryFormat_v1_0
-                                                         errorDescription:&errorString];
-        if (plist) {
-          [plist writeToFile:[NSString stringWithFormat:@"%@.meta", [_crashesDir stringByAppendingPathComponent: cacheFilename]] atomically:YES];
-        } else {
-          BITHockeyLog(@"ERROR: Writing crash meta data failed. %@", error);
-        }
+        [self storeMetaDataForCrashReportFilename:cacheFilename];
       }
     }
   }
@@ -734,8 +858,101 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       _isSetup = YES;
     });
   }
+
+  if ([[NSUserDefaults standardUserDefaults] valueForKey:kBITAppDidReceiveLowMemoryNotification])
+    _didReceiveMemoryWarningInLastSession = [[NSUserDefaults standardUserDefaults] boolForKey:kBITAppDidReceiveLowMemoryNotification];
+
+  if (!_didCrashInLastSession && self.isAppKillDetectionWhileInForegroundEnabled) {
+    BOOL didAppSwitchToBackgroundSafely = YES;
+    
+    if ([[NSUserDefaults standardUserDefaults] valueForKey:kBITAppWentIntoBackgroundSafely])
+      didAppSwitchToBackgroundSafely = [[NSUserDefaults standardUserDefaults] boolForKey:kBITAppWentIntoBackgroundSafely];
+
+    if (!didAppSwitchToBackgroundSafely) {
+      NSLog(@"AppHasBeenKilled!");
+      
+      [self createCrashReportForAppKill];
+      
+      _wasKilledInLastSession = YES;
+      _didCrashInLastSession = YES;
+    }
+  }
+  [self appEnteredForeground];
+  [[NSUserDefaults standardUserDefaults] setBool:NO forKey:kBITAppDidReceiveLowMemoryNotification];
+  [[NSUserDefaults standardUserDefaults] synchronize];
   
   [self triggerDelayedProcessing];
+}
+
+/**
+ *  Creates a fake crash report because the app was killed while being in foreground
+ */
+- (void)createCrashReportForAppKill {
+  NSString *fakeReportUUID = bit_UUID();
+  
+  NSString *fakeReportAppVersion = [[NSUserDefaults standardUserDefaults] objectForKey:kBITAppVersion];
+  if (!fakeReportAppVersion)
+    return;
+  
+  NSString *fakeReportOSVersion = [[NSUserDefaults standardUserDefaults] objectForKey:kBITAppOSVersion] ?: [[UIDevice currentDevice] systemVersion];
+  NSString *fakeReportAppBundleIdentifier = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"];
+  NSString *fakeReportDeviceModel = [self getDevicePlatform] ?: @"Unknown";
+  NSString *fakeReportAppUUIDs = [[NSUserDefaults standardUserDefaults] objectForKey:kBITAppUUIDs] ?: @"";
+  
+  NSMutableString *fakeReportString = [NSMutableString string];
+
+  [fakeReportString appendFormat:@"Incident Identifier: %@\n", fakeReportUUID];
+  [fakeReportString appendFormat:@"CrashReporter Key:   %@\n", bit_appAnonID() ?: @"???"];
+  [fakeReportString appendFormat:@"Hardware Model:      %@\n", fakeReportDeviceModel];
+  [fakeReportString appendFormat:@"Identifier:      %@\n", fakeReportAppBundleIdentifier];
+  [fakeReportString appendFormat:@"Version:         %@\n", fakeReportAppVersion];
+  [fakeReportString appendString:@"Code Type:       ARM\n"];
+  [fakeReportString appendString:@"\n"];
+  
+  NSLocale *enUSPOSIXLocale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"];
+  NSDateFormatter *rfc3339Formatter = [[NSDateFormatter alloc] init];
+  [rfc3339Formatter setLocale:enUSPOSIXLocale];
+  [rfc3339Formatter setDateFormat:@"yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'"];
+  [rfc3339Formatter setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:0]];
+
+  // we use the current date, since we don't know when the kill actually happened
+  [fakeReportString appendFormat:@"Date/Time:       %@\n", [rfc3339Formatter stringFromDate:[NSDate date]]];
+  [fakeReportString appendFormat:@"OS Version:      %@\n", fakeReportOSVersion];
+  [fakeReportString appendString:@"Report Version:  104\n"];
+  [fakeReportString appendString:@"\n"];
+  [fakeReportString appendString:@"Exception Type:  SIGKILL\n"];
+  [fakeReportString appendString:@"Exception Codes: 00000020 at 0x8badf00d\n"];
+  [fakeReportString appendString:@"\n"];
+  [fakeReportString appendString:@"Application Specific Information:\n"];
+  [fakeReportString appendString:@"The application was killed by the iOS watchdog."];
+  if (self.didReceiveMemoryWarningInLastSession) {
+    [fakeReportString appendString:@" The app received at least one Low Memory Warning."];
+  }
+  [fakeReportString appendString:@"\n"];
+  
+  NSString *fakeReportFilename = [NSString stringWithFormat: @"%.0f", [NSDate timeIntervalSinceReferenceDate]];
+  
+  NSString *errorString = nil;
+  
+  NSMutableDictionary *rootObj = [NSMutableDictionary dictionaryWithCapacity:2];
+  [rootObj setObject:fakeReportUUID forKey:kBITFakeCrashUUID];
+  [rootObj setObject:fakeReportAppVersion forKey:kBITFakeCrashAppVersion];
+  [rootObj setObject:fakeReportAppBundleIdentifier forKey:kBITFakeCrashAppBundleIdentifier];
+  [rootObj setObject:fakeReportOSVersion forKey:kBITFakeCrashOSVersion];
+  [rootObj setObject:fakeReportDeviceModel forKey:kBITFakeCrashDeviceModel];
+  [rootObj setObject:fakeReportAppUUIDs forKey:kBITFakeCrashAppBinaryUUID];
+  [rootObj setObject:fakeReportString forKey:kBITFakeCrashReport];
+  
+  NSData *plist = [NSPropertyListSerialization dataFromPropertyList:(id)rootObj
+                                                             format:NSPropertyListBinaryFormat_v1_0
+                                                   errorDescription:&errorString];
+  if (plist) {
+    if ([plist writeToFile:[_crashesDir stringByAppendingPathComponent:[fakeReportFilename stringByAppendingPathExtension:@"fake"]] atomically:YES]) {
+      [self storeMetaDataForCrashReportFilename:fakeReportFilename];
+    }
+  } else {
+    BITHockeyLog(@"ERROR: Writing fake crash report. %@", errorString);
+  }
 }
 
 /**
@@ -755,13 +972,49 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
     NSData *crashData = [NSData dataWithContentsOfFile:filename];
 		
     if ([crashData length] > 0) {
-      BITPLCrashReport *report = [[BITPLCrashReport alloc] initWithData:crashData error:&error];
+      BITPLCrashReport *report = nil;
+      NSString *crashUUID = @"";
+      NSString *installString = nil;
+      NSString *crashLogString = nil;
+      NSString *appBundleIdentifier = nil;
+      NSString *appBundleVersion = nil;
+      NSString *osVersion = nil;
+      NSString *deviceModel = nil;
+      NSString *appBinaryUUIDs = nil;
+      NSString *metaFilename = nil;
+      
+      NSString *errorString = nil;
+      NSPropertyListFormat format;
+
+      if ([[cacheFilename pathExtension] isEqualToString:@"fake"]) {
+        NSDictionary *fakeReportDict = (NSDictionary *)[NSPropertyListSerialization
+                                                        propertyListFromData:crashData
+                                                        mutabilityOption:NSPropertyListMutableContainersAndLeaves
+                                                        format:&format
+                                                        errorDescription:&errorString];
+
+        crashLogString = [fakeReportDict objectForKey:kBITFakeCrashReport];
+        crashUUID = [fakeReportDict objectForKey:kBITFakeCrashUUID];
+        appBundleIdentifier = [fakeReportDict objectForKey:kBITFakeCrashAppBundleIdentifier];
+        appBundleVersion = [fakeReportDict objectForKey:kBITFakeCrashAppVersion];
+        appBinaryUUIDs = [fakeReportDict objectForKey:kBITFakeCrashAppBinaryUUID];
+        deviceModel = [fakeReportDict objectForKey:kBITFakeCrashDeviceModel];
+        osVersion = [fakeReportDict objectForKey:kBITFakeCrashOSVersion];
+        
+        metaFilename = [cacheFilename stringByReplacingOccurrencesOfString:@".fake" withString:@".meta"];
+        if ([appBundleVersion compare:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]] == NSOrderedSame) {
+          _crashIdenticalCurrentVersion = YES;
+        }
+
+      } else {
+        report = [[BITPLCrashReport alloc] initWithData:crashData error:&error];
+      }
 			
-      if (report == nil) {
+      if (report == nil && crashLogString == nil) {
         BITHockeyLog(@"WARNING: Could not parse crash report");
         // we cannot do anything with this report, so delete it
         [_fileManager removeItemAtPath:filename error:&error];
-        [_fileManager removeItemAtPath:[NSString stringWithFormat:@"%@.meta", filename] error:&error];
+        [_fileManager removeItemAtPath:[NSString stringWithFormat:@"%@.meta", metaFilename] error:&error];
 
         [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserName]];
         [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserEmail]];
@@ -769,16 +1022,23 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
         continue;
       }
       
-      NSString *crashUUID = @"";
-      if (report.uuidRef != NULL) {
-        crashUUID = (NSString *) CFBridgingRelease(CFUUIDCreateString(NULL, report.uuidRef));
+      if (report) {
+        if (report.uuidRef != NULL) {
+          crashUUID = (NSString *) CFBridgingRelease(CFUUIDCreateString(NULL, report.uuidRef));
+        }
+        metaFilename = [filename stringByAppendingPathExtension:@"meta"];
+        crashLogString = [BITCrashReportTextFormatter stringValueForCrashReport:report crashReporterKey:installString];
+        appBundleIdentifier = report.applicationInfo.applicationIdentifier;
+        appBundleVersion = report.applicationInfo.applicationVersion;
+        osVersion = report.systemInfo.operatingSystemVersion;
+        deviceModel = [self getDevicePlatform];
+        appBinaryUUIDs = [self extractAppUUIDs:report];
+        if ([report.applicationInfo.applicationVersion compare:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]] == NSOrderedSame) {
+          _crashIdenticalCurrentVersion = YES;
+        }
       }
-      NSString *installString = bit_appAnonID() ?: @"";
-      NSString *crashLogString = [BITCrashReportTextFormatter stringValueForCrashReport:report crashReporterKey:installString];
       
-      if ([report.applicationInfo.applicationVersion compare:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]] == NSOrderedSame) {
-        _crashIdenticalCurrentVersion = YES;
-      }
+      installString = bit_appAnonID() ?: @"";
 			
       if (crashes == nil) {
         crashes = [NSMutableString string];
@@ -790,10 +1050,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       NSString *applicationLog = @"";
       NSString *description = @"";
       
-      NSString *errorString = nil;
-      NSPropertyListFormat format;
-      
-      NSData *plist = [NSData dataWithContentsOfFile:[filename stringByAppendingString:@".meta"]];
+      NSData *plist = [NSData dataWithContentsOfFile:[_crashesDir stringByAppendingPathComponent:metaFilename]];
       if (plist) {
         NSDictionary *metaDict = (NSDictionary *)[NSPropertyListSerialization
                                                   propertyListFromData:plist
@@ -815,12 +1072,12 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       
       [crashes appendFormat:@"<crash><applicationname>%s</applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><username>%@</username><contact>%@</contact><installstring>%@</installstring><description><![CDATA[%@]]></description></crash>",
        [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleExecutable"] UTF8String],
-       [self extractAppUUIDs:report],
-       report.applicationInfo.applicationIdentifier,
-       report.systemInfo.operatingSystemVersion,
-       [self getDevicePlatform],
+       appBinaryUUIDs,
+       appBundleIdentifier,
+       osVersion,
+       deviceModel,
        [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"],
-       report.applicationInfo.applicationVersion,
+       appBundleVersion,
        crashUUID,
        [crashLogString stringByReplacingOccurrencesOfString:@"]]>" withString:@"]]" @"]]><![CDATA[" @">" options:NSLiteralSearch range:NSMakeRange(0,crashLogString.length)],
        userid,

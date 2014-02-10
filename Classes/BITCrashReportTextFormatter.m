@@ -464,63 +464,70 @@ static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context) {
 {
   NSString *archName = @"???";
   if (imageInfo.codeType != nil && imageInfo.codeType.typeEncoding == PLCrashReportProcessorTypeEncodingMach) {
-    switch (imageInfo.codeType.type) {
-      case CPU_TYPE_ARM:
-        /* Apple includes subtype for ARM binaries. */
-        switch (imageInfo.codeType.subtype) {
-          case CPU_SUBTYPE_ARM_V6:
-            archName = @"armv6";
-            break;
-            
-          case CPU_SUBTYPE_ARM_V7:
-            archName = @"armv7";
-            break;
-            
-          case CPU_SUBTYPE_ARM_V7S:
-            archName = @"armv7s";
-            break;
-            
-          default:
-            archName = @"arm-unknown";
-            break;
-        }
-        break;
-        
-      case CPU_TYPE_ARM64:
-        /* Apple includes subtype for ARM64 binaries. */
-        switch (imageInfo.codeType.subtype) {
-          case CPU_SUBTYPE_ARM_ALL:
-            archName = @"arm64";
-            break;
-            
-          case CPU_SUBTYPE_ARM_V8:
-            archName = @"arm64";
-            break;
-            
-          default:
-            archName = @"arm64-unknown";
-            break;
-        }
-        break;
-        
-      case CPU_TYPE_X86:
-        archName = @"i386";
-        break;
-        
-      case CPU_TYPE_X86_64:
-        archName = @"x86_64";
-        break;
-        
-      case CPU_TYPE_POWERPC:
-        archName = @"powerpc";
-        break;
-        
-      default:
-        // Use the default archName value (initialized above).
-        break;
-    }
+    archName = [BITCrashReportTextFormatter bit_archNameFromCPUType:imageInfo.codeType.type subType:imageInfo.codeType.subtype];
   }
   
+  return archName;
+}
+
++ (NSString *)bit_archNameFromCPUType:(uint64_t)cpuType subType:(uint64_t)subType {
+  NSString *archName = @"???";
+  switch (cpuType) {
+    case CPU_TYPE_ARM:
+      /* Apple includes subtype for ARM binaries. */
+      switch (subType) {
+        case CPU_SUBTYPE_ARM_V6:
+          archName = @"armv6";
+          break;
+          
+        case CPU_SUBTYPE_ARM_V7:
+          archName = @"armv7";
+          break;
+          
+        case CPU_SUBTYPE_ARM_V7S:
+          archName = @"armv7s";
+          break;
+          
+        default:
+          archName = @"arm-unknown";
+          break;
+      }
+      break;
+      
+    case CPU_TYPE_ARM64:
+      /* Apple includes subtype for ARM64 binaries. */
+      switch (subType) {
+        case CPU_SUBTYPE_ARM_ALL:
+          archName = @"arm64";
+          break;
+          
+        case CPU_SUBTYPE_ARM_V8:
+          archName = @"arm64";
+          break;
+          
+        default:
+          archName = @"arm64-unknown";
+          break;
+      }
+      break;
+      
+    case CPU_TYPE_X86:
+      archName = @"i386";
+      break;
+      
+    case CPU_TYPE_X86_64:
+      archName = @"x86_64";
+      break;
+      
+    case CPU_TYPE_POWERPC:
+      archName = @"powerpc";
+      break;
+      
+    default:
+      // Use the default archName value (initialized above).
+      break;
+  }
+
   return archName;
 }
 
