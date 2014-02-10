@@ -346,6 +346,7 @@ NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
                                                                                              // we only need to log this once
                                                                                              if (!_didLogLowMemoryWarning) {
                                                                                                [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITAppDidReceiveLowMemoryNotification];
+                                                                                               [[NSUserDefaults standardUserDefaults] synchronize];
                                                                                                _didLogLowMemoryWarning = YES;
                                                                                              }
                                                                                            }];
