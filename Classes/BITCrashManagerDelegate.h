@@ -130,4 +130,25 @@
  */
 - (void)crashManagerDidFinishSendingCrashReport:(BITCrashManager *)crashManager;
 
+///-----------------------------------------------------------------------------
+/// @name Experimental
+///-----------------------------------------------------------------------------
+
+/** Define if a report should be considered as a crash report
+ 
+ Due to the risk, that these reports may be false positives, this delegates allows the
+ developer to influence which reports detected by the heuristic should actually be reported.
+ 
+ The developer can use the following property to get more information about the crash scenario:
+ - `[BITCrashManager didReceiveMemoryWarningInLastSession]`: Did the app receive a low memory warning
+ 
+ This allows only reports to be considered where at least one low memory warning notification was
+ received by the app to reduce to possibility of having false positives.
+ 
+ @param crashManager The `BITCrashManager` instance invoking this delegate
+ @return `YES` if the heuristic based detected report should be reported, otherwise `NO`
+ @see `[BITCrashManager didReceiveMemoryWarningInLastSession]`
+ */
+-(BOOL)considerAppNotTerminatedCleanlyReportForCrashManager:(BITCrashManager *)crashManager;
+
 @end

@@ -167,7 +167,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
 
 
 /**
- *  Enables heuristics to detect the app getting killed while being in the foreground
+ *  EXPERIMENTAL: Enable heuristics to detect the app not terminating cleanly
  *
  *  This allows it to get a crash report if the app got killed while being in the foreground
  *  because of now of the following reasons:
@@ -176,6 +176,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  *  - The app tried to allocate too much memory. If iOS did send a memory warning before killing the app because of this reason, `didReceiveMemoryWarningInLastSession` returns `YES`.
  *  - Permitted background duration if main thread is running in an endless loop
  *  - App failed to resume in time if main thread is running in an endless loop
+ *  - If `enableMachExceptionHandler` is not activated, crashed due to stackoverflow will also be reported
  *
  *  The following kills can _NOT_ be detected:
  *  - Terminating the app takes too long
@@ -186,16 +187,23 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  *  Crash reports triggered by this mechanisms do _NOT_ contain any stack traces since the time of the kill
  *  cannot be intercepted and hence no stack trace of the time of the kill event can't be gathered.
  *
+ *  The heuristic is implemented as follows:
+ *  If the app never gets a `UIApplicationDidEnterBackgroundNotification` or `UIApplicationWillTerminateNotification`
+ *  notification, PLCrashReporter doesn't detect a crash itself, and the app starts up again, it is assumed that
+ *  the app got either killed by iOS while being in foreground or a crash occured that couldn't be detected.
+ *
  *  Default: _NO_
  *
- * @warning This is a heuristic and it _MAY_ report false positives!
+ * @warning This is a heuristic and it _MAY_ report false positives! It has been tested with iOS 6.1 and iOS 7.
+ * Depending on Apple changing notification events, new iOS version may cause more false positives!
  *
  * @see wasKilledInLastSession
  * @see didReceiveMemoryWarningInLastSession
+ * @see `BITCrashManagerDelegate considerAppNotTerminatedCleanlyReportForCrashManager:`
  * @see [Apple Technical Note TN2151](https://developer.apple.com/library/ios/technotes/tn2151/_index.html)
  * @see [Apple Technical Q&A QA1693](https://developer.apple.com/library/ios/qa/qa1693/_index.html)
  */
-@property (nonatomic, assign, getter = isAppKillDetectionWhileInForegroundEnabled) BOOL enableAppKillDetectionWhileInForeground;
+@property (nonatomic, assign, getter = isAppNotTerminatingCleanlyDetectionEnabled) BOOL enableAppNotTerminatingCleanlyDetection;
 
 
 /**
@@ -271,7 +279,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  @warning This property only has a correct value, once `[BITHockeyManager startManager]` was
  invoked! In addition, it is automatically disabled while a debugger session is active!
  
- @see enableAppKillDetectionWhileInForeground
+ @see enableAppNotTerminatingCleanlyDetection
  @see didReceiveMemoryWarningInLastSession
  */
 @property (nonatomic, readonly) BOOL wasKilledInLastSession;
@@ -292,7 +300,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  @warning This property only has a correct value, once `[BITHockeyManager startManager]` was
  invoked!
  
- @see enableAppKillDetectionWhileInForeground
+ @see enableAppNotTerminatingCleanlyDetection
  @see wasKilledInLastSession
  */
 @property (nonatomic, readonly) BOOL didReceiveMemoryWarningInLastSession;

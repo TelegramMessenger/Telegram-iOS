@@ -370,7 +370,7 @@ NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
 }
 
 - (void)leavingAppSafely {
-  if (self.isAppKillDetectionWhileInForegroundEnabled)
+  if (self.isAppNotTerminatingCleanlyDetectionEnabled)
     [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITAppWentIntoBackgroundSafely];
 }
 
@@ -378,7 +378,7 @@ NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
   // we disable kill detection while the debugger is running, since we'd get only false positives if the app is terminated by the user using the debugger
   if (self.isDebuggerAttached) {
     [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITAppWentIntoBackgroundSafely];
-  } else if (self.isAppKillDetectionWhileInForegroundEnabled) {
+  } else if (self.isAppNotTerminatingCleanlyDetectionEnabled) {
     [[NSUserDefaults standardUserDefaults] setBool:NO forKey:kBITAppWentIntoBackgroundSafely];
     
     static dispatch_once_t predAppData;
@@ -862,19 +862,26 @@ NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
   if ([[NSUserDefaults standardUserDefaults] valueForKey:kBITAppDidReceiveLowMemoryNotification])
     _didReceiveMemoryWarningInLastSession = [[NSUserDefaults standardUserDefaults] boolForKey:kBITAppDidReceiveLowMemoryNotification];
 
-  if (!_didCrashInLastSession && self.isAppKillDetectionWhileInForegroundEnabled) {
+  if (!_didCrashInLastSession && self.isAppNotTerminatingCleanlyDetectionEnabled) {
     BOOL didAppSwitchToBackgroundSafely = YES;
     
     if ([[NSUserDefaults standardUserDefaults] valueForKey:kBITAppWentIntoBackgroundSafely])
       didAppSwitchToBackgroundSafely = [[NSUserDefaults standardUserDefaults] boolForKey:kBITAppWentIntoBackgroundSafely];
 
     if (!didAppSwitchToBackgroundSafely) {
-      NSLog(@"AppHasBeenKilled!");
+      BOOL considerReport = YES;
       
-      [self createCrashReportForAppKill];
+      if (self.delegate &&
+          [self.delegate respondsToSelector:@selector(considerAppNotTerminatedCleanlyReportForCrashManager:)]) {
+        considerReport = [self.delegate considerAppNotTerminatedCleanlyReportForCrashManager:self];
+      }
       
-      _wasKilledInLastSession = YES;
-      _didCrashInLastSession = YES;
+      if (considerReport) {
+        [self createCrashReportForAppKill];
+      
+        _wasKilledInLastSession = YES;
+        _didCrashInLastSession = YES;
+      }
     }
   }
   [self appEnteredForeground];
@@ -924,7 +931,7 @@ NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
   [fakeReportString appendString:@"Exception Codes: 00000020 at 0x8badf00d\n"];
   [fakeReportString appendString:@"\n"];
   [fakeReportString appendString:@"Application Specific Information:\n"];
-  [fakeReportString appendString:@"The application was killed by the iOS watchdog."];
+  [fakeReportString appendString:@"The application did not terminate cleanly but no crash occured."];
   if (self.didReceiveMemoryWarningInLastSession) {
     [fakeReportString appendString:@" The app received at least one Low Memory Warning."];
   }
