@@ -936,7 +936,7 @@ NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
   if (self.didReceiveMemoryWarningInLastSession) {
     [fakeReportString appendString:@" The app received at least one Low Memory Warning."];
   }
-  [fakeReportString appendString:@"\n"];
+  [fakeReportString appendString:@"\n\n"];
   
   NSString *fakeReportFilename = [NSString stringWithFormat: @"%.0f", [NSDate timeIntervalSinceReferenceDate]];
   
