@@ -417,7 +417,10 @@
  This property is optional and can be used as an alternative to the delegate. If you
  want to define specific data for each component, use the delegate instead which does
  overwrite the values set by this property.
- 
+
+ @warning When returning a non nil value, crash reports are not anonymous any more
+ and the crash alerts will not show the word "anonymous"!
+
  @see userID
  @see userEmail
  @see `[BITHockeyManagerDelegate userNameForHockeyManager:componentManager:]`
@@ -437,6 +440,9 @@
  want to define specific data for each component, use the delegate instead which does
  overwrite the values set by this property.
  
+ @warning When returning a non nil value, crash reports are not anonymous any more
+ and the crash alerts will not show the word "anonymous"!
+
  @see userID
  @see userName
  @see `[BITHockeyManagerDelegate userEmailForHockeyManager:componentManager:]`
