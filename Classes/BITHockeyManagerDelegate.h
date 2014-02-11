@@ -121,7 +121,7 @@
 
 /** Return the userid that should used in the SDK components
  
- Right now this is used by the `BITCrashMananger` to attach to a crash report.
+ Right now this is used by the `BITCrashManager` to attach to a crash report.
  `BITFeedbackManager` uses it too for assigning the user to a discussion thread.
  
  In addition, if this returns not nil for `BITFeedbackManager` the user will
@@ -152,7 +152,7 @@
 
 /** Return the user name that should used in the SDK components
  
- Right now this is used by the `BITCrashMananger` to attach to a crash report.
+ Right now this is used by the `BITCrashManager` to attach to a crash report.
  `BITFeedbackManager` uses it too for assigning the user to a discussion thread.
  
  In addition, if this returns not nil for `BITFeedbackManager` the user will
@@ -182,7 +182,7 @@
 
 /** Return the users email address that should used in the SDK components
  
- Right now this is used by the `BITCrashMananger` to attach to a crash report.
+ Right now this is used by the `BITCrashManager` to attach to a crash report.
  `BITFeedbackManager` uses it too for assigning the user to a discussion thread.
  
  In addition, if this returns not nil for `BITFeedbackManager` the user will

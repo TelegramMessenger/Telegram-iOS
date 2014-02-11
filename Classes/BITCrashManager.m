@@ -298,7 +298,8 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
  *	@return The userID value
  */
 - (NSString *)userIDForCrashReport {
-  NSString *userID = @"";
+  // first check the global keychain storage
+  NSString *userID = [self stringValueFromKeychainForKey:kBITHockeyMetaUserID] ?: @"";
   
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
   // if we have an identification from BITAuthenticator, use this as a default.
@@ -327,7 +328,8 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
  *	@return The userName value
  */
 - (NSString *)userNameForCrashReport {
-  NSString *username = @"";
+  // first check the global keychain storage
+  NSString *username = [self stringValueFromKeychainForKey:kBITHockeyMetaUserName] ?: @"";
   
   if (self.delegate && [self.delegate respondsToSelector:@selector(userNameForCrashManager:)]) {
     username = [self.delegate userNameForCrashManager:self] ?: @"";
@@ -348,7 +350,8 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
  *	@return The userEmail value
  */
 - (NSString *)userEmailForCrashReport {
-  NSString *useremail = @"";
+  // first check the global keychain storage
+  NSString *useremail = [self stringValueFromKeychainForKey:kBITHockeyMetaUserEmail] ?: @"";
   
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
   // if we have an identification from BITAuthenticator, use this as a default.

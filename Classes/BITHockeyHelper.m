@@ -113,7 +113,13 @@ BOOL bit_validateEmail(NSString *email) {
 }
 
 NSString *bit_keychainHockeySDKServiceName(void) {
-  NSString *serviceName = [NSString stringWithFormat:@"%@.HockeySDK", bit_mainBundleIdentifier()];
+  static NSString *serviceName = nil;
+  static dispatch_once_t predServiceName;
+  
+  dispatch_once(&predServiceName, ^{
+    serviceName = [NSString stringWithFormat:@"%@.HockeySDK", bit_mainBundleIdentifier()];
+  });
+  
   return serviceName;
 }
 
