@@ -660,8 +660,14 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       if (self.isMachExceptionHandlerEnabled) {
         signalHandlerType = PLCrashReporterSignalHandlerTypeMach;
       }
+      
+      PLCrashReporterSymbolicationStrategy symbolicationStrategy = PLCrashReporterSymbolicationStrategyNone;
+      if (self.isOnDeviceSymbolicationEnabled) {
+        symbolicationStrategy = PLCrashReporterSymbolicationStrategyAll;
+      }
+      
       BITPLCrashReporterConfig *config = [[BITPLCrashReporterConfig alloc] initWithSignalHandlerType: signalHandlerType
-                                                                               symbolicationStrategy: PLCrashReporterSymbolicationStrategyAll];
+                                                                               symbolicationStrategy: symbolicationStrategy];
       self.plCrashReporter = [[BITPLCrashReporter alloc] initWithConfiguration: config];
       
       // Check if we previously crashed

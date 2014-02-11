@@ -167,6 +167,20 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
 
 
 /**
+ *  Enable on device symbolication for system symbols
+ *
+ *  By default, the SDK does not symbolicate on the device, since this can
+ *  take a few seconds at each crash. Also note that symbolication on the
+ *  device might not be able to retrieve all symbols.
+ *
+ *  Enable if you want to analyze crashes on unreleased OS versions.
+ *
+ *  Default: _NO_
+ */
+@property (nonatomic, assign, getter=isOnDeviceSymbolicationEnabled) BOOL enableOnDeviceSymbolication;
+
+
+/**
  * Set the callbacks that will be executed prior to program termination after a crash has occurred
  *
  * PLCrashReporter provides support for executing an application specified function in the context
