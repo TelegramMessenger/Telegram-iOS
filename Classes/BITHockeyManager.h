@@ -312,9 +312,6 @@
 /**
  Reference to the initialized BITAuthenticator module
  
- The authenticator is disabled by default. To enable it you need to set
- `[BITAuthenticator authenticationType]` and `[BITAuthenticator validationType]`
- 
  Returns the BITAuthenticator instance initialized by BITHockeyManager
  
  @see configureWithIdentifier:delegate:
