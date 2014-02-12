@@ -42,14 +42,21 @@
 #import "BITHockeyHelper.h"
 
 
-@interface BITFeedbackComposeViewController () <BITFeedbackUserDataDelegate> {
+@interface BITFeedbackComposeViewController () <BITFeedbackUserDataDelegate, UIImagePickerControllerDelegate> {
   UIStatusBarStyle _statusBarStyle;
 }
 
 @property (nonatomic, weak) BITFeedbackManager *manager;
 @property (nonatomic, strong) UITextView *textView;
+@property (nonatomic, strong) UIView *contentViewContainer;
+@property (nonatomic, strong) UIScrollView *photoScrollView;
+@property (nonatomic, strong) NSMutableArray *photoScrollViewImageViews;
 
 @property (nonatomic, strong) NSString *text;
+
+@property (nonatomic, strong) NSMutableArray *photos;
+
+@property (nonatomic, strong) UIView *textAccessoryView;
 
 @end
 
@@ -68,6 +75,8 @@
     _blockUserDataScreen = NO;
     _delegate = nil;
     _manager = [BITHockeyManager sharedHockeyManager].feedbackManager;
+    _photos = [NSMutableArray new];
+    _photoScrollViewImageViews = [NSMutableArray new];
 
     _text = nil;
   }
@@ -122,12 +131,12 @@
       frame.size.height = windowSize.width - navBarHeight - modalGap - kbSize.width;
     }
   }
-  [self.textView setFrame:frame];
+  [self.contentViewContainer setFrame:frame];
 }
 
 - (void)keyboardWillBeHidden:(NSNotification*)aNotification {
   CGRect frame = CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height);
-  [self.textView setFrame:frame];
+  [self.contentViewContainer setFrame:frame];
 }
 
 
@@ -142,20 +151,49 @@
   self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel
                                                                                          target:self
                                                                                          action:@selector(dismissAction:)];
-  
   self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeSend")
                                                                              style:UIBarButtonItemStyleDone
                                                                             target:self
                                                                             action:@selector(sendAction:)];
+  
+  // Container that contains both the textfield and eventually the photo scroll view on the right side
+  self.contentViewContainer = [[UIView alloc] initWithFrame:self.view.bounds];
+  [self.view addSubview:self.contentViewContainer];
+  
 
+  
   // message input textfield
-  self.textView = [[UITextView alloc] initWithFrame:self.view.frame];
+  self.textView = [[UITextView alloc] initWithFrame:self.view.bounds];
   self.textView.font = [UIFont systemFontOfSize:17];
   self.textView.delegate = self;
   self.textView.backgroundColor = [UIColor whiteColor];
   self.textView.returnKeyType = UIReturnKeyDefault;
-  self.textView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-  [self.view addSubview:self.textView];
+  self.textView.autoresizingMask = UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight;
+  
+  [self.contentViewContainer addSubview:self.textView];
+  
+  // Add Photo Button + Container that's displayed above the keyboard.
+  self.textAccessoryView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, CGRectGetWidth(self.view.frame), 44)];
+  self.textAccessoryView.backgroundColor = [UIColor colorWithRed:0.9f green:0.9f blue:0.9f alpha:1.0f];
+  UIButton *addPhotoButton = [UIButton buttonWithType:UIButtonTypeSystem];
+  [addPhotoButton setTitle:@"+ Add Photo" forState:UIControlStateNormal];
+  addPhotoButton.frame = CGRectMake(0, 0, 100, 44);
+  
+  [addPhotoButton addTarget:self action:@selector(addPhotoAction:) forControlEvents:UIControlEventTouchUpInside];
+  
+  [self.textAccessoryView addSubview:addPhotoButton];
+  
+  self.textView.inputAccessoryView = self.textAccessoryView;
+  
+  self.photoScrollView = [[UIScrollView alloc] initWithFrame:CGRectZero];
+  self.photoScrollView.scrollEnabled = YES;
+  self.photoScrollView.bounces = YES;
+  self.photoScrollView.autoresizingMask = UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight;
+
+  
+  [self.contentViewContainer addSubview:self.photoScrollView];
+  
+  
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -178,7 +216,7 @@
   [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleBlackOpaque];
 #endif
   
-  [self.textView setFrame:self.view.frame];
+ // [self.textView setFrame:self.view.frame];
 
   if (_text) {
     self.textView.text = _text;
@@ -216,6 +254,69 @@
 
 - (void)viewDidDisappear:(BOOL)animated {
 	[super viewDidDisappear:animated];
+}
+
+-(void)refreshPhotoScrollview {
+  CGFloat scrollViewWidth = 0;
+  
+  if (self.photos.count){
+    scrollViewWidth = 100;
+  }
+  
+  CGRect textViewFrame = self.textView.frame;
+  
+  CGRect scrollViewFrame = self.photoScrollView.frame;
+  
+  BOOL alreadySetup = CGRectGetWidth(scrollViewFrame) == scrollViewWidth;
+  
+  if (!alreadySetup){
+    textViewFrame.size.width -= scrollViewWidth;
+    
+    // status bar?
+
+    scrollViewFrame = CGRectMake(CGRectGetMaxX(textViewFrame), self.view.frame.origin.y, scrollViewWidth, CGRectGetHeight(textViewFrame));
+    self.textView.frame = textViewFrame;
+    self.photoScrollView.frame = scrollViewFrame;
+    self.photoScrollView.contentInset = self.textView.contentInset;
+  }
+  
+  for (UIView *subview in self.photoScrollView.subviews){
+    [subview removeFromSuperview];
+  }
+  
+  if (self.photos.count > self.photoScrollViewImageViews.count){
+    NSInteger numberOfViewsToCreate = self.photos.count - self.photoScrollViewImageViews.count;
+    for (int i = 0;i<numberOfViewsToCreate;i++){
+      UIImageView *newImageView = [[UIImageView alloc] initWithFrame:CGRectZero];
+      [self.photoScrollViewImageViews addObject:newImageView];
+    }
+  }
+    
+  int index = 0;
+  
+  CGFloat currentYOffset = 0.0f;
+  
+  for (UIImage* photo in self.photos){
+    UIImageView *imageView = self.photoScrollViewImageViews[index];
+    
+    // determine the factor by which we scale..
+    CGFloat scaleFactor = CGRectGetWidth(self.photoScrollView.frame) / photo.size.width;
+    
+    CGFloat height = photo.size.height * scaleFactor;
+    
+    imageView.frame = CGRectInset(CGRectMake(0, currentYOffset, scaleFactor * photo.size.width, height),10,10);
+    
+    currentYOffset += height;
+    
+    [self.photoScrollView addSubview:imageView];
+    
+    imageView.image = photo;
+    index++;
+  }
+  
+  [self.photoScrollView setContentSize:CGSizeMake(CGRectGetWidth(self.photoScrollView.frame), currentYOffset)];
+  
+  
 }
 
 
@@ -266,6 +367,32 @@
   } else {
     [self dismissViewControllerAnimated:YES completion:nil];
   }
+}
+
+-(void)addPhotoAction:(id)sender {
+  // add photo.
+  UIImagePickerController *pickerController = [[UIImagePickerController alloc] init];
+  pickerController.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
+  pickerController.delegate = self;
+  pickerController.editing = NO;
+  [self presentModalViewController:pickerController animated:YES];
+}
+
+#pragma mark - UIImagePickerControllerDelegate
+
+- (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary *)info {
+  UIImage *pickedImage = info[UIImagePickerControllerOriginalImage];
+  
+  if (pickedImage){
+    [self.photos addObject:pickedImage];
+  }
+  
+  [picker dismissModalViewControllerAnimated:YES];
+  [self refreshPhotoScrollview];
+}
+
+- (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker {
+  
 }
 
 #pragma mark - BITFeedbackUserDataDelegate
