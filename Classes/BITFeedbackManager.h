@@ -87,9 +87,9 @@ typedef NS_ENUM(NSInteger, BITFeedbackUserDataElement) {
  reload the list content from the server and changing the users name or email if these
  are allowed to be set.
  
- It is also possible to invoke the user interface to compose a new message anywhere in your
+ It is also possible to invoke the user interface to compose a new message in your
  own code, by calling `[BITFeedbackManager showFeedbackComposeView]` modally or adding
- `[BITFeedackManager feedbackComposeViewController]` to push onto a navigation stack.
+ `[BITFeedbackManager feedbackComposeViewController]` to push onto a navigation stack.
  
  If new messages are written while the device is offline, the SDK automatically retries to
  send them once the app starts again or gets active again, or if the notification

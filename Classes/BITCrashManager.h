@@ -167,6 +167,20 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
 
 
 /**
+ *  Enable on device symbolication for system symbols
+ *
+ *  By default, the SDK does not symbolicate on the device, since this can
+ *  take a few seconds at each crash. Also note that symbolication on the
+ *  device might not be able to retrieve all symbols.
+ *
+ *  Enable if you want to analyze crashes on unreleased OS versions.
+ *
+ *  Default: _NO_
+ */
+@property (nonatomic, assign, getter=isOnDeviceSymbolicationEnabled) BOOL enableOnDeviceSymbolication;
+
+
+/**
  *  EXPERIMENTAL: Enable heuristics to detect the app not terminating cleanly
  *
  *  This allows it to get a crash report if the app got killed while being in the foreground

@@ -30,6 +30,8 @@ Previous versions of HockeySDK for iOS used the response of the method `UIDevice
 
     The app opens Safari and asks the user to log in to his HockeyApp account.
 
+The strategies **BITAuthenticatorIdentificationTypeDevice** and **BITAuthenticatorIdentificationTypeWebAuth** also allow for automatic authentication as explained [here](http://hockeyapp.net/blog/2014/01/31/automatic-authentication-ios.html).
+
 After setting up one of those strategies, you need to trigger the authentication process by calling  
 
     [[BITHockeyManager sharedHockeyManager].authenticator authenticateInstallation];

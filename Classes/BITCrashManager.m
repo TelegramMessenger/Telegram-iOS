@@ -145,17 +145,7 @@ NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
       [[NSUserDefaults standardUserDefaults] setInteger:_crashManagerStatus forKey:kBITCrashManagerStatus];
     }
     
-    // temporary directory for crashes grabbed from PLCrashReporter
-    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
-    _crashesDir = [[paths objectAtIndex:0] stringByAppendingPathComponent:BITHOCKEY_IDENTIFIER];
-    
-    if (![self.fileManager fileExistsAtPath:_crashesDir]) {
-      NSDictionary *attributes = [NSDictionary dictionaryWithObject: [NSNumber numberWithUnsignedLong: 0755] forKey: NSFilePosixPermissions];
-      NSError *theError = NULL;
-      
-      [self.fileManager createDirectoryAtPath:_crashesDir withIntermediateDirectories: YES attributes: attributes error: &theError];
-    }
-    
+    _crashesDir = bit_settingsDir();
     _settingsFile = [_crashesDir stringByAppendingPathComponent:BITHOCKEY_CRASH_SETTINGS];
     _analyzerInProgressFile = [_crashesDir stringByAppendingPathComponent:BITHOCKEY_CRASH_ANALYZER];
 
@@ -425,7 +415,8 @@ NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
  *	@return The userID value
  */
 - (NSString *)userIDForCrashReport {
-  NSString *userID = @"";
+  // first check the global keychain storage
+  NSString *userID = [self stringValueFromKeychainForKey:kBITHockeyMetaUserID] ?: @"";
   
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
   // if we have an identification from BITAuthenticator, use this as a default.
@@ -454,7 +445,8 @@ NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
  *	@return The userName value
  */
 - (NSString *)userNameForCrashReport {
-  NSString *username = @"";
+  // first check the global keychain storage
+  NSString *username = [self stringValueFromKeychainForKey:kBITHockeyMetaUserName] ?: @"";
   
   if (self.delegate && [self.delegate respondsToSelector:@selector(userNameForCrashManager:)]) {
     username = [self.delegate userNameForCrashManager:self] ?: @"";
@@ -475,7 +467,8 @@ NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
  *	@return The userEmail value
  */
 - (NSString *)userEmailForCrashReport {
-  NSString *useremail = @"";
+  // first check the global keychain storage
+  NSString *useremail = [self stringValueFromKeychainForKey:kBITHockeyMetaUserEmail] ?: @"";
   
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
   // if we have an identification from BITAuthenticator, use this as a default.
@@ -792,8 +785,14 @@ NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
       if (self.isMachExceptionHandlerEnabled) {
         signalHandlerType = PLCrashReporterSignalHandlerTypeMach;
       }
+      
+      PLCrashReporterSymbolicationStrategy symbolicationStrategy = PLCrashReporterSymbolicationStrategyNone;
+      if (self.isOnDeviceSymbolicationEnabled) {
+        symbolicationStrategy = PLCrashReporterSymbolicationStrategyAll;
+      }
+      
       BITPLCrashReporterConfig *config = [[BITPLCrashReporterConfig alloc] initWithSignalHandlerType: signalHandlerType
-                                                                               symbolicationStrategy: PLCrashReporterSymbolicationStrategyAll];
+                                                                               symbolicationStrategy: symbolicationStrategy];
       self.plCrashReporter = [[BITPLCrashReporter alloc] initWithConfiguration: config];
       
       // Check if we previously crashed
