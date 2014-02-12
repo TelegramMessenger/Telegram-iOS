@@ -312,9 +312,6 @@
 /**
  Reference to the initialized BITAuthenticator module
  
- The authenticator is disabled by default. To enable it you need to set
- `[BITAuthenticator authenticationType]` and `[BITAuthenticator validationType]`
- 
  Returns the BITAuthenticator instance initialized by BITHockeyManager
  
  @see configureWithIdentifier:delegate:
@@ -387,7 +384,74 @@
 
 
 ///-----------------------------------------------------------------------------
-/// @name Meta
+/// @name Additional meta data
+///-----------------------------------------------------------------------------
+
+/** Set the userid that should used in the SDK components
+ 
+ Right now this is used by the `BITCrashManager` to attach to a crash report.
+ `BITFeedbackManager` uses it too for assigning the user to a discussion thread.
+
+ The value can be set at any time and will be stored in the keychain on the current
+ device only! To delete the value from the keychain set the value to `nil`.
+ 
+ This property is optional and can be used as an alternative to the delegate. If you
+ want to define specific data for each component, use the delegate instead which does
+ overwrite the values set by this property.
+ 
+ @see userName
+ @see userEmail
+ @see `[BITHockeyManagerDelegate userIDForHockeyManager:componentManager:]`
+ */
+@property (nonatomic, retain) NSString *userID;
+
+
+/** Set the user name that should used in the SDK components
+ 
+ Right now this is used by the `BITCrashManager` to attach to a crash report.
+ `BITFeedbackManager` uses it too for assigning the user to a discussion thread.
+ 
+ The value can be set at any time and will be stored in the keychain on the current
+ device only! To delete the value from the keychain set the value to `nil`.
+ 
+ This property is optional and can be used as an alternative to the delegate. If you
+ want to define specific data for each component, use the delegate instead which does
+ overwrite the values set by this property.
+
+ @warning When returning a non nil value, crash reports are not anonymous any more
+ and the crash alerts will not show the word "anonymous"!
+
+ @see userID
+ @see userEmail
+ @see `[BITHockeyManagerDelegate userNameForHockeyManager:componentManager:]`
+ */
+@property (nonatomic, retain) NSString *userName;
+
+
+/** Set the users email address that should used in the SDK components
+ 
+ Right now this is used by the `BITCrashManager` to attach to a crash report.
+ `BITFeedbackManager` uses it too for assigning the user to a discussion thread.
+ 
+ The value can be set at any time and will be stored in the keychain on the current
+ device only! To delete the value from the keychain set the value to `nil`.
+ 
+ This property is optional and can be used as an alternative to the delegate. If you
+ want to define specific data for each component, use the delegate instead which does
+ overwrite the values set by this property.
+ 
+ @warning When returning a non nil value, crash reports are not anonymous any more
+ and the crash alerts will not show the word "anonymous"!
+
+ @see userID
+ @see userName
+ @see `[BITHockeyManagerDelegate userEmailForHockeyManager:componentManager:]`
+ */
+@property (nonatomic, retain) NSString *userEmail;
+
+
+///-----------------------------------------------------------------------------
+/// @name SDK meta data
 ///-----------------------------------------------------------------------------
 
 /**

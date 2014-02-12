@@ -29,13 +29,14 @@
 #import <Foundation/Foundation.h>
 
 @class BITFeedbackManager;
+@protocol BITFeedbackComposeViewControllerDelegate;
 
 /**
  *	Delegate protocol which is notified about changes in the feedbackManager
  *  @TODO 
  *    * move shouldShowUpdateAlert from feedbackManager here
  */
-@protocol BITFeedbackManagerDelegate <NSObject>
+@protocol BITFeedbackManagerDelegate <NSObject, BITFeedbackComposeViewControllerDelegate>
 
 @optional
 

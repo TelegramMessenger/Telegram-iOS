@@ -43,6 +43,10 @@
 
 #define BITHOCKEY_USAGE_DATA @"BITUpdateManager.plist"
 
+#define kBITHockeyMetaUserName  @"BITHockeyMetaUserName"
+#define kBITHockeyMetaUserEmail @"BITHockeyMetaUserEmail"
+#define kBITHockeyMetaUserID    @"BITHockeyMetaUserID"
+
 #define kBITUpdateInstalledUUID              @"BITUpdateInstalledUUID"
 #define kBITUpdateInstalledVersionID         @"BITUpdateInstalledVersionID"
 #define kBITUpdateCurrentCompanyName         @"BITUpdateCurrentCompanyName"

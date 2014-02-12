@@ -53,7 +53,6 @@
 
 @implementation BITFeedbackManager {
   NSFileManager  *_fileManager;
-  NSString       *_feedbackDir;
   NSString       *_settingsFile;
   
   id _appDidBecomeActiveObserver;
@@ -89,18 +88,7 @@
 
     _fileManager = [[NSFileManager alloc] init];
 
-    // temporary directory for crashes grabbed from PLCrashReporter
-    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
-    _feedbackDir = [[paths objectAtIndex:0] stringByAppendingPathComponent:BITHOCKEY_IDENTIFIER];
-    
-    if (![_fileManager fileExistsAtPath:_feedbackDir]) {
-      NSDictionary *attributes = [NSDictionary dictionaryWithObject: [NSNumber numberWithUnsignedLong: 0755] forKey: NSFilePosixPermissions];
-      NSError *theError = NULL;
-      
-      [_fileManager createDirectoryAtPath:_feedbackDir withIntermediateDirectories: YES attributes: attributes error: &theError];
-    }
-    
-    _settingsFile = [_feedbackDir stringByAppendingPathComponent:BITHOCKEY_FEEDBACK_SETTINGS];
+    _settingsFile = [bit_settingsDir() stringByAppendingPathComponent:BITHOCKEY_FEEDBACK_SETTINGS];
     
     _userID = nil;
     _userName = nil;
@@ -218,7 +206,10 @@
 
 
 - (BITFeedbackComposeViewController *)feedbackComposeViewController {
-  return [[BITFeedbackComposeViewController alloc] init];
+  BITFeedbackComposeViewController *composeViewController = [[BITFeedbackComposeViewController alloc] init];
+  // by default set the delegate to be identical to the one of BITFeedbackManager
+  [composeViewController setDelegate:self.delegate];
+  return composeViewController;
 }
 
 - (void)showFeedbackComposeView {
@@ -271,63 +262,72 @@
   }
 }
 
-- (BOOL)updateUserIDUsingDelegate {
+- (BOOL)updateUserIDUsingKeychainAndDelegate {
   BOOL availableViaDelegate = NO;
+  
+  NSString *userID = [self stringValueFromKeychainForKey:kBITHockeyMetaUserID];
   
   if ([BITHockeyManager sharedHockeyManager].delegate &&
       [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
-    NSString *userID = [[BITHockeyManager sharedHockeyManager].delegate
-                        userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                        componentManager:self];
-    if (userID) {
-      availableViaDelegate = YES;
-      self.userID = userID;
-    }
+    userID = [[BITHockeyManager sharedHockeyManager].delegate
+              userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
+              componentManager:self];
   }
-  
+
+  if (userID) {
+    availableViaDelegate = YES;
+    self.userID = userID;
+  }
+
   return availableViaDelegate;
 }
 
-- (BOOL)updateUserNameUsingDelegate {
+- (BOOL)updateUserNameUsingKeychainAndDelegate {
   BOOL availableViaDelegate = NO;
+  
+  NSString *userName = [self stringValueFromKeychainForKey:kBITHockeyMetaUserName];
   
   if ([BITHockeyManager sharedHockeyManager].delegate &&
       [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
-    NSString *userName = [[BITHockeyManager sharedHockeyManager].delegate
+    userName = [[BITHockeyManager sharedHockeyManager].delegate
                           userNameForHockeyManager:[BITHockeyManager sharedHockeyManager]
                           componentManager:self];
-    if (userName) {
-      availableViaDelegate = YES;
-      self.userName = userName;
-      self.requireUserName = BITFeedbackUserDataElementDontShow;
-    }
   }
-  
+
+  if (userName) {
+    availableViaDelegate = YES;
+    self.userName = userName;
+    self.requireUserName = BITFeedbackUserDataElementDontShow;
+  }
+
   return availableViaDelegate;
 }
 
-- (BOOL)updateUserEmailUsingDelegate {
+- (BOOL)updateUserEmailUsingKeychainAndDelegate {
   BOOL availableViaDelegate = NO;
   
+  NSString *userEmail = [self stringValueFromKeychainForKey:kBITHockeyMetaUserEmail];
+
   if ([BITHockeyManager sharedHockeyManager].delegate &&
       [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userEmailForHockeyManager:componentManager:)]) {
-    NSString *userEmail = [[BITHockeyManager sharedHockeyManager].delegate
-                           userEmailForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                           componentManager:self];
-    if (userEmail) {
-      availableViaDelegate = YES;
-      self.userEmail = userEmail;
-      self.requireUserEmail = BITFeedbackUserDataElementDontShow;
-    }
+    userEmail = [[BITHockeyManager sharedHockeyManager].delegate
+                 userEmailForHockeyManager:[BITHockeyManager sharedHockeyManager]
+                 componentManager:self];
   }
-  
+
+  if (userEmail) {
+    availableViaDelegate = YES;
+    self.userEmail = userEmail;
+    self.requireUserEmail = BITFeedbackUserDataElementDontShow;
+  }
+
   return availableViaDelegate;
 }
 
 - (void)updateAppDefinedUserData {
-  [self updateUserIDUsingDelegate];
-  [self updateUserNameUsingDelegate];
-  [self updateUserEmailUsingDelegate];
+  [self updateUserIDUsingKeychainAndDelegate];
+  [self updateUserNameUsingKeychainAndDelegate];
+  [self updateUserEmailUsingKeychainAndDelegate];
 
   // if both values are shown via the delegates, we never ever did ask and will never ever ask for user data
   if (self.requireUserName == BITFeedbackUserDataElementDontShow &&
@@ -339,9 +339,9 @@
 #pragma mark - Local Storage
 
 - (void)loadMessages {
-  BOOL userIDViaDelegate = [self updateUserIDUsingDelegate];
-  BOOL userNameViaDelegate = [self updateUserNameUsingDelegate];
-  BOOL userEmailViaDelegate = [self updateUserEmailUsingDelegate];
+  BOOL userIDViaDelegate = [self updateUserIDUsingKeychainAndDelegate];
+  BOOL userNameViaDelegate = [self updateUserNameUsingKeychainAndDelegate];
+  BOOL userEmailViaDelegate = [self updateUserEmailUsingKeychainAndDelegate];
   
   if (![_fileManager fileExistsAtPath:_settingsFile])
     return;

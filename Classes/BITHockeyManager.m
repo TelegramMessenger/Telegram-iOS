@@ -34,6 +34,7 @@
 
 #import "BITHockeyHelper.h"
 #import "BITHockeyAppClient.h"
+#import "BITKeychainUtils.h"
 
 
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
@@ -348,6 +349,56 @@
     }
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
   }
+}
+
+- (void)modifyKeychainUserValue:(NSString *)value forKey:(NSString *)key {
+  NSError *error = nil;
+  BOOL success = YES;
+  NSString *updateType = @"update";
+  
+  if (value) {
+    success = [BITKeychainUtils storeUsername:key
+                                  andPassword:value
+                               forServiceName:bit_keychainHockeySDKServiceName()
+                               updateExisting:YES
+                                accessibility:kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+                                        error:&error];
+  } else {
+    updateType = @"delete";
+    if ([BITKeychainUtils getPasswordForUsername:key
+                                  andServiceName:bit_keychainHockeySDKServiceName()
+                                           error:&error]) {
+      success = [BITKeychainUtils deleteItemForUsername:key
+                                         andServiceName:bit_keychainHockeySDKServiceName()
+                                                  error:&error];
+    }
+  }
+  
+  if (!success) {
+    NSString *errorDescription = [error description] ?: @"";
+    BITHockeyLog(@"ERROR: Couldn't %@ key %@ in the keychain. %@", updateType, key, errorDescription);
+  }
+}
+
+- (void)setUserID:(NSString *)userID {
+  // always set it, since nil value will trigger removal of the keychain entry
+  _userID = userID;
+  
+  [self modifyKeychainUserValue:userID forKey:kBITHockeyMetaUserID];
+}
+
+- (void)setUserName:(NSString *)userName {
+  // always set it, since nil value will trigger removal of the keychain entry
+  _userName = userName;
+  
+  [self modifyKeychainUserValue:userName forKey:kBITHockeyMetaUserName];
+}
+
+- (void)setUserEmail:(NSString *)userEmail {
+  // always set it, since nil value will trigger removal of the keychain entry
+  _userEmail = userEmail;
+  
+  [self modifyKeychainUserValue:userEmail forKey:kBITHockeyMetaUserEmail];
 }
 
 - (void)testIdentifier {
