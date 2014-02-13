@@ -69,6 +69,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackMessageStatus) {
 @property (nonatomic, copy) NSDate *date;
 @property (nonatomic, copy) NSNumber *id;
 @property (nonatomic, copy) NSString *token;
+@property (nonatomic, strong) NSArray *photos;
 @property (nonatomic) BITFeedbackMessageStatus status;
 @property (nonatomic) BOOL userMessage;
 

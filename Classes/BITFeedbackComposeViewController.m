@@ -351,7 +351,7 @@
   
   NSString *text = self.textView.text;
   
-  [self.manager submitMessageWithText:text];
+  [self.manager submitMessageWithText:text andPhotos:self.photos];
   
   [self dismissWithResult:BITFeedbackComposeResultSubmitted];
 }

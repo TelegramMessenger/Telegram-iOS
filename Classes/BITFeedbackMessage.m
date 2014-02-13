@@ -42,6 +42,7 @@
     _email = nil;
     _date = [[NSDate alloc] init];
     _token = nil;
+    _photos = nil;
     _id = [[NSNumber alloc] initWithInteger:0];
     _status = BITFeedbackMessageStatusSendPending;
     _userMessage = NO;
@@ -59,6 +60,7 @@
   [encoder encodeObject:self.email forKey:@"email"];
   [encoder encodeObject:self.date forKey:@"date"];
   [encoder encodeObject:self.id forKey:@"id"];
+  [encoder encodeObject:self.photos forKey:@"photos"];
   [encoder encodeInteger:self.status forKey:@"status"];
   [encoder encodeBool:self.userMessage forKey:@"userMessage"];
   [encoder encodeObject:self.token forKey:@"token"];
@@ -72,6 +74,7 @@
     self.email = [decoder decodeObjectForKey:@"email"];
     self.date = [decoder decodeObjectForKey:@"date"];
     self.id = [decoder decodeObjectForKey:@"id"];
+    self.photos = [decoder decodeObjectForKey:@"photos"];
     self.status = (BITFeedbackMessageStatus)[decoder decodeIntegerForKey:@"status"];
     self.userMessage = [decoder decodeBoolForKey:@"userMessage"];
     self.token = [decoder decodeObjectForKey:@"token"];

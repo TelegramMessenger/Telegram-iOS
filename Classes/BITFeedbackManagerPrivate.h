@@ -65,7 +65,7 @@
 - (NSUInteger)numberOfMessages;
 - (BITFeedbackMessage *)messageAtIndex:(NSUInteger)index;
 
-- (void)submitMessageWithText:(NSString *)text;
+- (void)submitMessageWithText:(NSString *)text andPhotos:(NSArray *)photos;
 - (void)submitPendingMessages;
 
 // Returns YES if manual user data can be entered, required or optional
