@@ -42,7 +42,7 @@
 #import "BITHockeyHelper.h"
 
 
-@interface BITFeedbackComposeViewController () <BITFeedbackUserDataDelegate, UIImagePickerControllerDelegate> {
+@interface BITFeedbackComposeViewController () <BITFeedbackUserDataDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate> {
   UIStatusBarStyle _statusBarStyle;
 }
 
