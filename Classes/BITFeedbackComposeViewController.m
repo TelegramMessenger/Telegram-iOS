@@ -34,6 +34,7 @@
 #import "HockeySDKPrivate.h"
 
 #import "BITFeedbackManagerPrivate.h"
+#import "BITFeedbackMessageAttachment.h"
 #import "BITFeedbackComposeViewController.h"
 #import "BITFeedbackUserDataViewController.h"
 
@@ -160,8 +161,6 @@
   self.contentViewContainer = [[UIView alloc] initWithFrame:self.view.bounds];
   [self.view addSubview:self.contentViewContainer];
   
-
-  
   // message input textfield
   self.textView = [[UITextView alloc] initWithFrame:self.view.bounds];
   self.textView.font = [UIFont systemFontOfSize:17];
@@ -185,15 +184,13 @@
   
   self.textView.inputAccessoryView = self.textAccessoryView;
   
+  // This could be a subclass, yet 
   self.photoScrollView = [[UIScrollView alloc] initWithFrame:CGRectZero];
   self.photoScrollView.scrollEnabled = YES;
   self.photoScrollView.bounces = YES;
   self.photoScrollView.autoresizingMask = UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight;
-
   
   [self.contentViewContainer addSubview:self.photoScrollView];
-  
-  
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -271,9 +268,6 @@
   
   if (!alreadySetup){
     textViewFrame.size.width -= scrollViewWidth;
-    
-    // status bar?
-
     scrollViewFrame = CGRectMake(CGRectGetMaxX(textViewFrame), self.view.frame.origin.y, scrollViewWidth, CGRectGetHeight(textViewFrame));
     self.textView.frame = textViewFrame;
     self.photoScrollView.frame = scrollViewFrame;
@@ -315,8 +309,6 @@
   }
   
   [self.photoScrollView setContentSize:CGSizeMake(CGRectGetWidth(self.photoScrollView.frame), currentYOffset)];
-  
-  
 }
 
 
@@ -351,7 +343,16 @@
   
   NSString *text = self.textView.text;
   
-  [self.manager submitMessageWithText:text andPhotos:self.photos];
+  // Create attachments from the photos.
+  
+  NSMutableArray *attachments = [NSMutableArray new];
+  
+  for (UIImage *photo in self.photos){
+    BITFeedbackMessageAttachment *attachment = [BITFeedbackMessageAttachment attachmentWithData:UIImageJPEGRepresentation(photo, 0.7f) contentType:@"image/jpeg"];
+    [attachments addObject:attachment];
+  }
+  
+  [self.manager submitMessageWithText:text andAttachments:attachments];
   
   [self dismissWithResult:BITFeedbackComposeResultSubmitted];
 }
@@ -392,7 +393,7 @@
 }
 
 - (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker {
-  
+  [picker dismissModalViewControllerAnimated:YES];
 }
 
 #pragma mark - BITFeedbackUserDataDelegate

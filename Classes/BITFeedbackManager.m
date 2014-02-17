@@ -34,6 +34,7 @@
 #import "HockeySDKPrivate.h"
 
 #import "BITFeedbackManager.h"
+#import "BITFeedbackMessageAttachment.h"
 #import "BITFeedbackManagerPrivate.h"
 #import "BITHockeyBaseManagerPrivate.h"
 
@@ -697,6 +698,14 @@
             matchingSendInProgressOrInConflictMessage.date = [self parseRFC3339Date:[(NSDictionary *)objMessage objectForKey:@"created_at"]];
             matchingSendInProgressOrInConflictMessage.id = messageID;
             matchingSendInProgressOrInConflictMessage.status = BITFeedbackMessageStatusRead;
+            NSArray *feedbackAttachments =[(NSDictionary *)objMessage objectForKey:@"attachments"];
+            if (matchingSendInProgressOrInConflictMessage.attachments.count == feedbackAttachments.count) {
+              int attachmentIndex = 0;
+              for (BITFeedbackMessageAttachment* attachment in matchingSendInProgressOrInConflictMessage.attachments){
+                attachment.id =feedbackAttachments[attachmentIndex][@"id"];
+                attachmentIndex++;
+              }
+            }
           } else {
             if ([(NSDictionary *)objMessage objectForKey:@"clean_text"] || [(NSDictionary *)objMessage objectForKey:@"text"]) {
               BITFeedbackMessage *message = [[BITFeedbackMessage alloc] init];
@@ -835,16 +844,17 @@
       [postBody appendData:[BITHockeyAppClient dataWithPostValue:self.userEmail forKey:@"email" boundary:boundary]];
     }
     
-    [postBody appendData:[[NSString stringWithFormat:@"--%@--\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
     
     NSInteger photoIndex = 0;
     
-    for (UIImage *image in message.photos){
-      NSString *contentType = @"image/png";
-      NSData* imageData = UIImagePNGRepresentation(image);
-      [postBody appendData:[BITHockeyAppClient dataWithPostValue:imageData forKey:[NSString stringWithFormat:@"attachment%ld", (long)photoIndex] contentType:contentType boundary:boundary]];
+    for (BITFeedbackMessageAttachment *attachment in message.attachments){
+      NSString *key = [NSString stringWithFormat:@"attachment%ld", (long)photoIndex];
+      [postBody appendData:[BITHockeyAppClient dataWithPostValue:attachment.data forKey:key contentType:attachment.contentType boundary:boundary]];
       photoIndex++;
     }
+    
+    [postBody appendData:[[NSString stringWithFormat:@"--%@--\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
+
     
     [request setHTTPBody:postBody];
   }
@@ -980,12 +990,12 @@
   }
 }
 
-- (void)submitMessageWithText:(NSString *)text andPhotos:(NSArray *)photos {
+- (void)submitMessageWithText:(NSString *)text andAttachments:(NSArray *)attachments {
   BITFeedbackMessage *message = [[BITFeedbackMessage alloc] init];
   message.text = text;
   [message setStatus:BITFeedbackMessageStatusSendPending];
   [message setToken:[self uuidAsLowerCaseAndShortened]];
-  [message setPhotos:photos];
+  [message setAttachments:attachments];
   [message setUserMessage:YES];
   
   [_feedbackList addObject:message];
