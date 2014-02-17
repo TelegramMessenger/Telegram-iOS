@@ -32,8 +32,8 @@
 
 @interface BITFeedbackMessageAttachment : NSObject<NSCoding>
 
-@property (nonatomic, copy) NSString *filename;
 @property (nonatomic, copy) NSNumber *id;
+@property (nonatomic, copy) NSString *originalFilename;
 @property (nonatomic, copy) NSString *contentType;
 @property (nonatomic, readonly) NSData *data;
 

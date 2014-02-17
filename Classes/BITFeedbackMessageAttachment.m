@@ -37,6 +37,8 @@
 
 @property (nonatomic, strong) NSMutableDictionary *thumbnailRepresentations;
 @property (nonatomic, strong) NSData *internalData;
+@property (nonatomic, copy) NSString *filename;
+
 @end
 
 @implementation BITFeedbackMessageAttachment
@@ -79,6 +81,7 @@
 - (void)encodeWithCoder:(NSCoder *)aCoder {
   [aCoder encodeObject:self.contentType forKey:@"contentType"];
   [aCoder encodeObject:self.filename forKey:@"filename"];
+  [aCoder encodeObject:self.originalFilename forKey:@"originalFilename"];
 
 }
 
@@ -89,6 +92,7 @@
     self.contentType = [aDecoder decodeObjectForKey:@"contentType"];
     self.filename = [aDecoder decodeObjectForKey:@"filename"];
     self.thumbnailRepresentations = [NSMutableDictionary new];
+    self.originalFilename = [aDecoder decodeObjectForKey:@"originalFilename"];
   }
   
   return self;

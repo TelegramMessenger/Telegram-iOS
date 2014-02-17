@@ -138,6 +138,5 @@
  *
  *	@return	NSData instance configured to be attached on a (post) URLRequest
  */
-+ (NSData *)dataWithPostValue:(NSData *)value forKey:(NSString *)key contentType:(NSString *)contentType boundary:(NSString *) boundary;
-
++ (NSData *)dataWithPostValue:(NSData *)value forKey:(NSString *)key contentType:(NSString *)contentType boundary:(NSString *) boundary filename:(NSString *)filename;
 @end

@@ -50,12 +50,12 @@
 @property (nonatomic, weak) BITFeedbackManager *manager;
 @property (nonatomic, strong) UITextView *textView;
 @property (nonatomic, strong) UIView *contentViewContainer;
-@property (nonatomic, strong) UIScrollView *photoScrollView;
-@property (nonatomic, strong) NSMutableArray *photoScrollViewImageViews;
+@property (nonatomic, strong) UIScrollView *attachmentScrollView;
+@property (nonatomic, strong) NSMutableArray *attachmentScrollViewImageViews;
 
 @property (nonatomic, strong) NSString *text;
 
-@property (nonatomic, strong) NSMutableArray *photos;
+@property (nonatomic, strong) NSMutableArray *attachments;
 
 @property (nonatomic, strong) UIView *textAccessoryView;
 
@@ -76,8 +76,8 @@
     _blockUserDataScreen = NO;
     _delegate = nil;
     _manager = [BITHockeyManager sharedHockeyManager].feedbackManager;
-    _photos = [NSMutableArray new];
-    _photoScrollViewImageViews = [NSMutableArray new];
+    _attachments = [NSMutableArray new];
+    _attachmentScrollViewImageViews = [NSMutableArray new];
 
     _text = nil;
   }
@@ -185,12 +185,12 @@
   self.textView.inputAccessoryView = self.textAccessoryView;
   
   // This could be a subclass, yet 
-  self.photoScrollView = [[UIScrollView alloc] initWithFrame:CGRectZero];
-  self.photoScrollView.scrollEnabled = YES;
-  self.photoScrollView.bounces = YES;
-  self.photoScrollView.autoresizingMask = UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight;
+  self.attachmentScrollView = [[UIScrollView alloc] initWithFrame:CGRectZero];
+  self.attachmentScrollView.scrollEnabled = YES;
+  self.attachmentScrollView.bounces = YES;
+  self.attachmentScrollView.autoresizingMask = UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight;
   
-  [self.contentViewContainer addSubview:self.photoScrollView];
+  [self.contentViewContainer addSubview:self.attachmentScrollView];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -256,13 +256,13 @@
 -(void)refreshPhotoScrollview {
   CGFloat scrollViewWidth = 0;
   
-  if (self.photos.count){
+  if (self.attachments.count){
     scrollViewWidth = 100;
   }
   
   CGRect textViewFrame = self.textView.frame;
   
-  CGRect scrollViewFrame = self.photoScrollView.frame;
+  CGRect scrollViewFrame = self.attachmentScrollView.frame;
   
   BOOL alreadySetup = CGRectGetWidth(scrollViewFrame) == scrollViewWidth;
   
@@ -270,19 +270,19 @@
     textViewFrame.size.width -= scrollViewWidth;
     scrollViewFrame = CGRectMake(CGRectGetMaxX(textViewFrame), self.view.frame.origin.y, scrollViewWidth, CGRectGetHeight(textViewFrame));
     self.textView.frame = textViewFrame;
-    self.photoScrollView.frame = scrollViewFrame;
-    self.photoScrollView.contentInset = self.textView.contentInset;
+    self.attachmentScrollView.frame = scrollViewFrame;
+    self.attachmentScrollView.contentInset = self.textView.contentInset;
   }
   
-  for (UIView *subview in self.photoScrollView.subviews){
+  for (UIView *subview in self.attachmentScrollView.subviews){
     [subview removeFromSuperview];
   }
   
-  if (self.photos.count > self.photoScrollViewImageViews.count){
-    NSInteger numberOfViewsToCreate = self.photos.count - self.photoScrollViewImageViews.count;
+  if (self.attachments.count > self.attachmentScrollViewImageViews.count){
+    NSInteger numberOfViewsToCreate = self.attachments.count - self.attachmentScrollViewImageViews.count;
     for (int i = 0;i<numberOfViewsToCreate;i++){
       UIImageView *newImageView = [[UIImageView alloc] initWithFrame:CGRectZero];
-      [self.photoScrollViewImageViews addObject:newImageView];
+      [self.attachmentScrollViewImageViews addObject:newImageView];
     }
   }
     
@@ -290,25 +290,27 @@
   
   CGFloat currentYOffset = 0.0f;
   
-  for (UIImage* photo in self.photos){
-    UIImageView *imageView = self.photoScrollViewImageViews[index];
+  for (BITFeedbackMessageAttachment* attachment in self.attachments){
+    UIImageView *imageView = self.attachmentScrollViewImageViews[index];
+    
+    UIImage *image = [attachment thumbnailWithSize:CGSizeMake(100, 100)];
     
     // determine the factor by which we scale..
-    CGFloat scaleFactor = CGRectGetWidth(self.photoScrollView.frame) / photo.size.width;
+    CGFloat scaleFactor = CGRectGetWidth(self.attachmentScrollView.frame) / image.size.width;
     
-    CGFloat height = photo.size.height * scaleFactor;
+    CGFloat height = image.size.height * scaleFactor;
     
-    imageView.frame = CGRectInset(CGRectMake(0, currentYOffset, scaleFactor * photo.size.width, height),10,10);
+    imageView.frame = CGRectInset(CGRectMake(0, currentYOffset, scaleFactor * image.size.width, height),10,10);
     
     currentYOffset += height;
     
-    [self.photoScrollView addSubview:imageView];
+    [self.attachmentScrollView addSubview:imageView];
     
-    imageView.image = photo;
+    imageView.image = image;
     index++;
   }
   
-  [self.photoScrollView setContentSize:CGSizeMake(CGRectGetWidth(self.photoScrollView.frame), currentYOffset)];
+  [self.attachmentScrollView setContentSize:CGSizeMake(CGRectGetWidth(self.attachmentScrollView.frame), currentYOffset)];
 }
 
 
@@ -343,16 +345,7 @@
   
   NSString *text = self.textView.text;
   
-  // Create attachments from the photos.
-  
-  NSMutableArray *attachments = [NSMutableArray new];
-  
-  for (UIImage *photo in self.photos){
-    BITFeedbackMessageAttachment *attachment = [BITFeedbackMessageAttachment attachmentWithData:UIImageJPEGRepresentation(photo, 0.7f) contentType:@"image/jpeg"];
-    [attachments addObject:attachment];
-  }
-  
-  [self.manager submitMessageWithText:text andAttachments:attachments];
+  [self.manager submitMessageWithText:text andAttachments:self.attachments];
   
   [self dismissWithResult:BITFeedbackComposeResultSubmitted];
 }
@@ -385,7 +378,12 @@
   UIImage *pickedImage = info[UIImagePickerControllerOriginalImage];
   
   if (pickedImage){
-    [self.photos addObject:pickedImage];
+    NSData *imageData = UIImageJPEGRepresentation(pickedImage, 0.7f);
+    BITFeedbackMessageAttachment *newAttachment = [BITFeedbackMessageAttachment attachmentWithData:imageData contentType:@"image/jpeg"];
+    NSURL *imagePath = [info objectForKey:@"UIImagePickerControllerReferenceURL"];
+    NSString *imageName = [imagePath lastPathComponent];
+    newAttachment.originalFilename = imageName;
+    [self.attachments addObject:newAttachment];
   }
   
   [picker dismissModalViewControllerAnimated:YES];

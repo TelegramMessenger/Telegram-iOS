@@ -849,7 +849,7 @@
     
     for (BITFeedbackMessageAttachment *attachment in message.attachments){
       NSString *key = [NSString stringWithFormat:@"attachment%ld", (long)photoIndex];
-      [postBody appendData:[BITHockeyAppClient dataWithPostValue:attachment.data forKey:key contentType:attachment.contentType boundary:boundary]];
+      [postBody appendData:[BITHockeyAppClient dataWithPostValue:attachment.data forKey:key contentType:attachment.contentType boundary:boundary filename:attachment.originalFilename]];
       photoIndex++;
     }
     
