@@ -31,11 +31,12 @@
 #import "BITHockeyHelper.h"
 #import "HockeySDKPrivate.h"
 
+#define kCacheFolderName @"hockey_attachments"
+
 @interface BITFeedbackMessageAttachment()
 
-@property (nonatomic, strong) NSData *data;
 @property (nonatomic, strong) NSMutableDictionary *thumbnailRepresentations;
-
+@property (nonatomic, strong) NSData *internalData;
 @end
 
 @implementation BITFeedbackMessageAttachment
@@ -53,6 +54,24 @@
     self.thumbnailRepresentations = [NSMutableDictionary new];
   }
   return self;
+}
+
+-(void)setData:(NSData *)data {
+  self->_internalData = data;
+  self.filename = [self createFilename];
+  [self->_internalData writeToFile:self.filename atomically:NO];
+}
+
+-(NSData *)data {
+  if (!self->_internalData && self.filename){
+    self.internalData = [NSData dataWithContentsOfFile:self.filename];
+  }
+  
+  if (self.internalData){
+    return self.internalData;
+  }
+  
+  return nil;
 }
 
 #pragma mark NSCoding
@@ -75,23 +94,56 @@
   return self;
 }
 
+#pragma mark - Thubmnails / Image Representation
+
 - (UIImage *)imageRepresentation {
   if ([self.contentType rangeOfString:@"image"].location != NSNotFound){
+    NSData *imageData = self.data;
     return [UIImage imageWithData:self.data];
   } else {
-   // return bit_imageNamed(@"feedbackActiviy.png", BITHOCKEYSDK_BUNDLE);
+    return bit_imageNamed(@"feedbackActiviy.png", BITHOCKEYSDK_BUNDLE); // TODO add another placeholder.
   }
 }
 
 - (UIImage *)thumbnailWithSize:(CGSize)size {
   id<NSCopying> cacheKey = [NSValue valueWithCGSize:size];
   
-//  if (!self.thumbnailRepresentations[cacheKey]){
-//    UIImage *thumbnail =bit_imageToFitSize(self.imageRepresentation, size, YES);
-//    [self.thumbnailRepresentations setObject:thumbnail forKey:cacheKey];
-//  }
+  if (!self.thumbnailRepresentations[cacheKey]){
+    UIImage *image = self.imageRepresentation;
+    UIImage *thumbnail = bit_imageToFitSize(image, size, NO);
+    if (thumbnail){
+    [self.thumbnailRepresentations setObject:thumbnail forKey:cacheKey];
+    }
+  }
   
   return self.thumbnailRepresentations[cacheKey];
+}
+
+#pragma mark - Persistence Helpers
+
+- (NSString *)createFilename {
+  NSArray* cachePathArray = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
+  NSString* cachePath = [cachePathArray lastObject];
+  cachePath = [cachePath stringByAppendingPathComponent:kCacheFolderName];
+  
+  BOOL isDirectory;
+  
+  if (![[NSFileManager defaultManager] fileExistsAtPath:cachePath isDirectory:&isDirectory]){
+    [[NSFileManager defaultManager] createDirectoryAtPath:cachePath withIntermediateDirectories:YES attributes:nil error:nil];
+  }
+  
+  NSString *uniqueString = [BITFeedbackMessageAttachment GetUUID];
+  cachePath = [cachePath stringByAppendingPathComponent:uniqueString];
+  
+  return  cachePath;
+}
+
++ (NSString *)GetUUID
+{
+  CFUUIDRef theUUID = CFUUIDCreate(NULL);
+  CFStringRef string = CFUUIDCreateString(NULL, theUUID);
+  CFRelease(theUUID);
+  return (__bridge NSString *)string;
 }
 
 @end

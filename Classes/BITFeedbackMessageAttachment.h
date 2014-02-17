@@ -35,9 +35,9 @@
 @property (nonatomic, copy) NSString *filename;
 @property (nonatomic, copy) NSNumber *id;
 @property (nonatomic, copy) NSString *contentType;
+@property (nonatomic, readonly) NSData *data;
 
 @property (readonly) UIImage *imageRepresentation;
-@property (readonly) NSData *data;
 
 
 + (BITFeedbackMessageAttachment *)attachmentWithData:(NSData *)data contentType:(NSString *)contentType;
