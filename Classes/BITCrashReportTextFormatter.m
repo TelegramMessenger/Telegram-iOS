@@ -599,7 +599,9 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
     // get the SEL
     const char *foundSelector = findSEL([imageForRegAddress.imageName UTF8String], imageForRegAddress.imageUUID, regAddress - (uint64_t)imageForRegAddress.imageBaseAddress);
     
-    return [NSString stringWithUTF8String:foundSelector];
+    if (foundSelector != NULL) {
+      return [NSString stringWithUTF8String:foundSelector];
+    }
   }
     
   return nil;

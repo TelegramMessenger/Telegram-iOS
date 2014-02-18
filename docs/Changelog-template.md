@@ -1,3 +1,9 @@
+## Version 3.5.4
+
+- [BUGFIX] Fix a possible crash before sending the crash report when the selector could not be found
+- [BUGFIX] Fix a memory leak in keychain handling
+<br /><br/>
+
 ## Version 3.5.3
 
 - [NEW] Crash Reports now provide the selector name e.g. for crashes in `objc_MsgSend`
