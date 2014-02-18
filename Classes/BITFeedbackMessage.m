@@ -28,6 +28,7 @@
 
 
 #import "BITFeedbackMessage.h"
+#import "BITFeedbackMessageAttachment.h"
 
 @implementation BITFeedbackMessage
 
@@ -80,6 +81,14 @@
     self.token = [decoder decodeObjectForKey:@"token"];
   }
   return self;
+}
+
+#pragma mark - Deletion
+
+-(void)deleteContents {
+  for (BITFeedbackMessageAttachment *attachment in self.attachments){
+    [attachment deleteContents];
+  }
 }
 
 @end

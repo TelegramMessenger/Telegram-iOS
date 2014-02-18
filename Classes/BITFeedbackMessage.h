@@ -73,4 +73,11 @@ typedef NS_ENUM(NSInteger, BITFeedbackMessageStatus) {
 @property (nonatomic) BITFeedbackMessageStatus status;
 @property (nonatomic) BOOL userMessage;
 
+/** 
+ * This method must be called before a feedback message is deleted. It handles the 
+ * deletion of any data stored on the device in association with the feedback message.
+ */
+-(void)deleteContents;
+
+
 @end

@@ -458,6 +458,7 @@
     
     if (self.selectedAttachmentIndex != NSNotFound){
       BITFeedbackMessageAttachment* attachment = [self.attachments objectAtIndex:self.selectedAttachmentIndex];
+      [attachment deleteContents]; // mandatory call to delete the files associatd.
       [self.attachments removeObject:attachment];
     }
     

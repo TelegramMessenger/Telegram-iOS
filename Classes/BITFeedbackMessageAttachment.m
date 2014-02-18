@@ -150,4 +150,12 @@
   return (__bridge NSString *)string;
 }
 
+- (void)deleteContents {
+  if (self.filename){
+    [[NSFileManager defaultManager] removeItemAtPath:self.filename error:nil];
+    self.filename = nil;
+  }
+}
+
+
 @end

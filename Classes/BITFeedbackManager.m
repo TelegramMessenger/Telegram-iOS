@@ -572,6 +572,8 @@
 
 - (BOOL)deleteMessageAtIndex:(NSUInteger)index {
   if (_feedbackList && [_feedbackList count] > index && [_feedbackList objectAtIndex:index]) {
+    BITFeedbackMessage *message = _feedbackList[index];
+    [message deleteContents];
     [_feedbackList removeObjectAtIndex:index];
     
     [self saveMessages];

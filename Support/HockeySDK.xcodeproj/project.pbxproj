@@ -134,7 +134,6 @@
 		97F0F9FD18ABAECD00EF50AA /* iconCamera.png in Resources */ = {isa = PBXBuildFile; fileRef = 97F0F9FB18ABAECD00EF50AA /* iconCamera.png */; };
 		97F0F9FE18ABAECD00EF50AA /* iconCamera@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 97F0F9FC18ABAECD00EF50AA /* iconCamera@2x.png */; };
 		97F0FA0118AE375E00EF50AA /* BITImageAnnotationViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 97F0FA0018AE375E00EF50AA /* BITImageAnnotationViewController.m */; };
-		97F0FA0418AE5AED00EF50AA /* BITFeedbackMessageAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 97F0FA0318AE5AED00EF50AA /* BITFeedbackMessageAttachment.m */; };
 		97F0FA0518B2294D00EF50AA /* BITFeedbackMessageAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 97F0FA0318AE5AED00EF50AA /* BITFeedbackMessageAttachment.m */; };
 		E405266217A2AD300096359C /* BITFeedbackManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = E405266117A2AD300096359C /* BITFeedbackManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		E40E0B0917DA19DC005E38C1 /* BITHockeyAppClientTests.m in Sources */ = {isa = PBXBuildFile; fileRef = E40E0B0817DA19DC005E38C1 /* BITHockeyAppClientTests.m */; };
@@ -923,7 +922,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				97F0FA0118AE375E00EF50AA /* BITImageAnnotationViewController.m in Sources */,
-				97F0FA0418AE5AED00EF50AA /* BITFeedbackMessageAttachment.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
