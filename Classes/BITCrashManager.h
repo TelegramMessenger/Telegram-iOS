@@ -281,7 +281,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
 /**
  Indicates if the app was killed while being in foreground from the iOS
  
- If `enableDectionAppKillWhileInForeground` is enabled, use this on startup to check if the
+ If `enableAppNotTerminatingCleanlyDetection` is enabled, use this on startup to check if the
  app starts the first time after it was killed by iOS in the previous session.
  
  This can happen if it consumed too much memory or the watchdog killed the app because it
