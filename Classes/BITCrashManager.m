@@ -357,7 +357,8 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   // if we have an identification from BITAuthenticator, use this as a default.
   if ((
        self.installationIdentificationType == BITAuthenticatorIdentificationTypeHockeyAppEmail ||
-       self.installationIdentificationType == BITAuthenticatorIdentificationTypeHockeyAppUser
+       self.installationIdentificationType == BITAuthenticatorIdentificationTypeHockeyAppUser ||
+       self.installationIdentificationType == BITAuthenticatorIdentificationTypeWebAuth
        ) &&
       self.installationIdentification) {
     useremail = self.installationIdentification;
