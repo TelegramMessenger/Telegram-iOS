@@ -24,7 +24,7 @@ Pod::Spec.new do |s|
   
   s.frameworks              = 'CoreText', 'QuartzCore', 'SystemConfiguration', 'CoreGraphics', 'UIKit', 'Security'
   s.ios.vendored_frameworks = 'Vendor/CrashReporter.framework'
-  s.xcconfig                = {'GCC_PREPROCESSOR_DEFINITIONS' => %{$(inherited) BITHOCKEY_VERSION="@\\"#{s.version}\\"" BITHOCKEY_BUILD="@\\"27\\""} }
+  s.xcconfig                = {'GCC_PREPROCESSOR_DEFINITIONS' => %{$(inherited) BITHOCKEY_VERSION="@\\"#{s.version}\\"" BITHOCKEY_C_VERSION="\\"#{s.version}\\"" BITHOCKEY_BUILD="@\\"27\\"" BITHOCKEY_C_BUILD="\\"27\\""} }
   s.resource_bundle         = { 'HockeySDKResources' => ['Resources/*.png', 'Resources/*.lproj'] }
   s.preserve_paths          = 'Resources', 'Support'
 
