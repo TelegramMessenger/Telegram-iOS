@@ -70,6 +70,7 @@
  The follwoing data object classes are currently supported:
  - NSString
  - NSURL
+ - UIImage
  
  These are automatically concatenated to one text string.
  

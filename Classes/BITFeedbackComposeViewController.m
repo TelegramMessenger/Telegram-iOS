@@ -95,6 +95,9 @@
       self.text = [(self.text ? self.text : @"") stringByAppendingFormat:@"%@%@", (self.text ? @" " : @""), item];
     } else if ([item isKindOfClass:[NSURL class]]) {
       self.text = [(self.text ? self.text : @"") stringByAppendingFormat:@"%@%@", (self.text ? @" " : @""), [(NSURL *)item absoluteString]];
+    } else if ([item isKindOfClass:[UIImage class]]) {
+      UIImage *image = item;
+      [self.attachments addObject:[BITFeedbackMessageAttachment attachmentWithData:UIImageJPEGRepresentation(image, 0.7f) contentType:@"image/jpeg"]];
     } else {
       BITHockeyLog(@"Unknown item type %@", item);
     }
@@ -221,6 +224,8 @@
   }
   
   [self updateBarButtonState];
+  
+
 }
 
 - (void)viewDidAppear:(BOOL)animated {
@@ -236,6 +241,9 @@
     // Invoke delayed to fix iOS 7 iPad landscape bug, where this view will be moved if not called delayed
     [self.textView performSelector:@selector(becomeFirstResponder) withObject:nil afterDelay:0.0];
   }
+  
+  [self refreshAttachmentScrollview];
+
 }
 
 - (void)viewWillDisappear:(BOOL)animated {
@@ -264,7 +272,7 @@
   
   CGRect scrollViewFrame = self.attachmentScrollView.frame;
   
-  BOOL alreadySetup = CGRectGetWidth(scrollViewFrame) == scrollViewWidth;
+  BOOL alreadySetup = CGRectGetWidth(scrollViewFrame) > 0;
   
   if (!alreadySetup){
     textViewFrame.size.width -= scrollViewWidth;
@@ -468,6 +476,7 @@
   self.selectedAttachmentIndex = NSNotFound;
   
 }
+
 @end
 
 #endif /* HOCKEYSDK_FEATURE_FEEDBACK */
