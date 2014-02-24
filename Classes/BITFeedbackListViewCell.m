@@ -264,14 +264,13 @@
   
   CGFloat attachmentsPerRow = ceilf(self.frame.size.width / (FRAME_SIDE_BORDER + ATTACHMENT_SIZE));
   for ( UIImageView *imageView in self.attachmentViews){
+    
     if ( !_message.userMessage){
       imageView.frame = CGRectMake(FRAME_SIDE_BORDER + (FRAME_SIDE_BORDER + ATTACHMENT_SIZE) * i , floor(i/attachmentsPerRow) + baseOffsetOfText , ATTACHMENT_SIZE, ATTACHMENT_SIZE);
     } else {
-
       imageView.frame = CGRectMake(self.frame.size.width - FRAME_SIDE_BORDER - ATTACHMENT_SIZE -  ((FRAME_SIDE_BORDER + ATTACHMENT_SIZE) * (i) ), floor(i/attachmentsPerRow) + baseOffsetOfText , ATTACHMENT_SIZE, ATTACHMENT_SIZE);
-
-      NSLog(@"ImageView %@", imageView);
     }
+    
     i++;
       
   }
