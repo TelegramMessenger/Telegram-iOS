@@ -1040,7 +1040,7 @@
 }
 
 -(void)screenshotNotificationReceived:(NSNotification *)notification {
-
+  [self extractLastPictureFromLibraryAndLaunchFeedback];
 }
 
 -(void)extractLastPictureFromLibraryAndLaunchFeedback {
@@ -1057,8 +1057,7 @@
         UIImage *latestPhoto = [UIImage imageWithCGImage:[representation fullScreenImage]];
         
         *stop = YES; *innerStop = YES;
-        
-     //   [self sendTweet:latestPhoto];
+        [self showFeedbackComposeViewWithPreparedItems:@[latestPhoto]];
       }
     }];
   } failureBlock: nil];
