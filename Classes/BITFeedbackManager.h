@@ -59,6 +59,25 @@ typedef NS_ENUM(NSInteger, BITFeedbackUserDataElement) {
   BITFeedbackUserDataElementRequired = 2
 };
 
+/**
+ *  Available modes for collecting automated feedback.
+ */
+typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
+  /**
+   *  No automatic feedback gathering.
+   */
+  BITFeedbackObservationNone = 0,
+  /**
+   *  Feedback compose form will open once a screenshot is taken.
+   */
+  BITFeedbackObservationModeOnScreenshot = 1,
+  /**
+   *  Feedback compose will open with a generated screenshot if the screen is tapped
+   *  three fingers for three seconds.
+   */
+  BITFeedbackObservationModeThreeFingersThreeSeconds = 2
+};
+
 
 @class BITFeedbackMessage;
 @protocol BITFeedbackManagerDelegate;
@@ -241,6 +260,19 @@ typedef NS_ENUM(NSInteger, BITFeedbackUserDataElement) {
  */
 - (void)showFeedbackComposeView;
 
+/**
+ Present the modal feedback compose message user interface with the items given. 
+ All NSString-Content in the array will be concatenated and result in the message,
+ while all UIImage and NSData-instances will be turned into attachments.
+ */
+- (void)showFeedbackComposeViewWithPreparedItems:(NSArray *)items;
+
+/**
+ Present the modal feedback compose message user interface with a screenshot that is taken 
+ at the time of calling this method.
+ */
+- (void)showFeedbackComposeViewWithGeneratedScreenshot;
+
 
 /**
  Create an feedback compose view
@@ -261,6 +293,8 @@ typedef NS_ENUM(NSInteger, BITFeedbackUserDataElement) {
  e.g. to push it onto a navigation stack.
  */
 - (BITFeedbackComposeViewController *)feedbackComposeViewController;
+
+- (void)setFeedbackObservationMode:(BITFeedbackObservationMode)mode;
 
 
 @end

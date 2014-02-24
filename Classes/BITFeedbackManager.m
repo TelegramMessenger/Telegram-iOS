@@ -29,6 +29,8 @@
 
 #import "HockeySDK.h"
 
+#import <AssetsLibrary/AssetsLibrary.h>
+
 #if HOCKEYSDK_FEATURE_FEEDBACK
 
 #import "HockeySDKPrivate.h"
@@ -63,6 +65,8 @@
   BOOL _incomingMessagesAlertShowing;
   BOOL _didEnterBackgroundState;
   BOOL _networkRequestInProgress;
+  
+  BITFeedbackObservationMode _observationMode;
 }
 
 #pragma mark - Initialization
@@ -214,14 +218,23 @@
 }
 
 - (void)showFeedbackComposeView {
+  [self showFeedbackComposeViewWithPreparedItems:nil];
+}
+
+- (void)showFeedbackComposeViewWithPreparedItems:(NSArray *)items{
   if (_currentFeedbackComposeViewController) {
     BITHockeyLog(@"INFO: update view already visible, aborting");
     return;
   }
-  
-  [self showView:[self feedbackComposeViewController]];
+  BITFeedbackComposeViewController *composeView = [self feedbackComposeViewController];
+  [composeView prepareWithItems:items];
+  [self showView:composeView];
 }
 
+- (void)showFeedbackComposeViewWithGeneratedScreenshot {
+  UIImage *screenshot = bit_screenshot();
+  [self showFeedbackComposeViewWithPreparedItems:@[screenshot]];
+}
 
 #pragma mark - Manager Control
 
@@ -1018,6 +1031,38 @@
   }
 }
 
+#pragma mark - Observation Handling 
+
+-(void)setFeedbackObservationMode:(BITFeedbackObservationMode)mode {
+  if (mode == BITFeedbackObservationModeOnScreenshot){
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenshotNotificationReceived:) name:UIApplicationUserDidTakeScreenshotNotification object:nil];
+  }
+}
+
+-(void)screenshotNotificationReceived:(NSNotification *)notification {
+
+}
+
+-(void)extractLastPictureFromLibraryAndLaunchFeedback {
+  ALAssetsLibrary *library = [[ALAssetsLibrary alloc] init];
+  
+  [library enumerateGroupsWithTypes:ALAssetsGroupSavedPhotos usingBlock:^(ALAssetsGroup *group, BOOL *stop) {
+    
+    [group setAssetsFilter:[ALAssetsFilter allPhotos]];
+    
+    [group enumerateAssetsWithOptions:NSEnumerationReverse usingBlock:^(ALAsset *alAsset, NSUInteger index, BOOL *innerStop) {
+      
+      if (alAsset) {
+        ALAssetRepresentation *representation = [alAsset defaultRepresentation];
+        UIImage *latestPhoto = [UIImage imageWithCGImage:[representation fullScreenImage]];
+        
+        *stop = YES; *innerStop = YES;
+        
+     //   [self sendTweet:latestPhoto];
+      }
+    }];
+  } failureBlock: nil];
+}
 
 @end
 
