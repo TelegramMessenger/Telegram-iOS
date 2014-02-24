@@ -29,6 +29,7 @@
 
 #import "BITFeedbackListViewCell.h"
 #import "HockeySDKPrivate.h"
+#import "BITFeedbackMessageAttachment.h"
 
 #define BACKGROUNDCOLOR_DEFAULT BIT_RGBCOLOR(245, 245, 245)
 #define BACKGROUNDCOLOR_ALTERNATE BIT_RGBCOLOR(235, 235, 235)
@@ -54,12 +55,17 @@
 
 #define LABEL_TEXT_Y 25
 
+#define ATTACHMENT_SIZE 45
+
+
 @interface BITFeedbackListViewCell ()
 
 @property (nonatomic, strong) NSDateFormatter *dateFormatter;
 @property (nonatomic, strong) NSDateFormatter *timeFormatter;
 
 @property (nonatomic, strong) UILabel *labelTitle;
+
+@property (nonatomic, strong) NSMutableArray *attachmentViews;
 
 @end
 
@@ -96,6 +102,8 @@
     self.labelText.numberOfLines = 0;
     self.labelText.textAlignment = kBITTextLabelAlignmentLeft;
     self.labelText.dataDetectorTypes = UIDataDetectorTypeAll;
+    
+    self.attachmentViews = [NSMutableArray new];
   }
   return self;
 }
@@ -135,6 +143,19 @@
 #pragma mark - Layout
 
 + (CGFloat) heightForRowWithMessage:(BITFeedbackMessage *)message tableViewWidth:(CGFloat)width {
+  
+  CGFloat baseHeight = [self heightForTextInRowWithMessage:message tableViewWidth:width];
+  
+  CGFloat attachmentsPerRow = floorf(width / (FRAME_SIDE_BORDER + ATTACHMENT_SIZE));
+  
+  CGFloat calculatedHeight = baseHeight + (FRAME_TOP_BORDER + ATTACHMENT_SIZE) * ceil(message.attachments.count/attachmentsPerRow);
+  
+  return ceil(calculatedHeight);
+}
+
+
+
++ (CGFloat) heightForTextInRowWithMessage:(BITFeedbackMessage *)message tableViewWidth:(CGFloat)width {
   CGFloat calculatedHeight;
   
 #if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
@@ -143,7 +164,11 @@
                                                        options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingUsesFontLeading
                                                     attributes:@{NSFontAttributeName:[UIFont systemFontOfSize:TEXT_FONTSIZE]}
                                                        context:nil];
-     calculatedHeight = calculatedRect.size.height + FRAME_TOP_BORDER + LABEL_TEXT_Y + FRAME_BOTTOM_BORDER;
+    calculatedHeight = calculatedRect.size.height + FRAME_TOP_BORDER + LABEL_TEXT_Y + FRAME_BOTTOM_BORDER;
+    
+    // added to make space for the images.
+    
+
   } else {
 #endif
 #pragma clang diagnostic push
@@ -151,6 +176,7 @@
     calculatedHeight = [message.text sizeWithFont:[UIFont systemFontOfSize:TEXT_FONTSIZE]
                                 constrainedToSize:CGSizeMake(width - (2 * FRAME_SIDE_BORDER), CGFLOAT_MAX)
                         ].height + FRAME_TOP_BORDER + LABEL_TEXT_Y + FRAME_BOTTOM_BORDER;
+
 #pragma clang diagnostic pop
 #if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
   }
@@ -158,6 +184,22 @@
   
   return ceil(calculatedHeight);
 }
+
+- (void)setAttachments:(NSArray *)attachments {
+  for (UIView *view in self.attachmentViews){
+    [view removeFromSuperview];
+  }
+  
+  [self.attachmentViews removeAllObjects];
+  
+  for (BITFeedbackMessageAttachment *attachment in attachments){
+    UIImageView *imageView = [[UIImageView alloc] initWithFrame:CGRectZero];
+    imageView.image = [attachment thumbnailWithSize:CGSizeMake(ATTACHMENT_SIZE, ATTACHMENT_SIZE)];
+    [self.attachmentViews addObject:imageView];
+    [self addSubview:imageView];
+  }
+}
+
 
 - (void)layoutSubviews {
   UIView *accessoryViewBackground = [[UIView alloc] initWithFrame:CGRectMake(0, 2, self.frame.size.width * 2, self.frame.size.height - 2)];
@@ -208,12 +250,31 @@
 
   // text
   [self.labelText setText:_message.text];
-  CGSize size = CGSizeMake(self.frame.size.width - (2 * FRAME_SIDE_BORDER),
-                           [[self class] heightForRowWithMessage:_message tableViewWidth:self.frame.size.width] - LABEL_TEXT_Y - FRAME_BOTTOM_BORDER);
+  CGSize sizeForTextLabel = CGSizeMake(self.frame.size.width - (2 * FRAME_SIDE_BORDER),
+                           [[self class] heightForTextInRowWithMessage:_message tableViewWidth:self.frame.size.width] - LABEL_TEXT_Y - FRAME_BOTTOM_BORDER);
   
-  [self.labelText setFrame:CGRectMake(FRAME_SIDE_BORDER, LABEL_TEXT_Y, size.width, size.height)];
+  [self.labelText setFrame:CGRectMake(FRAME_SIDE_BORDER, LABEL_TEXT_Y, sizeForTextLabel.width, sizeForTextLabel.height)];
   
   [self addSubview:self.labelText];
+  
+  CGFloat baseOffsetOfText = CGRectGetMaxY(self.labelText.frame);
+  
+  
+  int i = 0;
+  
+  CGFloat attachmentsPerRow = ceilf(self.frame.size.width / (FRAME_SIDE_BORDER + ATTACHMENT_SIZE));
+
+  for ( UIImageView *imageView in self.attachmentViews){
+    if ( !_message.userMessage){
+      imageView.frame = CGRectMake(FRAME_SIDE_BORDER + (FRAME_SIDE_BORDER * ATTACHMENT_SIZE) * i , floor(i/attachmentsPerRow) + baseOffsetOfText , ATTACHMENT_SIZE, ATTACHMENT_SIZE);
+    } else {
+      imageView.frame = CGRectMake(self.frame.size.width - FRAME_SIDE_BORDER - ATTACHMENT_SIZE -  ((FRAME_SIDE_BORDER * ATTACHMENT_SIZE) * (i) ), floor(i/attachmentsPerRow) + baseOffsetOfText , ATTACHMENT_SIZE, ATTACHMENT_SIZE);
+
+      
+    }i++;
+      
+  }
+  
   
   [super layoutSubviews];
 }

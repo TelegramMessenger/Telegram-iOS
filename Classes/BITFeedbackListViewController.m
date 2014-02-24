@@ -628,6 +628,7 @@
     cell.message = message;
     cell.labelText.delegate = self;
     cell.labelText.userInteractionEnabled = YES;
+    [cell setAttachments:message.attachments];
 
     if (
         [self.manager isPreiOS7Environment] ||
