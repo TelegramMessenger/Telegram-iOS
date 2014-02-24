@@ -709,7 +709,7 @@
               }
             }
           } else {
-            if ([(NSDictionary *)objMessage objectForKey:@"clean_text"] || [(NSDictionary *)objMessage objectForKey:@"text"]) {
+            if ([(NSDictionary *)objMessage objectForKey:@"clean_text"] || [(NSDictionary *)objMessage objectForKey:@"text"] || [(NSDictionary *)objMessage objectForKey:@"attachments"]) {
               BITFeedbackMessage *message = [[BITFeedbackMessage alloc] init];
               message.text = [(NSDictionary *)objMessage objectForKey:@"clean_text"] ?: [(NSDictionary *)objMessage objectForKey:@"text"] ?: @"";
               message.name = [(NSDictionary *)objMessage objectForKey:@"name"] ?: @"";
@@ -1018,6 +1018,9 @@
   }
 }
 
+
 @end
+
+
 
 #endif /* HOCKEYSDK_FEATURE_FEEDBACK */
