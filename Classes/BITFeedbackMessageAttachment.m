@@ -102,7 +102,6 @@
 
 - (UIImage *)imageRepresentation {
   if ([self.contentType rangeOfString:@"image"].location != NSNotFound){
-    NSData *imageData = self.data;
     return [UIImage imageWithData:self.data];
   } else {
     return bit_imageNamed(@"feedbackActiviy.png", BITHOCKEYSDK_BUNDLE); // TODO add another placeholder.
@@ -116,7 +115,7 @@
     UIImage *image = self.imageRepresentation;
     UIImage *thumbnail = bit_imageToFitSize(image, size, NO);
     if (thumbnail){
-    [self.thumbnailRepresentations setObject:thumbnail forKey:cacheKey];
+      [self.thumbnailRepresentations setObject:thumbnail forKey:cacheKey];
     }
   }
   
