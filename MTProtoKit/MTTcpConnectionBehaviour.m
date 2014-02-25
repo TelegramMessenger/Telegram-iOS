@@ -1,0 +1,114 @@
+/*
+ * This is the source code of Telegram for iOS v. 1.1
+ * It is licensed under GNU GPL v. 2 or later.
+ * You should have received a copy of the license in this archive (see LICENSE).
+ *
+ * Copyright Peter Iakovlev, 2013.
+ */
+
+#import <MTProtoKit/MTTcpConnectionBehaviour.h>
+
+#import <MTProtoKit/MTTimer.h>
+#import <MTProtoKit/MTQueue.h>
+
+@interface MTTcpConnectionBehaviour ()
+{
+    MTTimer *_backoffTimer;
+    NSInteger _backoffCount;
+}
+
+@end
+
+@implementation MTTcpConnectionBehaviour
+
+- (instancetype)initWithQueue:(MTQueue *)queue
+{
+    self = [super init];
+    if (self != nil)
+    {
+        _queue = queue;
+        
+        _needsReconnection = true;
+    }
+    return self;
+}
+
+- (void)dealloc
+{
+    [self invalidateTimer];
+}
+
+- (void)connectionOpened
+{
+    //_backoffCount = 0;
+    
+    //[self invalidateTimer];
+}
+
+- (void)connectionValidDataReceived
+{
+    _backoffCount = 0;
+    
+    [self invalidateTimer];
+}
+
+- (void)connectionClosed
+{
+    if (_needsReconnection)
+    {
+        _backoffCount++;
+        
+        if (_backoffCount == 1)
+            [self timerEvent];
+        else
+        {
+            [self startTimer:1.0];
+        }
+    }
+}
+
+- (void)clearBackoff
+{
+    _backoffCount = 0;
+}
+
+- (void)invalidateTimer
+{
+    MTTimer *reconnectionTimer = _backoffTimer;
+    _backoffTimer = nil;
+    
+    [_queue dispatchOnQueue:^
+    {
+        [reconnectionTimer invalidate];
+    }];
+}
+
+- (void)startTimer:(NSTimeInterval)timeout
+{
+    [self invalidateTimer];
+    
+    [_queue dispatchOnQueue:^
+    {
+        __weak MTTcpConnectionBehaviour *weakSelf = self;
+        _backoffTimer = [[MTTimer alloc] initWithTimeout:timeout repeat:false completion:^
+        {
+            __strong MTTcpConnectionBehaviour *strongSelf = weakSelf;
+            [strongSelf timerEvent];
+        } queue:[_queue nativeQueue]];
+        [_backoffTimer start];
+    }];
+}
+
+- (void)timerEvent
+{
+    [self invalidateTimer];
+    
+    [_queue dispatchOnQueue:^
+    {
+        id<MTTcpConnectionBehaviourDelegate> delegate = _delegate;
+        if ([delegate respondsToSelector:@selector(tcpConnectionBehaviourRequestsReconnection:)])
+            [delegate tcpConnectionBehaviourRequestsReconnection:self];
+    }];
+}
+
+@end

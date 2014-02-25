@@ -1,0 +1,1925 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		93DBD23118B2D72800631ADC /* MTRequestErrorContext.h in Headers */ = {isa = PBXBuildFile; fileRef = 93DBD22F18B2D72800631ADC /* MTRequestErrorContext.h */; };
+		93DBD23218B2D72800631ADC /* MTRequestErrorContext.m in Sources */ = {isa = PBXBuildFile; fileRef = 93DBD23018B2D72800631ADC /* MTRequestErrorContext.m */; };
+		93DBD23518B2DA1E00631ADC /* MTTime.m in Sources */ = {isa = PBXBuildFile; fileRef = 93DBD23418B2DA1E00631ADC /* MTTime.m */; };
+		93DBD23618B2DA5400631ADC /* MTTime.h in Headers */ = {isa = PBXBuildFile; fileRef = 93DBD23318B2D9AA00631ADC /* MTTime.h */; };
+		93DBD23718B2DA5500631ADC /* MTTime.h in Headers */ = {isa = PBXBuildFile; fileRef = 93DBD23318B2D9AA00631ADC /* MTTime.h */; };
+		93DBD23818B2DA5800631ADC /* MTTime.m in Sources */ = {isa = PBXBuildFile; fileRef = 93DBD23418B2DA1E00631ADC /* MTTime.m */; };
+		93DBD23918B2DA6F00631ADC /* MTRequestErrorContext.m in Sources */ = {isa = PBXBuildFile; fileRef = 93DBD23018B2D72800631ADC /* MTRequestErrorContext.m */; };
+		93DBD23A18B2DA7900631ADC /* MTRequestErrorContext.h in Headers */ = {isa = PBXBuildFile; fileRef = 93DBD22F18B2D72800631ADC /* MTRequestErrorContext.h */; };
+		D0254C7818B103D4009452AA /* aes.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C2C18B103D4009452AA /* aes.h */; };
+		D0254C7918B103D4009452AA /* asn1.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C2D18B103D4009452AA /* asn1.h */; };
+		D0254C7A18B103D4009452AA /* asn1_mac.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C2E18B103D4009452AA /* asn1_mac.h */; };
+		D0254C7B18B103D4009452AA /* asn1t.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C2F18B103D4009452AA /* asn1t.h */; };
+		D0254C7C18B103D4009452AA /* bio.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C3018B103D4009452AA /* bio.h */; };
+		D0254C7D18B103D4009452AA /* blowfish.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C3118B103D4009452AA /* blowfish.h */; };
+		D0254C7E18B103D4009452AA /* bn.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C3218B103D4009452AA /* bn.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0254C7F18B103D4009452AA /* buffer.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C3318B103D4009452AA /* buffer.h */; };
+		D0254C8018B103D4009452AA /* camellia.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C3418B103D4009452AA /* camellia.h */; };
+		D0254C8118B103D4009452AA /* cast.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C3518B103D4009452AA /* cast.h */; };
+		D0254C8218B103D4009452AA /* cmac.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C3618B103D4009452AA /* cmac.h */; };
+		D0254C8318B103D4009452AA /* cms.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C3718B103D4009452AA /* cms.h */; };
+		D0254C8418B103D4009452AA /* comp.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C3818B103D4009452AA /* comp.h */; };
+		D0254C8518B103D4009452AA /* conf.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C3918B103D4009452AA /* conf.h */; };
+		D0254C8618B103D4009452AA /* conf_api.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C3A18B103D4009452AA /* conf_api.h */; };
+		D0254C8718B103D4009452AA /* crypto.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C3B18B103D4009452AA /* crypto.h */; };
+		D0254C8818B103D4009452AA /* des.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C3C18B103D4009452AA /* des.h */; };
+		D0254C8918B103D4009452AA /* des_old.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C3D18B103D4009452AA /* des_old.h */; };
+		D0254C8A18B103D4009452AA /* dh.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C3E18B103D4009452AA /* dh.h */; };
+		D0254C8B18B103D4009452AA /* dsa.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C3F18B103D4009452AA /* dsa.h */; };
+		D0254C8C18B103D4009452AA /* dso.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C4018B103D4009452AA /* dso.h */; };
+		D0254C8D18B103D4009452AA /* dtls1.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C4118B103D4009452AA /* dtls1.h */; };
+		D0254C8E18B103D4009452AA /* e_os2.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C4218B103D4009452AA /* e_os2.h */; };
+		D0254C8F18B103D4009452AA /* ebcdic.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C4318B103D4009452AA /* ebcdic.h */; };
+		D0254C9018B103D4009452AA /* ec.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C4418B103D4009452AA /* ec.h */; };
+		D0254C9118B103D4009452AA /* ecdh.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C4518B103D4009452AA /* ecdh.h */; };
+		D0254C9218B103D4009452AA /* ecdsa.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C4618B103D4009452AA /* ecdsa.h */; };
+		D0254C9318B103D4009452AA /* engine.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C4718B103D4009452AA /* engine.h */; };
+		D0254C9418B103D4009452AA /* err.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C4818B103D4009452AA /* err.h */; };
+		D0254C9518B103D4009452AA /* evp.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C4918B103D4009452AA /* evp.h */; };
+		D0254C9618B103D4009452AA /* hmac.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C4A18B103D4009452AA /* hmac.h */; };
+		D0254C9718B103D4009452AA /* idea.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C4B18B103D4009452AA /* idea.h */; };
+		D0254C9818B103D4009452AA /* krb5_asn.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C4C18B103D4009452AA /* krb5_asn.h */; };
+		D0254C9918B103D4009452AA /* kssl.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C4D18B103D4009452AA /* kssl.h */; };
+		D0254C9A18B103D4009452AA /* lhash.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C4E18B103D4009452AA /* lhash.h */; };
+		D0254C9B18B103D4009452AA /* md4.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C4F18B103D4009452AA /* md4.h */; };
+		D0254C9C18B103D4009452AA /* md5.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C5018B103D4009452AA /* md5.h */; };
+		D0254C9D18B103D4009452AA /* mdc2.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C5118B103D4009452AA /* mdc2.h */; };
+		D0254C9E18B103D4009452AA /* modes.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C5218B103D4009452AA /* modes.h */; };
+		D0254C9F18B103D4009452AA /* obj_mac.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C5318B103D4009452AA /* obj_mac.h */; };
+		D0254CA018B103D4009452AA /* objects.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C5418B103D4009452AA /* objects.h */; };
+		D0254CA118B103D4009452AA /* ocsp.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C5518B103D4009452AA /* ocsp.h */; };
+		D0254CA218B103D4009452AA /* opensslconf.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C5618B103D4009452AA /* opensslconf.h */; };
+		D0254CA318B103D4009452AA /* opensslv.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C5718B103D4009452AA /* opensslv.h */; };
+		D0254CA418B103D4009452AA /* ossl_typ.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C5818B103D4009452AA /* ossl_typ.h */; };
+		D0254CA518B103D4009452AA /* pem.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C5918B103D4009452AA /* pem.h */; };
+		D0254CA618B103D4009452AA /* pem2.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C5A18B103D4009452AA /* pem2.h */; };
+		D0254CA718B103D4009452AA /* pkcs12.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C5B18B103D4009452AA /* pkcs12.h */; };
+		D0254CA818B103D4009452AA /* pkcs7.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C5C18B103D4009452AA /* pkcs7.h */; };
+		D0254CA918B103D4009452AA /* pqueue.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C5D18B103D4009452AA /* pqueue.h */; };
+		D0254CAA18B103D4009452AA /* rand.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C5E18B103D4009452AA /* rand.h */; };
+		D0254CAB18B103D4009452AA /* rc2.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C5F18B103D4009452AA /* rc2.h */; };
+		D0254CAC18B103D4009452AA /* rc4.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C6018B103D4009452AA /* rc4.h */; };
+		D0254CAD18B103D4009452AA /* ripemd.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C6118B103D4009452AA /* ripemd.h */; };
+		D0254CAE18B103D4009452AA /* rsa.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C6218B103D4009452AA /* rsa.h */; };
+		D0254CAF18B103D4009452AA /* safestack.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C6318B103D4009452AA /* safestack.h */; };
+		D0254CB018B103D4009452AA /* seed.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C6418B103D4009452AA /* seed.h */; };
+		D0254CB118B103D4009452AA /* sha.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C6518B103D4009452AA /* sha.h */; };
+		D0254CB218B103D4009452AA /* srp.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C6618B103D4009452AA /* srp.h */; };
+		D0254CB318B103D4009452AA /* srtp.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C6718B103D4009452AA /* srtp.h */; };
+		D0254CB418B103D4009452AA /* ssl.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C6818B103D4009452AA /* ssl.h */; };
+		D0254CB518B103D4009452AA /* ssl2.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C6918B103D4009452AA /* ssl2.h */; };
+		D0254CB618B103D4009452AA /* ssl23.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C6A18B103D4009452AA /* ssl23.h */; };
+		D0254CB718B103D4009452AA /* ssl3.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C6B18B103D4009452AA /* ssl3.h */; };
+		D0254CB818B103D4009452AA /* stack.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C6C18B103D4009452AA /* stack.h */; };
+		D0254CB918B103D4009452AA /* symhacks.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C6D18B103D4009452AA /* symhacks.h */; };
+		D0254CBA18B103D4009452AA /* tls1.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C6E18B103D4009452AA /* tls1.h */; };
+		D0254CBB18B103D4009452AA /* ts.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C6F18B103D4009452AA /* ts.h */; };
+		D0254CBC18B103D4009452AA /* txt_db.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C7018B103D4009452AA /* txt_db.h */; };
+		D0254CBD18B103D4009452AA /* ui.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C7118B103D4009452AA /* ui.h */; };
+		D0254CBE18B103D4009452AA /* ui_compat.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C7218B103D4009452AA /* ui_compat.h */; };
+		D0254CBF18B103D4009452AA /* whrlpool.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C7318B103D4009452AA /* whrlpool.h */; };
+		D0254CC018B103D4009452AA /* x509.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C7418B103D4009452AA /* x509.h */; };
+		D0254CC118B103D4009452AA /* x509_vfy.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C7518B103D4009452AA /* x509_vfy.h */; };
+		D0254CC218B103D4009452AA /* x509v3.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C7618B103D4009452AA /* x509v3.h */; };
+		D0254CC418B103E3009452AA /* bn.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C3218B103D4009452AA /* bn.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0254CC618B10404009452AA /* MTEncryption.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254CC518B10404009452AA /* MTEncryption.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0503ADA18B027F80074C3FE /* MTOutputStream.h in Headers */ = {isa = PBXBuildFile; fileRef = D0503AD818B027F80074C3FE /* MTOutputStream.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0503ADB18B027F80074C3FE /* MTOutputStream.m in Sources */ = {isa = PBXBuildFile; fileRef = D0503AD918B027F80074C3FE /* MTOutputStream.m */; };
+		D0503ADE18B029480074C3FE /* MTInputStream.h in Headers */ = {isa = PBXBuildFile; fileRef = D0503ADC18B029480074C3FE /* MTInputStream.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0503ADF18B029480074C3FE /* MTInputStream.m in Sources */ = {isa = PBXBuildFile; fileRef = D0503ADD18B029480074C3FE /* MTInputStream.m */; };
+		D05A831818AFB3F9007F1076 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D05A831718AFB3F9007F1076 /* Foundation.framework */; };
+		D05A832918AFB3F9007F1076 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D05A832818AFB3F9007F1076 /* XCTest.framework */; };
+		D05A832A18AFB3F9007F1076 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D05A831718AFB3F9007F1076 /* Foundation.framework */; };
+		D05A832C18AFB3F9007F1076 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D05A832B18AFB3F9007F1076 /* UIKit.framework */; };
+		D05A833118AFB3F9007F1076 /* MtProtoKit iOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D05A831418AFB3F9007F1076 /* MtProtoKit iOS.framework */; };
+		D05A833718AFB3F9007F1076 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = D05A833518AFB3F9007F1076 /* InfoPlist.strings */; };
+		D05A833918AFB3F9007F1076 /* MtProtoKitTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A833818AFB3F9007F1076 /* MtProtoKitTests.m */; };
+		D05A834918AFB40C007F1076 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D05A834818AFB40C007F1076 /* Cocoa.framework */; };
+		D05A835318AFB40C007F1076 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = D05A835118AFB40C007F1076 /* InfoPlist.strings */; };
+		D05A835D18AFB40C007F1076 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D05A832818AFB3F9007F1076 /* XCTest.framework */; };
+		D05A835E18AFB40C007F1076 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D05A834818AFB40C007F1076 /* Cocoa.framework */; };
+		D05A836118AFB40C007F1076 /* MTProtoKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D05A834718AFB40C007F1076 /* MTProtoKit.framework */; };
+		D05A83E718AFB75B007F1076 /* MTContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A839C18AFB75B007F1076 /* MTContext.m */; };
+		D05A83E818AFB75B007F1076 /* MTDatacenterTransferAuthAction.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A839D18AFB75B007F1076 /* MTDatacenterTransferAuthAction.m */; };
+		D05A83E918AFB75B007F1076 /* MTContext.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A839E18AFB75B007F1076 /* MTContext.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05A83EA18AFB75B007F1076 /* MTDatacenterTransferAuthAction.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A839F18AFB75B007F1076 /* MTDatacenterTransferAuthAction.h */; };
+		D05A83EB18AFB75B007F1076 /* MTDatacenterAuthAction.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A83A018AFB75B007F1076 /* MTDatacenterAuthAction.h */; };
+		D05A83EE18AFB75B007F1076 /* MTKeychain.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A83A318AFB75B007F1076 /* MTKeychain.m */; };
+		D05A83FB18AFB75B007F1076 /* MTDatacenterAuthMessageService.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A83B018AFB75B007F1076 /* MTDatacenterAuthMessageService.m */; };
+		D05A840018AFB75B007F1076 /* MTSerialization.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A83B518AFB75B007F1076 /* MTSerialization.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05A840B18AFB75B007F1076 /* MTKeychain.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A83C018AFB75B007F1076 /* MTKeychain.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05A841118AFB75B007F1076 /* MTDatacenterSaltInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A83C618AFB75B007F1076 /* MTDatacenterSaltInfo.m */; };
+		D05A841218AFB75B007F1076 /* MTDatacenterSaltInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A83C718AFB75B007F1076 /* MTDatacenterSaltInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05A841318AFB75B007F1076 /* MTDatacenterAuthInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A83C818AFB75B007F1076 /* MTDatacenterAuthInfo.m */; };
+		D05A841418AFB75B007F1076 /* MTDatacenterAuthInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A83C918AFB75B007F1076 /* MTDatacenterAuthInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05A841518AFB75B007F1076 /* MTDatacenterAddress.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A83CA18AFB75B007F1076 /* MTDatacenterAddress.m */; };
+		D05A841618AFB75B007F1076 /* MTDatacenterAddress.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A83CB18AFB75B007F1076 /* MTDatacenterAddress.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05A841718AFB75B007F1076 /* MTDatacenterAddressSet.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A83CC18AFB75B007F1076 /* MTDatacenterAddressSet.m */; };
+		D05A841818AFB75B007F1076 /* MTDatacenterAddressSet.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A83CD18AFB75B007F1076 /* MTDatacenterAddressSet.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05A841918AFB75B007F1076 /* MTDatacenterAuthAction.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A83CE18AFB75B007F1076 /* MTDatacenterAuthAction.m */; };
+		D05A841C18AFB75B007F1076 /* MTInternalId.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A83D118AFB75B007F1076 /* MTInternalId.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05A841F18AFB75B007F1076 /* MTDiscoverDatacenterAddressAction.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A83D418AFB75B007F1076 /* MTDiscoverDatacenterAddressAction.m */; };
+		D05A842018AFB75B007F1076 /* MTDiscoverDatacenterAddressAction.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A83D518AFB75B007F1076 /* MTDiscoverDatacenterAddressAction.h */; };
+		D05A842418AFB75B007F1076 /* MTDatacenterAuthMessageService.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A83D918AFB75B007F1076 /* MTDatacenterAuthMessageService.h */; };
+		D05A845018AFC7DC007F1076 /* MTKeychain.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A83C018AFB75B007F1076 /* MTKeychain.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05A845118AFC7DC007F1076 /* MTKeychain.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A83A318AFB75B007F1076 /* MTKeychain.m */; };
+		D05A845218AFC7DC007F1076 /* MTContext.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A839E18AFB75B007F1076 /* MTContext.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05A845318AFC7DC007F1076 /* MTContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A839C18AFB75B007F1076 /* MTContext.m */; };
+		D05A845418AFC7DC007F1076 /* MTDiscoverDatacenterAddressAction.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A83D518AFB75B007F1076 /* MTDiscoverDatacenterAddressAction.h */; };
+		D05A845518AFC7DC007F1076 /* MTDiscoverDatacenterAddressAction.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A83D418AFB75B007F1076 /* MTDiscoverDatacenterAddressAction.m */; };
+		D05A845618AFC7DC007F1076 /* MTDatacenterTransferAuthAction.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A839F18AFB75B007F1076 /* MTDatacenterTransferAuthAction.h */; };
+		D05A845718AFC7DC007F1076 /* MTDatacenterTransferAuthAction.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A839D18AFB75B007F1076 /* MTDatacenterTransferAuthAction.m */; };
+		D05A845818AFC7DC007F1076 /* MTDatacenterAuthAction.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A83A018AFB75B007F1076 /* MTDatacenterAuthAction.h */; };
+		D05A845918AFC7DC007F1076 /* MTDatacenterAuthAction.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A83CE18AFB75B007F1076 /* MTDatacenterAuthAction.m */; };
+		D05A845A18AFC7DC007F1076 /* MTDatacenterAuthMessageService.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A83D918AFB75B007F1076 /* MTDatacenterAuthMessageService.h */; };
+		D05A845B18AFC7DC007F1076 /* MTDatacenterAuthMessageService.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A83B018AFB75B007F1076 /* MTDatacenterAuthMessageService.m */; };
+		D05A845C18AFC7DC007F1076 /* MTDatacenterAddress.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A83CB18AFB75B007F1076 /* MTDatacenterAddress.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05A845D18AFC7DC007F1076 /* MTDatacenterAddress.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A83CA18AFB75B007F1076 /* MTDatacenterAddress.m */; };
+		D05A845E18AFC7DC007F1076 /* MTDatacenterAddressSet.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A83CD18AFB75B007F1076 /* MTDatacenterAddressSet.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05A845F18AFC7DC007F1076 /* MTDatacenterAddressSet.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A83CC18AFB75B007F1076 /* MTDatacenterAddressSet.m */; };
+		D05A846018AFC7DC007F1076 /* MTDatacenterAuthInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A83C918AFB75B007F1076 /* MTDatacenterAuthInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05A846118AFC7DC007F1076 /* MTDatacenterAuthInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A83C818AFB75B007F1076 /* MTDatacenterAuthInfo.m */; };
+		D05A846218AFC7DC007F1076 /* MTDatacenterSaltInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A83C718AFB75B007F1076 /* MTDatacenterSaltInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05A846318AFC7DC007F1076 /* MTDatacenterSaltInfo.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A83C618AFB75B007F1076 /* MTDatacenterSaltInfo.m */; };
+		D05A84A118AFCF8E007F1076 /* MTQueue.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A849F18AFCF8E007F1076 /* MTQueue.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05A84A318AFCF8E007F1076 /* MTQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84A018AFCF8E007F1076 /* MTQueue.m */; };
+		D05A84DD18AFE81D007F1076 /* MTTimer.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84D818AFE81C007F1076 /* MTTimer.m */; };
+		D05A84DF18AFE81D007F1076 /* MTTimer.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A84D918AFE81D007F1076 /* MTTimer.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05A84E118AFE81D007F1076 /* MTLogging.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A84DA18AFE81D007F1076 /* MTLogging.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05A84E318AFE81D007F1076 /* MTLogging.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84DB18AFE81D007F1076 /* MTLogging.m */; };
+		D05A84E518AFE81D007F1076 /* MTEncryption.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84DC18AFE81D007F1076 /* MTEncryption.m */; };
+		D05A84F918AFF259007F1076 /* AFHTTPClient.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A84E918AFF259007F1076 /* AFHTTPClient.h */; };
+		D05A84FA18AFF259007F1076 /* AFHTTPClient.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A84E918AFF259007F1076 /* AFHTTPClient.h */; };
+		D05A84FB18AFF259007F1076 /* AFHTTPClient.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84EA18AFF259007F1076 /* AFHTTPClient.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		D05A84FC18AFF259007F1076 /* AFHTTPClient.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84EA18AFF259007F1076 /* AFHTTPClient.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		D05A84FD18AFF259007F1076 /* AFHTTPRequestOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A84EB18AFF259007F1076 /* AFHTTPRequestOperation.h */; };
+		D05A84FE18AFF259007F1076 /* AFHTTPRequestOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A84EB18AFF259007F1076 /* AFHTTPRequestOperation.h */; };
+		D05A84FF18AFF259007F1076 /* AFHTTPRequestOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84EC18AFF259007F1076 /* AFHTTPRequestOperation.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		D05A850018AFF259007F1076 /* AFHTTPRequestOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84EC18AFF259007F1076 /* AFHTTPRequestOperation.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		D05A850D18AFF259007F1076 /* AFNetworking.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A84F318AFF259007F1076 /* AFNetworking.h */; };
+		D05A850E18AFF259007F1076 /* AFNetworking.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A84F318AFF259007F1076 /* AFNetworking.h */; };
+		D05A850F18AFF259007F1076 /* AFURLConnectionOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A84F418AFF259007F1076 /* AFURLConnectionOperation.h */; };
+		D05A851018AFF259007F1076 /* AFURLConnectionOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A84F418AFF259007F1076 /* AFURLConnectionOperation.h */; };
+		D05A851118AFF259007F1076 /* AFURLConnectionOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84F518AFF259007F1076 /* AFURLConnectionOperation.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		D05A851218AFF259007F1076 /* AFURLConnectionOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84F518AFF259007F1076 /* AFURLConnectionOperation.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		D05A851318AFF259007F1076 /* GCDAsyncSocket.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A84F718AFF259007F1076 /* GCDAsyncSocket.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05A851418AFF259007F1076 /* GCDAsyncSocket.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A84F718AFF259007F1076 /* GCDAsyncSocket.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05A851518AFF259007F1076 /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84F818AFF259007F1076 /* GCDAsyncSocket.m */; };
+		D05A851618AFF259007F1076 /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84F818AFF259007F1076 /* GCDAsyncSocket.m */; };
+		D05A851918AFF2F8007F1076 /* AFJSONUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A851718AFF2F8007F1076 /* AFJSONUtilities.h */; };
+		D05A851A18AFF2F8007F1076 /* AFJSONUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A851718AFF2F8007F1076 /* AFJSONUtilities.h */; };
+		D05A851B18AFF2F8007F1076 /* AFJSONUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A851818AFF2F8007F1076 /* AFJSONUtilities.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		D05A851C18AFF2F8007F1076 /* AFJSONUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A851818AFF2F8007F1076 /* AFJSONUtilities.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		D063A2E118B143EA00C65116 /* MTTimer.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84D818AFE81C007F1076 /* MTTimer.m */; };
+		D063A2E218B143EA00C65116 /* MTTimer.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A84D918AFE81D007F1076 /* MTTimer.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A2E318B143EA00C65116 /* MTLogging.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A84DA18AFE81D007F1076 /* MTLogging.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A2E418B143EA00C65116 /* MTLogging.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84DB18AFE81D007F1076 /* MTLogging.m */; };
+		D063A2E518B143EA00C65116 /* MTEncryption.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254CC518B10404009452AA /* MTEncryption.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A2E618B143EA00C65116 /* MTEncryption.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84DC18AFE81D007F1076 /* MTEncryption.m */; };
+		D063A2E718B143EA00C65116 /* MTInternalId.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A83D118AFB75B007F1076 /* MTInternalId.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A2E818B143EA00C65116 /* MTQueue.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A849F18AFCF8E007F1076 /* MTQueue.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A2E918B143EA00C65116 /* MTQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84A018AFCF8E007F1076 /* MTQueue.m */; };
+		D063A2EA18B143EA00C65116 /* MTOutputStream.h in Headers */ = {isa = PBXBuildFile; fileRef = D0503AD818B027F80074C3FE /* MTOutputStream.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A2EB18B143EA00C65116 /* MTOutputStream.m in Sources */ = {isa = PBXBuildFile; fileRef = D0503AD918B027F80074C3FE /* MTOutputStream.m */; };
+		D063A2EC18B143EA00C65116 /* MTInputStream.h in Headers */ = {isa = PBXBuildFile; fileRef = D0503ADC18B029480074C3FE /* MTInputStream.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A2ED18B143EA00C65116 /* MTInputStream.m in Sources */ = {isa = PBXBuildFile; fileRef = D0503ADD18B029480074C3FE /* MTInputStream.m */; };
+		D063A2EF18B143F000C65116 /* MTSerialization.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A83B518AFB75B007F1076 /* MTSerialization.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A2F818B14A9400C65116 /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D063A2F718B14A9400C65116 /* libcrypto.a */; };
+		D063A2FA18B14AB500C65116 /* libcrypto.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D063A2F918B14AB500C65116 /* libcrypto.dylib */; };
+		D063A31A18B157F700C65116 /* MtProtoKit-Prefix.pch in Headers */ = {isa = PBXBuildFile; fileRef = D063A31518B157F700C65116 /* MtProtoKit-Prefix.pch */; };
+		D063A31B18B157F700C65116 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = D063A31718B157F700C65116 /* InfoPlist.strings */; };
+		D063A31C18B157F700C65116 /* MtProtoKit-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = D063A31918B157F700C65116 /* MtProtoKit-Info.plist */; };
+		D063A31E18B158AE00C65116 /* MTProtoKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A31D18B158AE00C65116 /* MTProtoKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A31F18B158B500C65116 /* MTProtoKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A31D18B158AE00C65116 /* MTProtoKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A32A18B1618D00C65116 /* MTOutgoingMessage.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A32018B1618D00C65116 /* MTOutgoingMessage.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A32B18B1618D00C65116 /* MTOutgoingMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A32118B1618D00C65116 /* MTOutgoingMessage.m */; };
+		D063A32C18B1618D00C65116 /* MTPreparedMessage.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A32218B1618D00C65116 /* MTPreparedMessage.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A32D18B1618D00C65116 /* MTPreparedMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A32318B1618D00C65116 /* MTPreparedMessage.m */; };
+		D063A32E18B1618D00C65116 /* MTProto.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A32418B1618D00C65116 /* MTProto.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A32F18B1618D00C65116 /* MTProto.mm in Sources */ = {isa = PBXBuildFile; fileRef = D063A32518B1618D00C65116 /* MTProto.mm */; };
+		D063A33018B1618D00C65116 /* MTSessionInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A32618B1618D00C65116 /* MTSessionInfo.h */; };
+		D063A33118B1618D00C65116 /* MTSessionInfo.mm in Sources */ = {isa = PBXBuildFile; fileRef = D063A32718B1618D00C65116 /* MTSessionInfo.mm */; };
+		D063A33218B1618D00C65116 /* MTTimeFixContext.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A32818B1618D00C65116 /* MTTimeFixContext.h */; };
+		D063A33318B1618D00C65116 /* MTTimeFixContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A32918B1618D00C65116 /* MTTimeFixContext.m */; };
+		D063A33A18B161B600C65116 /* MTDatacenterTransportStraregy.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A33418B161B600C65116 /* MTDatacenterTransportStraregy.h */; };
+		D063A33B18B161B600C65116 /* MTDatacenterTransportStraregy.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A33518B161B600C65116 /* MTDatacenterTransportStraregy.m */; };
+		D063A33C18B161B600C65116 /* MTIncomingMessage.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A33618B161B600C65116 /* MTIncomingMessage.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A33D18B161B600C65116 /* MTIncomingMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A33718B161B600C65116 /* MTIncomingMessage.m */; };
+		D063A33E18B161B600C65116 /* MTMessageEncryptionKey.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A33818B161B600C65116 /* MTMessageEncryptionKey.h */; };
+		D063A33F18B161B600C65116 /* MTMessageEncryptionKey.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A33918B161B600C65116 /* MTMessageEncryptionKey.m */; };
+		D063A34018B161C400C65116 /* MTProto.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A32418B1618D00C65116 /* MTProto.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A34118B161C400C65116 /* MTProto.mm in Sources */ = {isa = PBXBuildFile; fileRef = D063A32518B1618D00C65116 /* MTProto.mm */; };
+		D063A34218B161C400C65116 /* MTSessionInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A32618B1618D00C65116 /* MTSessionInfo.h */; };
+		D063A34318B161C400C65116 /* MTSessionInfo.mm in Sources */ = {isa = PBXBuildFile; fileRef = D063A32718B1618D00C65116 /* MTSessionInfo.mm */; };
+		D063A34418B161C400C65116 /* MTTimeFixContext.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A32818B1618D00C65116 /* MTTimeFixContext.h */; };
+		D063A34518B161C400C65116 /* MTTimeFixContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A32918B1618D00C65116 /* MTTimeFixContext.m */; };
+		D063A34618B161C400C65116 /* MTPreparedMessage.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A32218B1618D00C65116 /* MTPreparedMessage.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A34718B161C400C65116 /* MTPreparedMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A32318B1618D00C65116 /* MTPreparedMessage.m */; };
+		D063A34818B161C400C65116 /* MTOutgoingMessage.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A32018B1618D00C65116 /* MTOutgoingMessage.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A34918B161C400C65116 /* MTOutgoingMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A32118B1618D00C65116 /* MTOutgoingMessage.m */; };
+		D063A34A18B161C400C65116 /* MTDatacenterTransportStraregy.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A33418B161B600C65116 /* MTDatacenterTransportStraregy.h */; };
+		D063A34B18B161C400C65116 /* MTDatacenterTransportStraregy.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A33518B161B600C65116 /* MTDatacenterTransportStraregy.m */; };
+		D063A34C18B161C400C65116 /* MTIncomingMessage.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A33618B161B600C65116 /* MTIncomingMessage.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A34D18B161C400C65116 /* MTIncomingMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A33718B161B600C65116 /* MTIncomingMessage.m */; };
+		D063A34E18B161C400C65116 /* MTMessageEncryptionKey.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A33818B161B600C65116 /* MTMessageEncryptionKey.h */; };
+		D063A34F18B161C400C65116 /* MTMessageEncryptionKey.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A33918B161B600C65116 /* MTMessageEncryptionKey.m */; };
+		D063A35318B1631900C65116 /* MTMessageService.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A35018B1631900C65116 /* MTMessageService.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A35418B1631900C65116 /* MTMessageService.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A35018B1631900C65116 /* MTMessageService.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A35518B1631900C65116 /* MTMessageTransaction.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A35118B1631900C65116 /* MTMessageTransaction.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A35618B1631900C65116 /* MTMessageTransaction.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A35118B1631900C65116 /* MTMessageTransaction.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A35718B1631900C65116 /* MTMessageTransaction.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A35218B1631900C65116 /* MTMessageTransaction.m */; };
+		D063A35818B1631900C65116 /* MTMessageTransaction.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A35218B1631900C65116 /* MTMessageTransaction.m */; };
+		D063A35B18B164BA00C65116 /* MTTimeSyncMessageService.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A35918B164BA00C65116 /* MTTimeSyncMessageService.h */; };
+		D063A35C18B164BA00C65116 /* MTTimeSyncMessageService.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A35918B164BA00C65116 /* MTTimeSyncMessageService.h */; };
+		D063A35D18B164BA00C65116 /* MTTimeSyncMessageService.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A35A18B164BA00C65116 /* MTTimeSyncMessageService.m */; };
+		D063A35E18B164BA00C65116 /* MTTimeSyncMessageService.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A35A18B164BA00C65116 /* MTTimeSyncMessageService.m */; };
+		D063A36918B164D600C65116 /* MTApiEnvironment.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A35F18B164D600C65116 /* MTApiEnvironment.h */; };
+		D063A36A18B164D600C65116 /* MTApiEnvironment.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A35F18B164D600C65116 /* MTApiEnvironment.h */; };
+		D063A36B18B164D600C65116 /* MTApiEnvironment.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A36018B164D600C65116 /* MTApiEnvironment.m */; };
+		D063A36C18B164D600C65116 /* MTApiEnvironment.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A36018B164D600C65116 /* MTApiEnvironment.m */; };
+		D063A36D18B164D600C65116 /* MTDropResponseContext.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A36118B164D600C65116 /* MTDropResponseContext.h */; };
+		D063A36E18B164D600C65116 /* MTDropResponseContext.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A36118B164D600C65116 /* MTDropResponseContext.h */; };
+		D063A36F18B164D600C65116 /* MTDropResponseContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A36218B164D600C65116 /* MTDropResponseContext.m */; };
+		D063A37018B164D600C65116 /* MTDropResponseContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A36218B164D600C65116 /* MTDropResponseContext.m */; };
+		D063A37118B164D600C65116 /* MTRequest.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A36318B164D600C65116 /* MTRequest.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A37218B164D600C65116 /* MTRequest.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A36318B164D600C65116 /* MTRequest.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A37318B164D600C65116 /* MTRequest.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A36418B164D600C65116 /* MTRequest.m */; };
+		D063A37418B164D600C65116 /* MTRequest.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A36418B164D600C65116 /* MTRequest.m */; };
+		D063A37518B164D600C65116 /* MTRequestContext.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A36518B164D600C65116 /* MTRequestContext.h */; };
+		D063A37618B164D600C65116 /* MTRequestContext.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A36518B164D600C65116 /* MTRequestContext.h */; };
+		D063A37718B164D600C65116 /* MTRequestContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A36618B164D600C65116 /* MTRequestContext.m */; };
+		D063A37818B164D600C65116 /* MTRequestContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A36618B164D600C65116 /* MTRequestContext.m */; };
+		D063A37918B164D600C65116 /* MTRequestMessageService.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A36718B164D600C65116 /* MTRequestMessageService.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A37A18B164D600C65116 /* MTRequestMessageService.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A36718B164D600C65116 /* MTRequestMessageService.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A37B18B164D600C65116 /* MTRequestMessageService.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A36818B164D600C65116 /* MTRequestMessageService.m */; };
+		D063A37C18B164D600C65116 /* MTRequestMessageService.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A36818B164D600C65116 /* MTRequestMessageService.m */; };
+		D063A37F18B164E600C65116 /* MTResendMessageService.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A37D18B164E600C65116 /* MTResendMessageService.h */; };
+		D063A38018B164E600C65116 /* MTResendMessageService.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A37D18B164E600C65116 /* MTResendMessageService.h */; };
+		D063A38118B164E600C65116 /* MTResendMessageService.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A37E18B164E600C65116 /* MTResendMessageService.m */; };
+		D063A38218B164E600C65116 /* MTResendMessageService.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A37E18B164E600C65116 /* MTResendMessageService.m */; };
+		D063A38918B164F800C65116 /* MTNetworkAvailability.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A38318B164F800C65116 /* MTNetworkAvailability.h */; };
+		D063A38A18B164F800C65116 /* MTNetworkAvailability.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A38318B164F800C65116 /* MTNetworkAvailability.h */; };
+		D063A38B18B164F800C65116 /* MTNetworkAvailability.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A38418B164F800C65116 /* MTNetworkAvailability.m */; };
+		D063A38C18B164F800C65116 /* MTNetworkAvailability.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A38418B164F800C65116 /* MTNetworkAvailability.m */; };
+		D063A38D18B164F800C65116 /* MTTransport.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A38518B164F800C65116 /* MTTransport.h */; };
+		D063A38E18B164F800C65116 /* MTTransport.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A38518B164F800C65116 /* MTTransport.h */; };
+		D063A38F18B164F800C65116 /* MTTransport.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A38618B164F800C65116 /* MTTransport.m */; };
+		D063A39018B164F800C65116 /* MTTransport.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A38618B164F800C65116 /* MTTransport.m */; };
+		D063A39118B164F800C65116 /* MTTransportTransaction.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A38718B164F800C65116 /* MTTransportTransaction.h */; };
+		D063A39218B164F800C65116 /* MTTransportTransaction.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A38718B164F800C65116 /* MTTransportTransaction.h */; };
+		D063A39318B164F800C65116 /* MTTransportTransaction.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A38818B164F800C65116 /* MTTransportTransaction.m */; };
+		D063A39418B164F800C65116 /* MTTransportTransaction.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A38818B164F800C65116 /* MTTransportTransaction.m */; };
+		D063A39B18B1650400C65116 /* MTTcpConnection.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A39518B1650400C65116 /* MTTcpConnection.h */; };
+		D063A39C18B1650400C65116 /* MTTcpConnection.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A39518B1650400C65116 /* MTTcpConnection.h */; };
+		D063A39D18B1650400C65116 /* MTTcpConnection.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A39618B1650400C65116 /* MTTcpConnection.m */; };
+		D063A39E18B1650400C65116 /* MTTcpConnection.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A39618B1650400C65116 /* MTTcpConnection.m */; };
+		D063A39F18B1650400C65116 /* MTTcpConnectionBehaviour.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A39718B1650400C65116 /* MTTcpConnectionBehaviour.h */; };
+		D063A3A018B1650400C65116 /* MTTcpConnectionBehaviour.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A39718B1650400C65116 /* MTTcpConnectionBehaviour.h */; };
+		D063A3A118B1650400C65116 /* MTTcpConnectionBehaviour.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A39818B1650400C65116 /* MTTcpConnectionBehaviour.m */; };
+		D063A3A218B1650400C65116 /* MTTcpConnectionBehaviour.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A39818B1650400C65116 /* MTTcpConnectionBehaviour.m */; };
+		D063A3A318B1650400C65116 /* MTTcpTransport.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A39918B1650400C65116 /* MTTcpTransport.h */; };
+		D063A3A418B1650400C65116 /* MTTcpTransport.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A39918B1650400C65116 /* MTTcpTransport.h */; };
+		D063A3A518B1650400C65116 /* MTTcpTransport.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A39A18B1650400C65116 /* MTTcpTransport.m */; };
+		D063A3A618B1650400C65116 /* MTTcpTransport.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A39A18B1650400C65116 /* MTTcpTransport.m */; };
+		D063A3AD18B1650F00C65116 /* MTHttpTransport.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A3A718B1650F00C65116 /* MTHttpTransport.h */; };
+		D063A3AE18B1650F00C65116 /* MTHttpTransport.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A3A718B1650F00C65116 /* MTHttpTransport.h */; };
+		D063A3AF18B1650F00C65116 /* MTHttpTransport.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A3A818B1650F00C65116 /* MTHttpTransport.m */; };
+		D063A3B018B1650F00C65116 /* MTHttpTransport.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A3A818B1650F00C65116 /* MTHttpTransport.m */; };
+		D063A3B118B1650F00C65116 /* MTHttpWorker.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A3A918B1650F00C65116 /* MTHttpWorker.h */; };
+		D063A3B218B1650F00C65116 /* MTHttpWorker.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A3A918B1650F00C65116 /* MTHttpWorker.h */; };
+		D063A3B318B1650F00C65116 /* MTHttpWorker.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A3AA18B1650F00C65116 /* MTHttpWorker.m */; };
+		D063A3B418B1650F00C65116 /* MTHttpWorker.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A3AA18B1650F00C65116 /* MTHttpWorker.m */; };
+		D063A3B518B1650F00C65116 /* MTHttpWorkerBehaviour.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A3AB18B1650F00C65116 /* MTHttpWorkerBehaviour.h */; };
+		D063A3B618B1650F00C65116 /* MTHttpWorkerBehaviour.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A3AB18B1650F00C65116 /* MTHttpWorkerBehaviour.h */; };
+		D063A3B718B1650F00C65116 /* MTHttpWorkerBehaviour.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A3AC18B1650F00C65116 /* MTHttpWorkerBehaviour.m */; };
+		D063A3B818B1650F00C65116 /* MTHttpWorkerBehaviour.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A3AC18B1650F00C65116 /* MTHttpWorkerBehaviour.m */; };
+		D0A44E4E18B24A6000B64FC6 /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0A44E4D18B24A6000B64FC6 /* libcrypto.a */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		D05A832D18AFB3F9007F1076 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D05A830A18AFB3F9007F1076 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D05A831318AFB3F9007F1076;
+			remoteInfo = MtProtoKit;
+		};
+		D05A832F18AFB3F9007F1076 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D05A830A18AFB3F9007F1076 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D05A831318AFB3F9007F1076;
+			remoteInfo = MtProtoKit;
+		};
+		D05A835F18AFB40C007F1076 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D05A830A18AFB3F9007F1076 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D05A834618AFB40C007F1076;
+			remoteInfo = MtProtoKitOSX;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		93DBD22F18B2D72800631ADC /* MTRequestErrorContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTRequestErrorContext.h; path = MtProtoKit/MTRequestErrorContext.h; sourceTree = "<group>"; };
+		93DBD23018B2D72800631ADC /* MTRequestErrorContext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTRequestErrorContext.m; path = MtProtoKit/MTRequestErrorContext.m; sourceTree = "<group>"; };
+		93DBD23318B2D9AA00631ADC /* MTTime.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = MTTime.h; path = MtProtoKit/MTTime.h; sourceTree = "<group>"; };
+		93DBD23418B2DA1E00631ADC /* MTTime.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTTime.m; path = MtProtoKit/MTTime.m; sourceTree = "<group>"; };
+		D0254C2C18B103D4009452AA /* aes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = aes.h; sourceTree = "<group>"; };
+		D0254C2D18B103D4009452AA /* asn1.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = asn1.h; sourceTree = "<group>"; };
+		D0254C2E18B103D4009452AA /* asn1_mac.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = asn1_mac.h; sourceTree = "<group>"; };
+		D0254C2F18B103D4009452AA /* asn1t.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = asn1t.h; sourceTree = "<group>"; };
+		D0254C3018B103D4009452AA /* bio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bio.h; sourceTree = "<group>"; };
+		D0254C3118B103D4009452AA /* blowfish.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = blowfish.h; sourceTree = "<group>"; };
+		D0254C3218B103D4009452AA /* bn.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bn.h; sourceTree = "<group>"; };
+		D0254C3318B103D4009452AA /* buffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = buffer.h; sourceTree = "<group>"; };
+		D0254C3418B103D4009452AA /* camellia.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = camellia.h; sourceTree = "<group>"; };
+		D0254C3518B103D4009452AA /* cast.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cast.h; sourceTree = "<group>"; };
+		D0254C3618B103D4009452AA /* cmac.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cmac.h; sourceTree = "<group>"; };
+		D0254C3718B103D4009452AA /* cms.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cms.h; sourceTree = "<group>"; };
+		D0254C3818B103D4009452AA /* comp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = comp.h; sourceTree = "<group>"; };
+		D0254C3918B103D4009452AA /* conf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = conf.h; sourceTree = "<group>"; };
+		D0254C3A18B103D4009452AA /* conf_api.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = conf_api.h; sourceTree = "<group>"; };
+		D0254C3B18B103D4009452AA /* crypto.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = crypto.h; sourceTree = "<group>"; };
+		D0254C3C18B103D4009452AA /* des.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = des.h; sourceTree = "<group>"; };
+		D0254C3D18B103D4009452AA /* des_old.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = des_old.h; sourceTree = "<group>"; };
+		D0254C3E18B103D4009452AA /* dh.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = dh.h; sourceTree = "<group>"; };
+		D0254C3F18B103D4009452AA /* dsa.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = dsa.h; sourceTree = "<group>"; };
+		D0254C4018B103D4009452AA /* dso.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = dso.h; sourceTree = "<group>"; };
+		D0254C4118B103D4009452AA /* dtls1.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = dtls1.h; sourceTree = "<group>"; };
+		D0254C4218B103D4009452AA /* e_os2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = e_os2.h; sourceTree = "<group>"; };
+		D0254C4318B103D4009452AA /* ebcdic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ebcdic.h; sourceTree = "<group>"; };
+		D0254C4418B103D4009452AA /* ec.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ec.h; sourceTree = "<group>"; };
+		D0254C4518B103D4009452AA /* ecdh.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ecdh.h; sourceTree = "<group>"; };
+		D0254C4618B103D4009452AA /* ecdsa.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ecdsa.h; sourceTree = "<group>"; };
+		D0254C4718B103D4009452AA /* engine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = engine.h; sourceTree = "<group>"; };
+		D0254C4818B103D4009452AA /* err.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = err.h; sourceTree = "<group>"; };
+		D0254C4918B103D4009452AA /* evp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = evp.h; sourceTree = "<group>"; };
+		D0254C4A18B103D4009452AA /* hmac.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = hmac.h; sourceTree = "<group>"; };
+		D0254C4B18B103D4009452AA /* idea.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = idea.h; sourceTree = "<group>"; };
+		D0254C4C18B103D4009452AA /* krb5_asn.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = krb5_asn.h; sourceTree = "<group>"; };
+		D0254C4D18B103D4009452AA /* kssl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kssl.h; sourceTree = "<group>"; };
+		D0254C4E18B103D4009452AA /* lhash.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = lhash.h; sourceTree = "<group>"; };
+		D0254C4F18B103D4009452AA /* md4.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = md4.h; sourceTree = "<group>"; };
+		D0254C5018B103D4009452AA /* md5.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = md5.h; sourceTree = "<group>"; };
+		D0254C5118B103D4009452AA /* mdc2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mdc2.h; sourceTree = "<group>"; };
+		D0254C5218B103D4009452AA /* modes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = modes.h; sourceTree = "<group>"; };
+		D0254C5318B103D4009452AA /* obj_mac.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = obj_mac.h; sourceTree = "<group>"; };
+		D0254C5418B103D4009452AA /* objects.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = objects.h; sourceTree = "<group>"; };
+		D0254C5518B103D4009452AA /* ocsp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ocsp.h; sourceTree = "<group>"; };
+		D0254C5618B103D4009452AA /* opensslconf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = opensslconf.h; sourceTree = "<group>"; };
+		D0254C5718B103D4009452AA /* opensslv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = opensslv.h; sourceTree = "<group>"; };
+		D0254C5818B103D4009452AA /* ossl_typ.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ossl_typ.h; sourceTree = "<group>"; };
+		D0254C5918B103D4009452AA /* pem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pem.h; sourceTree = "<group>"; };
+		D0254C5A18B103D4009452AA /* pem2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pem2.h; sourceTree = "<group>"; };
+		D0254C5B18B103D4009452AA /* pkcs12.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pkcs12.h; sourceTree = "<group>"; };
+		D0254C5C18B103D4009452AA /* pkcs7.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pkcs7.h; sourceTree = "<group>"; };
+		D0254C5D18B103D4009452AA /* pqueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pqueue.h; sourceTree = "<group>"; };
+		D0254C5E18B103D4009452AA /* rand.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = rand.h; sourceTree = "<group>"; };
+		D0254C5F18B103D4009452AA /* rc2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = rc2.h; sourceTree = "<group>"; };
+		D0254C6018B103D4009452AA /* rc4.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = rc4.h; sourceTree = "<group>"; };
+		D0254C6118B103D4009452AA /* ripemd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ripemd.h; sourceTree = "<group>"; };
+		D0254C6218B103D4009452AA /* rsa.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = rsa.h; sourceTree = "<group>"; };
+		D0254C6318B103D4009452AA /* safestack.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = safestack.h; sourceTree = "<group>"; };
+		D0254C6418B103D4009452AA /* seed.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = seed.h; sourceTree = "<group>"; };
+		D0254C6518B103D4009452AA /* sha.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sha.h; sourceTree = "<group>"; };
+		D0254C6618B103D4009452AA /* srp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = srp.h; sourceTree = "<group>"; };
+		D0254C6718B103D4009452AA /* srtp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = srtp.h; sourceTree = "<group>"; };
+		D0254C6818B103D4009452AA /* ssl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ssl.h; sourceTree = "<group>"; };
+		D0254C6918B103D4009452AA /* ssl2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ssl2.h; sourceTree = "<group>"; };
+		D0254C6A18B103D4009452AA /* ssl23.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ssl23.h; sourceTree = "<group>"; };
+		D0254C6B18B103D4009452AA /* ssl3.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ssl3.h; sourceTree = "<group>"; };
+		D0254C6C18B103D4009452AA /* stack.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = stack.h; sourceTree = "<group>"; };
+		D0254C6D18B103D4009452AA /* symhacks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = symhacks.h; sourceTree = "<group>"; };
+		D0254C6E18B103D4009452AA /* tls1.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tls1.h; sourceTree = "<group>"; };
+		D0254C6F18B103D4009452AA /* ts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ts.h; sourceTree = "<group>"; };
+		D0254C7018B103D4009452AA /* txt_db.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = txt_db.h; sourceTree = "<group>"; };
+		D0254C7118B103D4009452AA /* ui.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ui.h; sourceTree = "<group>"; };
+		D0254C7218B103D4009452AA /* ui_compat.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ui_compat.h; sourceTree = "<group>"; };
+		D0254C7318B103D4009452AA /* whrlpool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = whrlpool.h; sourceTree = "<group>"; };
+		D0254C7418B103D4009452AA /* x509.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = x509.h; sourceTree = "<group>"; };
+		D0254C7518B103D4009452AA /* x509_vfy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = x509_vfy.h; sourceTree = "<group>"; };
+		D0254C7618B103D4009452AA /* x509v3.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = x509v3.h; sourceTree = "<group>"; };
+		D0254CC518B10404009452AA /* MTEncryption.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTEncryption.h; path = MTProtoKit/MTEncryption.h; sourceTree = "<group>"; };
+		D0503AD818B027F80074C3FE /* MTOutputStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTOutputStream.h; path = MTProtoKit/MTOutputStream.h; sourceTree = "<group>"; };
+		D0503AD918B027F80074C3FE /* MTOutputStream.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTOutputStream.m; path = MTProtoKit/MTOutputStream.m; sourceTree = "<group>"; };
+		D0503ADC18B029480074C3FE /* MTInputStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTInputStream.h; path = MTProtoKit/MTInputStream.h; sourceTree = "<group>"; };
+		D0503ADD18B029480074C3FE /* MTInputStream.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTInputStream.m; path = MTProtoKit/MTInputStream.m; sourceTree = "<group>"; };
+		D05A831418AFB3F9007F1076 /* MtProtoKit iOS.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework.static; includeInIndex = 0; path = "MtProtoKit iOS.framework"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D05A831718AFB3F9007F1076 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		D05A832718AFB3F9007F1076 /* MtProtoKit iOS Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "MtProtoKit iOS Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D05A832818AFB3F9007F1076 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
+		D05A832B18AFB3F9007F1076 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
+		D05A833418AFB3F9007F1076 /* MtProtoKitTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "MtProtoKitTests-Info.plist"; sourceTree = "<group>"; };
+		D05A833618AFB3F9007F1076 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		D05A833818AFB3F9007F1076 /* MtProtoKitTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MtProtoKitTests.m; sourceTree = "<group>"; };
+		D05A834718AFB40C007F1076 /* MTProtoKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MTProtoKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D05A834818AFB40C007F1076 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
+		D05A834B18AFB40C007F1076 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		D05A834C18AFB40C007F1076 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
+		D05A834D18AFB40C007F1076 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		D05A835018AFB40C007F1076 /* MtProtoKitOSX-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "MtProtoKitOSX-Info.plist"; sourceTree = "<group>"; };
+		D05A835218AFB40C007F1076 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		D05A835418AFB40C007F1076 /* MtProtoKitOSX-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "MtProtoKitOSX-Prefix.pch"; sourceTree = "<group>"; };
+		D05A835C18AFB40C007F1076 /* MtProtoKit OSX Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "MtProtoKit OSX Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D05A839C18AFB75B007F1076 /* MTContext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTContext.m; path = MTProtoKit/MTContext.m; sourceTree = "<group>"; };
+		D05A839D18AFB75B007F1076 /* MTDatacenterTransferAuthAction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTDatacenterTransferAuthAction.m; path = MTProtoKit/MTDatacenterTransferAuthAction.m; sourceTree = "<group>"; };
+		D05A839E18AFB75B007F1076 /* MTContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTContext.h; path = MTProtoKit/MTContext.h; sourceTree = "<group>"; };
+		D05A839F18AFB75B007F1076 /* MTDatacenterTransferAuthAction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTDatacenterTransferAuthAction.h; path = MTProtoKit/MTDatacenterTransferAuthAction.h; sourceTree = "<group>"; };
+		D05A83A018AFB75B007F1076 /* MTDatacenterAuthAction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTDatacenterAuthAction.h; path = MTProtoKit/MTDatacenterAuthAction.h; sourceTree = "<group>"; };
+		D05A83A318AFB75B007F1076 /* MTKeychain.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTKeychain.m; path = MTProtoKit/MTKeychain.m; sourceTree = "<group>"; };
+		D05A83B018AFB75B007F1076 /* MTDatacenterAuthMessageService.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTDatacenterAuthMessageService.m; path = MTProtoKit/MTDatacenterAuthMessageService.m; sourceTree = "<group>"; };
+		D05A83B518AFB75B007F1076 /* MTSerialization.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTSerialization.h; path = MTProtoKit/MTSerialization.h; sourceTree = "<group>"; };
+		D05A83C018AFB75B007F1076 /* MTKeychain.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTKeychain.h; path = MTProtoKit/MTKeychain.h; sourceTree = "<group>"; };
+		D05A83C618AFB75B007F1076 /* MTDatacenterSaltInfo.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTDatacenterSaltInfo.m; path = MTProtoKit/MTDatacenterSaltInfo.m; sourceTree = "<group>"; };
+		D05A83C718AFB75B007F1076 /* MTDatacenterSaltInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTDatacenterSaltInfo.h; path = MTProtoKit/MTDatacenterSaltInfo.h; sourceTree = "<group>"; };
+		D05A83C818AFB75B007F1076 /* MTDatacenterAuthInfo.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTDatacenterAuthInfo.m; path = MTProtoKit/MTDatacenterAuthInfo.m; sourceTree = "<group>"; };
+		D05A83C918AFB75B007F1076 /* MTDatacenterAuthInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTDatacenterAuthInfo.h; path = MTProtoKit/MTDatacenterAuthInfo.h; sourceTree = "<group>"; };
+		D05A83CA18AFB75B007F1076 /* MTDatacenterAddress.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTDatacenterAddress.m; path = MTProtoKit/MTDatacenterAddress.m; sourceTree = "<group>"; };
+		D05A83CB18AFB75B007F1076 /* MTDatacenterAddress.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTDatacenterAddress.h; path = MTProtoKit/MTDatacenterAddress.h; sourceTree = "<group>"; };
+		D05A83CC18AFB75B007F1076 /* MTDatacenterAddressSet.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTDatacenterAddressSet.m; path = MTProtoKit/MTDatacenterAddressSet.m; sourceTree = "<group>"; };
+		D05A83CD18AFB75B007F1076 /* MTDatacenterAddressSet.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTDatacenterAddressSet.h; path = MTProtoKit/MTDatacenterAddressSet.h; sourceTree = "<group>"; };
+		D05A83CE18AFB75B007F1076 /* MTDatacenterAuthAction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTDatacenterAuthAction.m; path = MTProtoKit/MTDatacenterAuthAction.m; sourceTree = "<group>"; };
+		D05A83D118AFB75B007F1076 /* MTInternalId.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTInternalId.h; path = MTProtoKit/MTInternalId.h; sourceTree = "<group>"; };
+		D05A83D418AFB75B007F1076 /* MTDiscoverDatacenterAddressAction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTDiscoverDatacenterAddressAction.m; path = MTProtoKit/MTDiscoverDatacenterAddressAction.m; sourceTree = "<group>"; };
+		D05A83D518AFB75B007F1076 /* MTDiscoverDatacenterAddressAction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTDiscoverDatacenterAddressAction.h; path = MTProtoKit/MTDiscoverDatacenterAddressAction.h; sourceTree = "<group>"; };
+		D05A83D918AFB75B007F1076 /* MTDatacenterAuthMessageService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTDatacenterAuthMessageService.h; path = MTProtoKit/MTDatacenterAuthMessageService.h; sourceTree = "<group>"; };
+		D05A849F18AFCF8E007F1076 /* MTQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTQueue.h; path = MTProtoKit/MTQueue.h; sourceTree = "<group>"; };
+		D05A84A018AFCF8E007F1076 /* MTQueue.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTQueue.m; path = MTProtoKit/MTQueue.m; sourceTree = "<group>"; };
+		D05A84D818AFE81C007F1076 /* MTTimer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTTimer.m; path = MTProtoKit/MTTimer.m; sourceTree = "<group>"; };
+		D05A84D918AFE81D007F1076 /* MTTimer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTTimer.h; path = MTProtoKit/MTTimer.h; sourceTree = "<group>"; };
+		D05A84DA18AFE81D007F1076 /* MTLogging.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTLogging.h; path = MTProtoKit/MTLogging.h; sourceTree = "<group>"; };
+		D05A84DB18AFE81D007F1076 /* MTLogging.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTLogging.m; path = MTProtoKit/MTLogging.m; sourceTree = "<group>"; };
+		D05A84DC18AFE81D007F1076 /* MTEncryption.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTEncryption.m; path = MTProtoKit/MTEncryption.m; sourceTree = "<group>"; };
+		D05A84E918AFF259007F1076 /* AFHTTPClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AFHTTPClient.h; sourceTree = "<group>"; };
+		D05A84EA18AFF259007F1076 /* AFHTTPClient.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AFHTTPClient.m; sourceTree = "<group>"; };
+		D05A84EB18AFF259007F1076 /* AFHTTPRequestOperation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AFHTTPRequestOperation.h; sourceTree = "<group>"; };
+		D05A84EC18AFF259007F1076 /* AFHTTPRequestOperation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AFHTTPRequestOperation.m; sourceTree = "<group>"; };
+		D05A84F318AFF259007F1076 /* AFNetworking.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AFNetworking.h; sourceTree = "<group>"; };
+		D05A84F418AFF259007F1076 /* AFURLConnectionOperation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AFURLConnectionOperation.h; sourceTree = "<group>"; };
+		D05A84F518AFF259007F1076 /* AFURLConnectionOperation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AFURLConnectionOperation.m; sourceTree = "<group>"; };
+		D05A84F718AFF259007F1076 /* GCDAsyncSocket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GCDAsyncSocket.h; sourceTree = "<group>"; };
+		D05A84F818AFF259007F1076 /* GCDAsyncSocket.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GCDAsyncSocket.m; sourceTree = "<group>"; };
+		D05A851718AFF2F8007F1076 /* AFJSONUtilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AFJSONUtilities.h; sourceTree = "<group>"; };
+		D05A851818AFF2F8007F1076 /* AFJSONUtilities.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AFJSONUtilities.m; sourceTree = "<group>"; };
+		D063A2F718B14A9400C65116 /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libcrypto.a; sourceTree = "<group>"; };
+		D063A2F918B14AB500C65116 /* libcrypto.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.dylib; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk/usr/lib/libcrypto.dylib; sourceTree = DEVELOPER_DIR; };
+		D063A31518B157F700C65116 /* MtProtoKit-Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "MtProtoKit-Prefix.pch"; path = "MtProtoKitiOS/MtProtoKit-Prefix.pch"; sourceTree = SOURCE_ROOT; };
+		D063A31818B157F700C65116 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = InfoPlist.strings; sourceTree = "<group>"; };
+		D063A31918B157F700C65116 /* MtProtoKit-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "MtProtoKit-Info.plist"; path = "MtProtoKitiOS/MtProtoKit-Info.plist"; sourceTree = SOURCE_ROOT; };
+		D063A31D18B158AE00C65116 /* MTProtoKit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTProtoKit.h; path = MTProtoKit/MTProtoKit.h; sourceTree = "<group>"; };
+		D063A32018B1618D00C65116 /* MTOutgoingMessage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTOutgoingMessage.h; path = MTProtoKit/MTOutgoingMessage.h; sourceTree = "<group>"; };
+		D063A32118B1618D00C65116 /* MTOutgoingMessage.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTOutgoingMessage.m; path = MTProtoKit/MTOutgoingMessage.m; sourceTree = "<group>"; };
+		D063A32218B1618D00C65116 /* MTPreparedMessage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTPreparedMessage.h; path = MTProtoKit/MTPreparedMessage.h; sourceTree = "<group>"; };
+		D063A32318B1618D00C65116 /* MTPreparedMessage.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTPreparedMessage.m; path = MTProtoKit/MTPreparedMessage.m; sourceTree = "<group>"; };
+		D063A32418B1618D00C65116 /* MTProto.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTProto.h; path = MTProtoKit/MTProto.h; sourceTree = "<group>"; };
+		D063A32518B1618D00C65116 /* MTProto.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = MTProto.mm; path = MTProtoKit/MTProto.mm; sourceTree = "<group>"; };
+		D063A32618B1618D00C65116 /* MTSessionInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTSessionInfo.h; path = MTProtoKit/MTSessionInfo.h; sourceTree = "<group>"; };
+		D063A32718B1618D00C65116 /* MTSessionInfo.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = MTSessionInfo.mm; path = MTProtoKit/MTSessionInfo.mm; sourceTree = "<group>"; };
+		D063A32818B1618D00C65116 /* MTTimeFixContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTTimeFixContext.h; path = MTProtoKit/MTTimeFixContext.h; sourceTree = "<group>"; };
+		D063A32918B1618D00C65116 /* MTTimeFixContext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTTimeFixContext.m; path = MTProtoKit/MTTimeFixContext.m; sourceTree = "<group>"; };
+		D063A33418B161B600C65116 /* MTDatacenterTransportStraregy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTDatacenterTransportStraregy.h; path = MTProtoKit/MTDatacenterTransportStraregy.h; sourceTree = "<group>"; };
+		D063A33518B161B600C65116 /* MTDatacenterTransportStraregy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTDatacenterTransportStraregy.m; path = MTProtoKit/MTDatacenterTransportStraregy.m; sourceTree = "<group>"; };
+		D063A33618B161B600C65116 /* MTIncomingMessage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTIncomingMessage.h; path = MTProtoKit/MTIncomingMessage.h; sourceTree = "<group>"; };
+		D063A33718B161B600C65116 /* MTIncomingMessage.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTIncomingMessage.m; path = MTProtoKit/MTIncomingMessage.m; sourceTree = "<group>"; };
+		D063A33818B161B600C65116 /* MTMessageEncryptionKey.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTMessageEncryptionKey.h; path = MTProtoKit/MTMessageEncryptionKey.h; sourceTree = "<group>"; };
+		D063A33918B161B600C65116 /* MTMessageEncryptionKey.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTMessageEncryptionKey.m; path = MTProtoKit/MTMessageEncryptionKey.m; sourceTree = "<group>"; };
+		D063A35018B1631900C65116 /* MTMessageService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTMessageService.h; path = MTProtoKit/MTMessageService.h; sourceTree = "<group>"; };
+		D063A35118B1631900C65116 /* MTMessageTransaction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTMessageTransaction.h; path = MTProtoKit/MTMessageTransaction.h; sourceTree = "<group>"; };
+		D063A35218B1631900C65116 /* MTMessageTransaction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTMessageTransaction.m; path = MTProtoKit/MTMessageTransaction.m; sourceTree = "<group>"; };
+		D063A35918B164BA00C65116 /* MTTimeSyncMessageService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTTimeSyncMessageService.h; path = MTProtoKit/MTTimeSyncMessageService.h; sourceTree = "<group>"; };
+		D063A35A18B164BA00C65116 /* MTTimeSyncMessageService.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTTimeSyncMessageService.m; path = MTProtoKit/MTTimeSyncMessageService.m; sourceTree = "<group>"; };
+		D063A35F18B164D600C65116 /* MTApiEnvironment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTApiEnvironment.h; path = MTProtoKit/MTApiEnvironment.h; sourceTree = "<group>"; };
+		D063A36018B164D600C65116 /* MTApiEnvironment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTApiEnvironment.m; path = MTProtoKit/MTApiEnvironment.m; sourceTree = "<group>"; };
+		D063A36118B164D600C65116 /* MTDropResponseContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTDropResponseContext.h; path = MTProtoKit/MTDropResponseContext.h; sourceTree = "<group>"; };
+		D063A36218B164D600C65116 /* MTDropResponseContext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTDropResponseContext.m; path = MTProtoKit/MTDropResponseContext.m; sourceTree = "<group>"; };
+		D063A36318B164D600C65116 /* MTRequest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTRequest.h; path = MTProtoKit/MTRequest.h; sourceTree = "<group>"; };
+		D063A36418B164D600C65116 /* MTRequest.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTRequest.m; path = MTProtoKit/MTRequest.m; sourceTree = "<group>"; };
+		D063A36518B164D600C65116 /* MTRequestContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTRequestContext.h; path = MTProtoKit/MTRequestContext.h; sourceTree = "<group>"; };
+		D063A36618B164D600C65116 /* MTRequestContext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTRequestContext.m; path = MTProtoKit/MTRequestContext.m; sourceTree = "<group>"; };
+		D063A36718B164D600C65116 /* MTRequestMessageService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTRequestMessageService.h; path = MTProtoKit/MTRequestMessageService.h; sourceTree = "<group>"; };
+		D063A36818B164D600C65116 /* MTRequestMessageService.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTRequestMessageService.m; path = MTProtoKit/MTRequestMessageService.m; sourceTree = "<group>"; };
+		D063A37D18B164E600C65116 /* MTResendMessageService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTResendMessageService.h; path = MTProtoKit/MTResendMessageService.h; sourceTree = "<group>"; };
+		D063A37E18B164E600C65116 /* MTResendMessageService.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTResendMessageService.m; path = MTProtoKit/MTResendMessageService.m; sourceTree = "<group>"; };
+		D063A38318B164F800C65116 /* MTNetworkAvailability.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTNetworkAvailability.h; path = MTProtoKit/MTNetworkAvailability.h; sourceTree = "<group>"; };
+		D063A38418B164F800C65116 /* MTNetworkAvailability.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTNetworkAvailability.m; path = MTProtoKit/MTNetworkAvailability.m; sourceTree = "<group>"; };
+		D063A38518B164F800C65116 /* MTTransport.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTTransport.h; path = MTProtoKit/MTTransport.h; sourceTree = "<group>"; };
+		D063A38618B164F800C65116 /* MTTransport.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTTransport.m; path = MTProtoKit/MTTransport.m; sourceTree = "<group>"; };
+		D063A38718B164F800C65116 /* MTTransportTransaction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTTransportTransaction.h; path = MTProtoKit/MTTransportTransaction.h; sourceTree = "<group>"; };
+		D063A38818B164F800C65116 /* MTTransportTransaction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTTransportTransaction.m; path = MTProtoKit/MTTransportTransaction.m; sourceTree = "<group>"; };
+		D063A39518B1650400C65116 /* MTTcpConnection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTTcpConnection.h; path = MTProtoKit/MTTcpConnection.h; sourceTree = "<group>"; };
+		D063A39618B1650400C65116 /* MTTcpConnection.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTTcpConnection.m; path = MTProtoKit/MTTcpConnection.m; sourceTree = "<group>"; };
+		D063A39718B1650400C65116 /* MTTcpConnectionBehaviour.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTTcpConnectionBehaviour.h; path = MTProtoKit/MTTcpConnectionBehaviour.h; sourceTree = "<group>"; };
+		D063A39818B1650400C65116 /* MTTcpConnectionBehaviour.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTTcpConnectionBehaviour.m; path = MTProtoKit/MTTcpConnectionBehaviour.m; sourceTree = "<group>"; };
+		D063A39918B1650400C65116 /* MTTcpTransport.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTTcpTransport.h; path = MTProtoKit/MTTcpTransport.h; sourceTree = "<group>"; };
+		D063A39A18B1650400C65116 /* MTTcpTransport.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTTcpTransport.m; path = MTProtoKit/MTTcpTransport.m; sourceTree = "<group>"; };
+		D063A3A718B1650F00C65116 /* MTHttpTransport.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTHttpTransport.h; path = MTProtoKit/MTHttpTransport.h; sourceTree = "<group>"; };
+		D063A3A818B1650F00C65116 /* MTHttpTransport.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTHttpTransport.m; path = MTProtoKit/MTHttpTransport.m; sourceTree = "<group>"; };
+		D063A3A918B1650F00C65116 /* MTHttpWorker.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTHttpWorker.h; path = MTProtoKit/MTHttpWorker.h; sourceTree = "<group>"; };
+		D063A3AA18B1650F00C65116 /* MTHttpWorker.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTHttpWorker.m; path = MTProtoKit/MTHttpWorker.m; sourceTree = "<group>"; };
+		D063A3AB18B1650F00C65116 /* MTHttpWorkerBehaviour.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTHttpWorkerBehaviour.h; path = MTProtoKit/MTHttpWorkerBehaviour.h; sourceTree = "<group>"; };
+		D063A3AC18B1650F00C65116 /* MTHttpWorkerBehaviour.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTHttpWorkerBehaviour.m; path = MTProtoKit/MTHttpWorkerBehaviour.m; sourceTree = "<group>"; };
+		D0A44E4D18B24A6000B64FC6 /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libcrypto.a; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D05A830F18AFB3F9007F1076 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D063A2F818B14A9400C65116 /* libcrypto.a in Frameworks */,
+				D05A831818AFB3F9007F1076 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D05A832418AFB3F9007F1076 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D05A832918AFB3F9007F1076 /* XCTest.framework in Frameworks */,
+				D05A833118AFB3F9007F1076 /* MtProtoKit iOS.framework in Frameworks */,
+				D05A832C18AFB3F9007F1076 /* UIKit.framework in Frameworks */,
+				D05A832A18AFB3F9007F1076 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D05A834318AFB40C007F1076 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D063A2FA18B14AB500C65116 /* libcrypto.dylib in Frameworks */,
+				D05A834918AFB40C007F1076 /* Cocoa.framework in Frameworks */,
+				D0A44E4E18B24A6000B64FC6 /* libcrypto.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D05A835918AFB40C007F1076 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D05A835E18AFB40C007F1076 /* Cocoa.framework in Frameworks */,
+				D05A836118AFB40C007F1076 /* MTProtoKit.framework in Frameworks */,
+				D05A835D18AFB40C007F1076 /* XCTest.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D0254C2918B103D4009452AA /* openssl */ = {
+			isa = PBXGroup;
+			children = (
+				D0A44E4C18B24A6000B64FC6 /* OSX */,
+				D063A2F618B14A9400C65116 /* iOS */,
+				D0254C2B18B103D4009452AA /* openssl */,
+			);
+			path = openssl;
+			sourceTree = "<group>";
+		};
+		D0254C2B18B103D4009452AA /* openssl */ = {
+			isa = PBXGroup;
+			children = (
+				D0254C2C18B103D4009452AA /* aes.h */,
+				D0254C2D18B103D4009452AA /* asn1.h */,
+				D0254C2E18B103D4009452AA /* asn1_mac.h */,
+				D0254C2F18B103D4009452AA /* asn1t.h */,
+				D0254C3018B103D4009452AA /* bio.h */,
+				D0254C3118B103D4009452AA /* blowfish.h */,
+				D0254C3218B103D4009452AA /* bn.h */,
+				D0254C3318B103D4009452AA /* buffer.h */,
+				D0254C3418B103D4009452AA /* camellia.h */,
+				D0254C3518B103D4009452AA /* cast.h */,
+				D0254C3618B103D4009452AA /* cmac.h */,
+				D0254C3718B103D4009452AA /* cms.h */,
+				D0254C3818B103D4009452AA /* comp.h */,
+				D0254C3918B103D4009452AA /* conf.h */,
+				D0254C3A18B103D4009452AA /* conf_api.h */,
+				D0254C3B18B103D4009452AA /* crypto.h */,
+				D0254C3C18B103D4009452AA /* des.h */,
+				D0254C3D18B103D4009452AA /* des_old.h */,
+				D0254C3E18B103D4009452AA /* dh.h */,
+				D0254C3F18B103D4009452AA /* dsa.h */,
+				D0254C4018B103D4009452AA /* dso.h */,
+				D0254C4118B103D4009452AA /* dtls1.h */,
+				D0254C4218B103D4009452AA /* e_os2.h */,
+				D0254C4318B103D4009452AA /* ebcdic.h */,
+				D0254C4418B103D4009452AA /* ec.h */,
+				D0254C4518B103D4009452AA /* ecdh.h */,
+				D0254C4618B103D4009452AA /* ecdsa.h */,
+				D0254C4718B103D4009452AA /* engine.h */,
+				D0254C4818B103D4009452AA /* err.h */,
+				D0254C4918B103D4009452AA /* evp.h */,
+				D0254C4A18B103D4009452AA /* hmac.h */,
+				D0254C4B18B103D4009452AA /* idea.h */,
+				D0254C4C18B103D4009452AA /* krb5_asn.h */,
+				D0254C4D18B103D4009452AA /* kssl.h */,
+				D0254C4E18B103D4009452AA /* lhash.h */,
+				D0254C4F18B103D4009452AA /* md4.h */,
+				D0254C5018B103D4009452AA /* md5.h */,
+				D0254C5118B103D4009452AA /* mdc2.h */,
+				D0254C5218B103D4009452AA /* modes.h */,
+				D0254C5318B103D4009452AA /* obj_mac.h */,
+				D0254C5418B103D4009452AA /* objects.h */,
+				D0254C5518B103D4009452AA /* ocsp.h */,
+				D0254C5618B103D4009452AA /* opensslconf.h */,
+				D0254C5718B103D4009452AA /* opensslv.h */,
+				D0254C5818B103D4009452AA /* ossl_typ.h */,
+				D0254C5918B103D4009452AA /* pem.h */,
+				D0254C5A18B103D4009452AA /* pem2.h */,
+				D0254C5B18B103D4009452AA /* pkcs12.h */,
+				D0254C5C18B103D4009452AA /* pkcs7.h */,
+				D0254C5D18B103D4009452AA /* pqueue.h */,
+				D0254C5E18B103D4009452AA /* rand.h */,
+				D0254C5F18B103D4009452AA /* rc2.h */,
+				D0254C6018B103D4009452AA /* rc4.h */,
+				D0254C6118B103D4009452AA /* ripemd.h */,
+				D0254C6218B103D4009452AA /* rsa.h */,
+				D0254C6318B103D4009452AA /* safestack.h */,
+				D0254C6418B103D4009452AA /* seed.h */,
+				D0254C6518B103D4009452AA /* sha.h */,
+				D0254C6618B103D4009452AA /* srp.h */,
+				D0254C6718B103D4009452AA /* srtp.h */,
+				D0254C6818B103D4009452AA /* ssl.h */,
+				D0254C6918B103D4009452AA /* ssl2.h */,
+				D0254C6A18B103D4009452AA /* ssl23.h */,
+				D0254C6B18B103D4009452AA /* ssl3.h */,
+				D0254C6C18B103D4009452AA /* stack.h */,
+				D0254C6D18B103D4009452AA /* symhacks.h */,
+				D0254C6E18B103D4009452AA /* tls1.h */,
+				D0254C6F18B103D4009452AA /* ts.h */,
+				D0254C7018B103D4009452AA /* txt_db.h */,
+				D0254C7118B103D4009452AA /* ui.h */,
+				D0254C7218B103D4009452AA /* ui_compat.h */,
+				D0254C7318B103D4009452AA /* whrlpool.h */,
+				D0254C7418B103D4009452AA /* x509.h */,
+				D0254C7518B103D4009452AA /* x509_vfy.h */,
+				D0254C7618B103D4009452AA /* x509v3.h */,
+			);
+			path = openssl;
+			sourceTree = "<group>";
+		};
+		D05A830918AFB3F9007F1076 = {
+			isa = PBXGroup;
+			children = (
+				D05A84E718AFF0EE007F1076 /* Third Party */,
+				D05A849B18AFCA3D007F1076 /* MTProtoKit */,
+				D05A831918AFB3F9007F1076 /* MtProtoKit iOS */,
+				D05A834E18AFB40C007F1076 /* MtProtoKitOSX */,
+				D05A833218AFB3F9007F1076 /* MtProtoKit Tests */,
+				D05A831618AFB3F9007F1076 /* Frameworks */,
+				D05A831518AFB3F9007F1076 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		D05A831518AFB3F9007F1076 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D05A831418AFB3F9007F1076 /* MtProtoKit iOS.framework */,
+				D05A832718AFB3F9007F1076 /* MtProtoKit iOS Tests.xctest */,
+				D05A834718AFB40C007F1076 /* MTProtoKit.framework */,
+				D05A835C18AFB40C007F1076 /* MtProtoKit OSX Tests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D05A831618AFB3F9007F1076 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D063A2F918B14AB500C65116 /* libcrypto.dylib */,
+				D05A831718AFB3F9007F1076 /* Foundation.framework */,
+				D05A832818AFB3F9007F1076 /* XCTest.framework */,
+				D05A832B18AFB3F9007F1076 /* UIKit.framework */,
+				D05A834818AFB40C007F1076 /* Cocoa.framework */,
+				D05A834A18AFB40C007F1076 /* Other Frameworks */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		D05A831918AFB3F9007F1076 /* MtProtoKit iOS */ = {
+			isa = PBXGroup;
+			children = (
+				D05A831A18AFB3F9007F1076 /* Supporting Files */,
+			);
+			name = "MtProtoKit iOS";
+			path = MtProtoKit;
+			sourceTree = "<group>";
+		};
+		D05A831A18AFB3F9007F1076 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				D063A31518B157F700C65116 /* MtProtoKit-Prefix.pch */,
+				D063A31618B157F700C65116 /* en.lproj */,
+				D063A31918B157F700C65116 /* MtProtoKit-Info.plist */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		D05A833218AFB3F9007F1076 /* MtProtoKit Tests */ = {
+			isa = PBXGroup;
+			children = (
+				D05A833818AFB3F9007F1076 /* MtProtoKitTests.m */,
+				D05A833318AFB3F9007F1076 /* Supporting Files */,
+			);
+			name = "MtProtoKit Tests";
+			path = MtProtoKitTests;
+			sourceTree = "<group>";
+		};
+		D05A833318AFB3F9007F1076 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				D05A833418AFB3F9007F1076 /* MtProtoKitTests-Info.plist */,
+				D05A833518AFB3F9007F1076 /* InfoPlist.strings */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		D05A834A18AFB40C007F1076 /* Other Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D05A834B18AFB40C007F1076 /* Foundation.framework */,
+				D05A834C18AFB40C007F1076 /* CoreData.framework */,
+				D05A834D18AFB40C007F1076 /* AppKit.framework */,
+			);
+			name = "Other Frameworks";
+			sourceTree = "<group>";
+		};
+		D05A834E18AFB40C007F1076 /* MtProtoKitOSX */ = {
+			isa = PBXGroup;
+			children = (
+				D05A834F18AFB40C007F1076 /* Supporting Files */,
+			);
+			path = MtProtoKitOSX;
+			sourceTree = "<group>";
+		};
+		D05A834F18AFB40C007F1076 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				D05A835018AFB40C007F1076 /* MtProtoKitOSX-Info.plist */,
+				D05A835118AFB40C007F1076 /* InfoPlist.strings */,
+				D05A835418AFB40C007F1076 /* MtProtoKitOSX-Prefix.pch */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		D05A842B18AFB770007F1076 /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				93DBD23318B2D9AA00631ADC /* MTTime.h */,
+				93DBD23418B2DA1E00631ADC /* MTTime.m */,
+				D05A84D918AFE81D007F1076 /* MTTimer.h */,
+				D05A84D818AFE81C007F1076 /* MTTimer.m */,
+				D05A84DA18AFE81D007F1076 /* MTLogging.h */,
+				D05A84DB18AFE81D007F1076 /* MTLogging.m */,
+				D0254CC518B10404009452AA /* MTEncryption.h */,
+				D05A84DC18AFE81D007F1076 /* MTEncryption.m */,
+				D05A83D118AFB75B007F1076 /* MTInternalId.h */,
+				D05A849F18AFCF8E007F1076 /* MTQueue.h */,
+				D05A84A018AFCF8E007F1076 /* MTQueue.m */,
+				D0503AD818B027F80074C3FE /* MTOutputStream.h */,
+				D0503AD918B027F80074C3FE /* MTOutputStream.m */,
+				D0503ADC18B029480074C3FE /* MTInputStream.h */,
+				D0503ADD18B029480074C3FE /* MTInputStream.m */,
+			);
+			name = Utils;
+			sourceTree = "<group>";
+		};
+		D05A842C18AFB783007F1076 /* Serialization */ = {
+			isa = PBXGroup;
+			children = (
+				D05A83B518AFB75B007F1076 /* MTSerialization.h */,
+			);
+			name = Serialization;
+			sourceTree = "<group>";
+		};
+		D05A842D18AFB79D007F1076 /* Keychain */ = {
+			isa = PBXGroup;
+			children = (
+				D05A83C018AFB75B007F1076 /* MTKeychain.h */,
+				D05A83A318AFB75B007F1076 /* MTKeychain.m */,
+			);
+			name = Keychain;
+			sourceTree = "<group>";
+		};
+		D05A842E18AFB7B7007F1076 /* MTProto */ = {
+			isa = PBXGroup;
+			children = (
+				D063A32418B1618D00C65116 /* MTProto.h */,
+				D063A32518B1618D00C65116 /* MTProto.mm */,
+				D063A32618B1618D00C65116 /* MTSessionInfo.h */,
+				D063A32718B1618D00C65116 /* MTSessionInfo.mm */,
+				D063A32818B1618D00C65116 /* MTTimeFixContext.h */,
+				D063A32918B1618D00C65116 /* MTTimeFixContext.m */,
+				D063A32218B1618D00C65116 /* MTPreparedMessage.h */,
+				D063A32318B1618D00C65116 /* MTPreparedMessage.m */,
+				D063A32018B1618D00C65116 /* MTOutgoingMessage.h */,
+				D063A32118B1618D00C65116 /* MTOutgoingMessage.m */,
+				D063A33418B161B600C65116 /* MTDatacenterTransportStraregy.h */,
+				D063A33518B161B600C65116 /* MTDatacenterTransportStraregy.m */,
+				D063A33618B161B600C65116 /* MTIncomingMessage.h */,
+				D063A33718B161B600C65116 /* MTIncomingMessage.m */,
+				D063A33818B161B600C65116 /* MTMessageEncryptionKey.h */,
+				D063A33918B161B600C65116 /* MTMessageEncryptionKey.m */,
+				D05A843018AFB875007F1076 /* Service */,
+			);
+			name = MTProto;
+			sourceTree = "<group>";
+		};
+		D05A843018AFB875007F1076 /* Service */ = {
+			isa = PBXGroup;
+			children = (
+				D063A35018B1631900C65116 /* MTMessageService.h */,
+				D063A35118B1631900C65116 /* MTMessageTransaction.h */,
+				D063A35218B1631900C65116 /* MTMessageTransaction.m */,
+				D05A843118AFB897007F1076 /* Time Synchronization */,
+				D05A843218AFB8A9007F1076 /* RPC */,
+				D05A843318AFB8B3007F1076 /* Message Resending */,
+			);
+			name = Service;
+			sourceTree = "<group>";
+		};
+		D05A843118AFB897007F1076 /* Time Synchronization */ = {
+			isa = PBXGroup;
+			children = (
+				D063A35918B164BA00C65116 /* MTTimeSyncMessageService.h */,
+				D063A35A18B164BA00C65116 /* MTTimeSyncMessageService.m */,
+			);
+			name = "Time Synchronization";
+			sourceTree = "<group>";
+		};
+		D05A843218AFB8A9007F1076 /* RPC */ = {
+			isa = PBXGroup;
+			children = (
+				D063A36718B164D600C65116 /* MTRequestMessageService.h */,
+				D063A36818B164D600C65116 /* MTRequestMessageService.m */,
+				D063A36318B164D600C65116 /* MTRequest.h */,
+				D063A36418B164D600C65116 /* MTRequest.m */,
+				D063A36518B164D600C65116 /* MTRequestContext.h */,
+				D063A36618B164D600C65116 /* MTRequestContext.m */,
+				93DBD22F18B2D72800631ADC /* MTRequestErrorContext.h */,
+				93DBD23018B2D72800631ADC /* MTRequestErrorContext.m */,
+				D063A36118B164D600C65116 /* MTDropResponseContext.h */,
+				D063A36218B164D600C65116 /* MTDropResponseContext.m */,
+				D063A35F18B164D600C65116 /* MTApiEnvironment.h */,
+				D063A36018B164D600C65116 /* MTApiEnvironment.m */,
+			);
+			name = RPC;
+			sourceTree = "<group>";
+		};
+		D05A843318AFB8B3007F1076 /* Message Resending */ = {
+			isa = PBXGroup;
+			children = (
+				D063A37D18B164E600C65116 /* MTResendMessageService.h */,
+				D063A37E18B164E600C65116 /* MTResendMessageService.m */,
+			);
+			name = "Message Resending";
+			sourceTree = "<group>";
+		};
+		D05A843418AFB925007F1076 /* Context */ = {
+			isa = PBXGroup;
+			children = (
+				D05A839E18AFB75B007F1076 /* MTContext.h */,
+				D05A839C18AFB75B007F1076 /* MTContext.m */,
+				D05A843518AFB941007F1076 /* Discover Address */,
+				D05A843618AFB955007F1076 /* Authorization */,
+			);
+			name = Context;
+			sourceTree = "<group>";
+		};
+		D05A843518AFB941007F1076 /* Discover Address */ = {
+			isa = PBXGroup;
+			children = (
+				D05A83D518AFB75B007F1076 /* MTDiscoverDatacenterAddressAction.h */,
+				D05A83D418AFB75B007F1076 /* MTDiscoverDatacenterAddressAction.m */,
+			);
+			name = "Discover Address";
+			sourceTree = "<group>";
+		};
+		D05A843618AFB955007F1076 /* Authorization */ = {
+			isa = PBXGroup;
+			children = (
+				D05A839F18AFB75B007F1076 /* MTDatacenterTransferAuthAction.h */,
+				D05A839D18AFB75B007F1076 /* MTDatacenterTransferAuthAction.m */,
+				D05A83A018AFB75B007F1076 /* MTDatacenterAuthAction.h */,
+				D05A83CE18AFB75B007F1076 /* MTDatacenterAuthAction.m */,
+				D05A83D918AFB75B007F1076 /* MTDatacenterAuthMessageService.h */,
+				D05A83B018AFB75B007F1076 /* MTDatacenterAuthMessageService.m */,
+			);
+			name = Authorization;
+			sourceTree = "<group>";
+		};
+		D05A843718AFB985007F1076 /* Datacenter */ = {
+			isa = PBXGroup;
+			children = (
+				D05A83CB18AFB75B007F1076 /* MTDatacenterAddress.h */,
+				D05A83CA18AFB75B007F1076 /* MTDatacenterAddress.m */,
+				D05A83CD18AFB75B007F1076 /* MTDatacenterAddressSet.h */,
+				D05A83CC18AFB75B007F1076 /* MTDatacenterAddressSet.m */,
+				D05A83C918AFB75B007F1076 /* MTDatacenterAuthInfo.h */,
+				D05A83C818AFB75B007F1076 /* MTDatacenterAuthInfo.m */,
+				D05A83C718AFB75B007F1076 /* MTDatacenterSaltInfo.h */,
+				D05A83C618AFB75B007F1076 /* MTDatacenterSaltInfo.m */,
+			);
+			name = Datacenter;
+			sourceTree = "<group>";
+		};
+		D05A843818AFB9C4007F1076 /* Transport */ = {
+			isa = PBXGroup;
+			children = (
+				D063A38318B164F800C65116 /* MTNetworkAvailability.h */,
+				D063A38418B164F800C65116 /* MTNetworkAvailability.m */,
+				D063A38518B164F800C65116 /* MTTransport.h */,
+				D063A38618B164F800C65116 /* MTTransport.m */,
+				D063A38718B164F800C65116 /* MTTransportTransaction.h */,
+				D063A38818B164F800C65116 /* MTTransportTransaction.m */,
+				D05A843918AFB9DA007F1076 /* TCP */,
+				D05A843A18AFB9E1007F1076 /* HTTP */,
+			);
+			name = Transport;
+			sourceTree = "<group>";
+		};
+		D05A843918AFB9DA007F1076 /* TCP */ = {
+			isa = PBXGroup;
+			children = (
+				D063A39918B1650400C65116 /* MTTcpTransport.h */,
+				D063A39A18B1650400C65116 /* MTTcpTransport.m */,
+				D063A39518B1650400C65116 /* MTTcpConnection.h */,
+				D063A39618B1650400C65116 /* MTTcpConnection.m */,
+				D063A39718B1650400C65116 /* MTTcpConnectionBehaviour.h */,
+				D063A39818B1650400C65116 /* MTTcpConnectionBehaviour.m */,
+			);
+			name = TCP;
+			sourceTree = "<group>";
+		};
+		D05A843A18AFB9E1007F1076 /* HTTP */ = {
+			isa = PBXGroup;
+			children = (
+				D063A3A718B1650F00C65116 /* MTHttpTransport.h */,
+				D063A3A818B1650F00C65116 /* MTHttpTransport.m */,
+				D063A3A918B1650F00C65116 /* MTHttpWorker.h */,
+				D063A3AA18B1650F00C65116 /* MTHttpWorker.m */,
+				D063A3AB18B1650F00C65116 /* MTHttpWorkerBehaviour.h */,
+				D063A3AC18B1650F00C65116 /* MTHttpWorkerBehaviour.m */,
+			);
+			name = HTTP;
+			sourceTree = "<group>";
+		};
+		D05A849B18AFCA3D007F1076 /* MTProtoKit */ = {
+			isa = PBXGroup;
+			children = (
+				D063A31D18B158AE00C65116 /* MTProtoKit.h */,
+				D05A842B18AFB770007F1076 /* Utils */,
+				D05A842C18AFB783007F1076 /* Serialization */,
+				D05A842D18AFB79D007F1076 /* Keychain */,
+				D05A843418AFB925007F1076 /* Context */,
+				D05A843718AFB985007F1076 /* Datacenter */,
+				D05A842E18AFB7B7007F1076 /* MTProto */,
+				D05A843818AFB9C4007F1076 /* Transport */,
+			);
+			name = MTProtoKit;
+			sourceTree = "<group>";
+		};
+		D05A84E718AFF0EE007F1076 /* Third Party */ = {
+			isa = PBXGroup;
+			children = (
+				D0254C2918B103D4009452AA /* openssl */,
+				D05A84E818AFF259007F1076 /* AFNetworking */,
+				D05A84F618AFF259007F1076 /* AsyncSocket */,
+			);
+			name = "Third Party";
+			sourceTree = "<group>";
+		};
+		D05A84E818AFF259007F1076 /* AFNetworking */ = {
+			isa = PBXGroup;
+			children = (
+				D05A851718AFF2F8007F1076 /* AFJSONUtilities.h */,
+				D05A851818AFF2F8007F1076 /* AFJSONUtilities.m */,
+				D05A84E918AFF259007F1076 /* AFHTTPClient.h */,
+				D05A84EA18AFF259007F1076 /* AFHTTPClient.m */,
+				D05A84EB18AFF259007F1076 /* AFHTTPRequestOperation.h */,
+				D05A84EC18AFF259007F1076 /* AFHTTPRequestOperation.m */,
+				D05A84F318AFF259007F1076 /* AFNetworking.h */,
+				D05A84F418AFF259007F1076 /* AFURLConnectionOperation.h */,
+				D05A84F518AFF259007F1076 /* AFURLConnectionOperation.m */,
+			);
+			name = AFNetworking;
+			path = thirdparty/AFNetworking;
+			sourceTree = "<group>";
+		};
+		D05A84F618AFF259007F1076 /* AsyncSocket */ = {
+			isa = PBXGroup;
+			children = (
+				D05A84F718AFF259007F1076 /* GCDAsyncSocket.h */,
+				D05A84F818AFF259007F1076 /* GCDAsyncSocket.m */,
+			);
+			name = AsyncSocket;
+			path = thirdparty/AsyncSocket;
+			sourceTree = "<group>";
+		};
+		D063A2F618B14A9400C65116 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				D063A2F718B14A9400C65116 /* libcrypto.a */,
+			);
+			path = iOS;
+			sourceTree = "<group>";
+		};
+		D063A31618B157F700C65116 /* en.lproj */ = {
+			isa = PBXGroup;
+			children = (
+				D063A31718B157F700C65116 /* InfoPlist.strings */,
+			);
+			name = en.lproj;
+			path = MtProtoKitiOS/en.lproj;
+			sourceTree = SOURCE_ROOT;
+		};
+		D0A44E4C18B24A6000B64FC6 /* OSX */ = {
+			isa = PBXGroup;
+			children = (
+				D0A44E4D18B24A6000B64FC6 /* libcrypto.a */,
+			);
+			path = OSX;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		D05A831018AFB3F9007F1076 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0254C8518B103D4009452AA /* conf.h in Headers */,
+				D0254CAE18B103D4009452AA /* rsa.h in Headers */,
+				D0254C7B18B103D4009452AA /* asn1t.h in Headers */,
+				D05A841818AFB75B007F1076 /* MTDatacenterAddressSet.h in Headers */,
+				D063A31E18B158AE00C65116 /* MTProtoKit.h in Headers */,
+				D0254CAB18B103D4009452AA /* rc2.h in Headers */,
+				D05A83E918AFB75B007F1076 /* MTContext.h in Headers */,
+				D063A37118B164D600C65116 /* MTRequest.h in Headers */,
+				D0254C8718B103D4009452AA /* crypto.h in Headers */,
+				D0254CBA18B103D4009452AA /* tls1.h in Headers */,
+				D0254CAD18B103D4009452AA /* ripemd.h in Headers */,
+				D0254C8D18B103D4009452AA /* dtls1.h in Headers */,
+				D063A39F18B1650400C65116 /* MTTcpConnectionBehaviour.h in Headers */,
+				D063A37518B164D600C65116 /* MTRequestContext.h in Headers */,
+				D05A840018AFB75B007F1076 /* MTSerialization.h in Headers */,
+				D05A84DF18AFE81D007F1076 /* MTTimer.h in Headers */,
+				D0254C7F18B103D4009452AA /* buffer.h in Headers */,
+				D0254C9718B103D4009452AA /* idea.h in Headers */,
+				D063A38918B164F800C65116 /* MTNetworkAvailability.h in Headers */,
+				D063A35B18B164BA00C65116 /* MTTimeSyncMessageService.h in Headers */,
+				D0254C8418B103D4009452AA /* comp.h in Headers */,
+				D0254CA518B103D4009452AA /* pem.h in Headers */,
+				D05A84E118AFE81D007F1076 /* MTLogging.h in Headers */,
+				D0254C7918B103D4009452AA /* asn1.h in Headers */,
+				D0254C9018B103D4009452AA /* ec.h in Headers */,
+				D0254CC218B103D4009452AA /* x509v3.h in Headers */,
+				D0254C7D18B103D4009452AA /* blowfish.h in Headers */,
+				D0254CA218B103D4009452AA /* opensslconf.h in Headers */,
+				D063A3B118B1650F00C65116 /* MTHttpWorker.h in Headers */,
+				D0254CAA18B103D4009452AA /* rand.h in Headers */,
+				D0254C9B18B103D4009452AA /* md4.h in Headers */,
+				D0254CB318B103D4009452AA /* srtp.h in Headers */,
+				D0254C9418B103D4009452AA /* err.h in Headers */,
+				D0254CB018B103D4009452AA /* seed.h in Headers */,
+				D0254C8118B103D4009452AA /* cast.h in Headers */,
+				D05A83EB18AFB75B007F1076 /* MTDatacenterAuthAction.h in Headers */,
+				D05A841618AFB75B007F1076 /* MTDatacenterAddress.h in Headers */,
+				D05A840B18AFB75B007F1076 /* MTKeychain.h in Headers */,
+				93DBD23118B2D72800631ADC /* MTRequestErrorContext.h in Headers */,
+				D0254CB618B103D4009452AA /* ssl23.h in Headers */,
+				D063A32C18B1618D00C65116 /* MTPreparedMessage.h in Headers */,
+				D0254C9618B103D4009452AA /* hmac.h in Headers */,
+				D0254CBD18B103D4009452AA /* ui.h in Headers */,
+				D063A39118B164F800C65116 /* MTTransportTransaction.h in Headers */,
+				D05A84FD18AFF259007F1076 /* AFHTTPRequestOperation.h in Headers */,
+				D05A842418AFB75B007F1076 /* MTDatacenterAuthMessageService.h in Headers */,
+				D0254C9E18B103D4009452AA /* modes.h in Headers */,
+				D0254C9C18B103D4009452AA /* md5.h in Headers */,
+				D0254C7C18B103D4009452AA /* bio.h in Headers */,
+				D0254CA618B103D4009452AA /* pem2.h in Headers */,
+				D063A38D18B164F800C65116 /* MTTransport.h in Headers */,
+				D0254C7E18B103D4009452AA /* bn.h in Headers */,
+				D0254CB718B103D4009452AA /* ssl3.h in Headers */,
+				D063A3AD18B1650F00C65116 /* MTHttpTransport.h in Headers */,
+				D063A3B518B1650F00C65116 /* MTHttpWorkerBehaviour.h in Headers */,
+				D0254C8C18B103D4009452AA /* dso.h in Headers */,
+				D0254C9118B103D4009452AA /* ecdh.h in Headers */,
+				D0254C9918B103D4009452AA /* kssl.h in Headers */,
+				D063A35518B1631900C65116 /* MTMessageTransaction.h in Headers */,
+				D0254C9A18B103D4009452AA /* lhash.h in Headers */,
+				D0254CBC18B103D4009452AA /* txt_db.h in Headers */,
+				D0254CAC18B103D4009452AA /* rc4.h in Headers */,
+				D0254C9F18B103D4009452AA /* obj_mac.h in Headers */,
+				D0503ADE18B029480074C3FE /* MTInputStream.h in Headers */,
+				D0254CA818B103D4009452AA /* pkcs7.h in Headers */,
+				D0254CB118B103D4009452AA /* sha.h in Headers */,
+				D05A841218AFB75B007F1076 /* MTDatacenterSaltInfo.h in Headers */,
+				D0254C7A18B103D4009452AA /* asn1_mac.h in Headers */,
+				D063A3A318B1650400C65116 /* MTTcpTransport.h in Headers */,
+				D0254C8E18B103D4009452AA /* e_os2.h in Headers */,
+				D0254CA718B103D4009452AA /* pkcs12.h in Headers */,
+				D063A33018B1618D00C65116 /* MTSessionInfo.h in Headers */,
+				D063A37F18B164E600C65116 /* MTResendMessageService.h in Headers */,
+				D063A33C18B161B600C65116 /* MTIncomingMessage.h in Headers */,
+				D0254CB918B103D4009452AA /* symhacks.h in Headers */,
+				D0254CC118B103D4009452AA /* x509_vfy.h in Headers */,
+				D063A36D18B164D600C65116 /* MTDropResponseContext.h in Headers */,
+				D0254C8F18B103D4009452AA /* ebcdic.h in Headers */,
+				D0254C9818B103D4009452AA /* krb5_asn.h in Headers */,
+				D0254CA118B103D4009452AA /* ocsp.h in Headers */,
+				D0254C9D18B103D4009452AA /* mdc2.h in Headers */,
+				D05A851318AFF259007F1076 /* GCDAsyncSocket.h in Headers */,
+				D0254C8B18B103D4009452AA /* dsa.h in Headers */,
+				D0254CA418B103D4009452AA /* ossl_typ.h in Headers */,
+				D0254CAF18B103D4009452AA /* safestack.h in Headers */,
+				D0254CB518B103D4009452AA /* ssl2.h in Headers */,
+				D05A850F18AFF259007F1076 /* AFURLConnectionOperation.h in Headers */,
+				D0254C8918B103D4009452AA /* des_old.h in Headers */,
+				D05A841C18AFB75B007F1076 /* MTInternalId.h in Headers */,
+				D0254CBB18B103D4009452AA /* ts.h in Headers */,
+				D0254C9518B103D4009452AA /* evp.h in Headers */,
+				D063A32A18B1618D00C65116 /* MTOutgoingMessage.h in Headers */,
+				D0254C8318B103D4009452AA /* cms.h in Headers */,
+				D0254CC618B10404009452AA /* MTEncryption.h in Headers */,
+				D063A31A18B157F700C65116 /* MtProtoKit-Prefix.pch in Headers */,
+				D063A32E18B1618D00C65116 /* MTProto.h in Headers */,
+				D0254C8618B103D4009452AA /* conf_api.h in Headers */,
+				D0254CA918B103D4009452AA /* pqueue.h in Headers */,
+				D0254C8218B103D4009452AA /* cmac.h in Headers */,
+				D063A35318B1631900C65116 /* MTMessageService.h in Headers */,
+				D0254CA318B103D4009452AA /* opensslv.h in Headers */,
+				D063A33218B1618D00C65116 /* MTTimeFixContext.h in Headers */,
+				D0254CBE18B103D4009452AA /* ui_compat.h in Headers */,
+				D0254CB818B103D4009452AA /* stack.h in Headers */,
+				D0254C7818B103D4009452AA /* aes.h in Headers */,
+				D0254CB218B103D4009452AA /* srp.h in Headers */,
+				D0254C8018B103D4009452AA /* camellia.h in Headers */,
+				D05A850D18AFF259007F1076 /* AFNetworking.h in Headers */,
+				D05A84F918AFF259007F1076 /* AFHTTPClient.h in Headers */,
+				D0503ADA18B027F80074C3FE /* MTOutputStream.h in Headers */,
+				D0254CBF18B103D4009452AA /* whrlpool.h in Headers */,
+				D063A33E18B161B600C65116 /* MTMessageEncryptionKey.h in Headers */,
+				D063A33A18B161B600C65116 /* MTDatacenterTransportStraregy.h in Headers */,
+				D0254C9318B103D4009452AA /* engine.h in Headers */,
+				D05A851918AFF2F8007F1076 /* AFJSONUtilities.h in Headers */,
+				D0254CA018B103D4009452AA /* objects.h in Headers */,
+				D05A83EA18AFB75B007F1076 /* MTDatacenterTransferAuthAction.h in Headers */,
+				D0254CC018B103D4009452AA /* x509.h in Headers */,
+				D0254C8A18B103D4009452AA /* dh.h in Headers */,
+				D063A36918B164D600C65116 /* MTApiEnvironment.h in Headers */,
+				93DBD23718B2DA5500631ADC /* MTTime.h in Headers */,
+				D05A84A118AFCF8E007F1076 /* MTQueue.h in Headers */,
+				D05A842018AFB75B007F1076 /* MTDiscoverDatacenterAddressAction.h in Headers */,
+				D063A37918B164D600C65116 /* MTRequestMessageService.h in Headers */,
+				D0254C9218B103D4009452AA /* ecdsa.h in Headers */,
+				D0254CB418B103D4009452AA /* ssl.h in Headers */,
+				D05A841418AFB75B007F1076 /* MTDatacenterAuthInfo.h in Headers */,
+				D0254C8818B103D4009452AA /* des.h in Headers */,
+				D063A39B18B1650400C65116 /* MTTcpConnection.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D05A834418AFB40C007F1076 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D063A38018B164E600C65116 /* MTResendMessageService.h in Headers */,
+				D05A845E18AFC7DC007F1076 /* MTDatacenterAddressSet.h in Headers */,
+				D063A35418B1631900C65116 /* MTMessageService.h in Headers */,
+				D063A34618B161C400C65116 /* MTPreparedMessage.h in Headers */,
+				D063A2EA18B143EA00C65116 /* MTOutputStream.h in Headers */,
+				D05A84FA18AFF259007F1076 /* AFHTTPClient.h in Headers */,
+				D063A34218B161C400C65116 /* MTSessionInfo.h in Headers */,
+				D063A34E18B161C400C65116 /* MTMessageEncryptionKey.h in Headers */,
+				D063A2E818B143EA00C65116 /* MTQueue.h in Headers */,
+				D063A2E718B143EA00C65116 /* MTInternalId.h in Headers */,
+				D05A845618AFC7DC007F1076 /* MTDatacenterTransferAuthAction.h in Headers */,
+				D063A2E218B143EA00C65116 /* MTTimer.h in Headers */,
+				D05A851018AFF259007F1076 /* AFURLConnectionOperation.h in Headers */,
+				D063A34818B161C400C65116 /* MTOutgoingMessage.h in Headers */,
+				D063A3B618B1650F00C65116 /* MTHttpWorkerBehaviour.h in Headers */,
+				D05A845218AFC7DC007F1076 /* MTContext.h in Headers */,
+				D063A36A18B164D600C65116 /* MTApiEnvironment.h in Headers */,
+				D063A39218B164F800C65116 /* MTTransportTransaction.h in Headers */,
+				D063A3A418B1650400C65116 /* MTTcpTransport.h in Headers */,
+				D063A3A018B1650400C65116 /* MTTcpConnectionBehaviour.h in Headers */,
+				D063A3AE18B1650F00C65116 /* MTHttpTransport.h in Headers */,
+				D05A845418AFC7DC007F1076 /* MTDiscoverDatacenterAddressAction.h in Headers */,
+				93DBD23A18B2DA7900631ADC /* MTRequestErrorContext.h in Headers */,
+				D063A38A18B164F800C65116 /* MTNetworkAvailability.h in Headers */,
+				D063A3B218B1650F00C65116 /* MTHttpWorker.h in Headers */,
+				D063A34018B161C400C65116 /* MTProto.h in Headers */,
+				D063A34C18B161C400C65116 /* MTIncomingMessage.h in Headers */,
+				D063A2E518B143EA00C65116 /* MTEncryption.h in Headers */,
+				D05A845A18AFC7DC007F1076 /* MTDatacenterAuthMessageService.h in Headers */,
+				D05A846018AFC7DC007F1076 /* MTDatacenterAuthInfo.h in Headers */,
+				D063A31F18B158B500C65116 /* MTProtoKit.h in Headers */,
+				D05A851418AFF259007F1076 /* GCDAsyncSocket.h in Headers */,
+				D0254CC418B103E3009452AA /* bn.h in Headers */,
+				D063A37A18B164D600C65116 /* MTRequestMessageService.h in Headers */,
+				D05A845C18AFC7DC007F1076 /* MTDatacenterAddress.h in Headers */,
+				D05A846218AFC7DC007F1076 /* MTDatacenterSaltInfo.h in Headers */,
+				D063A2EC18B143EA00C65116 /* MTInputStream.h in Headers */,
+				D063A34A18B161C400C65116 /* MTDatacenterTransportStraregy.h in Headers */,
+				D05A851A18AFF2F8007F1076 /* AFJSONUtilities.h in Headers */,
+				D05A850E18AFF259007F1076 /* AFNetworking.h in Headers */,
+				D063A38E18B164F800C65116 /* MTTransport.h in Headers */,
+				D063A35C18B164BA00C65116 /* MTTimeSyncMessageService.h in Headers */,
+				D05A845818AFC7DC007F1076 /* MTDatacenterAuthAction.h in Headers */,
+				D05A84FE18AFF259007F1076 /* AFHTTPRequestOperation.h in Headers */,
+				D063A2EF18B143F000C65116 /* MTSerialization.h in Headers */,
+				D063A2E318B143EA00C65116 /* MTLogging.h in Headers */,
+				D05A845018AFC7DC007F1076 /* MTKeychain.h in Headers */,
+				D063A36E18B164D600C65116 /* MTDropResponseContext.h in Headers */,
+				D063A34418B161C400C65116 /* MTTimeFixContext.h in Headers */,
+				D063A39C18B1650400C65116 /* MTTcpConnection.h in Headers */,
+				D063A37218B164D600C65116 /* MTRequest.h in Headers */,
+				D063A35618B1631900C65116 /* MTMessageTransaction.h in Headers */,
+				93DBD23618B2DA5400631ADC /* MTTime.h in Headers */,
+				D063A37618B164D600C65116 /* MTRequestContext.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		D05A831318AFB3F9007F1076 /* MtProtoKit iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D05A833C18AFB3F9007F1076 /* Build configuration list for PBXNativeTarget "MtProtoKit iOS" */;
+			buildPhases = (
+				D05A830E18AFB3F9007F1076 /* Sources */,
+				D05A830F18AFB3F9007F1076 /* Frameworks */,
+				D05A831018AFB3F9007F1076 /* Headers */,
+				D05A831118AFB3F9007F1076 /* Resources */,
+				D05A831218AFB3F9007F1076 /* ShellScript */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "MtProtoKit iOS";
+			productName = MtProtoKit;
+			productReference = D05A831418AFB3F9007F1076 /* MtProtoKit iOS.framework */;
+			productType = "com.apple.product-type.framework.static";
+		};
+		D05A832618AFB3F9007F1076 /* MtProtoKit iOS Tests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D05A833F18AFB3F9007F1076 /* Build configuration list for PBXNativeTarget "MtProtoKit iOS Tests" */;
+			buildPhases = (
+				D05A832318AFB3F9007F1076 /* Sources */,
+				D05A832418AFB3F9007F1076 /* Frameworks */,
+				D05A832518AFB3F9007F1076 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D05A832E18AFB3F9007F1076 /* PBXTargetDependency */,
+				D05A833018AFB3F9007F1076 /* PBXTargetDependency */,
+			);
+			name = "MtProtoKit iOS Tests";
+			productName = MtProtoKitTests;
+			productReference = D05A832718AFB3F9007F1076 /* MtProtoKit iOS Tests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		D05A834618AFB40C007F1076 /* MtProtoKit OSX */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D05A836A18AFB40C007F1076 /* Build configuration list for PBXNativeTarget "MtProtoKit OSX" */;
+			buildPhases = (
+				D05A834218AFB40C007F1076 /* Sources */,
+				D05A834318AFB40C007F1076 /* Frameworks */,
+				D05A834418AFB40C007F1076 /* Headers */,
+				D05A834518AFB40C007F1076 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "MtProtoKit OSX";
+			productName = MtProtoKitOSX;
+			productReference = D05A834718AFB40C007F1076 /* MTProtoKit.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		D05A835B18AFB40C007F1076 /* MtProtoKit OSX Tests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D05A836D18AFB40C007F1076 /* Build configuration list for PBXNativeTarget "MtProtoKit OSX Tests" */;
+			buildPhases = (
+				D05A835818AFB40C007F1076 /* Sources */,
+				D05A835918AFB40C007F1076 /* Frameworks */,
+				D05A835A18AFB40C007F1076 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D05A836018AFB40C007F1076 /* PBXTargetDependency */,
+			);
+			name = "MtProtoKit OSX Tests";
+			productName = MtProtoKitOSXTests;
+			productReference = D05A835C18AFB40C007F1076 /* MtProtoKit OSX Tests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D05A830A18AFB3F9007F1076 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0510;
+				ORGANIZATIONNAME = Telegram;
+				TargetAttributes = {
+					D05A832618AFB3F9007F1076 = {
+						TestTargetID = D05A831318AFB3F9007F1076;
+					};
+					D05A835B18AFB40C007F1076 = {
+						TestTargetID = D05A831318AFB3F9007F1076;
+					};
+				};
+			};
+			buildConfigurationList = D05A830D18AFB3F9007F1076 /* Build configuration list for PBXProject "MtProtoKit" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = D05A830918AFB3F9007F1076;
+			productRefGroup = D05A831518AFB3F9007F1076 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D05A831318AFB3F9007F1076 /* MtProtoKit iOS */,
+				D05A832618AFB3F9007F1076 /* MtProtoKit iOS Tests */,
+				D05A834618AFB40C007F1076 /* MtProtoKit OSX */,
+				D05A835B18AFB40C007F1076 /* MtProtoKit OSX Tests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D05A831118AFB3F9007F1076 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D063A31B18B157F700C65116 /* InfoPlist.strings in Resources */,
+				D063A31C18B157F700C65116 /* MtProtoKit-Info.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D05A832518AFB3F9007F1076 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D05A833718AFB3F9007F1076 /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D05A834518AFB40C007F1076 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D05A835318AFB40C007F1076 /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D05A835A18AFB40C007F1076 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		D05A831218AFB3F9007F1076 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /usr/bin/python;
+			shellScript = "# TAG: BUILD SCRIPT (do not remove this comment)\n# Build script generated using https://github.com/kstenerud/iOS-Universal-Framework Mk 8 (beta 2012-06-16)\nimport logging\n\n\n##############################################################################\n#\n# Configuration\n#\n##############################################################################\n\n# Select which kind of framework to build.\n#\n# Note: Due to issues with Xcode's build process, if you select\n#       'embeddedframework', it will still show the regular framework\n#       (as a symlink) along side of the embedded framework. Be sure to\n#       instruct your users to copy/move the embedded framework in this case!\n#\n# If your framework contains resources such as images, nibs, momds, plists,\n# zipfiles and such, choose 'embeddedframework'.\n#\n# If your framework contains no resources, choose 'framework'.\n#\nconfig_framework_type = 'framework'\n#config_framework_type = 'embeddedframework'\n\n# Open the build directory in Finder when the universal framework is\n# successfully built.\n#\n# This value can be overridden by setting the UFW_OPEN_BUILD_DIR env variable\n# to True or False.\n#\n# Recommended setting: True\n#\nconfig_open_build_dir = True\n\n# If true, ensures that all public headers are stored in the framework under\n# the same directory hierarchy as they were in the source tree.\n#\n# Xcode by default places all headers at the same top level, but every other\n# build tool in the known universe preserves directory structure. For simple\n# libraries it doesn't really matter much, but for ports of existing software\n# packages or for bigger libraries, it makes sense to have more structure.\n#\n# The default is set to \"False\" since that's what most Xcode users are used to.\n#\n# Recommended setting: True for deep hierarchy projects, False otherwise.\n#\nconfig_deep_header_hierarchy = False\n\n# Specify where the top of the public header hierarchy is. This path is\n# relative to the project's dir (PROJECT_DIR). You can reference environment\n# variables using templating syntax (e.g. \"${TARGET_NAME}/Some/Subdir\")\n#\n# NOTE: Only used if config_deep_header_hierarchy is True.\n#\n# If this is set to None, the script will attempt to figure out for itself\n# where the top of the header hierarchy is by looking for common path prefixes\n# in the public header files. This process can fail if:\n# - You only have one public header file.\n# - Your source header files don't all have a common root.\n#\n# A common approach is to use \"${TARGET_NAME}\", working under the assumption\n# that all of your header files share the common root of a directory under\n# your project with the same name as your target (which is the Xcode default).\n#\n# Recommended setting: \"${TARGET_NAME}\"\n#\nconfig_deep_header_top = \"${TARGET_NAME}\"\n\n# Warn when \"DerivedData\" is detected in any of the header, library, or\n# framework search paths. In almost all cases, references to directories under\n# DerivedData are added as a result of an Xcode bug and must be manually\n# removed.\n#\n# Recommended setting: True\n#\nconfig_warn_derived_data = True\n\n# Warn if no headers were marked public in this framework.\n#\n# Recommended setting: True\n#\nconfig_warn_no_public_headers = True\n\n# Cause the build to fail if any warnings are issued.\n#\n# Recommended setting: True\n#\nconfig_fail_on_warnings = True\n\n# Minimum log level\n#\n# Recommended setting: logging.INFO\n#\nconfig_log_level = logging.INFO\n\n\n##############################################################################\n#\n# Don't touch anything below here unless you know what you're doing.\n#\n##############################################################################\n\nimport collections\nimport json\nimport os\nimport re\nimport shlex\nimport shutil\nimport string\nimport subprocess\nimport sys\nimport time\nimport traceback\n\n\n##############################################################################\n#\n# Globals\n#\n##############################################################################\n\nlog = logging.getLogger('UFW')\n\nissued_warnings = False\n\n\n##############################################################################\n#\n# Classes\n#\n##############################################################################\n\n# Allows the slave build to communicate with the master build.\n#\nclass BuildState:\n\n    def __init__(self):\n        self.reload()\n\n    def reset(self):\n        self.slave_platform = None\n        self.slave_architectures = []\n        self.slave_linked_archive_paths = []\n        self.slave_built_fw_path = None\n        self.slave_built_embedded_fw_path = None\n\n    def set_slave_properties(self, architectures,\n                             linked_archive_paths,\n                             built_fw_path,\n                             built_embedded_fw_path):\n        self.slave_platform = os.environ['PLATFORM_NAME']\n        self.slave_architectures = architectures\n        self.slave_linked_archive_paths = linked_archive_paths\n        self.slave_built_fw_path = built_fw_path\n        self.slave_built_embedded_fw_path = built_embedded_fw_path\n\n    def get_save_path(self):\n        return os.path.join(os.environ['PROJECT_TEMP_DIR'], \"ufw_build_state.json\")\n\n    def persist(self):\n        filename = self.get_save_path()\n        parent = os.path.dirname(filename)\n        if not os.path.isdir(parent):\n            os.makedirs(parent)\n        with open(filename, \"w\") as f:\n            f.write(json.dumps(self.__dict__))\n\n    def reload(self):\n        self.reset()\n        filename = self.get_save_path()\n        if os.path.exists(filename):\n            with open(filename, \"r\") as f:\n                new_dict = json.loads(f.read())\n                if new_dict is not None:\n                    self.__dict__ = dict(self.__dict__.items() + new_dict.items())\n\n\n# Holds information about the current project and build environment.\n#\nclass Project:\n\n    def __init__(self, filename):\n        sourcecode_types = ['sourcecode.c.c',\n                            'sourcecode.c.objc',\n                            'sourcecode.cpp.cpp',\n                            'sourcecode.cpp.objcpp',\n                            'sourcecode.asm.asm',\n                            'sourcecode.asm.llvm',\n                            'sourcecode.nasm']\n\n        self.build_state = BuildState()\n        self.project_data = self.load_from_file(filename)\n        self.target = filter(lambda x: x['name'] == os.environ['TARGET_NAME'], self.project_data['targets'])[0]\n        self.public_headers = self.get_build_phase_files('PBXHeadersBuildPhase', lambda x: x.get('settings', False) and x['settings'].get('ATTRIBUTES', False) and 'Public' in x['settings']['ATTRIBUTES'])\n        self.static_libraries = self.get_build_phase_files('PBXFrameworksBuildPhase', lambda x: x['fileRef']['fileType'] == 'archive.ar' and x['fileRef']['sourceTree'] not in ['DEVELOPER_DIR', 'SDKROOT'])\n        self.static_frameworks = self.get_build_phase_files('PBXFrameworksBuildPhase', lambda x: x['fileRef']['fileType'] == 'wrapper.framework' and x['fileRef']['sourceTree'] not in ['DEVELOPER_DIR', 'SDKROOT'])\n        self.compilable_sources = self.get_build_phase_files('PBXSourcesBuildPhase', lambda x: x['fileRef']['fileType'] in sourcecode_types)\n        self.header_paths = [os.path.join(*x['pathComponents']) for x in self.public_headers]\n\n        self.headers_dir = os.path.join(os.environ['TARGET_BUILD_DIR'], os.environ['CONTENTS_FOLDER_PATH'], 'Headers')\n        self.libtool_path = os.path.join(os.environ['DT_TOOLCHAIN_DIR'], 'usr', 'bin', 'libtool')\n        self.project_filename = os.path.join(os.environ['PROJECT_FILE_PATH'], \"project.pbxproj\")\n        self.local_exe_path = os.path.join(os.environ['TARGET_BUILD_DIR'], os.environ['EXECUTABLE_PATH'])\n        self.local_architectures = os.environ['ARCHS'].split(' ')\n        self.local_built_fw_path = os.path.join(os.environ['TARGET_BUILD_DIR'], os.environ['WRAPPER_NAME'])\n        self.local_built_embedded_fw_path = os.path.splitext(self.local_built_fw_path)[0] + \".embeddedframework\"\n        self.local_linked_archive_paths = [self.get_linked_ufw_archive_path(arch) for arch in self.local_architectures]\n        self.local_platform = os.environ['PLATFORM_NAME']\n        other_platforms = os.environ['SUPPORTED_PLATFORMS'].split(' ')\n        other_platforms.remove(self.local_platform)\n        self.other_platform = other_platforms[0]\n\n        sdk_name = os.environ['SDK_NAME']\n        if not sdk_name.startswith(self.local_platform):\n            raise Exception(\"%s didn't start with %s\" % (sdk_name, self.local_platform))\n        self.sdk_version = sdk_name[len(self.local_platform):]\n\n    # Load an Xcode project file.\n    #\n    def load_from_file(self, filename):\n        project_file = json.loads(subprocess.check_output([\"plutil\", \"-convert\", \"json\", \"-o\", \"-\", filename]))\n        all_objects = project_file['objects']\n        del project_file['objects']\n        for obj in all_objects.values():\n            self.fix_keys(obj)\n        self.unpack_objects(self.build_dereference_list(all_objects, None, None, project_file))\n        self.unpack_objects(self.build_dereference_list(all_objects, None, None, all_objects.values()))\n        project_data = project_file['rootObject']\n        self.build_full_paths(project_data, splitpath(os.environ['SOURCE_ROOT']))\n        return project_data\n\n    def is_key(self, obj):        \n        return isinstance(obj, basestring) and len(obj) == 24 and re.search('^[0-9a-fA-F]+$', obj) is not None\n    \n    def build_dereference_list(self, all_objects, parent, key, obj):\n        deref_list = []\n        if self.is_key(obj):\n            dereferenced = all_objects.get(obj, obj)\n            if dereferenced is not obj:\n                deref_list.append((parent, key, obj, dereferenced))\n        elif isinstance(obj, collections.Mapping):\n            for k, v in obj.iteritems():\n                deref_list += self.build_dereference_list(all_objects, obj, k, v)\n        elif isinstance(obj, collections.Iterable) and not isinstance(obj, basestring):\n            for item in obj:\n                deref_list += self.build_dereference_list(all_objects, obj, None, item)\n        return deref_list\n    \n    def unpack_objects(self, deref_list):\n        for parent, key, orig, obj in deref_list:\n            if key is None:\n                parent.remove(orig)\n                parent.append(obj)\n            else:\n                parent[key] = obj\n\n    # Store the full path, separated into components, to a node inside the node\n    # as \"pathComponents\". Also recurse into that node if it's a group.\n    #\n    def build_full_paths(self, node, base_path):\n        # Some nodes are relative to a different source tree, specified as an\n        # env variable.\n        if node.get('sourceTree', '<group>') != '<group>':\n            new_base_path = os.environ.get(node['sourceTree'], None)\n            if new_base_path:\n                base_path = splitpath(new_base_path)\n        # Add the current node's path, if any.\n        if node.get('path', False):\n            base_path = base_path + splitpath(node['path'])\n        node['pathComponents'] = base_path\n        # Recurse if this is a group.\n        if node['isa'] == 'PBXGroup':\n            for child in node['children']:\n                self.build_full_paths(child, base_path)\n        elif node['isa'] == 'PBXProject':\n            self.build_full_paths(node['mainGroup'], base_path)\n            self.build_full_paths(node['productRefGroup'], base_path)\n            for child in node['targets']:\n                self.build_full_paths(child, base_path)\n            projectRefs = node.get('projectReferences', None)\n            if projectRefs is not None:\n                for child in projectRefs[0].values():\n                    self.build_full_paths(child, base_path)\n\n    # Fix up any inconvenient keys.\n    #\n    def fix_keys(self, obj):\n        key_remappings = {'lastKnownFileType': 'fileType', 'explicitFileType': 'fileType'}\n        for key in list(set(key_remappings.keys()) & set(obj.keys())):\n            obj[key_remappings[key]] = obj[key]\n            del obj[key]\n\n    # Get the files from a build phase.\n    #\n    def get_build_phase_files(self, build_phase_name, filter_func):\n        build_phase = filter(lambda x: x['isa'] == build_phase_name, self.target['buildPhases'])[0]\n        build_files = filter(filter_func, build_phase['files'])\n        return [x['fileRef'] for x in build_files]\n\n    # Get the truncated paths of all headers that start with the specified\n    # relative path. Paths are read and returned as fully separated lists.\n    # e.g. ['Some', 'Path', 'To', 'A', 'Header'] with relative_path of\n    # ['Some', 'Path'] gets truncated to ['To', 'A', 'Header']\n    #\n    def movable_headers_relative_to(self, relative_path):\n        rel_path_length = len(relative_path)\n        result = filter(lambda path: len(path) >= rel_path_length and\n                                     path[:rel_path_length] == relative_path, self.header_paths)\n        return [path[rel_path_length:] for path in result]\n\n    # Get the full path to where a linkable archive (library or framework)\n    # is supposed to be.\n    #\n    def get_linked_archive_path(self, architecture):\n        return os.path.join(os.environ['OBJECT_FILE_DIR_%s' % os.environ['CURRENT_VARIANT']],\n                            architecture,\n                            os.environ['EXECUTABLE_NAME'])\n\n    # Get the full path to our custom linked archive of the project.\n    #\n    def get_linked_ufw_archive_path(self, architecture):\n        return self.get_linked_archive_path(architecture) + \".ufwbuild\"\n\n    # Get the full path to the executable of an archive.\n    #\n    def get_exe_path(self, node):\n        path = os.path.join(*node['pathComponents'])\n        if node['fileType'] == 'wrapper.framework':\n            # Frameworks are directories, so go one deeper\n            path = os.path.join(path, os.path.splitext(node['pathComponents'][-1])[0])\n        return path\n\n    # Get the path to the directory containing the archive.\n    #\n    def get_containing_path(self, node):\n        return os.path.join(*node['pathComponents'])\n    \n    def get_archive_search_paths(self):\n        log.info(\"Search paths = %s\" % set([self.get_containing_path(fw) for fw in self.static_frameworks] + [self.get_containing_path(fw) for fw in self.static_libraries]))\n        return set([self.get_containing_path(fw) for fw in self.static_frameworks] + [self.get_containing_path(fw) for fw in self.static_libraries])\n\n    # Command to link all objects of a single architecture.\n    #\n    def get_single_arch_link_command(self, architecture):\n        cmd = [self.libtool_path,\n               \"-static\",\n               \"-arch_only\", architecture,\n               \"-syslibroot\", os.environ['SDKROOT'],\n               \"-L%s\" % os.environ['TARGET_BUILD_DIR'],\n               \"-filelist\", os.environ['LINK_FILE_LIST_%s_%s' % (os.environ['CURRENT_VARIANT'], architecture)]]\n        if os.environ.get('OTHER_LDFLAGS', False):\n            cmd += [os.environ['OTHER_LDFLAGS']]\n        if os.environ.get('WARNING_LDFLAGS', False):\n            cmd += [os.environ['WARNING_LDFLAGS']]\n#        cmd += [\"-L%s\" % libpath for libpath in self.get_archive_search_paths()]\n        cmd += [self.get_exe_path(fw) for fw in self.static_frameworks]\n        cmd += [self.get_exe_path(lib) for lib in self.static_libraries]\n        cmd += [\"-o\", self.get_linked_ufw_archive_path(architecture)]\n        return cmd\n\n    # Command to link all local architectures for the current configuration\n    # into an archive. This reads all libraries + the UFW-built archives and\n    # overwrites the final product.\n    #\n    def get_local_archs_link_command(self):\n        cmd = [self.libtool_path,\n               \"-static\"]\n        cmd += self.local_linked_archive_paths\n        cmd += [self.get_exe_path(fw) for fw in self.static_frameworks]\n        cmd += [self.get_exe_path(lib) for lib in self.static_libraries]\n        cmd += [\"-o\", os.path.join(os.environ['TARGET_BUILD_DIR'], os.environ['EXECUTABLE_PATH'])]\n        return cmd\n\n    # Command to link all architectures into a universal archive.\n    # This reads all UFW-built archives and overwrites the final product.\n    #\n    def get_all_archs_link_command(self):\n        cmd = [self.libtool_path,\n               \"-static\"]\n        cmd += self.local_linked_archive_paths + self.build_state.slave_linked_archive_paths\n        cmd += [\"-o\", os.path.join(os.environ['TARGET_BUILD_DIR'], os.environ['EXECUTABLE_PATH'])]\n        return cmd\n\n    # Build up an environment for the slave process. This uses BUILD_ROOT\n    # and TEMP_ROOT to convert all environment variables to values suitable\n    # for the slave build environment so that xcodebuild doesn't try to build\n    # in the project directory under \"build\".\n    #\n    def get_slave_environment(self):\n        ignored = ['LD_MAP_FILE_PATH',\n        'HEADER_SEARCH_PATHS',\n        'LIBRARY_SEARCH_PATHS',\n        'FRAMEWORK_SEARCH_PATHS']\n        build_root = os.environ['BUILD_ROOT']\n        temp_root = os.environ['TEMP_ROOT']\n        newenv = {}\n        for key, value in os.environ.items():\n            if key not in ignored and not key.startswith('LINK_FILE_LIST_') and not key.startswith('LD_DEPENDENCY_'):\n                if build_root in value or temp_root in value:\n                    newenv[key] = value.replace(self.local_platform, self.other_platform)\n        return newenv\n\n    # Command to invoke xcodebuild on the slave platform.\n    #\n    def get_slave_project_build_command(self):\n        cmd = [\"xcodebuild\",\n               \"-project\",\n               os.environ['PROJECT_FILE_PATH'],\n               \"-target\",\n               os.environ['TARGET_NAME'],\n               \"-configuration\",\n               os.environ['CONFIGURATION'],\n               \"-sdk\",\n               self.other_platform + self.sdk_version]\n        cmd += [\"%s=%s\" % (key, value) for key, value in self.get_slave_environment().items()]\n        cmd += [\"UFW_MASTER_PLATFORM=\" + os.environ['PLATFORM_NAME']]\n        cmd += [os.environ['ACTION']]\n        return cmd\n\n\n\n##############################################################################\n#\n# Utility Functions\n#\n##############################################################################\n\n# Split a path into a list of path components.\n#\ndef splitpath(path, maxdepth=20):\n     (head, tail) = os.path.split(path)\n     return splitpath(head, maxdepth - 1) + [tail] if maxdepth and head and head != path else [ head or tail ]\n\n# Remove all subdirectories under a path.\n#\ndef remove_subdirs(path, ignore_files):\n    if os.path.exists(path):\n        for filename in filter(lambda x: x not in ignore_files, os.listdir(path)):\n            fullpath = os.path.join(path, filename)\n            if os.path.isdir(fullpath):\n                log.info(\"Remove %s\" % fullpath)\n                shutil.rmtree(fullpath)\n\n# Make whatever parent paths are necessary for a path to exist.\n#\ndef ensure_path_exists(path):\n    if not os.path.isdir(path):\n        os.makedirs(path)\n\n# Make whatever parent paths are necessary for a path's parent to exist.\n#\ndef ensure_parent_exists(path):\n    parent = os.path.dirname(path)\n    if not os.path.isdir(parent):\n        os.makedirs(parent)\n\n# Remove a file or dir if it exists.\n#\ndef remove_path(path):\n    if os.path.exists(path):\n        if os.path.isdir(path) and not os.path.islink(path):\n            shutil.rmtree(path)\n        else:\n            os.remove(path)\n\n# Move a file or dir, replacing the destination if it exists.\n#\ndef move_file(src, dst):\n    if src == dst or not os.path.isfile(src):\n        return\n    log.info(\"Move %s to %s\" % (src, dst))\n    ensure_parent_exists(dst)\n    remove_path(dst)\n    shutil.move(src, dst)\n\n# Copy a file or dir, replacing the destination if it exists already.\n#\ndef copy_overwrite(src, dst):\n    if src != dst:\n        remove_path(dst)\n        ensure_parent_exists(dst)\n        shutil.copytree(src, dst, symlinks=True)\n\n# Attempt to symlink link_path -> link_to.\n# link_to must be a path relative to link_path's parent and must exist.\n# If link_path already exists, do nothing.\n#\ndef attempt_symlink(link_path, link_to):\n    # Only allow linking to an existing file\n    os.stat(os.path.abspath(os.path.join(link_path, \"..\", link_to)))\n\n    # Only make the link if it hasn't already been made\n    if not os.path.exists(link_path):\n        log.info(\"Symlink %s -> %s\" % (link_path, link_to))\n        os.symlink(link_to, link_path)\n\n# Takes the last entry in an array-based path and returns a normal path\n# relative to base_path.\n#\ndef top_level_file_path(base_path, path_list):\n    return os.path.join(base_path, os.path.split(path_list[-1])[-1])\n\n# Takes all entries in an array-based path and returns a normal path\n# relative to base_path.\n#\ndef full_file_path(base_path, path_list):\n    return os.path.join(*([base_path] + path_list))\n\n# Print a command before executing it.\n# Also print out all output from the command to STDOUT.\n#\ndef print_and_call(cmd):\n    log.info(\"Cmd \" + \" \".join(cmd))\n    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)\n    result = p.communicate()[0]\n    if len(result) > 0:\n        log.info(result)\n    if p.returncode != 0:\n        raise subprocess.CalledProcessError(p.returncode, cmd)\n\n# Special print-and-call command for the slave build that strips out\n# xcodebuild's spammy list of environment variables.\n#\ndef print_and_call_slave_build(cmd, other_platform):\n    separator = '=== BUILD NATIVE TARGET '\n    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)\n    result = p.communicate()[0].split(separator)\n    if len(result) == 1:\n        result = result[0]\n    else:\n        result = separator + result[1]\n    log.info(\"Cmd \" + \" \".join(cmd) + \"\\n\" + result)\n    if p.returncode != 0:\n        raise subprocess.CalledProcessError(p.returncode, cmd)\n\n# Issue a warning and record that a warning has been issued.\n#\ndef issue_warning(msg, *args, **kwargs):\n    global issued_warnings\n    issued_warnings = True\n    log.warn(msg, *args, **kwargs)\n\n\n\n##############################################################################\n#\n# Main Application\n#\n##############################################################################\n\n# Check if we are running as master.\n#\ndef is_master():\n    return os.environ.get('UFW_MASTER_PLATFORM', os.environ['PLATFORM_NAME']) == os.environ['PLATFORM_NAME']\n\n# DerivedData should almost never appear in any framework, library, or header\n# search paths. However, Xcode will sometimes add them in, so we check to make\n# sure.\n#\ndef check_for_derived_data_in_search_paths(project):\n    search_path_keys = [\"FRAMEWORK_SEARCH_PATHS\", \"LIBRARY_SEARCH_PATHS\", \"HEADER_SEARCH_PATHS\"]\n    build_configs = project.target['buildConfigurationList']['buildConfigurations']\n    build_settings = filter(lambda x: x['name'] == os.environ['CONFIGURATION'], build_configs)[0]['buildSettings']\n    \n    found_something = False\n    for path_key in filter(lambda x: x in build_settings, search_path_keys):\n        path = build_settings[path_key]\n        if \"DerivedData\" in path:\n            found_something = True\n            log.warn(\"Derived data in %s\" % path)\n            issue_warning(\"'%s' contains reference to 'DerivedData'.\" % path_key)\n    if found_something:\n        log.warn(\"Check your build settings and remove any entries that contain paths inside the DerivedData folder.\")\n        log.warn(\"Otherwise you can disable this warning by changing 'config_warn_derived_data' in this script.\")\n\n# Link local architectures into their respective archives.\n#\ndef link_local_archs(project):\n    for arch in project.local_architectures:\n        print_and_call(project.get_single_arch_link_command(arch))\n\n# Link only the local architectures into the final product, not the slave\n# architectures. For iphoneos, this will be armv6, armv7. For simulator, this\n# will be i386.\n#\ndef link_combine_local_archs(project):\n    print_and_call(project.get_local_archs_link_command())\n\n# Link all architectures into the final product.\n#\ndef link_combine_all_archs(project):\n    print_and_call(project.get_all_archs_link_command())\n\n# Check if we should open the build directory after a successful build.\n#\ndef should_open_build_dir():\n    env_setting = os.environ.get('UFW_OPEN_BUILD_DIR', None)\n    if env_setting is not None:\n        return env_setting\n\n    return config_open_build_dir\n\n# Open the build dir in Finder.\n#\ndef open_build_dir():\n    print_and_call(['open', os.environ['TARGET_BUILD_DIR']])\n\n# Check if the build was started by selecting \"Archive\" under \"Product\" in\n# Xcode.\n#\ndef is_archive_build():\n    # ACTION is always 'build', but perhaps Apple will fix this someday?\n    archive_build = os.environ['ACTION'] == 'archive'\n\n    if not archive_build:\n        # This can be passed in as an env variable when building from command line.\n        archive_build = os.environ.get('UFW_ACTION', None) == 'archive'\n\n    build_dir = splitpath(os.environ['BUILD_DIR'])\n    if not archive_build:\n        # This partial path is used when you select \"archive\" from within Xcode.\n        archive_build = 'ArchiveIntermediates' in build_dir\n\n    # It only counts as a full archive build if this target is being built into\n    # its own build dir (not being built as a dependency of another target)\n    if archive_build:\n        archive_build = os.environ['TARGET_NAME'] in build_dir\n    \n    return archive_build\n\n# Xcode by default throws all public headers into the top level directory.\n# This function moves them to their expected deep hierarchy.\n#\ndef build_deep_header_hierarchy(project):\n    header_path_top = config_deep_header_top\n    if not header_path_top:\n        header_path_top = os.path.commonprefix(project.header_paths)\n    else:\n        header_path_top = splitpath(header_path_top)\n\n    built_headers_path = os.path.join(os.environ['TARGET_BUILD_DIR'], os.environ['PUBLIC_HEADERS_FOLDER_PATH'])\n    movable_headers = project.movable_headers_relative_to(header_path_top)\n\n    # Remove subdirs if they only contain files that have been rebuilt\n    ignore_headers = filter(lambda x: not os.path.isfile(top_level_file_path(built_headers_path, x)), movable_headers)\n    remove_subdirs(built_headers_path, [file[0] for file in ignore_headers])\n\n    # Move rebuilt headers into their proper subdirs\n    for header in movable_headers:\n        move_file(top_level_file_path(built_headers_path, header), full_file_path(built_headers_path, header))\n\n# Add all symlinks needed to make a full framework structure:\n#\n# MyFramework.framework\n# |-- MyFramework -> Versions/Current/MyFramework\n# |-- Headers -> Versions/Current/Headers\n# |-- Resources -> Versions/Current/Resources\n# `-- Versions\n#     |-- A\n#     |   |-- MyFramework\n#     |   |-- Headers\n#     |   |   `-- MyFramework.h\n#     |   `-- Resources\n#     |       |-- Info.plist\n#     |       |-- MyViewController.nib\n#     |       `-- en.lproj\n#     |           `-- InfoPlist.strings\n#     `-- Current -> A\n#\ndef add_symlinks_to_framework(project):\n    base_dir = project.local_built_fw_path\n    attempt_symlink(os.path.join(base_dir, \"Versions\", \"Current\"), os.environ['FRAMEWORK_VERSION'])\n    if os.path.isdir(os.path.join(base_dir, \"Versions\", \"Current\", \"Headers\")):\n        attempt_symlink(os.path.join(base_dir, \"Headers\"), os.path.join(\"Versions\", \"Current\", \"Headers\"))\n    if os.path.isdir(os.path.join(base_dir, \"Versions\", \"Current\", \"Resources\")):\n        attempt_symlink(os.path.join(base_dir, \"Resources\"), os.path.join(\"Versions\", \"Current\", \"Resources\"))\n    attempt_symlink(os.path.join(base_dir, os.environ['EXECUTABLE_NAME']), os.path.join(\"Versions\", \"Current\", os.environ['EXECUTABLE_NAME']))\n\n# Build an embedded framework structure.\n# An embedded framework contains the actual framework, plus a \"Resources\"\n# directory containing symlinks to all resources found in the actual framework,\n# with the exception of \"Info.plist\" and anything ending in \".lproj\":\n#\n# MyFramework.embeddedframework\n# |-- MyFramework.framework\n# |   |-- MyFramework -> Versions/Current/MyFramework\n# |   |-- Headers -> Versions/Current/Headers\n# |   |-- Resources -> Versions/Current/Resources\n# |   `-- Versions\n# |       |-- A\n# |       |   |-- MyFramework\n# |       |   |-- Headers\n# |       |   |   `-- MyFramework.h\n# |       |   `-- Resources\n# |       |       |-- Info.plist\n# |       |       |-- MyViewController.nib\n# |       |       `-- en.lproj\n# |       |           `-- InfoPlist.strings\n# |       `-- Current -> A\n# `-- Resources\n#     `-- MyViewController.nib -> ../MyFramework.framework/Resources/MyViewController.nib\n#\ndef build_embedded_framework(project):\n    fw_path = project.local_built_fw_path\n    embedded_path = project.local_built_embedded_fw_path\n    fw_name = os.environ['WRAPPER_NAME']\n\n    if (os.path.islink(fw_path)):\n        # If the framework path is a link, the build result already in embeddedframework.\n        # Just recreate embeddedframework's Resources\n        remove_path(os.path.join(embedded_path, \"Resources\"))\n    else:\n        remove_path(embedded_path)\n        ensure_path_exists(embedded_path)\n        copy_overwrite(fw_path, os.path.join(embedded_path, fw_name))\n\n    # Create embeddedframework's Resources        \n    ensure_path_exists(os.path.join(embedded_path, \"Resources\"))\n    symlink_source = os.path.join(\"..\", fw_name, \"Resources\")\n    symlink_path = os.path.join(embedded_path, \"Resources\")\n    if os.path.isdir(os.path.join(fw_path, \"Resources\")):\n        for file in filter(lambda x: x != \"Info.plist\" and not x.endswith(\".lproj\"), os.listdir(os.path.join(fw_path, \"Resources\"))):\n            attempt_symlink(os.path.join(symlink_path, file), os.path.join(symlink_source, file))\n\n    # Remove the normal framework and replace it with a symlink to the copy\n    # in the embedded framework. This is needed because Xcode runs its strip\n    # phase AFTER the script runs.\n    embed_fw_wrapper = os.path.splitext(os.environ['WRAPPER_NAME'])[0] + \".embeddedframework\"\n    remove_path(fw_path)\n    attempt_symlink(fw_path, os.path.join(embed_fw_wrapper, os.environ['WRAPPER_NAME']))\n\n\n# Run the build process in slave mode to build the other configuration\n# (device/simulator).\n#\ndef run_slave_build(project):\n    print_and_call_slave_build(project.get_slave_project_build_command(), project.other_platform)\n\n# Run the build process.\n#\ndef run_build():\n    project = Project(os.path.join(os.environ['PROJECT_FILE_PATH'], \"project.pbxproj\"))\n\n    # Issue warnings only if we're master.\n    if is_master():\n        if len(project.compilable_sources) == 0:\n            raise Exception(\"No compilable sources found. Please add at least one source file to build target %s.\" % os.environ['TARGET_NAME'])\n\n        if config_warn_derived_data:\n            check_for_derived_data_in_search_paths(project)\n        if config_warn_no_public_headers and len(project.public_headers) == 0:\n            issue_warning('No headers in build target %s were marked public. Please move at least one header to \"Public\" in the \"Copy Headers\" build phase.' % os.environ['TARGET_NAME'])\n\n    # Only build slave if this is an archive build.\n    if is_archive_build():\n        if is_master():\n            log.debug(\"Building as MASTER\")\n            # The slave-side linker tries to include this (nonexistent) path as\n            # a library path.\n            ensure_path_exists(project.get_slave_environment()['BUILT_PRODUCTS_DIR'])\n            project.build_state.persist()\n            run_slave_build(project)\n            project.build_state.reload()\n        else:\n            log.debug(\"Building as SLAVE\")\n            project.build_state.reload()\n            project.build_state.set_slave_properties(project.local_architectures,\n                                                     project.local_linked_archive_paths,\n                                                     project.local_built_fw_path,\n                                                     project.local_built_embedded_fw_path)\n            project.build_state.persist()\n\n    link_local_archs(project)\n    \n    # Only do a universal binary when building an archive.\n    if is_archive_build() and is_master():\n        link_combine_all_archs(project)\n    else:\n        link_combine_local_archs(project)\n\n    if config_deep_header_hierarchy:\n        build_deep_header_hierarchy(project)\n\n    add_symlinks_to_framework(project)\n    \n    if is_master():\n        if config_framework_type == 'embeddedframework':\n            build_embedded_framework(project)\n        elif config_framework_type != 'framework':\n            raise Exception(\"%s: Unknown framework type for config_framework_type\" % config_framework_type)\n\n\nif __name__ == \"__main__\":\n    log_handler = logging.StreamHandler()\n    log_handler.setFormatter(logging.Formatter(\"%(name)s (\" + os.environ['PLATFORM_NAME'] + \"): %(levelname)s: %(message)s\"))\n    log.addHandler(log_handler)\n    log.setLevel(config_log_level)\n\n    error_code = 0\n    prefix = \"M\" if is_master() else \"S\"\n    log_handler.setFormatter(logging.Formatter(\"%(name)s (\" + prefix + \" \" + os.environ['PLATFORM_NAME'] + \"): %(levelname)s: %(message)s\"))\n\n    log.debug(\"Begin build process\")\n\n    if config_deep_header_top:\n        config_deep_header_top = string.Template(config_deep_header_top).substitute(os.environ)\n\n    try:\n        run_build()\n        if issued_warnings:\n            if config_fail_on_warnings:\n                error_code = 1\n            log.warn(\"Build completed with warnings\")\n        else:\n            log.info(\"Build completed\")\n        if not is_archive_build():\n            log.info(\"Note: This is *NOT* a universal framework build. To build as a universal framework, do an archive build.\")\n            log.info(\"To do an archive build from command line, use \\\"xcodebuild -configuration Release UFW_ACTION=archive clean build\\\"\")\n    except Exception:\n        traceback.print_exc(file=sys.stdout)\n        error_code = 1\n        log.error(\"Build failed\")\n    finally:\n        if error_code == 0 and is_archive_build() and is_master():\n            log.info(\"Built framework is in \" + os.environ['TARGET_BUILD_DIR'])\n            if should_open_build_dir():\n                open_build_dir()\n        sys.exit(error_code)\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D05A830E18AFB3F9007F1076 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D063A36B18B164D600C65116 /* MTApiEnvironment.m in Sources */,
+				D063A37318B164D600C65116 /* MTRequest.m in Sources */,
+				D063A3A118B1650400C65116 /* MTTcpConnectionBehaviour.m in Sources */,
+				D05A83E718AFB75B007F1076 /* MTContext.m in Sources */,
+				D05A841318AFB75B007F1076 /* MTDatacenterAuthInfo.m in Sources */,
+				D05A84FF18AFF259007F1076 /* AFHTTPRequestOperation.m in Sources */,
+				D063A35718B1631900C65116 /* MTMessageTransaction.m in Sources */,
+				D063A32B18B1618D00C65116 /* MTOutgoingMessage.m in Sources */,
+				D063A33D18B161B600C65116 /* MTIncomingMessage.m in Sources */,
+				D063A3B718B1650F00C65116 /* MTHttpWorkerBehaviour.m in Sources */,
+				D05A83E818AFB75B007F1076 /* MTDatacenterTransferAuthAction.m in Sources */,
+				D063A37B18B164D600C65116 /* MTRequestMessageService.m in Sources */,
+				D05A84A318AFCF8E007F1076 /* MTQueue.m in Sources */,
+				D063A3A518B1650400C65116 /* MTTcpTransport.m in Sources */,
+				D063A33F18B161B600C65116 /* MTMessageEncryptionKey.m in Sources */,
+				D063A33118B1618D00C65116 /* MTSessionInfo.mm in Sources */,
+				D063A33B18B161B600C65116 /* MTDatacenterTransportStraregy.m in Sources */,
+				D0503ADF18B029480074C3FE /* MTInputStream.m in Sources */,
+				D063A38118B164E600C65116 /* MTResendMessageService.m in Sources */,
+				93DBD23518B2DA1E00631ADC /* MTTime.m in Sources */,
+				D05A83EE18AFB75B007F1076 /* MTKeychain.m in Sources */,
+				D063A32D18B1618D00C65116 /* MTPreparedMessage.m in Sources */,
+				D05A841718AFB75B007F1076 /* MTDatacenterAddressSet.m in Sources */,
+				D05A841118AFB75B007F1076 /* MTDatacenterSaltInfo.m in Sources */,
+				D063A37718B164D600C65116 /* MTRequestContext.m in Sources */,
+				D05A851B18AFF2F8007F1076 /* AFJSONUtilities.m in Sources */,
+				D0503ADB18B027F80074C3FE /* MTOutputStream.m in Sources */,
+				D063A38B18B164F800C65116 /* MTNetworkAvailability.m in Sources */,
+				D063A36F18B164D600C65116 /* MTDropResponseContext.m in Sources */,
+				D05A83FB18AFB75B007F1076 /* MTDatacenterAuthMessageService.m in Sources */,
+				D05A84FB18AFF259007F1076 /* AFHTTPClient.m in Sources */,
+				D05A841918AFB75B007F1076 /* MTDatacenterAuthAction.m in Sources */,
+				D05A841F18AFB75B007F1076 /* MTDiscoverDatacenterAddressAction.m in Sources */,
+				D05A84DD18AFE81D007F1076 /* MTTimer.m in Sources */,
+				D063A38F18B164F800C65116 /* MTTransport.m in Sources */,
+				D05A841518AFB75B007F1076 /* MTDatacenterAddress.m in Sources */,
+				93DBD23218B2D72800631ADC /* MTRequestErrorContext.m in Sources */,
+				D063A3B318B1650F00C65116 /* MTHttpWorker.m in Sources */,
+				D063A3AF18B1650F00C65116 /* MTHttpTransport.m in Sources */,
+				D063A33318B1618D00C65116 /* MTTimeFixContext.m in Sources */,
+				D05A851118AFF259007F1076 /* AFURLConnectionOperation.m in Sources */,
+				D063A39D18B1650400C65116 /* MTTcpConnection.m in Sources */,
+				D063A35D18B164BA00C65116 /* MTTimeSyncMessageService.m in Sources */,
+				D063A39318B164F800C65116 /* MTTransportTransaction.m in Sources */,
+				D05A84E518AFE81D007F1076 /* MTEncryption.m in Sources */,
+				D05A84E318AFE81D007F1076 /* MTLogging.m in Sources */,
+				D063A32F18B1618D00C65116 /* MTProto.mm in Sources */,
+				D05A851518AFF259007F1076 /* GCDAsyncSocket.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D05A832318AFB3F9007F1076 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D05A833918AFB3F9007F1076 /* MtProtoKitTests.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D05A834218AFB40C007F1076 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D063A36C18B164D600C65116 /* MTApiEnvironment.m in Sources */,
+				D063A37418B164D600C65116 /* MTRequest.m in Sources */,
+				D063A3A218B1650400C65116 /* MTTcpConnectionBehaviour.m in Sources */,
+				D063A2E618B143EA00C65116 /* MTEncryption.m in Sources */,
+				D05A846318AFC7DC007F1076 /* MTDatacenterSaltInfo.m in Sources */,
+				D063A34D18B161C400C65116 /* MTIncomingMessage.m in Sources */,
+				D05A845118AFC7DC007F1076 /* MTKeychain.m in Sources */,
+				93DBD23818B2DA5800631ADC /* MTTime.m in Sources */,
+				D063A34118B161C400C65116 /* MTProto.mm in Sources */,
+				D063A35818B1631900C65116 /* MTMessageTransaction.m in Sources */,
+				D063A3B818B1650F00C65116 /* MTHttpWorkerBehaviour.m in Sources */,
+				D05A846118AFC7DC007F1076 /* MTDatacenterAuthInfo.m in Sources */,
+				D05A850018AFF259007F1076 /* AFHTTPRequestOperation.m in Sources */,
+				D063A37C18B164D600C65116 /* MTRequestMessageService.m in Sources */,
+				D063A3A618B1650400C65116 /* MTTcpTransport.m in Sources */,
+				D063A34718B161C400C65116 /* MTPreparedMessage.m in Sources */,
+				D063A34F18B161C400C65116 /* MTMessageEncryptionKey.m in Sources */,
+				D063A2E118B143EA00C65116 /* MTTimer.m in Sources */,
+				D05A845F18AFC7DC007F1076 /* MTDatacenterAddressSet.m in Sources */,
+				D063A34918B161C400C65116 /* MTOutgoingMessage.m in Sources */,
+				D063A34318B161C400C65116 /* MTSessionInfo.mm in Sources */,
+				D063A38218B164E600C65116 /* MTResendMessageService.m in Sources */,
+				D05A845718AFC7DC007F1076 /* MTDatacenterTransferAuthAction.m in Sources */,
+				D063A34518B161C400C65116 /* MTTimeFixContext.m in Sources */,
+				D063A37818B164D600C65116 /* MTRequestContext.m in Sources */,
+				D05A845D18AFC7DC007F1076 /* MTDatacenterAddress.m in Sources */,
+				D063A2ED18B143EA00C65116 /* MTInputStream.m in Sources */,
+				D05A845B18AFC7DC007F1076 /* MTDatacenterAuthMessageService.m in Sources */,
+				D063A37018B164D600C65116 /* MTDropResponseContext.m in Sources */,
+				D063A38C18B164F800C65116 /* MTNetworkAvailability.m in Sources */,
+				D063A2E418B143EA00C65116 /* MTLogging.m in Sources */,
+				D063A34B18B161C400C65116 /* MTDatacenterTransportStraregy.m in Sources */,
+				D05A845318AFC7DC007F1076 /* MTContext.m in Sources */,
+				D063A2E918B143EA00C65116 /* MTQueue.m in Sources */,
+				D063A2EB18B143EA00C65116 /* MTOutputStream.m in Sources */,
+				D063A3B418B1650F00C65116 /* MTHttpWorker.m in Sources */,
+				D063A3B018B1650F00C65116 /* MTHttpTransport.m in Sources */,
+				D063A39018B164F800C65116 /* MTTransport.m in Sources */,
+				D05A851C18AFF2F8007F1076 /* AFJSONUtilities.m in Sources */,
+				D063A39E18B1650400C65116 /* MTTcpConnection.m in Sources */,
+				D05A845918AFC7DC007F1076 /* MTDatacenterAuthAction.m in Sources */,
+				D05A84FC18AFF259007F1076 /* AFHTTPClient.m in Sources */,
+				D063A35E18B164BA00C65116 /* MTTimeSyncMessageService.m in Sources */,
+				93DBD23918B2DA6F00631ADC /* MTRequestErrorContext.m in Sources */,
+				D063A39418B164F800C65116 /* MTTransportTransaction.m in Sources */,
+				D05A851218AFF259007F1076 /* AFURLConnectionOperation.m in Sources */,
+				D05A845518AFC7DC007F1076 /* MTDiscoverDatacenterAddressAction.m in Sources */,
+				D05A851618AFF259007F1076 /* GCDAsyncSocket.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D05A835818AFB40C007F1076 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D05A832E18AFB3F9007F1076 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D05A831318AFB3F9007F1076 /* MtProtoKit iOS */;
+			targetProxy = D05A832D18AFB3F9007F1076 /* PBXContainerItemProxy */;
+		};
+		D05A833018AFB3F9007F1076 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D05A831318AFB3F9007F1076 /* MtProtoKit iOS */;
+			targetProxy = D05A832F18AFB3F9007F1076 /* PBXContainerItemProxy */;
+		};
+		D05A836018AFB40C007F1076 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D05A834618AFB40C007F1076 /* MtProtoKit OSX */;
+			targetProxy = D05A835F18AFB40C007F1076 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		D05A833518AFB3F9007F1076 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				D05A833618AFB3F9007F1076 /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		D05A835118AFB40C007F1076 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				D05A835218AFB40C007F1076 /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		D063A31718B157F700C65116 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				D063A31818B157F700C65116 /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		D05A833A18AFB3F9007F1076 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 7.1;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		D05A833B18AFB3F9007F1076 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 7.1;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		D05A833D18AFB3F9007F1076 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = armv7;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				FRAMEWORK_VERSION = A;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "MtProtoKitiOS/MtProtoKit-Prefix.pch";
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"/Applications/Xcode51-Beta5.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include",
+					"$(PROJECT_DIR)/openssl",
+					"$(PROJECT_DIR)",
+				);
+				INFOPLIST_FILE = "MtProtoKitiOS/MtProtoKit-Info.plist";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/openssl",
+					"$(PROJECT_DIR)/openssl/OSX",
+					"$(PROJECT_DIR)/openssl/iOS",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = framework;
+			};
+			name = Debug;
+		};
+		D05A833E18AFB3F9007F1076 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = armv7;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				FRAMEWORK_VERSION = A;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "MtProtoKitiOS/MtProtoKit-Prefix.pch";
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"/Applications/Xcode51-Beta5.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include",
+					"$(PROJECT_DIR)/openssl",
+					"$(PROJECT_DIR)",
+				);
+				INFOPLIST_FILE = "MtProtoKitiOS/MtProtoKit-Info.plist";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/openssl",
+					"$(PROJECT_DIR)/openssl/OSX",
+					"$(PROJECT_DIR)/openssl/iOS",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = framework;
+			};
+			name = Release;
+		};
+		D05A834018AFB3F9007F1076 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/MtProtoKit iOS.framework/Versions/A/MtProtoKit iOS";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)/Developer/Library/Frameworks",
+					"$(inherited)",
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+				);
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "MtProtoKit/MtProtoKit-Prefix.pch";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = "MtProtoKitTests/MtProtoKitTests-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUNDLE_LOADER)";
+				WRAPPER_EXTENSION = xctest;
+			};
+			name = Debug;
+		};
+		D05A834118AFB3F9007F1076 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/MtProtoKit iOS.framework/Versions/A/MtProtoKit iOS";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)/Developer/Library/Frameworks",
+					"$(inherited)",
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+				);
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "MtProtoKit/MtProtoKit-Prefix.pch";
+				INFOPLIST_FILE = "MtProtoKitTests/MtProtoKitTests-Info.plist";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TEST_HOST = "$(BUNDLE_LOADER)";
+				WRAPPER_EXTENSION = xctest;
+			};
+			name = Release;
+		};
+		D05A836B18AFB40C007F1076 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+				);
+				FRAMEWORK_VERSION = A;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "MtProtoKitOSX/MtProtoKitOSX-Prefix.pch";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"/Applications/Xcode51-Beta5.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include",
+					"$(PROJECT_DIR)",
+				);
+				INFOPLIST_FILE = "MtProtoKitOSX/MtProtoKitOSX-Info.plist";
+				LD_DYLIB_INSTALL_NAME = "@executable_path/../Frameworks/$(EXECUTABLE_PATH)";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/openssl",
+					"$(PROJECT_DIR)/openssl/OSX",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				PRODUCT_NAME = MTProtoKit;
+				SDKROOT = macosx;
+				WRAPPER_EXTENSION = framework;
+			};
+			name = Debug;
+		};
+		D05A836C18AFB40C007F1076 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+				);
+				FRAMEWORK_VERSION = A;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "MtProtoKitOSX/MtProtoKitOSX-Prefix.pch";
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"/Applications/Xcode51-Beta5.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include",
+					"$(PROJECT_DIR)",
+				);
+				INFOPLIST_FILE = "MtProtoKitOSX/MtProtoKitOSX-Info.plist";
+				LD_DYLIB_INSTALL_NAME = "@executable_path/../Frameworks/$(EXECUTABLE_PATH)";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/openssl",
+					"$(PROJECT_DIR)/openssl/OSX",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				PRODUCT_NAME = MTProtoKit;
+				SDKROOT = macosx;
+				WRAPPER_EXTENSION = framework;
+			};
+			name = Release;
+		};
+		D05A836E18AFB40C007F1076 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/MtProtoKit iOS.framework/Versions/A/MtProtoKit iOS";
+				COMBINE_HIDPI_IMAGES = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+					"$(inherited)",
+				);
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "MtProtoKitOSX/MtProtoKitOSX-Prefix.pch";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = "MtProtoKitOSXTests/MtProtoKitOSXTests-Info.plist";
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUNDLE_LOADER)";
+				WRAPPER_EXTENSION = xctest;
+			};
+			name = Debug;
+		};
+		D05A836F18AFB40C007F1076 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/MtProtoKit iOS.framework/Versions/A/MtProtoKit iOS";
+				COMBINE_HIDPI_IMAGES = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+					"$(inherited)",
+				);
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "MtProtoKitOSX/MtProtoKitOSX-Prefix.pch";
+				INFOPLIST_FILE = "MtProtoKitOSXTests/MtProtoKitOSXTests-Info.plist";
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUNDLE_LOADER)";
+				WRAPPER_EXTENSION = xctest;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D05A830D18AFB3F9007F1076 /* Build configuration list for PBXProject "MtProtoKit" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D05A833A18AFB3F9007F1076 /* Debug */,
+				D05A833B18AFB3F9007F1076 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D05A833C18AFB3F9007F1076 /* Build configuration list for PBXNativeTarget "MtProtoKit iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D05A833D18AFB3F9007F1076 /* Debug */,
+				D05A833E18AFB3F9007F1076 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D05A833F18AFB3F9007F1076 /* Build configuration list for PBXNativeTarget "MtProtoKit iOS Tests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D05A834018AFB3F9007F1076 /* Debug */,
+				D05A834118AFB3F9007F1076 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D05A836A18AFB40C007F1076 /* Build configuration list for PBXNativeTarget "MtProtoKit OSX" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D05A836B18AFB40C007F1076 /* Debug */,
+				D05A836C18AFB40C007F1076 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D05A836D18AFB40C007F1076 /* Build configuration list for PBXNativeTarget "MtProtoKit OSX Tests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D05A836E18AFB40C007F1076 /* Debug */,
+				D05A836F18AFB40C007F1076 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D05A830A18AFB3F9007F1076 /* Project object */;
+}
