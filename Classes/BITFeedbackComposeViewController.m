@@ -42,8 +42,10 @@
 
 #import "BITHockeyHelper.h"
 
+#import "BITImageAnnotationViewController.h"
 
-@interface BITFeedbackComposeViewController () <BITFeedbackUserDataDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate, UIActionSheetDelegate> {
+
+@interface BITFeedbackComposeViewController () <BITFeedbackUserDataDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate, UIActionSheetDelegate, BITImageAnnotationDelegate> {
   UIStatusBarStyle _statusBarStyle;
 }
 
@@ -469,12 +471,38 @@
       [attachment deleteContents]; // mandatory call to delete the files associatd.
       [self.attachments removeObject:attachment];
     }
-    
+    self.selectedAttachmentIndex = NSNotFound;
+
+    [self refreshAttachmentScrollview];
+  } else {
+    if (self.selectedAttachmentIndex != NSNotFound){
+      BITFeedbackMessageAttachment* attachment = [self.attachments objectAtIndex:self.selectedAttachmentIndex];
+      BITImageAnnotationViewController *annotationEditor = [[BITImageAnnotationViewController alloc ] init];
+      annotationEditor.delegate = self;
+      UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:annotationEditor];
+      annotationEditor.image = attachment.imageRepresentation;
+      [self presentViewController:navController animated:YES completion:nil];
+    }
+
+  }
+  
+  
+}
+
+#pragma mark - Image Annotation Delegate
+
+- (void)annotationController:(BITImageAnnotationViewController *)annotationController didFinishWithImage:(UIImage *)image {
+  if (self.selectedAttachmentIndex != NSNotFound){
+    BITFeedbackMessageAttachment* attachment = [self.attachments objectAtIndex:self.selectedAttachmentIndex];
+    [attachment replaceData:UIImageJPEGRepresentation(image, 0.7f)];
     [self refreshAttachmentScrollview];
   }
   
   self.selectedAttachmentIndex = NSNotFound;
-  
+}
+
+- (void)annotationControllerDidCancel:(BITImageAnnotationViewController *)annotationController {
+  self.selectedAttachmentIndex = NSNotFound;
 }
 
 @end

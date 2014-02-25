@@ -1035,7 +1035,7 @@
 
 -(void)setFeedbackObservationMode:(BITFeedbackObservationMode)mode {
   if (mode == BITFeedbackObservationModeOnScreenshot){
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenshotNotificationReceived:) name:UIApplicationUserDidTakeScreenshotNotification object:nil];
+  //  [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenshotNotificationReceived:) name:UIApplicationUserDidTakeScreenshotNotification object:nil];
   }
 }
 

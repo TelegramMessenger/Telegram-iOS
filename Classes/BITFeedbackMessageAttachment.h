@@ -44,6 +44,8 @@
 
 - (UIImage *)thumbnailWithSize:(CGSize)size;
 
+- (void)replaceData:(NSData *)data;
+
 - (void)deleteContents;
 
 @end

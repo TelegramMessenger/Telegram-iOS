@@ -76,6 +76,11 @@
   return nil;
 }
 
+- (void)replaceData:(NSData *)data {
+  self.data = data;
+  self.thumbnailRepresentations = [NSMutableDictionary new];
+}
+
 #pragma mark NSCoding
 
 - (void)encodeWithCoder:(NSCoder *)aCoder {
