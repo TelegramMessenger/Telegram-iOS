@@ -190,6 +190,8 @@ static NSMutableDictionary *keychains()
         NSString *applicationSupportPath = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES)[0];
         NSString *applicationName = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleName"];
         dataDirectory = [[applicationSupportPath stringByAppendingPathComponent:applicationName] stringByAppendingPathComponent:@"mtkeychain"];
+#else
+#   error "Unsupported OS"
 #endif
         
         __autoreleasing NSError *error = nil;
