@@ -184,7 +184,14 @@ static NSMutableDictionary *keychains()
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^
     {
+#if TARGET_OS_IPHONE
         dataDirectory = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true)[0] stringByAppendingPathComponent:@"mtkeychain"];
+#elif TARGET_OS_MAC
+        NSString *applicationSupportPath = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES)[0];
+        NSString *applicationName = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleName"];
+        dataDirectory = [[applicationSupportPath stringByAppendingPathComponent:applicationName] stringByAppendingPathComponent:@"mtkeychain"];
+#endif
+        
         __autoreleasing NSError *error = nil;
         [[NSFileManager defaultManager] createDirectoryAtPath:dataDirectory withIntermediateDirectories:true attributes:nil error:&error];
         if (error != nil)
