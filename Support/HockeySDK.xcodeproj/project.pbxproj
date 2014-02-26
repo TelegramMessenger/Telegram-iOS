@@ -136,6 +136,8 @@
 		973EC8B818BCA8A200DBFFBB /* BITRectangleImageAnnotation.m in Sources */ = {isa = PBXBuildFile; fileRef = 973EC8B618BCA8A200DBFFBB /* BITRectangleImageAnnotation.m */; };
 		973EC8BB18BDE29800DBFFBB /* BITArrowImageAnnotation.h in Headers */ = {isa = PBXBuildFile; fileRef = 973EC8B918BDE29800DBFFBB /* BITArrowImageAnnotation.h */; };
 		973EC8BC18BDE29800DBFFBB /* BITArrowImageAnnotation.m in Sources */ = {isa = PBXBuildFile; fileRef = 973EC8BA18BDE29800DBFFBB /* BITArrowImageAnnotation.m */; };
+		973EC8BF18BE2B5B00DBFFBB /* BITBlurImageAnnotation.h in Headers */ = {isa = PBXBuildFile; fileRef = 973EC8BD18BE2B5B00DBFFBB /* BITBlurImageAnnotation.h */; };
+		973EC8C018BE2B5B00DBFFBB /* BITBlurImageAnnotation.m in Sources */ = {isa = PBXBuildFile; fileRef = 973EC8BE18BE2B5B00DBFFBB /* BITBlurImageAnnotation.m */; };
 		9760F6C418BB4D2D00959B93 /* AssetsLibrary.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9760F6C318BB4D2D00959B93 /* AssetsLibrary.framework */; };
 		9760F6CF18BB685600959B93 /* BITImageAnnotation.h in Headers */ = {isa = PBXBuildFile; fileRef = 9760F6CD18BB685600959B93 /* BITImageAnnotation.h */; };
 		9760F6D018BB685600959B93 /* BITImageAnnotation.m in Sources */ = {isa = PBXBuildFile; fileRef = 9760F6CE18BB685600959B93 /* BITImageAnnotation.m */; };
@@ -304,6 +306,8 @@
 		973EC8B618BCA8A200DBFFBB /* BITRectangleImageAnnotation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITRectangleImageAnnotation.m; sourceTree = "<group>"; };
 		973EC8B918BDE29800DBFFBB /* BITArrowImageAnnotation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITArrowImageAnnotation.h; sourceTree = "<group>"; };
 		973EC8BA18BDE29800DBFFBB /* BITArrowImageAnnotation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITArrowImageAnnotation.m; sourceTree = "<group>"; };
+		973EC8BD18BE2B5B00DBFFBB /* BITBlurImageAnnotation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITBlurImageAnnotation.h; sourceTree = "<group>"; };
+		973EC8BE18BE2B5B00DBFFBB /* BITBlurImageAnnotation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITBlurImageAnnotation.m; sourceTree = "<group>"; };
 		9760F6C318BB4D2D00959B93 /* AssetsLibrary.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AssetsLibrary.framework; path = System/Library/Frameworks/AssetsLibrary.framework; sourceTree = SDKROOT; };
 		9760F6CD18BB685600959B93 /* BITImageAnnotation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITImageAnnotation.h; sourceTree = "<group>"; };
 		9760F6CE18BB685600959B93 /* BITImageAnnotation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITImageAnnotation.m; sourceTree = "<group>"; };
@@ -570,6 +574,8 @@
 				973EC8B618BCA8A200DBFFBB /* BITRectangleImageAnnotation.m */,
 				973EC8B918BDE29800DBFFBB /* BITArrowImageAnnotation.h */,
 				973EC8BA18BDE29800DBFFBB /* BITArrowImageAnnotation.m */,
+				973EC8BD18BE2B5B00DBFFBB /* BITBlurImageAnnotation.h */,
+				973EC8BE18BE2B5B00DBFFBB /* BITBlurImageAnnotation.m */,
 			);
 			name = "Image Editor";
 			sourceTree = "<group>";
@@ -684,6 +690,7 @@
 				1E49A4731612226D00463151 /* BITUpdateManager.h in Headers */,
 				1E49A4791612226D00463151 /* BITUpdateManagerDelegate.h in Headers */,
 				1E49A44E1612223B00463151 /* BITFeedbackManager.h in Headers */,
+				973EC8BF18BE2B5B00DBFFBB /* BITBlurImageAnnotation.h in Headers */,
 				E4B4DB7D17B435550099C67F /* BITAuthenticationViewController.h in Headers */,
 				1E49A4481612223B00463151 /* BITFeedbackListViewController.h in Headers */,
 				1E49A47F1612226D00463151 /* BITUpdateViewController.h in Headers */,
@@ -935,6 +942,7 @@
 				1E49A4821612226D00463151 /* BITUpdateViewController.m in Sources */,
 				E4B4DB7E17B435550099C67F /* BITAuthenticationViewController.m in Sources */,
 				1E49A4B2161222B900463151 /* BITHockeyBaseManager.m in Sources */,
+				973EC8C018BE2B5B00DBFFBB /* BITBlurImageAnnotation.m in Sources */,
 				9760F6D018BB685600959B93 /* BITImageAnnotation.m in Sources */,
 				1E49A4BB161222B900463151 /* BITHockeyBaseViewController.m in Sources */,
 				97F0FA0518B2294D00EF50AA /* BITFeedbackMessageAttachment.m in Sources */,

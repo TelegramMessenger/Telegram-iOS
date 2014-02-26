@@ -10,6 +10,7 @@
 #import "BITImageAnnotation.h"
 #import "BITRectangleImageAnnotation.h"
 #import "BITArrowImageAnnotation.h"
+#import "BITBlurImageAnnotation.h"
 
 @interface BITImageAnnotationViewController ()
 
@@ -50,15 +51,12 @@
   self.objects = [NSMutableArray new];
   
   [self.editingControls addTarget:self action:@selector(editingAction:) forControlEvents:UIControlEventTouchUpInside];
+  [self.editingControls setSelectedSegmentIndex:0];
   
   self.imageView = [[UIImageView alloc] initWithFrame:self.view.bounds];
   
-  
-  
   self.imageView.clipsToBounds = YES;
-  
-  self.imageView.layer.masksToBounds = YES;
-  
+    
   self.imageView.image = self.image;
   self.imageView.contentMode = UIViewContentModeScaleToFill;
   
@@ -102,7 +100,7 @@
   } else if(self.editingControls.selectedSegmentIndex==1){
     return [[BITArrowImageAnnotation alloc] initWithFrame:CGRectZero];
   } else {
-    return [[BITImageAnnotation alloc] initWithFrame:CGRectZero];
+    return [[BITBlurImageAnnotation alloc] initWithFrame:CGRectZero];
   }
 }
 
@@ -143,11 +141,14 @@
   if (gestureRecognizer.state == UIGestureRecognizerStateBegan){
     self.currentAnnotation = [self annotationForCurrentMode];
     [self.objects addObject:self.currentAnnotation];
+    self.currentAnnotation.sourceImage = self.image;
     [self.imageView insertSubview:self.currentAnnotation aboveSubview:self.imageView];
     self.panStart = [gestureRecognizer locationInView:self.imageView];
   } else if (gestureRecognizer.state == UIGestureRecognizerStateChanged){
-    CGPoint bla = [gestureRecognizer translationInView:self.imageView];
-    self.currentAnnotation.frame = CGRectMake(self.panStart.x, self.panStart.y, bla.x, bla.y);
+    CGPoint bla = [gestureRecognizer locationInView:self.imageView];
+    self.currentAnnotation.frame = CGRectMake(self.panStart.x, self.panStart.y, bla.x - self.panStart.x, bla.y - self.panStart.y);
+    self.currentAnnotation.movedDelta = CGSizeMake(bla.x - self.panStart.x, bla.y - self.panStart.y);
+    self.currentAnnotation.imageFrame = [self.view convertRect:self.imageView.frame toView:self.currentAnnotation];
   }
   
 }

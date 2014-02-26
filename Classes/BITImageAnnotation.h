@@ -9,5 +9,7 @@
 #import <UIKit/UIKit.h>
 
 @interface BITImageAnnotation : UIView
-
+@property (nonatomic) CGSize movedDelta;
+@property (nonatomic, weak) UIImage *sourceImage;
+@property (nonatomic) CGRect imageFrame;
 @end

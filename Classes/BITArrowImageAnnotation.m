@@ -14,6 +14,8 @@
 @interface BITArrowImageAnnotation()
 
 @property (nonatomic, strong) CAShapeLayer *shapeLayer;
+@property (nonatomic, strong) CAShapeLayer *strokeLayer;
+
 
 @end
 
@@ -27,7 +29,15 @@
     self.shapeLayer.strokeColor = [UIColor redColor].CGColor;
     self.shapeLayer.lineWidth = 5;
     self.shapeLayer.fillColor = [UIColor clearColor].CGColor;
+    
+    self.strokeLayer = [CAShapeLayer layer];
+    self.strokeLayer.strokeColor = [UIColor whiteColor].CGColor;
+    self.strokeLayer.lineWidth = 10;
+    self.strokeLayer.fillColor = [UIColor clearColor].CGColor;
+    [self.layer addSublayer:self.strokeLayer];
+
     [self.layer addSublayer:self.shapeLayer];
+
     
   }
   return self;
@@ -35,20 +45,41 @@
 
 - (void)buildShape {
   CGFloat topHeight = MAX(self.frame.size.width / 3.0f,20);
+
   
-  CGFloat lineWidth = MAX(self.frame.size.width / 5.0f,20);
+  CGFloat lineWidth = MAX(self.frame.size.width / 10.0f,10);
+  CGFloat startX, startY, endX, endY;
+  if ( self.movedDelta.width > 0){
+    startX = CGRectGetMinX(self.bounds);
+    endX =  CGRectGetMaxX(self.bounds);
+  } else {
+    startX = CGRectGetMaxX(self.bounds);
+    endX = CGRectGetMinX(self.bounds);
+
+  }
   
-  UIBezierPath *path = [self bezierPathWithArrowFromPoint:CGPointMake(CGRectGetMinX(self.frame), CGRectGetMinY(self.frame)) toPoint:CGPointMake(CGRectGetMaxX(self.frame), CGRectGetMaxY(self.frame)) tailWidth:lineWidth headWidth:self.frame.size.height headLength:topHeight];
+  if ( self.movedDelta.height > 0){
+    startY = CGRectGetMinY(self.bounds);
+    endY =  CGRectGetMaxY(self.bounds);
+  } else {
+    startY = CGRectGetMaxY(self.bounds);
+    endY =  CGRectGetMinY(self.bounds);
+    
+  }
+  
+  NSLog(@"Start X: %f, Y: %f, END: %f %f %@", startX, startY, endX,endY, self);
+  
+  UIBezierPath *path = [self bezierPathWithArrowFromPoint:CGPointMake(endX,endY) toPoint:CGPointMake(startX,startY) tailWidth:lineWidth headWidth:topHeight headLength:topHeight];
   
   self.shapeLayer.path = path.CGPath;
+  self.strokeLayer.path = path.CGPath;
 }
 
 -(void)layoutSubviews{
   [super layoutSubviews];
-  
+
   [self buildShape];
   
-  self.shapeLayer.frame = self.bounds;
 }
 
 /*
