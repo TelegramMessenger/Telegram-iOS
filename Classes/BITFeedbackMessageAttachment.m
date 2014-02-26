@@ -140,18 +140,10 @@
     [[NSFileManager defaultManager] createDirectoryAtPath:cachePath withIntermediateDirectories:YES attributes:nil error:nil];
   }
   
-  NSString *uniqueString = [BITFeedbackMessageAttachment GetUUID];
+  NSString *uniqueString = bit_UUID();
   cachePath = [cachePath stringByAppendingPathComponent:uniqueString];
   
   return  cachePath;
-}
-
-+ (NSString *)GetUUID
-{
-  CFUUIDRef theUUID = CFUUIDCreate(NULL);
-  CFStringRef string = CFUUIDCreateString(NULL, theUUID);
-  CFRelease(theUUID);
-  return (__bridge NSString *)string;
 }
 
 - (void)deleteContents {
