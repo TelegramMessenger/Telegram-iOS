@@ -43,7 +43,7 @@
   
   self.view.backgroundColor = [UIColor groupTableViewBackgroundColor];
   
-  self.editingControls = [[UISegmentedControl alloc] initWithItems:@[@"Arrow", @"Rect", @"Blur"]];
+  self.editingControls = [[UISegmentedControl alloc] initWithItems:@[@"Rectangle", @"Arrow", @"Blur"]];
   
   self.navigationItem.titleView = self.editingControls;
 
