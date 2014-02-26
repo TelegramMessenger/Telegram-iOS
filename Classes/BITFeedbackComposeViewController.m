@@ -421,8 +421,8 @@
   self.selectedAttachmentIndex = index;
   UIActionSheet * actionSheet = [[UIActionSheet alloc] initWithTitle: nil
                                                             delegate: self
-                                                   cancelButtonTitle: @"Delete Attachment"
-                                              destructiveButtonTitle: nil
+                                                   cancelButtonTitle:@"Cancel"
+                                              destructiveButtonTitle: @"Delete Attachment"
                                                    otherButtonTitles: @"Edit Attachment", nil];
   
   [actionSheet showFromRect: sender.frame inView: self.attachmentScrollView animated: YES];
@@ -464,7 +464,7 @@
 #pragma mark - UIActionSheet Delegate
 
 - (void)actionSheet:(UIActionSheet *)actionSheet didDismissWithButtonIndex:(NSInteger)buttonIndex {
-  if (buttonIndex == [actionSheet cancelButtonIndex]){
+  if (buttonIndex == [actionSheet destructiveButtonIndex]){
     
     if (self.selectedAttachmentIndex != NSNotFound){
       BITFeedbackMessageAttachment* attachment = [self.attachments objectAtIndex:self.selectedAttachmentIndex];
@@ -474,7 +474,7 @@
     self.selectedAttachmentIndex = NSNotFound;
 
     [self refreshAttachmentScrollview];
-  } else {
+  } else if(buttonIndex != [actionSheet cancelButtonIndex]){
     if (self.selectedAttachmentIndex != NSNotFound){
       BITFeedbackMessageAttachment* attachment = [self.attachments objectAtIndex:self.selectedAttachmentIndex];
       BITImageAnnotationViewController *annotationEditor = [[BITImageAnnotationViewController alloc ] init];
