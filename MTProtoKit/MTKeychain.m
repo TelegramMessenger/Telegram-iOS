@@ -299,10 +299,12 @@ static NSMutableDictionary *keychains()
                 MTLog(@"[MTKeychain error writing keychain to file]");
             else
             {
+#if TARGET_OS_IPHONE
                 __autoreleasing NSError *error = nil;
                 [[NSURL fileURLWithPath:filePath] setResourceValue:[NSNumber numberWithBool:true] forKey:NSURLIsExcludedFromBackupKey error:&error];
                 if (error != nil)
                     MTLog(@"[MTKeychain error setting \"exclude from backup\" flag]");
+#endif
             }
         }
         else
