@@ -201,6 +201,7 @@
   [_sut handleCrashReport];
   
   [verifyCount(delegateMock, times(1)) applicationLogForCrashManager:_sut];
+  [verifyCount(delegateMock, times(1)) attachmentForCrashManager:_sut];
   
   // we should have now 1 pending crash report
   assertThatBool([_sut hasPendingCrashReport], equalToBool(YES));

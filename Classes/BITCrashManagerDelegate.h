@@ -29,6 +29,7 @@
 #import <Foundation/Foundation.h>
 
 @class BITCrashManager;
+@class BITCrashAttachment;
 
 /**
  The `BITCrashManagerDelegate` formal protocol defines methods further configuring
@@ -47,10 +48,35 @@
 /** Return any log string based data the crash report being processed should contain
 
  @param crashManager The `BITCrashManager` instance invoking this delegate
+ @see attachmentForCrashManager:
  @see userNameForCrashManager:
  @see userEmailForCrashManager:
  */
 -(NSString *)applicationLogForCrashManager:(BITCrashManager *)crashManager;
+
+
+/** Return a BITCrashAttachment object providing an NSData object the crash report
+ being processed should contain
+ 
+ Please limit your attachments to reasonable files to avoid high traffic costs for your users.
+ 
+ Example implementation:
+ 
+     - (BITCrashAttachment *)attachmentForCrashManager:(BITCrashManager *)crashManager {
+       NSData *data = [NSData dataWithContentsOfURL:@"mydatafile"];
+ 
+       BITCrashAttachment *attachment = [[BITCrashAttachment alloc] initWithFilename:@"myfile.data"
+                                                                      attachmentData:data
+                                                                         contentType:@"'application/octet-stream"];
+       return attachment;
+     }
+ 
+ @param crashManager The `BITCrashManager` instance invoking this delegate
+ @see applicationLogForCrashManager:
+ @see userNameForCrashManager:
+ @see userEmailForCrashManager:
+ */
+-(BITCrashAttachment *)attachmentForCrashManager:(BITCrashManager *)crashManager;
 
 
 
@@ -58,6 +84,7 @@
  
  @param crashManager The `BITCrashManager` instance invoking this delegate
  @see applicationLogForCrashManager:
+ @see attachmentForCrashManager:
  @see userEmailForCrashManager:
  @deprecated Please use `BITHockeyManagerDelegate userNameForHockeyManager:componentManager:` instead
  @warning When returning a non nil value, crash reports are not anonymous any
@@ -71,6 +98,7 @@
  
  @param crashManager The `BITCrashManager` instance invoking this delegate
  @see applicationLogForCrashManager:
+ @see attachmentForCrashManager:
  @see userNameForCrashManager:
  @deprecated Please use `BITHockeyManagerDelegate userEmailForHockeyManager:componentManager:` instead
  @warning When returning a non nil value, crash reports are not anonymous any
