@@ -8,31 +8,23 @@
 
 #import <MTProtoKit/MTTimer.h>
 
-#if TARGET_OS_IPHONE
-
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= 60000 // iOS 6.0 or later
-#define NEEDS_DISPATCH_RETAIN_RELEASE 0
-#else                                         // iOS 5.X or earlier
-#define NEEDS_DISPATCH_RETAIN_RELEASE 1
-#endif
-
-#else
-
-#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1080     // Mac OS X 10.8 or later
-#define NEEDS_DISPATCH_RETAIN_RELEASE 0
-#else
-#define NEEDS_DISPATCH_RETAIN_RELEASE 1     // Mac OS X 10.7 or earlier
-#endif
-
-#endif
-
 @interface MTTimer ()
 
+#if OS_OBJECT_USE_OBJC
 @property (nonatomic, strong) dispatch_source_t timer;
+#else
+@property (nonatomic) dispatch_source_t timer;
+#endif
+
 @property (nonatomic) NSTimeInterval timeout;
 @property (nonatomic) bool repeat;
 @property (nonatomic, copy) dispatch_block_t completion;
+
+#if OS_OBJECT_USE_OBJC
 @property (nonatomic, strong) dispatch_queue_t queue;
+#else
+@property (nonatomic) dispatch_queue_t queue;
+#endif
 
 @end
 
@@ -48,7 +40,10 @@
         _timeout = timeout;
         _repeat = repeat;
         self.completion = completion;
-        self.queue = queue;
+#if !OS_OBJECT_USE_OBJC
+        dispatch_retain(queue);
+#endif
+        _queue = queue;
     }
     return self;
 }
@@ -58,10 +53,18 @@
     if (_timer != nil)
     {
         dispatch_source_cancel(_timer);
-#if NEEDS_DISPATCH_RETAIN_RELEASE
+#if !OS_OBJECT_USE_OBJC
         dispatch_release(_timer);
 #endif
         _timer = nil;
+    }
+    
+    if (_queue != nil)
+    {
+#if !OS_OBJECT_USE_OBJC
+        dispatch_release(_queue);
+#endif
+        _queue = nil;
     }
 }
 
@@ -99,7 +102,7 @@
     if (_timer != nil)
     {
         dispatch_source_cancel(_timer);
-#if NEEDS_DISPATCH_RETAIN_RELEASE
+#if !OS_OBJECT_USE_OBJC
         dispatch_release(_timer);
 #endif
         _timer = nil;

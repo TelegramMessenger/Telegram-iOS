@@ -1783,7 +1783,7 @@
 					"$(PROJECT_DIR)/openssl",
 					"$(PROJECT_DIR)/openssl/OSX",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				PRODUCT_NAME = MTProtoKit;
 				SDKROOT = macosx;
 				WRAPPER_EXTENSION = framework;
@@ -1817,7 +1817,7 @@
 					"$(PROJECT_DIR)/openssl",
 					"$(PROJECT_DIR)/openssl/OSX",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				PRODUCT_NAME = MTProtoKit;
 				SDKROOT = macosx;
 				WRAPPER_EXTENSION = framework;
