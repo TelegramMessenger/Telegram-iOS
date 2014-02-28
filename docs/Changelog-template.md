@@ -1,3 +1,19 @@
+## Version 3.5.4
+
+- [BUGFIX] Fix a possible crash before sending the crash report when the selector could not be found
+- [BUGFIX] Fix a memory leak in keychain handling
+<br /><br/>
+
+## Version 3.5.3
+
+- [NEW] Crash Reports now provide the selector name e.g. for crashes in `objc_MsgSend`
+- [NEW] Add setter for global `userID`, `userName`, `userEmail`. Can be used instead of the delegates.
+- [UPDATE] On device symbolication is now optional, disabled by default
+- [BUGFIX] Fix for automatic authentication not always working correctly
+- [BUGFIX] `BITFeedbackComposeViewControllerDelegate` now also works for compose view controller used by the feedback list view
+- [BUGFIX] Fix typos in documentation
+<br /><br/>
+
 ## Version 3.5.2
 
 - [UPDATE] Make sure a log message appears in the console if the SDK is not setup on the main thread

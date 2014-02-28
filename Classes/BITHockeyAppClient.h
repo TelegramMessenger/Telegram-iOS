@@ -118,7 +118,7 @@
 
 #pragma mark - Helpers
 /**
- *	create a post body from the given value, key and boundary. This is a convenience call to 
+ *	create a post body from the given value, key and boundary. This is a convenience call to
  *  dataWithPostValue:forKey:contentType:boundary and aimed at NSString-content.
  *
  *	@param	value	-
@@ -134,9 +134,12 @@
  *
  *	@param	value	-
  *	@param	key	-
+ *@param contentType -
  *	@param	boundary	-
+ *	@param	filename	-
  *
  *	@return	NSData instance configured to be attached on a (post) URLRequest
  */
 + (NSData *)dataWithPostValue:(NSData *)value forKey:(NSString *)key contentType:(NSString *)contentType boundary:(NSString *) boundary filename:(NSString *)filename;
+
 @end

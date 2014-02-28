@@ -463,10 +463,7 @@ UIImage *bit_newWithContentsOfResolutionIndependentFile(NSString * path) {
 
 
 UIImage *bit_imageWithContentsOfResolutionIndependentFile(NSString *path) {
-#ifndef __clang_analyzer__
-  // clang alayzer in 4.2b3 thinks here's a leak, which is not the case.
   return bit_newWithContentsOfResolutionIndependentFile(path);
-#endif
 }
 
 
