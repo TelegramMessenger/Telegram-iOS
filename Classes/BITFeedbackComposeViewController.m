@@ -104,6 +104,7 @@
       BITHockeyLog(@"Unknown item type %@", item);
     }
   }
+  
 }
 
 
@@ -165,6 +166,8 @@
   
   // Container that contains both the textfield and eventually the photo scroll view on the right side
   self.contentViewContainer = [[UIView alloc] initWithFrame:self.view.bounds];
+  self.contentViewContainer.autoresizingMask = UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight;
+
   [self.view addSubview:self.contentViewContainer];
   
   // message input textfield
@@ -194,7 +197,7 @@
   self.attachmentScrollView = [[UIScrollView alloc] initWithFrame:CGRectZero];
   self.attachmentScrollView.scrollEnabled = YES;
   self.attachmentScrollView.bounces = YES;
-  self.attachmentScrollView.autoresizingMask = UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleHeight;
+  self.attachmentScrollView.autoresizingMask = UIViewAutoresizingFlexibleHeight|UIViewAutoresizingFlexibleRightMargin;
   
   [self.contentViewContainer addSubview:self.attachmentScrollView];
 }
@@ -278,7 +281,7 @@
   
   if (!alreadySetup){
     textViewFrame.size.width -= scrollViewWidth;
-    scrollViewFrame = CGRectMake(CGRectGetMaxX(textViewFrame), self.view.frame.origin.y, scrollViewWidth, CGRectGetHeight(textViewFrame));
+    scrollViewFrame = CGRectMake(CGRectGetMaxX(textViewFrame), self.view.frame.origin.y, scrollViewWidth, CGRectGetHeight(self.view.bounds));
     self.textView.frame = textViewFrame;
     self.attachmentScrollView.frame = scrollViewFrame;
     self.attachmentScrollView.contentInset = self.textView.contentInset;

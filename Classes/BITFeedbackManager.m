@@ -228,7 +228,9 @@
   }
   BITFeedbackComposeViewController *composeView = [self feedbackComposeViewController];
   [composeView prepareWithItems:items];
+
   [self showView:composeView];
+
 }
 
 - (void)showFeedbackComposeViewWithGeneratedScreenshot {
