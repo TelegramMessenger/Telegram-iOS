@@ -40,6 +40,7 @@
 #import "BITFeedbackUserDataViewController.h"
 #import "BITFeedbackMessage.h"
 #import "BITAttributedLabel.h"
+#import "BITAttachmentGalleryViewController.h"
 
 #import "BITHockeyBaseManagerPrivate.h"
 
@@ -64,7 +65,7 @@
 #define BORDER_COLOR BIT_RGBCOLOR(215, 215, 215)
 
 
-@interface BITFeedbackListViewController () <BITFeedbackUserDataDelegate, BITFeedbackComposeViewControllerDelegate, BITAttributedLabelDelegate>
+@interface BITFeedbackListViewController () <BITFeedbackUserDataDelegate, BITFeedbackComposeViewControllerDelegate, BITAttributedLabelDelegate, BITFeedbackListViewCellDelegate>
 
 @property (nonatomic, weak) BITFeedbackManager *manager;
 @property (nonatomic, strong) NSDateFormatter *lastUpdateDateFormatter;
@@ -628,6 +629,7 @@
     cell.message = message;
     cell.labelText.delegate = self;
     cell.labelText.userInteractionEnabled = YES;
+    cell.delegate = self;
     [cell setAttachments:message.attachments];
 
     if (
@@ -767,6 +769,19 @@
       pasteboard.URL = [NSURL URLWithString:actionSheet.title];
     }
   }
+}
+
+- (void)listCell:(id)cell didSelectAttachment:(BITFeedbackMessageAttachment *)attachment {
+  BITAttachmentGalleryViewController *galleryController = [BITAttachmentGalleryViewController new];
+  
+  UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:galleryController];
+  NSMutableArray *collectedMessages = [NSMutableArray new];
+  for (int i = 0; i<self.manager.numberOfMessages;i++){
+    [collectedMessages addObject:[self.manager messageAtIndex:i]];
+  }
+  [galleryController setMessages:collectedMessages];
+  
+  [self presentViewController:navController animated:YES completion:nil];
 }
 
 @end

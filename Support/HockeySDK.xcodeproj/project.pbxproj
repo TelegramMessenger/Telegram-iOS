@@ -138,6 +138,8 @@
 		973EC8BC18BDE29800DBFFBB /* BITArrowImageAnnotation.m in Sources */ = {isa = PBXBuildFile; fileRef = 973EC8BA18BDE29800DBFFBB /* BITArrowImageAnnotation.m */; };
 		973EC8BF18BE2B5B00DBFFBB /* BITBlurImageAnnotation.h in Headers */ = {isa = PBXBuildFile; fileRef = 973EC8BD18BE2B5B00DBFFBB /* BITBlurImageAnnotation.h */; };
 		973EC8C018BE2B5B00DBFFBB /* BITBlurImageAnnotation.m in Sources */ = {isa = PBXBuildFile; fileRef = 973EC8BE18BE2B5B00DBFFBB /* BITBlurImageAnnotation.m */; };
+		973EC91818C87E7300DBFFBB /* BITAttachmentGalleryViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 973EC91618C87E7300DBFFBB /* BITAttachmentGalleryViewController.h */; };
+		973EC91918C87E7300DBFFBB /* BITAttachmentGalleryViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 973EC91718C87E7300DBFFBB /* BITAttachmentGalleryViewController.m */; };
 		9760F6C418BB4D2D00959B93 /* AssetsLibrary.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9760F6C318BB4D2D00959B93 /* AssetsLibrary.framework */; };
 		9760F6CF18BB685600959B93 /* BITImageAnnotation.h in Headers */ = {isa = PBXBuildFile; fileRef = 9760F6CD18BB685600959B93 /* BITImageAnnotation.h */; };
 		9760F6D018BB685600959B93 /* BITImageAnnotation.m in Sources */ = {isa = PBXBuildFile; fileRef = 9760F6CE18BB685600959B93 /* BITImageAnnotation.m */; };
@@ -308,6 +310,8 @@
 		973EC8BA18BDE29800DBFFBB /* BITArrowImageAnnotation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITArrowImageAnnotation.m; sourceTree = "<group>"; };
 		973EC8BD18BE2B5B00DBFFBB /* BITBlurImageAnnotation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITBlurImageAnnotation.h; sourceTree = "<group>"; };
 		973EC8BE18BE2B5B00DBFFBB /* BITBlurImageAnnotation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITBlurImageAnnotation.m; sourceTree = "<group>"; };
+		973EC91618C87E7300DBFFBB /* BITAttachmentGalleryViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITAttachmentGalleryViewController.h; sourceTree = "<group>"; };
+		973EC91718C87E7300DBFFBB /* BITAttachmentGalleryViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITAttachmentGalleryViewController.m; sourceTree = "<group>"; };
 		9760F6C318BB4D2D00959B93 /* AssetsLibrary.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AssetsLibrary.framework; path = System/Library/Frameworks/AssetsLibrary.framework; sourceTree = SDKROOT; };
 		9760F6CD18BB685600959B93 /* BITImageAnnotation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITImageAnnotation.h; sourceTree = "<group>"; };
 		9760F6CE18BB685600959B93 /* BITImageAnnotation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITImageAnnotation.m; sourceTree = "<group>"; };
@@ -467,6 +471,7 @@
 		1E754E461621FA9A0070AB92 /* Feedback */ = {
 			isa = PBXGroup;
 			children = (
+				973EC91518C87E5A00DBFFBB /* Image Viewer */,
 				9760F6CC18BB684200959B93 /* Image Editor */,
 				1E49A4361612223B00463151 /* BITFeedbackMessage.h */,
 				1E49A4371612223B00463151 /* BITFeedbackMessage.m */,
@@ -561,6 +566,15 @@
 				E4B4DB7C17B435550099C67F /* BITAuthenticationViewController.m */,
 			);
 			name = Private;
+			sourceTree = "<group>";
+		};
+		973EC91518C87E5A00DBFFBB /* Image Viewer */ = {
+			isa = PBXGroup;
+			children = (
+				973EC91618C87E7300DBFFBB /* BITAttachmentGalleryViewController.h */,
+				973EC91718C87E7300DBFFBB /* BITAttachmentGalleryViewController.m */,
+			);
+			name = "Image Viewer";
 			sourceTree = "<group>";
 		};
 		9760F6CC18BB684200959B93 /* Image Editor */ = {
@@ -710,6 +724,7 @@
 				1E49A47C1612226D00463151 /* BITUpdateManagerPrivate.h in Headers */,
 				1E49A4851612226D00463151 /* BITUpdateViewControllerPrivate.h in Headers */,
 				1E49A4B5161222B900463151 /* BITHockeyBaseManagerPrivate.h in Headers */,
+				973EC91818C87E7300DBFFBB /* BITAttachmentGalleryViewController.h in Headers */,
 				E4933E8017B66CDA00B11ACC /* BITHTTPOperation.h in Headers */,
 				1E49A4BE161222B900463151 /* BITHockeyHelper.h in Headers */,
 				973EC8BB18BDE29800DBFFBB /* BITArrowImageAnnotation.h in Headers */,
@@ -928,6 +943,7 @@
 			files = (
 				1E5954D315B6F24A00A03429 /* BITHockeyManager.m in Sources */,
 				1E49A43F1612223B00463151 /* BITFeedbackComposeViewController.m in Sources */,
+				973EC91918C87E7300DBFFBB /* BITAttachmentGalleryViewController.m in Sources */,
 				E40E0B0D17DA1AFF005E38C1 /* BITHockeyAppClient.m in Sources */,
 				1E49A4451612223B00463151 /* BITFeedbackListViewCell.m in Sources */,
 				973EC8B818BCA8A200DBFFBB /* BITRectangleImageAnnotation.m in Sources */,
