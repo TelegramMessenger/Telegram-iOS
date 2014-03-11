@@ -127,7 +127,7 @@
 		1EAF20AA162DC0F600957B1D /* feedbackActiviy.png in Resources */ = {isa = PBXBuildFile; fileRef = 1EAF20A6162DC0F600957B1D /* feedbackActiviy.png */; };
 		1EAF20AB162DC0F600957B1D /* feedbackActiviy@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1EAF20A7162DC0F600957B1D /* feedbackActiviy@2x.png */; };
 		1EB52FD5167B766100C801D5 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
-		1ED570C718BF878C00AB3350 /* BITCrashAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = 1ED570C518BF878C00AB3350 /* BITCrashAttachment.h */; };
+		1ED570C718BF878C00AB3350 /* BITCrashAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = 1ED570C518BF878C00AB3350 /* BITCrashAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1ED570C818BF878C00AB3350 /* BITCrashAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 1ED570C618BF878C00AB3350 /* BITCrashAttachment.m */; };
 		1EF95CA6162CB037000AE3AD /* BITFeedbackActivity.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EF95CA4162CB036000AE3AD /* BITFeedbackActivity.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1EF95CA7162CB037000AE3AD /* BITFeedbackActivity.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EF95CA5162CB036000AE3AD /* BITFeedbackActivity.m */; };
@@ -744,7 +744,7 @@
 		E4005611148D79B500EB22B9 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0500;
+				LastUpgradeCheck = 0510;
 			};
 			buildConfigurationList = E4005614148D79B500EB22B9 /* Build configuration list for PBXProject "HockeySDK" */;
 			compatibilityVersion = "Xcode 3.2";
