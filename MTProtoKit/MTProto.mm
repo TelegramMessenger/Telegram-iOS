@@ -368,6 +368,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
 
 - (void)removeMessageService:(id<MTMessageService>)messageService
 {
+    if (messageService == nil)
+        return;
+    
     [[MTProto managerQueue] dispatchOnQueue:^
     {
         if ([_messageServices containsObject:messageService])
@@ -1879,9 +1882,10 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
 {
     [[MTProto managerQueue] dispatchOnQueue:^
     {
-        if (context == _context && datacenterId == _datacenterId && (_mtState & MTProtoStateAwaitingDatacenterAddress))
+        if (context == _context && datacenterId == _datacenterId && ![self isStopped])
         {
-            [self setMtState:_mtState & (~MTProtoStateAwaitingDatacenterAddress)];
+            if (_mtState & MTProtoStateAwaitingDatacenterAddress)
+                [self setMtState:_mtState & (~MTProtoStateAwaitingDatacenterAddress)];
             
             [self resetTransport];
             [self requestTransportTransaction];

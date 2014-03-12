@@ -16,4 +16,6 @@
 
 - (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port;
 
+- (BOOL)isEqualToAddress:(MTDatacenterAddress *)other;
+
 @end

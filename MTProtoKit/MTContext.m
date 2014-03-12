@@ -383,6 +383,29 @@
     }];
 }
 
+- (NSArray *)knownDatacenterIds
+{
+    NSMutableSet *datacenterIds = [[NSMutableSet alloc] init];
+    
+    [[MTContext contextQueue] dispatchOnQueue:^
+    {
+        for (NSNumber *nDatacenterId in _datacenterSeedAddressSetById.allKeys)
+        {
+            [datacenterIds addObject:nDatacenterId];
+        }
+        
+        for (NSNumber *nDatacenterId in _datacenterAddressSetById.allKeys)
+        {
+            [datacenterIds addObject:nDatacenterId];
+        }
+    } synchronous:true];
+    
+    return [[datacenterIds allObjects] sortedArrayUsingComparator:^NSComparisonResult(NSNumber *n1, NSNumber *n2)
+    {
+        return [n1 compare:n2];
+    }];
+}
+
 - (void)enumerateAddressSetsForDatacenters:(void (^)(NSInteger datacenterId, MTDatacenterAddressSet *addressSet, BOOL *stop))block
 {
     [[MTContext contextQueue] dispatchOnQueue:^

@@ -40,4 +40,18 @@
     [aCoder encodeInt:_port forKey:@"port"];
 }
 
+- (BOOL)isEqualToAddress:(MTDatacenterAddress *)other
+{
+    if (![other isKindOfClass:[MTDatacenterAddress class]])
+        return false;
+    
+    if (![_ip isEqualToString:other.ip])
+        return false;
+    
+    if (_port != other.port)
+        return false;
+    
+    return true;
+}
+
 @end
