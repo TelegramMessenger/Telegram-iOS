@@ -607,7 +607,6 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     case BITAuthenticatorIdentificationTypeHockeyAppEmail:
     case BITAuthenticatorIdentificationTypeAnonymous:
     case BITAuthenticatorIdentificationTypeHockeyAppUser:
-      NSAssert(NO, @"Should only be called for Device and WebAuth identificationType");
       return NO;
   }
   

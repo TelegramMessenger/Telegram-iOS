@@ -37,6 +37,7 @@
 
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
 #import "BITCrashManager.h"
+#import "BITCrashAttachment.h"
 #import "BITCrashManagerDelegate.h"
 #endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */
 

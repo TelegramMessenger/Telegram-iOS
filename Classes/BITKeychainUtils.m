@@ -200,7 +200,7 @@ static NSString *BITKeychainUtilsErrorDomain = @"BITKeychainUtilsErrorDomain";
 			
 			NSDictionary *query = [[NSDictionary alloc] initWithObjects: objects forKeys: keys];
 			
-			status = SecItemUpdate((__bridge_retained CFDictionaryRef) query, (__bridge_retained CFDictionaryRef) [NSDictionary dictionaryWithObject: [password dataUsingEncoding: NSUTF8StringEncoding] forKey: (__bridge_transfer NSString *) kSecValueData]);
+			status = SecItemUpdate((__bridge CFDictionaryRef) query, (__bridge CFDictionaryRef) [NSDictionary dictionaryWithObject: [password dataUsingEncoding: NSUTF8StringEncoding] forKey: (__bridge_transfer NSString *) kSecValueData]);
 		}
 	}
 	else
@@ -226,7 +226,7 @@ static NSString *BITKeychainUtilsErrorDomain = @"BITKeychainUtilsErrorDomain";
 		
 		NSDictionary *query = [[NSDictionary alloc] initWithObjects: objects forKeys: keys];
     
-		status = SecItemAdd((__bridge_retained CFDictionaryRef) query, NULL);
+		status = SecItemAdd((__bridge CFDictionaryRef) query, NULL);
 	}
 	
 	if (error != nil && status != noErr)
