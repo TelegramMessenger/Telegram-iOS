@@ -49,7 +49,7 @@
   
   CGFloat lineWidth = MAX(self.frame.size.width / 10.0f,10);
   CGFloat startX, startY, endX, endY;
-  if ( self.movedDelta.width > 0){
+  if ( self.movedDelta.width < 0){
     startX = CGRectGetMinX(self.bounds);
     endX =  CGRectGetMaxX(self.bounds);
   } else {
@@ -58,7 +58,7 @@
 
   }
   
-  if ( self.movedDelta.height > 0){
+  if ( self.movedDelta.height < 0){
     startY = CGRectGetMinY(self.bounds);
     endY =  CGRectGetMaxY(self.bounds);
   } else {
