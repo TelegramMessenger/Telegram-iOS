@@ -193,8 +193,11 @@
   [self.attachmentViews removeAllObjects];
   
   for (BITFeedbackMessageAttachment *attachment in attachments){
-    UIImageView *imageView = [[UIImageView alloc] initWithFrame:CGRectZero];
-    imageView.image = [attachment thumbnailWithSize:CGSizeMake(ATTACHMENT_SIZE, ATTACHMENT_SIZE)];
+    UIButton *imageView = [UIButton buttonWithType:UIButtonTypeCustom];
+    [imageView setImage:[attachment thumbnailWithSize:CGSizeMake(ATTACHMENT_SIZE, ATTACHMENT_SIZE)] forState:UIControlStateNormal];
+    
+    [imageView addTarget:self action:@selector(imageButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
+    
     [self.attachmentViews addObject:imageView];
     [self addSubview:imageView];
   }
@@ -263,13 +266,13 @@
   int i = 0;
   
   CGFloat attachmentsPerRow = ceilf(self.frame.size.width / (FRAME_SIDE_BORDER + ATTACHMENT_SIZE));
-  for ( UIImageView *imageView in self.attachmentViews){
-    imageView.contentMode = UIViewContentModeScaleAspectFit;
+  for ( UIButton *imageButton in self.attachmentViews){
+    imageButton.contentMode = UIViewContentModeScaleAspectFit;
     
     if ( !_message.userMessage){
-      imageView.frame = CGRectMake(FRAME_SIDE_BORDER + (FRAME_SIDE_BORDER + ATTACHMENT_SIZE) * i , floor(i/attachmentsPerRow) + baseOffsetOfText , ATTACHMENT_SIZE, ATTACHMENT_SIZE);
+      imageButton.frame = CGRectMake(FRAME_SIDE_BORDER + (FRAME_SIDE_BORDER + ATTACHMENT_SIZE) * i , floor(i/attachmentsPerRow) + baseOffsetOfText , ATTACHMENT_SIZE, ATTACHMENT_SIZE);
     } else {
-      imageView.frame = CGRectMake(self.frame.size.width - FRAME_SIDE_BORDER - ATTACHMENT_SIZE -  ((FRAME_SIDE_BORDER + ATTACHMENT_SIZE) * (i) ), floor(i/attachmentsPerRow) + baseOffsetOfText , ATTACHMENT_SIZE, ATTACHMENT_SIZE);
+      imageButton.frame = CGRectMake(self.frame.size.width - FRAME_SIDE_BORDER - ATTACHMENT_SIZE -  ((FRAME_SIDE_BORDER + ATTACHMENT_SIZE) * (i) ), floor(i/attachmentsPerRow) + baseOffsetOfText , ATTACHMENT_SIZE, ATTACHMENT_SIZE);
     }
     
     i++;
@@ -278,6 +281,16 @@
   
   
   [super layoutSubviews];
+}
+
+- (void)imageButtonPressed:(id)sender {
+  if ([self.delegate respondsToSelector:@selector(listCell:didSelectAttachment:)]){
+    NSInteger index = [self.attachmentViews indexOfObject:sender];
+    if (index != NSNotFound){
+      BITFeedbackMessageAttachment *attachment = self.message.attachments[index];
+      [self.delegate listCell:self didSelectAttachment:attachment];
+    }
+  }
 }
 
 
