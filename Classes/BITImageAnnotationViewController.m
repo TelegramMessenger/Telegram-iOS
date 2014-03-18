@@ -19,10 +19,14 @@
 @property (nonatomic, strong) NSMutableArray *objects;
 @property (nonatomic, strong) UIPanGestureRecognizer *panRecognizer;
 @property (nonatomic, strong) UITapGestureRecognizer *tapRecognizer;
+@property (nonatomic, strong) UIPinchGestureRecognizer *pinchRecognizer;
+
 @property (nonatomic) CGFloat scaleFactor;
 
 @property (nonatomic) CGPoint panStart;
 @property (nonatomic,strong) BITImageAnnotation *currentAnnotation;
+
+@property (nonatomic) BOOL isDrawing;
 
 @end
 
@@ -138,17 +142,47 @@
 #pragma mark - Gesture Handling
 
 - (void)panned:(UIPanGestureRecognizer *)gestureRecognizer {
+  if ([self.editingControls selectedSegmentIndex] != UISegmentedControlNoSegment || self.isDrawing ){
   if (gestureRecognizer.state == UIGestureRecognizerStateBegan){
     self.currentAnnotation = [self annotationForCurrentMode];
     [self.objects addObject:self.currentAnnotation];
     self.currentAnnotation.sourceImage = self.image;
     [self.imageView insertSubview:self.currentAnnotation aboveSubview:self.imageView];
     self.panStart = [gestureRecognizer locationInView:self.imageView];
+    
+    [self.editingControls setSelectedSegmentIndex:UISegmentedControlNoSegment];
+    self.isDrawing = YES;
+    
   } else if (gestureRecognizer.state == UIGestureRecognizerStateChanged){
     CGPoint bla = [gestureRecognizer locationInView:self.imageView];
     self.currentAnnotation.frame = CGRectMake(self.panStart.x, self.panStart.y, bla.x - self.panStart.x, bla.y - self.panStart.y);
     self.currentAnnotation.movedDelta = CGSizeMake(bla.x - self.panStart.x, bla.y - self.panStart.y);
     self.currentAnnotation.imageFrame = [self.view convertRect:self.imageView.frame toView:self.currentAnnotation];
+  } else {
+    self.currentAnnotation = nil;
+    self.isDrawing = NO;
+  }
+  } else {
+    if (gestureRecognizer.state == UIGestureRecognizerStateBegan){
+    // find and possibly move an existing annotation.
+    BITImageAnnotation *selectedAnnotation = (BITImageAnnotation *)[self.view hitTest:[gestureRecognizer locationInView:self.view] withEvent:nil];
+    
+    if ([self.objects indexOfObject:selectedAnnotation] != NSNotFound){
+        self.currentAnnotation = selectedAnnotation;
+    }
+    } else if (gestureRecognizer.state == UIGestureRecognizerStateChanged && self.currentAnnotation){
+      CGPoint delta = [gestureRecognizer translationInView:self.view];
+      
+      CGRect annotationFrame = self.currentAnnotation.frame;
+      annotationFrame.origin.x += delta.x;
+      annotationFrame.origin.y += delta.y;
+      self.currentAnnotation.frame = annotationFrame;
+      
+      [gestureRecognizer setTranslation:CGPointZero inView:self.view];
+      
+    } else {
+      self.currentAnnotation = nil;
+    }
   }
   
 }
