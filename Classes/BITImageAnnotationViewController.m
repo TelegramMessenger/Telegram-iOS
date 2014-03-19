@@ -110,13 +110,13 @@
 
 - (void)discard:(id)sender {
   [self.delegate annotationControllerDidCancel:self];
-  [self dismissModalViewControllerAnimated:YES];
+  [self dismissViewControllerAnimated:YES completion:nil];
 }
 
 - (void)save:(id)sender {
   UIImage *image = [self extractImage];
   [self.delegate annotationController:self didFinishWithImage:image];
-  [self dismissModalViewControllerAnimated:YES];
+  [self dismissViewControllerAnimated:YES completion:nil];
 }
 
 - (UIImage *)extractImage {
@@ -192,7 +192,7 @@
   }
 }
 
--(BITImageAnnotation *)firstAnnotationThatIsNotBlur {
+-(UIView *)firstAnnotationThatIsNotBlur {
   for (BITImageAnnotation *annotation in self.imageView.subviews){
     if (![annotation isKindOfClass:[BITBlurImageAnnotation class]]){
       return annotation;

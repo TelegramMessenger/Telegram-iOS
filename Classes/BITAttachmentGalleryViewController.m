@@ -133,7 +133,7 @@
 }
 
 - (void)close:(id)sender {
-  [self dismissModalViewControllerAnimated:YES];
+  [self dismissViewControllerAnimated:YES completion:nil];
 }
 
 - (void)share:(id)sender {

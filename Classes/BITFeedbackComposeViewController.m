@@ -393,7 +393,7 @@
   pickerController.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
   pickerController.delegate = self;
   pickerController.editing = NO;
-  [self presentModalViewController:pickerController animated:YES];
+  [self presentViewController:pickerController animated:YES completion:nil];
 }
 
 #pragma mark - UIImagePickerControllerDelegate
@@ -410,12 +410,12 @@
     [self.attachments addObject:newAttachment];
   }
   
-  [picker dismissModalViewControllerAnimated:YES];
+  [picker dismissViewControllerAnimated:YES completion:nil];
   [self refreshAttachmentScrollview];
 }
 
 - (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker {
-  [picker dismissModalViewControllerAnimated:YES];
+  [picker dismissViewControllerAnimated:YES completion:nil];
 }
 
 - (void)imageButtonAction:(UIButton *)sender {
