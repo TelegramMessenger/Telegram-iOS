@@ -12,4 +12,7 @@
 @property (nonatomic) CGSize movedDelta;
 @property (nonatomic, weak) UIImage *sourceImage;
 @property (nonatomic) CGRect imageFrame;
+
+-(BOOL)resizable;
+
 @end

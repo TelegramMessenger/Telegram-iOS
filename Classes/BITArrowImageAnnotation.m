@@ -66,9 +66,7 @@
     endY =  CGRectGetMinY(self.bounds);
     
   }
-  
-  NSLog(@"Start X: %f, Y: %f, END: %f %f %@", startX, startY, endX,endY, self);
-  
+    
   UIBezierPath *path = [self bezierPathWithArrowFromPoint:CGPointMake(endX,endY) toPoint:CGPointMake(startX,startY) tailWidth:lineWidth headWidth:topHeight headLength:topHeight];
   
   self.shapeLayer.path = path.CGPath;

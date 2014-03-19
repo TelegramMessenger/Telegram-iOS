@@ -52,7 +52,6 @@
   
   self.navigationItem.titleView = self.editingControls;
   
-  
   self.objects = [NSMutableArray new];
   
   [self.editingControls addTarget:self action:@selector(editingAction:) forControlEvents:UIControlEventTouchUpInside];
@@ -146,7 +145,13 @@
       self.currentAnnotation = [self annotationForCurrentMode];
       [self.objects addObject:self.currentAnnotation];
       self.currentAnnotation.sourceImage = self.image;
-      [self.imageView insertSubview:self.currentAnnotation aboveSubview:self.imageView];
+      
+      if (self.imageView.subviews.count > 0 && [self.currentAnnotation isKindOfClass:[BITBlurImageAnnotation class]]){
+        [self.imageView insertSubview:self.currentAnnotation belowSubview:[self firstAnnotationThatIsNotBlur]];
+      } else {
+        [self.imageView addSubview:self.currentAnnotation];
+      }
+      
       self.panStart = [gestureRecognizer locationInView:self.imageView];
       
       [self.editingControls setSelectedSegmentIndex:UISegmentedControlNoSegment];
@@ -176,6 +181,8 @@
       annotationFrame.origin.x += delta.x;
       annotationFrame.origin.y += delta.y;
       self.currentAnnotation.frame = annotationFrame;
+      self.currentAnnotation.imageFrame = [self.view convertRect:self.imageView.frame toView:self.currentAnnotation];
+
       
       [gestureRecognizer setTranslation:CGPointZero inView:self.view];
       
@@ -183,7 +190,16 @@
       self.currentAnnotation = nil;
     }
   }
+}
+
+-(BITImageAnnotation *)firstAnnotationThatIsNotBlur {
+  for (BITImageAnnotation *annotation in self.imageView.subviews){
+    if (![annotation isKindOfClass:[BITBlurImageAnnotation class]]){
+      return annotation;
+    }
+  }
   
+  return self.imageView;
 }
 
 -(void)pinched:(UIPinchGestureRecognizer *)gestureRecognizer {
@@ -202,7 +218,7 @@
       }
     }
     
-    if (validView){
+    if (validView && [candidate resizable]){
       self.currentAnnotation = candidate;
       self.pinchStartingFrame = self.currentAnnotation.frame;
     }
@@ -227,6 +243,8 @@
 
     
     self.currentAnnotation.frame = newFrame;
+    self.currentAnnotation.imageFrame = [self.view convertRect:self.imageView.frame toView:self.currentAnnotation];
+
     // we
     
     
