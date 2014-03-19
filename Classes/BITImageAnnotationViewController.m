@@ -18,7 +18,6 @@
 @property (nonatomic, strong) UISegmentedControl *editingControls;
 @property (nonatomic, strong) NSMutableArray *objects;
 @property (nonatomic, strong) UIPanGestureRecognizer *panRecognizer;
-@property (nonatomic, strong) UITapGestureRecognizer *tapRecognizer;
 @property (nonatomic, strong) UIPinchGestureRecognizer *pinchRecognizer;
 
 @property (nonatomic) CGFloat scaleFactor;
@@ -28,17 +27,19 @@
 
 @property (nonatomic) BOOL isDrawing;
 
+@property (nonatomic) CGRect pinchStartingFrame;
+
 @end
 
 @implementation BITImageAnnotationViewController
 
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
-    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
-    if (self) {
-        // Custom initialization
-    }
-    return self;
+  self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+  if (self) {
+    // Custom initialization
+  }
+  return self;
 }
 
 - (void)viewDidLoad
@@ -50,7 +51,7 @@
   self.editingControls = [[UISegmentedControl alloc] initWithItems:@[@"Rectangle", @"Arrow", @"Blur"]];
   
   self.navigationItem.titleView = self.editingControls;
-
+  
   
   self.objects = [NSMutableArray new];
   
@@ -60,7 +61,7 @@
   self.imageView = [[UIImageView alloc] initWithFrame:self.view.bounds];
   
   self.imageView.clipsToBounds = YES;
-    
+  
   self.imageView.image = self.image;
   self.imageView.contentMode = UIViewContentModeScaleToFill;
   
@@ -68,12 +69,10 @@
   [self.view addSubview:self.imageView];
   self.imageView.frame = self.view.bounds;
   
-  self.tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapped:)];
   self.panRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(panned:)];
+  self.pinchRecognizer = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(pinched:)];
   
-  [self.tapRecognizer requireGestureRecognizerToFail:self.panRecognizer];
-  
-  [self.imageView addGestureRecognizer:self.tapRecognizer];
+  [self.imageView addGestureRecognizer:self.pinchRecognizer];
   [self.imageView addGestureRecognizer:self.panRecognizer];
   
   self.imageView.userInteractionEnabled = YES;
@@ -89,8 +88,8 @@
   CGSize scaledImageSize = CGSizeMake(self.image.size.width * factor, self.image.size.height * factor);
   
   self.imageView.frame = CGRectMake(self.view.frame.size.width/2 - scaledImageSize.width/2, self.view.frame.size.height/2 - scaledImageSize.height/2, scaledImageSize.width, scaledImageSize.height);
-
-
+  
+  
 	// Do any additional setup after loading the view.
 }
 
@@ -133,7 +132,7 @@
     [annotation.layer renderInContext:ctx];
     CGContextTranslateCTM(ctx,-1 * annotation.frame.origin.x,-1 *  annotation.frame.origin.y);
   }
-
+  
   UIImage *renderedImageOfMyself = UIGraphicsGetImageFromCurrentImageContext();
   UIGraphicsEndImageContext();
   return renderedImageOfMyself;
@@ -143,33 +142,33 @@
 
 - (void)panned:(UIPanGestureRecognizer *)gestureRecognizer {
   if ([self.editingControls selectedSegmentIndex] != UISegmentedControlNoSegment || self.isDrawing ){
-  if (gestureRecognizer.state == UIGestureRecognizerStateBegan){
-    self.currentAnnotation = [self annotationForCurrentMode];
-    [self.objects addObject:self.currentAnnotation];
-    self.currentAnnotation.sourceImage = self.image;
-    [self.imageView insertSubview:self.currentAnnotation aboveSubview:self.imageView];
-    self.panStart = [gestureRecognizer locationInView:self.imageView];
-    
-    [self.editingControls setSelectedSegmentIndex:UISegmentedControlNoSegment];
-    self.isDrawing = YES;
-    
-  } else if (gestureRecognizer.state == UIGestureRecognizerStateChanged){
-    CGPoint bla = [gestureRecognizer locationInView:self.imageView];
-    self.currentAnnotation.frame = CGRectMake(self.panStart.x, self.panStart.y, bla.x - self.panStart.x, bla.y - self.panStart.y);
-    self.currentAnnotation.movedDelta = CGSizeMake(bla.x - self.panStart.x, bla.y - self.panStart.y);
-    self.currentAnnotation.imageFrame = [self.view convertRect:self.imageView.frame toView:self.currentAnnotation];
-  } else {
-    self.currentAnnotation = nil;
-    self.isDrawing = NO;
-  }
+    if (gestureRecognizer.state == UIGestureRecognizerStateBegan){
+      self.currentAnnotation = [self annotationForCurrentMode];
+      [self.objects addObject:self.currentAnnotation];
+      self.currentAnnotation.sourceImage = self.image;
+      [self.imageView insertSubview:self.currentAnnotation aboveSubview:self.imageView];
+      self.panStart = [gestureRecognizer locationInView:self.imageView];
+      
+      [self.editingControls setSelectedSegmentIndex:UISegmentedControlNoSegment];
+      self.isDrawing = YES;
+      
+    } else if (gestureRecognizer.state == UIGestureRecognizerStateChanged){
+      CGPoint bla = [gestureRecognizer locationInView:self.imageView];
+      self.currentAnnotation.frame = CGRectMake(self.panStart.x, self.panStart.y, bla.x - self.panStart.x, bla.y - self.panStart.y);
+      self.currentAnnotation.movedDelta = CGSizeMake(bla.x - self.panStart.x, bla.y - self.panStart.y);
+      self.currentAnnotation.imageFrame = [self.view convertRect:self.imageView.frame toView:self.currentAnnotation];
+    } else {
+      self.currentAnnotation = nil;
+      self.isDrawing = NO;
+    }
   } else {
     if (gestureRecognizer.state == UIGestureRecognizerStateBegan){
-    // find and possibly move an existing annotation.
-    BITImageAnnotation *selectedAnnotation = (BITImageAnnotation *)[self.view hitTest:[gestureRecognizer locationInView:self.view] withEvent:nil];
-    
-    if ([self.objects indexOfObject:selectedAnnotation] != NSNotFound){
+      // find and possibly move an existing annotation.
+      BITImageAnnotation *selectedAnnotation = (BITImageAnnotation *)[self.view hitTest:[gestureRecognizer locationInView:self.view] withEvent:nil];
+      
+      if ([self.objects indexOfObject:selectedAnnotation] != NSNotFound){
         self.currentAnnotation = selectedAnnotation;
-    }
+      }
     } else if (gestureRecognizer.state == UIGestureRecognizerStateChanged && self.currentAnnotation){
       CGPoint delta = [gestureRecognizer translationInView:self.view];
       
@@ -187,15 +186,40 @@
   
 }
 
--(void)tapped:(UITapGestureRecognizer *)gestureRecognizer {
-  
-  
+-(void)pinched:(UIPinchGestureRecognizer *)gestureRecognizer {
+  if (gestureRecognizer.state == UIGestureRecognizerStateBegan){
+    // try to figure out which view we are talking about.
+    BITImageAnnotation *candidate = nil;
+    BOOL validView = YES;
+    
+    for ( int i = 0; i<gestureRecognizer.numberOfTouches; i++){
+      BITImageAnnotation *newCandidate = (BITImageAnnotation *)[self.view hitTest:[gestureRecognizer locationOfTouch:i inView:self.view] withEvent:nil];
+      if (candidate == nil){
+        candidate = newCandidate;
+      } else if (candidate != newCandidate){
+        validView = NO;
+        break;
+      }
+    }
+    
+    if (validView){
+      self.currentAnnotation = candidate;
+      self.pinchStartingFrame = self.currentAnnotation.frame;
+    }
+    
+  } else if (gestureRecognizer.state == UIGestureRecognizerStateChanged && self.currentAnnotation){
+    CGRect newFrame= (self.pinchStartingFrame);
+    
+    
+  } else {
+    self.currentAnnotation = nil;
+  }
 }
 
 - (void)didReceiveMemoryWarning
 {
-    [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
+  [super didReceiveMemoryWarning];
+  // Dispose of any resources that can be recreated.
 }
 
 @end
