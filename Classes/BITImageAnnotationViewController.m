@@ -207,8 +207,27 @@
       self.pinchStartingFrame = self.currentAnnotation.frame;
     }
     
-  } else if (gestureRecognizer.state == UIGestureRecognizerStateChanged && self.currentAnnotation){
+  } else if (gestureRecognizer.state == UIGestureRecognizerStateChanged && self.currentAnnotation && gestureRecognizer.numberOfTouches>1){
     CGRect newFrame= (self.pinchStartingFrame);
+    NSLog(@"%f", [gestureRecognizer scale]);
+    
+    // upper point?
+    CGPoint point1 = [gestureRecognizer locationOfTouch:0 inView:self.view];
+    CGPoint point2 = [gestureRecognizer locationOfTouch:1 inView:self.view];
+    
+    
+    newFrame.origin.x = point1.x;
+    newFrame.origin.y = point1.y;
+    
+    newFrame.origin.x = (point1.x > point2.x) ? point2.x : point1.x;
+    newFrame.origin.y = (point1.y > point2.y) ? point2.y : point1.y;
+    
+    newFrame.size.width = (point1.x > point2.x) ? point1.x - point2.x : point2.x - point1.x;
+    newFrame.size.height = (point1.y > point2.y) ? point1.y - point2.y : point2.y - point1.y;
+
+    
+    self.currentAnnotation.frame = newFrame;
+    // we
     
     
   } else {
