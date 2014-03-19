@@ -331,9 +331,9 @@
 
 - (void)updateBarButtonState {
   if (self.textView.text.length > 0 ) {
-    self.navigationItem.rightBarButtonItem.enabled = NO;
-  } else {
     self.navigationItem.rightBarButtonItem.enabled = YES;
+  } else {
+    self.navigationItem.rightBarButtonItem.enabled = NO;
   }
 }
 
