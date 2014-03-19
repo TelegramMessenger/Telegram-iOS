@@ -162,6 +162,8 @@
       self.currentAnnotation.frame = CGRectMake(self.panStart.x, self.panStart.y, bla.x - self.panStart.x, bla.y - self.panStart.y);
       self.currentAnnotation.movedDelta = CGSizeMake(bla.x - self.panStart.x, bla.y - self.panStart.y);
       self.currentAnnotation.imageFrame = [self.view convertRect:self.imageView.frame toView:self.currentAnnotation];
+      [self.currentAnnotation setNeedsLayout];
+      [self.currentAnnotation layoutIfNeeded];
     } else {
       self.currentAnnotation = nil;
       self.isDrawing = NO;
@@ -183,6 +185,8 @@
       self.currentAnnotation.frame = annotationFrame;
       self.currentAnnotation.imageFrame = [self.view convertRect:self.imageView.frame toView:self.currentAnnotation];
 
+      [self.currentAnnotation setNeedsLayout];
+      [self.currentAnnotation layoutIfNeeded];
       
       [gestureRecognizer setTranslation:CGPointZero inView:self.view];
       

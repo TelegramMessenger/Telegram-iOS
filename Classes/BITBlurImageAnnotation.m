@@ -35,23 +35,30 @@
   UIGraphicsBeginImageContext(size);
   [sourceImage drawInRect:CGRectMake(0, 0, size.width, size.height)];
   self.scaledImage = UIGraphicsGetImageFromCurrentImageContext();
+  self.imageLayer.shouldRasterize = YES;
+  self.imageLayer.rasterizationScale = 1;
+  self.imageLayer.magnificationFilter = kCAFilterNearest;
   self.imageLayer.contents = (id)self.scaledImage.CGImage;
+  
+  
+  
   UIGraphicsEndImageContext();
 }
 
 - (void)layoutSubviews {
   [super layoutSubviews];
+  
+  [CATransaction begin];
+  [CATransaction setValue:(id)kCFBooleanTrue forKey:kCATransactionDisableActions];
+  
   self.imageLayer.frame = self.imageFrame;
   self.imageLayer.masksToBounds = YES;
+  
+  [CATransaction commit];
 }
 
-/*
-// Only override drawRect: if you perform custom drawing.
-// An empty implementation adversely affects performance during animation.
-- (void)drawRect:(CGRect)rect
-{
-    // Drawing code
+-(BOOL)resizable {
+  return YES;
 }
-*/
 
 @end
