@@ -17,6 +17,7 @@
 @property (nonatomic, strong) NSArray *imageViews;
 @property (nonatomic, strong) NSArray *extractedAttachments;
 @property (nonatomic) NSInteger currentIndex;
+@property (nonatomic) NSInteger loadedImageIndex;
 @property (nonatomic, strong) UITapGestureRecognizer *tapognizer;
 
 @end
@@ -35,17 +36,28 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
+  self.automaticallyAdjustsScrollViewInsets = NO;
+  self.navigationController.navigationBar.translucent = YES;
+  self.edgesForExtendedLayout = YES;
+  self.extendedLayoutIncludesOpaqueBars = YES;
   self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Close" style:UIBarButtonItemStylePlain target:self action:@selector(close:)];
 
   self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAction target:self action:@selector(share:)];
+  
+  
+  self.currentIndex = 0;
+  
+  [self extractUsableAttachments];
+  [self setupScrollView];
+  
+  [self layoutViews];
 }
 
 - (void)viewDidAppear:(BOOL)animated {
   [super viewDidAppear:animated];
   
-  [self extractUsableAttachments];
   
-  [self setupScrollView];
+
   
   self.tapognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapped:)];
   [self.view addGestureRecognizer:self.tapognizer];
@@ -53,6 +65,7 @@
 }
 - (void)setupScrollView {
   self.scrollView = [[UIScrollView alloc] initWithFrame:self.view.bounds];
+  self.view.autoresizesSubviews = NO;
   [self.view addSubview:self.scrollView];
   self.scrollView.delegate = self;
   self.scrollView.pagingEnabled = YES;
@@ -85,6 +98,8 @@
   }
   
   self.extractedAttachments = extractedOnes;
+  
+  [self layoutViews];
 }
 
 - (void)didReceiveMemoryWarning
@@ -99,17 +114,7 @@
     // requeue elements.
     NSInteger baseIndex = MAX(0,self.currentIndex-1);
     [self layoutViews];
-    NSInteger z = baseIndex;
-    
-    
-    
-    for ( NSInteger i = baseIndex; i < MIN(baseIndex+2, self.extractedAttachments.count);i++ ){
-      UIImageView *imageView = self.imageViews[z];
-      BITFeedbackMessageAttachment *attachment = self.extractedAttachments[i];
-      imageView.image =[attachment imageRepresentation];
-      z++;
-    }
-    
+
     
   }
 }
@@ -123,13 +128,17 @@
   NSInteger z = baseIndex;
   for ( NSInteger i = baseIndex; i < MIN(baseIndex+2, self.extractedAttachments.count);i++ ){
     UIImageView *imageView = self.imageViews[z];
+    BITFeedbackMessageAttachment *attachment = self.extractedAttachments[i];
+    imageView.image =[attachment imageRepresentation];
     imageView.frame = [self frameForItemAtIndex:i];
     z++;
   }
+
+  
 }
 
 - (BOOL)prefersStatusBarHidden {
-  return YES;
+  return self.navigationController.navigationBarHidden;
 }
 
 - (void)close:(id)sender {
@@ -146,12 +155,12 @@
 - (void)tapped:(UITapGestureRecognizer *)tapRecognizer {
   if (self.navigationController.navigationBarHidden){
     [[UIApplication sharedApplication] setStatusBarHidden:NO];
-    self.navigationController.navigationBarHidden = NO;
+    [self.navigationController setNavigationBarHidden:NO animated:YES];
   } else {
+    [self.navigationController setNavigationBarHidden:YES animated:YES];
     [[UIApplication sharedApplication] setStatusBarHidden:YES];
-    self.navigationController.navigationBarHidden = YES;
+
   }
-  [self layoutViews];
 }
 
 - (CGRect)frameForItemAtIndex:(NSInteger)index {
