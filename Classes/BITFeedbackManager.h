@@ -294,6 +294,13 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
  */
 - (BITFeedbackComposeViewController *)feedbackComposeViewController;
 
+/**
+ Set the so-called feedback observation mode. Depending on the chosen mode, 
+ the feedback manager will automatically launch once the event has been detected. 
+ 
+ You can choose from the modes in BITFeedbackObservationMode. The default mode is 
+ BITFeedbackObservationNone.
+ */
 - (void)setFeedbackObservationMode:(BITFeedbackObservationMode)mode;
 
 

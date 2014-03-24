@@ -72,7 +72,8 @@
  - NSURL
  - UIImage
  
- These are automatically concatenated to one text string.
+ These are automatically concatenated to one text string, while any image attachments are 
+ added as attachments to the feedback.
  
  @param items Array of data objects to prefill the feedback text message.
  */
