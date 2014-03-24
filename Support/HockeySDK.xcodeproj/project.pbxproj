@@ -98,6 +98,7 @@
 		1E5A459516F0DFC200B55C04 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E400561D148D79B500EB22B9 /* Foundation.framework */; };
 		1E5A459B16F0DFC200B55C04 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E5A459916F0DFC200B55C04 /* InfoPlist.strings */; };
 		1E5A459E16F0DFC200B55C04 /* BITStoreUpdateManagerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E5A459D16F0DFC200B55C04 /* BITStoreUpdateManagerTests.m */; };
+		1E61CCAF18E0585A00A5E38E /* BITFeedbackManagerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E61CCAE18E0585A00A5E38E /* BITFeedbackManagerTests.m */; };
 		1E70A23217F2F982001BB32D /* live_report_empty.plcrash in Resources */ = {isa = PBXBuildFile; fileRef = 1E70A22F17F2F982001BB32D /* live_report_empty.plcrash */; };
 		1E70A23317F2F982001BB32D /* live_report_exception.plcrash in Resources */ = {isa = PBXBuildFile; fileRef = 1E70A23017F2F982001BB32D /* live_report_exception.plcrash */; };
 		1E70A23417F2F982001BB32D /* live_report_signal.plcrash in Resources */ = {isa = PBXBuildFile; fileRef = 1E70A23117F2F982001BB32D /* live_report_signal.plcrash */; };
@@ -251,6 +252,7 @@
 		1E5A459A16F0DFC200B55C04 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		1E5A459D16F0DFC200B55C04 /* BITStoreUpdateManagerTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BITStoreUpdateManagerTests.m; sourceTree = "<group>"; };
 		1E5A459F16F0DFC200B55C04 /* HockeySDKTests-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "HockeySDKTests-Prefix.pch"; sourceTree = "<group>"; };
+		1E61CCAE18E0585A00A5E38E /* BITFeedbackManagerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITFeedbackManagerTests.m; sourceTree = "<group>"; };
 		1E66CA9115D4100500F35BED /* buildnumber.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = buildnumber.xcconfig; sourceTree = "<group>"; };
 		1E6DDCEE169E290C0076C65D /* ro */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ro; path = ro.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		1E6F0450167B5E5600ED1C86 /* pt-PT */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-PT"; path = "pt-PT.lproj/HockeySDK.strings"; sourceTree = "<group>"; };
@@ -378,6 +380,7 @@
 				1E5A459D16F0DFC200B55C04 /* BITStoreUpdateManagerTests.m */,
 				E48A3DEE17B3EFF100924C3D /* BITAuthenticatorTests.m */,
 				1EFF03E417F2485500A5F13C /* BITCrashManagerTests.m */,
+				1E61CCAE18E0585A00A5E38E /* BITFeedbackManagerTests.m */,
 				E40E0B0817DA19DC005E38C1 /* BITHockeyAppClientTests.m */,
 				E4507E4217F0658F00171A0D /* BITKeychainUtilsTests.m */,
 				1E70A23517F31B82001BB32D /* BITHockeyHelperTests.m */,
@@ -919,6 +922,7 @@
 				1E70A23617F31B82001BB32D /* BITHockeyHelperTests.m in Sources */,
 				E48A3DEF17B3EFF100924C3D /* BITAuthenticatorTests.m in Sources */,
 				1EA1170716F53B91001C015C /* BITTestHelper.m in Sources */,
+				1E61CCAF18E0585A00A5E38E /* BITFeedbackManagerTests.m in Sources */,
 				E4507E4317F0658F00171A0D /* BITKeychainUtilsTests.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
