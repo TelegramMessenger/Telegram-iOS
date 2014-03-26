@@ -145,11 +145,8 @@
   if (!executableHeader)
     return @"";
   
-#ifdef __LP64__
-  uintptr_t cursor = (uintptr_t)executableHeader + sizeof(struct mach_header_64);
-#else
-  uintptr_t cursor = (uintptr_t)executableHeader + sizeof(struct mach_header);
-#endif
+  BOOL is64bit = executableHeader->magic == MH_MAGIC_64 || executableHeader->magic == MH_CIGAM_64;
+  uintptr_t cursor = (uintptr_t)executableHeader + (is64bit ? sizeof(struct mach_header_64) : sizeof(struct mach_header));
   const struct segment_command *segmentCommand = NULL;
   for (uint32_t i = 0; i < executableHeader->ncmds; i++, cursor += segmentCommand->cmdsize) {
     segmentCommand = (struct segment_command *)cursor;
