@@ -300,7 +300,7 @@
   STAssertFalse(result, @"The newer version is being ignored");
 }
 
-- (void)testReportedVersionIsNewerThanTHeIgnoredVersion {
+- (void)testReportedVersionIsNewerThanTheIgnoredVersion {
   NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
   [given([mockUserDefaults objectForKey:@"BITStoreUpdateLastStoreVersion"]) willReturn:@"4.1.1"];
   [given([mockUserDefaults objectForKey:@"BITStoreUpdateLastUUID"]) willReturn:@""];
