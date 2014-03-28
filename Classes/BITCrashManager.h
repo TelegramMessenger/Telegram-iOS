@@ -173,10 +173,6 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  *  the debugger during runtime, this may cause issues the Mach exception handler is enabled!
  * @see isDebuggerAttached
  */
-
-@property (nonatomic, assign) BITCrashManagerUserInput crashManagerUserInput;
-
-
 @property (nonatomic, assign, getter=isMachExceptionHandlerEnabled) BOOL enableMachExceptionHandler;
 
 

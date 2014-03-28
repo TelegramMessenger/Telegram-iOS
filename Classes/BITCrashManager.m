@@ -930,12 +930,11 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 #pragma mark - UIAlertView Delegate
 
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
-  _crashManagerUserInput = buttonIndex;
-  [self handleUserInput];
+  [self handleUserInput:buttonIndex];
 }
 
-- (void)handleUserInput {
-    switch (_crashManagerUserInput) {
+- (void)handleUserInput:(BITCrashManagerUserInput)userInput {
+    switch (userInput) {
       case BITCrashManagerUserInputDontSend:
             if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillCancelSendingCrashReport:)]) {
                 [self.delegate crashManagerWillCancelSendingCrashReport:self];
