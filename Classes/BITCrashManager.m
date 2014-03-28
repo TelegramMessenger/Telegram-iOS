@@ -930,34 +930,35 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 #pragma mark - UIAlertView Delegate
 
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
-  switch (buttonIndex) {
-    case 0:
-      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillCancelSendingCrashReport:)]) {
-        [self.delegate crashManagerWillCancelSendingCrashReport:self];
-      }
-      
-      _sendingInProgress = NO;
-      [self cleanCrashReports];
-      break;
-    case 1:
-      [self sendCrashReports];
-      break;
-    case 2: {
-      _crashManagerStatus = BITCrashManagerStatusAutoSend;
-      [[NSUserDefaults standardUserDefaults] setInteger:_crashManagerStatus forKey:kBITCrashManagerStatus];
-      [[NSUserDefaults standardUserDefaults] synchronize];
-      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillSendCrashReportsAlways:)]) {
-        [self.delegate crashManagerWillSendCrashReportsAlways:self];
-      }
-      
-      [self sendCrashReports];
-      break;
+  _crashManagerUserInput = buttonIndex;
+  [self handleUserInput];
+}
+
+- (void)handleUserInput {
+    switch (_crashManagerUserInput) {
+      case BITCrashManagerUserInputDontSend:
+            if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillCancelSendingCrashReport:)]) {
+                [self.delegate crashManagerWillCancelSendingCrashReport:self];
+            }
+            
+            _sendingInProgress = NO;
+            [self cleanCrashReports];
+            break;
+       case BITCrashManagerUserInputSend:
+            [self sendCrashReports];
+            break;
+      case BITCrashManagerUserInputAlwaysSend:
+            _crashManagerStatus = BITCrashManagerStatusAutoSend;
+            [[NSUserDefaults standardUserDefaults] setInteger:_crashManagerStatus forKey:kBITCrashManagerStatus];
+            [[NSUserDefaults standardUserDefaults] synchronize];
+            if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillSendCrashReportsAlways:)]) {
+                [self.delegate crashManagerWillSendCrashReportsAlways:self];
+            }
+            
+            [self sendCrashReports];
+            break;
     }
-    default:
-      _sendingInProgress = NO;
-      [self cleanCrashReports];
-      break;
-  }
+    
 }
 
 

@@ -58,6 +58,16 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
   BITCrashManagerStatusAutoSend = 2
 };
 
+typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
+  
+  BITCrashManagerUserInputDontSend,
+  
+  BITCrashManagerUserInputSend,
+  
+  BITCrashManagerUserInputAlwaysSend
+  
+};
+
 
 @protocol BITCrashManagerDelegate;
 
@@ -163,6 +173,10 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  *  the debugger during runtime, this may cause issues the Mach exception handler is enabled!
  * @see isDebuggerAttached
  */
+
+@property (nonatomic, assign) BITCrashManagerUserInput crashManagerUserInput;
+
+
 @property (nonatomic, assign, getter=isMachExceptionHandlerEnabled) BOOL enableMachExceptionHandler;
 
 
