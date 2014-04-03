@@ -1029,6 +1029,8 @@ NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
         continue;
       }
       
+      installString = bit_appAnonID() ?: @"";
+
       if (report) {
         if (report.uuidRef != NULL) {
           crashUUID = (NSString *) CFBridgingRelease(CFUUIDCreateString(NULL, report.uuidRef));
@@ -1045,8 +1047,6 @@ NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
         }
       }
       
-      installString = bit_appAnonID() ?: @"";
-			
       if (crashes == nil) {
         crashes = [NSMutableString string];
       }
