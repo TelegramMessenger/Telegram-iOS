@@ -612,8 +612,12 @@ NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
       if (report == nil) {
         BITHockeyLog(@"WARNING: Could not parse crash report");
       } else {
+        NSDate *appStartTime = nil;
+        NSDate *appCrashTime = nil;
         if ([report.processInfo respondsToSelector:@selector(processStartTime)]) {
           if (report.systemInfo.timestamp && report.processInfo.processStartTime) {
+            appStartTime = report.processInfo.processStartTime;
+            appCrashTime =report.systemInfo.timestamp;
             _timeintervalCrashInLastSessionOccured = [report.systemInfo.timestamp timeIntervalSinceDate:report.processInfo.processStartTime];
           }
         }
@@ -621,6 +625,22 @@ NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
         [crashData writeToFile:[_crashesDir stringByAppendingPathComponent: cacheFilename] atomically:YES];
         
         [self storeMetaDataForCrashReportFilename:cacheFilename];
+        
+        NSString *incidentIdentifier = @"???";
+        if (report.uuidRef != NULL) {
+          incidentIdentifier = (NSString *) CFBridgingRelease(CFUUIDCreateString(NULL, report.uuidRef));
+        }
+        
+        NSString *reporterKey = bit_appAnonID() ?: @"";
+
+        _lastSessionCrashDetails = [[BITCrashDetails alloc] initWithIncidentIdentifier:incidentIdentifier
+                                                                           reporterKey:reporterKey
+                                                                                signal:report.signalInfo.name
+                                                                         exceptionName:report.exceptionInfo.exceptionName
+                                                                       exceptionReason:report.exceptionInfo.exceptionReason
+                                                                          appStartTime:appStartTime
+                                                                             crashTime:appCrashTime
+                                    ];
       }
     }
   }
@@ -896,6 +916,7 @@ NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
  */
 - (void)createCrashReportForAppKill {
   NSString *fakeReportUUID = bit_UUID();
+  NSString *fakeReporterKey = bit_appAnonID() ?: @"???";
   
   NSString *fakeReportAppVersion = [[NSUserDefaults standardUserDefaults] objectForKey:kBITAppVersion];
   if (!fakeReportAppVersion)
@@ -906,10 +927,12 @@ NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
   NSString *fakeReportDeviceModel = [self getDevicePlatform] ?: @"Unknown";
   NSString *fakeReportAppUUIDs = [[NSUserDefaults standardUserDefaults] objectForKey:kBITAppUUIDs] ?: @"";
   
+  NSString *fakeSignalName = @"SIGKILL";
+  
   NSMutableString *fakeReportString = [NSMutableString string];
 
   [fakeReportString appendFormat:@"Incident Identifier: %@\n", fakeReportUUID];
-  [fakeReportString appendFormat:@"CrashReporter Key:   %@\n", bit_appAnonID() ?: @"???"];
+  [fakeReportString appendFormat:@"CrashReporter Key:   %@\n", fakeReporterKey];
   [fakeReportString appendFormat:@"Hardware Model:      %@\n", fakeReportDeviceModel];
   [fakeReportString appendFormat:@"Identifier:      %@\n", fakeReportAppBundleIdentifier];
   [fakeReportString appendFormat:@"Version:         %@\n", fakeReportAppVersion];
@@ -921,13 +944,14 @@ NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
   [rfc3339Formatter setLocale:enUSPOSIXLocale];
   [rfc3339Formatter setDateFormat:@"yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'"];
   [rfc3339Formatter setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:0]];
+  NSString *fakeCrashTimestamp = [rfc3339Formatter stringFromDate:[NSDate date]];
 
   // we use the current date, since we don't know when the kill actually happened
-  [fakeReportString appendFormat:@"Date/Time:       %@\n", [rfc3339Formatter stringFromDate:[NSDate date]]];
+  [fakeReportString appendFormat:@"Date/Time:       %@\n", fakeCrashTimestamp];
   [fakeReportString appendFormat:@"OS Version:      %@\n", fakeReportOSVersion];
   [fakeReportString appendString:@"Report Version:  104\n"];
   [fakeReportString appendString:@"\n"];
-  [fakeReportString appendString:@"Exception Type:  SIGKILL\n"];
+  [fakeReportString appendFormat:@"Exception Type:  %@\n", fakeSignalName];
   [fakeReportString appendString:@"Exception Codes: 00000020 at 0x8badf00d\n"];
   [fakeReportString appendString:@"\n"];
   [fakeReportString appendString:@"Application Specific Information:\n"];
@@ -950,6 +974,15 @@ NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
   [rootObj setObject:fakeReportAppUUIDs forKey:kBITFakeCrashAppBinaryUUID];
   [rootObj setObject:fakeReportString forKey:kBITFakeCrashReport];
   
+  _lastSessionCrashDetails = [[BITCrashDetails alloc] initWithIncidentIdentifier:fakeReportUUID
+                                                                     reporterKey:fakeReporterKey
+                                                                          signal:fakeSignalName
+                                                                   exceptionName:nil
+                                                                 exceptionReason:nil
+                                                                    appStartTime:nil
+                                                                       crashTime:nil
+                              ];
+
   NSData *plist = [NSPropertyListSerialization dataFromPropertyList:(id)rootObj
                                                              format:NSPropertyListBinaryFormat_v1_0
                                                    errorDescription:&errorString];

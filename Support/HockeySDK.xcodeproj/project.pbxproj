@@ -111,6 +111,8 @@
 		1E7A45FC16F54FB5005B08F1 /* OCHamcrestIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E7A45FA16F54FB5005B08F1 /* OCHamcrestIOS.framework */; };
 		1E7A45FD16F54FB5005B08F1 /* OCMockitoIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E7A45FB16F54FB5005B08F1 /* OCMockitoIOS.framework */; };
 		1E84DB3417E099BA00AC83FD /* HockeySDKFeatureConfig.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E84DB3317E0977C00AC83FD /* HockeySDKFeatureConfig.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		1E90FD7318EDB86400CF0417 /* BITCrashDetails.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E90FD7118EDB86400CF0417 /* BITCrashDetails.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		1E90FD7418EDB86400CF0417 /* BITCrashDetails.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E90FD7218EDB86400CF0417 /* BITCrashDetails.m */; };
 		1E94F9E116E91330006570AD /* BITStoreUpdateManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E94F9DF16E91330006570AD /* BITStoreUpdateManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E94F9E216E91330006570AD /* BITStoreUpdateManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E94F9E016E91330006570AD /* BITStoreUpdateManager.m */; };
 		1E94F9E416E9136B006570AD /* BITStoreUpdateManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E94F9E316E9136B006570AD /* BITStoreUpdateManagerPrivate.h */; };
@@ -268,6 +270,8 @@
 		1E7A45FA16F54FB5005B08F1 /* OCHamcrestIOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = OCHamcrestIOS.framework; sourceTree = "<group>"; };
 		1E7A45FB16F54FB5005B08F1 /* OCMockitoIOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = OCMockitoIOS.framework; sourceTree = "<group>"; };
 		1E84DB3317E0977C00AC83FD /* HockeySDKFeatureConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HockeySDKFeatureConfig.h; sourceTree = "<group>"; };
+		1E90FD7118EDB86400CF0417 /* BITCrashDetails.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashDetails.h; sourceTree = "<group>"; };
+		1E90FD7218EDB86400CF0417 /* BITCrashDetails.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITCrashDetails.m; sourceTree = "<group>"; };
 		1E94F9DF16E91330006570AD /* BITStoreUpdateManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITStoreUpdateManager.h; sourceTree = "<group>"; };
 		1E94F9E016E91330006570AD /* BITStoreUpdateManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITStoreUpdateManager.m; sourceTree = "<group>"; };
 		1E94F9E316E9136B006570AD /* BITStoreUpdateManagerPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITStoreUpdateManagerPrivate.h; sourceTree = "<group>"; };
@@ -478,6 +482,8 @@
 			children = (
 				1E754E561621FBB70070AB92 /* BITCrashManager.h */,
 				1E754E571621FBB70070AB92 /* BITCrashManager.m */,
+				1E90FD7118EDB86400CF0417 /* BITCrashDetails.h */,
+				1E90FD7218EDB86400CF0417 /* BITCrashDetails.m */,
 				1EFF03D717F20F8300A5F13C /* BITCrashManagerPrivate.h */,
 				1E754E581621FBB70070AB92 /* BITCrashManagerDelegate.h */,
 				1E754E5A1621FBB70070AB92 /* BITCrashReportTextFormatter.h */,
@@ -635,6 +641,7 @@
 				1E5955FD15B7877B00A03429 /* BITHockeyManagerDelegate.h in Headers */,
 				1E754E5C1621FBB70070AB92 /* BITCrashManager.h in Headers */,
 				1E754E5E1621FBB70070AB92 /* BITCrashManagerDelegate.h in Headers */,
+				1E90FD7318EDB86400CF0417 /* BITCrashDetails.h in Headers */,
 				1E49A4731612226D00463151 /* BITUpdateManager.h in Headers */,
 				1E49A4791612226D00463151 /* BITUpdateManagerDelegate.h in Headers */,
 				1E49A44E1612223B00463151 /* BITFeedbackManager.h in Headers */,
@@ -886,6 +893,7 @@
 				1E49A4C1161222B900463151 /* BITHockeyHelper.m in Sources */,
 				1E49A4C7161222B900463151 /* BITAppStoreHeader.m in Sources */,
 				1E49A4CD161222B900463151 /* BITStoreButton.m in Sources */,
+				1E90FD7418EDB86400CF0417 /* BITCrashDetails.m in Sources */,
 				1E49A4D3161222B900463151 /* BITWebTableViewCell.m in Sources */,
 				E48A3DED17B3ED1C00924C3D /* BITAuthenticator.m in Sources */,
 				1E49A4DB161222D400463151 /* HockeySDKPrivate.m in Sources */,

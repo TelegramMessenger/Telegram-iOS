@@ -38,6 +38,7 @@
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
 #import "BITCrashManager.h"
 #import "BITCrashManagerDelegate.h"
+#import "BITCrashDetails.h"
 #endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */
 
 #if HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT
