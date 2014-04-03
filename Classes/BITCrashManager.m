@@ -32,6 +32,8 @@
 
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
 
+#import <CrashReporter/CrashReporter.h>
+
 #import <SystemConfiguration/SystemConfiguration.h>
 #import <UIKit/UIKit.h>
 
@@ -68,6 +70,25 @@ NSString *const kBITFakeCrashOSVersion = @"BITFakeCrashOSVersion";
 NSString *const kBITFakeCrashDeviceModel = @"BITFakeCrashDeviceModel";
 NSString *const kBITFakeCrashAppBinaryUUID = @"BITFakeCrashAppBinaryUUID";
 NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
+
+
+static BITCrashManagerCallbacks bitCrashCallbacks = {
+  .context = NULL,
+  .handleSignal = NULL
+};
+
+// proxy implementation for PLCrashReporter to keep our interface stable while this can change
+static void plcr_post_crash_callback (siginfo_t *info, ucontext_t *uap, void *context) {
+  if (bitCrashCallbacks.handleSignal != NULL)
+    bitCrashCallbacks.handleSignal(context);
+}
+
+static PLCrashReporterCallbacks plCrashCallbacks = {
+  .version = 0,
+  .context = NULL,
+  .handleSignal = plcr_post_crash_callback
+};
+
 
 @interface BITCrashManager ()
 
@@ -498,8 +519,22 @@ NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
 #pragma mark - Public
 
 
-- (void)setCrashCallbacks: (PLCrashReporterCallbacks *) callbacks {
-  _crashCallBacks = callbacks;
+/**
+ *  Set the callback for PLCrashReporter
+ *
+ *  @param callbacks BITCrashManagerCallbacks instance
+ */
+- (void)setCrashCallbacks: (BITCrashManagerCallbacks *) callbacks {
+  if (!callbacks) return;
+  
+  // set our proxy callback struct
+  bitCrashCallbacks.context = callbacks->context;
+  bitCrashCallbacks.handleSignal = callbacks->handleSignal;
+  
+  // set the PLCrashReporterCallbacks struct
+  plCrashCallbacks.context = callbacks->context;
+  
+  _crashCallBacks = &plCrashCallbacks;
 }
 
 /**

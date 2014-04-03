@@ -32,14 +32,6 @@
 
 #import "BITHockeyBaseManager.h"
 
-// We need this check depending on integrating as a subproject or using the binary distribution
-#if __has_include("CrashReporter.h")
-#import "CrashReporter.h"
-#else
-#import <CrashReporter/CrashReporter.h>
-#endif
-
-
 /**
  * Crash Manager status
  */
@@ -57,6 +49,35 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
    */
   BITCrashManagerStatusAutoSend = 2
 };
+
+
+/**
+ * Prototype of a callback function used to execute additional user code. Called upon completion of crash
+ * handling, after the crash report has been written to disk.
+ *
+ * @param context The API client's supplied context value.
+ *
+ * @see `BITCrashManagerCallbacks`
+ * @see `[BITCrashManager setCrashCallbacks:]`
+ */
+typedef void (*BITCrashManagerPostCrashSignalCallback)(void *context);
+
+/**
+ * This structure contains callbacks supported by `BITCrashManager` to allow the host application to perform
+ * additional tasks prior to program termination after a crash has occured.
+ *
+ * @see `BITCrashManagerPostCrashSignalCallback`
+ * @see `[BITCrashManager setCrashCallbacks:]`
+ */
+typedef struct BITCrashManagerCallbacks {
+  /** An arbitrary user-supplied context value. This value may be NULL. */
+  void *context;
+  
+  /**
+   * The callback used to report caught signal information.
+   */
+  BITCrashManagerPostCrashSignalCallback handleSignal;
+} BITCrashManagerCallbacks;
 
 
 @protocol BITCrashManagerDelegate;
@@ -234,15 +255,18 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  *
  * _Async-Safe Functions_
  *
- * A subset of functions are defined to be async-safe by the OS, and are safely callable from within a signal handler. If you do implement a custom post-crash handler, it must be async-safe. A table of POSIX-defined async-safe functions and additional information is available from the CERT programming guide - SIG30-C, see https://www.securecoding.cert.org/confluence/display/seccode/SIG30-C.+Call+only+asynchronous-safe+functions+within+signal+handlers
+ * A subset of functions are defined to be async-safe by the OS, and are safely callable from within a signal handler. If you do implement a custom post-crash handler, it must be async-safe. A table of POSIX-defined async-safe functions and additional information is available from the [CERT programming guide - SIG30-C](https://www.securecoding.cert.org/confluence/display/seccode/SIG30-C.+Call+only+asynchronous-safe+functions+within+signal+handlers).
  *
  * Most notably, the Objective-C runtime itself is not async-safe, and Objective-C may not be used within a signal handler.
  *
  * Documentation taken from PLCrashReporter: https://www.plcrashreporter.org/documentation/api/v1.2-rc2/async_safety.html
  *
+ * @see `BITCrashManagerPostCrashSignalCallback`
+ * @see `BITCrashManagerCallbacks`
+ *
  * @param callbacks A pointer to an initialized PLCrashReporterCallback structure, see https://www.plcrashreporter.org/documentation/api/v1.2-rc2/struct_p_l_crash_reporter_callbacks.html
  */
-- (void)setCrashCallbacks: (PLCrashReporterCallbacks *) callbacks;
+- (void)setCrashCallbacks: (BITCrashManagerCallbacks *) callbacks;
 
 
 /**
