@@ -32,7 +32,12 @@
 }
 
 - (void)tearDown {
-  // Put teardown code here; it will be run once, after the last test case.
+  // Tear-down code here.
+# pragma clang diagnostic push
+# pragma clang diagnostic ignored "-Wimplicit"
+  __gcov_flush();
+# pragma clang diagnostic pop
+  
   [super tearDown];
 }
 

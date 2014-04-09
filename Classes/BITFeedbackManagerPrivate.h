@@ -56,6 +56,11 @@
 @property (nonatomic, copy) NSString *userEmail;
 
 
+// Fetch user meta data
+- (BOOL)updateUserIDUsingKeychainAndDelegate;
+- (BOOL)updateUserNameUsingKeychainAndDelegate;
+- (BOOL)updateUserEmailUsingKeychainAndDelegate;
+
 // load new messages from the server
 - (void)updateMessagesList;
 
