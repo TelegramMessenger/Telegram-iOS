@@ -36,10 +36,12 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-  self.automaticallyAdjustsScrollViewInsets = NO;
   self.navigationController.navigationBar.translucent = YES;
+#if __IPHONE_OS_VERSION_MIN_REQUIRED > __IPHONE_6_1
+  self.automaticallyAdjustsScrollViewInsets = NO;
   self.edgesForExtendedLayout = YES;
   self.extendedLayoutIncludesOpaqueBars = YES;
+#endif
   self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:@"Close" style:UIBarButtonItemStylePlain target:self action:@selector(close:)];
 
   self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAction target:self action:@selector(share:)];
