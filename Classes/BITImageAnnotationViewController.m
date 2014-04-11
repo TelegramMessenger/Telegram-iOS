@@ -11,12 +11,16 @@
 #import "BITRectangleImageAnnotation.h"
 #import "BITArrowImageAnnotation.h"
 #import "BITBlurImageAnnotation.h"
+#import "BITHockeyHelper.h"
+#import "HockeySDKPrivate.h"
 
 @interface BITImageAnnotationViewController ()
 
 @property (nonatomic, strong) UIImageView *imageView;
 @property (nonatomic, strong) UISegmentedControl *editingControls;
 @property (nonatomic, strong) NSMutableArray *objects;
+
+@property (nonatomic, strong) UITapGestureRecognizer *tapRecognizer;
 @property (nonatomic, strong) UIPanGestureRecognizer *panRecognizer;
 @property (nonatomic, strong) UIPinchGestureRecognizer *pinchRecognizer;
 
@@ -48,7 +52,15 @@
   
   self.view.backgroundColor = [UIColor groupTableViewBackgroundColor];
   
+  NSArray *icons = @[@"Rectangle.png", @"Arrow.png", @"Blur.png"];
+  
   self.editingControls = [[UISegmentedControl alloc] initWithItems:@[@"Rectangle", @"Arrow", @"Blur"]];
+  int i=0;
+  for (NSString *imageName in icons){
+    [self.editingControls setImage:bit_imageNamed(imageName, BITHOCKEYSDK_BUNDLE) forSegmentAtIndex:i++];
+  }
+  
+  [self.editingControls setSegmentedControlStyle:UISegmentedControlStyleBar];
   
   self.navigationItem.titleView = self.editingControls;
   
@@ -66,18 +78,32 @@
   
   
   [self.view addSubview:self.imageView];
-  self.imageView.frame = self.view.bounds;
+  // Erm.
+  self.imageView.frame = [UIScreen mainScreen].bounds;
   
   self.panRecognizer = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(panned:)];
   self.pinchRecognizer = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(pinched:)];
+  self.tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapped:)];
+  
+  [self.panRecognizer requireGestureRecognizerToFail:self.tapRecognizer];
   
   [self.imageView addGestureRecognizer:self.pinchRecognizer];
   [self.imageView addGestureRecognizer:self.panRecognizer];
+  [self.view addGestureRecognizer:self.tapRecognizer];
   
   self.imageView.userInteractionEnabled = YES;
   
   self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc ] initWithTitle:@"Discard" style:UIBarButtonItemStyleBordered target:self action:@selector(discard:)];
   self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc ] initWithTitle:@"Save" style:UIBarButtonItemStyleBordered target:self action:@selector(save:)];
+
+  [self fitImageViewFrame];
+  
+  
+	// Do any additional setup after loading the view.
+}
+
+- (void)fitImageViewFrame {
+  
   
   CGFloat heightScaleFactor = self.view.frame.size.height / self.image.size.height;
   CGFloat widthScaleFactor = self.view.frame.size.width / self.image.size.width;
@@ -87,9 +113,6 @@
   CGSize scaledImageSize = CGSizeMake(self.image.size.width * factor, self.image.size.height * factor);
   
   self.imageView.frame = CGRectMake(self.view.frame.size.width/2 - scaledImageSize.width/2, self.view.frame.size.height/2 - scaledImageSize.height/2, scaledImageSize.width, scaledImageSize.height);
-  
-  
-	// Do any additional setup after loading the view.
 }
 
 -(void)editingAction:(id)sender {
@@ -196,16 +219,6 @@
   }
 }
 
--(UIView *)firstAnnotationThatIsNotBlur {
-  for (BITImageAnnotation *annotation in self.imageView.subviews){
-    if (![annotation isKindOfClass:[BITBlurImageAnnotation class]]){
-      return annotation;
-    }
-  }
-  
-  return self.imageView;
-}
-
 -(void)pinched:(UIPinchGestureRecognizer *)gestureRecognizer {
   if (gestureRecognizer.state == UIGestureRecognizerStateBegan){
     // try to figure out which view we are talking about.
@@ -257,10 +270,40 @@
   }
 }
 
-- (void)didReceiveMemoryWarning
-{
-  [super didReceiveMemoryWarning];
-  // Dispose of any resources that can be recreated.
+-(void)tapped:(UIGestureRecognizer *)tapRecognizer {
+  if (self.navigationController.navigationBarHidden){
+   // [[UIApplication sharedApplication] setStatusBarHidden:NO];
+    [UIView animateWithDuration:0.35f animations:^{
+      self.navigationController.navigationBar.alpha = 1;
+    } completion:^(BOOL finished) {
+      [self fitImageViewFrame];
+      [self.navigationController setNavigationBarHidden:NO animated:NO];
+
+
+    }];
+  } else {
+    [UIView animateWithDuration:0.35f animations:^{
+      self.navigationController.navigationBar.alpha = 0;
+
+    } completion:^(BOOL finished) {
+      [self.navigationController setNavigationBarHidden:YES animated:NO];
+
+      [self fitImageViewFrame];
+      
+    }];    
+  }
+  
+}
+
+#pragma mark - Helpers
+-(UIView *)firstAnnotationThatIsNotBlur {
+  for (BITImageAnnotation *annotation in self.imageView.subviews){
+    if (![annotation isKindOfClass:[BITBlurImageAnnotation class]]){
+      return annotation;
+    }
+  }
+  
+  return self.imageView;
 }
 
 @end
