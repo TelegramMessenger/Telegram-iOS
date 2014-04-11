@@ -67,6 +67,8 @@
 
 @property (nonatomic, strong) NSMutableArray *attachmentViews;
 
+@property (nonatomic, strong) UIView *accessoryBackgroundView;
+
 @end
 
 
@@ -112,6 +114,7 @@
 #pragma mark - Private
 
 - (UIColor *)backgroundColor {
+  
   if (self.backgroundStyle == BITFeedbackListViewCellBackgroundStyleNormal) {
     if (self.style == BITFeedbackListViewCellPresentatationStyleDefault) {
       return BACKGROUNDCOLOR_DEFAULT;
@@ -187,7 +190,7 @@
 
 - (void)setAttachments:(NSArray *)attachments {
   for (UIView *view in self.attachmentViews){
-    [view removeFromSuperview];
+   [view removeFromSuperview];
   }
   
   [self.attachmentViews removeAllObjects];
@@ -199,18 +202,25 @@
     [imageView addTarget:self action:@selector(imageButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
     
     [self.attachmentViews addObject:imageView];
-    [self addSubview:imageView];
   }
 }
 
 
 - (void)layoutSubviews {
-  UIView *accessoryViewBackground = [[UIView alloc] initWithFrame:CGRectMake(0, 2, self.frame.size.width * 2, self.frame.size.height - 2)];
-  accessoryViewBackground.autoresizingMask = UIViewAutoresizingFlexibleHeight;
-  accessoryViewBackground.clipsToBounds = YES;
+  if (!self.accessoryBackgroundView){
+  self.accessoryBackgroundView = [[UIView alloc] initWithFrame:CGRectMake(0, 2, self.frame.size.width * 2, self.frame.size.height - 2)];
+  self.accessoryBackgroundView.autoresizingMask = UIViewAutoresizingFlexibleHeight;
+  self.accessoryBackgroundView.clipsToBounds = YES;
   
   // colors
-  accessoryViewBackground.backgroundColor = [self backgroundColor];
+  self.accessoryBackgroundView.backgroundColor = [self backgroundColor];
+  }
+  
+  if (self.style == BITFeedbackListViewCellPresentatationStyleDefault) {
+    [self addSubview:self.accessoryBackgroundView];
+  } else if (self.accessoryBackgroundView.superview){
+    [self.accessoryBackgroundView removeFromSuperview];
+  }
   self.contentView.backgroundColor = [self backgroundColor];
   self.labelTitle.backgroundColor = [self backgroundColor];
   self.labelText.backgroundColor = [self backgroundColor];
@@ -223,9 +233,7 @@
   }
 
   // background for deletion accessory view
-  if (self.style == BITFeedbackListViewCellPresentatationStyleDefault) {
-    [self addSubview:accessoryViewBackground];
-  }
+
   
   // header
   NSString *dateString = @"";
@@ -266,6 +274,7 @@
   int i = 0;
   
   CGFloat attachmentsPerRow = ceilf(self.frame.size.width / (FRAME_SIDE_BORDER + ATTACHMENT_SIZE));
+  
   for ( UIButton *imageButton in self.attachmentViews){
     imageButton.contentMode = UIViewContentModeScaleAspectFit;
     
@@ -275,10 +284,12 @@
       imageButton.frame = CGRectMake(self.frame.size.width - FRAME_SIDE_BORDER - ATTACHMENT_SIZE -  ((FRAME_SIDE_BORDER + ATTACHMENT_SIZE) * (i) ), floor(i/attachmentsPerRow) + baseOffsetOfText , ATTACHMENT_SIZE, ATTACHMENT_SIZE);
     }
     
+    if (!imageButton.superview){
+      [self addSubview:imageButton];
+    }
+    
     i++;
-      
   }
-  
   
   [super layoutSubviews];
 }
