@@ -184,8 +184,7 @@
   self.textAccessoryView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, CGRectGetWidth(self.view.frame), 44)];
   self.textAccessoryView.backgroundColor = [UIColor colorWithRed:0.9f green:0.9f blue:0.9f alpha:1.0f];
   UIButton *addPhotoButton = [UIButton buttonWithType:UIButtonTypeCustom];
-  [addPhotoButton setTitle:@"+ Add Photo" forState:UIControlStateNormal];
-  [addPhotoButton setTitleColor:[UIColor darkGrayColor] forState:UIControlStateNormal];
+  [addPhotoButton setTitle:@"+ Add Photo" forState:UIControlStateNormal];                                        [addPhotoButton setTitleColor:[UIColor darkGrayColor] forState:UIControlStateNormal];
   addPhotoButton.frame = CGRectMake(0, 0, CGRectGetWidth(self.view.frame), 44);
   [addPhotoButton addTarget:self action:@selector(addPhotoAction:) forControlEvents:UIControlEventTouchUpInside];
   

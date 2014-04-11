@@ -107,7 +107,7 @@
 
 - (UIImage *)imageRepresentation {
   if ([self.contentType rangeOfString:@"image"].location != NSNotFound){
-    return [UIImage imageWithData:self.data];
+    return [UIImage imageWithData:self.data scale:[UIScreen mainScreen].scale];
   } else {
     return bit_imageNamed(@"feedbackActiviy.png", BITHOCKEYSDK_BUNDLE); // TODO add another placeholder.
   }
@@ -118,9 +118,16 @@
   
   if (!self.thumbnailRepresentations[cacheKey]){
     UIImage *image = self.imageRepresentation;
-    UIImage *thumbnail = bit_imageToFitSize(image, size, NO);
+    // consider the scale.
+    
+    CGFloat scale = [UIScreen mainScreen].scale;
+    
+    CGSize scaledSize = CGSizeApplyAffineTransform(size, CGAffineTransformMakeScale(scale, scale));
+    UIImage *thumbnail = bit_imageToFitSize(image, scaledSize, NO) ;
+    
+    UIImage *scaledTumbnail = [UIImage imageWithCGImage:thumbnail.CGImage scale:scale orientation:thumbnail.imageOrientation];
     if (thumbnail){
-      [self.thumbnailRepresentations setObject:thumbnail forKey:cacheKey];
+      [self.thumbnailRepresentations setObject:scaledTumbnail forKey:cacheKey];
     }
   }
   

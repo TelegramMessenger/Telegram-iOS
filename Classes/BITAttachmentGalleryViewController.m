@@ -52,6 +52,9 @@
   [self extractUsableAttachments];
   [self setupScrollView];
   
+  self.view.frame = UIScreen.mainScreen.applicationFrame;
+ // self.view.frame.origin = CGPointZero;
+  
   [self layoutViews];
 }
 
@@ -80,7 +83,7 @@
   for (int i = 0; i<3; i++){
     UIImageView *newImageView = [[UIImageView alloc] initWithFrame:CGRectZero];
     [imageviews addObject:newImageView];
-    newImageView.contentMode = UIViewContentModeScaleAspectFit;
+    newImageView.contentMode = UIViewContentModeScaleAspectFit|UIViewContentModeBottom;
     [self.scrollView addSubview:newImageView];
   }
   
@@ -113,11 +116,7 @@
   NSInteger newIndex = self.scrollView.contentOffset.x / self.scrollView.frame.size.width;
   if (newIndex!=self.currentIndex){
     self.currentIndex = newIndex;
-    // requeue elements.
-    NSInteger baseIndex = MAX(0,self.currentIndex-1);
     [self layoutViews];
-
-    
   }
 }
 
@@ -125,6 +124,10 @@
   
   self.scrollView.frame = self.view.bounds;
   self.scrollView.contentSize = CGSizeMake(CGRectGetWidth(self.view.bounds) * self.extractedAttachments.count, CGRectGetHeight(self.view.bounds));
+  
+  self.scrollView.contentInset = UIEdgeInsetsZero;
+  
+  self.scrollView.contentOffset = CGPointMake(self.scrollView.contentOffset.x, 0);
 
   NSInteger baseIndex = MAX(0,self.currentIndex-1);
   NSInteger z = baseIndex;
@@ -163,10 +166,11 @@
     [[UIApplication sharedApplication] setStatusBarHidden:YES];
 
   }
+  [self layoutViews];
 }
 
 - (CGRect)frameForItemAtIndex:(NSInteger)index {
-  return CGRectMake(index * CGRectGetWidth(self.scrollView.frame), 0, CGRectGetWidth(self.scrollView.frame), CGRectGetHeight(self.scrollView.frame));
+  return CGRectMake(index * CGRectGetWidth(self.scrollView.frame), 0, CGRectGetWidth(self.scrollView.frame), CGRectGetHeight(self.view.bounds));
 }
 
 @end
