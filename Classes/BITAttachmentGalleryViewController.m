@@ -120,8 +120,6 @@
   }
   
   self.extractedAttachments = extractedOnes;
-  
-  [self layoutViews];
 }
 
 - (void)didReceiveMemoryWarning
@@ -152,7 +150,7 @@
   NSInteger baseIndex = MAX(0,self.currentIndex-1);
   NSInteger z = baseIndex;
   for ( NSInteger i = baseIndex; i < MIN(baseIndex+2, self.extractedAttachments.count);i++ ){
-    UIImageView *imageView = self.imageViews[z];
+    UIImageView *imageView = self.imageViews[z%self.imageViews.count];
     BITFeedbackMessageAttachment *attachment = self.extractedAttachments[i];
     imageView.image =[attachment imageRepresentation];
     imageView.frame = [self frameForItemAtIndex:i];
