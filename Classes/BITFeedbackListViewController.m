@@ -773,14 +773,16 @@
 
 - (void)listCell:(id)cell didSelectAttachment:(BITFeedbackMessageAttachment *)attachment {
   BITAttachmentGalleryViewController *galleryController = [BITAttachmentGalleryViewController new];
-  
   UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:galleryController];
+  
   NSMutableArray *collectedMessages = [NSMutableArray new];
+  
   for (int i = 0; i<self.manager.numberOfMessages;i++){
     [collectedMessages addObject:[self.manager messageAtIndex:i]];
   }
-  [galleryController setMessages:collectedMessages];
   
+  [galleryController setMessages:collectedMessages];
+  [galleryController setPreselectedAttachment:attachment];
   [self presentViewController:navController animated:YES completion:nil];
 }
 
