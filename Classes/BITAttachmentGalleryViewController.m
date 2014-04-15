@@ -37,6 +37,7 @@
 {
     [super viewDidLoad];
   self.navigationController.navigationBar.translucent = YES;
+  self.navigationController.navigationBar.opaque = NO;
 #if __IPHONE_OS_VERSION_MIN_REQUIRED > __IPHONE_6_1
   self.automaticallyAdjustsScrollViewInsets = NO;
   self.edgesForExtendedLayout = YES;
@@ -55,14 +56,21 @@
   self.view.frame = UIScreen.mainScreen.applicationFrame;
  // self.view.frame.origin = CGPointZero;
   
+}
+-(void)viewWillAppear:(BOOL)animated {
+  [super viewWillAppear:animated];
+  
+  // Hide the navigation bar and stuff initially.
+  [self.navigationController setNavigationBarHidden:YES animated:NO];
+  [[UIApplication sharedApplication] setStatusBarHidden:YES];
+  
   [self layoutViews];
+
+ 
 }
 
 - (void)viewDidAppear:(BOOL)animated {
   [super viewDidAppear:animated];
-  
-  
-
   
   self.tapognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapped:)];
   [self.view addGestureRecognizer:self.tapognizer];
@@ -83,7 +91,7 @@
   for (int i = 0; i<3; i++){
     UIImageView *newImageView = [[UIImageView alloc] initWithFrame:CGRectZero];
     [imageviews addObject:newImageView];
-    newImageView.contentMode = UIViewContentModeScaleAspectFit|UIViewContentModeBottom;
+    newImageView.contentMode = UIViewContentModeScaleAspectFit;
     [self.scrollView addSubview:newImageView];
   }
   
@@ -126,6 +134,7 @@
   self.scrollView.contentSize = CGSizeMake(CGRectGetWidth(self.view.bounds) * self.extractedAttachments.count, CGRectGetHeight(self.view.bounds));
   
   self.scrollView.contentInset = UIEdgeInsetsZero;
+  self.scrollView.autoresizesSubviews = NO;
   
   self.scrollView.contentOffset = CGPointMake(self.scrollView.contentOffset.x, 0);
 
