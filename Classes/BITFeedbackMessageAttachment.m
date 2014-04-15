@@ -107,7 +107,7 @@
 
 - (UIImage *)imageRepresentation {
   if ([self.contentType rangeOfString:@"image"].location != NSNotFound){
-    return [UIImage imageWithData:self.data scale:[UIScreen mainScreen].scale];
+    return [UIImage imageWithData:self.data];
   } else {
     return bit_imageNamed(@"feedbackActiviy.png", BITHOCKEYSDK_BUNDLE); // TODO add another placeholder.
   }
