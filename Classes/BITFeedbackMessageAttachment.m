@@ -44,9 +44,20 @@
 @implementation BITFeedbackMessageAttachment
 
 + (BITFeedbackMessageAttachment *)attachmentWithData:(NSData *)data contentType:(NSString *)contentType {
+  
+  static NSDateFormatter *formatter;
+  
+  if(!formatter){
+    formatter = [NSDateFormatter new];
+    formatter.dateStyle = NSDateFormatterShortStyle;
+    formatter.timeStyle = NSDateFormatterShortStyle;
+
+  }
+  
   BITFeedbackMessageAttachment *newAttachment = [BITFeedbackMessageAttachment new];
   newAttachment.contentType = contentType;
   newAttachment.data = data;
+  newAttachment.originalFilename = [NSString stringWithFormat:@"Attachment: %@", [formatter stringFromDate:[NSDate date]]];
   return newAttachment;
 }
 
