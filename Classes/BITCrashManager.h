@@ -57,14 +57,22 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
    */
   BITCrashManagerStatusAutoSend = 2
 };
-
+/**
+ * Crash Manager alert user input
+ */
 typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
-  
-  BITCrashManagerUserInputDontSend,
-  
-  BITCrashManagerUserInputSend,
-  
-  BITCrashManagerUserInputAlwaysSend
+  /**
+   *  User chose not to send the crash report
+   */
+  BITCrashManagerUserInputDontSend = 0,
+  /**
+   *  User wants the crash report to be sent
+   */
+  BITCrashManagerUserInputSend = 1,
+  /**
+   *  User chose to always send crash reports
+   */
+  BITCrashManagerUserInputAlwaysSend = 2
   
 };
 
