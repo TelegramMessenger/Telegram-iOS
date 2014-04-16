@@ -90,5 +90,10 @@
     [attachment deleteContents];
   }
 }
-
+-(void)addAttachmentsObject:(BITFeedbackMessageAttachment *)object{
+  if (!self.attachments){
+    self.attachments = [NSArray array];
+  }
+  self.attachments = [self.attachments arrayByAddingObject:object];
+}
 @end

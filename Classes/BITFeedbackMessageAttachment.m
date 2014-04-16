@@ -39,6 +39,7 @@
 @property (nonatomic, strong) NSData *internalData;
 @property (nonatomic, copy) NSString *filename;
 
+
 @end
 
 @implementation BITFeedbackMessageAttachment
@@ -92,12 +93,18 @@
   self.thumbnailRepresentations = [NSMutableDictionary new];
 }
 
+-(BOOL)needsLoadingFromURL {
+  return (self.sourceURL);
+}
+
 #pragma mark NSCoding
 
 - (void)encodeWithCoder:(NSCoder *)aCoder {
   [aCoder encodeObject:self.contentType forKey:@"contentType"];
   [aCoder encodeObject:self.filename forKey:@"filename"];
   [aCoder encodeObject:self.originalFilename forKey:@"originalFilename"];
+  [aCoder encodeObject:self.sourceURL forKey:@"url"];
+
 
 }
 
@@ -109,6 +116,8 @@
     self.filename = [aDecoder decodeObjectForKey:@"filename"];
     self.thumbnailRepresentations = [NSMutableDictionary new];
     self.originalFilename = [aDecoder decodeObjectForKey:@"originalFilename"];
+    self.sourceURL = [aDecoder decodeObjectForKey:@"sourceURL"];
+
   }
   
   return self;
@@ -117,7 +126,7 @@
 #pragma mark - Thubmnails / Image Representation
 
 - (UIImage *)imageRepresentation {
-  if ([self.contentType rangeOfString:@"image"].location != NSNotFound){
+  if ([self.contentType rangeOfString:@"image"].location != NSNotFound || [self.sourceURL rangeOfString:@"jpeg"].location != NSNotFound){
     return [UIImage imageWithData:self.data];
   } else {
     return bit_imageNamed(@"feedbackActiviy.png", BITHOCKEYSDK_BUNDLE); // TODO add another placeholder.

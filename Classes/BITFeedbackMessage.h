@@ -29,6 +29,8 @@
 
 #import <Foundation/Foundation.h>
 
+@class BITFeedbackMessageAttachment;
+
 /**
  *  Status for each feedback message
  */
@@ -78,6 +80,8 @@ typedef NS_ENUM(NSInteger, BITFeedbackMessageStatus) {
  * deletion of any data stored on the device in association with the feedback message.
  */
 -(void)deleteContents;
+
+-(void)addAttachmentsObject:(BITFeedbackMessageAttachment *)object;
 
 
 @end

@@ -35,6 +35,7 @@
 @property (nonatomic, copy) NSNumber *id;
 @property (nonatomic, copy) NSString *originalFilename;
 @property (nonatomic, copy) NSString *contentType;
+@property (nonatomic, copy) NSString *sourceURL;
 @property (nonatomic, readonly) NSData *data;
 
 @property (readonly) UIImage *imageRepresentation;
@@ -47,5 +48,7 @@
 - (void)replaceData:(NSData *)data;
 
 - (void)deleteContents;
+
+-(BOOL)needsLoadingFromURL;
 
 @end
