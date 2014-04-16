@@ -247,6 +247,11 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  */
 @property (nonatomic, readonly) BOOL didCrashInLastSession;
 
+/**
+Provides an interface to handle user input from a custom alert 
+ @return BOOl if the input is a valid option
+ */
+- (BOOL)handleUserInput: (BITCrashManagerUserInput) userInput;
 
 /**
  Provides the time between startup and crash in seconds

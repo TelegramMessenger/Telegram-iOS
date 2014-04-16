@@ -487,6 +487,36 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   }
 }
 
+- (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput {
+  switch (userInput) {
+    case BITCrashManagerUserInputDontSend:
+      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillCancelSendingCrashReport:)]) {
+        [self.delegate crashManagerWillCancelSendingCrashReport:self];
+      }
+      
+      [self cleanCrashReports];
+      YES;
+      
+    case BITCrashManagerUserInputSend:
+      [self sendCrashReports];
+      YES;
+      
+    case BITCrashManagerUserInputAlwaysSend:
+      _crashManagerStatus = BITCrashManagerStatusAutoSend;
+      [[NSUserDefaults standardUserDefaults] setInteger:_crashManagerStatus forKey:kBITCrashManagerStatus];
+      [[NSUserDefaults standardUserDefaults] synchronize];
+      if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillSendCrashReportsAlways:)]) {
+        [self.delegate crashManagerWillSendCrashReportsAlways:self];
+      }
+      
+      [self sendCrashReports];
+      return YES;
+      
+    default:
+      return NO;
+  }
+  
+}
 
 #pragma mark - PLCrashReporter
 
@@ -930,35 +960,20 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 #pragma mark - UIAlertView Delegate
 
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
-  [self handleUserInput:buttonIndex];
+  switch (buttonIndex) {
+    case 0:
+      [self handleUserInput:BITCrashManagerUserInputDontSend];
+      break;
+    case 1:
+      [self handleUserInput:BITCrashManagerUserInputSend];
+      break;
+    case 2:
+      [self handleUserInput:BITCrashManagerUserInputAlwaysSend];
+      break;
+  }
 }
 
-- (void)handleUserInput:(BITCrashManagerUserInput)userInput {
-    switch (userInput) {
-      case BITCrashManagerUserInputDontSend:
-            if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillCancelSendingCrashReport:)]) {
-                [self.delegate crashManagerWillCancelSendingCrashReport:self];
-            }
-            
-            _sendingInProgress = NO;
-            [self cleanCrashReports];
-            break;
-       case BITCrashManagerUserInputSend:
-            [self sendCrashReports];
-            break;
-      case BITCrashManagerUserInputAlwaysSend:
-            _crashManagerStatus = BITCrashManagerStatusAutoSend;
-            [[NSUserDefaults standardUserDefaults] setInteger:_crashManagerStatus forKey:kBITCrashManagerStatus];
-            [[NSUserDefaults standardUserDefaults] synchronize];
-            if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillSendCrashReportsAlways:)]) {
-                [self.delegate crashManagerWillSendCrashReportsAlways:self];
-            }
-            
-            [self sendCrashReports];
-            break;
-    }
-    
-}
+
 
 
 #pragma mark - Networking
