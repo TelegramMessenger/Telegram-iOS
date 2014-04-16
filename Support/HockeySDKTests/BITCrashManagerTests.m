@@ -123,6 +123,40 @@
   [verifyCount(delegateMock, times(1)) userEmailForHockeyManager:hm componentManager:_sut];
 }
 
+#pragma mark - Handle User Input
+
+- (void)testHandleUserInputDontSend {
+  id <BITCrashManagerDelegate> delegateMock = mockProtocol(@protocol(BITCrashManagerDelegate));
+  _sut.delegate = delegateMock;
+  
+  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputDontSend], equalToBool(YES));
+  
+  [verify(delegateMock) crashManagerWillCancelSendingCrashReport:_sut];
+  
+}
+
+- (void)testHandleUserInputSend {
+  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputSend], equalToBool(YES));
+}
+
+- (void)testHandleUserInputAlwaysSend {
+  id <BITCrashManagerDelegate> delegateMock = mockProtocol(@protocol(BITCrashManagerDelegate));
+  _sut.delegate = delegateMock;
+  NSUserDefaults *mockUserDefaults = mock([NSUserDefaults class]);
+  
+  //Test if CrashManagerStatus is unset
+  [given([mockUserDefaults integerForKey:@"BITCrashManagerStatus"]) willReturn:nil];
+  
+  //Test if method runs through
+  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputAlwaysSend], equalToBool(YES));
+  
+  //Test if correct CrashManagerStatus is now set
+  [given([mockUserDefaults integerForKey:@"BITCrashManagerStauts"]) willReturnInt:BITCrashManagerStatusAutoSend];
+  
+  //Verify that delegate method has been called
+  [verify(delegateMock) crashManagerWillSendCrashReportsAlways:_sut];
+  
+}
 
 #pragma mark - Debugger
 
