@@ -57,6 +57,8 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
    */
   BITCrashManagerStatusAutoSend = 2
 };
+
+
 /**
  * Crash Manager alert user input
  */
@@ -220,7 +222,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  *
  * @param callbacks A pointer to an initialized PLCrashReporterCallback structure, see https://www.plcrashreporter.org/documentation/api/v1.2-rc2/struct_p_l_crash_reporter_callbacks.html
  */
-- (void)setCrashCallbacks: (PLCrashReporterCallbacks *) callbacks;
+- (void)setCrashCallbacks:(PLCrashReporterCallbacks *)callbacks;
 
 
 /**
@@ -256,10 +258,14 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
 @property (nonatomic, readonly) BOOL didCrashInLastSession;
 
 /**
-Provides an interface to handle user input from a custom alert 
+ Provides an interface to handle user input from a custom alert
+ 
+ On this input depends, whether crash reports are sent, always sent or not sent and deleted.
+ 
  @return BOOl if the input is a valid option
+ @see BITCrashManagerUserInput
  */
-- (BOOL)handleUserInput: (BITCrashManagerUserInput) userInput;
+- (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput;
 
 /**
  Provides the time between startup and crash in seconds

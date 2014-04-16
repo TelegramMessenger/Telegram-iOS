@@ -174,9 +174,9 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   NSString *errorString = nil;
   
   NSMutableDictionary *rootObj = [NSMutableDictionary dictionaryWithCapacity:2];
-  if (_approvedCrashReports && [_approvedCrashReports count] > 0)
+  if (_approvedCrashReports && [_approvedCrashReports count] > 0) {
     [rootObj setObject:_approvedCrashReports forKey:kBITCrashApprovedReports];
-  
+  }
   NSData *plist = [NSPropertyListSerialization dataFromPropertyList:(id)rootObj
                                                              format:NSPropertyListBinaryFormat_v1_0
                                                    errorDescription:&errorString];
@@ -438,7 +438,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 #pragma mark - Public
 
 
-- (void)setCrashCallbacks: (PLCrashReporterCallbacks *) callbacks {
+- (void)setCrashCallbacks:(PLCrashReporterCallbacks *)callbacks {
   _crashCallBacks = callbacks;
 }
 
