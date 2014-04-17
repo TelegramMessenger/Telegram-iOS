@@ -31,8 +31,15 @@
 
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
 
+@class BITHockeyAppClient;
+
 @interface BITCrashManager () {
 }
+
+/**
+ * must be set
+ */
+@property (nonatomic, strong) BITHockeyAppClient *hockeyAppClient;
 
 @property (nonatomic) NSUncaughtExceptionHandler *exceptionHandler;
 
