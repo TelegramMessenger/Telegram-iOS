@@ -19,7 +19,7 @@ Pod::Spec.new do |s|
   s.source            = { :git => 'https://github.com/bitstadium/HockeySDK-iOS.git', :tag => s.version.to_s }
 
   s.platform          = :ios, '5.0'
-  s.source_files      = 'Classes'
+  s.source_files      = 'Classes', "Vendor/CrashReporter.framework/Versions/A/Headers/*.h"
   s.requires_arc      = true
   
   s.frameworks              = 'CoreText', 'QuartzCore', 'SystemConfiguration', 'CoreGraphics', 'UIKit', 'Security'
