@@ -1,3 +1,14 @@
+## Version 3.5.5
+
+- [NEW] `BITCrashManager`: Added support for adding a binary attachment to crash reports
+- [NEW] `BITCrashManager`: Integrated PLCrashReporter 1.2 RC5 (with 2 more fixes)
+- [BUGFIX] `BITUpdateManager`: Fixed problem with `checkForUpdate` when `updateSetting` is set to `BITUpdateCheckManually`
+- [BUGFIX] `BITAuthenticator`: Fixed keychain warning alert showing app on launch if keychain is locked
+- [BUGFIX] `BITAuthenticator`: Fixed a possible assertion problem with auto-authentication (when using custom SDK builds without assertions being disabled)
+- [BUGFIX] `BITAuthenticator`: Added user email to crash report for beta builds if BITAuthenticator is set to BITAuthenticatorIdentificationTypeWebAuth
+- [BUGFIX] Fixed more analyzer warnings
+<br /><br/>
+
 ## Version 3.5.4
 
 - [BUGFIX] Fix a possible crash before sending the crash report when the selector could not be found

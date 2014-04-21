@@ -38,9 +38,8 @@
 #import "BITKeychainUtils.h"
 
 #import <sys/sysctl.h>
-#if !TARGET_IPHONE_SIMULATOR
-#import <mach-o/ldsyms.h>
-#endif
+#import <mach-o/dyld.h>
+#import <mach-o/loader.h>
 
 #ifndef __IPHONE_6_1
 #define __IPHONE_6_1     60100
@@ -134,29 +133,35 @@
 }
 
 - (NSString *)executableUUID {
-  // This now requires the testing of this feature to be done on an actual device, since it returns always empty strings on the simulator
-  // Once there is a better solution to get unit test targets build without problems this should be changed again, so testing of this
-  // feature is also possible using the simulator
-  // See: http://support.hockeyapp.net/discussions/problems/2306-integrating-hockeyapp-with-test-bundle-target-i386-issues
-  //      http://support.hockeyapp.net/discussions/problems/4113-linking-hockeysdk-to-test-bundle-target
-#if !TARGET_IPHONE_SIMULATOR
-  const uint8_t *command = (const uint8_t *)(&_mh_execute_header + 1);
-  for (uint32_t idx = 0; idx < _mh_execute_header.ncmds; ++idx) {
-    const struct load_command *load_command = (const struct load_command *)command;
-    if (load_command->cmd == LC_UUID) {
-      const struct uuid_command *uuid_command = (const struct uuid_command *)command;
-      const uint8_t *uuid = uuid_command->uuid;
+  const struct mach_header *executableHeader = NULL;
+  for (uint32_t i = 0; i < _dyld_image_count(); i++) {
+    const struct mach_header *header = _dyld_get_image_header(i);
+    if (header->filetype == MH_EXECUTE) {
+      executableHeader = header;
+      break;
+    }
+  }
+  
+  if (!executableHeader)
+    return @"";
+  
+  BOOL is64bit = executableHeader->magic == MH_MAGIC_64 || executableHeader->magic == MH_CIGAM_64;
+  uintptr_t cursor = (uintptr_t)executableHeader + (is64bit ? sizeof(struct mach_header_64) : sizeof(struct mach_header));
+  const struct segment_command *segmentCommand = NULL;
+  for (uint32_t i = 0; i < executableHeader->ncmds; i++, cursor += segmentCommand->cmdsize) {
+    segmentCommand = (struct segment_command *)cursor;
+    if (segmentCommand->cmd == LC_UUID) {
+      const struct uuid_command *uuidCommand = (const struct uuid_command *)segmentCommand;
+      const uint8_t *uuid = uuidCommand->uuid;
       return [[NSString stringWithFormat:@"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
                uuid[0], uuid[1], uuid[2], uuid[3],
                uuid[4], uuid[5], uuid[6], uuid[7],
                uuid[8], uuid[9], uuid[10], uuid[11],
                uuid[12], uuid[13], uuid[14], uuid[15]]
               lowercaseString];
-    } else {
-      command += load_command->cmdsize;
     }
   }
-#endif
+  
   return @"";
 }
 

@@ -4,7 +4,8 @@
 #   Source: https://github.com/jonreid/XcodeCoverage
 #
 
-source env.sh
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+source ${DIR}/env.sh
 
 # Change the report name if you like:
 LCOV_INFO=Coverage.info
