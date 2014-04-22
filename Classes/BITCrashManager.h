@@ -265,7 +265,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  @return BOOl if the input is a valid option
  @see BITCrashManagerUserInput
  */
-- (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput;
+- (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput withCrashMetaDescription:metaDescription;
 
 /**
  Provides the time between startup and crash in seconds

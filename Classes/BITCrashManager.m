@@ -55,6 +55,7 @@
 #define kBITCrashMetaUserID @"BITCrashMetaUserID"
 #define kBITCrashMetaApplicationLog @"BITCrashMetaApplicationLog"
 #define kBITCrashMetaAttachment @"BITCrashMetaAttachment"
+#define kBITCrashMetaDescription @"BITCrashMetaDescription"
 
 // internal keys
 NSString *const KBITAttachmentDictIndex = @"index";
@@ -74,6 +75,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   
   NSMutableArray *_crashFiles;
   NSString       *_crashesDir;
+  NSString       *_lastCrashFilename;
   NSString       *_settingsFile;
   NSString       *_analyzerInProgressFile;
   NSFileManager  *_fileManager;
@@ -487,7 +489,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   }
 }
 
-- (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput {
+- (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput withCrashMetaDescription:(NSString *)metaDescription{
   switch (userInput) {
     case BITCrashManagerUserInputDontSend:
       if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillCancelSendingCrashReport:)]) {
@@ -498,6 +500,11 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       YES;
       
     case BITCrashManagerUserInputSend:
+      if (!metaDescription && [metaDescription length] > 0) {
+        NSError *error;
+        [metaDescription writeToFile:[NSString stringWithFormat:@"%@_description.meta", [_crashesDir stringByAppendingPathComponent: _lastCrashFilename]] atomically:YES encoding:NSUTF8StringEncoding error:&error];
+        BITHockeyLog(@"ERROR: Writing crash meta description failed. %@", error);
+      }
       [self sendCrashReports];
       YES;
       
@@ -591,6 +598,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
         } else {
           BITHockeyLog(@"ERROR: Writing crash meta data failed. %@", error);
         }
+        _lastCrashFilename = cacheFilename;
       }
     }
   }
@@ -626,7 +634,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 /**
  *	Check if there are any new crash reports that are not yet processed
  *
- *	@return	`YES` if ther eis at least one new crash report found, `NO` otherwise
+ *	@return	`YES` if there is at least one new crash report found, `NO` otherwise
  */
 - (BOOL)hasPendingCrashReport {
   if (_crashManagerStatus == BITCrashManagerStatusDisabled) return NO;
@@ -902,7 +910,8 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
         useremail = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserEmail]] ?: @"";
         userid = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserID]] ?: @"";
         applicationLog = [metaDict objectForKey:kBITCrashMetaApplicationLog] ?: @"";
-
+        description = [NSString stringWithContentsOfFile:[NSString stringWithFormat:@"%@_description.meta", [_crashesDir stringByAppendingPathComponent: _lastCrashFilename]] encoding:NSUTF8StringEncoding error:&error];
+        
         BITCrashAttachment *attachment = [self attachmentForCrashReport:filename];
         if (attachment) {
           NSDictionary *attachmentDict = @{KBITAttachmentDictIndex: @(i),
@@ -914,7 +923,11 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       }
       
       if ([applicationLog length] > 0) {
-        description = [NSString stringWithFormat:@"%@", applicationLog];
+        if ([description length] > 0) {
+          description = [NSString stringWithFormat:@"%@\n\nLog:\n%@", description, applicationLog];
+        } else {
+          description = [NSString stringWithFormat:@"Log:\n%@", applicationLog];
+        }
       }
       
       [crashes appendFormat:@"<crash><applicationname>%s</applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><username>%@</username><contact>%@</contact><installstring>%@</installstring><description><![CDATA[%@]]></description></crash>",
@@ -962,13 +975,13 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
   switch (buttonIndex) {
     case 0:
-      [self handleUserInput:BITCrashManagerUserInputDontSend];
+      [self handleUserInput:BITCrashManagerUserInputDontSend withCrashMetaDescription:nil];
       break;
     case 1:
-      [self handleUserInput:BITCrashManagerUserInputSend];
+      [self handleUserInput:BITCrashManagerUserInputSend withCrashMetaDescription:nil];
       break;
     case 2:
-      [self handleUserInput:BITCrashManagerUserInputAlwaysSend];
+      [self handleUserInput:BITCrashManagerUserInputAlwaysSend withCrashMetaDescription:nil];
       break;
   }
 }
