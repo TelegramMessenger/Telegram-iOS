@@ -268,6 +268,12 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
 - (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput withCrashMetaDescription:metaDescription;
 
 /**
+ Property that lets you set a custom block which handles showing a custom UI and asking the user
+ whether he wants to send the crash report. Needs to call the `handleUserInput` method.
+ */
+@property (nonatomic, copy,  setter = setAlertViewHandler:) void (^alertViewHandler) ();
+
+/**
  Provides the time between startup and crash in seconds
  
  Use this in together with `didCrashInLastSession` to detect if the app crashed very

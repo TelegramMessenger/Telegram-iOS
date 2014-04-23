@@ -116,6 +116,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
     _timeintervalCrashInLastSessionOccured = -1;
     
     _approvedCrashReports = [[NSMutableDictionary alloc] init];
+    _alertViewHandler = nil;
 
     _fileManager = [[NSFileManager alloc] init];
     _crashFiles = [[NSMutableArray alloc] init];
@@ -489,6 +490,10 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   }
 }
 
+- (void)setAlertViewHandler:(void (^)())alertViewHandler{
+  _alertViewHandler = alertViewHandler;
+}
+
 - (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput withCrashMetaDescription:(NSString *)metaDescription{
   switch (userInput) {
     case BITCrashManagerUserInputDontSend:
@@ -500,7 +505,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       YES;
       
     case BITCrashManagerUserInputSend:
-      if (!metaDescription && [metaDescription length] > 0) {
+      if (metaDescription && [metaDescription length] > 0) {
         NSError *error;
         [metaDescription writeToFile:[NSString stringWithFormat:@"%@_description.meta", [_crashesDir stringByAppendingPathComponent: _lastCrashFilename]] atomically:YES encoding:NSUTF8StringEncoding error:&error];
         BITHockeyLog(@"ERROR: Writing crash meta description failed. %@", error);
@@ -730,17 +735,21 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
         alertDescription = [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundDescription"), appName];
       }
       
-      UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:[NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundTitle"), appName]
-                                                          message:alertDescription
-                                                         delegate:self
-                                                cancelButtonTitle:BITHockeyLocalizedString(@"CrashDontSendReport")
-                                                otherButtonTitles:BITHockeyLocalizedString(@"CrashSendReport"), nil];
-      
-      if (self.shouldShowAlwaysButton) {
-        [alertView addButtonWithTitle:BITHockeyLocalizedString(@"CrashSendReportAlways")];
+      if (_alertViewHandler) {
+        _alertViewHandler();
+      } else {
+        UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:[NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundTitle"), appName]
+                                                            message:alertDescription
+                                                           delegate:self
+                                                  cancelButtonTitle:BITHockeyLocalizedString(@"CrashDontSendReport")
+                                                  otherButtonTitles:BITHockeyLocalizedString(@"CrashSendReport"), nil];
+        
+        if (self.shouldShowAlwaysButton) {
+          [alertView addButtonWithTitle:BITHockeyLocalizedString(@"CrashSendReportAlways")];
+        }
+        
+        [alertView show];
       }
-      
-      [alertView show];
     } else {
       [self sendCrashReports];
     }
