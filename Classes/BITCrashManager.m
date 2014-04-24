@@ -446,7 +446,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 }
 
 
-- (void)setAlertViewHandler:(void (^)())alertViewHandler{
+- (void)setAlertViewHandler:(customAlertViewHandler)alertViewHandler{
   _alertViewHandler = alertViewHandler;
 }
 
