@@ -274,12 +274,12 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
 - (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput withUserProvidedCrashDescription:(NSString*)userProvidedCrashDescription;
 
 /**
- Property that lets you set a custom block which handles showing a custom UI and asking the user
+ Lets you set a custom block which handles showing a custom UI and asking the user
  whether he wants to send the crash report. 
  
- @warning Needs to call the `handleUserInput` method!
+ @warning Block needs to call the `handleUserInput:withUserProvidedCrashDescription` method!
  */
-@property (nonatomic, copy,  setter = setAlertViewHandler:) customAlertViewHandler alertViewHandler;
+- (void) setAlertViewHandler:(CustomAlertViewHandler)alertViewHandler;
 
 /**
  Provides the time between startup and crash in seconds
