@@ -265,7 +265,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  @return BOOl if the input is a valid option
  @see BITCrashManagerUserInput
  */
-- (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput withCrashMetaDescription:metaDescription;
+- (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput crashMetaDescription:metaDescription;
 
 /**
  Property that lets you set a custom block which handles showing a custom UI and asking the user

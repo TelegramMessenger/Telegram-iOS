@@ -496,7 +496,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 }
 
 
-- (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput withCrashMetaDescription:(NSString *)metaDescription{
+- (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput crashMetaDescription:(NSString *)metaDescription{
   switch (userInput) {
     case BITCrashManagerUserInputDontSend:
       if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillCancelSendingCrashReport:)]) {
@@ -520,6 +520,11 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       [[NSUserDefaults standardUserDefaults] synchronize];
       if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillSendCrashReportsAlways:)]) {
         [self.delegate crashManagerWillSendCrashReportsAlways:self];
+      }
+      
+      if (metaDescription && [metaDescription length] > 0) {
+        NSError *error;
+        [metaDescription writeToFile:[NSString stringWithFormat:@"%@_description.meta", [_crashesDir stringByAppendingPathComponent: _lastCrashFilename]] atomically:YES encoding:NSUTF8StringEncoding error:&error];
       }
       
       [self sendCrashReports];
@@ -985,13 +990,13 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
   switch (buttonIndex) {
     case 0:
-      [self handleUserInput:BITCrashManagerUserInputDontSend withCrashMetaDescription:nil];
+      [self handleUserInput:BITCrashManagerUserInputDontSend crashMetaDescription:nil];
       break;
     case 1:
-      [self handleUserInput:BITCrashManagerUserInputSend withCrashMetaDescription:nil];
+      [self handleUserInput:BITCrashManagerUserInputSend crashMetaDescription:nil];
       break;
     case 2:
-      [self handleUserInput:BITCrashManagerUserInputAlwaysSend withCrashMetaDescription:nil];
+      [self handleUserInput:BITCrashManagerUserInputAlwaysSend crashMetaDescription:nil];
       break;
   }
 }
