@@ -227,6 +227,8 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
     [_fileManager removeItemAtPath:[_crashFiles objectAtIndex:i] error:&error];
     [_fileManager removeItemAtPath:[[_crashFiles objectAtIndex:i] stringByAppendingString:@".data"] error:&error];
     [_fileManager removeItemAtPath:[[_crashFiles objectAtIndex:i] stringByAppendingString:@".meta"] error:&error];
+    [_fileManager removeItemAtPath:[[_crashFiles objectAtIndex:i] stringByAppendingString:@".desc"] error:&error];
+
     
     NSString *cacheFilename = [[_crashFiles objectAtIndex:i] lastPathComponent];
     [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserName]];
@@ -665,7 +667,8 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
           ![file hasSuffix:@".analyzer"] &&
           ![file hasSuffix:@".plist"] &&
           ![file hasSuffix:@".data"] &&
-          ![file hasSuffix:@".meta"]) {
+          ![file hasSuffix:@".meta"] &&
+          ![file hasSuffix:@".desc"]) {
         [_crashFiles addObject:[_crashesDir stringByAppendingPathComponent: file]];
       }
     }
@@ -884,6 +887,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
         [_fileManager removeItemAtPath:filename error:&error];
         [_fileManager removeItemAtPath:[NSString stringWithFormat:@"%@.data", filename] error:&error];
         [_fileManager removeItemAtPath:[NSString stringWithFormat:@"%@.meta", filename] error:&error];
+        [_fileManager removeItemAtPath:[NSString stringWithFormat:@"%@.desc", filename] error:&error];
 
         [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserName]];
         [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserEmail]];
@@ -927,7 +931,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
         useremail = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserEmail]] ?: @"";
         userid = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserID]] ?: @"";
         applicationLog = [metaDict objectForKey:kBITCrashMetaApplicationLog] ?: @"";
-        description = [NSString stringWithContentsOfFile:[NSString stringWithFormat:@"%@_description.meta", [_crashesDir stringByAppendingPathComponent: cacheFilename]] encoding:NSUTF8StringEncoding error:&error];
+        description = [NSString stringWithContentsOfFile:[NSString stringWithFormat:@"%@.desc", [_crashesDir stringByAppendingPathComponent: cacheFilename]] encoding:NSUTF8StringEncoding error:&error];
         
         BITCrashAttachment *attachment = [self attachmentForCrashReport:filename];
         if (attachment) {
