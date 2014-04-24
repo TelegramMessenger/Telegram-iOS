@@ -504,7 +504,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       }
       
       [self cleanCrashReports];
-      YES;
+      return YES;
       
     case BITCrashManagerUserInputSend:
       if (metaDescription && [metaDescription length] > 0) {
@@ -512,7 +512,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
         [metaDescription writeToFile:[NSString stringWithFormat:@"%@_description.meta", [_crashesDir stringByAppendingPathComponent: _lastCrashFilename]] atomically:YES encoding:NSUTF8StringEncoding error:&error];
       }
       [self sendCrashReports];
-      YES;
+      return YES;
       
     case BITCrashManagerUserInputAlwaysSend:
       _crashManagerStatus = BITCrashManagerStatusAutoSend;
