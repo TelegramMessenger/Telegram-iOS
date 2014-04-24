@@ -266,7 +266,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  Provides an interface to handle user input from a custom alert
  
  @param userInput On this input depends, whether crash reports are sent, always sent or not sent and deleted.
- @param userProvidedCrashDescription The content of this string will be attached to the crash report as the description and allows to ask the user for e.g. additional comments or info
+ @param userProvidedCrashDescription The content of this optional string will be attached to the crash report as the description and allows to ask the user for e.g. additional comments or info
  
  @return Returns YES if the input is a valid option and successfully triggered further processing of the crash report
  @see BITCrashManagerUserInput
@@ -275,7 +275,9 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
 
 /**
  Lets you set a custom block which handles showing a custom UI and asking the user
- whether he wants to send the crash report. 
+ whether he wants to send the crash report.
+ 
+ @param alertViewHandler A block that is responsible for loading, presenting and and dismissing your custom user interface which prompts the user if he wants to send crash reports. The block is also responsible for triggering further processing of the crash reports.
  
  @warning Block needs to call the `handleUserInput:withUserProvidedCrashDescription` method!
  */
