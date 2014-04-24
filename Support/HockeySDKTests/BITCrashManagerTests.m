@@ -129,14 +129,14 @@
   id <BITCrashManagerDelegate> delegateMock = mockProtocol(@protocol(BITCrashManagerDelegate));
   _sut.delegate = delegateMock;
   
-  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputDontSend crashMetaDescription:nil], equalToBool(YES));
+  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputDontSend withUserProvidedCrashDescription:nil], equalToBool(YES));
   
   [verify(delegateMock) crashManagerWillCancelSendingCrashReport:_sut];
   
 }
 
 - (void)testHandleUserInputSend {
-  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputSend crashMetaDescription:nil], equalToBool(YES));
+  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputSend withUserProvidedCrashDescription:nil], equalToBool(YES));
 }
 
 - (void)testHandleUserInputAlwaysSend {
@@ -148,7 +148,7 @@
   [given([mockUserDefaults integerForKey:@"BITCrashManagerStatus"]) willReturn:nil];
   
   //Test if method runs through
-  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputAlwaysSend crashMetaDescription:nil], equalToBool(YES));
+  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputAlwaysSend withUserProvidedCrashDescription:nil], equalToBool(YES));
   
   //Test if correct CrashManagerStatus is now set
   [given([mockUserDefaults integerForKey:@"BITCrashManagerStauts"]) willReturnInt:BITCrashManagerStatusAutoSend];

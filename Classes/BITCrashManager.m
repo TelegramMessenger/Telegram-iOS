@@ -496,7 +496,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 }
 
 
-- (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput crashMetaDescription:(NSString *)metaDescription{
+- (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput withUserProvidedCrashDescription:(NSString *)metaDescription{
   switch (userInput) {
     case BITCrashManagerUserInputDontSend:
       if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillCancelSendingCrashReport:)]) {
@@ -990,13 +990,13 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
   switch (buttonIndex) {
     case 0:
-      [self handleUserInput:BITCrashManagerUserInputDontSend crashMetaDescription:nil];
+      [self handleUserInput:BITCrashManagerUserInputDontSend withUserProvidedCrashDescription:nil];
       break;
     case 1:
-      [self handleUserInput:BITCrashManagerUserInputSend crashMetaDescription:nil];
+      [self handleUserInput:BITCrashManagerUserInputSend withUserProvidedCrashDescription:nil];
       break;
     case 2:
-      [self handleUserInput:BITCrashManagerUserInputAlwaysSend crashMetaDescription:nil];
+      [self handleUserInput:BITCrashManagerUserInputAlwaysSend withUserProvidedCrashDescription:nil];
       break;
   }
 }
