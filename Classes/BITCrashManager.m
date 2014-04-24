@@ -252,6 +252,13 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   [data writeToFile:attachmentFilename atomically:YES];
 }
 
+- (void)persistUserProvidedCrashDescription:(NSString *)userProvidedCrashDescription {
+  if (userProvidedCrashDescription && [userProvidedCrashDescription length] > 0) {
+    NSError *error;
+    [userProvidedCrashDescription writeToFile:[NSString stringWithFormat:@"%@.desc", [_crashesDir stringByAppendingPathComponent: _lastCrashFilename]] atomically:YES encoding:NSUTF8StringEncoding error:&error];
+  }
+}
+
 /**
  *  Read the attachment data from the stored file
  *
@@ -507,10 +514,8 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       return YES;
       
     case BITCrashManagerUserInputSend:
-      if (userProvidedCrashDescription && [userProvidedCrashDescription length] > 0) {
-        NSError *error;
-        [userProvidedCrashDescription writeToFile:[NSString stringWithFormat:@"%@_description.meta", [_crashesDir stringByAppendingPathComponent: _lastCrashFilename]] atomically:YES encoding:NSUTF8StringEncoding error:&error];
-      }
+      [self persistUserProvidedCrashDescription:userProvidedCrashDescription];
+      
       [self sendCrashReports];
       return YES;
       
@@ -522,10 +527,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
         [self.delegate crashManagerWillSendCrashReportsAlways:self];
       }
       
-      if (userProvidedCrashDescription && [userProvidedCrashDescription length] > 0) {
-        NSError *error;
-        [userProvidedCrashDescription writeToFile:[NSString stringWithFormat:@"%@_description.meta", [_crashesDir stringByAppendingPathComponent: _lastCrashFilename]] atomically:YES encoding:NSUTF8StringEncoding error:&error];
-      }
+      [self persistUserProvidedCrashDescription:userProvidedCrashDescription];
       
       [self sendCrashReports];
       return YES;
