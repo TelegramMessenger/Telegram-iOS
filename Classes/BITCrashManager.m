@@ -496,7 +496,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 }
 
 
-- (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput withUserProvidedCrashDescription:(NSString *)metaDescription{
+- (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput withUserProvidedCrashDescription:(NSString *)userProvidedCrashDescription{
   switch (userInput) {
     case BITCrashManagerUserInputDontSend:
       if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillCancelSendingCrashReport:)]) {
@@ -507,9 +507,9 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       return YES;
       
     case BITCrashManagerUserInputSend:
-      if (metaDescription && [metaDescription length] > 0) {
+      if (userProvidedCrashDescription && [userProvidedCrashDescription length] > 0) {
         NSError *error;
-        [metaDescription writeToFile:[NSString stringWithFormat:@"%@_description.meta", [_crashesDir stringByAppendingPathComponent: _lastCrashFilename]] atomically:YES encoding:NSUTF8StringEncoding error:&error];
+        [userProvidedCrashDescription writeToFile:[NSString stringWithFormat:@"%@_description.meta", [_crashesDir stringByAppendingPathComponent: _lastCrashFilename]] atomically:YES encoding:NSUTF8StringEncoding error:&error];
       }
       [self sendCrashReports];
       return YES;
@@ -522,9 +522,9 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
         [self.delegate crashManagerWillSendCrashReportsAlways:self];
       }
       
-      if (metaDescription && [metaDescription length] > 0) {
+      if (userProvidedCrashDescription && [userProvidedCrashDescription length] > 0) {
         NSError *error;
-        [metaDescription writeToFile:[NSString stringWithFormat:@"%@_description.meta", [_crashesDir stringByAppendingPathComponent: _lastCrashFilename]] atomically:YES encoding:NSUTF8StringEncoding error:&error];
+        [userProvidedCrashDescription writeToFile:[NSString stringWithFormat:@"%@_description.meta", [_crashesDir stringByAppendingPathComponent: _lastCrashFilename]] atomically:YES encoding:NSUTF8StringEncoding error:&error];
       }
       
       [self sendCrashReports];
