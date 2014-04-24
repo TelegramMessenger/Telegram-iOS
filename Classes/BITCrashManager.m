@@ -55,7 +55,6 @@
 #define kBITCrashMetaUserID @"BITCrashMetaUserID"
 #define kBITCrashMetaApplicationLog @"BITCrashMetaApplicationLog"
 #define kBITCrashMetaAttachment @"BITCrashMetaAttachment"
-#define kBITCrashMetaDescription @"BITCrashMetaDescription"
 
 // internal keys
 NSString *const KBITAttachmentDictIndex = @"index";
@@ -67,6 +66,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 @interface BITCrashManager ()
 
 @property (nonatomic, strong) NSFileManager *fileManager;
+@property (nonatomic, copy, setter = setAlertViewHandler:) CustomAlertViewHandler alertViewHandler;
 
 @end
 
@@ -79,7 +79,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   NSString       *_settingsFile;
   NSString       *_analyzerInProgressFile;
   NSFileManager  *_fileManager;
-  
+    
   PLCrashReporterCallbacks *_crashCallBacks;
   
   BOOL _crashIdenticalCurrentVersion;
@@ -446,7 +446,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 }
 
 
-- (void)setAlertViewHandler:(customAlertViewHandler)alertViewHandler{
+- (void)setAlertViewHandler:(CustomAlertViewHandler)alertViewHandler{
   _alertViewHandler = alertViewHandler;
 }
 
