@@ -61,8 +61,13 @@
 - (BOOL)hasPendingCrashReport;
 - (BOOL)hasNonApprovedCrashReports;
 
+- (void)persistUserProvidedCrashDescription:(NSString *)userProvidedCrashDescription;
+
 - (void)invokeDelayedProcessing;
 - (void)sendCrashReports;
+
+- (NSString *)getCrashesDir;
+- (void)setLastCrashFilename:(NSString *)lastCrashFilename;
 
 @end
 

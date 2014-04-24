@@ -71,6 +71,13 @@
   [self startManager];
 }
 
+- (void)testPersistUserProvidedCrashDescription {
+  [_sut setLastCrashFilename:@"temp"];
+  [_sut persistUserProvidedCrashDescription:@"Test string"];
+  NSError *error;
+  NSString *description = [NSString stringWithContentsOfFile:[NSString stringWithFormat:@"%@.desc", [[_sut getCrashesDir] stringByAppendingPathComponent: @"temp"]] encoding:NSUTF8StringEncoding error:&error];
+  assertThat(description, equalTo(@"Test string"));
+}
 
 #pragma mark - Setup Tests
 

@@ -451,6 +451,13 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   return useremail;
 }
 
+- (NSString *)getCrashesDir {
+  return _crashesDir;
+}
+
+- (void)setLastCrashFilename:(NSString *)lastCrashFilename {
+  _lastCrashFilename = lastCrashFilename;
+}
 
 #pragma mark - Public
 
