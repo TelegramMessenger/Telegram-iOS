@@ -445,6 +445,11 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   _crashCallBacks = callbacks;
 }
 
+
+- (void)setAlertViewHandler:(void (^)())alertViewHandler{
+  _alertViewHandler = alertViewHandler;
+}
+
 /**
  * Check if the debugger is attached
  *
@@ -490,9 +495,6 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   }
 }
 
-- (void)setAlertViewHandler:(void (^)())alertViewHandler{
-  _alertViewHandler = alertViewHandler;
-}
 
 - (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput withCrashMetaDescription:(NSString *)metaDescription{
   switch (userInput) {
@@ -508,7 +510,6 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
       if (metaDescription && [metaDescription length] > 0) {
         NSError *error;
         [metaDescription writeToFile:[NSString stringWithFormat:@"%@_description.meta", [_crashesDir stringByAppendingPathComponent: _lastCrashFilename]] atomically:YES encoding:NSUTF8StringEncoding error:&error];
-        BITHockeyLog(@"ERROR: Writing crash meta description failed. %@", error);
       }
       [self sendCrashReports];
       YES;
@@ -555,6 +556,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
     NSData *crashData = [[NSData alloc] initWithData:[self.plCrashReporter loadPendingCrashReportDataAndReturnError: &error]];
     
     NSString *cacheFilename = [NSString stringWithFormat: @"%.0f", [NSDate timeIntervalSinceReferenceDate]];
+    _lastCrashFilename = cacheFilename;
     
     if (crashData == nil) {
       BITHockeyLog(@"ERROR: Could not load crash report: %@", error);
@@ -603,7 +605,6 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
         } else {
           BITHockeyLog(@"ERROR: Writing crash meta data failed. %@", error);
         }
-        _lastCrashFilename = cacheFilename;
       }
     }
   }
@@ -919,7 +920,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
         useremail = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserEmail]] ?: @"";
         userid = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserID]] ?: @"";
         applicationLog = [metaDict objectForKey:kBITCrashMetaApplicationLog] ?: @"";
-        description = [NSString stringWithContentsOfFile:[NSString stringWithFormat:@"%@_description.meta", [_crashesDir stringByAppendingPathComponent: _lastCrashFilename]] encoding:NSUTF8StringEncoding error:&error];
+        description = [NSString stringWithContentsOfFile:[NSString stringWithFormat:@"%@_description.meta", [_crashesDir stringByAppendingPathComponent: cacheFilename]] encoding:NSUTF8StringEncoding error:&error];
         
         BITCrashAttachment *attachment = [self attachmentForCrashReport:filename];
         if (attachment) {
