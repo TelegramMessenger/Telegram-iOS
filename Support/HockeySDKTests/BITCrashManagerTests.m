@@ -23,6 +23,7 @@
 
 #import "BITTestHelper.h"
 
+#define kBITCrashMetaAttachment @"BITCrashMetaAttachment"
 
 @interface BITCrashManagerTests : SenTestCase
 
@@ -91,12 +92,20 @@
 }
 
 - (void)testPersistAttachment {
-  BITCrashAttachment *attachment = mock([BITCrashAttachment class]);
-  NSString *filename = @"testAttachment";
+  NSString *filename = @"TestAttachment";
+  NSData *data = [[NSData alloc] initWithBase64Encoding:@"TestData"];
+  NSString* type = @"text/plain";
   
-  [_sut persistAttachment:attachment withFilename:filename];
+  BITCrashAttachment *originalAttachment = [[BITCrashAttachment alloc] initWithFilename:filename attachmentData:data contentType:type];
+  NSString *attachmentFilename = [_sut.getCrashesDir stringByAppendingPathComponent:@"testAttachment"];
   
-  [given([NSData dataWithContentsOfFile:[filename stringByAppendingString:@".data"]]) willReturn:[NSMutableDictionary class]];
+  [_sut persistAttachment:originalAttachment withFilename:attachmentFilename];
+  
+  BITCrashAttachment *decodedAttachment = [_sut attachmentForCrashReport:attachmentFilename];
+  
+  assertThat(decodedAttachment.filename, equalTo(filename));
+  assertThat(decodedAttachment.attachmentData, equalTo(data));
+  assertThat(decodedAttachment.contentType, equalTo(type));
 }
 
 #pragma mark - Helper

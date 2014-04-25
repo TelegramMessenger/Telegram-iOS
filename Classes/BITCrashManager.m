@@ -65,7 +65,6 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 
 @interface BITCrashManager ()
 
-@property (nonatomic, strong) NSFileManager *fileManager;
 @property (nonatomic, copy, setter = setAlertViewHandler:) CustomAlertViewHandler alertViewHandler;
 
 @end

@@ -36,6 +36,8 @@
 
 @property (nonatomic) NSUncaughtExceptionHandler *exceptionHandler;
 
+@property (nonatomic, strong) NSFileManager *fileManager;
+
 @property (nonatomic, strong) BITPLCrashReporter *plCrashReporter;
 
 @property (nonatomic) NSString *lastCrashFilename;
@@ -65,6 +67,8 @@
 
 - (void)persistUserProvidedCrashDescription:(NSString *)userProvidedCrashDescription;
 - (void)persistAttachment:(BITCrashAttachment *)attachment withFilename:(NSString *)filename;
+
+- (BITCrashAttachment *)attachmentForCrashReport:(NSString *)filename;
 
 - (void)invokeDelayedProcessing;
 - (void)sendCrashReports;
