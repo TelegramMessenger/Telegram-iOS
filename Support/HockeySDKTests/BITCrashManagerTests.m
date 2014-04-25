@@ -71,14 +71,6 @@
   [self startManager];
 }
 
-- (void)testPersistUserProvidedCrashDescription {
-  [_sut setLastCrashFilename:@"temp"];
-  [_sut persistUserProvidedCrashDescription:@"Test string"];
-  NSError *error;
-  NSString *description = [NSString stringWithContentsOfFile:[NSString stringWithFormat:@"%@.desc", [[_sut getCrashesDir] stringByAppendingPathComponent: @"temp"]] encoding:NSUTF8StringEncoding error:&error];
-  assertThat(description, equalTo(@"Test string"));
-}
-
 #pragma mark - Setup Tests
 
 - (void)testThatItInstantiates {
@@ -88,6 +80,24 @@
 
 #pragma mark - Persistence tests
 
+- (void)testPersistUserProvidedCrashDescription {
+  NSString *tempCrashName = @"tempCrash";
+  [_sut setLastCrashFilename:tempCrashName];
+  [_sut persistUserProvidedCrashDescription:@"Test string"];
+  
+  NSError *error;
+  NSString *description = [NSString stringWithContentsOfFile:[NSString stringWithFormat:@"%@.desc", [[_sut getCrashesDir] stringByAppendingPathComponent: tempCrashName]] encoding:NSUTF8StringEncoding error:&error];
+  assertThat(description, equalTo(@"Test string"));
+}
+
+- (void)testPersistAttachment {
+  BITCrashAttachment *attachment = mock([BITCrashAttachment class]);
+  NSString *filename = @"testAttachment";
+  
+  [_sut persistAttachment:attachment withFilename:filename];
+  
+  [given([NSData dataWithContentsOfFile:[filename stringByAppendingString:@".data"]]) willReturn:[NSMutableDictionary class]];
+}
 
 #pragma mark - Helper
 
@@ -163,6 +173,10 @@
   //Verify that delegate method has been called
   [verify(delegateMock) crashManagerWillSendCrashReportsAlways:_sut];
   
+}
+
+- (void)testHandleUserInputWithInvalidInput {
+  assertThatBool([_sut handleUserInput:3 withUserProvidedCrashDescription:nil], equalToBool(NO));
 }
 
 #pragma mark - Debugger

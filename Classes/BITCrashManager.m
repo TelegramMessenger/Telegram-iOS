@@ -455,10 +455,6 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   return _crashesDir;
 }
 
-- (void)setLastCrashFilename:(NSString *)lastCrashFilename {
-  _lastCrashFilename = lastCrashFilename;
-}
-
 #pragma mark - Public
 
 

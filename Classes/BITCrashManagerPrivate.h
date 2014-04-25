@@ -38,6 +38,8 @@
 
 @property (nonatomic, strong) BITPLCrashReporter *plCrashReporter;
 
+@property (nonatomic) NSString *lastCrashFilename;
+
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
 
 // Only set via BITAuthenticator
@@ -62,6 +64,7 @@
 - (BOOL)hasNonApprovedCrashReports;
 
 - (void)persistUserProvidedCrashDescription:(NSString *)userProvidedCrashDescription;
+- (void)persistAttachment:(BITCrashAttachment *)attachment withFilename:(NSString *)filename;
 
 - (void)invokeDelayedProcessing;
 - (void)sendCrashReports;
