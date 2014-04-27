@@ -85,16 +85,14 @@
   self.pinchRecognizer = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(pinched:)];
   self.tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapped:)];
   
-  [self.tapRecognizer requireGestureRecognizerToFail:self.panRecognizer];
-  
   [self.imageView addGestureRecognizer:self.pinchRecognizer];
   [self.imageView addGestureRecognizer:self.panRecognizer];
   [self.view addGestureRecognizer:self.tapRecognizer];
   
   self.imageView.userInteractionEnabled = YES;
   
-  self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc ] initWithTitle:@"Discard" style:UIBarButtonItemStyleBordered target:self action:@selector(discard:)];
-  self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc ] initWithTitle:@"Save" style:UIBarButtonItemStyleBordered target:self action:@selector(save:)];
+  self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc ] initWithImage:bit_imageNamed(@"Cancel.png", BITHOCKEYSDK_BUNDLE) landscapeImagePhone:bit_imageNamed(@"Cancel.png", BITHOCKEYSDK_BUNDLE) style:UIBarButtonItemStyleBordered target:self action:@selector(discard:)];
+  self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc ] initWithImage:bit_imageNamed(@"Ok.png", BITHOCKEYSDK_BUNDLE) landscapeImagePhone:bit_imageNamed(@"Ok.png", BITHOCKEYSDK_BUNDLE) style:UIBarButtonItemStyleBordered target:self action:@selector(save:)];
 
   [self fitImageViewFrame];
 }
@@ -105,8 +103,6 @@
 
 
 - (void)fitImageViewFrame {
-  
-  
   CGFloat heightScaleFactor = self.view.frame.size.height / self.image.size.height;
   CGFloat widthScaleFactor = self.view.frame.size.width / self.image.size.width;
   
@@ -179,7 +175,7 @@
       
       self.panStart = [gestureRecognizer locationInView:self.imageView];
       
-      [self.editingControls setSelectedSegmentIndex:UISegmentedControlNoSegment];
+     // [self.editingControls setSelectedSegmentIndex:UISegmentedControlNoSegment];
       self.isDrawing = YES;
       
     } else if (gestureRecognizer.state == UIGestureRecognizerStateChanged){
