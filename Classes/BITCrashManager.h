@@ -39,6 +39,11 @@
 #import <CrashReporter/CrashReporter.h>
 #endif
 
+/**
+ * Custom block that handles the alert that prompts the user whether he wants to send crash reports
+ */
+typedef void(^CustomAlertViewHandler)();
+
 
 /**
  * Crash Manager status
@@ -56,6 +61,26 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
    *	Each crash report is send automatically
    */
   BITCrashManagerStatusAutoSend = 2
+};
+
+
+/**
+ * Crash Manager alert user input
+ */
+typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
+  /**
+   *  User chose not to send the crash report
+   */
+  BITCrashManagerUserInputDontSend = 0,
+  /**
+   *  User wants the crash report to be sent
+   */
+  BITCrashManagerUserInputSend = 1,
+  /**
+   *  User chose to always send crash reports
+   */
+  BITCrashManagerUserInputAlwaysSend = 2
+  
 };
 
 
@@ -202,7 +227,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  *
  * @param callbacks A pointer to an initialized PLCrashReporterCallback structure, see https://www.plcrashreporter.org/documentation/api/v1.2-rc2/struct_p_l_crash_reporter_callbacks.html
  */
-- (void)setCrashCallbacks: (PLCrashReporterCallbacks *) callbacks;
+- (void)setCrashCallbacks:(PLCrashReporterCallbacks *)callbacks;
 
 
 /**
@@ -237,6 +262,26 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  */
 @property (nonatomic, readonly) BOOL didCrashInLastSession;
 
+/**
+ Provides an interface to handle user input from a custom alert
+ 
+ @param userInput On this input depends, whether crash reports are sent, always sent or not sent and deleted.
+ @param userProvidedCrashDescription The content of this optional string will be attached to the crash report as the description and allows to ask the user for e.g. additional comments or info
+ 
+ @return Returns YES if the input is a valid option and successfully triggered further processing of the crash report
+ @see BITCrashManagerUserInput
+ */
+- (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput withUserProvidedCrashDescription:(NSString*)userProvidedCrashDescription;
+
+/**
+ Lets you set a custom block which handles showing a custom UI and asking the user
+ whether he wants to send the crash report.
+ 
+ @param alertViewHandler A block that is responsible for loading, presenting and and dismissing your custom user interface which prompts the user if he wants to send crash reports. The block is also responsible for triggering further processing of the crash reports.
+ 
+ @warning Block needs to call the `handleUserInput:withUserProvidedCrashDescription` method!
+ */
+- (void) setAlertViewHandler:(CustomAlertViewHandler)alertViewHandler;
 
 /**
  Provides the time between startup and crash in seconds
