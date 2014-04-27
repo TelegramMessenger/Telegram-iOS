@@ -253,7 +253,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
   [_fileManager removeItemAtPath:filename error:&error];
   [_fileManager removeItemAtPath:[filename stringByAppendingString:@".data"] error:&error];
   [_fileManager removeItemAtPath:[filename stringByAppendingString:@".meta"] error:&error];
-  [_fileManager removeItemAtPath:[filename stringByAppendingString:@".desc"]error:&error];
+  [_fileManager removeItemAtPath:[filename stringByAppendingString:@".desc"] error:&error];
   
   NSString *cacheFilename = [filename lastPathComponent];
   [self removeKeyFromKeychain:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserName]];
