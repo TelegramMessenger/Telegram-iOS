@@ -108,19 +108,19 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   
   // make sure this is called after startManager so all modules are fully setup
   if (!_isSetup) {
+    [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(authenticateInstallation) object:nil];
     [self performSelector:@selector(authenticateInstallation) withObject:nil afterDelay:0.1];
+  } else {
+    switch ([[UIApplication sharedApplication] applicationState]) {
+      case UIApplicationStateActive:
+        [self authenticate];
+        break;
+      case UIApplicationStateBackground:
+      case UIApplicationStateInactive:
+        // do nothing, wait for active state
+        break;
+    }
   }
-  
-  switch ([[UIApplication sharedApplication] applicationState]) {
-    case UIApplicationStateActive:
-      [self authenticate];
-      break;
-    case UIApplicationStateBackground:
-    case UIApplicationStateInactive:
-      // do nothing, wait for active state
-      break;
-  }
-  
   [self registerObservers];
 }
 
@@ -156,6 +156,10 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 }
 
 - (void)alertOnFailureStoringTokenInKeychain {
+  if ([[UIApplication sharedApplication] applicationState] != UIApplicationStateActive) {
+    return;
+  }
+
   UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil
                                                       message:BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerStorageError")
                                                      delegate:self
@@ -607,7 +611,6 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     case BITAuthenticatorIdentificationTypeHockeyAppEmail:
     case BITAuthenticatorIdentificationTypeAnonymous:
     case BITAuthenticatorIdentificationTypeHockeyAppUser:
-      NSAssert(NO, @"Should only be called for Device and WebAuth identificationType");
       return NO;
   }
   

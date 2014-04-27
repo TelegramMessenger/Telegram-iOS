@@ -155,7 +155,7 @@
   if ([self.userDefaults objectForKey:kBITStoreUpdateLastUUID]) {
     lastSavedUUID = [self.userDefaults objectForKey:kBITStoreUpdateLastUUID];
 
-    if (lastSavedUUID && ![lastSavedUUID isEqualToString:_currentUUID]) {
+    if (lastSavedUUID && [lastSavedUUID length] > 0 && ![lastSavedUUID isEqualToString:_currentUUID]) {
       // the UUIDs don't match, store the new one
       [self.userDefaults setObject:_currentUUID forKey:kBITStoreUpdateLastUUID];
       
