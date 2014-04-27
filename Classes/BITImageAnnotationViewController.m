@@ -161,7 +161,13 @@
 #pragma mark - Gesture Handling
 
 - (void)panned:(UIPanGestureRecognizer *)gestureRecognizer {
-  if ([self.editingControls selectedSegmentIndex] != UISegmentedControlNoSegment || self.isDrawing ){
+  BITImageAnnotation *annotationAtLocation = (BITImageAnnotation *)[self.view hitTest:[gestureRecognizer locationInView:self.view] withEvent:nil];
+  
+  if (![annotationAtLocation isKindOfClass:[BITImageAnnotation class]]){
+    annotationAtLocation = nil;
+  }
+  
+  if (([self.editingControls selectedSegmentIndex] != UISegmentedControlNoSegment || self.isDrawing) && !annotationAtLocation ){
     if (gestureRecognizer.state == UIGestureRecognizerStateBegan){
       self.currentAnnotation = [self annotationForCurrentMode];
       [self.objects addObject:self.currentAnnotation];
@@ -192,11 +198,14 @@
   } else {
     if (gestureRecognizer.state == UIGestureRecognizerStateBegan){
       // find and possibly move an existing annotation.
-      BITImageAnnotation *selectedAnnotation = (BITImageAnnotation *)[self.view hitTest:[gestureRecognizer locationInView:self.view] withEvent:nil];
+
       
-      if ([self.objects indexOfObject:selectedAnnotation] != NSNotFound){
-        self.currentAnnotation = selectedAnnotation;
+      if ([self.objects indexOfObject:annotationAtLocation] != NSNotFound){
+        self.currentAnnotation = annotationAtLocation;
+        [annotationAtLocation setSelected:YES];
       }
+      
+      
     } else if (gestureRecognizer.state == UIGestureRecognizerStateChanged && self.currentAnnotation){
       CGPoint delta = [gestureRecognizer translationInView:self.view];
       
@@ -213,6 +222,8 @@
       
     } else {
       self.currentAnnotation = nil;
+      [annotationAtLocation setSelected:NO];
+
     }
   }
 }
