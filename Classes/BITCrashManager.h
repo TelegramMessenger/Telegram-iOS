@@ -34,6 +34,11 @@
 
 @class BITCrashDetails;
 
+/**
+ * Custom block that handles the alert that prompts the user whether he wants to send crash reports
+ */
+typedef void(^CustomAlertViewHandler)();
+
 
 /**
  * Crash Manager status
@@ -51,6 +56,54 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
    *	Each crash report is send automatically
    */
   BITCrashManagerStatusAutoSend = 2
+};
+
+
+/**
+ * Prototype of a callback function used to execute additional user code. Called upon completion of crash
+ * handling, after the crash report has been written to disk.
+ *
+ * @param context The API client's supplied context value.
+ *
+ * @see `BITCrashManagerCallbacks`
+ * @see `[BITCrashManager setCrashCallbacks:]`
+ */
+typedef void (*BITCrashManagerPostCrashSignalCallback)(void *context);
+
+/**
+ * This structure contains callbacks supported by `BITCrashManager` to allow the host application to perform
+ * additional tasks prior to program termination after a crash has occured.
+ *
+ * @see `BITCrashManagerPostCrashSignalCallback`
+ * @see `[BITCrashManager setCrashCallbacks:]`
+ */
+typedef struct BITCrashManagerCallbacks {
+  /** An arbitrary user-supplied context value. This value may be NULL. */
+  void *context;
+  
+  /**
+   * The callback used to report caught signal information.
+   */
+  BITCrashManagerPostCrashSignalCallback handleSignal;
+} BITCrashManagerCallbacks;
+
+/**
+ * Crash Manager alert user input
+ */
+typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
+  /**
+   *  User chose not to send the crash report
+   */
+  BITCrashManagerUserInputDontSend = 0,
+  /**
+   *  User wants the crash report to be sent
+   */
+  BITCrashManagerUserInputSend = 1,
+  /**
+   *  User chose to always send crash reports
+   */
+  BITCrashManagerUserInputAlwaysSend = 2
+  
 };
 
 
@@ -229,15 +282,18 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  *
  * _Async-Safe Functions_
  *
- * A subset of functions are defined to be async-safe by the OS, and are safely callable from within a signal handler. If you do implement a custom post-crash handler, it must be async-safe. A table of POSIX-defined async-safe functions and additional information is available from the CERT programming guide - SIG30-C, see https://www.securecoding.cert.org/confluence/display/seccode/SIG30-C.+Call+only+asynchronous-safe+functions+within+signal+handlers
+ * A subset of functions are defined to be async-safe by the OS, and are safely callable from within a signal handler. If you do implement a custom post-crash handler, it must be async-safe. A table of POSIX-defined async-safe functions and additional information is available from the [CERT programming guide - SIG30-C](https://www.securecoding.cert.org/confluence/display/seccode/SIG30-C.+Call+only+asynchronous-safe+functions+within+signal+handlers).
  *
  * Most notably, the Objective-C runtime itself is not async-safe, and Objective-C may not be used within a signal handler.
  *
  * Documentation taken from PLCrashReporter: https://www.plcrashreporter.org/documentation/api/v1.2-rc2/async_safety.html
  *
+ * @see `BITCrashManagerPostCrashSignalCallback`
+ * @see `BITCrashManagerCallbacks`
+ *
  * @param callbacks A pointer to an initialized PLCrashReporterCallback structure, see https://www.plcrashreporter.org/documentation/api/v1.2-rc2/struct_p_l_crash_reporter_callbacks.html
  */
-- (void)setCrashCallbacks: (PLCrashReporterCallbacks *) callbacks;
+- (void)setCrashCallbacks: (BITCrashManagerCallbacks *) callbacks;
 
 
 /**
@@ -272,6 +328,26 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
  */
 @property (nonatomic, readonly) BOOL didCrashInLastSession;
 
+/**
+ Provides an interface to handle user input from a custom alert
+ 
+ @param userInput On this input depends, whether crash reports are sent, always sent or not sent and deleted.
+ @param userProvidedCrashDescription The content of this optional string will be attached to the crash report as the description and allows to ask the user for e.g. additional comments or info
+ 
+ @return Returns YES if the input is a valid option and successfully triggered further processing of the crash report
+ @see BITCrashManagerUserInput
+ */
+- (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput withUserProvidedCrashDescription:(NSString*)userProvidedCrashDescription;
+
+/**
+ Lets you set a custom block which handles showing a custom UI and asking the user
+ whether he wants to send the crash report.
+ 
+ @param alertViewHandler A block that is responsible for loading, presenting and and dismissing your custom user interface which prompts the user if he wants to send crash reports. The block is also responsible for triggering further processing of the crash reports.
+ 
+ @warning Block needs to call the `handleUserInput:withUserProvidedCrashDescription` method!
+ */
+- (void) setAlertViewHandler:(CustomAlertViewHandler)alertViewHandler;
 
 /**
  Indicates if the app was killed while being in foreground from the iOS
