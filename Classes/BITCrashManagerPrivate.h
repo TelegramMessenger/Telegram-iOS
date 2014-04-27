@@ -33,8 +33,15 @@
 
 #import <CrashReporter/CrashReporter.h>
 
+@class BITHockeyAppClient;
+
 @interface BITCrashManager () {
 }
+
+/**
+ * must be set
+ */
+@property (nonatomic, strong) BITHockeyAppClient *hockeyAppClient;
 
 @property (nonatomic) NSUncaughtExceptionHandler *exceptionHandler;
 
