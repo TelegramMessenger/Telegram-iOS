@@ -32,6 +32,8 @@
 
 #import "BITHockeyBaseManager.h"
 
+@class BITCrashDetails;
+
 /**
  * Custom block that handles the alert that prompts the user whether he wants to send crash reports
  */
@@ -366,6 +368,12 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  @see didReceiveMemoryWarningInLastSession
  */
 @property (nonatomic, readonly) BOOL wasKilledInLastSession;
+
+
+/**
+ * Provides details about the crash that occured in the last app session
+ */
+@property (nonatomic, readonly) BITCrashDetails *lastSessionCrashDetails;
 
 
 /**
