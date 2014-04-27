@@ -85,7 +85,7 @@
   self.pinchRecognizer = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(pinched:)];
   self.tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapped:)];
   
-  [self.panRecognizer requireGestureRecognizerToFail:self.tapRecognizer];
+  [self.tapRecognizer requireGestureRecognizerToFail:self.panRecognizer];
   
   [self.imageView addGestureRecognizer:self.pinchRecognizer];
   [self.imageView addGestureRecognizer:self.panRecognizer];
@@ -97,10 +97,12 @@
   self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc ] initWithTitle:@"Save" style:UIBarButtonItemStyleBordered target:self action:@selector(save:)];
 
   [self fitImageViewFrame];
-  
-  
-	// Do any additional setup after loading the view.
 }
+
+- (BOOL)prefersStatusBarHidden {
+  return self.navigationController.navigationBarHidden;
+}
+
 
 - (void)fitImageViewFrame {
   
@@ -278,6 +280,7 @@
     } completion:^(BOOL finished) {
       [self fitImageViewFrame];
       [self.navigationController setNavigationBarHidden:NO animated:NO];
+      [[UIApplication sharedApplication] setStatusBarHidden:NO];
 
 
     }];
@@ -287,6 +290,8 @@
 
     } completion:^(BOOL finished) {
       [self.navigationController setNavigationBarHidden:YES animated:NO];
+      [[UIApplication sharedApplication] setStatusBarHidden:YES];
+
 
       [self fitImageViewFrame];
       
@@ -296,6 +301,7 @@
 }
 
 #pragma mark - Helpers
+
 -(UIView *)firstAnnotationThatIsNotBlur {
   for (BITImageAnnotation *annotation in self.imageView.subviews){
     if (![annotation isKindOfClass:[BITBlurImageAnnotation class]]){
