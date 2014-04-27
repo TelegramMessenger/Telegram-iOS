@@ -44,10 +44,10 @@
 }
 
 - (void)buildShape {
-  CGFloat topHeight = MAX(self.frame.size.width / 3.0f,20);
+  CGFloat topHeight = MAX(self.frame.size.width / 3.0f,10);
 
   
-  CGFloat lineWidth = MAX(self.frame.size.width / 10.0f,10);
+  CGFloat lineWidth = MAX(self.frame.size.width / 10.0f,3);
   CGFloat startX, startY, endX, endY;
   if ( self.movedDelta.width < 0){
     startX = CGRectGetMinX(self.bounds);
@@ -71,6 +71,13 @@
   
   self.shapeLayer.path = path.CGPath;
   self.strokeLayer.path = path.CGPath;
+  [CATransaction begin];
+  [CATransaction setAnimationDuration:0];
+  self.strokeLayer.lineWidth = lineWidth/1.5f;
+  self.shapeLayer.lineWidth = lineWidth / 3.0f;
+
+  [CATransaction commit];
+
 }
 
 -(void)layoutSubviews{

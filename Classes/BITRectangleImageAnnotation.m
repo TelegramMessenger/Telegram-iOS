@@ -48,6 +48,15 @@
   
   self.strokeLayer.frame = self.bounds;
   self.strokeLayer.path = [UIBezierPath bezierPathWithRoundedRect:self.bounds cornerRadius:10].CGPath;
+  
+  CGFloat lineWidth = MAX(self.frame.size.width / 10.0f,10);
+  
+  [CATransaction begin];
+  [CATransaction setAnimationDuration:0];
+  self.strokeLayer.lineWidth = lineWidth/1.5f;
+  self.shapeLayer.lineWidth = lineWidth / 3.0f;
+  
+  [CATransaction commit];
 }
 
 -(BOOL)resizable {
