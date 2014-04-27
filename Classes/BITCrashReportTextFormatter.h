@@ -49,5 +49,6 @@
 
 + (NSString *)stringValueForCrashReport:(PLCrashReport *)report crashReporterKey:(NSString *)crashReporterKey;
 + (NSArray *)arrayOfAppUUIDsForCrashReport:(PLCrashReport *)report;
++ (NSString *)bit_archNameFromCPUType:(uint64_t)cpuType subType:(uint64_t)subType;
 
 @end

@@ -32,13 +32,6 @@
 
 #import "BITHockeyBaseManager.h"
 
-// We need this check depending on integrating as a subproject or using the binary distribution
-#if __has_include("CrashReporter.h")
-#import "CrashReporter.h"
-#else
-#import <CrashReporter/CrashReporter.h>
-#endif
-
 /**
  * Custom block that handles the alert that prompts the user whether he wants to send crash reports
  */
@@ -63,6 +56,34 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerStatus) {
   BITCrashManagerStatusAutoSend = 2
 };
 
+
+/**
+ * Prototype of a callback function used to execute additional user code. Called upon completion of crash
+ * handling, after the crash report has been written to disk.
+ *
+ * @param context The API client's supplied context value.
+ *
+ * @see `BITCrashManagerCallbacks`
+ * @see `[BITCrashManager setCrashCallbacks:]`
+ */
+typedef void (*BITCrashManagerPostCrashSignalCallback)(void *context);
+
+/**
+ * This structure contains callbacks supported by `BITCrashManager` to allow the host application to perform
+ * additional tasks prior to program termination after a crash has occured.
+ *
+ * @see `BITCrashManagerPostCrashSignalCallback`
+ * @see `[BITCrashManager setCrashCallbacks:]`
+ */
+typedef struct BITCrashManagerCallbacks {
+  /** An arbitrary user-supplied context value. This value may be NULL. */
+  void *context;
+  
+  /**
+   * The callback used to report caught signal information.
+   */
+  BITCrashManagerPostCrashSignalCallback handleSignal;
+} BITCrashManagerCallbacks;
 
 /**
  * Crash Manager alert user input
@@ -206,6 +227,46 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
 
 
 /**
+ *  EXPERIMENTAL: Enable heuristics to detect the app not terminating cleanly
+ *
+ *  This allows it to get a crash report if the app got killed while being in the foreground
+ *  because of now of the following reasons:
+ *  - The main thread was blocked for too long
+ *  - The app took too long to start up
+ *  - The app tried to allocate too much memory. If iOS did send a memory warning before killing the app because of this reason, `didReceiveMemoryWarningInLastSession` returns `YES`.
+ *  - Permitted background duration if main thread is running in an endless loop
+ *  - App failed to resume in time if main thread is running in an endless loop
+ *  - If `enableMachExceptionHandler` is not activated, crashed due to stackoverflow will also be reported
+ *
+ *  The following kills can _NOT_ be detected:
+ *  - Terminating the app takes too long
+ *  - Permitted background duration too long for all other cases
+ *  - App failed to resume in time for all other cases
+ *  - possibly more cases
+ *
+ *  Crash reports triggered by this mechanisms do _NOT_ contain any stack traces since the time of the kill
+ *  cannot be intercepted and hence no stack trace of the time of the kill event can't be gathered.
+ *
+ *  The heuristic is implemented as follows:
+ *  If the app never gets a `UIApplicationDidEnterBackgroundNotification` or `UIApplicationWillTerminateNotification`
+ *  notification, PLCrashReporter doesn't detect a crash itself, and the app starts up again, it is assumed that
+ *  the app got either killed by iOS while being in foreground or a crash occured that couldn't be detected.
+ *
+ *  Default: _NO_
+ *
+ * @warning This is a heuristic and it _MAY_ report false positives! It has been tested with iOS 6.1 and iOS 7.
+ * Depending on Apple changing notification events, new iOS version may cause more false positives!
+ *
+ * @see wasKilledInLastSession
+ * @see didReceiveMemoryWarningInLastSession
+ * @see `BITCrashManagerDelegate considerAppNotTerminatedCleanlyReportForCrashManager:`
+ * @see [Apple Technical Note TN2151](https://developer.apple.com/library/ios/technotes/tn2151/_index.html)
+ * @see [Apple Technical Q&A QA1693](https://developer.apple.com/library/ios/qa/qa1693/_index.html)
+ */
+@property (nonatomic, assign, getter = isAppNotTerminatingCleanlyDetectionEnabled) BOOL enableAppNotTerminatingCleanlyDetection;
+
+
+/**
  * Set the callbacks that will be executed prior to program termination after a crash has occurred
  *
  * PLCrashReporter provides support for executing an application specified function in the context
@@ -219,15 +280,18 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  *
  * _Async-Safe Functions_
  *
- * A subset of functions are defined to be async-safe by the OS, and are safely callable from within a signal handler. If you do implement a custom post-crash handler, it must be async-safe. A table of POSIX-defined async-safe functions and additional information is available from the CERT programming guide - SIG30-C, see https://www.securecoding.cert.org/confluence/display/seccode/SIG30-C.+Call+only+asynchronous-safe+functions+within+signal+handlers
+ * A subset of functions are defined to be async-safe by the OS, and are safely callable from within a signal handler. If you do implement a custom post-crash handler, it must be async-safe. A table of POSIX-defined async-safe functions and additional information is available from the [CERT programming guide - SIG30-C](https://www.securecoding.cert.org/confluence/display/seccode/SIG30-C.+Call+only+asynchronous-safe+functions+within+signal+handlers).
  *
  * Most notably, the Objective-C runtime itself is not async-safe, and Objective-C may not be used within a signal handler.
  *
  * Documentation taken from PLCrashReporter: https://www.plcrashreporter.org/documentation/api/v1.2-rc2/async_safety.html
  *
+ * @see `BITCrashManagerPostCrashSignalCallback`
+ * @see `BITCrashManagerCallbacks`
+ *
  * @param callbacks A pointer to an initialized PLCrashReporterCallback structure, see https://www.plcrashreporter.org/documentation/api/v1.2-rc2/struct_p_l_crash_reporter_callbacks.html
  */
-- (void)setCrashCallbacks:(PLCrashReporterCallbacks *)callbacks;
+- (void)setCrashCallbacks: (BITCrashManagerCallbacks *) callbacks;
 
 
 /**
@@ -282,6 +346,48 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  @warning Block needs to call the `handleUserInput:withUserProvidedCrashDescription` method!
  */
 - (void) setAlertViewHandler:(CustomAlertViewHandler)alertViewHandler;
+
+/**
+ Indicates if the app was killed while being in foreground from the iOS
+ 
+ If `enableAppNotTerminatingCleanlyDetection` is enabled, use this on startup to check if the
+ app starts the first time after it was killed by iOS in the previous session.
+ 
+ This can happen if it consumed too much memory or the watchdog killed the app because it
+ took too long to startup or blocks the main thread for too long, or other reasons. See Apple
+ documentation: https://developer.apple.com/library/ios/qa/qa1693/_index.html
+ 
+ See `enableDectionAppKillWhileInForeground` for more details about which kind of kills can be detected.
+ 
+ @warning This property only has a correct value, once `[BITHockeyManager startManager]` was
+ invoked! In addition, it is automatically disabled while a debugger session is active!
+ 
+ @see enableAppNotTerminatingCleanlyDetection
+ @see didReceiveMemoryWarningInLastSession
+ */
+@property (nonatomic, readonly) BOOL wasKilledInLastSession;
+
+
+/**
+ Indicates if the app did receive a low memory warning in the last session
+ 
+ It may happen that low memory warning where send but couldn't be logged, since iOS
+ killed the app before updating the flag in the filesystem did complete.
+ 
+ This property may be true in case of low memory kills, but it doesn't have to be! Apps
+ can also be killed without the app ever receiving a low memory warning.
+ 
+ Also the app could have received a low memory warning, but the reason for being killed was
+ actually different.
+ 
+ @warning This property only has a correct value, once `[BITHockeyManager startManager]` was
+ invoked!
+ 
+ @see enableAppNotTerminatingCleanlyDetection
+ @see wasKilledInLastSession
+ */
+@property (nonatomic, readonly) BOOL didReceiveMemoryWarningInLastSession;
+
 
 /**
  Provides the time between startup and crash in seconds
