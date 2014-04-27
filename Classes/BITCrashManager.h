@@ -37,7 +37,7 @@
 /**
  * Custom block that handles the alert that prompts the user whether he wants to send crash reports
  */
-typedef void(^CustomAlertViewHandler)();
+typedef void(^BITCustomAlertViewHandler)();
 
 
 /**
@@ -347,7 +347,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  
  @warning Block needs to call the `handleUserInput:withUserProvidedCrashDescription` method!
  */
-- (void) setAlertViewHandler:(CustomAlertViewHandler)alertViewHandler;
+- (void) setAlertViewHandler:(BITCustomAlertViewHandler)alertViewHandler;
 
 /**
  Indicates if the app was killed while being in foreground from the iOS

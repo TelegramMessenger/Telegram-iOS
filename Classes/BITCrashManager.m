@@ -95,12 +95,6 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
 };
 
 
-@interface BITCrashManager ()
-
-@property (nonatomic, copy, setter = setAlertViewHandler:) CustomAlertViewHandler alertViewHandler;
-
-@end
-
 @implementation BITCrashManager {
   NSMutableDictionary *_approvedCrashReports;
   
@@ -608,7 +602,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
 }
 
 
-- (void)setAlertViewHandler:(CustomAlertViewHandler)alertViewHandler{
+- (void)setAlertViewHandler:(BITCustomAlertViewHandler)alertViewHandler{
   _alertViewHandler = alertViewHandler;
 }
 

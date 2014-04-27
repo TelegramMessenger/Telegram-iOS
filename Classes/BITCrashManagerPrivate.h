@@ -51,6 +51,8 @@
 
 @property (nonatomic) NSString *lastCrashFilename;
 
+@property (nonatomic, copy, setter = setAlertViewHandler:) BITCustomAlertViewHandler alertViewHandler;
+
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
 
 // Only set via BITAuthenticator
