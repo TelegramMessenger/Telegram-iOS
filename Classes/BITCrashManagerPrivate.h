@@ -31,6 +31,8 @@
 
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
 
+#import <CrashReporter/CrashReporter.h>
+
 @class BITHockeyAppClient;
 
 @interface BITCrashManager () {
@@ -43,7 +45,11 @@
 
 @property (nonatomic) NSUncaughtExceptionHandler *exceptionHandler;
 
+@property (nonatomic, strong) NSFileManager *fileManager;
+
 @property (nonatomic, strong) BITPLCrashReporter *plCrashReporter;
+
+@property (nonatomic) NSString *lastCrashFilename;
 
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
 
@@ -68,8 +74,16 @@
 - (BOOL)hasPendingCrashReport;
 - (BOOL)hasNonApprovedCrashReports;
 
+- (void)persistUserProvidedCrashDescription:(NSString *)userProvidedCrashDescription;
+- (void)persistAttachment:(BITCrashAttachment *)attachment withFilename:(NSString *)filename;
+
+- (BITCrashAttachment *)attachmentForCrashReport:(NSString *)filename;
+
 - (void)invokeDelayedProcessing;
 - (void)sendCrashReports;
+
+- (NSString *)getCrashesDir;
+- (void)setLastCrashFilename:(NSString *)lastCrashFilename;
 
 @end
 
