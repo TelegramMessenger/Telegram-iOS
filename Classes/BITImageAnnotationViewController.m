@@ -14,6 +14,12 @@
 #import "BITHockeyHelper.h"
 #import "HockeySDKPrivate.h"
 
+typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
+  BITImageAnnotationViewControllerInteractionModeNone,
+  BITImageAnnotationViewControllerInteractionModeDraw,
+  BITImageAnnotationViewControllerInteractionModeMove
+};
+
 @interface BITImageAnnotationViewController ()
 
 @property (nonatomic, strong) UIImageView *imageView;
@@ -29,7 +35,7 @@
 @property (nonatomic) CGPoint panStart;
 @property (nonatomic,strong) BITImageAnnotation *currentAnnotation;
 
-@property (nonatomic) BOOL isDrawing;
+@property (nonatomic) BITImageAnnotationViewControllerInteractionMode currentInteraction;
 
 @property (nonatomic) CGRect pinchStartingFrame;
 
@@ -158,7 +164,7 @@
   return renderedImageOfMyself;
 }
 
-#pragma mark - Gesture Handling
+#pragma mark - UIGestureRecognizers
 
 - (void)panned:(UIPanGestureRecognizer *)gestureRecognizer {
   BITImageAnnotation *annotationAtLocation = (BITImageAnnotation *)[self.view hitTest:[gestureRecognizer locationInView:self.view] withEvent:nil];
@@ -167,7 +173,22 @@
     annotationAtLocation = nil;
   }
   
-  if (([self.editingControls selectedSegmentIndex] != UISegmentedControlNoSegment || self.isDrawing) && !annotationAtLocation ){
+  // determine the interaction mode if none is set so far.
+  
+  if (self.currentInteraction == BITImageAnnotationViewControllerInteractionModeNone){
+    if (annotationAtLocation){
+      self.currentInteraction = BITImageAnnotationViewControllerInteractionModeMove;
+    } else if ([self canDrawNewAnnotation]){
+      self.currentInteraction = BITImageAnnotationViewControllerInteractionModeDraw;
+    }
+  }
+  
+  if (self.currentInteraction == BITImageAnnotationViewControllerInteractionModeNone){
+    return;
+  }
+  
+
+  if (self.currentInteraction == BITImageAnnotationViewControllerInteractionModeDraw){
     if (gestureRecognizer.state == UIGestureRecognizerStateBegan){
       self.currentAnnotation = [self annotationForCurrentMode];
       [self.objects addObject:self.currentAnnotation];
@@ -182,7 +203,6 @@
       self.panStart = [gestureRecognizer locationInView:self.imageView];
       
      // [self.editingControls setSelectedSegmentIndex:UISegmentedControlNoSegment];
-      self.isDrawing = YES;
       
     } else if (gestureRecognizer.state == UIGestureRecognizerStateChanged){
       CGPoint bla = [gestureRecognizer locationInView:self.imageView];
@@ -193,9 +213,9 @@
       [self.currentAnnotation layoutIfNeeded];
     } else {
       self.currentAnnotation = nil;
-      self.isDrawing = NO;
+      self.currentInteraction = BITImageAnnotationViewControllerInteractionModeNone;
     }
-  } else {
+  } else if (self.currentInteraction == BITImageAnnotationViewControllerInteractionModeMove){
     if (gestureRecognizer.state == UIGestureRecognizerStateBegan){
       // find and possibly move an existing annotation.
 
@@ -223,6 +243,8 @@
     } else {
       self.currentAnnotation = nil;
       [annotationAtLocation setSelected:NO];
+      self.currentInteraction = BITImageAnnotationViewControllerInteractionModeNone;
+
 
     }
   }
@@ -281,15 +303,12 @@
 
 -(void)tapped:(UIGestureRecognizer *)tapRecognizer {
   if (self.navigationController.navigationBarHidden){
-   // [[UIApplication sharedApplication] setStatusBarHidden:NO];
     [UIView animateWithDuration:0.35f animations:^{
       self.navigationController.navigationBar.alpha = 1;
     } completion:^(BOOL finished) {
       [self fitImageViewFrame];
       [self.navigationController setNavigationBarHidden:NO animated:NO];
       [[UIApplication sharedApplication] setStatusBarHidden:NO];
-
-
     }];
   } else {
     [UIView animateWithDuration:0.35f animations:^{
@@ -319,4 +338,7 @@
   return self.imageView;
 }
 
+- (BOOL)canDrawNewAnnotation {
+  return [self.editingControls selectedSegmentIndex] != UISegmentedControlNoSegment;
+}
 @end

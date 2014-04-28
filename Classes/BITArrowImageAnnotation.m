@@ -26,12 +26,12 @@
   self = [super initWithFrame:frame];
   if (self) {
     self.shapeLayer = [CAShapeLayer layer];
-    self.shapeLayer.strokeColor = [UIColor redColor].CGColor;
+    self.shapeLayer.strokeColor = [UIColor whiteColor].CGColor;
     self.shapeLayer.lineWidth = 5;
-    self.shapeLayer.fillColor = [UIColor clearColor].CGColor;
+    self.shapeLayer.fillColor = [UIColor redColor].CGColor;
     
     self.strokeLayer = [CAShapeLayer layer];
-    self.strokeLayer.strokeColor = [UIColor whiteColor].CGColor;
+    self.strokeLayer.strokeColor = [UIColor redColor].CGColor;
     self.strokeLayer.lineWidth = 10;
     self.strokeLayer.fillColor = [UIColor clearColor].CGColor;
     [self.layer addSublayer:self.strokeLayer];
@@ -152,6 +152,41 @@
   CGFloat cosine = (endPoint.x - startPoint.x) / length;
   CGFloat sine = (endPoint.y - startPoint.y) / length;
   return (CGAffineTransform){ cosine, sine, -sine, cosine, startPoint.x, startPoint.y };
+}
+
+#pragma mark - UIView 
+
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+  UIColor *color = [self colorAtPoint:point];
+  CGFloat alpha, white;
+  [color getWhite:&white alpha:&alpha];
+  if (white || alpha){
+    return self;
+  } else {
+    return nil;
+  }
+
+}
+
+#pragma mark - Helpers
+
+// This is taken from http://stackoverflow.com/questions/12770181/how-to-get-the-pixel-color-on-touch
+- (UIColor *)colorAtPoint:(CGPoint)point {
+  unsigned char pixel[4] = {0};
+  CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+  CGContextRef context = CGBitmapContextCreate(pixel,
+                                               1, 1, 8, 4, colorSpace, (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
+  
+  CGContextTranslateCTM(context, -point.x, -point.y);
+  
+  [self.layer renderInContext:context];
+  
+  CGContextRelease(context);
+  CGColorSpaceRelease(colorSpace);
+  UIColor *color = [UIColor colorWithRed:pixel[0]/255.0
+                                   green:pixel[1]/255.0 blue:pixel[2]/255.0
+                                   alpha:pixel[3]/255.0];
+  return color;
 }
 
 @end
