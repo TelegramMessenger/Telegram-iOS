@@ -308,23 +308,17 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
 -(void)tapped:(UIGestureRecognizer *)tapRecognizer {
   if (self.navigationController.navigationBarHidden){
     [UIView animateWithDuration:0.35f animations:^{
-      self.navigationController.navigationBar.alpha = 1;
+      [[UIApplication sharedApplication] setStatusBarHidden:NO];
+      [self.navigationController setNavigationBarHidden:NO animated:NO];
     } completion:^(BOOL finished) {
       [self fitImageViewFrame];
-      [self.navigationController setNavigationBarHidden:NO animated:NO];
-      [[UIApplication sharedApplication] setStatusBarHidden:NO];
     }];
   } else {
     [UIView animateWithDuration:0.35f animations:^{
-      self.navigationController.navigationBar.alpha = 0;
-
-    } completion:^(BOOL finished) {
-      [self.navigationController setNavigationBarHidden:YES animated:NO];
       [[UIApplication sharedApplication] setStatusBarHidden:YES];
-
-
+      [self.navigationController setNavigationBarHidden:YES animated:NO];
+    } completion:^(BOOL finished) {
       [self fitImageViewFrame];
-      
     }];    
   }
   

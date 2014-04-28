@@ -180,7 +180,9 @@
   UIColor *color = [self colorAtPoint:point];
   CGFloat alpha, white;
   [color getWhite:&white alpha:&alpha];
-  if (white || alpha){
+  NSLog(@"%f %f", alpha,white);
+
+  if ((int)white > 0 || (int)alpha > 0){
     return self;
   } else {
     return nil;

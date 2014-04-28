@@ -177,13 +177,17 @@
 
 - (void)tapped:(UITapGestureRecognizer *)tapRecognizer {
   if (self.navigationController.navigationBarHidden){
-    [[UIApplication sharedApplication] setStatusBarHidden:NO];
-    [self.navigationController setNavigationBarHidden:NO animated:YES];
+    [UIView animateWithDuration:0.35f animations:^{
+      [[UIApplication sharedApplication] setStatusBarHidden:NO];
+      [self.navigationController setNavigationBarHidden:NO animated:NO];
+    } completion:nil];
   } else {
-    [self.navigationController setNavigationBarHidden:YES animated:YES];
-    [[UIApplication sharedApplication] setStatusBarHidden:YES];
-
+    [UIView animateWithDuration:0.35f animations:^{
+      [[UIApplication sharedApplication] setStatusBarHidden:YES];
+      [self.navigationController setNavigationBarHidden:YES animated:NO];
+    } completion:nil];
   }
+  
   [self layoutViews];
 }
 
