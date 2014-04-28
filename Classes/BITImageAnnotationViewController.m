@@ -246,11 +246,9 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
       [gestureRecognizer setTranslation:CGPointZero inView:self.view];
       
     } else {
+      [self.currentAnnotation setSelected:NO];
       self.currentAnnotation = nil;
-      [annotationAtLocation setSelected:NO];
       self.currentInteraction = BITImageAnnotationViewControllerInteractionModeNone;
-
-
     }
   }
 }
@@ -279,6 +277,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
     if (validView && [candidate resizable]){
       self.currentAnnotation = candidate;
       self.pinchStartingFrame = self.currentAnnotation.frame;
+      [self.currentAnnotation setSelected:YES];
     }
     
   } else if (gestureRecognizer.state == UIGestureRecognizerStateChanged && self.currentAnnotation && gestureRecognizer.numberOfTouches>1){
@@ -302,6 +301,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
     self.currentAnnotation.frame = newFrame;
     self.currentAnnotation.imageFrame = [self.view convertRect:self.imageView.frame toView:self.currentAnnotation];
   } else {
+    [self.currentAnnotation setSelected:NO];
     self.currentAnnotation = nil;
   }
 }
