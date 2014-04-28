@@ -19,19 +19,13 @@
 @property (nonatomic) NSInteger currentIndex;
 @property (nonatomic) NSInteger loadedImageIndex;
 @property (nonatomic, strong) UITapGestureRecognizer *tapognizer;
+@property (nonatomic, strong) NSMutableDictionary *images;
 
 @end
 
 @implementation BITAttachmentGalleryViewController
 
-- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
-{
-    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
-    if (self) {
-        // Custom initialization
-    }
-    return self;
-}
+#pragma mark - UIViewController
 
 - (void)viewDidLoad
 {
@@ -58,6 +52,7 @@
   self.tapognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapped:)];
   [self.view addGestureRecognizer:self.tapognizer];
 }
+
 -(void)viewWillAppear:(BOOL)animated {
   [super viewWillAppear:animated];
   
@@ -70,21 +65,34 @@
     if (indexOfSelectedAttachment != NSNotFound){
       self.currentIndex = indexOfSelectedAttachment;
       self.scrollView.contentOffset = CGPointMake(self.scrollView.frame.size.width * self.currentIndex, 0);
-
     }
   }
   
+  self.images = [NSMutableDictionary new];
   [self layoutViews];
-
- 
 }
 
 - (void)viewDidAppear:(BOOL)animated {
   [super viewDidAppear:animated];
-  
-
-
 }
+
+-(void)viewWillDisappear:(BOOL)animated {
+  [super viewWillDisappear:animated];
+  [self.images removeAllObjects];
+}
+
+- (void)didReceiveMemoryWarning
+{
+  [super didReceiveMemoryWarning];
+  [self.images removeAllObjects];
+}
+
+- (BOOL)prefersStatusBarHidden {
+  return self.navigationController.navigationBarHidden;
+}
+
+#pragma mark - Scroll View Content/Layout
+
 - (void)setupScrollView {
   self.scrollView = [[UIScrollView alloc] initWithFrame:self.view.bounds];
   self.view.autoresizesSubviews = NO;
@@ -122,18 +130,6 @@
   self.extractedAttachments = extractedOnes;
 }
 
-- (void)didReceiveMemoryWarning
-{
-    [super didReceiveMemoryWarning];
-}
-
-- (void)scrollViewDidScroll:(UIScrollView *)scrollView {
-  NSInteger newIndex = self.scrollView.contentOffset.x / self.scrollView.frame.size.width;
-  if (newIndex!=self.currentIndex){
-    self.currentIndex = newIndex;
-    [self layoutViews];
-  }
-}
 
 - (void)layoutViews {
   CGPoint savedOffset = self.scrollView.contentOffset;
@@ -146,23 +142,31 @@
   self.scrollView.autoresizesSubviews = NO;
   self.scrollView.contentOffset = savedOffset;
   
-
+  
   NSInteger baseIndex = MAX(0,self.currentIndex-1);
   NSInteger z = baseIndex;
   for ( NSInteger i = baseIndex; i < MIN(baseIndex+2, self.extractedAttachments.count);i++ ){
     UIImageView *imageView = self.imageViews[z%self.imageViews.count];
     BITFeedbackMessageAttachment *attachment = self.extractedAttachments[i];
-    imageView.image =[attachment imageRepresentation];
+    imageView.image = [self imageForAttachment:attachment];
     imageView.frame = [self frameForItemAtIndex:i];
     z++;
   }
-
+  
   
 }
 
-- (BOOL)prefersStatusBarHidden {
-  return self.navigationController.navigationBarHidden;
+#pragma mark - UIScrollViewDelegate
+
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView {
+  NSInteger newIndex = self.scrollView.contentOffset.x / self.scrollView.frame.size.width;
+  if (newIndex!=self.currentIndex){
+    self.currentIndex = newIndex;
+    [self layoutViews];
+  }
 }
+
+#pragma mark - IBActions
 
 - (void)close:(id)sender {
   [self dismissViewControllerAnimated:YES completion:nil];
@@ -174,6 +178,8 @@
   UIActivityViewController *activityVC = [[UIActivityViewController alloc] initWithActivityItems:[NSArray arrayWithObjects:attachment.originalFilename, attachment.imageRepresentation  , nil] applicationActivities:nil];
   [self presentViewController:activityVC animated:YES completion:nil];
 }
+
+#pragma mark - UIGestureRecognizer
 
 - (void)tapped:(UITapGestureRecognizer *)tapRecognizer {
   if (self.navigationController.navigationBarHidden){
@@ -191,8 +197,21 @@
   [self layoutViews];
 }
 
+#pragma mark - Layout Helpers
+
 - (CGRect)frameForItemAtIndex:(NSInteger)index {
   return CGRectMake(index * CGRectGetWidth(self.scrollView.frame), 0, CGRectGetWidth(self.scrollView.frame), CGRectGetHeight(self.view.bounds));
+}
+
+- (UIImage *)imageForAttachment:(BITFeedbackMessageAttachment *)attachment {
+  UIImage *cachedObject = self.images[@([self.extractedAttachments indexOfObject:attachment])];
+  
+  if (!cachedObject){
+    cachedObject = [attachment imageRepresentation];
+    self.images[@([self.extractedAttachments indexOfObject:attachment])] = cachedObject;
+  }
+  
+  return cachedObject;
 }
 
 @end

@@ -85,7 +85,8 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
   self.imageView.image = self.image;
   self.imageView.contentMode = UIViewContentModeScaleToFill;
   
-  
+  self.view.frame = UIScreen.mainScreen.applicationFrame;
+
   [self.view addSubview:self.imageView];
   // Erm.
   self.imageView.frame = [UIScreen mainScreen].bounds;
