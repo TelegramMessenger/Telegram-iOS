@@ -212,6 +212,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
       [self.currentAnnotation setNeedsLayout];
       [self.currentAnnotation layoutIfNeeded];
     } else {
+      [self.currentAnnotation setSelected:NO];
       self.currentAnnotation = nil;
       self.currentInteraction = BITImageAnnotationViewControllerInteractionModeNone;
     }
