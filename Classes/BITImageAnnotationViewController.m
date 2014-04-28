@@ -66,7 +66,10 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
     [self.editingControls setImage:bit_imageNamed(imageName, BITHOCKEYSDK_BUNDLE) forSegmentAtIndex:i++];
   }
   
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   [self.editingControls setSegmentedControlStyle:UISegmentedControlStyleBar];
+#pragma clang diagnostic pop
   
   self.navigationItem.titleView = self.editingControls;
   
@@ -279,7 +282,6 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
     
   } else if (gestureRecognizer.state == UIGestureRecognizerStateChanged && self.currentAnnotation && gestureRecognizer.numberOfTouches>1){
     CGRect newFrame= (self.pinchStartingFrame);
-    NSLog(@"%f", [gestureRecognizer scale]);
     
     // upper point?
     CGPoint point1 = [gestureRecognizer locationOfTouch:0 inView:self.view];
@@ -298,10 +300,6 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
     
     self.currentAnnotation.frame = newFrame;
     self.currentAnnotation.imageFrame = [self.view convertRect:self.imageView.frame toView:self.currentAnnotation];
-
-    // we
-    
-    
   } else {
     self.currentAnnotation = nil;
   }
