@@ -44,30 +44,50 @@
 }
 
 - (void)buildShape {
-  CGFloat topHeight = MAX(self.frame.size.width / 3.0f,10);
+  CGFloat baseWidth = MAX(self.frame.size.width, self.frame.size.height);
+  CGFloat topHeight = MAX(baseWidth / 3.0f,10);
 
   
-  CGFloat lineWidth = MAX(self.frame.size.width / 10.0f,3);
+  CGFloat lineWidth = MAX(baseWidth / 10.0f,3);
   CGFloat startX, startY, endX, endY;
+  
+  CGRect boundRect = CGRectInset(self.bounds, 0, 0);
+  CGFloat arrowLength= sqrt(pow(CGRectGetWidth(boundRect), 2) + pow(CGRectGetHeight(boundRect), 2));
+  if (arrowLength < 30){
+    
+    CGFloat factor = 30.f/arrowLength;
+    
+    boundRect = CGRectApplyAffineTransform(boundRect, CGAffineTransformMakeScale(factor,factor));
+  }
+  
   if ( self.movedDelta.width < 0){
-    startX = CGRectGetMinX(self.bounds);
-    endX =  CGRectGetMaxX(self.bounds);
+    startX = CGRectGetMinX(boundRect);
+    endX =  CGRectGetMaxX(boundRect);
   } else {
-    startX = CGRectGetMaxX(self.bounds);
-    endX = CGRectGetMinX(self.bounds);
+    startX = CGRectGetMaxX(boundRect);
+    endX = CGRectGetMinX(boundRect);
 
   }
   
   if ( self.movedDelta.height < 0){
-    startY = CGRectGetMinY(self.bounds);
-    endY =  CGRectGetMaxY(self.bounds);
+    startY = CGRectGetMinY(boundRect);
+    endY =  CGRectGetMaxY(boundRect);
   } else {
-    startY = CGRectGetMaxY(self.bounds);
-    endY =  CGRectGetMinY(self.bounds);
+    startY = CGRectGetMaxY(boundRect);
+    endY =  CGRectGetMinY(boundRect);
     
   }
+  
+  
+  if (abs(CGRectGetWidth(boundRect)) < 30 || abs(CGRectGetHeight(boundRect)) < 30){
+    CGFloat smallerOne = MIN(abs(CGRectGetHeight(boundRect)), abs(CGRectGetWidth(boundRect)));
     
-  UIBezierPath *path = [self bezierPathWithArrowFromPoint:CGPointMake(endX,endY) toPoint:CGPointMake(startX,startY) tailWidth:lineWidth headWidth:topHeight headLength:topHeight];
+    CGFloat factor = smallerOne/30.f;
+    
+    CGRectApplyAffineTransform(boundRect, CGAffineTransformMakeScale(factor,factor));
+  }
+  
+  UIBezierPath *path = [self bezierPathWithArrowFromPoint:CGPointMake(endX, endY) toPoint:CGPointMake(startX, startY) tailWidth:lineWidth headWidth:topHeight headLength:topHeight];
   
   self.shapeLayer.path = path.CGPath;
   self.strokeLayer.path = path.CGPath;
