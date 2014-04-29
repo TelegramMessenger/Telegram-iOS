@@ -1005,7 +1005,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
     
     BITCrashAttachment *attachment = (BITCrashAttachment *)dict[KBITAttachmentDictAttachment];
     
-    [postBody appendData:[BITHockeyAppClient dataWithPostValue:attachment.attachmentData
+    [postBody appendData:[BITHockeyAppClient dataWithPostValue:attachment.crashAttachmentData
                                                         forKey:key
                                                    contentType:attachment.contentType
                                                       boundary:boundary
