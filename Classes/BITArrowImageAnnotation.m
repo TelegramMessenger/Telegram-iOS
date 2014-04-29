@@ -16,7 +16,6 @@
 @property (nonatomic, strong) CAShapeLayer *shapeLayer;
 @property (nonatomic, strong) CAShapeLayer *strokeLayer;
 
-
 @end
 
 @implementation BITArrowImageAnnotation
@@ -100,21 +99,6 @@
 
 }
 
--(void)layoutSubviews{
-  [super layoutSubviews];
-
-  [self buildShape];
-  
-}
-
-/*
-// Only override drawRect: if you perform custom drawing.
-// An empty implementation adversely affects performance during animation.
-- (void)drawRect:(CGRect)rect
-{
-    // Drawing code
-}
-*/
 
 - (UIBezierPath *)bezierPathWithArrowFromPoint:(CGPoint)startPoint
                                            toPoint:(CGPoint)endPoint
@@ -177,12 +161,14 @@
 #pragma mark - UIView 
 
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
-  UIColor *color = [self colorAtPoint:point];
-  CGFloat alpha, white;
-  [color getWhite:&white alpha:&alpha];
-  NSLog(@"%f %f", alpha,white);
 
-  if ((int)white > 0 || (int)alpha > 0){
+  CGPathRef strokePath = CGPathCreateCopyByStrokingPath(self.shapeLayer.path, NULL, fmaxf(90.0f, self.shapeLayer.lineWidth), kCGLineCapRound,kCGLineJoinMiter,0);
+  
+  BOOL containsPoint = CGPathContainsPoint(strokePath, NULL, point, NO);
+  
+  CGPathRelease(strokePath);
+  
+  if (containsPoint){
     return self;
   } else {
     return nil;
@@ -190,25 +176,10 @@
 
 }
 
-#pragma mark - Helpers
-
-// This is taken from http://stackoverflow.com/questions/12770181/how-to-get-the-pixel-color-on-touch
-- (UIColor *)colorAtPoint:(CGPoint)point {
-  unsigned char pixel[4] = {0};
-  CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-  CGContextRef context = CGBitmapContextCreate(pixel,
-                                               1, 1, 8, 4, colorSpace, (CGBitmapInfo)kCGImageAlphaPremultipliedLast);
+-(void)layoutSubviews{
+  [super layoutSubviews];
   
-  CGContextTranslateCTM(context, -point.x, -point.y);
-  
-  [self.layer renderInContext:context];
-  
-  CGContextRelease(context);
-  CGColorSpaceRelease(colorSpace);
-  UIColor *color = [UIColor colorWithRed:pixel[0]/255.0
-                                   green:pixel[1]/255.0 blue:pixel[2]/255.0
-                                   alpha:pixel[3]/255.0];
-  return color;
+  [self buildShape];
 }
 
 @end
