@@ -51,7 +51,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
   
   self.view.backgroundColor = [UIColor groupTableViewBackgroundColor];
   
-  NSArray *icons = @[@"Rectangle.png", @"Arrow.png", @"Blur.png"];
+  NSArray *icons = @[@"Arrow.png",@"Rectangle.png", @"Blur.png"];
   
   self.editingControls = [[UISegmentedControl alloc] initWithItems:@[@"Rectangle", @"Arrow", @"Blur"]];
   int i=0;
@@ -131,9 +131,9 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
 
 - (BITImageAnnotation *)annotationForCurrentMode {
   if (self.editingControls.selectedSegmentIndex == 0){
-    return [[BITRectangleImageAnnotation alloc] initWithFrame:CGRectZero];
-  } else if(self.editingControls.selectedSegmentIndex==1){
     return [[BITArrowImageAnnotation alloc] initWithFrame:CGRectZero];
+  } else if(self.editingControls.selectedSegmentIndex==1){
+    return [[BITRectangleImageAnnotation alloc] initWithFrame:CGRectZero];
   } else {
     return [[BITBlurImageAnnotation alloc] initWithFrame:CGRectZero];
   }
