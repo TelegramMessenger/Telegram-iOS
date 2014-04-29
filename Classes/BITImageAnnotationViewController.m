@@ -79,7 +79,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
   self.imageView.contentMode = UIViewContentModeScaleToFill;
   
   self.view.frame = UIScreen.mainScreen.applicationFrame;
-
+  
   [self.view addSubview:self.imageView];
   // Erm.
   self.imageView.frame = [UIScreen mainScreen].bounds;
@@ -96,29 +96,33 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
   
   self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc ] initWithImage:bit_imageNamed(@"Cancel.png", BITHOCKEYSDK_BUNDLE) landscapeImagePhone:bit_imageNamed(@"Cancel.png", BITHOCKEYSDK_BUNDLE) style:UIBarButtonItemStyleBordered target:self action:@selector(discard:)];
   self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc ] initWithImage:bit_imageNamed(@"Ok.png", BITHOCKEYSDK_BUNDLE) landscapeImagePhone:bit_imageNamed(@"Ok.png", BITHOCKEYSDK_BUNDLE) style:UIBarButtonItemStyleBordered target:self action:@selector(save:)];
+  
+  self.view.autoresizesSubviews = NO;
 }
 
 
 - (void)viewWillAppear:(BOOL)animated {
   [super viewWillAppear:animated];
   [self fitImageViewFrame];
-
+  
 }
 
 - (BOOL)prefersStatusBarHidden {
-  return self.navigationController.navigationBarHidden;
+  return self.navigationController.navigationBarHidden || self.navigationController.navigationBar.alpha == 0.0f;
 }
 
 
 - (void)fitImageViewFrame {
-  CGFloat heightScaleFactor = self.view.frame.size.height / self.image.size.height;
-  CGFloat widthScaleFactor = self.view.frame.size.width / self.image.size.width;
+  CGFloat heightScaleFactor =  [[UIScreen mainScreen] bounds].size.height / self.image.size.height;
+  CGFloat widthScaleFactor =  [[UIScreen mainScreen] bounds].size.width / self.image.size.width;
   
   CGFloat factor = MIN(heightScaleFactor, widthScaleFactor);
   self.scaleFactor = factor;
   CGSize scaledImageSize = CGSizeMake(self.image.size.width * factor, self.image.size.height * factor);
   
-  self.imageView.frame = CGRectMake(self.view.frame.size.width/2 - scaledImageSize.width/2, self.view.frame.size.height/2 - scaledImageSize.height/2, scaledImageSize.width, scaledImageSize.height);
+  CGRect baseFrame = CGRectMake(self.view.frame.size.width/2 - scaledImageSize.width/2, self.view.frame.size.height -  [[UIScreen mainScreen] bounds].size.height, scaledImageSize.width, scaledImageSize.height);
+  
+  self.imageView.frame = baseFrame;
 }
 
 -(void)editingAction:(id)sender {
@@ -189,7 +193,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
     return;
   }
   
-
+  
   if (self.currentInteraction == BITImageAnnotationViewControllerInteractionModeDraw){
     if (gestureRecognizer.state == UIGestureRecognizerStateBegan){
       self.currentAnnotation = [self annotationForCurrentMode];
@@ -204,7 +208,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
       
       self.panStart = [gestureRecognizer locationInView:self.imageView];
       
-     // [self.editingControls setSelectedSegmentIndex:UISegmentedControlNoSegment];
+      // [self.editingControls setSelectedSegmentIndex:UISegmentedControlNoSegment];
       
     } else if (gestureRecognizer.state == UIGestureRecognizerStateChanged){
       CGPoint bla = [gestureRecognizer locationInView:self.imageView];
@@ -221,7 +225,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
   } else if (self.currentInteraction == BITImageAnnotationViewControllerInteractionModeMove){
     if (gestureRecognizer.state == UIGestureRecognizerStateBegan){
       // find and possibly move an existing annotation.
-
+      
       
       if ([self.objects indexOfObject:annotationAtLocation] != NSNotFound){
         self.currentAnnotation = annotationAtLocation;
@@ -237,7 +241,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
       annotationFrame.origin.y += delta.y;
       self.currentAnnotation.frame = annotationFrame;
       self.currentAnnotation.imageFrame = [self.view convertRect:self.imageView.frame toView:self.currentAnnotation];
-
+      
       [self.currentAnnotation setNeedsLayout];
       [self.currentAnnotation layoutIfNeeded];
       
@@ -294,7 +298,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
     
     newFrame.size.width = (point1.x > point2.x) ? point1.x - point2.x : point2.x - point1.x;
     newFrame.size.height = (point1.y > point2.y) ? point1.y - point2.y : point2.y - point1.y;
-
+    
     
     self.currentAnnotation.frame = newFrame;
     self.currentAnnotation.imageFrame = [self.view convertRect:self.imageView.frame toView:self.currentAnnotation];
@@ -305,20 +309,41 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
 }
 
 -(void)tapped:(UIGestureRecognizer *)tapRecognizer {
-  if (self.navigationController.navigationBarHidden){
+  // This toggles the nav and status bar. Since iOS7 and pre-iOS7 behave weirdly different,
+  // this might look rather hacky, but hiding the navbar under iOS6 leads to some ugly
+  // animation effect which is avoided by simply hiding the navbar setting it's alpha to 0. // moritzh
+  
+  if (self.navigationController.navigationBar.alpha == 0 || self.navigationController.navigationBarHidden ){
+    
     [UIView animateWithDuration:0.35f animations:^{
+      
+      if (NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1) {
+        [self.navigationController setNavigationBarHidden:NO animated:NO];
+      } else {
+        self.navigationController.navigationBar.alpha = 1.0;
+      }
+      
       [[UIApplication sharedApplication] setStatusBarHidden:NO];
-      [self.navigationController setNavigationBarHidden:NO animated:NO];
+      
     } completion:^(BOOL finished) {
       [self fitImageViewFrame];
+      
     }];
   } else {
     [UIView animateWithDuration:0.35f animations:^{
+      
+      if (NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1) {
+        [self.navigationController setNavigationBarHidden:YES animated:NO];
+      } else {
+        self.navigationController.navigationBar.alpha = 0.0;
+      }
+      
       [[UIApplication sharedApplication] setStatusBarHidden:YES];
-      [self.navigationController setNavigationBarHidden:YES animated:NO];
+      
     } completion:^(BOOL finished) {
       [self fitImageViewFrame];
-    }];    
+      
+    }];
   }
   
 }
