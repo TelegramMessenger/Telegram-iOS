@@ -49,6 +49,8 @@
   
   self.view.frame = UIScreen.mainScreen.applicationFrame;
   
+  
+  
   self.tapognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapped:)];
   [self.view addGestureRecognizer:self.tapognizer];
 }
@@ -57,8 +59,7 @@
   [super viewWillAppear:animated];
   
   // Hide the navigation bar and stuff initially.
-  [self.navigationController setNavigationBarHidden:YES animated:NO];
-  [[UIApplication sharedApplication] setStatusBarHidden:YES];
+  [self tapped:nil];
   
   if (self.preselectedAttachment){
     NSInteger indexOfSelectedAttachment = [self.extractedAttachments indexOfObject:self.preselectedAttachment];
@@ -95,6 +96,11 @@
 
 - (void)setupScrollView {
   self.scrollView = [[UIScrollView alloc] initWithFrame:self.view.bounds];
+  CGRect frame = self.scrollView.frame;
+  
+  frame.origin.y = self.scrollView.frame.size.height - [[UIScreen mainScreen] bounds].size.height;
+  
+  self.scrollView.frame = frame;
   self.view.autoresizesSubviews = NO;
   [self.view addSubview:self.scrollView];
   self.scrollView.delegate = self;
@@ -136,7 +142,7 @@
   
   self.scrollView.delegate = nil;
   self.scrollView.frame = self.view.bounds;
-  self.scrollView.contentSize = CGSizeMake(CGRectGetWidth(self.view.bounds) * self.extractedAttachments.count, CGRectGetHeight(self.view.bounds));
+  self.scrollView.contentSize = CGSizeMake( [[UIScreen mainScreen] bounds].size.width * self.extractedAttachments.count, [[UIScreen mainScreen] bounds].size.height);
   self.scrollView.delegate = self;
   self.scrollView.contentInset = UIEdgeInsetsZero;
   self.scrollView.autoresizesSubviews = NO;
@@ -153,6 +159,11 @@
     z++;
   }
   
+  CGRect frame = self.scrollView.frame;
+  
+  frame.origin.y = self.scrollView.frame.size.height - [[UIScreen mainScreen] bounds].size.height;
+  
+  self.scrollView.frame = frame;
   
 }
 
@@ -182,25 +193,44 @@
 #pragma mark - UIGestureRecognizer
 
 - (void)tapped:(UITapGestureRecognizer *)tapRecognizer {
-  if (self.navigationController.navigationBarHidden){
+  if (self.navigationController.navigationBar.alpha == 0 || self.navigationController.navigationBarHidden ){
+    
     [UIView animateWithDuration:0.35f animations:^{
+      
+      if (NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1) {
+        [self.navigationController setNavigationBarHidden:NO animated:NO];
+      } else {
+        self.navigationController.navigationBar.alpha = 1.0;
+      }
+      
       [[UIApplication sharedApplication] setStatusBarHidden:NO];
-      [self.navigationController setNavigationBarHidden:NO animated:NO];
-    } completion:nil];
+      
+    } completion:^(BOOL finished){
+      [self layoutViews];
+    }];
   } else {
     [UIView animateWithDuration:0.35f animations:^{
+      
+      if (NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1) {
+        [self.navigationController setNavigationBarHidden:YES animated:NO];
+      } else {
+        self.navigationController.navigationBar.alpha = 0.0;
+      }
+      
       [[UIApplication sharedApplication] setStatusBarHidden:YES];
-      [self.navigationController setNavigationBarHidden:YES animated:NO];
-    } completion:nil];
+      
+    } completion:^(BOOL finished){
+       [self layoutViews];
+    }];
   }
   
-  [self layoutViews];
+ 
 }
 
 #pragma mark - Layout Helpers
 
 - (CGRect)frameForItemAtIndex:(NSInteger)index {
-  return CGRectMake(index * CGRectGetWidth(self.scrollView.frame), 0, CGRectGetWidth(self.scrollView.frame), CGRectGetHeight(self.view.bounds));
+  return CGRectMake(index * [[UIScreen mainScreen] bounds].size.width, 0, [[UIScreen mainScreen] bounds].size.width,    [[UIScreen mainScreen] bounds].size.height);
 }
 
 - (UIImage *)imageForAttachment:(BITFeedbackMessageAttachment *)attachment {
