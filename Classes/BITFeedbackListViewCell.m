@@ -87,15 +87,15 @@
     self.dateFormatter = [[NSDateFormatter alloc] init];
     [self.dateFormatter setTimeStyle:NSDateFormatterNoStyle];
     [self.dateFormatter setDateStyle:NSDateFormatterMediumStyle];
-    [self.dateFormatter setLocale:[NSLocale currentLocale]];    
+    [self.dateFormatter setLocale:[NSLocale currentLocale]];
     [self.dateFormatter setDoesRelativeDateFormatting:YES];
-
+    
     self.timeFormatter = [[NSDateFormatter alloc] init];
     [self.timeFormatter setTimeStyle:NSDateFormatterShortStyle];
     [self.timeFormatter setDateStyle:NSDateFormatterNoStyle];
     [self.timeFormatter setLocale:[NSLocale currentLocale]];
     [self.timeFormatter setDoesRelativeDateFormatting:YES];
-
+    
     self.labelTitle = [[UILabel alloc] init];
     self.labelTitle.font = [UIFont systemFontOfSize:TITLE_FONTSIZE];
     
@@ -171,7 +171,7 @@
     
     // added to make space for the images.
     
-
+    
   } else {
 #endif
 #pragma clang diagnostic push
@@ -179,7 +179,7 @@
     calculatedHeight = [message.text sizeWithFont:[UIFont systemFontOfSize:TEXT_FONTSIZE]
                                 constrainedToSize:CGSizeMake(width - (2 * FRAME_SIDE_BORDER), CGFLOAT_MAX)
                         ].height + FRAME_TOP_BORDER + LABEL_TEXT_Y + FRAME_BOTTOM_BORDER;
-
+    
 #pragma clang diagnostic pop
 #if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
   }
@@ -190,7 +190,7 @@
 
 - (void)setAttachments:(NSArray *)attachments {
   for (UIView *view in self.attachmentViews){
-   [view removeFromSuperview];
+    [view removeFromSuperview];
   }
   
   [self.attachmentViews removeAllObjects];
@@ -198,8 +198,13 @@
   for (BITFeedbackMessageAttachment *attachment in attachments){
     UIButton *imageView = [UIButton buttonWithType:UIButtonTypeCustom];
     [imageView setImage:[attachment thumbnailWithSize:CGSizeMake(ATTACHMENT_SIZE, ATTACHMENT_SIZE)] forState:UIControlStateNormal];
+    [imageView setTitle:attachment.originalFilename forState:UIControlStateNormal];
+    [imageView setContentVerticalAlignment:UIControlContentVerticalAlignmentCenter];
+    [imageView setContentHorizontalAlignment:UIControlContentHorizontalAlignmentCenter];
     
     [imageView addTarget:self action:@selector(imageButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
+    
+    imageView.contentMode = UIViewContentModeScaleAspectFill;
     
     [self.attachmentViews addObject:imageView];
   }
@@ -208,12 +213,12 @@
 
 - (void)layoutSubviews {
   if (!self.accessoryBackgroundView){
-  self.accessoryBackgroundView = [[UIView alloc] initWithFrame:CGRectMake(0, 2, self.frame.size.width * 2, self.frame.size.height - 2)];
-  self.accessoryBackgroundView.autoresizingMask = UIViewAutoresizingFlexibleHeight;
-  self.accessoryBackgroundView.clipsToBounds = YES;
-  
-  // colors
-  self.accessoryBackgroundView.backgroundColor = [self backgroundColor];
+    self.accessoryBackgroundView = [[UIView alloc] initWithFrame:CGRectMake(0, 2, self.frame.size.width * 2, self.frame.size.height - 2)];
+    self.accessoryBackgroundView.autoresizingMask = UIViewAutoresizingFlexibleHeight;
+    self.accessoryBackgroundView.clipsToBounds = YES;
+    
+    // colors
+    self.accessoryBackgroundView.backgroundColor = [self backgroundColor];
   }
   
   if (self.style == BITFeedbackListViewCellPresentatationStyleDefault) {
@@ -231,9 +236,9 @@
   } else {
     [self.labelText setTextColor:TEXTCOLOR_DEFAULT];
   }
-
+  
   // background for deletion accessory view
-
+  
   
   // header
   NSString *dateString = @"";
@@ -248,7 +253,7 @@
   }
   [self.labelTitle setText:dateString];
   [self.labelTitle setFrame:CGRectMake(FRAME_SIDE_BORDER, FRAME_TOP_BORDER + LABEL_TITLE_Y, self.frame.size.width - (2 * FRAME_SIDE_BORDER), LABEL_TITLE_HEIGHT)];
-    
+  
   if (_message.userMessage) {
     self.labelTitle.textAlignment = kBITTextLabelAlignmentRight;
     self.labelText.textAlignment = kBITTextLabelAlignmentRight;
@@ -256,13 +261,13 @@
     self.labelTitle.textAlignment = kBITTextLabelAlignmentLeft;
     self.labelText.textAlignment = kBITTextLabelAlignmentLeft;
   }
-
+  
   [self addSubview:self.labelTitle];
-
+  
   // text
   [self.labelText setText:_message.text];
   CGSize sizeForTextLabel = CGSizeMake(self.frame.size.width - (2 * FRAME_SIDE_BORDER),
-                           [[self class] heightForTextInRowWithMessage:_message tableViewWidth:self.frame.size.width] - LABEL_TEXT_Y - FRAME_BOTTOM_BORDER);
+                                       [[self class] heightForTextInRowWithMessage:_message tableViewWidth:self.frame.size.width] - LABEL_TEXT_Y - FRAME_BOTTOM_BORDER);
   
   [self.labelText setFrame:CGRectMake(FRAME_SIDE_BORDER, LABEL_TEXT_Y, sizeForTextLabel.width, sizeForTextLabel.height)];
   

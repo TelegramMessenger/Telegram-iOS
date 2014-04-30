@@ -49,6 +49,10 @@
 
 - (void)deleteContents;
 
--(BOOL)needsLoadingFromURL;
+- (BOOL)needsLoadingFromURL;
+
+- (BOOL)isImage;
+
+- (NSURL *)localURL;
 
 @end

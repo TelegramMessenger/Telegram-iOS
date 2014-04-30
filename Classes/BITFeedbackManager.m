@@ -739,7 +739,7 @@
                 newAttachment.originalFilename = attachmentData[@"file_name"];
                 newAttachment.id = attachmentData[@"id"];
                 newAttachment.sourceURL = attachmentData[@"url"];
-                newAttachment.contentType = @"image/jpg";
+                newAttachment.contentType = attachmentData[@"content_type"];
                 [message addAttachmentsObject:newAttachment];
               }
               
@@ -1048,7 +1048,6 @@
                          completionHandler:^(NSError *err){
                            if (err) {
                              [self markSendInProgressMessagesAsPending];
-                             
                              [self saveMessages];
                            }
                            

@@ -39,13 +39,15 @@
 #import "BITFeedbackComposeViewController.h"
 #import "BITFeedbackUserDataViewController.h"
 #import "BITFeedbackMessage.h"
+#import "BITFeedbackMessageAttachment.h"
+#import "BITFeedbackMessageAttachment+QLPreviewItem.h"
 #import "BITAttributedLabel.h"
-#import "BITAttachmentGalleryViewController.h"
 
 #import "BITHockeyBaseManagerPrivate.h"
 
 #import "BITHockeyHelper.h"
 #import <QuartzCore/QuartzCore.h>
+#import <QuickLook/QuickLook.h>
 
 
 #define DEFAULT_BACKGROUNDCOLOR BIT_RGBCOLOR(245, 245, 245)
@@ -70,6 +72,7 @@
 @property (nonatomic, weak) BITFeedbackManager *manager;
 @property (nonatomic, strong) NSDateFormatter *lastUpdateDateFormatter;
 @property (nonatomic) BOOL userDataComposeFlow;
+@property (nonatomic, strong) NSArray *cachedPreviewItems;
 
 @end
 
@@ -330,6 +333,7 @@
 
 -(void)userDataUpdateFinished {
   [self.manager saveMessages];
+  [self refreshPreviewItems];
   
   if (self.userDataComposeFlow) {
     if ([self.manager showFirstRequiredPresentationModal]) {
@@ -771,19 +775,46 @@
   }
 }
 
+#pragma mark - ListViewCellDelegate
+
 - (void)listCell:(id)cell didSelectAttachment:(BITFeedbackMessageAttachment *)attachment {
-  BITAttachmentGalleryViewController *galleryController = [BITAttachmentGalleryViewController new];
-  UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:galleryController];
+    QLPreviewController *previewController = [[QLPreviewController alloc] init];
+    previewController.dataSource = self;
+
+    [self presentViewController:previewController animated:YES completion:nil];
+    
+    [previewController setCurrentPreviewItemIndex:[self.cachedPreviewItems indexOfObject:attachment]];
   
-  NSMutableArray *collectedMessages = [NSMutableArray new];
+}
+- (void)refreshPreviewItems {
+  self.cachedPreviewItems = nil;
+  NSMutableArray *collectedAttachments = [NSMutableArray new];
   
   for (int i = 0; i<self.manager.numberOfMessages;i++){
-    [collectedMessages addObject:[self.manager messageAtIndex:i]];
+    BITFeedbackMessage *message = [self.manager messageAtIndex:i];
+    for (BITFeedbackMessageAttachment *attachment in message.attachments){
+      NSLog(@"%@", attachment.localURL);
+      if ([QLPreviewController canPreviewItem:attachment]){
+        [collectedAttachments addObject:attachment];
+
+      }
+    }
   }
   
-  [galleryController setMessages:collectedMessages];
-  [galleryController setPreselectedAttachment:attachment];
-  [self presentViewController:navController animated:YES completion:nil];
+  self.cachedPreviewItems = collectedAttachments;
+}
+
+- (NSInteger) numberOfPreviewItemsInPreviewController: (QLPreviewController *) controller {
+  if (!self.cachedPreviewItems){
+    [self refreshPreviewItems];
+  }
+  return self.cachedPreviewItems.count;
+}
+
+- (id <QLPreviewItem>) previewController: (QLPreviewController *) controller previewItemAtIndex: (NSInteger) index {
+  if (index>=0){
+    return self.cachedPreviewItems[index];}
+  return nil;
 }
 
 @end

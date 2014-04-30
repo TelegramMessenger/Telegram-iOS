@@ -30,6 +30,7 @@
 #import "BITFeedbackMessageAttachment.h"
 #import "BITHockeyHelper.h"
 #import "HockeySDKPrivate.h"
+#import <MobileCoreServices/MobileCoreServices.h>
 
 #define kCacheFolderName @"hockey_attachments"
 
@@ -52,7 +53,7 @@
     formatter = [NSDateFormatter new];
     formatter.dateStyle = NSDateFormatterShortStyle;
     formatter.timeStyle = NSDateFormatterShortStyle;
-
+    
   }
   
   BITFeedbackMessageAttachment *newAttachment = [BITFeedbackMessageAttachment new];
@@ -97,6 +98,17 @@
   return (self.sourceURL);
 }
 
+- (BOOL)isImage {
+  return ([self.contentType rangeOfString:@"image"].location != NSNotFound);
+}
+
+- (NSURL *)localURL {
+  if (self.filename){
+    return [NSURL fileURLWithPath:self.filename];
+  } else
+  { return nil;}
+}
+
 #pragma mark NSCoding
 
 - (void)encodeWithCoder:(NSCoder *)aCoder {
@@ -104,8 +116,8 @@
   [aCoder encodeObject:self.filename forKey:@"filename"];
   [aCoder encodeObject:self.originalFilename forKey:@"originalFilename"];
   [aCoder encodeObject:self.sourceURL forKey:@"url"];
-
-
+  
+  
 }
 
 - (id)initWithCoder:(NSCoder *)aDecoder {
@@ -117,7 +129,7 @@
     self.thumbnailRepresentations = [NSMutableDictionary new];
     self.originalFilename = [aDecoder decodeObjectForKey:@"originalFilename"];
     self.sourceURL = [aDecoder decodeObjectForKey:@"sourceURL"];
-
+    
   }
   
   return self;
@@ -126,10 +138,14 @@
 #pragma mark - Thubmnails / Image Representation
 
 - (UIImage *)imageRepresentation {
-  if ([self.contentType rangeOfString:@"image"].location != NSNotFound || [self.sourceURL rangeOfString:@"jpeg"].location != NSNotFound){
+  if ([self.contentType rangeOfString:@"image"].location != NSNotFound ){
     return [UIImage imageWithData:self.data];
   } else {
-    return bit_imageNamed(@"feedbackActiviy.png", BITHOCKEYSDK_BUNDLE); // TODO add another placeholder.
+    // Create a Icon ..
+    UIDocumentInteractionController* docController = [[UIDocumentInteractionController alloc] init];
+    docController.name = self.originalFilename;
+    NSArray* icons = docController.icons;
+    return icons[0];
   }
 }
 
@@ -139,46 +155,69 @@
   if (!self.thumbnailRepresentations[cacheKey]){
     UIImage *image = self.imageRepresentation;
     // consider the scale.
+    if (!image)
+      return nil;
     
     CGFloat scale = [UIScreen mainScreen].scale;
     
-    CGSize scaledSize = CGSizeApplyAffineTransform(size, CGAffineTransformMakeScale(scale, scale));
-    UIImage *thumbnail = bit_imageToFitSize(image, scaledSize, NO) ;
+    if (scale != image.scale){
+      
+      CGSize scaledSize = CGSizeApplyAffineTransform(size, CGAffineTransformMakeScale(scale, scale));
+      UIImage *thumbnail = bit_imageToFitSize(image, scaledSize, YES) ;
+      
+      UIImage *scaledTumbnail = [UIImage imageWithCGImage:thumbnail.CGImage scale:scale orientation:thumbnail.imageOrientation];
+      if (thumbnail){
+        [self.thumbnailRepresentations setObject:scaledTumbnail forKey:cacheKey];
+      }
+      
+      } else {
+        UIImage *thumbnail = bit_imageToFitSize(image, size, YES) ;
+        
+        [self.thumbnailRepresentations setObject:thumbnail forKey:cacheKey];
+        
+      }
     
-    UIImage *scaledTumbnail = [UIImage imageWithCGImage:thumbnail.CGImage scale:scale orientation:thumbnail.imageOrientation];
-    if (thumbnail){
-      [self.thumbnailRepresentations setObject:scaledTumbnail forKey:cacheKey];
+  }
+  
+    return self.thumbnailRepresentations[cacheKey];
+  }
+  
+#pragma mark - Persistence Helpers
+  
+  - (NSString *)createFilename {
+    NSArray* cachePathArray = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
+    NSString* cachePath = [cachePathArray lastObject];
+    cachePath = [cachePath stringByAppendingPathComponent:kCacheFolderName];
+    
+    BOOL isDirectory;
+    
+    if (![[NSFileManager defaultManager] fileExistsAtPath:cachePath isDirectory:&isDirectory]){
+      [[NSFileManager defaultManager] createDirectoryAtPath:cachePath withIntermediateDirectories:YES attributes:nil error:nil];
+    }
+    
+    NSString *uniqueString = bit_UUID();
+    cachePath = [cachePath stringByAppendingPathComponent:uniqueString];
+    
+    // File extension that suits the Content type.
+    
+    CFStringRef mimeType = (__bridge CFStringRef)self.contentType;
+    CFStringRef uti = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, mimeType, NULL);
+    CFStringRef extension = UTTypeCopyPreferredTagWithClass(uti, kUTTagClassFilenameExtension);
+    
+    cachePath = [cachePath stringByAppendingPathExtension:(__bridge NSString *)(extension)];
+    
+    CFRelease(uti);
+    CFRelease(extension);
+    
+    return  cachePath;
+  }
+  
+  - (void)deleteContents {
+    if (self.filename){
+      [[NSFileManager defaultManager] removeItemAtPath:self.filename error:nil];
+      self.filename = nil;
     }
   }
   
-  return self.thumbnailRepresentations[cacheKey];
-}
-
-#pragma mark - Persistence Helpers
-
-- (NSString *)createFilename {
-  NSArray* cachePathArray = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
-  NSString* cachePath = [cachePathArray lastObject];
-  cachePath = [cachePath stringByAppendingPathComponent:kCacheFolderName];
   
-  BOOL isDirectory;
-  
-  if (![[NSFileManager defaultManager] fileExistsAtPath:cachePath isDirectory:&isDirectory]){
-    [[NSFileManager defaultManager] createDirectoryAtPath:cachePath withIntermediateDirectories:YES attributes:nil error:nil];
-  }
-  
-  NSString *uniqueString = bit_UUID();
-  cachePath = [cachePath stringByAppendingPathComponent:uniqueString];
-  
-  return  cachePath;
-}
-
-- (void)deleteContents {
-  if (self.filename){
-    [[NSFileManager defaultManager] removeItemAtPath:self.filename error:nil];
-    self.filename = nil;
-  }
-}
-
-
-@end
+  @end
