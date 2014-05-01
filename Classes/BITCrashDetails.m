@@ -16,7 +16,8 @@
                              exceptionName:(NSString *)exceptionName
                            exceptionReason:(NSString *)exceptionReason
                               appStartTime:(NSDate *)appStartTime
-                                 crashTime:(NSDate *)crashTime;
+                                 crashTime:(NSDate *)crashTime
+                                  appBuild:(NSString *)appBuild
 {
   if ((self = [super init])) {
     _incidentIdentifier = incidentIdentifier;
@@ -26,6 +27,7 @@
     _exceptionReason = exceptionReason;
     _appStartTime = appStartTime;
     _crashTime = crashTime;
+    _appBuild = appBuild;
   }
   return self;
 }

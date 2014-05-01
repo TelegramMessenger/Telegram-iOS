@@ -788,6 +788,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
                                                                        exceptionReason:report.exceptionInfo.exceptionReason
                                                                           appStartTime:appStartTime
                                                                              crashTime:appCrashTime
+                                                                              appBuild:report.applicationInfo.applicationVersion
                                     ];
       }
     }
@@ -1135,6 +1136,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
                                                                  exceptionReason:nil
                                                                     appStartTime:nil
                                                                        crashTime:nil
+                                                                        appBuild:fakeReportAppVersion
                               ];
 
   NSData *plist = [NSPropertyListSerialization dataFromPropertyList:(id)rootObj
