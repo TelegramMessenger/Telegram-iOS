@@ -268,6 +268,8 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
 
 /**
  *	 Remove all crash reports and stored meta data for each from the file system and keychain
+ *
+ * This is currently only used as a helper method for tests
  */
 - (void)cleanCrashReports {
   for (NSUInteger i=0; i < [_crashFiles count]; i++) {
@@ -696,7 +698,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
         [self.delegate crashManagerWillCancelSendingCrashReport:self];
       }
       
-      [self cleanCrashReports];
+      [self cleanCrashReportWithFilename:[_crashesDir stringByAppendingPathComponent: _lastCrashFilename]];
       return YES;
       
     case BITCrashManagerUserInputSend:
