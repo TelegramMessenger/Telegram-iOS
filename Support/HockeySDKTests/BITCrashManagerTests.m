@@ -272,7 +272,7 @@
   assertThatBool([_sut hasNonApprovedCrashReports], equalToBool(YES));
   
   // this is currently sending blindly, needs refactoring to test properly
-  [_sut sendCrashReports];
+  [_sut sendNextCrashReport];
   [verifyCount(delegateMock, times(1)) crashManagerWillSendCrashReport:_sut];
   
   [_sut cleanCrashReports];

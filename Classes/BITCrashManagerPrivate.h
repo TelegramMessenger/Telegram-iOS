@@ -82,7 +82,7 @@
 - (BITCrashAttachment *)attachmentForCrashReport:(NSString *)filename;
 
 - (void)invokeDelayedProcessing;
-- (void)sendCrashReports;
+- (void)sendNextCrashReport;
 
 - (NSString *)getCrashesDir;
 - (void)setLastCrashFilename:(NSString *)lastCrashFilename;
