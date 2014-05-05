@@ -782,8 +782,9 @@
     previewController.dataSource = self;
 
     [self presentViewController:previewController animated:YES completion:nil];
-    
+  if (self.cachedPreviewItems.count > [self.cachedPreviewItems indexOfObject:attachment]){
     [previewController setCurrentPreviewItemIndex:[self.cachedPreviewItems indexOfObject:attachment]];
+  }
   
 }
 - (void)refreshPreviewItems {

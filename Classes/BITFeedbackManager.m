@@ -1093,13 +1093,21 @@
 
 -(void)setFeedbackObservationMode:(BITFeedbackObservationMode)mode {
   if (mode == BITFeedbackObservationModeOnScreenshot){
+    if (NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1){
       [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenshotNotificationReceived:) name:UIApplicationUserDidTakeScreenshotNotification object:nil];
+    } else {
+      BITHockeyLog("Not enabling Screenshot notifications: iOS6.1 and lower is not supported.");
+    }
+    
     self.screenshotNotificationEnabled = YES;
+    
     if (self.tapRecognizer){
       [[[UIApplication sharedApplication] keyWindow] removeGestureRecognizer:self.tapRecognizer];
       self.tapRecognizer = nil;
     }
-  } else if (mode == BITFeedbackObservationModeThreeFingerTap){
+  }
+  
+  if (mode == BITFeedbackObservationModeThreeFingerTap){
     if (!self.tapRecognizer){
       self.tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(screenshotTripleTap:)];
       self.tapRecognizer.numberOfTouchesRequired = 3;
@@ -1111,8 +1119,10 @@
     }
     
     if (self.screenshotNotificationEnabled){
-      [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationUserDidTakeScreenshotNotification object:nil];
-      self.screenshotNotificationEnabled = NO;
+      if (NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1){
+        [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationUserDidTakeScreenshotNotification object:nil];
+        self.screenshotNotificationEnabled = NO;
+      }
     }
   }
 }
