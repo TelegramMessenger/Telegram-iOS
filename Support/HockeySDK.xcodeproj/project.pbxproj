@@ -157,6 +157,8 @@
 		97BD9BD31911085A0043FD59 /* BITFeedbackMessageAttachment+QLPreviewItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 97BD9BD11911085A0043FD59 /* BITFeedbackMessageAttachment+QLPreviewItem.m */; };
 		97BD9BD5191109730043FD59 /* QuickLook.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 97BD9BD4191109730043FD59 /* QuickLook.framework */; };
 		97CC11F71917AB7C0028768F /* QuickLook.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 97BD9BD4191109730043FD59 /* QuickLook.framework */; };
+		97CC11F91917C0310028768F /* MobileCoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 97CC11F81917C0310028768F /* MobileCoreServices.framework */; };
+		97CC11FA1917C0390028768F /* MobileCoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 97CC11F81917C0310028768F /* MobileCoreServices.framework */; };
 		97F0F9FD18ABAECD00EF50AA /* iconCamera.png in Resources */ = {isa = PBXBuildFile; fileRef = 97F0F9FB18ABAECD00EF50AA /* iconCamera.png */; };
 		97F0F9FE18ABAECD00EF50AA /* iconCamera@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 97F0F9FC18ABAECD00EF50AA /* iconCamera@2x.png */; };
 		97F0FA0518B2294D00EF50AA /* BITFeedbackMessageAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 97F0FA0318AE5AED00EF50AA /* BITFeedbackMessageAttachment.m */; };
@@ -342,6 +344,7 @@
 		97BD9BD01911085A0043FD59 /* BITFeedbackMessageAttachment+QLPreviewItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "BITFeedbackMessageAttachment+QLPreviewItem.h"; sourceTree = "<group>"; };
 		97BD9BD11911085A0043FD59 /* BITFeedbackMessageAttachment+QLPreviewItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "BITFeedbackMessageAttachment+QLPreviewItem.m"; sourceTree = "<group>"; };
 		97BD9BD4191109730043FD59 /* QuickLook.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLook.framework; path = System/Library/Frameworks/QuickLook.framework; sourceTree = SDKROOT; };
+		97CC11F81917C0310028768F /* MobileCoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MobileCoreServices.framework; path = System/Library/Frameworks/MobileCoreServices.framework; sourceTree = SDKROOT; };
 		97F0F9FB18ABAECD00EF50AA /* iconCamera.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = iconCamera.png; sourceTree = "<group>"; };
 		97F0F9FC18ABAECD00EF50AA /* iconCamera@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "iconCamera@2x.png"; sourceTree = "<group>"; };
 		97F0F9FF18AE375E00EF50AA /* BITImageAnnotationViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITImageAnnotationViewController.h; sourceTree = "<group>"; };
@@ -373,6 +376,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				97CC11F91917C0310028768F /* MobileCoreServices.framework in Frameworks */,
 				97BD9BD5191109730043FD59 /* QuickLook.framework in Frameworks */,
 				9760F6C418BB4D2D00959B93 /* AssetsLibrary.framework in Frameworks */,
 				1E5954DC15B6F24A00A03429 /* Foundation.framework in Frameworks */,
@@ -391,6 +395,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				97CC11FA1917C0390028768F /* MobileCoreServices.framework in Frameworks */,
 				97CC11F71917AB7C0028768F /* QuickLook.framework in Frameworks */,
 				1EA1170016F4D32C001C015C /* libHockeySDK.a in Frameworks */,
 				1E5A459216F0DFC200B55C04 /* SenTestingKit.framework in Frameworks */,
@@ -655,6 +660,7 @@
 		E400561C148D79B500EB22B9 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				97CC11F81917C0310028768F /* MobileCoreServices.framework */,
 				97BD9BD4191109730043FD59 /* QuickLook.framework */,
 				9760F6C318BB4D2D00959B93 /* AssetsLibrary.framework */,
 				E41EB48B148D7C4E0015DEDC /* CrashReporter.framework */,
