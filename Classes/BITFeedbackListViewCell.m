@@ -274,15 +274,15 @@
   
   int i = 0;
   
-  CGFloat attachmentsPerRow = ceilf(self.frame.size.width / (FRAME_SIDE_BORDER + ATTACHMENT_SIZE));
+  CGFloat attachmentsPerRow = floorf(self.frame.size.width / (FRAME_SIDE_BORDER + ATTACHMENT_SIZE));
   
   for ( UIButton *imageButton in self.attachmentViews){
     imageButton.contentMode = UIViewContentModeScaleAspectFit;
     
     if ( !_message.userMessage){
-      imageButton.frame = CGRectMake(FRAME_SIDE_BORDER + (FRAME_SIDE_BORDER + ATTACHMENT_SIZE) * i , floor(i/attachmentsPerRow) + baseOffsetOfText , ATTACHMENT_SIZE, ATTACHMENT_SIZE);
+      imageButton.frame = CGRectMake(FRAME_SIDE_BORDER + (FRAME_SIDE_BORDER + ATTACHMENT_SIZE) * (i%(int)attachmentsPerRow) , floor(i/attachmentsPerRow)*(FRAME_SIDE_BORDER + ATTACHMENT_SIZE) + baseOffsetOfText , ATTACHMENT_SIZE, ATTACHMENT_SIZE);
     } else {
-      imageButton.frame = CGRectMake(self.frame.size.width - FRAME_SIDE_BORDER - ATTACHMENT_SIZE -  ((FRAME_SIDE_BORDER + ATTACHMENT_SIZE) * (i) ), floor(i/attachmentsPerRow) + baseOffsetOfText , ATTACHMENT_SIZE, ATTACHMENT_SIZE);
+      imageButton.frame = CGRectMake(self.frame.size.width - FRAME_SIDE_BORDER - ATTACHMENT_SIZE -  ((FRAME_SIDE_BORDER + ATTACHMENT_SIZE) *  (i%(int)attachmentsPerRow) ), floor(i/attachmentsPerRow)*(FRAME_SIDE_BORDER + ATTACHMENT_SIZE) + baseOffsetOfText , ATTACHMENT_SIZE, ATTACHMENT_SIZE);
     }
     
     if (!imageButton.superview){
