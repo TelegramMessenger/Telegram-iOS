@@ -95,7 +95,7 @@
 }
 
 -(BOOL)needsLoadingFromURL {
-  return (self.sourceURL);
+  return (self.sourceURL && ![[NSFileManager defaultManager] fileExistsAtPath:self.localURL.absoluteString]);
 }
 
 - (BOOL)isImage {
@@ -128,7 +128,7 @@
     self.filename = [aDecoder decodeObjectForKey:@"filename"];
     self.thumbnailRepresentations = [NSMutableDictionary new];
     self.originalFilename = [aDecoder decodeObjectForKey:@"originalFilename"];
-    self.sourceURL = [aDecoder decodeObjectForKey:@"sourceURL"];
+    self.sourceURL = [aDecoder decodeObjectForKey:@"url"];
     
   }
   
@@ -208,11 +208,13 @@
     CFStringRef mimeType = (__bridge CFStringRef)self.contentType;
     CFStringRef uti = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, mimeType, NULL);
     CFStringRef extension = UTTypeCopyPreferredTagWithClass(uti, kUTTagClassFilenameExtension);
-    
+    if (extension){
     cachePath = [cachePath stringByAppendingPathExtension:(__bridge NSString *)(extension)];
+      CFRelease(extension);
+ 
+    }
     
     CFRelease(uti);
-    CFRelease(extension);
     
     return  cachePath;
   }

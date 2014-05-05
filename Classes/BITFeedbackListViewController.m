@@ -34,6 +34,7 @@
 #import "HockeySDKPrivate.h"
 
 #import "BITFeedbackManagerPrivate.h"
+#import "BITFeedbackManager.h"
 #import "BITFeedbackListViewController.h"
 #import "BITFeedbackListViewCell.h"
 #import "BITFeedbackComposeViewController.h"
@@ -794,7 +795,7 @@
   for (int i = 0; i<self.manager.numberOfMessages;i++){
     BITFeedbackMessage *message = [self.manager messageAtIndex:i];
     for (BITFeedbackMessageAttachment *attachment in message.attachments){
-      NSLog(@"%@", attachment.localURL);
+      NSLog(@"%@", attachment.possibleFilename);
       if ([QLPreviewController canPreviewItem:attachment]){
         [collectedAttachments addObject:attachment];
 
@@ -822,6 +823,7 @@
         if (responseData.length){
           [attachment replaceData:responseData];
           [controller reloadData];
+          [[BITHockeyManager sharedHockeyManager].feedbackManager saveMessages];
         }
       }];
       return nil;

@@ -198,7 +198,7 @@
   for (BITFeedbackMessageAttachment *attachment in attachments){
     UIButton *imageView = [UIButton buttonWithType:UIButtonTypeCustom];
     [imageView setImage:[attachment thumbnailWithSize:CGSizeMake(ATTACHMENT_SIZE, ATTACHMENT_SIZE)] forState:UIControlStateNormal];
-    
+    [imageView setContentMode:UIViewContentModeScaleAspectFit];
     [imageView addTarget:self action:@selector(imageButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
     
     [self.attachmentViews addObject:imageView];
