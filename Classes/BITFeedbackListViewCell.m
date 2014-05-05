@@ -198,15 +198,11 @@
   for (BITFeedbackMessageAttachment *attachment in attachments){
     UIButton *imageView = [UIButton buttonWithType:UIButtonTypeCustom];
     [imageView setImage:[attachment thumbnailWithSize:CGSizeMake(ATTACHMENT_SIZE, ATTACHMENT_SIZE)] forState:UIControlStateNormal];
-    [imageView setTitle:attachment.originalFilename forState:UIControlStateNormal];
-    [imageView setContentVerticalAlignment:UIControlContentVerticalAlignmentCenter];
-    [imageView setContentHorizontalAlignment:UIControlContentHorizontalAlignmentCenter];
     
     [imageView addTarget:self action:@selector(imageButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
     
-    imageView.contentMode = UIViewContentModeScaleAspectFill;
-    
     [self.attachmentViews addObject:imageView];
+    [self addSubview:imageView];
   }
 }
 

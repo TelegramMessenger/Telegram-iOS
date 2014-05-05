@@ -103,24 +103,42 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
 
 - (void)viewWillAppear:(BOOL)animated {
   [super viewWillAppear:animated];
+  
+  [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(orientationDidChange:) name:UIDeviceOrientationDidChangeNotification object:nil];
+  
   [self fitImageViewFrame];
   
+}
+
+- (void)viewWillDisappear:(BOOL)animated {
+  [[NSNotificationCenter defaultCenter] removeObserver:self name:UIDeviceOrientationDidChangeNotification object:nil];
+
 }
 
 - (BOOL)prefersStatusBarHidden {
   return self.navigationController.navigationBarHidden || self.navigationController.navigationBar.alpha == 0.0f;
 }
 
+- (void)orientationDidChange:(NSNotification *)notification {
+  [self fitImageViewFrame];
+}
+
 
 - (void)fitImageViewFrame {
-  CGFloat heightScaleFactor =  [[UIScreen mainScreen] bounds].size.height / self.image.size.height;
-  CGFloat widthScaleFactor =  [[UIScreen mainScreen] bounds].size.width / self.image.size.width;
+  
+  CGSize size = [UIScreen mainScreen].bounds.size;
+  if (UIInterfaceOrientationIsLandscape([UIApplication sharedApplication].statusBarOrientation)){
+    size = CGSizeMake(size.height, size.width);
+  }
+  
+  CGFloat heightScaleFactor = size.height / self.image.size.height;
+  CGFloat widthScaleFactor =  size.width / self.image.size.width;
   
   CGFloat factor = MIN(heightScaleFactor, widthScaleFactor);
   self.scaleFactor = factor;
   CGSize scaledImageSize = CGSizeMake(self.image.size.width * factor, self.image.size.height * factor);
   
-  CGRect baseFrame = CGRectMake(self.view.frame.size.width/2 - scaledImageSize.width/2, self.view.frame.size.height -  [[UIScreen mainScreen] bounds].size.height, scaledImageSize.width, scaledImageSize.height);
+  CGRect baseFrame = CGRectMake(self.view.frame.size.width/2 - scaledImageSize.width/2, self.view.frame.size.height -  size.height, scaledImageSize.width, scaledImageSize.height);
   
   self.imageView.frame = baseFrame;
 }
