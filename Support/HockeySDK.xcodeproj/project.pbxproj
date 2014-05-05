@@ -341,7 +341,6 @@
 		97BD9BD01911085A0043FD59 /* BITFeedbackMessageAttachment+QLPreviewItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "BITFeedbackMessageAttachment+QLPreviewItem.h"; sourceTree = "<group>"; };
 		97BD9BD11911085A0043FD59 /* BITFeedbackMessageAttachment+QLPreviewItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "BITFeedbackMessageAttachment+QLPreviewItem.m"; sourceTree = "<group>"; };
 		97BD9BD4191109730043FD59 /* QuickLook.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLook.framework; path = System/Library/Frameworks/QuickLook.framework; sourceTree = SDKROOT; };
-		97BD9BDF19113F9B0043FD59 /* View.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = View.xib; sourceTree = "<group>"; };
 		97F0F9FB18ABAECD00EF50AA /* iconCamera.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = iconCamera.png; sourceTree = "<group>"; };
 		97F0F9FC18ABAECD00EF50AA /* iconCamera@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "iconCamera@2x.png"; sourceTree = "<group>"; };
 		97F0F9FF18AE375E00EF50AA /* BITImageAnnotationViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITImageAnnotationViewController.h; sourceTree = "<group>"; };
@@ -521,7 +520,6 @@
 				1E49A4391612223B00463151 /* BITFeedbackUserDataViewController.m */,
 				1E49A42F1612223B00463151 /* BITFeedbackListViewCell.h */,
 				1E49A4301612223B00463151 /* BITFeedbackListViewCell.m */,
-				97BD9BDF19113F9B0043FD59 /* View.xib */,
 				1E49A4311612223B00463151 /* BITFeedbackListViewController.h */,
 				1E49A4321612223B00463151 /* BITFeedbackListViewController.m */,
 				1EF95CA4162CB036000AE3AD /* BITFeedbackActivity.h */,
