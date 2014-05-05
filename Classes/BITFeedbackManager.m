@@ -53,6 +53,12 @@
 #define kBITFeedbackLastMessageID   @"HockeyFeedbackLastMessageID"
 #define kBITFeedbackAppID           @"HockeyFeedbackAppID"
 
+@interface BITFeedbackManager()<UIGestureRecognizerDelegate>
+
+@property (nonatomic, strong) UITapGestureRecognizer *tapRecognizer;
+@property (nonatomic) BOOL screenshotNotificationEnabled;
+
+@end
 
 @implementation BITFeedbackManager {
   NSFileManager  *_fileManager;
@@ -1087,12 +1093,34 @@
 
 -(void)setFeedbackObservationMode:(BITFeedbackObservationMode)mode {
   if (mode == BITFeedbackObservationModeOnScreenshot){
-    //  [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenshotNotificationReceived:) name:UIApplicationUserDidTakeScreenshotNotification object:nil];
+      [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenshotNotificationReceived:) name:UIApplicationUserDidTakeScreenshotNotification object:nil];
+    self.screenshotNotificationEnabled = YES;
+    if (self.tapRecognizer){
+      [[[UIApplication sharedApplication] keyWindow] removeGestureRecognizer:self.tapRecognizer];
+      self.tapRecognizer = nil;
+    }
+  } else if (mode == BITFeedbackObservationModeThreeFingerTap){
+    if (!self.tapRecognizer){
+      self.tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(screenshotTripleTap:)];
+      self.tapRecognizer.numberOfTouchesRequired = 3;
+      self.tapRecognizer.delegate = self;
+      
+      dispatch_async(dispatch_get_main_queue(), ^{
+        [[UIApplication sharedApplication].keyWindow addGestureRecognizer:self.tapRecognizer];
+      });
+    }
+    
+    if (self.screenshotNotificationEnabled){
+      [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationUserDidTakeScreenshotNotification object:nil];
+      self.screenshotNotificationEnabled = NO;
+    }
   }
 }
 
 -(void)screenshotNotificationReceived:(NSNotification *)notification {
-  [self extractLastPictureFromLibraryAndLaunchFeedback];
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [self extractLastPictureFromLibraryAndLaunchFeedback];
+  });
 }
 
 -(void)extractLastPictureFromLibraryAndLaunchFeedback {
@@ -1108,11 +1136,23 @@
         ALAssetRepresentation *representation = [alAsset defaultRepresentation];
         UIImage *latestPhoto = [UIImage imageWithCGImage:[representation fullScreenImage]];
         
-        *stop = YES; *innerStop = YES;
+        *stop = YES;
+        *innerStop = YES;
+        
         [self showFeedbackComposeViewWithPreparedItems:@[latestPhoto]];
       }
     }];
   } failureBlock: nil];
+}
+
+- (void)screenshotTripleTap:(UITapGestureRecognizer *)tapRecognizer {
+  if (tapRecognizer.state == UIGestureRecognizerStateRecognized){
+    [self showFeedbackComposeViewWithGeneratedScreenshot];
+  }
+}
+
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
+  return YES;
 }
 
 @end

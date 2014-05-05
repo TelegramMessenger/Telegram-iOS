@@ -75,7 +75,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
    *  Feedback compose will open with a generated screenshot if the screen is tapped
    *  three fingers for three seconds.
    */
-  BITFeedbackObservationModeThreeFingersThreeSeconds = 2
+  BITFeedbackObservationModeThreeFingerTap = 2
 };
 
 
