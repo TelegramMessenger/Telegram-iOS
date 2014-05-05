@@ -15,7 +15,11 @@
 }
 
 - (NSURL *)previewItemURL {
-  return self.localURL;
+  if (self.localURL){
+    return self.localURL;
+  } else {
+    return [NSURL fileURLWithPath:self.possibleFilename];
+  }
 }
 
 @end

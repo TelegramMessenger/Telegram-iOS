@@ -73,7 +73,7 @@
 
 -(void)setData:(NSData *)data {
   self->_internalData = data;
-  self.filename = [self createFilename];
+  self.filename = [self possibleFilename];
   [self->_internalData writeToFile:self.filename atomically:NO];
 }
 
@@ -138,14 +138,18 @@
 #pragma mark - Thubmnails / Image Representation
 
 - (UIImage *)imageRepresentation {
-  if ([self.contentType rangeOfString:@"image"].location != NSNotFound ){
+  if ([self.contentType rangeOfString:@"image"].location != NSNotFound && self.filename ){
     return [UIImage imageWithData:self.data];
   } else {
     // Create a Icon ..
     UIDocumentInteractionController* docController = [[UIDocumentInteractionController alloc] init];
     docController.name = self.originalFilename;
     NSArray* icons = docController.icons;
-    return icons[0];
+    if (icons.count){
+      return icons[0];
+    } else {
+      return nil;
+    }
   }
 }
 
@@ -181,10 +185,11 @@
   
     return self.thumbnailRepresentations[cacheKey];
   }
+
   
 #pragma mark - Persistence Helpers
   
-  - (NSString *)createFilename {
+  - (NSString *)possibleFilename {
     NSArray* cachePathArray = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
     NSString* cachePath = [cachePathArray lastObject];
     cachePath = [cachePath stringByAppendingPathComponent:kCacheFolderName];

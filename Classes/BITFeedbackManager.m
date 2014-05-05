@@ -805,7 +805,8 @@
     [self markSendInProgressMessagesAsPending];
   }
   
-  [self synchronizeMissingAttachments];
+  // we'll load the images on demand.
+  //[self synchronizeMissingAttachments];
   
   [self saveMessages];
   

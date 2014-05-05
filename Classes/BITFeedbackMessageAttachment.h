@@ -36,7 +36,9 @@
 @property (nonatomic, copy) NSString *originalFilename;
 @property (nonatomic, copy) NSString *contentType;
 @property (nonatomic, copy) NSString *sourceURL;
+@property (nonatomic) BOOL isLoading;
 @property (nonatomic, readonly) NSData *data;
+
 
 @property (readonly) UIImage *imageRepresentation;
 
@@ -54,5 +56,10 @@
 - (BOOL)isImage;
 
 - (NSURL *)localURL;
+
+/**
+ Used to determine whether QuickLook can preview this file or not. If not, we don't download it.
+ */ 
+- (NSString*)possibleFilename;
 
 @end

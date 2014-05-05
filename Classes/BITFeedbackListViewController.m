@@ -814,7 +814,21 @@
 
 - (id <QLPreviewItem>) previewController: (QLPreviewController *) controller previewItemAtIndex: (NSInteger) index {
   if (index>=0){
-    return self.cachedPreviewItems[index];}
+    BITFeedbackMessageAttachment *attachment = self.cachedPreviewItems[index];
+    if (attachment.needsLoadingFromURL && !attachment.isLoading){
+      attachment.isLoading = YES;
+      NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
+      [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue new] completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
+        if (responseData.length){
+          [attachment replaceData:responseData];
+          [controller reloadData];
+        }
+      }];
+      return nil;
+    } else {
+      return self.cachedPreviewItems[index];
+    }
+  }
   return nil;
 }
 
