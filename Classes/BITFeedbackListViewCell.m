@@ -278,6 +278,7 @@
   
   for ( UIButton *imageButton in self.attachmentViews){
     imageButton.contentMode = UIViewContentModeScaleAspectFit;
+    imageButton.imageView.contentMode = UIViewContentModeScaleAspectFill;
     
     if ( !_message.userMessage){
       imageButton.frame = CGRectMake(FRAME_SIDE_BORDER + (FRAME_SIDE_BORDER + ATTACHMENT_SIZE) * (i%(int)attachmentsPerRow) , floor(i/attachmentsPerRow)*(FRAME_SIDE_BORDER + ATTACHMENT_SIZE) + baseOffsetOfText , ATTACHMENT_SIZE, ATTACHMENT_SIZE);
