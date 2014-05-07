@@ -66,6 +66,7 @@
 -(id)init {
   self = [super init];
   if (self){
+    self.isLoading = NO;
     self.thumbnailRepresentations = [NSMutableDictionary new];
   }
   return self;
