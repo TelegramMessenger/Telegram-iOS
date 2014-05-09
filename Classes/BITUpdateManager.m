@@ -424,10 +424,6 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
       self.lastCheck = [NSDate distantPast];
     }
     
-    if (self.delegate != nil && [self.delegate respondsToSelector:@selector(updateManagerShouldSendUsageData:)]) {
-      _sendUsageData = [self.delegate updateManagerShouldSendUsageData:self];
-    }
-    
     if (!BITHockeyBundle()) {
       NSLog(@"[HockeySDK] WARNING: %@ is missing, make sure it is added!", BITHOCKEYSDK_BUNDLE);
     }
@@ -762,6 +758,10 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     if ([self isUpdateManagerDisabled]) return;
     
     BITHockeyLog(@"INFO: Starting UpdateManager");
+    
+    if (self.delegate != nil && [self.delegate respondsToSelector:@selector(updateManagerShouldSendUsageData:)]) {
+      _sendUsageData = [self.delegate updateManagerShouldSendUsageData:self];
+    }
     
     [self checkExpiryDateReached];
     if (![self expiryDateReached]) {
