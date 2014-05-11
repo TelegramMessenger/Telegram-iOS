@@ -62,6 +62,10 @@
 @property (nonatomic, strong) UIView *textAccessoryView;
 @property (nonatomic) NSInteger selectedAttachmentIndex;
 
+@property (nonatomic) BOOL scrollToNewestAttachment;
+
+@property (nonatomic) BOOL reallyVisible;
+
 @end
 
 
@@ -228,6 +232,7 @@
   }
   
   [self updateBarButtonState];
+
   
 
 }
@@ -245,6 +250,10 @@
     // Invoke delayed to fix iOS 7 iPad landscape bug, where this view will be moved if not called delayed
     [self.textView performSelector:@selector(becomeFirstResponder) withObject:nil afterDelay:0.0];
   }
+
+  
+  
+  self.reallyVisible = YES;
   
   [self refreshAttachmentScrollview];
 
@@ -258,6 +267,8 @@
   
 	[super viewWillDisappear:animated];
 
+  self.reallyVisible = NO;
+  
   [[UIApplication sharedApplication] setStatusBarStyle:_statusBarStyle];
 }
 
@@ -267,6 +278,8 @@
 
 -(void)refreshAttachmentScrollview {
   CGFloat scrollViewWidth = 0;
+  
+  CGPoint preservedOffset = self.attachmentScrollView.contentOffset;
   
   if (self.attachments.count){
     scrollViewWidth = 100;
@@ -287,7 +300,7 @@
   }
   
   for (UIView *subview in self.attachmentScrollView.subviews){
-    [subview removeFromSuperview];
+   // [subview removeFromSuperview];
   }
   
   if (self.attachments.count > self.attachmentScrollViewImageViews.count){
@@ -296,12 +309,15 @@
       UIButton *newImageButton = [UIButton buttonWithType:UIButtonTypeCustom];
       [newImageButton addTarget:self action:@selector(imageButtonAction:) forControlEvents:UIControlEventTouchUpInside];
       [self.attachmentScrollViewImageViews addObject:newImageButton];
+      [self.attachmentScrollView addSubview:newImageButton];
     }
   }
     
   int index = 0;
   
   CGFloat currentYOffset = 0.0f;
+  
+  CGFloat heightOfLastAttachment = 0.0f;
   
   for (BITFeedbackMessageAttachment* attachment in self.attachments){
     UIButton *imageButton = self.attachmentScrollViewImageViews[index];
@@ -317,13 +333,23 @@
     
     currentYOffset += height;
     
-    [self.attachmentScrollView addSubview:imageButton];
+   // [self.attachmentScrollView addSubview:imageButton];
+    
+    heightOfLastAttachment = height + 20;
     
     [imageButton setImage:image forState:UIControlStateNormal];
     index++;
   }
   
   [self.attachmentScrollView setContentSize:CGSizeMake(CGRectGetWidth(self.attachmentScrollView.frame), currentYOffset)];
+  NSLog(@"%f %f", self.attachmentScrollView.contentOffset.x, self.attachmentScrollView.contentOffset.y);
+  if (self.scrollToNewestAttachment && self.reallyVisible && currentYOffset - heightOfLastAttachment > 0){
+    self.scrollToNewestAttachment = NO;
+    
+    [self.attachmentScrollView setContentOffset:CGPointMake(0,currentYOffset-heightOfLastAttachment)];
+  } else {
+    self.attachmentScrollView.contentOffset = preservedOffset;
+  }
   
   [self updateBarButtonState];
 }
@@ -333,6 +359,13 @@
     self.navigationItem.rightBarButtonItem.enabled = YES;
   } else {
     self.navigationItem.rightBarButtonItem.enabled = NO;
+  }
+  
+  if (self.attachments.count > 2){
+    self.textView.inputAccessoryView = nil;
+  } else {
+    self.textView.inputAccessoryView = self.textAccessoryView;
+
   }
 }
 
@@ -407,10 +440,10 @@
     NSString *imageName = [imagePath lastPathComponent];
     newAttachment.originalFilename = imageName;
     [self.attachments addObject:newAttachment];
+    self.scrollToNewestAttachment = YES;
   }
   
   [picker dismissViewControllerAnimated:YES completion:nil];
-  [self refreshAttachmentScrollview];
 }
 
 - (void)imagePickerControllerDidCancel:(UIImagePickerController *)picker {
@@ -476,6 +509,7 @@
     self.selectedAttachmentIndex = NSNotFound;
 
     [self refreshAttachmentScrollview];
+    
   } else if(buttonIndex != [actionSheet cancelButtonIndex]){
     if (self.selectedAttachmentIndex != NSNotFound){
       BITFeedbackMessageAttachment* attachment = [self.attachments objectAtIndex:self.selectedAttachmentIndex];
@@ -497,7 +531,6 @@
   if (self.selectedAttachmentIndex != NSNotFound){
     BITFeedbackMessageAttachment* attachment = [self.attachments objectAtIndex:self.selectedAttachmentIndex];
     [attachment replaceData:UIImageJPEGRepresentation(image, 0.7f)];
-    [self refreshAttachmentScrollview];
   }
   
   self.selectedAttachmentIndex = NSNotFound;
