@@ -74,6 +74,7 @@
 @property (nonatomic, strong) NSDateFormatter *lastUpdateDateFormatter;
 @property (nonatomic) BOOL userDataComposeFlow;
 @property (nonatomic, strong) NSArray *cachedPreviewItems;
+@property (nonatomic, strong) NSOperationQueue *thumbnailQueue;
 
 @end
 
@@ -95,6 +96,8 @@
 		[self.lastUpdateDateFormatter setDateStyle:NSDateFormatterShortStyle];
 		[self.lastUpdateDateFormatter setTimeStyle:NSDateFormatterShortStyle];
 		self.lastUpdateDateFormatter.locale = [NSLocale currentLocale];
+    
+    _thumbnailQueue = [NSOperationQueue new];
   }
   return self;
 }
@@ -636,6 +639,22 @@
     cell.labelText.userInteractionEnabled = YES;
     cell.delegate = self;
     [cell setAttachments:message.attachments];
+    
+    for (BITFeedbackMessageAttachment *attachment in message.attachments){
+      if (attachment.needsLoadingFromURL && !attachment.isLoading){
+        attachment.isLoading = YES;
+        NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
+        [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
+          if (responseData.length){
+            [attachment replaceData:responseData];
+            dispatch_async(dispatch_get_main_queue(), ^{
+              [self.tableView reloadData];
+            });
+            [[BITHockeyManager sharedHockeyManager].feedbackManager saveMessages];
+          }
+        }];
+      }
+    }
 
     if (
         [self.manager isPreiOS7Environment] ||
@@ -819,14 +838,14 @@
     if (attachment.needsLoadingFromURL && !attachment.isLoading){
       attachment.isLoading = YES;
       NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
-      [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue new] completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
+      [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
         if (responseData.length){
           [attachment replaceData:responseData];
           [controller reloadData];
           [[BITHockeyManager sharedHockeyManager].feedbackManager saveMessages];
         }
       }];
-      return nil;
+      return attachment;
     } else {
       return self.cachedPreviewItems[index];
     }
