@@ -138,7 +138,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
   self.scaleFactor = factor;
   CGSize scaledImageSize = CGSizeMake(self.image.size.width * factor, self.image.size.height * factor);
   
-  CGRect baseFrame = CGRectMake(self.view.frame.size.width/2 - scaledImageSize.width/2, self.view.frame.size.height -  size.height, scaledImageSize.width, scaledImageSize.height);
+  CGRect baseFrame = CGRectMake(self.view.frame.size.width/2 - scaledImageSize.width/2, self.view.frame.size.height/2 -  scaledImageSize.height/2, scaledImageSize.width, scaledImageSize.height);
   
   self.imageView.frame = baseFrame;
 }
