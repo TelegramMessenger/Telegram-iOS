@@ -61,10 +61,7 @@
 
 @property (nonatomic, strong) UIView *textAccessoryView;
 @property (nonatomic) NSInteger selectedAttachmentIndex;
-
-@property (nonatomic) BOOL scrollToNewestAttachment;
-
-@property (nonatomic) BOOL reallyVisible;
+@property (nonatomic, strong) UITapGestureRecognizer *tapRecognizer;
 
 @end
 
@@ -85,6 +82,8 @@
     _manager = [BITHockeyManager sharedHockeyManager].feedbackManager;
     _attachments = [NSMutableArray new];
     _attachmentScrollViewImageViews = [NSMutableArray new];
+    self.tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(scrollViewTapped:)];
+    [self.attachmentScrollView addGestureRecognizer:self.tapRecognizer];
 
     _text = nil;
   }
@@ -144,6 +143,9 @@
     }
   }
   [self.contentViewContainer setFrame:frame];
+  
+  [self performSelector:@selector(refreshAttachmentScrollview) withObject:nil afterDelay:0.0f];
+
 }
 
 - (void)keyboardWillBeHidden:(NSNotification*)aNotification {
@@ -200,6 +202,7 @@
   self.attachmentScrollView = [[UIScrollView alloc] initWithFrame:CGRectZero];
   self.attachmentScrollView.scrollEnabled = YES;
   self.attachmentScrollView.bounces = YES;
+  self.attachmentScrollView.autoresizesSubviews = NO;
   self.attachmentScrollView.autoresizingMask = UIViewAutoresizingFlexibleHeight|UIViewAutoresizingFlexibleRightMargin;
   
   [self.contentViewContainer addSubview:self.attachmentScrollView];
@@ -250,13 +253,7 @@
     // Invoke delayed to fix iOS 7 iPad landscape bug, where this view will be moved if not called delayed
     [self.textView performSelector:@selector(becomeFirstResponder) withObject:nil afterDelay:0.0];
   }
-
   
-  
-  self.reallyVisible = YES;
-  
-  [self refreshAttachmentScrollview];
-
 }
 
 - (void)viewWillDisappear:(BOOL)animated {
@@ -266,8 +263,6 @@
   self.manager.currentFeedbackComposeViewController = nil;
   
 	[super viewWillDisappear:animated];
-
-  self.reallyVisible = NO;
   
   [[UIApplication sharedApplication] setStatusBarStyle:_statusBarStyle];
 }
@@ -297,10 +292,7 @@
     self.textView.frame = textViewFrame;
     self.attachmentScrollView.frame = scrollViewFrame;
     self.attachmentScrollView.contentInset = self.textView.contentInset;
-  }
-  
-  for (UIView *subview in self.attachmentScrollView.subviews){
-   // [subview removeFromSuperview];
+    
   }
   
   if (self.attachments.count > self.attachmentScrollViewImageViews.count){
@@ -317,9 +309,9 @@
   
   CGFloat currentYOffset = 0.0f;
   
-  CGFloat heightOfLastAttachment = 0.0f;
+  NSEnumerator *reverseAttachments = self.attachments.reverseObjectEnumerator;
   
-  for (BITFeedbackMessageAttachment* attachment in self.attachments){
+  for (BITFeedbackMessageAttachment* attachment in reverseAttachments.allObjects){
     UIButton *imageButton = self.attachmentScrollViewImageViews[index];
     
     UIImage *image = [attachment thumbnailWithSize:CGSizeMake(100, 100)];
@@ -333,23 +325,11 @@
     
     currentYOffset += height;
     
-   // [self.attachmentScrollView addSubview:imageButton];
-    
-    heightOfLastAttachment = height + 20;
-    
     [imageButton setImage:image forState:UIControlStateNormal];
     index++;
   }
   
   [self.attachmentScrollView setContentSize:CGSizeMake(CGRectGetWidth(self.attachmentScrollView.frame), currentYOffset)];
-  NSLog(@"%f %f", self.attachmentScrollView.contentOffset.x, self.attachmentScrollView.contentOffset.y);
-  if (self.scrollToNewestAttachment && self.reallyVisible && currentYOffset - heightOfLastAttachment > 0){
-    self.scrollToNewestAttachment = NO;
-    
-    [self.attachmentScrollView setContentOffset:CGPointMake(0,currentYOffset-heightOfLastAttachment)];
-  } else {
-    self.attachmentScrollView.contentOffset = preservedOffset;
-  }
   
   [self updateBarButtonState];
 }
@@ -428,6 +408,16 @@
   [self presentViewController:pickerController animated:YES completion:nil];
 }
 
+- (void)scrollViewTapped:(id)unused {
+  UIMenuController *menuController = [UIMenuController sharedMenuController];
+  [menuController setTargetRect:CGRectMake([self.tapRecognizer locationInView:self.view].x, [self.tapRecognizer locationInView:self.view].x, 1, 1) inView:self.view];
+  [menuController setMenuVisible:YES animated:YES];
+}
+
+- (void)paste:(id)sender {
+  
+}
+
 #pragma mark - UIImagePickerControllerDelegate
 
 - (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary *)info {
@@ -440,7 +430,6 @@
     NSString *imageName = [imagePath lastPathComponent];
     newAttachment.originalFilename = imageName;
     [self.attachments addObject:newAttachment];
-    self.scrollToNewestAttachment = YES;
   }
   
   [picker dismissViewControllerAnimated:YES completion:nil];
