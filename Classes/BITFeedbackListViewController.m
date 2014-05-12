@@ -814,7 +814,6 @@
   for (int i = 0; i<self.manager.numberOfMessages;i++){
     BITFeedbackMessage *message = [self.manager messageAtIndex:i];
     for (BITFeedbackMessageAttachment *attachment in message.attachments){
-      NSLog(@"%@", attachment.possibleFilename);
       if ([QLPreviewController canPreviewItem:attachment]){
         [collectedAttachments addObject:attachment];
 
