@@ -175,57 +175,70 @@
         [self.thumbnailRepresentations setObject:scaledTumbnail forKey:cacheKey];
       }
       
-      } else {
-        UIImage *thumbnail = bit_imageToFitSize(image, size, YES) ;
-        
-        [self.thumbnailRepresentations setObject:thumbnail forKey:cacheKey];
-        
-      }
+    } else {
+      UIImage *thumbnail = bit_imageToFitSize(image, size, YES) ;
+      
+      [self.thumbnailRepresentations setObject:thumbnail forKey:cacheKey];
+      
+    }
     
   }
   
-    return self.thumbnailRepresentations[cacheKey];
-  }
+  return self.thumbnailRepresentations[cacheKey];
+}
 
-  
+
 #pragma mark - Persistence Helpers
+
+- (NSString *)possibleFilename {
+  NSArray* cachePathArray = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
+  NSString* cachePath = [cachePathArray lastObject];
+  cachePath = [cachePath stringByAppendingPathComponent:kCacheFolderName];
   
-  - (NSString *)possibleFilename {
-    NSArray* cachePathArray = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
-    NSString* cachePath = [cachePathArray lastObject];
-    cachePath = [cachePath stringByAppendingPathComponent:kCacheFolderName];
-    
-    BOOL isDirectory;
-    
-    if (![[NSFileManager defaultManager] fileExistsAtPath:cachePath isDirectory:&isDirectory]){
-      [[NSFileManager defaultManager] createDirectoryAtPath:cachePath withIntermediateDirectories:YES attributes:nil error:nil];
-    }
-    
-    NSString *uniqueString = bit_UUID();
-    cachePath = [cachePath stringByAppendingPathComponent:uniqueString];
-    
-    // File extension that suits the Content type.
-    
-    CFStringRef mimeType = (__bridge CFStringRef)self.contentType;
-    CFStringRef uti = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, mimeType, NULL);
-    CFStringRef extension = UTTypeCopyPreferredTagWithClass(uti, kUTTagClassFilenameExtension);
-    if (extension){
+  BOOL isDirectory;
+  
+  if (![[NSFileManager defaultManager] fileExistsAtPath:cachePath isDirectory:&isDirectory]){
+    [[NSFileManager defaultManager] createDirectoryAtPath:cachePath withIntermediateDirectories:YES attributes:nil error:nil];
+  }
+  
+  NSString *uniqueString = bit_UUID();
+  cachePath = [cachePath stringByAppendingPathComponent:uniqueString];
+  
+  // File extension that suits the Content type.
+  
+  CFStringRef mimeType = (__bridge CFStringRef)self.contentType;
+  CFStringRef uti = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, mimeType, NULL);
+  CFStringRef extension = UTTypeCopyPreferredTagWithClass(uti, kUTTagClassFilenameExtension);
+  if (extension){
     cachePath = [cachePath stringByAppendingPathExtension:(__bridge NSString *)(extension)];
-      CFRelease(extension);
- 
-    }
+    CFRelease(extension);
     
-    CFRelease(uti);
-    
-    return  cachePath;
   }
   
-  - (void)deleteContents {
-    if (self.filename){
-      [[NSFileManager defaultManager] removeItemAtPath:self.filename error:nil];
-      self.filename = nil;
-    }
+  CFRelease(uti);
+  
+  return  cachePath;
+}
+
+- (void)deleteContents {
+  if (self.filename){
+    [[NSFileManager defaultManager] removeItemAtPath:self.filename error:nil];
+    self.filename = nil;
   }
-  
-  
-  @end
+}
+
+#pragma mark - QLPreviewItem
+
+- (NSString *)previewItemTitle {
+  return self.originalFilename;
+}
+
+- (NSURL *)previewItemURL {
+  if (self.localURL){
+    return self.localURL;
+  } else {
+    return [NSURL fileURLWithPath:self.possibleFilename];
+  }
+}
+
+@end

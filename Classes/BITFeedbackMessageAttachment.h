@@ -29,8 +29,9 @@
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
+#import <QuickLook/QuickLook.h>
 
-@interface BITFeedbackMessageAttachment : NSObject<NSCoding>
+@interface BITFeedbackMessageAttachment : NSObject<NSCoding, QLPreviewItem>
 
 @property (nonatomic, copy) NSNumber *id;
 @property (nonatomic, copy) NSString *originalFilename;

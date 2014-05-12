@@ -153,8 +153,6 @@
 		9782023918F81BFC00A98D8B /* Ok@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 9782022F18F81BFC00A98D8B /* Ok@2x.png */; };
 		9782023A18F81BFC00A98D8B /* Rectangle.png in Resources */ = {isa = PBXBuildFile; fileRef = 9782023018F81BFC00A98D8B /* Rectangle.png */; };
 		9782023B18F81BFC00A98D8B /* Rectangle@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 9782023118F81BFC00A98D8B /* Rectangle@2x.png */; };
-		97BD9BD21911085A0043FD59 /* BITFeedbackMessageAttachment+QLPreviewItem.h in Headers */ = {isa = PBXBuildFile; fileRef = 97BD9BD01911085A0043FD59 /* BITFeedbackMessageAttachment+QLPreviewItem.h */; };
-		97BD9BD31911085A0043FD59 /* BITFeedbackMessageAttachment+QLPreviewItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 97BD9BD11911085A0043FD59 /* BITFeedbackMessageAttachment+QLPreviewItem.m */; };
 		97BD9BD5191109730043FD59 /* QuickLook.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 97BD9BD4191109730043FD59 /* QuickLook.framework */; };
 		97CC11F71917AB7C0028768F /* QuickLook.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 97BD9BD4191109730043FD59 /* QuickLook.framework */; };
 		97CC11F91917C0310028768F /* MobileCoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 97CC11F81917C0310028768F /* MobileCoreServices.framework */; };
@@ -341,8 +339,6 @@
 		9782022F18F81BFC00A98D8B /* Ok@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Ok@2x.png"; sourceTree = "<group>"; };
 		9782023018F81BFC00A98D8B /* Rectangle.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Rectangle.png; sourceTree = "<group>"; };
 		9782023118F81BFC00A98D8B /* Rectangle@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Rectangle@2x.png"; sourceTree = "<group>"; };
-		97BD9BD01911085A0043FD59 /* BITFeedbackMessageAttachment+QLPreviewItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "BITFeedbackMessageAttachment+QLPreviewItem.h"; sourceTree = "<group>"; };
-		97BD9BD11911085A0043FD59 /* BITFeedbackMessageAttachment+QLPreviewItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "BITFeedbackMessageAttachment+QLPreviewItem.m"; sourceTree = "<group>"; };
 		97BD9BD4191109730043FD59 /* QuickLook.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLook.framework; path = System/Library/Frameworks/QuickLook.framework; sourceTree = SDKROOT; };
 		97CC11F81917C0310028768F /* MobileCoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MobileCoreServices.framework; path = System/Library/Frameworks/MobileCoreServices.framework; sourceTree = SDKROOT; };
 		97F0F9FB18ABAECD00EF50AA /* iconCamera.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = iconCamera.png; sourceTree = "<group>"; };
@@ -535,8 +531,6 @@
 				1E49A4341612223B00463151 /* BITFeedbackManager.m */,
 				E405266117A2AD300096359C /* BITFeedbackManagerDelegate.h */,
 				1E49A4351612223B00463151 /* BITFeedbackManagerPrivate.h */,
-				97BD9BD01911085A0043FD59 /* BITFeedbackMessageAttachment+QLPreviewItem.h */,
-				97BD9BD11911085A0043FD59 /* BITFeedbackMessageAttachment+QLPreviewItem.m */,
 			);
 			name = Feedback;
 			sourceTree = "<group>";
@@ -739,7 +733,6 @@
 				1E59559A15B6FDA500A03429 /* BITHockeyManager.h in Headers */,
 				1E5955FD15B7877B00A03429 /* BITHockeyManagerDelegate.h in Headers */,
 				1E754E5C1621FBB70070AB92 /* BITCrashManager.h in Headers */,
-				97BD9BD21911085A0043FD59 /* BITFeedbackMessageAttachment+QLPreviewItem.h in Headers */,
 				1E754E5E1621FBB70070AB92 /* BITCrashManagerDelegate.h in Headers */,
 				1E49A4731612226D00463151 /* BITUpdateManager.h in Headers */,
 				1E49A4791612226D00463151 /* BITUpdateManagerDelegate.h in Headers */,
@@ -993,7 +986,6 @@
 			files = (
 				1E5954D315B6F24A00A03429 /* BITHockeyManager.m in Sources */,
 				1E49A43F1612223B00463151 /* BITFeedbackComposeViewController.m in Sources */,
-				97BD9BD31911085A0043FD59 /* BITFeedbackMessageAttachment+QLPreviewItem.m in Sources */,
 				E40E0B0D17DA1AFF005E38C1 /* BITHockeyAppClient.m in Sources */,
 				1E49A4451612223B00463151 /* BITFeedbackListViewCell.m in Sources */,
 				973EC8B818BCA8A200DBFFBB /* BITRectangleImageAnnotation.m in Sources */,

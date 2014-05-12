@@ -41,7 +41,6 @@
 #import "BITFeedbackUserDataViewController.h"
 #import "BITFeedbackMessage.h"
 #import "BITFeedbackMessageAttachment.h"
-#import "BITFeedbackMessageAttachment+QLPreviewItem.h"
 #import "BITAttributedLabel.h"
 
 #import "BITHockeyBaseManagerPrivate.h"

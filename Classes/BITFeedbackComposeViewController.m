@@ -273,9 +273,7 @@
 
 -(void)refreshAttachmentScrollview {
   CGFloat scrollViewWidth = 0;
-  
-  CGPoint preservedOffset = self.attachmentScrollView.contentOffset;
-  
+    
   if (self.attachments.count){
     scrollViewWidth = 100;
   }
