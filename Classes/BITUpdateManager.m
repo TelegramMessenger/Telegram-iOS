@@ -108,7 +108,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   if ([self expiryDateReached]) return;
   
   [self startUsage];
-  if (_checkForUpdateOnLaunch) {
+
+  if ([self isCheckForUpdateOnLaunch] && [self shouldCheckForUpdates]) {
     [self checkForUpdate];
   }
 }
