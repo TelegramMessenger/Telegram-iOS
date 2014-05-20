@@ -259,7 +259,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  * @warning This is a heuristic and it _MAY_ report false positives! It has been tested with iOS 6.1 and iOS 7.
  * Depending on Apple changing notification events, new iOS version may cause more false positives!
  *
- * @see wasKilledInLastSession
+ * @see lastSessionCrashDetails
  * @see didReceiveMemoryWarningInLastSession
  * @see `BITCrashManagerDelegate considerAppNotTerminatedCleanlyReportForCrashManager:`
  * @see [Apple Technical Note TN2151](https://developer.apple.com/library/ios/technotes/tn2151/_index.html)
@@ -325,6 +325,8 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  
  @warning This property only has a correct value, once `[BITHockeyManager startManager]` was
  invoked!
+ 
+ @see lastSessionCrashDetails
  */
 @property (nonatomic, readonly) BOOL didCrashInLastSession;
 
@@ -350,27 +352,6 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
 - (void) setAlertViewHandler:(BITCustomAlertViewHandler)alertViewHandler;
 
 /**
- Indicates if the app was killed while being in foreground from the iOS
- 
- If `enableAppNotTerminatingCleanlyDetection` is enabled, use this on startup to check if the
- app starts the first time after it was killed by iOS in the previous session.
- 
- This can happen if it consumed too much memory or the watchdog killed the app because it
- took too long to startup or blocks the main thread for too long, or other reasons. See Apple
- documentation: https://developer.apple.com/library/ios/qa/qa1693/_index.html
- 
- See `enableDectionAppKillWhileInForeground` for more details about which kind of kills can be detected.
- 
- @warning This property only has a correct value, once `[BITHockeyManager startManager]` was
- invoked! In addition, it is automatically disabled while a debugger session is active!
- 
- @see enableAppNotTerminatingCleanlyDetection
- @see didReceiveMemoryWarningInLastSession
- */
-@property (nonatomic, readonly) BOOL wasKilledInLastSession;
-
-
-/**
  * Provides details about the crash that occured in the last app session
  */
 @property (nonatomic, readonly) BITCrashDetails *lastSessionCrashDetails;
@@ -392,7 +373,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  invoked!
  
  @see enableAppNotTerminatingCleanlyDetection
- @see wasKilledInLastSession
+ @see lastSessionCrashDetails
  */
 @property (nonatomic, readonly) BOOL didReceiveMemoryWarningInLastSession;
 

@@ -26,12 +26,13 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import "BITCrashDetails.h"
-#import "BITCrashDetailsPrivate.h"
+#import <HockeySDK/HockeySDK.h>
 
-NSString *const kBITCrashKillSignal = @"SIGKILL";
+extern NSString *const __attribute__((unused)) kBITCrashKillSignal;
 
-@implementation BITCrashDetails
+@interface BITCrashDetails () {
+  
+}
 
 - (instancetype)initWithIncidentIdentifier:(NSString *)incidentIdentifier
                                reporterKey:(NSString *)reporterKey
@@ -40,28 +41,6 @@ NSString *const kBITCrashKillSignal = @"SIGKILL";
                            exceptionReason:(NSString *)exceptionReason
                               appStartTime:(NSDate *)appStartTime
                                  crashTime:(NSDate *)crashTime
-                                  appBuild:(NSString *)appBuild
-{
-  if ((self = [super init])) {
-    _incidentIdentifier = incidentIdentifier;
-    _reporterKey = reporterKey;
-    _signal = signal;
-    _exceptionName = exceptionName;
-    _exceptionReason = exceptionReason;
-    _appStartTime = appStartTime;
-    _crashTime = crashTime;
-    _appBuild = appBuild;
-  }
-  return self;
-}
-
-- (BOOL)isAppKill {
-  BOOL result = NO;
-  
-  if (_signal && [[_signal uppercaseString] isEqualToString:kBITCrashKillSignal])
-    result = YES;
-  
-  return result;
-}
+                                  appBuild:(NSString *)appBuild;
 
 @end

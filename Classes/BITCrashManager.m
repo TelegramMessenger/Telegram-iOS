@@ -43,6 +43,7 @@
 #import "BITHockeyBaseManagerPrivate.h"
 #import "BITCrashManagerPrivate.h"
 #import "BITCrashReportTextFormatter.h"
+#import "BITCrashDetailsPrivate.h"
 
 #include <sys/sysctl.h>
 
@@ -1056,7 +1057,6 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
       if (considerReport) {
         [self createCrashReportForAppKill];
       
-        _wasKilledInLastSession = YES;
         _didCrashInLastSession = YES;
       }
     }
@@ -1084,7 +1084,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
   NSString *fakeReportDeviceModel = [self getDevicePlatform] ?: @"Unknown";
   NSString *fakeReportAppUUIDs = [[NSUserDefaults standardUserDefaults] objectForKey:kBITAppUUIDs] ?: @"";
   
-  NSString *fakeSignalName = @"SIGKILL";
+  NSString *fakeSignalName = kBITCrashKillSignal;
   
   NSMutableString *fakeReportString = [NSMutableString string];
 
