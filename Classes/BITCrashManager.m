@@ -100,7 +100,6 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
   NSMutableDictionary *_approvedCrashReports;
   
   NSMutableArray *_crashFiles;
-  NSString       *_crashesDir;
   NSString       *_lastCrashFilename;
   NSString       *_settingsFile;
   NSString       *_analyzerInProgressFile;
@@ -290,10 +289,26 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
   [data writeToFile:attachmentFilename atomically:YES];
 }
 
-- (void)persistUserProvidedCrashDescription:(NSString *)userProvidedCrashDescription {
-  if (userProvidedCrashDescription && [userProvidedCrashDescription length] > 0) {
+- (void)persistUserProvidedMetaData:(BITCrashMetaData *)userProvidedMetaData {
+  if (!userProvidedMetaData) return;
+  
+  if (userProvidedMetaData.userDescription && [userProvidedMetaData.userDescription length] > 0) {
     NSError *error;
-    [userProvidedCrashDescription writeToFile:[NSString stringWithFormat:@"%@.desc", [_crashesDir stringByAppendingPathComponent: _lastCrashFilename]] atomically:YES encoding:NSUTF8StringEncoding error:&error];
+    [userProvidedMetaData.userDescription writeToFile:[NSString stringWithFormat:@"%@.desc", [_crashesDir stringByAppendingPathComponent: _lastCrashFilename]] atomically:YES encoding:NSUTF8StringEncoding error:&error];
+  }
+  
+  if (userProvidedMetaData.userName && [userProvidedMetaData.userName length] > 0) {
+    [self addStringValueToKeychain:userProvidedMetaData.userName forKey:[NSString stringWithFormat:@"%@.%@", _lastCrashFilename, kBITCrashMetaUserName]];
+
+  }
+
+  if (userProvidedMetaData.userEmail && [userProvidedMetaData.userEmail length] > 0) {
+    [self addStringValueToKeychain:userProvidedMetaData.userEmail forKey:[NSString stringWithFormat:@"%@.%@", _lastCrashFilename, kBITCrashMetaUserEmail]];
+  }
+
+  if (userProvidedMetaData.userID && [userProvidedMetaData.userID length] > 0) {
+    [self addStringValueToKeychain:userProvidedMetaData.userID forKey:[NSString stringWithFormat:@"%@.%@", _lastCrashFilename, kBITCrashMetaUserID]];
+    
   }
 }
 
@@ -579,9 +594,6 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
   return useremail;
 }
 
-- (NSString *)getCrashesDir {
-  return _crashesDir;
-}
 
 #pragma mark - Public
 
@@ -692,18 +704,21 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
   }
 }
 
-- (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput withUserProvidedCrashDescription:(NSString *)userProvidedCrashDescription{
+- (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput withUserProvidedMetaData:(BITCrashMetaData *)userProvidedMetaData {
   switch (userInput) {
     case BITCrashManagerUserInputDontSend:
       if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillCancelSendingCrashReport:)]) {
         [self.delegate crashManagerWillCancelSendingCrashReport:self];
       }
       
-      [self cleanCrashReportWithFilename:[_crashesDir stringByAppendingPathComponent: _lastCrashFilename]];
+      if (_lastCrashFilename)
+        [self cleanCrashReportWithFilename:[_crashesDir stringByAppendingPathComponent: _lastCrashFilename]];
+      
       return YES;
       
     case BITCrashManagerUserInputSend:
-      [self persistUserProvidedCrashDescription:userProvidedCrashDescription];
+      if (userProvidedMetaData)
+        [self persistUserProvidedMetaData:userProvidedMetaData];
       
       [self sendNextCrashReport];
       return YES;
@@ -716,7 +731,8 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
         [self.delegate crashManagerWillSendCrashReportsAlways:self];
       }
       
-      [self persistUserProvidedCrashDescription:userProvidedCrashDescription];
+      if (userProvidedMetaData)
+        [self persistUserProvidedMetaData:userProvidedMetaData];
       
       [self sendNextCrashReport];
       return YES;
@@ -1310,13 +1326,13 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
   switch (buttonIndex) {
     case 0:
-      [self handleUserInput:BITCrashManagerUserInputDontSend withUserProvidedCrashDescription:nil];
+      [self handleUserInput:BITCrashManagerUserInputDontSend withUserProvidedMetaData:nil];
       break;
     case 1:
-      [self handleUserInput:BITCrashManagerUserInputSend withUserProvidedCrashDescription:nil];
+      [self handleUserInput:BITCrashManagerUserInputSend withUserProvidedMetaData:nil];
       break;
     case 2:
-      [self handleUserInput:BITCrashManagerUserInputAlwaysSend withUserProvidedCrashDescription:nil];
+      [self handleUserInput:BITCrashManagerUserInputAlwaysSend withUserProvidedMetaData:nil];
       break;
   }
 }

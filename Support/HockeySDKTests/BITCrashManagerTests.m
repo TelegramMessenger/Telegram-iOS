@@ -81,13 +81,16 @@
 
 #pragma mark - Persistence tests
 
-- (void)testPersistUserProvidedCrashDescription {
+- (void)testPersistUserProvidedMetaData {
   NSString *tempCrashName = @"tempCrash";
   [_sut setLastCrashFilename:tempCrashName];
-  [_sut persistUserProvidedCrashDescription:@"Test string"];
+  
+  BITCrashMetaData *metaData = [BITCrashMetaData new];
+  [metaData setUserDescription:@"Test string"];
+  [_sut persistUserProvidedMetaData:metaData];
   
   NSError *error;
-  NSString *description = [NSString stringWithContentsOfFile:[NSString stringWithFormat:@"%@.desc", [[_sut getCrashesDir] stringByAppendingPathComponent: tempCrashName]] encoding:NSUTF8StringEncoding error:&error];
+  NSString *description = [NSString stringWithContentsOfFile:[NSString stringWithFormat:@"%@.desc", [[_sut crashesDir] stringByAppendingPathComponent: tempCrashName]] encoding:NSUTF8StringEncoding error:&error];
   assertThat(description, equalTo(@"Test string"));
 }
 
@@ -97,7 +100,7 @@
   NSString* type = @"text/plain";
   
   BITCrashAttachment *originalAttachment = [[BITCrashAttachment alloc] initWithFilename:filename attachmentData:data contentType:type];
-  NSString *attachmentFilename = [_sut.getCrashesDir stringByAppendingPathComponent:@"testAttachment"];
+  NSString *attachmentFilename = [[_sut crashesDir] stringByAppendingPathComponent:@"testAttachment"];
   
   [_sut persistAttachment:originalAttachment withFilename:attachmentFilename];
   
@@ -155,14 +158,14 @@
   id <BITCrashManagerDelegate> delegateMock = mockProtocol(@protocol(BITCrashManagerDelegate));
   _sut.delegate = delegateMock;
   
-  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputDontSend withUserProvidedCrashDescription:nil], equalToBool(YES));
+  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputDontSend withUserProvidedMetaData:nil], equalToBool(YES));
   
   [verify(delegateMock) crashManagerWillCancelSendingCrashReport:_sut];
   
 }
 
 - (void)testHandleUserInputSend {
-  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputSend withUserProvidedCrashDescription:nil], equalToBool(YES));
+  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputSend withUserProvidedMetaData:nil], equalToBool(YES));
 }
 
 - (void)testHandleUserInputAlwaysSend {
@@ -174,7 +177,7 @@
   [given([mockUserDefaults integerForKey:@"BITCrashManagerStatus"]) willReturn:nil];
   
   //Test if method runs through
-  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputAlwaysSend withUserProvidedCrashDescription:nil], equalToBool(YES));
+  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputAlwaysSend withUserProvidedMetaData:nil], equalToBool(YES));
   
   //Test if correct CrashManagerStatus is now set
   [given([mockUserDefaults integerForKey:@"BITCrashManagerStauts"]) willReturnInt:BITCrashManagerStatusAutoSend];
@@ -185,7 +188,7 @@
 }
 
 - (void)testHandleUserInputWithInvalidInput {
-  assertThatBool([_sut handleUserInput:3 withUserProvidedCrashDescription:nil], equalToBool(NO));
+  assertThatBool([_sut handleUserInput:3 withUserProvidedMetaData:nil], equalToBool(NO));
 }
 
 #pragma mark - Debugger

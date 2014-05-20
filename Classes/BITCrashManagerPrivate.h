@@ -53,6 +53,8 @@
 
 @property (nonatomic, copy, setter = setAlertViewHandler:) BITCustomAlertViewHandler alertViewHandler;
 
+@property (nonatomic, strong) NSString *crashesDir;
+
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
 
 // Only set via BITAuthenticator
@@ -76,7 +78,7 @@
 - (BOOL)hasPendingCrashReport;
 - (BOOL)hasNonApprovedCrashReports;
 
-- (void)persistUserProvidedCrashDescription:(NSString *)userProvidedCrashDescription;
+- (void)persistUserProvidedMetaData:(BITCrashMetaData *)userProvidedMetaData;
 - (void)persistAttachment:(BITCrashAttachment *)attachment withFilename:(NSString *)filename;
 
 - (BITCrashAttachment *)attachmentForCrashReport:(NSString *)filename;
@@ -84,7 +86,6 @@
 - (void)invokeDelayedProcessing;
 - (void)sendNextCrashReport;
 
-- (NSString *)getCrashesDir;
 - (void)setLastCrashFilename:(NSString *)lastCrashFilename;
 
 @end

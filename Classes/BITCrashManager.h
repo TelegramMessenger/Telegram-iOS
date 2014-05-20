@@ -33,6 +33,8 @@
 #import "BITHockeyBaseManager.h"
 
 @class BITCrashDetails;
+@class BITCrashMetaData;
+
 
 /**
  * Custom block that handles the alert that prompts the user whether he wants to send crash reports
@@ -331,15 +333,17 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
 @property (nonatomic, readonly) BOOL didCrashInLastSession;
 
 /**
- Provides an interface to handle user input from a custom alert
+ Provides an interface to pass user input from a custom alert to a crash report
  
- @param userInput On this input depends, whether crash reports are sent, always sent or not sent and deleted.
- @param userProvidedCrashDescription The content of this optional string will be attached to the crash report as the description and allows to ask the user for e.g. additional comments or info
+ @param userInput Defines the users action wether to send, always send, or not to send the crash report.
+ @param userProvidedMetaData The content of this optional BITCrashMetaData instance will be attached to the crash report and allows to ask the user for e.g. additional comments or info.
  
  @return Returns YES if the input is a valid option and successfully triggered further processing of the crash report
+ 
  @see BITCrashManagerUserInput
+ @see BITCrashMetaData
  */
-- (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput withUserProvidedCrashDescription:(NSString*)userProvidedCrashDescription;
+- (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput withUserProvidedMetaData:(BITCrashMetaData *)userProvidedMetaData;
 
 /**
  Lets you set a custom block which handles showing a custom UI and asking the user
