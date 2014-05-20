@@ -66,7 +66,7 @@
        NSData *data = [NSData dataWithContentsOfURL:@"mydatafile"];
  
        BITCrashAttachment *attachment = [[BITCrashAttachment alloc] initWithFilename:@"myfile.data"
-                                                                      attachmentData:data
+                                                                 crashAttachmentData:data
                                                                          contentType:@"'application/octet-stream"];
        return attachment;
      }

@@ -1378,7 +1378,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
                                                     filename:@"crash.xml"]];
   
   if (attachment) {
-    [postBody appendData:[BITHockeyAppClient dataWithPostValue:attachment.attachmentData
+    [postBody appendData:[BITHockeyAppClient dataWithPostValue:attachment.crashAttachmentData
                                                         forKey:@"attachment0"
                                                    contentType:attachment.contentType
                                                       boundary:boundary
