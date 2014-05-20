@@ -99,7 +99,7 @@
   NSData *data = [[NSData alloc] initWithBase64Encoding:@"TestData"];
   NSString* type = @"text/plain";
   
-  BITCrashAttachment *originalAttachment = [[BITCrashAttachment alloc] initWithFilename:filename attachmentData:data contentType:type];
+  BITCrashAttachment *originalAttachment = [[BITCrashAttachment alloc] initWithFilename:filename crashAttachmentData:data contentType:type];
   NSString *attachmentFilename = [[_sut crashesDir] stringByAppendingPathComponent:@"testAttachment"];
   
   [_sut persistAttachment:originalAttachment withFilename:attachmentFilename];
@@ -107,7 +107,7 @@
   BITCrashAttachment *decodedAttachment = [_sut attachmentForCrashReport:attachmentFilename];
   
   assertThat(decodedAttachment.filename, equalTo(filename));
-  assertThat(decodedAttachment.attachmentData, equalTo(data));
+  assertThat(decodedAttachment.crashAttachmentData, equalTo(data));
   assertThat(decodedAttachment.contentType, equalTo(type));
 }
 
