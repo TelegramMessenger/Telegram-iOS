@@ -90,6 +90,19 @@
     [attachment deleteContents];
   }
 }
+
+- (NSArray *)previewableAttachments {
+  NSMutableArray *returnArray = [NSMutableArray new];
+  
+  for (BITFeedbackMessageAttachment *attachment in self.attachments){
+    if ([QLPreviewController canPreviewItem:attachment ]){
+      [returnArray addObject:attachment];
+    }
+  }
+  
+  return returnArray;
+}
+
 -(void)addAttachmentsObject:(BITFeedbackMessageAttachment *)object{
   if (!self.attachments){
     self.attachments = [NSArray array];

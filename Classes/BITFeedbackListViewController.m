@@ -637,7 +637,7 @@
     cell.labelText.delegate = self;
     cell.labelText.userInteractionEnabled = YES;
     cell.delegate = self;
-    [cell setAttachments:message.attachments];
+    [cell setAttachments:message.previewableAttachments];
     
     for (BITFeedbackMessageAttachment *attachment in message.attachments){
       if (attachment.needsLoadingFromURL && !attachment.isLoading){
@@ -812,12 +812,7 @@
   
   for (int i = 0; i<self.manager.numberOfMessages;i++){
     BITFeedbackMessage *message = [self.manager messageAtIndex:i];
-    for (BITFeedbackMessageAttachment *attachment in message.attachments){
-      if ([QLPreviewController canPreviewItem:attachment]){
-        [collectedAttachments addObject:attachment];
-
-      }
-    }
+      [collectedAttachments addObjectsFromArray:message.previewableAttachments];
   }
   
   self.cachedPreviewItems = collectedAttachments;
@@ -832,15 +827,20 @@
 
 - (id <QLPreviewItem>) previewController: (QLPreviewController *) controller previewItemAtIndex: (NSInteger) index {
   if (index>=0){
+    __weak QLPreviewController* blockController = controller;
     BITFeedbackMessageAttachment *attachment = self.cachedPreviewItems[index];
     if (attachment.needsLoadingFromURL && !attachment.isLoading){
       attachment.isLoading = YES;
       NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
       [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
+        attachment.isLoading = NO;
         if (responseData.length){
           [attachment replaceData:responseData];
-          [controller reloadData];
-          [[BITHockeyManager sharedHockeyManager].feedbackManager saveMessages];
+          [blockController reloadData];
+          
+        [[BITHockeyManager sharedHockeyManager].feedbackManager saveMessages];
+        } else {
+          [blockController reloadData];
         }
       }];
       return attachment;

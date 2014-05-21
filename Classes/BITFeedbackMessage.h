@@ -83,5 +83,11 @@ typedef NS_ENUM(NSInteger, BITFeedbackMessageStatus) {
 
 -(void)addAttachmentsObject:(BITFeedbackMessageAttachment *)object;
 
+/**
+ * Returns an array of attachment objects that may be previewed on this device.
+ */ 
+- (NSArray *)previewableAttachments;
+
+
 
 @end

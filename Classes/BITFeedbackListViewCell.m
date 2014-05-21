@@ -210,7 +210,7 @@
     [imageView addTarget:self action:@selector(imageButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
     
     [self.attachmentViews addObject:imageView];
-    [self addSubview:imageView];
+    //[self addSubview:imageView];
     
     
   }
@@ -289,7 +289,7 @@
   for ( BITActivityIndicatorButton *imageButton in self.attachmentViews){
     imageButton.contentMode = UIViewContentModeScaleAspectFit;
     imageButton.imageView.contentMode = UIViewContentModeScaleAspectFill;
-    
+
     if ( !_message.userMessage){
       imageButton.frame = CGRectMake(FRAME_SIDE_BORDER + (FRAME_SIDE_BORDER + ATTACHMENT_SIZE) * (i%(int)attachmentsPerRow) , floor(i/attachmentsPerRow)*(FRAME_SIDE_BORDER + ATTACHMENT_SIZE) + baseOffsetOfText , ATTACHMENT_SIZE, ATTACHMENT_SIZE);
     } else {
@@ -297,7 +297,11 @@
     }
     
     if (!imageButton.superview){
-      [self addSubview:imageButton];
+      if (self.accessoryBackgroundView.superview){
+        [self insertSubview:imageButton aboveSubview:self.accessoryBackgroundView];
+      } else {
+        [self addSubview:imageButton];
+      }
     }
     
     i++;
