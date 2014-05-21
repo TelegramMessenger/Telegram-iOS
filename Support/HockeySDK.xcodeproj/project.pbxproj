@@ -143,6 +143,8 @@
 		9760F6C418BB4D2D00959B93 /* AssetsLibrary.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9760F6C318BB4D2D00959B93 /* AssetsLibrary.framework */; };
 		9760F6CF18BB685600959B93 /* BITImageAnnotation.h in Headers */ = {isa = PBXBuildFile; fileRef = 9760F6CD18BB685600959B93 /* BITImageAnnotation.h */; };
 		9760F6D018BB685600959B93 /* BITImageAnnotation.m in Sources */ = {isa = PBXBuildFile; fileRef = 9760F6CE18BB685600959B93 /* BITImageAnnotation.m */; };
+		9774BCFF192CB20A00085EB5 /* BITActivityIndicatorButton.h in Headers */ = {isa = PBXBuildFile; fileRef = 9774BCFD192CB20A00085EB5 /* BITActivityIndicatorButton.h */; };
+		9774BD00192CB20A00085EB5 /* BITActivityIndicatorButton.m in Sources */ = {isa = PBXBuildFile; fileRef = 9774BCFE192CB20A00085EB5 /* BITActivityIndicatorButton.m */; };
 		9782023218F81BFC00A98D8B /* Arrow.png in Resources */ = {isa = PBXBuildFile; fileRef = 9782022818F81BFC00A98D8B /* Arrow.png */; };
 		9782023318F81BFC00A98D8B /* Arrow@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 9782022918F81BFC00A98D8B /* Arrow@2x.png */; };
 		9782023418F81BFC00A98D8B /* Blur.png in Resources */ = {isa = PBXBuildFile; fileRef = 9782022A18F81BFC00A98D8B /* Blur.png */; };
@@ -329,6 +331,8 @@
 		9760F6C318BB4D2D00959B93 /* AssetsLibrary.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AssetsLibrary.framework; path = System/Library/Frameworks/AssetsLibrary.framework; sourceTree = SDKROOT; };
 		9760F6CD18BB685600959B93 /* BITImageAnnotation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITImageAnnotation.h; sourceTree = "<group>"; };
 		9760F6CE18BB685600959B93 /* BITImageAnnotation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITImageAnnotation.m; sourceTree = "<group>"; };
+		9774BCFD192CB20A00085EB5 /* BITActivityIndicatorButton.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITActivityIndicatorButton.h; sourceTree = "<group>"; };
+		9774BCFE192CB20A00085EB5 /* BITActivityIndicatorButton.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITActivityIndicatorButton.m; sourceTree = "<group>"; };
 		9782022818F81BFC00A98D8B /* Arrow.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Arrow.png; sourceTree = "<group>"; };
 		9782022918F81BFC00A98D8B /* Arrow@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Arrow@2x.png"; sourceTree = "<group>"; };
 		9782022A18F81BFC00A98D8B /* Blur.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Blur.png; sourceTree = "<group>"; };
@@ -531,6 +535,8 @@
 				1E49A4341612223B00463151 /* BITFeedbackManager.m */,
 				E405266117A2AD300096359C /* BITFeedbackManagerDelegate.h */,
 				1E49A4351612223B00463151 /* BITFeedbackManagerPrivate.h */,
+				9774BCFD192CB20A00085EB5 /* BITActivityIndicatorButton.h */,
+				9774BCFE192CB20A00085EB5 /* BITActivityIndicatorButton.m */,
 			);
 			name = Feedback;
 			sourceTree = "<group>";
@@ -758,6 +764,7 @@
 				1E49A47C1612226D00463151 /* BITUpdateManagerPrivate.h in Headers */,
 				1E49A4851612226D00463151 /* BITUpdateViewControllerPrivate.h in Headers */,
 				1E49A4B5161222B900463151 /* BITHockeyBaseManagerPrivate.h in Headers */,
+				9774BCFF192CB20A00085EB5 /* BITActivityIndicatorButton.h in Headers */,
 				E4933E8017B66CDA00B11ACC /* BITHTTPOperation.h in Headers */,
 				1E49A4BE161222B900463151 /* BITHockeyHelper.h in Headers */,
 				973EC8BB18BDE29800DBFFBB /* BITArrowImageAnnotation.h in Headers */,
@@ -998,6 +1005,7 @@
 				1E49A4701612226D00463151 /* BITAppVersionMetaInfo.m in Sources */,
 				1E49A4761612226D00463151 /* BITUpdateManager.m in Sources */,
 				1E49A4C1161222B900463151 /* BITHockeyHelper.m in Sources */,
+				9774BD00192CB20A00085EB5 /* BITActivityIndicatorButton.m in Sources */,
 				1E49A4821612226D00463151 /* BITUpdateViewController.m in Sources */,
 				E4B4DB7E17B435550099C67F /* BITAuthenticationViewController.m in Sources */,
 				1E49A4B2161222B900463151 /* BITHockeyBaseManager.m in Sources */,

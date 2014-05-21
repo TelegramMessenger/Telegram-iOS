@@ -26,10 +26,11 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import "HockeySDKPrivate.h"
 
 #import "BITFeedbackListViewCell.h"
-#import "HockeySDKPrivate.h"
 #import "BITFeedbackMessageAttachment.h"
+#import "BITActivityIndicatorButton.h"
 
 #define BACKGROUNDCOLOR_DEFAULT BIT_RGBCOLOR(245, 245, 245)
 #define BACKGROUNDCOLOR_ALTERNATE BIT_RGBCOLOR(235, 235, 235)
@@ -196,13 +197,22 @@
   [self.attachmentViews removeAllObjects];
   
   for (BITFeedbackMessageAttachment *attachment in attachments){
-    UIButton *imageView = [UIButton buttonWithType:UIButtonTypeCustom];
-    [imageView setImage:[attachment thumbnailWithSize:CGSizeMake(ATTACHMENT_SIZE, ATTACHMENT_SIZE)] forState:UIControlStateNormal];
+    BITActivityIndicatorButton *imageView = [BITActivityIndicatorButton buttonWithType:UIButtonTypeCustom];
+
+    if (attachment.localURL){
+      [imageView setImage:[attachment thumbnailWithSize:CGSizeMake(ATTACHMENT_SIZE, ATTACHMENT_SIZE)] forState:UIControlStateNormal];
+      [imageView setShowsActivityIndicator:NO];
+    } else {
+      [imageView setImage:nil forState:UIControlStateNormal];
+      [imageView setShowsActivityIndicator:YES];
+    }
     [imageView setContentMode:UIViewContentModeScaleAspectFit];
     [imageView addTarget:self action:@selector(imageButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
     
     [self.attachmentViews addObject:imageView];
     [self addSubview:imageView];
+    
+    
   }
 }
 
@@ -276,7 +286,7 @@
   
   CGFloat attachmentsPerRow = floorf(self.frame.size.width / (FRAME_SIDE_BORDER + ATTACHMENT_SIZE));
   
-  for ( UIButton *imageButton in self.attachmentViews){
+  for ( BITActivityIndicatorButton *imageButton in self.attachmentViews){
     imageButton.contentMode = UIViewContentModeScaleAspectFit;
     imageButton.imageView.contentMode = UIViewContentModeScaleAspectFill;
     
