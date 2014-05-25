@@ -514,7 +514,7 @@
 #pragma mark - UIActionSheet Delegate
 
 - (void)actionSheet:(UIActionSheet *)actionSheet didDismissWithButtonIndex:(NSInteger)buttonIndex {
-  if (buttonIndex == [actionSheet destructiveButtonIndex]){
+  if (buttonIndex == [actionSheet destructiveButtonIndex]) {
     
     if (self.selectedAttachmentIndex != NSNotFound){
       BITFeedbackMessageAttachment *attachment = self.imageAttachments[self.selectedAttachmentIndex];
@@ -526,7 +526,10 @@
 
     [self refreshAttachmentScrollview];
     
-  } else if(buttonIndex != [actionSheet cancelButtonIndex]){
+    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+      [self.textView becomeFirstResponder];
+    }
+  } else if (buttonIndex != [actionSheet cancelButtonIndex]) {
     if (self.selectedAttachmentIndex != NSNotFound){
       BITFeedbackMessageAttachment *attachment = self.imageAttachments[self.selectedAttachmentIndex];
       BITImageAnnotationViewController *annotationEditor = [[BITImageAnnotationViewController alloc ] init];
@@ -535,11 +538,12 @@
       annotationEditor.image = attachment.imageRepresentation;
       [self presentViewController:navController animated:YES completion:nil];
     }
+  } else {
+    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+      [self.textView becomeFirstResponder];
+    }
   }
   _actionSheetVisible = NO;
-  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
-    [self.textView becomeFirstResponder];
-  }
 }
 
 
