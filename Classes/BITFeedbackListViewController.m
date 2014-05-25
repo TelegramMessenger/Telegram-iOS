@@ -105,7 +105,7 @@
 - (void)dealloc {
   [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyFeedbackMessagesLoadingStarted object:nil];
   [[NSNotificationCenter defaultCenter] removeObserver:self name:BITHockeyFeedbackMessagesLoadingFinished object:nil];
-
+  
   [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(showDelayedUserDataViewController) object:nil];
 }
 
@@ -114,12 +114,12 @@
 
 - (void)viewDidLoad {
   [super viewDidLoad];
-
+  
   [[NSNotificationCenter defaultCenter] addObserver:self
                                            selector:@selector(startLoadingIndicator)
                                                name:BITHockeyFeedbackMessagesLoadingStarted
                                              object:nil];
-
+  
   [[NSNotificationCenter defaultCenter] addObserver:self
                                            selector:@selector(updateList)
                                                name:BITHockeyFeedbackMessagesLoadingFinished
@@ -135,13 +135,13 @@
     [self.tableView setBackgroundColor:[UIColor colorWithRed:0.82 green:0.84 blue:0.84 alpha:1]];
     [self.tableView setSeparatorColor:[UIColor colorWithRed:0.79 green:0.79 blue:0.79 alpha:1]];
   } else {
-//    [self.tableView setBackgroundColor:[UIColor colorWithRed:1.0 green:1.0 blue:1.0 alpha:1]];
+    //    [self.tableView setBackgroundColor:[UIColor colorWithRed:1.0 green:1.0 blue:1.0 alpha:1]];
   }
   
   if ([self.manager isPreiOS7Environment]) {
     self.view.backgroundColor = DEFAULT_BACKGROUNDCOLOR;
   } else {
-//    self.view.backgroundColor = DEFAULT_BACKGROUNDCOLOR_OS7;
+    //    self.view.backgroundColor = DEFAULT_BACKGROUNDCOLOR_OS7;
   }
   
   id refreshClass = NSClassFromString(@"UIRefreshControl");
@@ -150,9 +150,9 @@
     [self.refreshControl addTarget:self action:@selector(reloadList) forControlEvents:UIControlEventValueChanged];
   } else {
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemRefresh
-                                                                                            target:self
-                                                                                            action:@selector(reloadList)];
-  }  
+                                                                                           target:self
+                                                                                           action:@selector(reloadList)];
+  }
 }
 
 - (void)startLoadingIndicator {
@@ -191,7 +191,9 @@
   CGSize contentSize = self.tableView.contentSize;
   CGPoint contentOffset = self.tableView.contentOffset;
   
+  [self refreshPreviewItems];
   [self.tableView reloadData];
+  
   if (contentSize.height > 0 &&
       self.tableView.contentSize.height > self.tableView.frame.size.height &&
       self.tableView.contentSize.height > contentSize.height &&
@@ -199,7 +201,7 @@
     [self.tableView setContentOffset:CGPointMake(contentOffset.x, self.tableView.contentSize.height - contentSize.height + contentOffset.y) animated:NO];
   
   [self stopLoadingIndicator];
-
+  
   [self.tableView flashScrollIndicators];
 }
 
@@ -231,7 +233,7 @@
   } else {
     [self.tableView reloadData];
   }
-
+  
   [super viewDidAppear:animated];
 }
 
@@ -272,6 +274,8 @@
 
 - (void)deleteAllMessages {
   [_manager deleteAllMessages];
+  [self refreshPreviewItems];
+  
   [self.tableView reloadData];
 }
 
@@ -289,9 +293,9 @@
   } else {
     UIAlertView *deleteAction = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListButonDeleteAllMessages")
                                                            message:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllTitle")
-                                                       delegate:self
-                                              cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllCancel")
-                                              otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllDelete"), nil];
+                                                          delegate:self
+                                                 cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllCancel")
+                                                 otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllDelete"), nil];
     
     [deleteAction setTag:0];
     [deleteAction show];
@@ -495,7 +499,7 @@
     
     if (!cell) {
       cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:identifier];
-
+      
       cell.textLabel.font = [UIFont systemFontOfSize:14];
       cell.textLabel.numberOfLines = 0;
       cell.accessoryType = UITableViewCellAccessoryNone;
@@ -644,17 +648,18 @@
         attachment.isLoading = YES;
         NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
         [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
-          if (responseData.length){
+          if (responseData.length) {
             [attachment replaceData:responseData];
             dispatch_async(dispatch_get_main_queue(), ^{
               [self.tableView reloadData];
             });
+            
             [[BITHockeyManager sharedHockeyManager].feedbackManager saveMessages];
           }
         }];
       }
     }
-
+    
     if (
         [self.manager isPreiOS7Environment] ||
         (![self.manager isPreiOS7Environment] && indexPath.row != 0)
@@ -679,11 +684,18 @@
 
 - (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
   if (editingStyle == UITableViewCellEditingStyleDelete) {
+    BITFeedbackMessage *message = [self.manager messageAtIndex:indexPath.row];
+    BOOL messageHasAttachments = ([message attachments].count > 0);
+    
     if ([_manager deleteMessageAtIndex:indexPath.row]) {
       if ([_manager numberOfMessages] > 0) {
         [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
       } else {
         [tableView reloadData];
+      }
+      
+      if (messageHasAttachments) {
+        [self refreshPreviewItems];
       }
     }
   }
@@ -779,7 +791,7 @@
   if (buttonIndex == actionSheet.cancelButtonIndex) {
     return;
   }
-
+  
   if ([actionSheet tag] == 0) {
     if (buttonIndex == [actionSheet destructiveButtonIndex]) {
       [self deleteAllMessages];
@@ -794,60 +806,66 @@
   }
 }
 
+
 #pragma mark - ListViewCellDelegate
 
 - (void)listCell:(id)cell didSelectAttachment:(BITFeedbackMessageAttachment *)attachment {
-    QLPreviewController *previewController = [[QLPreviewController alloc] init];
-    previewController.dataSource = self;
-
-    [self presentViewController:previewController animated:YES completion:nil];
-  if (self.cachedPreviewItems.count > [self.cachedPreviewItems indexOfObject:attachment]){
+  QLPreviewController *previewController = [[QLPreviewController alloc] init];
+  previewController.dataSource = self;
+  
+  [self presentViewController:previewController animated:YES completion:nil];
+  
+  if (self.cachedPreviewItems.count > [self.cachedPreviewItems indexOfObject:attachment]) {
     [previewController setCurrentPreviewItemIndex:[self.cachedPreviewItems indexOfObject:attachment]];
   }
-  
 }
+
 - (void)refreshPreviewItems {
   self.cachedPreviewItems = nil;
   NSMutableArray *collectedAttachments = [NSMutableArray new];
   
-  for (int i = 0; i<self.manager.numberOfMessages;i++){
+  for (int i = 0; i < self.manager.numberOfMessages; i++) {
     BITFeedbackMessage *message = [self.manager messageAtIndex:i];
-      [collectedAttachments addObjectsFromArray:message.previewableAttachments];
+    [collectedAttachments addObjectsFromArray:message.previewableAttachments];
   }
   
   self.cachedPreviewItems = collectedAttachments;
 }
 
-- (NSInteger) numberOfPreviewItemsInPreviewController: (QLPreviewController *) controller {
+- (NSInteger)numberOfPreviewItemsInPreviewController:(QLPreviewController *)controller {
   if (!self.cachedPreviewItems){
     [self refreshPreviewItems];
   }
+  
   return self.cachedPreviewItems.count;
 }
 
-- (id <QLPreviewItem>) previewController: (QLPreviewController *) controller previewItemAtIndex: (NSInteger) index {
-  if (index>=0){
+- (id <QLPreviewItem>)previewController:(QLPreviewController *)controller previewItemAtIndex:(NSInteger)index {
+  if (index >= 0) {
     __weak QLPreviewController* blockController = controller;
     BITFeedbackMessageAttachment *attachment = self.cachedPreviewItems[index];
-    if (attachment.needsLoadingFromURL && !attachment.isLoading){
+    
+    if (attachment.needsLoadingFromURL && !attachment.isLoading) {
       attachment.isLoading = YES;
       NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
       [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
         attachment.isLoading = NO;
-        if (responseData.length){
+        if (responseData.length) {
           [attachment replaceData:responseData];
           [blockController reloadData];
           
-        [[BITHockeyManager sharedHockeyManager].feedbackManager saveMessages];
+          [[BITHockeyManager sharedHockeyManager].feedbackManager saveMessages];
         } else {
           [blockController reloadData];
         }
       }];
+      
       return attachment;
     } else {
       return self.cachedPreviewItems[index];
     }
   }
+  
   return nil;
 }
 

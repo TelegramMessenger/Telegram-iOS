@@ -76,18 +76,24 @@ typedef NS_ENUM(NSInteger, BITFeedbackMessageStatus) {
 @property (nonatomic) BOOL userMessage;
 
 /** 
- * This method must be called before a feedback message is deleted. It handles the 
- * deletion of any data stored on the device in association with the feedback message.
+ Delete local cached attachment data
+ 
+ @warning This method must be called before a feedback message is deleted.
  */
--(void)deleteContents;
+- (void)deleteContents;
 
+/**
+ Add an attachment to a message
+ 
+ @param object BITFeedbackMessageAttachment instance representing the attachment that should be added
+ */
 -(void)addAttachmentsObject:(BITFeedbackMessageAttachment *)object;
 
 /**
- * Returns an array of attachment objects that may be previewed on this device.
- */ 
+ Return the attachments that can be viewed
+ 
+ @return NSArray containing the attachment objects that can be previewed
+ */
 - (NSArray *)previewableAttachments;
-
-
 
 @end

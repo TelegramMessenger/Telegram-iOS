@@ -35,7 +35,7 @@
 
 #pragma mark - NSObject
 
-- (id) init {
+- (instancetype) init {
   if ((self = [super init])) {
     _text = nil;
     _userID = nil;
@@ -67,8 +67,8 @@
   [encoder encodeObject:self.token forKey:@"token"];
 }
 
-- (id)initWithCoder:(NSCoder *)decoder {
-  if ((self = [super init])) {
+- (instancetype)initWithCoder:(NSCoder *)decoder {
+  if ((self = [self init])) {
     self.text = [decoder decodeObjectForKey:@"text"];
     self.userID = [decoder decodeObjectForKey:@"userID"];
     self.name = [decoder decodeObjectForKey:@"name"];

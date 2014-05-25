@@ -2,7 +2,6 @@
  * Author: Moritz Haarmann <post@moritzhaarmann.de>
  *
  * Copyright (c) 2012-2014 HockeyApp, Bit Stadium GmbH.
- * Copyright (c) 2011 Andreas Linde & Kent Sutherland.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person

@@ -39,6 +39,7 @@
 
 @end
 
+
 /**
  * Cell style depending on the iOS version
  */
@@ -66,6 +67,7 @@ typedef NS_ENUM(NSUInteger, BITFeedbackListViewCellBackgroundStyle) {
    */
   BITFeedbackListViewCellBackgroundStyleAlternate = 1
 };
+
 
 @interface BITFeedbackListViewCell : UITableViewCell
 

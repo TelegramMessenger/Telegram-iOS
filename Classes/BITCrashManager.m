@@ -602,20 +602,22 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
   if (_crashManagerStatus == BITCrashManagerStatusDisabled) return NO;
     
   if ([self.fileManager fileExistsAtPath:_crashesDir]) {
-    NSString *file = nil;
     NSError *error = NULL;
     
-    NSDirectoryEnumerator *dirEnum = [self.fileManager enumeratorAtPath: _crashesDir];
+    NSArray *dirArray = [self.fileManager contentsOfDirectoryAtPath:_crashesDir error:&error];
     
-    while ((file = [dirEnum nextObject])) {
-      NSDictionary *fileAttributes = [self.fileManager attributesOfItemAtPath:[_crashesDir stringByAppendingPathComponent:file] error:&error];
-      if ([[fileAttributes objectForKey:NSFileSize] intValue] > 0 &&
+    for (NSString *file in dirArray) {
+      NSString *filePath = [_crashesDir stringByAppendingPathComponent:file];
+
+      NSDictionary *fileAttributes = [self.fileManager attributesOfItemAtPath:filePath error:&error];
+      if ([[fileAttributes objectForKey:NSFileType] isEqualToString:NSFileTypeRegular] &&
+          [[fileAttributes objectForKey:NSFileSize] intValue] > 0 &&
           ![file hasSuffix:@".DS_Store"] &&
           ![file hasSuffix:@".analyzer"] &&
           ![file hasSuffix:@".plist"] &&
           ![file hasSuffix:@".data"] &&
           ![file hasSuffix:@".meta"]) {
-        [_crashFiles addObject:[_crashesDir stringByAppendingPathComponent: file]];
+        [_crashFiles addObject:filePath];
       }
     }
   }

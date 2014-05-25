@@ -740,7 +740,7 @@
               message.id = [(NSDictionary *)objMessage objectForKey:@"id"];
               message.status = BITFeedbackMessageStatusUnread;
               
-              for (NSDictionary *attachmentData in objMessage[@"attachments"]){
+              for (NSDictionary *attachmentData in objMessage[@"attachments"]) {
                 BITFeedbackMessageAttachment *newAttachment = [BITFeedbackMessageAttachment new];
                 newAttachment.originalFilename = attachmentData[@"file_name"];
                 newAttachment.id = attachmentData[@"id"];
@@ -805,45 +805,11 @@
     [self markSendInProgressMessagesAsPending];
   }
   
-  // we'll load the images on demand.
-  //[self synchronizeMissingAttachments];
-  
   [self saveMessages];
   
   return;
 }
 
-/**
- Load all attachments without any local data to have them available.
- */
--(BOOL)synchronizeMissingAttachments {
-  // Extract all Attachments.
-  NSMutableArray *allAttachments = [NSMutableArray new];
-  for (int i = 0; i < [self numberOfMessages]; i++){
-    BITFeedbackMessage *message = [self messageAtIndex:i];
-    for (BITFeedbackMessageAttachment *attachment in message.attachments){
-      if (attachment.needsLoadingFromURL){
-        [allAttachments addObject:attachment];
-      }
-    }
-  }
-  
-  for (BITFeedbackMessageAttachment *attachment in allAttachments){
-    // we will just update the objects here and perform a save after each successful load operation.
-    
-    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
-    __weak BITFeedbackManager *weakSelf = self;
-    [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
-      if (responseData.length){
-        [attachment replaceData:responseData];
-        [weakSelf saveMessages];
-
-      }
-    }];
-    
-  }
-  return NO;
-}
 
 - (void)sendNetworkRequestWithHTTPMethod:(NSString *)httpMethod withMessage:(BITFeedbackMessage *)message completionHandler:(void (^)(NSError *err))completionHandler {
   NSString *boundary = @"----FOO";
@@ -1092,37 +1058,41 @@
 
 #pragma mark - Observation Handling
 
--(void)setFeedbackObservationMode:(BITFeedbackObservationMode)mode {
-  if (mode == BITFeedbackObservationModeOnScreenshot){
-    if (NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1){
-      [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenshotNotificationReceived:) name:UIApplicationUserDidTakeScreenshotNotification object:nil];
-    } else {
-      BITHockeyLog("Not enabling Screenshot notifications: iOS6.1 and lower is not supported.");
-    }
+- (void)setFeedbackObservationMode:(BITFeedbackObservationMode)feedbackObservationMode {
+  if (feedbackObservationMode != _feedbackObservationMode) {
+    _feedbackObservationMode = feedbackObservationMode;
     
-    self.screenshotNotificationEnabled = YES;
-    
-    if (self.tapRecognizer){
-      [[[UIApplication sharedApplication] keyWindow] removeGestureRecognizer:self.tapRecognizer];
-      self.tapRecognizer = nil;
-    }
-  }
-  
-  if (mode == BITFeedbackObservationModeThreeFingerTap){
-    if (!self.tapRecognizer){
-      self.tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(screenshotTripleTap:)];
-      self.tapRecognizer.numberOfTouchesRequired = 3;
-      self.tapRecognizer.delegate = self;
-      
-      dispatch_async(dispatch_get_main_queue(), ^{
-        [[UIApplication sharedApplication].keyWindow addGestureRecognizer:self.tapRecognizer];
-      });
-    }
-    
-    if (self.screenshotNotificationEnabled){
+    if (feedbackObservationMode == BITFeedbackObservationModeOnScreenshot){
       if (NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1){
-        [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationUserDidTakeScreenshotNotification object:nil];
-        self.screenshotNotificationEnabled = NO;
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenshotNotificationReceived:) name:UIApplicationUserDidTakeScreenshotNotification object:nil];
+      } else {
+        BITHockeyLog("WARNING: BITFeedbackObservationModeOnScreenshot requires iOS 7 or later.");
+      }
+      
+      self.screenshotNotificationEnabled = YES;
+      
+      if (self.tapRecognizer){
+        [[[UIApplication sharedApplication] keyWindow] removeGestureRecognizer:self.tapRecognizer];
+        self.tapRecognizer = nil;
+      }
+    }
+    
+    if (feedbackObservationMode == BITFeedbackObservationModeThreeFingerTap){
+      if (!self.tapRecognizer){
+        self.tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(screenshotTripleTap:)];
+        self.tapRecognizer.numberOfTouchesRequired = 3;
+        self.tapRecognizer.delegate = self;
+        
+        dispatch_async(dispatch_get_main_queue(), ^{
+          [[UIApplication sharedApplication].keyWindow addGestureRecognizer:self.tapRecognizer];
+        });
+      }
+      
+      if (self.screenshotNotificationEnabled){
+        if (NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1){
+          [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationUserDidTakeScreenshotNotification object:nil];
+          self.screenshotNotificationEnabled = NO;
+        }
       }
     }
   }

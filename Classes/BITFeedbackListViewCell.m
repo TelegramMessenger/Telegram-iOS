@@ -152,7 +152,7 @@
   
   CGFloat attachmentsPerRow = floorf(width / (FRAME_SIDE_BORDER + ATTACHMENT_SIZE));
   
-  CGFloat calculatedHeight = baseHeight + (FRAME_TOP_BORDER + ATTACHMENT_SIZE) * ceil(message.attachments.count/attachmentsPerRow);
+  CGFloat calculatedHeight = baseHeight + (FRAME_TOP_BORDER + ATTACHMENT_SIZE) * ceil([message previewableAttachments].count / attachmentsPerRow);
   
   return ceil(calculatedHeight);
 }
@@ -197,22 +197,21 @@
   [self.attachmentViews removeAllObjects];
   
   for (BITFeedbackMessageAttachment *attachment in attachments){
-    BITActivityIndicatorButton *imageView = [BITActivityIndicatorButton buttonWithType:UIButtonTypeCustom];
-
-    if (attachment.localURL){
-      [imageView setImage:[attachment thumbnailWithSize:CGSizeMake(ATTACHMENT_SIZE, ATTACHMENT_SIZE)] forState:UIControlStateNormal];
-      [imageView setShowsActivityIndicator:NO];
-    } else {
-      [imageView setImage:nil forState:UIControlStateNormal];
-      [imageView setShowsActivityIndicator:YES];
+    if (attachment.localURL || attachment.sourceURL) {
+      BITActivityIndicatorButton *imageView = [BITActivityIndicatorButton buttonWithType:UIButtonTypeCustom];
+    
+      if (attachment.localURL){
+        [imageView setImage:[attachment thumbnailWithSize:CGSizeMake(ATTACHMENT_SIZE, ATTACHMENT_SIZE)] forState:UIControlStateNormal];
+        [imageView setShowsActivityIndicator:NO];
+      } else {
+        [imageView setImage:nil forState:UIControlStateNormal];
+        [imageView setShowsActivityIndicator:YES];
+      }
+      [imageView setContentMode:UIViewContentModeScaleAspectFit];
+      [imageView addTarget:self action:@selector(imageButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
+      
+      [self.attachmentViews addObject:imageView];
     }
-    [imageView setContentMode:UIViewContentModeScaleAspectFit];
-    [imageView addTarget:self action:@selector(imageButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
-    
-    [self.attachmentViews addObject:imageView];
-    //[self addSubview:imageView];
-    
-    
   }
 }
 
@@ -286,18 +285,18 @@
   
   CGFloat attachmentsPerRow = floorf(self.frame.size.width / (FRAME_SIDE_BORDER + ATTACHMENT_SIZE));
   
-  for ( BITActivityIndicatorButton *imageButton in self.attachmentViews){
+  for (BITActivityIndicatorButton *imageButton in self.attachmentViews) {
     imageButton.contentMode = UIViewContentModeScaleAspectFit;
     imageButton.imageView.contentMode = UIViewContentModeScaleAspectFill;
-
-    if ( !_message.userMessage){
+    
+    if (!_message.userMessage) {
       imageButton.frame = CGRectMake(FRAME_SIDE_BORDER + (FRAME_SIDE_BORDER + ATTACHMENT_SIZE) * (i%(int)attachmentsPerRow) , floor(i/attachmentsPerRow)*(FRAME_SIDE_BORDER + ATTACHMENT_SIZE) + baseOffsetOfText , ATTACHMENT_SIZE, ATTACHMENT_SIZE);
     } else {
       imageButton.frame = CGRectMake(self.frame.size.width - FRAME_SIDE_BORDER - ATTACHMENT_SIZE -  ((FRAME_SIDE_BORDER + ATTACHMENT_SIZE) *  (i%(int)attachmentsPerRow) ), floor(i/attachmentsPerRow)*(FRAME_SIDE_BORDER + ATTACHMENT_SIZE) + baseOffsetOfText , ATTACHMENT_SIZE, ATTACHMENT_SIZE);
     }
     
-    if (!imageButton.superview){
-      if (self.accessoryBackgroundView.superview){
+    if (!imageButton.superview) {
+      if (self.accessoryBackgroundView.superview) {
         [self insertSubview:imageButton aboveSubview:self.accessoryBackgroundView];
       } else {
         [self addSubview:imageButton];
@@ -311,10 +310,10 @@
 }
 
 - (void)imageButtonPressed:(id)sender {
-  if ([self.delegate respondsToSelector:@selector(listCell:didSelectAttachment:)]){
+  if ([self.delegate respondsToSelector:@selector(listCell:didSelectAttachment:)]) {
     NSInteger index = [self.attachmentViews indexOfObject:sender];
-    if (index != NSNotFound){
-      BITFeedbackMessageAttachment *attachment = self.message.attachments[index];
+    if (index != NSNotFound && [self.message previewableAttachments].count > index) {
+      BITFeedbackMessageAttachment *attachment = [self.message previewableAttachments][index];
       [self.delegate listCell:self didSelectAttachment:attachment];
     }
   }
