@@ -68,7 +68,9 @@
 
 
 @implementation BITFeedbackComposeViewController {
-  BOOL _blockUserDataScreen;  
+  BOOL _blockUserDataScreen;
+  
+  BOOL _actionSheetVisible;
 }
 
 
@@ -79,6 +81,7 @@
   if (self) {
     self.title = BITHockeyLocalizedString(@"HockeyFeedbackComposeTitle");
     _blockUserDataScreen = NO;
+    _actionSheetVisible = NO;
     _delegate = nil;
     _manager = [BITHockeyManager sharedHockeyManager].feedbackManager;
     _attachments = [NSMutableArray new];
@@ -411,6 +414,8 @@
 }
 
 -(void)addPhotoAction:(id)sender {
+  if (_actionSheetVisible) return;
+  
   // add photo.
   UIImagePickerController *pickerController = [[UIImagePickerController alloc] init];
   pickerController.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
@@ -464,6 +469,11 @@
                                                   otherButtonTitles: BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentEdit"), nil];
   
   [actionSheet showFromRect: sender.frame inView: self.attachmentScrollView animated: YES];
+
+  _actionSheetVisible = YES;
+  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+    [self.textView resignFirstResponder];
+  }
 }
 
 
@@ -525,6 +535,10 @@
       annotationEditor.image = attachment.imageRepresentation;
       [self presentViewController:navController animated:YES completion:nil];
     }
+  }
+  _actionSheetVisible = NO;
+  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+    [self.textView becomeFirstResponder];
   }
 }
 
