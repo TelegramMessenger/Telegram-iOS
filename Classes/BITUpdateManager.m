@@ -108,7 +108,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   if ([self expiryDateReached]) return;
   
   [self startUsage];
-  if (_checkForUpdateOnLaunch) {
+
+  if ([self isCheckForUpdateOnLaunch] && [self shouldCheckForUpdates]) {
     [self checkForUpdate];
   }
 }
@@ -422,10 +423,6 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     
     if (!_lastCheck) {
       self.lastCheck = [NSDate distantPast];
-    }
-    
-    if (self.delegate != nil && [self.delegate respondsToSelector:@selector(updateManagerShouldSendUsageData:)]) {
-      _sendUsageData = [self.delegate updateManagerShouldSendUsageData:self];
     }
     
     if (!BITHockeyBundle()) {
@@ -762,6 +759,10 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     if ([self isUpdateManagerDisabled]) return;
     
     BITHockeyLog(@"INFO: Starting UpdateManager");
+    
+    if (self.delegate != nil && [self.delegate respondsToSelector:@selector(updateManagerShouldSendUsageData:)]) {
+      _sendUsageData = [self.delegate updateManagerShouldSendUsageData:self];
+    }
     
     [self checkExpiryDateReached];
     if (![self expiryDateReached]) {

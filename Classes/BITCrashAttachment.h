@@ -43,7 +43,7 @@
 /**
  *  The attachment data as NSData object
  */
-@property (nonatomic, readonly, strong) NSData *attachmentData;
+@property (nonatomic, readonly, strong) NSData *crashAttachmentData;
 
 /**
  *  The content type of your data as MIME type
@@ -60,7 +60,7 @@
  *  @return An instsance of BITCrashAttachment
  */
 - (instancetype)initWithFilename:(NSString *)filename
-                  attachmentData:(NSData *)attachmentData
+             crashAttachmentData:(NSData *)crashAttachmentData
                      contentType:(NSString *)contentType;
 
 @end
