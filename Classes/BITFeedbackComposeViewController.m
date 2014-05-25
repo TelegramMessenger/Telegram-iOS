@@ -103,6 +103,8 @@
     } else if ([item isKindOfClass:[UIImage class]]) {
       UIImage *image = item;
       [self.attachments addObject:[BITFeedbackMessageAttachment attachmentWithData:UIImageJPEGRepresentation(image, 0.7f) contentType:@"image/jpeg"]];
+    } else if ([item isKindOfClass:[NSData class]]) {
+      [self.attachments addObject:[BITFeedbackMessageAttachment attachmentWithData:item contentType:@"'application/octet-stream'"]];
     } else {
       BITHockeyLog(@"Unknown item type %@", item);
     }
