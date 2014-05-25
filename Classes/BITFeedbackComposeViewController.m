@@ -58,6 +58,7 @@
 @property (nonatomic, strong) NSString *text;
 
 @property (nonatomic, strong) NSMutableArray *attachments;
+@property (nonatomic, strong) NSMutableArray *imageAttachments;
 
 @property (nonatomic, strong) UIView *textAccessoryView;
 @property (nonatomic) NSInteger selectedAttachmentIndex;
@@ -81,6 +82,7 @@
     _delegate = nil;
     _manager = [BITHockeyManager sharedHockeyManager].feedbackManager;
     _attachments = [NSMutableArray new];
+    _imageAttachments = [NSMutableArray new];
     _attachmentScrollViewImageViews = [NSMutableArray new];
     self.tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(scrollViewTapped:)];
     [self.attachmentScrollView addGestureRecognizer:self.tapRecognizer];
@@ -102,14 +104,15 @@
       self.text = [(self.text ? self.text : @"") stringByAppendingFormat:@"%@%@", (self.text ? @" " : @""), [(NSURL *)item absoluteString]];
     } else if ([item isKindOfClass:[UIImage class]]) {
       UIImage *image = item;
-      [self.attachments addObject:[BITFeedbackMessageAttachment attachmentWithData:UIImageJPEGRepresentation(image, 0.7f) contentType:@"image/jpeg"]];
+      BITFeedbackMessageAttachment *attachment = [BITFeedbackMessageAttachment attachmentWithData:UIImageJPEGRepresentation(image, 0.7f) contentType:@"image/jpeg"];
+      [self.attachments addObject:attachment];
+      [self.imageAttachments addObject:attachment];
     } else if ([item isKindOfClass:[NSData class]]) {
       [self.attachments addObject:[BITFeedbackMessageAttachment attachmentWithData:item contentType:@"'application/octet-stream'"]];
     } else {
       BITHockeyLog(@"Unknown item type %@", item);
     }
   }
-  
 }
 
 
@@ -192,7 +195,8 @@
   self.textAccessoryView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, CGRectGetWidth(self.view.frame), 44)];
   self.textAccessoryView.backgroundColor = [UIColor colorWithRed:0.9f green:0.9f blue:0.9f alpha:1.0f];
   UIButton *addPhotoButton = [UIButton buttonWithType:UIButtonTypeCustom];
-  [addPhotoButton setTitle:@"+ Add Photo" forState:UIControlStateNormal];                                        [addPhotoButton setTitleColor:[UIColor darkGrayColor] forState:UIControlStateNormal];
+  [addPhotoButton setTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentAddImage") forState:UIControlStateNormal];
+  [addPhotoButton setTitleColor:[UIColor darkGrayColor] forState:UIControlStateNormal];
   addPhotoButton.frame = CGRectMake(0, 0, CGRectGetWidth(self.view.frame), 44);
   [addPhotoButton addTarget:self action:@selector(addPhotoAction:) forControlEvents:UIControlEventTouchUpInside];
   
@@ -237,9 +241,6 @@
   }
   
   [self updateBarButtonState];
-
-  
-
 }
 
 - (void)viewDidAppear:(BOOL)animated {
@@ -255,7 +256,6 @@
     // Invoke delayed to fix iOS 7 iPad landscape bug, where this view will be moved if not called delayed
     [self.textView performSelector:@selector(becomeFirstResponder) withObject:nil afterDelay:0.0];
   }
-  
 }
 
 - (void)viewWillDisappear:(BOOL)animated {
@@ -276,7 +276,7 @@
 -(void)refreshAttachmentScrollview {
   CGFloat scrollViewWidth = 0;
     
-  if (self.attachments.count){
+  if (self.imageAttachments.count){
     scrollViewWidth = 100;
   }
   
@@ -286,18 +286,25 @@
   
   BOOL alreadySetup = CGRectGetWidth(scrollViewFrame) > 0;
   
-  if (!alreadySetup){
+  if (alreadySetup && self.imageAttachments.count == 0) {
+    textViewFrame.size.width += 100;
+    self.textView.frame = textViewFrame;
+    scrollViewFrame.size.width = 0;
+    self.attachmentScrollView.frame = scrollViewFrame;
+    return;
+  }
+  
+  if (!alreadySetup) {
     textViewFrame.size.width -= scrollViewWidth;
     scrollViewFrame = CGRectMake(CGRectGetMaxX(textViewFrame), self.view.frame.origin.y, scrollViewWidth, CGRectGetHeight(self.view.bounds));
     self.textView.frame = textViewFrame;
     self.attachmentScrollView.frame = scrollViewFrame;
     self.attachmentScrollView.contentInset = self.textView.contentInset;
-    
   }
   
-  if (self.attachments.count > self.attachmentScrollViewImageViews.count){
-    NSInteger numberOfViewsToCreate = self.attachments.count - self.attachmentScrollViewImageViews.count;
-    for (int i = 0;i<numberOfViewsToCreate;i++){
+  if (self.imageAttachments.count > self.attachmentScrollViewImageViews.count){
+    NSInteger numberOfViewsToCreate = self.imageAttachments.count - self.attachmentScrollViewImageViews.count;
+    for (int i = 0; i <numberOfViewsToCreate; i++) {
       UIButton *newImageButton = [UIButton buttonWithType:UIButtonTypeCustom];
       [newImageButton addTarget:self action:@selector(imageButtonAction:) forControlEvents:UIControlEventTouchUpInside];
       [self.attachmentScrollViewImageViews addObject:newImageButton];
@@ -309,9 +316,9 @@
   
   CGFloat currentYOffset = 0.0f;
   
-  NSEnumerator *reverseAttachments = self.attachments.reverseObjectEnumerator;
+  NSEnumerator *reverseAttachments = self.imageAttachments.reverseObjectEnumerator;
   
-  for (BITFeedbackMessageAttachment* attachment in reverseAttachments.allObjects){
+  for (BITFeedbackMessageAttachment *attachment in reverseAttachments.allObjects){
     UIButton *imageButton = self.attachmentScrollViewImageViews[index];
     
     UIImage *image = [attachment thumbnailWithSize:CGSizeMake(100, 100)];
@@ -321,7 +328,7 @@
     
     CGFloat height = image.size.height * scaleFactor;
     
-    imageButton.frame = CGRectInset(CGRectMake(0, currentYOffset, scaleFactor * image.size.width, height),10,10);
+    imageButton.frame = CGRectInset(CGRectMake(0, currentYOffset, scaleFactor * image.size.width, height), 10, 10);
     
     currentYOffset += height;
     
@@ -341,7 +348,7 @@
     self.navigationItem.rightBarButtonItem.enabled = NO;
   }
   
-  if (self.attachments.count > 2){
+  if (self.imageAttachments.count > 2){
     self.textView.inputAccessoryView = nil;
   } else {
     self.textView.inputAccessoryView = self.textAccessoryView;
@@ -372,6 +379,10 @@
 #pragma mark - Actions
 
 - (void)dismissAction:(id)sender {
+  for (BITFeedbackMessageAttachment *attachment in self.attachments){
+    [attachment deleteContents];
+  }
+  
   [self dismissWithResult:BITFeedbackComposeResultCancelled];
 }
 
@@ -430,6 +441,7 @@
     NSString *imageName = [imagePath lastPathComponent];
     newAttachment.originalFilename = imageName;
     [self.attachments addObject:newAttachment];
+    [self.imageAttachments addObject:newAttachment];
   }
   
   [picker dismissViewControllerAnimated:YES completion:nil];
@@ -442,15 +454,18 @@
 - (void)imageButtonAction:(UIButton *)sender {
   // determine the index of the feedback
   NSInteger index = [self.attachmentScrollViewImageViews indexOfObject:sender];
+  
   self.selectedAttachmentIndex = index;
-  UIActionSheet * actionSheet = [[UIActionSheet alloc] initWithTitle: nil
-                                                            delegate: self
-                                                   cancelButtonTitle:@"Cancel"
-                                              destructiveButtonTitle: @"Delete Attachment"
-                                                   otherButtonTitles: @"Edit Attachment", nil];
+  
+  UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithTitle: nil
+                                                           delegate: self
+                                                  cancelButtonTitle: BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentCancel")
+                                             destructiveButtonTitle: BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentDelete")
+                                                  otherButtonTitles: BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentEdit"), nil];
   
   [actionSheet showFromRect: sender.frame inView: self.attachmentScrollView animated: YES];
 }
+
 
 #pragma mark - BITFeedbackUserDataDelegate
 
@@ -485,14 +500,16 @@
   [self updateBarButtonState];
 }
 
+
 #pragma mark - UIActionSheet Delegate
 
 - (void)actionSheet:(UIActionSheet *)actionSheet didDismissWithButtonIndex:(NSInteger)buttonIndex {
   if (buttonIndex == [actionSheet destructiveButtonIndex]){
     
     if (self.selectedAttachmentIndex != NSNotFound){
-      BITFeedbackMessageAttachment* attachment = [self.attachments objectAtIndex:self.selectedAttachmentIndex];
+      BITFeedbackMessageAttachment *attachment = self.imageAttachments[self.selectedAttachmentIndex];
       [attachment deleteContents]; // mandatory call to delete the files associatd.
+      [self.imageAttachments removeObject:attachment];
       [self.attachments removeObject:attachment];
     }
     self.selectedAttachmentIndex = NSNotFound;
@@ -501,24 +518,22 @@
     
   } else if(buttonIndex != [actionSheet cancelButtonIndex]){
     if (self.selectedAttachmentIndex != NSNotFound){
-      BITFeedbackMessageAttachment* attachment = [self.attachments objectAtIndex:self.selectedAttachmentIndex];
+      BITFeedbackMessageAttachment *attachment = self.imageAttachments[self.selectedAttachmentIndex];
       BITImageAnnotationViewController *annotationEditor = [[BITImageAnnotationViewController alloc ] init];
       annotationEditor.delegate = self;
       UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:annotationEditor];
       annotationEditor.image = attachment.imageRepresentation;
       [self presentViewController:navController animated:YES completion:nil];
     }
-
   }
-  
-  
 }
+
 
 #pragma mark - Image Annotation Delegate
 
 - (void)annotationController:(BITImageAnnotationViewController *)annotationController didFinishWithImage:(UIImage *)image {
   if (self.selectedAttachmentIndex != NSNotFound){
-    BITFeedbackMessageAttachment* attachment = [self.attachments objectAtIndex:self.selectedAttachmentIndex];
+    BITFeedbackMessageAttachment *attachment = self.imageAttachments[self.selectedAttachmentIndex];
     [attachment replaceData:UIImageJPEGRepresentation(image, 0.7f)];
   }
   

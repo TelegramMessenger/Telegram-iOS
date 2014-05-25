@@ -212,6 +212,18 @@
 /* Send button */
 "HockeyFeedbackComposeSend" = "Envoyer";
 
+/* Add Image button for attachment actions */
+"HockeyFeedbackComposeAttachmentAddImage" = "+ Add Image";
+
+/* Edit button for attachment actions */
+"HockeyFeedbackComposeAttachmentEdit" = "Edit Attachment";
+
+/* Delete button for attachment actions */
+"HockeyFeedbackComposeAttachmentDelete" = "Delete Attachment";
+
+/* Cancel button for attachment actions */
+"HockeyFeedbackComposeAttachmentCancel" = "Cancel";
+
 
 /* Set User Data */
 
