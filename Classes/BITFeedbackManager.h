@@ -69,7 +69,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
    */
   BITFeedbackObservationNone = 0,
   /**
-   *  Triggeres when the user takes a screenshot. Requires iOS 7 or later!
+   *  Triggeres when the user takes a screenshot. This will grab the latest image from the camera roll. Requires iOS 7 or later!
    */
   BITFeedbackObservationModeOnScreenshot = 1,
   /**
@@ -220,7 +220,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
    own trigger and then call `[[BITHockeyManager sharedHockeyManager].feedbackManager showFeedbackComposeViewWithGeneratedScreenshot];` to handle your custom events
    that should trigger this.
  - `BITFeedbackObservationModeOnScreenshot`: Triggeres when the user takes a screenshot.
-    Requires iOS 7 or later!
+    This will grab the latest image from the camera roll. Requires iOS 7 or later!
  - `BITFeedbackObservationModeThreeFingerTap`: Triggers when the user tapps with three fingers
    for three seconds on the screen.
  
