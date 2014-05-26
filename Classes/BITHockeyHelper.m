@@ -346,6 +346,11 @@ UIImage *bit_addGlossToImage(UIImage *inputImage) {
 #pragma mark UIImage helpers
 
 UIImage *bit_imageToFitSize(UIImage *inputImage, CGSize fitSize, BOOL honorScaleFactor) {
+  
+  if (!inputImage){
+    return nil;
+  }
+  
 	float imageScaleFactor = 1.0;
   if (honorScaleFactor) {
     if ([inputImage respondsToSelector:@selector(scale)]) {

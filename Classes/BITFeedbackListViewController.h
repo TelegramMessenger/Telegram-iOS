@@ -28,6 +28,7 @@
 
 
 #import <UIKit/UIKit.h>
+#import <QuickLook/QuickLook.h>
 
 #import "BITHockeyBaseViewController.h"
 
@@ -54,7 +55,7 @@
  This ensures that the presentation on iOS 6 and iOS 7 will use the corret design on each OS Version.
  */
 
-@interface BITFeedbackListViewController : BITHockeyBaseViewController <UITableViewDelegate, UITableViewDataSource, UIActionSheetDelegate, UIAlertViewDelegate> {
+@interface BITFeedbackListViewController : BITHockeyBaseViewController <UITableViewDelegate, UITableViewDataSource, UIActionSheetDelegate, UIAlertViewDelegate, QLPreviewControllerDataSource> {
 }
 
 @end

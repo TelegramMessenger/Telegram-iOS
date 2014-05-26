@@ -70,8 +70,11 @@
  The follwoing data object classes are currently supported:
  - NSString
  - NSURL
+ - UIImage
+ - NSData
  
- These are automatically concatenated to one text string.
+ These are automatically concatenated to one text string, while any images and NSData
+ objects are added as attachments to the feedback.
  
  @param items Array of data objects to prefill the feedback text message.
  */

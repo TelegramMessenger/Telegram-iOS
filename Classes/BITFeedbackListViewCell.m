@@ -26,9 +26,11 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import "HockeySDKPrivate.h"
 
 #import "BITFeedbackListViewCell.h"
-#import "HockeySDKPrivate.h"
+#import "BITFeedbackMessageAttachment.h"
+#import "BITActivityIndicatorButton.h"
 
 #define BACKGROUNDCOLOR_DEFAULT BIT_RGBCOLOR(245, 245, 245)
 #define BACKGROUNDCOLOR_ALTERNATE BIT_RGBCOLOR(235, 235, 235)
@@ -54,12 +56,19 @@
 
 #define LABEL_TEXT_Y 25
 
+#define ATTACHMENT_SIZE 45
+
+
 @interface BITFeedbackListViewCell ()
 
 @property (nonatomic, strong) NSDateFormatter *dateFormatter;
 @property (nonatomic, strong) NSDateFormatter *timeFormatter;
 
 @property (nonatomic, strong) UILabel *labelTitle;
+
+@property (nonatomic, strong) NSMutableArray *attachmentViews;
+
+@property (nonatomic, strong) UIView *accessoryBackgroundView;
 
 @end
 
@@ -79,15 +88,15 @@
     self.dateFormatter = [[NSDateFormatter alloc] init];
     [self.dateFormatter setTimeStyle:NSDateFormatterNoStyle];
     [self.dateFormatter setDateStyle:NSDateFormatterMediumStyle];
-    [self.dateFormatter setLocale:[NSLocale currentLocale]];    
+    [self.dateFormatter setLocale:[NSLocale currentLocale]];
     [self.dateFormatter setDoesRelativeDateFormatting:YES];
-
+    
     self.timeFormatter = [[NSDateFormatter alloc] init];
     [self.timeFormatter setTimeStyle:NSDateFormatterShortStyle];
     [self.timeFormatter setDateStyle:NSDateFormatterNoStyle];
     [self.timeFormatter setLocale:[NSLocale currentLocale]];
     [self.timeFormatter setDoesRelativeDateFormatting:YES];
-
+    
     self.labelTitle = [[UILabel alloc] init];
     self.labelTitle.font = [UIFont systemFontOfSize:TITLE_FONTSIZE];
     
@@ -96,6 +105,8 @@
     self.labelText.numberOfLines = 0;
     self.labelText.textAlignment = kBITTextLabelAlignmentLeft;
     self.labelText.dataDetectorTypes = UIDataDetectorTypeAll;
+    
+    self.attachmentViews = [NSMutableArray new];
   }
   return self;
 }
@@ -104,6 +115,7 @@
 #pragma mark - Private
 
 - (UIColor *)backgroundColor {
+  
   if (self.backgroundStyle == BITFeedbackListViewCellBackgroundStyleNormal) {
     if (self.style == BITFeedbackListViewCellPresentatationStyleDefault) {
       return BACKGROUNDCOLOR_DEFAULT;
@@ -135,6 +147,19 @@
 #pragma mark - Layout
 
 + (CGFloat) heightForRowWithMessage:(BITFeedbackMessage *)message tableViewWidth:(CGFloat)width {
+  
+  CGFloat baseHeight = [self heightForTextInRowWithMessage:message tableViewWidth:width];
+  
+  CGFloat attachmentsPerRow = floorf(width / (FRAME_SIDE_BORDER + ATTACHMENT_SIZE));
+  
+  CGFloat calculatedHeight = baseHeight + (FRAME_TOP_BORDER + ATTACHMENT_SIZE) * ceil([message previewableAttachments].count / attachmentsPerRow);
+  
+  return ceil(calculatedHeight);
+}
+
+
+
++ (CGFloat) heightForTextInRowWithMessage:(BITFeedbackMessage *)message tableViewWidth:(CGFloat)width {
   CGFloat calculatedHeight;
   
 #if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
@@ -143,7 +168,11 @@
                                                        options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingUsesFontLeading
                                                     attributes:@{NSFontAttributeName:[UIFont systemFontOfSize:TEXT_FONTSIZE]}
                                                        context:nil];
-     calculatedHeight = calculatedRect.size.height + FRAME_TOP_BORDER + LABEL_TEXT_Y + FRAME_BOTTOM_BORDER;
+    calculatedHeight = calculatedRect.size.height + FRAME_TOP_BORDER + LABEL_TEXT_Y + FRAME_BOTTOM_BORDER;
+    
+    // added to make space for the images.
+    
+    
   } else {
 #endif
 #pragma clang diagnostic push
@@ -151,6 +180,7 @@
     calculatedHeight = [message.text sizeWithFont:[UIFont systemFontOfSize:TEXT_FONTSIZE]
                                 constrainedToSize:CGSizeMake(width - (2 * FRAME_SIDE_BORDER), CGFLOAT_MAX)
                         ].height + FRAME_TOP_BORDER + LABEL_TEXT_Y + FRAME_BOTTOM_BORDER;
+    
 #pragma clang diagnostic pop
 #if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
   }
@@ -159,13 +189,48 @@
   return ceil(calculatedHeight);
 }
 
-- (void)layoutSubviews {
-  UIView *accessoryViewBackground = [[UIView alloc] initWithFrame:CGRectMake(0, 2, self.frame.size.width * 2, self.frame.size.height - 2)];
-  accessoryViewBackground.autoresizingMask = UIViewAutoresizingFlexibleHeight;
-  accessoryViewBackground.clipsToBounds = YES;
+- (void)setAttachments:(NSArray *)attachments {
+  for (UIView *view in self.attachmentViews){
+    [view removeFromSuperview];
+  }
   
-  // colors
-  accessoryViewBackground.backgroundColor = [self backgroundColor];
+  [self.attachmentViews removeAllObjects];
+  
+  for (BITFeedbackMessageAttachment *attachment in attachments){
+    if (attachment.localURL || attachment.sourceURL) {
+      BITActivityIndicatorButton *imageView = [BITActivityIndicatorButton buttonWithType:UIButtonTypeCustom];
+    
+      if (attachment.localURL){
+        [imageView setImage:[attachment thumbnailWithSize:CGSizeMake(ATTACHMENT_SIZE, ATTACHMENT_SIZE)] forState:UIControlStateNormal];
+        [imageView setShowsActivityIndicator:NO];
+      } else {
+        [imageView setImage:nil forState:UIControlStateNormal];
+        [imageView setShowsActivityIndicator:YES];
+      }
+      [imageView setContentMode:UIViewContentModeScaleAspectFit];
+      [imageView addTarget:self action:@selector(imageButtonPressed:) forControlEvents:UIControlEventTouchUpInside];
+      
+      [self.attachmentViews addObject:imageView];
+    }
+  }
+}
+
+
+- (void)layoutSubviews {
+  if (!self.accessoryBackgroundView){
+    self.accessoryBackgroundView = [[UIView alloc] initWithFrame:CGRectMake(0, 2, self.frame.size.width * 2, self.frame.size.height - 2)];
+    self.accessoryBackgroundView.autoresizingMask = UIViewAutoresizingFlexibleHeight;
+    self.accessoryBackgroundView.clipsToBounds = YES;
+    
+    // colors
+    self.accessoryBackgroundView.backgroundColor = [self backgroundColor];
+  }
+  
+  if (self.style == BITFeedbackListViewCellPresentatationStyleDefault) {
+    [self addSubview:self.accessoryBackgroundView];
+  } else if (self.accessoryBackgroundView.superview){
+    [self.accessoryBackgroundView removeFromSuperview];
+  }
   self.contentView.backgroundColor = [self backgroundColor];
   self.labelTitle.backgroundColor = [self backgroundColor];
   self.labelText.backgroundColor = [self backgroundColor];
@@ -176,11 +241,9 @@
   } else {
     [self.labelText setTextColor:TEXTCOLOR_DEFAULT];
   }
-
+  
   // background for deletion accessory view
-  if (self.style == BITFeedbackListViewCellPresentatationStyleDefault) {
-    [self addSubview:accessoryViewBackground];
-  }
+  
   
   // header
   NSString *dateString = @"";
@@ -195,7 +258,7 @@
   }
   [self.labelTitle setText:dateString];
   [self.labelTitle setFrame:CGRectMake(FRAME_SIDE_BORDER, FRAME_TOP_BORDER + LABEL_TITLE_Y, self.frame.size.width - (2 * FRAME_SIDE_BORDER), LABEL_TITLE_HEIGHT)];
-    
+  
   if (_message.userMessage) {
     self.labelTitle.textAlignment = kBITTextLabelAlignmentRight;
     self.labelText.textAlignment = kBITTextLabelAlignmentRight;
@@ -203,19 +266,57 @@
     self.labelTitle.textAlignment = kBITTextLabelAlignmentLeft;
     self.labelText.textAlignment = kBITTextLabelAlignmentLeft;
   }
-
+  
   [self addSubview:self.labelTitle];
-
+  
   // text
   [self.labelText setText:_message.text];
-  CGSize size = CGSizeMake(self.frame.size.width - (2 * FRAME_SIDE_BORDER),
-                           [[self class] heightForRowWithMessage:_message tableViewWidth:self.frame.size.width] - LABEL_TEXT_Y - FRAME_BOTTOM_BORDER);
+  CGSize sizeForTextLabel = CGSizeMake(self.frame.size.width - (2 * FRAME_SIDE_BORDER),
+                                       [[self class] heightForTextInRowWithMessage:_message tableViewWidth:self.frame.size.width] - LABEL_TEXT_Y - FRAME_BOTTOM_BORDER);
   
-  [self.labelText setFrame:CGRectMake(FRAME_SIDE_BORDER, LABEL_TEXT_Y, size.width, size.height)];
+  [self.labelText setFrame:CGRectMake(FRAME_SIDE_BORDER, LABEL_TEXT_Y, sizeForTextLabel.width, sizeForTextLabel.height)];
   
   [self addSubview:self.labelText];
   
+  CGFloat baseOffsetOfText = CGRectGetMaxY(self.labelText.frame);
+  
+  
+  int i = 0;
+  
+  CGFloat attachmentsPerRow = floorf(self.frame.size.width / (FRAME_SIDE_BORDER + ATTACHMENT_SIZE));
+  
+  for (BITActivityIndicatorButton *imageButton in self.attachmentViews) {
+    imageButton.contentMode = UIViewContentModeScaleAspectFit;
+    imageButton.imageView.contentMode = UIViewContentModeScaleAspectFill;
+    
+    if (!_message.userMessage) {
+      imageButton.frame = CGRectMake(FRAME_SIDE_BORDER + (FRAME_SIDE_BORDER + ATTACHMENT_SIZE) * (i%(int)attachmentsPerRow) , floor(i/attachmentsPerRow)*(FRAME_SIDE_BORDER + ATTACHMENT_SIZE) + baseOffsetOfText , ATTACHMENT_SIZE, ATTACHMENT_SIZE);
+    } else {
+      imageButton.frame = CGRectMake(self.frame.size.width - FRAME_SIDE_BORDER - ATTACHMENT_SIZE -  ((FRAME_SIDE_BORDER + ATTACHMENT_SIZE) *  (i%(int)attachmentsPerRow) ), floor(i/attachmentsPerRow)*(FRAME_SIDE_BORDER + ATTACHMENT_SIZE) + baseOffsetOfText , ATTACHMENT_SIZE, ATTACHMENT_SIZE);
+    }
+    
+    if (!imageButton.superview) {
+      if (self.accessoryBackgroundView.superview) {
+        [self insertSubview:imageButton aboveSubview:self.accessoryBackgroundView];
+      } else {
+        [self addSubview:imageButton];
+      }
+    }
+    
+    i++;
+  }
+  
   [super layoutSubviews];
+}
+
+- (void)imageButtonPressed:(id)sender {
+  if ([self.delegate respondsToSelector:@selector(listCell:didSelectAttachment:)]) {
+    NSInteger index = [self.attachmentViews indexOfObject:sender];
+    if (index != NSNotFound && [self.message previewableAttachments].count > index) {
+      BITFeedbackMessageAttachment *attachment = [self.message previewableAttachments][index];
+      [self.delegate listCell:self didSelectAttachment:attachment];
+    }
+  }
 }
 
 

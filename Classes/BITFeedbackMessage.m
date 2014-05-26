@@ -28,13 +28,14 @@
 
 
 #import "BITFeedbackMessage.h"
+#import "BITFeedbackMessageAttachment.h"
 
 @implementation BITFeedbackMessage
 
 
 #pragma mark - NSObject
 
-- (id) init {
+- (instancetype) init {
   if ((self = [super init])) {
     _text = nil;
     _userID = nil;
@@ -42,6 +43,7 @@
     _email = nil;
     _date = [[NSDate alloc] init];
     _token = nil;
+    _attachments = nil;
     _id = [[NSNumber alloc] initWithInteger:0];
     _status = BITFeedbackMessageStatusSendPending;
     _userMessage = NO;
@@ -59,24 +61,54 @@
   [encoder encodeObject:self.email forKey:@"email"];
   [encoder encodeObject:self.date forKey:@"date"];
   [encoder encodeObject:self.id forKey:@"id"];
+  [encoder encodeObject:self.attachments forKey:@"attachments"];
   [encoder encodeInteger:self.status forKey:@"status"];
   [encoder encodeBool:self.userMessage forKey:@"userMessage"];
   [encoder encodeObject:self.token forKey:@"token"];
 }
 
-- (id)initWithCoder:(NSCoder *)decoder {
-  if ((self = [super init])) {
+- (instancetype)initWithCoder:(NSCoder *)decoder {
+  if ((self = [self init])) {
     self.text = [decoder decodeObjectForKey:@"text"];
     self.userID = [decoder decodeObjectForKey:@"userID"];
     self.name = [decoder decodeObjectForKey:@"name"];
     self.email = [decoder decodeObjectForKey:@"email"];
     self.date = [decoder decodeObjectForKey:@"date"];
     self.id = [decoder decodeObjectForKey:@"id"];
+    self.attachments = [decoder decodeObjectForKey:@"attachments"];
     self.status = (BITFeedbackMessageStatus)[decoder decodeIntegerForKey:@"status"];
     self.userMessage = [decoder decodeBoolForKey:@"userMessage"];
     self.token = [decoder decodeObjectForKey:@"token"];
   }
   return self;
 }
+
+#pragma mark - Deletion
+
+-(void)deleteContents {
+  for (BITFeedbackMessageAttachment *attachment in self.attachments){
+    [attachment deleteContents];
+  }
+}
+
+- (NSArray *)previewableAttachments {
+  NSMutableArray *returnArray = [NSMutableArray new];
+  
+  for (BITFeedbackMessageAttachment *attachment in self.attachments){
+    if ([QLPreviewController canPreviewItem:attachment ]){
+      [returnArray addObject:attachment];
+    }
+  }
+  
+  return returnArray;
+}
+
+-(void)addAttachmentsObject:(BITFeedbackMessageAttachment *)object{
+  if (!self.attachments){
+    self.attachments = [NSArray array];
+  }
+  self.attachments = [self.attachments arrayByAddingObject:object];
+}
+
 
 @end

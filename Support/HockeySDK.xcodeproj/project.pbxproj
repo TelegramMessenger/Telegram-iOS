@@ -138,6 +138,35 @@
 		1EF95CA7162CB037000AE3AD /* BITFeedbackActivity.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EF95CA5162CB036000AE3AD /* BITFeedbackActivity.m */; };
 		1EF95CAA162CB314000AE3AD /* BITFeedbackComposeViewControllerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EF95CA9162CB313000AE3AD /* BITFeedbackComposeViewControllerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1EFF03E517F2485500A5F13C /* BITCrashManagerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EFF03E417F2485500A5F13C /* BITCrashManagerTests.m */; };
+		973EC8B418BCA7BC00DBFFBB /* BITImageAnnotationViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 97F0FA0018AE375E00EF50AA /* BITImageAnnotationViewController.m */; };
+		973EC8B718BCA8A200DBFFBB /* BITRectangleImageAnnotation.h in Headers */ = {isa = PBXBuildFile; fileRef = 973EC8B518BCA8A200DBFFBB /* BITRectangleImageAnnotation.h */; };
+		973EC8B818BCA8A200DBFFBB /* BITRectangleImageAnnotation.m in Sources */ = {isa = PBXBuildFile; fileRef = 973EC8B618BCA8A200DBFFBB /* BITRectangleImageAnnotation.m */; };
+		973EC8BB18BDE29800DBFFBB /* BITArrowImageAnnotation.h in Headers */ = {isa = PBXBuildFile; fileRef = 973EC8B918BDE29800DBFFBB /* BITArrowImageAnnotation.h */; };
+		973EC8BC18BDE29800DBFFBB /* BITArrowImageAnnotation.m in Sources */ = {isa = PBXBuildFile; fileRef = 973EC8BA18BDE29800DBFFBB /* BITArrowImageAnnotation.m */; };
+		973EC8BF18BE2B5B00DBFFBB /* BITBlurImageAnnotation.h in Headers */ = {isa = PBXBuildFile; fileRef = 973EC8BD18BE2B5B00DBFFBB /* BITBlurImageAnnotation.h */; };
+		973EC8C018BE2B5B00DBFFBB /* BITBlurImageAnnotation.m in Sources */ = {isa = PBXBuildFile; fileRef = 973EC8BE18BE2B5B00DBFFBB /* BITBlurImageAnnotation.m */; };
+		9760F6C418BB4D2D00959B93 /* AssetsLibrary.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9760F6C318BB4D2D00959B93 /* AssetsLibrary.framework */; };
+		9760F6CF18BB685600959B93 /* BITImageAnnotation.h in Headers */ = {isa = PBXBuildFile; fileRef = 9760F6CD18BB685600959B93 /* BITImageAnnotation.h */; };
+		9760F6D018BB685600959B93 /* BITImageAnnotation.m in Sources */ = {isa = PBXBuildFile; fileRef = 9760F6CE18BB685600959B93 /* BITImageAnnotation.m */; };
+		9774BCFF192CB20A00085EB5 /* BITActivityIndicatorButton.h in Headers */ = {isa = PBXBuildFile; fileRef = 9774BCFD192CB20A00085EB5 /* BITActivityIndicatorButton.h */; };
+		9774BD00192CB20A00085EB5 /* BITActivityIndicatorButton.m in Sources */ = {isa = PBXBuildFile; fileRef = 9774BCFE192CB20A00085EB5 /* BITActivityIndicatorButton.m */; };
+		9782023218F81BFC00A98D8B /* Arrow.png in Resources */ = {isa = PBXBuildFile; fileRef = 9782022818F81BFC00A98D8B /* Arrow.png */; };
+		9782023318F81BFC00A98D8B /* Arrow@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 9782022918F81BFC00A98D8B /* Arrow@2x.png */; };
+		9782023418F81BFC00A98D8B /* Blur.png in Resources */ = {isa = PBXBuildFile; fileRef = 9782022A18F81BFC00A98D8B /* Blur.png */; };
+		9782023518F81BFC00A98D8B /* Blur@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 9782022B18F81BFC00A98D8B /* Blur@2x.png */; };
+		9782023618F81BFC00A98D8B /* Cancel.png in Resources */ = {isa = PBXBuildFile; fileRef = 9782022C18F81BFC00A98D8B /* Cancel.png */; };
+		9782023718F81BFC00A98D8B /* Cancel@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 9782022D18F81BFC00A98D8B /* Cancel@2x.png */; };
+		9782023818F81BFC00A98D8B /* Ok.png in Resources */ = {isa = PBXBuildFile; fileRef = 9782022E18F81BFC00A98D8B /* Ok.png */; };
+		9782023918F81BFC00A98D8B /* Ok@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 9782022F18F81BFC00A98D8B /* Ok@2x.png */; };
+		9782023A18F81BFC00A98D8B /* Rectangle.png in Resources */ = {isa = PBXBuildFile; fileRef = 9782023018F81BFC00A98D8B /* Rectangle.png */; };
+		9782023B18F81BFC00A98D8B /* Rectangle@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 9782023118F81BFC00A98D8B /* Rectangle@2x.png */; };
+		97BD9BD5191109730043FD59 /* QuickLook.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 97BD9BD4191109730043FD59 /* QuickLook.framework */; };
+		97CC11F71917AB7C0028768F /* QuickLook.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 97BD9BD4191109730043FD59 /* QuickLook.framework */; };
+		97CC11F91917C0310028768F /* MobileCoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 97CC11F81917C0310028768F /* MobileCoreServices.framework */; };
+		97CC11FA1917C0390028768F /* MobileCoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 97CC11F81917C0310028768F /* MobileCoreServices.framework */; };
+		97F0F9FD18ABAECD00EF50AA /* iconCamera.png in Resources */ = {isa = PBXBuildFile; fileRef = 97F0F9FB18ABAECD00EF50AA /* iconCamera.png */; };
+		97F0F9FE18ABAECD00EF50AA /* iconCamera@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 97F0F9FC18ABAECD00EF50AA /* iconCamera@2x.png */; };
+		97F0FA0518B2294D00EF50AA /* BITFeedbackMessageAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 97F0FA0318AE5AED00EF50AA /* BITFeedbackMessageAttachment.m */; };
 		E405266217A2AD300096359C /* BITFeedbackManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = E405266117A2AD300096359C /* BITFeedbackManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		E40E0B0917DA19DC005E38C1 /* BITHockeyAppClientTests.m in Sources */ = {isa = PBXBuildFile; fileRef = E40E0B0817DA19DC005E38C1 /* BITHockeyAppClientTests.m */; };
 		E40E0B0C17DA1AFF005E38C1 /* BITHockeyAppClient.h in Headers */ = {isa = PBXBuildFile; fileRef = E40E0B0A17DA1AFF005E38C1 /* BITHockeyAppClient.h */; };
@@ -303,6 +332,35 @@
 		1EF95CA9162CB313000AE3AD /* BITFeedbackComposeViewControllerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITFeedbackComposeViewControllerDelegate.h; sourceTree = "<group>"; };
 		1EFF03D717F20F8300A5F13C /* BITCrashManagerPrivate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BITCrashManagerPrivate.h; sourceTree = "<group>"; };
 		1EFF03E417F2485500A5F13C /* BITCrashManagerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITCrashManagerTests.m; sourceTree = "<group>"; };
+		973EC8B518BCA8A200DBFFBB /* BITRectangleImageAnnotation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITRectangleImageAnnotation.h; sourceTree = "<group>"; };
+		973EC8B618BCA8A200DBFFBB /* BITRectangleImageAnnotation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITRectangleImageAnnotation.m; sourceTree = "<group>"; };
+		973EC8B918BDE29800DBFFBB /* BITArrowImageAnnotation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITArrowImageAnnotation.h; sourceTree = "<group>"; };
+		973EC8BA18BDE29800DBFFBB /* BITArrowImageAnnotation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITArrowImageAnnotation.m; sourceTree = "<group>"; };
+		973EC8BD18BE2B5B00DBFFBB /* BITBlurImageAnnotation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITBlurImageAnnotation.h; sourceTree = "<group>"; };
+		973EC8BE18BE2B5B00DBFFBB /* BITBlurImageAnnotation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITBlurImageAnnotation.m; sourceTree = "<group>"; };
+		9760F6C318BB4D2D00959B93 /* AssetsLibrary.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AssetsLibrary.framework; path = System/Library/Frameworks/AssetsLibrary.framework; sourceTree = SDKROOT; };
+		9760F6CD18BB685600959B93 /* BITImageAnnotation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITImageAnnotation.h; sourceTree = "<group>"; };
+		9760F6CE18BB685600959B93 /* BITImageAnnotation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITImageAnnotation.m; sourceTree = "<group>"; };
+		9774BCFD192CB20A00085EB5 /* BITActivityIndicatorButton.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITActivityIndicatorButton.h; sourceTree = "<group>"; };
+		9774BCFE192CB20A00085EB5 /* BITActivityIndicatorButton.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITActivityIndicatorButton.m; sourceTree = "<group>"; };
+		9782022818F81BFC00A98D8B /* Arrow.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Arrow.png; sourceTree = "<group>"; };
+		9782022918F81BFC00A98D8B /* Arrow@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Arrow@2x.png"; sourceTree = "<group>"; };
+		9782022A18F81BFC00A98D8B /* Blur.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Blur.png; sourceTree = "<group>"; };
+		9782022B18F81BFC00A98D8B /* Blur@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Blur@2x.png"; sourceTree = "<group>"; };
+		9782022C18F81BFC00A98D8B /* Cancel.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Cancel.png; sourceTree = "<group>"; };
+		9782022D18F81BFC00A98D8B /* Cancel@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Cancel@2x.png"; sourceTree = "<group>"; };
+		9782022E18F81BFC00A98D8B /* Ok.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Ok.png; sourceTree = "<group>"; };
+		9782022F18F81BFC00A98D8B /* Ok@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Ok@2x.png"; sourceTree = "<group>"; };
+		9782023018F81BFC00A98D8B /* Rectangle.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Rectangle.png; sourceTree = "<group>"; };
+		9782023118F81BFC00A98D8B /* Rectangle@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Rectangle@2x.png"; sourceTree = "<group>"; };
+		97BD9BD4191109730043FD59 /* QuickLook.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLook.framework; path = System/Library/Frameworks/QuickLook.framework; sourceTree = SDKROOT; };
+		97CC11F81917C0310028768F /* MobileCoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MobileCoreServices.framework; path = System/Library/Frameworks/MobileCoreServices.framework; sourceTree = SDKROOT; };
+		97F0F9FB18ABAECD00EF50AA /* iconCamera.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = iconCamera.png; sourceTree = "<group>"; };
+		97F0F9FC18ABAECD00EF50AA /* iconCamera@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "iconCamera@2x.png"; sourceTree = "<group>"; };
+		97F0F9FF18AE375E00EF50AA /* BITImageAnnotationViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITImageAnnotationViewController.h; sourceTree = "<group>"; };
+		97F0FA0018AE375E00EF50AA /* BITImageAnnotationViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITImageAnnotationViewController.m; sourceTree = "<group>"; };
+		97F0FA0218AE5AED00EF50AA /* BITFeedbackMessageAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITFeedbackMessageAttachment.h; sourceTree = "<group>"; };
+		97F0FA0318AE5AED00EF50AA /* BITFeedbackMessageAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITFeedbackMessageAttachment.m; sourceTree = "<group>"; };
 		BEE0207C16C5107E004426EA /* hu */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = hu; path = hu.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		E400561D148D79B500EB22B9 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		E405266117A2AD300096359C /* BITFeedbackManagerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITFeedbackManagerDelegate.h; sourceTree = "<group>"; };
@@ -328,6 +386,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				97CC11F91917C0310028768F /* MobileCoreServices.framework in Frameworks */,
+				97BD9BD5191109730043FD59 /* QuickLook.framework in Frameworks */,
+				9760F6C418BB4D2D00959B93 /* AssetsLibrary.framework in Frameworks */,
 				1E5954DC15B6F24A00A03429 /* Foundation.framework in Frameworks */,
 				1E5954DD15B6F24A00A03429 /* CrashReporter.framework in Frameworks */,
 			);
@@ -344,6 +405,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				97CC11FA1917C0390028768F /* MobileCoreServices.framework in Frameworks */,
+				97CC11F71917AB7C0028768F /* QuickLook.framework in Frameworks */,
 				1EA1170016F4D32C001C015C /* libHockeySDK.a in Frameworks */,
 				1E5A459216F0DFC200B55C04 /* SenTestingKit.framework in Frameworks */,
 				1EA1170116F4D354001C015C /* CrashReporter.framework in Frameworks */,
@@ -359,6 +422,18 @@
 		1E5955A415B71BDC00A03429 /* Images */ = {
 			isa = PBXGroup;
 			children = (
+				9782022818F81BFC00A98D8B /* Arrow.png */,
+				9782022918F81BFC00A98D8B /* Arrow@2x.png */,
+				9782022A18F81BFC00A98D8B /* Blur.png */,
+				9782022B18F81BFC00A98D8B /* Blur@2x.png */,
+				9782022C18F81BFC00A98D8B /* Cancel.png */,
+				9782022D18F81BFC00A98D8B /* Cancel@2x.png */,
+				9782022E18F81BFC00A98D8B /* Ok.png */,
+				9782022F18F81BFC00A98D8B /* Ok@2x.png */,
+				9782023018F81BFC00A98D8B /* Rectangle.png */,
+				9782023118F81BFC00A98D8B /* Rectangle@2x.png */,
+				97F0F9FB18ABAECD00EF50AA /* iconCamera.png */,
+				97F0F9FC18ABAECD00EF50AA /* iconCamera@2x.png */,
 				1E5955BB15B71C8600A03429 /* authorize_denied.png */,
 				1E5955BC15B71C8600A03429 /* authorize_denied@2x.png */,
 				1E5955BF15B71C8600A03429 /* bg.png */,
@@ -450,8 +525,11 @@
 		1E754E461621FA9A0070AB92 /* Feedback */ = {
 			isa = PBXGroup;
 			children = (
+				9760F6CC18BB684200959B93 /* Image Editor */,
 				1E49A4361612223B00463151 /* BITFeedbackMessage.h */,
 				1E49A4371612223B00463151 /* BITFeedbackMessage.m */,
+				97F0FA0218AE5AED00EF50AA /* BITFeedbackMessageAttachment.h */,
+				97F0FA0318AE5AED00EF50AA /* BITFeedbackMessageAttachment.m */,
 				1E49A42D1612223B00463151 /* BITFeedbackComposeViewController.h */,
 				1E49A42E1612223B00463151 /* BITFeedbackComposeViewController.m */,
 				1EF95CA9162CB313000AE3AD /* BITFeedbackComposeViewControllerDelegate.h */,
@@ -467,6 +545,8 @@
 				1E49A4341612223B00463151 /* BITFeedbackManager.m */,
 				E405266117A2AD300096359C /* BITFeedbackManagerDelegate.h */,
 				1E49A4351612223B00463151 /* BITFeedbackManagerPrivate.h */,
+				9774BCFD192CB20A00085EB5 /* BITActivityIndicatorButton.h */,
+				9774BCFE192CB20A00085EB5 /* BITActivityIndicatorButton.m */,
 			);
 			name = Feedback;
 			sourceTree = "<group>";
@@ -550,6 +630,23 @@
 			name = Private;
 			sourceTree = "<group>";
 		};
+		9760F6CC18BB684200959B93 /* Image Editor */ = {
+			isa = PBXGroup;
+			children = (
+				97F0F9FF18AE375E00EF50AA /* BITImageAnnotationViewController.h */,
+				97F0FA0018AE375E00EF50AA /* BITImageAnnotationViewController.m */,
+				9760F6CD18BB685600959B93 /* BITImageAnnotation.h */,
+				9760F6CE18BB685600959B93 /* BITImageAnnotation.m */,
+				973EC8B518BCA8A200DBFFBB /* BITRectangleImageAnnotation.h */,
+				973EC8B618BCA8A200DBFFBB /* BITRectangleImageAnnotation.m */,
+				973EC8B918BDE29800DBFFBB /* BITArrowImageAnnotation.h */,
+				973EC8BA18BDE29800DBFFBB /* BITArrowImageAnnotation.m */,
+				973EC8BD18BE2B5B00DBFFBB /* BITBlurImageAnnotation.h */,
+				973EC8BE18BE2B5B00DBFFBB /* BITBlurImageAnnotation.m */,
+			);
+			name = "Image Editor";
+			sourceTree = "<group>";
+		};
 		E400560F148D79B500EB22B9 = {
 			isa = PBXGroup;
 			children = (
@@ -578,6 +675,9 @@
 		E400561C148D79B500EB22B9 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				97CC11F81917C0310028768F /* MobileCoreServices.framework */,
+				97BD9BD4191109730043FD59 /* QuickLook.framework */,
+				9760F6C318BB4D2D00959B93 /* AssetsLibrary.framework */,
 				E41EB48B148D7C4E0015DEDC /* CrashReporter.framework */,
 				E400561D148D79B500EB22B9 /* Foundation.framework */,
 				1E5A459116F0DFC200B55C04 /* SenTestingKit.framework */,
@@ -659,6 +759,7 @@
 				1E49A4731612226D00463151 /* BITUpdateManager.h in Headers */,
 				1E49A4791612226D00463151 /* BITUpdateManagerDelegate.h in Headers */,
 				1E49A44E1612223B00463151 /* BITFeedbackManager.h in Headers */,
+				973EC8BF18BE2B5B00DBFFBB /* BITBlurImageAnnotation.h in Headers */,
 				E4B4DB7D17B435550099C67F /* BITAuthenticationViewController.h in Headers */,
 				1E49A4481612223B00463151 /* BITFeedbackListViewController.h in Headers */,
 				1ECA8F4D192B5BD8006B9416 /* BITCrashDetailsPrivate.h in Headers */,
@@ -681,10 +782,13 @@
 				1E49A4851612226D00463151 /* BITUpdateViewControllerPrivate.h in Headers */,
 				1ECA8F51192B6954006B9416 /* BITCrashMetaData.h in Headers */,
 				1E49A4B5161222B900463151 /* BITHockeyBaseManagerPrivate.h in Headers */,
+				9774BCFF192CB20A00085EB5 /* BITActivityIndicatorButton.h in Headers */,
 				E4933E8017B66CDA00B11ACC /* BITHTTPOperation.h in Headers */,
 				1E49A4BE161222B900463151 /* BITHockeyHelper.h in Headers */,
+				973EC8BB18BDE29800DBFFBB /* BITArrowImageAnnotation.h in Headers */,
 				1E49A4C4161222B900463151 /* BITAppStoreHeader.h in Headers */,
 				1E49A4CA161222B900463151 /* BITStoreButton.h in Headers */,
+				973EC8B718BCA8A200DBFFBB /* BITRectangleImageAnnotation.h in Headers */,
 				E405266217A2AD300096359C /* BITFeedbackManagerDelegate.h in Headers */,
 				1E49A4D0161222B900463151 /* BITWebTableViewCell.h in Headers */,
 				1E49A4D8161222D400463151 /* HockeySDKPrivate.h in Headers */,
@@ -694,6 +798,7 @@
 				1EACC97B162F041E007578C5 /* BITAttributedLabel.h in Headers */,
 				1E0FEE28173BDB260061331F /* BITKeychainUtils.h in Headers */,
 				1E94F9E416E9136B006570AD /* BITStoreUpdateManagerPrivate.h in Headers */,
+				9760F6CF18BB685600959B93 /* BITImageAnnotation.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -807,20 +912,32 @@
 			files = (
 				1E5955C615B71C8600A03429 /* authorize_denied.png in Resources */,
 				1E5955C715B71C8600A03429 /* authorize_denied@2x.png in Resources */,
+				9782023B18F81BFC00A98D8B /* Rectangle@2x.png in Resources */,
 				1E5955CA15B71C8600A03429 /* bg.png in Resources */,
+				97F0F9FD18ABAECD00EF50AA /* iconCamera.png in Resources */,
+				9782023618F81BFC00A98D8B /* Cancel.png in Resources */,
+				9782023318F81BFC00A98D8B /* Arrow@2x.png in Resources */,
+				9782023818F81BFC00A98D8B /* Ok.png in Resources */,
 				1E5955CB15B71C8600A03429 /* buttonHighlight.png in Resources */,
 				1E5955CC15B71C8600A03429 /* buttonHighlight@2x.png in Resources */,
 				1E5955CF15B71C8600A03429 /* IconGradient.png in Resources */,
 				1E5955D015B71C8600A03429 /* IconGradient@2x.png in Resources */,
+				9782023218F81BFC00A98D8B /* Arrow.png in Resources */,
+				9782023A18F81BFC00A98D8B /* Rectangle.png in Resources */,
 				1EAF20A8162DC0F600957B1D /* feedbackActivity@2x~ipad.png in Resources */,
 				1EAF20A9162DC0F600957B1D /* feedbackActivity~ipad.png in Resources */,
+				9782023918F81BFC00A98D8B /* Ok@2x.png in Resources */,
+				9782023418F81BFC00A98D8B /* Blur.png in Resources */,
 				1EAF20AA162DC0F600957B1D /* feedbackActiviy.png in Resources */,
 				1EAF20AB162DC0F600957B1D /* feedbackActiviy@2x.png in Resources */,
+				9782023518F81BFC00A98D8B /* Blur@2x.png in Resources */,
 				1E1127C416580C87007067A2 /* buttonRoundedDelete.png in Resources */,
 				1E1127C516580C87007067A2 /* buttonRoundedDelete@2x.png in Resources */,
 				1E1127C616580C87007067A2 /* buttonRoundedDeleteHighlighted.png in Resources */,
+				9782023718F81BFC00A98D8B /* Cancel@2x.png in Resources */,
 				1E1127C716580C87007067A2 /* buttonRoundedDeleteHighlighted@2x.png in Resources */,
 				1E1127C816580C87007067A2 /* buttonRoundedRegular.png in Resources */,
+				97F0F9FE18ABAECD00EF50AA /* iconCamera@2x.png in Resources */,
 				1E1127C916580C87007067A2 /* buttonRoundedRegular@2x.png in Resources */,
 				1E1127CA16580C87007067A2 /* buttonRoundedRegularHighlighted.png in Resources */,
 				1E1127CB16580C87007067A2 /* buttonRoundedRegularHighlighted@2x.png in Resources */,
@@ -896,6 +1013,7 @@
 				1E49A43F1612223B00463151 /* BITFeedbackComposeViewController.m in Sources */,
 				E40E0B0D17DA1AFF005E38C1 /* BITHockeyAppClient.m in Sources */,
 				1E49A4451612223B00463151 /* BITFeedbackListViewCell.m in Sources */,
+				973EC8B818BCA8A200DBFFBB /* BITRectangleImageAnnotation.m in Sources */,
 				1E49A44B1612223B00463151 /* BITFeedbackListViewController.m in Sources */,
 				1E49A4511612223B00463151 /* BITFeedbackManager.m in Sources */,
 				1ECA8F52192B6954006B9416 /* BITCrashMetaData.m in Sources */,
@@ -905,11 +1023,15 @@
 				1E49A4601612223B00463151 /* BITFeedbackUserDataViewController.m in Sources */,
 				1E49A4701612226D00463151 /* BITAppVersionMetaInfo.m in Sources */,
 				1E49A4761612226D00463151 /* BITUpdateManager.m in Sources */,
+				1E49A4C1161222B900463151 /* BITHockeyHelper.m in Sources */,
+				9774BD00192CB20A00085EB5 /* BITActivityIndicatorButton.m in Sources */,
 				1E49A4821612226D00463151 /* BITUpdateViewController.m in Sources */,
 				E4B4DB7E17B435550099C67F /* BITAuthenticationViewController.m in Sources */,
 				1E49A4B2161222B900463151 /* BITHockeyBaseManager.m in Sources */,
+				973EC8C018BE2B5B00DBFFBB /* BITBlurImageAnnotation.m in Sources */,
+				9760F6D018BB685600959B93 /* BITImageAnnotation.m in Sources */,
 				1E49A4BB161222B900463151 /* BITHockeyBaseViewController.m in Sources */,
-				1E49A4C1161222B900463151 /* BITHockeyHelper.m in Sources */,
+				97F0FA0518B2294D00EF50AA /* BITFeedbackMessageAttachment.m in Sources */,
 				1E49A4C7161222B900463151 /* BITAppStoreHeader.m in Sources */,
 				1E49A4CD161222B900463151 /* BITStoreButton.m in Sources */,
 				1E90FD7418EDB86400CF0417 /* BITCrashDetails.m in Sources */,
@@ -920,6 +1042,8 @@
 				1E754E611621FBB70070AB92 /* BITCrashReportTextFormatter.m in Sources */,
 				1EF95CA7162CB037000AE3AD /* BITFeedbackActivity.m in Sources */,
 				1EACC97C162F041E007578C5 /* BITAttributedLabel.m in Sources */,
+				973EC8BC18BDE29800DBFFBB /* BITArrowImageAnnotation.m in Sources */,
+				973EC8B418BCA7BC00DBFFBB /* BITImageAnnotationViewController.m in Sources */,
 				1E0FEE29173BDB260061331F /* BITKeychainUtils.m in Sources */,
 				1E94F9E216E91330006570AD /* BITStoreUpdateManager.m in Sources */,
 			);

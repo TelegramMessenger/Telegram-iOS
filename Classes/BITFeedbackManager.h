@@ -32,6 +32,7 @@
 #import "BITHockeyBaseManager.h"
 #import "BITFeedbackListViewController.h"
 #import "BITFeedbackComposeViewController.h"
+#import "HockeySDKPrivate.h"
 
 
 // Notification message which tells that loading messages finished
@@ -57,6 +58,24 @@ typedef NS_ENUM(NSInteger, BITFeedbackUserDataElement) {
    *  the user has to provide this to continue
    */
   BITFeedbackUserDataElementRequired = 2
+};
+
+/**
+ *  Available modes for opening the feedback compose interface with a screenshot attached
+ */
+typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
+  /**
+   *  No SDK provided trigger is active.
+   */
+  BITFeedbackObservationNone = 0,
+  /**
+   *  Triggeres when the user takes a screenshot. This will grab the latest image from the camera roll. Requires iOS 7 or later!
+   */
+  BITFeedbackObservationModeOnScreenshot = 1,
+  /**
+   *  Triggers when the user tapps with three fingers for three seconds on the screen.
+   */
+  BITFeedbackObservationModeThreeFingerTap = 2
 };
 
 
@@ -192,6 +211,26 @@ typedef NS_ENUM(NSInteger, BITFeedbackUserDataElement) {
 @property (nonatomic, readwrite) BOOL showAlertOnIncomingMessages;
 
 
+/**
+ Define the trigger that opens the feedback composer and attaches a screenshot
+ 
+ The following modes are available:
+ 
+ - `BITFeedbackObservationNone`: No SDK based trigger is active. You can implement your
+   own trigger and then call `[[BITHockeyManager sharedHockeyManager].feedbackManager showFeedbackComposeViewWithGeneratedScreenshot];` to handle your custom events
+   that should trigger this.
+ - `BITFeedbackObservationModeOnScreenshot`: Triggeres when the user takes a screenshot.
+    This will grab the latest image from the camera roll. Requires iOS 7 or later!
+ - `BITFeedbackObservationModeThreeFingerTap`: Triggers when the user tapps with three fingers
+   for three seconds on the screen.
+ 
+ Default is `BITFeedbackObservationNone`
+ 
+ @see showFeedbackComposeViewWithGeneratedScreenshot
+ */
+@property (nonatomic, readwrite) BITFeedbackObservationMode feedbackObservationMode;
+
+
 ///-----------------------------------------------------------------------------
 /// @name User Interface
 ///-----------------------------------------------------------------------------
@@ -240,6 +279,24 @@ typedef NS_ENUM(NSInteger, BITFeedbackUserDataElement) {
  Present the modal feedback compose message user interface.
  */
 - (void)showFeedbackComposeView;
+
+/**
+ Present the modal feedback compose message user interface with the items given. 
+ All NSString-Content in the array will be concatenated and result in the message,
+ while all UIImage and NSData-instances will be turned into attachments.
+ */
+- (void)showFeedbackComposeViewWithPreparedItems:(NSArray *)items;
+
+/**
+ Presents a modal feedback compose interface with a screenshot attached which is taken at the time of calling this method.
+ 
+ This should be used when your own trigger fires. The following code should be used:
+ 
+     [[BITHockeyManager sharedHockeyManager].feedbackManager showFeedbackComposeViewWithGeneratedScreenshot];
+ 
+ @see feedbackObservationMode
+ */
+- (void)showFeedbackComposeViewWithGeneratedScreenshot;
 
 
 /**
