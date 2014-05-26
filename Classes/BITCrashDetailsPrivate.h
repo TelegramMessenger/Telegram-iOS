@@ -1,11 +1,6 @@
 /*
- * Authors:
- *  Landon Fuller <landonf@plausiblelabs.com>
- *  Damian Morris <damian@moso.com.au>
- *  Andreas Linde <mail@andreaslinde.de>
+ * Author: Andreas Linde <mail@andreaslinde.de>
  *
- * Copyright (c) 2008-2013 Plausible Labs Cooperative, Inc.
- * Copyright (c) 2010 MOSO Corporation, Pty Ltd.
  * Copyright (c) 2012-2014 HockeyApp, Bit Stadium GmbH.
  * All rights reserved.
  *
@@ -31,24 +26,21 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import <HockeySDK/HockeySDK.h>
 
-#import <Foundation/Foundation.h>
+extern NSString *const __attribute__((unused)) kBITCrashKillSignal;
 
-#import <CrashReporter/PLCrashReport.h>
-
-// Dictionary keys for array elements returned by arrayOfAppUUIDsForCrashReport:
-#ifndef kBITBinaryImageKeyUUID
-#define kBITBinaryImageKeyUUID @"uuid"
-#define kBITBinaryImageKeyArch @"arch"
-#define kBITBinaryImageKeyType @"type"
-#endif
-
-
-@interface BITCrashReportTextFormatter : NSObject {
+@interface BITCrashDetails () {
+  
 }
 
-+ (NSString *)stringValueForCrashReport:(PLCrashReport *)report crashReporterKey:(NSString *)crashReporterKey;
-+ (NSArray *)arrayOfAppUUIDsForCrashReport:(PLCrashReport *)report;
-+ (NSString *)bit_archNameFromCPUType:(uint64_t)cpuType subType:(uint64_t)subType;
+- (instancetype)initWithIncidentIdentifier:(NSString *)incidentIdentifier
+                               reporterKey:(NSString *)reporterKey
+                                    signal:(NSString *)signal
+                             exceptionName:(NSString *)exceptionName
+                           exceptionReason:(NSString *)exceptionReason
+                              appStartTime:(NSDate *)appStartTime
+                                 crashTime:(NSDate *)crashTime
+                                  appBuild:(NSString *)appBuild;
 
 @end

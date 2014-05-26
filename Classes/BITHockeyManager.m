@@ -610,6 +610,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
     BITHockeyLog(@"INFO: Setup CrashManager");
     _crashManager = [[BITCrashManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironment:_appStoreEnvironment];
+    _crashManager.hockeyAppClient = [self hockeyAppClient];
     _crashManager.delegate = _delegate;
 #endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */
     

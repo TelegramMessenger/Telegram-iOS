@@ -1,11 +1,6 @@
 /*
- * Authors:
- *  Landon Fuller <landonf@plausiblelabs.com>
- *  Damian Morris <damian@moso.com.au>
- *  Andreas Linde <mail@andreaslinde.de>
+ * Author: Andreas Linde <mail@andreaslinde.de>
  *
- * Copyright (c) 2008-2013 Plausible Labs Cooperative, Inc.
- * Copyright (c) 2010 MOSO Corporation, Pty Ltd.
  * Copyright (c) 2012-2014 HockeyApp, Bit Stadium GmbH.
  * All rights reserved.
  *
@@ -31,24 +26,9 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-
-#import <Foundation/Foundation.h>
-
-#import <CrashReporter/PLCrashReport.h>
-
-// Dictionary keys for array elements returned by arrayOfAppUUIDsForCrashReport:
-#ifndef kBITBinaryImageKeyUUID
-#define kBITBinaryImageKeyUUID @"uuid"
-#define kBITBinaryImageKeyArch @"arch"
-#define kBITBinaryImageKeyType @"type"
-#endif
+#import "BITCrashMetaData.h"
 
 
-@interface BITCrashReportTextFormatter : NSObject {
-}
-
-+ (NSString *)stringValueForCrashReport:(PLCrashReport *)report crashReporterKey:(NSString *)crashReporterKey;
-+ (NSArray *)arrayOfAppUUIDsForCrashReport:(PLCrashReport *)report;
-+ (NSString *)bit_archNameFromCPUType:(uint64_t)cpuType subType:(uint64_t)subType;
+@implementation BITCrashMetaData
 
 @end
