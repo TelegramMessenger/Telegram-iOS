@@ -148,7 +148,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
  The delegate is automatically set by using `[BITHockeyManager setDelegate:]`. You
  should not need to set this delegate individually.
  
- @see `[BITHockeyManager setDelegate:`]
+ @see `[BITHockeyManager setDelegate:]`
  */
 @property (nonatomic, weak) id<BITFeedbackManagerDelegate> delegate;
 
@@ -294,6 +294,8 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
  
  All NSString-Content in the array will be concatenated and result in the message,
  while all UIImage and NSData-instances will be turned into attachments.
+ 
+ @param items an NSArray with objects that should be attached
  */
 - (void)showFeedbackComposeViewWithPreparedItems:(NSArray *)items;
 
