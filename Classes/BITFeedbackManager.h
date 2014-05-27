@@ -32,7 +32,6 @@
 #import "BITHockeyBaseManager.h"
 #import "BITFeedbackListViewController.h"
 #import "BITFeedbackComposeViewController.h"
-#import "HockeySDKPrivate.h"
 
 
 // Notification message which tells that loading messages finished
