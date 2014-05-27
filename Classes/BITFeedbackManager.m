@@ -29,9 +29,9 @@
 
 #import "HockeySDK.h"
 
-#import <AssetsLibrary/AssetsLibrary.h>
-
 #if HOCKEYSDK_FEATURE_FEEDBACK
+
+#import <AssetsLibrary/AssetsLibrary.h>
 
 #import "HockeySDKPrivate.h"
 

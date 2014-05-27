@@ -53,9 +53,9 @@
 /**
  *  Create an BITCrashAttachment instance with a given filename and NSData object
  *
- *  @param filename       The filename the attachment should get
- *  @param attachmentData The attachment data as NSData
- *  @param contentType    The content type of your data as MIME type
+ *  @param filename            The filename the attachment should get
+ *  @param crashAttachmentData The attachment data as NSData
+ *  @param contentType         The content type of your data as MIME type
  *
  *  @return An instsance of BITCrashAttachment
  */

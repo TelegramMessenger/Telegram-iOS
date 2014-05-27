@@ -88,6 +88,11 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
  This is the HockeySDK module for letting your users to communicate directly with you via
  the app and an integrated user interface. It provides to have a single threaded
  discussion with a user running your app.
+ 
+ You should never create your own instance of `BITFeedbackManager` but use the one provided
+ by the `[BITHockeyManager sharedHockeyManager]`:
+ 
+     [BITHockeyManager sharedHockeyManager].feedbackManager
 
  The user interface provides a list view than can be presented modally using
  `[BITFeedbackManager showFeedbackListView]` modally or adding
@@ -140,6 +145,11 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
  Sets the `BITFeedbackManagerDelegate` delegate.
 
  Can be set to be notified when new feedback is received from the server.
+ 
+ The delegate is automatically set by using `[BITHockeyManager setDelegate:]`. You
+ should not need to set this delegate individually.
+ 
+ @see `[BITHockeyManager setDelegate:`]
  */
 @property (nonatomic, weak) id<BITFeedbackManagerDelegate> delegate;
 
@@ -282,6 +292,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
 
 /**
  Present the modal feedback compose message user interface with the items given. 
+ 
  All NSString-Content in the array will be concatenated and result in the message,
  while all UIImage and NSData-instances will be turned into attachments.
  */

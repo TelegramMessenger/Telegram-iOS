@@ -163,6 +163,11 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
 
 /**
  Sets the optional `BITCrashManagerDelegate` delegate.
+
+ The delegate is automatically set by using `[BITHockeyManager setDelegate:]`. You
+ should not need to set this delegate individually.
+ 
+ @see `[BITHockeyManager setDelegate:]`
  */
 @property (nonatomic, weak) id delegate;
 
@@ -290,8 +295,8 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  *
  * Documentation taken from PLCrashReporter: https://www.plcrashreporter.org/documentation/api/v1.2-rc2/async_safety.html
  *
- * @see `BITCrashManagerPostCrashSignalCallback`
- * @see `BITCrashManagerCallbacks`
+ * @see BITCrashManagerPostCrashSignalCallback
+ * @see BITCrashManagerCallbacks
  *
  * @param callbacks A pointer to an initialized PLCrashReporterCallback structure, see https://www.plcrashreporter.org/documentation/api/v1.2-rc2/struct_p_l_crash_reporter_callbacks.html
  */
@@ -349,11 +354,21 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  Lets you set a custom block which handles showing a custom UI and asking the user
  whether he wants to send the crash report.
  
+ This replaces the default alert the SDK would show!
+ 
+ You can use this to present any kind of user interface which asks the user for additional information,
+ e.g. what they did in the app before the app crashed.
+ 
+ In addition to this you should always ask your users if they agree to send crash reports, send them
+ always or not and return the result when calling `handleUserInput:withUserProvidedCrashDescription`.
+ 
  @param alertViewHandler A block that is responsible for loading, presenting and and dismissing your custom user interface which prompts the user if he wants to send crash reports. The block is also responsible for triggering further processing of the crash reports.
  
- @warning Block needs to call the `handleUserInput:withUserProvidedCrashDescription` method!
+ @warning Block needs to call the `[BITCrashManager handleUserInput:withUserProvidedMetaData:]` method!
+ 
+ @warning This needs to be set before calling `[BITHockeyManager startManager]`!
  */
-- (void) setAlertViewHandler:(BITCustomAlertViewHandler)alertViewHandler;
+- (void)setAlertViewHandler:(BITCustomAlertViewHandler)alertViewHandler;
 
 /**
  * Provides details about the crash that occured in the last app session

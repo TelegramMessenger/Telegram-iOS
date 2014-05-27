@@ -61,6 +61,9 @@ typedef NS_ENUM(NSInteger, BITFeedbackMessageStatus) {
   BITFeedbackMessageStatusArchived = 5
 };
 
+/**
+ *  An individual feedback message
+ */
 @interface BITFeedbackMessage : NSObject {
 }
 

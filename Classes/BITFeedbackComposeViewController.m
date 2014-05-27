@@ -237,8 +237,6 @@
   [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleBlackOpaque];
 #endif
   
- // [self.textView setFrame:self.view.frame];
-
   if (_text) {
     self.textView.text = _text;
   }

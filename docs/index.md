@@ -36,11 +36,11 @@ The main SDK class is `BITHockeyManager`. It initializes all modules and provide
 - [How to upload symbols for crash reporting](HowTo-Upload-Symbols)
 - [How to handle crashes on startup](HowTo-Handle-Crashes-On-Startup)
 - [How to add application specific log data](HowTo-Add-Application-Log)
-- [How to integrate Atlassian JMC](HowTo-Integrate-Atlassian-JMC)
+- [How to ask the user for more details about a crash](HowTo-Set-Custom-AlertViewHandler)
 
 ## Troubleshooting
 
-- [Symbolication doesn't work](Symbolication-Doesnt-Work) (Or the rules of binary UUIDs and dSYMs)
+- [Symbolication doesn't work](Troubleshooting-Symbolication-Doesnt-Work) (Or the rules of binary UUIDs and dSYMs)
 - [Crash Reporting is not working](Troubleshooting-Crash-Reporting-Not-Working)
 
 ## Xcode Documentation

@@ -28,6 +28,9 @@
 
 #import <Foundation/Foundation.h>
 
+/**
+ *  Provides details about the crash that occured in the previous app session
+ */
 @interface BITCrashDetails : NSObject
 
 /**
@@ -80,7 +83,7 @@
  took too long to startup or blocks the main thread for too long, or other reasons. See Apple
  documentation: https://developer.apple.com/library/ios/qa/qa1693/_index.html
  
- See `[BITCrashManager enableDectionAppKillWhileInForeground]` for more details about which kind of kills can be detected.
+ See `[BITCrashManager enableAppNotTerminatingCleanlyDetection]` for more details about which kind of kills can be detected.
  
  @warning This property only has a correct value, once `[BITHockeyManager startManager]` was
  invoked! In addition, it is automatically disabled while a debugger session is active!
