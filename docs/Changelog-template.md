@@ -1,3 +1,20 @@
+## Version 3.6.0 Beta 1
+
+- [NEW] Minimum iOS Deployment version is now iOS 6.0
+- [NEW] Requires to link additional frameworks: `AssetLibrary`, `MobileCoreServices`, `QuickLook`
+- [NEW] `BITFeedbackManager`: Attach and annotate images and screenshots
+- [NEW] `BITFeedbackManager`: Attach any binary data to compose message view (see `showFeedbackComposeViewWithPreparedItems:`)
+- [NEW] `BITFeedbackManager`: Show a compose message with a screenshot image attached using predefined triggers (see `feedbackObservationMode`) or your own custom triggers (see `showFeedbackComposeViewWithGeneratedScreenshot`)
+- [NEW] `BITCrashManager`: Option to add a custom UI flow before sending a crash report, e.g. to ask users for more details (see `setAlertViewHandler:`)
+- [NEW] `BITCrashManager`: Provide details on a crash report (see `lastSessionCrashDetails`)
+- [NEW] `BITCrashManager`: Experimental support for detecting app kills triggered by iOS while the app is in foreground (see `enableAppNotTerminatingCleanlyDetection`)
+- [NEW] `BITCrashManager`: Added `didReceiveMemoryWarningInLastSession` which indicates if the last app session did get a memory warning by iOS
+- [UPDATE] `BITCrashManager`: Updated `setCrashCallbacks` handling now using `BITCrashManagerCallbacks` instead of `PLCrashReporterCallbacks` (which is no longer public)
+- [UPDATE] `BITCrashManager`: Crash reports are now send individually if there are multiple pending
+- [UPDATE] Removed support for Atlassian JMC
+- [BUGFIX] Fixed an incorrect submission warning about referencing non-public selector `attachmentData`
+<br /><br/>
+
 ## Version 3.5.5
 
 - [NEW] `BITCrashManager`: Added support for adding a binary attachment to crash reports

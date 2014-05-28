@@ -130,7 +130,7 @@
 		1EAF20AB162DC0F600957B1D /* feedbackActiviy@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1EAF20A7162DC0F600957B1D /* feedbackActiviy@2x.png */; };
 		1EB52FD5167B766100C801D5 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
 		1ECA8F4D192B5BD8006B9416 /* BITCrashDetailsPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1ECA8F4B192B5BD8006B9416 /* BITCrashDetailsPrivate.h */; };
-		1ECA8F51192B6954006B9416 /* BITCrashMetaData.h in Headers */ = {isa = PBXBuildFile; fileRef = 1ECA8F4F192B6954006B9416 /* BITCrashMetaData.h */; };
+		1ECA8F51192B6954006B9416 /* BITCrashMetaData.h in Headers */ = {isa = PBXBuildFile; fileRef = 1ECA8F4F192B6954006B9416 /* BITCrashMetaData.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1ECA8F52192B6954006B9416 /* BITCrashMetaData.m in Sources */ = {isa = PBXBuildFile; fileRef = 1ECA8F50192B6954006B9416 /* BITCrashMetaData.m */; };
 		1ED570C718BF878C00AB3350 /* BITCrashAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = 1ED570C518BF878C00AB3350 /* BITCrashAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1ED570C818BF878C00AB3350 /* BITCrashAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 1ED570C618BF878C00AB3350 /* BITCrashAttachment.m */; };
@@ -753,25 +753,28 @@
 				1E59559B15B6FDA500A03429 /* HockeySDK.h in Headers */,
 				1E59559A15B6FDA500A03429 /* BITHockeyManager.h in Headers */,
 				1E5955FD15B7877B00A03429 /* BITHockeyManagerDelegate.h in Headers */,
+				E48A3DEC17B3ED1C00924C3D /* BITAuthenticator.h in Headers */,
 				1E754E5C1621FBB70070AB92 /* BITCrashManager.h in Headers */,
 				1E754E5E1621FBB70070AB92 /* BITCrashManagerDelegate.h in Headers */,
+				1ED570C718BF878C00AB3350 /* BITCrashAttachment.h in Headers */,
+				1ECA8F51192B6954006B9416 /* BITCrashMetaData.h in Headers */,
 				1E90FD7318EDB86400CF0417 /* BITCrashDetails.h in Headers */,
 				1E49A4731612226D00463151 /* BITUpdateManager.h in Headers */,
 				1E49A4791612226D00463151 /* BITUpdateManagerDelegate.h in Headers */,
 				1E49A44E1612223B00463151 /* BITFeedbackManager.h in Headers */,
+				E405266217A2AD300096359C /* BITFeedbackManagerDelegate.h in Headers */,
 				973EC8BF18BE2B5B00DBFFBB /* BITBlurImageAnnotation.h in Headers */,
 				E4B4DB7D17B435550099C67F /* BITAuthenticationViewController.h in Headers */,
 				1E49A4481612223B00463151 /* BITFeedbackListViewController.h in Headers */,
 				1ECA8F4D192B5BD8006B9416 /* BITCrashDetailsPrivate.h in Headers */,
+				1E94F9E116E91330006570AD /* BITStoreUpdateManager.h in Headers */,
 				1E49A47F1612226D00463151 /* BITUpdateViewController.h in Headers */,
 				1E49A43C1612223B00463151 /* BITFeedbackComposeViewController.h in Headers */,
 				E40E0B0C17DA1AFF005E38C1 /* BITHockeyAppClient.h in Headers */,
 				1EF95CAA162CB314000AE3AD /* BITFeedbackComposeViewControllerDelegate.h in Headers */,
 				1EF95CA6162CB037000AE3AD /* BITFeedbackActivity.h in Headers */,
-				1E49A4AF161222B900463151 /* BITHockeyBaseManager.h in Headers */,
 				1E49A4B8161222B900463151 /* BITHockeyBaseViewController.h in Headers */,
-				1E94F9E116E91330006570AD /* BITStoreUpdateManager.h in Headers */,
-				1ED570C718BF878C00AB3350 /* BITCrashAttachment.h in Headers */,
+				1E49A4AF161222B900463151 /* BITHockeyBaseManager.h in Headers */,
 				1E0829001708F69A0073050E /* BITStoreUpdateManagerDelegate.h in Headers */,
 				1E49A4421612223B00463151 /* BITFeedbackListViewCell.h in Headers */,
 				1E49A4541612223B00463151 /* BITFeedbackManagerPrivate.h in Headers */,
@@ -780,7 +783,6 @@
 				1E49A46D1612226D00463151 /* BITAppVersionMetaInfo.h in Headers */,
 				1E49A47C1612226D00463151 /* BITUpdateManagerPrivate.h in Headers */,
 				1E49A4851612226D00463151 /* BITUpdateViewControllerPrivate.h in Headers */,
-				1ECA8F51192B6954006B9416 /* BITCrashMetaData.h in Headers */,
 				1E49A4B5161222B900463151 /* BITHockeyBaseManagerPrivate.h in Headers */,
 				9774BCFF192CB20A00085EB5 /* BITActivityIndicatorButton.h in Headers */,
 				E4933E8017B66CDA00B11ACC /* BITHTTPOperation.h in Headers */,
@@ -789,10 +791,8 @@
 				1E49A4C4161222B900463151 /* BITAppStoreHeader.h in Headers */,
 				1E49A4CA161222B900463151 /* BITStoreButton.h in Headers */,
 				973EC8B718BCA8A200DBFFBB /* BITRectangleImageAnnotation.h in Headers */,
-				E405266217A2AD300096359C /* BITFeedbackManagerDelegate.h in Headers */,
 				1E49A4D0161222B900463151 /* BITWebTableViewCell.h in Headers */,
 				1E49A4D8161222D400463151 /* HockeySDKPrivate.h in Headers */,
-				E48A3DEC17B3ED1C00924C3D /* BITAuthenticator.h in Headers */,
 				1E754E601621FBB70070AB92 /* BITCrashReportTextFormatter.h in Headers */,
 				1E84DB3417E099BA00AC83FD /* HockeySDKFeatureConfig.h in Headers */,
 				1EACC97B162F041E007578C5 /* BITAttributedLabel.h in Headers */,
@@ -1303,7 +1303,7 @@
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 5.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
 				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 7.0;
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				OTHER_CFLAGS = (
@@ -1440,7 +1440,7 @@
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 5.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
 				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 7.0;
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				OTHER_CFLAGS = (
@@ -1475,7 +1475,7 @@
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 5.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
 				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 7.0;
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				OTHER_CFLAGS = (

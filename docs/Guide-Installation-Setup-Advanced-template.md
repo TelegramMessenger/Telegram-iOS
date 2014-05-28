@@ -1,6 +1,6 @@
-## Version 3.5.5
+## Version 3.5 Beta 1
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.5.5/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.6-b.1/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -17,7 +17,7 @@ This document contains the following sections:
 <a id="requirements"></a> 
 ## Requirements
 
-The SDK runs on devices with iOS 5.0 or higher.
+The SDK runs on devices with iOS 6.0 or higher.
 
 <a id="download"></a> 
 ## Set up Git submodule
@@ -58,10 +58,13 @@ The SDK runs on devices with iOS 5.0 or higher.
     <img src="XcodeFrameworks4_normal.png"/>
 
 10. Add the following system frameworks, if they are missing:
+    - `AssetsLibrary`
     - `CoreText`
     - `CoreGraphics`
     - `Foundation`
+    - `MobileCoreServices`
     - `QuartzCore`
+    - `QuickLook`
     - `Security`
     - `SystemConfiguration`
     - `UIKit`
@@ -116,7 +119,7 @@ This documentation provides integrated help in Xcode for all public APIs and a s
 
 3. Copy the content into ~`/Library/Developer/Shared/Documentation/DocSets`
 
-The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.5.5/](http://hockeyapp.net/help/sdk/ios/3.5.5/)
+The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.6-b.1/](http://hockeyapp.net/help/sdk/ios/3.6-b.1/)
 
 ### Set up with xcconfig
 
