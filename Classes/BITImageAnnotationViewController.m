@@ -65,8 +65,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
 
 #pragma mark - UIViewController
 
-- (void)viewDidLoad
-{
+- (void)viewDidLoad {
   [super viewDidLoad];
   
   self.view.backgroundColor = [UIColor groupTableViewBackgroundColor];
@@ -163,7 +162,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
   self.imageView.frame = baseFrame;
 }
 
--(void)editingAction:(id)sender {
+- (void)editingAction:(id)sender {
   
 }
 
@@ -246,8 +245,6 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
       
       self.panStart = [gestureRecognizer locationInView:self.imageView];
       
-      // [self.editingControls setSelectedSegmentIndex:UISegmentedControlNoSegment];
-      
     } else if (gestureRecognizer.state == UIGestureRecognizerStateChanged){
       CGPoint bla = [gestureRecognizer locationInView:self.imageView];
       self.currentAnnotation.frame = CGRectMake(self.panStart.x, self.panStart.y, bla.x - self.panStart.x, bla.y - self.panStart.y);
@@ -293,7 +290,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
   }
 }
 
--(void)pinched:(UIPinchGestureRecognizer *)gestureRecognizer {
+- (void)pinched:(UIPinchGestureRecognizer *)gestureRecognizer {
   if (gestureRecognizer.state == UIGestureRecognizerStateBegan){
     // try to figure out which view we are talking about.
     BITImageAnnotation *candidate = nil;
@@ -346,7 +343,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
   }
 }
 
--(void)tapped:(UIGestureRecognizer *)tapRecognizer {
+- (void)tapped:(UIGestureRecognizer *)tapRecognizer {
   // This toggles the nav and status bar. Since iOS7 and pre-iOS7 behave weirdly different,
   // this might look rather hacky, but hiding the navbar under iOS6 leads to some ugly
   // animation effect which is avoided by simply hiding the navbar setting it's alpha to 0. // moritzh
@@ -388,7 +385,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
 
 #pragma mark - Helpers
 
--(UIView *)firstAnnotationThatIsNotBlur {
+- (UIView *)firstAnnotationThatIsNotBlur {
   for (BITImageAnnotation *annotation in self.imageView.subviews){
     if (![annotation isKindOfClass:[BITBlurImageAnnotation class]]){
       return annotation;

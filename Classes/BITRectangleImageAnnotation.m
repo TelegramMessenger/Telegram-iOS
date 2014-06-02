@@ -38,8 +38,7 @@
 
 @implementation BITRectangleImageAnnotation
 
-- (id)initWithFrame:(CGRect)frame
-{
+- (id)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
     if (self) {
       self.shapeLayer = [CAShapeLayer layer];
@@ -79,7 +78,7 @@
   [CATransaction commit];
 }
 
--(BOOL)resizable {
+- (BOOL)resizable {
   return YES;
 }
 

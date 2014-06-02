@@ -85,7 +85,7 @@
 
 #pragma mark - Deletion
 
--(void)deleteContents {
+- (void)deleteContents {
   for (BITFeedbackMessageAttachment *attachment in self.attachments){
     [attachment deleteContents];
   }
@@ -103,7 +103,7 @@
   return returnArray;
 }
 
--(void)addAttachmentsObject:(BITFeedbackMessageAttachment *)object{
+- (void)addAttachmentsObject:(BITFeedbackMessageAttachment *)object{
   if (!self.attachments){
     self.attachments = [NSArray array];
   }

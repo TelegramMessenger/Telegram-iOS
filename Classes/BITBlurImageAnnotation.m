@@ -39,8 +39,7 @@
 
 @implementation BITBlurImageAnnotation
 
-- (id)initWithFrame:(CGRect)frame
-{
+- (id)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
     if (self) {
       self.clipsToBounds = YES;
@@ -57,7 +56,7 @@
     return self;
 }
 
--(void)setSourceImage:(UIImage *)sourceImage {
+- (void)setSourceImage:(UIImage *)sourceImage {
   CGSize size = CGSizeMake(sourceImage.size.width/30, sourceImage.size.height/30);
   
   UIGraphicsBeginImageContext(size);
@@ -95,7 +94,7 @@
   [CATransaction commit];
 }
 
--(BOOL)resizable {
+- (BOOL)resizable {
   return YES;
 }
 

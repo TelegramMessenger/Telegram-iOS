@@ -40,8 +40,7 @@
 
 @implementation BITArrowImageAnnotation
 
-- (id)initWithFrame:(CGRect)frame
-{
+- (id)initWithFrame:(CGRect)frame {
   self = [super initWithFrame:frame];
   if (self) {
     self.shapeLayer = [CAShapeLayer layer];
@@ -196,7 +195,7 @@
 
 }
 
--(void)layoutSubviews{
+- (void)layoutSubviews{
   [super layoutSubviews];
   
   [self buildShape];
