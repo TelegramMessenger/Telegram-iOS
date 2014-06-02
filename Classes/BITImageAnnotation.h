@@ -36,7 +36,7 @@
 @property (nonatomic, weak) UIImage *sourceImage;
 @property (nonatomic) CGRect imageFrame;
 
--(BOOL)resizable;
+- (BOOL)resizable;
 
 - (void)setSelected:(BOOL)selected;
 - (BOOL)isSelected;

@@ -90,7 +90,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackMessageStatus) {
  
  @param object BITFeedbackMessageAttachment instance representing the attachment that should be added
  */
--(void)addAttachmentsObject:(BITFeedbackMessageAttachment *)object;
+- (void)addAttachmentsObject:(BITFeedbackMessageAttachment *)object;
 
 /**
  Return the attachments that can be viewed

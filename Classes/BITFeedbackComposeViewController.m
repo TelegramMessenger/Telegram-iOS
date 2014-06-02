@@ -274,7 +274,7 @@
 	[super viewDidDisappear:animated];
 }
 
--(void)refreshAttachmentScrollview {
+- (void)refreshAttachmentScrollview {
   CGFloat scrollViewWidth = 0;
     
   if (self.imageAttachments.count){
@@ -411,7 +411,7 @@
   }
 }
 
--(void)addPhotoAction:(id)sender {
+- (void)addPhotoAction:(id)sender {
   if (_actionSheetVisible) return;
   
   // add photo.
