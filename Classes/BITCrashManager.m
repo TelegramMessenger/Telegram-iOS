@@ -1269,7 +1269,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
       if (report.uuidRef != NULL) {
         crashUUID = (NSString *) CFBridgingRelease(CFUUIDCreateString(NULL, report.uuidRef));
       }
-      metaFilename = [filename stringByAppendingPathExtension:@"meta"];
+      metaFilename = [cacheFilename stringByAppendingPathExtension:@"meta"];
       crashLogString = [BITCrashReportTextFormatter stringValueForCrashReport:report crashReporterKey:installString];
       appBundleIdentifier = report.applicationInfo.applicationIdentifier;
       appBundleVersion = report.applicationInfo.applicationVersion;
