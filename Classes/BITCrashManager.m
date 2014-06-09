@@ -67,6 +67,7 @@ NSString *const kBITAppWentIntoBackgroundSafely = @"BITAppWentIntoBackgroundSafe
 NSString *const kBITAppDidReceiveLowMemoryNotification = @"BITAppDidReceiveLowMemoryNotification";
 NSString *const kBITAppVersion = @"BITAppVersion";
 NSString *const kBITAppOSVersion = @"BITAppOSVersion";
+NSString *const kBITAppOSBuild = @"BITAppOSBuild";
 NSString *const kBITAppUUIDs = @"BITAppUUIDs";
 
 NSString *const kBITFakeCrashUUID = @"BITFakeCrashUUID";
@@ -478,6 +479,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
       if (bundleVersion && [bundleVersion isKindOfClass:[NSString class]])
         [[NSUserDefaults standardUserDefaults] setObject:bundleVersion forKey:kBITAppVersion];
       [[NSUserDefaults standardUserDefaults] setObject:[[UIDevice currentDevice] systemVersion] forKey:kBITAppOSVersion];
+      [[NSUserDefaults standardUserDefaults] setObject:[self osBuild] forKey:kBITAppOSBuild];
       
       NSString *uuidString =[NSString stringWithFormat:@"<uuid type=\"app\" arch=\"%@\">%@</uuid>",
                              [self deviceArchitecture],
@@ -506,6 +508,18 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
   archName = [BITCrashReportTextFormatter bit_archNameFromCPUType:type subType:subtype] ?: @"???";
   
   return archName;
+}
+
+- (NSString *)osBuild {
+  size_t size;
+  sysctlbyname("kern.osversion", NULL, &size, NULL, 0);
+  char *answer = (char*)malloc(size);
+  if (answer == NULL)
+    return nil;
+  sysctlbyname("kern.osversion", answer, &size, NULL, 0);
+  NSString *osBuild = [NSString stringWithCString:answer encoding: NSUTF8StringEncoding];
+  free(answer);
+  return osBuild;
 }
 
 /**
@@ -807,6 +821,8 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
                                                                        exceptionReason:report.exceptionInfo.exceptionReason
                                                                           appStartTime:appStartTime
                                                                              crashTime:appCrashTime
+                                                                             osVersion:report.systemInfo.operatingSystemVersion
+                                                                               osBuild:report.systemInfo.operatingSystemBuild
                                                                               appBuild:report.applicationInfo.applicationVersion
                                     ];
       }
@@ -1098,6 +1114,12 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
     return;
   
   NSString *fakeReportOSVersion = [[NSUserDefaults standardUserDefaults] objectForKey:kBITAppOSVersion] ?: [[UIDevice currentDevice] systemVersion];
+  NSString *fakeReportOSVersionString = fakeReportOSVersion;
+  NSString *fakeReportOSBuild = [[NSUserDefaults standardUserDefaults] objectForKey:kBITAppOSBuild] ?: [self osBuild];
+  if (fakeReportOSBuild) {
+    fakeReportOSVersionString = [NSString stringWithFormat:@"%@ (%@)", fakeReportOSVersion, fakeReportOSBuild];
+  }
+  
   NSString *fakeReportAppBundleIdentifier = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"];
   NSString *fakeReportDeviceModel = [self getDevicePlatform] ?: @"Unknown";
   NSString *fakeReportAppUUIDs = [[NSUserDefaults standardUserDefaults] objectForKey:kBITAppUUIDs] ?: @"";
@@ -1123,7 +1145,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
 
   // we use the current date, since we don't know when the kill actually happened
   [fakeReportString appendFormat:@"Date/Time:       %@\n", fakeCrashTimestamp];
-  [fakeReportString appendFormat:@"OS Version:      %@\n", fakeReportOSVersion];
+  [fakeReportString appendFormat:@"OS Version:      %@\n", fakeReportOSVersionString];
   [fakeReportString appendString:@"Report Version:  104\n"];
   [fakeReportString appendString:@"\n"];
   [fakeReportString appendFormat:@"Exception Type:  %@\n", fakeSignalName];
@@ -1156,6 +1178,8 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
                                                                  exceptionReason:nil
                                                                     appStartTime:nil
                                                                        crashTime:nil
+                                                                       osVersion:fakeReportOSVersion
+                                                                         osBuild:fakeReportOSBuild
                                                                         appBuild:fakeReportAppVersion
                               ];
 

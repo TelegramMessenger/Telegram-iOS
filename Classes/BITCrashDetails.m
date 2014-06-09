@@ -40,6 +40,8 @@ NSString *const kBITCrashKillSignal = @"SIGKILL";
                            exceptionReason:(NSString *)exceptionReason
                               appStartTime:(NSDate *)appStartTime
                                  crashTime:(NSDate *)crashTime
+                                 osVersion:(NSString *)osVersion
+                                   osBuild:(NSString *)osBuild
                                   appBuild:(NSString *)appBuild
 {
   if ((self = [super init])) {
@@ -50,6 +52,8 @@ NSString *const kBITCrashKillSignal = @"SIGKILL";
     _exceptionReason = exceptionReason;
     _appStartTime = appStartTime;
     _crashTime = crashTime;
+    _osVersion = osVersion;
+    _osBuild = osBuild;
     _appBuild = appBuild;
   }
   return self;

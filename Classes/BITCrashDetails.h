@@ -69,6 +69,18 @@
 @property (nonatomic, readonly, strong) NSDate *crashTime;
 
 /**
+ *  Operation System version string the app was running on when it crashed.
+ */
+@property (nonatomic, readonly, strong) NSString *osVersion;
+
+/**
+ *  Operation System build string the app was running on when it crashed
+ *
+ *  This may be unavailable.
+ */
+@property (nonatomic, readonly, strong) NSString *osBuild;
+
+/**
  *  CFBundleVersion value of the app that crashed
  */
 @property (nonatomic, readonly, strong) NSString *appBuild;
