@@ -839,20 +839,22 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
 }
 
 /**
- *	Check if there are any crash reports available which the user did not approve yet
- *
- *	@return `YES` if there are crash reports pending that are not approved, `NO` otherwise
+ Get the filename of the first not approved crash report
+ 
+ @return NSString Filename of the first found not approved crash report
  */
-- (BOOL)hasNonApprovedCrashReports {
-  if ((!_approvedCrashReports || [_approvedCrashReports count] == 0) && [_crashFiles count] > 0) return YES;
+- (NSString *)firstNotApprovedCrashReport {
+  if ((!_approvedCrashReports || [_approvedCrashReports count] == 0) && [_crashFiles count] > 0) {
+    return [_crashFiles objectAtIndex:0];
+  }
   
   for (NSUInteger i=0; i < [_crashFiles count]; i++) {
     NSString *filename = [_crashFiles objectAtIndex:i];
     
-    if (![_approvedCrashReports objectForKey:filename]) return YES;
+    if (![_approvedCrashReports objectForKey:filename]) return filename;
   }
   
-  return NO;
+  return nil;
 }
 
 /**
@@ -935,9 +937,17 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
   
   if (!_sendingInProgress && [self hasPendingCrashReport]) {
     _sendingInProgress = YES;
+    
+    NSString *notApprovedReportFilename = [self firstNotApprovedCrashReport];
+
+    // this can happen in case there is a non approved crash report but it didn't happen in the previous app session
+    if (notApprovedReportFilename && !_lastCrashFilename) {
+      _lastCrashFilename = [notApprovedReportFilename lastPathComponent];
+    }
+
     if (!BITHockeyBundle()) {
       [self sendNextCrashReport];
-    } else if (_crashManagerStatus != BITCrashManagerStatusAutoSend && [self hasNonApprovedCrashReports]) {
+    } else if (_crashManagerStatus != BITCrashManagerStatusAutoSend && notApprovedReportFilename) {
       
       if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillShowSubmitCrashReportAlert:)]) {
         [self.delegate crashManagerWillShowSubmitCrashReportAlert:self];
@@ -1335,6 +1345,8 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
     
     // store this crash report as user approved, so if it fails it will retry automatically
     [_approvedCrashReports setObject:[NSNumber numberWithBool:YES] forKey:filename];
+
+    [self saveSettings];
     
     BITHockeyLog(@"INFO: Sending crash reports:\n%@", crashXML);
     [self sendCrashReportWithFilename:filename xml:crashXML attachment:attachment];
@@ -1342,8 +1354,6 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
     // we cannot do anything with this report, so delete it
     [self cleanCrashReportWithFilename:filename];
   }
-
-  [self saveSettings];
 }
 
 
