@@ -769,8 +769,6 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
 	
   if (!self.plCrashReporter) return;
   
-  [self loadSettings];
-  
   // check if the next call ran successfully the last time
   if (![_fileManager fileExistsAtPath:_analyzerInProgressFile]) {
     // mark the start of the routine
@@ -987,6 +985,8 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
   if (_crashManagerStatus == BITCrashManagerStatusDisabled) return;
   
   [self registerObservers];
+  
+  [self loadSettings];
   
   if (!_isSetup) {
     static dispatch_once_t plcrPredicate;
