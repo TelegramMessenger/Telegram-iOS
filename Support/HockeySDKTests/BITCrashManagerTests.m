@@ -209,9 +209,9 @@
   assertThatBool([_sut hasPendingCrashReport], equalToBool(NO));
 }
 
-- (void)testHasNonApprovedCrashReportsWithNoFiles {
+- (void)testFirstNotApprovedCrashReportWithNoFiles {
   _sut.crashManagerStatus = BITCrashManagerStatusAutoSend;
-  assertThatBool([_sut hasNonApprovedCrashReports], equalToBool(NO));
+  assertThat([_sut firstNotApprovedCrashReport], equalTo(nil));
 }
 
 
@@ -247,7 +247,7 @@
   
   // No files at startup
   assertThatBool([_sut hasPendingCrashReport], equalToBool(NO));
-  assertThatBool([_sut hasNonApprovedCrashReports], equalToBool(NO));
+  assertThat([_sut firstNotApprovedCrashReport], equalTo(nil));
   
   [_sut invokeDelayedProcessing];
   
@@ -258,7 +258,7 @@
   
   // we should have 0 pending crash report
   assertThatBool([_sut hasPendingCrashReport], equalToBool(NO));
-  assertThatBool([_sut hasNonApprovedCrashReports], equalToBool(NO));
+  assertThat([_sut firstNotApprovedCrashReport], equalTo(nil));
   
   [_sut cleanCrashReports];
   
@@ -272,7 +272,7 @@
   
   // we should have now 1 pending crash report
   assertThatBool([_sut hasPendingCrashReport], equalToBool(YES));
-  assertThatBool([_sut hasNonApprovedCrashReports], equalToBool(YES));
+  assertThat([_sut firstNotApprovedCrashReport], notNilValue());
   
   // this is currently sending blindly, needs refactoring to test properly
   [_sut sendNextCrashReport];
@@ -287,7 +287,7 @@
   
   // we should have now 1 pending crash report
   assertThatBool([_sut hasPendingCrashReport], equalToBool(YES));
-  assertThatBool([_sut hasNonApprovedCrashReports], equalToBool(YES));
+  assertThat([_sut firstNotApprovedCrashReport], notNilValue());
   
   [_sut cleanCrashReports];
 }

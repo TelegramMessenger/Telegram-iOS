@@ -76,7 +76,7 @@
 
 - (void)handleCrashReport;
 - (BOOL)hasPendingCrashReport;
-- (BOOL)hasNonApprovedCrashReports;
+- (NSString *)firstNotApprovedCrashReport;
 
 - (void)persistUserProvidedMetaData:(BITCrashMetaData *)userProvidedMetaData;
 - (void)persistAttachment:(BITCrashAttachment *)attachment withFilename:(NSString *)filename;
