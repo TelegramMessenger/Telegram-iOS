@@ -132,6 +132,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
 - (void)viewWillDisappear:(BOOL)animated {
   [[NSNotificationCenter defaultCenter] removeObserver:self name:UIDeviceOrientationDidChangeNotification object:nil];
 
+  [super viewWillDisappear:animated];
 }
 
 - (BOOL)prefersStatusBarHidden {
