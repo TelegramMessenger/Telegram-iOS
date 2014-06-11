@@ -77,7 +77,7 @@
 
 #pragma mark - Initialization
 
-- (id)init {
+- (instancetype)init {
   if ((self = [super init])) {
     _currentFeedbackListViewController = nil;
     _currentFeedbackComposeViewController = nil;

@@ -38,7 +38,7 @@
 
 @implementation BITRectangleImageAnnotation
 
-- (id)initWithFrame:(CGRect)frame {
+- (instancetype)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
     if (self) {
       self.shapeLayer = [CAShapeLayer layer];

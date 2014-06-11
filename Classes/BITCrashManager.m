@@ -124,7 +124,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
 }
 
 
-- (id)init {
+- (instancetype)init {
   if ((self = [super init])) {
     _delegate = nil;
     _showAlwaysButton = YES;

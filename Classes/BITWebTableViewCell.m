@@ -118,7 +118,7 @@ body { font: 13px 'Helvetica Neue', Helvetica; color:#626262; word-wrap:break-wo
 
 #pragma mark - NSObject
 
-- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
+- (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
   if((self = [super initWithStyle:style reuseIdentifier:reuseIdentifier])) {
     self.cellBackgroundColor = [UIColor clearColor];
   }

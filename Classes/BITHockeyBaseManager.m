@@ -54,7 +54,7 @@
 }
 
 
-- (id)init {
+- (instancetype)init {
   if ((self = [super init])) {
     _serverURL = BITHOCKEYSDK_URL;
 
@@ -75,7 +75,7 @@
   return self;
 }
 
-- (id)initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironment:(BOOL)isAppStoreEnvironment {
+- (instancetype)initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironment:(BOOL)isAppStoreEnvironment {
   if ((self = [self init])) {
     _appIdentifier = appIdentifier;
     _isAppStoreEnvironment = isAppStoreEnvironment;

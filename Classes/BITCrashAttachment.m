@@ -52,7 +52,7 @@
   [encoder encodeObject:self.contentType forKey:@"contentType"];
 }
 
-- (id)initWithCoder:(NSCoder *)decoder {
+- (instancetype)initWithCoder:(NSCoder *)decoder {
   if ((self = [super init])) {
     _filename = [decoder decodeObjectForKey:@"filename"];
     _crashAttachmentData = [decoder decodeObjectForKey:@"data"];
