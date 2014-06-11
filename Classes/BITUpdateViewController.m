@@ -230,7 +230,7 @@
 
 #pragma mark - Init
 
-- (id)initWithStyle:(UITableViewStyle)style {
+- (instancetype)initWithStyle:(UITableViewStyle)style {
   if ((self = [super initWithStyle:UITableViewStylePlain])) {
     _updateManager = [BITHockeyManager sharedHockeyManager].updateManager ;
     _isAppStoreEnvironment = [BITHockeyManager sharedHockeyManager].isAppStoreEnvironment;

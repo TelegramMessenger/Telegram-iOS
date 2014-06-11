@@ -33,7 +33,7 @@
 @end
 @implementation MyDeviceWithIdentifierForVendor
 
-- (id)init {
+- (instancetype)init {
   self = [super init];
   if( self ) {
     _identifierForVendor = [NSUUID UUID];

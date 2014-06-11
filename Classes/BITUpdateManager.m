@@ -386,7 +386,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 
 #pragma mark - Init
 
-- (id)init {
+- (instancetype)init {
   if ((self = [super init])) {
     _delegate = nil;
     _expiryDate = nil;

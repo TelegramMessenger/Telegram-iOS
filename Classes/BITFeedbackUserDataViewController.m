@@ -51,7 +51,7 @@
 @implementation BITFeedbackUserDataViewController
 
 
-- (id)initWithStyle:(UITableViewStyle)style {
+- (instancetype)initWithStyle:(UITableViewStyle)style {
   self = [super initWithStyle:style];
   if (self) {
     self.title = BITHockeyLocalizedString(@"HockeyFeedbackUserDataTitle");
