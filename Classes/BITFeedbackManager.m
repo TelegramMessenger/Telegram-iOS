@@ -198,6 +198,10 @@
 
 #pragma mark - Feedback Modal UI
 
+- (UIImage *)screenshot {
+  return bit_screenshot();
+}
+
 - (BITFeedbackListViewController *)feedbackListViewController:(BOOL)modal {
   if ([self isPreiOS7Environment]) {
     return [[BITFeedbackListViewController alloc] initWithModalStyle:modal];

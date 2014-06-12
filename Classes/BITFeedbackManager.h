@@ -267,6 +267,15 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
  */
 @property (nonatomic, readwrite) BOOL showFirstRequiredPresentationModal;
 
+
+/**
+ Return a screenshot UIImage intance from the current visiable screen
+ 
+ @return UIImage instance containing a screenshot of the current screen
+ */
+- (UIImage *)screenshot;
+
+
 /**
  Present the modal feedback list user interface.
  */
