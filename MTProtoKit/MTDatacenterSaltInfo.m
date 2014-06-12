@@ -49,4 +49,9 @@
     return MAX(0, _lastValidMessageId - messageId);
 }
 
+- (bool)isValidFutureSaltForMessageId:(int64_t)messageId
+{
+    return _lastValidMessageId > messageId;
+}
+
 @end

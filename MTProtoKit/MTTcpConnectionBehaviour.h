@@ -26,6 +26,7 @@
 
 - (instancetype)initWithQueue:(MTQueue *)queue;
 
+- (void)requestConnection;
 - (void)connectionOpened;
 - (void)connectionValidDataReceived;
 - (void)connectionClosed;

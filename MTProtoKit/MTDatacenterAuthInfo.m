@@ -61,4 +61,38 @@
     return bestSalt;
 }
 
+- (MTDatacenterAuthInfo *)mergeSaltSet:(NSArray *)updatedSaltSet forTimestamp:(NSTimeInterval)timestamp
+{
+    int64_t referenceMessageId = (int64_t)(timestamp * 4294967296);
+    
+    NSMutableArray *mergedSaltSet = [[NSMutableArray alloc] init];
+    
+    for (MTDatacenterSaltInfo *saltInfo in _saltSet)
+    {
+        if ([saltInfo isValidFutureSaltForMessageId:referenceMessageId])
+            [mergedSaltSet addObject:saltInfo];
+    }
+    
+    for (MTDatacenterSaltInfo *saltInfo in updatedSaltSet)
+    {
+        bool alreadExists = false;
+        for (MTDatacenterSaltInfo *existingSaltInfo in mergedSaltSet)
+        {
+            if (existingSaltInfo.firstValidMessageId == saltInfo.firstValidMessageId)
+            {
+                alreadExists = true;
+                break;
+            }
+        }
+        
+        if (!alreadExists)
+        {
+            if ([saltInfo isValidFutureSaltForMessageId:referenceMessageId])
+                [mergedSaltSet addObject:saltInfo];
+        }
+    }
+    
+    return [[MTDatacenterAuthInfo alloc] initWithAuthKey:_authKey authKeyId:_authKeyId saltSet:mergedSaltSet authKeyAttributes:_authKeyAttributes];
+}
+
 @end

@@ -110,10 +110,19 @@ typedef enum {
     if (self != nil)
     {
         NSString *bundleIdentifier = [[NSBundle mainBundle] bundleIdentifier];
-        if (bundleIdentifier.length != 0 && [[bundleIdentifier lowercaseString] rangeOfString:@"enterprise"].location != NSNotFound)
+        
+        if ([[bundleIdentifier lowercaseString] rangeOfString:@"enterprise"].location != NSNotFound)
+        {
             _apiId = 3;
+        }
+        else if ([bundleIdentifier isEqualToString:@"org.projecttest1231.ProjectTest1231"])
+        {
+            _apiId = 16352;
+        }
         else
+        {
             _apiId = 1;
+        }
         
         _deviceModel = [self platformString];
 #if TARGET_OS_IPHONE

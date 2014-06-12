@@ -17,5 +17,6 @@
 - (instancetype)initWithSalt:(int64_t)salt firstValidMessageId:(int64_t)firstValidMessageId lastValidMessageId:(int64_t)lastValidMessageId;
 
 - (int64_t)validMessageCountAfterId:(int64_t)messageId;
+- (bool)isValidFutureSaltForMessageId:(int64_t)messageId;
 
 @end

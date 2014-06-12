@@ -61,6 +61,7 @@
 
 - (id)getFutureSalts:(int32_t)count;
 - (bool)isMessageFutureSalts:(id)message;
+- (int64_t)futureSaltsRequestMessageId:(id)message;
 - (NSArray *)saltInfoListFromMessage:(id)message;
 
 - (id)resendMessagesRequest:(NSArray *)messageIds;
@@ -91,6 +92,7 @@
 - (id)ping:(int64_t)pingId;
 - (bool)isMessagePong:(id)message;
 - (int64_t)pongMessageId:(id)message;
+- (int64_t)pongPingId:(id)message;
 
 - (id)msgsAck:(NSArray *)messageIds;
 - (bool)isMessageMsgsAck:(id)message;

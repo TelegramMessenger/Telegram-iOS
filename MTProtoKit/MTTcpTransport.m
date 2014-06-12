@@ -26,6 +26,8 @@
 
 @interface MTTcpTransport () <MTTcpConnectionDelegate, MTTcpConnectionBehaviourDelegate>
 {
+    MTDatacenterAddress *_address;
+    
     MTTcpConnection *_connection;
     bool _connectionConnected;
     bool _connectionIsValid;
@@ -43,6 +45,8 @@
     bool _didSendActualizationPingAfterConnection;
     int64_t _currentActualizationPingMessageId;
     MTTimer *_actualizationPingResendTimer;
+    
+    MTTimer *_connectionWatchdogTimer;
 }
 
 @end
@@ -60,16 +64,19 @@
     return queue;
 }
 
-- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId
+- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address
 {
 #ifdef DEBUG
     NSAssert(context != nil, @"context should not be nil");
     NSAssert(datacenterId != 0, @"datacenterId should not be nil");
+    NSAssert(address != nil, @"address should not be nil");
 #endif
     
-    self = [super initWithDelegate:delegate context:context datacenterId:datacenterId];
+    self = [super initWithDelegate:delegate context:context datacenterId:datacenterId address:address];
     if (self != nil)
     {
+        _address = address;
+        
         _connectionBehaviour = [[MTTcpConnectionBehaviour alloc] initWithQueue:[MTTcpTransport tcpTransportQueue]];
         _connectionBehaviour.delegate = self;
         
@@ -89,6 +96,9 @@
     MTTimer *actualizationPingResendTimer = _actualizationPingResendTimer;
     _actualizationPingResendTimer = nil;
     
+    MTTimer *connectionWatchdogTimer = _connectionWatchdogTimer;
+    _connectionWatchdogTimer = nil;
+    
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
         connection.delegate = nil;
@@ -97,6 +107,8 @@
         connectionBehaviour.delegate = nil;
         
         [actualizationPingResendTimer invalidate];
+        
+        [connectionWatchdogTimer invalidate];
     }];
 }
 
@@ -132,7 +144,7 @@
                 _willRequestTransactionOnNextQueuePass = false;
                 
                 if (_connection == nil)
-                    [self startIfNeeded];
+                    [_connectionBehaviour requestConnection];
                 else if (_connectionConnected)
                     [self _requestTransactionFromDelegate];
             });
@@ -143,19 +155,23 @@
 - (void)startIfNeeded
 {
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
-    {   
+    {
         if (_connection == nil)
         {
-            MTDatacenterAddress *address = [[self.context addressSetForDatacenterWithId:self.datacenterId] firstAddress];
-            if (address != nil)
-            {
-                _connection = [[MTTcpConnection alloc] initWithAddress:address];
-                _connection.delegate = self;
-                [_connection start];
-            }
-            else
-                MTLog(@"[MTTcpTransport#%p: can't start connection: address is empty]", self);
+            [self startConnectionWatchdogTimer];
+            
+            _connection = [[MTTcpConnection alloc] initWithAddress:_address interface:nil];
+            _connection.delegate = self;
+            [_connection start];
         }
+    }];
+}
+
+- (void)reset
+{
+    [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
+    {
+        [_connection stop];
     }];
 }
 
@@ -184,9 +200,47 @@
         [_connection stop];
         _connection = nil;
         
+        [self stopConnectionWatchdogTimer];
+        
         [_actualizationPingResendTimer invalidate];
         _actualizationPingResendTimer = nil;
     }];
+}
+
+- (void)startConnectionWatchdogTimer
+{
+    [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
+    {
+        if (_connectionWatchdogTimer == nil)
+        {
+            __weak MTTcpTransport *weakSelf = self;
+            _connectionWatchdogTimer = [[MTTimer alloc] initWithTimeout:10.0 repeat:false completion:^
+            {
+                __strong MTTcpTransport *strongSelf = weakSelf;
+                [strongSelf connectionWatchdogTimeout];
+            } queue:[MTTcpTransport tcpTransportQueue].nativeQueue];
+            [_connectionWatchdogTimer start];
+        }
+    }];
+}
+
+- (void)stopConnectionWatchdogTimer
+{
+    [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
+    {
+        [_connectionWatchdogTimer invalidate];
+        _connectionWatchdogTimer = nil;
+    }];
+}
+
+- (void)connectionWatchdogTimeout
+{
+    [_connectionWatchdogTimer invalidate];
+    _connectionWatchdogTimer = nil;
+    
+    id<MTTransportDelegate> delegate = self.delegate;
+    if ([delegate respondsToSelector:@selector(transportConnectionProblemsStatusChanged:hasConnectionProblems:isProbablyHttp:)])
+        [delegate transportConnectionProblemsStatusChanged:self hasConnectionProblems:true isProbablyHttp:false];
 }
 
 - (void)startActualizationPingResendTimer
@@ -300,6 +354,11 @@
                 __strong MTTcpTransport *strongSelf = weakSelf;
                 [strongSelf connectionIsValid:transactionId];
             }
+            else
+            {
+                __strong MTTcpTransport *strongSelf = weakSelf;
+                [strongSelf connectionIsInvalid];
+            }
         }];
     }];
 }
@@ -313,6 +372,18 @@
             _connectionIsValid = true;
             [_connectionBehaviour connectionValidDataReceived];
         }
+        
+        [self stopConnectionWatchdogTimer];
+    }];
+}
+
+- (void)connectionIsInvalid
+{
+    [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
+    {
+        id<MTTransportDelegate> delegate = self.delegate;
+        if ([delegate respondsToSelector:@selector(transportConnectionProblemsStatusChanged:hasConnectionProblems:isProbablyHttp:)])
+            [delegate transportConnectionProblemsStatusChanged:self hasConnectionProblems:true isProbablyHttp:true];
     }];
 }
 

@@ -40,6 +40,14 @@
     [aCoder encodeInt:_port forKey:@"port"];
 }
 
+- (BOOL)isEqual:(id)object
+{
+    if (![object isKindOfClass:[MTDatacenterAddress class]])
+        return false;
+    
+    return [self isEqualToAddress:object];
+}
+
 - (BOOL)isEqualToAddress:(MTDatacenterAddress *)other
 {
     if (![other isKindOfClass:[MTDatacenterAddress class]])
@@ -52,6 +60,11 @@
         return false;
     
     return true;
+}
+
+- (NSString *)description
+{
+    return [[NSString alloc] initWithFormat:@"%@:%d", _ip == nil ? _host : _ip, (int)_port];
 }
 
 @end

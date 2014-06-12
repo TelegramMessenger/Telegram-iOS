@@ -47,5 +47,6 @@
 - (void)requestTransportTransaction;
 - (void)requestSecureTransportReset;
 - (void)resetSessionInfo;
+- (void)requestTimeResync;
 
 @end

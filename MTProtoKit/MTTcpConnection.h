@@ -34,10 +34,12 @@
 
 @property (nonatomic, weak) id<MTTcpConnectionDelegate> delegate;
 @property (nonatomic, strong, readonly) id internalId;
+@property (nonatomic, strong, readonly) MTDatacenterAddress *address;
+@property (nonatomic, strong, readonly) NSString *interface;
 
 + (MTQueue *)tcpQueue;
 
-- (instancetype)initWithAddress:(MTDatacenterAddress *)address;
+- (instancetype)initWithAddress:(MTDatacenterAddress *)address interface:(NSString *)interface;
 
 - (void)start;
 - (void)stop;

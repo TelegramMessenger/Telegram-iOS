@@ -30,9 +30,7 @@ static const NSTimeInterval MTMinTcpResponseTimeout = 12.0;
 static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
 
 @interface MTTcpConnection () <GCDAsyncSocketDelegate>
-{
-    MTDatacenterAddress *_address;
-    
+{   
     GCDAsyncSocket *_socket;
     bool _closed;
     
@@ -66,7 +64,7 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
     return queue;
 }
 
-- (instancetype)initWithAddress:(MTDatacenterAddress *)address
+- (instancetype)initWithAddress:(MTDatacenterAddress *)address interface:(NSString *)interface
 {
 #ifdef DEBUG
     NSAssert(address != nil, @"address should not be nil");
@@ -78,6 +76,7 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
         _internalId = [[MTInternalId(MTTcpConnection) alloc] init];
         
         _address = address;
+        _interface = interface;
     }
     return self;
 }
@@ -113,10 +112,10 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
         {
             _socket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:[[MTTcpConnection tcpQueue] nativeQueue]];
             
-            MTLog(@"[MTTcpConnection#%x connecting to %@]", (int)self, _address.ip);
+            MTLog(@"[MTTcpConnection#%x connecting to %@:%d]", (int)self, _address.ip, (int)_address.port);
             
             __autoreleasing NSError *error = nil;
-            if (![_socket connectToHost:_address.ip onPort:_address.port error:&error] || error != nil)
+            if (![_socket connectToHost:_address.ip onPort:_address.port viaInterface:_interface withTimeout:12 error:&error] || error != nil)
                 [self closeAndNotify];
             else
                 [_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];

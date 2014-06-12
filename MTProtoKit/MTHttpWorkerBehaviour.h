@@ -29,6 +29,7 @@
 
 - (void)setWorkersNeeded;
 - (void)workerConnected;
+- (void)workerReceivedValidData;
 - (void)workerDisconnectedWithError;
 
 @end

@@ -15,15 +15,20 @@
 #import <MTProtoKit/MTQueue.h>
 #import <MTProtoKit/MTKeychain.h>
 
+#import <MTProtoKit/MTDatacenterAddressSet.h>
 #import <MTProtoKit/MTDatacenterAuthInfo.h>
 #import <MTProtoKit/MTDatacenterSaltInfo.h>
 #import <MTProtoKit/MTSessionInfo.h>
 
 #import <MTProtoKit/MTDiscoverDatacenterAddressAction.h>
+#import <MtProtoKit/MTDiscoverTransportSchemeAction.h>
 #import <MTProtoKit/MTDatacenterAuthAction.h>
 #import <MTProtoKit/MTDatacenterTransferAuthAction.h>
 
-@interface MTContext () <MTDiscoverDatacenterAddressActionDelegate, MTDatacenterAuthActionDelegate, MTDatacenterTransferAuthActionDelegate>
+#import <MTProtoKit/MTTransportScheme.h>
+#import <MTProtoKit/MTTcpTransport.h>
+
+@interface MTContext () <MTDiscoverDatacenterAddressActionDelegate, MTDiscoverTransportSchemeActionDelegate, MTDatacenterAuthActionDelegate, MTDatacenterTransferAuthActionDelegate>
 {
     int64_t _uniqueId;
     
@@ -32,6 +37,7 @@
     NSMutableDictionary *_datacenterSeedAddressSetById;
     
     NSMutableDictionary *_datacenterAddressSetById;
+    NSMutableDictionary *_datacenterTransportSchemeById;
     NSMutableDictionary *_datacenterAuthInfoById;
     
     NSMutableDictionary *_authTokenById;
@@ -39,6 +45,7 @@
     NSMutableArray *_changeListeners;
     
     NSMutableDictionary *_discoverDatacenterAddressActions;
+    NSMutableDictionary *_discoverDatacenterTransportSchemeActions;
     NSMutableDictionary *_datacenterAuthActions;
     NSMutableDictionary *_datacenterTransferAuthActions;
     
@@ -78,6 +85,7 @@
         _datacenterSeedAddressSetById = [[NSMutableDictionary alloc] init];
         
         _datacenterAddressSetById = [[NSMutableDictionary alloc] init];
+        _datacenterTransportSchemeById = [[NSMutableDictionary alloc] init];
         _datacenterAuthInfoById = [[NSMutableDictionary alloc] init];
         
         _authTokenById = [[NSMutableDictionary alloc] init];
@@ -85,6 +93,7 @@
         _changeListeners = [[NSMutableArray alloc] init];
         
         _discoverDatacenterAddressActions = [[NSMutableDictionary alloc] init];
+        _discoverDatacenterTransportSchemeActions = [[NSMutableDictionary alloc] init];
         _datacenterAuthActions = [[NSMutableDictionary alloc] init];
         _datacenterTransferAuthActions = [[NSMutableDictionary alloc] init];
         
@@ -120,6 +129,9 @@
     NSDictionary *discoverDatacenterAddressActions = _discoverDatacenterAddressActions;
     _discoverDatacenterAddressActions = nil;
     
+    NSDictionary *discoverDatacenterTransportSchemeActions = _discoverDatacenterTransportSchemeActions;
+    _discoverDatacenterTransportSchemeActions = nil;
+    
     NSDictionary *datacenterTransferAuthActions = _datacenterTransferAuthActions;
     _datacenterTransferAuthActions = nil;
     
@@ -128,6 +140,13 @@
         for (NSNumber *nDatacenterId in discoverDatacenterAddressActions)
         {
             MTDiscoverDatacenterAddressAction *action = discoverDatacenterAddressActions[nDatacenterId];
+            action.delegate = nil;
+            [action cancel];
+        }
+        
+        for (NSNumber *nDatacenterId in discoverDatacenterTransportSchemeActions)
+        {
+            MTDiscoverTransportSchemeAction *action = discoverDatacenterTransportSchemeActions[nDatacenterId];
             action.delegate = nil;
             [action cancel];
         }
@@ -169,6 +188,10 @@
             NSDictionary *datacenterAddressSetById = [keychain objectForKey:@"datacenterAddressSetById" group:@"persistent"];
             if (datacenterAddressSetById != nil)
                 _datacenterAddressSetById = [[NSMutableDictionary alloc] initWithDictionary:datacenterAddressSetById];
+            
+            NSDictionary *datacenterTransportSchemeById = [keychain objectForKey:@"datacenterTransportSchemeById" group:@"persistent"];
+            if (datacenterTransportSchemeById != nil)
+                _datacenterTransportSchemeById = [[NSMutableDictionary alloc] initWithDictionary:datacenterTransportSchemeById];
             
             NSDictionary *datacenterAuthInfoById = [keychain objectForKey:@"datacenterAuthInfoById" group:@"persistent"];
             if (datacenterAuthInfoById != nil)
@@ -254,6 +277,54 @@
         {
             MTLog(@"[MTContext#%x: address set updated for %d]", (int)self, datacenterId);
             
+            bool previousAddressSetWasEmpty = ((MTDatacenterAddressSet *)_datacenterAddressSetById[@(datacenterId)]).addressList.count == 0;
+            
+            _datacenterAddressSetById[@(datacenterId)] = addressSet;
+            [_keychain setObject:_datacenterAddressSetById forKey:@"datacenterAddressSetById" group:@"persistent"];
+            
+            NSArray *currentListeners = [[NSArray alloc] initWithArray:_changeListeners];
+            
+            for (id<MTContextChangeListener> listener in currentListeners)
+            {
+                if ([listener respondsToSelector:@selector(contextDatacenterAddressSetUpdated:datacenterId:addressSet:)])
+                    [listener contextDatacenterAddressSetUpdated:self datacenterId:datacenterId addressSet:addressSet];
+            }
+            
+            if (previousAddressSetWasEmpty)
+                [self updateTransportSchemeForDatacenterWithId:datacenterId transportScheme:_datacenterTransportSchemeById[@(datacenterId)]];
+        }
+    }];
+}
+
+- (void)addAddressForDatacenterWithId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address
+{
+    if (address == nil || datacenterId == 0)
+        return;
+    
+    [[MTContext contextQueue] dispatchOnQueue:^
+    {
+        bool updated = false;
+        
+        MTDatacenterAddressSet *addressSet = [self addressSetForDatacenterWithId:datacenterId];
+        if (addressSet == nil)
+        {
+            addressSet = [[MTDatacenterAddressSet alloc] initWithAddressList:@[address]];
+            updated = true;
+        }
+        else if (![addressSet.addressList containsObject:address])
+        {
+            NSMutableArray *updatedAddressList = [[NSMutableArray alloc] init];
+            [updatedAddressList addObject:address];
+            [updatedAddressList addObjectsFromArray:addressSet.addressList];
+            
+            addressSet = [[MTDatacenterAddressSet alloc] initWithAddressList:updatedAddressList];
+            updated = true;
+        }
+        
+        if (updated)
+        {
+            MTLog(@"[MTContext#%x: added address %@ for datacenter %d]", (int)self, address, datacenterId);
+            
             _datacenterAddressSetById[@(datacenterId)] = addressSet;
             [_keychain setObject:_datacenterAddressSetById forKey:@"datacenterAddressSetById" group:@"persistent"];
             
@@ -290,13 +361,35 @@
     }];
 }
 
-- (void)updateTransportStrategyForDatacenterWithId:(NSInteger)datacenterId strategy:(MTTransportStraregy *)transportStrategy
+- (void)updateTransportSchemeForDatacenterWithId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme
 {
     [[MTContext contextQueue] dispatchOnQueue:^
     {
-        if (transportStrategy != nil && datacenterId != 0)
+        if (transportScheme != nil && datacenterId != 0)
         {
-            MTLog(@"[MTContext#%x: transport strategy (%@) updated for %d]", (int)self, transportStrategy, datacenterId);
+            MTTransportScheme *previousScheme = _datacenterTransportSchemeById[@(datacenterId)];
+            
+            if (transportScheme == nil)
+                [_datacenterTransportSchemeById removeObjectForKey:@(datacenterId)];
+            else
+                _datacenterTransportSchemeById[@(datacenterId)] = transportScheme;
+            
+            [_keychain setObject:_datacenterTransportSchemeById forKey:@"datacenterTransportSchemeById" group:@"persistent"];
+            
+            NSArray *currentListeners = [[NSArray alloc] initWithArray:_changeListeners];
+            
+            MTTransportScheme *currentScheme = transportScheme == nil ? [self defaultTransportSchemeForDatacenterWithId:datacenterId] : transportScheme;
+            
+            if (currentScheme != nil && (previousScheme == nil || ![previousScheme isEqualToScheme:currentScheme]))
+            {
+                MTLog(@"[MTContext#%x: transport scheme updated for %d: %@]", (int)self, datacenterId, transportScheme);
+                
+                for (id<MTContextChangeListener> listener in currentListeners)
+                {
+                    if ([listener respondsToSelector:@selector(contextDatacenterTransportSchemeUpdated:datacenterId:transportScheme:)])
+                        [listener contextDatacenterTransportSchemeUpdated:self datacenterId:datacenterId transportScheme:currentScheme];
+                }
+            }
         }
     }];
 }
@@ -443,6 +536,34 @@
     return result;
 }
 
+- (MTTransportScheme *)transportSchemeForDatacenterWithid:(NSInteger)datacenterId
+{
+    __block MTTransportScheme *result = nil;
+    [[MTContext contextQueue] dispatchOnQueue:^
+    {
+        MTTransportScheme *candidate = _datacenterTransportSchemeById[@(datacenterId)];
+        if (candidate != nil)
+            result = candidate;
+        else
+            result = [self defaultTransportSchemeForDatacenterWithId:datacenterId];
+        
+        if (result != nil && ![result isOptimal])
+        {
+            MTDiscoverTransportSchemeAction *action = _discoverDatacenterTransportSchemeActions[@(datacenterId)];
+            if (action == nil)
+            {
+                action = [[MTDiscoverTransportSchemeAction alloc] initWithContext:self datacenterId:datacenterId];
+                action.delegate = self;
+                _discoverDatacenterTransportSchemeActions[@(datacenterId)] = action;
+            }
+            
+            [action discoverMoreOptimalSchemeThan:result];
+        }
+    } synchronous:true];
+    
+    return result;
+}
+
 - (MTDatacenterAuthInfo *)authInfoForDatacenterWithId:(NSInteger)datacenterId
 {
     __block MTDatacenterAuthInfo *result = nil;
@@ -482,6 +603,82 @@
     return result;
 }
 
+- (MTTransportScheme *)defaultTransportSchemeForDatacenterWithId:(NSInteger)datacenterId
+{
+    __block MTTransportScheme *result = nil;
+    [[MTContext contextQueue] dispatchOnQueue:^
+    {
+        MTDatacenterAddressSet *addressSet = [self addressSetForDatacenterWithId:datacenterId];
+        if (addressSet != nil && addressSet.addressList.count != 0)
+            result = [[MTTransportScheme alloc] initWithTransportClass:[MTTcpTransport class] address:addressSet.addressList.firstObject];
+        else
+            [self addressSetForDatacenterWithIdRequired:datacenterId];
+    } synchronous:true];
+    
+    return result;
+}
+
+- (void)transportSchemeForDatacenterWithIdRequired:(NSInteger)datacenterId
+{
+    [[MTContext contextQueue] dispatchOnQueue:^
+    {
+        MTDiscoverTransportSchemeAction *action = _discoverDatacenterTransportSchemeActions[@(datacenterId)];
+        if (action == nil)
+        {
+            action = [[MTDiscoverTransportSchemeAction alloc] initWithContext:self datacenterId:datacenterId];
+            action.delegate = self;
+            _discoverDatacenterTransportSchemeActions[@(datacenterId)] = action;
+        }
+        
+        [action discoverScheme];
+    }];
+}
+
+- (void)invalidateTransportSchemeForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme isProbablyHttp:(bool)isProbablyHttp
+{
+    if (transportScheme == nil)
+        return;
+    
+    [[MTContext contextQueue] dispatchOnQueue:^
+    {
+        MTDiscoverTransportSchemeAction *action = _discoverDatacenterTransportSchemeActions[@(datacenterId)];
+        if (action == nil)
+        {
+            action = [[MTDiscoverTransportSchemeAction alloc] initWithContext:self datacenterId:datacenterId];
+            action.delegate = self;
+            _discoverDatacenterTransportSchemeActions[@(datacenterId)] = action;
+        }
+        
+        [action invalidateScheme:transportScheme beginWithHttp:isProbablyHttp];
+    }];
+}
+
+- (void)revalidateTransportSchemeForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme
+{
+    [[MTContext contextQueue] dispatchOnQueue:^
+    {
+        MTDiscoverTransportSchemeAction *action = _discoverDatacenterTransportSchemeActions[@(datacenterId)];
+        if (action != nil)
+            [action validateScheme:transportScheme];
+    }];
+}
+
+- (void)discoverTransportSchemeActionCompleted:(MTDiscoverTransportSchemeAction *)action
+{
+    [[MTContext contextQueue] dispatchOnQueue:^
+    {
+        for (NSNumber *nDatacenterId in _discoverDatacenterTransportSchemeActions)
+        {
+            if (_discoverDatacenterTransportSchemeActions[nDatacenterId] == action)
+            {
+                [_discoverDatacenterTransportSchemeActions removeObjectForKey:nDatacenterId];
+                
+                break;
+            }
+        }
+    }];
+}
+
 - (void)updateAuthTokenForDatacenterWithId:(NSInteger)datacenterId authToken:(id)authToken
 {
     [[MTContext contextQueue] dispatchOnQueue:^
@@ -500,32 +697,6 @@
                 [listener contextDatacenterAuthTokenUpdated:self datacenterId:datacenterId authToken:authToken];
         }
     }];
-}
-
-- (bool)findAnyDatacenterIdWithAuthToken:(id)authToken datacenterId:(NSInteger *)datacenterId
-{
-    if (authToken == nil)
-        return false;
-    
-    __block bool found = false;
-    [[MTContext contextQueue] dispatchOnQueue:^
-    {
-        [_authTokenById enumerateKeysAndObjectsUsingBlock:^(NSNumber *nDatacenterId, id datacenterAuthToken, BOOL *stop)
-        {
-            if ([authToken isEqual:datacenterAuthToken])
-            {
-                found = true;
-                
-                if (datacenterId != NULL)
-                    *datacenterId = [nDatacenterId integerValue];
-                
-                if (stop != NULL)
-                    *stop = true;
-            }
-        }];
-    } synchronous:true];
-    
-    return found;
 }
 
 - (void)addressSetForDatacenterWithIdRequired:(NSInteger)datacenterId
@@ -595,7 +766,7 @@
         if (authToken == nil)
             return;
         
-        if (_datacenterTransferAuthActions[@(datacenterId)] == nil)
+        if (_datacenterTransferAuthActions[@(datacenterId)] == nil && masterDatacenterId != datacenterId)
         {
             MTDatacenterTransferAuthAction *transferAction = [[MTDatacenterTransferAuthAction alloc] init];
             transferAction.delegate = self;

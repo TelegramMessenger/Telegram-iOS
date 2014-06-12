@@ -56,7 +56,18 @@
         if (_backoffCount <= 1)
             [self timerEvent];
         else
-            [self startTimer:1.0];
+        {
+            NSTimeInterval delay = 1.0;
+            
+            if (_backoffCount <= 5)
+                delay = 1.0;
+            else if (_backoffCount <= 20)
+                delay = 4.0;
+            else
+                delay = 8.0;
+            
+            [self startTimer:delay];
+        }
     }];
 }
 
@@ -69,6 +80,10 @@
         if (_workersNeeded)
             [self timerEvent];
     }];
+}
+
+- (void)workerReceivedValidData
+{
 }
 
 - (void)workerDisconnectedWithError

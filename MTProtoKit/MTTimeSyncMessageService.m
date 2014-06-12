@@ -28,6 +28,8 @@
     NSUInteger _takenSampleCount;
     NSUInteger _requiredSampleCount;
     NSMutableArray *_takenSamples;
+    
+    NSMutableArray *_futureSalts;
 }
 
 @end
@@ -40,6 +42,7 @@
     if (self != nil)
     {
         _takenSamples = [[NSMutableArray alloc] init];
+        _futureSalts = [[NSMutableArray alloc] init];
     }
     return self;
 }
@@ -57,7 +60,7 @@
         _currentTransactionId = nil;
         _currentSampleAbsoluteStartTime = 0.0;
         
-        MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithBody:[mtProto.context.serialization getFutureSalts:32]];
+        MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithBody:[mtProto.context.serialization getFutureSalts:_futureSalts.count != 0 ? 1 : 32]];
         
         return [[MTMessageTransaction alloc] initWithMessagePayload:@[outgoingMessage] completion:^(NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
         {
@@ -119,8 +122,13 @@
 
 - (void)mtProto:(MTProto *)mtProto receivedMessage:(MTIncomingMessage *)message
 {
-    if (message.messageId == _currentMessageId && [mtProto.context.serialization isMessageFutureSalts:message.body])
+    if ([mtProto.context.serialization isMessageFutureSalts:message.body] && [mtProto.context.serialization futureSaltsRequestMessageId:message.body] == _currentMessageId)
     {
+        _currentMessageId = 0;
+        _currentTransactionId = nil;
+        
+        [_futureSalts addObjectsFromArray:[mtProto.context.serialization saltInfoListFromMessage:message.body]];
+        
         NSTimeInterval timeDifference = message.messageId / 4294967296.0 - [[NSDate date] timeIntervalSince1970];
         [_takenSamples addObject:@(timeDifference)];
         _takenSampleCount++;
@@ -129,7 +137,7 @@
         
         if (_requiredSampleCount == 0)
         {
-            if (ABS(MTAbsoluteSystemTime() - _currentSampleAbsoluteStartTime) > 4.0)
+            if (ABS(MTAbsoluteSystemTime() - _currentSampleAbsoluteStartTime) > 1.0)
             {
                 _requiredSampleCount = 6;
                 requestTransaction = true;
@@ -138,9 +146,9 @@
         
         if (_takenSampleCount >= _requiredSampleCount)
         {
-            NSTimeInterval maxSample = 0.0;
+            NSTimeInterval maxSampleAbs = 0.0;
             NSUInteger maxSampleIndex = NSNotFound;
-            NSTimeInterval minSample = 0.0;
+            NSTimeInterval minSampleAbs = 0.0;
             NSUInteger minSampleIndex = NSNotFound;
             
             NSInteger index = -1;
@@ -148,15 +156,15 @@
             {
                 index++;
                 
-                if (maxSampleIndex == NSNotFound || [nSample doubleValue] > maxSample)
+                if (maxSampleIndex == NSNotFound || ABS([nSample doubleValue]) > maxSampleAbs)
                 {
-                    maxSample = [nSample doubleValue];
+                    maxSampleAbs = ABS([nSample doubleValue]);
                     maxSampleIndex = (NSUInteger)index;
                 }
                 
-                if (minSampleIndex == NSNotFound || [nSample doubleValue] < minSample)
+                if (minSampleIndex == NSNotFound || ABS([nSample doubleValue]) < minSampleAbs)
                 {
-                    minSample = [nSample doubleValue];
+                    minSampleAbs = ABS([nSample doubleValue]);
                     minSampleIndex = (NSUInteger)index;
                 }
             }
@@ -181,10 +189,9 @@
             else
                 totalTimeDifference = timeDifference;
             
-            NSArray *saltList = [mtProto.context.serialization saltInfoListFromMessage:message.body];
             id<MTTimeSyncMessageServiceDelegate> delegate = _delegate;
             if ([delegate respondsToSelector:@selector(timeSyncServiceCompleted:timeDifference:saltList:)])
-                [delegate timeSyncServiceCompleted:self timeDifference:totalTimeDifference saltList:saltList];
+                [delegate timeSyncServiceCompleted:self timeDifference:totalTimeDifference saltList:_futureSalts];
         }
         else
             requestTransaction = true;

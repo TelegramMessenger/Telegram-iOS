@@ -32,5 +32,6 @@
 - (bool)isConnected;
 
 - (void)stop;
+- (void)terminateWithFailure;
 
 @end

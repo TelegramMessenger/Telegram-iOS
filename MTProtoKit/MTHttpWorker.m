@@ -134,6 +134,18 @@ MTInternalIdClass(MTHttpWorker)
     [self cancelTimer];
 }
 
+- (void)terminateWithFailure
+{
+    [[MTHttpWorker httpWorkerProcessingQueue] dispatchOnQueue:^
+    {
+        [self stop];
+        
+        id<MTHttpWorkerDelegate> delegate = _delegate;
+        if ([delegate respondsToSelector:@selector(httpWorkerFailed:)])
+            [delegate httpWorkerFailed:self];
+    }];
+}
+
 - (void)cancelTimer
 {
     if (_timeoutTimer != nil)

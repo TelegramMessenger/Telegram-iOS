@@ -11,7 +11,7 @@
 @class MTDatacenterAuthInfo;
 @protocol MTSerialization;
 @class MTContext;
-@class MTTransportStraregy;
+@class MTTransportScheme;
 @class MTKeychain;
 @class MTSessionInfo;
 
@@ -22,6 +22,7 @@
 - (void)contextDatacenterAddressSetUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId addressSet:(MTDatacenterAddressSet *)addressSet;
 - (void)contextDatacenterAuthInfoUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId authInfo:(MTDatacenterAuthInfo *)authInfo;
 - (void)contextDatacenterAuthTokenUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId authToken:(id)authToken;
+- (void)contextDatacenterTransportSchemeUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme;
 
 @end
 
@@ -45,8 +46,9 @@
 
 - (void)setSeedAddressSetForDatacenterWithId:(NSInteger)datacenterId seedAddressSet:(MTDatacenterAddressSet *)seedAddressSet;
 - (void)updateAddressSetForDatacenterWithId:(NSInteger)datacenterId addressSet:(MTDatacenterAddressSet *)addressSet;
+- (void)addAddressForDatacenterWithId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address;
+- (void)updateTransportSchemeForDatacenterWithId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme;
 - (void)updateAuthInfoForDatacenterWithId:(NSInteger)datacenterId authInfo:(MTDatacenterAuthInfo *)authInfo;
-- (void)updateTransportStrategyForDatacenterWithId:(NSInteger)datacenterId strategy:(MTTransportStraregy *)transportStrategy;
 
 - (void)scheduleSessionCleanupForAuthKeyId:(int64_t)authKeyId sessionInfo:(MTSessionInfo *)sessionInfo;
 - (void)collectSessionIdsForCleanupWithAuthKeyId:(int64_t)authKeyId completion:(void (^)(NSArray *sessionIds))completion;
@@ -56,12 +58,15 @@
 - (void)enumerateAddressSetsForDatacenters:(void (^)(NSInteger datacenterId, MTDatacenterAddressSet *addressSet, BOOL *stop))block;
 
 - (MTDatacenterAddressSet *)addressSetForDatacenterWithId:(NSInteger)datacenterId;
+- (MTTransportScheme *)transportSchemeForDatacenterWithid:(NSInteger)datacenterId;
+- (void)transportSchemeForDatacenterWithIdRequired:(NSInteger)datacenterId;
+- (void)invalidateTransportSchemeForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme isProbablyHttp:(bool)isProbablyHttp;
+- (void)revalidateTransportSchemeForDatacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme;
 - (MTDatacenterAuthInfo *)authInfoForDatacenterWithId:(NSInteger)datacenterId;
 
 - (void)removeAllAuthTokens;
 - (id)authTokenForDatacenterWithId:(NSInteger)datacenterId;
 - (void)updateAuthTokenForDatacenterWithId:(NSInteger)datacenterId authToken:(id)authToken;
-- (bool)findAnyDatacenterIdWithAuthToken:(id)authToken datacenterId:(NSInteger *)datacenterId;
 
 - (void)addressSetForDatacenterWithIdRequired:(NSInteger)datacenterId;
 - (void)authInfoForDatacenterWithIdRequired:(NSInteger)datacenterId;

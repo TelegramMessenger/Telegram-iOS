@@ -19,7 +19,7 @@
 
 @implementation MTTransport
 
-- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId
+- (instancetype)initWithDelegate:(id<MTTransportDelegate>)delegate context:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address
 {
 #ifdef DEBUG
     NSAssert(context != nil, @"context should not be nil");
@@ -45,6 +45,10 @@
     return false;
 }
 
+- (void)reset
+{
+}
+
 - (void)stop
 {
 }
@@ -61,7 +65,9 @@
 {
     id<MTTransportDelegate> delegate = _delegate;
     if ([delegate respondsToSelector:@selector(transportHasIncomingData:data:transactionId:requestTransactionAfterProcessing:decodeResult:)])
+    {
         [delegate transportHasIncomingData:self data:data transactionId:transactionId requestTransactionAfterProcessing:requestTransactionAfterProcessing decodeResult:decodeResult];
+    }
 }
 
 - (void)networkAvailabilityChanged:(MTNetworkAvailability *)__unused networkAvailability networkIsAvailable:(bool)networkIsAvailable

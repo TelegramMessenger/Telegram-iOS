@@ -9,7 +9,6 @@
 #import <Foundation/Foundation.h>
 
 @class MTContext;
-
 @class MTDiscoverDatacenterAddressAction;
 
 @protocol MTDiscoverDatacenterAddressActionDelegate <NSObject>

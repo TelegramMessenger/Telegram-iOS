@@ -35,6 +35,38 @@
     [aCoder encodeObject:_addressList forKey:@"addressList"];
 }
 
+- (BOOL)isEqual:(MTDatacenterAddressSet *)another
+{
+    if (![another isKindOfClass:[MTDatacenterAddressSet class]])
+        return false;
+    
+    if (_addressList.count != another.addressList.count)
+        return false;
+    
+    for (NSUInteger i = 0; i < _addressList.count; i++)
+    {
+        if (![_addressList[i] isEqual:another.addressList[i]])
+            return false;
+    }
+    
+    return true;
+}
+
+- (NSString *)description
+{
+    NSMutableString *string = [[NSMutableString alloc] init];
+    [string appendString:@"["];
+    for (MTDatacenterAddress *address in _addressList)
+    {
+        if (string.length != 1)
+            [string appendString:@", "];
+        [string appendString:[address description]];
+    }
+    [string appendString:@"]"];
+    
+    return string;
+}
+
 - (MTDatacenterAddress *)firstAddress
 {
     return _addressList.count == 0 ? nil : _addressList[0];
