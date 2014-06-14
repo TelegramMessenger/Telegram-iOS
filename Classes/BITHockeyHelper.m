@@ -690,7 +690,7 @@ UIImage *bit_appIcon() {
   }
 }
 
-UIImage *bit_screenshot() {
+UIImage *bit_screenshot(BOOL includeStatusBar) {
   // Create a graphics context with the target size
   CGSize imageSize = [[UIScreen mainScreen] bounds].size;
   BOOL isLandscapeLeft = [UIApplication sharedApplication].statusBarOrientation == UIInterfaceOrientationLandscapeLeft;
@@ -722,7 +722,10 @@ UIImage *bit_screenshot() {
       CGContextConcatCTM(context, [window transform]);
       
       // Y-offset for the status bar (if it's showing)
-      NSInteger yOffset = [UIApplication sharedApplication].statusBarHidden ? 0 : -20;
+      NSInteger yOffset = 0;
+      if (!includeStatusBar) {
+        yOffset = [UIApplication sharedApplication].statusBarHidden ? 0 : -20;
+      }
       
       // Offset by the portion of the bounds left of and above the anchor point
       CGContextTranslateCTM(context,
