@@ -317,10 +317,8 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
      [[BITHockeyManager sharedHockeyManager].feedbackManager showFeedbackComposeViewWithGeneratedScreenshot];
  
  @see feedbackObservationMode
- 
- @param includeStatusBar BOOL if the screenshot should include the satusbar (if present) or not
  */
-- (void)showFeedbackComposeViewWithGeneratedScreenshotWithStatusBar:(BOOL)includeStatusBar;
+- (void)showFeedbackComposeViewWithGeneratedScreenshot;
 
 
 /**

@@ -243,8 +243,8 @@
   
 }
 
-- (void)showFeedbackComposeViewWithGeneratedScreenshotWithStatusBar:(BOOL)includeStatusBar {
-  UIImage *screenshot = bit_screenshot(includeStatusBar);
+- (void)showFeedbackComposeViewWithGeneratedScreenshot {
+  UIImage *screenshot = bit_screenshot(YES);
   [self showFeedbackComposeViewWithPreparedItems:@[screenshot]];
 }
 
@@ -1132,7 +1132,7 @@
 
 - (void)screenshotTripleTap:(UITapGestureRecognizer *)tapRecognizer {
   if (tapRecognizer.state == UIGestureRecognizerStateRecognized){
-    [self showFeedbackComposeViewWithGeneratedScreenshotWithStatusBar:NO];
+    [self showFeedbackComposeViewWithGeneratedScreenshot];
   }
 }
 
