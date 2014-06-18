@@ -35,6 +35,18 @@
 @interface BITAuthenticator ()<BITAuthenticationViewControllerDelegate, UIAlertViewDelegate>
 
 /**
+ Delegate that can be used to do any last minute configurations on the
+ presented viewController.
+ 
+ The delegate is automatically set by using `[BITHockeyManager setDelegate:]`. You
+ should not need to set this delegate individually.
+ 
+ @see `[BITHockeyManager setDelegate:]`
+ @see BITAuthenticatorDelegate
+ */
+@property (nonatomic, weak) id<BITAuthenticatorDelegate> delegate;
+
+/**
  * must be set
  */
 @property (nonatomic, strong) BITHockeyAppClient *hockeyAppClient;

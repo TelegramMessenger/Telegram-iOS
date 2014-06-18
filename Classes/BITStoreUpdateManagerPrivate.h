@@ -34,6 +34,16 @@
 @interface BITStoreUpdateManager () <UIAlertViewDelegate> {
 }
 
+///-----------------------------------------------------------------------------
+/// @name Delegate
+///-----------------------------------------------------------------------------
+
+/**
+ Sets the optional `BITStoreUpdateManagerDelegate` delegate.
+ */
+@property (nonatomic, weak) id delegate;
+
+
 // is an update available?
 @property (nonatomic, assign, getter=isUpdateAvailable) BOOL updateAvailable;
 

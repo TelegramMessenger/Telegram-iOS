@@ -137,23 +137,6 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
 @interface BITFeedbackManager : BITHockeyBaseManager
 
 ///-----------------------------------------------------------------------------
-/// @name Delegate
-///-----------------------------------------------------------------------------
-
-/**
- Sets the `BITFeedbackManagerDelegate` delegate.
-
- Can be set to be notified when new feedback is received from the server.
- 
- The delegate is automatically set by using `[BITHockeyManager setDelegate:]`. You
- should not need to set this delegate individually.
- 
- @see `[BITHockeyManager setDelegate:]`
- */
-@property (nonatomic, weak) id<BITFeedbackManagerDelegate> delegate;
-
-
-///-----------------------------------------------------------------------------
 /// @name General settings
 ///-----------------------------------------------------------------------------
 

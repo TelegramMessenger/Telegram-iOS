@@ -198,18 +198,6 @@ typedef NS_ENUM(NSUInteger, BITAuthenticatorAppRestrictionEnforcementFrequency) 
  */
 @property (nonatomic, copy) NSString *authenticationSecret;
 
-/**
- Delegate that can be used to do any last minute configurations on the
- presented viewController.
- 
- The delegate is automatically set by using `[BITHockeyManager setDelegate:]`. You
- should not need to set this delegate individually.
- 
- @see `[BITHockeyManager setDelegate:]`
- @see BITAuthenticatorDelegate
- */
-@property (nonatomic, weak) id<BITAuthenticatorDelegate> delegate;
-
 
 #pragma mark - Device based identification
 

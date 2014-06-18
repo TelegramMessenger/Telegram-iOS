@@ -39,6 +39,21 @@
 @interface BITUpdateManager () {
 }
 
+///-----------------------------------------------------------------------------
+/// @name Delegate
+///-----------------------------------------------------------------------------
+
+/**
+ Sets the `BITUpdateManagerDelegate` delegate.
+ 
+ The delegate is automatically set by using `[BITHockeyManager setDelegate:]`. You
+ should not need to set this delegate individually.
+ 
+ @see `[BITHockeyManager setDelegate:]`
+ */
+@property (nonatomic, weak) id delegate;
+
+
 // is an update available?
 @property (nonatomic, assign, getter=isUpdateAvailable) BOOL updateAvailable;
 
