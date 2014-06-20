@@ -91,10 +91,10 @@
     _userButtonSection = -1;
     _userDataComposeFlow = NO;
     
-    self.lastUpdateDateFormatter = [[NSDateFormatter alloc] init];
-		[self.lastUpdateDateFormatter setDateStyle:NSDateFormatterShortStyle];
-		[self.lastUpdateDateFormatter setTimeStyle:NSDateFormatterShortStyle];
-		self.lastUpdateDateFormatter.locale = [NSLocale currentLocale];
+    _lastUpdateDateFormatter = [[NSDateFormatter alloc] init];
+		[_lastUpdateDateFormatter setDateStyle:NSDateFormatterShortStyle];
+		[_lastUpdateDateFormatter setTimeStyle:NSDateFormatterShortStyle];
+		_lastUpdateDateFormatter.locale = [NSLocale currentLocale];
     
     _thumbnailQueue = [NSOperationQueue new];
   }

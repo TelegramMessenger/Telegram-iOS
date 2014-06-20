@@ -72,8 +72,8 @@
 
 - (instancetype)init {
   if ((self = [super init])) {
-    self.isLoading = NO;
-    self.thumbnailRepresentations = [NSMutableDictionary new];
+    _isLoading = NO;
+    _thumbnailRepresentations = [NSMutableDictionary new];
     
     _fm = [[NSFileManager alloc] init];
     _cachePath = [bit_settingsDir() stringByAppendingPathComponent:kCacheFolderName];

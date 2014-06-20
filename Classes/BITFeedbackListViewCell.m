@@ -85,28 +85,28 @@
     
     _message = nil;
     
-    self.dateFormatter = [[NSDateFormatter alloc] init];
-    [self.dateFormatter setTimeStyle:NSDateFormatterNoStyle];
-    [self.dateFormatter setDateStyle:NSDateFormatterMediumStyle];
-    [self.dateFormatter setLocale:[NSLocale currentLocale]];
-    [self.dateFormatter setDoesRelativeDateFormatting:YES];
+    _dateFormatter = [[NSDateFormatter alloc] init];
+    [_dateFormatter setTimeStyle:NSDateFormatterNoStyle];
+    [_dateFormatter setDateStyle:NSDateFormatterMediumStyle];
+    [_dateFormatter setLocale:[NSLocale currentLocale]];
+    [_dateFormatter setDoesRelativeDateFormatting:YES];
     
-    self.timeFormatter = [[NSDateFormatter alloc] init];
-    [self.timeFormatter setTimeStyle:NSDateFormatterShortStyle];
-    [self.timeFormatter setDateStyle:NSDateFormatterNoStyle];
-    [self.timeFormatter setLocale:[NSLocale currentLocale]];
-    [self.timeFormatter setDoesRelativeDateFormatting:YES];
+    _timeFormatter = [[NSDateFormatter alloc] init];
+    [_timeFormatter setTimeStyle:NSDateFormatterShortStyle];
+    [_timeFormatter setDateStyle:NSDateFormatterNoStyle];
+    [_timeFormatter setLocale:[NSLocale currentLocale]];
+    [_timeFormatter setDoesRelativeDateFormatting:YES];
     
-    self.labelTitle = [[UILabel alloc] init];
-    self.labelTitle.font = [UIFont systemFontOfSize:TITLE_FONTSIZE];
+    _labelTitle = [[UILabel alloc] init];
+    _labelTitle.font = [UIFont systemFontOfSize:TITLE_FONTSIZE];
     
-    self.labelText = [[BITAttributedLabel alloc] init];
-    self.labelText.font = [UIFont systemFontOfSize:TEXT_FONTSIZE];
-    self.labelText.numberOfLines = 0;
-    self.labelText.textAlignment = kBITTextLabelAlignmentLeft;
-    self.labelText.dataDetectorTypes = UIDataDetectorTypeAll;
+    _labelText = [[BITAttributedLabel alloc] init];
+    _labelText.font = [UIFont systemFontOfSize:TEXT_FONTSIZE];
+    _labelText.numberOfLines = 0;
+    _labelText.textAlignment = kBITTextLabelAlignmentLeft;
+    _labelText.dataDetectorTypes = UIDataDetectorTypeAll;
     
-    self.attachmentViews = [NSMutableArray new];
+    _attachmentViews = [NSMutableArray new];
   }
   return self;
 }

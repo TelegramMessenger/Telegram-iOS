@@ -95,7 +95,7 @@
     _token = nil;
     _lastMessageID = nil;
     
-    self.feedbackList = [NSMutableArray array];
+    _feedbackList = [NSMutableArray array];
     
     _fileManager = [[NSFileManager alloc] init];
     
@@ -537,7 +537,7 @@
   __block BITFeedbackMessage *message = nil;
   
   [_feedbackList enumerateObjectsUsingBlock:^(BITFeedbackMessage *objMessage, NSUInteger messagesIdx, BOOL *stop) {
-    if ([[objMessage id] isEqualToNumber:messageID]) {
+    if ([[objMessage identifier] isEqualToNumber:messageID]) {
       message = objMessage;
       *stop = YES;
     }
@@ -562,7 +562,7 @@
   __block BITFeedbackMessage *message = nil;
   
   [_feedbackList enumerateObjectsUsingBlock:^(BITFeedbackMessage *objMessage, NSUInteger messagesIdx, BOOL *stop) {
-    if ([[objMessage id] integerValue] != 0) {
+    if ([[objMessage identifier] integerValue] != 0) {
       message = objMessage;
       *stop = YES;
     }
@@ -590,8 +590,8 @@
 - (void)updateLastMessageID {
   BITFeedbackMessage *lastMessageHavingID = [self lastMessageHavingID];
   if (lastMessageHavingID) {
-    if (!self.lastMessageID || [self.lastMessageID compare:[lastMessageHavingID id]] != NSOrderedSame)
-      self.lastMessageID = [lastMessageHavingID id];
+    if (!self.lastMessageID || [self.lastMessageID compare:[lastMessageHavingID identifier]] != NSOrderedSame)
+      self.lastMessageID = [lastMessageHavingID identifier];
   }
 }
 
@@ -723,13 +723,13 @@
           
           if (matchingSendInProgressOrInConflictMessage) {
             matchingSendInProgressOrInConflictMessage.date = [self parseRFC3339Date:[(NSDictionary *)objMessage objectForKey:@"created_at"]];
-            matchingSendInProgressOrInConflictMessage.id = messageID;
+            matchingSendInProgressOrInConflictMessage.identifier = messageID;
             matchingSendInProgressOrInConflictMessage.status = BITFeedbackMessageStatusRead;
             NSArray *feedbackAttachments =[(NSDictionary *)objMessage objectForKey:@"attachments"];
             if (matchingSendInProgressOrInConflictMessage.attachments.count == feedbackAttachments.count) {
               int attachmentIndex = 0;
               for (BITFeedbackMessageAttachment* attachment in matchingSendInProgressOrInConflictMessage.attachments){
-                attachment.id =feedbackAttachments[attachmentIndex][@"id"];
+                attachment.identifier =feedbackAttachments[attachmentIndex][@"id"];
                 attachmentIndex++;
               }
             }
@@ -741,13 +741,13 @@
               message.email = [(NSDictionary *)objMessage objectForKey:@"email"] ?: @"";
               
               message.date = [self parseRFC3339Date:[(NSDictionary *)objMessage objectForKey:@"created_at"]] ?: [NSDate date];
-              message.id = [(NSDictionary *)objMessage objectForKey:@"id"];
+              message.identifier = [(NSDictionary *)objMessage objectForKey:@"id"];
               message.status = BITFeedbackMessageStatusUnread;
               
               for (NSDictionary *attachmentData in objMessage[@"attachments"]) {
                 BITFeedbackMessageAttachment *newAttachment = [BITFeedbackMessageAttachment new];
                 newAttachment.originalFilename = attachmentData[@"file_name"];
-                newAttachment.id = attachmentData[@"id"];
+                newAttachment.identifier = attachmentData[@"id"];
                 newAttachment.sourceURL = attachmentData[@"url"];
                 newAttachment.contentType = attachmentData[@"content_type"];
                 [message addAttachmentsObject:newAttachment];

@@ -79,7 +79,6 @@
 - (instancetype)init {
   self = [super init];
   if (self) {
-    self.title = BITHockeyLocalizedString(@"HockeyFeedbackComposeTitle");
     _blockUserDataScreen = NO;
     _actionSheetVisible = NO;
     _delegate = nil;
@@ -87,8 +86,8 @@
     _attachments = [NSMutableArray new];
     _imageAttachments = [NSMutableArray new];
     _attachmentScrollViewImageViews = [NSMutableArray new];
-    self.tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(scrollViewTapped:)];
-    [self.attachmentScrollView addGestureRecognizer:self.tapRecognizer];
+    _tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(scrollViewTapped:)];
+    [_attachmentScrollView addGestureRecognizer:self.tapRecognizer];
 
     _text = nil;
   }
@@ -167,6 +166,7 @@
 - (void)viewDidLoad {
   [super viewDidLoad];
   
+  self.title = BITHockeyLocalizedString(@"HockeyFeedbackComposeTitle");
   self.view.backgroundColor = [UIColor whiteColor];
   
   // Do any additional setup after loading the view.

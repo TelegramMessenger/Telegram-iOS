@@ -35,7 +35,7 @@
  */
 @interface BITFeedbackMessageAttachment : NSObject<NSCoding, QLPreviewItem>
 
-@property (nonatomic, copy) NSNumber *id;
+@property (nonatomic, copy) NSNumber *identifier;
 @property (nonatomic, copy) NSString *originalFilename;
 @property (nonatomic, copy) NSString *contentType;
 @property (nonatomic, copy) NSString *sourceURL;

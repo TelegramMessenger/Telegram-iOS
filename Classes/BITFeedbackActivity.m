@@ -59,7 +59,7 @@
     _customActivityImage = nil;
     _customActivityTitle = nil;
     
-    self.items = [NSMutableArray array];;
+    _items = [NSMutableArray array];
   }
   
   return self;
