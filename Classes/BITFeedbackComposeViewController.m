@@ -107,10 +107,13 @@
     } else if ([item isKindOfClass:[UIImage class]]) {
       UIImage *image = item;
       BITFeedbackMessageAttachment *attachment = [BITFeedbackMessageAttachment attachmentWithData:UIImageJPEGRepresentation(image, 0.7f) contentType:@"image/jpeg"];
+      attachment.originalFilename = [NSString stringWithFormat:@"Image_%li.jpg", (unsigned long)[self.attachments count]];
       [self.attachments addObject:attachment];
       [self.imageAttachments addObject:attachment];
     } else if ([item isKindOfClass:[NSData class]]) {
-      [self.attachments addObject:[BITFeedbackMessageAttachment attachmentWithData:item contentType:@"'application/octet-stream'"]];
+      BITFeedbackMessageAttachment *attachment = [BITFeedbackMessageAttachment attachmentWithData:item contentType:@"application/octet-stream"];
+      attachment.originalFilename = [NSString stringWithFormat:@"Attachment_%li.data", (unsigned long)[self.attachments count]];
+      [self.attachments addObject:attachment];
     } else {
       BITHockeyLog(@"Unknown item type %@", item);
     }
