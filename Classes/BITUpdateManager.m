@@ -402,7 +402,6 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     _versionID = nil;
     _sendUsageData = YES;
     _disableUpdateManager = NO;
-    _checkForTracker = NO;
     _firstStartAfterInstall = NO;
     _companyName = nil;
     _currentAppVersionUsageTime = @0;
@@ -653,8 +652,6 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     }
     
     [self checkForUpdateShowFeedback:NO];
-  } else if ([self checkForTracker]) {
-    [self checkForUpdateShowFeedback:NO];
   }
 }
 
@@ -666,7 +663,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   self.checkInProgress = YES;
   
   // do we need to update?
-  if (![self checkForTracker] && !_currentHockeyViewController && ![self shouldCheckForUpdates] && _updateSetting != BITUpdateCheckManually) {
+  if (!_currentHockeyViewController && ![self shouldCheckForUpdates] && _updateSetting != BITUpdateCheckManually) {
     BITHockeyLog(@"INFO: Update not needed right now");
     self.checkInProgress = NO;
     return;
@@ -697,10 +694,6 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
      bit_URLEncodedString([self installationDateString]),
      bit_URLEncodedString([self currentUsageString])
      ];
-  }
-  
-  if ([self checkForTracker]) {
-    [parameter appendFormat:@"&jmc=yes"];
   }
   
   // build request & send
@@ -766,20 +759,11 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     
     [self checkExpiryDateReached];
     if (![self expiryDateReached]) {
-      if ([self checkForTracker] || ([self isCheckForUpdateOnLaunch] && [self shouldCheckForUpdates])) {
+      if ([self isCheckForUpdateOnLaunch] && [self shouldCheckForUpdates]) {
         if ([[UIApplication sharedApplication] applicationState] != UIApplicationStateActive) return;
         
         [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0f];
       }
-    }
-  } else {
-    if ([self checkForTracker]) {
-      // if we are in the app store, make sure not to send usage information in any case for now
-      _sendUsageData = NO;
-
-      if ([[UIApplication sharedApplication] applicationState] != UIApplicationStateActive) return;
-      
-      [self performSelector:@selector(checkForUpdate) withObject:nil afterDelay:1.0f];
     }
   }
   [self registerObservers];
@@ -846,8 +830,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     
     NSError *error = nil;
     NSDictionary *json = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:0 error:&error];
-                                              
-    self.trackerConfig = (([self checkForTracker] && [[json valueForKey:@"tracker"] isKindOfClass:[NSDictionary class]]) ? [json valueForKey:@"tracker"] : nil);
+    
     self.companyName = (([[json valueForKey:@"company"] isKindOfClass:[NSString class]]) ? [json valueForKey:@"company"] : nil);
     
     if (![self isAppStoreEnvironment]) {

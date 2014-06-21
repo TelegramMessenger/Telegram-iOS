@@ -75,10 +75,6 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 
 - (BOOL)shouldUseLiveIdentifier;
 
-#if HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT
-- (void)configureJMC;
-#endif /* HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT */
-
 @end
 
 
@@ -267,12 +263,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
   
 #if HOCKEYSDK_FEATURE_UPDATES
-  BOOL jmcIsPresent = NO;
   BOOL isIdentified = NO;
-
-#if HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT
-  jmcIsPresent = [[self class] isJMCPresent]
-#endif /* HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT */
 
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
   if (![self isAppStoreEnvironment])
@@ -280,9 +271,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
 
   // Setup UpdateManager
-  if (
-      (![self isUpdateManagerDisabled] && isIdentified) ||
-      jmcIsPresent) {
+  if (![self isUpdateManagerDisabled] && isIdentified) {
     [self invokeStartUpdateManager];
   }
 #endif /* HOCKEYSDK_FEATURE_UPDATES */
@@ -457,20 +446,6 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
         [self invokeStartUpdateManager];
       }
     }
-#if HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT
-  } else if (([object trackerConfig]) && ([[object trackerConfig] isKindOfClass:[NSDictionary class]])) {
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    NSMutableDictionary *trackerConfig = [[defaults valueForKey:@"BITTrackerConfigurations"] mutableCopy];
-    if (!trackerConfig) {
-      trackerConfig = [NSMutableDictionary dictionaryWithCapacity:1];
-    }
-    
-    [trackerConfig setValue:[object trackerConfig] forKey:_appIdentifier];
-    [defaults setValue:trackerConfig forKey:@"BITTrackerConfigurations"];
-    
-    [defaults synchronize];
-    [self configureJMC];
-#endif /* HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT */
   }
 }
 #endif /* HOCKEYSDK_FEATURE_UPDATES */
@@ -638,21 +613,6 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     _authenticator.delegate = _delegate;
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
 
-#if HOCKEYSDK_FEATURE_UPDATES
-    
-#if HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT
-    // Only if JMC is part of the project
-    if ([[self class] isJMCPresent]) {
-      BITHockeyLog(@"INFO: Setup JMC");
-      [_updateManager setCheckForTracker:YES];
-      [_updateManager addObserver:self forKeyPath:@"trackerConfig" options:0 context:nil];
-      [[self class] disableJMCCrashReporter];
-      [self performSelector:@selector(configureJMC) withObject:nil afterDelay:0];
-    }
-#endif /* HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT */
-
-#endif /* HOCKEYSDK_FEATURE_UPDATES */
-
     if (![self isAppStoreEnvironment]) {
       NSString *integrationFlowTime = [self integrationFlowTimeString];
       if (integrationFlowTime && [self integrationFlowStartedWithTimeString:integrationFlowTime]) {
@@ -663,106 +623,5 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     [self logInvalidIdentifier:@"app identifier"];
   }
 }
-
-#if HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT
-
-#pragma mark - JMC
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wundeclared-selector"
-+ (id)jmcInstance {
-  id jmcClass = NSClassFromString(@"JMC");
-  if ((jmcClass) && ([jmcClass respondsToSelector:@selector(sharedInstance)])) {
-    return [jmcClass performSelector:@selector(sharedInstance)];
-  }
-#ifdef JMC_LEGACY
-  else if ((jmcClass) && ([jmcClass respondsToSelector:@selector(instance)])) {
-    return [jmcClass performSelector:@selector(instance)]; // legacy pre (JMC 1.0.11) support
-  }
-#endif
-  
-  return nil;
-}
-#pragma clang diagnostic pop
-
-+ (BOOL)isJMCActive {
-  id jmcInstance = [self jmcInstance];
-  return (jmcInstance) && ([jmcInstance performSelector:@selector(url)]);
-}
-
-+ (BOOL)isJMCPresent {
-  return [self jmcInstance] != nil;
-}
-
-#pragma mark - Private Class Methods
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wundeclared-selector"
-#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-+ (void)disableJMCCrashReporter {
-  id jmcInstance = [self jmcInstance];
-  SEL optionsSelector = @selector(options);
-  id jmcOptions = [jmcInstance performSelector:optionsSelector];
-  SEL crashReporterSelector = @selector(setCrashReportingEnabled:);
-  
-  BOOL value = NO;
-  
-  NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:[jmcOptions methodSignatureForSelector:crashReporterSelector]];
-  invocation.target = jmcOptions;
-  invocation.selector = crashReporterSelector;
-  [invocation setArgument:&value atIndex:2];
-  [invocation invoke];
-}
-#pragma clang diagnostic pop
-
-+ (BOOL)checkJMCConfiguration:(NSDictionary *)configuration {
-  return (([configuration isKindOfClass:[NSDictionary class]]) &&
-          ([[configuration valueForKey:@"enabled"] boolValue]) &&
-          ([(NSString *)[configuration valueForKey:@"url"] length] > 0) &&
-          ([(NSString *)[configuration valueForKey:@"key"] length] > 0) &&
-          ([(NSString *)[configuration valueForKey:@"project"] length] > 0));
-}
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wundeclared-selector"
-#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-+ (void)applyJMCConfiguration:(NSDictionary *)configuration {
-  id jmcInstance = [self jmcInstance];
-  SEL configureSelector = @selector(configureJiraConnect:projectKey:apiKey:);
-  
-  __unsafe_unretained NSString *url = [configuration valueForKey:@"url"];
-  __unsafe_unretained NSString *project = [configuration valueForKey:@"project"];
-  __unsafe_unretained NSString *key = [configuration valueForKey:@"key"];
-  
-  NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:[jmcInstance methodSignatureForSelector:configureSelector]];
-  invocation.target = jmcInstance;
-  invocation.selector = configureSelector;
-  [invocation setArgument:&url atIndex:2];
-  [invocation setArgument:&project atIndex:3];
-  [invocation setArgument:&key atIndex:4];
-  [invocation invoke];
-  
-  SEL pingSelector = NSSelectorFromString(@"ping");
-  if ([jmcInstance respondsToSelector:pingSelector]) {
-    [jmcInstance performSelector:pingSelector];
-  }
-}
-#pragma clang diagnostic pop
-
-- (void)configureJMC {
-  // Return if JMC is already configured
-  if ([[self class] isJMCActive]) {
-    return;
-  }
-  
-  // Configure JMC from user defaults
-  NSDictionary *configurations = [[NSUserDefaults standardUserDefaults] valueForKey:@"BITTrackerConfigurations"];
-  NSDictionary *configuration = [configurations valueForKey:_appIdentifier];
-  if ([[self class] checkJMCConfiguration:configuration]) {
-    [[self class] applyJMCConfiguration:configuration];
-  }
-}
-
-#endif /* HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT */
 
 @end

@@ -83,13 +83,6 @@
 
 @property (nonatomic) BOOL installationIdentified;
 
-// if YES, the API will return an existing JMC config
-// if NO, the API will return only version information
-@property (nonatomic, assign) BOOL checkForTracker;
-
-// Contains the tracker config if received from server
-@property (nonatomic, strong) NSDictionary *trackerConfig;
-
 // used by BITHockeyManager if disable status is changed
 @property (nonatomic, getter = isUpdateManagerDisabled) BOOL disableUpdateManager;
 
