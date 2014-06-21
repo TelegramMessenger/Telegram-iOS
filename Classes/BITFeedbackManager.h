@@ -289,6 +289,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
  while all UIImage and NSData-instances will be turned into attachments.
  
  @param items an NSArray with objects that should be attached
+ @see `[BITFeedbackComposeViewController prepareWithItems:]`
  */
 - (void)showFeedbackComposeViewWithPreparedItems:(NSArray *)items;
 

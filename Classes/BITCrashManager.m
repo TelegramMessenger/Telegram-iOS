@@ -278,7 +278,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
   }
 }
 
-- (void)persistAttachment:(BITCrashAttachment *)attachment withFilename:(NSString *)filename {
+- (void)persistAttachment:(BITHockeyAttachment *)attachment withFilename:(NSString *)filename {
   NSString *attachmentFilename = [filename stringByAppendingString:@".data"];
   NSMutableData *data = [[NSMutableData alloc] init];
   NSKeyedArchiver *archiver = [[NSKeyedArchiver alloc] initForWritingWithMutableData:data];
@@ -318,9 +318,9 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
  *
  *  @param filename The crash report file path
  *
- *  @return an BITCrashAttachment instance or nil
+ *  @return an BITHockeyAttachment instance or nil
  */
-- (BITCrashAttachment *)attachmentForCrashReport:(NSString *)filename {
+- (BITHockeyAttachment *)attachmentForCrashReport:(NSString *)filename {
   NSString *attachmentFilename = [filename stringByAppendingString:@".data"];
   
   if (![_fileManager fileExistsAtPath:attachmentFilename])
@@ -341,7 +341,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
   }
   
   if ([unarchiver containsValueForKey:kBITCrashMetaAttachment]) {
-    BITCrashAttachment *attachment = [unarchiver decodeObjectForKey:kBITCrashMetaAttachment];
+    BITHockeyAttachment *attachment = [unarchiver decodeObjectForKey:kBITCrashMetaAttachment];
     return attachment;
   }
   
@@ -701,9 +701,9 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
   [metaDict setObject:applicationLog forKey:kBITCrashMetaApplicationLog];
   
   if (self.delegate != nil && [self.delegate respondsToSelector:@selector(attachmentForCrashManager:)]) {
-    BITCrashAttachment *attachment = [self.delegate attachmentForCrashManager:self];
+    BITHockeyAttachment *attachment = [self.delegate attachmentForCrashManager:self];
     
-    if (attachment) {
+    if (attachment && attachment.hockeyAttachmentData) {
       [self persistAttachment:attachment withFilename:[_crashesDir stringByAppendingPathComponent: filename]];
     }
   }
@@ -1219,7 +1219,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
     return;
   
   NSString *crashXML = nil;
-  BITCrashAttachment *attachment = nil;
+  BITHockeyAttachment *attachment = nil;
   
   NSString *filename = [_crashFiles objectAtIndex:0];
   NSString *cacheFilename = [filename lastPathComponent];
@@ -1378,7 +1378,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
 
 #pragma mark - Networking
 
-- (NSURLRequest *)requestWithXML:(NSString*)xml attachment:(BITCrashAttachment *)attachment {
+- (NSURLRequest *)requestWithXML:(NSString*)xml attachment:(BITHockeyAttachment *)attachment {
   NSString *postCrashPath = [NSString stringWithFormat:@"api/2/apps/%@/crashes", self.encodedAppIdentifier];
   
   NSMutableURLRequest *request = [self.hockeyAppClient requestWithMethod:@"POST"
@@ -1413,12 +1413,16 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
                                                     boundary:boundary
                                                     filename:@"crash.xml"]];
   
-  if (attachment) {
-    [postBody appendData:[BITHockeyAppClient dataWithPostValue:attachment.crashAttachmentData
+  if (attachment && attachment.hockeyAttachmentData) {
+    NSString *attachmentFilename = attachment.filename;
+    if (!attachmentFilename) {
+      attachmentFilename = @"Attachment_0";
+    }
+    [postBody appendData:[BITHockeyAppClient dataWithPostValue:attachment.hockeyAttachmentData
                                                         forKey:@"attachment0"
                                                    contentType:attachment.contentType
                                                       boundary:boundary
-                                                      filename:attachment.filename]];
+                                                      filename:attachmentFilename]];
   }
   
   [postBody appendData:[[NSString stringWithFormat:@"\r\n--%@--\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
@@ -1435,7 +1439,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
  *
  *	@param	xml	The XML data that needs to be send to the server
  */
-- (void)sendCrashReportWithFilename:(NSString *)filename xml:(NSString*)xml attachment:(BITCrashAttachment *)attachment {
+- (void)sendCrashReportWithFilename:(NSString *)filename xml:(NSString*)xml attachment:(BITHockeyAttachment *)attachment {
   
   NSURLRequest* request = [self requestWithXML:xml attachment:attachment];
   

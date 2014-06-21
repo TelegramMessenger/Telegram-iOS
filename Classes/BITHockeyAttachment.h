@@ -26,34 +26,43 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import "BITHockeyAttachment.h"
+#import <Foundation/Foundation.h>
 
 /**
- Deprecated: Provides support to add binary attachments to crash reports
+ Provides support to add binary attachments to crash reports and feedback messages
  
- This class is not needed any longer and exists for compatiblity purposes with
- HockeySDK-iOS 3.5.5.
- 
- It is a subclass of `BITHockeyAttachment` which only provides an initializer
- that is compatible with the one of HockeySDK-iOS 3.5.5.
- 
- This is used by `[BITCrashManagerDelegate attachmentForCrashManager:]`
- 
- @see BITHockeyAttachment
+ This is used by `[BITCrashManagerDelegate attachmentForCrashManager:]`,
+ `[BITFeedbackComposeViewController prepareWithItems:]` and
+ `[BITFeedbackManager showFeedbackComposeViewWithPreparedItems:]`
  */
-@interface BITCrashAttachment : BITHockeyAttachment
+@interface BITHockeyAttachment : NSObject<NSCoding>
 
 /**
- Create an BITCrashAttachment instance with a given filename and NSData object
+ The filename the attachment should get
+ */
+@property (nonatomic, readonly, strong) NSString *filename;
+
+/**
+ The attachment data as NSData object
+ */
+@property (nonatomic, readonly, strong) NSData *hockeyAttachmentData;
+
+/**
+ The content type of your data as MIME type
+ */
+@property (nonatomic, readonly, strong) NSString *contentType;
+
+/**
+ Create an BITHockeyAttachment instance with a given filename and NSData object
  
- @param filename            The filename the attachment should get
- @param crashAttachmentData The attachment data as NSData
- @param contentType         The content type of your data as MIME type
+ @param filename             The filename the attachment should get. If nil will get a automatically generated filename
+ @param hockeyAttachmentData The attachment data as NSData. The instance will be ignore if this is set to nil!
+ @param contentType          The content type of your data as MIME type. If nil will be set to "application/octet-stream"
  
- @return An instsance of BITCrashAttachment
+ @return An instsance of BITHockeyAttachment.
  */
 - (instancetype)initWithFilename:(NSString *)filename
-             crashAttachmentData:(NSData *)crashAttachmentData
+            hockeyAttachmentData:(NSData *)hockeyAttachmentData
                      contentType:(NSString *)contentType;
 
 @end

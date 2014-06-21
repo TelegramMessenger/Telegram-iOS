@@ -29,7 +29,7 @@
 #import <Foundation/Foundation.h>
 
 @class BITCrashManager;
-@class BITCrashAttachment;
+@class BITHockeyAttachment;
 
 /**
  The `BITCrashManagerDelegate` formal protocol defines methods further configuring
@@ -55,28 +55,29 @@
 -(NSString *)applicationLogForCrashManager:(BITCrashManager *)crashManager;
 
 
-/** Return a BITCrashAttachment object providing an NSData object the crash report
+/** Return a BITHockeyAttachment object providing an NSData object the crash report
  being processed should contain
  
  Please limit your attachments to reasonable files to avoid high traffic costs for your users.
  
  Example implementation:
  
-     - (BITCrashAttachment *)attachmentForCrashManager:(BITCrashManager *)crashManager {
+     - (BITHockeyAttachment *)attachmentForCrashManager:(BITCrashManager *)crashManager {
        NSData *data = [NSData dataWithContentsOfURL:@"mydatafile"];
  
-       BITCrashAttachment *attachment = [[BITCrashAttachment alloc] initWithFilename:@"myfile.data"
-                                                                 crashAttachmentData:data
-                                                                         contentType:@"'application/octet-stream"];
+       BITHockeyAttachment *attachment = [[BITHockeyAttachment alloc] initWithFilename:@"myfile.data"
+                                                                  hockeyAttachmentData:data
+                                                                           contentType:@"'application/octet-stream"];
        return attachment;
      }
  
  @param crashManager The `BITCrashManager` instance invoking this delegate
+ @see BITHockeyAttachment
  @see applicationLogForCrashManager:
  @see userNameForCrashManager:
  @see userEmailForCrashManager:
  */
--(BITCrashAttachment *)attachmentForCrashManager:(BITCrashManager *)crashManager;
+-(BITHockeyAttachment *)attachmentForCrashManager:(BITCrashManager *)crashManager;
 
 
 

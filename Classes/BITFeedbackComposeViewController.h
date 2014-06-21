@@ -77,6 +77,7 @@
  - NSURL
  - UIImage
  - NSData
+ - `BITHockeyAttachment`
  
  These are automatically concatenated to one text string, while any images and NSData
  objects are added as attachments to the feedback.

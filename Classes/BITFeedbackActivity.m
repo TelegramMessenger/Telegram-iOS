@@ -38,6 +38,7 @@
 #import "BITFeedbackManagerPrivate.h"
 
 #import "BITHockeyBaseManagerPrivate.h"
+#import "BITHockeyAttachment.h"
 
 
 @interface BITFeedbackActivity()
@@ -100,6 +101,8 @@
       return YES;
     } else if ([item isKindOfClass:[NSData class]]) {
       return YES;
+    } else if ([item isKindOfClass:[BITHockeyAttachment class]]) {
+      return YES;
     } else if ([item isKindOfClass:[NSURL class]]) {
       return YES;
     }
@@ -112,6 +115,7 @@
     if ([item isKindOfClass:[NSString class]] ||
         [item isKindOfClass:[UIImage class]] ||
         [item isKindOfClass:[NSData class]] ||
+        [item isKindOfClass:[BITHockeyAttachment class]] ||
         [item isKindOfClass:[NSURL class]]) {
       [_items addObject:item];
     } else {

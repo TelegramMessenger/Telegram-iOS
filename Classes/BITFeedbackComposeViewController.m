@@ -43,6 +43,7 @@
 #import "BITHockeyHelper.h"
 
 #import "BITImageAnnotationViewController.h"
+#import "BITHockeyAttachment.h"
 
 
 @interface BITFeedbackComposeViewController () <BITFeedbackUserDataDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate, UIActionSheetDelegate, BITImageAnnotationDelegate> {
@@ -113,6 +114,22 @@
     } else if ([item isKindOfClass:[NSData class]]) {
       BITFeedbackMessageAttachment *attachment = [BITFeedbackMessageAttachment attachmentWithData:item contentType:@"application/octet-stream"];
       attachment.originalFilename = [NSString stringWithFormat:@"Attachment_%li.data", (unsigned long)[self.attachments count]];
+      [self.attachments addObject:attachment];
+    } else if ([item isKindOfClass:[BITHockeyAttachment class]]) {
+      BITHockeyAttachment *sourceAttachment = (BITHockeyAttachment *)item;
+      
+      if (!sourceAttachment.hockeyAttachmentData) {
+        BITHockeyLog(@"BITHockeyAttachment instance doesn't contain any data.");
+        continue;
+      }
+            
+      NSString *filename = [NSString stringWithFormat:@"Attachment_%li.data", (unsigned long)[self.attachments count]];
+      if (sourceAttachment.filename) {
+        filename = sourceAttachment.filename;
+      }
+      
+      BITFeedbackMessageAttachment *attachment = [BITFeedbackMessageAttachment attachmentWithData:sourceAttachment.hockeyAttachmentData contentType:sourceAttachment.contentType];
+      attachment.originalFilename = filename;
       [self.attachments addObject:attachment];
     } else {
       BITHockeyLog(@"Unknown item type %@", item);
