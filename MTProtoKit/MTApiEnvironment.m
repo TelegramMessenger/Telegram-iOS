@@ -119,6 +119,10 @@ typedef enum {
         {
             _apiId = 16352;
         }
+        else if ([bundleIdentifier isEqualToString:@"org.telegram.TelegramHD"])
+        {
+            _apiId = 7;
+        }
         else
         {
             _apiId = 1;

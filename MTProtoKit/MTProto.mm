@@ -1870,6 +1870,8 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         {
             int64_t requestMessageId = [_context.serialization detailedInfoResponseRequestMessageId:incomingMessage.body];
             
+            MTLog(@"[MTProto#%p detailed info %" PRId64 " is for %" PRId64 "", self, incomingMessage.messageId, requestMessageId);
+            
             for (id<MTMessageService> messageService in _messageServices)
             {
                 if ([messageService respondsToSelector:@selector(mtProto:shouldRequestMessageInResponseToMessageId:currentTransactionId:)])
