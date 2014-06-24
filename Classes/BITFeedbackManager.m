@@ -198,8 +198,8 @@
 
 #pragma mark - Feedback Modal UI
 
-- (UIImage *)screenshotWithStatusBar:(BOOL)includeStatusBar {
-  return bit_screenshot(includeStatusBar);
+- (UIImage *)screenshot {
+  return bit_screenshot();
 }
 
 - (BITFeedbackListViewController *)feedbackListViewController:(BOOL)modal {
@@ -244,7 +244,7 @@
 }
 
 - (void)showFeedbackComposeViewWithGeneratedScreenshot {
-  UIImage *screenshot = bit_screenshot(YES);
+  UIImage *screenshot = bit_screenshot();
   [self showFeedbackComposeViewWithPreparedItems:@[screenshot]];
 }
 

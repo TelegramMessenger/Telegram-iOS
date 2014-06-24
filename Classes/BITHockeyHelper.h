@@ -59,5 +59,5 @@ UIImage *bit_reflectedImageWithHeight(UIImage *inputImage, NSUInteger height, fl
 UIImage *bit_newWithContentsOfResolutionIndependentFile(NSString * path);
 UIImage *bit_imageWithContentsOfResolutionIndependentFile(NSString * path);
 UIImage *bit_imageNamed(NSString *imageName, NSString *bundleName);
-UIImage *bit_screenshot(BOOL includeStatusBar);
+UIImage *bit_screenshot(void);
 UIImage *bit_appIcon(void);

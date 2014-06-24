@@ -254,11 +254,9 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
 /**
  Return a screenshot UIImage intance from the current visiable screen
 
- @param includeStatusBar BOOL if the screenshot should include the satusbar (if present) or not
- 
  @return UIImage instance containing a screenshot of the current screen
  */
-- (UIImage *)screenshotWithStatusBar:(BOOL)includeStatusBar;
+- (UIImage *)screenshot;
 
 
 /**

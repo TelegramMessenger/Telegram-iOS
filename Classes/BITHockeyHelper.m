@@ -690,7 +690,7 @@ UIImage *bit_appIcon() {
   }
 }
 
-UIImage *bit_screenshot(BOOL includeStatusBar) {
+UIImage *bit_screenshot(void) {
   // Create a graphics context with the target size
   CGSize imageSize = [[UIScreen mainScreen] bounds].size;
   BOOL isLandscapeLeft = [UIApplication sharedApplication].statusBarOrientation == UIInterfaceOrientationLandscapeLeft;
@@ -703,7 +703,7 @@ UIImage *bit_screenshot(BOOL includeStatusBar) {
     imageSize.height = temp;
   }
   
-  UIGraphicsBeginImageContextWithOptions(imageSize, NO, 0);
+  UIGraphicsBeginImageContextWithOptions(imageSize, YES, 0);
   
   CGContextRef context = UIGraphicsGetCurrentContext();
   
@@ -723,9 +723,6 @@ UIImage *bit_screenshot(BOOL includeStatusBar) {
       
       // Y-offset for the status bar (if it's showing)
       NSInteger yOffset = 0;
-      if (!includeStatusBar) {
-        yOffset = [UIApplication sharedApplication].statusBarHidden ? 0 : -20;
-      }
       
       // Offset by the portion of the bounds left of and above the anchor point
       CGContextTranslateCTM(context,
@@ -740,8 +737,12 @@ UIImage *bit_screenshot(BOOL includeStatusBar) {
         CGContextConcatCTM(context, CGAffineTransformRotate(CGAffineTransformMakeTranslation( imageSize.width, imageSize.height), M_PI));
       }
       
-      // Render the layer hierarchy to the current context
-      [[window layer] renderInContext:context];
+      if ([window respondsToSelector:@selector(drawViewHierarchyInRect:afterScreenUpdates:)]) {
+        [window drawViewHierarchyInRect:window.bounds afterScreenUpdates:NO];
+      } else {
+        // Render the layer hierarchy to the current context
+        [[window layer] renderInContext:context];
+      }
       
       // Restore the context
       CGContextRestoreGState(context);
