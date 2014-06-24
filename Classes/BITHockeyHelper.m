@@ -721,13 +721,10 @@ UIImage *bit_screenshot(void) {
       // Apply the window's transform about the anchor point
       CGContextConcatCTM(context, [window transform]);
       
-      // Y-offset for the status bar (if it's showing)
-      NSInteger yOffset = 0;
-      
       // Offset by the portion of the bounds left of and above the anchor point
       CGContextTranslateCTM(context,
                             -[window bounds].size.width * [[window layer] anchorPoint].x,
-                            -[window bounds].size.height * [[window layer] anchorPoint].y + yOffset);
+                            -[window bounds].size.height * [[window layer] anchorPoint].y);
       
       if (isLandscapeLeft) {
         CGContextConcatCTM(context, CGAffineTransformRotate(CGAffineTransformMakeTranslation( imageSize.width, 0), M_PI / 2.0));
