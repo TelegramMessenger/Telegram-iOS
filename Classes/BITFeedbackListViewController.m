@@ -649,12 +649,11 @@
         NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
         [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
           if (responseData.length) {
-            [attachment replaceData:responseData];
             dispatch_async(dispatch_get_main_queue(), ^{
-              [self.tableView reloadData];
+              [attachment replaceData:responseData];
+              [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
+              [[BITHockeyManager sharedHockeyManager].feedbackManager saveMessages];
             });
-            
-            [[BITHockeyManager sharedHockeyManager].feedbackManager saveMessages];
           }
         }];
       }
