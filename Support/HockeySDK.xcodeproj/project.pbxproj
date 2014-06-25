@@ -131,7 +131,7 @@
 		1EAF20AA162DC0F600957B1D /* feedbackActiviy.png in Resources */ = {isa = PBXBuildFile; fileRef = 1EAF20A6162DC0F600957B1D /* feedbackActiviy.png */; };
 		1EAF20AB162DC0F600957B1D /* feedbackActiviy@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1EAF20A7162DC0F600957B1D /* feedbackActiviy@2x.png */; };
 		1EB52FD5167B766100C801D5 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
-		1EB92E731955C38C0093C8B6 /* BITHockeyAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EB92E711955C38C0093C8B6 /* BITHockeyAttachment.h */; };
+		1EB92E731955C38C0093C8B6 /* BITHockeyAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EB92E711955C38C0093C8B6 /* BITHockeyAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1EB92E741955C38C0093C8B6 /* BITHockeyAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EB92E721955C38C0093C8B6 /* BITHockeyAttachment.m */; };
 		1ECA8F4D192B5BD8006B9416 /* BITCrashDetailsPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1ECA8F4B192B5BD8006B9416 /* BITCrashDetailsPrivate.h */; };
 		1ECA8F51192B6954006B9416 /* BITCrashMetaData.h in Headers */ = {isa = PBXBuildFile; fileRef = 1ECA8F4F192B6954006B9416 /* BITCrashMetaData.h */; settings = {ATTRIBUTES = (Public, ); }; };
