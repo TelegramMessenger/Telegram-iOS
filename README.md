@@ -1,6 +1,6 @@
-## Version 3.6 Beta 1
+## Version 3.6 Beta 2
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.6-b.1/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.6-b.2/docs/docs/Changelog.html)
 
 
 ## Introduction
