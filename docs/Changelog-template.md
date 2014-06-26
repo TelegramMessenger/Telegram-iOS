@@ -1,3 +1,17 @@
+## Version 3.6.0 Beta 2
+
+- [NEW] `BITFeedbackManager`: Screenshot feature is now part of the public API
+- [UPDATE] `BITFeedbackManager`: Various improvements for the screenshot feature
+- [UPDATE] `BITFeedbackManager`: Added `BITHockeyAttachment` for more customizable attachments to feedback (`content-type`, `filename`)
+- [UPDATE] `BITUpdateManager`: Improved algorithm for fetching an optimal sized app icon for the Update View
+- [UPDATE] `BITUpdateManager`: Properly consider paragraphs in releases notes when presenting them in the Update View
+- [UPDATE] `BITCrashManager`: Updated PLCrashReporter to version 1.2
+- [UPDATE] `BITCrashManager`: Added `osVersion` and `osBuild` properties to `BITCrashDetails`
+- [BUGFIX] `BITCrashManager`: Use correct filename for crash report attachments
+- [UPDATE] Property `delegate` in all components is now private. Set the delegate on `BITHockeyManager` only!
+- [BUGFIX] Various additional fixes
+<br /><br/>
+
 ## Version 3.6.0 Beta 1
 
 - [NEW] Minimum iOS Deployment version is now iOS 6.0

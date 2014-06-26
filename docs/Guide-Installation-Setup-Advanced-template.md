@@ -1,6 +1,6 @@
-## Version 3.5 Beta 1
+## Version 3.6 Beta 2
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.6-b.1/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.6-b.2/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -150,10 +150,13 @@ Instead of manually adding the missing frameworks, you can also use our bundled 
     **Important note:** Check if you overwrite any of the build settings and add a missing `$(inherited)` entry on the projects build settings level, so the `HockeySDK.xcconfig` settings will be passed through successfully.
     
 4. If you are getting build warnings, then the `.xcconfig` setting wasn't included successfully or its settings in `Other Linker Flags` get ignored because `$(inherited)` is missing on project or target level. Either add `$(inherited)` or link the following frameworks manually in `Link Binary With Libraries` under `Build Phases`:
+    - `AssetsLibrary`
     - `CoreText`
     - `CoreGraphics`
     - `Foundation`
+    - `MobileCoreServices`
     - `QuartzCore`
+    - `QuickLook`
     - `Security`
     - `SystemConfiguration`
     - `UIKit`

@@ -28,19 +28,19 @@ The main SDK class is `BITHockeyManager`. It initializes all modules and provide
 - [Installation & Setup Advanced](Guide-Installation-Setup-Advanced) (Using Git submodule and Xcode sub-project)
 - [Identify and authenticate users of Ad-Hoc or Enterprise builds](HowTo-Authenticating-Users-on-iOS)
 - [Migration from previous SDK Versions](Guide-Migration-Kits)
-- [Mac Desktop Uploader](Guide-Installation-Mac-App)
+- [Mac Desktop Uploader](http://support.hockeyapp.net/kb/services-webhooks-desktop-apps/how-to-upload-to-hockeyapp-on-a-mac)
 
 ## HowTos
 
 - [How to do app versioning](HowTo-App-Versioning)
 - [How to upload symbols for crash reporting](HowTo-Upload-Symbols)
-- [How to handle crashes on startup](HowTo-Handle-Crashes-On-Startup)
-- [How to add application specific log data](HowTo-Add-Application-Log)
+- [How to handle crashes on startup](http://support.hockeyapp.net/kb/client-integration-ios-mac-os-x/how-to-handle-crashes-during-startup-on-ios)
+- [How to add application specific log data](http://support.hockeyapp.net/kb/client-integration-ios-mac-os-x/how-to-add-application-specific-log-data-on-ios)
 - [How to ask the user for more details about a crash](HowTo-Set-Custom-AlertViewHandler)
 
 ## Troubleshooting
 
-- [Symbolication doesn't work](Troubleshooting-Symbolication-Doesnt-Work) (Or the rules of binary UUIDs and dSYMs)
+- [Symbolication doesn't work](http://support.hockeyapp.net/kb/client-integration-ios-mac-os-x/how-to-solve-symbolication-problems) (Or the rules of binary UUIDs and dSYMs)
 - [Crash Reporting is not working](Troubleshooting-Crash-Reporting-Not-Working)
 
 ## Xcode Documentation

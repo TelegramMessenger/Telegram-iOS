@@ -1,6 +1,6 @@
-## Version 3.6 Beta 1
+## Version 3.6 Beta 2
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.6-b.1/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.6-b.2/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -93,9 +93,9 @@ The Mac Desktop Uploader can provide easy uploading of your app versions to Hock
 
 This documentation provides integrated help in Xcode for all public APIs and a set of additional tutorials and how-tos.
 
-1. Copy `de.bitstadium.HockeySDK-iOS-3.5.5.docset` into ~`/Library/Developer/Shared/Documentation/DocSets`
+1. Copy `de.bitstadium.HockeySDK-iOS-3.6-b.2.docset` into ~`/Library/Developer/Shared/Documentation/DocSets`
 
-The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.6-b.1/](http://hockeyapp.net/help/sdk/ios/3.6-b.1/)
+The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.6-b.2/](http://hockeyapp.net/help/sdk/ios/3.6-b.2/)
 
 ### Set up with xcconfig
 
@@ -124,10 +124,13 @@ Instead of manually adding the missing frameworks, you can also use our bundled 
     **Important note:** Check if you overwrite any of the build settings and add a missing `$(inherited)` entry on the projects build settings level, so the `HockeySDK.xcconfig` settings will be passed through successfully.
 
 7. If you are getting build warnings, then the `.xcconfig` setting wasn't included successfully or its settings in `Other Linker Flags` get ignored because `$(inherited)` is missing on project or target level. Either add `$(inherited)` or link the following frameworks manually in `Link Binary With Libraries` under `Build Phases`:
+    - `AssetsLibrary`
     - `CoreText`
     - `CoreGraphics`
     - `Foundation`
+    - `MobileCoreServices`
     - `QuartzCore`
+    - `QuickLook`
     - `Security`
     - `SystemConfiguration`
     - `UIKit`
