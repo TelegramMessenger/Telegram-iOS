@@ -10,6 +10,7 @@
 
 #import <MTProtoKit/MTQueue.h>
 #import <MTProtoKit/MTTimer.h>
+#import <MTProtoKit/MTTime.h>
 
 #import <MTProtoKit/MTDatacenterAddressSet.h>
 
@@ -23,6 +24,8 @@
 #import <MTProtoKit/MTTcpConnectionBehaviour.h>
 
 #import <MTProtoKit/MTSerialization.h>
+
+static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 
 @interface MTTcpTransport () <MTTcpConnectionDelegate, MTTcpConnectionBehaviourDelegate>
 {
@@ -47,6 +50,8 @@
     MTTimer *_actualizationPingResendTimer;
     
     MTTimer *_connectionWatchdogTimer;
+    MTTimer *_sleepWatchdogTimer;
+    MTAbsoluteTime _sleepWatchdogTimerLastTime;
 }
 
 @end
@@ -98,6 +103,8 @@
     
     MTTimer *connectionWatchdogTimer = _connectionWatchdogTimer;
     _connectionWatchdogTimer = nil;
+    MTTimer *sleepWatchdogTimer = _sleepWatchdogTimer;
+    _sleepWatchdogTimer = nil;
     
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
@@ -109,6 +116,7 @@
         [actualizationPingResendTimer invalidate];
         
         [connectionWatchdogTimer invalidate];
+        [sleepWatchdogTimer invalidate];
     }];
 }
 
@@ -159,6 +167,7 @@
         if (_connection == nil)
         {
             [self startConnectionWatchdogTimer];
+            [self startSleepWatchdogTimer];
             
             _connection = [[MTTcpConnection alloc] initWithAddress:_address interface:nil];
             _connection.delegate = self;
@@ -201,9 +210,56 @@
         _connection = nil;
         
         [self stopConnectionWatchdogTimer];
+        [self stopSleepWatchdogTimer];
         
         [_actualizationPingResendTimer invalidate];
         _actualizationPingResendTimer = nil;
+    }];
+}
+
+- (void)startSleepWatchdogTimer
+{
+    [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
+    {
+        if (_sleepWatchdogTimer == nil)
+        {
+            _sleepWatchdogTimerLastTime = MTAbsoluteSystemTime();
+            
+            __weak MTTcpTransport *weakSelf = self;
+            _sleepWatchdogTimer = [[MTTimer alloc] initWithTimeout:MTTcpTransportSleepWatchdogTimeout repeat:true completion:^
+            {
+                MTAbsoluteTime currentTime = MTAbsoluteSystemTime();
+                
+                __strong MTTcpTransport *strongSelf = weakSelf;
+                if (strongSelf != nil)
+                {
+                    if (ABS(currentTime - strongSelf->_sleepWatchdogTimerLastTime) > MTTcpTransportSleepWatchdogTimeout * 2.0)
+                    {
+                        MTLog(@"[MTTcpTransport#%p system sleep detected, resetting connection]", strongSelf);
+                        [strongSelf reset];
+                    }
+                    strongSelf->_sleepWatchdogTimerLastTime = currentTime;
+                }
+            } queue:[MTTcpConnection tcpQueue].nativeQueue];
+            [_sleepWatchdogTimer start];
+        }
+    }];
+}
+
+- (void)restartSleepWatchdogTimer
+{
+    [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
+    {
+        [_sleepWatchdogTimer resetTimeout:MTTcpTransportSleepWatchdogTimeout];
+    }];
+}
+
+- (void)stopSleepWatchdogTimer
+{
+    [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
+    {
+        [_sleepWatchdogTimer invalidate];
+        _sleepWatchdogTimer = nil;
     }];
 }
 
@@ -326,6 +382,8 @@
         
         _didSendActualizationPingAfterConnection = false;
         _currentActualizationPingMessageId = 0;
+        
+        [self restartSleepWatchdogTimer];
         
         id<MTTransportDelegate> delegate = self.delegate;
         if ([delegate respondsToSelector:@selector(transportConnectionStateChanged:isConnected:)])

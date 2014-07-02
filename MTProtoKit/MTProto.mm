@@ -198,6 +198,8 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     {
         MTLog(@"[MTProto#%p changing transport %@#%p to %@#%p]", self, [_transport class] == nil ? @"" : NSStringFromClass([_transport class]), _transport, [transport class] == nil ? @"" : NSStringFromClass([transport class]), transport);
         
+        [self allTransactionsMayHaveFailed];
+        
         MTTransport *previousTransport = _transport;
         [_transport activeTransactionIds:^(NSArray *transactionIds)
         {
@@ -1283,6 +1285,31 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if (requestTransaction && ![self isPaused])
             [self requestTransportTransaction];
     }];
+}
+
+- (void)allTransactionsMayHaveFailed
+{
+    if ([self isStopped])
+        return;
+    
+    bool requestTransaction = false;
+    
+    if (_timeFixContext != nil && _timeFixContext.transactionId != nil)
+    {
+        _timeFixContext = nil;
+        requestTransaction = true;
+    }
+    
+    for (NSInteger i = (NSInteger)_messageServices.count - 1; i >= 0; i--)
+    {
+        id<MTMessageService> messageService = _messageServices[(NSUInteger)i];
+        
+        if ([messageService respondsToSelector:@selector(mtProtoAllTransactionsMayHaveFailed:)])
+            [messageService mtProtoAllTransactionsMayHaveFailed:self];
+    }
+    
+    if (requestTransaction && ![self isPaused])
+        [self requestTransportTransaction];
 }
 
 - (void)transportReceivedQuickAck:(MTTransport *)transport quickAckId:(int32_t)quickAckId

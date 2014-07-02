@@ -604,4 +604,13 @@ typedef enum {
     }
 }
 
+- (void)mtProtoAllTransactionsMayHaveFailed:(MTProto *)mtProto
+{
+    if (_currentStageTransactionId != nil)
+    {
+        _currentStageTransactionId = nil;
+        [mtProto requestTransportTransaction];
+    }
+}
+
 @end

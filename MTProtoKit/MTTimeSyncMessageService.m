@@ -99,6 +99,16 @@
     }
 }
 
+- (void)mtProtoAllTransactionsMayHaveFailed:(MTProto *)mtProto
+{
+    if (_currentTransactionId != nil)
+    {
+        _currentTransactionId = nil;
+        
+        [mtProto requestTransportTransaction];
+    }
+}
+
 - (void)mtProtoDidChangeSession:(MTProto *)mtProto
 {
     _currentMessageId = 0;

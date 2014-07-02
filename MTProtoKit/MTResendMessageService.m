@@ -106,6 +106,15 @@
     }
 }
 
+- (void)mtProtoAllTransactionsMayHaveFailed:(MTProto *)mtProto
+{
+    if (_currentRequestTransactionId != nil)
+    {
+        _currentRequestTransactionId = nil;
+        [mtProto requestTransportTransaction];
+    }
+}
+
 - (void)mtProto:(MTProto *)mtProto receivedMessage:(MTIncomingMessage *)message
 {
     if (message.messageId == _messageId)

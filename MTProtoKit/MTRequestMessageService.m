@@ -603,6 +603,23 @@
         [mtProto requestTransportTransaction];
 }
 
+- (void)mtProtoAllTransactionsMayHaveFailed:(MTProto *)mtProto
+{
+    bool requestTransaction = false;
+    
+    for (MTRequest *request in _requests)
+    {
+        if (request.requestContext != nil && request.requestContext.transactionId != nil)
+        {
+            request.requestContext.transactionId = nil;
+            requestTransaction = true;
+        }
+    }
+    
+    if (requestTransaction)
+        [mtProto requestTransportTransaction];
+}
+
 - (bool)mtProto:(MTProto *)__unused mtProto shouldRequestMessageInResponseToMessageId:(int64_t)messageId currentTransactionId:(id)currentTransactionId
 {
     for (MTRequest *request in _requests)

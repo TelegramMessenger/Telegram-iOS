@@ -23,6 +23,7 @@
 - (void)mtProto:(MTProto *)mtProto receivedMessage:(MTIncomingMessage *)message;
 - (void)mtProto:(MTProto *)mtProto receivedQuickAck:(int32_t)quickAckId;
 - (void)mtProto:(MTProto *)mtProto transactionsMayHaveFailed:(NSArray *)transactionIds;
+- (void)mtProtoAllTransactionsMayHaveFailed:(MTProto *)mtProto;
 - (void)mtProto:(MTProto *)mtProto messageDeliveryFailed:(int64_t)messageId;
 - (void)mtProto:(MTProto *)mtProto messageDeliveryConfirmed:(NSArray *)messageIds;
 - (void)mtProto:(MTProto *)mtProto protocolErrorReceived:(int32_t)errorCode;
