@@ -245,7 +245,7 @@ BOOL bit_isPreiOS7Environment(void) {
  
  @return NSString with the valid app icon or nil if none found
  */
-NSString *bit_validAppIconStringFromIcons(NSArray *icons) {
+NSString *bit_validAppIconStringFromIcons(NSBundle *resourceBundle, NSArray *icons) {
   if (!icons) return nil;
   if (![icons isKindOfClass:[NSArray class]]) return nil;
   
@@ -267,16 +267,29 @@ NSString *bit_validAppIconStringFromIcons(NSArray *icons) {
   for(NSString *icon in icons) {
     // Don't use imageNamed, otherwise unit tests won't find the fixture icon
     // and using imageWithContentsOfFile doesn't load @2x files with absolut paths (required in tests)
-    NSData *imgData = [[NSData alloc] initWithContentsOfFile:icon];
-    UIImage *iconImage = [[UIImage alloc] initWithData:imgData];
+
+    NSString *iconPathExtension = ([[icon pathExtension] length] > 0) ? [icon pathExtension] : @"png";
+    NSMutableArray *iconFilenameVariants = [NSMutableArray new];
     
-    if (iconImage) {
-      if (iconImage.size.height == bestMatchHeight) {
-        return icon;
-      } else if (iconImage.size.height < bestMatchHeight &&
-                 iconImage.size.height > currentBestMatchHeight) {
-        currentBestMatchHeight = iconImage.size.height;
-        currentBestMatch = icon;
+    [iconFilenameVariants addObject:[icon stringByDeletingPathExtension]];
+    [iconFilenameVariants addObject:[NSString stringWithFormat:@"%@@2x", [icon stringByDeletingPathExtension]]];
+    
+    for (NSString *iconFilename in iconFilenameVariants) {
+      // this call already covers "~ipad" files
+      NSString *iconPath = [resourceBundle pathForResource:iconFilename ofType:iconPathExtension];
+      
+      NSData *imgData = [[NSData alloc] initWithContentsOfFile:iconPath];
+    
+      UIImage *iconImage = [[UIImage alloc] initWithData:imgData];
+      
+      if (iconImage) {
+        if (iconImage.size.height == bestMatchHeight) {
+          return iconFilename;
+        } else if (iconImage.size.height < bestMatchHeight &&
+                   iconImage.size.height > currentBestMatchHeight) {
+          currentBestMatchHeight = iconImage.size.height;
+          currentBestMatch = iconFilename;
+        }
       }
     }
   }
@@ -284,19 +297,19 @@ NSString *bit_validAppIconStringFromIcons(NSArray *icons) {
   return currentBestMatch;
 }
 
-NSString *bit_validAppIconFilename(NSBundle *bundle) {
+NSString *bit_validAppIconFilename(NSBundle *bundle, NSBundle *resourceBundle) {
   NSString *iconFilename = nil;
   NSArray *icons = nil;
   
   icons = [bundle objectForInfoDictionaryKey:@"CFBundleIconFiles"];
-  iconFilename = bit_validAppIconStringFromIcons(icons);
+  iconFilename = bit_validAppIconStringFromIcons(resourceBundle, icons);
   
   if (!iconFilename) {
     icons = [bundle objectForInfoDictionaryKey:@"CFBundleIcons"];
     if (icons && [icons isKindOfClass:[NSDictionary class]]) {
       icons = [icons valueForKeyPath:@"CFBundlePrimaryIcon.CFBundleIconFiles"];
     }
-    iconFilename = bit_validAppIconStringFromIcons(icons);
+    iconFilename = bit_validAppIconStringFromIcons(resourceBundle, icons);
   }
   
   // we test iPad structure anyway and use it if we find a result and don't have another one yet
@@ -305,7 +318,7 @@ NSString *bit_validAppIconFilename(NSBundle *bundle) {
     if (icons && [icons isKindOfClass:[NSDictionary class]]) {
       icons = [icons valueForKeyPath:@"CFBundlePrimaryIcon.CFBundleIconFiles"];
     }
-    NSString *iPadIconFilename = bit_validAppIconStringFromIcons(icons);
+    NSString *iPadIconFilename = bit_validAppIconStringFromIcons(resourceBundle, icons);
     if (iPadIconFilename && !iconFilename) {
       iconFilename = iPadIconFilename;
     }
@@ -314,12 +327,12 @@ NSString *bit_validAppIconFilename(NSBundle *bundle) {
   if (!iconFilename) {
     NSString *tempFilename = [bundle objectForInfoDictionaryKey:@"CFBundleIconFile"];
     if (tempFilename) {
-      iconFilename = bit_validAppIconStringFromIcons(@[tempFilename]);
+      iconFilename = bit_validAppIconStringFromIcons(resourceBundle, @[tempFilename]);
     }
   }
   
   if (!iconFilename) {
-    iconFilename = bit_validAppIconStringFromIcons(@[@"Icon.png"]);
+    iconFilename = bit_validAppIconStringFromIcons(resourceBundle, @[@"Icon.png"]);
   }
   
   return iconFilename;
