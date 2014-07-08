@@ -294,7 +294,7 @@
   }
   [self updateAppStoreHeader];
   
-  NSString *iconFilename = bit_validAppIconFilename([NSBundle mainBundle]);
+  NSString *iconFilename = bit_validAppIconFilename([NSBundle mainBundle], [NSBundle mainBundle]);
   if (iconFilename) {
     BOOL addGloss = YES;
     NSNumber *prerendered = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"UIPrerenderedIcon"];
