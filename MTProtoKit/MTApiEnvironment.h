@@ -10,7 +10,7 @@
 
 @interface MTApiEnvironment : NSObject
 
-@property (nonatomic, readonly) int32_t apiId;
+@property (nonatomic) int32_t apiId;
 @property (nonatomic, strong, readonly) NSString *deviceModel;
 @property (nonatomic, strong, readonly) NSString *systemVersion;
 @property (nonatomic, strong, readonly) NSString *appVersion;

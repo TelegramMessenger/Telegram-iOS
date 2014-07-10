@@ -51,7 +51,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     
     MTTimer *_connectionWatchdogTimer;
     MTTimer *_sleepWatchdogTimer;
-    MTAbsoluteTime _sleepWatchdogTimerLastTime;
+    CFAbsoluteTime _sleepWatchdogTimerLastTime;
 }
 
 @end
@@ -228,7 +228,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
             __weak MTTcpTransport *weakSelf = self;
             _sleepWatchdogTimer = [[MTTimer alloc] initWithTimeout:MTTcpTransportSleepWatchdogTimeout repeat:true completion:^
             {
-                MTAbsoluteTime currentTime = MTAbsoluteSystemTime();
+                CFAbsoluteTime currentTime = CFAbsoluteTimeGetCurrent();
                 
                 __strong MTTcpTransport *strongSelf = weakSelf;
                 if (strongSelf != nil)

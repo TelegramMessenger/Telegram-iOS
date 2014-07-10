@@ -53,7 +53,7 @@
         _requests = [[NSMutableArray alloc] init];
         _dropReponseContexts = [[NSMutableArray alloc] init];
         
-        _apiEnvironment = [[MTApiEnvironment alloc] init];
+        _apiEnvironment = context.apiEnvironment;
     }
     return self;
 }

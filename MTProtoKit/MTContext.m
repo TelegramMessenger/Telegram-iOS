@@ -64,15 +64,16 @@
     self = [super init];
     if (self != nil)
     {
-        NSAssert(false, @"use initWithSerialization");
+        NSAssert(false, @"use initWithSerialization:apiEnvironment:");
     }
     return self;
 }
 
-- (instancetype)initWithSerialization:(id<MTSerialization>)serialization
+- (instancetype)initWithSerialization:(id<MTSerialization>)serialization apiEnvironment:(MTApiEnvironment *)apiEnvironment
 {
 #ifdef DEBUG
-    NSAssert(serialization != nil, @"serialization shouold not be nil");
+    NSAssert(serialization != nil, @"serialization should not be nil");
+    NSAssert(apiEnvironment != nil, @"apiEnvironment should not be nil");
 #endif
     
     self = [super init];
@@ -81,6 +82,7 @@
         arc4random_buf(&_uniqueId, sizeof(_uniqueId));
         
         _serialization = serialization;
+        _apiEnvironment = apiEnvironment;
         
         _datacenterSeedAddressSetById = [[NSMutableDictionary alloc] init];
         

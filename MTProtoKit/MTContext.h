@@ -14,6 +14,7 @@
 @class MTTransportScheme;
 @class MTKeychain;
 @class MTSessionInfo;
+@class MTApiEnvironment;
 
 @protocol MTContextChangeListener <NSObject>
 
@@ -31,8 +32,9 @@
 @property (nonatomic, strong) MTKeychain *keychain;
 
 @property (nonatomic, strong, readonly) id<MTSerialization> serialization;
+@property (nonatomic, strong, readonly) MTApiEnvironment *apiEnvironment;
 
-- (instancetype)initWithSerialization:(id<MTSerialization>)serialization;
+- (instancetype)initWithSerialization:(id<MTSerialization>)serialization apiEnvironment:(MTApiEnvironment *)apiEnvironment;
 
 - (void)performBatchUpdates:(void (^)())block;
 
