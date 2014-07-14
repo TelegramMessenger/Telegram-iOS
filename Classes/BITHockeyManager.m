@@ -162,6 +162,15 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
   return self;
 }
 
+- (void)dealloc {
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
+  // start Authenticator
+  if (![self isAppStoreEnvironment]) {
+    [_authenticator removeObserver:self forKeyPath:@"identified"];
+  }
+#endif
+}
+
 
 #pragma mark - Public Instance Methods (Configuration)
 
