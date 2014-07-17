@@ -6,7 +6,7 @@
 //
 //
 
-#import <SenTestingKit/SenTestingKit.h>
+#import <XCTest/XCTest.h>
 
 #define HC_SHORTHAND
 #import <OCHamcrestIOS/OCHamcrestIOS.h>
@@ -45,7 +45,7 @@
 
 static void *kInstallationIdentification = &kInstallationIdentification;
 
-@interface BITAuthenticatorTests : SenTestCase
+@interface BITAuthenticatorTests : XCTestCase
 @end
 
 @implementation BITAuthenticatorTests {
@@ -84,7 +84,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 
 #pragma mark - Setup Tests
 - (void) testThatItInstantiates {
-  STAssertNotNil(_sut, @"Should be there");
+  XCTAssertNotNil(_sut, @"Should be there");
 }
 
 #pragma mark - Persistence Tests

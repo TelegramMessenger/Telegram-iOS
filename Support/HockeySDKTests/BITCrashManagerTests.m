@@ -6,7 +6,7 @@
 //
 //
 
-#import <SenTestingKit/SenTestingKit.h>
+#import <XCTest/XCTest.h>
 
 #define HC_SHORTHAND
 #import <OCHamcrestIOS/OCHamcrestIOS.h>
@@ -25,7 +25,7 @@
 
 #define kBITCrashMetaAttachment @"BITCrashMetaAttachment"
 
-@interface BITCrashManagerTests : SenTestCase
+@interface BITCrashManagerTests : XCTestCase
 
 @end
 
@@ -75,7 +75,7 @@
 #pragma mark - Setup Tests
 
 - (void)testThatItInstantiates {
-  STAssertNotNil(_sut, @"Should be there");
+  XCTAssertNotNil(_sut, @"Should be there");
 }
 
 

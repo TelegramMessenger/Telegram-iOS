@@ -6,7 +6,7 @@
 //
 //
 
-#import <SenTestingKit/SenTestingKit.h>
+#import <XCTest/XCTest.h>
 
 #define HC_SHORTHAND
 #import <OCHamcrestIOS/OCHamcrestIOS.h>
@@ -19,7 +19,7 @@
 #import "BITKeychainUtils.h"
 
 
-@interface BITHockeyHelperTests : SenTestCase
+@interface BITHockeyHelperTests : XCTestCase
 
 @end
 
