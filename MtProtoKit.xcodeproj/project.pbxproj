@@ -246,8 +246,8 @@
 		D063A35C18B164BA00C65116 /* MTTimeSyncMessageService.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A35918B164BA00C65116 /* MTTimeSyncMessageService.h */; };
 		D063A35D18B164BA00C65116 /* MTTimeSyncMessageService.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A35A18B164BA00C65116 /* MTTimeSyncMessageService.m */; };
 		D063A35E18B164BA00C65116 /* MTTimeSyncMessageService.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A35A18B164BA00C65116 /* MTTimeSyncMessageService.m */; };
-		D063A36918B164D600C65116 /* MTApiEnvironment.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A35F18B164D600C65116 /* MTApiEnvironment.h */; };
-		D063A36A18B164D600C65116 /* MTApiEnvironment.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A35F18B164D600C65116 /* MTApiEnvironment.h */; };
+		D063A36918B164D600C65116 /* MTApiEnvironment.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A35F18B164D600C65116 /* MTApiEnvironment.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D063A36A18B164D600C65116 /* MTApiEnvironment.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A35F18B164D600C65116 /* MTApiEnvironment.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D063A36B18B164D600C65116 /* MTApiEnvironment.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A36018B164D600C65116 /* MTApiEnvironment.m */; };
 		D063A36C18B164D600C65116 /* MTApiEnvironment.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A36018B164D600C65116 /* MTApiEnvironment.m */; };
 		D063A36D18B164D600C65116 /* MTDropResponseContext.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A36118B164D600C65116 /* MTDropResponseContext.h */; };
