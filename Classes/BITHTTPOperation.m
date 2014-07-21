@@ -65,6 +65,7 @@
   
   if (![[NSThread currentThread] isMainThread]) {
     [self performSelector:@selector(start) onThread:NSThread.mainThread withObject:nil waitUntilDone:NO];
+    return;
   }
   
   if(self.isCancelled) {
