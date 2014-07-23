@@ -44,6 +44,8 @@
 		1E1127C916580C87007067A2 /* buttonRoundedRegular@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E1127C116580C87007067A2 /* buttonRoundedRegular@2x.png */; };
 		1E1127CA16580C87007067A2 /* buttonRoundedRegularHighlighted.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E1127C216580C87007067A2 /* buttonRoundedRegularHighlighted.png */; };
 		1E1127CB16580C87007067A2 /* buttonRoundedRegularHighlighted@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E1127C316580C87007067A2 /* buttonRoundedRegularHighlighted@2x.png */; };
+		1E494AEC19491943001EFF74 /* AppIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E494AEA19491943001EFF74 /* AppIcon.png */; };
+		1E494AED19491943001EFF74 /* AppIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E494AEB19491943001EFF74 /* AppIcon@2x.png */; };
 		1E49A43C1612223B00463151 /* BITFeedbackComposeViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A42D1612223B00463151 /* BITFeedbackComposeViewController.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E49A43F1612223B00463151 /* BITFeedbackComposeViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A42E1612223B00463151 /* BITFeedbackComposeViewController.m */; };
 		1E49A4421612223B00463151 /* BITFeedbackListViewCell.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A42F1612223B00463151 /* BITFeedbackListViewCell.h */; };
@@ -192,6 +194,8 @@
 		1E1127C316580C87007067A2 /* buttonRoundedRegularHighlighted@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "buttonRoundedRegularHighlighted@2x.png"; sourceTree = "<group>"; };
 		1E20A57F181E9D4600D5B770 /* nl */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = nl; path = nl.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		1E36D8B816667611000B134C /* hr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = hr; path = hr.lproj/HockeySDK.strings; sourceTree = "<group>"; };
+		1E494AEA19491943001EFF74 /* AppIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = AppIcon.png; sourceTree = "<group>"; };
+		1E494AEB19491943001EFF74 /* AppIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AppIcon@2x.png"; sourceTree = "<group>"; };
 		1E49A42D1612223B00463151 /* BITFeedbackComposeViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITFeedbackComposeViewController.h; sourceTree = "<group>"; };
 		1E49A42E1612223B00463151 /* BITFeedbackComposeViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITFeedbackComposeViewController.m; sourceTree = "<group>"; };
 		1E49A42F1612223B00463151 /* BITFeedbackListViewCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITFeedbackListViewCell.h; sourceTree = "<group>"; };
@@ -506,6 +510,8 @@
 		1EA1170216F53B49001C015C /* Fixtures */ = {
 			isa = PBXGroup;
 			children = (
+				1E494AEA19491943001EFF74 /* AppIcon.png */,
+				1E494AEB19491943001EFF74 /* AppIcon@2x.png */,
 				1EA1170316F53B49001C015C /* StoreBundleIdentifierUnknown.json */,
 				1EA1170816F53E3A001C015C /* StoreBundleIdentifierKnown.json */,
 				1E70A22F17F2F982001BB32D /* live_report_empty.plcrash */,
@@ -814,12 +820,14 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1E494AEC19491943001EFF74 /* AppIcon.png in Resources */,
 				1EA1170C16F54A64001C015C /* HockeySDKResources.bundle in Resources */,
 				1E5A459B16F0DFC200B55C04 /* InfoPlist.strings in Resources */,
 				1E70A23417F2F982001BB32D /* live_report_signal.plcrash in Resources */,
 				1EA1170416F53B49001C015C /* StoreBundleIdentifierUnknown.json in Resources */,
 				1E70A23317F2F982001BB32D /* live_report_exception.plcrash in Resources */,
 				1E70A23217F2F982001BB32D /* live_report_empty.plcrash in Resources */,
+				1E494AED19491943001EFF74 /* AppIcon@2x.png in Resources */,
 				1EA1170916F53E3A001C015C /* StoreBundleIdentifierKnown.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

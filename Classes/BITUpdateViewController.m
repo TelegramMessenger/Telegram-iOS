@@ -294,57 +294,19 @@
   }
   [self updateAppStoreHeader];
   
-  NSString *iconString = nil;
-  NSArray *icons = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIconFiles"];
-  if (!icons) {
-    icons = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIcons"];
-    if ((icons) && ([icons isKindOfClass:[NSDictionary class]])) {
-      icons = [icons valueForKeyPath:@"CFBundlePrimaryIcon.CFBundleIconFiles"];
+  NSString *iconFilename = bit_validAppIconFilename([NSBundle mainBundle], [NSBundle mainBundle]);
+  if (iconFilename) {
+    BOOL addGloss = YES;
+    NSNumber *prerendered = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"UIPrerenderedIcon"];
+    if (prerendered) {
+      addGloss = ![prerendered boolValue];
     }
     
-    if (!icons) {
-      iconString = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIconFile"];
-      if (!iconString) {
-        iconString = @"Icon.png";
-      }
+    if (addGloss && [self.updateManager isPreiOS7Environment]) {
+      _appStoreHeader.iconImage = [self addGlossToImage:[UIImage imageNamed:iconFilename]];
+    } else {
+      _appStoreHeader.iconImage = [UIImage imageNamed:iconFilename];
     }
-  } 
-  
-  if (icons) {
-    BOOL useHighResIcon = NO;
-    BOOL useiPadIcon = NO;
-    if ([UIScreen mainScreen].scale == 2.0f) useHighResIcon = YES;
-    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) useiPadIcon = YES;
-
-    for(NSString *icon in icons) {
-      iconString = icon;
-      UIImage *iconImage = [UIImage imageNamed:icon];
-      
-      if (
-          (iconImage.size.height == 57 && !useHighResIcon && !useiPadIcon) ||
-          (iconImage.size.height == 114 && useHighResIcon && !useiPadIcon) ||
-          (iconImage.size.height == 120 && useHighResIcon && !useiPadIcon) ||
-          (iconImage.size.height == 72 && !useHighResIcon && useiPadIcon) ||
-          (iconImage.size.height == 76 && !useHighResIcon && useiPadIcon) ||
-          (iconImage.size.height == 144 && !useHighResIcon && useiPadIcon) ||
-          (iconImage.size.height == 152 && useHighResIcon && useiPadIcon)
-          ) {
-        // found!
-        break;
-      }
-    }
-  }
-  
-  BOOL addGloss = YES;
-  NSNumber *prerendered = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"UIPrerenderedIcon"];
-  if (prerendered) {
-    addGloss = ![prerendered boolValue];
-  }
-  
-  if (addGloss && [self.updateManager isPreiOS7Environment]) {
-    _appStoreHeader.iconImage = [self addGlossToImage:[UIImage imageNamed:iconString]];
-  } else {
-    _appStoreHeader.iconImage = [UIImage imageNamed:iconString];
   }
   
   self.tableView.tableHeaderView = _appStoreHeader;

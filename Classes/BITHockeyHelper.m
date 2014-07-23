@@ -216,6 +216,127 @@ NSString *bit_appAnonID(void) {
   return appAnonID;
 }
 
+BOOL bit_isPreiOS7Environment(void) {
+  static BOOL isPreiOS7Environment = YES;
+  static dispatch_once_t checkOS;
+  
+  dispatch_once(&checkOS, ^{
+    // we only perform this runtime check if this is build against at least iOS7 base SDK
+#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
+    // runtime check according to
+    // https://developer.apple.com/library/prerelease/ios/documentation/UserExperience/Conceptual/TransitionGuide/SupportingEarlieriOS.html
+    if (floor(NSFoundationVersionNumber) <= NSFoundationVersionNumber_iOS_6_1) {
+      isPreiOS7Environment = YES;
+    } else {
+      isPreiOS7Environment = NO;
+    }
+#else
+    isPreiOS7Environment = YES;
+#endif
+  });
+  
+  return isPreiOS7Environment;
+}
+
+/**
+ Find a valid app icon filename that points to a proper app icon image
+ 
+ @param icons NSArray with app icon filenames
+ 
+ @return NSString with the valid app icon or nil if none found
+ */
+NSString *bit_validAppIconStringFromIcons(NSBundle *resourceBundle, NSArray *icons) {
+  if (!icons) return nil;
+  if (![icons isKindOfClass:[NSArray class]]) return nil;
+  
+  BOOL useHighResIcon = NO;
+  BOOL useiPadIcon = NO;
+  if ([UIScreen mainScreen].scale == 2.0f) useHighResIcon = YES;
+  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) useiPadIcon = YES;
+  
+  NSString *currentBestMatch = nil;
+  float currentBestMatchHeight = 0;
+  float bestMatchHeight = 0;
+
+  if (bit_isPreiOS7Environment()) {
+    bestMatchHeight = useiPadIcon ? (useHighResIcon ? 144 : 72) : (useHighResIcon ? 114 : 57);
+  } else {
+    bestMatchHeight = useiPadIcon ? (useHighResIcon ? 152 : 76) : 120;
+  }
+  
+  for(NSString *icon in icons) {
+    // Don't use imageNamed, otherwise unit tests won't find the fixture icon
+    // and using imageWithContentsOfFile doesn't load @2x files with absolut paths (required in tests)
+
+    NSString *iconPathExtension = ([[icon pathExtension] length] > 0) ? [icon pathExtension] : @"png";
+    NSMutableArray *iconFilenameVariants = [NSMutableArray new];
+    
+    [iconFilenameVariants addObject:[icon stringByDeletingPathExtension]];
+    [iconFilenameVariants addObject:[NSString stringWithFormat:@"%@@2x", [icon stringByDeletingPathExtension]]];
+    
+    for (NSString *iconFilename in iconFilenameVariants) {
+      // this call already covers "~ipad" files
+      NSString *iconPath = [resourceBundle pathForResource:iconFilename ofType:iconPathExtension];
+      
+      NSData *imgData = [[NSData alloc] initWithContentsOfFile:iconPath];
+    
+      UIImage *iconImage = [[UIImage alloc] initWithData:imgData];
+      
+      if (iconImage) {
+        if (iconImage.size.height == bestMatchHeight) {
+          return iconFilename;
+        } else if (iconImage.size.height < bestMatchHeight &&
+                   iconImage.size.height > currentBestMatchHeight) {
+          currentBestMatchHeight = iconImage.size.height;
+          currentBestMatch = iconFilename;
+        }
+      }
+    }
+  }
+  
+  return currentBestMatch;
+}
+
+NSString *bit_validAppIconFilename(NSBundle *bundle, NSBundle *resourceBundle) {
+  NSString *iconFilename = nil;
+  NSArray *icons = nil;
+  
+  icons = [bundle objectForInfoDictionaryKey:@"CFBundleIconFiles"];
+  iconFilename = bit_validAppIconStringFromIcons(resourceBundle, icons);
+  
+  if (!iconFilename) {
+    icons = [bundle objectForInfoDictionaryKey:@"CFBundleIcons"];
+    if (icons && [icons isKindOfClass:[NSDictionary class]]) {
+      icons = [icons valueForKeyPath:@"CFBundlePrimaryIcon.CFBundleIconFiles"];
+    }
+    iconFilename = bit_validAppIconStringFromIcons(resourceBundle, icons);
+  }
+  
+  // we test iPad structure anyway and use it if we find a result and don't have another one yet
+  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+    icons = [bundle objectForInfoDictionaryKey:@"CFBundleIcons~ipad"];
+    if (icons && [icons isKindOfClass:[NSDictionary class]]) {
+      icons = [icons valueForKeyPath:@"CFBundlePrimaryIcon.CFBundleIconFiles"];
+    }
+    NSString *iPadIconFilename = bit_validAppIconStringFromIcons(resourceBundle, icons);
+    if (iPadIconFilename && !iconFilename) {
+      iconFilename = iPadIconFilename;
+    }
+  }
+
+  if (!iconFilename) {
+    NSString *tempFilename = [bundle objectForInfoDictionaryKey:@"CFBundleIconFile"];
+    if (tempFilename) {
+      iconFilename = bit_validAppIconStringFromIcons(resourceBundle, @[tempFilename]);
+    }
+  }
+  
+  if (!iconFilename) {
+    iconFilename = bit_validAppIconStringFromIcons(resourceBundle, @[@"Icon.png"]);
+  }
+  
+  return iconFilename;
+}
 
 #pragma mark UIImage private helpers
 

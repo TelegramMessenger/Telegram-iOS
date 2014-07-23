@@ -46,6 +46,10 @@ NSString *bit_appName(NSString *placeHolderString);
 NSString *bit_UUIDPreiOS6(void);
 NSString *bit_UUID(void);
 NSString *bit_appAnonID(void);
+BOOL bit_isPreiOS7Environment(void);
+
+NSString *bit_validAppIconStringFromIcons(NSBundle *resourceBundle, NSArray *icons);
+NSString *bit_validAppIconFilename(NSBundle *bundle, NSBundle *resourceBundle);
 
 /* UIImage helpers */
 UIImage *bit_roundedCornerImage(UIImage *inputImage, NSInteger cornerSize, NSInteger borderSize);
