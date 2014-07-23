@@ -27,6 +27,13 @@
 - [UPDATE] `BITCrashManager`: Crash reports are now send individually if there are multiple pending
 - [UPDATE] Removed support for Atlassian JMC
 - [BUGFIX] Fixed an incorrect submission warning about referencing non-public selector `attachmentData`
+
+## Version 3.5.6
+
+- [UPDATE] `BITCrashManager`: Updated PLCrashReporter to version 1.2
+- [UPDATE] `BITUpdateManager`: Improved algorithm to find the optimal app icon
+- [BUGFIX] `BITAuthenticator`: Fixed problem with authorization and iOS 8
+- [BUGFIX] Fixed a problem with integration test and iOS 8 
 <br /><br/>
 
 ## Version 3.5.5
