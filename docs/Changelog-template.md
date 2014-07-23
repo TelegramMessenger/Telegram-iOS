@@ -1,3 +1,11 @@
+## Version 3.5.6
+
+- [UPDATE] `BITCrashManager`: Updated PLCrashReporter to version 1.2
+- [UPDATE] `BITUpdateManager`: Improved algorithm to find the optimal app icon
+- [BUGFIX] `BITAuthenticator`: Fixed problem with authorization and iOS 8
+- [BUGFIX] Fixed a problem with integration test and iOS 8 
+<br /><br/>
+
 ## Version 3.5.5
 
 - [NEW] `BITCrashManager`: Added support for adding a binary attachment to crash reports
