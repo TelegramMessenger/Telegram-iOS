@@ -430,18 +430,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     
     _fileManager = [[NSFileManager alloc] init];
     
-    // temporary directory for crashes grabbed from PLCrashReporter
-    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
-    _updateDir = [[paths objectAtIndex:0] stringByAppendingPathComponent:BITHOCKEY_IDENTIFIER];
-    
-    if (![_fileManager fileExistsAtPath:_updateDir]) {
-      NSDictionary *attributes = [NSDictionary dictionaryWithObject: [NSNumber numberWithUnsignedLong: 0755] forKey: NSFilePosixPermissions];
-      NSError *theError = NULL;
-      
-      [_fileManager createDirectoryAtPath:_updateDir withIntermediateDirectories: YES attributes: attributes error: &theError];
-    }
-    
-    _usageDataFile = [_updateDir stringByAppendingPathComponent:BITHOCKEY_USAGE_DATA];
+    _usageDataFile = [bit_settingsDir() stringByAppendingPathComponent:BITHOCKEY_USAGE_DATA];
     
     [self loadAppCache];
     
