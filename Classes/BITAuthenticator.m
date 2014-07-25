@@ -340,6 +340,12 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 - (NSDictionary*) validationParameters {
   NSParameterAssert(self.installationIdentifier);
   NSParameterAssert(self.installationIdentifierParameterString);
+  
+  NSString *installString = bit_appAnonID();
+  if (installString) {
+    return @{self.installationIdentifierParameterString : self.installationIdentifier, @"install_string": installString};
+  }
+  
   return @{self.installationIdentifierParameterString : self.installationIdentifier};
 }
 
@@ -455,6 +461,19 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     NSString *authValue = [NSString stringWithFormat:@"Basic %@", bit_base64String(authData, authData.length)];
     [request setValue:authValue forHTTPHeaderField:@"Authorization"];
   }
+  
+  NSMutableData *postBody = [NSMutableData data];
+  NSString *boundary = @"----FOO";
+  
+  NSString *installString = bit_appAnonID();
+  if (installString) {
+    [postBody appendData:[BITHockeyAppClient dataWithPostValue:installString forKey:@"install_string" boundary:boundary]];
+  }
+  [postBody appendData:[[NSString stringWithFormat:@"--%@--\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
+  
+  
+  [request setHTTPBody:postBody];
+
   return request;
 }
 
