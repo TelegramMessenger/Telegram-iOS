@@ -440,16 +440,20 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 
 - (NSURLRequest *) requestForAuthenticationEmail:(NSString*) email password:(NSString*) password {
   NSString *authenticationPath = [self authenticationPath];
-  NSDictionary *params = nil;
+  NSMutableDictionary *params = [NSMutableDictionary dictionary];
   
+  NSString *installString = bit_appAnonID();
+  if (installString) {
+    params[@"install_string"] = installString;
+  }
+
   if(BITAuthenticatorIdentificationTypeHockeyAppEmail == self.identificationType) {
     NSString *authCode = BITHockeyMD5([NSString stringWithFormat:@"%@%@",
                                        self.authenticationSecret ? : @"",
                                        email ? : @""]);
-    params = @{
-               @"email" : email ? : @"",
-               @"authcode" : authCode.lowercaseString,
-               };
+    
+    params[@"email"] = email ? : @"";
+    params[@"authcode"] = authCode.lowercaseString;
   }
   
   NSMutableURLRequest *request = [self.hockeyAppClient requestWithMethod:@"POST"
@@ -462,18 +466,6 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     [request setValue:authValue forHTTPHeaderField:@"Authorization"];
   }
   
-  NSMutableData *postBody = [NSMutableData data];
-  NSString *boundary = @"----FOO";
-  
-  NSString *installString = bit_appAnonID();
-  if (installString) {
-    [postBody appendData:[BITHockeyAppClient dataWithPostValue:installString forKey:@"install_string" boundary:boundary]];
-  }
-  [postBody appendData:[[NSString stringWithFormat:@"--%@--\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
-  
-  
-  [request setHTTPBody:postBody];
-
   return request;
 }
 
