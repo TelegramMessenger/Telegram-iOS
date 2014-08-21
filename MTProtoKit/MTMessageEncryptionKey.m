@@ -77,4 +77,15 @@
     return result;
 }
 
+- (instancetype)initWithKey:(NSData *)key iv:(NSData *)iv
+{
+    self = [super init];
+    if (self != nil)
+    {
+        _key = key;
+        _iv = iv;
+    }
+    return self;
+}
+
 @end
