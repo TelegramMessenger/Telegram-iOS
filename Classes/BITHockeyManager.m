@@ -212,7 +212,10 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 
 - (void)startManager {
   if (!_validAppIdentifier) return;
-  if (_startManagerIsInvoked) return;
+  if (_startManagerIsInvoked) {
+    NSLog(@"[HockeySDK] Warning: startManager should only be invoked once! This call is ignored.");
+    return;
+  }
   
   if (![self isSetUpOnMainThread]) return;
   
@@ -588,7 +591,10 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 }
 
 - (void)initializeModules {
-  if (_managersInitialized) return;
+  if (_managersInitialized) {
+    NSLog(@"[HockeySDK] Warning: The SDK should only be initialized once! This call is ignored.");
+    return;
+  }
   
   _validAppIdentifier = [self checkValidityOfAppIdentifier:_appIdentifier];
   
