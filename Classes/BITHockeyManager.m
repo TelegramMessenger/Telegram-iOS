@@ -88,6 +88,8 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
   
   BOOL _startUpdateManagerIsInvoked;
   
+  BOOL _managersInitialized;
+  
   BITHockeyAppClient *_hockeyAppClient;
 }
 
@@ -134,6 +136,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
   if ((self = [super init])) {
     _serverURL = nil;
     _delegate = nil;
+    _managersInitialized = NO;
     
     _hockeyAppClient = nil;
     
@@ -209,6 +212,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 
 - (void)startManager {
   if (!_validAppIdentifier) return;
+  if (_startManagerIsInvoked) return;
   
   if (![self isSetUpOnMainThread]) return;
   
@@ -584,6 +588,8 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 }
 
 - (void)initializeModules {
+  if (_managersInitialized) return;
+  
   _validAppIdentifier = [self checkValidityOfAppIdentifier:_appIdentifier];
   
   if (![self isSetUpOnMainThread]) return;
@@ -628,6 +634,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
         [self pingServerForIntegrationStartWorkflowWithTimeString:integrationFlowTime appIdentifier:_appIdentifier];
       }
     }
+    _managersInitialized = YES;
   } else {
     [self logInvalidIdentifier:@"app identifier"];
   }
