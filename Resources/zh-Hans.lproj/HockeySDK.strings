@@ -213,16 +213,16 @@
 "HockeyFeedbackComposeSend" = "发送";
 
 /* Add Image button for attachment actions */
-"HockeyFeedbackComposeAttachmentAddImage" = "+ Add Image";
+"HockeyFeedbackComposeAttachmentAddImage" = "Add Image";
 
 /* Edit button for attachment actions */
-"HockeyFeedbackComposeAttachmentEdit" = "Edit Attachment";
+"HockeyFeedbackComposeAttachmentEdit" = "Edit Image";
 
 /* Delete button for attachment actions */
-"HockeyFeedbackComposeAttachmentDelete" = "Delete Attachment";
+"HockeyFeedbackComposeAttachmentDelete" = "Delete Image";
 
 /* Cancel button for attachment actions */
-"HockeyFeedbackComposeAttachmentCancel" = "Cancel";
+"HockeyFeedbackComposeAttachmentCancel" = "取消";
 
 
 /* Set User Data */

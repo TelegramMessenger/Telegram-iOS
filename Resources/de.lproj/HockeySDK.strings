@@ -213,13 +213,13 @@
 "HockeyFeedbackComposeSend" = "Senden";
 
 /* Add Image button for attachment actions */
-"HockeyFeedbackComposeAttachmentAddImage" = "+ Bild hinzufügen";
+"HockeyFeedbackComposeAttachmentAddImage" = "Bild hinzufügen";
 
 /* Edit button for attachment actions */
-"HockeyFeedbackComposeAttachmentEdit" = "Anhang bearbeiten";
+"HockeyFeedbackComposeAttachmentEdit" = "Bild bearbeiten";
 
 /* Delete button for attachment actions */
-"HockeyFeedbackComposeAttachmentDelete" = "Anhang löschen";
+"HockeyFeedbackComposeAttachmentDelete" = "Bild löschen";
 
 /* Cancel button for attachment actions */
 "HockeyFeedbackComposeAttachmentCancel" = "Abbrechen";

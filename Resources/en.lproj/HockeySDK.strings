@@ -1,4 +1,4 @@
-﻿/*
+/*
  Localization provided by Wordcrafts
  The Mac OS X and iOS localization experts.
  http://www.wordcrafts.de
@@ -213,13 +213,13 @@
 "HockeyFeedbackComposeSend" = "Send";
 
 /* Add Image button for attachment actions */
-"HockeyFeedbackComposeAttachmentAddImage" = "+ Add Image";
+"HockeyFeedbackComposeAttachmentAddImage" = "Add Image";
 
 /* Edit button for attachment actions */
-"HockeyFeedbackComposeAttachmentEdit" = "Edit Attachment";
+"HockeyFeedbackComposeAttachmentEdit" = "Edit Image";
 
 /* Delete button for attachment actions */
-"HockeyFeedbackComposeAttachmentDelete" = "Delete Attachment";
+"HockeyFeedbackComposeAttachmentDelete" = "Delete Image";
 
 /* Cancel button for attachment actions */
 "HockeyFeedbackComposeAttachmentCancel" = "Cancel";
