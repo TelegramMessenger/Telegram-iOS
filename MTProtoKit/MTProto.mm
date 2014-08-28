@@ -1709,7 +1709,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             }
         }
         
-        return nil;
+        return 0;
     }];
     
     if (topObject == nil)
