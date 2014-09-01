@@ -106,6 +106,23 @@
 - (BOOL)updateManagerShouldSendUsageData:(BITUpdateManager *)updateManager;
 
 
+///-----------------------------------------------------------------------------
+/// @name Events
+///-----------------------------------------------------------------------------
+
+/** Implement this method to be notified before an update starts.
+ 
+ The update manager will send this delegate message _just_ before the system
+ call to update the application is placed, but after the user has already chosen
+ to install the update.
+ 
+ There is no guarantee that the update will actually start after this delegate
+ message is sent.
+
+ @param updateManager The `BITUpdateManager` instance invoking this delegate
+ */
+- (BOOL)willStartDownloadAndUpdate:(BITUpdateManager *)updateManager;
+
 #pragma mark - Deprecated
 
 ///-----------------------------------------------------------------------------
