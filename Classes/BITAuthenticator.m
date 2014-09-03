@@ -171,7 +171,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 
 - (void) identifyWithCompletion:(void (^)(BOOL identified, NSError *))completion {
   if(_authenticationController) {
-    BITHockeyLog(@"Authentication controller already visible. Ingoring identify request");
+    BITHockeyLog(@"Authentication controller already visible. Ignoring identify request");
     if(completion) completion(NO, nil);
     return;
   }
