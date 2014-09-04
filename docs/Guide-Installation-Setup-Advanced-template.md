@@ -79,11 +79,13 @@ The SDK runs on devices with iOS 5.0 or higher.
 <a id="modify"></a> 
 ## Modify Code
 
+### Objective-C
+
 1. Open your `AppDelegate.m` file.
 
 2. Add the following line at the top of the file below your own #import statements:
 
-        #import "HockeySDK.h"
+        #import <HockeySDK/HockeySDK.h>
 
 3. Search for the method `application:didFinishLaunchingWithOptions:`
 
@@ -93,9 +95,32 @@ The SDK runs on devices with iOS 5.0 or higher.
         [[BITHockeyManager sharedHockeyManager] startManager];
         [[BITHockeyManager sharedHockeyManager].authenticator authenticateInstallation];
 
-5. Replace `APP_IDENTIFIER` with the app identifier of your beta app. If you don't know what the app identifier is or how to find it, please read [this how-to](http://support.hockeyapp.net/kb/how-tos/how-to-find-the-app-identifier). 
+5. Continue with [General subsection](#generalcode)
 
-6. If you want to see beta analytics, use the beta distribution feature with in-app updates, restrict versions to specific users, or want to know who is actually testing your app, you need to follow the instructions on our guide [Identify and authenticate users of Ad-Hoc or Enterprise builds](HowTo-Authenticating-Users-on-iOS)
+### Swift
+
+1. Add the following line to your [Objective-C bridging header](https://developer.apple.com/library/prerelease/ios/documentation/Swift/Conceptual/BuildingCocoaApps/MixandMatch.html) file:
+
+        #import <HockeySDK/HockeySDK.h>
+
+2. Open your `AppDelegate.swift` file.
+
+3. Search for the method `application(application: UIApplication, didFinishLaunchingWithOptions launchOptions: [NSObject: AnyObject]?) -> Bool`
+
+4. Add the following lines:
+
+        BITHockeyManager.sharedHockeyManager().configureWithIdentifier("APP_IDENTIFIER");
+        BITHockeyManager.sharedHockeyManager().startManager();
+        BITHockeyManager.sharedHockeyManager().authenticator.authenticateInstallation();
+
+5. Continue with [General subsection](#generalcode)
+
+<a id="generalcode"></a>
+### General
+
+1. Replace `APP_IDENTIFIER` with the app identifier of your beta app. If you don't know what the app identifier is or how to find it, please read [this how-to](http://support.hockeyapp.net/kb/how-tos/how-to-find-the-app-identifier). 
+
+2. If you want to see beta analytics, use the beta distribution feature with in-app updates, restrict versions to specific users, or want to know who is actually testing your app, you need to follow the instructions on our guide [Identify and authenticate users of Ad-Hoc or Enterprise builds](HowTo-Authenticating-Users-on-iOS)
 
 *Note:* The SDK is optimized to defer everything possible to a later time while making sure e.g. crashes on startup can also be caught and each module executes other code with a delay some seconds. This ensures that applicationDidFinishLaunching will process as fast as possible and the SDK will not block the startup sequence resulting in a possible kill by the watchdog process.
 
