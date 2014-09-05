@@ -342,7 +342,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 
 - (void)setDelegate:(id<BITHockeyManagerDelegate>)delegate {
   if (![self isAppStoreEnvironment]) {
-    if (!_startManagerIsInvoked) {
+    if (_startManagerIsInvoked) {
       NSLog(@"[HockeySDK] ERROR: The `delegate` property has to be set before calling [[BITHockeyManager sharedHockeyManager] startManager] !");
     }
   }
