@@ -6,7 +6,7 @@
 //
 //
 
-#import <SenTestingKit/SenTestingKit.h>
+#import <XCTest/XCTest.h>
 
 #define HC_SHORTHAND
 #import <OCHamcrestIOS/OCHamcrestIOS.h>
@@ -19,7 +19,7 @@
 #import "BITHTTPOperation.h"
 #import "BITTestHelper.h"
 
-@interface BITHockeyAppClientTests : SenTestCase
+@interface BITHockeyAppClientTests : XCTestCase
 @end
 
 @implementation BITHockeyAppClientTests {
@@ -57,7 +57,7 @@
 
 #pragma mark - Setup Tests
 - (void) testThatItInstantiates {
-  STAssertNotNil(_sut, @"Should be there");
+  XCTAssertNotNil(_sut, @"Should be there");
 }
 
 #pragma mark - Networking base tests

@@ -6,7 +6,7 @@
 //
 //
 
-#import <SenTestingKit/SenTestingKit.h>
+#import <XCTest/XCTest.h>
 
 // Uncomment the next two lines to use OCHamcrest for test assertions:
 #define HC_SHORTHAND
@@ -25,7 +25,7 @@
 #import "BITTestHelper.h"
 
 
-@interface BITStoreUpdateManagerTests : SenTestCase
+@interface BITStoreUpdateManagerTests : XCTestCase
 
 @end
 
@@ -83,7 +83,7 @@
   
   BOOL result = [_storeUpdateManager shouldAutoCheckForUpdates];
   
-  STAssertTrue(result, @"Checking daily first time ever");
+  XCTAssertTrue(result, @"Checking daily first time ever");
 }
 
 - (void)testUpdateCheckDailyFirstTimeTodayLastCheckPreviousDay {
@@ -96,7 +96,7 @@
   
   BOOL result = [_storeUpdateManager shouldAutoCheckForUpdates];
   
-  STAssertTrue(result, @"Checking daily first time today with last check done previous day");
+  XCTAssertTrue(result, @"Checking daily first time today with last check done previous day");
 }
 
 - (void)testUpdateCheckDailySecondTimeOfTheDay {
@@ -108,7 +108,7 @@
   
   BOOL result = [_storeUpdateManager shouldAutoCheckForUpdates];
   
-  STAssertFalse(result, @"Checking daily second time of the day");
+  XCTAssertFalse(result, @"Checking daily second time of the day");
 }
 
 - (void)testUpdateCheckWeeklyFirstTimeEver {
@@ -120,7 +120,7 @@
   
   BOOL result = [_storeUpdateManager shouldAutoCheckForUpdates];
   
-  STAssertTrue(result, @"Checking weekly first time ever");
+  XCTAssertTrue(result, @"Checking weekly first time ever");
 }
 
 - (void)testUpdateCheckWeeklyFirstTimeTodayLastCheckPreviousWeek {
@@ -133,7 +133,7 @@
   
   BOOL result = [_storeUpdateManager shouldAutoCheckForUpdates];
   
-  STAssertTrue(result, @"Checking weekly first time after one week");
+  XCTAssertTrue(result, @"Checking weekly first time after one week");
 }
 
 - (void)testUpdateCheckWeeklyFirstTimeFiveDaysAfterPreviousCheck {
@@ -146,7 +146,7 @@
   
   BOOL result = [_storeUpdateManager shouldAutoCheckForUpdates];
   
-  STAssertFalse(result, @"Checking weekly first time five days after previous check");
+  XCTAssertFalse(result, @"Checking weekly first time five days after previous check");
 }
 
 - (void)testUpdateCheckManuallyFirstTimeEver {
@@ -158,7 +158,7 @@
   
   BOOL result = [_storeUpdateManager shouldAutoCheckForUpdates];
   
-  STAssertFalse(result, @"Checking manually first time ever");
+  XCTAssertFalse(result, @"Checking manually first time ever");
 }
 
 - (void)testUpdateCheckManuallyFirstTimeTodayLastCheckDonePreviousDay {
@@ -171,7 +171,7 @@
   
   BOOL result = [_storeUpdateManager shouldAutoCheckForUpdates];
   
-  STAssertFalse(result, @"Checking manually first time ever");
+  XCTAssertFalse(result, @"Checking manually first time ever");
 }
 
 
@@ -180,28 +180,28 @@
 - (void)testProcessStoreResponseWithEmptyData {
   BOOL result = [_storeUpdateManager processStoreResponseWithString:nil];
   
-  STAssertFalse(result, @"Empty data was handled correctly");
+  XCTAssertFalse(result, @"Empty data was handled correctly");
 }
 
 - (void)testProcessStoreResponseWithInvalidData {
   NSString *invalidString = @"8a@c&)if";
   BOOL result = [_storeUpdateManager processStoreResponseWithString:invalidString];
   
-  STAssertFalse(result, @"Invalid JSON data was handled correctly");
+  XCTAssertFalse(result, @"Invalid JSON data was handled correctly");
 }
 
 - (void)testProcessStoreResponseWithUnknownBundleIdentifier {
   NSString *dataString = [BITTestHelper jsonFixture:@"StoreBundleIdentifierUnknown"];
   BOOL result = [_storeUpdateManager processStoreResponseWithString:dataString];
   
-  STAssertFalse(result, @"Valid but empty json data was handled correctly");
+  XCTAssertFalse(result, @"Valid but empty json data was handled correctly");
 }
 
 - (void)testProcessStoreResponseWithKnownBundleIdentifier {
   NSString *dataString = [BITTestHelper jsonFixture:@"StoreBundleIdentifierKnown"];
   BOOL result = [_storeUpdateManager processStoreResponseWithString:dataString];
 
-  STAssertTrue(result, @"Valid and correct JSON data was handled correctly");
+  XCTAssertTrue(result, @"Valid and correct JSON data was handled correctly");
 }
 
 
@@ -219,7 +219,7 @@
 
   BOOL result = [_storeUpdateManager hasNewVersion:json];
   
-  STAssertFalse(result, @"There is no udpate available");
+  XCTAssertFalse(result, @"There is no udpate available");
 }
 
 - (void)testFirstStartHasNewVersionReturnsFalseWithSameVersion {
@@ -234,7 +234,7 @@
   
   BOOL result = [_storeUpdateManager hasNewVersion:json];
   
-  STAssertFalse(result, @"There is no udpate available");
+  XCTAssertFalse(result, @"There is no udpate available");
 }
 
 
@@ -250,7 +250,7 @@
   
   BOOL result = [_storeUpdateManager hasNewVersion:json];
   
-  STAssertFalse(result, @"There is no udpate available");
+  XCTAssertFalse(result, @"There is no udpate available");
 }
 
 - (void)testFirstStartHasNewVersionReturnsTrue {
@@ -265,7 +265,7 @@
   
   BOOL result = [_storeUpdateManager hasNewVersion:json];
   
-  STAssertTrue(result, @"There is an udpate available");
+  XCTAssertTrue(result, @"There is an udpate available");
 }
 
 
@@ -281,7 +281,7 @@
   
   BOOL result = [_storeUpdateManager hasNewVersion:json];
   
-  STAssertFalse(result, @"There is no udpate available");
+  XCTAssertFalse(result, @"There is no udpate available");
 }
 
 - (void)testReportedVersionIsBeingIgnored {
@@ -297,7 +297,7 @@
   
   BOOL result = [_storeUpdateManager hasNewVersion:json];
   
-  STAssertFalse(result, @"The newer version is being ignored");
+  XCTAssertFalse(result, @"The newer version is being ignored");
 }
 
 - (void)testReportedVersionIsNewerThanTheIgnoredVersion {
@@ -313,7 +313,7 @@
   
   BOOL result = [_storeUpdateManager hasNewVersion:json];
   
-  STAssertTrue(result, @"The newer version is not ignored");
+  XCTAssertTrue(result, @"The newer version is not ignored");
 }
 
 @end
