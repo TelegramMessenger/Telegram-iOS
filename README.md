@@ -1,6 +1,6 @@
-## Version 3.5.6
+## Version 3.5.7
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.5.6/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.5.7/docs/docs/Changelog.html)
 
 
 ## Introduction
@@ -31,11 +31,10 @@ The main SDK class is `BITHockeyManager`. It initializes all modules and provide
 
 ## Installation & Setup
 
-- [Installation & Setup](http://www.hockeyapp.net/help/sdk/ios/3.5.6/docs/docs/Guide-Installation-Setup.html) (Recommended)
-- [Installation & Setup Advanced](http://www.hockeyapp.net/help/sdk/ios/3.5.6/docs/docs/Guide-Installation-Setup-Advanced.html) (Using Git submodule and Xcode sub-project)
-- [Identify and authenticate users of Ad-Hoc or Enterprise builds](http://www.hockeyapp.net/help/sdk/ios/3.5.6/docs/docs/HowTo-Authenticating-Users-on-iOS.html)
-- [Migration from previous SDK Versions](http://www.hockeyapp.net/help/sdk/ios/3.5.6/docs/docs/Guide-Migration-Kits.html)
-- [Mac Desktop Uploader](http://support.hockeyapp.net/kb/how-tos/how-to-upload-to-hockeyapp-on-a-mac)
+- [Installation & Setup](http://www.hockeyapp.net/help/sdk/ios/3.5.7/docs/docs/Guide-Installation-Setup.html) (Recommended)
+- [Installation & Setup Advanced](http://www.hockeyapp.net/help/sdk/ios/3.5.7/docs/docs/Guide-Installation-Setup-Advanced.html) (Using Git submodule and Xcode sub-project)
+- [Identify and authenticate users of Ad-Hoc or Enterprise builds](http://www.hockeyapp.net/help/sdk/ios/3.5.7/docs/docs/HowTo-Authenticating-Users-on-iOS.html)
+- [Migration from previous SDK Versions](http://www.hockeyapp.net/help/sdk/ios/3.5.7/docs/docs/Guide-Migration-Kits.html)
 
 
 ## Xcode Documentation
@@ -48,4 +47,4 @@ This documentation provides integrated help in Xcode for all public APIs and a s
 
 3. Copy the content into ~`/Library/Developer/Shared/Documentation/DocSets`
 
-The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.5.6/](http://hockeyapp.net/help/sdk/ios/3.5.6/)
+The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.5.7/](http://hockeyapp.net/help/sdk/ios/3.5.7/)

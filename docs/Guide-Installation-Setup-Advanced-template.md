@@ -1,6 +1,6 @@
-## Version 3.5.6
+## Version 3.5.7
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.5.6/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.5.7/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -127,10 +127,6 @@ The SDK runs on devices with iOS 5.0 or higher.
 <a id="options"></a> 
 ## Additional Options
 
-### Mac Desktop Uploader
-
-The Mac Desktop Uploader can provide easy uploading of your app versions to HockeyApp. Check out the [installation tutorial](Guide-Installation-Mac-App).
-
 ### Xcode Documentation
 
 This documentation provides integrated help in Xcode for all public APIs and a set of additional tutorials and how-tos.
@@ -141,7 +137,7 @@ This documentation provides integrated help in Xcode for all public APIs and a s
 
 3. Copy the content into ~`/Library/Developer/Shared/Documentation/DocSets`
 
-The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.5.6/](http://hockeyapp.net/help/sdk/ios/3.5.6/)
+The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.5.7/](http://hockeyapp.net/help/sdk/ios/3.5.7/)
 
 ### Set up with xcconfig
 
