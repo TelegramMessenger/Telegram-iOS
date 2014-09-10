@@ -47,6 +47,7 @@ NSString *bit_UUIDPreiOS6(void);
 NSString *bit_UUID(void);
 NSString *bit_appAnonID(void);
 BOOL bit_isPreiOS7Environment(void);
+BOOL bit_isPreiOS8Environment(void);
 
 NSString *bit_validAppIconStringFromIcons(NSBundle *resourceBundle, NSArray *icons);
 NSString *bit_validAppIconFilename(NSBundle *bundle, NSBundle *resourceBundle);

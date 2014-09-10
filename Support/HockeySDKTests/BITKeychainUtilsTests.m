@@ -6,7 +6,7 @@
 //  Copyright (c) 2013 __MyCompanyName__. All rights reserved.
 //
 
-#import <SenTestingKit/SenTestingKit.h>
+#import <XCTest/XCTest.h>
 
 #define HC_SHORTHAND
 #import <OCHamcrestIOS/OCHamcrestIOS.h>
@@ -17,7 +17,7 @@
 #import "HockeySDK.h"
 #import "BITKeychainUtils.h"
 
-@interface BITKeychainUtilsTests : SenTestCase {
+@interface BITKeychainUtilsTests : XCTestCase {
 
 }
 @end

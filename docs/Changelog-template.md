@@ -1,3 +1,12 @@
+## Version 3.5.7
+
+- [UPDATE] Easy Swift integration for binary distribution (No Objective-C bridging header required)
+- [UPDATE] `BITAuthenticator`: Improved keychain handling
+- [UPDATE] `BITUpdateManager`: Improved iOS 8 In-App-Update process handling
+- [BUGFIX] `BITUpdateManager`: Fixed layout issue for resizable iOS layout
+- [BUGFIX] Fixed an iTunes Connect warning for `attachmentData` property
+<br /><br/>
+
 ## Version 3.5.6
 
 - [UPDATE] `BITCrashManager`: Updated PLCrashReporter to version 1.2

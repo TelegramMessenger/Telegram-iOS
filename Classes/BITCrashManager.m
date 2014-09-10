@@ -887,8 +887,8 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
         description = [NSString stringWithFormat:@"%@", applicationLog];
       }
       
-      [crashes appendFormat:@"<crash><applicationname>%s</applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><username>%@</username><contact>%@</contact><installstring>%@</installstring><description><![CDATA[%@]]></description></crash>",
-       [[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleExecutable"] UTF8String],
+      [crashes appendFormat:@"<crash><applicationname>%@</applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><username>%@</username><contact>%@</contact><installstring>%@</installstring><description><![CDATA[%@]]></description></crash>",
+       [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleExecutable"],
        [self extractAppUUIDs:report],
        report.applicationInfo.applicationIdentifier,
        report.systemInfo.operatingSystemVersion,
@@ -1005,7 +1005,7 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
     
     BITCrashAttachment *attachment = (BITCrashAttachment *)dict[KBITAttachmentDictAttachment];
     
-    [postBody appendData:[BITHockeyAppClient dataWithPostValue:attachment.attachmentData
+    [postBody appendData:[BITHockeyAppClient dataWithPostValue:attachment.crashAttachmentData
                                                         forKey:key
                                                    contentType:attachment.contentType
                                                       boundary:boundary

@@ -6,7 +6,7 @@
 //
 //
 
-#import <SenTestingKit/SenTestingKit.h>
+#import <XCTest/XCTest.h>
 
 #define HC_SHORTHAND
 #import <OCHamcrestIOS/OCHamcrestIOS.h>
@@ -23,7 +23,7 @@
 
 #import "BITTestHelper.h"
 
-@interface BITFeedbackManagerTests : SenTestCase
+@interface BITFeedbackManagerTests : XCTestCase
 
 @end
 

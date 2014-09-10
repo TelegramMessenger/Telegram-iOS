@@ -67,6 +67,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   id _appDidEnterBackgroundObserver;
   id _networkDidBecomeReachableObserver;
 
+  BOOL _didStartUpdateProcess;
   BOOL _didEnterBackgroundState;
   
   BOOL _firstStartAfterInstall;
@@ -100,6 +101,23 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 
 - (void)didBecomeActiveActions {
   if ([self isUpdateManagerDisabled]) return;
+  
+  // this is a special iOS 8 case for handling the case that the app is not moved to background
+  // once the users accepts the iOS install alert button. Without this, the install process doesn't start.
+  //
+  // Important: The iOS dialog offers the user to deny installation, we can't find out which button
+  // was tapped, so we assume the user agreed
+  if (_didStartUpdateProcess) {
+    _didStartUpdateProcess = NO;
+    
+    // we only care about iOS 8 or later
+    if (bit_isPreiOS8Environment()) return;
+    
+    // for now we simply exit the app, later SDK versions might optionally show an alert with localized text
+    // describing the user to press the home button to start the update process
+    exit(0);
+  }
+  
   if (!_didEnterBackgroundState) return;
   
   _didEnterBackgroundState = NO;
@@ -120,6 +138,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     _didEnterBackgroundState = YES;
   }
 }
+
 
 #pragma mark - Observers
 - (void) registerObservers {
@@ -752,6 +771,9 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   BITHockeyLog(@"INFO: API Server Call: %@, calling iOS with %@", hockeyAPIURL, iOSUpdateURL);
   BOOL success = [[UIApplication sharedApplication] openURL:[NSURL URLWithString:iOSUpdateURL]];
   BITHockeyLog(@"INFO: System returned: %d", success);
+  
+  _didStartUpdateProcess = success;
+  
   return success;
 }
 

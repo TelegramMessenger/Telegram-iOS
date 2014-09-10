@@ -1,6 +1,6 @@
-## Version 3.5.6
+## Version 3.5.7
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.5.6/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.5.7/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -57,7 +57,9 @@ The SDK runs on devices with iOS 5.0 or higher.
     - `UIKit`
 
 <a id="modify"></a> 
-## Modify Code
+## Modify Code 
+
+### Objective-C
 
 1. Open your `AppDelegate.m` file.
 
@@ -73,26 +75,45 @@ The SDK runs on devices with iOS 5.0 or higher.
         [[BITHockeyManager sharedHockeyManager] startManager];
         [[BITHockeyManager sharedHockeyManager].authenticator authenticateInstallation];
 
-5. Replace `APP_IDENTIFIER` with the app identifier of your app. If you don't know what the app identifier is or how to find it, please read [this how-to](http://support.hockeyapp.net/kb/how-tos/how-to-find-the-app-identifier). 
+5. Continue with [General subsection](#generalcode)
 
-6. If you want to see beta analytics, use the beta distribution feature with in-app updates, restrict versions to specific users, or want to know who is actually testing your app, you need to follow the instructions on our guide [Identify and authenticate users of Ad-Hoc or Enterprise builds](HowTo-Authenticating-Users-on-iOS)
+### Swift
+
+1. Open your `AppDelegate.swift` file.
+
+2. Add the following line at the top of the file below your own #import statements:
+
+        import HockeySDK
+
+3. Search for the method `application(application: UIApplication, didFinishLaunchingWithOptions launchOptions: [NSObject: AnyObject]?) -> Bool`
+
+4. Add the following lines:
+
+        BITHockeyManager.sharedHockeyManager().configureWithIdentifier("APP_IDENTIFIER");
+        BITHockeyManager.sharedHockeyManager().startManager();
+        BITHockeyManager.sharedHockeyManager().authenticator.authenticateInstallation();
+
+5. Continue with [General subsection](#generalcode)
+
+<a id="generalcode"></a>
+### General
+
+1. Replace `APP_IDENTIFIER` with the app identifier of your app. If you don't know what the app identifier is or how to find it, please read [this how-to](http://support.hockeyapp.net/kb/how-tos/how-to-find-the-app-identifier). 
+
+2. If you want to see beta analytics, use the beta distribution feature with in-app updates, restrict versions to specific users, or want to know who is actually testing your app, you need to follow the instructions on our guide [Identify and authenticate users of Ad-Hoc or Enterprise builds](HowTo-Authenticating-Users-on-iOS)
 
 *Note:* The SDK is optimized to defer everything possible to a later time while making sure e.g. crashes on startup can also be caught and each module executes other code with a delay some seconds. This ensures that applicationDidFinishLaunching will process as fast as possible and the SDK will not block the startup sequence resulting in a possible kill by the watchdog process.
 
 <a id="options"></a> 
 ## Additional Options
 
-### Mac Desktop Uploader
-
-The Mac Desktop Uploader can provide easy uploading of your app versions to HockeyApp. Check out the [installation tutorial](Guide-Installation-Mac-App).
-
 ### Xcode Documentation
 
 This documentation provides integrated help in Xcode for all public APIs and a set of additional tutorials and how-tos.
 
-1. Copy `de.bitstadium.HockeySDK-iOS-3.5.5.docset` into ~`/Library/Developer/Shared/Documentation/DocSets`
+1. Copy `de.bitstadium.HockeySDK-iOS-3.5.7.docset` into ~`/Library/Developer/Shared/Documentation/DocSets`
 
-The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.5.6/](http://hockeyapp.net/help/sdk/ios/3.5.6/)
+The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.5.7/](http://hockeyapp.net/help/sdk/ios/3.5.7/)
 
 ### Set up with xcconfig
 

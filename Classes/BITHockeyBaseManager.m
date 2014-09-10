@@ -282,7 +282,7 @@
                              andPassword:stringValue
                           forServiceName:bit_keychainHockeySDKServiceName()
                           updateExisting:YES
-                           accessibility:kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+                           accessibility:kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
                                    error:&error];
 }
 

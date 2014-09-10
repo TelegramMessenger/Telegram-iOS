@@ -171,7 +171,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 
 - (void) identifyWithCompletion:(void (^)(BOOL identified, NSError *))completion {
   if(_authenticationController) {
-    BITHockeyLog(@"Authentication controller already visible. Ingoring identify request");
+    BITHockeyLog(@"Authentication controller already visible. Ignoring identify request");
     if(completion) completion(NO, nil);
     return;
   }
@@ -338,6 +338,12 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 - (NSDictionary*) validationParameters {
   NSParameterAssert(self.installationIdentifier);
   NSParameterAssert(self.installationIdentifierParameterString);
+  
+  NSString *installString = bit_appAnonID();
+  if (installString) {
+    return @{self.installationIdentifierParameterString : self.installationIdentifier, @"install_string": installString};
+  }
+  
   return @{self.installationIdentifierParameterString : self.installationIdentifier};
 }
 
@@ -432,16 +438,20 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 
 - (NSURLRequest *) requestForAuthenticationEmail:(NSString*) email password:(NSString*) password {
   NSString *authenticationPath = [self authenticationPath];
-  NSDictionary *params = nil;
+  NSMutableDictionary *params = [NSMutableDictionary dictionary];
   
+  NSString *installString = bit_appAnonID();
+  if (installString) {
+    params[@"install_string"] = installString;
+  }
+
   if(BITAuthenticatorIdentificationTypeHockeyAppEmail == self.identificationType) {
     NSString *authCode = BITHockeyMD5([NSString stringWithFormat:@"%@%@",
                                        self.authenticationSecret ? : @"",
                                        email ? : @""]);
-    params = @{
-               @"email" : email ? : @"",
-               @"authcode" : authCode.lowercaseString,
-               };
+    
+    params[@"email"] = email ? : @"";
+    params[@"authcode"] = authCode.lowercaseString;
   }
   
   NSMutableURLRequest *request = [self.hockeyAppClient requestWithMethod:@"POST"
@@ -453,6 +463,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     NSString *authValue = [NSString stringWithFormat:@"Basic %@", bit_base64String(authData, authData.length)];
     [request setValue:authValue forHTTPHeaderField:@"Authorization"];
   }
+  
   return request;
 }
 
