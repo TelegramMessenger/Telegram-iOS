@@ -238,6 +238,28 @@ BOOL bit_isPreiOS7Environment(void) {
   return isPreiOS7Environment;
 }
 
+BOOL bit_isPreiOS8Environment(void) {
+  static BOOL isPreiOS8Environment = YES;
+  static dispatch_once_t checkOS8;
+  
+  dispatch_once(&checkOS8, ^{
+    // we only perform this runtime check if this is build against at least iOS8 base SDK
+#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_7_1
+    // runtime check according to
+    // https://developer.apple.com/library/prerelease/ios/documentation/UserExperience/Conceptual/TransitionGuide/SupportingEarlieriOS.html
+    if (floor(NSFoundationVersionNumber) <= NSFoundationVersionNumber_iOS_7_1) {
+      isPreiOS8Environment = YES;
+    } else {
+      isPreiOS8Environment = NO;
+    }
+#else
+    isPreiOS8Environment = YES;
+#endif
+  });
+  
+  return isPreiOS8Environment;
+}
+
 /**
  Find a valid app icon filename that points to a proper app icon image
  

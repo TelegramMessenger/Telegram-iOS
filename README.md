@@ -35,7 +35,6 @@ The main SDK class is `BITHockeyManager`. It initializes all modules and provide
 - [Installation & Setup Advanced](http://www.hockeyapp.net/help/sdk/ios/3.6-b.2/docs/docs/Guide-Installation-Setup-Advanced.html) (Using Git submodule and Xcode sub-project)
 - [Identify and authenticate users of Ad-Hoc or Enterprise builds](http://www.hockeyapp.net/help/sdk/ios/3.6-b.2/docs/docs/HowTo-Authenticating-Users-on-iOS.html)
 - [Migration from previous SDK Versions](http://www.hockeyapp.net/help/sdk/ios/3.6-b.2/docs/docs/Guide-Migration-Kits.html)
-- [Mac Desktop Uploader](http://support.hockeyapp.net/kb/how-tos/how-to-upload-to-hockeyapp-on-a-mac)
 
 
 ## Xcode Documentation

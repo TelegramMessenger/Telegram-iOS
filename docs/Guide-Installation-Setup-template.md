@@ -110,10 +110,6 @@ The SDK runs on devices with iOS 6.0 or higher.
 <a id="options"></a> 
 ## Additional Options
 
-### Mac Desktop Uploader
-
-The Mac Desktop Uploader can provide easy uploading of your app versions to HockeyApp. Check out the [installation tutorial](Guide-Installation-Mac-App).
-
 ### Xcode Documentation
 
 This documentation provides integrated help in Xcode for all public APIs and a set of additional tutorials and how-tos.
