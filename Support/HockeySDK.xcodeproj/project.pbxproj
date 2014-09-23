@@ -292,7 +292,6 @@
 		1E5A459F16F0DFC200B55C04 /* HockeySDKTests-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "HockeySDKTests-Prefix.pch"; sourceTree = "<group>"; };
 		1E61CCAE18E0585A00A5E38E /* BITFeedbackManagerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITFeedbackManagerTests.m; sourceTree = "<group>"; };
 		1E66CA9115D4100500F35BED /* buildnumber.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = buildnumber.xcconfig; sourceTree = "<group>"; };
-		1E6DDCEE169E290C0076C65D /* ro */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ro; path = ro.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		1E6F0450167B5E5600ED1C86 /* pt-PT */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-PT"; path = "pt-PT.lproj/HockeySDK.strings"; sourceTree = "<group>"; };
 		1E70A22F17F2F982001BB32D /* live_report_empty.plcrash */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = live_report_empty.plcrash; sourceTree = "<group>"; };
 		1E70A23017F2F982001BB32D /* live_report_exception.plcrash */ = {isa = PBXFileReference; lastKnownFileType = file; path = live_report_exception.plcrash; sourceTree = "<group>"; };
@@ -1126,7 +1125,6 @@
 				1E6F0450167B5E5600ED1C86 /* pt-PT */,
 				1EB52FC3167B73D400C801D5 /* en */,
 				1EA512DF167F7EF000FC9FBA /* zh-Hans */,
-				1E6DDCEE169E290C0076C65D /* ro */,
 				BEE0207C16C5107E004426EA /* hu */,
 				1E20A57F181E9D4600D5B770 /* nl */,
 			);
