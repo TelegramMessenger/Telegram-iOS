@@ -146,6 +146,31 @@
   [(UIButton *)sender setBackgroundColor:BIT_RGBCOLOR(245, 245, 245)];
 }
 
+- (UIImage *)gradientButtonHighlightImage {
+  CGFloat width = 10;
+  CGFloat height = 70;
+  
+  CGSize size = CGSizeMake(width, height);
+  UIGraphicsBeginImageContextWithOptions(size, NO, 0);
+  CGContextRef context = UIGraphicsGetCurrentContext();
+  
+  CGColorSpaceRef colorspace = CGColorSpaceCreateDeviceRGB();
+  
+  NSArray *colors = [NSArray arrayWithObjects:(id)BIT_RGBCOLOR(69, 127, 247).CGColor, (id)BIT_RGBCOLOR(58, 68, 233).CGColor, nil];
+  CGGradientRef gradient = CGGradientCreateWithColors(CGColorGetColorSpace((__bridge CGColorRef)[colors objectAtIndex:0]), (__bridge CFArrayRef)colors, (CGFloat[2]){0, 1});
+  CGPoint top = CGPointMake(width / 2, 0);
+  CGPoint bottom = CGPointMake(width / 2, height);
+  CGContextDrawLinearGradient(context, gradient, top, bottom, 0);
+  
+  UIImage *theImage = UIGraphicsGetImageFromCurrentImageContext();
+  
+  CGGradientRelease(gradient);
+  CGColorSpaceRelease(colorspace);
+  UIGraphicsEndImageContext();
+  
+  return theImage;
+}
+
 - (void)showHidePreviousVersionsButton {
   BOOL multipleVersionButtonNeeded = [_updateManager.appVersions count] > 1 && !_showAllVersions;
   
@@ -174,7 +199,7 @@
     [footerButton setTitle:BITHockeyLocalizedString(@"UpdateShowPreviousVersions") forState:UIControlStateNormal];
     [footerButton setTitleColor:BIT_RGBCOLOR(61, 61, 61) forState:UIControlStateNormal];
     [footerButton setTitleColor:[UIColor whiteColor] forState:UIControlStateHighlighted];
-    [footerButton setBackgroundImage:bit_imageNamed(@"buttonHighlight.png", BITHOCKEYSDK_BUNDLE) forState:UIControlStateHighlighted];
+    [footerButton setBackgroundImage:[self gradientButtonHighlightImage] forState:UIControlStateHighlighted];
     footerButton.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin;
     [footerButton addTarget:self action:@selector(showPreviousVersionAction) forControlEvents:UIControlEventTouchUpInside];
     footerButton.frame = CGRectMake(0, kMinPreviousVersionButtonHeight-44, self.view.frame.size.width, 44);
