@@ -127,6 +127,11 @@ Instead of implementing the individual protocols in your app delegate, you can n
 
 The delegate `-(NSString *)customDeviceIdentifierForUpdateManager:(BITUpdateManager *)updateManager` has been removed. To identify the installation please use the new `BITAuthenticator` class.
 
+### HockeySDK-iOS 3.5.x
+
+If you are using `PLCrashReporterCallbacks`, you now have to use `BITCrashManagerCallbacks` instead. This `struct` doesn't contain `version` any longer, so you have to remove that. Otherwise everything is the same.
+
+
 ## Troubleshooting
 
 ### ld: warning: directory not found for option '....QuincyKit.....'
