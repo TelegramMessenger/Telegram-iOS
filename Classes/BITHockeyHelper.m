@@ -260,6 +260,17 @@ BOOL bit_isPreiOS8Environment(void) {
   return isPreiOS8Environment;
 }
 
+BOOL bit_isRunningInAppExtension(void) {
+  static BOOL isRunningInAppExtension = NO;
+  static dispatch_once_t checkAppExtension;
+  
+  dispatch_once(&checkAppExtension, ^{
+    isRunningInAppExtension = [[[NSBundle mainBundle] executablePath] containsString:@".appex/"];
+  });
+  
+  return isRunningInAppExtension;
+}
+
 /**
  Find a valid app icon filename that points to a proper app icon image
  

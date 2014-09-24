@@ -242,6 +242,11 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
   }
 #endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */
   
+  // App Extensions can only use BITCrashManager, so ignore all others automatically
+  if (bit_isRunningInAppExtension()) {
+    return;
+  }
+  
 #if HOCKEYSDK_FEATURE_STORE_UPDATES
   // start StoreUpdateManager
   if ([self isStoreUpdateManagerEnabled]) {

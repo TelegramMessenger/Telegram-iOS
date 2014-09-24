@@ -919,7 +919,10 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
  * - Send pending approved crash reports
  */
 - (void)invokeDelayedProcessing {
-  if ([[UIApplication sharedApplication] applicationState] != UIApplicationStateActive) return;
+  if (!bit_isRunningInAppExtension() &&
+      [[UIApplication sharedApplication] applicationState] != UIApplicationStateActive) {
+    return;
+  }
   
   BITHockeyLog(@"INFO: Start delayed CrashManager processing");
   
@@ -945,7 +948,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
       _lastCrashFilename = [notApprovedReportFilename lastPathComponent];
     }
 
-    if (!BITHockeyBundle()) {
+    if (!BITHockeyBundle() || bit_isRunningInAppExtension()) {
       [self sendNextCrashReport];
     } else if (_crashManagerStatus != BITCrashManagerStatusAutoSend && notApprovedReportFilename) {
       
