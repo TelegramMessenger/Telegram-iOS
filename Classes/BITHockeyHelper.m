@@ -265,7 +265,7 @@ BOOL bit_isRunningInAppExtension(void) {
   static dispatch_once_t checkAppExtension;
   
   dispatch_once(&checkAppExtension, ^{
-    isRunningInAppExtension = [[[NSBundle mainBundle] executablePath] containsString:@".appex/"];
+    isRunningInAppExtension = ([[[NSBundle mainBundle] executablePath] rangeOfString:@".appex/"].location != NSNotFound);
   });
   
   return isRunningInAppExtension;
