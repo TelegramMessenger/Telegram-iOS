@@ -169,7 +169,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
       [_fileManager removeItemAtPath:_analyzerInProgressFile error:&error];
     }
     
-    if (!BITHockeyBundle()) {
+    if (!BITHockeyBundle() && !bit_isRunningInAppExtension()) {
       NSLog(@"[HockeySDK] WARNING: %@ is missing, will send reports automatically!", BITHOCKEYSDK_BUNDLE);
     }
   }
