@@ -221,18 +221,16 @@ BOOL bit_isPreiOS7Environment(void) {
   static dispatch_once_t checkOS;
   
   dispatch_once(&checkOS, ^{
-    // we only perform this runtime check if this is build against at least iOS7 base SDK
-#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
+    // NSFoundationVersionNumber_iOS_6_1 = 993.00
+    // We hardcode this, so compiling with iOS 6 is possible while still being able to detect the correct environment
+    
     // runtime check according to
     // https://developer.apple.com/library/prerelease/ios/documentation/UserExperience/Conceptual/TransitionGuide/SupportingEarlieriOS.html
-    if (floor(NSFoundationVersionNumber) <= NSFoundationVersionNumber_iOS_6_1) {
+    if (floor(NSFoundationVersionNumber) <= 993.00) {
       isPreiOS7Environment = YES;
     } else {
       isPreiOS7Environment = NO;
     }
-#else
-    isPreiOS7Environment = YES;
-#endif
   });
   
   return isPreiOS7Environment;
@@ -243,18 +241,16 @@ BOOL bit_isPreiOS8Environment(void) {
   static dispatch_once_t checkOS8;
   
   dispatch_once(&checkOS8, ^{
-    // we only perform this runtime check if this is build against at least iOS8 base SDK
-#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_7_1
+    // NSFoundationVersionNumber_iOS_7_1 = 1047.25
+    // We hardcode this, so compiling with iOS 7 is possible while still being able to detect the correct environment
+
     // runtime check according to
     // https://developer.apple.com/library/prerelease/ios/documentation/UserExperience/Conceptual/TransitionGuide/SupportingEarlieriOS.html
-    if (floor(NSFoundationVersionNumber) <= NSFoundationVersionNumber_iOS_7_1) {
+    if (floor(NSFoundationVersionNumber) <= 1047.25) {
       isPreiOS8Environment = YES;
     } else {
       isPreiOS8Environment = NO;
     }
-#else
-    isPreiOS8Environment = YES;
-#endif
   });
   
   return isPreiOS8Environment;
