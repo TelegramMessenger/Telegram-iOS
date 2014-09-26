@@ -131,6 +131,21 @@ The delegate `-(NSString *)customDeviceIdentifierForUpdateManager:(BITUpdateMana
 
 If you are using `PLCrashReporterCallbacks`, you now have to use `BITCrashManagerCallbacks` instead. This `struct` doesn't contain `version` any longer, so you have to remove that. Otherwise everything is the same.
 
+If you did set the delegate per component, e.g. `[[BITHockeyManager sharedHockeyManager].crashManager setDelegate:self]`, you need to remove these and set the delegate this way only: `[[BITHockeyManager sharedHockeyManager] setDelegate:self]`. This will propagate the delegate to all SDK components. Make sure to set it before calling `startManager`!
+
+In addition you need to make sure all of these frameworks are linked:
+
+- `AssetsLibrary`
+- `CoreText`
+- `CoreGraphics`
+- `Foundation`
+- `MobileCoreServices`
+- `QuartzCore`
+- `QuickLook`
+- `Security`
+- `SystemConfiguration`
+- `UIKit`
+
 
 ## Troubleshooting
 

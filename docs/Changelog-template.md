@@ -1,3 +1,24 @@
+## Version 3.6.0
+
+- [NEW] `BITCrashManager`: Added support for iOS 8 Extensions
+- [NEW] `BITCrashManager`: Option to add a custom UI flow before sending a crash report, e.g. to ask users for more details (see `setAlertViewHandler:`)
+- [NEW] `BITCrashManager`: Provide details on a crash report (see `lastSessionCrashDetails` and `BITCrashDetails`)
+- [NEW] `BITCrashManager`: Experimental support for detecting app kills triggered by iOS while the app is in foreground (see `enableAppNotTerminatingCleanlyDetection`)
+- [NEW] `BITCrashManager`: Added `didReceiveMemoryWarningInLastSession` which indicates if the last app session did get a memory warning by iOS
+- [NEW] `BITFeedbackManager`: Attach and annotate images and screenshots
+- [NEW] `BITFeedbackManager`: Attach any binary data to compose message view (see `showFeedbackComposeViewWithPreparedItems:`)
+- [NEW] `BITFeedbackManager`: Show a compose message with a screenshot image attached using predefined triggers (see `feedbackObservationMode`) or your own custom triggers (see `showFeedbackComposeViewWithGeneratedScreenshot`)
+- [NEW] Minimum iOS Deployment version is now iOS 6.0
+- [NEW] Requires to link additional frameworks: `AssetLibrary`, `MobileCoreServices`, `QuickLook`
+- [UPDATE] `BITCrashManager`: Updated `setCrashCallbacks` handling now using `BITCrashManagerCallbacks` instead of `PLCrashReporterCallbacks` (which is no longer public)
+- [UPDATE] `BITCrashManager`: Crash reports are now sent individually if there are multiple pending
+- [UPDATE] `BITUpdateManager`: Improved algorithm for fetching an optimal sized app icon for the Update View
+- [UPDATE] `BITUpdateManager`: Properly consider paragraphs in release notes when presenting them in the Update view
+- [UPDATE] Property `delegate` in all components is now private. Set the delegate on `BITHockeyManager` only!
+- [UPDATE] Removed support for Atlassian JMC
+- [BUGFIX] Various additional fixes
+<br /><br/>
+
 ## Version 3.6.0 Beta 2
 
 - [NEW] `BITFeedbackManager`: Screenshot feature is now part of the public API
