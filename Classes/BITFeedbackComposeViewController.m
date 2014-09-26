@@ -146,18 +146,22 @@
   
   CGRect frame = CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height);
   if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
-    if (UIInterfaceOrientationIsPortrait(self.interfaceOrientation))
+    if (!bit_isPreiOS8Environment() || UIInterfaceOrientationIsPortrait(self.interfaceOrientation)) {
       frame.size.height -= kbSize.height;
-    else
+    } else {
       frame.size.height -= kbSize.width;
+    }
   } else {
     CGSize windowSize = [[UIScreen mainScreen] bounds].size;
     CGFloat windowHeight = windowSize.height - 20;
     CGFloat navBarHeight = self.navigationController.navigationBar.frame.size.height;
     
-    if (UIInterfaceOrientationIsPortrait(self.interfaceOrientation)) {
+    if (!bit_isPreiOS8Environment() || UIInterfaceOrientationIsPortrait(self.interfaceOrientation)) {
       CGFloat modalGap = (windowHeight - self.view.bounds.size.height) / 2;
-      frame.size.height = windowHeight - navBarHeight - modalGap - kbSize.height;
+      frame.size.height = windowHeight - navBarHeight - kbSize.height;
+      if (bit_isPreiOS8Environment()) {
+        frame.size.height -= modalGap;
+      }
     } else {
       windowHeight = windowSize.width - 20;
       CGFloat modalGap = 0.0f;
