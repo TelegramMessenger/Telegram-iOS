@@ -15,8 +15,8 @@ The main SDK class is `BITHockeyManager`. It initializes all modules and provide
 ## Prerequisites
 
 1. Before you integrate HockeySDK into your own app, you should add the app to HockeyApp if you haven't already. Read [this how-to](http://support.hockeyapp.net/kb/how-tos/how-to-create-a-new-app) on how to do it.
-2. We also assume that you already have a project in Xcode and that this project is opened in Xcode 4.
-3. The SDK supports iOS 5.0 or newer.
+2. We also assume that you already have a project in Xcode and that this project is opened in Xcode 5.
+3. The SDK supports iOS 6.0 or newer.
 
 ## Release Notes
 
@@ -33,13 +33,13 @@ The main SDK class is `BITHockeyManager`. It initializes all modules and provide
 
 - [How to do app versioning](HowTo-App-Versioning)
 - [How to upload symbols for crash reporting](HowTo-Upload-Symbols)
-- [How to handle crashes on startup](HowTo-Handle-Crashes-On-Startup)
-- [How to add application specific log data](HowTo-Add-Application-Log)
-- [How to integrate Atlassian JMC](HowTo-Integrate-Atlassian-JMC)
+- [How to handle crashes on startup](http://support.hockeyapp.net/kb/client-integration-ios-mac-os-x/how-to-handle-crashes-during-startup-on-ios)
+- [How to add application specific log data](http://support.hockeyapp.net/kb/client-integration-ios-mac-os-x/how-to-add-application-specific-log-data-on-ios)
+- [How to ask the user for more details about a crash](HowTo-Set-Custom-AlertViewHandler)
 
 ## Troubleshooting
 
-- [Symbolication doesn't work](Symbolication-Doesnt-Work) (Or the rules of binary UUIDs and dSYMs)
+- [Symbolication doesn't work](http://support.hockeyapp.net/kb/client-integration-ios-mac-os-x/how-to-solve-symbolication-problems) (Or the rules of binary UUIDs and dSYMs)
 - [Crash Reporting is not working](Troubleshooting-Crash-Reporting-Not-Working)
 
 ## Xcode Documentation

@@ -45,7 +45,7 @@
  
  This is the principal SDK class. It represents the entry point for the HockeySDK. The main promises of the class are initializing the SDK modules, providing access to global properties and to all modules. Initialization is divided into several distinct phases:
  
- 1. Setup the [HockeyApp](http://hockeyapp.net/) app identifier and the optional delegate: This is the least required information on setting up the SDK and using it. It does some simple validation of the app identifier and checks if the app is running from the App Store or not. If the [Atlassian JMC framework](http://www.atlassian.com/jmc/) is found, it will disable its Crash Reporting module and configure it with the Jira configuration data from [HockeyApp](http://hockeyapp.net/).
+ 1. Setup the [HockeyApp](http://hockeyapp.net/) app identifier and the optional delegate: This is the least required information on setting up the SDK and using it. It does some simple validation of the app identifier and checks if the app is running from the App Store or not.
  2. Provides access to the SDK modules `BITCrashManager`, `BITUpdateManager`, and `BITFeedbackManager`. This way all modules can be further configured to personal needs, if the defaults don't fit the requirements.
  3. Configure each module.
  4. Start up all modules.
@@ -66,7 +66,7 @@
  
  @warning The SDK is **NOT** thread safe and has to be set up on the main thread!
  
- @warning You should **NOT** change any module configuration after calling `startManager`!
+ @warning Most properties of all components require to be set **BEFORE** calling`startManager`!
 
  */
 
@@ -182,14 +182,19 @@
 
 
 /**
- * Set the delegate
- *
- * Defines the class that implements the optional protocol `BITHockeyManagerDelegate`.
- *
- * @see BITHockeyManagerDelegate
- * @see BITCrashManagerDelegate
- * @see BITUpdateManagerDelegate
- * @see BITFeedbackManagerDelegate
+ Set the delegate
+ 
+ Defines the class that implements the optional protocol `BITHockeyManagerDelegate`.
+ 
+ The delegate will automatically be propagated to all components. There is no need to set the delegate
+ for each component individually.
+ 
+ @warning This property needs to be set before calling `startManager`
+ 
+ @see BITHockeyManagerDelegate
+ @see BITCrashManagerDelegate
+ @see BITUpdateManagerDelegate
+ @see BITFeedbackManagerDelegate
  */
 @property (nonatomic, weak) id<BITHockeyManagerDelegate> delegate;
 
@@ -199,6 +204,8 @@
  
  By default this is set to the HockeyApp servers and there rarely should be a
  need to modify that.
+ 
+ @warning This property needs to be set before calling `startManager`
  */
 @property (nonatomic, strong) NSString *serverURL;
 
@@ -222,7 +229,10 @@
  If this flag is enabled, then crash reporting is disabled and no crashes will
  be send.
  
- Please note that the Crash Manager will be initialized anyway!
+ Please note that the Crash Manager instance will be initialized anyway, but crash report
+ handling (signal and uncaught exception handlers) will **not** be registered.
+
+ @warning This property needs to be set before calling `startManager`
 
  *Default*: _NO_
  @see crashManager
@@ -249,8 +259,10 @@
  If this flag is enabled, then checking for updates and submitting beta usage
  analytics will be turned off!
  
- Please note that the Update Manager will be initialized anyway!
+ Please note that the Update Manager instance will be initialized anyway!
  
+ @warning This property needs to be set before calling `startManager`
+
  *Default*: _NO_
  @see updateManager
  */
@@ -276,8 +288,10 @@
  If this flag is enabled, then checking for updates when the app runs from the
  app store will be turned on!
  
- Please note that the Store Update Manager will be initialized anyway!
- 
+ Please note that the Store Update Manager instance will be initialized anyway!
+
+ @warning This property needs to be set before calling `startManager`
+
  *Default*: _NO_
  @see storeUpdateManager
  */
@@ -302,8 +316,10 @@
  If this flag is enabled, then letting the user give feedback and
  get responses will be turned off!
  
- Please note that the Feedback Manager will be initialized anyway!
- 
+ Please note that the Feedback Manager instance will be initialized anyway!
+
+ @warning This property needs to be set before calling `startManager`
+
  *Default*: _NO_
  @see feedbackManager
  */
@@ -359,6 +375,8 @@
  This is ignored if the app is running in the App Store and reverts to the
  default value in that case.
  
+ @warning This property needs to be set before calling `startManager`
+ 
  *Default*: _NO_
  */
 @property (nonatomic, assign, getter=isDebugLogEnabled) BOOL debugLogEnabled;
@@ -399,6 +417,12 @@
  want to define specific data for each component, use the delegate instead which does
  overwrite the values set by this property.
  
+ @warning When returning a non nil value, crash reports are not anonymous any more
+ and the crash alerts will not show the word "anonymous"!
+ 
+ @warning This property needs to be set before calling `startManager` to be considered
+ for being added to crash reports as meta data.
+
  @see userName
  @see userEmail
  @see `[BITHockeyManagerDelegate userIDForHockeyManager:componentManager:]`
@@ -421,6 +445,9 @@
  @warning When returning a non nil value, crash reports are not anonymous any more
  and the crash alerts will not show the word "anonymous"!
 
+ @warning This property needs to be set before calling `startManager` to be considered
+ for being added to crash reports as meta data.
+
  @see userID
  @see userEmail
  @see `[BITHockeyManagerDelegate userNameForHockeyManager:componentManager:]`
@@ -442,6 +469,9 @@
  
  @warning When returning a non nil value, crash reports are not anonymous any more
  and the crash alerts will not show the word "anonymous"!
+ 
+ @warning This property needs to be set before calling `startManager` to be considered
+ for being added to crash reports as meta data.
 
  @see userID
  @see userName

@@ -71,8 +71,8 @@ typedef NS_ENUM(NSUInteger, BITStoreButtonStyle) {
 // The interface is flexible, so there is now fixed order
 @interface BITStoreButton : UIButton
 
-- (id)initWithFrame:(CGRect)frame;
-- (id)initWithPadding:(CGPoint)padding style:(BITStoreButtonStyle)style;
+- (instancetype)initWithFrame:(CGRect)frame;
+- (instancetype)initWithPadding:(CGPoint)padding style:(BITStoreButtonStyle)style;
 
 // action delegate
 @property (nonatomic, weak) id<BITStoreButtonDelegate> buttonDelegate;

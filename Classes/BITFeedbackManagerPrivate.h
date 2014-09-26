@@ -36,6 +36,23 @@
 }
 
 
+///-----------------------------------------------------------------------------
+/// @name Delegate
+///-----------------------------------------------------------------------------
+
+/**
+ Sets the `BITFeedbackManagerDelegate` delegate.
+ 
+ Can be set to be notified when new feedback is received from the server.
+ 
+ The delegate is automatically set by using `[BITHockeyManager setDelegate:]`. You
+ should not need to set this delegate individually.
+ 
+ @see `[BITHockeyManager setDelegate:]`
+ */
+@property (nonatomic, weak) id<BITFeedbackManagerDelegate> delegate;
+
+
 @property (nonatomic, strong) NSMutableArray *feedbackList;
 @property (nonatomic, strong) NSString *token;
 
@@ -70,7 +87,7 @@
 - (NSUInteger)numberOfMessages;
 - (BITFeedbackMessage *)messageAtIndex:(NSUInteger)index;
 
-- (void)submitMessageWithText:(NSString *)text;
+- (void)submitMessageWithText:(NSString *)text andAttachments:(NSArray *)photos;
 - (void)submitPendingMessages;
 
 // Returns YES if manual user data can be entered, required or optional

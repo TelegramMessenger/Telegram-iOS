@@ -62,8 +62,7 @@ typedef NS_ENUM (NSUInteger, BITUpdateSetting) {
  This modul handles version updates, presents update and version information in a App Store like user interface,
  collects usage information and provides additional authorization options when using Ad-Hoc provisioning profiles.
  
- This module automatically disables itself when running in an App Store build by default! If you integrate the
- Atlassian JMC client this module is used to automatically configure JMC, but will not do anything else.
+ This module automatically disables itself when running in an App Store build by default!
  
  The protocol `BITUpdateManagerDelegate` provides delegates to inform about events and adjust a few behaviors.
  
@@ -74,17 +73,6 @@ typedef NS_ENUM (NSUInteger, BITUpdateSetting) {
  */
 
 @interface BITUpdateManager : BITHockeyBaseManager <UIAlertViewDelegate>
-
-
-///-----------------------------------------------------------------------------
-/// @name Delegate
-///-----------------------------------------------------------------------------
-
-/**
- Sets the `BITUpdateManagerDelegate` delegate. 
- */
-@property (nonatomic, weak) id delegate;
-
 
 ///-----------------------------------------------------------------------------
 /// @name Update Checking

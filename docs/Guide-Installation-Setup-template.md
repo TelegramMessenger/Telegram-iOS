@@ -1,6 +1,6 @@
-## Version 3.5.7
+## Version 3.6
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.5.7/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.6/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -10,14 +10,15 @@ This document contains the following sections:
 
 - [Requirements](#requirements)
 - [Download & Extract](#download)
-- [Set up Xcode](#xcode)
+- [Set up Xcode](#xcode) 
 - [Modify Code](#modify)
+- [iOS 8 Extensions](#extension)
 - [Additional Options](#options)
 
 <a id="requirements"></a> 
 ## Requirements
 
-The SDK runs on devices with iOS 5.0 or higher.
+The SDK runs on devices with iOS 6.0 or higher.
 
 <a id="download"></a> 
 ## Download & Extract
@@ -48,10 +49,13 @@ The SDK runs on devices with iOS 5.0 or higher.
 7. Expand `Link Binary With Libraries`.
 
 8. Add the following system frameworks, if they are missing:
+    - `AssetsLibrary`
     - `CoreText`
     - `CoreGraphics`
     - `Foundation`
+    - `MobileCoreServices`
     - `QuartzCore`
+    - `QuickLook`
     - `Security`
     - `SystemConfiguration`
     - `UIKit`
@@ -104,6 +108,33 @@ The SDK runs on devices with iOS 5.0 or higher.
 
 *Note:* The SDK is optimized to defer everything possible to a later time while making sure e.g. crashes on startup can also be caught and each module executes other code with a delay some seconds. This ensures that applicationDidFinishLaunching will process as fast as possible and the SDK will not block the startup sequence resulting in a possible kill by the watchdog process.
 
+<a id="extensions"></a>
+## iOS 8 Extensions
+
+The following points need to be considered to use HockeySDK with iOS 8 Extensions:
+
+1. Each extension is required to use the same values for version (`CFBundleShortVersionString`) and build number (`CFBundleVersion`) as the main app uses. (This is required only if you are using the same APP_IDENTIFIER for your app and extensions).
+2. You need to make sure the SDK setup code is only invoked once. Since there is no `applicationDidFinishLaunching:` equivalent and `viewDidLoad` can run multiple times, you need to use a setup like the following example:
+
+        @interface TodayViewController () <NCWidgetProviding>
+
+        @property (nonatomic, assign) BOOL didSetupHockeySDK;
+
+        @end
+
+        @implementation TodayViewController
+
+        - (void)viewDidLoad {
+          [super viewDidLoad];
+          if (!self.didSetupHockeySDK) {
+            [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
+            [[BITHockeyManager sharedHockeyManager] startManager];
+            self.didSetupHockeySDK = YES;
+          }
+        }
+3. The binary distribution provides a special framework build in the `HockeySDKCrashOnly` folder of the distribution zip file, which only contains crash reporting functionality (also automatic sending crash reports only). You can use this to further slim down the binary size of your extensions. 
+
+
 <a id="options"></a> 
 ## Additional Options
 
@@ -111,9 +142,9 @@ The SDK runs on devices with iOS 5.0 or higher.
 
 This documentation provides integrated help in Xcode for all public APIs and a set of additional tutorials and how-tos.
 
-1. Copy `de.bitstadium.HockeySDK-iOS-3.5.7.docset` into ~`/Library/Developer/Shared/Documentation/DocSets`
+1. Copy `de.bitstadium.HockeySDK-iOS-3.6.docset` into ~`/Library/Developer/Shared/Documentation/DocSets`
 
-The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.5.7/](http://hockeyapp.net/help/sdk/ios/3.5.7/)
+The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.6/](http://hockeyapp.net/help/sdk/ios/3.6/)
 
 ### Set up with xcconfig
 
@@ -142,10 +173,13 @@ Instead of manually adding the missing frameworks, you can also use our bundled 
     **Important note:** Check if you overwrite any of the build settings and add a missing `$(inherited)` entry on the projects build settings level, so the `HockeySDK.xcconfig` settings will be passed through successfully.
 
 7. If you are getting build warnings, then the `.xcconfig` setting wasn't included successfully or its settings in `Other Linker Flags` get ignored because `$(inherited)` is missing on project or target level. Either add `$(inherited)` or link the following frameworks manually in `Link Binary With Libraries` under `Build Phases`:
+    - `AssetsLibrary`
     - `CoreText`
     - `CoreGraphics`
     - `Foundation`
+    - `MobileCoreServices`
     - `QuartzCore`
+    - `QuickLook`
     - `Security`
     - `SystemConfiguration`
     - `UIKit`

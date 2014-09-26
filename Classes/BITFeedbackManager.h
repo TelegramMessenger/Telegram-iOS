@@ -42,7 +42,7 @@
 
 
 /**
- *  Defines if behavior of the user data field
+ *  Defines behavior of the user data field
  */
 typedef NS_ENUM(NSInteger, BITFeedbackUserDataElement) {
   /**
@@ -59,6 +59,24 @@ typedef NS_ENUM(NSInteger, BITFeedbackUserDataElement) {
   BITFeedbackUserDataElementRequired = 2
 };
 
+/**
+ *  Available modes for opening the feedback compose interface with a screenshot attached
+ */
+typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
+  /**
+   *  No SDK provided trigger is active.
+   */
+  BITFeedbackObservationNone = 0,
+  /**
+   *  Triggers when the user takes a screenshot. This will grab the latest image from the camera roll. Requires iOS 7 or later!
+   */
+  BITFeedbackObservationModeOnScreenshot = 1,
+  /**
+   *  Triggers when the user taps with three fingers for three seconds on the screen.
+   */
+  BITFeedbackObservationModeThreeFingerTap = 2
+};
+
 
 @class BITFeedbackMessage;
 @protocol BITFeedbackManagerDelegate;
@@ -66,25 +84,30 @@ typedef NS_ENUM(NSInteger, BITFeedbackUserDataElement) {
 /**
  The feedback module.
  
- This is the HockeySDK module for letting your users to communicate directly with you via
- the app and an integrated user interface. It provides to have a single threaded
+ This is the HockeySDK module for letting your users communicate directly with you via
+ the app and an integrated user interface. It provides a single threaded
  discussion with a user running your app.
+ 
+ You should never create your own instance of `BITFeedbackManager` but use the one provided
+ by the `[BITHockeyManager sharedHockeyManager]`:
+ 
+     [BITHockeyManager sharedHockeyManager].feedbackManager
 
  The user interface provides a list view than can be presented modally using
- `[BITFeedbackManager showFeedbackListView]` modally or adding
+ `[BITFeedbackManager showFeedbackListView]` or adding
  `[BITFeedbackManager feedbackListViewController:]` to push onto a navigation stack.
- This list integrates all features to load new messages, write new messages, view message
+ This list integrates all features to load new messages, write new messages, view messages
  and ask the user for additional (optional) data like name and email.
  
- If the user provides the email address, all responses from the server will also be send
- to the user via email and the user is also able to respond directly via email too.
+ If the user provides the email address, all responses from the server will also be sent
+ to the user via email and the user is also able to respond directly via email, too.
  
  The message list interface also contains options to locally delete single messages
  by swiping over them, or deleting all messages. This will not delete the messages
- on the server though!
+ on the server, though!
  
- It is also integrates actions to invoke the user interface to compose a new messages,
- reload the list content from the server and changing the users name or email if these
+ It also integrates actions to invoke the user interface to compose a new message,
+ reload the list content from the server and change the users name or email if these
  are allowed to be set.
  
  It is also possible to invoke the user interface to compose a new message in your
@@ -98,9 +121,9 @@ typedef NS_ENUM(NSInteger, BITFeedbackUserDataElement) {
  A third option is to include the `BITFeedbackActivity` into an UIActivityViewController.
  This can be useful if you present some data that users can not only share but also
  report back to the developer because they have some problems, e.g. webcams not working
- any more. The activity provide a default title and image that can be also be customized.
+ any more. The activity provides a default title and image that can also be customized.
 
- New message are automatically loaded on startup, when the app becomes active again
+ New messages are automatically loaded on startup, when the app becomes active again
  or when the notification `BITHockeyNetworkDidBecomeReachableNotification` is fired. This
  only happens if the user ever did initiate a conversation by writing the first
  feedback message.
@@ -112,18 +135,6 @@ typedef NS_ENUM(NSInteger, BITFeedbackUserDataElement) {
  */
 
 @interface BITFeedbackManager : BITHockeyBaseManager
-
-///-----------------------------------------------------------------------------
-/// @name Delegate
-///-----------------------------------------------------------------------------
-
-/**
- Sets the `BITFeedbackManagerDelegate` delegate.
-
- Can be set to be notified when new feedback is received from the server.
- */
-@property (nonatomic, weak) id<BITFeedbackManagerDelegate> delegate;
-
 
 ///-----------------------------------------------------------------------------
 /// @name General settings
@@ -174,12 +185,12 @@ typedef NS_ENUM(NSInteger, BITFeedbackUserDataElement) {
 
 
 /**
- Indicates if an alert should be shown when new messages arrived
+ Indicates if an alert should be shown when new messages have arrived
  
- This lets the user to view the new feedback by choosing the appropriate option
+ This lets the user view the new feedback by choosing the appropriate option
  in the alert sheet, and the `BITFeedbackListViewController` will be shown.
  
- The alert is only shown, if the newest message is not originated from the current user.
+ The alert is only shown, if the newest message didn't originate from the current user.
  This requires the users email address to be present! The optional userid property
  cannot be used, because users could also answer via email and then this information
  is not available.
@@ -192,13 +203,32 @@ typedef NS_ENUM(NSInteger, BITFeedbackUserDataElement) {
 @property (nonatomic, readwrite) BOOL showAlertOnIncomingMessages;
 
 
+/**
+ Define the trigger that opens the feedback composer and attaches a screenshot
+ 
+ The following modes are available:
+ 
+ - `BITFeedbackObservationNone`: No SDK based trigger is active. You can implement your
+   own trigger and then call `[[BITHockeyManager sharedHockeyManager].feedbackManager showFeedbackComposeViewWithGeneratedScreenshot];` to handle your custom events
+   that should trigger this.
+ - `BITFeedbackObservationModeOnScreenshot`: Triggers when the user takes a screenshot.
+    This will grab the latest image from the camera roll. Requires iOS 7 or later!
+ - `BITFeedbackObservationModeThreeFingerTap`: Triggers when the user taps on the screen for three seconds with three fingers.
+ 
+ Default is `BITFeedbackObservationNone`
+ 
+ @see showFeedbackComposeViewWithGeneratedScreenshot
+ */
+@property (nonatomic, readwrite) BITFeedbackObservationMode feedbackObservationMode;
+
+
 ///-----------------------------------------------------------------------------
 /// @name User Interface
 ///-----------------------------------------------------------------------------
 
 
 /**
- Indicates if an forced user data UI presentation is shown modal
+ Indicates if a forced user data UI presentation is shown modal
  
  If `requireUserName` and/or `requireUserEmail` are enabled, the first presentation
  of `feedbackListViewController:` and subsequent `feedbackComposeViewController:`
@@ -208,7 +238,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackUserDataElement) {
  If you want the SDK to push this UI onto the navigation stack in this specific scenario,
  then change the property to `NO`.
  
- @warning If you presenting the `BITFeedbackListViewController` in a popover, this property should not be changed!
+ @warning If you are presenting the `BITFeedbackListViewController` in a popover, this property should not be changed!
  
  Default is `YES`
  @see requireUserName
@@ -219,6 +249,15 @@ typedef NS_ENUM(NSInteger, BITFeedbackUserDataElement) {
  @see feedbackListViewController:
  */
 @property (nonatomic, readwrite) BOOL showFirstRequiredPresentationModal;
+
+
+/**
+ Return a screenshot UIImage intance from the current visiable screen
+
+ @return UIImage instance containing a screenshot of the current screen
+ */
+- (UIImage *)screenshot;
+
 
 /**
  Present the modal feedback list user interface.
@@ -241,9 +280,31 @@ typedef NS_ENUM(NSInteger, BITFeedbackUserDataElement) {
  */
 - (void)showFeedbackComposeView;
 
+/**
+ Present the modal feedback compose message user interface with the items given. 
+ 
+ All NSString-Content in the array will be concatenated and result in the message,
+ while all UIImage and NSData-instances will be turned into attachments.
+ 
+ @param items an NSArray with objects that should be attached
+ @see `[BITFeedbackComposeViewController prepareWithItems:]`
+ */
+- (void)showFeedbackComposeViewWithPreparedItems:(NSArray *)items;
 
 /**
- Create an feedback compose view
+ Presents a modal feedback compose interface with a screenshot attached which is taken at the time of calling this method.
+ 
+ This should be used when your own trigger fires. The following code should be used:
+ 
+     [[BITHockeyManager sharedHockeyManager].feedbackManager showFeedbackComposeViewWithGeneratedScreenshot];
+ 
+ @see feedbackObservationMode
+ */
+- (void)showFeedbackComposeViewWithGeneratedScreenshot;
+
+
+/**
+ Create a feedback compose view
 
  Example to show a modal feedback compose UI with prefilled text
      

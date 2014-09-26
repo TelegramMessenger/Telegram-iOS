@@ -38,6 +38,7 @@
 #import "BITFeedbackManagerPrivate.h"
 
 #import "BITHockeyBaseManagerPrivate.h"
+#import "BITHockeyAttachment.h"
 
 
 @interface BITFeedbackActivity()
@@ -54,12 +55,12 @@
 
 #pragma mark - NSObject
 
-- (id)init {
+- (instancetype)init {
   if ((self = [super init])) {
     _customActivityImage = nil;
     _customActivityTitle = nil;
     
-    self.items = [NSMutableArray array];;
+    _items = [NSMutableArray array];
   }
   
   return self;
@@ -96,6 +97,12 @@
   for (UIActivityItemProvider *item in activityItems) {
     if ([item isKindOfClass:[NSString class]]) {
       return YES;
+    } else if ([item isKindOfClass:[UIImage class]]) {
+      return YES;
+    } else if ([item isKindOfClass:[NSData class]]) {
+      return YES;
+    } else if ([item isKindOfClass:[BITHockeyAttachment class]]) {
+      return YES;
     } else if ([item isKindOfClass:[NSURL class]]) {
       return YES;
     }
@@ -106,6 +113,9 @@
 - (void)prepareWithActivityItems:(NSArray *)activityItems {
   for (id item in activityItems) {
     if ([item isKindOfClass:[NSString class]] ||
+        [item isKindOfClass:[UIImage class]] ||
+        [item isKindOfClass:[NSData class]] ||
+        [item isKindOfClass:[BITHockeyAttachment class]] ||
         [item isKindOfClass:[NSURL class]]) {
       [_items addObject:item];
     } else {

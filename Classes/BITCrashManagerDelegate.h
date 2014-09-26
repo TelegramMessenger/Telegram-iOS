@@ -29,7 +29,7 @@
 #import <Foundation/Foundation.h>
 
 @class BITCrashManager;
-@class BITCrashAttachment;
+@class BITHockeyAttachment;
 
 /**
  The `BITCrashManagerDelegate` formal protocol defines methods further configuring
@@ -55,28 +55,29 @@
 -(NSString *)applicationLogForCrashManager:(BITCrashManager *)crashManager;
 
 
-/** Return a BITCrashAttachment object providing an NSData object the crash report
+/** Return a BITHockeyAttachment object providing an NSData object the crash report
  being processed should contain
  
  Please limit your attachments to reasonable files to avoid high traffic costs for your users.
  
  Example implementation:
  
-     - (BITCrashAttachment *)attachmentForCrashManager:(BITCrashManager *)crashManager {
+     - (BITHockeyAttachment *)attachmentForCrashManager:(BITCrashManager *)crashManager {
        NSData *data = [NSData dataWithContentsOfURL:@"mydatafile"];
  
-       BITCrashAttachment *attachment = [[BITCrashAttachment alloc] initWithFilename:@"myfile.data"
-                                                                 crashAttachmentData:data
-                                                                         contentType:@"'application/octet-stream"];
+       BITHockeyAttachment *attachment = [[BITHockeyAttachment alloc] initWithFilename:@"myfile.data"
+                                                                  hockeyAttachmentData:data
+                                                                           contentType:@"'application/octet-stream"];
        return attachment;
      }
  
  @param crashManager The `BITCrashManager` instance invoking this delegate
+ @see BITHockeyAttachment
  @see applicationLogForCrashManager:
  @see userNameForCrashManager:
  @see userEmailForCrashManager:
  */
--(BITCrashAttachment *)attachmentForCrashManager:(BITCrashManager *)crashManager;
+-(BITHockeyAttachment *)attachmentForCrashManager:(BITCrashManager *)crashManager;
 
 
 
@@ -157,5 +158,26 @@
  @param crashManager The `BITCrashManager` instance invoking this delegate
  */
 - (void)crashManagerDidFinishSendingCrashReport:(BITCrashManager *)crashManager;
+
+///-----------------------------------------------------------------------------
+/// @name Experimental
+///-----------------------------------------------------------------------------
+
+/** Define if a report should be considered as a crash report
+ 
+ Due to the risk, that these reports may be false positives, this delegates allows the
+ developer to influence which reports detected by the heuristic should actually be reported.
+ 
+ The developer can use the following property to get more information about the crash scenario:
+ - `[BITCrashManager didReceiveMemoryWarningInLastSession]`: Did the app receive a low memory warning
+ 
+ This allows only reports to be considered where at least one low memory warning notification was
+ received by the app to reduce to possibility of having false positives.
+ 
+ @param crashManager The `BITCrashManager` instance invoking this delegate
+ @return `YES` if the heuristic based detected report should be reported, otherwise `NO`
+ @see `[BITCrashManager didReceiveMemoryWarningInLastSession]`
+ */
+-(BOOL)considerAppNotTerminatedCleanlyReportForCrashManager:(BITCrashManager *)crashManager;
 
 @end

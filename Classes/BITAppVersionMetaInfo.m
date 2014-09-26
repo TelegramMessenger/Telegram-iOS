@@ -139,7 +139,7 @@
   [encoder encodeObject:self.uuids forKey:@"uuids"];
 }
 
-- (id)initWithCoder:(NSCoder *)decoder {
+- (instancetype)initWithCoder:(NSCoder *)decoder {
   if ((self = [super init])) {
     self.name = [decoder decodeObjectForKey:@"name"];
     self.version = [decoder decodeObjectForKey:@"version"];

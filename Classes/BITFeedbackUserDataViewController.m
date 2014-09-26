@@ -51,11 +51,9 @@
 @implementation BITFeedbackUserDataViewController
 
 
-- (id)initWithStyle:(UITableViewStyle)style {
+- (instancetype)initWithStyle:(UITableViewStyle)style {
   self = [super initWithStyle:style];
   if (self) {
-    self.title = BITHockeyLocalizedString(@"HockeyFeedbackUserDataTitle");
-    
     _delegate = nil;
     
     _manager = [BITHockeyManager sharedHockeyManager].feedbackManager;
@@ -68,6 +66,8 @@
 - (void)viewDidLoad {
   [super viewDidLoad];
 
+  self.title = BITHockeyLocalizedString(@"HockeyFeedbackUserDataTitle");
+  
   [self.tableView setScrollEnabled:NO];
 }
 

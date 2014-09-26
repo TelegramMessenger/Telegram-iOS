@@ -256,6 +256,8 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     if(validated) {
       [self dismissAuthenticationControllerAnimated:YES completion:nil];
     } else {
+      BITHockeyLog(@"Validation failed with error: %@", error);
+      
       UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil
                                                           message:error.localizedDescription
                                                          delegate:self

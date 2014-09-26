@@ -221,18 +221,16 @@ BOOL bit_isPreiOS7Environment(void) {
   static dispatch_once_t checkOS;
   
   dispatch_once(&checkOS, ^{
-    // we only perform this runtime check if this is build against at least iOS7 base SDK
-#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
+    // NSFoundationVersionNumber_iOS_6_1 = 993.00
+    // We hardcode this, so compiling with iOS 6 is possible while still being able to detect the correct environment
+    
     // runtime check according to
     // https://developer.apple.com/library/prerelease/ios/documentation/UserExperience/Conceptual/TransitionGuide/SupportingEarlieriOS.html
-    if (floor(NSFoundationVersionNumber) <= NSFoundationVersionNumber_iOS_6_1) {
+    if (floor(NSFoundationVersionNumber) <= 993.00) {
       isPreiOS7Environment = YES;
     } else {
       isPreiOS7Environment = NO;
     }
-#else
-    isPreiOS7Environment = YES;
-#endif
   });
   
   return isPreiOS7Environment;
@@ -243,21 +241,30 @@ BOOL bit_isPreiOS8Environment(void) {
   static dispatch_once_t checkOS8;
   
   dispatch_once(&checkOS8, ^{
-    // we only perform this runtime check if this is build against at least iOS8 base SDK
-#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_7_1
+    // NSFoundationVersionNumber_iOS_7_1 = 1047.25
+    // We hardcode this, so compiling with iOS 7 is possible while still being able to detect the correct environment
+
     // runtime check according to
     // https://developer.apple.com/library/prerelease/ios/documentation/UserExperience/Conceptual/TransitionGuide/SupportingEarlieriOS.html
-    if (floor(NSFoundationVersionNumber) <= NSFoundationVersionNumber_iOS_7_1) {
+    if (floor(NSFoundationVersionNumber) <= 1047.25) {
       isPreiOS8Environment = YES;
     } else {
       isPreiOS8Environment = NO;
     }
-#else
-    isPreiOS8Environment = YES;
-#endif
   });
   
   return isPreiOS8Environment;
+}
+
+BOOL bit_isRunningInAppExtension(void) {
+  static BOOL isRunningInAppExtension = NO;
+  static dispatch_once_t checkAppExtension;
+  
+  dispatch_once(&checkAppExtension, ^{
+    isRunningInAppExtension = ([[[NSBundle mainBundle] executablePath] rangeOfString:@".appex/"].location != NSNotFound);
+  });
+  
+  return isRunningInAppExtension;
 }
 
 /**
@@ -489,6 +496,11 @@ UIImage *bit_addGlossToImage(UIImage *inputImage) {
 #pragma mark UIImage helpers
 
 UIImage *bit_imageToFitSize(UIImage *inputImage, CGSize fitSize, BOOL honorScaleFactor) {
+  
+  if (!inputImage){
+    return nil;
+  }
+  
 	float imageScaleFactor = 1.0;
   if (honorScaleFactor) {
     if ([inputImage respondsToSelector:@selector(scale)]) {
@@ -720,7 +732,7 @@ UIImage *bit_appIcon() {
   }
 }
 
-UIImage *bit_screenshot() {
+UIImage *bit_screenshot(void) {
   // Create a graphics context with the target size
   CGSize imageSize = [[UIScreen mainScreen] bounds].size;
   BOOL isLandscapeLeft = [UIApplication sharedApplication].statusBarOrientation == UIInterfaceOrientationLandscapeLeft;
@@ -733,7 +745,7 @@ UIImage *bit_screenshot() {
     imageSize.height = temp;
   }
   
-  UIGraphicsBeginImageContextWithOptions(imageSize, NO, 0);
+  UIGraphicsBeginImageContextWithOptions(imageSize, YES, 0);
   
   CGContextRef context = UIGraphicsGetCurrentContext();
   
@@ -751,13 +763,10 @@ UIImage *bit_screenshot() {
       // Apply the window's transform about the anchor point
       CGContextConcatCTM(context, [window transform]);
       
-      // Y-offset for the status bar (if it's showing)
-      NSInteger yOffset = [UIApplication sharedApplication].statusBarHidden ? 0 : -20;
-      
       // Offset by the portion of the bounds left of and above the anchor point
       CGContextTranslateCTM(context,
                             -[window bounds].size.width * [[window layer] anchorPoint].x,
-                            -[window bounds].size.height * [[window layer] anchorPoint].y + yOffset);
+                            -[window bounds].size.height * [[window layer] anchorPoint].y);
       
       if (isLandscapeLeft) {
         CGContextConcatCTM(context, CGAffineTransformRotate(CGAffineTransformMakeTranslation( imageSize.width, 0), M_PI / 2.0));
@@ -767,8 +776,12 @@ UIImage *bit_screenshot() {
         CGContextConcatCTM(context, CGAffineTransformRotate(CGAffineTransformMakeTranslation( imageSize.width, imageSize.height), M_PI));
       }
       
-      // Render the layer hierarchy to the current context
-      [[window layer] renderInContext:context];
+      if ([window respondsToSelector:@selector(drawViewHierarchyInRect:afterScreenUpdates:)]) {
+        [window drawViewHierarchyInRect:window.bounds afterScreenUpdates:NO];
+      } else {
+        // Render the layer hierarchy to the current context
+        [[window layer] renderInContext:context];
+      }
       
       // Restore the context
       CGContextRestoreGState(context);

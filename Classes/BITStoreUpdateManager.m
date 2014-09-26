@@ -106,7 +106,7 @@
 
 #pragma mark - Init
 
-- (id)init {
+- (instancetype)init {
   if ((self = [super init])) {
     _checkInProgress = NO;
     _updateAvailable = NO;

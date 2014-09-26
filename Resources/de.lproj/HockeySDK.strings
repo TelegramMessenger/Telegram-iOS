@@ -212,6 +212,18 @@
 /* Send button */
 "HockeyFeedbackComposeSend" = "Senden";
 
+/* Add Image button for attachment actions */
+"HockeyFeedbackComposeAttachmentAddImage" = "Bild hinzufügen";
+
+/* Edit button for attachment actions */
+"HockeyFeedbackComposeAttachmentEdit" = "Bild bearbeiten";
+
+/* Delete button for attachment actions */
+"HockeyFeedbackComposeAttachmentDelete" = "Bild löschen";
+
+/* Cancel button for attachment actions */
+"HockeyFeedbackComposeAttachmentCancel" = "Abbrechen";
+
 
 /* Set User Data */
 
@@ -222,7 +234,7 @@
 "HockeyFeedbackUserDataDescription" = "Bitte geben Sie vor Verfassen Ihres Feedbacks Ihre Daten ein.";
 
 /* Name Field */
-"HockeyFeedbackUserDataName" = "Name";
+"HockeyFeedbackUserDataName" = "Max Mustermann";
 
 /* Name Placeholder */
 "HockeyFeedbackUserDataNamePlaceHolder" = "Max Mustermann";
@@ -259,7 +271,6 @@
 
 /* Error presented to the user if authentication could not be stored on the device */
 "HockeyAuthenticationViewControllerStorageError" = "Your authentication token could not be stored due to a keychain error. Please contact the developer of the app.";
-
 
 "HockeyAuthenticationFailedAuthenticate" = "Autorisierung fehlgeschlagen. Bitte erneut versuchen oder an den Entwickler dieser App wenden.";
 "HockeyAuthenticationNotMember" = "Sie sind nicht berechtigt, diese App zu nutzen. Bitte wenden Sie sich an den Entwickler dieser App.";

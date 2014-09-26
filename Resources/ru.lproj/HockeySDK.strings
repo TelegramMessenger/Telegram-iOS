@@ -212,6 +212,18 @@
 /* Send button */
 "HockeyFeedbackComposeSend" = "Отправить";
 
+/* Add Image button for attachment actions */
+"HockeyFeedbackComposeAttachmentAddImage" = "Добавить фото";
+
+/* Edit button for attachment actions */
+"HockeyFeedbackComposeAttachmentEdit" = "Изменить фото";
+
+/* Delete button for attachment actions */
+"HockeyFeedbackComposeAttachmentDelete" = "Удалить фото";
+
+/* Cancel button for attachment actions */
+"HockeyFeedbackComposeAttachmentCancel" = "Отменить";
+
 
 /* Set User Data */
 
@@ -259,7 +271,6 @@
 
 /* Error presented to the user if authentication could not be stored on the device */
 "HockeyAuthenticationViewControllerStorageError" = "Your authentication token could not be stored due to a keychain error. Please contact the developer of the app.";
-
 
 "HockeyAuthenticationFailedAuthenticate" = "Авторизация не удалась. Попробуйте еще раз или свяжитесь с разработчиком приложения.";
 "HockeyAuthenticationNotMember" = "У вас нет разрешения использовать это приложение. Обратитесь к разработчику приложения.";

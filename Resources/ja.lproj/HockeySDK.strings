@@ -212,6 +212,18 @@
 /* Send button */
 "HockeyFeedbackComposeSend" = "送信";
 
+/* Add Image button for attachment actions */
+"HockeyFeedbackComposeAttachmentAddImage" = "イメージを追加";
+
+/* Edit button for attachment actions */
+"HockeyFeedbackComposeAttachmentEdit" = "イメージを編集";
+
+/* Delete button for attachment actions */
+"HockeyFeedbackComposeAttachmentDelete" = "イメージを削除";
+
+/* Cancel button for attachment actions */
+"HockeyFeedbackComposeAttachmentCancel" = "キャンセル";
+
 
 /* Set User Data */
 
@@ -259,7 +271,6 @@
 
 /* Error presented to the user if authentication could not be stored on the device */
 "HockeyAuthenticationViewControllerStorageError" = "Your authentication token could not be stored due to a keychain error. Please contact the developer of the app.";
-
 
 "HockeyAuthenticationFailedAuthenticate" = "認証できませんでした。やり直すか、このAppのデベロッパに連絡してください。";
 "HockeyAuthenticationNotMember" = "このAppの使用を認証されていません。このAppのデベロッパに連絡してください。";

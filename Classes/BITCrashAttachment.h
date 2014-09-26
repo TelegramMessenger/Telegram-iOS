@@ -26,38 +26,31 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import <Foundation/Foundation.h>
+#import "BITHockeyAttachment.h"
 
 /**
- *  Provides support to add binary attachments to crash reports
- *
- *  This is used by `[BITCrashManagerDelegate attachmentForCrashManager:]`
+ Deprecated: Provides support to add binary attachments to crash reports
+ 
+ This class is not needed any longer and exists for compatiblity purposes with
+ HockeySDK-iOS 3.5.5.
+ 
+ It is a subclass of `BITHockeyAttachment` which only provides an initializer
+ that is compatible with the one of HockeySDK-iOS 3.5.5.
+ 
+ This is used by `[BITCrashManagerDelegate attachmentForCrashManager:]`
+ 
+ @see BITHockeyAttachment
  */
-@interface BITCrashAttachment : NSObject<NSCoding>
+@interface BITCrashAttachment : BITHockeyAttachment
 
 /**
- *  The filename the attachment should get
- */
-@property (nonatomic, readonly, strong) NSString *filename;
-
-/**
- *  The attachment data as NSData object
- */
-@property (nonatomic, readonly, strong) NSData *crashAttachmentData;
-
-/**
- *  The content type of your data as MIME type
- */
-@property (nonatomic, readonly, strong) NSString *contentType;
-
-/**
- *  Create an BITCrashAttachment instance with a given filename and NSData object
- *
- *  @param filename            The filename the attachment should get
- *  @param crashAttachmentData The attachment data as NSData
- *  @param contentType         The content type of your data as MIME type
- *
- *  @return An instsance of BITCrashAttachment
+ Create an BITCrashAttachment instance with a given filename and NSData object
+ 
+ @param filename            The filename the attachment should get
+ @param crashAttachmentData The attachment data as NSData
+ @param contentType         The content type of your data as MIME type
+ 
+ @return An instsance of BITCrashAttachment
  */
 - (instancetype)initWithFilename:(NSString *)filename
              crashAttachmentData:(NSData *)crashAttachmentData

@@ -35,13 +35,19 @@
 #import "BITHockeyManager.h"
 #import "BITHockeyManagerDelegate.h"
 
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER || HOCKEYSDK_FEATURE_FEEDBACK
+#import "BITHockeyAttachment.h"
+#endif
+
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
 #import "BITCrashManager.h"
 #import "BITCrashAttachment.h"
 #import "BITCrashManagerDelegate.h"
+#import "BITCrashDetails.h"
+#import "BITCrashMetaData.h"
 #endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */
 
-#if HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_JIRA_MOBILE_CONNECT
+#if HOCKEYSDK_FEATURE_UPDATES
 #import "BITUpdateManager.h"
 #import "BITUpdateManagerDelegate.h"
 #import "BITUpdateViewController.h"

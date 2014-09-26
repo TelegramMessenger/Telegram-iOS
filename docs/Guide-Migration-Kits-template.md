@@ -127,6 +127,26 @@ Instead of implementing the individual protocols in your app delegate, you can n
 
 The delegate `-(NSString *)customDeviceIdentifierForUpdateManager:(BITUpdateManager *)updateManager` has been removed. To identify the installation please use the new `BITAuthenticator` class.
 
+### HockeySDK-iOS 3.5.x
+
+If you are using `PLCrashReporterCallbacks`, you now have to use `BITCrashManagerCallbacks` instead. This `struct` doesn't contain `version` any longer, so you have to remove that. Otherwise everything is the same.
+
+If you did set the delegate per component, e.g. `[[BITHockeyManager sharedHockeyManager].crashManager setDelegate:self]`, you need to remove these and set the delegate this way only: `[[BITHockeyManager sharedHockeyManager] setDelegate:self]`. This will propagate the delegate to all SDK components. Make sure to set it before calling `startManager`!
+
+In addition you need to make sure all of these frameworks are linked:
+
+- `AssetsLibrary`
+- `CoreText`
+- `CoreGraphics`
+- `Foundation`
+- `MobileCoreServices`
+- `QuartzCore`
+- `QuickLook`
+- `Security`
+- `SystemConfiguration`
+- `UIKit`
+
+
 ## Troubleshooting
 
 ### ld: warning: directory not found for option '....QuincyKit.....'

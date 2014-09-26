@@ -39,6 +39,21 @@
 @interface BITUpdateManager () {
 }
 
+///-----------------------------------------------------------------------------
+/// @name Delegate
+///-----------------------------------------------------------------------------
+
+/**
+ Sets the `BITUpdateManagerDelegate` delegate.
+ 
+ The delegate is automatically set by using `[BITHockeyManager setDelegate:]`. You
+ should not need to set this delegate individually.
+ 
+ @see `[BITHockeyManager setDelegate:]`
+ */
+@property (nonatomic, weak) id delegate;
+
+
 // is an update available?
 @property (nonatomic, assign, getter=isUpdateAvailable) BOOL updateAvailable;
 
@@ -67,13 +82,6 @@
 @property (nonatomic, strong) NSString *installationIdentificationType;
 
 @property (nonatomic) BOOL installationIdentified;
-
-// if YES, the API will return an existing JMC config
-// if NO, the API will return only version information
-@property (nonatomic, assign) BOOL checkForTracker;
-
-// Contains the tracker config if received from server
-@property (nonatomic, strong) NSDictionary *trackerConfig;
 
 // used by BITHockeyManager if disable status is changed
 @property (nonatomic, getter = isUpdateManagerDisabled) BOOL disableUpdateManager;
