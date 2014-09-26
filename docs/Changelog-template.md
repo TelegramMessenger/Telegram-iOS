@@ -1,4 +1,8 @@
-## Version 3.6.0
+## Version 3.6.1
+
+- [BUGFIX] Fixed feedback compose view to correctly show the text in landscape on iOS 8
+
+## Version 3.6
 
 - [NEW] `BITCrashManager`: Added support for iOS 8 Extensions
 - [NEW] `BITCrashManager`: Option to add a custom UI flow before sending a crash report, e.g. to ask users for more details (see `setAlertViewHandler:`)
