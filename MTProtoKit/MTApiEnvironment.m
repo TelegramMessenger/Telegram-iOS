@@ -116,8 +116,9 @@ typedef enum {
         NSProcessInfo *pInfo = [NSProcessInfo processInfo];
         _systemVersion = [[[pInfo operatingSystemVersionString] componentsSeparatedByString:@" "] objectAtIndex:1];
 #endif
-        NSString *appVersion = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"];
-        _appVersion = appVersion.length == 0 ? @"1.0-Test" : appVersion;
+        
+        NSString *versionString = [[NSString alloc] initWithFormat:@"%@ (%@)", [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"], [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"]];
+        _appVersion = versionString;
         
         _langCode = [[NSLocale preferredLanguages] objectAtIndex:0];
         
