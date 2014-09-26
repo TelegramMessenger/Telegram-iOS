@@ -1,6 +1,6 @@
-## Version 3.6 Beta 2
+## Version 3.6
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.6-b.2/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.6/docs/docs/Changelog.html)
 
 
 ## Introduction
@@ -25,16 +25,16 @@ The main SDK class is `BITHockeyManager`. It initializes all modules and provide
 ## Prerequisites
 
 1. Before you integrate HockeySDK into your own app, you should add the app to HockeyApp if you haven't already. Read [this how-to](http://support.hockeyapp.net/kb/how-tos/how-to-create-a-new-app) on how to do it.
-2. We also assume that you already have a project in Xcode and that this project is opened in Xcode 4.
+2. We also assume that you already have a project in Xcode and that this project is opened in Xcode 5.
 3. The SDK supports iOS 6.0 or newer.
 
 
 ## Installation & Setup
 
-- [Installation & Setup](http://www.hockeyapp.net/help/sdk/ios/3.6-b.2/docs/docs/Guide-Installation-Setup.html) (Recommended)
-- [Installation & Setup Advanced](http://www.hockeyapp.net/help/sdk/ios/3.6-b.2/docs/docs/Guide-Installation-Setup-Advanced.html) (Using Git submodule and Xcode sub-project)
-- [Identify and authenticate users of Ad-Hoc or Enterprise builds](http://www.hockeyapp.net/help/sdk/ios/3.6-b.2/docs/docs/HowTo-Authenticating-Users-on-iOS.html)
-- [Migration from previous SDK Versions](http://www.hockeyapp.net/help/sdk/ios/3.6-b.2/docs/docs/Guide-Migration-Kits.html)
+- [Installation & Setup](http://www.hockeyapp.net/help/sdk/ios/3.6/docs/docs/Guide-Installation-Setup.html) (Recommended)
+- [Installation & Setup Advanced](http://www.hockeyapp.net/help/sdk/ios/3.6/docs/docs/Guide-Installation-Setup-Advanced.html) (Using Git submodule and Xcode sub-project)
+- [Identify and authenticate users of Ad-Hoc or Enterprise builds](http://www.hockeyapp.net/help/sdk/ios/3.6/docs/docs/HowTo-Authenticating-Users-on-iOS.html)
+- [Migration from previous SDK Versions](http://www.hockeyapp.net/help/sdk/ios/3.6/docs/docs/Guide-Migration-Kits.html)
 
 
 ## Xcode Documentation
@@ -47,4 +47,4 @@ This documentation provides integrated help in Xcode for all public APIs and a s
 
 3. Copy the content into ~`/Library/Developer/Shared/Documentation/DocSets`
 
-The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.6-b.2/](http://hockeyapp.net/help/sdk/ios/3.6-b.2/)
+The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.6/](http://hockeyapp.net/help/sdk/ios/3.6/)
