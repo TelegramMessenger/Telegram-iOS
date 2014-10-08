@@ -279,6 +279,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 }
 
 - (void)stopUsage {
+  if ([self isAppStoreEnvironment]) return;
   if ([self expiryDateReached]) return;
   
   double timeDifference = [[NSDate date] timeIntervalSinceReferenceDate] - [_usageStartTimestamp timeIntervalSinceReferenceDate];
@@ -288,6 +289,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 }
 
 - (void) storeUsageTimeForCurrentVersion:(NSNumber *)usageTime {
+  if ([self isAppStoreEnvironment]) return;
+  
   NSMutableData *data = [[NSMutableData alloc] init];
   NSKeyedArchiver *archiver = [[NSKeyedArchiver alloc] initForWritingWithMutableData:data];
   
