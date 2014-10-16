@@ -1103,7 +1103,10 @@
 }
 
 -(void)screenshotNotificationReceived:(NSNotification *)notification {
-  dispatch_async(dispatch_get_main_queue(), ^{
+  double amountOfSeconds = 0.5;
+  dispatch_time_t delayTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(amountOfSeconds * NSEC_PER_SEC));
+  
+  dispatch_after(delayTime, dispatch_get_main_queue(), ^{
     [self extractLastPictureFromLibraryAndLaunchFeedback];
   });
 }
