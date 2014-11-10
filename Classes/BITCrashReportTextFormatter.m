@@ -540,7 +540,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
     NSString *appBundleContentsPath = [[report.processInfo.processPath stringByDeletingLastPathComponent] stringByDeletingLastPathComponent];
     
     // exclude iOS swift dylibs
-    if (![imageInfo.imageName containsString:@".app/Frameworks/libswift"]) {
+    if ([imageInfo.imageName rangeOfString:@".app/Frameworks/libswift"].location == NSNotFound) {
       if ([imagePath isEqual: report.processInfo.processPath] ||
           [imagePath hasPrefix:appBundleContentsPath] ||
           [imageInfo.imageName hasPrefix:appBundleContentsPath]) // Fix issue with iOS 8 `stringByStandardizingPath` removing leading `/private` path (when not running in the debugger only)
