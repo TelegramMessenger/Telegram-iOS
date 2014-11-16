@@ -245,10 +245,8 @@
     {
         if (initializeApi && _apiEnvironment != nil)
         {
-            currentBody = [_serialization connectionWithApiId:_apiEnvironment.apiId deviceModel:_apiEnvironment.deviceModel systemVersion:_apiEnvironment.systemVersion appVersion:_apiEnvironment.appVersion langCode:_apiEnvironment.langCode query:currentBody];
+            currentBody = [_serialization wrapInLayer:[_serialization connectionWithApiId:_apiEnvironment.apiId deviceModel:_apiEnvironment.deviceModel systemVersion:_apiEnvironment.systemVersion appVersion:_apiEnvironment.appVersion langCode:_apiEnvironment.langCode query:currentBody]];
         }
-        
-        currentBody = [_serialization wrapInLayer:currentBody];
     }
     
     if (request.shouldDependOnRequest != nil)
@@ -473,8 +471,11 @@
                                 [scanner scanString:@"FLOOD_WAIT_" intoString:nil];
                                 if ([scanner scanInt:&errorWaitTime])
                                 {
-                                    restartRequest = true;
-                                    request.errorContext.minimalExecuteTime = MAX(request.errorContext.minimalExecuteTime, MTAbsoluteSystemTime() + (MTAbsoluteTime)errorWaitTime);
+                                    if (request.shouldContinueExecutionWithErrorContext != nil && request.shouldContinueExecutionWithErrorContext(request.errorContext))
+                                    {
+                                        restartRequest = true;
+                                        request.errorContext.minimalExecuteTime = MAX(request.errorContext.minimalExecuteTime, MTAbsoluteSystemTime() + (MTAbsoluteTime)errorWaitTime);
+                                    }
                                 }
                             }
                         }
