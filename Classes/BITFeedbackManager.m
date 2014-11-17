@@ -1088,7 +1088,9 @@
         self.tapRecognizer.delegate = self;
         
         dispatch_async(dispatch_get_main_queue(), ^{
-          [[UIApplication sharedApplication].keyWindow addGestureRecognizer:self.tapRecognizer];
+          if (self.tapRecognizer) {
+            [[UIApplication sharedApplication].keyWindow addGestureRecognizer:self.tapRecognizer];
+          }
         });
       }
       
