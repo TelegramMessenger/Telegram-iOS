@@ -39,6 +39,14 @@ NSData *MTSubdataSha1(NSData *data, NSUInteger offset, NSUInteger length)
     return [[NSData alloc] initWithBytes:digest length:20];
 }
 
+NSData *MTSha256(NSData *data)
+{
+    uint8_t digest[CC_SHA256_DIGEST_LENGTH];
+    CC_SHA256(data.bytes, (CC_LONG)data.length, digest);
+    
+    return [[NSData alloc] initWithBytes:digest length:CC_SHA256_DIGEST_LENGTH];
+}
+
 #if defined(_MSC_VER)
 
 #define FORCE_INLINE    __forceinline

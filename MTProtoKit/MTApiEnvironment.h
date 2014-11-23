@@ -15,6 +15,7 @@
 @property (nonatomic, strong, readonly) NSString *systemVersion;
 @property (nonatomic, strong, readonly) NSString *appVersion;
 @property (nonatomic, strong, readonly) NSString *langCode;
+@property (nonatomic, strong) NSNumber *layer;
 
 @property (nonatomic, strong, readonly) NSString *apiInitializationHash;
 

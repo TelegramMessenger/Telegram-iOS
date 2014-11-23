@@ -18,6 +18,8 @@ extern "C" {
 NSData *MTSha1(NSData *data);
 NSData *MTSubdataSha1(NSData *data, NSUInteger offset, NSUInteger length);
     
+NSData *MTSha256(NSData *data);
+    
 int32_t MTMurMurHash32(const void *bytes, int length);
     
 void MTAesEncryptInplace(NSMutableData *data, NSData *key, NSData *iv);

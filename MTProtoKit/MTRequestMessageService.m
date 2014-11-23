@@ -476,6 +476,11 @@
                                         restartRequest = true;
                                         request.errorContext.minimalExecuteTime = MAX(request.errorContext.minimalExecuteTime, MTAbsoluteSystemTime() + (MTAbsoluteTime)errorWaitTime);
                                     }
+                                    else
+                                    {
+                                        restartRequest = true;
+                                        request.errorContext.minimalExecuteTime = MAX(request.errorContext.minimalExecuteTime, MTAbsoluteSystemTime() + (MTAbsoluteTime)errorWaitTime);
+                                    }
                                 }
                             }
                         }

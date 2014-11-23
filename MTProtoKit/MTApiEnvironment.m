@@ -122,7 +122,7 @@ typedef enum {
         
         _langCode = [[NSLocale preferredLanguages] objectAtIndex:0];
         
-        _apiInitializationHash = [[NSString alloc] initWithFormat:@"apiId=%" PRId32 "&deviceModel=%@&systemVersion=%@&appVersion=%@&langCode=%@", _apiId, _deviceModel, _systemVersion, _appVersion, _langCode];
+        _apiInitializationHash = [[NSString alloc] initWithFormat:@"apiId=%" PRId32 "&deviceModel=%@&systemVersion=%@&appVersion=%@&langCode=%@&layer=%@", _apiId, _deviceModel, _systemVersion, _appVersion, _langCode, _layer];
     }
     return self;
 }
