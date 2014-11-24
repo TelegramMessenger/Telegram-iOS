@@ -198,7 +198,7 @@ NSString *bit_appAnonID(void) {
     __block NSError *error = nil;
     appAnonID = [BITKeychainUtils getPasswordForUsername:appAnonIDKey andServiceName:bit_keychainHockeySDKServiceName() error:&error];
     
-    if (appAnonID) {
+    if (!appAnonID) {
       appAnonID = bit_UUID();
       // store this UUID in the keychain (on this device only) so we can be sure to always have the same ID upon app startups
       if (appAnonID) {
