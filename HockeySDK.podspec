@@ -27,5 +27,6 @@ Pod::Spec.new do |s|
   s.xcconfig                = {'GCC_PREPROCESSOR_DEFINITIONS' => %{$(inherited) BITHOCKEY_VERSION="@\\"#{s.version}\\"" BITHOCKEY_C_VERSION="\\"#{s.version}\\"" BITHOCKEY_BUILD="@\\"35\\"" BITHOCKEY_C_BUILD="\\"35\\""} }
   s.resource_bundle         = { 'HockeySDKResources' => ['Resources/*.png', 'Resources/*.lproj'] }
   s.preserve_paths          = 'Resources', 'Support'
+  s.private_header_files  = 'Classes/*Private.h'
 
 end
