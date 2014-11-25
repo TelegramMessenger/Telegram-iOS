@@ -33,7 +33,9 @@
 
 #import "BITHockeyBaseManager.h"
 #import "BITHockeyBaseManagerPrivate.h"
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_FEEDBACK
 #import "BITHockeyBaseViewController.h"
+#endif
 
 #import "BITKeychainUtils.h"
 
@@ -199,6 +201,9 @@
 }
 
 - (void)showView:(UIViewController *)viewController {
+  // if we compile Crash only, then BITHockeyBaseViewController is not included
+  // in the headers and will cause a warning with the modulemap file
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_FEEDBACK
   UIViewController *parentViewController = nil;
     
   if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(viewControllerForHockeyManager:componentManager:)]) {
@@ -259,6 +264,7 @@
       [(BITHockeyBaseViewController *)viewController setModalAnimated:NO];
     [visibleWindow addSubview:_navController.view];
   }
+#endif
 }
 
 - (BOOL)addStringValueToKeychain:(NSString *)stringValue forKey:(NSString *)key {

@@ -144,9 +144,17 @@
   NSDictionary* info = [aNotification userInfo];
   CGSize kbSize = [[info objectForKey:UIKeyboardFrameBeginUserInfoKey] CGRectValue].size;
   
+  BOOL isPortraitOrientation = NO;
+
+#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_8_0
+  isPortraitOrientation = UIInterfaceOrientationIsPortrait([[UIApplication sharedApplication] statusBarOrientation]);
+#else
+  isPortraitOrientation = UIInterfaceOrientationIsPortrait(self.interfaceOrientation);
+#endif
+  
   CGRect frame = CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height);
   if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
-    if (!bit_isPreiOS8Environment() || UIInterfaceOrientationIsPortrait(self.interfaceOrientation)) {
+    if (!bit_isPreiOS8Environment() || isPortraitOrientation) {
       frame.size.height -= kbSize.height;
     } else {
       frame.size.height -= kbSize.width;
@@ -156,7 +164,7 @@
     CGFloat windowHeight = windowSize.height - 20;
     CGFloat navBarHeight = self.navigationController.navigationBar.frame.size.height;
     
-    if (!bit_isPreiOS8Environment() || UIInterfaceOrientationIsPortrait(self.interfaceOrientation)) {
+    if (!bit_isPreiOS8Environment() || isPortraitOrientation) {
       CGFloat modalGap = (windowHeight - self.view.bounds.size.height) / 2;
       frame.size.height = windowHeight - navBarHeight - kbSize.height;
       if (bit_isPreiOS8Environment()) {
@@ -261,7 +269,7 @@
   [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleBlackOpaque];
 #endif
   
-  if (_text) {
+  if (_text && self.textView.text.length == 0) {
     self.textView.text = _text;
   }
   

@@ -539,8 +539,13 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
     NSString *imagePath = [imageInfo.imageName stringByStandardizingPath];
     NSString *appBundleContentsPath = [[report.processInfo.processPath stringByDeletingLastPathComponent] stringByDeletingLastPathComponent];
     
-    if ([imagePath isEqual: report.processInfo.processPath] || [imagePath hasPrefix:appBundleContentsPath])
-      binaryDesignator = @"+";
+    // exclude iOS swift dylibs
+    if ([imageInfo.imageName rangeOfString:@".app/Frameworks/libswift"].location == NSNotFound) {
+      if ([imagePath isEqual: report.processInfo.processPath] ||
+          [imagePath hasPrefix:appBundleContentsPath] ||
+          [imageInfo.imageName hasPrefix:appBundleContentsPath]) // Fix issue with iOS 8 `stringByStandardizingPath` removing leading `/private` path (when not running in the debugger only)
+        binaryDesignator = @"+";
+    }
     
     /* base_address - terminating_address [designator]file_name arch <uuid> file_path */
     NSString *fmt = nil;

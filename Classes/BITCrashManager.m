@@ -197,19 +197,19 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
  * This saves the list of approved crash reports
  */
 - (void)saveSettings {
-  NSString *errorString = nil;
+  NSError *error = nil;
   
   NSMutableDictionary *rootObj = [NSMutableDictionary dictionaryWithCapacity:2];
   if (_approvedCrashReports && [_approvedCrashReports count] > 0) {
     [rootObj setObject:_approvedCrashReports forKey:kBITCrashApprovedReports];
   }
-  NSData *plist = [NSPropertyListSerialization dataFromPropertyList:(id)rootObj
-                                                             format:NSPropertyListBinaryFormat_v1_0
-                                                   errorDescription:&errorString];
+
+  NSData *plist = [NSPropertyListSerialization dataWithPropertyList:(id)rootObj format:NSPropertyListBinaryFormat_v1_0 options:0 error:&error];
+  
   if (plist) {
     [plist writeToFile:_settingsFile atomically:YES];
   } else {
-    BITHockeyLog(@"ERROR: Writing settings. %@", errorString);
+    BITHockeyLog(@"ERROR: Writing settings. %@", [error description]);
   }
 }
 
@@ -219,7 +219,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
  * This contains the list of approved crash reports
  */
 - (void)loadSettings {
-  NSString *errorString = nil;
+  NSError *error = nil;
   NSPropertyListFormat format;
   
   if (![_fileManager fileExistsAtPath:_settingsFile])
@@ -228,10 +228,10 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
   NSData *plist = [NSData dataWithContentsOfFile:_settingsFile];
   if (plist) {
     NSDictionary *rootObj = (NSDictionary *)[NSPropertyListSerialization
-                                             propertyListFromData:plist
-                                             mutabilityOption:NSPropertyListMutableContainersAndLeaves
+                                             propertyListWithData:plist
+                                             options:NSPropertyListMutableContainersAndLeaves
                                              format:&format
-                                             errorDescription:&errorString];
+                                             error:&error];
     
     if ([rootObj objectForKey:kBITCrashApprovedReports])
       [_approvedCrashReports setDictionary:[rootObj objectForKey:kBITCrashApprovedReports]];
@@ -689,7 +689,6 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
   NSError *error = NULL;
   NSMutableDictionary *metaDict = [NSMutableDictionary dictionaryWithCapacity:4];
   NSString *applicationLog = @"";
-  NSString *errorString = nil;
   
   [self addStringValueToKeychain:[self userNameForCrashReport] forKey:[NSString stringWithFormat:@"%@.%@", filename, kBITCrashMetaUserName]];
   [self addStringValueToKeychain:[self userEmailForCrashReport] forKey:[NSString stringWithFormat:@"%@.%@", filename, kBITCrashMetaUserEmail]];
@@ -708,9 +707,10 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
     }
   }
   
-  NSData *plist = [NSPropertyListSerialization dataFromPropertyList:(id)metaDict
+  NSData *plist = [NSPropertyListSerialization dataWithPropertyList:(id)metaDict
                                                              format:NSPropertyListBinaryFormat_v1_0
-                                                   errorDescription:&errorString];
+                                                            options:0
+                                                              error:&error];
   if (plist) {
     [plist writeToFile:[_crashesDir stringByAppendingPathComponent: [filename stringByAppendingPathExtension:@"meta"]] atomically:YES];
   } else {
@@ -1173,7 +1173,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
   
   NSString *fakeReportFilename = [NSString stringWithFormat: @"%.0f", [NSDate timeIntervalSinceReferenceDate]];
   
-  NSString *errorString = nil;
+  NSError *error = nil;
   
   NSMutableDictionary *rootObj = [NSMutableDictionary dictionaryWithCapacity:2];
   [rootObj setObject:fakeReportUUID forKey:kBITFakeCrashUUID];
@@ -1196,15 +1196,16 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
                                                                         appBuild:fakeReportAppVersion
                               ];
 
-  NSData *plist = [NSPropertyListSerialization dataFromPropertyList:(id)rootObj
+  NSData *plist = [NSPropertyListSerialization dataWithPropertyList:(id)rootObj
                                                              format:NSPropertyListBinaryFormat_v1_0
-                                                   errorDescription:&errorString];
+                                                            options:0
+                                                              error:&error];
   if (plist) {
     if ([plist writeToFile:[_crashesDir stringByAppendingPathComponent:[fakeReportFilename stringByAppendingPathExtension:@"fake"]] atomically:YES]) {
       [self storeMetaDataForCrashReportFilename:fakeReportFilename];
     }
   } else {
-    BITHockeyLog(@"ERROR: Writing fake crash report. %@", errorString);
+    BITHockeyLog(@"ERROR: Writing fake crash report. %@", [error description]);
   }
 }
 
@@ -1240,15 +1241,14 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
     NSString *appBinaryUUIDs = nil;
     NSString *metaFilename = nil;
     
-    NSString *errorString = nil;
     NSPropertyListFormat format;
     
     if ([[cacheFilename pathExtension] isEqualToString:@"fake"]) {
       NSDictionary *fakeReportDict = (NSDictionary *)[NSPropertyListSerialization
-                                                      propertyListFromData:crashData
-                                                      mutabilityOption:NSPropertyListMutableContainersAndLeaves
+                                                      propertyListWithData:crashData
+                                                      options:NSPropertyListMutableContainersAndLeaves
                                                       format:&format
-                                                      errorDescription:&errorString];
+                                                      error:&error];
       
       crashLogString = [fakeReportDict objectForKey:kBITFakeCrashReport];
       crashUUID = [fakeReportDict objectForKey:kBITFakeCrashUUID];
@@ -1307,10 +1307,10 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
     NSData *plist = [NSData dataWithContentsOfFile:[_crashesDir stringByAppendingPathComponent:metaFilename]];
     if (plist) {
       NSDictionary *metaDict = (NSDictionary *)[NSPropertyListSerialization
-                                                propertyListFromData:plist
-                                                mutabilityOption:NSPropertyListMutableContainersAndLeaves
+                                                propertyListWithData:plist
+                                                options:NSPropertyListMutableContainersAndLeaves
                                                 format:&format
-                                                errorDescription:&errorString];
+                                                error:&error];
       
       username = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserName]] ?: @"";
       useremail = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserEmail]] ?: @"";
@@ -1330,7 +1330,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
       }
     }
     
-    crashXML = [NSString stringWithFormat:@"<crashes><crash><applicationname>%@</applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><username>%@</username><contact>%@</contact><installstring>%@</installstring><description><![CDATA[%@]]></description></crash></crashes>",
+    crashXML = [NSString stringWithFormat:@"<crashes><crash><applicationname><![CDATA[%@]]></applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><username>%@</username><contact>%@</contact><installstring>%@</installstring><description><![CDATA[%@]]></description></crash></crashes>",
                 [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleExecutable"],
                 appBinaryUUIDs,
                 appBundleIdentifier,
@@ -1468,10 +1468,10 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
                                        [strongSelf cleanCrashReportWithFilename:filename];
                                        
                                        // HockeyApp uses PList XML format
-                                       NSMutableDictionary *response = [NSPropertyListSerialization propertyListFromData:responseData
-                                                                                                        mutabilityOption:NSPropertyListMutableContainersAndLeaves
+                                       NSMutableDictionary *response = [NSPropertyListSerialization propertyListWithData:responseData
+                                                                                                                 options:NSPropertyListMutableContainersAndLeaves
                                                                                                                   format:nil
-                                                                                                        errorDescription:NULL];
+                                                                                                                   error:&error];
                                        BITHockeyLog(@"INFO: Received API response: %@", response);
                                        
                                        if (strongSelf.delegate != nil &&

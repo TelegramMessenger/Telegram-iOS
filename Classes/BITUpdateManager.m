@@ -113,6 +113,10 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     // we only care about iOS 8 or later
     if (bit_isPreiOS8Environment()) return;
     
+    if (self.delegate != nil && [self.delegate respondsToSelector:@selector(updateManagerWillExitApp:)]) {
+      [self.delegate updateManagerWillExitApp:self];
+    }
+    
     // for now we simply exit the app, later SDK versions might optionally show an alert with localized text
     // describing the user to press the home button to start the update process
     exit(0);
@@ -279,6 +283,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 }
 
 - (void)stopUsage {
+  if ([self isAppStoreEnvironment]) return;
   if ([self expiryDateReached]) return;
   
   double timeDifference = [[NSDate date] timeIntervalSinceReferenceDate] - [_usageStartTimestamp timeIntervalSinceReferenceDate];
@@ -288,6 +293,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 }
 
 - (void) storeUsageTimeForCurrentVersion:(NSNumber *)usageTime {
+  if ([self isAppStoreEnvironment]) return;
+  
   NSMutableData *data = [[NSMutableData alloc] init];
   NSKeyedArchiver *archiver = [[NSKeyedArchiver alloc] initForWritingWithMutableData:data];
   

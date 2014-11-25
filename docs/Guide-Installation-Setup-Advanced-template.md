@@ -1,6 +1,6 @@
-## Version 3.6.1
+## Version 3.6.2
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.6.1/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.6.2/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -166,7 +166,7 @@ This documentation provides integrated help in Xcode for all public APIs and a s
 
 3. Copy the content into ~`/Library/Developer/Shared/Documentation/DocSets`
 
-The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.6.1/](http://hockeyapp.net/help/sdk/ios/3.6.1/)
+The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.6.2/](http://hockeyapp.net/help/sdk/ios/3.6.2/)
 
 ### Set up with xcconfig
 

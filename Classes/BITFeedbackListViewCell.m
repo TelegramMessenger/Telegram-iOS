@@ -134,7 +134,12 @@
 - (BOOL)isSameDayWithDate1:(NSDate*)date1 date2:(NSDate*)date2 {
   NSCalendar* calendar = [NSCalendar currentCalendar];
   
+#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_8_0
+  unsigned unitFlags = NSCalendarUnitYear | NSCalendarUnitMonth |  NSCalendarUnitDay;
+#else
   unsigned unitFlags = NSYearCalendarUnit | NSMonthCalendarUnit |  NSDayCalendarUnit;
+#endif
+  
   NSDateComponents *dateComponent1 = [calendar components:unitFlags fromDate:date1];
   NSDateComponents *dateComponent2 = [calendar components:unitFlags fromDate:date2];
   

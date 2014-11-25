@@ -88,7 +88,6 @@
 		1E4CD1E819D17EAD00019DD4 /* Cancel@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E4CD1E719D17EAD00019DD4 /* Cancel@3x.png */; };
 		1E4CD1EA19D17EB700019DD4 /* Ok@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E4CD1E919D17EB700019DD4 /* Ok@3x.png */; };
 		1E4CD1EC19D17EBE00019DD4 /* Rectangle@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E4CD1EB19D17EBE00019DD4 /* Rectangle@3x.png */; };
-		1E4CD1EE19D17ECF00019DD4 /* feedbackActivity@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E4CD1ED19D17ECF00019DD4 /* feedbackActivity@3x.png */; };
 		1E4CD1F019D17EE400019DD4 /* authorize_denied@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E4CD1EF19D17EE400019DD4 /* authorize_denied@3x.png */; };
 		1E5954D315B6F24A00A03429 /* BITHockeyManager.m in Sources */ = {isa = PBXBuildFile; fileRef = E41EB466148D7BF50015DEDC /* BITHockeyManager.m */; };
 		1E5954DC15B6F24A00A03429 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E400561D148D79B500EB22B9 /* Foundation.framework */; };
@@ -117,6 +116,11 @@
 		1E7A45FC16F54FB5005B08F1 /* OCHamcrestIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E7A45FA16F54FB5005B08F1 /* OCHamcrestIOS.framework */; };
 		1E7A45FD16F54FB5005B08F1 /* OCMockitoIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E7A45FB16F54FB5005B08F1 /* OCMockitoIOS.framework */; };
 		1E84DB3417E099BA00AC83FD /* HockeySDKFeatureConfig.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E84DB3317E0977C00AC83FD /* HockeySDKFeatureConfig.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		1E90D97F19DAD8A800188C43 /* feedbackActivity.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E90D97A19DAD8A800188C43 /* feedbackActivity.png */; };
+		1E90D98019DAD8A800188C43 /* feedbackActivity@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E90D97B19DAD8A800188C43 /* feedbackActivity@2x.png */; };
+		1E90D98119DAD8A800188C43 /* feedbackActivity@2x~ipad.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E90D97C19DAD8A800188C43 /* feedbackActivity@2x~ipad.png */; };
+		1E90D98219DAD8A800188C43 /* feedbackActivity@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E90D97D19DAD8A800188C43 /* feedbackActivity@3x.png */; };
+		1E90D98319DAD8A800188C43 /* feedbackActivity~ipad.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E90D97E19DAD8A800188C43 /* feedbackActivity~ipad.png */; };
 		1E90FD7318EDB86400CF0417 /* BITCrashDetails.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E90FD7118EDB86400CF0417 /* BITCrashDetails.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E90FD7418EDB86400CF0417 /* BITCrashDetails.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E90FD7218EDB86400CF0417 /* BITCrashDetails.m */; };
 		1E94F9E116E91330006570AD /* BITStoreUpdateManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E94F9DF16E91330006570AD /* BITStoreUpdateManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -130,10 +134,6 @@
 		1EA1170C16F54A64001C015C /* HockeySDKResources.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 1E59550A15B6F45800A03429 /* HockeySDKResources.bundle */; };
 		1EACC97B162F041E007578C5 /* BITAttributedLabel.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EACC979162F041E007578C5 /* BITAttributedLabel.h */; };
 		1EACC97C162F041E007578C5 /* BITAttributedLabel.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EACC97A162F041E007578C5 /* BITAttributedLabel.m */; };
-		1EAF20A8162DC0F600957B1D /* feedbackActivity@2x~ipad.png in Resources */ = {isa = PBXBuildFile; fileRef = 1EAF20A4162DC0F600957B1D /* feedbackActivity@2x~ipad.png */; };
-		1EAF20A9162DC0F600957B1D /* feedbackActivity~ipad.png in Resources */ = {isa = PBXBuildFile; fileRef = 1EAF20A5162DC0F600957B1D /* feedbackActivity~ipad.png */; };
-		1EAF20AA162DC0F600957B1D /* feedbackActiviy.png in Resources */ = {isa = PBXBuildFile; fileRef = 1EAF20A6162DC0F600957B1D /* feedbackActiviy.png */; };
-		1EAF20AB162DC0F600957B1D /* feedbackActiviy@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1EAF20A7162DC0F600957B1D /* feedbackActiviy@2x.png */; };
 		1EB52FD5167B766100C801D5 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
 		1EB92E731955C38C0093C8B6 /* BITHockeyAttachment.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EB92E711955C38C0093C8B6 /* BITHockeyAttachment.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1EB92E741955C38C0093C8B6 /* BITHockeyAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EB92E721955C38C0093C8B6 /* BITHockeyAttachment.m */; };
@@ -278,7 +278,6 @@
 		1E4CD1E719D17EAD00019DD4 /* Cancel@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Cancel@3x.png"; sourceTree = "<group>"; };
 		1E4CD1E919D17EB700019DD4 /* Ok@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Ok@3x.png"; sourceTree = "<group>"; };
 		1E4CD1EB19D17EBE00019DD4 /* Rectangle@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Rectangle@3x.png"; sourceTree = "<group>"; };
-		1E4CD1ED19D17ECF00019DD4 /* feedbackActivity@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "feedbackActivity@3x.png"; sourceTree = "<group>"; };
 		1E4CD1EF19D17EE400019DD4 /* authorize_denied@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "authorize_denied@3x.png"; sourceTree = "<group>"; };
 		1E5954F215B6F24A00A03429 /* libHockeySDK.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libHockeySDK.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E59550A15B6F45800A03429 /* HockeySDKResources.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HockeySDKResources.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -318,6 +317,11 @@
 		1E7A45FB16F54FB5005B08F1 /* OCMockitoIOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = OCMockitoIOS.framework; sourceTree = "<group>"; };
 		1E7DE39619D44DC6009AB8E5 /* crashonly.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = crashonly.xcconfig; sourceTree = "<group>"; };
 		1E84DB3317E0977C00AC83FD /* HockeySDKFeatureConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HockeySDKFeatureConfig.h; sourceTree = "<group>"; };
+		1E90D97A19DAD8A800188C43 /* feedbackActivity.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = feedbackActivity.png; sourceTree = "<group>"; };
+		1E90D97B19DAD8A800188C43 /* feedbackActivity@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "feedbackActivity@2x.png"; sourceTree = "<group>"; };
+		1E90D97C19DAD8A800188C43 /* feedbackActivity@2x~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "feedbackActivity@2x~ipad.png"; sourceTree = "<group>"; };
+		1E90D97D19DAD8A800188C43 /* feedbackActivity@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "feedbackActivity@3x.png"; sourceTree = "<group>"; };
+		1E90D97E19DAD8A800188C43 /* feedbackActivity~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "feedbackActivity~ipad.png"; sourceTree = "<group>"; };
 		1E90FD7118EDB86400CF0417 /* BITCrashDetails.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashDetails.h; sourceTree = "<group>"; };
 		1E90FD7218EDB86400CF0417 /* BITCrashDetails.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITCrashDetails.m; sourceTree = "<group>"; };
 		1E91D84619B924E600E9616D /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
@@ -331,10 +335,6 @@
 		1EA512DF167F7EF000FC9FBA /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/HockeySDK.strings"; sourceTree = "<group>"; };
 		1EACC979162F041E007578C5 /* BITAttributedLabel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITAttributedLabel.h; sourceTree = "<group>"; };
 		1EACC97A162F041E007578C5 /* BITAttributedLabel.m */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 4; lastKnownFileType = sourcecode.c.objc; path = BITAttributedLabel.m; sourceTree = "<group>"; };
-		1EAF20A4162DC0F600957B1D /* feedbackActivity@2x~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "feedbackActivity@2x~ipad.png"; sourceTree = "<group>"; };
-		1EAF20A5162DC0F600957B1D /* feedbackActivity~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "feedbackActivity~ipad.png"; sourceTree = "<group>"; };
-		1EAF20A6162DC0F600957B1D /* feedbackActiviy.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = feedbackActiviy.png; sourceTree = "<group>"; };
-		1EAF20A7162DC0F600957B1D /* feedbackActiviy@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "feedbackActiviy@2x.png"; sourceTree = "<group>"; };
 		1EB52FC3167B73D400C801D5 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		1EB92E711955C38C0093C8B6 /* BITHockeyAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITHockeyAttachment.h; sourceTree = "<group>"; };
 		1EB92E721955C38C0093C8B6 /* BITHockeyAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITHockeyAttachment.m; sourceTree = "<group>"; };
@@ -469,11 +469,11 @@
 				1E1127C316580C87007067A2 /* buttonRoundedRegularHighlighted@2x.png */,
 				1E5955C415B71C8600A03429 /* IconGradient.png */,
 				1E5955C515B71C8600A03429 /* IconGradient@2x.png */,
-				1EAF20A4162DC0F600957B1D /* feedbackActivity@2x~ipad.png */,
-				1EAF20A5162DC0F600957B1D /* feedbackActivity~ipad.png */,
-				1EAF20A6162DC0F600957B1D /* feedbackActiviy.png */,
-				1EAF20A7162DC0F600957B1D /* feedbackActiviy@2x.png */,
-				1E4CD1ED19D17ECF00019DD4 /* feedbackActivity@3x.png */,
+				1E90D97A19DAD8A800188C43 /* feedbackActivity.png */,
+				1E90D97B19DAD8A800188C43 /* feedbackActivity@2x.png */,
+				1E90D97C19DAD8A800188C43 /* feedbackActivity@2x~ipad.png */,
+				1E90D97D19DAD8A800188C43 /* feedbackActivity@3x.png */,
+				1E90D97E19DAD8A800188C43 /* feedbackActivity~ipad.png */,
 			);
 			name = Images;
 			sourceTree = "<group>";
@@ -947,21 +947,20 @@
 				97F0F9FD18ABAECD00EF50AA /* iconCamera.png in Resources */,
 				9782023618F81BFC00A98D8B /* Cancel.png in Resources */,
 				9782023318F81BFC00A98D8B /* Arrow@2x.png in Resources */,
+				1E90D98119DAD8A800188C43 /* feedbackActivity@2x~ipad.png in Resources */,
 				9782023818F81BFC00A98D8B /* Ok.png in Resources */,
+				1E90D98219DAD8A800188C43 /* feedbackActivity@3x.png in Resources */,
 				1E5955CF15B71C8600A03429 /* IconGradient.png in Resources */,
 				1E5955D015B71C8600A03429 /* IconGradient@2x.png in Resources */,
+				1E90D98019DAD8A800188C43 /* feedbackActivity@2x.png in Resources */,
 				9782023218F81BFC00A98D8B /* Arrow.png in Resources */,
 				9782023A18F81BFC00A98D8B /* Rectangle.png in Resources */,
-				1EAF20A8162DC0F600957B1D /* feedbackActivity@2x~ipad.png in Resources */,
-				1EAF20A9162DC0F600957B1D /* feedbackActivity~ipad.png in Resources */,
 				9782023918F81BFC00A98D8B /* Ok@2x.png in Resources */,
 				9782023418F81BFC00A98D8B /* Blur.png in Resources */,
-				1EAF20AA162DC0F600957B1D /* feedbackActiviy.png in Resources */,
-				1E4CD1EE19D17ECF00019DD4 /* feedbackActivity@3x.png in Resources */,
-				1EAF20AB162DC0F600957B1D /* feedbackActiviy@2x.png in Resources */,
 				9782023518F81BFC00A98D8B /* Blur@2x.png in Resources */,
 				1E1127C416580C87007067A2 /* buttonRoundedDelete.png in Resources */,
 				1E1127C516580C87007067A2 /* buttonRoundedDelete@2x.png in Resources */,
+				1E90D97F19DAD8A800188C43 /* feedbackActivity.png in Resources */,
 				1E1127C616580C87007067A2 /* buttonRoundedDeleteHighlighted.png in Resources */,
 				9782023718F81BFC00A98D8B /* Cancel@2x.png in Resources */,
 				1E1127C716580C87007067A2 /* buttonRoundedDeleteHighlighted@2x.png in Resources */,
@@ -974,6 +973,7 @@
 				1E1127CA16580C87007067A2 /* buttonRoundedRegularHighlighted.png in Resources */,
 				1E1127CB16580C87007067A2 /* buttonRoundedRegularHighlighted@2x.png in Resources */,
 				1E4CD1EC19D17EBE00019DD4 /* Rectangle@3x.png in Resources */,
+				1E90D98319DAD8A800188C43 /* feedbackActivity~ipad.png in Resources */,
 				1EB52FD5167B766100C801D5 /* HockeySDK.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

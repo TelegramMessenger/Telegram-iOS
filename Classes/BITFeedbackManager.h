@@ -72,7 +72,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
    */
   BITFeedbackObservationModeOnScreenshot = 1,
   /**
-   *  Triggers when the user taps with three fingers for three seconds on the screen.
+   *  Triggers when the user taps with three fingers on the screen.
    */
   BITFeedbackObservationModeThreeFingerTap = 2
 };
