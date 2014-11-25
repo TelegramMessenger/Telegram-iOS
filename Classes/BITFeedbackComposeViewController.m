@@ -149,7 +149,7 @@
 #if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_8_0
   isPortraitOrientation = UIInterfaceOrientationIsPortrait([[UIApplication sharedApplication] statusBarOrientation]);
 #else
-  isPortraitOrientation = UIInterfaceOrientationIsPortrait(self.interfaceOrientation)
+  isPortraitOrientation = UIInterfaceOrientationIsPortrait(self.interfaceOrientation);
 #endif
   
   CGRect frame = CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height);

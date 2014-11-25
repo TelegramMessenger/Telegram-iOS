@@ -1,3 +1,16 @@
+## Version 3.6.2
+
+- [UPDATE] Store anonymous UUID asynchronously into the keychain to work around rare keychain blocking behavior
+- [UPDATE] `BITCrashManager`: Improved detecting app specific binary images in crash report for improved crash grouping on the server
+- [UPDATE] `BITUpdateManager`: Added new `updateManagerWillExitApp` delegate method
+- [UPDATE] `BITUpdateManager`: Don't save any file when app was installed from App Store
+- [BUGFIX] `BITCrashManager`: Fixed issues with sending crash reports for apps with xml tags in the app name
+- [BUGFIX] `BITFeedbackManager`: Fixed screenshot trigger issue not always fetching the last taken image
+- [BUGFIX] `BITFeedbackManager`: Fixed compose view issue with predefined text
+- [BUGFIX] Fixed a warning when integrating the binary framework for only crash reporting
+- [BUGFIX] Fixed compiler warnings
+- [BUGFIX] Various additional fixes
+
 ## Version 3.6.1
 
 - [BUGFIX] Fixed feedback compose view to correctly show the text in landscape on iOS 8

@@ -117,6 +117,7 @@
  not running. On all iOS versions up to iOS 7, the system did automatically exit the app
  in these cases. Since iOS 8 this isn't done any longer.
  
+ @param updateManager The `BITUpdateManager` instance invoking this delegate
  */
 - (void)updateManagerWillExitApp:(BITUpdateManager *)updateManager;
 
