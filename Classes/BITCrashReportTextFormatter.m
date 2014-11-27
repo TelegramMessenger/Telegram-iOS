@@ -536,14 +536,9 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
     
     /* Determine if this is the main executable or an app specific framework*/
     NSString *binaryDesignator = @" ";
-    NSString *imagePath = [imageInfo.imageName stringByStandardizingPath];
-    NSString *appBundleContentsPath = [[report.processInfo.processPath stringByDeletingLastPathComponent] stringByDeletingLastPathComponent];
-    
-    // exclude iOS swift dylibs
-    if ([imageInfo.imageName rangeOfString:@".app/Frameworks/libswift"].location == NSNotFound) {
-      if ([imagePath isEqual: report.processInfo.processPath] ||
-          [imagePath hasPrefix:appBundleContentsPath] ||
-          [imageInfo.imageName hasPrefix:appBundleContentsPath]) // Fix issue with iOS 8 `stringByStandardizingPath` removing leading `/private` path (when not running in the debugger only)
+    BITBinaryImageType imageType = [[self class] bit_imageTypeForImagePath:imageInfo.imageName
+                                                               processPath:report.processInfo.processPath];
+    if (imageType != BITBinaryImageTypeOther) {
         binaryDesignator = @"+";
     }
     
@@ -635,25 +630,58 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
     
     /* Determine the architecture string */
     NSString *archName = [[self class] bit_archNameFromImageInfo:imageInfo];
-    
+
     /* Determine if this is the app executable or app specific framework */
-    NSString *imagePath = [imageInfo.imageName stringByStandardizingPath];
-    NSString *appBundleContentsPath = [[report.processInfo.processPath stringByDeletingLastPathComponent] stringByDeletingLastPathComponent];
-    NSString *imageType = @"";
+    BITBinaryImageType imageType = [[self class] bit_imageTypeForImagePath:imageInfo.imageName
+                                                               processPath:report.processInfo.processPath];
+    NSString *imageTypeString = @"";
     
-    if ([imageInfo.imageName isEqual: report.processInfo.processPath]) {
-      imageType = @"app";
-    } else {
-      imageType = @"framework";
-    }
-    
-    if ([imagePath isEqual: report.processInfo.processPath] || [imagePath hasPrefix:appBundleContentsPath]) {
-      [appUUIDs addObject:@{kBITBinaryImageKeyUUID: uuid, kBITBinaryImageKeyArch: archName, kBITBinaryImageKeyType: imageType}];
+    if (imageType != BITBinaryImageTypeOther) {
+      if (imageType == BITBinaryImageTypeAppBinary) {
+        imageTypeString = @"app";
+      } else {
+        imageTypeString = @"framework";
+      }
+      
+      [appUUIDs addObject:@{kBITBinaryImageKeyUUID: uuid,
+                            kBITBinaryImageKeyArch: archName,
+                            kBITBinaryImageKeyType: imageTypeString}
+       ];
     }
   }
   
-  
   return appUUIDs;
+}
+
+/* Determine if in binary image is the app executable or app specific framework */
++ (BITBinaryImageType)bit_imageTypeForImagePath:(NSString *)imagePath processPath:(NSString *)processPath {
+  BITBinaryImageType imageType = BITBinaryImageTypeOther;
+  
+  NSString *standardizedImagePath = [[imagePath stringByStandardizingPath] lowercaseString];
+  imagePath = [imagePath lowercaseString];
+  processPath = [processPath lowercaseString];
+  
+  NSRange appRange = [standardizedImagePath rangeOfString: @".app/"];
+  
+  // Exclude iOS swift dylibs. These are provided as part of the app binary by Xcode for now, but we never get a dSYM for those.
+  NSRange swiftLibRange = [standardizedImagePath rangeOfString:@"frameworks/libswift"];
+  BOOL dylibSuffix = [standardizedImagePath hasSuffix:@".dylib"];
+  
+  if (appRange.location != NSNotFound && !(swiftLibRange.location != NSNotFound && dylibSuffix)) {
+    NSString *appBundleContentsPath = [standardizedImagePath substringToIndex:appRange.location + 5];
+    
+    if ([standardizedImagePath isEqual: processPath] ||
+        // Fix issue with iOS 8 `stringByStandardizingPath` removing leading `/private` path (when not running in the debugger or simulator only)
+        [imagePath hasPrefix:processPath]) {
+      imageType = BITBinaryImageTypeAppBinary;
+    } else if ([standardizedImagePath hasPrefix:appBundleContentsPath] ||
+                // Fix issue with iOS 8 `stringByStandardizingPath` removing leading `/private` path (when not running in the debugger or simulator only)
+               [imagePath hasPrefix:appBundleContentsPath]) {
+      imageType = BITBinaryImageTypeAppFramework;
+    }
+  }
+  
+  return imageType;
 }
 
 + (NSString *)bit_archNameFromImageInfo:(BITPLCrashReportBinaryImageInfo *)imageInfo
@@ -778,12 +806,9 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
   
   /* If symbol info is available, the format used in Apple's reports is Sym + OffsetFromSym. Otherwise,
    * the format used is imageBaseAddress + offsetToIP */
-  NSString *imagePath = [imageInfo.imageName stringByStandardizingPath];
-  NSString *appBundleContentsPath = [[report.processInfo.processPath stringByDeletingLastPathComponent] stringByDeletingLastPathComponent];
-  
-  if (frameInfo.symbolInfo != nil &&
-      ![imagePath isEqual: report.processInfo.processPath] &&
-      ![imagePath hasPrefix:appBundleContentsPath]) {
+  BITBinaryImageType imageType = [[self class] bit_imageTypeForImagePath:imageInfo.imageName
+                                                             processPath:report.processInfo.processPath];
+  if (frameInfo.symbolInfo != nil && imageType == BITBinaryImageTypeOther) {
     NSString *symbolName = frameInfo.symbolInfo.symbolName;
     
     /* Apple strips the _ symbol prefix in their reports. Only OS X makes use of an
