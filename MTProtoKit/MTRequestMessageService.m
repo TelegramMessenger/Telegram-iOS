@@ -50,6 +50,16 @@
     {
         _context = context;
         
+        __weak MTRequestMessageService *weakSelf = self;
+        MTContextBlockChangeListener *changeListener = [[MTContextBlockChangeListener alloc] init];
+        changeListener.contextIsPasswordRequiredUpdated = ^(MTContext *context, NSInteger datacenterId)
+        {
+            __strong MTRequestMessageService *strongSelf = weakSelf;
+            [strongSelf _contextIsPasswordRequiredUpdated:context datacenterId:datacenterId];
+        };
+        
+        [_context addChangeListener:changeListener];
+        
         _requests = [[NSMutableArray alloc] init];
         _dropReponseContexts = [[NSMutableArray alloc] init];
         
@@ -153,6 +163,22 @@
             completion(_requests.count);
         }];
     }
+}
+
+- (void)_contextIsPasswordRequiredUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId
+{
+    [_queue dispatchOnQueue:^
+    {
+        if ([context isPasswordInputRequiredForDatacenterWithId:datacenterId])
+            return;
+        
+        if (context != _context)
+            return;
+        
+        MTProto *mtProto = _mtProto;
+        if (datacenterId == mtProto.datacenterId)
+            [mtProto requestTransportTransaction];
+    }];
 }
 
 - (void)updateRequestsTimer
@@ -284,6 +310,9 @@
     
     for (MTRequest *request in _requests)
     {
+        if (request.dependsOnPasswordEntry && [_context isPasswordInputRequiredForDatacenterWithId:mtProto.datacenterId])
+            continue;
+        
         if (request.errorContext != nil && request.errorContext.minimalExecuteTime > currentTime)
             continue;
         
@@ -441,9 +470,16 @@
                         NSString *errorText = [_serialization rpcErrorText:object];
                         if (errorCode == 401)
                         {
-                            id<MTRequestMessageServiceDelegate> delegate = _delegate;
-                            if ([delegate respondsToSelector:@selector(requestMessageServiceAuthorizationRequired:)])
-                                [delegate requestMessageServiceAuthorizationRequired:self];
+                            if ([errorText rangeOfString:@"SESSION_PASSWORD_NEEDED"].location != NSNotFound)
+                            {
+                                [_context updatePasswordInputRequiredForDatacenterWithId:mtProto.datacenterId required:true];
+                            }
+                            else
+                            {
+                                id<MTRequestMessageServiceDelegate> delegate = _delegate;
+                                if ([delegate respondsToSelector:@selector(requestMessageServiceAuthorizationRequired:)])
+                                    [delegate requestMessageServiceAuthorizationRequired:self];
+                            }
                         }
                         else if (errorCode == -500 || errorCode == 500)
                         {

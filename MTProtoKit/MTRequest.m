@@ -56,6 +56,7 @@
     if (self != nil)
     {
         _internalId = [[MTRequestInternalId alloc] init];
+        _dependsOnPasswordEntry = true;
     }
     return self;
 }

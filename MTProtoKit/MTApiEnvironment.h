@@ -19,4 +19,6 @@
 
 @property (nonatomic, strong, readonly) NSString *apiInitializationHash;
 
+@property (nonatomic, copy) void (^passwordInputHandler)();
+
 @end

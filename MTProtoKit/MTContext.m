@@ -28,6 +28,18 @@
 #import <MTProtoKit/MTTransportScheme.h>
 #import <MTProtoKit/MTTcpTransport.h>
 
+#import <libkern/OSAtomic.h>
+
+@implementation MTContextBlockChangeListener
+
+- (void)contextIsPasswordRequiredUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId
+{
+    if (_contextIsPasswordRequiredUpdated)
+        _contextIsPasswordRequiredUpdated(context, datacenterId);
+}
+
+@end
+
 @interface MTContext () <MTDiscoverDatacenterAddressActionDelegate, MTDiscoverTransportSchemeActionDelegate, MTDatacenterAuthActionDelegate, MTDatacenterTransferAuthActionDelegate>
 {
     int64_t _uniqueId;
@@ -53,6 +65,9 @@
     NSMutableArray *_currentSessionInfos;
     
     NSMutableDictionary *_periodicTasksTimerByDatacenterId;
+    
+    volatile OSSpinLock _passwordEntryRequiredLock;
+    NSMutableDictionary *_passwordRequiredByDatacenterId;
 }
 
 @end
@@ -101,6 +116,8 @@
         
         _cleanupSessionIdsByAuthKeyId = [[NSMutableDictionary alloc] init];
         _currentSessionInfos = [[NSMutableArray alloc] init];
+        
+        _passwordRequiredByDatacenterId = [[NSMutableDictionary alloc] init];
         
         [self updatePeriodicTasks];
     }
@@ -361,6 +378,40 @@
             }
         }
     }];
+}
+
+- (bool)isPasswordInputRequiredForDatacenterWithId:(NSInteger)datacenterId
+{
+    OSSpinLockLock(&_passwordEntryRequiredLock);
+    bool currentValue = [_passwordRequiredByDatacenterId[@(datacenterId)] boolValue];
+    OSSpinLockUnlock(&_passwordEntryRequiredLock);
+    
+    return currentValue;
+}
+
+- (bool)updatePasswordInputRequiredForDatacenterWithId:(NSInteger)datacenterId required:(bool)required
+{
+    OSSpinLockLock(&_passwordEntryRequiredLock);
+    bool currentValue = [_passwordRequiredByDatacenterId[@(datacenterId)] boolValue];
+    bool updated = currentValue != required;
+    _passwordRequiredByDatacenterId[@(datacenterId)] = @(required);
+    OSSpinLockUnlock(&_passwordEntryRequiredLock);
+    
+    if (updated)
+    {
+        [[MTContext contextQueue] dispatchOnQueue:^
+        {
+            NSArray *currentListeners = [[NSArray alloc] initWithArray:_changeListeners];
+            
+            for (id<MTContextChangeListener> listener in currentListeners)
+            {
+                if ([listener respondsToSelector:@selector(contextIsPasswordRequiredUpdated:datacenterId:)])
+                    [listener contextIsPasswordRequiredUpdated:self datacenterId:datacenterId];
+            }
+        }];
+    }
+    
+    return currentValue;
 }
 
 - (void)updateTransportSchemeForDatacenterWithId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme
