@@ -18,7 +18,7 @@
 #import <MTProtoKit/MTPreparedMessage.h>
 #import <MTProtoKit/MTDatacenterAuthInfo.h>
 #import <MTProtoKit/MTDatacenterSaltInfo.h>
-
+#import <MTProtoKit/MTBuffer.h>
 #import <MTProtoKit/MTEncryption.h>
 
 static NSDictionary *selectPublicKey(NSArray *fingerprints)
@@ -175,9 +175,11 @@ typedef enum {
                     _nonce = [[NSData alloc] initWithBytes:nonceBytes length:16];
                 }
                 
-                id reqPq = [mtProto.context.serialization reqPq:_nonce];
+                MTBuffer *reqPqBuffer = [[MTBuffer alloc] init];
+                [reqPqBuffer appendInt32:(int32_t)0x60469778];
+                [reqPqBuffer appendBytes:_nonce.bytes length:_nonce.length];
                 
-                MTOutgoingMessage *message = [[MTOutgoingMessage alloc] initWithBody:reqPq messageId:_currentStageMessageId messageSeqNo:_currentStageMessageSeqNo];
+                MTOutgoingMessage *message = [[MTOutgoingMessage alloc] initWithData:reqPqBuffer.data messageId:_currentStageMessageId messageSeqNo:_currentStageMessageSeqNo];
                 return [[MTMessageTransaction alloc] initWithMessagePayload:@[message] completion:^(NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
                 {
                     if (_stage == MTDatacenterAuthStagePQ && messageInternalIdToTransactionId[message.internalId] != nil && messageInternalIdToPreparedMessage[message.internalId] != nil)
@@ -192,8 +194,9 @@ typedef enum {
             case MTDatacenterAuthStageReqDH:
             {
                 id reqDh = [mtProto.context.serialization reqDhParams:_nonce serverNonce:_serverNonce p:_dhP q:_dhQ publicKeyFingerprint:_dhPublicKeyFingerprint encryptedData:_dhEncryptedData];
+                NSData *reqDhData = [mtProto.context.serialization serializeMessage:reqDh];
                 
-                MTOutgoingMessage *message = [[MTOutgoingMessage alloc] initWithBody:reqDh messageId:_currentStageMessageId messageSeqNo:_currentStageMessageSeqNo];
+                MTOutgoingMessage *message = [[MTOutgoingMessage alloc] initWithData:reqDhData messageId:_currentStageMessageId messageSeqNo:_currentStageMessageSeqNo];
                 return [[MTMessageTransaction alloc] initWithMessagePayload:@[message] completion:^(NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
                 {
                     if (_stage == MTDatacenterAuthStageReqDH && messageInternalIdToTransactionId[message.internalId] != nil && messageInternalIdToPreparedMessage[message.internalId] != nil)
@@ -208,8 +211,9 @@ typedef enum {
             case MTDatacenterAuthStageKeyVerification:
             {
                 id setClientDhParams = [mtProto.context.serialization setDhParams:_nonce serverNonce:_serverNonce encryptedData:_encryptedClientData];
+                NSData *setClientDhParamsData = [mtProto.context.serialization serializeMessage:setClientDhParams];
                 
-                MTOutgoingMessage *message = [[MTOutgoingMessage alloc] initWithBody:setClientDhParams messageId:_currentStageMessageId messageSeqNo:_currentStageMessageSeqNo];
+                MTOutgoingMessage *message = [[MTOutgoingMessage alloc] initWithData:setClientDhParamsData messageId:_currentStageMessageId messageSeqNo:_currentStageMessageSeqNo];
                 return [[MTMessageTransaction alloc] initWithMessagePayload:@[message] completion:^(NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
                 {
                     if (_stage == MTDatacenterAuthStageKeyVerification && messageInternalIdToTransactionId[message.internalId] != nil && messageInternalIdToPreparedMessage[message.internalId] != nil)

@@ -96,6 +96,8 @@
 		D0254CC218B103D4009452AA /* x509v3.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C7618B103D4009452AA /* x509v3.h */; };
 		D0254CC418B103E3009452AA /* bn.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254C3218B103D4009452AA /* bn.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0254CC618B10404009452AA /* MTEncryption.h in Headers */ = {isa = PBXBuildFile; fileRef = D0254CC518B10404009452AA /* MTEncryption.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D04AC0081A3D14C600869014 /* MTBuffer.h in Headers */ = {isa = PBXBuildFile; fileRef = D04AC0061A3D14C600869014 /* MTBuffer.h */; };
+		D04AC0091A3D14C600869014 /* MTBuffer.m in Sources */ = {isa = PBXBuildFile; fileRef = D04AC0071A3D14C600869014 /* MTBuffer.m */; };
 		D0503ADA18B027F80074C3FE /* MTOutputStream.h in Headers */ = {isa = PBXBuildFile; fileRef = D0503AD818B027F80074C3FE /* MTOutputStream.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0503ADB18B027F80074C3FE /* MTOutputStream.m in Sources */ = {isa = PBXBuildFile; fileRef = D0503AD918B027F80074C3FE /* MTOutputStream.m */; };
 		D0503ADE18B029480074C3FE /* MTInputStream.h in Headers */ = {isa = PBXBuildFile; fileRef = D0503ADC18B029480074C3FE /* MTInputStream.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -416,6 +418,8 @@
 		D0254C7518B103D4009452AA /* x509_vfy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = x509_vfy.h; sourceTree = "<group>"; };
 		D0254C7618B103D4009452AA /* x509v3.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = x509v3.h; sourceTree = "<group>"; };
 		D0254CC518B10404009452AA /* MTEncryption.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTEncryption.h; path = MTProtoKit/MTEncryption.h; sourceTree = "<group>"; };
+		D04AC0061A3D14C600869014 /* MTBuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTBuffer.h; path = MTProtoKit/MTBuffer.h; sourceTree = "<group>"; };
+		D04AC0071A3D14C600869014 /* MTBuffer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTBuffer.m; path = MTProtoKit/MTBuffer.m; sourceTree = "<group>"; };
 		D0503AD818B027F80074C3FE /* MTOutputStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTOutputStream.h; path = MTProtoKit/MTOutputStream.h; sourceTree = "<group>"; };
 		D0503AD918B027F80074C3FE /* MTOutputStream.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTOutputStream.m; path = MTProtoKit/MTOutputStream.m; sourceTree = "<group>"; };
 		D0503ADC18B029480074C3FE /* MTInputStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTInputStream.h; path = MTProtoKit/MTInputStream.h; sourceTree = "<group>"; };
@@ -805,6 +809,8 @@
 				D0503AD918B027F80074C3FE /* MTOutputStream.m */,
 				D0503ADC18B029480074C3FE /* MTInputStream.h */,
 				D0503ADD18B029480074C3FE /* MTInputStream.m */,
+				D04AC0061A3D14C600869014 /* MTBuffer.h */,
+				D04AC0071A3D14C600869014 /* MTBuffer.m */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -1148,6 +1154,7 @@
 				D063A33C18B161B600C65116 /* MTIncomingMessage.h in Headers */,
 				D0254CB918B103D4009452AA /* symhacks.h in Headers */,
 				D0254CC118B103D4009452AA /* x509_vfy.h in Headers */,
+				D04AC0081A3D14C600869014 /* MTBuffer.h in Headers */,
 				D063A36D18B164D600C65116 /* MTDropResponseContext.h in Headers */,
 				D0254C8F18B103D4009452AA /* ebcdic.h in Headers */,
 				D0254C9818B103D4009452AA /* krb5_asn.h in Headers */,
@@ -1448,6 +1455,7 @@
 				D063A32B18B1618D00C65116 /* MTOutgoingMessage.m in Sources */,
 				D063A33D18B161B600C65116 /* MTIncomingMessage.m in Sources */,
 				D063A3B718B1650F00C65116 /* MTHttpWorkerBehaviour.m in Sources */,
+				D04AC0091A3D14C600869014 /* MTBuffer.m in Sources */,
 				D05A83E818AFB75B007F1076 /* MTDatacenterTransferAuthAction.m in Sources */,
 				D063A37B18B164D600C65116 /* MTRequestMessageService.m in Sources */,
 				D05A84A318AFCF8E007F1076 /* MTQueue.m in Sources */,

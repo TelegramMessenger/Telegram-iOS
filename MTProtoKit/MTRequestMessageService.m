@@ -24,6 +24,7 @@
 #import <MTProtoKit/MTDropResponseContext.h>
 #import <MTProtoKit/MTApiEnvironment.h>
 #import <MTProtoKit/MTDatacenterAuthInfo.h>
+#import <MTProtoKit/MTBuffer.h>
 
 @interface MTRequestMessageService ()
 {
@@ -263,16 +264,29 @@
     _serialization = mtProto.context.serialization;
 }
 
-- (id)decorateRequest:(MTRequest *)request initializeApi:(bool)initializeApi unresolvedDependencyOnRequestInternalId:(__autoreleasing id *)unresolvedDependencyOnRequestInternalId
+- (NSData *)decorateRequestData:(MTRequest *)request initializeApi:(bool)initializeApi unresolvedDependencyOnRequestInternalId:(__autoreleasing id *)unresolvedDependencyOnRequestInternalId
 {    
-    id currentBody = request.body;
+    NSData *currentData = request.data;
     
-    if ([_serialization isMessageRpcWithLayer:request.body])
+    if (initializeApi && _apiEnvironment != nil)
     {
-        if (initializeApi && _apiEnvironment != nil)
-        {
-            currentBody = [_serialization wrapInLayer:[_serialization connectionWithApiId:_apiEnvironment.apiId deviceModel:_apiEnvironment.deviceModel systemVersion:_apiEnvironment.systemVersion appVersion:_apiEnvironment.appVersion langCode:_apiEnvironment.langCode query:currentBody]];
-        }
+        MTBuffer *buffer = [[MTBuffer alloc] init];
+        
+        // invokeWithLayer
+        [buffer appendInt32:(int32_t)0xda9b0d0d];
+        [buffer appendInt32:(int32_t)[_serialization currentLayer]];
+        
+        // initConnection
+        [buffer appendInt32:(int32_t)0x69796de9];
+        [buffer appendInt32:(int32_t)_apiEnvironment.apiId];
+        [buffer appendTLString:_apiEnvironment.deviceModel];
+        [buffer appendTLString:_apiEnvironment.systemVersion];
+        [buffer appendTLString:_apiEnvironment.appVersion];
+        [buffer appendTLString:_apiEnvironment.langCode];
+        
+        [buffer appendBytes:currentData.bytes length:currentData.length];
+        
+        currentData = buffer.data;
     }
     
     if (request.shouldDependOnRequest != nil)
@@ -286,7 +300,16 @@
                 if (request.shouldDependOnRequest(anotherRequest))
                 {
                     if (anotherRequest.requestContext != nil)
-                        currentBody = [_serialization invokeAfterMessageId:anotherRequest.requestContext.messageId query:currentBody];
+                    {
+                        MTBuffer *buffer = [[MTBuffer alloc] init];
+                        
+                        // invokeAfterMsg
+                        [buffer appendInt32:(int32_t)0xcb9f372d];
+                        [buffer appendInt64:anotherRequest.requestContext.messageId];
+                        [buffer appendBytes:currentData.bytes length:currentData.length];
+                        
+                        currentData = buffer.data;
+                    }
                     else if (unresolvedDependencyOnRequestInternalId != nil)
                         *unresolvedDependencyOnRequestInternalId = anotherRequest.internalId;
                     
@@ -296,7 +319,7 @@
         }
     }
     
-    return currentBody;
+    return currentData;
 }
 
 - (MTMessageTransaction *)mtProtoMessageTransaction:(MTProto *)mtProto
@@ -332,7 +355,8 @@
                 messageId = request.requestContext.messageId;
                 messageSeqNo = request.requestContext.messageSeqNo;
             }
-            MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithBody:[self decorateRequest:request initializeApi:requestsWillInitializeApi unresolvedDependencyOnRequestInternalId:&autoreleasingUnresolvedDependencyOnRequestInternalId] messageId:messageId messageSeqNo:messageSeqNo];
+            
+            MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:[self decorateRequestData:request initializeApi:requestsWillInitializeApi unresolvedDependencyOnRequestInternalId:&autoreleasingUnresolvedDependencyOnRequestInternalId] messageId:messageId messageSeqNo:messageSeqNo];
             outgoingMessage.needsQuickAck = request.acknowledgementReceived != nil;
             outgoingMessage.hasHighPriority = request.hasHighPriority;
             
@@ -368,7 +392,9 @@
         if (dropMessageIdToMessageInternalId == nil)
             dropMessageIdToMessageInternalId = [[NSMutableDictionary alloc] init];
         
-        MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithBody:[_serialization dropAnswerToMessageId:dropContext.dropMessageId] messageId:dropContext.messageId messageSeqNo:dropContext.messageSeqNo];
+        NSData *dropAnswerData = [_serialization serializeMessage:[_serialization dropAnswerToMessageId:dropContext.dropMessageId]];
+        
+        MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:dropAnswerData messageId:dropContext.messageId messageSeqNo:dropContext.messageSeqNo];
         outgoingMessage.requiresConfirmation = false;
         dropMessageIdToMessageInternalId[@(dropContext.dropMessageId)] = outgoingMessage.internalId;
         [messages addObject:outgoingMessage];

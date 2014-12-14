@@ -11,7 +11,7 @@
 @interface MTOutgoingMessage : NSObject
 
 @property (nonatomic, strong, readonly) id internalId;
-@property (nonatomic, strong, readonly) id body;
+@property (nonatomic, strong, readonly) NSData *data;
 @property (nonatomic, readonly) int64_t messageId;
 @property (nonatomic, readonly) int32_t messageSeqNo;
 @property (nonatomic) bool requiresConfirmation;
@@ -19,9 +19,9 @@
 @property (nonatomic) bool hasHighPriority;
 @property (nonatomic) int64_t inResponseToMessageId;
 
-@property (nonatomic, copy) id (^dynamicDecorator)(id currentBody, NSMutableDictionary *messageInternalIdToPreparedMessage);
+@property (nonatomic, copy) id (^dynamicDecorator)(NSData *currentData, NSMutableDictionary *messageInternalIdToPreparedMessage);
 
-- (instancetype)initWithBody:(id)body;
-- (instancetype)initWithBody:(id)body messageId:(int64_t)messageId messageSeqNo:(int32_t)messageSeqNo;
+- (instancetype)initWithData:(id)data;
+- (instancetype)initWithData:(id)data messageId:(int64_t)messageId messageSeqNo:(int32_t)messageSeqNo;
 
 @end

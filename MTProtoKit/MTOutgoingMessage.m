@@ -50,18 +50,18 @@
 
 @implementation MTOutgoingMessage
 
-- (instancetype)initWithBody:(id)body
+- (instancetype)initWithData:(id)data
 {
-    return [self initWithBody:body messageId:0 messageSeqNo:0];
+    return [self initWithData:data messageId:0 messageSeqNo:0];
 }
 
-- (instancetype)initWithBody:(id)body messageId:(int64_t)messageId messageSeqNo:(int32_t)messageSeqNo
+- (instancetype)initWithData:(id)data messageId:(int64_t)messageId messageSeqNo:(int32_t)messageSeqNo
 {
     self = [super init];
     if (self != nil)
     {
         _internalId = [[MTOutgoingMessageInternalId alloc] init];
-        _body = body;
+        _data = data;
         _messageId = messageId;
         _messageSeqNo = messageSeqNo;
         _requiresConfirmation = true;

@@ -732,7 +732,8 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 NSArray *scheduledMessageConfirmations = [transactionSessionInfo scheduledMessageConfirmations];
                 if (scheduledMessageConfirmations.count != 0)
                 {
-                    MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithBody:[_context.serialization msgsAck:scheduledMessageConfirmations]];
+                    NSData *msgsAckData = [_context.serialization serializeMessage:[_context.serialization msgsAck:scheduledMessageConfirmations]];
+                    MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:msgsAckData];
                     outgoingMessage.requiresConfirmation = false;
                     
                     [messageTransactions addObject:[[MTMessageTransaction alloc] initWithMessagePayload:@[outgoingMessage] completion:^(__unused NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
@@ -769,16 +770,16 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             {
                 for (MTOutgoingMessage *outgoingMessage in messageTransaction.messagePayload)
                 {
-                    id messageBody = outgoingMessage.body;
+                    NSData *messageData = outgoingMessage.data;
                     
                     if (outgoingMessage.dynamicDecorator != nil)
                     {
-                        id decoratedBody = outgoingMessage.dynamicDecorator(messageBody, messageInternalIdToPreparedMessage);
-                        if (decoratedBody != nil)
-                            messageBody = decoratedBody;
+                        id decoratedData = outgoingMessage.dynamicDecorator(messageData, messageInternalIdToPreparedMessage);
+                        if (decoratedData != nil)
+                            messageData = decoratedData;
                     }
                     
-                    NSData *data = [_context.serialization serializeMessage:messageBody];
+                    NSData *data = messageData;
                     
                     int64_t messageId = 0;
                     int32_t messageSeqNo = 0;
@@ -793,7 +794,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                         messageSeqNo = outgoingMessage.messageSeqNo;
                     }
                     
-                    MTLog(@"[MTProto#%p preparing %@]", self, [_context.serialization messageDescription:messageBody messageId:messageId messageSeqNo:messageSeqNo]);
+                    MTLog(@"[MTProto#%p preparing %@]", self, [_context.serialization messageDescription:messageData messageId:messageId messageSeqNo:messageSeqNo]);
                     
                     if (!monotonityViolated || _useUnauthorizedMode)
                     {

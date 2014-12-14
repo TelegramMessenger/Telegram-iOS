@@ -10,11 +10,12 @@
 
 @protocol MTSerialization <NSObject>
 
+- (NSUInteger)currentLayer;
+
 - (NSData *)serializeMessage:(id)message;
 - (id)parseMessage:(NSInputStream *)is responseParsingBlock:(int32_t (^)(int64_t, bool *))responseParsingBlock;
-- (NSString *)messageDescription:(id)messageBody messageId:(int64_t)messageId messageSeqNo:(int32_t)messageSeqNo;
+- (NSString *)messageDescription:(NSData *)messageData messageId:(int64_t)messageId messageSeqNo:(int32_t)messageSeqNo;
 
-- (id)reqPq:(NSData *)nonce;
 - (id)reqDhParams:(NSData *)nonce serverNonce:(NSData *)serverNonce p:(NSData *)p q:(NSData *)q publicKeyFingerprint:(int64_t)publicKeyFingerprint encryptedData:(NSData *)encryptedData;
 - (id)setDhParams:(NSData *)nonce serverNonce:(NSData *)serverNonce encryptedData:(NSData *)encryptedData;
 

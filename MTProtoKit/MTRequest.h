@@ -13,7 +13,7 @@
 
 @property (nonatomic, strong, readonly) id internalId;
 
-@property (nonatomic) id body;
+@property (nonatomic) NSData *data;
 @property (nonatomic, strong) NSArray *decorators;
 @property (nonatomic, strong) MTRequestContext *requestContext;
 @property (nonatomic, strong) MTRequestErrorContext *errorContext;
