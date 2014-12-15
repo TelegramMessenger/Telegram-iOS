@@ -8,6 +8,7 @@
 
 #import <MTProtoKit/MTTcpTransport.h>
 
+#import <MTProtoKit/MTLogging.h>
 #import <MTProtoKit/MTQueue.h>
 #import <MTProtoKit/MTTimer.h>
 #import <MTProtoKit/MTTime.h>

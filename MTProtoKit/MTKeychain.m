@@ -7,6 +7,7 @@
  */
 
 #import <MTProtoKit/MTKeychain.h>
+#import <MTProtoKit/MTLogging.h>
 
 #import <pthread.h>
 

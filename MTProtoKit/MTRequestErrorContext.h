@@ -6,6 +6,7 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
+#import <Foundation/Foundation.h>
 #import <MTProtoKit/MTTime.h>
 
 @interface MTRequestErrorContext : NSObject

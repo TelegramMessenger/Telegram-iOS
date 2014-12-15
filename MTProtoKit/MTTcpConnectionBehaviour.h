@@ -9,6 +9,8 @@
 @class MTQueue;
 @class MTTcpConnectionBehaviour;
 
+#import <Foundation/Foundation.h>
+
 @protocol MTTcpConnectionBehaviourDelegate <NSObject>
 
 @optional

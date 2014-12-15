@@ -6,6 +6,8 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
+#import <Foundation/Foundation.h>
+#import <MTProtoKit/MTLogging.h>
 #import <MTProtoKit/MTInputStream.h>
 
 #if TARGET_OS_IPHONE

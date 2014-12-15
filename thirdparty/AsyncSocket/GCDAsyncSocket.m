@@ -10,6 +10,8 @@
 
 #import "GCDAsyncSocket.h"
 
+#import <MTProtoKit/MTLogging.h>
+
 #if TARGET_OS_IPHONE
 #import <CFNetwork/CFNetwork.h>
 #endif

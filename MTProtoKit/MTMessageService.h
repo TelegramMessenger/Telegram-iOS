@@ -6,6 +6,8 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
+#import <Foundation/Foundation.h>
+
 @class MTProto;
 @class MTIncomingMessage;
 @class MTMessageTransaction;

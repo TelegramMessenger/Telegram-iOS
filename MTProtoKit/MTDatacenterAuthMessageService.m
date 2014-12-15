@@ -8,6 +8,7 @@
 
 #import <MTProtoKit/MTDatacenterAuthMessageService.h>
 
+#import <MTProtoKit/MTLogging.h>
 #import <MTProtoKit/MTContext.h>
 #import <MTProtoKit/MTProto.h>
 #import <MTProtoKit/MTSerialization.h>

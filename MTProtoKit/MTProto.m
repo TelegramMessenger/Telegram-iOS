@@ -10,6 +10,7 @@
 
 #import <inttypes.h>
 
+#import <MTProtoKit/MTLogging.h>
 #import <MTProtoKit/MTQueue.h>
 #import <MTProtoKit/MTOutputStream.h>
 #import <MTProtoKit/MTInputStream.h>

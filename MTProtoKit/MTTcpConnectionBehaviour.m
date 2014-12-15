@@ -6,6 +6,8 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
+#import <Foundation/Foundation.h>
+
 #import <MTProtoKit/MTTcpConnectionBehaviour.h>
 
 #import <MTProtoKit/MTTimer.h>
