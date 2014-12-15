@@ -48,13 +48,11 @@ static inline int roundUp(int numToRound, int multiple)
 
 @implementation MTBuffer (TL)
 
-- (void)appendTLString:(NSString *)string
+- (void)appendTLBytes:(NSData *)bytes
 {
-    NSData *stringData = [string dataUsingEncoding:NSUTF8StringEncoding];
+    int32_t length = (int32_t)bytes.length;
     
-    int32_t length = (int32_t)stringData.length;
-    
-    if (stringData == nil || length == 0)
+    if (bytes == nil || length == 0)
     {
         [self appendInt32:0];
         return;
@@ -77,11 +75,16 @@ static inline int roundUp(int numToRound, int multiple)
         paddingBytes = roundUp(length + 1, 4) - (length + 1);
     }
     
-    [self appendBytes:stringData.bytes length:length];
+    [self appendBytes:bytes.bytes length:length];
     
     uint8_t tmp = 0;
     for (int i = 0; i < paddingBytes; i++)
         [self appendBytes:&tmp length:1];
+}
+
+- (void)appendTLString:(NSString *)string
+{
+    [self appendTLBytes:[string dataUsingEncoding:NSUTF8StringEncoding]];
 }
 
 @end

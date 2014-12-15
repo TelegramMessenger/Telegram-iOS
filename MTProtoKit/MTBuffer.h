@@ -12,6 +12,7 @@
 
 @interface MTBuffer (TL)
 
+- (void)appendTLBytes:(NSData *)bytes;
 - (void)appendTLString:(NSString *)string;
 
 @end

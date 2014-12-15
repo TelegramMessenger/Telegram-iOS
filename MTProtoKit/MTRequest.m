@@ -61,4 +61,11 @@
     return self;
 }
 
+- (void)setPayload:(NSData *)payload metadata:(id)metadata responseParser:(id (^)(NSData *))responseParser
+{
+    _payload = payload;
+    _metadata = metadata;
+    _responseParser = [responseParser copy];
+}
+
 @end

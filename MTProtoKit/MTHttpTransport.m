@@ -24,6 +24,9 @@
 #import <MTProtoKit/MTHttpWorkerBehaviour.h>
 #import <MTProtoKit/MTHttpWorker.h>
 
+#import <MTProtoKit/MTBuffer.h>
+#import <MTProtoKit/MTPongMessage.h>
+
 @interface MTHttpTransport () <MTHttpWorkerBehaviourDelegate, MTHttpWorkerDelegate, MTContextChangeListener>
 {
     MTDatacenterAddress *_address;
@@ -408,17 +411,24 @@
             
             if (_currentActualizationPingId != 0)
             {
-                id ping = [self.context.serialization ping:_currentActualizationPingId];
+                MTBuffer *pingBuffer = [[MTBuffer alloc] init];
+                [pingBuffer appendInt32:(int32_t)0x7abe77ec];
+                [pingBuffer appendInt64:_currentActualizationPingId];
                 
-                MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithBody:ping];
+                MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:pingBuffer.data metadata:@"ping"];
                 outgoingMessage.requiresConfirmation = false;
                 transportSpecificTransaction = [[MTMessageTransaction alloc] initWithMessagePayload:@[outgoingMessage] completion:nil];
                 transportSpecificTransaction.requiresEncryption = true;
             }
             else if (!activeWorkersWithLongPollingFound)
             {
-                id httpWait = [self.context.serialization httpWaitWithMaxDelay:50 waitAfter:50 maxWait:25000];
-                MTOutgoingMessage *actualizationPingMessage = [[MTOutgoingMessage alloc] initWithBody:httpWait];
+                MTBuffer *httpWaitBuffer = [[MTBuffer alloc] init];
+                [httpWaitBuffer appendInt32:(int32_t)0x9299359f];
+                [httpWaitBuffer appendInt32:50];
+                [httpWaitBuffer appendInt32:50];
+                [httpWaitBuffer appendInt32:25000];
+                
+                MTOutgoingMessage *actualizationPingMessage = [[MTOutgoingMessage alloc] initWithData:httpWaitBuffer.data metadata:@"httpWait"];
                 actualizationPingMessage.requiresConfirmation = false;
                 transportSpecificTransaction = [[MTMessageTransaction alloc] initWithMessagePayload:@[actualizationPingMessage] completion:^(__unused NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
                 {
@@ -533,11 +543,11 @@
 
 - (void)mtProto:(MTProto *)__unused mtProto receivedMessage:(MTIncomingMessage *)incomingMessage
 {
-    if ([self.context.serialization isMessagePong:incomingMessage.body])
+    if ([incomingMessage.body isKindOfClass:[MTPongMessage class]])
     {
         [[MTHttpTransport httpTransportQueue] dispatchOnQueue:^
         {
-            if (_currentActualizationPingId != 0 && [self.context.serialization pongPingId:incomingMessage.body] == _currentActualizationPingId)
+            if (_currentActualizationPingId != 0 && ((MTPongMessage *)incomingMessage.body).pingId == _currentActualizationPingId)
             {
                 _currentActualizationPingId = 0;
                 

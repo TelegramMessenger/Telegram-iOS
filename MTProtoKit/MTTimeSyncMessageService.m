@@ -16,8 +16,9 @@
 #import <MTProtoKit/MTIncomingMessage.h>
 #import <MTProtoKit/MTPreparedMessage.h>
 #import <MTProtoKit/MTMessageTransaction.h>
-
 #import <MTProtoKit/MTDatacenterSaltInfo.h>
+#import <MTProtoKit/MTBuffer.h>
+#import <MTProtoKit/MTFutureSaltsMessage.h>
 
 @interface MTTimeSyncMessageService ()
 {
@@ -60,7 +61,11 @@
         _currentTransactionId = nil;
         _currentSampleAbsoluteStartTime = 0.0;
         
-        MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithBody:[mtProto.context.serialization getFutureSalts:_futureSalts.count != 0 ? 1 : 32]];
+        MTBuffer *getFutureSaltsBuffer = [[MTBuffer alloc] init];
+        [getFutureSaltsBuffer appendInt32:(int32_t)0xb921bd04];
+        [getFutureSaltsBuffer appendInt32:_futureSalts.count != 0 ? 1 : 32];
+        
+        MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:getFutureSaltsBuffer.data metadata:@"getFutureSalts"];
         
         return [[MTMessageTransaction alloc] initWithMessagePayload:@[outgoingMessage] completion:^(NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
         {
@@ -132,12 +137,18 @@
 
 - (void)mtProto:(MTProto *)mtProto receivedMessage:(MTIncomingMessage *)message
 {
-    if ([mtProto.context.serialization isMessageFutureSalts:message.body] && [mtProto.context.serialization futureSaltsRequestMessageId:message.body] == _currentMessageId)
+    if ([message.body isKindOfClass:[MTFutureSaltsMessage class]] && ((MTFutureSaltsMessage *)message.body).requestMessageId == _currentMessageId)
     {
         _currentMessageId = 0;
         _currentTransactionId = nil;
         
-        [_futureSalts addObjectsFromArray:[mtProto.context.serialization saltInfoListFromMessage:message.body]];
+        NSMutableArray *saltList = [[NSMutableArray alloc] init];
+        for (MTFutureSalt *futureSalt in ((MTFutureSaltsMessage *)message.body).salts)
+        {
+            [saltList addObject:[[MTDatacenterSaltInfo alloc] initWithSalt:futureSalt.salt firstValidMessageId:futureSalt.validSince * 4294967296 lastValidMessageId:futureSalt.validUntil * 4294967296]];
+        }
+        
+        [_futureSalts addObjectsFromArray:saltList];
         
         NSTimeInterval timeDifference = message.messageId / 4294967296.0 - [[NSDate date] timeIntervalSince1970];
         [_takenSamples addObject:@(timeDifference)];

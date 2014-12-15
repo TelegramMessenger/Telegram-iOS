@@ -40,6 +40,16 @@
 #import <MTProtoKit/MTSerialization.h>
 #import <MTProtoKit/MTEncryption.h>
 
+#import <MTProtoKit/MTBuffer.h>
+#import <MTProtoKit/MTInternalMessageParser.h>
+#import <MTProtoKit/MTMsgContainerMessage.h>
+#import <MTProtoKit/MTMessage.h>
+#import <MTProtoKit/MTBadMsgNotificationMessage.h>
+#import <MTProtoKit/MTMsgsAckMessage.h>
+#import <MTProtoKit/MTMsgDetailedInfoMessage.h>
+#import <MTProtoKit/MTNewSessionCreatedMessage.h>
+#import <MTProtoKit/MTPongMessage.h>
+
 typedef enum {
     MTProtoStateAwaitingDatacenterScheme = 1,
     MTProtoStateAwaitingDatacenterAuthorization = 2,
@@ -674,6 +684,16 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     }];
 }
 
+- (NSString *)outgoingMessageDescription:(MTOutgoingMessage *)message
+{
+    return [[NSString alloc] initWithFormat:@"%@ (%" PRId64 "/%" PRId32 ")", message.metadata, message.messageId, message.messageSeqNo];
+}
+
+- (NSString *)incomingMessageDescription:(MTIncomingMessage *)message
+{
+    return [[NSString alloc] initWithFormat:@"%@ (%" PRId64")", message.body, message.messageId];
+}
+
 - (void)transportReadyForTransaction:(MTTransport *)transport transportSpecificTransaction:(MTMessageTransaction *)transportSpecificTransaction forceConfirmations:(bool)forceConfirmations transactionReady:(void (^)(NSArray *))transactionReady
 {
     [[MTProto managerQueue] dispatchOnQueue:^
@@ -732,8 +752,16 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 NSArray *scheduledMessageConfirmations = [transactionSessionInfo scheduledMessageConfirmations];
                 if (scheduledMessageConfirmations.count != 0)
                 {
-                    NSData *msgsAckData = [_context.serialization serializeMessage:[_context.serialization msgsAck:scheduledMessageConfirmations]];
-                    MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:msgsAckData];
+                    MTBuffer *msgsAckBuffer = [[MTBuffer alloc] init];
+                    [msgsAckBuffer appendInt32:(int32_t)0x62d6b459];
+                    [msgsAckBuffer appendInt32:481674261];
+                    [msgsAckBuffer appendInt32:(int32_t)scheduledMessageConfirmations.count];
+                    for (NSNumber *nMessageId in scheduledMessageConfirmations)
+                    {
+                        [msgsAckBuffer appendInt64:(int64_t)[nMessageId longLongValue]];
+                    }
+                    
+                    MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:msgsAckBuffer.data metadata:@"msgsAck"];
                     outgoingMessage.requiresConfirmation = false;
                     
                     [messageTransactions addObject:[[MTMessageTransaction alloc] initWithMessagePayload:@[outgoingMessage] completion:^(__unused NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
@@ -794,7 +822,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                         messageSeqNo = outgoingMessage.messageSeqNo;
                     }
                     
-                    MTLog(@"[MTProto#%p preparing %@]", self, [_context.serialization messageDescription:messageData messageId:messageId messageSeqNo:messageSeqNo]);
+                    MTLog(@"[MTProto#%p preparing  %@]", self, [self outgoingMessageDescription:outgoingMessage]);
                     
                     if (!monotonityViolated || _useUnauthorizedMode)
                     {
@@ -1038,12 +1066,15 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             int64_t randomId = 0;
             arc4random_buf(&randomId, 8);
             
-            id ping = [_context.serialization ping:randomId];
-            NSData *messageData = [_context.serialization serializeMessage:ping];
+            MTBuffer *pingBuffer = [[MTBuffer alloc] init];
+            [pingBuffer appendInt32:(int32_t)0x7abe77ec];
+            [pingBuffer appendInt64:randomId];
+            
+            NSData *messageData = pingBuffer.data;
             
             MTOutputStream *decryptedOs = [[MTOutputStream alloc] init];
             
-            MTLog(@"[MTProto#%x sending time fix %@ (%" PRId64 "/%" PRId32 ")]", self, NSStringFromClass([ping class]), timeFixMessageId, timeFixSeqNo);
+            MTLog(@"[MTProto#%x sending time fix ping (%" PRId64 "/%" PRId32 ")]", self, timeFixMessageId, timeFixSeqNo);
             
             [decryptedOs writeInt64:[_authInfo authSaltForMessageId:timeFixMessageId]]; // salt
             [decryptedOs writeInt64:_sessionInfo.sessionId];
@@ -1603,6 +1634,15 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     return decryptedData;
 }
 
+- (id)parseMessage:(NSData *)data
+{
+    id internalMessage = [MTInternalMessageParser parseMessage:data];
+    if (internalMessage != nil)
+        return internalMessage;
+    
+    return [_context.serialization parseMessage:data];
+}
+
 - (NSArray *)_parseIncomingMessages:(NSData *)data dataMessageId:(out int64_t *)dataMessageId parseError:(out bool *)parseError
 {
     MTInputStream *is = [[MTInputStream alloc] initWithData:data];
@@ -1693,26 +1733,17 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         }
     }
     
-    id topObject = [_context.serialization parseMessage:[is wrappedInputStream] responseParsingBlock:^int32_t (int64_t requestMessageId, bool *requestFound)
+    NSMutableData *topMessageData = [[NSMutableData alloc] init];
+    uint8_t buffer[128];
+    while (true)
     {
-        for (id<MTMessageService> messageService in _messageServices)
-        {
-            if ([messageService respondsToSelector:@selector(possibleSignatureForResult:found:)])
-            {
-                bool found = false;
-                int32_t possibleSignature = [messageService possibleSignatureForResult:requestMessageId found:&found];
-                if (found)
-                {
-                    if (requestFound != NULL)
-                        *requestFound = true;
-                    return possibleSignature;
-                }
-            }
-        }
-        
-        return 0;
-    }];
+        NSInteger readBytes = [[is wrappedInputStream] read:buffer maxLength:128];
+        if (readBytes <= 0)
+            break;
+        [topMessageData appendBytes:buffer length:readBytes];
+    }
     
+    id topObject = [self parseMessage:topMessageData];
     if (topObject == nil)
     {
         if (parseError != NULL)
@@ -1725,35 +1756,39 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     NSMutableArray *messages = [[NSMutableArray alloc] init];
     NSTimeInterval timestamp = embeddedMessageId / 4294967296.0;
     
-    if ([_context.serialization isMessageContainer:topObject])
+    if ([topObject isKindOfClass:[MTMsgContainerMessage class]])
     {
-        for (id subObject in [_context.serialization containerMessages:topObject])
+        for (MTMessage *subMessage in ((MTMsgContainerMessage *)topObject).messages)
         {
-            if ([_context.serialization isMessageProtoMessage:subObject])
+            id subObject = [self parseMessage:subMessage.data];
+            if (subObject == nil)
             {
-                int64_t subMessageId = 0;
-                int32_t subMessageSeqNo = 0;
-                int32_t subMessageLength = 0;
-                id subMessageBody = [_context.serialization protoMessageBody:subObject messageId:&subMessageId seqNo:&subMessageSeqNo length:&subMessageLength];
-                [messages addObject:[[MTIncomingMessage alloc] initWithMessageId:subMessageId seqNo:subMessageSeqNo salt:embeddedSalt timestamp:timestamp size:subMessageLength body:subMessageBody]];
+                if (parseError != NULL)
+                    *parseError = true;
+                return nil;
             }
-            if ([_context.serialization isMessageProtoCopyMessage:subObject])
-            {
-                int64_t subMessageId = 0;
-                int32_t subMessageSeqNo = 0;
-                int32_t subMessageLength = 0;
-                id subMessageBody = [_context.serialization protoCopyMessageBody:subObject messageId:&subMessageId seqNo:&subMessageSeqNo length:&subMessageLength];
-                [messages addObject:[[MTIncomingMessage alloc] initWithMessageId:subMessageId seqNo:subMessageSeqNo salt:embeddedSalt timestamp:timestamp size:subMessageLength body:subMessageBody]];
-            }
+            
+            int64_t subMessageId = subMessage.messageId;
+            int32_t subMessageSeqNo = subMessage.seqNo;
+            int32_t subMessageLength = (int32_t)subMessage.data.length;
+            [messages addObject:[[MTIncomingMessage alloc] initWithMessageId:subMessageId seqNo:subMessageSeqNo salt:embeddedSalt timestamp:timestamp size:subMessageLength body:subObject]];
         }
     }
-    else if ([_context.serialization isMessageProtoCopyMessage:topObject])
+    else if ([topObject isKindOfClass:[MTMessage class]])
     {
-        int64_t subMessageId = 0;
-        int32_t subMessageSeqNo = 0;
-        int32_t subMessageLength = 0;
-        id subMessageBody = [_context.serialization protoCopyMessageBody:topObject messageId:&subMessageId seqNo:&subMessageSeqNo length:&subMessageLength];
-        [messages addObject:[[MTIncomingMessage alloc] initWithMessageId:subMessageId seqNo:subMessageSeqNo salt:embeddedSalt timestamp:timestamp size:subMessageLength body:subMessageBody]];
+        MTMessage *message = topObject;
+        id subObject = [self parseMessage:message.data];
+        if (subObject == nil)
+        {
+            if (parseError != NULL)
+                *parseError = true;
+            return nil;
+        }
+        
+        int64_t subMessageId = message.messageId;
+        int32_t subMessageSeqNo = message.seqNo;
+        int32_t subMessageLength = (int32_t)message.data.length;
+        [messages addObject:[[MTIncomingMessage alloc] initWithMessageId:subMessageId seqNo:subMessageSeqNo salt:embeddedSalt timestamp:timestamp size:subMessageLength body:subObject]];
     }
     else
         [messages addObject:[[MTIncomingMessage alloc] initWithMessageId:embeddedMessageId seqNo:embeddedSeqNo salt:embeddedSalt timestamp:timestamp size:topMessageSize body:topObject]];
@@ -1774,7 +1809,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         return;
     }
     
-    MTLog(@"[MTProto#%p received %@]", self, [_context.serialization messageDescription:incomingMessage.body messageId:incomingMessage.messageId messageSeqNo:incomingMessage.seqNo]);
+    MTLog(@"[MTProto#%p received %@]", self, [self incomingMessageDescription:incomingMessage]);
     
     [_sessionInfo setMessageProcessed:incomingMessage.messageId];
     if (!_useUnauthorizedMode && incomingMessage.seqNo % 2 != 0)
@@ -1785,13 +1820,15 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             [self requestTransportTransaction];
     }
     
-    if (!_useUnauthorizedMode && [_context.serialization isMessageBadMsgNotification:incomingMessage.body])
+    if (!_useUnauthorizedMode && [incomingMessage.body isKindOfClass:[MTBadMsgNotificationMessage class]])
     {
-        int64_t badMessageId = [_context.serialization badMessageBadMessageId:incomingMessage.body];
+        MTBadMsgNotificationMessage *badMsgNotification = incomingMessage.body;
+        
+        int64_t badMessageId = badMsgNotification.badMessageId;
         
         NSArray *containerMessageIds = [_sessionInfo messageIdsInContainer:badMessageId];
         
-        if ([_context.serialization isMessageBadServerSaltNotification:incomingMessage.body])
+        if ([badMsgNotification isKindOfClass:[MTBadServerSaltNotificationMessage class]])
         {
             if (_timeFixContext != nil && badMessageId == _timeFixContext.messageId)
             {
@@ -1811,7 +1848,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 }
                 else*/
                 {
-                    int64_t validSalt = [_context.serialization badMessageNewServerSalt:incomingMessage.body];
+                    int64_t validSalt = ((MTBadServerSaltNotificationMessage *)badMsgNotification).nextServerSalt;
                     NSTimeInterval timeDifference = incomingMessage.messageId / 4294967296.0 - [[NSDate date] timeIntervalSince1970];
                     [self completeTimeSync];
                     [self timeSyncInfoChanged:timeDifference saltList:@[[[MTDatacenterSaltInfo alloc] initWithSalt:validSalt firstValidMessageId:incomingMessage.messageId lastValidMessageId:incomingMessage.messageId + (4294967296 * 30 * 60)]]];
@@ -1822,7 +1859,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         }
         else
         {
-            switch ([_context.serialization badMessageErrorCode:incomingMessage.body])
+            switch (badMsgNotification.errorCode)
             {
                 case 16:
                 case 17:
@@ -1878,9 +1915,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if ([self canAskForTransactions] || [self canAskForServiceTransactions])
             [self requestTransportTransaction];
     }
-    else if ([_context.serialization isMessageMsgsAck:incomingMessage.body])
+    else if ([incomingMessage.body isKindOfClass:[MTMsgsAckMessage class]])
     {
-        NSArray *messageIds = [_context.serialization msgsAckMessageIds:incomingMessage.body];
+        NSArray *messageIds = ((MTMsgsAckMessage *)incomingMessage.body).messageIds;
         
         for (NSInteger i = (NSInteger)_messageServices.count - 1; i >= 0; i--)
         {
@@ -1890,13 +1927,15 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 [messageService mtProto:self messageDeliveryConfirmed:messageIds];
         }
     }
-    else if ([_context.serialization isMessageDetailedInfo:incomingMessage.body])
+    else if ([incomingMessage.body isKindOfClass:[MTMsgDetailedInfoMessage class]])
     {
+        MTMsgDetailedInfoMessage *detailedInfoMessage = incomingMessage.body;
+        
         bool shouldRequest = false;
         
-        if ([_context.serialization isMessageDetailedResponseInfo:incomingMessage.body])
+        if ([detailedInfoMessage isKindOfClass:[MTMsgDetailedResponseInfoMessage class]])
         {
-            int64_t requestMessageId = [_context.serialization detailedInfoResponseRequestMessageId:incomingMessage.body];
+            int64_t requestMessageId = ((MTMsgDetailedResponseInfoMessage *)detailedInfoMessage).requestMessageId;
             
             MTLog(@"[MTProto#%p detailed info %" PRId64 " is for %" PRId64 "", self, incomingMessage.messageId, requestMessageId);
             
@@ -1916,16 +1955,16 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             shouldRequest = true;
         
         if (shouldRequest)
-            [self requestMessageWithId:[_context.serialization detailedInfoResponseMessageId:incomingMessage.body]];
+            [self requestMessageWithId:detailedInfoMessage.responseMessageId];
         else
         {
-            [_sessionInfo scheduleMessageConfirmation:[_context.serialization detailedInfoResponseMessageId:incomingMessage.body] size:(NSInteger)[_context.serialization detailedInfoResponseMessageLength:incomingMessage.body]];
+            [_sessionInfo scheduleMessageConfirmation:detailedInfoMessage.responseMessageId size:(NSInteger)detailedInfoMessage.responseLength];
             [self requestTransportTransaction];
         }
     }
-    else if ([_context.serialization isMessageNewSession:incomingMessage.body])
+    else if ([incomingMessage.body isKindOfClass:[MTNewSessionCreatedMessage class]])
     {
-        int64_t firstValidMessageId = [_context.serialization messageNewSessionFirstValidMessageId:incomingMessage.body];
+        int64_t firstValidMessageId = ((MTNewSessionCreatedMessage *)incomingMessage.body).firstMessageId;
         
         for (NSInteger i = (NSInteger)_messageServices.count - 1; i >= 0; i--)
         {
@@ -1945,7 +1984,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 [messageService mtProto:self receivedMessage:incomingMessage];
         }
         
-        if (_timeFixContext != nil && [_context.serialization isMessagePong:incomingMessage.body] && [_context.serialization pongMessageId:incomingMessage.body] == _timeFixContext.messageId)
+        if (_timeFixContext != nil && [incomingMessage.body isKindOfClass:[MTPongMessage class]] && ((MTPongMessage *)incomingMessage.body).messageId == _timeFixContext.messageId)
         {
             _timeFixContext = nil;
             [self completeTimeSync];
