@@ -84,7 +84,7 @@
     {
         if (_isMainQueue)
         {
-            if ([NSThread mainThread])
+            if ([NSThread isMainThread])
                 block();
             else if (synchronous)
                 dispatch_sync(_queue, block);

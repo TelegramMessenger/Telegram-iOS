@@ -118,7 +118,8 @@
                     anyNewDropRequests = true;
                 }
                 
-                MTLog(@"[MTRequestMessageService#%x drop %" PRId64 "]", (int)self, request.requestContext.messageId);
+                if (request.requestContext.messageId != 0)
+                    MTLog(@"[MTRequestMessageService#%x drop %" PRId64 "]", (int)self, request.requestContext.messageId);
                 
                 request.requestContext = nil;
                 [_requests removeObjectAtIndex:(NSUInteger)index];
@@ -545,10 +546,11 @@
                     }
                     else
                     {
-                        if (request.completed)
-                            request.completed(resultIsError ? nil : object, message.timestamp, resultIsError ? object : nil);
-                        
+                        void (^completed)(id result, NSTimeInterval completionTimestamp, id error) = request.completed;
                         [_requests removeObjectAtIndex:(NSUInteger)index];
+                        
+                        if (completed)
+                            completed(resultIsError ? nil : object, message.timestamp, resultIsError ? object : nil);
                     }
                     
                     break;
