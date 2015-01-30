@@ -1,0 +1,10 @@
+#import "SSignal.h"
+
+@interface SSignal (SideEffects)
+
+- (SSignal *)onNext:(void (^)(id next))f;
+- (SSignal *)onError:(void (^)(id error))f;
+- (SSignal *)onCompletion:(void (^)())f;
+- (SSignal *)onDispose:(void (^)())f;
+
+@end

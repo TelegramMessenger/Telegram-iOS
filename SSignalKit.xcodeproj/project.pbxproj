@@ -10,6 +10,77 @@
 		D0445DDE1A7C2CA500267924 /* SSignalKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445DDD1A7C2CA500267924 /* SSignalKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0445DE41A7C2CA500267924 /* SSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0445DD81A7C2CA500267924 /* SSignalKit.framework */; };
 		D0445DEB1A7C2CA500267924 /* SSignalKitTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445DEA1A7C2CA500267924 /* SSignalKitTests.m */; };
+		D0445E221A7C2D7300267924 /* SBlockDisposable.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445DF61A7C2D7300267924 /* SBlockDisposable.m */; };
+		D0445E231A7C2D7300267924 /* SAtomic.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445DF71A7C2D7300267924 /* SAtomic.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E241A7C2D7300267924 /* SAtomic.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445DF81A7C2D7300267924 /* SAtomic.m */; };
+		D0445E251A7C2D7300267924 /* SBag.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445DF91A7C2D7300267924 /* SBag.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E261A7C2D7300267924 /* SBag.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445DFA1A7C2D7300267924 /* SBag.m */; };
+		D0445E271A7C2D7300267924 /* SBlockDisposable.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445DFB1A7C2D7300267924 /* SBlockDisposable.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E281A7C2D7300267924 /* SCompositeDisposable.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445DFC1A7C2D7300267924 /* SCompositeDisposable.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E291A7C2D7300267924 /* SCompositeDisposable.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445DFD1A7C2D7300267924 /* SCompositeDisposable.m */; };
+		D0445E2A1A7C2D7300267924 /* SDisposable.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445DFE1A7C2D7300267924 /* SDisposable.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E2B1A7C2D7300267924 /* SEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445DFF1A7C2D7300267924 /* SEvent.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E2C1A7C2D7300267924 /* SEvent.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E001A7C2D7300267924 /* SEvent.m */; };
+		D0445E2D1A7C2D7300267924 /* SMetaDisposable.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E011A7C2D7300267924 /* SMetaDisposable.m */; };
+		D0445E2E1A7C2D7300267924 /* SMulticastSignalManager.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E021A7C2D7300267924 /* SMulticastSignalManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E2F1A7C2D7300267924 /* SMulticastSignalManager.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E031A7C2D7300267924 /* SMulticastSignalManager.m */; };
+		D0445E301A7C2D7300267924 /* SSignal.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E041A7C2D7300267924 /* SSignal.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E311A7C2D7300267924 /* SSignal.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E051A7C2D7300267924 /* SSignal.m */; };
+		D0445E321A7C2D7300267924 /* SSignal+Accumulate.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E061A7C2D7300267924 /* SSignal+Accumulate.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E331A7C2D7300267924 /* SSignal+Accumulate.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E071A7C2D7300267924 /* SSignal+Accumulate.m */; };
+		D0445E341A7C2D7300267924 /* SSignal+Catch.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E081A7C2D7300267924 /* SSignal+Catch.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E351A7C2D7300267924 /* SSignal+Catch.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E091A7C2D7300267924 /* SSignal+Catch.m */; };
+		D0445E361A7C2D7300267924 /* SSignal+Combine.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E0A1A7C2D7300267924 /* SSignal+Combine.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E371A7C2D7300267924 /* SSignal+Combine.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E0B1A7C2D7300267924 /* SSignal+Combine.m */; };
+		D0445E381A7C2D7300267924 /* SSignal+Concat.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E0C1A7C2D7300267924 /* SSignal+Concat.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E391A7C2D7300267924 /* SSignal+Concat.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E0D1A7C2D7300267924 /* SSignal+Concat.m */; };
+		D0445E3A1A7C2D7300267924 /* SSignal+Dispatch.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E0E1A7C2D7300267924 /* SSignal+Dispatch.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E3B1A7C2D7300267924 /* SSignal+Dispatch.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E0F1A7C2D7300267924 /* SSignal+Dispatch.m */; };
+		D0445E3C1A7C2D7300267924 /* SSignal+Mapping.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E101A7C2D7300267924 /* SSignal+Mapping.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E3D1A7C2D7300267924 /* SSignal+Mapping.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E111A7C2D7300267924 /* SSignal+Mapping.m */; };
+		D0445E3E1A7C2D7300267924 /* SSignal+Meta.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E121A7C2D7300267924 /* SSignal+Meta.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E3F1A7C2D7300267924 /* SSignal+Meta.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E131A7C2D7300267924 /* SSignal+Meta.m */; };
+		D0445E401A7C2D7300267924 /* SSignal+Multicast.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E141A7C2D7300267924 /* SSignal+Multicast.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E411A7C2D7300267924 /* SSignal+Multicast.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E151A7C2D7300267924 /* SSignal+Multicast.m */; };
+		D0445E421A7C2D7300267924 /* SSignal+SideEffects.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E161A7C2D7300267924 /* SSignal+SideEffects.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E431A7C2D7300267924 /* SSignal+SideEffects.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E171A7C2D7300267924 /* SSignal+SideEffects.m */; };
+		D0445E441A7C2D7300267924 /* SSignal+Single.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E181A7C2D7300267924 /* SSignal+Single.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E451A7C2D7300267924 /* SSignal+Single.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E191A7C2D7300267924 /* SSignal+Single.m */; };
+		D0445E461A7C2D7300267924 /* SSignal+Timing.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E1A1A7C2D7300267924 /* SSignal+Timing.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E471A7C2D7300267924 /* SSignal+Timing.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E1B1A7C2D7300267924 /* SSignal+Timing.m */; };
+		D0445E481A7C2D7300267924 /* SSubscriber.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E1C1A7C2D7300267924 /* SSubscriber.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E491A7C2D7300267924 /* SSubscriber.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E1D1A7C2D7300267924 /* SSubscriber.m */; };
+		D0445E4A1A7C2D7300267924 /* SThreadPool.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E1E1A7C2D7300267924 /* SThreadPool.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E4B1A7C2D7300267924 /* SThreadPool.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E1F1A7C2D7300267924 /* SThreadPool.m */; };
+		D0445E4E1A7C2D8A00267924 /* SQueue.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E4C1A7C2D8A00267924 /* SQueue.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E4F1A7C2D8A00267924 /* SQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E4D1A7C2D8A00267924 /* SQueue.m */; };
+		D0445E511A7C2DBF00267924 /* SMetaDisposable.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E501A7C2DBF00267924 /* SMetaDisposable.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E541A7C2E9D00267924 /* STimer.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E521A7C2E9D00267924 /* STimer.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0445E551A7C2E9D00267924 /* STimer.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E531A7C2E9D00267924 /* STimer.m */; };
+		D0445E571A7C3FB400267924 /* SBlockDisposableTest.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E561A7C3FB400267924 /* SBlockDisposableTest.m */; };
+		D0445E731A7C447D00267924 /* SBlockDisposable.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445DF61A7C2D7300267924 /* SBlockDisposable.m */; };
+		D0445E741A7C447D00267924 /* SAtomic.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445DF81A7C2D7300267924 /* SAtomic.m */; };
+		D0445E751A7C447D00267924 /* SBag.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445DFA1A7C2D7300267924 /* SBag.m */; };
+		D0445E761A7C447D00267924 /* SCompositeDisposable.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445DFD1A7C2D7300267924 /* SCompositeDisposable.m */; };
+		D0445E771A7C447D00267924 /* SEvent.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E001A7C2D7300267924 /* SEvent.m */; };
+		D0445E781A7C447D00267924 /* SMetaDisposable.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E011A7C2D7300267924 /* SMetaDisposable.m */; };
+		D0445E791A7C447D00267924 /* SMulticastSignalManager.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E031A7C2D7300267924 /* SMulticastSignalManager.m */; };
+		D0445E7A1A7C447D00267924 /* SSignal.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E051A7C2D7300267924 /* SSignal.m */; };
+		D0445E7B1A7C447D00267924 /* SSignal+Accumulate.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E071A7C2D7300267924 /* SSignal+Accumulate.m */; };
+		D0445E7C1A7C447D00267924 /* SSignal+Catch.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E091A7C2D7300267924 /* SSignal+Catch.m */; };
+		D0445E7D1A7C447D00267924 /* SSignal+Combine.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E0B1A7C2D7300267924 /* SSignal+Combine.m */; };
+		D0445E7E1A7C447D00267924 /* SSignal+Concat.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E0D1A7C2D7300267924 /* SSignal+Concat.m */; };
+		D0445E7F1A7C447D00267924 /* SSignal+Dispatch.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E0F1A7C2D7300267924 /* SSignal+Dispatch.m */; };
+		D0445E801A7C447D00267924 /* SSignal+Mapping.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E111A7C2D7300267924 /* SSignal+Mapping.m */; };
+		D0445E811A7C447D00267924 /* SSignal+Meta.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E131A7C2D7300267924 /* SSignal+Meta.m */; };
+		D0445E821A7C447D00267924 /* SSignal+Multicast.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E151A7C2D7300267924 /* SSignal+Multicast.m */; };
+		D0445E831A7C447D00267924 /* SSignal+SideEffects.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E171A7C2D7300267924 /* SSignal+SideEffects.m */; };
+		D0445E841A7C447D00267924 /* SSignal+Single.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E191A7C2D7300267924 /* SSignal+Single.m */; };
+		D0445E851A7C447D00267924 /* SSignal+Timing.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E1B1A7C2D7300267924 /* SSignal+Timing.m */; };
+		D0445E861A7C447D00267924 /* SSubscriber.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E1D1A7C2D7300267924 /* SSubscriber.m */; };
+		D0445E871A7C447D00267924 /* SThreadPool.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E1F1A7C2D7300267924 /* SThreadPool.m */; };
+		D0445E881A7C447D00267924 /* SQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E4D1A7C2D8A00267924 /* SQueue.m */; };
+		D0445E891A7C447D00267924 /* STimer.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E531A7C2E9D00267924 /* STimer.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -22,6 +93,18 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		D0445E5A1A7C446000267924 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "include/$(PRODUCT_NAME)";
+			dstSubfolderSpec = 16;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		D0445DD81A7C2CA500267924 /* SSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = SSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0445DDC1A7C2CA500267924 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -29,6 +112,55 @@
 		D0445DE31A7C2CA500267924 /* SSignalKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SSignalKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0445DE91A7C2CA500267924 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0445DEA1A7C2CA500267924 /* SSignalKitTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SSignalKitTests.m; sourceTree = "<group>"; };
+		D0445DF61A7C2D7300267924 /* SBlockDisposable.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SBlockDisposable.m; sourceTree = "<group>"; };
+		D0445DF71A7C2D7300267924 /* SAtomic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SAtomic.h; sourceTree = "<group>"; };
+		D0445DF81A7C2D7300267924 /* SAtomic.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SAtomic.m; sourceTree = "<group>"; };
+		D0445DF91A7C2D7300267924 /* SBag.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SBag.h; sourceTree = "<group>"; };
+		D0445DFA1A7C2D7300267924 /* SBag.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SBag.m; sourceTree = "<group>"; };
+		D0445DFB1A7C2D7300267924 /* SBlockDisposable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SBlockDisposable.h; sourceTree = "<group>"; };
+		D0445DFC1A7C2D7300267924 /* SCompositeDisposable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SCompositeDisposable.h; sourceTree = "<group>"; };
+		D0445DFD1A7C2D7300267924 /* SCompositeDisposable.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SCompositeDisposable.m; sourceTree = "<group>"; };
+		D0445DFE1A7C2D7300267924 /* SDisposable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SDisposable.h; sourceTree = "<group>"; };
+		D0445DFF1A7C2D7300267924 /* SEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SEvent.h; sourceTree = "<group>"; };
+		D0445E001A7C2D7300267924 /* SEvent.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SEvent.m; sourceTree = "<group>"; };
+		D0445E011A7C2D7300267924 /* SMetaDisposable.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SMetaDisposable.m; sourceTree = "<group>"; };
+		D0445E021A7C2D7300267924 /* SMulticastSignalManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SMulticastSignalManager.h; sourceTree = "<group>"; };
+		D0445E031A7C2D7300267924 /* SMulticastSignalManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SMulticastSignalManager.m; sourceTree = "<group>"; };
+		D0445E041A7C2D7300267924 /* SSignal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SSignal.h; sourceTree = "<group>"; };
+		D0445E051A7C2D7300267924 /* SSignal.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SSignal.m; sourceTree = "<group>"; };
+		D0445E061A7C2D7300267924 /* SSignal+Accumulate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "SSignal+Accumulate.h"; sourceTree = "<group>"; };
+		D0445E071A7C2D7300267924 /* SSignal+Accumulate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "SSignal+Accumulate.m"; sourceTree = "<group>"; };
+		D0445E081A7C2D7300267924 /* SSignal+Catch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "SSignal+Catch.h"; sourceTree = "<group>"; };
+		D0445E091A7C2D7300267924 /* SSignal+Catch.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "SSignal+Catch.m"; sourceTree = "<group>"; };
+		D0445E0A1A7C2D7300267924 /* SSignal+Combine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "SSignal+Combine.h"; sourceTree = "<group>"; };
+		D0445E0B1A7C2D7300267924 /* SSignal+Combine.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "SSignal+Combine.m"; sourceTree = "<group>"; };
+		D0445E0C1A7C2D7300267924 /* SSignal+Concat.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "SSignal+Concat.h"; sourceTree = "<group>"; };
+		D0445E0D1A7C2D7300267924 /* SSignal+Concat.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "SSignal+Concat.m"; sourceTree = "<group>"; };
+		D0445E0E1A7C2D7300267924 /* SSignal+Dispatch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "SSignal+Dispatch.h"; sourceTree = "<group>"; };
+		D0445E0F1A7C2D7300267924 /* SSignal+Dispatch.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "SSignal+Dispatch.m"; sourceTree = "<group>"; };
+		D0445E101A7C2D7300267924 /* SSignal+Mapping.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "SSignal+Mapping.h"; sourceTree = "<group>"; };
+		D0445E111A7C2D7300267924 /* SSignal+Mapping.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "SSignal+Mapping.m"; sourceTree = "<group>"; };
+		D0445E121A7C2D7300267924 /* SSignal+Meta.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "SSignal+Meta.h"; sourceTree = "<group>"; };
+		D0445E131A7C2D7300267924 /* SSignal+Meta.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "SSignal+Meta.m"; sourceTree = "<group>"; };
+		D0445E141A7C2D7300267924 /* SSignal+Multicast.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "SSignal+Multicast.h"; sourceTree = "<group>"; };
+		D0445E151A7C2D7300267924 /* SSignal+Multicast.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "SSignal+Multicast.m"; sourceTree = "<group>"; };
+		D0445E161A7C2D7300267924 /* SSignal+SideEffects.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "SSignal+SideEffects.h"; sourceTree = "<group>"; };
+		D0445E171A7C2D7300267924 /* SSignal+SideEffects.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "SSignal+SideEffects.m"; sourceTree = "<group>"; };
+		D0445E181A7C2D7300267924 /* SSignal+Single.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "SSignal+Single.h"; sourceTree = "<group>"; };
+		D0445E191A7C2D7300267924 /* SSignal+Single.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "SSignal+Single.m"; sourceTree = "<group>"; };
+		D0445E1A1A7C2D7300267924 /* SSignal+Timing.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "SSignal+Timing.h"; sourceTree = "<group>"; };
+		D0445E1B1A7C2D7300267924 /* SSignal+Timing.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "SSignal+Timing.m"; sourceTree = "<group>"; };
+		D0445E1C1A7C2D7300267924 /* SSubscriber.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SSubscriber.h; sourceTree = "<group>"; };
+		D0445E1D1A7C2D7300267924 /* SSubscriber.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SSubscriber.m; sourceTree = "<group>"; };
+		D0445E1E1A7C2D7300267924 /* SThreadPool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SThreadPool.h; sourceTree = "<group>"; };
+		D0445E1F1A7C2D7300267924 /* SThreadPool.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SThreadPool.m; sourceTree = "<group>"; };
+		D0445E4C1A7C2D8A00267924 /* SQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SQueue.h; sourceTree = "<group>"; };
+		D0445E4D1A7C2D8A00267924 /* SQueue.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SQueue.m; sourceTree = "<group>"; };
+		D0445E501A7C2DBF00267924 /* SMetaDisposable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SMetaDisposable.h; sourceTree = "<group>"; };
+		D0445E521A7C2E9D00267924 /* STimer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STimer.h; sourceTree = "<group>"; };
+		D0445E531A7C2E9D00267924 /* STimer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STimer.m; sourceTree = "<group>"; };
+		D0445E561A7C3FB400267924 /* SBlockDisposableTest.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SBlockDisposableTest.m; sourceTree = "<group>"; };
+		D0445E5C1A7C446000267924 /* libSSignalKitStatic.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libSSignalKitStatic.a; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -44,6 +176,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0445DE41A7C2CA500267924 /* SSignalKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0445E591A7C446000267924 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -64,6 +203,7 @@
 			children = (
 				D0445DD81A7C2CA500267924 /* SSignalKit.framework */,
 				D0445DE31A7C2CA500267924 /* SSignalKitTests.xctest */,
+				D0445E5C1A7C446000267924 /* libSSignalKitStatic.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -71,6 +211,53 @@
 		D0445DDA1A7C2CA500267924 /* SSignalKit */ = {
 			isa = PBXGroup;
 			children = (
+				D0445DFB1A7C2D7300267924 /* SBlockDisposable.h */,
+				D0445DF61A7C2D7300267924 /* SBlockDisposable.m */,
+				D0445DF71A7C2D7300267924 /* SAtomic.h */,
+				D0445DF81A7C2D7300267924 /* SAtomic.m */,
+				D0445DF91A7C2D7300267924 /* SBag.h */,
+				D0445DFA1A7C2D7300267924 /* SBag.m */,
+				D0445DFC1A7C2D7300267924 /* SCompositeDisposable.h */,
+				D0445DFD1A7C2D7300267924 /* SCompositeDisposable.m */,
+				D0445DFE1A7C2D7300267924 /* SDisposable.h */,
+				D0445DFF1A7C2D7300267924 /* SEvent.h */,
+				D0445E001A7C2D7300267924 /* SEvent.m */,
+				D0445E501A7C2DBF00267924 /* SMetaDisposable.h */,
+				D0445E011A7C2D7300267924 /* SMetaDisposable.m */,
+				D0445E021A7C2D7300267924 /* SMulticastSignalManager.h */,
+				D0445E031A7C2D7300267924 /* SMulticastSignalManager.m */,
+				D0445E041A7C2D7300267924 /* SSignal.h */,
+				D0445E051A7C2D7300267924 /* SSignal.m */,
+				D0445E061A7C2D7300267924 /* SSignal+Accumulate.h */,
+				D0445E071A7C2D7300267924 /* SSignal+Accumulate.m */,
+				D0445E081A7C2D7300267924 /* SSignal+Catch.h */,
+				D0445E091A7C2D7300267924 /* SSignal+Catch.m */,
+				D0445E0A1A7C2D7300267924 /* SSignal+Combine.h */,
+				D0445E0B1A7C2D7300267924 /* SSignal+Combine.m */,
+				D0445E0C1A7C2D7300267924 /* SSignal+Concat.h */,
+				D0445E0D1A7C2D7300267924 /* SSignal+Concat.m */,
+				D0445E0E1A7C2D7300267924 /* SSignal+Dispatch.h */,
+				D0445E0F1A7C2D7300267924 /* SSignal+Dispatch.m */,
+				D0445E101A7C2D7300267924 /* SSignal+Mapping.h */,
+				D0445E111A7C2D7300267924 /* SSignal+Mapping.m */,
+				D0445E121A7C2D7300267924 /* SSignal+Meta.h */,
+				D0445E131A7C2D7300267924 /* SSignal+Meta.m */,
+				D0445E141A7C2D7300267924 /* SSignal+Multicast.h */,
+				D0445E151A7C2D7300267924 /* SSignal+Multicast.m */,
+				D0445E161A7C2D7300267924 /* SSignal+SideEffects.h */,
+				D0445E171A7C2D7300267924 /* SSignal+SideEffects.m */,
+				D0445E181A7C2D7300267924 /* SSignal+Single.h */,
+				D0445E191A7C2D7300267924 /* SSignal+Single.m */,
+				D0445E1A1A7C2D7300267924 /* SSignal+Timing.h */,
+				D0445E1B1A7C2D7300267924 /* SSignal+Timing.m */,
+				D0445E1C1A7C2D7300267924 /* SSubscriber.h */,
+				D0445E1D1A7C2D7300267924 /* SSubscriber.m */,
+				D0445E1E1A7C2D7300267924 /* SThreadPool.h */,
+				D0445E1F1A7C2D7300267924 /* SThreadPool.m */,
+				D0445E4C1A7C2D8A00267924 /* SQueue.h */,
+				D0445E4D1A7C2D8A00267924 /* SQueue.m */,
+				D0445E521A7C2E9D00267924 /* STimer.h */,
+				D0445E531A7C2E9D00267924 /* STimer.m */,
 				D0445DDD1A7C2CA500267924 /* SSignalKit.h */,
 				D0445DDB1A7C2CA500267924 /* Supporting Files */,
 			);
@@ -90,6 +277,7 @@
 			children = (
 				D0445DEA1A7C2CA500267924 /* SSignalKitTests.m */,
 				D0445DE81A7C2CA500267924 /* Supporting Files */,
+				D0445E561A7C3FB400267924 /* SBlockDisposableTest.m */,
 			);
 			path = SSignalKitTests;
 			sourceTree = "<group>";
@@ -109,7 +297,31 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0445E481A7C2D7300267924 /* SSubscriber.h in Headers */,
+				D0445E2E1A7C2D7300267924 /* SMulticastSignalManager.h in Headers */,
+				D0445E271A7C2D7300267924 /* SBlockDisposable.h in Headers */,
+				D0445E4A1A7C2D7300267924 /* SThreadPool.h in Headers */,
+				D0445E541A7C2E9D00267924 /* STimer.h in Headers */,
+				D0445E301A7C2D7300267924 /* SSignal.h in Headers */,
+				D0445E321A7C2D7300267924 /* SSignal+Accumulate.h in Headers */,
+				D0445E361A7C2D7300267924 /* SSignal+Combine.h in Headers */,
+				D0445E2A1A7C2D7300267924 /* SDisposable.h in Headers */,
+				D0445E421A7C2D7300267924 /* SSignal+SideEffects.h in Headers */,
+				D0445E3E1A7C2D7300267924 /* SSignal+Meta.h in Headers */,
+				D0445E2B1A7C2D7300267924 /* SEvent.h in Headers */,
+				D0445E281A7C2D7300267924 /* SCompositeDisposable.h in Headers */,
+				D0445E341A7C2D7300267924 /* SSignal+Catch.h in Headers */,
+				D0445E4E1A7C2D8A00267924 /* SQueue.h in Headers */,
+				D0445E441A7C2D7300267924 /* SSignal+Single.h in Headers */,
+				D0445E251A7C2D7300267924 /* SBag.h in Headers */,
+				D0445E3A1A7C2D7300267924 /* SSignal+Dispatch.h in Headers */,
+				D0445E401A7C2D7300267924 /* SSignal+Multicast.h in Headers */,
+				D0445E511A7C2DBF00267924 /* SMetaDisposable.h in Headers */,
+				D0445E231A7C2D7300267924 /* SAtomic.h in Headers */,
+				D0445E461A7C2D7300267924 /* SSignal+Timing.h in Headers */,
+				D0445E381A7C2D7300267924 /* SSignal+Concat.h in Headers */,
 				D0445DDE1A7C2CA500267924 /* SSignalKit.h in Headers */,
+				D0445E3C1A7C2D7300267924 /* SSignal+Mapping.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -152,6 +364,23 @@
 			productReference = D0445DE31A7C2CA500267924 /* SSignalKitTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		D0445E5B1A7C446000267924 /* SSignalKitStatic */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D0445E6D1A7C446000267924 /* Build configuration list for PBXNativeTarget "SSignalKitStatic" */;
+			buildPhases = (
+				D0445E581A7C446000267924 /* Sources */,
+				D0445E591A7C446000267924 /* Frameworks */,
+				D0445E5A1A7C446000267924 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SSignalKitStatic;
+			productName = SSignalKitStatic;
+			productReference = D0445E5C1A7C446000267924 /* libSSignalKitStatic.a */;
+			productType = "com.apple.product-type.library.static";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -165,6 +394,9 @@
 						CreatedOnToolsVersion = 6.1.1;
 					};
 					D0445DE21A7C2CA500267924 = {
+						CreatedOnToolsVersion = 6.1.1;
+					};
+					D0445E5B1A7C446000267924 = {
 						CreatedOnToolsVersion = 6.1.1;
 					};
 				};
@@ -182,6 +414,7 @@
 			projectRoot = "";
 			targets = (
 				D0445DD71A7C2CA500267924 /* SSignalKit */,
+				D0445E5B1A7C446000267924 /* SSignalKitStatic */,
 				D0445DE21A7C2CA500267924 /* SSignalKitTests */,
 			);
 		};
@@ -209,6 +442,29 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0445E451A7C2D7300267924 /* SSignal+Single.m in Sources */,
+				D0445E2D1A7C2D7300267924 /* SMetaDisposable.m in Sources */,
+				D0445E3B1A7C2D7300267924 /* SSignal+Dispatch.m in Sources */,
+				D0445E4F1A7C2D8A00267924 /* SQueue.m in Sources */,
+				D0445E241A7C2D7300267924 /* SAtomic.m in Sources */,
+				D0445E4B1A7C2D7300267924 /* SThreadPool.m in Sources */,
+				D0445E551A7C2E9D00267924 /* STimer.m in Sources */,
+				D0445E3D1A7C2D7300267924 /* SSignal+Mapping.m in Sources */,
+				D0445E351A7C2D7300267924 /* SSignal+Catch.m in Sources */,
+				D0445E411A7C2D7300267924 /* SSignal+Multicast.m in Sources */,
+				D0445E2C1A7C2D7300267924 /* SEvent.m in Sources */,
+				D0445E261A7C2D7300267924 /* SBag.m in Sources */,
+				D0445E331A7C2D7300267924 /* SSignal+Accumulate.m in Sources */,
+				D0445E471A7C2D7300267924 /* SSignal+Timing.m in Sources */,
+				D0445E291A7C2D7300267924 /* SCompositeDisposable.m in Sources */,
+				D0445E311A7C2D7300267924 /* SSignal.m in Sources */,
+				D0445E491A7C2D7300267924 /* SSubscriber.m in Sources */,
+				D0445E391A7C2D7300267924 /* SSignal+Concat.m in Sources */,
+				D0445E431A7C2D7300267924 /* SSignal+SideEffects.m in Sources */,
+				D0445E3F1A7C2D7300267924 /* SSignal+Meta.m in Sources */,
+				D0445E371A7C2D7300267924 /* SSignal+Combine.m in Sources */,
+				D0445E2F1A7C2D7300267924 /* SMulticastSignalManager.m in Sources */,
+				D0445E221A7C2D7300267924 /* SBlockDisposable.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -217,6 +473,37 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0445DEB1A7C2CA500267924 /* SSignalKitTests.m in Sources */,
+				D0445E571A7C3FB400267924 /* SBlockDisposableTest.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0445E581A7C446000267924 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0445E841A7C447D00267924 /* SSignal+Single.m in Sources */,
+				D0445E781A7C447D00267924 /* SMetaDisposable.m in Sources */,
+				D0445E7F1A7C447D00267924 /* SSignal+Dispatch.m in Sources */,
+				D0445E881A7C447D00267924 /* SQueue.m in Sources */,
+				D0445E741A7C447D00267924 /* SAtomic.m in Sources */,
+				D0445E871A7C447D00267924 /* SThreadPool.m in Sources */,
+				D0445E891A7C447D00267924 /* STimer.m in Sources */,
+				D0445E801A7C447D00267924 /* SSignal+Mapping.m in Sources */,
+				D0445E7C1A7C447D00267924 /* SSignal+Catch.m in Sources */,
+				D0445E821A7C447D00267924 /* SSignal+Multicast.m in Sources */,
+				D0445E771A7C447D00267924 /* SEvent.m in Sources */,
+				D0445E751A7C447D00267924 /* SBag.m in Sources */,
+				D0445E7B1A7C447D00267924 /* SSignal+Accumulate.m in Sources */,
+				D0445E851A7C447D00267924 /* SSignal+Timing.m in Sources */,
+				D0445E761A7C447D00267924 /* SCompositeDisposable.m in Sources */,
+				D0445E7A1A7C447D00267924 /* SSignal.m in Sources */,
+				D0445E861A7C447D00267924 /* SSubscriber.m in Sources */,
+				D0445E7E1A7C447D00267924 /* SSignal+Concat.m in Sources */,
+				D0445E831A7C447D00267924 /* SSignal+SideEffects.m in Sources */,
+				D0445E811A7C447D00267924 /* SSignal+Meta.m in Sources */,
+				D0445E7D1A7C447D00267924 /* SSignal+Combine.m in Sources */,
+				D0445E791A7C447D00267924 /* SMulticastSignalManager.m in Sources */,
+				D0445E731A7C447D00267924 /* SBlockDisposable.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -324,6 +611,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				INFOPLIST_FILE = SSignalKit/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -339,6 +627,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				INFOPLIST_FILE = SSignalKit/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -375,6 +664,28 @@
 			};
 			name = Release;
 		};
+		D0445E6E1A7C446000267924 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		D0445E6F1A7C446000267924 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -400,6 +711,14 @@
 			buildConfigurations = (
 				D0445DF21A7C2CA500267924 /* Debug */,
 				D0445DF31A7C2CA500267924 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+		D0445E6D1A7C446000267924 /* Build configuration list for PBXNativeTarget "SSignalKitStatic" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0445E6E1A7C446000267924 /* Debug */,
+				D0445E6F1A7C446000267924 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 		};
