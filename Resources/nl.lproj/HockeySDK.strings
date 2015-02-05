@@ -269,9 +269,6 @@
 /* Error presented to the user if authentication failed because of networking issues */
 "HockeyAuthenticationViewControllerNetworkError" = "Identiteitscontrole mislukt omdat uw apparaat niet is verbonden met het internet. Probeer opnieuw.";
 
-/* Error presented to the user if authentication could not be stored on the device */
-"HockeyAuthenticationViewControllerStorageError" = "Your authentication token could not be stored due to a keychain error. Please contact the developer of the app.";
-
 "HockeyAuthenticationFailedAuthenticate" = "Identiteitscontrole mislukt. Probeer opnieuw of neem contact op met de ontwikkelaar van deze app.";
 "HockeyAuthenticationNotMember" = "U bent niet gemachtigd om deze app te gebruiken. Neem contact op met de ontwikkelaar van deze app.";
 "HockeyAuthenticationContactDeveloper" = "Fout bij identiteitscontrole. Neem contact op met de ontwikkelaar van deze app.";

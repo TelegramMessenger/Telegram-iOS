@@ -160,13 +160,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     return;
   }
 
-  UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil
-                                                      message:BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerStorageError")
-                                                     delegate:self
-                                            cancelButtonTitle:BITHockeyLocalizedString(@"HockeyOK")
-                                            otherButtonTitles:nil];
-  [alertView setTag:1];
-  [alertView show];
+  NSLog(@"[HockeySDK] ERROR: The authentication token could not be stored due to a keychain error. This is most likely a signing or keychain entitlement issue!");
 }
 
 - (void) identifyWithCompletion:(void (^)(BOOL identified, NSError *))completion {

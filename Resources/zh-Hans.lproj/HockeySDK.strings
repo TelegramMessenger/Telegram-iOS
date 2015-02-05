@@ -269,9 +269,6 @@
 /* Error presented to the user if authentication failed because of networking issues */
 "HockeyAuthenticationViewControllerNetworkError" = "你设备的 Internet 连接似乎已断开，导致授权失败。请再试一次。";
 
-/* Error presented to the user if authentication could not be stored on the device */
-"HockeyAuthenticationViewControllerStorageError" = "Your authentication token could not be stored due to a keychain error. Please contact the developer of the app.";
-
 "HockeyAuthenticationFailedAuthenticate" = "授权错误。请再试一次或联系这个 app 的开发人员。";
 "HockeyAuthenticationNotMember" = "你未获授权使用这个程序。请联系这个 app 的开发人员。";
 "HockeyAuthenticationContactDeveloper" = "授权错误。请联系这个 app 开发人员。";
