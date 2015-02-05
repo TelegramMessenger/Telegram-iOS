@@ -1,7 +1,6 @@
 #import "SSignal+Concat.h"
 
 #import "SAtomic.h"
-#import "SCompositeDisposable.h"
 
 @implementation SSignal (Concat)
 

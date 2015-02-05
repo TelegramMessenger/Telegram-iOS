@@ -4,6 +4,7 @@
 #import <pthread.h>
 
 #import "SEvent.h"
+#import "SDisposableSet.h"
 
 #define lockSelf(x) pthread_mutex_lock(&x->_mutex)
 #define unlockSelf(x) pthread_mutex_unlock(&x->_mutex)
@@ -17,7 +18,7 @@
     void (^_error)(id);
     void (^_completed)();
     
-    SCompositeDisposable *_disposable;
+    SDisposableSet *_disposable;
 }
 
 @end
@@ -30,7 +31,7 @@
     if (self != nil)
     {
         pthread_mutex_init(&_mutex, NULL);
-        _disposable = [[SCompositeDisposable alloc] init];
+        _disposable = [[SDisposableSet alloc] init];
         _next = [next copy];
         _error = [error copy];
         _completed = [completed copy];

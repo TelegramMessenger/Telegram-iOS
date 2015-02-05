@@ -1,6 +1,6 @@
 #import "SDisposable.h"
 
-@interface SCompositeDisposable : NSObject <SDisposable>
+@interface SDisposableSet : NSObject <SDisposable>
 
 - (void)add:(id<SDisposable>)disposable;
 

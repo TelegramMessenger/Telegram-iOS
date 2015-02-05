@@ -1,51 +1,57 @@
 #import "SMetaDisposable.h"
 
 #import <libkern/OSAtomic.h>
-#import <pthread.h>
 
 @interface SMetaDisposable ()
 {
-    //volatile OSSpinLock _lock;
-    pthread_mutex_t _mutex;
-    id<SDisposable> _disposable;
+    void *_disposable;
 }
 
 @end
 
 @implementation SMetaDisposable
 
-- (instancetype)init
+- (void)dealloc
 {
-    self = [super init];
-    if (self != nil)
+    while (true)
     {
-        pthread_mutex_init(&_mutex, NULL);
+        void *previousDisposable = _disposable;
+        if (OSAtomicCompareAndSwapPtr(previousDisposable, NULL, &_disposable))
+        {
+            if (previousDisposable != NULL)
+            {
+                __strong id<SDisposable> strongPreviousDisposable = (__bridge_transfer id<SDisposable>)previousDisposable;
+                strongPreviousDisposable = nil;
+            }
+            
+            break;
+        }
     }
-    return self;
 }
 
 - (void)setDisposable:(id<SDisposable>)disposable
 {
-    id<SDisposable> currentDisposable = nil;
-    //OSSpinLockLock(&_lock);
-    pthread_mutex_lock(&_mutex);
-    currentDisposable = _disposable;
-    _disposable = disposable;
-    //OSSpinLockUnlock(&lock);
-    pthread_mutex_unlock(&_mutex);
-    
-    [currentDisposable dispose];
+    void *newDisposable = (__bridge_retained void *)disposable;
+    while (true)
+    {
+        void *previousDisposable = _disposable;
+        if (OSAtomicCompareAndSwapPtr(previousDisposable, newDisposable, &_disposable))
+        {
+            if (previousDisposable != NULL)
+            {
+                __strong id<SDisposable> strongPreviousDisposable = (__bridge_transfer id<SDisposable>)previousDisposable;
+                [strongPreviousDisposable dispose];
+                strongPreviousDisposable = nil;
+            }
+            
+            break;
+        }
+    }
 }
 
 - (void)dispose
 {
-    id<SDisposable> disposable = nil;
-    pthread_mutex_lock(&_mutex);
-    disposable = _disposable;
-    _disposable = nil;
-    pthread_mutex_unlock(&_mutex);
-    
-    [disposable dispose];
+    [self setDisposable:nil];
 }
 
 @end

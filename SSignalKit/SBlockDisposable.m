@@ -1,7 +1,6 @@
 #import "SBlockDisposable.h"
 
 #import <libkern/OSAtomic.h>
-#import <pthread.h>
 #import <objc/runtime.h>
 
 @interface SBlockDisposable ()

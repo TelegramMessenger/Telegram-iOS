@@ -22,7 +22,7 @@ FOUNDATION_EXPORT const unsigned char SSignalKitVersionString[];
 #import <SSignalKit/SEvent.h>
 #import <SSignalKit/SSubscriber.h>
 #import <SSignalKit/SDisposable.h>
-#import <SSignalKit/SCompositeDisposable.h>
+#import <SSignalKit/SDisposableSet.h>
 #import <SSignalKit/SBlockDisposable.h>
 #import <SSignalKit/SMetaDisposable.h>
 #import <SSignalKit/SSignal+Single.h>

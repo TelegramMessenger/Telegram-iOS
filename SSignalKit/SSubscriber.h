@@ -1,5 +1,4 @@
-#import "SCompositeDisposable.h"
-
+#import "SDisposable.h"
 #import "SEvent.h"
 
 @interface SSubscriber : NSObject
