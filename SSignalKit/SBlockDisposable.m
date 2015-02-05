@@ -23,6 +23,22 @@
     return self;
 }
 
+- (void)dealloc
+{
+    void *block = _block;
+    if (block != NULL)
+    {
+        if (OSAtomicCompareAndSwapPtr(block, 0, &_block))
+        {
+            if (block != nil)
+            {
+                __strong id strongBlock = (__bridge_transfer id)block;
+                strongBlock = nil;
+            }
+        }
+    }
+}
+
 - (void)dispose
 {
     void *block = _block;
@@ -34,6 +50,7 @@
             {
                 __strong id strongBlock = (__bridge_transfer id)block;
                 ((dispatch_block_t)strongBlock)();
+                strongBlock = nil;
             }
         }
     }

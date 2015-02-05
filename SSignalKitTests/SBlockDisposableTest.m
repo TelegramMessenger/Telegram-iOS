@@ -5,6 +5,32 @@
 
 @import SSignalKit;
 
+@interface TestObject : NSObject
+{
+    bool *_deallocated;
+}
+
+@end
+
+@implementation TestObject
+
+- (instancetype)initWithDeallocated:(bool *)deallocated
+{
+    self = [super init];
+    if (self != nil)
+    {
+        _deallocated = deallocated;
+    }
+    return self;
+}
+
+- (void)dealloc
+{
+    *_deallocated = true;
+}
+
+@end
+
 @interface SBlockDisposableTest : XCTestCase
 
 @end
@@ -21,35 +47,38 @@
     [super tearDown];
 }
 
-- (void)testBlockDisposable
+- (void)testBlockDisposableDisposed
 {
+    bool deallocated = false;
+    {
+        TestObject *object = [[TestObject alloc] initWithDeallocated:&deallocated];
+        dispatch_block_t block = ^{
+            [object description];
+        };
+        SBlockDisposable *disposable = [[SBlockDisposable alloc] initWithBlock:[block copy]];
+        object = nil;
+        block = nil;
+        [disposable dispose];
+    }
+    
+    XCTAssertTrue(deallocated);
 }
 
-- (void)testPerformanceExample
+- (void)testBlockDisposableNotDisposed
 {
-    [self measureBlock:^
+    bool deallocated = false;
     {
-        SSignal *signal = [[SSignal alloc] initWithGenerator:^(SSubscriber *subscriber)
-        {
-            //SSubscriber_putNext(subscriber, @1);
-            //SSubscriber_putCompletion(subscriber);
-        }];
-        
-        for (int i = 0; i < 1000000; i++)
-        {
-            [signal startWithNext:^(id next)
-            {
-                
-            } error:^(id error)
-            {
-                
-            } completed:^
-            {
-                
-            }];
-            //SSignal_start(signal, ^(id next){}, ^(id error){}, ^{});
-        }
-    }];
+        TestObject *object = [[TestObject alloc] initWithDeallocated:&deallocated];
+        dispatch_block_t block = ^{
+            [object description];
+        };
+        SBlockDisposable *disposable = [[SBlockDisposable alloc] initWithBlock:[block copy]];
+        object = nil;
+        block = nil;
+        disposable = nil;
+    }
+    
+    XCTAssertTrue(deallocated);
 }
 
 @end
