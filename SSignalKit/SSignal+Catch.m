@@ -1,24 +1,23 @@
 #import "SSignal+Catch.h"
 
 #import "SMetaDisposable.h"
+#import "SDisposableSet.h"
 
 @implementation SSignal (Catch)
 
 - (SSignal *)catch:(SSignal *(^)(id error))f
 {
-    return [[SSignal alloc] initWithGenerator:^(SSubscriber *subscriber)
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
     {
         SMetaDisposable *disposable = [[SMetaDisposable alloc] init];
         
-        [subscriber addDisposable:disposable];
-        
-        [subscriber addDisposable:[self startWithNext:^(id next)
+        [disposable setDisposable:[self startWithNext:^(id next)
         {
             SSubscriber_putNext(subscriber, next);
         } error:^(id error)
         {
             SSignal *signal = f(error);
-            [subscriber addDisposable:[signal startWithNext:^(id next)
+            [disposable setDisposable:[signal startWithNext:^(id next)
             {
                 SSubscriber_putNext(subscriber, next);
             } error:^(id error)
@@ -32,6 +31,8 @@
         {
             SSubscriber_putCompletion(subscriber);
         }]];
+        
+        return disposable;
     }];
 }
 

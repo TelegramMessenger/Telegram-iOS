@@ -1,6 +1,7 @@
 #import "SSignal+Combine.h"
 
 #import "SAtomic.h"
+#import "SDisposableSet.h"
 
 @interface SSignalCombineState : NSObject
 
@@ -48,6 +49,8 @@
             initialLatestValues[@(i)] = initialStates[i];
         }
         SAtomic *combineState = [[SAtomic alloc] initWithValue:[[SSignalCombineState alloc] initWithLatestValues:initialLatestValues completedStatuses:completedStatuses error:false]];
+        
+        SDisposableSet *compositeDisposable = [[SDisposableSet alloc] init];
         
         NSUInteger index = 0;
         NSUInteger count = signals.count;
@@ -120,9 +123,11 @@
                 if (!wasCompleted && isCompleted)
                     SSubscriber_putCompletion(subscriber);
             }];
-            [subscriber addDisposable:disposable];
+            [compositeDisposable add:disposable];
             index++;
         }
+        
+        return compositeDisposable;
     }];
 }
 

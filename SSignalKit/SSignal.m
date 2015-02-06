@@ -8,7 +8,7 @@
 
 @implementation SSignal
 
-- (instancetype)initWithGenerator:(void (^)(SSubscriber *))generator
+- (instancetype)initWithGenerator:(id<SDisposable> (^)(SSubscriber *))generator
 {
     self = [super init];
     if (self != nil)
@@ -21,8 +21,7 @@
 - (id<SDisposable>)startWithNext:(void (^)(id))next error:(void (^)(id))error completed:(void (^)())completed
 {
     SSubscriber *subscriber = [[SSubscriber alloc] initWithNext:next error:error completed:completed];
-    _generator(subscriber);
-    return [subscriber _disposable];
+    return _generator(subscriber);
 }
 
 @end

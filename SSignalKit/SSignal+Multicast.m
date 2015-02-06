@@ -38,15 +38,13 @@ typedef enum {
     _disposable = disposable;
 }
 
-- (bool)addSubscriber:(SSubscriber *)subscriber
+- (id<SDisposable>)addSubscriber:(SSubscriber *)subscriber start:(bool *)start
 {
-    bool start = false;
-    
     OSSpinLockLock(&_lock);
     NSInteger index = [_subscribers addItem:subscriber];
     switch (_state) {
         case SSignalMulticastStateReady:
-            start = true;
+            *start = true;
             _state = SSignalMulticastStateStarted;
             break;
         default:
@@ -54,12 +52,10 @@ typedef enum {
     }
     OSSpinLockUnlock(&_lock);
     
-    [subscriber addDisposable:[[SBlockDisposable alloc] initWithBlock:^
+    return [[SBlockDisposable alloc] initWithBlock:^
     {
         [self remove:index];
-    }]];
-    
-    return start;
+    }];
 }
 
 - (void)remove:(NSInteger)index
@@ -106,9 +102,11 @@ typedef enum {
 - (SSignal *)multicast
 {
     SSignalMulticastSubscribers *subscribers = [[SSignalMulticastSubscribers alloc] init];
-    return [[SSignal alloc] initWithGenerator:^(SSubscriber *subscriber)
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
     {
-        if ([subscribers addSubscriber:subscriber])
+        bool start = false;
+        id<SDisposable> currentDisposable = [subscribers addSubscriber:subscriber start:&start];
+        if (start)
         {
             id<SDisposable> disposable = [self startWithNext:^(id next)
             {
@@ -120,11 +118,14 @@ typedef enum {
             {
                 [subscribers notify:[[SEvent alloc] initWithCompleted]];
             }];
+            
             [subscribers setDisposable:[[SBlockDisposable alloc] initWithBlock:^
             {
                 [disposable dispose];
             }]];
         }
+        
+        return currentDisposable;
     }];
 }
 

@@ -4,9 +4,9 @@
 
 - (SSignal *)map:(id (^)(id))f
 {
-    return [[SSignal alloc] initWithGenerator:^(SSubscriber *subscriber)
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
     {
-        id<SDisposable> disposable = [self startWithNext:^(id next)
+        return [self startWithNext:^(id next)
         {
             SSubscriber_putNext(subscriber, f(next));
         } error:^(id error)
@@ -16,15 +16,30 @@
         {
             SSubscriber_putCompletion(subscriber);
         }];
-        [subscriber addDisposable:disposable];
     }];
+}
+
+- (SSignal *)_mapInplace:(id (^)(id))f
+{
+    id<SDisposable> (^generator)(SSubscriber *) = self->_generator;
+    self->_generator = [^id<SDisposable> (SSubscriber *subscriber)
+    {
+        SSubscriber *mappedSubscriber = [[SSubscriber alloc] initWithNext:^(id next)
+        {
+            subscriber->_next(f(next));
+        } error:subscriber->_error completed:subscriber->_completed];
+        
+        return generator(mappedSubscriber);
+    } copy];
+    
+    return self;
 }
 
 - (SSignal *)filter:(bool (^)(id))f
 {
-    return [[SSignal alloc] initWithGenerator:^(SSubscriber *subscriber)
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
     {
-        id<SDisposable> disposable = [self startWithNext:^(id next)
+        return [self startWithNext:^(id next)
         {
             if (f(next))
                 SSubscriber_putNext(subscriber, next);
@@ -35,7 +50,6 @@
         {
             SSubscriber_putCompletion(subscriber);
         }];
-        [subscriber addDisposable:disposable];
     }];
 }
 

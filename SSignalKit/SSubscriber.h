@@ -2,11 +2,16 @@
 #import "SEvent.h"
 
 @interface SSubscriber : NSObject
+{
+    @public
+    void (^_next)(id);
+    void (^_error)(id);
+    void (^_completed)();
+}
 
 - (instancetype)initWithNext:(void (^)(id))next error:(void (^)(id))error completed:(void (^)())completed;
 
-- (id<SDisposable>)_disposable;
-- (void)addDisposable:(id<SDisposable>)disposable;
+- (void)_assignDisposable:(id<SDisposable>)disposable;
 
 - (void)putEvent:(SEvent *)event;
 - (void)putNext:(id)next;

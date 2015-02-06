@@ -4,7 +4,6 @@
 #import <pthread.h>
 
 #import "SEvent.h"
-#import "SDisposableSet.h"
 
 #define lockSelf(x) pthread_mutex_lock(&x->_mutex)
 #define unlockSelf(x) pthread_mutex_unlock(&x->_mutex)
@@ -14,11 +13,8 @@
     @public
     //volatile OSSpinLock _lock;
     pthread_mutex_t _mutex;
-    void (^_next)(id);
-    void (^_error)(id);
-    void (^_completed)();
     
-    SDisposableSet *_disposable;
+    id<SDisposable> _disposable;
 }
 
 @end
@@ -31,7 +27,6 @@
     if (self != nil)
     {
         pthread_mutex_init(&_mutex, NULL);
-        _disposable = [[SDisposableSet alloc] init];
         _next = [next copy];
         _error = [error copy];
         _completed = [completed copy];
@@ -39,14 +34,9 @@
     return self;
 }
 
-- (id<SDisposable>)_disposable
+- (void)_assignDisposable:(id<SDisposable>)disposable
 {
-    return _disposable;
-}
-
-- (void)addDisposable:(id<SDisposable>)disposable
-{
-    [_disposable add:disposable];
+    _disposable = disposable;
 }
 
 - (void)putEvent:(SEvent *)event

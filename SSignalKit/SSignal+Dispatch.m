@@ -1,14 +1,15 @@
 #import "SSignal+Dispatch.h"
 #import "SAtomic.h"
 #import "SBlockDisposable.h"
+#import "SMetaDisposable.h"
 
 @implementation SSignal (Dispatch)
 
 - (SSignal *)deliverOn:(SQueue *)queue
 {
-    return [[SSignal alloc] initWithGenerator:^(SSubscriber *subscriber)
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
     {
-        [subscriber addDisposable:[self startWithNext:^(id next)
+        return [self startWithNext:^(id next)
         {
             [queue dispatch:^
             {
@@ -26,16 +27,16 @@
             {
                 SSubscriber_putCompletion(subscriber);
             }];
-        }]];
+        }];
     }];
 }
 
 - (SSignal *)deliverOnThreadPool:(SThreadPool *)threadPool
 {
-    return [[SSignal alloc] initWithGenerator:^(SSubscriber *subscriber)
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
     {
         SAtomic *atomicLastTask = [[SAtomic alloc] initWithValue:nil];
-        [subscriber addDisposable:[self startWithNext:^(id next)
+        return [self startWithNext:^(id next)
         {
             SThreadPoolTask *task = [threadPool prepareTask:^(bool (^cancelled)())
             {
@@ -68,42 +69,54 @@
             if (lastTask != nil)
                 [task addDependency:lastTask];
             [threadPool startTask:task];
-        }]];
+        }];
     }];
 }
 
 - (SSignal *)startOn:(SQueue *)queue
 {
-    return [[SSignal alloc] initWithGenerator:^(SSubscriber *subscriber)
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
     {
+        __block bool isCancelled = false;
+        SMetaDisposable *disposable = [[SMetaDisposable alloc] init];
+        [disposable setDisposable:[[SBlockDisposable alloc] initWithBlock:^
+        {
+            isCancelled = true;
+        }]];
+        
         [queue dispatch:^
         {
-            id<SDisposable> disposable = [self startWithNext:^(id next)
+            if (!isCancelled)
             {
-                SSubscriber_putNext(subscriber, next);
-            } error:^(id error)
-            {
-                SSubscriber_putError(subscriber, error);
-            } completed:^
-            {
-                SSubscriber_putCompletion(subscriber);
-            }];
-            
-            [subscriber addDisposable:disposable];
+                [disposable setDisposable:[self startWithNext:^(id next)
+                {
+                    SSubscriber_putNext(subscriber, next);
+                } error:^(id error)
+                {
+                    SSubscriber_putError(subscriber, error);
+                } completed:^
+                {
+                    SSubscriber_putCompletion(subscriber);
+                }]];
+            }
         }];
+        
+        return disposable;
     }];
 }
 
 - (SSignal *)startOnThreadPool:(SThreadPool *)threadPool
 {
-    return [[SSignal alloc] initWithGenerator:^(SSubscriber *subscriber)
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
     {
+        SMetaDisposable *disposable = [[SMetaDisposable alloc] init];
+        
         id taskId = [threadPool addTask:^(bool (^cancelled)())
         {
             if (cancelled && cancelled())
                 return;
             
-            [subscriber addDisposable:[self startWithNext:^(id next)
+            [disposable setDisposable:[self startWithNext:^(id next)
             {
                 SSubscriber_putNext(subscriber, next);
             } error:^(id error)
@@ -115,12 +128,12 @@
             }]];
         }];
         
-        __weak SThreadPool *weakThreadPool = threadPool;
-        [subscriber addDisposable:[[SBlockDisposable alloc] initWithBlock:^
+        [disposable setDisposable:[[SBlockDisposable alloc] initWithBlock:^
         {
-            __strong SThreadPool *strongThreadPool = weakThreadPool;
-            [strongThreadPool cancelTask:taskId];
+            [threadPool cancelTask:taskId];
         }]];
+        
+        return disposable;
     }];
 }
 

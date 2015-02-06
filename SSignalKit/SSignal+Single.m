@@ -39,24 +39,27 @@
 
 + (SSignal *)fail:(id)error
 {
-    return [[SSignal alloc] initWithGenerator:^(SSubscriber *subscriber)
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
     {
         SSubscriber_putError(subscriber, error);
+        return nil;
     }];
 }
 
 + (SSignal *)never
 {
-    return [[SSignal alloc] initWithGenerator:^(__unused SSubscriber *subscriber)
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable> (__unused SSubscriber *subscriber)
     {
+        return nil;
     }];
 }
 
 + (SSignal *)complete
 {
-    return [[SSignal alloc] initWithGenerator:^(SSubscriber *subscriber)
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
     {
         SSubscriber_putCompletion(subscriber);
+        return nil;
     }];
 }
 

@@ -1,5 +1,6 @@
 #import "SSignal+Meta.h"
 
+#import "SDisposableSet.h"
 #import "SMetaDisposable.h"
 #import "SSignal+Mapping.h"
 #import "SAtomic.h"
@@ -8,15 +9,18 @@
 
 - (SSignal *)switchToLatest
 {
-    return [[SSignal alloc] initWithGenerator:^(SSubscriber *subscriber)
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
     {
+        SDisposableSet *compositeDisposable = [[SDisposableSet alloc] init];
+        
         SMetaDisposable *currentDisposable = [[SMetaDisposable alloc] init];
+        [compositeDisposable add:currentDisposable];
         
         SAtomic *didProduceNext = [[SAtomic alloc] initWithValue:nil];
-        id<SDisposable> disposable = [self startWithNext:^(SSignal *next)
+        [compositeDisposable add:[self startWithNext:^(SSignal *next)
         {
             [didProduceNext swap:@1];
-            id<SDisposable> innerDisposable = [next startWithNext:^(id next)
+            [currentDisposable setDisposable:[next startWithNext:^(id next)
             {
                 SSubscriber_putNext(subscriber, next);
             } error:^(id error)
@@ -25,19 +29,17 @@
             } completed:^
             {
                 SSubscriber_putCompletion(subscriber);
-            }];
-            [currentDisposable setDisposable:innerDisposable];
+            }]];
         } error:^(id error)
         {
             SSubscriber_putError(subscriber, error);
         } completed:^
         {
-            if ([didProduceNext value] == nil)
+            if ([didProduceNext swap:@1] == NULL)
                 SSubscriber_putCompletion(subscriber);
-        }];
+        }]];
         
-        [subscriber addDisposable:currentDisposable];
-        [subscriber addDisposable:disposable];
+        return compositeDisposable;
     }];
 }
 
@@ -48,9 +50,14 @@
 
 - (SSignal *)then:(SSignal *)signal
 {
+    SDisposableSet *compositeDisposable = [[SDisposableSet alloc] init];
+    
+    SMetaDisposable *currentDisposable = [[SMetaDisposable alloc] init];
+    [compositeDisposable add:currentDisposable];
+    
     return [[SSignal alloc] initWithGenerator:^(SSubscriber *subscriber)
     {
-        [subscriber addDisposable:[self startWithNext:^(id next)
+        [currentDisposable setDisposable:[self startWithNext:^(id next)
         {
             SSubscriber_putNext(subscriber, next);
         } error:^(id error)
@@ -58,7 +65,7 @@
             SSubscriber_putError(subscriber, error);
         } completed:^
         {
-            [subscriber addDisposable:[signal startWithNext:^(id next)
+            [compositeDisposable add:[signal startWithNext:^(id next)
             {
                 SSubscriber_putNext(subscriber, next);
             } error:^(id error)
@@ -69,6 +76,8 @@
                 SSubscriber_putCompletion(subscriber);
             }]];
         }]];
+        
+        return compositeDisposable;
     }];
 }
 
