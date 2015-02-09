@@ -621,7 +621,7 @@ UIImage *bit_imageWithContentsOfResolutionIndependentFile(NSString *path) {
 
 
 UIImage *bit_imageNamed(NSString *imageName, NSString *bundleName) {
-  NSString *resourcePath = [[NSBundle mainBundle] resourcePath];
+  NSString *resourcePath = [[NSBundle bundleForClass:[BITHockeyManager class]] resourcePath];
   NSString *bundlePath = [resourcePath stringByAppendingPathComponent:bundleName];
   NSString *imagePath = [bundlePath stringByAppendingPathComponent:imageName];
   return bit_imageWithContentsOfResolutionIndependentFile(imagePath);
