@@ -13,19 +13,19 @@
         {
             [queue dispatch:^
             {
-                SSubscriber_putNext(subscriber, next);
+                [subscriber putNext:next];
             }];
         } error:^(id error)
         {
             [queue dispatch:^
             {
-                SSubscriber_putError(subscriber, error);
+                [subscriber putError:error];
             }];
         } completed:^
         {
             [queue dispatch:^
             {
-                SSubscriber_putCompletion(subscriber);
+                [subscriber putCompletion];
             }];
         }];
     }];
@@ -41,7 +41,7 @@
             SThreadPoolTask *task = [threadPool prepareTask:^(bool (^cancelled)())
             {
                 if (!cancelled())
-                    SSubscriber_putNext(subscriber, next);
+                    [subscriber putNext:next];
             }];
             SThreadPoolTask *lastTask = [atomicLastTask swap:task];
             if (lastTask != nil)
@@ -52,7 +52,7 @@
             SThreadPoolTask *task = [threadPool prepareTask:^(bool (^cancelled)())
             {
                 if (!cancelled())
-                    SSubscriber_putError(subscriber, error);
+                    [subscriber putError:error];
             }];
             SThreadPoolTask *lastTask = [atomicLastTask swap:task];
             if (lastTask != nil)
@@ -63,7 +63,7 @@
             SThreadPoolTask *task = [threadPool prepareTask:^(bool (^cancelled)())
             {
                 if (!cancelled())
-                    SSubscriber_putCompletion(subscriber);
+                    [subscriber putCompletion];
             }];
             SThreadPoolTask *lastTask = [atomicLastTask swap:task];
             if (lastTask != nil)
@@ -90,13 +90,13 @@
             {
                 [disposable setDisposable:[self startWithNext:^(id next)
                 {
-                    SSubscriber_putNext(subscriber, next);
+                    [subscriber putNext:next];
                 } error:^(id error)
                 {
-                    SSubscriber_putError(subscriber, error);
+                    [subscriber putError:error];
                 } completed:^
                 {
-                    SSubscriber_putCompletion(subscriber);
+                    [subscriber putCompletion];
                 }]];
             }
         }];
@@ -118,13 +118,13 @@
             
             [disposable setDisposable:[self startWithNext:^(id next)
             {
-                SSubscriber_putNext(subscriber, next);
+                [subscriber putNext:next];
             } error:^(id error)
             {
-                SSubscriber_putError(subscriber, error);
+                [subscriber putError:error];
             } completed:^
             {
-                SSubscriber_putCompletion(subscriber);
+                [subscriber putCompletion];
             }]];
         }];
         

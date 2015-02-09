@@ -2,6 +2,7 @@
 
 #import "SMetaDisposable.h"
 #import "SDisposableSet.h"
+#import "SAtomic.h"
 
 @implementation SSignal (Catch)
 
@@ -13,23 +14,23 @@
         
         [disposable setDisposable:[self startWithNext:^(id next)
         {
-            SSubscriber_putNext(subscriber, next);
+            [subscriber putNext:next];
         } error:^(id error)
         {
             SSignal *signal = f(error);
             [disposable setDisposable:[signal startWithNext:^(id next)
             {
-                SSubscriber_putNext(subscriber, next);
+                [subscriber putNext:next];
             } error:^(id error)
             {
-                SSubscriber_putError(subscriber, error);
+                [subscriber putError:error];
             } completed:^
             {
-                SSubscriber_putCompletion(subscriber);
+                [subscriber putCompletion];
             }]];
         } completed:^
         {
-            SSubscriber_putCompletion(subscriber);
+            [subscriber putCompletion];
         }]];
         
         return disposable;

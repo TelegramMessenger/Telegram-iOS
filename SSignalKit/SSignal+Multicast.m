@@ -91,7 +91,7 @@ typedef enum {
     
     for (SSubscriber *subscriber in currentSubscribers)
     {
-        SSubscriber_putEvent(subscriber, event);
+        [subscriber putEvent:event];
     }
 }
 

@@ -8,13 +8,13 @@
     {
         return [self startWithNext:^(id next)
         {
-            SSubscriber_putNext(subscriber, f(next));
+            [subscriber putNext:f(next)];
         } error:^(id error)
         {
-            SSubscriber_putError(subscriber, error);
+            [subscriber putError:error];
         } completed:^
         {
-            SSubscriber_putCompletion(subscriber);
+            [subscriber putCompletion];
         }];
     }];
 }
@@ -24,12 +24,13 @@
     id<SDisposable> (^generator)(SSubscriber *) = self->_generator;
     self->_generator = [^id<SDisposable> (SSubscriber *subscriber)
     {
-        SSubscriber *mappedSubscriber = [[SSubscriber alloc] initWithNext:^(id next)
+        void (^next)(id) = subscriber->_next;
+        subscriber->_next = ^(id value)
         {
-            subscriber->_next(f(next));
-        } error:subscriber->_error completed:subscriber->_completed];
+            next(f(value));
+        };
         
-        return generator(mappedSubscriber);
+        return generator(subscriber);
     } copy];
     
     return self;
@@ -42,13 +43,13 @@
         return [self startWithNext:^(id next)
         {
             if (f(next))
-                SSubscriber_putNext(subscriber, next);
+                [subscriber putNext:next];
         } error:^(id error)
         {
-            SSubscriber_putError(subscriber, error);
+            [subscriber putError:error];
         } completed:^
         {
-            SSubscriber_putCompletion(subscriber);
+            [subscriber putCompletion];
         }];
     }];
 }

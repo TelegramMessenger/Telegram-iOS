@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		D0445DDE1A7C2CA500267924 /* SSignalKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445DDD1A7C2CA500267924 /* SSignalKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0445DE41A7C2CA500267924 /* SSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0445DD81A7C2CA500267924 /* SSignalKit.framework */; };
-		D0445DEB1A7C2CA500267924 /* SSignalKitTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445DEA1A7C2CA500267924 /* SSignalKitTests.m */; };
 		D0445E221A7C2D7300267924 /* SBlockDisposable.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445DF61A7C2D7300267924 /* SBlockDisposable.m */; };
 		D0445E231A7C2D7300267924 /* SAtomic.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445DF71A7C2D7300267924 /* SAtomic.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0445E241A7C2D7300267924 /* SAtomic.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445DF81A7C2D7300267924 /* SAtomic.m */; };
@@ -55,7 +54,7 @@
 		D0445E511A7C2DBF00267924 /* SMetaDisposable.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E501A7C2DBF00267924 /* SMetaDisposable.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0445E541A7C2E9D00267924 /* STimer.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E521A7C2E9D00267924 /* STimer.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0445E551A7C2E9D00267924 /* STimer.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E531A7C2E9D00267924 /* STimer.m */; };
-		D0445E571A7C3FB400267924 /* SBlockDisposableTest.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E561A7C3FB400267924 /* SBlockDisposableTest.m */; };
+		D0445E571A7C3FB400267924 /* SDisposableTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E561A7C3FB400267924 /* SDisposableTests.m */; };
 		D0445E731A7C447D00267924 /* SBlockDisposable.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445DF61A7C2D7300267924 /* SBlockDisposable.m */; };
 		D0445E741A7C447D00267924 /* SAtomic.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445DF81A7C2D7300267924 /* SAtomic.m */; };
 		D0445E751A7C447D00267924 /* SBag.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445DFA1A7C2D7300267924 /* SBag.m */; };
@@ -78,6 +77,9 @@
 		D0445E871A7C447D00267924 /* SThreadPool.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E1F1A7C2D7300267924 /* SThreadPool.m */; };
 		D0445E881A7C447D00267924 /* SQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E4D1A7C2D8A00267924 /* SQueue.m */; };
 		D0445E891A7C447D00267924 /* STimer.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E531A7C2E9D00267924 /* STimer.m */; };
+		D06F106C1A85561E00485185 /* SSignalBasicTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D06F106B1A85561E00485185 /* SSignalBasicTests.m */; };
+		D06F10711A855E2D00485185 /* DeallocatingObject.m in Sources */ = {isa = PBXBuildFile; fileRef = D06F10701A855E2D00485185 /* DeallocatingObject.m */; };
+		D06F10731A85882000485185 /* SSignalPerformanceTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D06F10721A85882000485185 /* SSignalPerformanceTests.m */; };
 		D087632A1A839EDC00632240 /* SDisposableSet.h in Headers */ = {isa = PBXBuildFile; fileRef = D08763281A839EDC00632240 /* SDisposableSet.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D087632B1A839EDC00632240 /* SDisposableSet.m in Sources */ = {isa = PBXBuildFile; fileRef = D08763291A839EDC00632240 /* SDisposableSet.m */; };
 		D087632C1A839EE800632240 /* SDisposableSet.m in Sources */ = {isa = PBXBuildFile; fileRef = D08763291A839EDC00632240 /* SDisposableSet.m */; };
@@ -111,7 +113,6 @@
 		D0445DDD1A7C2CA500267924 /* SSignalKit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSignalKit.h; sourceTree = "<group>"; };
 		D0445DE31A7C2CA500267924 /* SSignalKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SSignalKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0445DE91A7C2CA500267924 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		D0445DEA1A7C2CA500267924 /* SSignalKitTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SSignalKitTests.m; sourceTree = "<group>"; };
 		D0445DF61A7C2D7300267924 /* SBlockDisposable.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SBlockDisposable.m; sourceTree = "<group>"; };
 		D0445DF71A7C2D7300267924 /* SAtomic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SAtomic.h; sourceTree = "<group>"; };
 		D0445DF81A7C2D7300267924 /* SAtomic.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SAtomic.m; sourceTree = "<group>"; };
@@ -157,8 +158,12 @@
 		D0445E501A7C2DBF00267924 /* SMetaDisposable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SMetaDisposable.h; sourceTree = "<group>"; };
 		D0445E521A7C2E9D00267924 /* STimer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STimer.h; sourceTree = "<group>"; };
 		D0445E531A7C2E9D00267924 /* STimer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STimer.m; sourceTree = "<group>"; };
-		D0445E561A7C3FB400267924 /* SBlockDisposableTest.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SBlockDisposableTest.m; sourceTree = "<group>"; };
+		D0445E561A7C3FB400267924 /* SDisposableTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SDisposableTests.m; sourceTree = "<group>"; };
 		D0445E5C1A7C446000267924 /* libSSignalKitStatic.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libSSignalKitStatic.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		D06F106B1A85561E00485185 /* SSignalBasicTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SSignalBasicTests.m; sourceTree = "<group>"; };
+		D06F106F1A855E2D00485185 /* DeallocatingObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DeallocatingObject.h; sourceTree = "<group>"; };
+		D06F10701A855E2D00485185 /* DeallocatingObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DeallocatingObject.m; sourceTree = "<group>"; };
+		D06F10721A85882000485185 /* SSignalPerformanceTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SSignalPerformanceTests.m; sourceTree = "<group>"; };
 		D08763281A839EDC00632240 /* SDisposableSet.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SDisposableSet.h; sourceTree = "<group>"; };
 		D08763291A839EDC00632240 /* SDisposableSet.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SDisposableSet.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -275,9 +280,12 @@
 		D0445DE71A7C2CA500267924 /* SSignalKitTests */ = {
 			isa = PBXGroup;
 			children = (
-				D0445DEA1A7C2CA500267924 /* SSignalKitTests.m */,
+				D06F106F1A855E2D00485185 /* DeallocatingObject.h */,
+				D06F10701A855E2D00485185 /* DeallocatingObject.m */,
 				D0445DE81A7C2CA500267924 /* Supporting Files */,
-				D0445E561A7C3FB400267924 /* SBlockDisposableTest.m */,
+				D0445E561A7C3FB400267924 /* SDisposableTests.m */,
+				D06F106B1A85561E00485185 /* SSignalBasicTests.m */,
+				D06F10721A85882000485185 /* SSignalPerformanceTests.m */,
 			);
 			path = SSignalKitTests;
 			sourceTree = "<group>";
@@ -472,8 +480,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0445DEB1A7C2CA500267924 /* SSignalKitTests.m in Sources */,
-				D0445E571A7C3FB400267924 /* SBlockDisposableTest.m in Sources */,
+				D06F106C1A85561E00485185 /* SSignalBasicTests.m in Sources */,
+				D06F10711A855E2D00485185 /* DeallocatingObject.m in Sources */,
+				D06F10731A85882000485185 /* SSignalPerformanceTests.m in Sources */,
+				D0445E571A7C3FB400267924 /* SDisposableTests.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -13,12 +13,12 @@
             intermediateResult = f(intermediateResult, next);
         } error:^(id error)
         {
-            SSubscriber_putError(subscriber, error);
+            [subscriber putError:error];
         } completed:^
         {
             if (intermediateResult != nil)
-                SSubscriber_putNext(subscriber, intermediateResult);
-            SSubscriber_putCompletion(subscriber);
+                [subscriber putNext:intermediateResult];
+            [subscriber putCompletion];
         }];
     }];
 }

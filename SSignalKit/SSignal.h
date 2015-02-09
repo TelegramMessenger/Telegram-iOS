@@ -7,7 +7,10 @@
 }
 
 - (instancetype)initWithGenerator:(id<SDisposable> (^)(SSubscriber *))generator;
-- (id<SDisposable>)startWithNext:(void (^)(id))next error:(void (^)(id))error completed:(void (^)())completed;
+
+- (id<SDisposable>)startWithNext:(void (^)(id next))next error:(void (^)(id error))error completed:(void (^)())completed;
+- (id<SDisposable>)startWithNext:(void (^)(id next))next;
+- (id<SDisposable>)startWithNext:(void (^)(id next))next completed:(void (^)())completed;
 
 @end
 

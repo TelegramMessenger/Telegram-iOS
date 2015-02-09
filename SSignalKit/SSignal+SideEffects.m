@@ -12,13 +12,13 @@
         return [self startWithNext:^(id next)
         {
             f(next);
-            SSubscriber_putNext(subscriber, next);
+            [subscriber putNext:next];
         } error:^(id error)
         {
-            SSubscriber_putError(subscriber, error);
+            [subscriber putError:error];
         } completed:^
         {
-            SSubscriber_putCompletion(subscriber);
+            [subscriber putCompletion];
         }];
     }];
 }
@@ -29,14 +29,14 @@
     {
         return [self startWithNext:^(id next)
         {
-            SSubscriber_putNext(subscriber, next);
+            [subscriber putNext:next];
         } error:^(id error)
         {
             f(error);
-            SSubscriber_putError(subscriber, error);
+            [subscriber putError:error];
         } completed:^
         {
-            SSubscriber_putCompletion(subscriber);
+            [subscriber putCompletion];
         }];
     }];
 }
@@ -47,14 +47,14 @@
     {
         return [self startWithNext:^(id next)
         {
-            SSubscriber_putNext(subscriber, next);
+            [subscriber putNext:next];
         } error:^(id error)
         {
-            SSubscriber_putError(subscriber, error);
+            [subscriber putError:error];
         } completed:^
         {
             f();
-            SSubscriber_putCompletion(subscriber);
+            [subscriber putCompletion];
         }];
     }];
 }
@@ -67,13 +67,13 @@
         
         [compositeDisposable add:[self startWithNext:^(id next)
         {
-            SSubscriber_putNext(subscriber, next);
+            [subscriber putNext:next];
         } error:^(id error)
         {
-            SSubscriber_putError(subscriber, error);
+            [subscriber putError:error];
         } completed:^
         {
-            SSubscriber_putCompletion(subscriber);
+            [subscriber putCompletion];
         }]];
         
         [compositeDisposable add:[[SBlockDisposable alloc] initWithBlock:^

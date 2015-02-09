@@ -1,6 +1,5 @@
 #import "SSubscriber.h"
 
-#import <libkern/OSAtomic.h>
 #import <pthread.h>
 
 #import "SEvent.h"
@@ -10,8 +9,6 @@
 
 @interface SSubscriber ()
 {
-    @public
-    //volatile OSSpinLock _lock;
     pthread_mutex_t _mutex;
     
     id<SDisposable> _disposable;
@@ -41,95 +38,23 @@
 
 - (void)putEvent:(SEvent *)event
 {
-    SSubscriber_putEvent(self, event);
-}
-
-- (void)putNext:(id)next
-{
-    [self putEvent:[[SEvent alloc] initWithNext:next]];
-}
-
-- (void)putError:(id)error
-{
-    [self putEvent:[[SEvent alloc] initWithError:error]];
-}
-
-- (void)putCompletion
-{
-    [self putEvent:[[SEvent alloc] initWithCompleted]];
-}
-
-void SSubscriber_putNext(SSubscriber *subscriber, id next)
-{
-    void (^fnext)(id) = nil;
-    
-    lockSelf(subscriber);
-    fnext = subscriber->_next;
-    unlockSelf(subscriber);
-    
-    if (fnext)
-        fnext(next);
-}
-
-void SSubscriber_putError(SSubscriber *subscriber, id error)
-{
-    bool shouldDispose = false;
-    void (^ferror)(id) = nil;
-    
-    lockSelf(subscriber);
-    ferror = subscriber->_error;
-    shouldDispose = true;
-    subscriber->_next = nil;
-    subscriber->_error = nil;
-    subscriber->_completed = nil;
-    unlockSelf(subscriber);
-    
-    if (ferror)
-        ferror(error);
-    
-    if (shouldDispose)
-        [subscriber->_disposable dispose];
-}
-
-void SSubscriber_putCompletion(SSubscriber *subscriber)
-{
-    bool shouldDispose = false;
-    void (^completed)() = nil;
-    
-    lockSelf(subscriber);
-    completed = subscriber->_completed;
-    shouldDispose = true;
-    subscriber->_next = nil;
-    subscriber->_error = nil;
-    subscriber->_completed = nil;
-    unlockSelf(subscriber);
-    
-    if (completed)
-        completed();
-    
-    if (shouldDispose)
-        [subscriber->_disposable dispose];
-}
-
-void SSubscriber_putEvent(SSubscriber *subscriber, SEvent *event)
-{
     bool shouldDispose = false;
     void (^next)(id) = nil;
     void (^error)(id) = nil;
     void (^completed)(id) = nil;
     
-    lockSelf(subscriber);
-    next = subscriber->_next;
-    error = subscriber->_error;
-    completed = subscriber->_completed;
+    lockSelf(self);
+    next = self->_next;
+    error = self->_error;
+    completed = self->_completed;
     if (event.type != SEventTypeNext)
     {
         shouldDispose = true;
-        subscriber->_next = nil;
-        subscriber->_error = nil;
-        subscriber->_completed = nil;
+        self->_next = nil;
+        self->_error = nil;
+        self->_completed = nil;
     }
-    unlockSelf(subscriber);
+    unlockSelf(self);
     
     switch (event.type)
     {
@@ -148,7 +73,64 @@ void SSubscriber_putEvent(SSubscriber *subscriber, SEvent *event)
     }
     
     if (shouldDispose)
-        [subscriber->_disposable dispose];
+        [self->_disposable dispose];
+}
+
+- (void)putNext:(id)next
+{
+    void (^fnext)(id) = nil;
+    
+    lockSelf(self);
+    fnext = self->_next;
+    unlockSelf(self);
+    
+    if (fnext)
+        fnext(next);
+}
+
+- (void)putError:(id)error
+{
+    bool shouldDispose = false;
+    void (^ferror)(id) = nil;
+    
+    lockSelf(self);
+    ferror = self->_error;
+    shouldDispose = true;
+    self->_next = nil;
+    self->_error = nil;
+    self->_completed = nil;
+    unlockSelf(self);
+    
+    if (ferror)
+        ferror(error);
+    
+    if (shouldDispose)
+        [self->_disposable dispose];
+}
+
+- (void)putCompletion
+{
+    bool shouldDispose = false;
+    void (^completed)() = nil;
+    
+    lockSelf(self);
+    completed = self->_completed;
+    shouldDispose = true;
+    self->_next = nil;
+    self->_error = nil;
+    self->_completed = nil;
+    unlockSelf(self);
+    
+    if (completed)
+        completed();
+    
+    if (shouldDispose)
+        [self->_disposable dispose];
+}
+
+- (void)dispose
+{
+    [self->_disposable dispose];
 }
 
 @end

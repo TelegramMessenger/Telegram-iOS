@@ -22,21 +22,21 @@
             [didProduceNext swap:@1];
             [currentDisposable setDisposable:[next startWithNext:^(id next)
             {
-                SSubscriber_putNext(subscriber, next);
+                [subscriber putNext:next];
             } error:^(id error)
             {
-                SSubscriber_putError(subscriber, error);
+                [subscriber putError:error];
             } completed:^
             {
-                SSubscriber_putCompletion(subscriber);
+                [subscriber putCompletion];
             }]];
         } error:^(id error)
         {
-            SSubscriber_putError(subscriber, error);
+            [subscriber putError:error];
         } completed:^
         {
             if ([didProduceNext swap:@1] == NULL)
-                SSubscriber_putCompletion(subscriber);
+                [subscriber putCompletion];
         }]];
         
         return compositeDisposable;
@@ -59,21 +59,21 @@
     {
         [currentDisposable setDisposable:[self startWithNext:^(id next)
         {
-            SSubscriber_putNext(subscriber, next);
+            [subscriber putNext:next];
         } error:^(id error)
         {
-            SSubscriber_putError(subscriber, error);
+            [subscriber putError:error];
         } completed:^
         {
             [compositeDisposable add:[signal startWithNext:^(id next)
             {
-                SSubscriber_putNext(subscriber, next);
+                [subscriber putNext:next];
             } error:^(id error)
             {
-                SSubscriber_putError(subscriber, error);
+                [subscriber putError:error];
             } completed:^
             {
-                SSubscriber_putCompletion(subscriber);
+                [subscriber putCompletion];
             }]];
         }]];
         

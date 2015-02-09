@@ -18,10 +18,28 @@
     return self;
 }
 
-- (id<SDisposable>)startWithNext:(void (^)(id))next error:(void (^)(id))error completed:(void (^)())completed
+- (id<SDisposable>)startWithNext:(void (^)(id next))next error:(void (^)(id error))error completed:(void (^)())completed
 {
     SSubscriber *subscriber = [[SSubscriber alloc] initWithNext:next error:error completed:completed];
-    return _generator(subscriber);
+    id<SDisposable> disposable = _generator(subscriber);
+    [subscriber _assignDisposable:disposable];
+    return disposable;
+}
+
+- (id<SDisposable>)startWithNext:(void (^)(id next))next
+{
+    SSubscriber *subscriber = [[SSubscriber alloc] initWithNext:next error:nil completed:nil];
+    id<SDisposable> disposable = _generator(subscriber);
+    [subscriber _assignDisposable:disposable];
+    return disposable;
+}
+
+- (id<SDisposable>)startWithNext:(void (^)(id next))next completed:(void (^)())completed
+{
+    SSubscriber *subscriber = [[SSubscriber alloc] initWithNext:next error:nil completed:completed];
+    id<SDisposable> disposable = _generator(subscriber);
+    [subscriber _assignDisposable:disposable];
+    return disposable;
 }
 
 @end

@@ -76,7 +76,7 @@
                     latestValues[i] = value;
                 }
                 if (latestValues != nil)
-                    SSubscriber_putNext(subscriber, latestValues);
+                    [subscriber putNext:latestValues];
             }
             error:^(id error)
             {
@@ -87,7 +87,7 @@
                     return [[SSignalCombineState alloc] initWithLatestValues:state.latestValues completedStatuses:state.completedStatuses error:true];
                 }];
                 if (!hadError)
-                    SSubscriber_putError(subscriber, error);
+                    [subscriber putError:error];
             } completed:^
             {
                 __block bool wasCompleted = false;
@@ -121,7 +121,7 @@
                     return [[SSignalCombineState alloc] initWithLatestValues:state.latestValues completedStatuses:completedStatuses error:state.error];
                 }];
                 if (!wasCompleted && isCompleted)
-                    SSubscriber_putCompletion(subscriber);
+                    [subscriber putCompletion];
             }];
             [compositeDisposable add:disposable];
             index++;

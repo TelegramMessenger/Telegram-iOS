@@ -17,13 +17,13 @@
         {
             [disposable setDisposable:[self startWithNext:^(id next)
             {
-                SSubscriber_putNext(subscriber, next);
+                [subscriber putNext:next];
             } error:^(id error)
             {
-                SSubscriber_putError(subscriber, error);
+                [subscriber putError:error];
             } completed:^
             {
-                SSubscriber_putCompletion(subscriber);
+                [subscriber putCompletion];
             }]];
         } queue:queue];
         

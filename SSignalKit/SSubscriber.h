@@ -1,7 +1,7 @@
 #import "SDisposable.h"
 #import "SEvent.h"
 
-@interface SSubscriber : NSObject
+@interface SSubscriber : NSObject <SDisposable>
 {
     @public
     void (^_next)(id);
@@ -19,16 +19,3 @@
 - (void)putCompletion;
 
 @end
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-    
-void SSubscriber_putNext(SSubscriber *subscriber, id next);
-void SSubscriber_putError(SSubscriber *subscriber, id error);
-void SSubscriber_putCompletion(SSubscriber *subscriber);
-void SSubscriber_putEvent(SSubscriber *subscriber, SEvent *event);
-
-#ifdef __cplusplus
-}
-#endif
