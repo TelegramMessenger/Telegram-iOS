@@ -741,7 +741,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   UIAlertView *alert = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateWarning") message:BITHockeyLocalizedString(@"UpdateSimulatorMessage") delegate:nil cancelButtonTitle:BITHockeyLocalizedString(@"HockeyOK") otherButtonTitles:nil];
   [alert show];
   return NO;
-#endif
+
+#else
   
   NSString *extraParameter = [NSString string];
   if (_sendUsageData && self.installationIdentification && self.installationIdentificationType) {
@@ -761,6 +762,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   _didStartUpdateProcess = success;
   
   return success;
+
+#endif
 }
 
 
