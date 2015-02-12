@@ -490,7 +490,7 @@
   // determine the index of the feedback
   NSInteger index = [self.attachmentScrollViewImageViews indexOfObject:sender];
   
-  self.selectedAttachmentIndex = index;
+  self.selectedAttachmentIndex = (self.attachmentScrollViewImageViews.count - index - 1);
   
   UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithTitle: nil
                                                            delegate: self
@@ -547,10 +547,13 @@
   if (buttonIndex == [actionSheet destructiveButtonIndex]) {
     
     if (self.selectedAttachmentIndex != NSNotFound){
+      UIButton *imageButton = self.attachmentScrollViewImageViews[self.selectedAttachmentIndex];
       BITFeedbackMessageAttachment *attachment = self.imageAttachments[self.selectedAttachmentIndex];
       [attachment deleteContents]; // mandatory call to delete the files associatd.
       [self.imageAttachments removeObject:attachment];
       [self.attachments removeObject:attachment];
+      [imageButton removeFromSuperview];
+      [self.attachmentScrollViewImageViews removeObject:imageButton];
     }
     self.selectedAttachmentIndex = NSNotFound;
 
