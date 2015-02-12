@@ -56,6 +56,8 @@
 @property (nonatomic, strong) UIScrollView *attachmentScrollView;
 @property (nonatomic, strong) NSMutableArray *attachmentScrollViewImageViews;
 
+@property (nonatomic, strong) UIButton *addPhotoButton;
+
 @property (nonatomic, strong) NSString *text;
 
 @property (nonatomic, strong) NSMutableArray *attachments;
@@ -229,13 +231,14 @@
   // Add Photo Button + Container that's displayed above the keyboard.
   self.textAccessoryView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, CGRectGetWidth(self.view.frame), 44)];
   self.textAccessoryView.backgroundColor = [UIColor colorWithRed:0.9f green:0.9f blue:0.9f alpha:1.0f];
-  UIButton *addPhotoButton = [UIButton buttonWithType:UIButtonTypeCustom];
-  [addPhotoButton setTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentAddImage") forState:UIControlStateNormal];
-  [addPhotoButton setTitleColor:[UIColor darkGrayColor] forState:UIControlStateNormal];
-  addPhotoButton.frame = CGRectMake(0, 0, CGRectGetWidth(self.view.frame), 44);
-  [addPhotoButton addTarget:self action:@selector(addPhotoAction:) forControlEvents:UIControlEventTouchUpInside];
+  self.addPhotoButton = [UIButton buttonWithType:UIButtonTypeCustom];
+  [self.addPhotoButton setTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentAddImage") forState:UIControlStateNormal];
+  [self.addPhotoButton setTitleColor:[UIColor darkGrayColor] forState:UIControlStateNormal];
+  [self.addPhotoButton setTitleColor:[UIColor lightGrayColor] forState:UIControlStateDisabled];
+  self.addPhotoButton.frame = CGRectMake(0, 0, CGRectGetWidth(self.view.frame), 44);
+  [self.addPhotoButton addTarget:self action:@selector(addPhotoAction:) forControlEvents:UIControlEventTouchUpInside];
   
-  [self.textAccessoryView addSubview:addPhotoButton];
+  [self.textAccessoryView addSubview:self.addPhotoButton];
   
   self.textView.inputAccessoryView = self.textAccessoryView;
   
@@ -329,7 +332,8 @@
   
   if (!alreadySetup) {
     textViewFrame.size.width -= scrollViewWidth;
-    scrollViewFrame = CGRectMake(CGRectGetMaxX(textViewFrame), self.view.frame.origin.y, scrollViewWidth, CGRectGetHeight(self.view.bounds));
+    // height has to be identical to the textview!
+    scrollViewFrame = CGRectMake(CGRectGetMaxX(textViewFrame), self.view.frame.origin.y, scrollViewWidth, CGRectGetHeight(self.textView.bounds));
     self.textView.frame = textViewFrame;
     self.attachmentScrollView.frame = scrollViewFrame;
     self.attachmentScrollView.contentInset = self.textView.contentInset;
@@ -382,11 +386,20 @@
   }
   
   if (self.imageAttachments.count > 2){
-    self.textView.inputAccessoryView = nil;
+    [self.addPhotoButton setEnabled:NO];
   } else {
-    self.textView.inputAccessoryView = self.textAccessoryView;
-
+    [self.addPhotoButton setEnabled:YES];
   }
+}
+
+- (void)removeAttachmentScrollView {
+  CGRect frame = self.attachmentScrollView.frame;
+  frame.size.width = 0;
+  self.attachmentScrollView.frame = frame;
+  
+  frame = self.textView.frame;
+  frame.size.width += 100;
+  self.textView.frame = frame;
 }
 
 
@@ -394,6 +407,12 @@
 
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)orientation {
   return YES;
+}
+
+- (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation {
+  [self removeAttachmentScrollView];
+  
+  [self refreshAttachmentScrollview];
 }
 
 
