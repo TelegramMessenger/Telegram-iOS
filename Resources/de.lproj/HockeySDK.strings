@@ -234,7 +234,7 @@
 "HockeyFeedbackUserDataDescription" = "Bitte geben Sie vor Verfassen Ihres Feedbacks Ihre Daten ein.";
 
 /* Name Field */
-"HockeyFeedbackUserDataName" = "Max Mustermann";
+"HockeyFeedbackUserDataName" = "Name";
 
 /* Name Placeholder */
 "HockeyFeedbackUserDataNamePlaceHolder" = "Max Mustermann";
