@@ -153,7 +153,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
 - (void)fitImageViewFrame {
   
   CGSize size = [UIScreen mainScreen].bounds.size;
-  if (UIInterfaceOrientationIsLandscape([UIApplication sharedApplication].statusBarOrientation)){
+  if (UIInterfaceOrientationIsLandscape([UIApplication sharedApplication].statusBarOrientation) && size.height > size.width){
     size = CGSizeMake(size.height, size.width);
   }
   
