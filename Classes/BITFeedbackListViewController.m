@@ -648,6 +648,7 @@
         attachment.isLoading = YES;
         NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
         [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
+          attachment.isLoading = NO;
           if (responseData.length) {
             dispatch_async(dispatch_get_main_queue(), ^{
               [attachment replaceData:responseData];
