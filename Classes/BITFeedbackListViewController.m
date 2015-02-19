@@ -652,7 +652,7 @@
           if (responseData.length) {
             dispatch_async(dispatch_get_main_queue(), ^{
               [attachment replaceData:responseData];
-              [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
+              [[NSNotificationCenter defaultCenter] postNotificationName:kBITFeedbackUpdateAttachmentThumbnail object:attachment];
               [[BITHockeyManager sharedHockeyManager].feedbackManager saveMessages];
             });
           }

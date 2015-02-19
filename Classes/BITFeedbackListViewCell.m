@@ -26,11 +26,13 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
 
 #import "BITFeedbackListViewCell.h"
 #import "BITFeedbackMessageAttachment.h"
 #import "BITActivityIndicatorButton.h"
+#import "BITFeedbackManagerPrivate.h"
 
 #define BACKGROUNDCOLOR_DEFAULT BIT_RGBCOLOR(245, 245, 245)
 #define BACKGROUNDCOLOR_ALTERNATE BIT_RGBCOLOR(235, 235, 235)
@@ -70,6 +72,8 @@
 
 @property (nonatomic, strong) UIView *accessoryBackgroundView;
 
+@property (nonatomic, strong) id updateAttachmentNotification;
+
 @end
 
 
@@ -107,12 +111,52 @@
     _labelText.dataDetectorTypes = UIDataDetectorTypeAll;
     
     _attachmentViews = [NSMutableArray new];
+    [self registerObservers];
   }
   return self;
 }
 
+- (void)dealloc {
+  [self unregisterObservers];
+}
+
 
 #pragma mark - Private
+
+- (void) registerObservers {
+  __weak typeof(self) weakSelf = self;
+  if (nil == _updateAttachmentNotification) {
+    _updateAttachmentNotification = [[NSNotificationCenter defaultCenter] addObserverForName:kBITFeedbackUpdateAttachmentThumbnail
+                                                                                    object:nil
+                                                                                     queue:NSOperationQueue.mainQueue
+                                                                                usingBlock:^(NSNotification *note) {
+                                                                                  typeof(self) strongSelf = weakSelf;
+                                                                                  [strongSelf updateAttachmentFromNotification:note];
+                                                                                }];
+  }
+}
+
+- (void) unregisterObservers {
+  if (_updateAttachmentNotification) {
+    [[NSNotificationCenter defaultCenter] removeObserver:_updateAttachmentNotification];
+    _updateAttachmentNotification = nil;
+  }
+}
+
+- (void) updateAttachmentFromNotification:(NSNotification *)note {
+  if (!self.message) return;
+  if (!self.message.attachments) return;
+  if (self.message.attachments.count == 0) return;
+  if (!note.object) return;
+  if (![note.object isKindOfClass:[BITFeedbackMessageAttachment class]]) return;
+  
+  BITFeedbackMessageAttachment *attachment = (BITFeedbackMessageAttachment *)note.object;
+  if (![self.message.attachments containsObject:attachment]) return;
+  
+  // The attachment is part of the message used for this cell, so lets update it.
+  [self setAttachments:self.message.previewableAttachments];
+  [self setNeedsLayout];
+}
 
 - (UIColor *)backgroundColor {
   
