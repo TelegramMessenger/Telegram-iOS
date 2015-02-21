@@ -10,15 +10,15 @@
 {
     return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
     {
-        SMetaDisposable *disposable = [[SMetaDisposable alloc] init];
+        SDisposableSet *disposable = [[SDisposableSet alloc] init];
         
-        [disposable setDisposable:[self startWithNext:^(id next)
+        [disposable add:[self startWithNext:^(id next)
         {
             [subscriber putNext:next];
         } error:^(id error)
         {
             SSignal *signal = f(error);
-            [disposable setDisposable:[signal startWithNext:^(id next)
+            [disposable add:[signal startWithNext:^(id next)
             {
                 [subscriber putNext:next];
             } error:^(id error)

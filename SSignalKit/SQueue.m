@@ -50,6 +50,11 @@ static const void *SQueueSpecificKey = &SQueueSpecificKey;
     return queue;
 }
 
++ (SQueue *)wrapConcurrentNativeQueue:(dispatch_queue_t)nativeQueue
+{
+    return [[SQueue alloc] initWithNativeQueue:nativeQueue queueSpecific:NULL];
+}
+
 - (instancetype)init
 {
     dispatch_queue_t queue = dispatch_queue_create(NULL, NULL);

@@ -7,6 +7,7 @@
     return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
     {
         [subscriber putNext:next];
+        [subscriber putCompletion];
         return nil;
     }];
 }
