@@ -514,7 +514,11 @@
     // button
     NSString *titleString = nil;
     SEL actionSelector = nil;
+    
     UIColor *titleColor = BIT_RGBCOLOR(35, 111, 251);
+    if ([self.view respondsToSelector:@selector(tintColor)]){
+      titleColor = self.view.tintColor;
+    }
     
     UIButton *button = nil;
     if ([self.manager isPreiOS7Environment]) {
