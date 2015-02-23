@@ -320,12 +320,6 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
     [text appendFormat: @"Hardware Model:      %@\n", hardwareModel];
   }
   
-  NSLocale *enUSPOSIXLocale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"];
-  NSDateFormatter *rfc3339Formatter = [[NSDateFormatter alloc] init];
-  [rfc3339Formatter setLocale:enUSPOSIXLocale];
-  [rfc3339Formatter setDateFormat:@"yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'"];
-  [rfc3339Formatter setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:0]];
-  
   /* Application and process info */
   {
     NSString *unknownString = @"???";
@@ -370,13 +364,6 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
     [text appendFormat: @"Version:         %@\n", report.applicationInfo.applicationVersion];
     [text appendFormat: @"Code Type:       %@\n", codeType];
     [text appendFormat: @"Parent Process:  %@ [%@]\n", parentProcessName, parentProcessId];
-    
-    if ([report.processInfo respondsToSelector:@selector(processStartTime)]) {
-      if (report.systemInfo.timestamp && report.processInfo.processStartTime) {
-        [text appendFormat: @"Process Launch:  %@\n", [rfc3339Formatter stringFromDate:report.processInfo.processStartTime]];
-      }
-    }
-
   }
   
   [text appendString: @"\n"];
@@ -387,7 +374,18 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
     if (report.systemInfo.operatingSystemBuild != nil)
       osBuild = report.systemInfo.operatingSystemBuild;
     
+    NSLocale *enUSPOSIXLocale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US_POSIX"];
+    NSDateFormatter *rfc3339Formatter = [[NSDateFormatter alloc] init];
+    [rfc3339Formatter setLocale:enUSPOSIXLocale];
+    [rfc3339Formatter setDateFormat:@"yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'"];
+    [rfc3339Formatter setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:0]];
+    
     [text appendFormat: @"Date/Time:       %@\n", [rfc3339Formatter stringFromDate:report.systemInfo.timestamp]];
+    if ([report.processInfo respondsToSelector:@selector(processStartTime)]) {
+      if (report.systemInfo.timestamp && report.processInfo.processStartTime) {
+        [text appendFormat: @"Launch Time:     %@\n", [rfc3339Formatter stringFromDate:report.processInfo.processStartTime]];
+      }
+    }
     [text appendFormat: @"OS Version:      %@ %@ (%@)\n", osName, report.systemInfo.operatingSystemVersion, osBuild];
     [text appendFormat: @"Report Version:  104\n"];
   }
