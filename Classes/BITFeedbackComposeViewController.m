@@ -67,6 +67,14 @@
 @property (nonatomic) NSInteger selectedAttachmentIndex;
 @property (nonatomic, strong) UITapGestureRecognizer *tapRecognizer;
 
+/** 
+ * Workaround for UIImagePickerController bug.
+ * The statusBar shows up when the UIImagePickerController opens.
+ * The status bar does not disappear again when the UIImagePickerController is dismissed.
+ * Therefore store the state when UIImagePickerController is shown and restore when viewWillAppear gets called.
+ */
+@property (nonatomic, strong) NSNumber *statusBarHidden;
+
 @end
 
 
@@ -275,7 +283,11 @@
   if (_text && self.textView.text.length == 0) {
     self.textView.text = _text;
   }
-  
+
+  if (self.statusBarHidden) {
+    [[UIApplication sharedApplication] setStatusBarHidden:self.statusBarHidden.boolValue];
+  }
+
   [self updateBarButtonState];
 }
 
@@ -464,7 +476,9 @@
 
 - (void)addPhotoAction:(id)sender {
   if (_actionSheetVisible) return;
-  
+
+  self.statusBarHidden = @([[UIApplication sharedApplication] isStatusBarHidden]);
+
   // add photo.
   UIImagePickerController *pickerController = [[UIImagePickerController alloc] init];
   pickerController.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
