@@ -91,7 +91,18 @@ typedef enum {
     
     for (SSubscriber *subscriber in currentSubscribers)
     {
-        [subscriber putEvent:event];
+        switch (event.type)
+        {
+            case SEventTypeNext:
+                [subscriber putNext:event.data];
+                break;
+            case SEventTypeError:
+                [subscriber putError:event.data];
+                break;
+            case SEventTypeCompleted:
+                [subscriber putCompletion];
+                break;
+        }
     }
 }
 

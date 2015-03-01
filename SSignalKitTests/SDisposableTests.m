@@ -241,4 +241,74 @@
     XCTAssertFalse(disposed2);
 }
 
+- (void)testMetaDisposableAlreadyDisposed
+{
+    bool deallocated1 = false;
+    __block bool disposed1 = false;
+    bool deallocated2 = false;
+    __block bool disposed2 = false;
+    
+    @autoreleasepool
+    {
+        DeallocatingObject *object1 = [[DeallocatingObject alloc] initWithDeallocated:&deallocated1];
+        dispatch_block_t block1 = ^{
+            [object1 description];
+            disposed1 = true;
+        };
+        SBlockDisposable *blockDisposable1 = [[SBlockDisposable alloc] initWithBlock:[block1 copy]];
+        
+        DeallocatingObject *object2 = [[DeallocatingObject alloc] initWithDeallocated:&deallocated2];
+        dispatch_block_t block2 = ^{
+            [object2 description];
+            disposed2 = true;
+        };
+        SBlockDisposable *blockDisposable2 = [[SBlockDisposable alloc] initWithBlock:[block2 copy]];
+        
+        SMetaDisposable *metaDisposable = [[SMetaDisposable alloc] init];
+        [metaDisposable setDisposable:blockDisposable1];
+        [metaDisposable dispose];
+        [metaDisposable setDisposable:blockDisposable2];
+    }
+    
+    XCTAssertTrue(deallocated1);
+    XCTAssertTrue(disposed1);
+    XCTAssertTrue(deallocated2);
+    XCTAssertTrue(disposed2);
+}
+
+- (void)testDisposableSetAlreadyDisposed
+{
+    bool deallocated1 = false;
+    __block bool disposed1 = false;
+    bool deallocated2 = false;
+    __block bool disposed2 = false;
+    
+    @autoreleasepool
+    {
+        DeallocatingObject *object1 = [[DeallocatingObject alloc] initWithDeallocated:&deallocated1];
+        dispatch_block_t block1 = ^{
+            [object1 description];
+            disposed1 = true;
+        };
+        SBlockDisposable *blockDisposable1 = [[SBlockDisposable alloc] initWithBlock:[block1 copy]];
+        
+        DeallocatingObject *object2 = [[DeallocatingObject alloc] initWithDeallocated:&deallocated2];
+        dispatch_block_t block2 = ^{
+            [object2 description];
+            disposed2 = true;
+        };
+        SBlockDisposable *blockDisposable2 = [[SBlockDisposable alloc] initWithBlock:[block2 copy]];
+        
+        SMetaDisposable *metaDisposable = [[SMetaDisposable alloc] init];
+        [metaDisposable setDisposable:blockDisposable1];
+        [metaDisposable dispose];
+        [metaDisposable setDisposable:blockDisposable2];
+    }
+    
+    XCTAssertTrue(deallocated1);
+    XCTAssertTrue(disposed1);
+    XCTAssertTrue(deallocated2);
+    XCTAssertTrue(disposed2);
+}
+
 @end

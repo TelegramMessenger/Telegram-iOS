@@ -173,36 +173,71 @@
     __block bool disposed = false;
     __block bool generated = false;
     
+    @autoreleasepool
     {
-        @autoreleasepool
+        DeallocatingObject *object = [[DeallocatingObject alloc] initWithDeallocated:&deallocated];
+        SSignal *signal = [[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
         {
-            DeallocatingObject *object = [[DeallocatingObject alloc] initWithDeallocated:&deallocated];
-            SSignal *signal = [[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
-            {
-                [subscriber putNext:@1];
-                [object description];
-                return [[SBlockDisposable alloc] initWithBlock:^
-                {
-                    [object description];
-                    disposed = true;
-                }];
-            }] _mapInplace:^id(id value)
+            [subscriber putNext:@1];
+            [object description];
+            return [[SBlockDisposable alloc] initWithBlock:^
             {
                 [object description];
-                return @([value intValue] * 2);
+                disposed = true;
             }];
-            
-            id<SDisposable> disposable = [signal startWithNext:^(id value)
-            {
-                generated = [value isEqual:@2];
-            } error:nil completed:nil];
-            [disposable dispose];
-        }
+        }] _mapInplace:^id(id value)
+        {
+            [object description];
+            return @([value intValue] * 2);
+        }];
+        
+        id<SDisposable> disposable = [signal startWithNext:^(id value)
+        {
+            generated = [value isEqual:@2];
+        } error:nil completed:nil];
+        [disposable dispose];
     }
     
     XCTAssertTrue(deallocated);
     XCTAssertTrue(disposed);
     XCTAssertTrue(generated);
+}
+
+- (void)testSubscriberDisposal
+{
+    __block bool disposed = false;
+    __block bool generated = false;
+    
+    dispatch_queue_t queue = dispatch_queue_create(NULL, 0);
+    
+    @autoreleasepool
+    {
+        SSignal *signal = [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+        {
+            dispatch_async(queue, ^
+            {
+                [subscriber putNext:@1];
+            });
+            
+            return [[SBlockDisposable alloc] initWithBlock:^
+            {
+                disposed = true;
+            }];
+        }];
+        
+        id<SDisposable> disposable = [signal startWithNext:^(id value)
+        {
+            generated = true;
+        } error:nil completed:nil];
+        [disposable dispose];
+    }
+    
+    dispatch_barrier_sync(queue, ^
+    {
+    });
+    
+    XCTAssertTrue(disposed);
+    XCTAssertFalse(generated);
 }
 
 @end

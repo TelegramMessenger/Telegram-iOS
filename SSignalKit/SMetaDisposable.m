@@ -4,54 +4,50 @@
 
 @interface SMetaDisposable ()
 {
-    void *_disposable;
+    OSSpinLock _lock;
+    bool _disposed;
+    id<SDisposable> _disposable;
 }
 
 @end
 
 @implementation SMetaDisposable
 
-- (void)dealloc
-{
-    while (true)
-    {
-        void *previousDisposable = _disposable;
-        if (OSAtomicCompareAndSwapPtr(previousDisposable, NULL, &_disposable))
-        {
-            if (previousDisposable != NULL)
-            {
-                __strong id<SDisposable> strongPreviousDisposable = (__bridge_transfer id<SDisposable>)previousDisposable;
-                strongPreviousDisposable = nil;
-            }
-            
-            break;
-        }
-    }
-}
-
 - (void)setDisposable:(id<SDisposable>)disposable
 {
-    void *newDisposable = (__bridge_retained void *)disposable;
-    while (true)
+    id<SDisposable> previousDisposable = nil;
+    bool dispose = false;
+    
+    OSSpinLockLock(&_lock);
+    dispose = _disposed;
+    if (!dispose)
     {
-        void *previousDisposable = _disposable;
-        if (OSAtomicCompareAndSwapPtr(previousDisposable, newDisposable, &_disposable))
-        {
-            if (previousDisposable != NULL)
-            {
-                __strong id<SDisposable> strongPreviousDisposable = (__bridge_transfer id<SDisposable>)previousDisposable;
-                [strongPreviousDisposable dispose];
-                strongPreviousDisposable = nil;
-            }
-            
-            break;
-        }
+        previousDisposable = _disposable;
+        _disposable = disposable;
     }
+    OSSpinLockUnlock(&_lock);
+    
+    if (previousDisposable != nil)
+        [previousDisposable dispose];
+    
+    if (dispose)
+        [disposable dispose];
 }
 
 - (void)dispose
 {
-    [self setDisposable:nil];
+    id<SDisposable> disposable = nil;
+    
+    OSSpinLockLock(&_lock);
+    if (!_disposed)
+    {
+        disposable = _disposable;
+        _disposed = true;
+    }
+    OSSpinLockUnlock(&_lock);
+    
+    if (disposable != nil)
+        [disposable dispose];
 }
 
 @end

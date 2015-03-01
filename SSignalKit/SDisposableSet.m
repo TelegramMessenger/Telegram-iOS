@@ -5,6 +5,7 @@
 @interface SDisposableSet ()
 {
     OSSpinLock _lock;
+    bool _disposed;
     id<SDisposable> _singleDisposable;
     NSArray *_multipleDisposables;
 }
@@ -18,24 +19,33 @@
     if (disposable == nil)
         return;
     
+    bool dispose = false;
+    
     OSSpinLockLock(&_lock);
-    if (_multipleDisposables != nil)
+    dispose = _disposed;
+    if (!dispose)
     {
-        NSMutableArray *multipleDisposables = [[NSMutableArray alloc] initWithArray:_multipleDisposables];
-        [multipleDisposables addObject:disposable];
-        _multipleDisposables = multipleDisposables;
-    }
-    else if (_singleDisposable != nil)
-    {
-        NSMutableArray *multipleDisposables = [[NSMutableArray alloc] initWithObjects:_singleDisposable, disposable, nil];
-        _multipleDisposables = multipleDisposables;
-        _singleDisposable = nil;
-    }
-    else
-    {
-        _singleDisposable = disposable;
+        if (_multipleDisposables != nil)
+        {
+            NSMutableArray *multipleDisposables = [[NSMutableArray alloc] initWithArray:_multipleDisposables];
+            [multipleDisposables addObject:disposable];
+            _multipleDisposables = multipleDisposables;
+        }
+        else if (_singleDisposable != nil)
+        {
+            NSMutableArray *multipleDisposables = [[NSMutableArray alloc] initWithObjects:_singleDisposable, disposable, nil];
+            _multipleDisposables = multipleDisposables;
+            _singleDisposable = nil;
+        }
+        else
+        {
+            _singleDisposable = disposable;
+        }
     }
     OSSpinLockUnlock(&_lock);
+    
+    if (dispose)
+        [disposable dispose];
 }
 
 - (void)dispose
@@ -44,10 +54,14 @@
     NSArray *multipleDisposables = nil;
     
     OSSpinLockLock(&_lock);
-    singleDisposable = _singleDisposable;
-    multipleDisposables = _multipleDisposables;
-    _singleDisposable = nil;
-    _multipleDisposables = nil;
+    if (!_disposed)
+    {
+        _disposed = true;
+        singleDisposable = _singleDisposable;
+        multipleDisposables = _multipleDisposables;
+        _singleDisposable = nil;
+        _multipleDisposables = nil;
+    }
     OSSpinLockUnlock(&_lock);
     
     if (singleDisposable != nil)

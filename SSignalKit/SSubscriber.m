@@ -1,16 +1,11 @@
 #import "SSubscriber.h"
 
-#import <pthread.h>
-
-#import "SEvent.h"
-
-#define lockSelf(x) pthread_mutex_lock(&x->_mutex)
-#define unlockSelf(x) pthread_mutex_unlock(&x->_mutex)
+#import <libkern/OSAtomic.h>
 
 @interface SSubscriber ()
 {
-    pthread_mutex_t _mutex;
-    
+    OSSpinLock _lock;
+    bool _terminated;
     id<SDisposable> _disposable;
 }
 
@@ -23,7 +18,6 @@
     self = [super init];
     if (self != nil)
     {
-        pthread_mutex_init(&_mutex, NULL);
         _next = [next copy];
         _error = [error copy];
         _completed = [completed copy];
@@ -36,53 +30,27 @@
     _disposable = disposable;
 }
 
-- (void)putEvent:(SEvent *)event
+- (void)_markTerminatedWithoutDisposal
 {
-    bool shouldDispose = false;
-    void (^next)(id) = nil;
-    void (^error)(id) = nil;
-    void (^completed)(id) = nil;
-    
-    lockSelf(self);
-    next = self->_next;
-    error = self->_error;
-    completed = self->_completed;
-    if (event.type != SEventTypeNext)
+    OSSpinLockLock(&_lock);
+    if (!_terminated)
     {
-        shouldDispose = true;
-        self->_next = nil;
-        self->_error = nil;
-        self->_completed = nil;
+        _terminated = true;
+        _next = nil;
+        _error = nil;
+        _completed = nil;
     }
-    unlockSelf(self);
-    
-    switch (event.type)
-    {
-        case SEventTypeNext:
-            if (next)
-                next(event.data);
-            break;
-        case SEventTypeError:
-            if (error)
-                error(event.data);
-            break;
-        case SEventTypeCompleted:
-            if (completed)
-                completed(event.data);
-            break;
-    }
-    
-    if (shouldDispose)
-        [self->_disposable dispose];
+    OSSpinLockUnlock(&_lock);
 }
 
 - (void)putNext:(id)next
 {
     void (^fnext)(id) = nil;
     
-    lockSelf(self);
-    fnext = self->_next;
-    unlockSelf(self);
+    OSSpinLockLock(&_lock);
+    if (!_terminated)
+        fnext = self->_next;
+    OSSpinLockUnlock(&_lock);
     
     if (fnext)
         fnext(next);
@@ -93,13 +61,17 @@
     bool shouldDispose = false;
     void (^ferror)(id) = nil;
     
-    lockSelf(self);
-    ferror = self->_error;
-    shouldDispose = true;
-    self->_next = nil;
-    self->_error = nil;
-    self->_completed = nil;
-    unlockSelf(self);
+    OSSpinLockLock(&_lock);
+    if (!_terminated)
+    {
+        ferror = self->_error;
+        shouldDispose = true;
+        self->_next = nil;
+        self->_error = nil;
+        self->_completed = nil;
+        _terminated = true;
+    }
+    OSSpinLockUnlock(&_lock);
     
     if (ferror)
         ferror(error);
@@ -113,13 +85,17 @@
     bool shouldDispose = false;
     void (^completed)() = nil;
     
-    lockSelf(self);
-    completed = self->_completed;
-    shouldDispose = true;
-    self->_next = nil;
-    self->_error = nil;
-    self->_completed = nil;
-    unlockSelf(self);
+    OSSpinLockLock(&_lock);
+    if (!_terminated)
+    {
+        completed = self->_completed;
+        shouldDispose = true;
+        self->_next = nil;
+        self->_error = nil;
+        self->_completed = nil;
+        _terminated = true;
+    }
+    OSSpinLockUnlock(&_lock);
     
     if (completed)
         completed();

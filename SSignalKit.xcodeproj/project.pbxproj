@@ -29,8 +29,6 @@
 		D0445E351A7C2D7300267924 /* SSignal+Catch.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E091A7C2D7300267924 /* SSignal+Catch.m */; };
 		D0445E361A7C2D7300267924 /* SSignal+Combine.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E0A1A7C2D7300267924 /* SSignal+Combine.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0445E371A7C2D7300267924 /* SSignal+Combine.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E0B1A7C2D7300267924 /* SSignal+Combine.m */; };
-		D0445E381A7C2D7300267924 /* SSignal+Concat.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E0C1A7C2D7300267924 /* SSignal+Concat.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		D0445E391A7C2D7300267924 /* SSignal+Concat.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E0D1A7C2D7300267924 /* SSignal+Concat.m */; };
 		D0445E3A1A7C2D7300267924 /* SSignal+Dispatch.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E0E1A7C2D7300267924 /* SSignal+Dispatch.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0445E3B1A7C2D7300267924 /* SSignal+Dispatch.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E0F1A7C2D7300267924 /* SSignal+Dispatch.m */; };
 		D0445E3C1A7C2D7300267924 /* SSignal+Mapping.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445E101A7C2D7300267924 /* SSignal+Mapping.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -65,7 +63,6 @@
 		D0445E7B1A7C447D00267924 /* SSignal+Accumulate.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E071A7C2D7300267924 /* SSignal+Accumulate.m */; };
 		D0445E7C1A7C447D00267924 /* SSignal+Catch.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E091A7C2D7300267924 /* SSignal+Catch.m */; };
 		D0445E7D1A7C447D00267924 /* SSignal+Combine.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E0B1A7C2D7300267924 /* SSignal+Combine.m */; };
-		D0445E7E1A7C447D00267924 /* SSignal+Concat.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E0D1A7C2D7300267924 /* SSignal+Concat.m */; };
 		D0445E7F1A7C447D00267924 /* SSignal+Dispatch.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E0F1A7C2D7300267924 /* SSignal+Dispatch.m */; };
 		D0445E801A7C447D00267924 /* SSignal+Mapping.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E111A7C2D7300267924 /* SSignal+Mapping.m */; };
 		D0445E811A7C447D00267924 /* SSignal+Meta.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E131A7C2D7300267924 /* SSignal+Meta.m */; };
@@ -133,8 +130,6 @@
 		D0445E091A7C2D7300267924 /* SSignal+Catch.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "SSignal+Catch.m"; sourceTree = "<group>"; };
 		D0445E0A1A7C2D7300267924 /* SSignal+Combine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "SSignal+Combine.h"; sourceTree = "<group>"; };
 		D0445E0B1A7C2D7300267924 /* SSignal+Combine.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "SSignal+Combine.m"; sourceTree = "<group>"; };
-		D0445E0C1A7C2D7300267924 /* SSignal+Concat.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "SSignal+Concat.h"; sourceTree = "<group>"; };
-		D0445E0D1A7C2D7300267924 /* SSignal+Concat.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "SSignal+Concat.m"; sourceTree = "<group>"; };
 		D0445E0E1A7C2D7300267924 /* SSignal+Dispatch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "SSignal+Dispatch.h"; sourceTree = "<group>"; };
 		D0445E0F1A7C2D7300267924 /* SSignal+Dispatch.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "SSignal+Dispatch.m"; sourceTree = "<group>"; };
 		D0445E101A7C2D7300267924 /* SSignal+Mapping.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "SSignal+Mapping.h"; sourceTree = "<group>"; };
@@ -239,8 +234,6 @@
 				D0445E091A7C2D7300267924 /* SSignal+Catch.m */,
 				D0445E0A1A7C2D7300267924 /* SSignal+Combine.h */,
 				D0445E0B1A7C2D7300267924 /* SSignal+Combine.m */,
-				D0445E0C1A7C2D7300267924 /* SSignal+Concat.h */,
-				D0445E0D1A7C2D7300267924 /* SSignal+Concat.m */,
 				D0445E0E1A7C2D7300267924 /* SSignal+Dispatch.h */,
 				D0445E0F1A7C2D7300267924 /* SSignal+Dispatch.m */,
 				D0445E101A7C2D7300267924 /* SSignal+Mapping.h */,
@@ -327,7 +320,6 @@
 				D0445E231A7C2D7300267924 /* SAtomic.h in Headers */,
 				D087632A1A839EDC00632240 /* SDisposableSet.h in Headers */,
 				D0445E461A7C2D7300267924 /* SSignal+Timing.h in Headers */,
-				D0445E381A7C2D7300267924 /* SSignal+Concat.h in Headers */,
 				D0445DDE1A7C2CA500267924 /* SSignalKit.h in Headers */,
 				D0445E3C1A7C2D7300267924 /* SSignal+Mapping.h in Headers */,
 			);
@@ -467,7 +459,6 @@
 				D0445E311A7C2D7300267924 /* SSignal.m in Sources */,
 				D087632B1A839EDC00632240 /* SDisposableSet.m in Sources */,
 				D0445E491A7C2D7300267924 /* SSubscriber.m in Sources */,
-				D0445E391A7C2D7300267924 /* SSignal+Concat.m in Sources */,
 				D0445E431A7C2D7300267924 /* SSignal+SideEffects.m in Sources */,
 				D0445E3F1A7C2D7300267924 /* SSignal+Meta.m in Sources */,
 				D0445E371A7C2D7300267924 /* SSignal+Combine.m in Sources */,
@@ -508,7 +499,6 @@
 				D0445E7A1A7C447D00267924 /* SSignal.m in Sources */,
 				D087632C1A839EE800632240 /* SDisposableSet.m in Sources */,
 				D0445E861A7C447D00267924 /* SSubscriber.m in Sources */,
-				D0445E7E1A7C447D00267924 /* SSignal+Concat.m in Sources */,
 				D0445E831A7C447D00267924 /* SSignal+SideEffects.m in Sources */,
 				D0445E811A7C447D00267924 /* SSignal+Meta.m in Sources */,
 				D0445E7D1A7C447D00267924 /* SSignal+Combine.m in Sources */,
