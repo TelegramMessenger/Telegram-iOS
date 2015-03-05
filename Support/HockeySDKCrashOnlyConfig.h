@@ -78,7 +78,7 @@
 
 
 /**
- * If true, include support for handling in-app udpates for Ad-Hoc and Enterprise builds
+ * If true, include support for handling in-app updates for Ad-Hoc and Enterprise builds
  *
  * _Default_: Enabled
  */
