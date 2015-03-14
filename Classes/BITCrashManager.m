@@ -803,8 +803,6 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
         
         [crashData writeToFile:[_crashesDir stringByAppendingPathComponent: cacheFilename] atomically:YES];
         
-        [self storeMetaDataForCrashReportFilename:cacheFilename];
-        
         NSString *incidentIdentifier = @"???";
         if (report.uuidRef != NULL) {
           incidentIdentifier = (NSString *) CFBridgingRelease(CFUUIDCreateString(NULL, report.uuidRef));
@@ -823,6 +821,9 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
                                                                                osBuild:report.systemInfo.operatingSystemBuild
                                                                               appBuild:report.applicationInfo.applicationVersion
                                     ];
+
+        // fetch and store the meta data after setting _lastSessionCrashDetails, so the property can be used in the protocol methods
+        [self storeMetaDataForCrashReportFilename:cacheFilename];
       }
     }
   }
