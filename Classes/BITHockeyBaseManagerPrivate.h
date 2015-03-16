@@ -49,7 +49,7 @@
 /** 
  * by default, just logs the message
  *
- * can be overriden by subclasses to do their own error handling,
+ * can be overridden by subclasses to do their own error handling,
  * e.g. to show UI
  *
  * @param error NSError
