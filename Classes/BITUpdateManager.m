@@ -333,11 +333,11 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 
 - (void)checkUpdateAvailable {
   // check if there is an update available
-  NSComparisonResult comparissonResult = bit_versionCompare(self.newestAppVersion.version, self.currentAppVersion);
+  NSComparisonResult comparisonResult = bit_versionCompare(self.newestAppVersion.version, self.currentAppVersion);
   
-  if (comparissonResult == NSOrderedDescending) {
+  if (comparisonResult == NSOrderedDescending) {
     self.updateAvailable = YES;
-  } else if (comparissonResult == NSOrderedSame) {
+  } else if (comparisonResult == NSOrderedSame) {
     // compare using the binary UUID and stored version id
     self.updateAvailable = NO;
     if (_firstStartAfterInstall) {
@@ -881,8 +881,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
           // check if minOSVersion is set and this device qualifies
           BOOL deviceOSVersionQualifies = YES;
           if ([appVersionMetaInfo minOSVersion] && ![[appVersionMetaInfo minOSVersion] isKindOfClass:[NSNull class]]) {
-            NSComparisonResult comparissonResult = bit_versionCompare(appVersionMetaInfo.minOSVersion, [[UIDevice currentDevice] systemVersion]);
-            if (comparissonResult == NSOrderedDescending) {
+            NSComparisonResult comparisonResult = bit_versionCompare(appVersionMetaInfo.minOSVersion, [[UIDevice currentDevice] systemVersion]);
+            if (comparisonResult == NSOrderedDescending) {
               deviceOSVersionQualifies = NO;
             }
           }
