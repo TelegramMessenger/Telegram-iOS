@@ -142,7 +142,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  It is possible to check upon startup if the app crashed before using `didCrashInLastSession` and also how much
  time passed between the app launch and the crash using `timeintervalCrashInLastSessionOccured`. This allows you
  to add additional code to your app delaying the app start until the crash has been successfully send if the crash
- occured within a critical startup timeframe, e.g. after 10 seconds. The `BITCrashManagerDelegate` protocol provides
+ occurred within a critical startup timeframe, e.g. after 10 seconds. The `BITCrashManagerDelegate` protocol provides
  various delegates to inform the app about it's current status so you can continue the remaining app startup setup
  after sending has been completed. The documentation contains a guide
  [How to handle Crashes on startup](HowTo-Handle-Crashes-On-Startup) with an example on how to do that.
