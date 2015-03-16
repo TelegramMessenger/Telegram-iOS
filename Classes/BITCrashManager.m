@@ -960,7 +960,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
       NSString *appName = bit_appName(BITHockeyLocalizedString(@"HockeyAppNamePlaceholder"));
       NSString *alertDescription = [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundAnonymousDescription"), appName];
       
-      // the crash report is not anynomous any more if username or useremail are not nil
+      // the crash report is not anonymous any more if username or useremail are not nil
       NSString *userid = [self userIDForCrashReport];
       NSString *username = [self userNameForCrashReport];
       NSString *useremail = [self userEmailForCrashReport];
