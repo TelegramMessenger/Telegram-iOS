@@ -349,14 +349,14 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
 }
 
 /**
- *	 Extract all app sepcific UUIDs from the crash reports
+ *	 Extract all app specific UUIDs from the crash reports
  *
  * This allows us to send the UUIDs in the XML construct to the server, so the server does not need to parse the crash report for this data.
  * The app specific UUIDs help to identify which dSYMs are needed to symbolicate this crash report.
  *
  *	@param	report The crash report from PLCrashReporter
  *
- *	@return XML structure with the app sepcific UUIDs
+ *	@return XML structure with the app specific UUIDs
  */
 - (NSString *) extractAppUUIDs:(BITPLCrashReport *)report {
   NSMutableString *uuidString = [NSMutableString string];
