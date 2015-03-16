@@ -303,7 +303,7 @@
 }
 
 - (UIView*) viewForShowingActionSheetOnPhone {
-  //find the topmost presented viewcontroller
+  //find the topmost presented view controller
   //and use its view
   UIViewController* topMostPresentedViewController = self.view.window.rootViewController;
   while(topMostPresentedViewController.presentedViewController) {
