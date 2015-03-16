@@ -422,7 +422,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
     [text appendString: @"\n"];
   } else if (crashed_thread != nil) {
     // try to find the selector in case this was a crash in obj_msgSend
-    // we search this wether the crash happend in obj_msgSend or not since we don't have the symbol!
+    // we search this whether the crash happened in obj_msgSend or not since we don't have the symbol!
     
     NSString *foundSelector = nil;
 
