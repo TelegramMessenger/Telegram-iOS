@@ -207,7 +207,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
   
 	/* Header */
 	
-  /* Map to apple style OS nane */
+  /* Map to apple style OS name */
   NSString *osName;
   switch (report.systemInfo.operatingSystem) {
     case PLCrashReportOperatingSystemMacOSX:
