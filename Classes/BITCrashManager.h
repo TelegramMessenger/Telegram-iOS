@@ -74,7 +74,7 @@ typedef void (*BITCrashManagerPostCrashSignalCallback)(void *context);
 
 /**
  * This structure contains callbacks supported by `BITCrashManager` to allow the host application to perform
- * additional tasks prior to program termination after a crash has occured.
+ * additional tasks prior to program termination after a crash has occurred.
  *
  * @see `BITCrashManagerPostCrashSignalCallback`
  * @see `[BITCrashManager setCrashCallbacks:]`
@@ -244,7 +244,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  *  The heuristic is implemented as follows:
  *  If the app never gets a `UIApplicationDidEnterBackgroundNotification` or `UIApplicationWillTerminateNotification`
  *  notification, PLCrashReporter doesn't detect a crash itself, and the app starts up again, it is assumed that
- *  the app got either killed by iOS while being in foreground or a crash occured that couldn't be detected.
+ *  the app got either killed by iOS while being in foreground or a crash occurred that couldn't be detected.
  *
  *  Default: _NO_
  *
@@ -356,7 +356,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
 - (void)setAlertViewHandler:(BITCustomAlertViewHandler)alertViewHandler;
 
 /**
- * Provides details about the crash that occured in the last app session
+ * Provides details about the crash that occurred in the last app session
  */
 @property (nonatomic, readonly) BITCrashDetails *lastSessionCrashDetails;
 
