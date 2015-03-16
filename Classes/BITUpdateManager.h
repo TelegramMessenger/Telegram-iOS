@@ -59,7 +59,7 @@ typedef NS_ENUM (NSUInteger, BITUpdateSetting) {
  The update manager module.
  
  This is the HockeySDK module for handling app updates when using Ad-Hoc or Enterprise provisioning profiles.
- This modul handles version updates, presents update and version information in a App Store like user interface,
+ This module handles version updates, presents update and version information in a App Store like user interface,
  collects usage information and provides additional authorization options when using Ad-Hoc provisioning profiles.
  
  This module automatically disables itself when running in an App Store build by default!
