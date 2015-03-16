@@ -72,7 +72,7 @@
 /**
  An array of data objects that should be used to prefill the compose view content
  
- The follwoing data object classes are currently supported:
+ The following data object classes are currently supported:
  - NSString
  - NSURL
  - UIImage
