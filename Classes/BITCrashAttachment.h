@@ -31,7 +31,7 @@
 /**
  Deprecated: Provides support to add binary attachments to crash reports
  
- This class is not needed any longer and exists for compatiblity purposes with
+ This class is not needed any longer and exists for compatibility purposes with
  HockeySDK-iOS 3.5.5.
  
  It is a subclass of `BITHockeyAttachment` which only provides an initializer
