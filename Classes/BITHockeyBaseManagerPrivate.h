@@ -59,7 +59,7 @@
 /** url encoded version of the appIdentifier
  
  where appIdentifier is either the value this object was initialized with,
- or the main bundles CFBundleIdentifier if appIdentifier ist nil
+ or the main bundles CFBundleIdentifier if appIdentifier is nil
  */
 - (NSString *)encodedAppIdentifier;
 
