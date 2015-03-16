@@ -776,7 +776,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
                             report: (BITPLCrashReport *) report
                               lp64: (BOOL) lp64
 {
-  /* Base image address containing instrumention pointer, offset of the IP from that base
+  /* Base image address containing instrumentation pointer, offset of the IP from that base
    * address, and the associated image name */
   uint64_t baseAddress = 0x0;
   uint64_t pcOffset = 0x0;
