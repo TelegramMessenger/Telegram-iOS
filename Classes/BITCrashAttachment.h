@@ -50,7 +50,7 @@
  @param crashAttachmentData The attachment data as NSData
  @param contentType         The content type of your data as MIME type
  
- @return An instsance of BITCrashAttachment
+ @return An instance of BITCrashAttachment
  */
 - (instancetype)initWithFilename:(NSString *)filename
              crashAttachmentData:(NSData *)crashAttachmentData

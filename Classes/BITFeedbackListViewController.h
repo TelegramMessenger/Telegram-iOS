@@ -44,7 +44,7 @@
  are allowed to be set.
  
  To add this view controller to your own app and push it onto a navigation stack,
- don't create the intance yourself, but use the following code to get a correct instance:
+ don't create the instance yourself, but use the following code to get a correct instance:
  
      [[BITHockeyManager sharedHockeyManager].feedbackManager feedbackListViewController:NO]
  
