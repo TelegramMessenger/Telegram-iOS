@@ -164,7 +164,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
 /** Set the default status of the Crash Manager
  
  Defines if the crash reporting feature should be disabled, ask the user before
- sending each crash report or send crash reportings automatically without
+ sending each crash report or send crash reports automatically without
  asking.
  
  The default value is `BITCrashManagerStatusAlwaysAsk`. The user can switch to
@@ -230,7 +230,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  *  - The app tried to allocate too much memory. If iOS did send a memory warning before killing the app because of this reason, `didReceiveMemoryWarningInLastSession` returns `YES`.
  *  - Permitted background duration if main thread is running in an endless loop
  *  - App failed to resume in time if main thread is running in an endless loop
- *  - If `enableMachExceptionHandler` is not activated, crashed due to stackoverflow will also be reported
+ *  - If `enableMachExceptionHandler` is not activated, crashed due to stack overflow will also be reported
  *
  *  The following kills can _NOT_ be detected:
  *  - Terminating the app takes too long
