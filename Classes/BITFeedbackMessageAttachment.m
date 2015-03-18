@@ -150,7 +150,7 @@
 }
 
 
-#pragma mark - Thubmnails / Image Representation
+#pragma mark - Thumbnails / Image Representation
 
 - (UIImage *)imageRepresentation {
   if ([self.contentType rangeOfString:@"image"].location != NSNotFound && self.filename ) {
@@ -185,9 +185,9 @@
       CGSize scaledSize = CGSizeApplyAffineTransform(size, CGAffineTransformMakeScale(scale, scale));
       UIImage *thumbnail = bit_imageToFitSize(image, scaledSize, YES) ;
       
-      UIImage *scaledTumbnail = [UIImage imageWithCGImage:thumbnail.CGImage scale:scale orientation:thumbnail.imageOrientation];
+      UIImage *scaledThumbnail = [UIImage imageWithCGImage:thumbnail.CGImage scale:scale orientation:thumbnail.imageOrientation];
       if (thumbnail) {
-        [self.thumbnailRepresentations setObject:scaledTumbnail forKey:cacheKey];
+        [self.thumbnailRepresentations setObject:scaledThumbnail forKey:cacheKey];
       }
       
     } else {
