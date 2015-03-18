@@ -207,7 +207,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
   
 	/* Header */
 	
-  /* Map to apple style OS nane */
+  /* Map to apple style OS name */
   NSString *osName;
   switch (report.systemInfo.operatingSystem) {
     case PLCrashReportOperatingSystemMacOSX:
@@ -422,7 +422,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
     [text appendString: @"\n"];
   } else if (crashed_thread != nil) {
     // try to find the selector in case this was a crash in obj_msgSend
-    // we search this wether the crash happend in obj_msgSend or not since we don't have the symbol!
+    // we search this whether the crash happened in obj_msgSend or not since we don't have the symbol!
     
     NSString *foundSelector = nil;
 
@@ -776,7 +776,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
                             report: (BITPLCrashReport *) report
                               lp64: (BOOL) lp64
 {
-  /* Base image address containing instrumention pointer, offset of the IP from that base
+  /* Base image address containing instrumentation pointer, offset of the IP from that base
    * address, and the associated image name */
   uint64_t baseAddress = 0x0;
   uint64_t pcOffset = 0x0;

@@ -221,7 +221,7 @@ typedef NS_ENUM(NSUInteger, BITAuthenticatorAppRestrictionEnforcementFrequency) 
 - (NSURL*) deviceAuthenticationURL;
 
 /**
- * The url-scheme used to idenfify via `BITAuthenticatorIdentificationTypeDevice`
+ * The url-scheme used to identify via `BITAuthenticatorIdentificationTypeDevice`
  *
  * Please make sure that the URL scheme is unique and not shared with other apps.
  *

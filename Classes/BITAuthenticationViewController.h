@@ -78,11 +78,11 @@
 /**
  *	called when the user wants to login
  *
- *	@param	viewController	the delegating viewcontroller
+ *	@param	viewController	the delegating view controller
  *	@param	email	the content of the email-field
  *	@param	password	the content of the password-field (if existent)
  *  @param  completion Must be called by the delegate once the auth-task completed
- *                     This viewcontroller shows an activity-indicator in between and blocks
+ *                     This view controller shows an activity-indicator in between and blocks
  *                     the UI. if succeeded is NO, it shows an alertView presenting the error
  *                     given by the completion block
  */
