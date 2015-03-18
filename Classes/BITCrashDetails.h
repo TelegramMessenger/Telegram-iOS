@@ -29,7 +29,7 @@
 #import <Foundation/Foundation.h>
 
 /**
- *  Provides details about the crash that occured in the previous app session
+ *  Provides details about the crash that occurred in the previous app session
  */
 @interface BITCrashDetails : NSObject
 
@@ -64,7 +64,7 @@
 @property (nonatomic, readonly, strong) NSDate *appStartTime;
 
 /**
- *  Date and time the crash occured, nil if unknown
+ *  Date and time the crash occurred, nil if unknown
  */
 @property (nonatomic, readonly, strong) NSDate *crashTime;
 
