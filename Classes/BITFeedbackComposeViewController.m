@@ -568,7 +568,7 @@
     if (self.selectedAttachmentIndex != NSNotFound){
       UIButton *imageButton = self.attachmentScrollViewImageViews[self.selectedAttachmentIndex];
       BITFeedbackMessageAttachment *attachment = self.imageAttachments[self.selectedAttachmentIndex];
-      [attachment deleteContents]; // mandatory call to delete the files associatd.
+      [attachment deleteContents]; // mandatory call to delete the files associated.
       [self.imageAttachments removeObject:attachment];
       [self.attachments removeObject:attachment];
       [imageButton removeFromSuperview];
