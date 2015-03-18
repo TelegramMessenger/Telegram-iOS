@@ -147,25 +147,25 @@
 "HockeyFeedbackListNeverUpdated" = "Soha";
 
 /* Provide Feedback Button Title */
-"HockeyFeedbackListButonWriteFeedback" = "Visszajelzés küldése";
+"HockeyFeedbackListButtonWriteFeedback" = "Visszajelzés küldése";
 
 /* Add a Response Button Title */
-"HockeyFeedbackListButonWriteResponse" = "Válasz küldése";
+"HockeyFeedbackListButtonWriteResponse" = "Válasz küldése";
 
 /* User Data Set Name Button Title */
-"HockeyFeedbackListButonUserDataSetName" = "Adja meg a nevét";
+"HockeyFeedbackListButtonUserDataSetName" = "Adja meg a nevét";
 
 /* User Data Set Email Button Title */
-"HockeyFeedbackListButonUserDataSetEmail" = "Adja meg az e-mail címét";
+"HockeyFeedbackListButtonUserDataSetEmail" = "Adja meg az e-mail címét";
 
 /* User Data With Name Button Title */
-"HockeyFeedbackListButonUserDataWithName" = "Név: %@";
+"HockeyFeedbackListButtonUserDataWithName" = "Név: %@";
 
 /* User Data With Email Button Title */
-"HockeyFeedbackListButonUserDataWithEmail" = "E-mail: %@";
+"HockeyFeedbackListButtonUserDataWithEmail" = "E-mail: %@";
 
 /* Button title for deleting all local messages*/
-"HockeyFeedbackListButonDeleteAllMessages" = "Összes üzenet törlése";
+"HockeyFeedbackListButtonDeleteAllMessages" = "Összes üzenet törlése";
 
 /* Message pending to be send */
 "HockeyFeedbackListMessagePending" = "Folyamatban";

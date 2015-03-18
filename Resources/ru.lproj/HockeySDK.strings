@@ -147,25 +147,25 @@
 "HockeyFeedbackListNeverUpdated" = "Не было";
 
 /* Provide Feedback Button Title */
-"HockeyFeedbackListButonWriteFeedback" = "Написать отклик";
+"HockeyFeedbackListButtonWriteFeedback" = "Написать отклик";
 
 /* Add a Response Button Title */
-"HockeyFeedbackListButonWriteResponse" = "Добавить ответ";
+"HockeyFeedbackListButtonWriteResponse" = "Добавить ответ";
 
 /* User Data Set Name Button Title */
-"HockeyFeedbackListButonUserDataSetName" = "Ввести ваше имя";
+"HockeyFeedbackListButtonUserDataSetName" = "Ввести ваше имя";
 
 /* User Data Set Email Button Title */
-"HockeyFeedbackListButonUserDataSetEmail" = "Ввести ваш email";
+"HockeyFeedbackListButtonUserDataSetEmail" = "Ввести ваш email";
 
 /* User Data With Name Button Title */
-"HockeyFeedbackListButonUserDataWithName" = "Имя: %@";
+"HockeyFeedbackListButtonUserDataWithName" = "Имя: %@";
 
 /* User Data With Email Button Title */
-"HockeyFeedbackListButonUserDataWithEmail" = "Email: %@";
+"HockeyFeedbackListButtonUserDataWithEmail" = "Email: %@";
 
 /* Button title for deleting all local messages*/
-"HockeyFeedbackListButonDeleteAllMessages" = "Удалить все сообщения";
+"HockeyFeedbackListButtonDeleteAllMessages" = "Удалить все сообщения";
 
 /* Message pending to be send */
 "HockeyFeedbackListMessagePending" = "Ожидание";

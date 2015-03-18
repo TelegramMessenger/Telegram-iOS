@@ -137,7 +137,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
     _crashIdenticalCurrentVersion = YES;
     
     _didCrashInLastSession = NO;
-    _timeintervalCrashInLastSessionOccured = -1;
+    _timeintervalCrashInLastSessionOccurred = -1;
     _didLogLowMemoryWarning = NO;
     
     _approvedCrashReports = [[NSMutableDictionary alloc] init];
@@ -797,7 +797,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
           if (report.systemInfo.timestamp && report.processInfo.processStartTime) {
             appStartTime = report.processInfo.processStartTime;
             appCrashTime =report.systemInfo.timestamp;
-            _timeintervalCrashInLastSessionOccured = [report.systemInfo.timestamp timeIntervalSinceDate:report.processInfo.processStartTime];
+            _timeintervalCrashInLastSessionOccurred = [report.systemInfo.timestamp timeIntervalSinceDate:report.processInfo.processStartTime];
           }
         }
         

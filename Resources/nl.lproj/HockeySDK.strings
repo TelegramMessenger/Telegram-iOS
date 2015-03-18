@@ -147,25 +147,25 @@
 "HockeyFeedbackListNeverUpdated" = "Nooit";
 
 /* Provide Feedback Button Title */
-"HockeyFeedbackListButonWriteFeedback" = "Stuur feedback";
+"HockeyFeedbackListButtonWriteFeedback" = "Stuur feedback";
 
 /* Add a Response Button Title */
-"HockeyFeedbackListButonWriteResponse" = "Voeg een reactie toe";
+"HockeyFeedbackListButtonWriteResponse" = "Voeg een reactie toe";
 
 /* User Data Set Name Button Title */
-"HockeyFeedbackListButonUserDataSetName" = "Stel uw naam in";
+"HockeyFeedbackListButtonUserDataSetName" = "Stel uw naam in";
 
 /* User Data Set Email Button Title */
-"HockeyFeedbackListButonUserDataSetEmail" = "Stel uw e-mail in";
+"HockeyFeedbackListButtonUserDataSetEmail" = "Stel uw e-mail in";
 
 /* User Data With Name Button Title */
-"HockeyFeedbackListButonUserDataWithName" = "Naam: %@";
+"HockeyFeedbackListButtonUserDataWithName" = "Naam: %@";
 
 /* User Data With Email Button Title */
-"HockeyFeedbackListButonUserDataWithEmail" = "E-mail: %@";
+"HockeyFeedbackListButtonUserDataWithEmail" = "E-mail: %@";
 
 /* Button title for deleting all local messages*/
-"HockeyFeedbackListButonDeleteAllMessages" = "Verwijder alle berichten";
+"HockeyFeedbackListButtonDeleteAllMessages" = "Verwijder alle berichten";
 
 /* Message pending to be send */
 "HockeyFeedbackListMessagePending" = "In wachtrij";

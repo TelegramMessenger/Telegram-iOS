@@ -87,7 +87,7 @@
   if (self.customActivityImage)
     return self.customActivityImage;
 
-  return bit_imageNamed(@"feedbackActiviy.png", BITHOCKEYSDK_BUNDLE);
+  return bit_imageNamed(@"feedbackActivity.png", BITHOCKEYSDK_BUNDLE);
 }
 
 

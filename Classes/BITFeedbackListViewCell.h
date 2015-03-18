@@ -43,15 +43,15 @@
 /**
  * Cell style depending on the iOS version
  */
-typedef NS_ENUM(NSUInteger, BITFeedbackListViewCellPresentatationStyle) {
+typedef NS_ENUM(NSUInteger, BITFeedbackListViewCellPresentationStyle) {
   /**
    * Default is iOS 6 style
    */
-  BITFeedbackListViewCellPresentatationStyleDefault = 0,
+  BITFeedbackListViewCellPresentationStyleDefault = 0,
   /**
    * Draw cells in the iOS 7 style
    */
-  BITFeedbackListViewCellPresentatationStyleOS7 = 1
+  BITFeedbackListViewCellPresentationStyleOS7 = 1
 };
 
 /**
@@ -73,7 +73,7 @@ typedef NS_ENUM(NSUInteger, BITFeedbackListViewCellBackgroundStyle) {
 
 @property (nonatomic, strong) BITFeedbackMessage *message;
 
-@property (nonatomic) BITFeedbackListViewCellPresentatationStyle style;
+@property (nonatomic) BITFeedbackListViewCellPresentationStyle style;
 
 @property (nonatomic) BITFeedbackListViewCellBackgroundStyle backgroundStyle;
 

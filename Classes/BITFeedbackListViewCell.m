@@ -85,7 +85,7 @@
   if (self) {
     // Initialization code
     _backgroundStyle = BITFeedbackListViewCellBackgroundStyleNormal;
-    _style = BITFeedbackListViewCellPresentatationStyleDefault;
+    _style = BITFeedbackListViewCellPresentationStyle;
     
     _message = nil;
     
@@ -161,13 +161,13 @@
 - (UIColor *)backgroundColor {
   
   if (self.backgroundStyle == BITFeedbackListViewCellBackgroundStyleNormal) {
-    if (self.style == BITFeedbackListViewCellPresentatationStyleDefault) {
+    if (self.style == BITFeedbackListViewCellPresentationStyleDefault) {
       return BACKGROUNDCOLOR_DEFAULT;
     } else {
       return BACKGROUNDCOLOR_DEFAULT_OS7;
     }
   } else {
-    if (self.style == BITFeedbackListViewCellPresentatationStyleDefault) {
+    if (self.style == BITFeedbackListViewCellPresentationStyleDefault) {
       return BACKGROUNDCOLOR_ALTERNATE;
     } else {
       return BACKGROUNDCOLOR_ALTERNATE_OS7;
@@ -275,7 +275,7 @@
     self.accessoryBackgroundView.backgroundColor = [self backgroundColor];
   }
   
-  if (self.style == BITFeedbackListViewCellPresentatationStyleDefault) {
+  if (self.style == BITFeedbackListViewCellPresentationStyleDefault) {
     [self addSubview:self.accessoryBackgroundView];
   } else if (self.accessoryBackgroundView.superview){
     [self.accessoryBackgroundView removeFromSuperview];
