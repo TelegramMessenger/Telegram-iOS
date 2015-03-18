@@ -85,7 +85,7 @@
   if (self) {
     // Initialization code
     _backgroundStyle = BITFeedbackListViewCellBackgroundStyleNormal;
-    _style = BITFeedbackListViewCellPresentationStyle;
+    _style = BITFeedbackListViewCellPresentationStyleDefault;
     
     _message = nil;
     
