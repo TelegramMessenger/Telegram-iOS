@@ -67,7 +67,7 @@ typedef NS_ENUM(NSUInteger, BITStoreButtonStyle) {
 };
 
 
-// Simulate the Paymeny-Button from the AppStore
+// Simulate the Payment Button from the AppStore
 // The interface is flexible, so there is now fixed order
 @interface BITStoreButton : UIButton
 

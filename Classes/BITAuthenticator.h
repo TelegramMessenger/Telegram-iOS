@@ -101,7 +101,7 @@ typedef NS_ENUM(NSUInteger, BITAuthenticatorAppRestrictionEnforcementFrequency) 
    */
   BITAuthenticatorAppRestrictionEnforcementOnFirstLaunch,
   /**
-   * Checks if the user is allowed to use the app everytime the app becomes active
+   * Checks if the user is allowed to use the app every time the app becomes active
    */
   BITAuthenticatorAppRestrictionEnforcementOnAppActive,
 };

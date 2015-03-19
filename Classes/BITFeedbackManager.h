@@ -252,7 +252,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
 
 
 /**
- Return a screenshot UIImage intance from the current visiable screen
+ Return a screenshot UIImage instance from the current visible screen
 
  @return UIImage instance containing a screenshot of the current screen
  */
