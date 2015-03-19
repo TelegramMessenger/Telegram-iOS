@@ -140,7 +140,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  very slow.
  
  It is possible to check upon startup if the app crashed before using `didCrashInLastSession` and also how much
- time passed between the app launch and the crash using `timeintervalCrashInLastSessionOccurred`. This allows you
+ time passed between the app launch and the crash using `timeIntervalCrashInLastSessionOccurred`. This allows you
  to add additional code to your app delaying the app start until the crash has been successfully send if the crash
  occurred within a critical startup timeframe, e.g. after 10 seconds. The `BITCrashManagerDelegate` protocol provides
  various delegates to inform the app about it's current status so you can continue the remaining app startup setup
@@ -400,7 +400,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  @see didCrashInLastSession
  @see BITCrashManagerDelegate
  */
-@property (nonatomic, readonly) NSTimeInterval timeintervalCrashInLastSessionOccurred;
+@property (nonatomic, readonly) NSTimeInterval timeIntervalCrashInLastSessionOccurred;
 
 
 ///-----------------------------------------------------------------------------
@@ -432,5 +432,11 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  * If the SDK detects an App Store environment, it will _NOT_ cause the app to crash!
  */
 - (void)generateTestCrash;
+
+///-----------------------------------------------------------------------------
+/// @name Deprecated
+///-----------------------------------------------------------------------------
+
+@property (nonatomic, readonly) NSTimeInterval timeintervalCrashInLastSessionOccured DEPRECATED_MSG_ATTRIBUTE("Use the properly spelled property `timeIntervalCrashInLastSessionOccurred` instead.");
 
 @end
