@@ -137,7 +137,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
     _crashIdenticalCurrentVersion = YES;
     
     _didCrashInLastSession = NO;
-    _timeintervalCrashInLastSessionOccurred = -1;
+    _timeIntervalCrashInLastSessionOccurred = -1;
     _didLogLowMemoryWarning = NO;
     
     _approvedCrashReports = [[NSMutableDictionary alloc] init];
@@ -797,7 +797,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
           if (report.systemInfo.timestamp && report.processInfo.processStartTime) {
             appStartTime = report.processInfo.processStartTime;
             appCrashTime =report.systemInfo.timestamp;
-            _timeintervalCrashInLastSessionOccurred = [report.systemInfo.timestamp timeIntervalSinceDate:report.processInfo.processStartTime];
+            _timeIntervalCrashInLastSessionOccurred = [report.systemInfo.timestamp timeIntervalSinceDate:report.processInfo.processStartTime];
           }
         }
         
@@ -1519,6 +1519,10 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
   BITHockeyLog(@"INFO: Sending crash reports started.");
 
   [self.hockeyAppClient enqeueHTTPOperation:operation];
+}
+
+- (NSTimeInterval)timeintervalCrashInLastSessionOccured {
+  return self.timeIntervalCrashInLastSessionOccurred;
 }
 
 @end
