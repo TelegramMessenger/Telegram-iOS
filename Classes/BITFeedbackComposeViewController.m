@@ -73,7 +73,7 @@
  * The status bar does not disappear again when the UIImagePickerController is dismissed.
  * Therefore store the state when UIImagePickerController is shown and restore when viewWillAppear gets called.
  */
-@property (nonatomic, strong) NSNumber *statusBarHidden;
+@property (nonatomic, strong) NSNumber *isStatusBarHiddenBeforeShowingPhotoPicker;
 
 @end
 
@@ -284,9 +284,11 @@
     self.textView.text = _text;
   }
 
-  if (self.statusBarHidden) {
-    [[UIApplication sharedApplication] setStatusBarHidden:self.statusBarHidden.boolValue];
+  if (self.isStatusBarHiddenBeforeShowingPhotoPicker) {
+    [[UIApplication sharedApplication] setStatusBarHidden:self.isStatusBarHiddenBeforeShowingPhotoPicker.boolValue];
   }
+  
+  self.isStatusBarHiddenBeforeShowingPhotoPicker = nil;
 
   [self updateBarButtonState];
 }
@@ -477,7 +479,7 @@
 - (void)addPhotoAction:(id)sender {
   if (_actionSheetVisible) return;
 
-  self.statusBarHidden = @([[UIApplication sharedApplication] isStatusBarHidden]);
+  self.isStatusBarHiddenBeforeShowingPhotoPicker = @([[UIApplication sharedApplication] isStatusBarHidden]);
 
   // add photo.
   UIImagePickerController *pickerController = [[UIImagePickerController alloc] init];
