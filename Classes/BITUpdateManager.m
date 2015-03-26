@@ -754,7 +754,12 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   
   NSString *hockeyAPIURL = [NSString stringWithFormat:@"%@api/2/apps/%@/app_versions/%@?format=plist%@", self.serverURL, [self encodedAppIdentifier], [self.newestAppVersion.versionID stringValue], extraParameter];
   NSString *iOSUpdateURL = [NSString stringWithFormat:@"itms-services://?action=download-manifest&url=%@", bit_URLEncodedString(hockeyAPIURL)];
-  
+
+  // Notify delegate of update intent before placing the call
+  if (self.delegate != nil && [self.delegate respondsToSelector:@selector(willStartDownloadAndUpdate:)]) {
+    [self.delegate willStartDownloadAndUpdate:self];
+  }
+
   BITHockeyLog(@"INFO: API Server Call: %@, calling iOS with %@", hockeyAPIURL, iOSUpdateURL);
   BOOL success = [[UIApplication sharedApplication] openURL:[NSURL URLWithString:iOSUpdateURL]];
   BITHockeyLog(@"INFO: System returned: %d", success);
