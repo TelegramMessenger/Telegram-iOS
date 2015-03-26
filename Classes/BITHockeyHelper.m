@@ -209,7 +209,7 @@ NSString *bit_appAnonID(void) {
                               andPassword:appAnonID
                            forServiceName:bit_keychainHockeySDKServiceName()
                            updateExisting:YES
-                            accessibility:kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+                            accessibility:kSecAttrAccessibleAlwaysThisDeviceOnly
                                     error:&error];
         });
       }

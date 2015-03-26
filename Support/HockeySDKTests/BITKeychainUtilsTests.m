@@ -60,7 +60,7 @@
                                        andPassword:@"PanThisDeviceOnly"
                                     forServiceName:@"Test"
                                     updateExisting:YES
-                                     accessibility:kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+                                     accessibility:kSecAttrAccessibleAlwaysThisDeviceOnly
                                              error:nil];
   assertThatBool(success, equalToBool(YES));
   NSString *pass = [BITKeychainUtils getPasswordForUsername:@"Peter"

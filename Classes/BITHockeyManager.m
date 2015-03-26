@@ -391,7 +391,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
                                   andPassword:value
                                forServiceName:bit_keychainHockeySDKServiceName()
                                updateExisting:YES
-                                accessibility:kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+                                accessibility:kSecAttrAccessibleAlwaysThisDeviceOnly
                                         error:&error];
   } else {
     updateType = @"delete";

@@ -123,7 +123,7 @@ static NSString *BITKeychainUtilsErrorDomain = @"BITKeychainUtilsErrorDomain";
 }
 
 + (BOOL) storeUsername: (NSString *) username andPassword: (NSString *) password forServiceName: (NSString *) serviceName updateExisting: (BOOL) updateExisting error: (NSError **) error {
-  return [self storeUsername:username andPassword:password forServiceName:serviceName updateExisting:updateExisting accessibility:kSecAttrAccessibleWhenUnlocked error:error];
+  return [self storeUsername:username andPassword:password forServiceName:serviceName updateExisting:updateExisting accessibility:kSecAttrAccessibleAlways error:error];
 }
 
 + (BOOL) storeUsername: (NSString *) username andPassword: (NSString *) password forServiceName: (NSString *) serviceName updateExisting: (BOOL) updateExisting accessibility:(CFTypeRef) accessibility error: (NSError **) error
