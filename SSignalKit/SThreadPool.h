@@ -1,18 +1,15 @@
 #import <Foundation/Foundation.h>
 
-@interface SThreadPoolTask : NSObject
-
-- (void)addDependency:(SThreadPoolTask *)task;
-
-@end
+#import <SSignalKit/SThreadPoolTask.h>
+#import <SSignalKit/SThreadPoolQueue.h>
 
 @interface SThreadPool : NSObject
 
 - (instancetype)initWithThreadCount:(NSUInteger)threadCount threadPriority:(double)threadPriority;
 
-- (id)addTask:(void (^)(bool (^)()))task;
-- (SThreadPoolTask *)prepareTask:(void (^)(bool (^)()))task;
-- (id)startTask:(SThreadPoolTask *)task;
-- (void)cancelTask:(id)taskId;
+- (void)addTask:(SThreadPoolTask *)task;
+
+- (SThreadPoolQueue *)nextQueue;
+- (void)_workOnQueue:(SThreadPoolQueue *)queue block:(void (^)())block;
 
 @end

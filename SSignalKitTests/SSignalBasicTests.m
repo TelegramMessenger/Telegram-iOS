@@ -216,6 +216,7 @@
         {
             dispatch_async(queue, ^
             {
+                usleep(100);
                 [subscriber putNext:@1];
             });
             
@@ -229,6 +230,7 @@
         {
             generated = true;
         } error:nil completed:nil];
+        NSLog(@"dispose");
         [disposable dispose];
     }
     

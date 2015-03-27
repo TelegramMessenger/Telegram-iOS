@@ -35,40 +35,31 @@
 {
     return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
     {
-        SAtomic *atomicLastTask = [[SAtomic alloc] initWithValue:nil];
+        SThreadPoolQueue *queue = [threadPool nextQueue];
         return [self startWithNext:^(id next)
         {
-            SThreadPoolTask *task = [threadPool prepareTask:^(bool (^cancelled)())
+            SThreadPoolTask *task = [[SThreadPoolTask alloc] initWithBlock:^(bool (^cancelled)())
             {
                 if (!cancelled())
                     [subscriber putNext:next];
             }];
-            SThreadPoolTask *lastTask = [atomicLastTask swap:task];
-            if (lastTask != nil)
-                [task addDependency:lastTask];
-            [threadPool startTask:task];
+            [queue addTask:task];
         } error:^(id error)
         {
-            SThreadPoolTask *task = [threadPool prepareTask:^(bool (^cancelled)())
+            SThreadPoolTask *task = [[SThreadPoolTask alloc] initWithBlock:^(bool (^cancelled)())
             {
                 if (!cancelled())
                     [subscriber putError:error];
             }];
-            SThreadPoolTask *lastTask = [atomicLastTask swap:task];
-            if (lastTask != nil)
-                [task addDependency:lastTask];
-            [threadPool startTask:task];
+            [queue addTask:task];
         } completed:^
         {
-            SThreadPoolTask *task = [threadPool prepareTask:^(bool (^cancelled)())
+            SThreadPoolTask *task = [[SThreadPoolTask alloc] initWithBlock:^(bool (^cancelled)())
             {
                 if (!cancelled())
                     [subscriber putCompletion];
             }];
-            SThreadPoolTask *lastTask = [atomicLastTask swap:task];
-            if (lastTask != nil)
-                [task addDependency:lastTask];
-            [threadPool startTask:task];
+            [queue addTask:task];
         }];
     }];
 }
@@ -111,7 +102,7 @@
     {
         SMetaDisposable *disposable = [[SMetaDisposable alloc] init];
         
-        id taskId = [threadPool addTask:^(bool (^cancelled)())
+        SThreadPoolTask *task = [[SThreadPoolTask alloc] initWithBlock:^(bool (^cancelled)())
         {
             if (cancelled && cancelled())
                 return;
@@ -130,8 +121,10 @@
         
         [disposable setDisposable:[[SBlockDisposable alloc] initWithBlock:^
         {
-            [threadPool cancelTask:taskId];
+            [task cancel];
         }]];
+        
+        [threadPool addTask:task];
         
         return disposable;
     }];

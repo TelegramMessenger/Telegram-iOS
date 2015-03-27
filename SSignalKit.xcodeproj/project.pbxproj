@@ -80,6 +80,10 @@
 		D087632A1A839EDC00632240 /* SDisposableSet.h in Headers */ = {isa = PBXBuildFile; fileRef = D08763281A839EDC00632240 /* SDisposableSet.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D087632B1A839EDC00632240 /* SDisposableSet.m in Sources */ = {isa = PBXBuildFile; fileRef = D08763291A839EDC00632240 /* SDisposableSet.m */; };
 		D087632C1A839EE800632240 /* SDisposableSet.m in Sources */ = {isa = PBXBuildFile; fileRef = D08763291A839EDC00632240 /* SDisposableSet.m */; };
+		D089E0311AC48EA7009A744B /* SThreadPoolTask.m in Sources */ = {isa = PBXBuildFile; fileRef = D089E02D1AC48EA7009A744B /* SThreadPoolTask.m */; };
+		D089E0321AC48EA7009A744B /* SThreadPoolQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = D089E02E1AC48EA7009A744B /* SThreadPoolQueue.m */; };
+		D089E0331AC48EA7009A744B /* SThreadPoolQueue.h in Headers */ = {isa = PBXBuildFile; fileRef = D089E02F1AC48EA7009A744B /* SThreadPoolQueue.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D089E0341AC48EA7009A744B /* SThreadPoolTask.h in Headers */ = {isa = PBXBuildFile; fileRef = D089E0301AC48EA7009A744B /* SThreadPoolTask.h */; settings = {ATTRIBUTES = (Public, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -161,6 +165,10 @@
 		D06F10721A85882000485185 /* SSignalPerformanceTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SSignalPerformanceTests.m; sourceTree = "<group>"; };
 		D08763281A839EDC00632240 /* SDisposableSet.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SDisposableSet.h; sourceTree = "<group>"; };
 		D08763291A839EDC00632240 /* SDisposableSet.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SDisposableSet.m; sourceTree = "<group>"; };
+		D089E02D1AC48EA7009A744B /* SThreadPoolTask.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SThreadPoolTask.m; sourceTree = "<group>"; };
+		D089E02E1AC48EA7009A744B /* SThreadPoolQueue.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SThreadPoolQueue.m; sourceTree = "<group>"; };
+		D089E02F1AC48EA7009A744B /* SThreadPoolQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SThreadPoolQueue.h; sourceTree = "<group>"; };
+		D089E0301AC48EA7009A744B /* SThreadPoolTask.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SThreadPoolTask.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -252,6 +260,10 @@
 				D0445E1D1A7C2D7300267924 /* SSubscriber.m */,
 				D0445E1E1A7C2D7300267924 /* SThreadPool.h */,
 				D0445E1F1A7C2D7300267924 /* SThreadPool.m */,
+				D089E02F1AC48EA7009A744B /* SThreadPoolQueue.h */,
+				D089E02E1AC48EA7009A744B /* SThreadPoolQueue.m */,
+				D089E0301AC48EA7009A744B /* SThreadPoolTask.h */,
+				D089E02D1AC48EA7009A744B /* SThreadPoolTask.m */,
 				D0445E4C1A7C2D8A00267924 /* SQueue.h */,
 				D0445E4D1A7C2D8A00267924 /* SQueue.m */,
 				D0445E521A7C2E9D00267924 /* STimer.h */,
@@ -301,9 +313,11 @@
 				D0445E481A7C2D7300267924 /* SSubscriber.h in Headers */,
 				D0445E2E1A7C2D7300267924 /* SMulticastSignalManager.h in Headers */,
 				D0445E271A7C2D7300267924 /* SBlockDisposable.h in Headers */,
+				D089E0331AC48EA7009A744B /* SThreadPoolQueue.h in Headers */,
 				D0445E4A1A7C2D7300267924 /* SThreadPool.h in Headers */,
 				D0445E541A7C2E9D00267924 /* STimer.h in Headers */,
 				D0445E301A7C2D7300267924 /* SSignal.h in Headers */,
+				D089E0341AC48EA7009A744B /* SThreadPoolTask.h in Headers */,
 				D0445E321A7C2D7300267924 /* SSignal+Accumulate.h in Headers */,
 				D0445E361A7C2D7300267924 /* SSignal+Combine.h in Headers */,
 				D0445E2A1A7C2D7300267924 /* SDisposable.h in Headers */,
@@ -449,6 +463,7 @@
 				D0445E241A7C2D7300267924 /* SAtomic.m in Sources */,
 				D0445E4B1A7C2D7300267924 /* SThreadPool.m in Sources */,
 				D0445E551A7C2E9D00267924 /* STimer.m in Sources */,
+				D089E0321AC48EA7009A744B /* SThreadPoolQueue.m in Sources */,
 				D0445E3D1A7C2D7300267924 /* SSignal+Mapping.m in Sources */,
 				D0445E351A7C2D7300267924 /* SSignal+Catch.m in Sources */,
 				D0445E411A7C2D7300267924 /* SSignal+Multicast.m in Sources */,
@@ -458,6 +473,7 @@
 				D0445E471A7C2D7300267924 /* SSignal+Timing.m in Sources */,
 				D0445E311A7C2D7300267924 /* SSignal.m in Sources */,
 				D087632B1A839EDC00632240 /* SDisposableSet.m in Sources */,
+				D089E0311AC48EA7009A744B /* SThreadPoolTask.m in Sources */,
 				D0445E491A7C2D7300267924 /* SSubscriber.m in Sources */,
 				D0445E431A7C2D7300267924 /* SSignal+SideEffects.m in Sources */,
 				D0445E3F1A7C2D7300267924 /* SSignal+Meta.m in Sources */,

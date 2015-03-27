@@ -4,82 +4,13 @@
 #import <pthread.h>
 #import "SQueue.h"
 
-@class SThreadPoolOperation;
-
-@interface SThreadPoolTask ()
-
-@property (nonatomic, strong, readonly) SThreadPoolOperation *operation;
-
-- (instancetype)initWithOperation:(SThreadPoolOperation *)operation;
-
-@end
-
-@interface SThreadPoolOperationCanelledHolder : NSObject
-{
-    @public
-    volatile bool _cancelled;
-}
-
-@property (nonatomic, weak) SThreadPoolOperation *operation;
-
-@end
-
-@implementation SThreadPoolOperationCanelledHolder
-
-@end
-
-@interface SThreadPoolOperation : NSOperation
-{
-    void (^_block)(bool (^)());
-}
-
-@property (nonatomic, strong, readonly) SThreadPoolOperationCanelledHolder *cancelledHolder;
-
-@end
-
-@implementation SThreadPoolOperation
-
-- (instancetype)initWithBlock:(void (^)(bool (^)()))block
-{
-    self = [super init];
-    if (self != nil)
-    {
-        _block = [block copy];
-        _cancelledHolder = [[SThreadPoolOperationCanelledHolder alloc] init];
-        _cancelledHolder.operation = self;
-    }
-    return self;
-}
-
-- (void)main
-{
-    if (!_cancelledHolder->_cancelled)
-    {
-        SThreadPoolOperationCanelledHolder *cancelledHolder = _cancelledHolder;
-        _block(^bool
-        {
-            return cancelledHolder->_cancelled;
-        });
-    }
-}
-
-- (void)cancel
-{
-    _cancelledHolder->_cancelled = true;
-}
-
-- (BOOL)isCancelled
-{
-    return _cancelledHolder->_cancelled;
-}
-
-@end
-
 @interface SThreadPool ()
 {
     SQueue *_managementQueue;
     NSMutableArray *_threads;
-    NSMutableArray *_operations;
+    
+    NSMutableArray *_queues;
+    NSMutableArray *_takenQueues;
     
     pthread_mutex_t _mutex;
     pthread_cond_t _cond;
@@ -91,39 +22,42 @@
 
 + (void)threadEntryPoint:(SThreadPool *)threadPool
 {
+    SThreadPoolQueue *queue = nil;
+    
     while (true)
     {
-        SThreadPoolOperation *operation = nil;
+        SThreadPoolTask *task = nil;
         
         pthread_mutex_lock(&threadPool->_mutex);
+        
+        if (queue != nil)
+        {
+            [threadPool->_takenQueues removeObject:queue];
+            if ([queue _hasTasks])
+                [threadPool->_queues addObject:queue];
+        }
+        
         while (true)
         {
-            while (threadPool->_operations.count == 0)
+            while (threadPool->_queues.count == 0)
                 pthread_cond_wait(&threadPool->_cond, &threadPool->_mutex);
-            for (NSUInteger index = 0; index < threadPool->_operations.count; index++)
-            {
-                SThreadPoolOperation *maybeOperation = threadPool->_operations[index];
-                if ([maybeOperation isCancelled])
-                {
-                    [threadPool->_operations removeObjectAtIndex:index];
-                    index--;
-                }
-                else if ([maybeOperation isReady])
-                {
-                    operation = maybeOperation;
-                    [threadPool->_operations removeObjectAtIndex:index];
-                    break;
-                }
-            }
+
+            queue = threadPool->_queues.firstObject;
+            task = [queue _popFirstTask];
             
-            if (operation != nil)
+            if (queue != nil)
+            {
+                [threadPool->_takenQueues addObject:queue];
+                [threadPool->_queues removeObjectAtIndex:0];
+            
                 break;
+            }
         }
         pthread_mutex_unlock(&threadPool->_mutex);
         
         @autoreleasepool
         {
-            [operation main];
+            [task execute];
         }
     }
 }
@@ -146,7 +80,8 @@
         [_managementQueue dispatch:^
         {
             _threads = [[NSMutableArray alloc] init];
-            _operations = [[NSMutableArray alloc] init];
+            _queues = [[NSMutableArray alloc] init];
+            _takenQueues = [[NSMutableArray alloc] init];
             for (NSUInteger i = 0; i < threadCount; i++)
             {
                 NSThread *thread = [[NSThread alloc] initWithTarget:[SThreadPool class] selector:@selector(threadEntryPoint:) object:self];
@@ -166,62 +101,28 @@
     pthread_cond_destroy(&_cond);
 }
 
-- (void)_addOperation:(SThreadPoolOperation *)operation
+- (void)addTask:(SThreadPoolTask *)task
 {
-    pthread_mutex_lock(&_mutex);
-    [_operations addObject:operation];
-    pthread_cond_signal(&_cond);
-    pthread_mutex_unlock(&_mutex);
+    SThreadPoolQueue *tempQueue = [self nextQueue];
+    [tempQueue addTask:task];
 }
 
-- (id)addTask:(void (^)(bool (^)()))task
+- (SThreadPoolQueue *)nextQueue
 {
-    SThreadPoolOperation *operation = [[SThreadPoolOperation alloc] initWithBlock:task];
-    [_managementQueue dispatch:^
-    {
-        [self _addOperation:operation];
-    }];
-    return operation.cancelledHolder;
+    return [[SThreadPoolQueue alloc] initWithThreadPool:self];
 }
 
-- (SThreadPoolTask *)prepareTask:(void (^)(bool (^)()))task
-{
-    SThreadPoolOperation *operation = [[SThreadPoolOperation alloc] initWithBlock:task];
-    return [[SThreadPoolTask alloc] initWithOperation:operation];
-}
-
-- (id)startTask:(SThreadPoolTask *)task
+- (void)_workOnQueue:(SThreadPoolQueue *)queue block:(void (^)())block
 {
     [_managementQueue dispatch:^
     {
-        [self _addOperation:task.operation];
+        pthread_mutex_lock(&_mutex);
+        block();
+        if (![_queues containsObject:queue] && ![_takenQueues containsObject:queue])
+            [_queues addObject:queue];
+        pthread_cond_broadcast(&_cond);
+        pthread_mutex_unlock(&_mutex);
     }];
-    return task.operation.cancelledHolder;
-}
-
-- (void)cancelTask:(id)taskId
-{
-    if (taskId != nil)
-        ((SThreadPoolOperationCanelledHolder *)taskId)->_cancelled = true;
-}
-
-@end
-
-@implementation SThreadPoolTask
-
-- (instancetype)initWithOperation:(SThreadPoolOperation *)operation
-{
-    self = [super init];
-    if (self != nil)
-    {
-        _operation = operation;
-    }
-    return self;
-}
-
-- (void)addDependency:(SThreadPoolTask *)task
-{
-    [_operation addDependency:task->_operation];
 }
 
 @end
