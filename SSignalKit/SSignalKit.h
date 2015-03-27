@@ -29,7 +29,6 @@ FOUNDATION_EXPORT const unsigned char SSignalKitVersionString[];
 #import <SSignalKit/SSignal+Mapping.h>
 #import <SSignalKit/SSignal+Multicast.h>
 #import <SSignalKit/SSignal+Meta.h>
-#import <SSignalKit/SSignal+Concat.h>
 #import <SSignalKit/SSignal+Accumulate.h>
 #import <SSignalKit/SSignal+Dispatch.h>
 #import <SSignalKit/SSignal+Catch.h>
