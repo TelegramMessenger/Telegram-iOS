@@ -1109,7 +1109,11 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
       }
     }
   }
-  [self appEnteredForeground];
+  
+  if ([[UIApplication sharedApplication] applicationState] == UIApplicationStateActive) {
+    [self appEnteredForeground];
+  }
+  
   [[NSUserDefaults standardUserDefaults] setBool:NO forKey:kBITAppDidReceiveLowMemoryNotification];
   [[NSUserDefaults standardUserDefaults] synchronize];
   
