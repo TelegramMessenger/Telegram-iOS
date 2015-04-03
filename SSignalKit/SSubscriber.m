@@ -27,7 +27,10 @@
 
 - (void)_assignDisposable:(id<SDisposable>)disposable
 {
-    _disposable = disposable;
+    if (_terminated)
+        [disposable dispose];
+    else
+        _disposable = disposable;
 }
 
 - (void)_markTerminatedWithoutDisposal

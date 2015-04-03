@@ -179,15 +179,15 @@
         SSignal *signal = [[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
         {
             [subscriber putNext:@1];
-            [object description];
+            __unused id a0 = [object description];
             return [[SBlockDisposable alloc] initWithBlock:^
             {
-                [object description];
+                __unused id a1 = [object description];
                 disposed = true;
             }];
         }] _mapInplace:^id(id value)
         {
-            [object description];
+            __unused id a1 = [object description];
             return @([value intValue] * 2);
         }];
         
@@ -240,6 +240,167 @@
     
     XCTAssertTrue(disposed);
     XCTAssertFalse(generated);
+}
+
+- (void)testThen
+{
+    __block bool generatedFirst = false;
+    __block bool disposedFirst = false;
+    __block bool generatedSecond = false;
+    __block bool disposedSecond = false;
+    __block int result = 0;
+    
+    SSignal *signal = [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        generatedFirst = true;
+        [subscriber putNext:@(1)];
+        [subscriber putCompletion];
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+            disposedFirst = true;
+        }];
+    }];
+    
+    signal = [signal then:[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        generatedSecond = true;
+        [subscriber putNext:@(2)];
+        [subscriber putCompletion];
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+            disposedSecond = true;
+        }];
+    }]];
+    
+    [signal startWithNext:^(id next)
+    {
+        result += [next intValue];
+    }];
+    
+    XCTAssertTrue(generatedFirst);
+    XCTAssertTrue(disposedFirst);
+    XCTAssertTrue(generatedSecond);
+    XCTAssertTrue(disposedSecond);
+    XCTAssert(result == 3);
+}
+
+- (void)testSwitchToLatest
+{
+    __block int result = 0;
+    __block bool disposedOne = false;
+    __block bool disposedTwo = false;
+    __block bool disposedThree = false;
+    __block bool completedAll = false;
+    
+    bool deallocatedOne = false;
+    bool deallocatedTwo = false;
+    bool deallocatedThree = false;
+    
+    @autoreleasepool
+    {
+        DeallocatingObject *objectOne = [[DeallocatingObject alloc] initWithDeallocated:&deallocatedOne];
+        DeallocatingObject *objectTwo = [[DeallocatingObject alloc] initWithDeallocated:&deallocatedTwo];
+        DeallocatingObject *objectThree = [[DeallocatingObject alloc] initWithDeallocated:&deallocatedThree];
+
+        SSignal *one = [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+        {
+            [subscriber putNext:@(1)];
+            [subscriber putCompletion];
+            __unused id a0 = [objectOne description];
+            return [[SBlockDisposable alloc] initWithBlock:^
+            {
+                __unused id a0 = [objectOne description];
+                disposedOne = true;
+            }];
+        }];
+        SSignal *two = [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+        {
+            [subscriber putNext:@(2)];
+            [subscriber putCompletion];
+            __unused id a1 = [objectTwo description];
+            return [[SBlockDisposable alloc] initWithBlock:^
+            {
+                __unused id a1 = [objectOne description];
+                disposedTwo = true;
+            }];
+        }];
+        SSignal *three = [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+        {
+            [subscriber putNext:@(3)];
+            [subscriber putCompletion];
+            __unused id a0 = [objectThree description];
+            return [[SBlockDisposable alloc] initWithBlock:^
+            {
+                __unused id a1 = [objectOne description];
+                disposedThree = true;
+            }];
+        }];
+        
+        SSignal *signal = [[[[SSignal single:one] then:[SSignal single:two]] then:[SSignal single:three]] switchToLatest];
+        [signal startWithNext:^(id next)
+        {
+            result += [next intValue];
+        } error:nil completed:^
+        {
+            completedAll = true;
+        }];
+    }
+    
+    XCTAssert(result == 6);
+    XCTAssertTrue(disposedOne);
+    XCTAssertTrue(disposedTwo);
+    XCTAssertTrue(disposedThree);
+    XCTAssertTrue(deallocatedOne);
+    XCTAssertTrue(deallocatedTwo);
+    XCTAssertTrue(deallocatedThree);
+    XCTAssertTrue(completedAll);
+}
+
+- (void)testSwitchToLatestError
+{
+    __block bool errorGenerated = false;
+    
+    SSignal *one = [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        [subscriber putError:nil];
+        return nil;
+    }];
+    
+    [one startWithNext:^(__unused id next)
+    {
+        
+    } error:^(__unused id error)
+    {
+        errorGenerated = true;
+    } completed:^
+    {
+        
+    }];
+    
+    XCTAssertTrue(errorGenerated);
+}
+
+- (void)testSwitchToLatestCompleted
+{
+    __block bool completedAll = false;
+    
+    SSignal *one = [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        [subscriber putCompletion];
+        return nil;
+    }];
+    
+    [one startWithNext:^(__unused id next)
+    {
+        
+    } error:^(__unused id error)
+    {
+    } completed:^
+    {
+        completedAll = true;
+    }];
+    
+    XCTAssertTrue(completedAll);
 }
 
 @end

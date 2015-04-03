@@ -5,41 +5,114 @@
 #import "SSignal+Mapping.h"
 #import "SAtomic.h"
 
+#import <libkern/OSAtomic.h>
+
+@interface SSignalSwitchToLatestState : NSObject <SDisposable>
+{
+    OSSpinLock _lock;
+    bool _didSwitch;
+    bool _terminated;
+    
+    id<SDisposable> _disposable;
+    SMetaDisposable *_currentDisposable;
+    SSubscriber *_subscriber;
+}
+
+@end
+
+@implementation SSignalSwitchToLatestState
+
+- (instancetype)initWithSubscriber:(SSubscriber *)subscriber
+{
+    self = [super init];
+    if (self != nil)
+    {
+        _subscriber = subscriber;
+        _currentDisposable = [[SMetaDisposable alloc] init];
+    }
+    return self;
+}
+
+- (void)beginWithDisposable:(id<SDisposable>)disposable
+{
+    _disposable = disposable;
+}
+
+- (void)switchToSignal:(SSignal *)signal
+{
+    OSSpinLockLock(&_lock);
+    _didSwitch = true;
+    OSSpinLockUnlock(&_lock);
+    
+    id<SDisposable> disposable = [signal startWithNext:^(id next)
+    {
+        [_subscriber putNext:next];
+    } error:^(id error)
+    {
+        [_subscriber putError:error];
+    } completed:^
+    {
+        OSSpinLockLock(&_lock);
+        _didSwitch = false;
+        OSSpinLockUnlock(&_lock);
+        
+        [self maybeComplete];
+    }];
+    
+    [_currentDisposable setDisposable:disposable];
+}
+
+- (void)maybeComplete
+{
+    bool terminated = false;
+    OSSpinLockLock(&_lock);
+    terminated = _terminated;
+    OSSpinLockUnlock(&_lock);
+    
+    if (terminated)
+        [_subscriber putCompletion];
+}
+
+- (void)beginCompletion
+{
+    bool didSwitch = false;
+    OSSpinLockLock(&_lock);
+    didSwitch = _didSwitch;
+    _terminated = true;
+    OSSpinLockUnlock(&_lock);
+    
+    if (!didSwitch)
+        [_subscriber putCompletion];
+}
+
+- (void)dispose
+{
+    [_disposable dispose];
+    [_currentDisposable dispose];
+}
+
+@end
+
 @implementation SSignal (Meta)
 
 - (SSignal *)switchToLatest
 {
     return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
     {
-        SDisposableSet *compositeDisposable = [[SDisposableSet alloc] init];
+        SSignalSwitchToLatestState *state = [[SSignalSwitchToLatestState alloc] initWithSubscriber:subscriber];
         
-        SMetaDisposable *currentDisposable = [[SMetaDisposable alloc] init];
-        [compositeDisposable add:currentDisposable];
-        
-        SAtomic *didProduceNext = [[SAtomic alloc] initWithValue:nil];
-        [compositeDisposable add:[self startWithNext:^(SSignal *next)
+        [state beginWithDisposable:[self startWithNext:^(id next)
         {
-            [didProduceNext swap:@1];
-            [currentDisposable setDisposable:[next startWithNext:^(id next)
-            {
-                [subscriber putNext:next];
-            } error:^(id error)
-            {
-                [subscriber putError:error];
-            } completed:^
-            {
-                [subscriber putCompletion];
-            }]];
+            [state switchToSignal:next];
         } error:^(id error)
         {
             [subscriber putError:error];
         } completed:^
         {
-            if ([didProduceNext swap:@1] == NULL)
-                [subscriber putCompletion];
+            [state beginCompletion];
         }]];
         
-        return compositeDisposable;
+        return state;
     }];
 }
 
