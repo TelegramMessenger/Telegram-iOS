@@ -28,12 +28,12 @@
             }]];
         } queue:queue];
         
+        [timer start];
+        
         [disposable setDisposable:[[SBlockDisposable alloc] initWithBlock:^
         {
             [timer invalidate];
         }]];
-        
-        [timer start];
         
         return disposable;
     }];
