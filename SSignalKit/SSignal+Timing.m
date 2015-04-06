@@ -39,7 +39,7 @@
     }];
 }
 
-- (SSignal *)timeout:(NSTimeInterval)seconds onQueue:(SQueue *)queue or:(SSignal *)signal
+- (SSignal *)timeout:(NSTimeInterval)seconds onQueue:(SQueue *)queue orSignal:(SSignal *)signal
 {
     return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
     {

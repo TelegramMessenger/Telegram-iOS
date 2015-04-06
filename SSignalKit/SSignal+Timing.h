@@ -5,6 +5,6 @@
 @interface SSignal (Timing)
 
 - (SSignal *)delay:(NSTimeInterval)seconds onQueue:(SQueue *)queue;
-- (SSignal *)timeout:(NSTimeInterval)seconds onQueue:(SQueue *)queue or:(SSignal *)signal;
+- (SSignal *)timeout:(NSTimeInterval)seconds onQueue:(SQueue *)queue orSignal:(SSignal *)signal;
 
 @end
