@@ -216,7 +216,7 @@
         {
             dispatch_async(queue, ^
             {
-                usleep(100);
+                usleep(200);
                 [subscriber putNext:@1];
             });
             
@@ -401,6 +401,258 @@
     }];
     
     XCTAssertTrue(completedAll);
+}
+
+- (void)testQueue
+{
+    dispatch_queue_t queue = dispatch_queue_create(NULL, 0);
+    
+    __block bool disposedFirst = false;
+    __block bool disposedSecond = false;
+    __block bool disposedThird = false;
+    __block int result = 0;
+    
+    SSignal *firstSignal = [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        dispatch_async(queue, ^
+        {
+            usleep(100);
+            [subscriber putNext:@1];
+            [subscriber putCompletion];
+        });
+        
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+            disposedFirst = true;
+        }];
+    }];
+    
+    SSignal *secondSignal = [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        dispatch_async(queue, ^
+        {
+            usleep(100);
+            [subscriber putNext:@2];
+            [subscriber putCompletion];
+        });
+        
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+            disposedSecond = true;
+        }];
+    }];
+    
+    SSignal *thirdSignal = [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        dispatch_async(queue, ^
+        {
+            usleep(100);
+            [subscriber putNext:@3];
+            [subscriber putCompletion];
+        });
+        
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+            disposedThird = true;
+        }];
+    }];
+    
+    SSignal *signal = [[[[SSignal single:firstSignal] then:[SSignal single:secondSignal]] then:[SSignal single:thirdSignal]] queue];
+    [signal startWithNext:^(id next)
+    {
+        result += [next intValue];
+    }];
+    
+    usleep(1000);
+    
+    XCTAssertEqual(result, 6);
+    XCTAssertTrue(disposedFirst);
+    XCTAssertTrue(disposedSecond);
+    XCTAssertTrue(disposedThird);
+}
+
+- (void)testQueueInterrupted
+{
+    dispatch_queue_t queue = dispatch_queue_create(NULL, 0);
+    
+    __block bool disposedFirst = false;
+    __block bool disposedSecond = false;
+    __block bool disposedThird = false;
+    __block bool startedThird = false;
+    __block int result = 0;
+    
+    SSignal *firstSignal = [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        dispatch_async(queue, ^
+        {
+            usleep(100);
+            [subscriber putNext:@1];
+            [subscriber putCompletion];
+        });
+        
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+            disposedFirst = true;
+        }];
+    }];
+    
+    SSignal *secondSignal = [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        dispatch_async(queue, ^
+        {
+            usleep(100);
+            [subscriber putNext:@2];
+            [subscriber putError:nil];
+        });
+        
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+            disposedSecond = true;
+        }];
+    }];
+    
+    SSignal *thirdSignal = [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        startedThird = true;
+        
+        dispatch_async(queue, ^
+        {
+            usleep(100);
+            [subscriber putNext:@3];
+            [subscriber putCompletion];
+        });
+        
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+            disposedThird = true;
+        }];
+    }];
+    
+    SSignal *signal = [[[[SSignal single:firstSignal] then:[SSignal single:secondSignal]] then:[SSignal single:thirdSignal]] queue];
+    [signal startWithNext:^(id next)
+    {
+        result += [next intValue];
+    }];
+    
+    usleep(1000);
+    
+    XCTAssertEqual(result, 3);
+    XCTAssertTrue(disposedFirst);
+    XCTAssertTrue(disposedSecond);
+    XCTAssertFalse(startedThird);
+    XCTAssertFalse(disposedThird);
+}
+
+- (void)testQueueDisposed
+{
+    dispatch_queue_t queue = dispatch_queue_create(NULL, 0);
+    
+    __block bool disposedFirst = false;
+    __block bool disposedSecond = false;
+    __block bool disposedThird = false;
+    __block bool startedFirst = false;
+    __block bool startedSecond = false;
+    __block bool startedThird = false;
+    __block int result = 0;
+    
+    SSignal *firstSignal = [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        startedFirst = true;
+        
+        __block bool cancelled = false;
+        dispatch_async(queue, ^
+        {
+            if (!cancelled)
+            {
+                usleep(100);
+                [subscriber putNext:@1];
+                [subscriber putCompletion];
+            }
+        });
+        
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+            cancelled = true;
+            disposedFirst = true;
+        }];
+    }];
+    
+    SSignal *secondSignal = [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        startedSecond = true;
+        
+        __block bool cancelled = false;
+        dispatch_async(queue, ^
+        {
+            if (!cancelled)
+            {
+                usleep(100);
+                [subscriber putNext:@2];
+                [subscriber putError:nil];
+            }
+        });
+        
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+            cancelled = true;
+            disposedSecond = true;
+        }];
+    }];
+    
+    SSignal *thirdSignal = [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        startedThird = true;
+        
+        dispatch_async(queue, ^
+        {
+            usleep(100);
+            [subscriber putNext:@3];
+            [subscriber putCompletion];
+        });
+        
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+            disposedThird = true;
+        }];
+    }];
+    
+    SSignal *signal = [[[[SSignal single:firstSignal] then:[SSignal single:secondSignal]] then:[SSignal single:thirdSignal]] queue];
+    [[signal startWithNext:^(id next)
+    {
+        result += [next intValue];
+    }] dispose];
+    
+    usleep(1000);
+    
+    XCTAssertEqual(result, 0);
+    XCTAssertTrue(disposedFirst);
+    XCTAssertFalse(disposedSecond);
+    XCTAssertFalse(disposedThird);
+    
+    XCTAssertTrue(startedFirst);
+    XCTAssertFalse(startedSecond);
+    XCTAssertFalse(startedThird);
+}
+
+- (void)testWaitSameQueue
+{
+    SSignal *signal = [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        dispatch_async(dispatch_get_main_queue(), ^
+        {
+            [subscriber putNext:@(1)];
+            [subscriber putCompletion];
+        });
+        
+        return nil;
+    }];
+    
+    CFAbsoluteTime startTime = CFAbsoluteTimeGetCurrent();
+    [[signal wait:2.0 onQueue:[SQueue concurrentDefaultQueue]] startWithNext:^(__unused id next)
+    {
+        
+    }];
+    XCTAssert(startTime < 0.5);
 }
 
 @end

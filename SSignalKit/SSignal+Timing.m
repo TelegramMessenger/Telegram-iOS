@@ -4,6 +4,8 @@
 #import "SDisposableSet.h"
 #import "SBlockDisposable.h"
 
+#import "SSignal+Dispatch.h"
+
 #import "STimer.h"
 
 @implementation SSignal (Timing)
@@ -73,6 +75,32 @@
             [timer invalidate];
             [subscriber putCompletion];
         }]];
+        
+        return disposable;
+    }];
+}
+
+- (SSignal *)wait:(NSTimeInterval)seconds
+{
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
+        
+        id<SDisposable> disposable = [self startWithNext:^(id next)
+        {
+            dispatch_semaphore_signal(semaphore);
+            [subscriber putNext:next];
+        } error:^(id error)
+        {
+            dispatch_semaphore_signal(semaphore);
+            [subscriber putError:error];
+        } completed:^
+        {
+            dispatch_semaphore_signal(semaphore);
+            [subscriber putCompletion];
+        }];
+        
+        dispatch_semaphore_wait(semaphore, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(seconds * NSEC_PER_SEC)));
         
         return disposable;
     }];
