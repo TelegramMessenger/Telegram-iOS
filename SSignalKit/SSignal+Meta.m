@@ -132,8 +132,8 @@
 
 - (void)dispose
 {
-    [_disposable dispose];
     [_currentDisposable dispose];
+    [_disposable dispose];
 }
 
 @end
@@ -164,6 +164,11 @@
 - (SSignal *)mapToSignal:(SSignal *(^)(id))f
 {
     return [[self map:f] switchToLatest];
+}
+
+- (SSignal *)mapToQueue:(SSignal *(^)(id))f
+{
+    return [[self map:f] queue];
 }
 
 - (SSignal *)then:(SSignal *)signal
