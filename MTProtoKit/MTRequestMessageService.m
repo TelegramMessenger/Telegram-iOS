@@ -473,7 +473,10 @@
                         {
                             if ([errorText rangeOfString:@"SESSION_PASSWORD_NEEDED"].location != NSNotFound)
                             {
-                                [_context updatePasswordInputRequiredForDatacenterWithId:mtProto.datacenterId required:true];
+                                if (!request.passthroughPasswordEntryError)
+                                {
+                                    [_context updatePasswordInputRequiredForDatacenterWithId:mtProto.datacenterId required:true];
+                                }
                             }
                             else
                             {
@@ -494,7 +497,7 @@
                                 request.errorContext.minimalExecuteTime = MAX(request.errorContext.minimalExecuteTime, MTAbsoluteSystemTime() + 2.0);
                             }
                         }
-                        else if (errorCode == 420)
+                        else if (errorCode == 420 || [errorText rangeOfString:@"FLOOD_WAIT_"].location != NSNotFound)
                         {
                             if (request.errorContext == nil)
                                 request.errorContext = [[MTRequestErrorContext alloc] init];
@@ -508,10 +511,15 @@
                                 [scanner scanString:@"FLOOD_WAIT_" intoString:nil];
                                 if ([scanner scanInt:&errorWaitTime])
                                 {
-                                    if (request.shouldContinueExecutionWithErrorContext != nil && request.shouldContinueExecutionWithErrorContext(request.errorContext))
+                                    request.errorContext.floodWaitSeconds = errorWaitTime;
+                                    
+                                    if (request.shouldContinueExecutionWithErrorContext != nil)
                                     {
-                                        restartRequest = true;
-                                        request.errorContext.minimalExecuteTime = MAX(request.errorContext.minimalExecuteTime, MTAbsoluteSystemTime() + (MTAbsoluteTime)errorWaitTime);
+                                        if (request.shouldContinueExecutionWithErrorContext(request.errorContext))
+                                        {
+                                            restartRequest = true;
+                                            request.errorContext.minimalExecuteTime = MAX(request.errorContext.minimalExecuteTime, MTAbsoluteSystemTime() + (MTAbsoluteTime)errorWaitTime);
+                                        }
                                     }
                                     else
                                     {

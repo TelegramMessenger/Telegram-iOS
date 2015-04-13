@@ -13,5 +13,6 @@
 @property (nonatomic) MTAbsoluteTime minimalExecuteTime;
 
 @property (nonatomic) NSUInteger internalServerErrorCount;
+@property (nonatomic) NSUInteger floodWaitSeconds;
 
 @end

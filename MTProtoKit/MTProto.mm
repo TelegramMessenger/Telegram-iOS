@@ -268,11 +268,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         {
             MTTransport *transport = nil;
             
-#if TARGET_IPHONE_SIMULATOR && false
-            transport = [[MTHttpTransport alloc] initWithDelegate:self context:_context datacenterId:_datacenterId address:[_context addressSetForDatacenterWithId:_datacenterId].addressList.firstObject];
-#else
             transport = [_transportScheme createTransportWithContext:_context datacenterId:_datacenterId delegate:self];
-#endif
             
             [self setTransport:transport];
         }

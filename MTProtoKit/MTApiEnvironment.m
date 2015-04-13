@@ -26,6 +26,9 @@
 #define IPHONE_4_NAMESTRING             @"iPhone 4"
 #define IPHONE_4S_NAMESTRING            @"iPhone 4S"
 #define IPHONE_5_NAMESTRING             @"iPhone 5"
+#define IPHONE_5S_NAMESTRING             @"iPhone 5S"
+#define IPHONE_6_NAMESTRING             @"iPhone 6"
+#define IPHONE_6Plus_NAMESTRING             @"iPhone 6 Plus"
 #define IPHONE_UNKNOWN_NAMESTRING       @"Unknown iPhone"
 
 #define IPOD_1G_NAMESTRING              @"iPod touch 1G"
@@ -67,6 +70,9 @@ typedef enum {
     UIDevice4iPhone,
     UIDevice4SiPhone,
     UIDevice5iPhone,
+    UIDevice5SiPhone,
+    UIDevice6iPhone,
+    UIDevice6PlusiPhone,
     
     UIDevice1GiPod,
     UIDevice2GiPod,
@@ -137,6 +143,9 @@ typedef enum {
         case UIDevice4iPhone: return IPHONE_4_NAMESTRING;
         case UIDevice4SiPhone: return IPHONE_4S_NAMESTRING;
         case UIDevice5iPhone: return IPHONE_5_NAMESTRING;
+        case UIDevice5SiPhone: return IPHONE_5S_NAMESTRING;
+        case UIDevice6iPhone: return IPHONE_6_NAMESTRING;
+        case UIDevice6PlusiPhone: return IPHONE_6Plus_NAMESTRING;
         case UIDeviceUnknowniPhone: return IPHONE_UNKNOWN_NAMESTRING;
             
         case UIDevice1GiPod: return IPOD_1G_NAMESTRING;
@@ -185,6 +194,10 @@ typedef enum {
     if ([platform hasPrefix:@"iPhone3"])            return UIDevice4iPhone;
     if ([platform hasPrefix:@"iPhone4"])            return UIDevice4SiPhone;
     if ([platform hasPrefix:@"iPhone5"])            return UIDevice5iPhone;
+    if ([platform hasPrefix:@"iPhone6,1"])            return UIDevice5SiPhone;
+    if ([platform hasPrefix:@"iPhone6,2"])            return UIDevice5SiPhone;
+    if ([platform hasPrefix:@"iPhone7,1"])            return UIDevice6PlusiPhone;
+    if ([platform hasPrefix:@"iPhone7,2"])            return UIDevice6iPhone;
     
     // iPod
     if ([platform hasPrefix:@"iPod1"])              return UIDevice1GiPod;

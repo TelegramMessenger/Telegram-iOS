@@ -539,6 +539,11 @@ typedef enum {
         
         bool success = [self isResponseValid:data];
         
+#ifdef DEBUG
+        //if (!success)
+        //    NSLog(@"%@", [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
+#endif
+        
         httpWorker.delegate = nil;
         [self _removeActiveConnection:httpWorker];
         

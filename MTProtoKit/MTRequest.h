@@ -19,6 +19,7 @@
 @property (nonatomic, strong) MTRequestErrorContext *errorContext;
 @property (nonatomic) bool hasHighPriority;
 @property (nonatomic) bool dependsOnPasswordEntry;
+@property (nonatomic) bool passthroughPasswordEntryError;
 
 @property (nonatomic, copy) void (^completed)(id result, NSTimeInterval completionTimestamp, id error);
 @property (nonatomic, copy) void (^progressUpdated)(float progress, NSUInteger packetLength);
