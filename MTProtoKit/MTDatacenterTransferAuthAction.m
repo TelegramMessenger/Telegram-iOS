@@ -13,6 +13,7 @@
 #import <MTProtoKit/MTProto.h>
 #import <MTProtoKit/MTRequestMessageService.h>
 #import <MTProtoKit/MTRequest.h>
+#import <MTProtoKit/MTBuffer.h>
 
 @interface MTDatacenterTransferAuthAction () <MTContextChangeListener>
 {
@@ -96,17 +97,22 @@
     
     MTRequest *request = [[MTRequest alloc] init];
     
-    request.body = [context.serialization exportAuthorization:(int32_t)_destinationDatacenterId];
+    NSData *exportAuthRequestData = nil;
+    MTExportAuthorizationResponseParser responseParser = [[context.serialization exportAuthorization:(int32_t)_destinationDatacenterId data:&exportAuthRequestData] copy];
+    
+    [request setPayload:exportAuthRequestData metadata:@"exportAuthorization" responseParser:responseParser];
     
     __weak MTDatacenterTransferAuthAction *weakSelf = self;
-    [request setCompleted:^(id result, __unused NSTimeInterval timestamp, id error)
+    [request setCompleted:^(MTExportedAuthorizationData *result, __unused NSTimeInterval timestamp, id error)
     {
         __strong MTDatacenterTransferAuthAction *strongSelf = weakSelf;
         if (strongSelf == nil)
             return;
         
         if (error == nil)
-            [strongSelf beginTransferWithId:[context.serialization exportedAuthorizationId:result] data:[context.serialization exportedAuthorizationBytes:result]];
+        {
+            [strongSelf beginTransferWithId:result.authorizationId data:result.authorizationBytes];
+        }
         else
             [strongSelf fail];
     }];
@@ -127,7 +133,12 @@
     
     MTRequest *request = [[MTRequest alloc] init];
     
-    request.body = [context.serialization importAuthorization:dataId bytes:authData];
+    NSData *importAuthRequestData = [_context.serialization importAuthorization:dataId bytes:authData];
+    
+    [request setPayload:importAuthRequestData metadata:@"importAuthorization" responseParser:^id (NSData *data)
+    {
+        return @true;
+    }];
     
     NSInteger destinationDatacenterId = _destinationDatacenterId;
     id authToken = _authToken;

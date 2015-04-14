@@ -8,6 +8,7 @@
 
 #import "MTDiscoverTransportSchemeAction.h"
 
+#import <MTProtoKit/MTLogging.h>
 #import <MtProtoKit/MTQueue.h>
 #import <MtProtoKit/MTTimer.h>
 #import <MtProtoKit/MTContext.h>

@@ -8,6 +8,7 @@
 
 #import <MTProtoKit/MTDatacenterAuthMessageService.h>
 
+#import <MTProtoKit/MTLogging.h>
 #import <MTProtoKit/MTContext.h>
 #import <MTProtoKit/MTProto.h>
 #import <MTProtoKit/MTSerialization.h>
@@ -18,8 +19,14 @@
 #import <MTProtoKit/MTPreparedMessage.h>
 #import <MTProtoKit/MTDatacenterAuthInfo.h>
 #import <MTProtoKit/MTDatacenterSaltInfo.h>
-
+#import <MTProtoKit/MTBuffer.h>
 #import <MTProtoKit/MTEncryption.h>
+
+#import <MTProtoKit/MTInternalMessageParser.h>
+#import <MTProtoKit/MTServerDhInnerDataMessage.h>
+#import <MTProtoKit/MTResPqMessage.h>
+#import <MTProtoKit/MTServerDhParamsMessage.h>
+#import <MTProtoKit/MTSetClientDhParamsResponseMessage.h>
 
 static NSDictionary *selectPublicKey(NSArray *fingerprints)
 {
@@ -175,9 +182,11 @@ typedef enum {
                     _nonce = [[NSData alloc] initWithBytes:nonceBytes length:16];
                 }
                 
-                id reqPq = [mtProto.context.serialization reqPq:_nonce];
+                MTBuffer *reqPqBuffer = [[MTBuffer alloc] init];
+                [reqPqBuffer appendInt32:(int32_t)0x60469778];
+                [reqPqBuffer appendBytes:_nonce.bytes length:_nonce.length];
                 
-                MTOutgoingMessage *message = [[MTOutgoingMessage alloc] initWithBody:reqPq messageId:_currentStageMessageId messageSeqNo:_currentStageMessageSeqNo];
+                MTOutgoingMessage *message = [[MTOutgoingMessage alloc] initWithData:reqPqBuffer.data metadata:@"reqPq" messageId:_currentStageMessageId messageSeqNo:_currentStageMessageSeqNo];
                 return [[MTMessageTransaction alloc] initWithMessagePayload:@[message] completion:^(NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
                 {
                     if (_stage == MTDatacenterAuthStagePQ && messageInternalIdToTransactionId[message.internalId] != nil && messageInternalIdToPreparedMessage[message.internalId] != nil)
@@ -191,9 +200,16 @@ typedef enum {
             }
             case MTDatacenterAuthStageReqDH:
             {
-                id reqDh = [mtProto.context.serialization reqDhParams:_nonce serverNonce:_serverNonce p:_dhP q:_dhQ publicKeyFingerprint:_dhPublicKeyFingerprint encryptedData:_dhEncryptedData];
+                MTBuffer *reqDhBuffer = [[MTBuffer alloc] init];
+                [reqDhBuffer appendInt32:(int32_t)0xd712e4be];
+                [reqDhBuffer appendBytes:_nonce.bytes length:_nonce.length];
+                [reqDhBuffer appendBytes:_serverNonce.bytes length:_serverNonce.length];
+                [reqDhBuffer appendTLBytes:_dhP];
+                [reqDhBuffer appendTLBytes:_dhQ];
+                [reqDhBuffer appendInt64:_dhPublicKeyFingerprint];
+                [reqDhBuffer appendTLBytes:_dhEncryptedData];
                 
-                MTOutgoingMessage *message = [[MTOutgoingMessage alloc] initWithBody:reqDh messageId:_currentStageMessageId messageSeqNo:_currentStageMessageSeqNo];
+                MTOutgoingMessage *message = [[MTOutgoingMessage alloc] initWithData:reqDhBuffer.data metadata:@"reqDh" messageId:_currentStageMessageId messageSeqNo:_currentStageMessageSeqNo];
                 return [[MTMessageTransaction alloc] initWithMessagePayload:@[message] completion:^(NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
                 {
                     if (_stage == MTDatacenterAuthStageReqDH && messageInternalIdToTransactionId[message.internalId] != nil && messageInternalIdToPreparedMessage[message.internalId] != nil)
@@ -207,9 +223,13 @@ typedef enum {
             }
             case MTDatacenterAuthStageKeyVerification:
             {
-                id setClientDhParams = [mtProto.context.serialization setDhParams:_nonce serverNonce:_serverNonce encryptedData:_encryptedClientData];
+                MTBuffer *setDhParamsBuffer = [[MTBuffer alloc] init];
+                [setDhParamsBuffer appendInt32:(int32_t)0xf5045f1f];
+                [setDhParamsBuffer appendBytes:_nonce.bytes length:_nonce.length];
+                [setDhParamsBuffer appendBytes:_serverNonce.bytes length:_serverNonce.length];
+                [setDhParamsBuffer appendTLBytes:_encryptedClientData];
                 
-                MTOutgoingMessage *message = [[MTOutgoingMessage alloc] initWithBody:setClientDhParams messageId:_currentStageMessageId messageSeqNo:_currentStageMessageSeqNo];
+                MTOutgoingMessage *message = [[MTOutgoingMessage alloc] initWithData:setDhParamsBuffer.data metadata:@"setDhParams" messageId:_currentStageMessageId messageSeqNo:_currentStageMessageSeqNo];
                 return [[MTMessageTransaction alloc] initWithMessagePayload:@[message] completion:^(NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
                 {
                     if (_stage == MTDatacenterAuthStageKeyVerification && messageInternalIdToTransactionId[message.internalId] != nil && messageInternalIdToPreparedMessage[message.internalId] != nil)
@@ -231,11 +251,13 @@ typedef enum {
 
 - (void)mtProto:(MTProto *)mtProto receivedMessage:(MTIncomingMessage *)message
 {
-    if (_stage == MTDatacenterAuthStagePQ && [mtProto.context.serialization isMessageResPq:message.body])
+    if (_stage == MTDatacenterAuthStagePQ && [message.body isKindOfClass:[MTResPqMessage class]])
     {
-        if ([_nonce isEqualToData:[mtProto.context.serialization resPqNonce:message.body]])
+        MTResPqMessage *resPqMessage = message.body;
+        
+        if ([_nonce isEqualToData:resPqMessage.nonce])
         {
-            NSDictionary *publicKey = selectPublicKey([mtProto.context.serialization resPqServerPublicKeyFingerprints:message.body]);
+            NSDictionary *publicKey = selectPublicKey(resPqMessage.serverPublicKeyFingerprints);
             if (publicKey == nil)
             {
                 MTLog(@"[MTDatacenterAuthMessageService#%p couldn't find valid server public key]", self);
@@ -243,7 +265,7 @@ typedef enum {
             }
             else
             {
-                NSData *pqBytes = [mtProto.context.serialization resPqPq:message.body];
+                NSData *pqBytes = resPqMessage.pq;
                 
                 uint64_t pq = 0;
                 for (int i = 0; i < (int)pqBytes.length; i++)
@@ -261,7 +283,7 @@ typedef enum {
                     return;
                 }
                 
-                _serverNonce = [mtProto.context.serialization resPqServerNonce:message.body];
+                _serverNonce = resPqMessage.serverNonce;
                 
                 NSMutableData *pBytes = [[NSMutableData alloc] init];
                 uint64_t p = factP;
@@ -287,8 +309,16 @@ typedef enum {
                 SecRandomCopyBytes(kSecRandomDefault, 32, nonceBytes);
                 _newNonce = [[NSData alloc] initWithBytes:nonceBytes length:32];
                 
-                id innerData = [mtProto.context.serialization pqInnerData:_nonce serverNonce:_serverNonce pq:pqBytes p:_dhP q:_dhQ newNonce:_newNonce];
-                NSData *innerDataBytes = [mtProto.context.serialization serializeMessage:innerData];
+                MTBuffer *innerDataBuffer = [[MTBuffer alloc] init];
+                [innerDataBuffer appendInt32:(int32_t)0x83c95aec];
+                [innerDataBuffer appendTLBytes:pqBytes];
+                [innerDataBuffer appendTLBytes:_dhP];
+                [innerDataBuffer appendTLBytes:_dhQ];
+                [innerDataBuffer appendBytes:_nonce.bytes length:_nonce.length];
+                [innerDataBuffer appendBytes:_serverNonce.bytes length:_serverNonce.length];
+                [innerDataBuffer appendBytes:_newNonce.bytes length:_newNonce.length];
+                
+                NSData *innerDataBytes = innerDataBuffer.data;
                 
                 NSMutableData *dataWithHash = [[NSMutableData alloc] init];
                 [dataWithHash appendData:MTSha1(innerDataBytes)];
@@ -328,11 +358,13 @@ typedef enum {
             }
         }
     }
-    else if (_stage == MTDatacenterAuthStageReqDH && [mtProto.context.serialization isMessageServerDhParams:message.body])
+    else if (_stage == MTDatacenterAuthStageReqDH && [message.body isKindOfClass:[MTServerDhParamsMessage class]])
     {
-        if ([_nonce isEqualToData:[mtProto.context.serialization serverDhParamsNonce:message.body]] && [_serverNonce isEqualToData:[mtProto.context.serialization serverDhParamsServerNonce:message.body]])
+        MTServerDhParamsMessage *serverDhParamsMessage = message.body;
+        
+        if ([_nonce isEqualToData:serverDhParamsMessage.nonce] && [_serverNonce isEqualToData:serverDhParamsMessage.serverNonce])
         {
-            if ([mtProto.context.serialization isMessageServerDhParamsOk:message.body])
+            if ([serverDhParamsMessage isKindOfClass:[MTServerDhParamsOkMessage class]])
             {
                 NSMutableData *tmpAesKey = [[NSMutableData alloc] init];
                 
@@ -363,7 +395,7 @@ typedef enum {
                 NSData *newNonce0_4 = [[NSData alloc] initWithBytes:((uint8_t *)_newNonce.bytes) length:4];
                 [tmpAesIv appendData:newNonce0_4];
                 
-                NSData *answerWithHash = MTAesDecrypt([mtProto.context.serialization serverDhParamsOkEncryptedAnswer:message.body], tmpAesKey, tmpAesIv);
+                NSData *answerWithHash = MTAesDecrypt(((MTServerDhParamsOkMessage *)serverDhParamsMessage).encryptedResponse, tmpAesKey, tmpAesIv);
                 NSData *answerHash = [[NSData alloc] initWithBytes:((uint8_t *)answerWithHash.bytes) length:20];
                 
                 NSMutableData *answerData = [[NSMutableData alloc] initWithBytes:(((uint8_t *)answerWithHash.bytes) + 20) length:(answerWithHash.length - 20)];
@@ -388,12 +420,9 @@ typedef enum {
                     return;
                 }
                 
-                NSInputStream *answerIs = [NSInputStream inputStreamWithData:answerData];
-                [answerIs open];
-                id dhInnerData = [mtProto.context.serialization parseMessage:answerIs responseParsingBlock:nil];
-                [answerIs close];
+                MTServerDhInnerDataMessage *dhInnerData = [MTInternalMessageParser parseMessage:answerData];
                 
-                if (![mtProto.context.serialization isMessageServerDhInnerData:dhInnerData])
+                if (![dhInnerData isKindOfClass:[MTServerDhInnerDataMessage class]])
                 {
                     MTLog(@"[MTDatacenterAuthMessageService#%p couldn't parse decoded DH params]", self);
                     [self reset:mtProto];
@@ -401,7 +430,7 @@ typedef enum {
                     return;
                 }
                 
-                if (![_nonce isEqualToData:[mtProto.context.serialization serverDhInnerDataNonce:dhInnerData]])
+                if (![_nonce isEqualToData:dhInnerData.nonce])
                 {
                     MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH nonce]", self);
                     [self reset:mtProto];
@@ -409,7 +438,7 @@ typedef enum {
                     return;
                 }
                 
-                if (![_serverNonce isEqualToData:[mtProto.context.serialization serverDhInnerDataServerNonce:dhInnerData]])
+                if (![_serverNonce isEqualToData:dhInnerData.serverNonce])
                 {
                     MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH server nonce]", self);
                     [self reset:mtProto];
@@ -417,7 +446,7 @@ typedef enum {
                     return;
                 }
                 
-                int32_t innerDataG = [mtProto.context.serialization serverDhInnerDataG:dhInnerData];
+                int32_t innerDataG = dhInnerData.g;
                 if (innerDataG < 0 || !MTCheckIsSafeG((unsigned int)innerDataG))
                 {
                     MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH g]", self);
@@ -426,8 +455,8 @@ typedef enum {
                     return;
                 }
                 
-                NSData *innerDataGA = [mtProto.context.serialization serverDhInnerDataGA:dhInnerData];
-                NSData *innerDataDhPrime = [mtProto.context.serialization serverDhInnerDataDhPrime:dhInnerData];
+                NSData *innerDataGA = dhInnerData.gA;
+                NSData *innerDataDhPrime = dhInnerData.dhPrime;
                 if (!MTCheckIsSafeGAOrB(innerDataGA, innerDataDhPrime))
                 {
                     MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH g_a]", self);
@@ -477,8 +506,15 @@ typedef enum {
                 
                 _authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey authKeyId:authKeyId saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:*((int64_t *)serverSaltData.bytes) firstValidMessageId:((int64_t)message.timestamp) * 4294967296 lastValidMessageId:((int64_t)(message.timestamp + 29.0 * 60.0)) * 4294967296]] authKeyAttributes:nil];
                 
-                id clientInnerData = [mtProto.context.serialization clientDhInnerData:_nonce serverNonce:_serverNonce g_b:g_b retryId:0];
-                NSData *clientInnerDataBytes = [mtProto.context.serialization serializeMessage:clientInnerData];
+                //client_DH_inner_data#6643b654 nonce:int128 server_nonce:int128 retry_id:long g_b:bytes = Client_DH_Inner_Data;
+                MTBuffer *clientDhInnerDataBuffer = [[MTBuffer alloc] init];
+                [clientDhInnerDataBuffer appendInt32:(int32_t)0x6643b654];
+                [clientDhInnerDataBuffer appendBytes:_nonce.bytes length:_nonce.length];
+                [clientDhInnerDataBuffer appendBytes:_serverNonce.bytes length:_serverNonce.length];
+                [clientDhInnerDataBuffer appendInt64:0];
+                [clientDhInnerDataBuffer appendTLBytes:g_b];
+                
+                NSData *clientInnerDataBytes = clientDhInnerDataBuffer.data;
                 
                 NSMutableData *clientDataWithHash = [[NSMutableData alloc] init];
                 [clientDataWithHash appendData:MTSha1(clientInnerDataBytes)];
@@ -505,9 +541,11 @@ typedef enum {
             }
         }
     }
-    else if (_stage == MTDatacenterAuthStageKeyVerification && [mtProto.context.serialization isMessageSetClientDhParamsAnswer:message.body])
+    else if (_stage == MTDatacenterAuthStageKeyVerification && [message.body isKindOfClass:[MTSetClientDhParamsResponseMessage class]])
     {
-        if ([_nonce isEqualToData:[mtProto.context.serialization setClientDhParamsNonce:message.body]] && [_serverNonce isEqualToData:[mtProto.context.serialization setClientDhParamsServerNonce:message.body]])
+        MTSetClientDhParamsResponseMessage *setClientDhParamsResponseMessage = message.body;
+        
+        if ([_nonce isEqualToData:setClientDhParamsResponseMessage.nonce] && [_serverNonce isEqualToData:setClientDhParamsResponseMessage.serverNonce])
         {
             NSData *authKeyAuxHashFull = MTSha1(_authInfo.authKey);
             NSData *authKeyAuxHash = [[NSData alloc] initWithBytes:((uint8_t *)authKeyAuxHashFull.bytes) length:8];
@@ -536,9 +574,9 @@ typedef enum {
             NSData *newNonceHash3Full = MTSha1(newNonce3);
             NSData *newNonceHash3 = [[NSData alloc] initWithBytes:(((uint8_t *)newNonceHash3Full.bytes) + newNonceHash3Full.length - 16) length:16];
             
-            if ([mtProto.context.serialization isMessageSetClientDhParamsAnswerOk:message.body])
+            if ([setClientDhParamsResponseMessage isKindOfClass:[MTSetClientDhParamsResponseOkMessage class]])
             {
-                if (![newNonceHash1 isEqualToData:[mtProto.context.serialization setClientDhParamsNewNonceHash1:message.body]])
+                if (![newNonceHash1 isEqualToData:((MTSetClientDhParamsResponseOkMessage *)setClientDhParamsResponseMessage).nextNonceHash1])
                 {
                     MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH answer nonce hash 1]", self);
                     [self reset:mtProto];
@@ -555,9 +593,9 @@ typedef enum {
                         [delegate authMessageServiceCompletedWithAuthInfo:_authInfo];
                 }
             }
-            else if ([mtProto.context.serialization isMessageSetClientDhParamsAnswerRetry:message.body])
+            else if ([setClientDhParamsResponseMessage isKindOfClass:[MTSetClientDhParamsResponseRetryMessage class]])
             {
-                if (![newNonceHash2 isEqualToData:[mtProto.context.serialization setClientDhParamsNewNonceHash2:message.body]])
+                if (![newNonceHash2 isEqualToData:((MTSetClientDhParamsResponseRetryMessage *)setClientDhParamsResponseMessage).nextNonceHash2])
                 {
                     MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH answer nonce hash 2]", self);
                     [self reset:mtProto];
@@ -568,9 +606,9 @@ typedef enum {
                     [self reset:mtProto];
                 }
             }
-            else if ([mtProto.context.serialization isMessageSetClientDhParamsAnswerFail:message.body])
+            else if ([setClientDhParamsResponseMessage isKindOfClass:[MTSetClientDhParamsResponseFailMessage class]])
             {
-                if (![newNonceHash3 isEqualToData:[mtProto.context.serialization setClientDhParamsNewNonceHash3:message.body]])
+                if (![newNonceHash3 isEqualToData:((MTSetClientDhParamsResponseFailMessage *)setClientDhParamsResponseMessage).nextNonceHash3])
                 {
                     MTLog(@"[MTDatacenterAuthMessageService#%p invalid DH answer nonce hash 3]", self);
                     [self reset:mtProto];

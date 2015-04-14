@@ -8,11 +8,8 @@
 
 #import <MTProtoKit/MTSessionInfo.h>
 
+#import <MTProtoKit/MTLogging.h>
 #import <MTProtoKit/MTContext.h>
-
-#import <set>
-#import <vector>
-#import <map>
 
 @interface MTScheduledMessageConfirmation : NSObject
 
@@ -60,9 +57,9 @@
     
     int64_t _lastServerMessageId;
     
-    std::set<int64_t> _processedMessageIds;
+    NSMutableSet *_processedMessageIdsSet;
     NSMutableArray *_scheduledMessageConfirmations;
-    std::map<int64_t, NSArray *> _containerMessagesMapping;
+    NSMutableDictionary *_containerMessagesMappingDict;
 }
 
 @end
@@ -85,6 +82,9 @@
         _context = context;
         
         _scheduledMessageConfirmations = [[NSMutableArray alloc] init];
+        
+        _processedMessageIdsSet = [[NSMutableSet alloc] init];
+        _containerMessagesMappingDict = [[NSMutableDictionary alloc] init];
     }
     return self;
 }
@@ -138,12 +138,12 @@
 
 - (bool)messageProcessed:(int64_t)messageId
 {
-    return _processedMessageIds.find(messageId) != _processedMessageIds.end();
+    return [_processedMessageIdsSet containsObject:@(messageId)];
 }
 
 - (void)setMessageProcessed:(int64_t)messageId
 {
-    _processedMessageIds.insert(messageId);
+    [_processedMessageIdsSet addObject:@(messageId)];
 }
 
 - (void)scheduleMessageConfirmation:(int64_t)messageId size:(NSInteger)size
@@ -246,32 +246,29 @@
 
 - (void)addContainerMessageIdMapping:(int64_t)containerMessageId childMessageIds:(NSArray *)childMessageIds
 {
-    _containerMessagesMapping[containerMessageId] = childMessageIds;
+    _containerMessagesMappingDict[@(containerMessageId)] = childMessageIds;
 }
 
 - (NSArray *)messageIdsInContainer:(int64_t)containerMessageId
 {
-    auto it = _containerMessagesMapping.find(containerMessageId);
-    if (it != _containerMessagesMapping.end())
-        return it->second;
-    
-    return nil;
+    return _containerMessagesMappingDict[@(containerMessageId)];
 }
 
 - (NSArray *)messageIdsInContainersAfterMessageId:(int64_t)firstMessageId
 {
     NSMutableArray *array = [[NSMutableArray alloc] init];
     
-    for (auto it = _containerMessagesMapping.begin(); it != _containerMessagesMapping.end(); it++)
+    [_containerMessagesMappingDict enumerateKeysAndObjectsUsingBlock:^(NSNumber *nContainerMessageId, NSArray *messageIds, __unused BOOL *stop)
     {
-        for (NSNumber *nMessageId in it->second)
+        int64_t containerMessageId = (int64_t)[nContainerMessageId longLongValue];
+        for (NSNumber *nMessageId in messageIds)
         {
-            if (it->first >= firstMessageId || ((int64_t)[nMessageId longLongValue]) >= firstMessageId)
+            if (containerMessageId >= firstMessageId || ((int64_t)[nMessageId longLongValue]) >= firstMessageId)
             {
                 [array addObject:nMessageId];
             }
         }
-    }
+    }];
     
     return array;
 }

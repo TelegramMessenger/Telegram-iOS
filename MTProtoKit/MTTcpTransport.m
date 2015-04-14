@@ -8,6 +8,7 @@
 
 #import <MTProtoKit/MTTcpTransport.h>
 
+#import <MTProtoKit/MTLogging.h>
 #import <MTProtoKit/MTQueue.h>
 #import <MTProtoKit/MTTimer.h>
 #import <MTProtoKit/MTTime.h>
@@ -24,6 +25,8 @@
 #import <MTProtoKit/MTTcpConnectionBehaviour.h>
 
 #import <MTProtoKit/MTSerialization.h>
+#import <MTProtoKit/MTBuffer.h>
+#import <MTProtoKit/MTPongMessage.h>
 
 static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 
@@ -536,7 +539,12 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
             
             int64_t randomId = 0;
             arc4random_buf(&randomId, 8);
-            MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithBody:[self.context.serialization ping:randomId]];
+            
+            MTBuffer *pingBuffer = [[MTBuffer alloc] init];
+            [pingBuffer appendInt32:(int32_t)0x7abe77ec];
+            [pingBuffer appendInt64:randomId];
+            
+            MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:pingBuffer.data metadata:@"ping"];
             outgoingMessage.requiresConfirmation = false;
             
             __weak MTTcpTransport *weakSelf = self;
@@ -652,11 +660,11 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 
 - (void)mtProto:(MTProto *)__unused mtProto receivedMessage:(MTIncomingMessage *)incomingMessage
 {
-    if ([self.context.serialization isMessagePong:incomingMessage.body])
+    if ([incomingMessage.body isKindOfClass:[MTPongMessage class]])
     {
         [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
         {
-            if (_currentActualizationPingMessageId != 0 && [self.context.serialization pongMessageId:incomingMessage.body] == _currentActualizationPingMessageId)
+            if (_currentActualizationPingMessageId != 0 && ((MTPongMessage *)incomingMessage.body).messageId == _currentActualizationPingMessageId)
             {
                 [self stopActualizationPingResendTimer];
                 

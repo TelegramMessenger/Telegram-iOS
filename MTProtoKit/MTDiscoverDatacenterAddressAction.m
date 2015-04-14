@@ -103,15 +103,19 @@
             [_mtProto addMessageService:_requestService];
             
             MTRequest *request = [[MTRequest alloc] init];
-            request.body = [context.serialization getConfig];
+            
+            NSData *getConfigData = nil;
+            MTRequestDatacenterAddressListParser responseParser = [_context.serialization requestDatacenterAddressList:_targetDatacenterId data:&getConfigData];
+            
+            [request setPayload:getConfigData metadata:@"getConfig" responseParser:responseParser];
             
             __weak MTDiscoverDatacenterAddressAction *weakSelf = self;
-            [request setCompleted:^(id result, __unused NSTimeInterval completionTimestamp, id error)
+            [request setCompleted:^(MTDatacenterAddressListData *result, __unused NSTimeInterval completionTimestamp, id error)
             {
                 __strong MTDiscoverDatacenterAddressAction *strongSelf = weakSelf;
                 
                 if (error == nil)
-                    [strongSelf getConfigSuccess:[context.serialization datacenterAddressListFromConfig:result datacenterId:_datacenterId]];
+                    [strongSelf getConfigSuccess:result.addressList];
                 else
                     [strongSelf getConfigFailed];
             }];

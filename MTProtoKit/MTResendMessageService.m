@@ -6,6 +6,8 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
+#import <Foundation/Foundation.h>
+#import <MTProtoKit/MTLogging.h>
 #import <MTProtoKit/MTResendMessageService.h>
 
 #import <MTProtoKit/MTProto.h>
@@ -15,6 +17,8 @@
 #import <MTProtoKit/MTOutgoingMessage.h>
 #import <MTProtoKit/MTPreparedMessage.h>
 #import <MTProtoKit/MTIncomingMessage.h>
+#import <MTProtoKit/MTBuffer.h>
+#import <MTProtoKit/MTMsgsStateInfoMessage.h>
 
 @interface MTResendMessageService ()
 {
@@ -51,7 +55,15 @@
     {
         _currentRequestTransactionId = nil;
         
-        MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithBody:[mtProto.context.serialization resendMessagesRequest:@[@(_messageId)]]];
+        MTBuffer *resendRequestBuffer = [[MTBuffer alloc] init];
+        [resendRequestBuffer appendInt32:(int32_t)0x7d861a08];
+        [resendRequestBuffer appendInt32:481674261];
+        [resendRequestBuffer appendInt32:1];
+        [resendRequestBuffer appendInt64:_messageId];
+        
+        NSData *resentMessagesRequestData = resendRequestBuffer.data;
+        
+        MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:resentMessagesRequestData metadata:@"resendMessages"];
         outgoingMessage.requiresConfirmation = false;
         
         return [[MTMessageTransaction alloc] initWithMessagePayload:@[outgoingMessage] completion:^(NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
@@ -123,7 +135,7 @@
         if ([delegate respondsToSelector:@selector(resendMessageServiceCompleted:)])
             [delegate resendMessageServiceCompleted:self];
     }
-    else if ([mtProto.context.serialization isMessageMsgsStateInfo:message.body forInfoRequestMessageId:_currentRequestMessageId])
+    else if ([message.body isKindOfClass:[MTMsgsStateInfoMessage class]] && ((MTMsgsStateInfoMessage *)message.body).requestMessageId)
     {
         id<MTResendMessageServiceDelegate> delegate = _delegate;
         if ([delegate respondsToSelector:@selector(resendMessageServiceCompleted:)])

@@ -6,6 +6,8 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
+#import <Foundation/Foundation.h>
+
 @class MTProto;
 @class MTIncomingMessage;
 @class MTMessageTransaction;
@@ -34,7 +36,5 @@
 - (void)mtProtoConnectionStateChanged:(MTProto *)mtProto isConnected:(bool)isConnected;
 - (void)mtProtoConnectionContextUpdateStateChanged:(MTProto *)mtProto isUpdatingConnectionContext:(bool)isUpdatingConnectionContext;
 - (void)mtProtoServiceTasksStateChanged:(MTProto *)mtProto isPerformingServiceTasks:(bool)isPerformingServiceTasks;
-
-- (int32_t)possibleSignatureForResult:(int64_t)messageId found:(bool *)found;
 
 @end

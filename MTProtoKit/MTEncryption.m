@@ -8,6 +8,7 @@
 
 #import <MTProtoKit/MTEncryption.h>
 
+#import <MTProtoKit/MTLogging.h>
 #import <MTProtoKit/MTKeychain.h>
 
 #import <CommonCrypto/CommonCrypto.h>

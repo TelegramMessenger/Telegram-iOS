@@ -6,6 +6,8 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
+#import <Foundation/Foundation.h>
+#import <MTProtoKit/MTLogging.h>
 #import <MTProtoKit/MTInputStream.h>
 
 #if TARGET_OS_IPHONE
@@ -346,13 +348,6 @@ static inline int roundUpInput(int numToRound, int multiple)
         length = 0;
         [_wrappedInputStream read:((uint8_t *)&length) + 1 maxLength:3];
         length >>= 8;
-        
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-#elif __BYTE_ORDER == __BIG_ENDIAN
-#   error "Big endian is not implemented"
-#else
-#   error "Unknown byte order"
-#endif
         
         paddingBytes = roundUpInput(length, 4) - length;
     }

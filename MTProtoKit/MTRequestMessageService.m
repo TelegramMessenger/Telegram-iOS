@@ -8,6 +8,7 @@
 
 #import <MTProtoKit/MTRequestMessageService.h>
 
+#import <MTProtoKit/MTLogging.h>
 #import <MtProtoKit/MTTime.h>
 #import <MtProtoKit/MTTimer.h>
 #import <MTProtoKit/MTContext.h>
@@ -24,6 +25,12 @@
 #import <MTProtoKit/MTDropResponseContext.h>
 #import <MTProtoKit/MTApiEnvironment.h>
 #import <MTProtoKit/MTDatacenterAuthInfo.h>
+#import <MTProtoKit/MTBuffer.h>
+
+#import <MTProtoKit/MTInternalMessageParser.h>
+#import <MTProtoKit/MTRpcResultMessage.h>
+#import <MTProtoKit/MTRpcError.h>
+#import <MTProtoKit/MTDropRpcResultMessage.h>
 
 @interface MTRequestMessageService ()
 {
@@ -264,16 +271,29 @@
     _serialization = mtProto.context.serialization;
 }
 
-- (id)decorateRequest:(MTRequest *)request initializeApi:(bool)initializeApi unresolvedDependencyOnRequestInternalId:(__autoreleasing id *)unresolvedDependencyOnRequestInternalId
+- (NSData *)decorateRequestData:(MTRequest *)request initializeApi:(bool)initializeApi unresolvedDependencyOnRequestInternalId:(__autoreleasing id *)unresolvedDependencyOnRequestInternalId
 {    
-    id currentBody = request.body;
+    NSData *currentData = request.payload;
     
-    if ([_serialization isMessageRpcWithLayer:request.body])
+    if (initializeApi && _apiEnvironment != nil)
     {
-        if (initializeApi && _apiEnvironment != nil)
-        {
-            currentBody = [_serialization wrapInLayer:[_serialization connectionWithApiId:_apiEnvironment.apiId deviceModel:_apiEnvironment.deviceModel systemVersion:_apiEnvironment.systemVersion appVersion:_apiEnvironment.appVersion langCode:_apiEnvironment.langCode query:currentBody]];
-        }
+        MTBuffer *buffer = [[MTBuffer alloc] init];
+        
+        // invokeWithLayer
+        [buffer appendInt32:(int32_t)0xda9b0d0d];
+        [buffer appendInt32:(int32_t)[_serialization currentLayer]];
+        
+        // initConnection
+        [buffer appendInt32:(int32_t)0x69796de9];
+        [buffer appendInt32:(int32_t)_apiEnvironment.apiId];
+        [buffer appendTLString:_apiEnvironment.deviceModel];
+        [buffer appendTLString:_apiEnvironment.systemVersion];
+        [buffer appendTLString:_apiEnvironment.appVersion];
+        [buffer appendTLString:_apiEnvironment.langCode];
+        
+        [buffer appendBytes:currentData.bytes length:currentData.length];
+        
+        currentData = buffer.data;
     }
     
     if (request.shouldDependOnRequest != nil)
@@ -287,7 +307,16 @@
                 if (request.shouldDependOnRequest(anotherRequest))
                 {
                     if (anotherRequest.requestContext != nil)
-                        currentBody = [_serialization invokeAfterMessageId:anotherRequest.requestContext.messageId query:currentBody];
+                    {
+                        MTBuffer *buffer = [[MTBuffer alloc] init];
+                        
+                        // invokeAfterMsg
+                        [buffer appendInt32:(int32_t)0xcb9f372d];
+                        [buffer appendInt64:anotherRequest.requestContext.messageId];
+                        [buffer appendBytes:currentData.bytes length:currentData.length];
+                        
+                        currentData = buffer.data;
+                    }
                     else if (unresolvedDependencyOnRequestInternalId != nil)
                         *unresolvedDependencyOnRequestInternalId = anotherRequest.internalId;
                     
@@ -297,7 +326,7 @@
         }
     }
     
-    return currentBody;
+    return currentData;
 }
 
 - (MTMessageTransaction *)mtProtoMessageTransaction:(MTProto *)mtProto
@@ -333,26 +362,31 @@
                 messageId = request.requestContext.messageId;
                 messageSeqNo = request.requestContext.messageSeqNo;
             }
-            MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithBody:[self decorateRequest:request initializeApi:requestsWillInitializeApi unresolvedDependencyOnRequestInternalId:&autoreleasingUnresolvedDependencyOnRequestInternalId] messageId:messageId messageSeqNo:messageSeqNo];
+            
+            MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:[self decorateRequestData:request initializeApi:requestsWillInitializeApi unresolvedDependencyOnRequestInternalId:&autoreleasingUnresolvedDependencyOnRequestInternalId] metadata:request.metadata messageId:messageId messageSeqNo:messageSeqNo];
             outgoingMessage.needsQuickAck = request.acknowledgementReceived != nil;
             outgoingMessage.hasHighPriority = request.hasHighPriority;
             
             id unresolvedDependencyOnRequestInternalId = autoreleasingUnresolvedDependencyOnRequestInternalId;
             if (unresolvedDependencyOnRequestInternalId != nil)
             {
-                id<MTSerialization> serialization = _serialization;
-                
-                outgoingMessage.dynamicDecorator = ^id (id currentBody, NSDictionary *messageInternalIdToPreparedMessage)
+                outgoingMessage.dynamicDecorator = ^id (NSData *currentData, NSDictionary *messageInternalIdToPreparedMessage)
                 {
                     id messageInternalId = requestInternalIdToMessageInternalId[unresolvedDependencyOnRequestInternalId];
                     if (messageInternalId != nil)
                     {
                         MTPreparedMessage *preparedMessage = messageInternalIdToPreparedMessage[messageInternalId];
                         if (preparedMessage != nil)
-                            return [serialization invokeAfterMessageId:preparedMessage.messageId query:currentBody];
+                        {
+                            MTBuffer *invokeAfterBuffer = [[MTBuffer alloc] init];
+                            [invokeAfterBuffer appendInt32:(int32_t)0xcb9f372d];
+                            [invokeAfterBuffer appendInt64:preparedMessage.messageId];
+                            [invokeAfterBuffer appendBytes:currentData.bytes length:currentData.length];
+                            return invokeAfterBuffer.data;
+                        }
                     }
                     
-                    return currentBody;
+                    return currentData;
                 };
             }
             
@@ -369,7 +403,11 @@
         if (dropMessageIdToMessageInternalId == nil)
             dropMessageIdToMessageInternalId = [[NSMutableDictionary alloc] init];
         
-        MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithBody:[_serialization dropAnswerToMessageId:dropContext.dropMessageId] messageId:dropContext.messageId messageSeqNo:dropContext.messageSeqNo];
+        MTBuffer *dropAnswerBuffer = [[MTBuffer alloc] init];
+        [dropAnswerBuffer appendInt32:(int32_t)0x58e4a740];
+        [dropAnswerBuffer appendInt64:dropContext.dropMessageId];
+        
+        MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:dropAnswerBuffer.data metadata:@"dropAnswer" messageId:dropContext.messageId messageSeqNo:dropContext.messageSeqNo];
         outgoingMessage.requiresConfirmation = false;
         dropMessageIdToMessageInternalId[@(dropContext.dropMessageId)] = outgoingMessage.internalId;
         [messages addObject:outgoingMessage];
@@ -411,15 +449,19 @@
 
 - (void)mtProto:(MTProto *)__unused mtProto receivedMessage:(MTIncomingMessage *)message
 {
-    if ([_serialization isMessageRpcResult:message.body])
+    if ([message.body isKindOfClass:[MTRpcResultMessage class]])
     {
-        if ([_serialization isRpcDroppedAnswer:message.body])
+        MTRpcResultMessage *rpcResultMessage = message.body;
+        
+        id maybeInternalMessage = [MTInternalMessageParser parseMessage:rpcResultMessage.data];
+        
+        if ([maybeInternalMessage isKindOfClass:[MTDropRpcResultMessage class]])
         {
             NSInteger index = -1;
             for (MTDropResponseContext *dropContext in _dropReponseContexts)
             {
                 index++;
-                if (dropContext.messageId == [_serialization rpcDropedAnswerDropMessageId:message.body])
+                if (dropContext.messageId == rpcResultMessage.requestMessageId)
                 {
                     [_dropReponseContexts removeObjectAtIndex:(NSUInteger)index];
                     break;
@@ -428,9 +470,6 @@
         }
         else
         {
-            int64_t requestMessageId = 0;
-            id rpcResult = [_serialization rpcResultBody:message.body requestMessageId:&requestMessageId];
-            
             bool requestFound = false;
             
             int index = -1;
@@ -438,18 +477,34 @@
             {
                 index++;
                 
-                if (request.requestContext != nil && request.requestContext.messageId == requestMessageId)
+                if (request.requestContext != nil && request.requestContext.messageId == rpcResultMessage.requestMessageId)
                 {
                     requestFound = true;
                     
                     bool restartRequest = false;
                     
-                    bool resultIsError = false;
-                    id object = [_serialization rpcResult:rpcResult requestBody:request.body isError:&resultIsError];
+                    id rpcResult = nil;
+                    MTRpcError *rpcError = nil;
                     
-                    MTLog(@"[MTRequestMessageService#%p response for %" PRId64 " is %@]", self, request.requestContext.messageId, [object class] == nil ? @"nil" : NSStringFromClass([object class]));
+                    if ([maybeInternalMessage isKindOfClass:[MTRpcError class]])
+                        rpcError = maybeInternalMessage;
+                    else
+                    {
+                        rpcResult = request.responseParser(rpcResultMessage.data);
+                        if (rpcResult == nil)
+                            rpcError = [[MTRpcError alloc] initWithErrorCode:400 errorDescription:@"INTERNAL_INVALID_RESPONSE"];
+                    }
                     
-                    if (object != nil && !resultIsError && request.requestContext.willInitializeApi)
+                    if (rpcResult != nil)
+                    {
+                        MTLog(@"[MTRequestMessageService#%p response for %" PRId64 " is %@]", self, request.requestContext.messageId, rpcResult);
+                    }
+                    else
+                    {
+                        MTLog(@"[MTRequestMessageService#%p response for %" PRId64 " is error: %d: %@]", self, request.requestContext.messageId, (int)rpcError.errorCode, rpcError.errorDescription);
+                    }
+                    
+                    if (rpcResult != nil && request.requestContext.willInitializeApi)
                     {
                         MTDatacenterAuthInfo *authInfo = [_context authInfoForDatacenterWithId:mtProto.datacenterId];
                         
@@ -463,15 +518,11 @@
                         }
                     }
                     
-                    if (resultIsError)
+                    if (rpcError != nil)
                     {
-                        MTLog(@"[MTRequestMessageService#%p in response to %" PRId64 " %@]", self, request.requestContext.messageId, [_serialization rpcErrorDescription:object]);
-                        
-                        int32_t errorCode = [_serialization rpcErrorCode:object];
-                        NSString *errorText = [_serialization rpcErrorText:object];
-                        if (errorCode == 401)
+                        if (rpcError.errorCode == 401)
                         {
-                            if ([errorText rangeOfString:@"SESSION_PASSWORD_NEEDED"].location != NSNotFound)
+                            if ([rpcError.errorDescription rangeOfString:@"SESSION_PASSWORD_NEEDED"].location != NSNotFound)
                             {
                                 if (!request.passthroughPasswordEntryError)
                                 {
@@ -485,7 +536,7 @@
                                     [delegate requestMessageServiceAuthorizationRequired:self];
                             }
                         }
-                        else if (errorCode == -500 || errorCode == 500)
+                        else if (rpcError.errorCode == -500 || rpcError.errorCode == 500)
                         {
                             if (request.errorContext == nil)
                                 request.errorContext = [[MTRequestErrorContext alloc] init];
@@ -502,11 +553,11 @@
                             if (request.errorContext == nil)
                                 request.errorContext = [[MTRequestErrorContext alloc] init];
                             
-                            if ([errorText rangeOfString:@"FLOOD_WAIT_"].location != NSNotFound)
+                            if ([rpcError.errorDescription rangeOfString:@"FLOOD_WAIT_"].location != NSNotFound)
                             {
                                 int errorWaitTime = 0;
                                 
-                                NSScanner *scanner = [[NSScanner alloc] initWithString:errorText];
+                                NSScanner *scanner = [[NSScanner alloc] initWithString:rpcError.errorDescription];
                                 [scanner scanUpToString:@"FLOOD_WAIT_" intoString:nil];
                                 [scanner scanString:@"FLOOD_WAIT_" intoString:nil];
                                 if ([scanner scanInt:&errorWaitTime])
@@ -529,7 +580,7 @@
                                 }
                             }
                         }
-                        else if (errorCode == 400 && [errorText rangeOfString:@"CONNECTION_NOT_INITED"].location != NSNotFound)
+                        else if (rpcError.errorCode == 400 && [rpcError.errorDescription rangeOfString:@"CONNECTION_NOT_INITED"].location != NSNotFound)
                         {
                             [_context performBatchUpdates:^
                             {
@@ -729,7 +780,7 @@
         [mtProto requestTransportTransaction];
 }
 
-- (int32_t)possibleSignatureForResult:(int64_t)messageId found:(bool *)found
+/*- (int32_t)possibleSignatureForResult:(int64_t)messageId found:(bool *)found
 {
     for (MTRequest *request in _requests)
     {
@@ -754,6 +805,6 @@
     }
     
     return 0;
-}
+}*/
 
 @end
