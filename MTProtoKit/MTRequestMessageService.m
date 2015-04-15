@@ -490,9 +490,11 @@
                         rpcError = maybeInternalMessage;
                     else
                     {
-                        rpcResult = request.responseParser(rpcResultMessage.data);
+                        rpcResult = request.responseParser([MTInternalMessageParser unwrapMessage:rpcResultMessage.data]);
                         if (rpcResult == nil)
-                            rpcError = [[MTRpcError alloc] initWithErrorCode:400 errorDescription:@"INTERNAL_INVALID_RESPONSE"];
+                        {
+                            rpcError = [[MTRpcError alloc] initWithErrorCode:500 errorDescription:@"INTERNAL_INVALID_RESPONSE"];
+                        }
                     }
                     
                     if (rpcResult != nil)
@@ -548,7 +550,7 @@
                                 request.errorContext.minimalExecuteTime = MAX(request.errorContext.minimalExecuteTime, MTAbsoluteSystemTime() + 2.0);
                             }
                         }
-                        else if (errorCode == 420 || [errorText rangeOfString:@"FLOOD_WAIT_"].location != NSNotFound)
+                        else if (rpcError.errorCode == 420 || [rpcError.errorDescription rangeOfString:@"FLOOD_WAIT_"].location != NSNotFound)
                         {
                             if (request.errorContext == nil)
                                 request.errorContext = [[MTRequestErrorContext alloc] init];
@@ -609,7 +611,7 @@
                         [_requests removeObjectAtIndex:(NSUInteger)index];
                         
                         if (completed)
-                            completed(resultIsError ? nil : object, message.timestamp, resultIsError ? object : nil);
+                            completed(rpcResult, message.timestamp, rpcError);
                     }
                     
                     break;

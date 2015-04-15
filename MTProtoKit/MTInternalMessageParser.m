@@ -24,6 +24,8 @@
 #import <MTProtoKit/MTMsgContainerMessage.h>
 #import <MTProtoKit/MTFutureSaltsMessage.h>
 
+#import <zlib.h>
+
 @implementation MTInternalMessageParser
 
 + (id)parseMessage:(NSData *)data
@@ -410,16 +412,34 @@
             }
             case (int32_t)0x62d6b459:
             {
+                int32_t vectorSignature = 0;
+                if (![reader readInt32:&vectorSignature])
+                {
+                    MTLog(@"[MTInternalMessageParser: msgs_ack can't read vectorSignature]");
+                    return nil;
+                }
+                else if (vectorSignature != (int32_t)0x1cb5c415)
+                {
+                    MTLog(@"[MTInternalMessageParser: msgs_ack invalid vectorSignature]");
+                    return nil;
+                }
+                
                 int32_t count = 0;
                 if (![reader readInt32:&count])
+                {
+                    MTLog(@"[MTInternalMessageParser: msgs_ack can't read count]");
                     return nil;
+                }
                 
                 NSMutableArray *messageIds = [[NSMutableArray alloc] init];
                 for (int32_t i = 0; i < count; i++)
                 {
                     int64_t messageId = 0;
                     if (![reader readInt64:&messageId])
+                    {
+                        MTLog(@"[MTInternalMessageParser: msgs_ack can't read messageId]");
                         return nil;
+                    }
                     [messageIds addObject:@(messageId)];
                 }
                 
@@ -429,7 +449,10 @@
             {
                 int64_t pingId = 0;
                 if (![reader readInt64:&pingId])
+                {
+                    MTLog(@"[MTInternalMessageParser: ping can't read pingId]");
                     return nil;
+                }
                 
                 return [[MTPingMessage alloc] initWithPingId:pingId];
             }
@@ -437,11 +460,17 @@
             {
                 int64_t messageId = 0;
                 if (![reader readInt64:&messageId])
+                {
+                    MTLog(@"[MTInternalMessageParser: pong can't read messageId]");
                     return nil;
+                }
                 
                 int64_t pingId = 0;
                 if (![reader readInt64:&pingId])
+                {
+                    MTLog(@"[MTInternalMessageParser: pong can't read pingId]");
                     return nil;
+                }
                 
                 return [[MTPongMessage alloc] initWithMessageId:messageId pingId:pingId];
             }
@@ -449,15 +478,24 @@
             {
                 int64_t firstMessageId = 0;
                 if (![reader readInt64:&firstMessageId])
+                {
+                    MTLog(@"[MTInternalMessageParser: new_session_created can't read firstMessageId]");
                     return nil;
+                }
                 
                 int64_t uniqueId = 0;
                 if (![reader readInt64:&uniqueId])
+                {
+                    MTLog(@"[MTInternalMessageParser: new_session_created can't read uniqueId]");
                     return nil;
+                }
                 
                 int64_t serverSalt = 0;
                 if (![reader readInt64:&serverSalt])
+                {
+                    MTLog(@"[MTInternalMessageParser: new_session_created can't read serverSalt]");
                     return nil;
+                }
                 
                 return [[MTNewSessionCreatedMessage alloc] initWithFirstMessageId:firstMessageId uniqueId:uniqueId serverSalt:serverSalt];
             }
@@ -465,7 +503,10 @@
             {
                 int64_t sessionId = 0;
                 if (![reader readInt64:&sessionId])
+                {
+                    MTLog(@"[MTInternalMessageParser: destroy_session_ok can't read sessionId]");
                     return nil;
+                }
                 
                 return [[MTDestroySessionResponseOkMessage alloc] initWithSessionId:sessionId];
             }
@@ -473,7 +514,10 @@
             {
                 int64_t sessionId = 0;
                 if (![reader readInt64:&sessionId])
+                {
+                    MTLog(@"[MTInternalMessageParser: destroy_session_none can't read sessionId]");
                     return nil;
+                }
                 
                 return [[MTDestroySessionResponseNoneMessage alloc] initWithSessionId:sessionId];
             }
@@ -487,7 +531,10 @@
             {
                 int32_t count = 0;
                 if (![reader readInt32:&count])
+                {
+                    MTLog(@"[MTInternalMessageParser: msg_container can't read count]");
                     return nil;
+                }
                 
                 NSMutableArray *messages = [[NSMutableArray alloc] init];
                 
@@ -495,23 +542,38 @@
                 {
                     int64_t messageId = 0;
                     if (![reader readInt64:&messageId])
+                    {
+                        MTLog(@"[MTInternalMessageParser: msg_container can't read messageId]");
                         return nil;
+                    }
                     
                     int32_t seqNo = 0;
                     if (![reader readInt32:&seqNo])
+                    {
+                        MTLog(@"[MTInternalMessageParser: msg_container can't read seqNo]");
                         return nil;
+                    }
                     
                     int32_t length = 0;
                     if (![reader readInt32:&length])
+                    {
+                        MTLog(@"[MTInternalMessageParser: msg_container can't read length]");
                         return nil;
+                    }
                     
                     if (length < 0 || length > 16 * 1024 * 1024)
+                    {
+                        MTLog(@"[MTInternalMessageParser: msg_container invalid length %d]", length);
                         return nil;
+                    }
                     
                     NSMutableData *messageData = [[NSMutableData alloc] init];
                     [messageData setLength:(NSUInteger)length];
                     if (![reader readBytes:messageData.mutableBytes length:(NSUInteger)length])
+                    {
+                        MTLog(@"[MTInternalMessageParser: msg_container can't read bytes]");
                         return nil;
+                    }
                     
                     [messages addObject:[[MTMessage alloc] initWithMessageId:messageId seqNo:seqNo data:messageData]];
                 }
@@ -559,6 +621,94 @@
     }
     
     return nil;
+}
+
++ (NSData *)readBytes:(NSData *)data skippingLength:(NSUInteger)skipLength
+{
+    NSUInteger offset = skipLength;
+    
+    uint8_t tmp = 0;
+    [data getBytes:&tmp range:NSMakeRange(offset, 1)];
+    offset += 1;
+    
+    int32_t length = tmp;
+    if (length == 254)
+    {
+        length = 0;
+        [data getBytes:((uint8_t *)&length) + 1 range:NSMakeRange(offset, 3)];
+        offset += 3;
+        length >>= 8;
+    }
+    
+    return [data subdataWithRange:NSMakeRange(offset, length)];
+}
+
++ (NSData *)decompressGZip:(NSData *)data
+{
+    const int kMemoryChunkSize = 1024;
+    
+    NSUInteger length = [data length];
+    int windowBits = 15 + 32; //Default + gzip header instead of zlib header
+    int retCode;
+    unsigned char output[kMemoryChunkSize];
+    uInt gotBack;
+    NSMutableData *result;
+    z_stream stream;
+    
+    if ((length == 0) || (length > UINT_MAX)) //FIXME: Support 64 bit inputs
+        return nil;
+    
+    bzero(&stream, sizeof(z_stream));
+    stream.avail_in = (uInt)length;
+    stream.next_in = (unsigned char*)[data bytes];
+    
+    retCode = inflateInit2(&stream, windowBits);
+    if(retCode != Z_OK)
+    {
+        NSLog(@"%s: inflateInit2() failed with error %i", __PRETTY_FUNCTION__, retCode);
+        return nil;
+    }
+    
+    result = [NSMutableData dataWithCapacity:(length * 4)];
+    do
+    {
+        stream.avail_out = kMemoryChunkSize;
+        stream.next_out = output;
+        retCode = inflate(&stream, Z_NO_FLUSH);
+        if ((retCode != Z_OK) && (retCode != Z_STREAM_END))
+        {
+            NSLog(@"%s: inflate() failed with error %i", __PRETTY_FUNCTION__, retCode);
+            inflateEnd(&stream);
+            return nil;
+        }
+        gotBack = kMemoryChunkSize - stream.avail_out;
+        if (gotBack > 0)
+            [result appendBytes:output length:gotBack];
+    } while( retCode == Z_OK);
+    inflateEnd(&stream);
+    
+    return (retCode == Z_STREAM_END ? result : nil);
+}
+
++ (NSData *)unwrapMessage:(NSData *)data
+{
+    if (data.length < 4)
+        return data;
+    
+    int32_t signature = 0;
+    [data getBytes:&signature length:4];
+    
+    if (signature == (int32_t)0x3072cfa1)
+    {
+        NSData *packedData = [self readBytes:data skippingLength:4];
+        if (packedData != nil)
+        {
+            NSData *unpackedData = [self decompressGZip:packedData];
+            return unpackedData;
+        }
+    }
+    
+    return data;
 }
 
 @end

@@ -1633,11 +1633,12 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
 
 - (id)parseMessage:(NSData *)data
 {
-    id internalMessage = [MTInternalMessageParser parseMessage:data];
+    NSData *unwrappedData = [MTInternalMessageParser unwrapMessage:data];
+    id internalMessage = [MTInternalMessageParser parseMessage:unwrappedData];
     if (internalMessage != nil)
         return internalMessage;
     
-    return [_context.serialization parseMessage:data];
+    return [_context.serialization parseMessage:unwrappedData];
 }
 
 - (NSArray *)_parseIncomingMessages:(NSData *)data dataMessageId:(out int64_t *)dataMessageId parseError:(out bool *)parseError
