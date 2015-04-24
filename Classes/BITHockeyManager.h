@@ -30,6 +30,8 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 
+#import "HockeySDKFeatureConfig.h"
+
 
 @protocol BITHockeyManagerDelegate;
 
