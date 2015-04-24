@@ -111,7 +111,7 @@ body { font: 13px 'Helvetica Neue', Helvetica; color:#626262; word-wrap:break-wo
   if (_webViewContent != aWebViewContent) {
     _webViewContent = aWebViewContent;
     
-    // add basic accessiblity (prevents "snarfed from ivar layout") logs
+    // add basic accessibility (prevents "snarfed from ivar layout") logs
     self.accessibilityLabel = aWebViewContent;
   }
 }

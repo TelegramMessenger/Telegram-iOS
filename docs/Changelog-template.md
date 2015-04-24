@@ -1,3 +1,27 @@
+## Version 3.6.3
+
+- [NEW] `BITCrashManager`: Added launch time to crash reports
+- [NEW] `BITFeedbackManager`: Added support for setting tintColor for feedback list buttons
+- [NEW] `BITFeedbackManager`: Added `feedbackComposerPreparedItems` to prefill feedback compose UI message with given items
+- [NEW] `BITUpdateManagerDelegate`: Added `willStartDownloadAndUpdate` to be notified before beta update starts
+- [UPDATE] Improved CocoaPods support to allow building as a native iOS 8 framework
+- [UPDATE] Keychain is now accessed with `kSecAttrAccessibleAlwaysThisDeviceOnly` to support apps that are running in the background and the device is still locked
+- [UPDATE] Reduced file size of images in `HockeySDKResources.bundle` by 63%
+- [UPDATE] `BITCrashManager`: `timeintervalCrashInLastSessionOccured` property is deprecated due to typo, use `timeIntervalCrashInLastSessionOccurred` instead
+- [UPDATE] `BITFeedbackManager`: `BITFeedbackListViewCellPresentatationStyle` is deprecated due to a typo, use `BITFeedbackListViewCellPresentationStyle` instead
+- [UPDATE] `BITAuthenticator`: Use NSLog instead of an UIAlertView in case of keychain issues
+- [BUGFIX] `BITCrashManager`: Fixed issue with `appNotTerminatingCleanlyDetection` for some scenarios
+- [BUGFIX] `BITFeedbackManager`: Fixed a crash when deleting feedback attachments
+- [BUGFIX] `BITFeedbackManager`: Fixed a crash related to viewing attachments
+- [BUGFIX] `BITFeedbackManager`: Fixed landscape screenshot issues in iOS 8
+- [BUGFIX] `BITFeedbackManager`: Fixed various issues in feedback compose UI
+- [BUGFIX] `BITFeedbackManager`: Fixed loading issues for attachments in feedback UI
+- [BUGFIX] `BITFeedbackManager`: Fixed statusbar issues and the image attachment picker with apps not showing a status bar
+- [BUGFIX] Removed a header file from the crash only build that is not needed
+- [BUGFIX] Fixed various typos in documentation, properties
+- [BUGFIX] Fixed various compiler warnings
+- [BUGFIX] Various additional fixes
+
 ## Version 3.6.2
 
 - [UPDATE] Store anonymous UUID asynchronously into the keychain to work around rare keychain blocking behavior

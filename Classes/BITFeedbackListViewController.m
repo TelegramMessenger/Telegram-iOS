@@ -291,7 +291,7 @@
     [deleteAction setActionSheetStyle:UIActionSheetStyleBlackTranslucent];
     [deleteAction showInView:[self viewForShowingActionSheetOnPhone]];
   } else {
-    UIAlertView *deleteAction = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListButonDeleteAllMessages")
+    UIAlertView *deleteAction = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListButtonDeleteAllMessages")
                                                            message:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllTitle")
                                                           delegate:self
                                                  cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllCancel")
@@ -303,7 +303,7 @@
 }
 
 - (UIView*) viewForShowingActionSheetOnPhone {
-  //find the topmost presented viewcontroller
+  //find the topmost presented view controller
   //and use its view
   UIViewController* topMostPresentedViewController = self.view.window.rootViewController;
   while(topMostPresentedViewController.presentedViewController) {
@@ -514,7 +514,11 @@
     // button
     NSString *titleString = nil;
     SEL actionSelector = nil;
+    
     UIColor *titleColor = BIT_RGBCOLOR(35, 111, 251);
+    if ([self.view respondsToSelector:@selector(tintColor)]){
+      titleColor = self.view.tintColor;
+    }
     
     UIButton *button = nil;
     if ([self.manager isPreiOS7Environment]) {
@@ -535,9 +539,9 @@
     if (indexPath.section == 0) {
       topGap = 22;
       if ([self.manager numberOfMessages] == 0) {
-        titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButonWriteFeedback");
+        titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButtonWriteFeedback");
       } else {
-        titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButonWriteResponse");
+        titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButtonWriteResponse");
       }
       actionSelector = @selector(newFeedbackAction:);
     } else if (indexPath.section == _userButtonSection) {
@@ -545,15 +549,15 @@
       if ([self.manager requireUserName] == BITFeedbackUserDataElementRequired ||
           ([self.manager requireUserName] == BITFeedbackUserDataElementOptional && [self.manager userName] != nil)
           ) {
-        titleString = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListButonUserDataWithName"), [self.manager userName] ?: @"-"];
+        titleString = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListButtonUserDataWithName"), [self.manager userName] ?: @"-"];
       } else if ([self.manager requireUserEmail] == BITFeedbackUserDataElementRequired ||
                  ([self.manager requireUserEmail] == BITFeedbackUserDataElementOptional && [self.manager userEmail] != nil)
                  ) {
-        titleString = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListButonUserDataWithEmail"), [self.manager userEmail] ?: @"-"];
+        titleString = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListButtonUserDataWithEmail"), [self.manager userEmail] ?: @"-"];
       } else if ([self.manager requireUserName] == BITFeedbackUserDataElementOptional) {
-        titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButonUserDataSetName");
+        titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButtonUserDataSetName");
       } else {
-        titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButonUserDataSetEmail");
+        titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButtonUserDataSetEmail");
       }
       actionSelector = @selector(setUserDataAction:);
     } else {
@@ -569,7 +573,7 @@
         [button setTitleShadowColor:BUTTON_DELETE_TEXTCOLOR_SHADOW forState:UIControlStateNormal];
       }
       
-      titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButonDeleteAllMessages");
+      titleString = BITHockeyLocalizedString(@"HockeyFeedbackListButtonDeleteAllMessages");
       titleColor = BIT_RGBCOLOR(251, 35, 35);
       actionSelector = @selector(deleteAllMessagesAction:);
     }
@@ -631,9 +635,9 @@
     }
     
     if ([self.manager isPreiOS7Environment]) {
-      cell.style = BITFeedbackListViewCellPresentatationStyleDefault;
+      cell.style = BITFeedbackListViewCellPresentationStyleDefault;
     } else {
-      cell.style = BITFeedbackListViewCellPresentatationStyleOS7;
+      cell.style = BITFeedbackListViewCellPresentationStyleOS7;
     }
     
     BITFeedbackMessage *message = [self.manager messageAtIndex:indexPath.row];
@@ -648,10 +652,11 @@
         attachment.isLoading = YES;
         NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
         [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
+          attachment.isLoading = NO;
           if (responseData.length) {
             dispatch_async(dispatch_get_main_queue(), ^{
               [attachment replaceData:responseData];
-              [self.tableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationNone];
+              [[NSNotificationCenter defaultCenter] postNotificationName:kBITFeedbackUpdateAttachmentThumbnail object:attachment];
               [[BITHockeyManager sharedHockeyManager].feedbackManager saveMessages];
             });
           }

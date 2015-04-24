@@ -147,25 +147,25 @@
 "HockeyFeedbackListNeverUpdated" = "Nikada";
 
 /* Provide Feedback Button Title */
-"HockeyFeedbackListButonWriteFeedback" = "Osigurajte Povratnu Informaciju";
+"HockeyFeedbackListButtonWriteFeedback" = "Osigurajte Povratnu Informaciju";
 
 /* Add a Response Button Title */
-"HockeyFeedbackListButonWriteResponse" = "Dodaj Odgovor";
+"HockeyFeedbackListButtonWriteResponse" = "Dodaj Odgovor";
 
 /* User Data Set Name Button Title */
-"HockeyFeedbackListButonUserDataSetName" = "Postavite Vaše Ime";
+"HockeyFeedbackListButtonUserDataSetName" = "Postavite Vaše Ime";
 
 /* User Data Set Email Button Title */
-"HockeyFeedbackListButonUserDataSetEmail" = "Postavite Vaš E-mail";
+"HockeyFeedbackListButtonUserDataSetEmail" = "Postavite Vaš E-mail";
 
 /* User Data With Name Button Title */
-"HockeyFeedbackListButonUserDataWithName" = "Ime: %@";
+"HockeyFeedbackListButtonUserDataWithName" = "Ime: %@";
 
 /* User Data With Email Button Title */
-"HockeyFeedbackListButonUserDataWithEmail" = "E-mail:  %@";
+"HockeyFeedbackListButtonUserDataWithEmail" = "E-mail:  %@";
 
 /* Button title for deleting all local messages*/
-"HockeyFeedbackListButonDeleteAllMessages" = "Obriši Sve Poruke";
+"HockeyFeedbackListButtonDeleteAllMessages" = "Obriši Sve Poruke";
 
 /* Message pending to be send */
 "HockeyFeedbackListMessagePending" = "Čekanje";
@@ -268,9 +268,6 @@
 
 /* Error presented to the user if authentication failed because of networking issues */
 "HockeyAuthenticationViewControllerNetworkError" = "Autorizacija nije uspjela. Vaš uređaj nema pristup internetu. Molimo Vas pokušajte iznova.";
-
-/* Error presented to the user if authentication could not be stored on the device */
-"HockeyAuthenticationViewControllerStorageError" = "Your authentication token could not be stored due to a keychain error. Please contact the developer of the app.";
 
 
 "HockeyAuthenticationFailedAuthenticate" = "Autorizacija nije uspjela. Molimo Vas pokušajte iznova ili kontaktirajte razvojnog programera ove aplikacije.";

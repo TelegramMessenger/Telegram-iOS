@@ -147,25 +147,25 @@
 "HockeyFeedbackListNeverUpdated" = "Mai";
 
 /* Provide Feedback Button Title */
-"HockeyFeedbackListButonWriteFeedback" = "Commenta";
+"HockeyFeedbackListButtonWriteFeedback" = "Commenta";
 
 /* Add a Response Button Title */
-"HockeyFeedbackListButonWriteResponse" = "Aggiungi una risposta";
+"HockeyFeedbackListButtonWriteResponse" = "Aggiungi una risposta";
 
 /* User Data Set Name Button Title */
-"HockeyFeedbackListButonUserDataSetName" = "Imposta il tuo nome";
+"HockeyFeedbackListButtonUserDataSetName" = "Imposta il tuo nome";
 
 /* User Data Set Email Button Title */
-"HockeyFeedbackListButonUserDataSetEmail" = "Imposta la tua e-mail";
+"HockeyFeedbackListButtonUserDataSetEmail" = "Imposta la tua e-mail";
 
 /* User Data With Name Button Title */
-"HockeyFeedbackListButonUserDataWithName" = "Nome: %@";
+"HockeyFeedbackListButtonUserDataWithName" = "Nome: %@";
 
 /* User Data With Email Button Title */
-"HockeyFeedbackListButonUserDataWithEmail" = "E-mail: %@";
+"HockeyFeedbackListButtonUserDataWithEmail" = "E-mail: %@";
 
 /* Button title for deleting all local messages*/
-"HockeyFeedbackListButonDeleteAllMessages" = "Cancella tutti i messagi";
+"HockeyFeedbackListButtonDeleteAllMessages" = "Cancella tutti i messagi";
 
 /* Message pending to be send */
 "HockeyFeedbackListMessagePending" = "In attesa";
@@ -268,9 +268,6 @@
 
 /* Error presented to the user if authentication failed because of networking issues */
 "HockeyAuthenticationViewControllerNetworkError" = "Autorizzazione non riuscita. Pare che il dispositivo non sia connesso a Internet. Riprova.";
-
-/* Error presented to the user if authentication could not be stored on the device */
-"HockeyAuthenticationViewControllerStorageError" = "Your authentication token could not be stored due to a keychain error. Please contact the developer of the app.";
 
 "HockeyAuthenticationFailedAuthenticate" = "Autorizzazione non riuscita. Riprova o contatta lo sviluppatore di questa app.";
 "HockeyAuthenticationNotMember" = "Non sei autorizzato a usare questa app. Contatta lo sviluppatore di questa app.";

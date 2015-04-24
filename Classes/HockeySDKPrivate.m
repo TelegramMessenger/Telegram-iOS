@@ -42,7 +42,7 @@ NSBundle *BITHockeyBundle(void) {
   static NSBundle *bundle = nil;
   static dispatch_once_t predicate;
   dispatch_once(&predicate, ^{
-    NSString* mainBundlePath = [[NSBundle mainBundle] resourcePath];
+    NSString* mainBundlePath = [[NSBundle bundleForClass:[BITHockeyManager class]] resourcePath];
     NSString* frameworkBundlePath = [mainBundlePath stringByAppendingPathComponent:BITHOCKEYSDK_BUNDLE];
     bundle = [NSBundle bundleWithPath:frameworkBundlePath];
   });

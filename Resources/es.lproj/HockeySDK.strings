@@ -147,25 +147,25 @@
 "HockeyFeedbackListNeverUpdated" = "Nunca";
 
 /* Provide Feedback Button Title */
-"HockeyFeedbackListButonWriteFeedback" = "Dejar un mensaje";
+"HockeyFeedbackListButtonWriteFeedback" = "Dejar un mensaje";
 
 /* Add a Response Button Title */
-"HockeyFeedbackListButonWriteResponse" = "Añadir una respuesta";
+"HockeyFeedbackListButtonWriteResponse" = "Añadir una respuesta";
 
 /* User Data Set Name Button Title */
-"HockeyFeedbackListButonUserDataSetName" = "Introduzca su nombre";
+"HockeyFeedbackListButtonUserDataSetName" = "Introduzca su nombre";
 
 /* User Data Set Email Button Title */
-"HockeyFeedbackListButonUserDataSetEmail" = "Introduzca su correo";
+"HockeyFeedbackListButtonUserDataSetEmail" = "Introduzca su correo";
 
 /* User Data With Name Button Title */
-"HockeyFeedbackListButonUserDataWithName" = "Nombre: %@";
+"HockeyFeedbackListButtonUserDataWithName" = "Nombre: %@";
 
 /* User Data With Email Button Title */
-"HockeyFeedbackListButonUserDataWithEmail" = "Correo: %@";
+"HockeyFeedbackListButtonUserDataWithEmail" = "Correo: %@";
 
 /* Button title for deleting all local messages*/
-"HockeyFeedbackListButonDeleteAllMessages" = "Eliminar todos los mensajes";
+"HockeyFeedbackListButtonDeleteAllMessages" = "Eliminar todos los mensajes";
 
 /* Message pending to be send */
 "HockeyFeedbackListMessagePending" = "Pendiente";
@@ -268,9 +268,6 @@
 
 /* Error presented to the user if authentication failed because of networking issues */
 "HockeyAuthenticationViewControllerNetworkError" = "No se ha podido realizar la autorización porque su dispositivo parece no estar conectado a Internet. Vuelva a intentarlo.";
-
-/* Error presented to the user if authentication could not be stored on the device */
-"HockeyAuthenticationViewControllerStorageError" = "Your authentication token could not be stored due to a keychain error. Please contact the developer of the app.";
 
 "HockeyAuthenticationFailedAuthenticate" = "Error de autorización. Vuelva a intentarlo o póngase en contacto con el desarrollador de la app.";
 "HockeyAuthenticationNotMember" = "No tiene autorización para usar esta app. Póngase en contacto con el desarrollador de la app.";

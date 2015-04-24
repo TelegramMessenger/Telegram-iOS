@@ -49,7 +49,7 @@
 /** 
  * by default, just logs the message
  *
- * can be overriden by subclasses to do their own error handling,
+ * can be overridden by subclasses to do their own error handling,
  * e.g. to show UI
  *
  * @param error NSError
@@ -59,7 +59,7 @@
 /** url encoded version of the appIdentifier
  
  where appIdentifier is either the value this object was initialized with,
- or the main bundles CFBundleIdentifier if appIdentifier ist nil
+ or the main bundles CFBundleIdentifier if appIdentifier is nil
  */
 - (NSString *)encodedAppIdentifier;
 

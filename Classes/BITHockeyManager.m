@@ -30,7 +30,9 @@
 #import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
 
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER || HOCKEYSDK_FEATURE_FEEDBACK || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_STORE_UPDATES
 #import "BITHockeyBaseManagerPrivate.h"
+#endif
 
 #import "BITHockeyHelper.h"
 #import "BITHockeyAppClient.h"
@@ -140,11 +142,19 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     
     _hockeyAppClient = nil;
     
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER
     _disableCrashManager = NO;
+#endif
+#if HOCKEYSDK_FEATURE_UPDATES
     _disableUpdateManager = NO;
+#endif
+#if HOCKEYSDK_FEATURE_FEEDBACK
     _disableFeedbackManager = NO;
+#endif
 
+#if HOCKEYSDK_FEATURE_STORE_UPDATES
     _enableStoreUpdateManager = NO;
+#endif
     
     _appStoreEnvironment = NO;
     _startManagerIsInvoked = NO;
@@ -391,7 +401,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
                                   andPassword:value
                                forServiceName:bit_keychainHockeySDKServiceName()
                                updateExisting:YES
-                                accessibility:kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+                                accessibility:kSecAttrAccessibleAlwaysThisDeviceOnly
                                         error:&error];
   } else {
     updateType = @"delete";

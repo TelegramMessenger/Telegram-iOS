@@ -147,25 +147,25 @@
 "HockeyFeedbackListNeverUpdated" = "Nunca";
 
 /* Provide Feedback Button Title */
-"HockeyFeedbackListButonWriteFeedback" = "Fornecer comentário";
+"HockeyFeedbackListButtonWriteFeedback" = "Fornecer comentário";
 
 /* Add a Response Button Title */
-"HockeyFeedbackListButonWriteResponse" = "Adicionar uma resposta";
+"HockeyFeedbackListButtonWriteResponse" = "Adicionar uma resposta";
 
 /* User Data Set Name Button Title */
-"HockeyFeedbackListButonUserDataSetName" = "Definir nome";
+"HockeyFeedbackListButtonUserDataSetName" = "Definir nome";
 
 /* User Data Set Email Button Title */
-"HockeyFeedbackListButonUserDataSetEmail" = "Definir e-mail";
+"HockeyFeedbackListButtonUserDataSetEmail" = "Definir e-mail";
 
 /* User Data With Name Button Title */
-"HockeyFeedbackListButonUserDataWithName" = "Nome: %@";
+"HockeyFeedbackListButtonUserDataWithName" = "Nome: %@";
 
 /* User Data With Email Button Title */
-"HockeyFeedbackListButonUserDataWithEmail" = "E-mail: %@";
+"HockeyFeedbackListButtonUserDataWithEmail" = "E-mail: %@";
 
 /* Button title for deleting all local messages*/
-"HockeyFeedbackListButonDeleteAllMessages" = "Eliminar todas as mensagens";
+"HockeyFeedbackListButtonDeleteAllMessages" = "Eliminar todas as mensagens";
 
 /* Message pending to be send */
 "HockeyFeedbackListMessagePending" = "Pendente";
@@ -268,9 +268,6 @@
 
 /* Error presented to the user if authentication failed because of networking issues */
 "HockeyAuthenticationViewControllerNetworkError" = "Falha ao autorizar porque provavelmente o dispositivo não tem ligação à Internet. Tente novamente.";
-
-/* Error presented to the user if authentication could not be stored on the device */
-"HockeyAuthenticationViewControllerStorageError" = "Your authentication token could not be stored due to a keychain error. Please contact the developer of the app.";
 
 "HockeyAuthenticationFailedAuthenticate" = "Falha ao autorizar. Tente novamente ou contacte o programador desta aplicação.";
 "HockeyAuthenticationNotMember" = "Não está autorizado a utilizar esta aplicação. Contacte o programador desta aplicação.";

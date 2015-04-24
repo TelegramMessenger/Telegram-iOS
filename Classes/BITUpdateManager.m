@@ -333,11 +333,11 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 
 - (void)checkUpdateAvailable {
   // check if there is an update available
-  NSComparisonResult comparissonResult = bit_versionCompare(self.newestAppVersion.version, self.currentAppVersion);
+  NSComparisonResult comparisonResult = bit_versionCompare(self.newestAppVersion.version, self.currentAppVersion);
   
-  if (comparissonResult == NSOrderedDescending) {
+  if (comparisonResult == NSOrderedDescending) {
     self.updateAvailable = YES;
-  } else if (comparissonResult == NSOrderedSame) {
+  } else if (comparisonResult == NSOrderedSame) {
     // compare using the binary UUID and stored version id
     self.updateAvailable = NO;
     if (_firstStartAfterInstall) {
@@ -606,7 +606,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   if (!self.checkInProgress) {
     
     if (!_lastUpdateCheckFromBlockingScreen ||
-        abs([NSDate timeIntervalSinceReferenceDate] - [_lastUpdateCheckFromBlockingScreen timeIntervalSinceReferenceDate]) > 60) {
+        fabs([NSDate timeIntervalSinceReferenceDate] - [_lastUpdateCheckFromBlockingScreen timeIntervalSinceReferenceDate]) > 60) {
       _lastUpdateCheckFromBlockingScreen = [NSDate date];
       [self checkForUpdateShowFeedback:NO];
     }
@@ -741,7 +741,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   UIAlertView *alert = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateWarning") message:BITHockeyLocalizedString(@"UpdateSimulatorMessage") delegate:nil cancelButtonTitle:BITHockeyLocalizedString(@"HockeyOK") otherButtonTitles:nil];
   [alert show];
   return NO;
-#endif
+
+#else
   
   NSString *extraParameter = [NSString string];
   if (_sendUsageData && self.installationIdentification && self.installationIdentificationType) {
@@ -753,7 +754,12 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   
   NSString *hockeyAPIURL = [NSString stringWithFormat:@"%@api/2/apps/%@/app_versions/%@?format=plist%@", self.serverURL, [self encodedAppIdentifier], [self.newestAppVersion.versionID stringValue], extraParameter];
   NSString *iOSUpdateURL = [NSString stringWithFormat:@"itms-services://?action=download-manifest&url=%@", bit_URLEncodedString(hockeyAPIURL)];
-  
+
+  // Notify delegate of update intent before placing the call
+  if (self.delegate != nil && [self.delegate respondsToSelector:@selector(willStartDownloadAndUpdate:)]) {
+    [self.delegate willStartDownloadAndUpdate:self];
+  }
+
   BITHockeyLog(@"INFO: API Server Call: %@, calling iOS with %@", hockeyAPIURL, iOSUpdateURL);
   BOOL success = [[UIApplication sharedApplication] openURL:[NSURL URLWithString:iOSUpdateURL]];
   BITHockeyLog(@"INFO: System returned: %d", success);
@@ -761,6 +767,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   _didStartUpdateProcess = success;
   
   return success;
+
+#endif
 }
 
 
@@ -878,8 +886,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
           // check if minOSVersion is set and this device qualifies
           BOOL deviceOSVersionQualifies = YES;
           if ([appVersionMetaInfo minOSVersion] && ![[appVersionMetaInfo minOSVersion] isKindOfClass:[NSNull class]]) {
-            NSComparisonResult comparissonResult = bit_versionCompare(appVersionMetaInfo.minOSVersion, [[UIDevice currentDevice] systemVersion]);
-            if (comparissonResult == NSOrderedDescending) {
+            NSComparisonResult comparisonResult = bit_versionCompare(appVersionMetaInfo.minOSVersion, [[UIDevice currentDevice] systemVersion]);
+            if (comparisonResult == NSOrderedDescending) {
               deviceOSVersionQualifies = NO;
             }
           }

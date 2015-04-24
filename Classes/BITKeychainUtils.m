@@ -123,10 +123,10 @@ static NSString *BITKeychainUtilsErrorDomain = @"BITKeychainUtilsErrorDomain";
 }
 
 + (BOOL) storeUsername: (NSString *) username andPassword: (NSString *) password forServiceName: (NSString *) serviceName updateExisting: (BOOL) updateExisting error: (NSError **) error {
-  return [self storeUsername:username andPassword:password forServiceName:serviceName updateExisting:updateExisting accessibility:kSecAttrAccessibleWhenUnlocked error:error];
+  return [self storeUsername:username andPassword:password forServiceName:serviceName updateExisting:updateExisting accessibility:kSecAttrAccessibleAlways error:error];
 }
 
-+ (BOOL) storeUsername: (NSString *) username andPassword: (NSString *) password forServiceName: (NSString *) serviceName updateExisting: (BOOL) updateExisting accessibility:(CFTypeRef) accessiblity error: (NSError **) error
++ (BOOL) storeUsername: (NSString *) username andPassword: (NSString *) password forServiceName: (NSString *) serviceName updateExisting: (BOOL) updateExisting accessibility:(CFTypeRef) accessibility error: (NSError **) error
 {
 	if (!username || !password || !serviceName)
   {
@@ -195,7 +195,7 @@ static NSString *BITKeychainUtilsErrorDomain = @"BITKeychainUtilsErrorDomain";
                           serviceName,
                           serviceName,
                           username,
-                          accessiblity,
+                          accessibility,
                           nil];
 			
 			NSDictionary *query = [[NSDictionary alloc] initWithObjects: objects forKeys: keys];
@@ -221,7 +221,7 @@ static NSString *BITKeychainUtilsErrorDomain = @"BITKeychainUtilsErrorDomain";
                         serviceName,
                         username,
                         [password dataUsingEncoding: NSUTF8StringEncoding],
-                        accessiblity,
+                        accessibility,
                         nil];
 		
 		NSDictionary *query = [[NSDictionary alloc] initWithObjects: objects forKeys: keys];

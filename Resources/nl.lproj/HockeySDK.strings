@@ -147,25 +147,25 @@
 "HockeyFeedbackListNeverUpdated" = "Nooit";
 
 /* Provide Feedback Button Title */
-"HockeyFeedbackListButonWriteFeedback" = "Stuur feedback";
+"HockeyFeedbackListButtonWriteFeedback" = "Stuur feedback";
 
 /* Add a Response Button Title */
-"HockeyFeedbackListButonWriteResponse" = "Voeg een reactie toe";
+"HockeyFeedbackListButtonWriteResponse" = "Voeg een reactie toe";
 
 /* User Data Set Name Button Title */
-"HockeyFeedbackListButonUserDataSetName" = "Stel uw naam in";
+"HockeyFeedbackListButtonUserDataSetName" = "Stel uw naam in";
 
 /* User Data Set Email Button Title */
-"HockeyFeedbackListButonUserDataSetEmail" = "Stel uw e-mail in";
+"HockeyFeedbackListButtonUserDataSetEmail" = "Stel uw e-mail in";
 
 /* User Data With Name Button Title */
-"HockeyFeedbackListButonUserDataWithName" = "Naam: %@";
+"HockeyFeedbackListButtonUserDataWithName" = "Naam: %@";
 
 /* User Data With Email Button Title */
-"HockeyFeedbackListButonUserDataWithEmail" = "E-mail: %@";
+"HockeyFeedbackListButtonUserDataWithEmail" = "E-mail: %@";
 
 /* Button title for deleting all local messages*/
-"HockeyFeedbackListButonDeleteAllMessages" = "Verwijder alle berichten";
+"HockeyFeedbackListButtonDeleteAllMessages" = "Verwijder alle berichten";
 
 /* Message pending to be send */
 "HockeyFeedbackListMessagePending" = "In wachtrij";
@@ -268,9 +268,6 @@
 
 /* Error presented to the user if authentication failed because of networking issues */
 "HockeyAuthenticationViewControllerNetworkError" = "Identiteitscontrole mislukt omdat uw apparaat niet is verbonden met het internet. Probeer opnieuw.";
-
-/* Error presented to the user if authentication could not be stored on the device */
-"HockeyAuthenticationViewControllerStorageError" = "Your authentication token could not be stored due to a keychain error. Please contact the developer of the app.";
 
 "HockeyAuthenticationFailedAuthenticate" = "Identiteitscontrole mislukt. Probeer opnieuw of neem contact op met de ontwikkelaar van deze app.";
 "HockeyAuthenticationNotMember" = "U bent niet gemachtigd om deze app te gebruiken. Neem contact op met de ontwikkelaar van deze app.";

@@ -126,7 +126,7 @@
  `BITFeedbackManager` uses it too for assigning the user to a discussion thread.
  
  In addition, if this returns not nil for `BITFeedbackManager` the user will
- not be asked for any user details by the component, including useerName or userEmail.
+ not be asked for any user details by the component, including userName or userEmail.
  
  You can find out the component requesting the userID like this:
  
@@ -162,7 +162,7 @@
  `BITFeedbackManager` uses it too for assigning the user to a discussion thread.
  
  In addition, if this returns not nil for `BITFeedbackManager` the user will
- not be asked for any user details by the component, including useerName or userEmail.
+ not be asked for any user details by the component, including userName or userEmail.
  
  You can find out the component requesting the user name like this:
  
@@ -198,7 +198,7 @@
  `BITFeedbackManager` uses it too for assigning the user to a discussion thread.
  
  In addition, if this returns not nil for `BITFeedbackManager` the user will
- not be asked for any user details by the component, including useerName or userEmail.
+ not be asked for any user details by the component, including userName or userEmail.
  
  You can find out the component requesting the user email like this:
  

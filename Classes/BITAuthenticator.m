@@ -53,7 +53,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 
 @implementation BITAuthenticator {
   id _appDidBecomeActiveObserver;
-  id _appDidEnterBackgroundOberser;
+  id _appDidEnterBackgroundObserver;
   UIViewController *_authenticationController;
   
   BOOL _isSetup;
@@ -160,13 +160,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     return;
   }
 
-  UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil
-                                                      message:BITHockeyLocalizedString(@"HockeyAuthenticationViewControllerStorageError")
-                                                     delegate:self
-                                            cancelButtonTitle:BITHockeyLocalizedString(@"HockeyOK")
-                                            otherButtonTitles:nil];
-  [alertView setTag:1];
-  [alertView show];
+  NSLog(@"[HockeySDK] ERROR: The authentication token could not be stored due to a keychain error. This is most likely a signing or keychain entitlement issue!");
 }
 
 - (void) identifyWithCompletion:(void (^)(BOOL identified, NSError *))completion {
@@ -795,8 +789,8 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
                                                                                   [strongSelf applicationDidBecomeActive:note];
                                                                                 }];
   }
-  if(nil == _appDidEnterBackgroundOberser) {
-    _appDidEnterBackgroundOberser = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification
+  if(nil == _appDidEnterBackgroundObserver) {
+    _appDidEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification
                                                                                       object:nil
                                                                                        queue:NSOperationQueue.mainQueue
                                                                                   usingBlock:^(NSNotification *note) {
@@ -811,9 +805,9 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     [[NSNotificationCenter defaultCenter] removeObserver:_appDidBecomeActiveObserver];
     _appDidBecomeActiveObserver = nil;
   }
-  if(_appDidEnterBackgroundOberser) {
-    [[NSNotificationCenter defaultCenter] removeObserver:_appDidEnterBackgroundOberser];
-    _appDidEnterBackgroundOberser = nil;
+  if(_appDidEnterBackgroundObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:_appDidEnterBackgroundObserver];
+    _appDidEnterBackgroundObserver = nil;
   }
 }
 

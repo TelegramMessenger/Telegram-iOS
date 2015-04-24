@@ -147,25 +147,25 @@
 "HockeyFeedbackListNeverUpdated" = "从不";
 
 /* Provide Feedback Button Title */
-"HockeyFeedbackListButonWriteFeedback" = "提供意见反馈";
+"HockeyFeedbackListButtonWriteFeedback" = "提供意见反馈";
 
 /* Add a Response Button Title */
-"HockeyFeedbackListButonWriteResponse" = "添加一个响应";
+"HockeyFeedbackListButtonWriteResponse" = "添加一个响应";
 
 /* User Data Set Name Button Title */
-"HockeyFeedbackListButonUserDataSetName" = "设置你的姓名";
+"HockeyFeedbackListButtonUserDataSetName" = "设置你的姓名";
 
 /* User Data Set Email Button Title */
-"HockeyFeedbackListButonUserDataSetEmail" = "设置你的邮件";
+"HockeyFeedbackListButtonUserDataSetEmail" = "设置你的邮件";
 
 /* User Data With Name Button Title */
-"HockeyFeedbackListButonUserDataWithName" = "姓名: %@";
+"HockeyFeedbackListButtonUserDataWithName" = "姓名: %@";
 
 /* User Data With Email Button Title */
-"HockeyFeedbackListButonUserDataWithEmail" = "邮件: %@";
+"HockeyFeedbackListButtonUserDataWithEmail" = "邮件: %@";
 
 /* Button title for deleting all local messages*/
-"HockeyFeedbackListButonDeleteAllMessages" = "删除全部信息";
+"HockeyFeedbackListButtonDeleteAllMessages" = "删除全部信息";
 
 /* Message pending to be send */
 "HockeyFeedbackListMessagePending" = "待定";
@@ -268,9 +268,6 @@
 
 /* Error presented to the user if authentication failed because of networking issues */
 "HockeyAuthenticationViewControllerNetworkError" = "你设备的 Internet 连接似乎已断开，导致授权失败。请再试一次。";
-
-/* Error presented to the user if authentication could not be stored on the device */
-"HockeyAuthenticationViewControllerStorageError" = "Your authentication token could not be stored due to a keychain error. Please contact the developer of the app.";
 
 "HockeyAuthenticationFailedAuthenticate" = "授权错误。请再试一次或联系这个 app 的开发人员。";
 "HockeyAuthenticationNotMember" = "你未获授权使用这个程序。请联系这个 app 的开发人员。";

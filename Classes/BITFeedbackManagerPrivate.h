@@ -30,6 +30,8 @@
 
 #if HOCKEYSDK_FEATURE_FEEDBACK
 
+extern NSString *const kBITFeedbackUpdateAttachmentThumbnail;
+
 #import "BITFeedbackMessage.h"
 
 @interface BITFeedbackManager () <UIAlertViewDelegate> {

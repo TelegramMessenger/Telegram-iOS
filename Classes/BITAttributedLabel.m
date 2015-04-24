@@ -837,7 +837,7 @@ static inline NSAttributedString * NSAttributedStringBySettingColorFromContext(N
         
     NSAttributedString *originalAttributedText = nil;
     
-    // Adjust the font size to fit width, if necessarry 
+    // Adjust the font size to fit width, if necessary
     if (self.adjustsFontSizeToFitWidth && self.numberOfLines > 0) {
         CGFloat textWidth = [self sizeThatFits:CGSizeZero].width;
         CGFloat availableWidth = self.frame.size.width * self.numberOfLines;

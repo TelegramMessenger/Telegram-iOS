@@ -372,7 +372,7 @@
   [self restoreStoreButtonStateAnimated:NO];
   [self updateAppStoreHeader];
   
-  // clean up and remove any pending overservers
+  // clean up and remove any pending observers
   for (UITableViewCell *cell in _cells) {
     [cell removeObserver:self forKeyPath:@"webViewSize"];
   }

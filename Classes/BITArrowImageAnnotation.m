@@ -97,8 +97,8 @@
   }
   
   
-  if (abs(CGRectGetWidth(boundRect)) < 30 || abs(CGRectGetHeight(boundRect)) < 30){
-    CGFloat smallerOne = MIN(abs(CGRectGetHeight(boundRect)), abs(CGRectGetWidth(boundRect)));
+  if (fabs(CGRectGetWidth(boundRect)) < 30 || fabs(CGRectGetHeight(boundRect)) < 30){
+    CGFloat smallerOne = MIN(fabs(CGRectGetHeight(boundRect)), fabs(CGRectGetWidth(boundRect)));
     
     CGFloat factor = smallerOne/30.f;
     

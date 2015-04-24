@@ -209,7 +209,7 @@ NSString *bit_appAnonID(void) {
                               andPassword:appAnonID
                            forServiceName:bit_keychainHockeySDKServiceName()
                            updateExisting:YES
-                            accessibility:kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+                            accessibility:kSecAttrAccessibleAlwaysThisDeviceOnly
                                     error:&error];
         });
       }
@@ -621,7 +621,7 @@ UIImage *bit_imageWithContentsOfResolutionIndependentFile(NSString *path) {
 
 
 UIImage *bit_imageNamed(NSString *imageName, NSString *bundleName) {
-  NSString *resourcePath = [[NSBundle mainBundle] resourcePath];
+  NSString *resourcePath = [[NSBundle bundleForClass:[BITHockeyManager class]] resourcePath];
   NSString *bundlePath = [resourcePath stringByAppendingPathComponent:bundleName];
   NSString *imagePath = [bundlePath stringByAppendingPathComponent:imageName];
   return bit_imageWithContentsOfResolutionIndependentFile(imagePath);
@@ -742,7 +742,10 @@ UIImage *bit_screenshot(void) {
   BOOL isLandscapeRight = [UIApplication sharedApplication].statusBarOrientation == UIInterfaceOrientationLandscapeRight;
   BOOL isUpsideDown = [UIApplication sharedApplication].statusBarOrientation == UIInterfaceOrientationPortraitUpsideDown;
   
-  if (isLandscapeLeft ||isLandscapeRight) {
+  BOOL needsRotation = NO;
+  
+  if ((isLandscapeLeft ||isLandscapeRight) && imageSize.height > imageSize.width) {
+    needsRotation = YES;
     CGFloat temp = imageSize.width;
     imageSize.width = imageSize.height;
     imageSize.height = temp;
@@ -771,10 +774,12 @@ UIImage *bit_screenshot(void) {
                             -[window bounds].size.width * [[window layer] anchorPoint].x,
                             -[window bounds].size.height * [[window layer] anchorPoint].y);
       
-      if (isLandscapeLeft) {
-        CGContextConcatCTM(context, CGAffineTransformRotate(CGAffineTransformMakeTranslation( imageSize.width, 0), M_PI / 2.0));
-      } else if (isLandscapeRight) {
-        CGContextConcatCTM(context, CGAffineTransformRotate(CGAffineTransformMakeTranslation( 0, imageSize.height), 3 * M_PI / 2.0));
+      if (needsRotation) {
+        if (isLandscapeLeft) {
+          CGContextConcatCTM(context, CGAffineTransformRotate(CGAffineTransformMakeTranslation( imageSize.width, 0), M_PI / 2.0));
+        } else if (isLandscapeRight) {
+          CGContextConcatCTM(context, CGAffineTransformRotate(CGAffineTransformMakeTranslation( 0, imageSize.height), 3 * M_PI / 2.0));
+        }
       } else if (isUpsideDown) {
         CGContextConcatCTM(context, CGAffineTransformRotate(CGAffineTransformMakeTranslation( imageSize.width, imageSize.height), M_PI));
       }

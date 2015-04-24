@@ -74,7 +74,7 @@ typedef void (*BITCrashManagerPostCrashSignalCallback)(void *context);
 
 /**
  * This structure contains callbacks supported by `BITCrashManager` to allow the host application to perform
- * additional tasks prior to program termination after a crash has occured.
+ * additional tasks prior to program termination after a crash has occurred.
  *
  * @see `BITCrashManagerPostCrashSignalCallback`
  * @see `[BITCrashManager setCrashCallbacks:]`
@@ -140,9 +140,9 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  very slow.
  
  It is possible to check upon startup if the app crashed before using `didCrashInLastSession` and also how much
- time passed between the app launch and the crash using `timeintervalCrashInLastSessionOccured`. This allows you
+ time passed between the app launch and the crash using `timeIntervalCrashInLastSessionOccurred`. This allows you
  to add additional code to your app delaying the app start until the crash has been successfully send if the crash
- occured within a critical startup timeframe, e.g. after 10 seconds. The `BITCrashManagerDelegate` protocol provides
+ occurred within a critical startup timeframe, e.g. after 10 seconds. The `BITCrashManagerDelegate` protocol provides
  various delegates to inform the app about it's current status so you can continue the remaining app startup setup
  after sending has been completed. The documentation contains a guide
  [How to handle Crashes on startup](HowTo-Handle-Crashes-On-Startup) with an example on how to do that.
@@ -164,7 +164,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
 /** Set the default status of the Crash Manager
  
  Defines if the crash reporting feature should be disabled, ask the user before
- sending each crash report or send crash reportings automatically without
+ sending each crash report or send crash reports automatically without
  asking.
  
  The default value is `BITCrashManagerStatusAlwaysAsk`. The user can switch to
@@ -230,7 +230,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  *  - The app tried to allocate too much memory. If iOS did send a memory warning before killing the app because of this reason, `didReceiveMemoryWarningInLastSession` returns `YES`.
  *  - Permitted background duration if main thread is running in an endless loop
  *  - App failed to resume in time if main thread is running in an endless loop
- *  - If `enableMachExceptionHandler` is not activated, crashed due to stackoverflow will also be reported
+ *  - If `enableMachExceptionHandler` is not activated, crashed due to stack overflow will also be reported
  *
  *  The following kills can _NOT_ be detected:
  *  - Terminating the app takes too long
@@ -244,7 +244,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  *  The heuristic is implemented as follows:
  *  If the app never gets a `UIApplicationDidEnterBackgroundNotification` or `UIApplicationWillTerminateNotification`
  *  notification, PLCrashReporter doesn't detect a crash itself, and the app starts up again, it is assumed that
- *  the app got either killed by iOS while being in foreground or a crash occured that couldn't be detected.
+ *  the app got either killed by iOS while being in foreground or a crash occurred that couldn't be detected.
  *
  *  Default: _NO_
  *
@@ -356,7 +356,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
 - (void)setAlertViewHandler:(BITCustomAlertViewHandler)alertViewHandler;
 
 /**
- * Provides details about the crash that occured in the last app session
+ * Provides details about the crash that occurred in the last app session
  */
 @property (nonatomic, readonly) BITCrashDetails *lastSessionCrashDetails;
 
@@ -400,7 +400,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  @see didCrashInLastSession
  @see BITCrashManagerDelegate
  */
-@property (nonatomic, readonly) NSTimeInterval timeintervalCrashInLastSessionOccured;
+@property (nonatomic, readonly) NSTimeInterval timeIntervalCrashInLastSessionOccurred;
 
 
 ///-----------------------------------------------------------------------------
@@ -432,5 +432,11 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  * If the SDK detects an App Store environment, it will _NOT_ cause the app to crash!
  */
 - (void)generateTestCrash;
+
+///-----------------------------------------------------------------------------
+/// @name Deprecated
+///-----------------------------------------------------------------------------
+
+@property (nonatomic, readonly) NSTimeInterval timeintervalCrashInLastSessionOccured DEPRECATED_MSG_ATTRIBUTE("Use the properly spelled property `timeIntervalCrashInLastSessionOccurred` instead.");
 
 @end

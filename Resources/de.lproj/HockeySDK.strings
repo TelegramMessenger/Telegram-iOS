@@ -147,25 +147,25 @@
 "HockeyFeedbackListNeverUpdated" = "Noch nie";
 
 /* Provide Feedback Button Title */
-"HockeyFeedbackListButonWriteFeedback" = "Feedback senden";
+"HockeyFeedbackListButtonWriteFeedback" = "Feedback senden";
 
 /* Add a Response Button Title */
-"HockeyFeedbackListButonWriteResponse" = "Antworten";
+"HockeyFeedbackListButtonWriteResponse" = "Antworten";
 
 /* User Data Set Name Button Title */
-"HockeyFeedbackListButonUserDataSetName" = "Namen eingeben";
+"HockeyFeedbackListButtonUserDataSetName" = "Namen eingeben";
 
 /* User Data Set Email Button Title */
-"HockeyFeedbackListButonUserDataSetEmail" = "E-Mail-Adresse eingeben";
+"HockeyFeedbackListButtonUserDataSetEmail" = "E-Mail-Adresse eingeben";
 
 /* User Data With Name Button Title */
-"HockeyFeedbackListButonUserDataWithName" = "Name: %@";
+"HockeyFeedbackListButtonUserDataWithName" = "Name: %@";
 
 /* User Data With Email Button Title */
-"HockeyFeedbackListButonUserDataWithEmail" = "E-Mail: %@";
+"HockeyFeedbackListButtonUserDataWithEmail" = "E-Mail: %@";
 
 /* Button title for deleting all local messages*/
-"HockeyFeedbackListButonDeleteAllMessages" = "Alle Mitteilungen löschen";
+"HockeyFeedbackListButtonDeleteAllMessages" = "Alle Mitteilungen löschen";
 
 /* Message pending to be send */
 "HockeyFeedbackListMessagePending" = "Versand ausstehend";
@@ -234,7 +234,7 @@
 "HockeyFeedbackUserDataDescription" = "Bitte geben Sie vor Verfassen Ihres Feedbacks Ihre Daten ein.";
 
 /* Name Field */
-"HockeyFeedbackUserDataName" = "Max Mustermann";
+"HockeyFeedbackUserDataName" = "Name";
 
 /* Name Placeholder */
 "HockeyFeedbackUserDataNamePlaceHolder" = "Max Mustermann";
@@ -268,9 +268,6 @@
 
 /* Error presented to the user if authentication failed because of networking issues */
 "HockeyAuthenticationViewControllerNetworkError" = "Die Autorisierung ist fehlgeschlagen, da Ihr Gerät anscheinend nicht mit dem Internet verbunden ist. Bitte erneut versuchen.";
-
-/* Error presented to the user if authentication could not be stored on the device */
-"HockeyAuthenticationViewControllerStorageError" = "Your authentication token could not be stored due to a keychain error. Please contact the developer of the app.";
 
 "HockeyAuthenticationFailedAuthenticate" = "Autorisierung fehlgeschlagen. Bitte erneut versuchen oder an den Entwickler dieser App wenden.";
 "HockeyAuthenticationNotMember" = "Sie sind nicht berechtigt, diese App zu nutzen. Bitte wenden Sie sich an den Entwickler dieser App.";

@@ -137,7 +137,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
     _crashIdenticalCurrentVersion = YES;
     
     _didCrashInLastSession = NO;
-    _timeintervalCrashInLastSessionOccured = -1;
+    _timeIntervalCrashInLastSessionOccurred = -1;
     _didLogLowMemoryWarning = NO;
     
     _approvedCrashReports = [[NSMutableDictionary alloc] init];
@@ -349,14 +349,14 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
 }
 
 /**
- *	 Extract all app sepcific UUIDs from the crash reports
+ *	 Extract all app specific UUIDs from the crash reports
  *
  * This allows us to send the UUIDs in the XML construct to the server, so the server does not need to parse the crash report for this data.
  * The app specific UUIDs help to identify which dSYMs are needed to symbolicate this crash report.
  *
  *	@param	report The crash report from PLCrashReporter
  *
- *	@return XML structure with the app sepcific UUIDs
+ *	@return XML structure with the app specific UUIDs
  */
 - (NSString *) extractAppUUIDs:(BITPLCrashReport *)report {
   NSMutableString *uuidString = [NSMutableString string];
@@ -797,13 +797,11 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
           if (report.systemInfo.timestamp && report.processInfo.processStartTime) {
             appStartTime = report.processInfo.processStartTime;
             appCrashTime =report.systemInfo.timestamp;
-            _timeintervalCrashInLastSessionOccured = [report.systemInfo.timestamp timeIntervalSinceDate:report.processInfo.processStartTime];
+            _timeIntervalCrashInLastSessionOccurred = [report.systemInfo.timestamp timeIntervalSinceDate:report.processInfo.processStartTime];
           }
         }
         
         [crashData writeToFile:[_crashesDir stringByAppendingPathComponent: cacheFilename] atomically:YES];
-        
-        [self storeMetaDataForCrashReportFilename:cacheFilename];
         
         NSString *incidentIdentifier = @"???";
         if (report.uuidRef != NULL) {
@@ -823,6 +821,9 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
                                                                                osBuild:report.systemInfo.operatingSystemBuild
                                                                               appBuild:report.applicationInfo.applicationVersion
                                     ];
+
+        // fetch and store the meta data after setting _lastSessionCrashDetails, so the property can be used in the protocol methods
+        [self storeMetaDataForCrashReportFilename:cacheFilename];
       }
     }
   }
@@ -959,7 +960,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
       NSString *appName = bit_appName(BITHockeyLocalizedString(@"HockeyAppNamePlaceholder"));
       NSString *alertDescription = [NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundAnonymousDescription"), appName];
       
-      // the crash report is not anynomous any more if username or useremail are not nil
+      // the crash report is not anonymous any more if username or useremail are not nil
       NSString *userid = [self userIDForCrashReport];
       NSString *username = [self userNameForCrashReport];
       NSString *useremail = [self userEmailForCrashReport];
@@ -1108,7 +1109,11 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
       }
     }
   }
-  [self appEnteredForeground];
+  
+  if ([[UIApplication sharedApplication] applicationState] == UIApplicationStateActive) {
+    [self appEnteredForeground];
+  }
+  
   [[NSUserDefaults standardUserDefaults] setBool:NO forKey:kBITAppDidReceiveLowMemoryNotification];
   [[NSUserDefaults standardUserDefaults] synchronize];
   
@@ -1518,6 +1523,10 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
   BITHockeyLog(@"INFO: Sending crash reports started.");
 
   [self.hockeyAppClient enqeueHTTPOperation:operation];
+}
+
+- (NSTimeInterval)timeintervalCrashInLastSessionOccured {
+  return self.timeIntervalCrashInLastSessionOccurred;
 }
 
 @end

@@ -147,25 +147,25 @@
 "HockeyFeedbackListNeverUpdated" = "しない";
 
 /* Provide Feedback Button Title */
-"HockeyFeedbackListButonWriteFeedback" = "フィードバックを送信";
+"HockeyFeedbackListButtonWriteFeedback" = "フィードバックを送信";
 
 /* Add a Response Button Title */
-"HockeyFeedbackListButonWriteResponse" = "応答を追加";
+"HockeyFeedbackListButtonWriteResponse" = "応答を追加";
 
 /* User Data Set Name Button Title */
-"HockeyFeedbackListButonUserDataSetName" = "名前を設定";
+"HockeyFeedbackListButtonUserDataSetName" = "名前を設定";
 
 /* User Data Set Email Button Title */
-"HockeyFeedbackListButonUserDataSetEmail" = "メールを設定";
+"HockeyFeedbackListButtonUserDataSetEmail" = "メールを設定";
 
 /* User Data With Name Button Title */
-"HockeyFeedbackListButonUserDataWithName" = "名前：%@";
+"HockeyFeedbackListButtonUserDataWithName" = "名前：%@";
 
 /* User Data With Email Button Title */
-"HockeyFeedbackListButonUserDataWithEmail" = "メール：%@";
+"HockeyFeedbackListButtonUserDataWithEmail" = "メール：%@";
 
 /* Button title for deleting all local messages*/
-"HockeyFeedbackListButonDeleteAllMessages" = "すべてのメッセージを削除";
+"HockeyFeedbackListButtonDeleteAllMessages" = "すべてのメッセージを削除";
 
 /* Message pending to be send */
 "HockeyFeedbackListMessagePending" = "保留中";
@@ -268,9 +268,6 @@
 
 /* Error presented to the user if authentication failed because of networking issues */
 "HockeyAuthenticationViewControllerNetworkError" = "デバイスがインターネットに接続されていないため、認証できません。やり直してください。";
-
-/* Error presented to the user if authentication could not be stored on the device */
-"HockeyAuthenticationViewControllerStorageError" = "Your authentication token could not be stored due to a keychain error. Please contact the developer of the app.";
 
 "HockeyAuthenticationFailedAuthenticate" = "認証できませんでした。やり直すか、このAppのデベロッパに連絡してください。";
 "HockeyAuthenticationNotMember" = "このAppの使用を認証されていません。このAppのデベロッパに連絡してください。";

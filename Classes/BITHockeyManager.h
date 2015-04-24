@@ -34,11 +34,21 @@
 @protocol BITHockeyManagerDelegate;
 
 @class BITHockeyBaseManager;
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER
 @class BITCrashManager;
+#endif
+#if HOCKEYSDK_FEATURE_UPDATES
 @class BITUpdateManager;
+#endif
+#if HOCKEYSDK_FEATURE_STORE_UPDATES
 @class BITStoreUpdateManager;
+#endif
+#if HOCKEYSDK_FEATURE_FEEDBACK
 @class BITFeedbackManager;
+#endif
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
 @class BITAuthenticator;
+#endif
 
 /** 
  The HockeySDK manager. Responsible for setup and management of all components
@@ -210,6 +220,8 @@
 @property (nonatomic, strong) NSString *serverURL;
 
 
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER
+
 /**
  Reference to the initialized BITCrashManager module
 
@@ -239,6 +251,10 @@
  */
 @property (nonatomic, getter = isCrashManagerDisabled) BOOL disableCrashManager;
 
+#endif
+
+
+#if HOCKEYSDK_FEATURE_UPDATES
 
 /**
  Reference to the initialized BITUpdateManager module
@@ -268,6 +284,10 @@
  */
 @property (nonatomic, getter = isUpdateManagerDisabled) BOOL disableUpdateManager;
 
+#endif
+
+
+#if HOCKEYSDK_FEATURE_STORE_UPDATES
 
 /**
  Reference to the initialized BITStoreUpdateManager module
@@ -297,6 +317,11 @@
  */
 @property (nonatomic, getter = isStoreUpdateManagerEnabled) BOOL enableStoreUpdateManager;
 
+#endif
+
+
+#if HOCKEYSDK_FEATURE_FEEDBACK
+
 /**
  Reference to the initialized BITFeedbackManager module
  
@@ -325,6 +350,11 @@
  */
 @property (nonatomic, getter = isFeedbackManagerDisabled) BOOL disableFeedbackManager;
 
+#endif
+
+
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
+
 /**
  Reference to the initialized BITAuthenticator module
  
@@ -335,6 +365,8 @@
  @see startManager
  */
 @property (nonatomic, strong, readonly) BITAuthenticator *authenticator;
+
+#endif
 
 
 ///-----------------------------------------------------------------------------

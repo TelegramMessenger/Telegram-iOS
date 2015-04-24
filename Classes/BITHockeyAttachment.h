@@ -59,7 +59,7 @@
  @param hockeyAttachmentData The attachment data as NSData. The instance will be ignore if this is set to nil!
  @param contentType          The content type of your data as MIME type. If nil will be set to "application/octet-stream"
  
- @return An instsance of BITHockeyAttachment.
+ @return An instance of BITHockeyAttachment.
  */
 - (instancetype)initWithFilename:(NSString *)filename
             hockeyAttachmentData:(NSData *)hockeyAttachmentData

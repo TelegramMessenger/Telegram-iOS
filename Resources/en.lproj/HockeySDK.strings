@@ -147,25 +147,25 @@
 "HockeyFeedbackListNeverUpdated" = "Never";
 
 /* Provide Feedback Button Title */
-"HockeyFeedbackListButonWriteFeedback" = "Provide Feedback";
+"HockeyFeedbackListButtonWriteFeedback" = "Provide Feedback";
 
 /* Add a Response Button Title */
-"HockeyFeedbackListButonWriteResponse" = "Add a Response";
+"HockeyFeedbackListButtonWriteResponse" = "Add a Response";
 
 /* User Data Set Name Button Title */
-"HockeyFeedbackListButonUserDataSetName" = "Set Your Name";
+"HockeyFeedbackListButtonUserDataSetName" = "Set Your Name";
 
 /* User Data Set Email Button Title */
-"HockeyFeedbackListButonUserDataSetEmail" = "Set Your Email";
+"HockeyFeedbackListButtonUserDataSetEmail" = "Set Your Email";
 
 /* User Data With Name Button Title */
-"HockeyFeedbackListButonUserDataWithName" = "Name: %@";
+"HockeyFeedbackListButtonUserDataWithName" = "Name: %@";
 
 /* User Data With Email Button Title */
-"HockeyFeedbackListButonUserDataWithEmail" = "Email: %@";
+"HockeyFeedbackListButtonUserDataWithEmail" = "Email: %@";
 
 /* Button title for deleting all local messages*/
-"HockeyFeedbackListButonDeleteAllMessages" = "Delete All Messages";
+"HockeyFeedbackListButtonDeleteAllMessages" = "Delete All Messages";
 
 /* Message pending to be send */
 "HockeyFeedbackListMessagePending" = "Pending";
@@ -268,9 +268,6 @@
 
 /* Error presented to the user if authentication failed because of networking issues */
 "HockeyAuthenticationViewControllerNetworkError" = "Failed to authorize because your device appears to be disconnected from the Internet. Please try again.";
-
-/* Error presented to the user if authentication could not be stored on the device */
-"HockeyAuthenticationViewControllerStorageError" = "Your authentication token could not be stored due to a keychain error. Please contact the developer of the app.";
 
 "HockeyAuthenticationFailedAuthenticate" = "Failed to authorize. Please try again or contact the developer of this app.";
 "HockeyAuthenticationNotMember" = "You are not authorized to use this app. Please contact the developer of this app.";

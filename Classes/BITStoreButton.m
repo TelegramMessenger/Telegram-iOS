@@ -119,7 +119,7 @@
       [CATransaction setAnimationDuration:kDefaultButtonAnimationTime];
       [CATransaction setAnimationTimingFunction:[CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut]];
     } else {
-      // frame is calculated and explicitely animated. so we absolutely need kCATransactionDisableActions
+      // frame is calculated and explicitly animated. so we absolutely need kCATransactionDisableActions
       [CATransaction setValue:[NSNumber numberWithBool:YES] forKey:kCATransactionDisableActions];
     }
     

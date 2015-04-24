@@ -147,25 +147,25 @@
 "HockeyFeedbackListNeverUpdated" = "Nunca";
 
 /* Provide Feedback Button Title */
-"HockeyFeedbackListButonWriteFeedback" = "Fornecer feedback";
+"HockeyFeedbackListButtonWriteFeedback" = "Fornecer feedback";
 
 /* Add a Response Button Title */
-"HockeyFeedbackListButonWriteResponse" = "Adicionar uma resposta";
+"HockeyFeedbackListButtonWriteResponse" = "Adicionar uma resposta";
 
 /* User Data Set Name Button Title */
-"HockeyFeedbackListButonUserDataSetName" = "Informe seu nome";
+"HockeyFeedbackListButtonUserDataSetName" = "Informe seu nome";
 
 /* User Data Set Email Button Title */
-"HockeyFeedbackListButonUserDataSetEmail" = "Informe seu e-mail";
+"HockeyFeedbackListButtonUserDataSetEmail" = "Informe seu e-mail";
 
 /* User Data With Name Button Title */
-"HockeyFeedbackListButonUserDataWithName" = "Nome: %@";
+"HockeyFeedbackListButtonUserDataWithName" = "Nome: %@";
 
 /* User Data With Email Button Title */
-"HockeyFeedbackListButonUserDataWithEmail" = "E-mail: %@";
+"HockeyFeedbackListButtonUserDataWithEmail" = "E-mail: %@";
 
 /* Button title for deleting all local messages*/
-"HockeyFeedbackListButonDeleteAllMessages" = "Excluir todas as mensagens";
+"HockeyFeedbackListButtonDeleteAllMessages" = "Excluir todas as mensagens";
 
 /* Message pending to be send */
 "HockeyFeedbackListMessagePending" = "Pendente";
@@ -268,9 +268,6 @@
 
 /* Error presented to the user if authentication failed because of networking issues */
 "HockeyAuthenticationViewControllerNetworkError" = "Não foi possível autorizar porque seu dispositivo parece estar desconectado da Internet. Tente novamente.";
-
-/* Error presented to the user if authentication could not be stored on the device */
-"HockeyAuthenticationViewControllerStorageError" = "Your authentication token could not be stored due to a keychain error. Please contact the developer of the app.";
 
 "HockeyAuthenticationFailedAuthenticate" = "Falha ao autorizar. Tente novamente ou contate o desenvolvedor deste aplicativo.";
 "HockeyAuthenticationNotMember" = "Você não tem autorização para usar este aplicativo. Contate o desenvolvedor deste aplicativo.";

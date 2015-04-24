@@ -222,6 +222,18 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
 @property (nonatomic, readwrite) BITFeedbackObservationMode feedbackObservationMode;
 
 
+/**
+ Prefill feedback compose message user interface with the items given.
+ 
+ All NSString-Content in the array will be concatenated and result in the message,
+ while all UIImage and NSData-instances will be turned into attachments.
+ 
+ @param items an NSArray with objects that should be attached
+ @see `[BITFeedbackComposeViewController prepareWithItems:]`
+ */
+@property (nonatomic, copy) NSArray *feedbackComposerPreparedItems;
+
+
 ///-----------------------------------------------------------------------------
 /// @name User Interface
 ///-----------------------------------------------------------------------------
@@ -252,7 +264,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
 
 
 /**
- Return a screenshot UIImage intance from the current visiable screen
+ Return a screenshot UIImage instance from the current visible screen
 
  @return UIImage instance containing a screenshot of the current screen
  */

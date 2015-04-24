@@ -136,9 +136,8 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
 
 - (void)viewWillDisappear:(BOOL)animated {
   [super viewWillDisappear:animated];
+  
   [[NSNotificationCenter defaultCenter] removeObserver:self name:UIDeviceOrientationDidChangeNotification object:nil];
-
-  [super viewWillDisappear:animated];
 }
 
 - (BOOL)prefersStatusBarHidden {
@@ -153,7 +152,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
 - (void)fitImageViewFrame {
   
   CGSize size = [UIScreen mainScreen].bounds.size;
-  if (UIInterfaceOrientationIsLandscape([UIApplication sharedApplication].statusBarOrientation)){
+  if (UIInterfaceOrientationIsLandscape([UIApplication sharedApplication].statusBarOrientation) && size.height > size.width){
     size = CGSizeMake(size.height, size.width);
   }
   
