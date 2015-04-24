@@ -1,3 +1,7 @@
+## Version 3.6.4
+
+- [BUGFIX] Fixed a build issue
+
 ## Version 3.6.3
 
 - [NEW] `BITCrashManager`: Added launch time to crash reports
