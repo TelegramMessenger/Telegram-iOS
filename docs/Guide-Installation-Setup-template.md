@@ -1,6 +1,6 @@
-## Version 3.6.3
+## Version 3.6.4
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.6.3/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.6.4/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -142,9 +142,9 @@ The following points need to be considered to use HockeySDK with iOS 8 Extension
 
 This documentation provides integrated help in Xcode for all public APIs and a set of additional tutorials and how-tos.
 
-1. Copy `de.bitstadium.HockeySDK-iOS-3.6.1.docset` into ~`/Library/Developer/Shared/Documentation/DocSets`
+1. Copy `de.bitstadium.HockeySDK-iOS-3.6.4.docset` into ~`/Library/Developer/Shared/Documentation/DocSets`
 
-The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.6.3/](http://hockeyapp.net/help/sdk/ios/3.6.3/)
+The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.6.4/](http://hockeyapp.net/help/sdk/ios/3.6.4/)
 
 ### Set up with xcconfig
 
