@@ -1,6 +1,6 @@
-## Version 3.6.3
+## Version 3.6.4
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.6.3/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.6.4/docs/docs/Changelog.html)
 
 
 ## Introduction
@@ -31,9 +31,9 @@ The main SDK class is `BITHockeyManager`. It initializes all modules and provide
 
 ## Installation & Setup
 
-- [Installation & Setup](http://www.hockeyapp.net/help/sdk/ios/3.6.3/docs/docs/Guide-Installation-Setup.html) (Recommended)
-- [Installation & Setup Advanced](http://www.hockeyapp.net/help/sdk/ios/3.6.2/docs/docs/Guide-Installation-Setup-Advanced.html) (Using Git submodule and Xcode sub-project)
-- [Identify and authenticate users of Ad-Hoc or Enterprise builds](http://www.hockeyapp.net/help/sdk/ios/3.6.2/docs/docs/HowTo-Authenticating-Users-on-iOS.html)
+- [Installation & Setup](http://www.hockeyapp.net/help/sdk/ios/3.6.4/docs/docs/Guide-Installation-Setup.html) (Recommended)
+- [Installation & Setup Advanced](http://www.hockeyapp.net/help/sdk/ios/3.6.4/docs/docs/Guide-Installation-Setup-Advanced.html) (Using Git submodule and Xcode sub-project)
+- [Identify and authenticate users of Ad-Hoc or Enterprise builds](http://www.hockeyapp.net/help/sdk/ios/3.6.4/docs/docs/HowTo-Authenticating-Users-on-iOS.html)
 - [Migration from previous SDK Versions](http://www.hockeyapp.net/help/sdk/ios/3.6.2/docs/docs/Guide-Migration-Kits.html)
 
 
@@ -47,4 +47,4 @@ This documentation provides integrated help in Xcode for all public APIs and a s
 
 3. Copy the content into ~`/Library/Developer/Shared/Documentation/DocSets`
 
-The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.6.3/](http://hockeyapp.net/help/sdk/ios/3.6.3/)
+The documentation is also available via the following URL: [http://hockeyapp.net/help/sdk/ios/3.6.4/](http://hockeyapp.net/help/sdk/ios/3.6.4/)
