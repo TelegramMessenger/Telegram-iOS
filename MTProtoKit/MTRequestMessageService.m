@@ -292,7 +292,16 @@
         [buffer appendTLString:_apiEnvironment.langCode];
         
         [buffer appendBytes:currentData.bytes length:currentData.length];
+        currentData = buffer.data;
+    }
+    
+    if (_apiEnvironment != nil && _apiEnvironment.disableUpdates)
+    {
+        MTBuffer *buffer = [[MTBuffer alloc] init];
         
+        [buffer appendInt32:(int32_t)0xbf9459b7];
+
+        [buffer appendBytes:currentData.bytes length:currentData.length];
         currentData = buffer.data;
     }
     

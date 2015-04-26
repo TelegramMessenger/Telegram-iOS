@@ -17,4 +17,6 @@
 - (id)objectForKey:(id<NSCopying>)aKey group:(NSString *)group;
 - (void)removeObjectForKey:(id<NSCopying>)aKey group:(NSString *)group;
 
+- (void)dropGroup:(NSString *)group;
+
 @end

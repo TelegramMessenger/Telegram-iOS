@@ -353,4 +353,15 @@ static NSMutableDictionary *keychains()
     TG_SYNCHRONIZED_END(_dictByGroup);
 }
 
+- (void)dropGroup:(NSString *)group
+{
+    if (group == nil)
+        return;
+    
+    TG_SYNCHRONIZED_BEGIN(_dictByGroup);
+    _dictByGroup[group] = [[NSMutableDictionary alloc] init];
+    [self _storeKeychain:group];
+    TG_SYNCHRONIZED_END(_dictByGroup);
+}
+
 @end

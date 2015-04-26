@@ -19,6 +19,8 @@
 
 @property (nonatomic, strong, readonly) NSString *apiInitializationHash;
 
+@property (nonatomic) bool disableUpdates;
+
 @property (nonatomic, copy) void (^passwordInputHandler)();
 
 @end
