@@ -86,6 +86,9 @@
 		D089E0341AC48EA7009A744B /* SThreadPoolTask.h in Headers */ = {isa = PBXBuildFile; fileRef = D089E0301AC48EA7009A744B /* SThreadPoolTask.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D089E0391AC56981009A744B /* SThreadPoolQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = D089E02E1AC48EA7009A744B /* SThreadPoolQueue.m */; };
 		D089E03A1AC56981009A744B /* SThreadPoolTask.m in Sources */ = {isa = PBXBuildFile; fileRef = D089E02D1AC48EA7009A744B /* SThreadPoolTask.m */; };
+		D0FC5B431AF140E600F353AB /* SSignal+Take.h in Headers */ = {isa = PBXBuildFile; fileRef = D0FC5B411AF140E600F353AB /* SSignal+Take.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0FC5B441AF140E600F353AB /* SSignal+Take.m in Sources */ = {isa = PBXBuildFile; fileRef = D0FC5B421AF140E600F353AB /* SSignal+Take.m */; };
+		D0FC5B451AF141F800F353AB /* SSignal+Take.m in Sources */ = {isa = PBXBuildFile; fileRef = D0FC5B421AF140E600F353AB /* SSignal+Take.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -171,6 +174,8 @@
 		D089E02E1AC48EA7009A744B /* SThreadPoolQueue.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SThreadPoolQueue.m; sourceTree = "<group>"; };
 		D089E02F1AC48EA7009A744B /* SThreadPoolQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SThreadPoolQueue.h; sourceTree = "<group>"; };
 		D089E0301AC48EA7009A744B /* SThreadPoolTask.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SThreadPoolTask.h; sourceTree = "<group>"; };
+		D0FC5B411AF140E600F353AB /* SSignal+Take.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "SSignal+Take.h"; sourceTree = "<group>"; };
+		D0FC5B421AF140E600F353AB /* SSignal+Take.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "SSignal+Take.m"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -258,6 +263,8 @@
 				D0445E191A7C2D7300267924 /* SSignal+Single.m */,
 				D0445E1A1A7C2D7300267924 /* SSignal+Timing.h */,
 				D0445E1B1A7C2D7300267924 /* SSignal+Timing.m */,
+				D0FC5B411AF140E600F353AB /* SSignal+Take.h */,
+				D0FC5B421AF140E600F353AB /* SSignal+Take.m */,
 				D0445E1C1A7C2D7300267924 /* SSubscriber.h */,
 				D0445E1D1A7C2D7300267924 /* SSubscriber.m */,
 				D0445E1E1A7C2D7300267924 /* SThreadPool.h */,
@@ -323,6 +330,7 @@
 				D0445E321A7C2D7300267924 /* SSignal+Accumulate.h in Headers */,
 				D0445E361A7C2D7300267924 /* SSignal+Combine.h in Headers */,
 				D0445E2A1A7C2D7300267924 /* SDisposable.h in Headers */,
+				D0FC5B431AF140E600F353AB /* SSignal+Take.h in Headers */,
 				D0445E421A7C2D7300267924 /* SSignal+SideEffects.h in Headers */,
 				D0445E3E1A7C2D7300267924 /* SSignal+Meta.h in Headers */,
 				D0445E2B1A7C2D7300267924 /* SEvent.h in Headers */,
@@ -475,6 +483,7 @@
 				D0445E471A7C2D7300267924 /* SSignal+Timing.m in Sources */,
 				D0445E311A7C2D7300267924 /* SSignal.m in Sources */,
 				D087632B1A839EDC00632240 /* SDisposableSet.m in Sources */,
+				D0FC5B441AF140E600F353AB /* SSignal+Take.m in Sources */,
 				D089E0311AC48EA7009A744B /* SThreadPoolTask.m in Sources */,
 				D0445E491A7C2D7300267924 /* SSubscriber.m in Sources */,
 				D0445E431A7C2D7300267924 /* SSignal+SideEffects.m in Sources */,
@@ -517,6 +526,7 @@
 				D0445E7B1A7C447D00267924 /* SSignal+Accumulate.m in Sources */,
 				D0445E851A7C447D00267924 /* SSignal+Timing.m in Sources */,
 				D0445E7A1A7C447D00267924 /* SSignal.m in Sources */,
+				D0FC5B451AF141F800F353AB /* SSignal+Take.m in Sources */,
 				D087632C1A839EE800632240 /* SDisposableSet.m in Sources */,
 				D0445E861A7C447D00267924 /* SSubscriber.m in Sources */,
 				D0445E831A7C447D00267924 /* SSignal+SideEffects.m in Sources */,
