@@ -502,7 +502,7 @@
                         rpcResult = request.responseParser([MTInternalMessageParser unwrapMessage:rpcResultMessage.data]);
                         if (rpcResult == nil)
                         {
-                            rpcError = [[MTRpcError alloc] initWithErrorCode:500 errorDescription:@"INTERNAL_INVALID_RESPONSE"];
+                            rpcError = [[MTRpcError alloc] initWithErrorCode:500 errorDescription:@"TL_PARSING_ERROR"];
                         }
                     }
                     

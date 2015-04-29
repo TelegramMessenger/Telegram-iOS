@@ -681,9 +681,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     }];
 }
 
-- (NSString *)outgoingMessageDescription:(MTOutgoingMessage *)message
+- (NSString *)outgoingMessageDescription:(MTOutgoingMessage *)message messageId:(int64_t)messageId messageSeqNo:(int32_t)messageSeqNo
 {
-    return [[NSString alloc] initWithFormat:@"%@ (%" PRId64 "/%" PRId32 ")", message.metadata, message.messageId, message.messageSeqNo];
+    return [[NSString alloc] initWithFormat:@"%@ (%" PRId64 "/%" PRId32 ")", message.metadata, message.messageId == 0 ? messageId : message.messageId, message.messageSeqNo == 0 ? message.messageSeqNo : messageSeqNo];
 }
 
 - (NSString *)incomingMessageDescription:(MTIncomingMessage *)message
@@ -819,7 +819,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                         messageSeqNo = outgoingMessage.messageSeqNo;
                     }
                     
-                    MTLog(@"[MTProto#%p preparing  %@]", self, [self outgoingMessageDescription:outgoingMessage]);
+                    MTLog(@"[MTProto#%p preparing %@]", self, [self outgoingMessageDescription:outgoingMessage messageId:messageId messageSeqNo:messageSeqNo]);
                     
                     if (!monotonityViolated || _useUnauthorizedMode)
                     {
