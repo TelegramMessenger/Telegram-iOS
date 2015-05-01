@@ -105,7 +105,7 @@
             MTRequest *request = [[MTRequest alloc] init];
             
             NSData *getConfigData = nil;
-            MTRequestDatacenterAddressListParser responseParser = [_context.serialization requestDatacenterAddressList:_targetDatacenterId data:&getConfigData];
+            MTRequestDatacenterAddressListParser responseParser = [_context.serialization requestDatacenterAddressList:(int32_t)_datacenterId data:&getConfigData];
             
             [request setPayload:getConfigData metadata:@"getConfig" responseParser:responseParser];
             

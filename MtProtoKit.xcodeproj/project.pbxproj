@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D079AB9C1AF39B8000076F59 /* MtProtoKitMac.h in Headers */ = {isa = PBXBuildFile; fileRef = D079AB9B1AF39B8000076F59 /* MtProtoKitMac.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D079ABB01AF39BA400076F59 /* MTProtoKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A31D18B158AE00C65116 /* MTProtoKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0CB05FC1ADC4483005E298F /* MtProtoKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CB05FB1ADC4483005E298F /* MtProtoKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0CB06101ADC44B7005E298F /* MTTime.m in Sources */ = {isa = PBXBuildFile; fileRef = 93DBD23418B2DA1E00631ADC /* MTTime.m */; };
 		D0CB06111ADC44B7005E298F /* MTTimer.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84D818AFE81C007F1076 /* MTTimer.m */; };
@@ -358,6 +360,11 @@
 		D063A3AA18B1650F00C65116 /* MTHttpWorker.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTHttpWorker.m; path = MTProtoKit/MTHttpWorker.m; sourceTree = "<group>"; };
 		D063A3AB18B1650F00C65116 /* MTHttpWorkerBehaviour.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTHttpWorkerBehaviour.h; path = MTProtoKit/MTHttpWorkerBehaviour.h; sourceTree = "<group>"; };
 		D063A3AC18B1650F00C65116 /* MTHttpWorkerBehaviour.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTHttpWorkerBehaviour.m; path = MTProtoKit/MTHttpWorkerBehaviour.m; sourceTree = "<group>"; };
+		D079AB971AF39B8000076F59 /* MtProtoKitMac.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MtProtoKitMac.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D079AB9A1AF39B8000076F59 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D079AB9B1AF39B8000076F59 /* MtProtoKitMac.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MtProtoKitMac.h; sourceTree = "<group>"; };
+		D079ABA71AF39B8000076F59 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D079ABA81AF39B8000076F59 /* MtProtoKitMacTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MtProtoKitMacTests.m; sourceTree = "<group>"; };
 		D0A44E4D18B24A6000B64FC6 /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libcrypto.a; sourceTree = "<group>"; };
 		D0CB05F71ADC4483005E298F /* MtProtoKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MtProtoKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0CB05FA1ADC4483005E298F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -420,6 +427,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		D079AB931AF39B8000076F59 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D0CB05F31ADC4483005E298F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -545,6 +559,8 @@
 				D05A833218AFB3F9007F1076 /* MtProtoKit Tests */,
 				D0CB05F81ADC4483005E298F /* MtProtoKit */,
 				D0CB06051ADC4483005E298F /* MtProtoKitTests */,
+				D079AB981AF39B8000076F59 /* MtProtoKitMac */,
+				D079ABA51AF39B8000076F59 /* MtProtoKitMacTests */,
 				D05A831618AFB3F9007F1076 /* Frameworks */,
 				D05A831518AFB3F9007F1076 /* Products */,
 			);
@@ -554,6 +570,7 @@
 			isa = PBXGroup;
 			children = (
 				D0CB05F71ADC4483005E298F /* MtProtoKit.framework */,
+				D079AB971AF39B8000076F59 /* MtProtoKitMac.framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -911,6 +928,40 @@
 			path = MtProtoKitiOS/en.lproj;
 			sourceTree = SOURCE_ROOT;
 		};
+		D079AB981AF39B8000076F59 /* MtProtoKitMac */ = {
+			isa = PBXGroup;
+			children = (
+				D079AB9B1AF39B8000076F59 /* MtProtoKitMac.h */,
+				D079AB991AF39B8000076F59 /* Supporting Files */,
+			);
+			path = MtProtoKitMac;
+			sourceTree = "<group>";
+		};
+		D079AB991AF39B8000076F59 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				D079AB9A1AF39B8000076F59 /* Info.plist */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		D079ABA51AF39B8000076F59 /* MtProtoKitMacTests */ = {
+			isa = PBXGroup;
+			children = (
+				D079ABA81AF39B8000076F59 /* MtProtoKitMacTests.m */,
+				D079ABA61AF39B8000076F59 /* Supporting Files */,
+			);
+			path = MtProtoKitMacTests;
+			sourceTree = "<group>";
+		};
+		D079ABA61AF39B8000076F59 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				D079ABA71AF39B8000076F59 /* Info.plist */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
 		D0A44E4C18B24A6000B64FC6 /* OSX */ = {
 			isa = PBXGroup;
 			children = (
@@ -1013,6 +1064,15 @@
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
+		D079AB941AF39B8000076F59 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D079AB9C1AF39B8000076F59 /* MtProtoKitMac.h in Headers */,
+				D079ABB01AF39BA400076F59 /* MTProtoKit.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D0CB05F41ADC4483005E298F /* Headers */ = {
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
@@ -1098,6 +1158,24 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
+		D079AB961AF39B8000076F59 /* MtProtoKitMac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D079ABAE1AF39B8000076F59 /* Build configuration list for PBXNativeTarget "MtProtoKitMac" */;
+			buildPhases = (
+				D079AB921AF39B8000076F59 /* Sources */,
+				D079AB931AF39B8000076F59 /* Frameworks */,
+				D079AB941AF39B8000076F59 /* Headers */,
+				D079AB951AF39B8000076F59 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MtProtoKitMac;
+			productName = MtProtoKitMac;
+			productReference = D079AB971AF39B8000076F59 /* MtProtoKitMac.framework */;
+			productType = "com.apple.product-type.framework";
+		};
 		D0CB05F61ADC4483005E298F /* MtProtoKit */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D0CB060E1ADC4483005E298F /* Build configuration list for PBXNativeTarget "MtProtoKit" */;
@@ -1125,6 +1203,9 @@
 				LastUpgradeCheck = 0510;
 				ORGANIZATIONNAME = Telegram;
 				TargetAttributes = {
+					D079AB961AF39B8000076F59 = {
+						CreatedOnToolsVersion = 6.3.1;
+					};
 					D0CB05F61ADC4483005E298F = {
 						CreatedOnToolsVersion = 6.3;
 					};
@@ -1143,11 +1224,19 @@
 			projectRoot = "";
 			targets = (
 				D0CB05F61ADC4483005E298F /* MtProtoKit */,
+				D079AB961AF39B8000076F59 /* MtProtoKitMac */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		D079AB951AF39B8000076F59 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D0CB05F51ADC4483005E298F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1158,6 +1247,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		D079AB921AF39B8000076F59 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D0CB05F21ADC4483005E298F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1338,6 +1434,68 @@
 			};
 			name = Release;
 		};
+		D079ABAA1AF39B8000076F59 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_VERSION = A;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = MtProtoKitMac/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = staticlib;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		D079ABAB1AF39B8000076F59 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				COMBINE_HIDPI_IMAGES = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_VERSION = A;
+				GCC_NO_COMMON_BLOCKS = YES;
+				INFOPLIST_FILE = MtProtoKitMac/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = staticlib;
+				MACOSX_DEPLOYMENT_TARGET = 10.10;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
 		D0CB060A1ADC4483005E298F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1432,6 +1590,14 @@
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
+		};
+		D079ABAE1AF39B8000076F59 /* Build configuration list for PBXNativeTarget "MtProtoKitMac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D079ABAA1AF39B8000076F59 /* Debug */,
+				D079ABAB1AF39B8000076F59 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
 		};
 		D0CB060E1ADC4483005E298F /* Build configuration list for PBXNativeTarget "MtProtoKit" */ = {
 			isa = XCConfigurationList;

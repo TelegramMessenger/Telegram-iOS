@@ -255,6 +255,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 {
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
+        _sleepWatchdogTimerLastTime = MTAbsoluteSystemTime();
         [_sleepWatchdogTimer resetTimeout:MTTcpTransportSleepWatchdogTimeout];
     }];
 }
