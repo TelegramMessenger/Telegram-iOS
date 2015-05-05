@@ -2,6 +2,7 @@
 
 #import "SMetaDisposable.h"
 #import "SDisposableSet.h"
+#import "SBlockDisposable.h"
 #import "SAtomic.h"
 
 @implementation SSignal (Catch)
@@ -34,6 +35,59 @@
         }]];
         
         return disposable;
+    }];
+}
+
+static dispatch_block_t recursiveBlock(void (^block)(dispatch_block_t recurse))
+{
+    return ^
+    {
+        block(RecursiveBlock(block));
+    };
+}
+
+- (SSignal *)restart
+{
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
+    {
+        SAtomic *shouldRestart = [[SAtomic alloc] initWithValue:@true];
+        
+        SMetaDisposable *currentDisposable = [[SMetaDisposable alloc] init];
+        
+        void (^start)() = recursiveBlock(^(dispatch_block_t recurse)
+        {
+            NSNumber *currentShouldRestart = [shouldRestart with:^id(NSNumber *current)
+            {
+                return current;
+            }];
+            
+            if ([currentShouldRestart boolValue])
+            {
+                id<SDisposable> disposable = [self startWithNext:^(id next)
+                {
+                    [subscriber putNext:next];
+                } error:^(id error)
+                {
+                    [subscriber putError:error];
+                } completed:^
+                {
+                    recurse();
+                }];
+                [currentDisposable setDisposable:disposable];
+            }
+        });
+        
+        start();
+        
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+            [currentDisposable dispose];
+            
+            [shouldRestart modify:^id(__unused id current)
+            {
+                return @false;
+            }];
+        }];
     }];
 }
 
