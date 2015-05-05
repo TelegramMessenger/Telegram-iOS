@@ -634,25 +634,35 @@
     XCTAssertFalse(startedThird);
 }
 
-- (void)testWaitSameQueue
+- (void)testRestart
 {
     SSignal *signal = [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
     {
-        dispatch_async(dispatch_get_main_queue(), ^
+        [[SQueue concurrentDefaultQueue] dispatch:^
         {
-            [subscriber putNext:@(1)];
+            [subscriber putNext:@1];
             [subscriber putCompletion];
-        });
+        }];
         
-        return nil;
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+        }];
     }];
     
-    CFAbsoluteTime startTime = CFAbsoluteTimeGetCurrent();
-    [[signal wait:2.0 onQueue:[SQueue concurrentDefaultQueue]] startWithNext:^(__unused id next)
+    __block int result = 0;
+    
+    [[[signal restart] take:3] startWithNext:^(id next)
     {
+        result += [next intValue];
+    } error:^(id error) {
+        
+    } completed:^{
         
     }];
-    XCTAssert(startTime < 0.5);
+    
+    usleep(100 * 1000);
+    
+    XCTAssertEqual(result, 3);
 }
 
 @end

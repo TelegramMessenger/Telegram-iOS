@@ -42,7 +42,7 @@ static dispatch_block_t recursiveBlock(void (^block)(dispatch_block_t recurse))
 {
     return ^
     {
-        block(RecursiveBlock(block));
+        block(recursiveBlock(block));
     };
 }
 
