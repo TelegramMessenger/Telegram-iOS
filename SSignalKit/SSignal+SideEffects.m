@@ -23,6 +23,24 @@
     }];
 }
 
+- (SSignal *)afterNext:(void (^)(id next))f
+{
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
+    {
+        return [self startWithNext:^(id next)
+        {
+            [subscriber putNext:next];
+            f(next);
+        } error:^(id error)
+        {
+            [subscriber putError:error];
+        } completed:^
+        {
+            [subscriber putCompletion];
+        }];
+    }];
+}
+
 - (SSignal *)onError:(void (^)(id error))f
 {
     return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)

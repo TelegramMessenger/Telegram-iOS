@@ -4,6 +4,7 @@
 #import "SSignal+SideEffects.h"
 #import "SBag.h"
 #import "SMetaDisposable.h"
+#import "SBlockDisposable.h"
 
 #import <libkern/OSAtomic.h>
 
@@ -12,6 +13,7 @@
     OSSpinLock _lock;
     NSMutableDictionary *_multicastSignals;
     NSMutableDictionary *_standaloneSignalDisposables;
+    NSMutableDictionary *_pipeListeners;
 }
 
 @end
@@ -25,6 +27,7 @@
     {
         _multicastSignals = [[NSMutableDictionary alloc] init];
         _standaloneSignalDisposables = [[NSMutableDictionary alloc] init];
+        _pipeListeners = [[NSMutableDictionary alloc] init];
     }
     return self;
 }
@@ -120,6 +123,44 @@
         OSSpinLockLock(&_lock);
         [(SMetaDisposable *)_standaloneSignalDisposables[key] setDisposable:disposable];
         OSSpinLockUnlock(&_lock);
+    }
+}
+
+- (SSignal *)multicastedPipeForKey:(NSString *)key
+{
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        OSSpinLockLock(&_lock);
+        SBag *bag = _pipeListeners[key];
+        if (bag == nil)
+        {
+            bag = [[SBag alloc] init];
+            _pipeListeners[key] = bag;
+        }
+        NSInteger index = [bag addItem:[^(id next)
+        {
+            [subscriber putNext:next];
+        } copy]];
+        OSSpinLockUnlock(&_lock);
+        
+        return [[SBlockDisposable alloc] initWithBlock:^
+        {
+            OSSpinLockLock(&_lock);
+            [(SBag *)_pipeListeners[key] removeItem:index];
+            OSSpinLockUnlock(&_lock);
+        }];
+    }];
+}
+
+- (void)putNext:(id)next toMulticastedPipeForKey:(NSString *)key
+{
+    OSSpinLockLock(&_lock);
+    NSArray *pipeListeners = [(SBag *)_pipeListeners[key] copyItems];
+    OSSpinLockUnlock(&_lock);
+    
+    for (void (^listener)(id) in pipeListeners)
+    {
+        listener(next);
     }
 }
 
