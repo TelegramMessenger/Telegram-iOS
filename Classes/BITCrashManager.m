@@ -820,6 +820,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
                                                                              osVersion:report.systemInfo.operatingSystemVersion
                                                                                osBuild:report.systemInfo.operatingSystemBuild
                                                                               appBuild:report.applicationInfo.applicationVersion
+                                                                  appProcessIdentifier:report.processInfo.processID
                                     ];
 
         // fetch and store the meta data after setting _lastSessionCrashDetails, so the property can be used in the protocol methods
@@ -1199,6 +1200,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
                                                                        osVersion:fakeReportOSVersion
                                                                          osBuild:fakeReportOSBuild
                                                                         appBuild:fakeReportAppVersion
+                                                            appProcessIdentifier:[[NSProcessInfo processInfo] processIdentifier]
                               ];
 
   NSData *plist = [NSPropertyListSerialization dataWithPropertyList:(id)rootObj

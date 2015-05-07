@@ -43,6 +43,7 @@ NSString *const kBITCrashKillSignal = @"SIGKILL";
                                  osVersion:(NSString *)osVersion
                                    osBuild:(NSString *)osBuild
                                   appBuild:(NSString *)appBuild
+                      appProcessIdentifier:(NSUInteger)appProcessIdentifier
 {
   if ((self = [super init])) {
     _incidentIdentifier = incidentIdentifier;
@@ -55,6 +56,7 @@ NSString *const kBITCrashKillSignal = @"SIGKILL";
     _osVersion = osVersion;
     _osBuild = osBuild;
     _appBuild = appBuild;
+    _appProcessIdentifier = appProcessIdentifier;
   }
   return self;
 }
