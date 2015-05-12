@@ -7,4 +7,5 @@ script:
 - xcodebuild -project HockeySDK.xcodeproj -scheme "HockeySDK" -sdk iphonesimulator
   -configuration Debug -destination "platform=iOS Simulator,name=iPhone 6" test |
   xcpretty -c
+- cd ..
 - pod lib lint 
