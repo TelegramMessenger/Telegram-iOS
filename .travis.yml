@@ -1,0 +1,10 @@
+language: objective-c
+before_install:
+- gem install xcpretty -N cocoapods
+script:
+- set -o pipefail
+- cd Support
+- xcodebuild -project HockeySDK.xcodeproj -scheme "HockeySDK" -sdk iphonesimulator
+  -configuration Debug -destination "platform=iOS Simulator,name=iPhone 6" test |
+  xcpretty -c
+- pod lib lint 
