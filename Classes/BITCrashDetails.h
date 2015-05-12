@@ -86,6 +86,11 @@
 @property (nonatomic, readonly, strong) NSString *appBuild;
 
 /**
+ *  Identifier of the app process that crashed
+ */
+@property (nonatomic, readonly, assign) NSUInteger appProcessIdentifier;
+
+/**
  Indicates if the app was killed while being in foreground from the iOS
  
  If `[BITCrashManager enableAppNotTerminatingCleanlyDetection]` is enabled, use this on startup
