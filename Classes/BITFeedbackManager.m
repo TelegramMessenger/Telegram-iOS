@@ -225,6 +225,7 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
 - (BITFeedbackComposeViewController *)feedbackComposeViewController {
   BITFeedbackComposeViewController *composeViewController = [[BITFeedbackComposeViewController alloc] init];
   [composeViewController prepareWithItems:self.feedbackComposerPreparedItems];
+  [composeViewController setHideImageAttachmentButton:self.feedbackComposeHideImageAttachmentButton];
     
   // by default set the delegate to be identical to the one of BITFeedbackManager
   [composeViewController setDelegate:self.delegate];

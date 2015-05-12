@@ -248,7 +248,9 @@
   
   [self.textAccessoryView addSubview:self.addPhotoButton];
   
-  self.textView.inputAccessoryView = self.textAccessoryView;
+  if (!self.hideImageAttachmentButton) {
+    self.textView.inputAccessoryView = self.textAccessoryView;
+  }
   
   // This could be a subclass, yet 
   self.attachmentScrollView = [[UIScrollView alloc] initWithFrame:CGRectZero];
@@ -305,6 +307,7 @@
   } else {
     // Invoke delayed to fix iOS 7 iPad landscape bug, where this view will be moved if not called delayed
     [self.textView performSelector:@selector(becomeFirstResponder) withObject:nil afterDelay:0.0];
+    [self refreshAttachmentScrollview];
   }
 }
 

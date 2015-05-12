@@ -70,6 +70,14 @@
 
 
 /**
+ Don't show the option to add images from the photo library
+ 
+ This is helpful if your application is landscape only, since the system UI for
+ selecting an image from the photo library is portrait only
+ */
+@property (nonatomic) BOOL hideImageAttachmentButton;
+
+/**
  An array of data objects that should be used to prefill the compose view content
  
  The following data object classes are currently supported:

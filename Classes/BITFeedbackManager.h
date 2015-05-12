@@ -234,6 +234,19 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
 @property (nonatomic, copy) NSArray *feedbackComposerPreparedItems;
 
 
+/**
+ Don't show the option to add images from the photo library
+ 
+ This is helpful if your application is landscape only, since the system UI for
+ selecting an image from the photo library is portrait only
+ 
+ This setting is used for all feedback compose views that are created by the
+ `BITFeedbackManager`. If you invoke your own `BITFeedbackComposeViewController`,
+ then set the appropriate property on the view controller directl!.
+ */
+@property (nonatomic) BOOL feedbackComposeHideImageAttachmentButton;
+
+
 ///-----------------------------------------------------------------------------
 /// @name User Interface
 ///-----------------------------------------------------------------------------
