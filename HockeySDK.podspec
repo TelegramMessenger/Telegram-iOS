@@ -25,7 +25,7 @@ Pod::Spec.new do |s|
   
   s.subspec 'SharedRequirements' do |ss|
     ss.source_files = 'Classes/HockeySDK*.{h,m}', 'Classes/BITHockeyManager*.{h,m}', 'Classes/BITHockeyAppClient.{h,m}', 'Classes/BITHTTPOperation.{h,m}', 'Classes/BITHockeyHelper.{h,m}', 'Classes/BITKeychain*.{h,m}', 'Classes/BITHockeyBaseManager*.{h,m}'
-    ss.frameworks = 'CoreText', 'CoreGraphics', 'QuartzCore', 'Security', 'UIKit'
+    ss.frameworks = 'CoreGraphics', 'QuartzCore', 'Security', 'UIKit'
     ss.resource_bundle         = { 'HockeySDKResources' => ['Resources/*.png', 'Resources/*.lproj'] }
     ss.preserve_paths          = 'Resources', 'Support'
     ss.private_header_files  = 'Classes/*Private.h'
@@ -42,7 +42,7 @@ Pod::Spec.new do |s|
   
   s.subspec 'UserFeedback' do |ss|
     ss.dependency 'HockeySDK/SharedRequirements'
-    ss.frameworks = 'AssetsLibrary', 'MobileCoreServices', 'QuickLook'
+    ss.frameworks = 'AssetsLibrary', 'MobileCoreServices', 'QuickLook', 'CoreText'
     ss.source_files = 'Classes/BITFeedback*.{h,m}', 'Classes/BIT*ImageAnnotation.{h,m}', 'Classes/BITImageAnnotationViewController.{h,m}', 'Classes/BITHockeyAttachment.{h,m}', 'Classes/BITHockeyBaseViewController.{h,m}', 'Classes/BITAttributedLabel.{h,m}', 'Classes/BITActivityIndicatorButton.{h,m}'
     ss.xcconfig = {'GCC_PREPROCESSOR_DEFINITIONS' => %{$(inherited) HOCKEYSDK_FEATURE_FEEDBACK=1} }
   end
