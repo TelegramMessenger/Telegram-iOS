@@ -383,12 +383,18 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     }
 #endif /* HOCKEYSDK_FEATURE_FEEDBACK */
     
-#if HOCKEYSDK_FEATURE_AUTHENTICATOR
-    if (_authenticator) {
-      _authenticator.delegate = _delegate;
+#if HOCKEYSDK_FEATURE_STORE_UPDATES
+    if (_storeUpdateManager) {
+      _storeUpdateManager.delegate = _delegate;
     }
-#endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
+#endif /* HOCKEYSDK_FEATURE_STORE_UPDATES */
   }
+  
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
+  if (_authenticator) {
+    _authenticator.delegate = _delegate;
+  }
+#endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
 }
 
 - (void)modifyKeychainUserValue:(NSString *)value forKey:(NSString *)key {
@@ -634,6 +640,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 #if HOCKEYSDK_FEATURE_STORE_UPDATES
     BITHockeyLog(@"INFO: Setup StoreUpdateManager");
     _storeUpdateManager = [[BITStoreUpdateManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironment:_appStoreEnvironment];
+    _storeUpdateManager.delegate = _delegate;
 #endif /* HOCKEYSDK_FEATURE_STORE_UPDATES */
     
 #if HOCKEYSDK_FEATURE_FEEDBACK
