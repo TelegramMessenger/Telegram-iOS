@@ -20,12 +20,7 @@
   // Put setup code here. This method is called before the invocation of each test method in the class.
 }
 
-- (void)tearDown {
-# pragma clang diagnostic push
-# pragma clang diagnostic ignored "-Wimplicit"
-  __gcov_flush();
-# pragma clang diagnostic pop
-  
+- (void)tearDown {  
   [super tearDown];
 }
 

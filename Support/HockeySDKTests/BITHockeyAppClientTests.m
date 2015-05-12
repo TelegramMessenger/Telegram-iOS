@@ -33,11 +33,6 @@
 }
 
 - (void)tearDown {
-# pragma clang diagnostic push
-# pragma clang diagnostic ignored "-Wimplicit"
-  __gcov_flush();
-# pragma clang diagnostic pop
-  
   [_sut cancelOperationsWithPath:nil method:nil];
   _sut = nil;
   
