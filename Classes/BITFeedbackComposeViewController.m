@@ -248,7 +248,9 @@
   
   [self.textAccessoryView addSubview:self.addPhotoButton];
   
-  self.textView.inputAccessoryView = self.textAccessoryView;
+  if (!self.hideImageAttachmentButton) {
+    self.textView.inputAccessoryView = self.textAccessoryView;
+  }
   
   // This could be a subclass, yet 
   self.attachmentScrollView = [[UIScrollView alloc] initWithFrame:CGRectZero];
