@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/bitstadium/HockeySDK-iOS.svg?branch=develop)](https://travis-ci.org/bitstadium/HockeySDK-iOS)
+
 ## Version 3.6.4
 
 - [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.6.4/docs/docs/Changelog.html)
