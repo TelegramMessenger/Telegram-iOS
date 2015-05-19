@@ -95,7 +95,7 @@
   
 #if __IPHONE_OS_VERSION_MIN_REQUIRED > __IPHONE_7_1
   data = [[NSData alloc] initWithBase64EncodedString:@"TestData" options:0];
-#elif
+#else
   if ([[NSData class] respondsToSelector:@selector(initWithBase64EncodedString:options:)]) {
     data = [[NSData alloc] initWithBase64EncodedString:@"TestData" options:0];
   } else {
