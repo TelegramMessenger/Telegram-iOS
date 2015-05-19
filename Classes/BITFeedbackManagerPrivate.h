@@ -80,6 +80,9 @@ extern NSString *const kBITFeedbackUpdateAttachmentThumbnail;
 - (BOOL)updateUserNameUsingKeychainAndDelegate;
 - (BOOL)updateUserEmailUsingKeychainAndDelegate;
 
+// check if the user wants to influence when fetching of new messages may be done
+- (BOOL)allowFetchingNewMessages;
+
 // load new messages from the server
 - (void)updateMessagesList;
 

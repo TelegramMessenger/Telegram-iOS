@@ -114,7 +114,6 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
   [self unregisterObservers];
 }
 
-
 - (void)didBecomeActiveActions {
   if ([self isFeedbackManagerDisabled]) return;
   if (!_didEnterBackgroundState) return;
@@ -126,7 +125,10 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
   } else {
     [self updateAppDefinedUserData];
   }
-  [self updateMessagesList];
+  
+  if ([self allowFetchingNewMessages]) {
+    [self updateMessagesList];
+  }
 }
 
 - (void)didEnterBackgroundActions {
@@ -273,6 +275,16 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
       // do nothing, wait for active state
       break;
   }
+}
+
+- (BOOL)allowFetchingNewMessages {
+  BOOL fetchNewMessages = YES;
+  if ([BITHockeyManager sharedHockeyManager].delegate &&
+      [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(allowAutomaticFetchingForNewFeedbackForManager:)]) {
+    fetchNewMessages = [[BITHockeyManager sharedHockeyManager].delegate
+                        allowAutomaticFetchingForNewFeedbackForManager:self];
+  }
+  return fetchNewMessages;
 }
 
 - (void)updateMessagesList {
