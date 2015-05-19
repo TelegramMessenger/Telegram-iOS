@@ -27,13 +27,17 @@
  */
 
 
-#import "BITAuthenticator.h"
 #import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
+
 #import "HockeySDKPrivate.h"
 #import "BITAuthenticator_Private.h"
+#import "BITAuthenticationViewController.h"
 #import "BITHTTPOperation.h"
 #import "BITHockeyAppClient.h"
 #import "BITHockeyHelper.h"
+#import "BITHockeyBaseManagerPrivate.h"
 
 #include <sys/stat.h>
 
@@ -908,3 +912,5 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   }
 }
 @end
+
+#endif

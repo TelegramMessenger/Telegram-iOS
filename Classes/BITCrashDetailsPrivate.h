@@ -26,8 +26,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import <HockeySDK/HockeySDK.h>
-
 extern NSString *const __attribute__((unused)) kBITCrashKillSignal;
 
 @interface BITCrashDetails () {

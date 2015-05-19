@@ -7,16 +7,16 @@
 	objects = {
 
 /* Begin PBXAggregateTarget section */
-		1E4F61E91621AD970033EFC5 /* HockeySDK Framework */ = {
+		1E4F61E91621AD970033EFC5 /* HockeySDK Distribution */ = {
 			isa = PBXAggregateTarget;
-			buildConfigurationList = 1E4F61EA1621AD970033EFC5 /* Build configuration list for PBXAggregateTarget "HockeySDK Framework" */;
+			buildConfigurationList = 1E4F61EA1621AD970033EFC5 /* Build configuration list for PBXAggregateTarget "HockeySDK Distribution" */;
 			buildPhases = (
 				1E4F61ED1621ADE70033EFC5 /* Build universal embedded framework */,
 			);
 			dependencies = (
 				1E754E431621F6290070AB92 /* PBXTargetDependency */,
 			);
-			name = "HockeySDK Framework";
+			name = "HockeySDK Distribution";
 			productName = "HockeySDK Framework";
 		};
 		1E8E66AD15BC3D7700632A2E /* HockeySDK Documentation */ = {
@@ -930,7 +930,7 @@
 				1E5954CB15B6F24A00A03429 /* HockeySDK */,
 				1E59550915B6F45800A03429 /* HockeySDKResources */,
 				1E8E66AD15BC3D7700632A2E /* HockeySDK Documentation */,
-				1E4F61E91621AD970033EFC5 /* HockeySDK Framework */,
+				1E4F61E91621AD970033EFC5 /* HockeySDK Distribution */,
 				1E5A458F16F0DFC200B55C04 /* HockeySDKTests */,
 			);
 		};
@@ -1653,7 +1653,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		1E4F61EA1621AD970033EFC5 /* Build configuration list for PBXAggregateTarget "HockeySDK Framework" */ = {
+		1E4F61EA1621AD970033EFC5 /* Build configuration list for PBXAggregateTarget "HockeySDK Distribution" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1E4F61EB1621AD970033EFC5 /* Debug */,

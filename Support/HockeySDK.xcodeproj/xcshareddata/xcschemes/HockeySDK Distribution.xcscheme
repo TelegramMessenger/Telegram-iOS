@@ -15,8 +15,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "1E4F61E91621AD970033EFC5"
-               BuildableName = "HockeySDK Framework"
-               BlueprintName = "HockeySDK Framework"
+               BuildableName = "HockeySDK Distribution"
+               BlueprintName = "HockeySDK Distribution"
                ReferencedContainer = "container:HockeySDK.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -43,8 +43,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "1E4F61E91621AD970033EFC5"
-            BuildableName = "HockeySDK Framework"
-            BlueprintName = "HockeySDK Framework"
+            BuildableName = "HockeySDK Distribution"
+            BlueprintName = "HockeySDK Distribution"
             ReferencedContainer = "container:HockeySDK.xcodeproj">
          </BuildableReference>
       </MacroExpansion>

@@ -27,9 +27,12 @@
  */
 
 
-#import "BITAuthenticator.h"
-#import "BITHockeyBaseManagerPrivate.h"
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
+
 #import "BITAuthenticationViewController.h"
+
 @class BITHockeyAppClient;
 
 @interface BITAuthenticator ()<BITAuthenticationViewControllerDelegate, UIAlertViewDelegate>
@@ -93,3 +96,5 @@
 - (BOOL) needsValidation;
 - (void) authenticate;
 @end
+
+#endif
