@@ -101,7 +101,6 @@
   } else {
     data = [[NSData alloc] initWithBase64Encoding:@"TestData"];
   }
-  }
 #endif
 
   NSString* type = @"text/plain";
