@@ -15,8 +15,10 @@
 #import <OCMockitoIOS/OCMockitoIOS.h>
 
 #import "HockeySDK.h"
+#import "HockeySDKPrivate.h"
 #import "BITAuthenticator.h"
 #import "BITAuthenticator_Private.h"
+#import "BITHockeyBaseManagerPrivate.h"
 #import "BITHTTPOperation.h"
 #import "BITTestHelper.h"
 #import "BITHockeyAppClient.h"
