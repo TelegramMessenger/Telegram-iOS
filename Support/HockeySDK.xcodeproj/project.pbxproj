@@ -255,8 +255,6 @@
 		1EB617CE1B0A34470035A986 /* BITHTTPOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = E4933E7F17B66CDA00B11ACC /* BITHTTPOperation.m */; };
 		1EB617CF1B0A344A0035A986 /* BITHockeyAppClient.h in Headers */ = {isa = PBXBuildFile; fileRef = E40E0B0A17DA1AFF005E38C1 /* BITHockeyAppClient.h */; };
 		1EB617D01B0A344D0035A986 /* BITHockeyAppClient.m in Sources */ = {isa = PBXBuildFile; fileRef = E40E0B0B17DA1AFF005E38C1 /* BITHockeyAppClient.m */; };
-		1EB617D11B0A34900035A986 /* OCHamcrestIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E7A45FA16F54FB5005B08F1 /* OCHamcrestIOS.framework */; };
-		1EB617D21B0A34940035A986 /* OCMockitoIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E7A45FB16F54FB5005B08F1 /* OCMockitoIOS.framework */; };
 		1EB617D31B0A34AB0035A986 /* OCHamcrestIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E7A45FA16F54FB5005B08F1 /* OCHamcrestIOS.framework */; };
 		1EB617D41B0A34AF0035A986 /* OCMockitoIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E7A45FB16F54FB5005B08F1 /* OCMockitoIOS.framework */; };
 		1EB617D51B0A36AE0035A986 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E400561D148D79B500EB22B9 /* Foundation.framework */; };
@@ -592,7 +590,6 @@
 				1EB617BA1B0A32870035A986 /* AssetsLibrary.framework in Frameworks */,
 				1EB617BC1B0A32C90035A986 /* CoreText.framework in Frameworks */,
 				1EB617BE1B0A32D00035A986 /* CoreGraphics.framework in Frameworks */,
-				1EB617D11B0A34900035A986 /* OCHamcrestIOS.framework in Frameworks */,
 				1EB617BF1B0A32DC0035A986 /* Foundation.framework in Frameworks */,
 				1EB617C01B0A32E40035A986 /* MobileCoreServices.framework in Frameworks */,
 				1EB617C21B0A32EE0035A986 /* QuartzCore.framework in Frameworks */,
@@ -600,7 +597,6 @@
 				1EB617C31B0A32F70035A986 /* QuickLook.framework in Frameworks */,
 				1EB617C51B0A33020035A986 /* Security.framework in Frameworks */,
 				1EB617C71B0A330C0035A986 /* SystemConfiguration.framework in Frameworks */,
-				1EB617D21B0A34940035A986 /* OCMockitoIOS.framework in Frameworks */,
 				1EB617C91B0A33140035A986 /* UIKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
