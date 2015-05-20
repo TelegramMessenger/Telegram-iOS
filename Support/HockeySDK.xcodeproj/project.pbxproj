@@ -44,6 +44,15 @@
 		1E1127C916580C87007067A2 /* buttonRoundedRegular@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E1127C116580C87007067A2 /* buttonRoundedRegular@2x.png */; };
 		1E1127CA16580C87007067A2 /* buttonRoundedRegularHighlighted.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E1127C216580C87007067A2 /* buttonRoundedRegularHighlighted.png */; };
 		1E1127CB16580C87007067A2 /* buttonRoundedRegularHighlighted@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E1127C316580C87007067A2 /* buttonRoundedRegularHighlighted@2x.png */; };
+		1E15087E1B0C922600D7B9D9 /* HockeySDKResources.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 1E59550A15B6F45800A03429 /* HockeySDKResources.bundle */; };
+		1E15087F1B0C924A00D7B9D9 /* AppIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E494AEA19491943001EFF74 /* AppIcon.png */; };
+		1E1508801B0C924A00D7B9D9 /* AppIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E494AEB19491943001EFF74 /* AppIcon@2x.png */; };
+		1E1508811B0C924A00D7B9D9 /* StoreBundleIdentifierUnknown.json in Resources */ = {isa = PBXBuildFile; fileRef = 1EA1170316F53B49001C015C /* StoreBundleIdentifierUnknown.json */; };
+		1E1508821B0C924A00D7B9D9 /* StoreBundleIdentifierKnown.json in Resources */ = {isa = PBXBuildFile; fileRef = 1EA1170816F53E3A001C015C /* StoreBundleIdentifierKnown.json */; };
+		1E1508831B0C924A00D7B9D9 /* live_report_empty.plcrash in Resources */ = {isa = PBXBuildFile; fileRef = 1E70A22F17F2F982001BB32D /* live_report_empty.plcrash */; };
+		1E1508841B0C924A00D7B9D9 /* live_report_exception.plcrash in Resources */ = {isa = PBXBuildFile; fileRef = 1E70A23017F2F982001BB32D /* live_report_exception.plcrash */; };
+		1E1508851B0C924A00D7B9D9 /* live_report_signal.plcrash in Resources */ = {isa = PBXBuildFile; fileRef = 1E70A23117F2F982001BB32D /* live_report_signal.plcrash */; };
+		1E1508861B0C927200D7B9D9 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E5A459916F0DFC200B55C04 /* InfoPlist.strings */; };
 		1E494AEC19491943001EFF74 /* AppIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E494AEA19491943001EFF74 /* AppIcon.png */; };
 		1E494AED19491943001EFF74 /* AppIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E494AEB19491943001EFF74 /* AppIcon@2x.png */; };
 		1E49A43C1612223B00463151 /* BITFeedbackComposeViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A42D1612223B00463151 /* BITFeedbackComposeViewController.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -1323,7 +1332,15 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1E15087F1B0C924A00D7B9D9 /* AppIcon.png in Resources */,
+				1E1508811B0C924A00D7B9D9 /* StoreBundleIdentifierUnknown.json in Resources */,
+				1E1508801B0C924A00D7B9D9 /* AppIcon@2x.png in Resources */,
+				1E1508831B0C924A00D7B9D9 /* live_report_empty.plcrash in Resources */,
 				1EB617B91B0A32780035A986 /* HockeySDKResources.bundle in Resources */,
+				1E1508851B0C924A00D7B9D9 /* live_report_signal.plcrash in Resources */,
+				1E1508821B0C924A00D7B9D9 /* StoreBundleIdentifierKnown.json in Resources */,
+				1E1508861B0C927200D7B9D9 /* InfoPlist.strings in Resources */,
+				1E1508841B0C924A00D7B9D9 /* live_report_exception.plcrash in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1331,6 +1348,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1E15087E1B0C922600D7B9D9 /* HockeySDKResources.bundle in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
