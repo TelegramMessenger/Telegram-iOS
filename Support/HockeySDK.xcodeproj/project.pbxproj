@@ -2005,7 +2005,7 @@
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					"/Users/andreaslinde/Sourcecode/HA/HockeySDK-iOSDemo/Vendor/HockeySDK/Vendor",
+					"$(PROJECT_DIR)/../Vendor",
 					"$(PROJECT_DIR)/HockeySDKTests",
 				);
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -2057,7 +2057,7 @@
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					"/Users/andreaslinde/Sourcecode/HA/HockeySDK-iOSDemo/Vendor/HockeySDK/Vendor",
+					"$(PROJECT_DIR)/../Vendor",
 					"$(PROJECT_DIR)/HockeySDKTests",
 				);
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -2106,7 +2106,7 @@
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					"/Users/andreaslinde/Sourcecode/HA/HockeySDK-iOSDemo/Vendor/HockeySDK/Vendor",
+					"$(PROJECT_DIR)/../Vendor",
 					"$(PROJECT_DIR)/HockeySDKTests",
 				);
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -2155,7 +2155,7 @@
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					"/Users/andreaslinde/Sourcecode/HA/HockeySDK-iOSDemo/Vendor/HockeySDK/Vendor",
+					"$(PROJECT_DIR)/../Vendor",
 					"$(PROJECT_DIR)/HockeySDKTests",
 				);
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -2198,7 +2198,7 @@
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(SDKROOT)/Developer/Library/Frameworks",
 					"$(inherited)",
-					"/Users/andreaslinde/Sourcecode/HA/HockeySDK-iOSDemo/Vendor/HockeySDK/Vendor",
+					"$(PROJECT_DIR)/../Vendor",
 					"$(PROJECT_DIR)/HockeySDKTests",
 				);
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -2239,7 +2239,7 @@
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(SDKROOT)/Developer/Library/Frameworks",
 					"$(inherited)",
-					"/Users/andreaslinde/Sourcecode/HA/HockeySDK-iOSDemo/Vendor/HockeySDK/Vendor",
+					"$(PROJECT_DIR)/../Vendor",
 					"$(PROJECT_DIR)/HockeySDKTests",
 				);
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -2277,7 +2277,7 @@
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(SDKROOT)/Developer/Library/Frameworks",
 					"$(inherited)",
-					"/Users/andreaslinde/Sourcecode/HA/HockeySDK-iOSDemo/Vendor/HockeySDK/Vendor",
+					"$(PROJECT_DIR)/../Vendor",
 					"$(PROJECT_DIR)/HockeySDKTests",
 				);
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -2315,7 +2315,7 @@
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(SDKROOT)/Developer/Library/Frameworks",
 					"$(inherited)",
-					"/Users/andreaslinde/Sourcecode/HA/HockeySDK-iOSDemo/Vendor/HockeySDK/Vendor",
+					"$(PROJECT_DIR)/../Vendor",
 					"$(PROJECT_DIR)/HockeySDKTests",
 				);
 				GCC_NO_COMMON_BLOCKS = YES;
