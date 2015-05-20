@@ -54,6 +54,8 @@
 - (NSDictionary *)jsonFromFixture:(NSString *)fixture {
   NSString *dataString = [BITTestHelper jsonFixture:fixture];
   
+  if (!dataString) return nil;
+  
   NSData *data = [dataString dataUsingEncoding:NSUTF8StringEncoding];
   NSError *error = nil;
   NSDictionary *json = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:data options:0 error:&error];

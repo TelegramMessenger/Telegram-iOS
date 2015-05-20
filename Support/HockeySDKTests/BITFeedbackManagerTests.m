@@ -218,7 +218,7 @@
     // check the delegate is implemented and returns NO
     BITHockeyManager *hm = [BITHockeyManager sharedHockeyManager];
     NSObject <BITHockeyManagerDelegate> *classMock = mockObjectAndProtocol([NSObject class], @protocol(BITHockeyManagerDelegate));
-    [given([classMock allowAutomaticFetchingForNewFeedbackForManager:_sut]) willReturn:NO];
+    [given([classMock allowAutomaticFetchingForNewFeedbackForManager:_sut]) willReturn:@NO];
     hm.delegate = classMock;
     _sut.delegate = classMock;
     
