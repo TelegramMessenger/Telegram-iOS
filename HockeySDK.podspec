@@ -21,7 +21,7 @@ Pod::Spec.new do |s|
   s.platform          = :ios, '6.0'
   s.requires_arc      = true
   
-  s.default_subspec = 'All'
+  s.default_subspec = 'CompiledLib'
   
   s.subspec 'SharedRequirements' do |ss|
     ss.source_files = 'Classes/HockeySDK*.{h,m}', 'Classes/BITHockeyManager*.{h,m}', 'Classes/BITHockeyAppClient.{h,m}', 'Classes/BITHTTPOperation.{h,m}', 'Classes/BITHockeyHelper.{h,m}', 'Classes/BITKeychain*.{h,m}', 'Classes/BITHockeyBaseManager*.{h,m}'
@@ -65,7 +65,7 @@ Pod::Spec.new do |s|
     ss.xcconfig = {'GCC_PREPROCESSOR_DEFINITIONS' => %{$(inherited) HOCKEYSDK_FEATURE_UPDATES=1} }
   end
   
-  s.subspec 'All' do |ss|
+  s.subspec 'CompiledLib' do |ss|
     ss.dependency 'HockeySDK/CrashReporter'
     ss.dependency 'HockeySDK/UserFeedback'
     ss.dependency 'HockeySDK/StoreUpdates'
