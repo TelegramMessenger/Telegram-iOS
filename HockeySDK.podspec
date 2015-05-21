@@ -24,6 +24,7 @@ Pod::Spec.new do |s|
   s.default_subspec = 'CompiledLib'
   
   s.subspec 'SharedRequirements' do |ss|
+    ss.prepare_command = 'mv -f Classes/HockeySDKFeatureConfig_CP.h Classes/HockeySDKFeatureConfig.h' #Changes default of everything enabled to disabled
     ss.source_files = 'Classes/HockeySDK*.{h,m}', 'Classes/BITHockeyManager*.{h,m}', 'Classes/BITHockeyAppClient.{h,m}', 'Classes/BITHTTPOperation.{h,m}', 'Classes/BITHockeyHelper.{h,m}', 'Classes/BITKeychain*.{h,m}', 'Classes/BITHockeyBaseManager*.{h,m}'
     ss.frameworks = 'CoreGraphics', 'QuartzCore', 'Security', 'UIKit'
     ss.resource_bundle         = { 'HockeySDKResources' => ['Resources/*.png', 'Resources/*.lproj'] }
