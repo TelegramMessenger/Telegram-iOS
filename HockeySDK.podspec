@@ -26,8 +26,9 @@ Pod::Spec.new do |s|
   s.subspec 'SharedRequirements' do |ss|
     ss.prepare_command = 'mv -f Classes/HockeySDKFeatureConfig_CP.h Classes/HockeySDKFeatureConfig.h' #Changes default of everything enabled to disabled
     ss.source_files = 'Classes/HockeySDK*.{h,m}', 'Classes/BITHockeyManager*.{h,m}', 'Classes/BITHockeyAppClient.{h,m}', 'Classes/BITHTTPOperation.{h,m}', 'Classes/BITHockeyHelper.{h,m}', 'Classes/BITKeychain*.{h,m}', 'Classes/BITHockeyBaseManager*.{h,m}'
+    #Include .png resources in the subspecs that need them
     ss.frameworks = 'CoreGraphics', 'QuartzCore', 'Security', 'UIKit'
-    ss.resource_bundle         = { 'HockeySDKResources' => ['Resources/*.png', 'Resources/*.lproj'] }
+    ss.resource_bundle         = { 'HockeySDKResources' => ['Resources/*.lproj'] }
     ss.preserve_paths          = 'Resources', 'Support'
     ss.private_header_files  = 'Classes/*Private.h'
     ss.xcconfig                = {'GCC_PREPROCESSOR_DEFINITIONS' => %{$(inherited) BITHOCKEY_VERSION="@\\"#{s.version}\\"" BITHOCKEY_C_VERSION="\\"#{s.version}\\"" BITHOCKEY_BUILD="@\\"38\\"" BITHOCKEY_C_BUILD="\\"38\\""} }
