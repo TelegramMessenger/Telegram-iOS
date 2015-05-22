@@ -27,6 +27,8 @@
  */
 #import "BITHockeyAppClient.h"
 
+NSString * const kBITHockeyAppClientBoundary = @"----FOO";
+
 @implementation BITHockeyAppClient
 - (void)dealloc {
   [self cancelOperationsWithPath:nil method:nil];
@@ -66,16 +68,15 @@
     } else {
       //TODO: this is crap. Boundary must be the same as the one in appendData
       //unify this!
-      NSString *boundary = @"----FOO";
-      NSString *contentType = [NSString stringWithFormat:@"multipart/form-data; boundary=%@", boundary];
+      NSString *contentType = [NSString stringWithFormat:@"multipart/form-data; boundary=%@", kBITHockeyAppClientBoundary];
       [request setValue:contentType forHTTPHeaderField:@"Content-type"];
       
       NSMutableData *postBody = [NSMutableData data];
       [params enumerateKeysAndObjectsUsingBlock:^(NSString *key, NSString *value, BOOL *stop) {
-        [postBody appendData:[[self class] dataWithPostValue:value forKey:key boundary:boundary]];
+        [postBody appendData:[[self class] dataWithPostValue:value forKey:key boundary:kBITHockeyAppClientBoundary]];
       }];
       
-      [postBody appendData:[[NSString stringWithFormat:@"--%@--\r\n", boundary] dataUsingEncoding:NSUTF8StringEncoding]];
+      [postBody appendData:[[NSString stringWithFormat:@"--%@--\r\n", kBITHockeyAppClientBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
       
       [request setHTTPBody:postBody];
     }
