@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D02AD5CA1B1121010074F9C1 /* SSignal+Pipe.m in Sources */ = {isa = PBXBuildFile; fileRef = D02AD5C81B1121010074F9C1 /* SSignal+Pipe.m */; };
+		D02AD5CB1B1121010074F9C1 /* SSignal+Pipe.h in Headers */ = {isa = PBXBuildFile; fileRef = D02AD5C91B1121010074F9C1 /* SSignal+Pipe.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0445DDE1A7C2CA500267924 /* SSignalKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D0445DDD1A7C2CA500267924 /* SSignalKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0445DE41A7C2CA500267924 /* SSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0445DD81A7C2CA500267924 /* SSignalKit.framework */; };
 		D0445E221A7C2D7300267924 /* SBlockDisposable.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445DF61A7C2D7300267924 /* SBlockDisposable.m */; };
@@ -114,6 +116,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D02AD5C81B1121010074F9C1 /* SSignal+Pipe.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "SSignal+Pipe.m"; sourceTree = "<group>"; };
+		D02AD5C91B1121010074F9C1 /* SSignal+Pipe.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "SSignal+Pipe.h"; sourceTree = "<group>"; };
 		D0445DD81A7C2CA500267924 /* SSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = SSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0445DDC1A7C2CA500267924 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0445DDD1A7C2CA500267924 /* SSignalKit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SSignalKit.h; sourceTree = "<group>"; };
@@ -226,6 +230,8 @@
 		D0445DDA1A7C2CA500267924 /* SSignalKit */ = {
 			isa = PBXGroup;
 			children = (
+				D02AD5C81B1121010074F9C1 /* SSignal+Pipe.m */,
+				D02AD5C91B1121010074F9C1 /* SSignal+Pipe.h */,
 				D0445DF71A7C2D7300267924 /* SAtomic.h */,
 				D0445DF81A7C2D7300267924 /* SAtomic.m */,
 				D0445DF91A7C2D7300267924 /* SBag.h */,
@@ -337,6 +343,7 @@
 				D0445E341A7C2D7300267924 /* SSignal+Catch.h in Headers */,
 				D0445E4E1A7C2D8A00267924 /* SQueue.h in Headers */,
 				D0445E441A7C2D7300267924 /* SSignal+Single.h in Headers */,
+				D02AD5CB1B1121010074F9C1 /* SSignal+Pipe.h in Headers */,
 				D0445E251A7C2D7300267924 /* SBag.h in Headers */,
 				D0445E3A1A7C2D7300267924 /* SSignal+Dispatch.h in Headers */,
 				D0445E401A7C2D7300267924 /* SSignal+Multicast.h in Headers */,
@@ -469,6 +476,7 @@
 				D0445E451A7C2D7300267924 /* SSignal+Single.m in Sources */,
 				D0445E2D1A7C2D7300267924 /* SMetaDisposable.m in Sources */,
 				D0445E3B1A7C2D7300267924 /* SSignal+Dispatch.m in Sources */,
+				D02AD5CA1B1121010074F9C1 /* SSignal+Pipe.m in Sources */,
 				D0445E4F1A7C2D8A00267924 /* SQueue.m in Sources */,
 				D0445E241A7C2D7300267924 /* SAtomic.m in Sources */,
 				D0445E4B1A7C2D7300267924 /* SThreadPool.m in Sources */,
