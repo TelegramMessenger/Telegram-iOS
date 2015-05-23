@@ -2,6 +2,7 @@
 
 #import "SAtomic.h"
 #import "SDisposableSet.h"
+#import "SSignal+Single.h"
 
 @interface SSignalCombineState : NSObject
 
@@ -130,5 +131,44 @@
         return compositeDisposable;
     }];
 }
+
++ (SSignal *)mergeSignals:(NSArray *)signals
+{
+    if (signals.count == 0)
+        return [SSignal complete];
+    
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        SDisposableSet *disposables = [[SDisposableSet alloc] init];
+        SAtomic *completedStates = [[SAtomic alloc] initWithValue:[[NSSet alloc] init]];
+        
+        NSInteger index = -1;
+        NSUInteger count = signals.count;
+        for (SSignal *signal in signals)
+        {
+            index++;
+            
+            id<SDisposable> disposable = [signal startWithNext:^(id next)
+            {
+                [subscriber putNext:next];
+            } error:^(id error)
+            {
+                [subscriber putError:error];
+            } completed:^
+            {
+                NSSet *set = [completedStates modify:^id(NSSet *set)
+                {
+                    return [set setByAddingObject:@(index)];
+                }];
+                if (set.count == count)
+                    [subscriber putCompletion];
+            }];
+            
+            [disposables add:disposable];
+        }
+        
+        return disposables;
+    }];
+};
 
 @end
