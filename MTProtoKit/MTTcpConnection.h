@@ -33,6 +33,11 @@
 @interface MTTcpConnection : NSObject
 
 @property (nonatomic, weak) id<MTTcpConnectionDelegate> delegate;
+
+@property (nonatomic, copy) void (^connectionOpened)();
+@property (nonatomic, copy) void (^connectionClosed)();
+@property (nonatomic, copy) void (^connectionReceivedData)(NSData *);
+
 @property (nonatomic, strong, readonly) id internalId;
 @property (nonatomic, strong, readonly) MTDatacenterAddress *address;
 @property (nonatomic, strong, readonly) NSString *interface;

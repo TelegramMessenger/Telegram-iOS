@@ -37,6 +37,11 @@ static inline int roundUp(int numToRound, int multiple)
     return self;
 }
 
+- (NSOutputStream *)wrappedOutputStream
+{
+    return _wrappedOutputStream;
+}
+
 - (void)dealloc
 {
     [_wrappedOutputStream close];

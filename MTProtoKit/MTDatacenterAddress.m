@@ -10,13 +10,14 @@
 
 @implementation MTDatacenterAddress
 
-- (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port
+- (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port preferForMedia:(bool)preferForMedia
 {
     self = [super init];
     if (self != nil)
     {
         _ip = ip;
         _port = port;
+        _preferForMedia = preferForMedia;
     }
     return self;
 }
@@ -29,6 +30,7 @@
         _ip = [aDecoder decodeObjectForKey:@"ip"];
         _host = [aDecoder decodeObjectForKey:@"host"];
         _port = (uint16_t)[aDecoder decodeIntForKey:@"port"];
+        _preferForMedia = [aDecoder decodeBoolForKey:@"preferForMedia"];
     }
     return self;
 }
@@ -38,6 +40,7 @@
     [aCoder encodeObject:_ip forKey:@"ip"];
     [aCoder encodeObject:_host forKey:@"host"];
     [aCoder encodeInt:_port forKey:@"port"];
+    [aCoder encodeBool:_preferForMedia forKey:@"preferForMedia"];
 }
 
 - (BOOL)isEqual:(id)object
@@ -59,12 +62,15 @@
     if (_port != other.port)
         return false;
     
+    if (_preferForMedia != other.preferForMedia)
+        return false;
+    
     return true;
 }
 
 - (NSString *)description
 {
-    return [[NSString alloc] initWithFormat:@"%@:%d", _ip == nil ? _host : _ip, (int)_port];
+    return [[NSString alloc] initWithFormat:@"%@:%d (media: %@)", _ip == nil ? _host : _ip, (int)_port, _preferForMedia ? @"yes" : @"no"];
 }
 
 @end

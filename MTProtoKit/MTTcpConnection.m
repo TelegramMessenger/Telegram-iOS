@@ -115,8 +115,10 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
             
             MTLog(@"[MTTcpConnection#%x connecting to %@:%d]", (int)self, _address.ip, (int)_address.port);
             
+            NSString *ip = _address.ip;
+            
             __autoreleasing NSError *error = nil;
-            if (![_socket connectToHost:_address.ip onPort:_address.port viaInterface:_interface withTimeout:12 error:&error] || error != nil)
+            if (![_socket connectToHost:ip onPort:_address.port viaInterface:_interface withTimeout:12 error:&error] || error != nil)
                 [self closeAndNotify];
             else
                 [_socket readDataToLength:1 withTimeout:-1 tag:MTTcpReadTagPacketShortLength];
@@ -145,6 +147,8 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
             _socket.delegate = nil;
             _socket = nil;
             
+            if (_connectionClosed)
+                _connectionClosed();
             id<MTTcpConnectionDelegate> delegate = _delegate;
             if ([delegate respondsToSelector:@selector(tcpConnectionClosed:)])
                 [delegate tcpConnectionClosed:self];
@@ -374,6 +378,8 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
             _packetHead = nil;
         }
         
+        if (_connectionReceivedData)
+            _connectionReceivedData(packetData);
         id<MTTcpConnectionDelegate> delegate = _delegate;
         if ([delegate respondsToSelector:@selector(tcpConnectionReceivedData:data:)])
             [delegate tcpConnectionReceivedData:self data:packetData];
@@ -402,6 +408,8 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
 
 - (void)socket:(GCDAsyncSocket *)__unused socket didConnectToHost:(NSString *)__unused host port:(uint16_t)__unused port
 {
+    if (_connectionOpened)
+        _connectionOpened();
     id<MTTcpConnectionDelegate> delegate = _delegate;
     if ([delegate respondsToSelector:@selector(tcpConnectionOpened:)])
         [delegate tcpConnectionOpened:self];

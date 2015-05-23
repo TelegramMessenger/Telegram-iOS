@@ -17,6 +17,28 @@
 
 MTInternalIdClass(MTHttpWorker)
 
+@implementation MTHttpWorkerBlockDelegate
+
+- (void)httpWorker:(MTHttpWorker *)__unused httpWorker completedWithData:(NSData *)data
+{
+    if (_completedWithData)
+        _completedWithData(data);
+}
+
+- (void)httpWorkerConnected:(MTHttpWorker *)__unused httpWorker
+{
+    if (_connected)
+        _connected();
+}
+
+- (void)httpWorkerFailed:(MTHttpWorker *)__unused httpWorker
+{
+    if (_failed)
+        _failed();
+}
+
+@end
+
 @interface MTHttpWorker ()
 {
     MTTimer *_timeoutTimer;

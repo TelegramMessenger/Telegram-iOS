@@ -13,8 +13,9 @@
 @property (nonatomic, strong, readonly) NSString *host;
 @property (nonatomic, strong, readonly) NSString *ip;
 @property (nonatomic, readonly) uint16_t port;
+@property (nonatomic, readonly) bool preferForMedia;
 
-- (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port;
+- (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port preferForMedia:(bool)preferForMedia;
 
 - (BOOL)isEqualToAddress:(MTDatacenterAddress *)other;
 

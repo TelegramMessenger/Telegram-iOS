@@ -115,34 +115,6 @@ typedef enum {
     }];
 }
 
-- (NSArray *)interfaceList
-{
-    NSMutableArray *list = [[NSMutableArray alloc] init];
-    
-    struct ifaddrs *addrs = NULL;
-    const struct ifaddrs *cursor = NULL;
-    
-    bool success = getifaddrs(&addrs) == 0;
-    if (success)
-    {
-        cursor = addrs;
-        while (cursor != NULL)
-        {
-            if (cursor->ifa_addr->sa_family == AF_INET && (cursor->ifa_flags & IFF_LOOPBACK) == 0)
-            {
-                NSString *name = [NSString stringWithUTF8String:cursor->ifa_name];
-                if (name != nil)
-                    [list addObject:name];
-            }
-            
-            cursor = cursor->ifa_next;
-        }
-        freeifaddrs(addrs);
-    }
-    
-    return list;
-}
-
 - (void)networkAvailabilityChanged:(MTNetworkAvailability *)networkAvailability networkIsAvailable:(bool)networkIsAvailable
 {
     [[MTDiscoverTransportSchemeAction discoverTransportSchemeQueue] dispatchOnQueue:^
@@ -356,7 +328,7 @@ typedef enum {
     NSMutableArray *httpAddresses = [[NSMutableArray alloc] init];
     for (MTDatacenterAddress *address in [(MTContext *)_context addressSetForDatacenterWithId:_datacenterId].addressList)
     {
-        MTDatacenterAddress *actualAddress = [[MTDatacenterAddress alloc] initWithIp:address.ip port:80];
+        MTDatacenterAddress *actualAddress = [[MTDatacenterAddress alloc] initWithIp:address.ip port:80 preferForMedia:false];
         if (![httpAddresses containsObject:actualAddress])
         {
             [httpAddresses addObject:httpAddresses];

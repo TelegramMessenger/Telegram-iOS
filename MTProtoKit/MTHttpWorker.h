@@ -21,6 +21,14 @@
 
 @end
 
+@interface MTHttpWorkerBlockDelegate : NSObject <MTHttpWorkerDelegate>
+
+@property (nonatomic, copy) void (^completedWithData)(NSData *);
+@property (nonatomic, copy) void (^connected)();
+@property (nonatomic, copy) void (^failed)();
+
+@end
+
 @interface MTHttpWorker : AFHTTPClient
 
 @property (nonatomic, strong, readonly) id internalId;

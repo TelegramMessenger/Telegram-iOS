@@ -203,7 +203,7 @@ static inline int roundUpInput(int numToRound, int multiple)
     return data;
 }
 
-- (NSMutableData *)readMutableData:(int)length
+- (NSMutableData *)readMutableData:(NSUInteger)length
 {
     uint8_t *bytes = (uint8_t *)malloc(length);
     NSInteger readLen = [_wrappedInputStream read:bytes maxLength:length];
@@ -215,7 +215,7 @@ static inline int roundUpInput(int numToRound, int multiple)
     return data;
 }
 
-- (NSMutableData *)readMutableData:(int)length failed:(bool *)failed
+- (NSMutableData *)readMutableData:(NSUInteger)length failed:(bool *)failed
 {
     uint8_t *bytes = (uint8_t *)malloc(length);
     NSInteger readLen = [_wrappedInputStream read:bytes maxLength:length];

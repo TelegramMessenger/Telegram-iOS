@@ -1953,7 +1953,10 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             shouldRequest = true;
         
         if (shouldRequest)
+        {
             [self requestMessageWithId:detailedInfoMessage.responseMessageId];
+            MTLog(@"[MTProto#%p will request message %" PRId64 "", self, detailedInfoMessage.responseMessageId);
+        }
         else
         {
             [_sessionInfo scheduleMessageConfirmation:detailedInfoMessage.responseMessageId size:(NSInteger)detailedInfoMessage.responseLength];

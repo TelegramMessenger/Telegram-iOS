@@ -21,8 +21,8 @@
 - (double)readDouble:(bool *)failed __attribute__((nonnull(1)));
 - (NSData *)readData:(int)length;
 - (NSData *)readData:(int)length failed:(bool *)failed __attribute__((nonnull(2)));
-- (NSMutableData *)readMutableData:(int)length;
-- (NSMutableData *)readMutableData:(int)length failed:(bool *)failed __attribute__((nonnull(2)));
+- (NSMutableData *)readMutableData:(NSUInteger)length;
+- (NSMutableData *)readMutableData:(NSUInteger)length failed:(bool *)failed __attribute__((nonnull(2)));
 - (NSString *)readString;
 - (NSString *)readString:(bool *)failed __attribute__((nonnull(1)));
 - (NSData *)readBytes;

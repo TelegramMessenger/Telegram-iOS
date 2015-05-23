@@ -13,7 +13,7 @@
 @property (nonatomic) int32_t apiId;
 @property (nonatomic, strong, readonly) NSString *deviceModel;
 @property (nonatomic, strong, readonly) NSString *systemVersion;
-@property (nonatomic, strong, readonly) NSString *appVersion;
+@property (nonatomic, strong) NSString *appVersion;
 @property (nonatomic, strong, readonly) NSString *langCode;
 @property (nonatomic, strong) NSNumber *layer;
 

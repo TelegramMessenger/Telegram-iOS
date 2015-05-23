@@ -30,6 +30,8 @@
 
 #import <libkern/OSAtomic.h>
 
+#import "MTDiscoverConnectionSignals.h"
+
 @implementation MTContextBlockChangeListener
 
 - (void)contextIsPasswordRequiredUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId
@@ -68,6 +70,8 @@
     
     volatile OSSpinLock _passwordEntryRequiredLock;
     NSMutableDictionary *_passwordRequiredByDatacenterId;
+    
+    NSMutableDictionary *_transportSchemeDisposableByDatacenterId;
 }
 
 @end
@@ -602,15 +606,7 @@
         
         if (result != nil && ![result isOptimal])
         {
-            MTDiscoverTransportSchemeAction *action = _discoverDatacenterTransportSchemeActions[@(datacenterId)];
-            if (action == nil)
-            {
-                action = [[MTDiscoverTransportSchemeAction alloc] initWithContext:self datacenterId:datacenterId];
-                action.delegate = self;
-                _discoverDatacenterTransportSchemeActions[@(datacenterId)] = action;
-            }
-            
-            [action discoverMoreOptimalSchemeThan:result];
+            [self transportSchemeForDatacenterWithIdRequired:datacenterId moreOptimalThan:result beginWithHttp:false];
         }
     } synchronous:true];
     
@@ -673,9 +669,46 @@
 
 - (void)transportSchemeForDatacenterWithIdRequired:(NSInteger)datacenterId
 {
+    [self transportSchemeForDatacenterWithIdRequired:datacenterId moreOptimalThan:nil beginWithHttp:false];
+}
+
+- (void)transportSchemeForDatacenterWithIdRequired:(NSInteger)datacenterId moreOptimalThan:(MTTransportScheme *)suboptimalScheme beginWithHttp:(bool)beginWithHttp
+{
     [[MTContext contextQueue] dispatchOnQueue:^
     {
-        MTDiscoverTransportSchemeAction *action = _discoverDatacenterTransportSchemeActions[@(datacenterId)];
+        if (_transportSchemeDisposableByDatacenterId == nil)
+            _transportSchemeDisposableByDatacenterId = [[NSMutableDictionary alloc] init];
+        id<SDisposable> disposable = _transportSchemeDisposableByDatacenterId[@(datacenterId)];
+        if (disposable == nil)
+        {
+            __weak MTContext *weakSelf = self;
+            MTDatacenterAddressSet *addressSet = [self addressSetForDatacenterWithId:datacenterId];
+            _transportSchemeDisposableByDatacenterId[@(datacenterId)] = [[[MTDiscoverConnectionSignals discoverSchemeWithContext:self addressList:addressSet.addressList preferMedia:false] onDispose:^
+            {
+                __strong MTContext *strongSelf = weakSelf;
+                if (strongSelf != nil)
+                {
+                    [[MTContext contextQueue] dispatchOnQueue:^
+                    {
+                        [strongSelf->_transportSchemeDisposableByDatacenterId removeObjectForKey:@(datacenterId)];
+                    }];
+                }
+            }] startWithNext:^(id next)
+            {
+                MTLog(@"scheme: %@", next);
+                __strong MTContext *strongSelf = weakSelf;
+                if (strongSelf != nil)
+                    [strongSelf updateTransportSchemeForDatacenterWithId:datacenterId transportScheme:next];
+            } error:^(id error)
+            {
+                
+            } completed:^
+            {
+                
+            }];
+        }
+        
+        /*MTDiscoverTransportSchemeAction *action = _discoverDatacenterTransportSchemeActions[@(datacenterId)];
         if (action == nil)
         {
             action = [[MTDiscoverTransportSchemeAction alloc] initWithContext:self datacenterId:datacenterId];
@@ -683,7 +716,15 @@
             _discoverDatacenterTransportSchemeActions[@(datacenterId)] = action;
         }
         
-        [action discoverScheme];
+        if (suboptimalScheme)
+        {
+            if (beginWithHttp)
+                [action invalidateScheme:suboptimalScheme beginWithHttp:true];
+            else
+                [action discoverMoreOptimalSchemeThan:suboptimalScheme];
+        }
+        else
+            [action discoverScheme];*/
     }];
 }
 
@@ -694,15 +735,7 @@
     
     [[MTContext contextQueue] dispatchOnQueue:^
     {
-        MTDiscoverTransportSchemeAction *action = _discoverDatacenterTransportSchemeActions[@(datacenterId)];
-        if (action == nil)
-        {
-            action = [[MTDiscoverTransportSchemeAction alloc] initWithContext:self datacenterId:datacenterId];
-            action.delegate = self;
-            _discoverDatacenterTransportSchemeActions[@(datacenterId)] = action;
-        }
-        
-        [action invalidateScheme:transportScheme beginWithHttp:isProbablyHttp];
+        [self transportSchemeForDatacenterWithIdRequired:datacenterId moreOptimalThan:transportScheme beginWithHttp:isProbablyHttp];
     }];
 }
 
@@ -713,6 +746,15 @@
         MTDiscoverTransportSchemeAction *action = _discoverDatacenterTransportSchemeActions[@(datacenterId)];
         if (action != nil)
             [action validateScheme:transportScheme];
+        
+        if ([transportScheme isOptimal])
+        {
+            if (_transportSchemeDisposableByDatacenterId == nil)
+                _transportSchemeDisposableByDatacenterId = [[NSMutableDictionary alloc] init];
+            id<SDisposable> disposable = _transportSchemeDisposableByDatacenterId[@(datacenterId)];
+            [disposable dispose];
+            [_transportSchemeDisposableByDatacenterId removeObjectForKey:@(datacenterId)];
+        }
     }];
 }
 

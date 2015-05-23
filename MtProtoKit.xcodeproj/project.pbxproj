@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D0580ABF1B0F3E7100E8235B /* SSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0580ABE1B0F3E7100E8235B /* SSignalKit.framework */; };
+		D0580AC21B0F3E9C00E8235B /* MTDiscoverConnectionSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = D0580AC01B0F3E9C00E8235B /* MTDiscoverConnectionSignals.h */; };
+		D0580AC31B0F3E9C00E8235B /* MTDiscoverConnectionSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = D0580AC11B0F3E9C00E8235B /* MTDiscoverConnectionSignals.m */; };
 		D079AB9C1AF39B8000076F59 /* MtProtoKitMac.h in Headers */ = {isa = PBXBuildFile; fileRef = D079AB9B1AF39B8000076F59 /* MtProtoKitMac.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D079ABB01AF39BA400076F59 /* MTProtoKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A31D18B158AE00C65116 /* MTProtoKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0CB05FC1ADC4483005E298F /* MtProtoKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CB05FB1ADC4483005E298F /* MtProtoKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -250,6 +253,9 @@
 		D0503AD918B027F80074C3FE /* MTOutputStream.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTOutputStream.m; path = MTProtoKit/MTOutputStream.m; sourceTree = "<group>"; };
 		D0503ADC18B029480074C3FE /* MTInputStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTInputStream.h; path = MTProtoKit/MTInputStream.h; sourceTree = "<group>"; };
 		D0503ADD18B029480074C3FE /* MTInputStream.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTInputStream.m; path = MTProtoKit/MTInputStream.m; sourceTree = "<group>"; };
+		D0580ABE1B0F3E7100E8235B /* SSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SSignalKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegraph-dzhgyeoibunjpxfckifwvbawfdmi/Build/Products/Debug-iphoneos/SSignalKit.framework"; sourceTree = "<group>"; };
+		D0580AC01B0F3E9C00E8235B /* MTDiscoverConnectionSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MTDiscoverConnectionSignals.h; sourceTree = "<group>"; };
+		D0580AC11B0F3E9C00E8235B /* MTDiscoverConnectionSignals.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MTDiscoverConnectionSignals.m; sourceTree = "<group>"; };
 		D05A831718AFB3F9007F1076 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		D05A832818AFB3F9007F1076 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
 		D05A832B18AFB3F9007F1076 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
@@ -438,6 +444,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0580ABF1B0F3E7100E8235B /* SSignalKit.framework in Frameworks */,
 				D0D1A0721ADDE2FC007D9ED6 /* libz.dylib in Frameworks */,
 				D0CB066B1ADC48C4005E298F /* libcrypto.a in Frameworks */,
 			);
@@ -453,6 +460,8 @@
 				D063A33518B161B600C65116 /* MTTransportScheme.m */,
 				9389BC5918DA2BD300F9C1A6 /* MTDiscoverTransportSchemeAction.h */,
 				9389BC5A18DA2BD300F9C1A6 /* MTDiscoverTransportSchemeAction.m */,
+				D0580AC01B0F3E9C00E8235B /* MTDiscoverConnectionSignals.h */,
+				D0580AC11B0F3E9C00E8235B /* MTDiscoverConnectionSignals.m */,
 			);
 			name = "Transport Scheme";
 			sourceTree = "<group>";
@@ -578,6 +587,7 @@
 		D05A831618AFB3F9007F1076 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0580ABE1B0F3E7100E8235B /* SSignalKit.framework */,
 				D0D1A0711ADDE2FC007D9ED6 /* libz.dylib */,
 				D063A2F918B14AB500C65116 /* libcrypto.dylib */,
 				D05A831718AFB3F9007F1076 /* Foundation.framework */,
@@ -1105,6 +1115,7 @@
 				D0CB06581ADC45CE005E298F /* MTNetworkAvailability.h in Headers */,
 				D0CB06601ADC45CE005E298F /* MTHttpWorkerBehaviour.h in Headers */,
 				D0CB06211ADC454C005E298F /* MTKeychain.h in Headers */,
+				D0580AC21B0F3E9C00E8235B /* MTDiscoverConnectionSignals.h in Headers */,
 				D0CB065F1ADC45CE005E298F /* MTHttpWorker.h in Headers */,
 				D0CB063B1ADC4591005E298F /* MTPreparedMessage.h in Headers */,
 				D0CB065E1ADC45CE005E298F /* MTHttpTransport.h in Headers */,
@@ -1271,6 +1282,7 @@
 				D0CB06141ADC44B7005E298F /* MTQueue.m in Sources */,
 				D0CB06711ADC4A50005E298F /* MTTransportScheme.m in Sources */,
 				D0D1A04B1ADD983C007D9ED6 /* MTMsgContainerMessage.m in Sources */,
+				D0580AC31B0F3E9C00E8235B /* MTDiscoverConnectionSignals.m in Sources */,
 				D0CB06341ADC4588005E298F /* MTDatacenterAddress.m in Sources */,
 				D0CB06111ADC44B7005E298F /* MTTimer.m in Sources */,
 				D0CB062E1ADC457B005E298F /* MTDatacenterAuthAction.m in Sources */,
@@ -1509,6 +1521,10 @@
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(USER_LIBRARY_DIR)/Developer/Xcode/DerivedData/Telegraph-dzhgyeoibunjpxfckifwvbawfdmi/Build/Products/Debug-iphoneos",
+				);
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "MtProtoKitiOS/MtProtoKit-Prefix.pch";
@@ -1553,6 +1569,10 @@
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(USER_LIBRARY_DIR)/Developer/Xcode/DerivedData/Telegraph-dzhgyeoibunjpxfckifwvbawfdmi/Build/Products/Debug-iphoneos",
+				);
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "MtProtoKitiOS/MtProtoKit-Prefix.pch";
@@ -1598,6 +1618,7 @@
 				D079ABAB1AF39B8000076F59 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		D0CB060E1ADC4483005E298F /* Build configuration list for PBXNativeTarget "MtProtoKit" */ = {
 			isa = XCConfigurationList;
