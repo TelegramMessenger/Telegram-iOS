@@ -665,4 +665,40 @@
     XCTAssertEqual(result, 3);
 }
 
+- (void)testPipe
+{
+    SPipe *pipe = [[SPipe alloc] init];
+    
+    __block int result1 = 0;
+    id<SDisposable> disposable1 = [pipe.signalProducer() startWithNext:^(id next)
+    {
+        result1 += [next intValue];
+    }];
+    
+    __block int result2 = 0;
+    id<SDisposable> disposable2 = [pipe.signalProducer() startWithNext:^(id next)
+    {
+        result2 += [next intValue];
+    }];
+    
+    pipe.sink(@1);
+    
+    XCTAssertEqual(result1, 1);
+    XCTAssertEqual(result2, 1);
+    
+    [disposable1 dispose];
+    
+    pipe.sink(@1);
+    
+    XCTAssertEqual(result1, 1);
+    XCTAssertEqual(result2, 2);
+    
+    [disposable2 dispose];
+    
+    pipe.sink(@1);
+    
+    XCTAssertEqual(result1, 1);
+    XCTAssertEqual(result2, 2);
+}
+
 @end
