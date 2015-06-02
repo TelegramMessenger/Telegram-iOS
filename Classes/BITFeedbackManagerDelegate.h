@@ -57,6 +57,8 @@
  *
  *  You could disable it e.g. depending on available mobile network/WLAN connection
  *  or let it fetch less frequently.
+ *
+ *	@param	feedbackManager	The feedbackManager which did detect the new messages
  */
 - (BOOL) allowAutomaticFetchingForNewFeedbackForManager:(BITFeedbackManager *)feedbackManager;
 
