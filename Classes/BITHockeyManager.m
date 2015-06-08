@@ -161,7 +161,8 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     _startUpdateManagerIsInvoked = NO;
     
     _liveIdentifier = nil;
-    _installString = bit_appAnonID();
+    _installString = bit_appAnonID(NO);
+    _disableInstallTracking = NO;
     
 #if !TARGET_IPHONE_SIMULATOR
     // check if we are really in an app store environment
@@ -229,6 +230,10 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
   
   if (![self isSetUpOnMainThread]) return;
   
+  if ([self isAppStoreEnvironment] && [self isInstallTrackingDisabled]) {
+    _installString = bit_appAnonID(YES);
+  }
+
   BITHockeyLog(@"INFO: Starting HockeyManager");
   _startManagerIsInvoked = YES;
   
