@@ -339,7 +339,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   NSParameterAssert(self.installationIdentifier);
   NSParameterAssert(self.installationIdentifierParameterString);
   
-  NSString *installString = bit_appAnonID();
+  NSString *installString = bit_appAnonID(NO);
   if (installString) {
     return @{self.installationIdentifierParameterString : self.installationIdentifier, @"install_string": installString};
   }
@@ -440,7 +440,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   NSString *authenticationPath = [self authenticationPath];
   NSMutableDictionary *params = [NSMutableDictionary dictionary];
   
-  NSString *installString = bit_appAnonID();
+  NSString *installString = bit_appAnonID(NO);
   if (installString) {
     params[@"install_string"] = installString;
   }

@@ -80,7 +80,7 @@
                            andServiceName:bit_keychainHockeySDKServiceName()
                                     error:&error];
   
-  NSString *resultString = bit_appAnonID();
+  NSString *resultString = bit_appAnonID(NO);
   assertThat(resultString, notNilValue());
   assertThatInteger([resultString length], equalToInteger(36));
 }

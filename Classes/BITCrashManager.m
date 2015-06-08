@@ -810,7 +810,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
           incidentIdentifier = (NSString *) CFBridgingRelease(CFUUIDCreateString(NULL, report.uuidRef));
         }
         
-        NSString *reporterKey = bit_appAnonID() ?: @"";
+        NSString *reporterKey = bit_appAnonID(NO) ?: @"";
 
         _lastSessionCrashDetails = [[BITCrashDetails alloc] initWithIncidentIdentifier:incidentIdentifier
                                                                            reporterKey:reporterKey
@@ -1136,7 +1136,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
  */
 - (void)createCrashReportForAppKill {
   NSString *fakeReportUUID = bit_UUID();
-  NSString *fakeReporterKey = bit_appAnonID() ?: @"???";
+  NSString *fakeReporterKey = bit_appAnonID(NO) ?: @"???";
   
   NSString *fakeReportAppVersion = [[NSUserDefaults standardUserDefaults] objectForKey:kBITAppVersion];
   if (!fakeReportAppVersion)
@@ -1294,7 +1294,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
       return;
     }
     
-    installString = bit_appAnonID() ?: @"";
+    installString = bit_appAnonID(NO) ?: @"";
     
     if (report) {
       if (report.uuidRef != NULL) {
