@@ -1122,7 +1122,7 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
 }
 
 -(void)screenshotNotificationReceived:(NSNotification *)notification {
-  double amountOfSeconds = 0.5;
+  double amountOfSeconds = 1.5;
   dispatch_time_t delayTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(amountOfSeconds * NSEC_PER_SEC));
   
   dispatch_after(delayTime, dispatch_get_main_queue(), ^{
