@@ -3,4 +3,6 @@ framework module HockeySDK {
   
   export *
   module * { export * }
+
+  link "c++"
 }

@@ -27,9 +27,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef HockeySDK_h
-#define HockeySDK_h
-
 #import "HockeySDKFeatureConfig.h"
 
 #import "BITHockeyManager.h"
@@ -208,5 +205,3 @@ typedef NS_ENUM(NSInteger, BITHockeyErrorReason) {
 };
 extern NSString *const __attribute__((unused)) kBITHockeyErrorDomain;
 
-
-#endif

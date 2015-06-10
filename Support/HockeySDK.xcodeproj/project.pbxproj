@@ -14,7 +14,7 @@
 				1E4F61ED1621ADE70033EFC5 /* Build universal embedded framework */,
 			);
 			dependencies = (
-				1E754E431621F6290070AB92 /* PBXTargetDependency */,
+				846A906B1B20D4BB0076BB80 /* PBXTargetDependency */,
 			);
 			name = "HockeySDK Distribution";
 			productName = "HockeySDK Framework";
@@ -272,6 +272,10 @@
 		1EF95CA7162CB037000AE3AD /* BITFeedbackActivity.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EF95CA5162CB036000AE3AD /* BITFeedbackActivity.m */; };
 		1EF95CAA162CB314000AE3AD /* BITFeedbackComposeViewControllerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EF95CA9162CB313000AE3AD /* BITFeedbackComposeViewControllerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1EFF03E517F2485500A5F13C /* BITCrashManagerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EFF03E417F2485500A5F13C /* BITCrashManagerTests.m */; };
+		846A901F1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h in Headers */ = {isa = PBXBuildFile; fileRef = 846A901D1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h */; };
+		846A90201B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h in Headers */ = {isa = PBXBuildFile; fileRef = 846A901D1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h */; };
+		846A90211B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.mm in Sources */ = {isa = PBXBuildFile; fileRef = 846A901E1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.mm */; };
+		846A90221B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.mm in Sources */ = {isa = PBXBuildFile; fileRef = 846A901E1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.mm */; };
 		973EC8B418BCA7BC00DBFFBB /* BITImageAnnotationViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 97F0FA0018AE375E00EF50AA /* BITImageAnnotationViewController.m */; };
 		973EC8B718BCA8A200DBFFBB /* BITRectangleImageAnnotation.h in Headers */ = {isa = PBXBuildFile; fileRef = 973EC8B518BCA8A200DBFFBB /* BITRectangleImageAnnotation.h */; };
 		973EC8B818BCA8A200DBFFBB /* BITRectangleImageAnnotation.m in Sources */ = {isa = PBXBuildFile; fileRef = 973EC8B618BCA8A200DBFFBB /* BITRectangleImageAnnotation.m */; };
@@ -323,13 +327,6 @@
 			remoteGlobalIDString = 1E59550915B6F45800A03429;
 			remoteInfo = HockeySDKResources;
 		};
-		1E754E421621F6290070AB92 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = E4005611148D79B500EB22B9 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 1E8E66AD15BC3D7700632A2E;
-			remoteInfo = "HockeySDK Documentation";
-		};
 		1EA116FE16F4D302001C015C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = E4005611148D79B500EB22B9 /* Project object */;
@@ -357,6 +354,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 1E59550915B6F45800A03429;
 			remoteInfo = HockeySDKResources;
+		};
+		846A906A1B20D4BB0076BB80 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E4005611148D79B500EB22B9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1E8E66AD15BC3D7700632A2E;
+			remoteInfo = "HockeySDK Documentation";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -500,6 +504,8 @@
 		1EF95CA9162CB313000AE3AD /* BITFeedbackComposeViewControllerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITFeedbackComposeViewControllerDelegate.h; sourceTree = "<group>"; };
 		1EFF03D717F20F8300A5F13C /* BITCrashManagerPrivate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BITCrashManagerPrivate.h; sourceTree = "<group>"; };
 		1EFF03E417F2485500A5F13C /* BITCrashManagerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITCrashManagerTests.m; sourceTree = "<group>"; };
+		846A901D1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashCXXExceptionHandler.h; sourceTree = "<group>"; };
+		846A901E1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = BITCrashCXXExceptionHandler.mm; sourceTree = "<group>"; };
 		973EC8B518BCA8A200DBFFBB /* BITRectangleImageAnnotation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITRectangleImageAnnotation.h; sourceTree = "<group>"; };
 		973EC8B618BCA8A200DBFFBB /* BITRectangleImageAnnotation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITRectangleImageAnnotation.m; sourceTree = "<group>"; };
 		973EC8B918BDE29800DBFFBB /* BITArrowImageAnnotation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITArrowImageAnnotation.h; sourceTree = "<group>"; };
@@ -790,6 +796,8 @@
 				1ED570C618BF878C00AB3350 /* BITCrashAttachment.m */,
 				1E754E5A1621FBB70070AB92 /* BITCrashReportTextFormatter.h */,
 				1E754E5B1621FBB70070AB92 /* BITCrashReportTextFormatter.m */,
+				846A901D1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h */,
+				846A901E1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.mm */,
 			);
 			name = CrashReports;
 			sourceTree = "<group>";
@@ -1011,6 +1019,7 @@
 				1E90FD7318EDB86400CF0417 /* BITCrashDetails.h in Headers */,
 				1E49A4731612226D00463151 /* BITUpdateManager.h in Headers */,
 				1E49A4791612226D00463151 /* BITUpdateManagerDelegate.h in Headers */,
+				846A901F1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h in Headers */,
 				1E49A44E1612223B00463151 /* BITFeedbackManager.h in Headers */,
 				E405266217A2AD300096359C /* BITFeedbackManagerDelegate.h in Headers */,
 				973EC8BF18BE2B5B00DBFFBB /* BITBlurImageAnnotation.h in Headers */,
@@ -1069,6 +1078,7 @@
 				1EB617991B0A31650035A986 /* BITFeedbackComposeViewController.h in Headers */,
 				1EB617651B0A30B30035A986 /* BITKeychainUtils.h in Headers */,
 				1EB617821B0A31310035A986 /* BITImageAnnotation.h in Headers */,
+				846A90201B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h in Headers */,
 				1EB617961B0A31550035A986 /* BITArrowImageAnnotation.h in Headers */,
 				1EB617801B0A31260035A986 /* BITCrashReportTextFormatter.h in Headers */,
 				1EB6179C1B0A31730035A986 /* BITFeedbackListViewCell.h in Headers */,
@@ -1431,6 +1441,7 @@
 				1E754E5D1621FBB70070AB92 /* BITCrashManager.m in Sources */,
 				1E754E611621FBB70070AB92 /* BITCrashReportTextFormatter.m in Sources */,
 				1EF95CA7162CB037000AE3AD /* BITFeedbackActivity.m in Sources */,
+				846A90211B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.mm in Sources */,
 				1EACC97C162F041E007578C5 /* BITAttributedLabel.m in Sources */,
 				973EC8BC18BDE29800DBFFBB /* BITArrowImageAnnotation.m in Sources */,
 				973EC8B418BCA7BC00DBFFBB /* BITImageAnnotationViewController.m in Sources */,
@@ -1499,6 +1510,7 @@
 				1EB617831B0A31350035A986 /* BITImageAnnotation.m in Sources */,
 				1EB617681B0A30BD0035A986 /* BITAttributedLabel.m in Sources */,
 				1EB617621B0A30AA0035A986 /* BITHockeyBaseViewController.m in Sources */,
+				846A90221B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.mm in Sources */,
 				1EB6178A1B0A31510035A986 /* BITFeedbackComposeViewController.m in Sources */,
 				1EB617701B0A30D70035A986 /* BITHockeyAttachment.m in Sources */,
 				1EB617881B0A31510035A986 /* BITFeedbackMessage.m in Sources */,
@@ -1531,11 +1543,6 @@
 			target = 1E59550915B6F45800A03429 /* HockeySDKResources */;
 			targetProxy = 1E59557D15B6F97100A03429 /* PBXContainerItemProxy */;
 		};
-		1E754E431621F6290070AB92 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 1E8E66AD15BC3D7700632A2E /* HockeySDK Documentation */;
-			targetProxy = 1E754E421621F6290070AB92 /* PBXContainerItemProxy */;
-		};
 		1EA116FF16F4D302001C015C /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 1E5954CB15B6F24A00A03429 /* HockeySDK */;
@@ -1555,6 +1562,11 @@
 			isa = PBXTargetDependency;
 			target = 1E59550915B6F45800A03429 /* HockeySDKResources */;
 			targetProxy = 1EB618191B0A3C380035A986 /* PBXContainerItemProxy */;
+		};
+		846A906B1B20D4BB0076BB80 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1E8E66AD15BC3D7700632A2E /* HockeySDK Documentation */;
+			targetProxy = 846A906A1B20D4BB0076BB80 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1608,6 +1620,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
 				DSTROOT = /tmp/HockeySDK.dst;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1625,6 +1639,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
 				DSTROOT = /tmp/HockeySDK.dst;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1781,6 +1797,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
 				DSTROOT = /tmp/HockeySDK.dst;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1900,6 +1918,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
 				DSTROOT = /tmp/HockeySDK.dst;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
