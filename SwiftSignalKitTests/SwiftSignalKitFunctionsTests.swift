@@ -309,10 +309,10 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
         XCTAssert(completed == true, "completed != true")
     }
     
-    /*func testSingle() {
-        let s1 = Signal<Int, Void>.single(1)
-        let s2 = Signal<Int, Void>.fail(Void())
-        let s3 = Signal<Int, Void>.complete()
+    func testSingle() {
+        let s1 = single(1, Void.self)
+        let s2 = fail(Int.self, Void())
+        let s3 = complete(Int.self, Void.self)
         
         var singleEmitted = false
         s1.start(next: { next in
@@ -331,7 +331,7 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
             completedEmitted = true
         })
         XCTAssert(completedEmitted == true, "errorEmitted != true")
-    }*/
+    }
     
     func testSwitchToLatest() {
         var result: [Int] = []
