@@ -1,4 +1,4 @@
-#import "SSignal.h"
+#import <SSignalKit/SSignal.h>
 
 @class SQueue;
 

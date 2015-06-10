@@ -1,4 +1,4 @@
-#import "SSubscriber.h"
+#import <SSignalKit/SSubscriber.h>
 
 @interface SSignal : NSObject
 {

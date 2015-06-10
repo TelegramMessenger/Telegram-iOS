@@ -1,5 +1,4 @@
-#import "SDisposable.h"
-#import "SEvent.h"
+#import <SSignalKit/SDisposable.h>
 
 @interface SSubscriber : NSObject <SDisposable>
 {

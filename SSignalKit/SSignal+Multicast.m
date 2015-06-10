@@ -80,29 +80,44 @@ typedef enum {
     [currentDisposable dispose];
 }
 
-- (void)notify:(SEvent *)event
+- (void)notifyNext:(id)next
 {
     NSArray *currentSubscribers = nil;
     OSSpinLockLock(&_lock);
     currentSubscribers = [_subscribers copyItems];
-    if (event.type != SEventTypeNext)
-        _state = SSignalMulticastStateCompleted;
     OSSpinLockUnlock(&_lock);
     
     for (SSubscriber *subscriber in currentSubscribers)
     {
-        switch (event.type)
-        {
-            case SEventTypeNext:
-                [subscriber putNext:event.data];
-                break;
-            case SEventTypeError:
-                [subscriber putError:event.data];
-                break;
-            case SEventTypeCompleted:
-                [subscriber putCompletion];
-                break;
-        }
+        [subscriber putNext:next];
+    }
+}
+
+- (void)notifyError:(id)error
+{
+    NSArray *currentSubscribers = nil;
+    OSSpinLockLock(&_lock);
+    currentSubscribers = [_subscribers copyItems];
+    _state = SSignalMulticastStateCompleted;
+    OSSpinLockUnlock(&_lock);
+    
+    for (SSubscriber *subscriber in currentSubscribers)
+    {
+        [subscriber putError:error];
+    }
+}
+
+- (void)notifyCompleted
+{
+    NSArray *currentSubscribers = nil;
+    OSSpinLockLock(&_lock);
+    currentSubscribers = [_subscribers copyItems];
+    _state = SSignalMulticastStateCompleted;
+    OSSpinLockUnlock(&_lock);
+    
+    for (SSubscriber *subscriber in currentSubscribers)
+    {
+        [subscriber putCompletion];
     }
 }
 
@@ -121,13 +136,13 @@ typedef enum {
         {
             id<SDisposable> disposable = [self startWithNext:^(id next)
             {
-                [subscribers notify:[[SEvent alloc] initWithNext:next]];
+                [subscribers notifyNext:next];
             } error:^(id error)
             {
-                [subscribers notify:[[SEvent alloc] initWithError:error]];
+                [subscribers notifyError:error];
             } completed:^
             {
-                [subscribers notify:[[SEvent alloc] initWithCompleted]];
+                [subscribers notifyCompleted];
             }];
             
             [subscribers setDisposable:[[SBlockDisposable alloc] initWithBlock:^

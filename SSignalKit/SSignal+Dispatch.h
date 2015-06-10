@@ -1,7 +1,7 @@
-#import "SSignal.h"
+#import <SSignalKit/SSignal.h>
 
-#import "SQueue.h"
-#import "SThreadPool.h"
+#import <SSignalKit/SQueue.h>
+#import <SSignalKit/SThreadPool.h>
 
 @interface SSignal (Dispatch)
 

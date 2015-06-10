@@ -1,4 +1,4 @@
-#import "SDisposable.h"
+#import <SSignalKit/SDisposable.h>
 
 @interface SDisposableSet : NSObject <SDisposable>
 

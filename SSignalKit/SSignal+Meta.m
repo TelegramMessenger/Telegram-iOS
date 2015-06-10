@@ -19,7 +19,6 @@
     
     NSMutableArray *_queuedSignals;
     bool _queueMode;
-    
 }
 
 @end

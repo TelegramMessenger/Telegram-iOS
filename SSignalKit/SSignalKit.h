@@ -19,7 +19,6 @@ FOUNDATION_EXPORT const unsigned char SSignalKitVersionString[];
 #import <SSignalKit/SAtomic.h>
 #import <SSignalKit/SBag.h>
 #import <SSignalKit/SSignal.h>
-#import <SSignalKit/SEvent.h>
 #import <SSignalKit/SSubscriber.h>
 #import <SSignalKit/SDisposable.h>
 #import <SSignalKit/SDisposableSet.h>
