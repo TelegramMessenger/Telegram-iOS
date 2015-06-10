@@ -6,7 +6,11 @@
 //  Copyright (c) 2015 Telegram. All rights reserved.
 //
 
+#if __IPHONE_OS_VERSION_MIN_REQUIRED
 #import <UIKit/UIKit.h>
+#else
+#import <Foundation/Foundation.h>
+#endif
 
 //! Project version number for SSignalKit.
 FOUNDATION_EXPORT double SSignalKitVersionNumber;
