@@ -2,6 +2,8 @@ import Foundation
 
 internal let doNothing: () -> Void = { _ in }
 
+typealias NoError = Void
+
 public func identity<A>(a: A) -> A {
     return a;
 }
