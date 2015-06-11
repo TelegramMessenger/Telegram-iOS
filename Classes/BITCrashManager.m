@@ -98,17 +98,17 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
 };
 
 
-// Temporary routine until PLCR catches up
-// We trick PLCR with an Objective-C exception. It's ugly but it works.
+// Temporary class until PLCR catches up
+// We trick PLCR with an Objective-C exception.
 @interface BITCrashCXXExceptionWrapperException : NSException
 - (instancetype)initWithCXXExceptionInfo:(const BITCrashUncaughtCXXExceptionInfo *)info;
 @end
-@implementation BITCrashCXXExceptionWrapperException
-{
+
+@implementation BITCrashCXXExceptionWrapperException {
   const BITCrashUncaughtCXXExceptionInfo *_info;
 }
-- (instancetype)initWithCXXExceptionInfo:(const BITCrashUncaughtCXXExceptionInfo *)info
-{
+
+- (instancetype)initWithCXXExceptionInfo:(const BITCrashUncaughtCXXExceptionInfo *)info {
   extern char* __cxa_demangle(const char* mangled_name, char* output_buffer, size_t* length, int* status);
   char *demangled_name = __cxa_demangle ? __cxa_demangle(info->exception_type_name ?: "", NULL, NULL, NULL) : NULL;
 
@@ -121,8 +121,7 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
   return self;
 }
 
-- (NSArray *)callStackReturnAddresses
-{
+- (NSArray *)callStackReturnAddresses {
   NSMutableArray *cxxFrames = [NSMutableArray arrayWithCapacity:_info->exception_frames_count];
   
   for (uint32_t i = 0; i < _info->exception_frames_count; ++i) {
@@ -132,12 +131,15 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
 }
 
 @end
-static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInfo *info)
-{
+
+
+// C++ Exception Handler
+static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInfo *info) {
   // This relies on a LOT of sneaky internal knowledge of how PLCR works and should not be considered a long-term solution.
   NSGetUncaughtExceptionHandler()([[BITCrashCXXExceptionWrapperException alloc] initWithCXXExceptionInfo:info]);
   abort();
 }
+
 
 @implementation BITCrashManager {
   NSMutableDictionary *_approvedCrashReports;

@@ -23,6 +23,7 @@ Pod::Spec.new do |s|
   s.requires_arc      = true
   
   s.frameworks              = 'AssetsLibrary', 'CoreText', 'CoreGraphics', 'MobileCoreServices', 'QuartzCore', 'QuickLook', 'Security', 'SystemConfiguration', 'UIKit'
+  s.libraries               = 'c++'
   s.ios.vendored_frameworks = 'Vendor/CrashReporter.framework'
   s.xcconfig                = {'GCC_PREPROCESSOR_DEFINITIONS' => %{$(inherited) BITHOCKEY_VERSION="@\\"#{s.version}\\"" BITHOCKEY_C_VERSION="\\"#{s.version}\\"" BITHOCKEY_BUILD="@\\"38\\"" BITHOCKEY_C_BUILD="\\"38\\""} }
   s.resource_bundle         = { 'HockeySDKResources' => ['Resources/*.png', 'Resources/*.lproj'] }
