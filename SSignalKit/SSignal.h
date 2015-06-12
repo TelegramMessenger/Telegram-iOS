@@ -12,5 +12,7 @@
 - (id<SDisposable>)startWithNext:(void (^)(id next))next;
 - (id<SDisposable>)startWithNext:(void (^)(id next))next completed:(void (^)())completed;
 
+- (SSignal *)trace:(NSString *)name;
+
 @end
 

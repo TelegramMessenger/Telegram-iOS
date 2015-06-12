@@ -18,3 +18,9 @@
 - (void)putCompletion;
 
 @end
+
+@interface STracingSubscriber : SSubscriber
+
+- (instancetype)initWithName:(NSString *)name next:(void (^)(id))next error:(void (^)(id))error completed:(void (^)())completed;
+
+@end
