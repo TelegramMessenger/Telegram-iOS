@@ -32,6 +32,8 @@ The SDK runs on devices with iOS 6.0 or higher.
 <a id="xcode"></a> 
 ## Set up Xcode
 
+### Full featured SDK
+
 1. Drag & drop `HockeySDK.embeddedframework` from your project directory to your Xcode project.
 
 2. Similar to above, our projects have a group `Vendor`, so we drop it there.
@@ -42,13 +44,15 @@ The SDK runs on devices with iOS 6.0 or higher.
 
 4. Select your project in the `Project Navigator` (⌘+1).
 
-5. Select your app target.
+5. If your app target is enabled to use Modules (which is default since Xcode 5 for new projects), you can continue with the section "Modify Code", otherwise continue with step 6.
 
-6. Select the tab `Build Phases`.
+6. Select your app target.
 
-7. Expand `Link Binary With Libraries`.
+7. Select the tab `Build Phases`.
 
-8. Add the following system frameworks, if they are missing:
+8. Expand `Link Binary With Libraries`.
+
+9. Add the following system frameworks, if they are missing:
     - `AssetsLibrary`
     - `CoreText`
     - `CoreGraphics`
@@ -56,6 +60,35 @@ The SDK runs on devices with iOS 6.0 or higher.
     - `MobileCoreServices`
     - `QuartzCore`
     - `QuickLook`
+    - `Security`
+    - `SystemConfiguration`
+    - `UIKit`
+    - `libc++`
+
+### Crash reporting only SDK
+
+1. Drag & drop `HockeySDK.framework` from your project directory to your Xcode project.
+
+2. If you don't want to auto-send crash reports, also copy the following resource bundle from `HockeySDK.embeddedframework/HockeySDK.framework/Versions/A/Resources/HockeySDKResources.bundle` into the same folder and Drag & drop it into your Xcode project
+
+2. Similar to above, our projects have a group `Vendor`, so we drop it there.
+
+3. Select `Create groups for any added folders` and set the checkmark for your target. Then click `Finish`.
+
+    <img src="XcodeCreateGroups_normal.png"/>
+
+4. Select your project in the `Project Navigator` (⌘+1).
+
+5. If your app target is enabled to use Modules (which is default since Xcode 5 for new projects), you can continue with the section "Modify Code", otherwise continue with step 6.
+
+6. Select your app target.
+
+7. Select the tab `Build Phases`.
+
+8. Expand `Link Binary With Libraries`.
+
+9. Add the following system frameworks, if they are missing (if you are using the full featured SDK):
+    - `Foundation`
     - `Security`
     - `SystemConfiguration`
     - `UIKit`
@@ -69,6 +102,12 @@ The SDK runs on devices with iOS 6.0 or higher.
 
 2. Add the following line at the top of the file below your own #import statements:
 
+	If your app target is enabled to use Modules (which is default since Xcode 5 for new projects) use:
+
+        @import HockeySDK
+	
+	Otherwise use:
+
         #import <HockeySDK/HockeySDK.h>
 
 3. Search for the method `application:didFinishLaunchingWithOptions:`
@@ -77,7 +116,7 @@ The SDK runs on devices with iOS 6.0 or higher.
 
         [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
         [[BITHockeyManager sharedHockeyManager] startManager];
-        [[BITHockeyManager sharedHockeyManager].authenticator authenticateInstallation];
+        [[BITHockeyManager sharedHockeyManager].authenticator authenticateInstallation]; // This line is obsolete in the crash only build
 
 5. Continue with [General subsection](#generalcode)
 
@@ -95,7 +134,7 @@ The SDK runs on devices with iOS 6.0 or higher.
 
         BITHockeyManager.sharedHockeyManager().configureWithIdentifier("APP_IDENTIFIER");
         BITHockeyManager.sharedHockeyManager().startManager();
-        BITHockeyManager.sharedHockeyManager().authenticator.authenticateInstallation();
+        BITHockeyManager.sharedHockeyManager().authenticator.authenticateInstallation(); // This line is obsolete in the crash only build
 
 5. Continue with [General subsection](#generalcode)
 
@@ -183,3 +222,4 @@ Instead of manually adding the missing frameworks, you can also use our bundled 
     - `Security`
     - `SystemConfiguration`
     - `UIKit`
+    - `libc++`

@@ -4,10 +4,10 @@ before_install:
 script:
 - set -o pipefail
 - cd Support
-- xcodebuild -project HockeySDK.xcodeproj -scheme "HockeySDK" -sdk iphonesimulator
-  -configuration Debug -destination "platform=iOS Simulator,name=iPhone 6" test |
-  xcpretty -c
 - xcodebuild -project HockeySDK.xcodeproj -scheme "HockeySDK Framework" -sdk iphonesimulator
-  -configuration Debug -destination "platform=iOS Simulator,name=iPhone 6" test |
+  -configuration Debug -destination "platform=iOS Simulator,name=iPhone 6" clean test |
+  xcpretty -c
+- xcodebuild -project HockeySDK.xcodeproj -scheme "HockeySDK" -sdk iphonesimulator
+  -configuration Debug -destination "platform=iOS Simulator,name=iPhone 6" clean test |
   xcpretty -c
 - cd ..
