@@ -100,6 +100,20 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
 
 // Temporary class until PLCR catches up
 // We trick PLCR with an Objective-C exception.
+//
+// This code provides us access to the C++ exception message, but we won't get a correct stack trace.
+// The cause for this is that the iOS runtime catches every C++ exception internally and rethrows it.
+// Since the exception object doesn't have the backtrace attached, we have no chance of accessing it.
+//
+// As a workaround we could hook into __cxx_throw and attaching the backtrace every time this is called.
+// This has a few sides effects which is why we are not doing this right now:
+// - CoreAdudio (and possibly other frameworks) use C++ exceptions heavily for control flow.
+//   Calling `backtrace()` is not cheap, so this could affect performance
+// - It is not clear if such a hook is ABI compatible with all C++ runtimes
+// - It is not clear if there could be any other side effects
+//
+// We'll evaluate this further to see if there is a safe solution.
+//
 @interface BITCrashCXXExceptionWrapperException : NSException
 - (instancetype)initWithCXXExceptionInfo:(const BITCrashUncaughtCXXExceptionInfo *)info;
 @end
