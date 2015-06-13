@@ -151,10 +151,6 @@
     if (!_terminated)
     {
         NSLog(@"trace(%@ terminated)", _name);
-        if ([_name hasPrefix:@"bestTcp4Signals"])
-        {
-            int bp = 1;
-        }
         _terminated = true;
         _next = nil;
         _error = nil;
