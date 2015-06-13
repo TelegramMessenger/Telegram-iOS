@@ -63,6 +63,7 @@ static dispatch_block_t recursiveBlock(void (^block)(dispatch_block_t recurse))
             
             if ([currentShouldRestart boolValue])
             {
+                [currentDisposable setDisposable:nil];
                 id<SDisposable> disposable = [self startWithNext:^(id next)
                 {
                     [subscriber putNext:next];

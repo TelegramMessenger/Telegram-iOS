@@ -150,6 +150,11 @@
     OSSpinLockLock(&_lock);
     if (!_terminated)
     {
+        NSLog(@"trace(%@ terminated)", _name);
+        if ([_name hasPrefix:@"bestTcp4Signals"])
+        {
+            int bp = 1;
+        }
         _terminated = true;
         _next = nil;
         _error = nil;
@@ -169,9 +174,11 @@
     
     if (fnext)
     {
-        NSLog(@"(%@ next: %@)", _name, next);
+        NSLog(@"trace(%@ next: %@)", _name, next);
         fnext(next);
     }
+    else
+        NSLog(@"trace(%@ next: %@, not accepted)", _name, next);
 }
 
 - (void)putError:(id)error
@@ -193,9 +200,11 @@
     
     if (ferror)
     {
-        NSLog(@"(%@ error: %@)", _name, error);
+        NSLog(@"trace(%@ error: %@)", _name, error);
         ferror(error);
     }
+    else
+        NSLog(@"trace(%@ error: %@, not accepted)", _name, error);
     
     if (shouldDispose)
         [self->_disposable dispose];
@@ -220,9 +229,11 @@
     
     if (completed)
     {
-        NSLog(@"(%@ completed)", _name);
+        NSLog(@"trace(%@ completed)", _name);
         completed();
     }
+    else
+        NSLog(@"trace(%@ completed, not accepted)", _name);
     
     if (shouldDispose)
         [self->_disposable dispose];
@@ -230,7 +241,7 @@
 
 - (void)dispose
 {
-    NSLog(@"(%@ dispose)", _name);
+    NSLog(@"trace(%@ dispose)", _name);
     [self->_disposable dispose];
 }
 

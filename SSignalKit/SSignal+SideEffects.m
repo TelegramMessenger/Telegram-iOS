@@ -5,6 +5,24 @@
 
 @implementation SSignal (SideEffects)
 
+- (SSignal *)onStart:(void (^)())f
+{
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
+    {
+        f();
+        return [self startWithNext:^(id next)
+        {
+            [subscriber putNext:next];
+        } error:^(id error)
+        {
+            [subscriber putError:error];
+        } completed:^
+        {
+            [subscriber putCompletion];
+        }];
+    }];
+}
+
 - (SSignal *)onNext:(void (^)(id next))f
 {
     return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)

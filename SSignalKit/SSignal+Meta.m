@@ -172,13 +172,13 @@
 
 - (SSignal *)then:(SSignal *)signal
 {
-    SDisposableSet *compositeDisposable = [[SDisposableSet alloc] init];
-    
-    SMetaDisposable *currentDisposable = [[SMetaDisposable alloc] init];
-    [compositeDisposable add:currentDisposable];
-    
     return [[SSignal alloc] initWithGenerator:^(SSubscriber *subscriber)
     {
+        SDisposableSet *compositeDisposable = [[SDisposableSet alloc] init];
+        
+        SMetaDisposable *currentDisposable = [[SMetaDisposable alloc] init];
+        [compositeDisposable add:currentDisposable];
+        
         [currentDisposable setDisposable:[self startWithNext:^(id next)
         {
             [subscriber putNext:next];

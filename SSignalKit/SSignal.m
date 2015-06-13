@@ -86,6 +86,8 @@
 #ifdef DEBUG
     return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
     {
+        NSString *traceName = [[NSString alloc] initWithFormat:@"%@#0x%x", name, (int)random()];
+        NSLog(@"trace(%@ start)", traceName);
         return [self startWithNext:^(id next)
         {
             [subscriber putNext:next];
@@ -95,7 +97,7 @@
         } completed:^
         {
             [subscriber putCompletion];
-        } traceName:name];
+        } traceName:traceName];
     }];
 #else
     return self;
