@@ -246,7 +246,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             [self setTransport:nil];
         }
         
-        _transportScheme = [_context transportSchemeForDatacenterWithid:_datacenterId];
+        _transportScheme = [_context transportSchemeForDatacenterWithid:_datacenterId media:_media];
         
         if (_transportScheme == nil)
         {
@@ -254,7 +254,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             {
                 [self setMtState:_mtState | MTProtoStateAwaitingDatacenterScheme];
                 
-                [_context transportSchemeForDatacenterWithIdRequired:_datacenterId];
+                [_context transportSchemeForDatacenterWithIdRequired:_datacenterId media:_media];
             }
         }
         else if (!_useUnauthorizedMode && [_context authInfoForDatacenterWithId:_datacenterId] == nil)
@@ -675,9 +675,13 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             return;
         
         if (hasConnectionProblems)
-            [_context invalidateTransportSchemeForDatacenterId:_datacenterId transportScheme:_transportScheme isProbablyHttp:isProbablyHttp];
+        {
+            [_context invalidateTransportSchemeForDatacenterId:_datacenterId transportScheme:_transportScheme isProbablyHttp:isProbablyHttp media:_media];
+        }
         else
-            [_context revalidateTransportSchemeForDatacenterId:_datacenterId transportScheme:_transportScheme];
+        {
+            [_context revalidateTransportSchemeForDatacenterId:_datacenterId transportScheme:_transportScheme media:_media];
+        }
     }];
 }
 
@@ -1996,11 +2000,11 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     }
 }
 
-- (void)contextDatacenterTransportSchemeUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme
+- (void)contextDatacenterTransportSchemeUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId transportScheme:(MTTransportScheme *)transportScheme media:(bool)media
 {
     [[MTProto managerQueue] dispatchOnQueue:^
     {
-        if (context == _context && datacenterId == _datacenterId && ![self isStopped] && (_transportScheme == nil || ![_transportScheme isEqualToScheme:transportScheme]))
+        if (context == _context && datacenterId == _datacenterId && media == _media && ![self isStopped] && (_transportScheme == nil || ![_transportScheme isEqualToScheme:transportScheme]))
         {
             if (_mtState & MTProtoStateAwaitingDatacenterScheme)
                 [self setMtState:_mtState & (~MTProtoStateAwaitingDatacenterScheme)];

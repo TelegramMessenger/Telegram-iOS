@@ -78,15 +78,25 @@ typedef struct {
             if (strongConnection != nil)
                 [strongConnection sendDatas:@[data] completion:nil requestQuickAck:false expectDataInResponse:true];
         };
+        __block bool received = false;
         connection.connectionReceivedData = ^(NSData *data)
         {
+            received = true;
             if ([self isResponseValid:data payloadData:payloadData])
+            {
+                MTLog(@"success tcp://%@:%d", address.ip, (int)address.port);
                 [subscriber putCompletion];
+            }
             else
+            {
+                MTLog(@"failed tcp://%@:%d", address.ip, (int)address.port);
                 [subscriber putError:nil];
+            }
         };
         connection.connectionClosed = ^
         {
+            if (!received)
+                MTLog(@"failed tcp://%@:%d", address.ip, (int)address.port);
             [subscriber putError:nil];
         };
         MTLog(@"trying tcp://%@:%d", address.ip, (int)address.port);
@@ -131,17 +141,14 @@ typedef struct {
     }];
 }
 
-+ (SSignal *)discoverSchemeWithContext:(MTContext *)context addressList:(NSArray *)addressList preferMedia:(bool)preferMedia
++ (SSignal *)discoverSchemeWithContext:(MTContext *)context addressList:(NSArray *)addressList media:(bool)media
 {
     NSMutableArray *bestAddressList = [[NSMutableArray alloc] init];
-    NSMutableArray *remainingAddressList = [[NSMutableArray alloc] init];
     
     for (MTDatacenterAddress *address in addressList)
     {
-        if (preferMedia == address.preferForMedia)
+        if (media == address.preferForMedia)
             [bestAddressList addObject:address];
-        else
-            [remainingAddressList addObject:address];
     }
     
     NSMutableArray *bestTcp4Signals = [[NSMutableArray alloc] init];
@@ -150,8 +157,8 @@ typedef struct {
     
     for (MTDatacenterAddress *address in bestAddressList)
     {
-        MTTransportScheme *tcpTransportScheme = [[MTTransportScheme alloc] initWithTransportClass:[MTTcpTransport class] address:address];
-        MTTransportScheme *httpTransportScheme = [[MTTransportScheme alloc] initWithTransportClass:[MTHttpTransport class] address:address];
+        MTTransportScheme *tcpTransportScheme = [[MTTransportScheme alloc] initWithTransportClass:[MTTcpTransport class] address:address media:media];
+        MTTransportScheme *httpTransportScheme = [[MTTransportScheme alloc] initWithTransportClass:[MTHttpTransport class] address:address media:media];
         
         if ([self isIpv6:address.ip])
         {
@@ -163,7 +170,8 @@ typedef struct {
         }
         else
         {
-            SSignal *signal = [[[[self tcpConnectionWithAddress:address] then:[SSignal single:tcpTransportScheme]] timeout:5.0 onQueue:[SQueue concurrentDefaultQueue] orSignal:[SSignal fail:nil]] catch:^SSignal *(__unused id error)
+            SSignal *tcpConnectionWithTimeout = [[[self tcpConnectionWithAddress:address] then:[SSignal single:tcpTransportScheme]] timeout:5.0 onQueue:[SQueue concurrentDefaultQueue] orSignal:[SSignal fail:nil]];
+            SSignal *signal = [tcpConnectionWithTimeout catch:^SSignal *(__unused id error)
             {
                 return [SSignal complete];
             }];
@@ -193,7 +201,9 @@ typedef struct {
     SSignal *signal = [anySignal mapToSignal:^SSignal *(MTTransportScheme *scheme)
     {
         if (![scheme isOptimal])
-            return [[SSignal single:scheme] then:optimalSignal];
+        {
+            return [[SSignal single:scheme] then:[optimalSignal delay:5.0 onQueue:[SQueue concurrentDefaultQueue]]];
+        }
         else
             return [SSignal single:scheme];
     }];

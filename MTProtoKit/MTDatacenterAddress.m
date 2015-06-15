@@ -8,6 +8,9 @@
 
 #import <MTProtoKit/MTDatacenterAddress.h>
 
+#import <netinet/in.h>
+#import <arpa/inet.h>
+
 @implementation MTDatacenterAddress
 
 - (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port preferForMedia:(bool)preferForMedia
@@ -66,6 +69,17 @@
         return false;
     
     return true;
+}
+
+- (BOOL)isIpv6
+{
+    const char *utf8 = [_ip UTF8String];
+    int success;
+    
+    struct in6_addr dst6;
+    success = inet_pton(AF_INET6, utf8, &dst6);
+    
+    return success == 1;
 }
 
 - (NSString *)description

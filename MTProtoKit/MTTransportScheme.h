@@ -17,8 +17,9 @@
 
 @property (nonatomic, strong, readonly) Class transportClass;
 @property (nonatomic, strong, readonly) MTDatacenterAddress *address;
+@property (nonatomic, readonly) bool media;
 
-- (instancetype)initWithTransportClass:(Class)transportClass address:(MTDatacenterAddress *)address;
+- (instancetype)initWithTransportClass:(Class)transportClass address:(MTDatacenterAddress *)address media:(bool)media;
 
 - (BOOL)isEqualToScheme:(MTTransportScheme *)other;
 - (BOOL)isOptimal;

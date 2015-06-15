@@ -18,5 +18,6 @@
 - (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port preferForMedia:(bool)preferForMedia;
 
 - (BOOL)isEqualToAddress:(MTDatacenterAddress *)other;
+- (BOOL)isIpv6;
 
 @end

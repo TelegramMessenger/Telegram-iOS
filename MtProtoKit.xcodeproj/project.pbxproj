@@ -35,8 +35,6 @@
 		D0CB06231ADC4558005E298F /* MTContext.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A839E18AFB75B007F1076 /* MTContext.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0CB06241ADC455C005E298F /* MTContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A839C18AFB75B007F1076 /* MTContext.m */; };
 		D0CB06251ADC4562005E298F /* MTTransportScheme.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A33418B161B600C65116 /* MTTransportScheme.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		D0CB06261ADC4562005E298F /* MTDiscoverTransportSchemeAction.h in Headers */ = {isa = PBXBuildFile; fileRef = 9389BC5918DA2BD300F9C1A6 /* MTDiscoverTransportSchemeAction.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		D0CB06271ADC4566005E298F /* MTDiscoverTransportSchemeAction.m in Sources */ = {isa = PBXBuildFile; fileRef = 9389BC5A18DA2BD300F9C1A6 /* MTDiscoverTransportSchemeAction.m */; };
 		D0CB06281ADC456A005E298F /* MTDiscoverDatacenterAddressAction.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A83D518AFB75B007F1076 /* MTDiscoverDatacenterAddressAction.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0CB06291ADC456E005E298F /* MTDiscoverDatacenterAddressAction.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A83D418AFB75B007F1076 /* MTDiscoverDatacenterAddressAction.m */; };
 		D0CB062A1ADC4575005E298F /* MTDatacenterTransferAuthAction.h in Headers */ = {isa = PBXBuildFile; fileRef = D05A839F18AFB75B007F1076 /* MTDatacenterTransferAuthAction.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -167,8 +165,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		9389BC5918DA2BD300F9C1A6 /* MTDiscoverTransportSchemeAction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTDiscoverTransportSchemeAction.h; path = MtProtoKit/MTDiscoverTransportSchemeAction.h; sourceTree = "<group>"; };
-		9389BC5A18DA2BD300F9C1A6 /* MTDiscoverTransportSchemeAction.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTDiscoverTransportSchemeAction.m; path = MtProtoKit/MTDiscoverTransportSchemeAction.m; sourceTree = "<group>"; };
 		93DBD22F18B2D72800631ADC /* MTRequestErrorContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTRequestErrorContext.h; path = MtProtoKit/MTRequestErrorContext.h; sourceTree = "<group>"; };
 		93DBD23018B2D72800631ADC /* MTRequestErrorContext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTRequestErrorContext.m; path = MtProtoKit/MTRequestErrorContext.m; sourceTree = "<group>"; };
 		93DBD23318B2D9AA00631ADC /* MTTime.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = MTTime.h; path = MtProtoKit/MTTime.h; sourceTree = "<group>"; };
@@ -458,8 +454,6 @@
 			children = (
 				D063A33418B161B600C65116 /* MTTransportScheme.h */,
 				D063A33518B161B600C65116 /* MTTransportScheme.m */,
-				9389BC5918DA2BD300F9C1A6 /* MTDiscoverTransportSchemeAction.h */,
-				9389BC5A18DA2BD300F9C1A6 /* MTDiscoverTransportSchemeAction.m */,
 				D0580AC01B0F3E9C00E8235B /* MTDiscoverConnectionSignals.h */,
 				D0580AC11B0F3E9C00E8235B /* MTDiscoverConnectionSignals.m */,
 			);
@@ -1120,7 +1114,6 @@
 				D0CB063B1ADC4591005E298F /* MTPreparedMessage.h in Headers */,
 				D0CB065E1ADC45CE005E298F /* MTHttpTransport.h in Headers */,
 				D0D1A04A1ADD983C007D9ED6 /* MTMsgContainerMessage.h in Headers */,
-				D0CB06261ADC4562005E298F /* MTDiscoverTransportSchemeAction.h in Headers */,
 				D0CB06491ADC45B1005E298F /* MTTimeSyncMessageService.h in Headers */,
 				D0CB05FC1ADC4483005E298F /* MtProtoKit.h in Headers */,
 				D0CB063E1ADC4591005E298F /* MTMessageEncryptionKey.h in Headers */,
@@ -1274,7 +1267,6 @@
 				D0CB062F1ADC457B005E298F /* MTDatacenterAuthMessageService.m in Sources */,
 				D0CB06351ADC4588005E298F /* MTDatacenterAddressSet.m in Sources */,
 				D0CB06621ADC45DA005E298F /* MTTransport.m in Sources */,
-				D0CB06271ADC4566005E298F /* MTDiscoverTransportSchemeAction.m in Sources */,
 				D0CB06631ADC45DA005E298F /* MTTransportTransaction.m in Sources */,
 				D0CB06421ADC4599005E298F /* MTPreparedMessage.m in Sources */,
 				D0CB06641ADC45DA005E298F /* MTTcpTransport.m in Sources */,

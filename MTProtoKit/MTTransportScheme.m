@@ -21,13 +21,14 @@
 
 @implementation MTTransportScheme
 
-- (instancetype)initWithTransportClass:(Class)transportClass address:(MTDatacenterAddress *)address
+- (instancetype)initWithTransportClass:(Class)transportClass address:(MTDatacenterAddress *)address media:(bool)media
 {
     self = [super init];
     if (self != nil)
     {
         _transportClass = transportClass;
         _address = address;
+        _media = media;
     }
     return self;
 }
@@ -39,6 +40,7 @@
     {
         _transportClass = NSClassFromString([aDecoder decodeObjectForKey:@"transportClass"]);
         _address = [aDecoder decodeObjectForKey:@"address"];
+        _media = [aDecoder decodeBoolForKey:@"media"];
     }
     return self;
 }
@@ -47,6 +49,7 @@
 {
     [aCoder encodeObject:NSStringFromClass(_transportClass) forKey:@"transportClass"];
     [aCoder encodeObject:_address forKey:@"address"];
+    [aCoder encodeBool:_media forKey:@"media"];
 }
 
 - (BOOL)isEqualToScheme:(MTTransportScheme *)other
@@ -58,6 +61,9 @@
         return false;
     
     if (![other->_address isEqualToAddress:_address])
+        return false;
+    
+    if (other->_media != _media)
         return false;
     
     return true;
@@ -78,17 +84,6 @@
     
     if (selfIsTcp != otherIsTcp)
         return selfIsTcp ? NSOrderedAscending : NSOrderedDescending;
-    
-    /*if (_address.port != other.address.port)
-    {
-        int bestPort = selfIsTcp ? 443 : 80;
-        
-        if (_address.port == bestPort && other->_address.port != bestPort)
-            return NSOrderedAscending;
-        else if (_address.port != bestPort && other->_address.port == bestPort)
-            return NSOrderedDescending;
-    }*/
-    
     return NSOrderedSame;
 }
 
@@ -99,7 +94,7 @@
 
 - (NSString *)description
 {
-    return [[NSString alloc] initWithFormat:@"%@://%@", [_transportClass isEqual:[MTTcpTransport class]] ? @"tcp" : @"http", _address];
+    return [[NSString alloc] initWithFormat:@"%@://%@ (media: %@)", [_transportClass isEqual:[MTTcpTransport class]] ? @"tcp" : @"http", _address, _media ? @"yes" : @"no"];
 }
 
 @end

@@ -10,8 +10,8 @@
 
 @interface MTKeychain : NSObject
 
-+ (instancetype)unencryptedKeychainWithName:(NSString *)name;
-+ (instancetype)keychainWithName:(NSString *)name;
++ (instancetype)unencryptedKeychainWithName:(NSString *)name documentsPath:(NSString *)documentsPath;
++ (instancetype)keychainWithName:(NSString *)name documentsPath:(NSString *)documentsPath;
 
 - (void)setObject:(id)object forKey:(id<NSCopying>)aKey group:(NSString *)group;
 - (id)objectForKey:(id<NSCopying>)aKey group:(NSString *)group;

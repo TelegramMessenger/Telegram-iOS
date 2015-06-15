@@ -38,6 +38,7 @@ static NSMutableDictionary *keychains()
     bool _encrypted;
     NSData *_aesKey;
     NSData *_aesIv;
+    NSString *_documentsPath;
     
     TG_SYNCHRONIZED_DEFINE(_dictByGroup);
     NSMutableDictionary *_dictByGroup;
@@ -47,7 +48,7 @@ static NSMutableDictionary *keychains()
 
 @implementation MTKeychain
 
-+ (instancetype)unencryptedKeychainWithName:(NSString *)name
++ (instancetype)unencryptedKeychainWithName:(NSString *)name documentsPath:(NSString *)documentsPath
 {
     if (name == nil)
         return nil;
@@ -56,7 +57,7 @@ static NSMutableDictionary *keychains()
     MTKeychain *keychain = [keychains() objectForKey:name];
     if (keychain == nil)
     {
-        keychain = [[MTKeychain alloc] initWithName:name encrypted:false];
+        keychain = [[MTKeychain alloc] initWithName:name documentsPath:documentsPath encrypted:false];
         [keychains() setObject:keychain forKey:name];
     }
     TG_SYNCHRONIZED_END(_keychains);
@@ -64,7 +65,7 @@ static NSMutableDictionary *keychains()
     return keychain;
 }
 
-+ (instancetype)keychainWithName:(NSString *)name
++ (instancetype)keychainWithName:(NSString *)name documentsPath:(NSString *)documentsPath
 {
     if (name == nil)
         return nil;
@@ -73,7 +74,7 @@ static NSMutableDictionary *keychains()
     MTKeychain *keychain = [keychains() objectForKey:name];
     if (keychain == nil)
     {
-        keychain = [[MTKeychain alloc] initWithName:name encrypted:true];
+        keychain = [[MTKeychain alloc] initWithName:name documentsPath:documentsPath encrypted:true];
         [keychains() setObject:keychain forKey:name];
     }
     TG_SYNCHRONIZED_END(_keychains);
@@ -81,7 +82,7 @@ static NSMutableDictionary *keychains()
     return keychain;
 }
 
-- (instancetype)initWithName:(NSString *)name encrypted:(bool)encrypted
+- (instancetype)initWithName:(NSString *)name documentsPath:(NSString *)documentsPath encrypted:(bool)encrypted
 {
     self = [super init];
     if (self != nil)
@@ -90,6 +91,7 @@ static NSMutableDictionary *keychains()
         _dictByGroup = [[NSMutableDictionary alloc] init];
         
         _name = name;
+        _documentsPath = documentsPath;
         _encrypted = encrypted;
         
         if (name != nil)
@@ -186,7 +188,7 @@ static NSMutableDictionary *keychains()
     dispatch_once(&onceToken, ^
     {
 #if TARGET_OS_IPHONE
-        dataDirectory = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true)[0] stringByAppendingPathComponent:@"mtkeychain"];
+        dataDirectory = [_documentsPath stringByAppendingPathComponent:@"mtkeychain"];
 #elif TARGET_OS_MAC
         NSString *applicationSupportPath = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES)[0];
         NSString *applicationName = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleName"];
