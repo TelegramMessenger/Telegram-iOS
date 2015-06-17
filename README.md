@@ -33,7 +33,6 @@ This document contains the following sections:
    6. [Feedback](#feedback)
    7. [Store Updates](#storeupdates)
    3. [In-App-Updates (Beta & Enterprise only)](#betaupdates)
-
 4. [Documentation](#documentation)
 5. [Contributing](#contributing)
 6. [Contact](#contact)
