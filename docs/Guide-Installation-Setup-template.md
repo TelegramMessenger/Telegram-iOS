@@ -117,7 +117,7 @@ If you are working with an older project which doesn't support clang modules yet
 4. Expand `Link Binary With Libraries`.
 5. Add the following system frameworks, if they are missing:
 
-    1. Full feature build: 
+    1. Full Featured: 
         - `AssetsLibrary`
         - `CoreText`
         - `CoreGraphics`
@@ -129,7 +129,7 @@ If you are working with an older project which doesn't support clang modules yet
 	    - `SystemConfiguration`
 	    - `UIKit`
 	    - `libc++`
-	 2. Crash reporting build only:
+	 2. Crash reporting only:
    		- `Foundation`
     	- `Security`
     	- `SystemConfiguration`
@@ -145,10 +145,37 @@ Note that this also means that you can't use the `@import` syntax mentioned in t
 
 **Podfile**
 
-```ruby
-platform :ios, '8.0'
-pod "HockeySDK"
-```
+    ```ruby
+    platform :ios, '8.0'
+    pod "HockeySDK"
+    ```
+
+#### 3.2.1 Binary Distribution Options
+
+The default and recommended distribution is a binary (static library) and a resource bundle with translations and images for all SDK Features: Crash Reporting, User Feedback, Store Updates, Authentication, AdHoc Updates.
+
+You can alternative use a Crash Reporting build only by using the following line in your `Podfile`:
+
+    ```ruby
+    pod "HockeySDK", :subspecs => ['CrashOnlyLib']
+    ```
+
+#### 3.2.2 Source Integration Options
+
+Alternatively you can integrate the SDK by source if you want to do any modifications or want a different feature set. The following entry will integrate all features:
+
+     ```ruby
+    pod "HockeySDK-Source"
+    ```
+
+You can use `subspecs` to specify your own feature set using the following options: `CrashReporter`, `UserFeedback`, `StoreUpdates`, `Authenticator`, `AdHocUpdates`. An example could look like:
+
+    ```ruby
+    pod "HockeySDK-Source", :subspecs => ['CrashReporter', 'UserFeedback']
+    ```
+
+*Note:* The source will not build without warnings in Xcode 7!
+
 
 <a id="extensions"></a>
 ### 3.3 iOS 8 Extensions
