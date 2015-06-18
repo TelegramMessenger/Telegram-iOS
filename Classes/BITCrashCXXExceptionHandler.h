@@ -27,7 +27,7 @@
  */
 
 #import <Foundation/Foundation.h>
-#import "HockeyNullability.h"
+#import "HockeySDKNullability.h"
 
 typedef struct {
     const void * __nullable exception;
