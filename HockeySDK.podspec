@@ -14,20 +14,31 @@ Pod::Spec.new do |s|
   s.homepage          = 'http://hockeyapp.net/'
   s.documentation_url = 'http://hockeyapp.net/help/sdk/ios/3.6.4/'
 
-  s.license           = 'MIT'
+  s.license           = { :type => 'MIT', :file => 'HockeySDK-iOS/LICENSE' }
   s.author            = { 'Andreas Linde' => 'mail@andreaslinde.de', 'Thomas Dohmke' => "thomas@dohmke.de" }
-  s.source            = { :git => 'https://github.com/bitstadium/HockeySDK-iOS.git', :tag => s.version.to_s }
 
   s.platform          = :ios, '6.0'
-  s.source_files      = 'Classes'
   s.requires_arc      = true
   
-  s.frameworks              = 'AssetsLibrary', 'CoreText', 'CoreGraphics', 'MobileCoreServices', 'QuartzCore', 'QuickLook', 'Security', 'SystemConfiguration', 'UIKit'
-  s.libraries               = 'c++'
-  s.ios.vendored_frameworks = 'Vendor/CrashReporter.framework'
-  s.xcconfig                = {'GCC_PREPROCESSOR_DEFINITIONS' => %{$(inherited) BITHOCKEY_VERSION="@\\"#{s.version}\\"" BITHOCKEY_C_VERSION="\\"#{s.version}\\"" BITHOCKEY_BUILD="@\\"38\\"" BITHOCKEY_C_BUILD="\\"38\\""} }
-  s.resource_bundle         = { 'HockeySDKResources' => ['Resources/*.png', 'Resources/*.lproj'] }
-  s.preserve_paths          = 'Resources'
-  s.private_header_files  = 'Classes/*Private.h'
+  s.preserve_path = 'HockeySDK-iOS/README.md'
+
+  s.source = { :http => "https://github.com/bitstadium/HockeySDK-iOS/releases/download/#{s.version}/HockeySDK-iOS-#{s.version}.zip" }
+
+  s.frameworks = 'SystemConfiguration', 'Security', 'UIKit'
+  s.libraries = 'c++'
+
+  s.default_subspec   = 'AllFeaturesLib'
+  
+  s.subspec 'CrashOnlyLib' do |ss|
+    ss.resource_bundle = { 'HockeySDKResources' => ['Resources/*.lproj'] }
+    ss.vendored_frameworks = 'HockeySDK-iOS/HockeySDKCrashOnly/HockeySDK.framework'
+  end
+
+  s.subspec 'AllFeaturesLib' do |ss|
+    ss.resource_bundle = { 'HockeySDKResources' => ['Resources/*.png', 'Resources/*.lproj'] }
+
+    ss.frameworks = 'CoreGraphics', 'QuartzCore', 'AssetsLibrary', 'MobileCoreServices', 'QuickLook', 'CoreText'
+    ss.vendored_frameworks = 'HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDK.framework'
+  end
 
 end
