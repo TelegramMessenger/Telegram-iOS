@@ -63,4 +63,18 @@
     return YES;
 }
 
++ (NSData *)dataOfFixtureCrashReportWithFileName:(NSString *)filename {
+  // the bundle identifier when running with unit tets is "otest"
+  const char *progname = getprogname();
+  if (progname == NULL) {
+    return NO;
+  }
+
+  NSString *filePath = [[NSBundle bundleForClass:self.class] pathForResource:filename ofType:@"plcrash"];
+  
+  if (!filePath) return nil;
+  NSData *data = [NSData dataWithContentsOfFile:filePath];
+  return data;
+}
+
 @end

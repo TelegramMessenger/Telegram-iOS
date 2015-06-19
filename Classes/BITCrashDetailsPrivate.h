@@ -41,6 +41,7 @@ extern NSString *const __attribute__((unused)) kBITCrashKillSignal;
                                  crashTime:(NSDate *)crashTime
                                  osVersion:(NSString *)osVersion
                                    osBuild:(NSString *)osBuild
+                                appVersion:(NSString *)appVersion
                                   appBuild:(NSString *)appBuild
                       appProcessIdentifier:(NSUInteger)appProcessIdentifier;
 

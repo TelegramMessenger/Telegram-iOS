@@ -272,7 +272,10 @@
   assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_signal"], equalToBool(YES));
   
   [_sut handleCrashReport];
-  
+
+  // this old report doesn't have a marketing version present
+  assertThat(_sut.lastSessionCrashDetails.appVersion, equalTo(nil));
+
   [verifyCount(delegateMock, times(1)) applicationLogForCrashManager:_sut];
   [verifyCount(delegateMock, times(1)) attachmentForCrashManager:_sut];
   
@@ -290,6 +293,50 @@
   assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_exception"], equalToBool(YES));
   
   [_sut handleCrashReport];
+  
+  // this old report doesn't have a marketing version present
+  assertThat(_sut.lastSessionCrashDetails.appVersion, equalTo(nil));
+  
+  [verifyCount(delegateMock, times(2)) applicationLogForCrashManager:_sut];
+  [verifyCount(delegateMock, times(2)) attachmentForCrashManager:_sut];
+  
+  // we should have now 1 pending crash report
+  assertThatBool([_sut hasPendingCrashReport], equalToBool(YES));
+  assertThat([_sut firstNotApprovedCrashReport], notNilValue());
+  
+  [_sut cleanCrashReports];
+  
+  // handle a new signal crash report
+  assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_signal_marketing"], equalToBool(YES));
+  
+  [_sut handleCrashReport];
+  
+  // this old report doesn't have a marketing version present
+  assertThat(_sut.lastSessionCrashDetails.appVersion, notNilValue());
+  
+  [verifyCount(delegateMock, times(3)) applicationLogForCrashManager:_sut];
+  [verifyCount(delegateMock, times(3)) attachmentForCrashManager:_sut];
+  
+  // we should have now 1 pending crash report
+  assertThatBool([_sut hasPendingCrashReport], equalToBool(YES));
+  assertThat([_sut firstNotApprovedCrashReport], notNilValue());
+  
+  // this is currently sending blindly, needs refactoring to test properly
+  [_sut sendNextCrashReport];
+  [verifyCount(delegateMock, times(2)) crashManagerWillSendCrashReport:_sut];
+  
+  [_sut cleanCrashReports];
+  
+  // handle a new signal crash report
+  assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_exception_marketing"], equalToBool(YES));
+  
+  [_sut handleCrashReport];
+  
+  // this old report doesn't have a marketing version present
+  assertThat(_sut.lastSessionCrashDetails.appVersion, notNilValue());
+  
+  [verifyCount(delegateMock, times(4)) applicationLogForCrashManager:_sut];
+  [verifyCount(delegateMock, times(4)) attachmentForCrashManager:_sut];
   
   // we should have now 1 pending crash report
   assertThatBool([_sut hasPendingCrashReport], equalToBool(YES));

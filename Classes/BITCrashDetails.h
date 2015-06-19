@@ -81,6 +81,14 @@
 @property (nonatomic, readonly, strong) NSString *osBuild;
 
 /**
+ *  CFBundleShortVersionString value of the app that crashed
+ *
+ *  Can be `nil` if the crash was captured with an older version of the SDK
+ *  or if the app doesn't set the value.
+ */
+@property (nonatomic, readonly, strong) NSString *appVersion;
+
+/**
  *  CFBundleVersion value of the app that crashed
  */
 @property (nonatomic, readonly, strong) NSString *appBuild;

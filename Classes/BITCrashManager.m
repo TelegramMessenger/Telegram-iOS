@@ -66,12 +66,14 @@ NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 
 NSString *const kBITAppWentIntoBackgroundSafely = @"BITAppWentIntoBackgroundSafely";
 NSString *const kBITAppDidReceiveLowMemoryNotification = @"BITAppDidReceiveLowMemoryNotification";
+NSString *const kBITAppMarketingVersion = @"BITAppMarketingVersion";
 NSString *const kBITAppVersion = @"BITAppVersion";
 NSString *const kBITAppOSVersion = @"BITAppOSVersion";
 NSString *const kBITAppOSBuild = @"BITAppOSBuild";
 NSString *const kBITAppUUIDs = @"BITAppUUIDs";
 
 NSString *const kBITFakeCrashUUID = @"BITFakeCrashUUID";
+NSString *const kBITFakeCrashAppMarketingVersion = @"BITFakeCrashAppMarketingVersion";
 NSString *const kBITFakeCrashAppVersion = @"BITFakeCrashAppVersion";
 NSString *const kBITFakeCrashAppBundleIdentifier = @"BITFakeCrashAppBundleIdentifier";
 NSString *const kBITFakeCrashOSVersion = @"BITFakeCrashOSVersion";
@@ -533,9 +535,14 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     static dispatch_once_t predAppData;
       
     dispatch_once(&predAppData, ^{
+      id marketingVersion = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
+      if (marketingVersion && [marketingVersion isKindOfClass:[NSString class]])
+        [[NSUserDefaults standardUserDefaults] setObject:marketingVersion forKey:kBITAppMarketingVersion];
+      
       id bundleVersion = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"];
       if (bundleVersion && [bundleVersion isKindOfClass:[NSString class]])
         [[NSUserDefaults standardUserDefaults] setObject:bundleVersion forKey:kBITAppVersion];
+      
       [[NSUserDefaults standardUserDefaults] setObject:[[UIDevice currentDevice] systemVersion] forKey:kBITAppOSVersion];
       [[NSUserDefaults standardUserDefaults] setObject:[self osBuild] forKey:kBITAppOSBuild];
       
@@ -879,6 +886,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
                                                                              crashTime:appCrashTime
                                                                              osVersion:report.systemInfo.operatingSystemVersion
                                                                                osBuild:report.systemInfo.operatingSystemBuild
+                                                                            appVersion:report.applicationInfo.applicationMarketingVersion
                                                                               appBuild:report.applicationInfo.applicationVersion
                                                                   appProcessIdentifier:report.processInfo.processID
                                     ];
@@ -1199,6 +1207,8 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   NSString *fakeReportUUID = bit_UUID();
   NSString *fakeReporterKey = bit_appAnonID(NO) ?: @"???";
   
+  NSString *fakeReportAppMarketingVersion = [[NSUserDefaults standardUserDefaults] objectForKey:kBITAppMarketingVersion];
+
   NSString *fakeReportAppVersion = [[NSUserDefaults standardUserDefaults] objectForKey:kBITAppVersion];
   if (!fakeReportAppVersion)
     return;
@@ -1222,7 +1232,10 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   [fakeReportString appendFormat:@"CrashReporter Key:   %@\n", fakeReporterKey];
   [fakeReportString appendFormat:@"Hardware Model:      %@\n", fakeReportDeviceModel];
   [fakeReportString appendFormat:@"Identifier:      %@\n", fakeReportAppBundleIdentifier];
-  [fakeReportString appendFormat:@"Version:         %@\n", fakeReportAppVersion];
+  
+  NSString *fakeReportAppVersionString = fakeReportAppMarketingVersion ? [NSString stringWithFormat:@"%@ (%@)", fakeReportAppMarketingVersion, fakeReportAppVersion] : fakeReportAppVersion;
+
+  [fakeReportString appendFormat:@"Version:         %@\n", fakeReportAppVersionString];
   [fakeReportString appendString:@"Code Type:       ARM\n"];
   [fakeReportString appendString:@"\n"];
   
@@ -1254,6 +1267,8 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   
   NSMutableDictionary *rootObj = [NSMutableDictionary dictionaryWithCapacity:2];
   [rootObj setObject:fakeReportUUID forKey:kBITFakeCrashUUID];
+  if (fakeReportAppMarketingVersion)
+    [rootObj setObject:fakeReportAppMarketingVersion forKey:kBITFakeCrashAppMarketingVersion];
   [rootObj setObject:fakeReportAppVersion forKey:kBITFakeCrashAppVersion];
   [rootObj setObject:fakeReportAppBundleIdentifier forKey:kBITFakeCrashAppBundleIdentifier];
   [rootObj setObject:fakeReportOSVersion forKey:kBITFakeCrashOSVersion];
@@ -1270,6 +1285,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
                                                                        crashTime:nil
                                                                        osVersion:fakeReportOSVersion
                                                                          osBuild:fakeReportOSBuild
+                                                                      appVersion:fakeReportAppMarketingVersion
                                                                         appBuild:fakeReportAppVersion
                                                             appProcessIdentifier:[[NSProcessInfo processInfo] processIdentifier]
                               ];
@@ -1314,6 +1330,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     NSString *installString = nil;
     NSString *crashLogString = nil;
     NSString *appBundleIdentifier = nil;
+    NSString *appBundleMarketingVersion = nil;
     NSString *appBundleVersion = nil;
     NSString *osVersion = nil;
     NSString *deviceModel = nil;
@@ -1332,6 +1349,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
       crashLogString = [fakeReportDict objectForKey:kBITFakeCrashReport];
       crashUUID = [fakeReportDict objectForKey:kBITFakeCrashUUID];
       appBundleIdentifier = [fakeReportDict objectForKey:kBITFakeCrashAppBundleIdentifier];
+      appBundleMarketingVersion = [fakeReportDict objectForKey:kBITFakeCrashAppMarketingVersion] ?: @"";
       appBundleVersion = [fakeReportDict objectForKey:kBITFakeCrashAppVersion];
       appBinaryUUIDs = [fakeReportDict objectForKey:kBITFakeCrashAppBinaryUUID];
       deviceModel = [fakeReportDict objectForKey:kBITFakeCrashDeviceModel];
@@ -1364,6 +1382,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
       metaFilename = [cacheFilename stringByAppendingPathExtension:@"meta"];
       crashLogString = [BITCrashReportTextFormatter stringValueForCrashReport:report crashReporterKey:installString];
       appBundleIdentifier = report.applicationInfo.applicationIdentifier;
+      appBundleMarketingVersion = report.applicationInfo.applicationMarketingVersion ?: @"";
       appBundleVersion = report.applicationInfo.applicationVersion;
       osVersion = report.systemInfo.operatingSystemVersion;
       deviceModel = [self getDevicePlatform];
@@ -1409,13 +1428,14 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
       }
     }
     
-    crashXML = [NSString stringWithFormat:@"<crashes><crash><applicationname><![CDATA[%@]]></applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><username>%@</username><contact>%@</contact><installstring>%@</installstring><description><![CDATA[%@]]></description></crash></crashes>",
+    crashXML = [NSString stringWithFormat:@"<crashes><crash><applicationname><![CDATA[%@]]></applicationname><uuids>%@</uuids><bundleidentifier>%@</bundleidentifier><systemversion>%@</systemversion><platform>%@</platform><senderversion>%@</senderversion><versionstring>%@</versionstring><version>%@</version><uuid>%@</uuid><log><![CDATA[%@]]></log><userid>%@</userid><username>%@</username><contact>%@</contact><installstring>%@</installstring><description><![CDATA[%@]]></description></crash></crashes>",
                 [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleExecutable"],
                 appBinaryUUIDs,
                 appBundleIdentifier,
                 osVersion,
                 deviceModel,
                 [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"],
+                appBundleMarketingVersion,
                 appBundleVersion,
                 crashUUID,
                 [crashLogString stringByReplacingOccurrencesOfString:@"]]>" withString:@"]]" @"]]><![CDATA[" @">" options:NSLiteralSearch range:NSMakeRange(0,crashLogString.length)],
