@@ -32,7 +32,8 @@ This document contains the following sections:
    5. [Crash Reporting](#crashreporting)
    6. [Feedback](#feedback)
    7. [Store Updates](#storeupdates)
-   3. [In-App-Updates (Beta & Enterprise only)](#betaupdates)
+   8. [In-App-Updates (Beta & Enterprise only)](#betaupdates)
+   9. [Debug information](#debug)
 4. [Documentation](#documentation)
 5. [Contributing](#contributing)
 6. [Contact](#contact)
@@ -104,7 +105,7 @@ From our experience, 3rd-party libraries usually reside inside a subdirectory (l
 3. Search for the method 
     
 	```swift
-	application(application: UIApplication, didFinishLaunchingWithOptions launchOptions:[NSObject: AnyObject]?) -> Bool`
+	application(application: UIApplication, didFinishLaunchingWithOptions launchOptions:[NSObject: AnyObject]?) -> Bool
 	```
 
 4. Add the following lines to setup and start the Application Insights SDK:
@@ -351,6 +352,8 @@ The `BITHockeyManagerDelegate` protocol provides methods to add additional data 
 The `BITCrashManagerDelegate` protocol (which is automatically included in `BITHockeyManagerDelegate`) provides methods to add more crash specific data to a crash report:
 
 1. Text attachments: `-(NSString *)applicationLogForCrashManager:(BITCrashManager *)crashManager`
+
+   Check the following tutorial for an example on how to add CocoaLumberjack log data: [How to Add Application Specific Log Data on iOS or OS X](http://support.hockeyapp.net/kb/client-integration-ios-mac-os-x/how-to-add-application-specific-log-data-on-ios-or-os-x)
 2. Binary attachments: `-(BITHockeyAttachment *)attachmentForCrashManager:(BITCrashManager *)crashManager`
 
 Make sure to implement the protocol
@@ -426,6 +429,19 @@ This feature can be disabled manually as follows:
     ```
 
 If you want to see beta analytics, use the beta distribution feature with in-app updates, restrict versions to specific users, or want to know who is actually testing your app, you need to follow the instructions on our guide [Authenticating Users on iOS](http://support.hockeyapp.net/kb/client-integration-ios-mac-os-x/authenticating-users-on-ios)
+
+<a id="debug"></a>
+### 3.9 Debug information
+
+To check if data is send properly to HockeyApp and also see some additional SDK debug log data in the console, add the following line before `startManager`:
+
+    ```objectivec
+    [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
+
+    [[BITHockeyManager sharedHockeyManager] setDebugLogEnabled:YES];
+
+    [[BITHockeyManager sharedHockeyManager] startManager];
+    ```
 
 <a id="documentation"></a>
 ## 4. Documentation
