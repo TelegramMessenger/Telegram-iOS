@@ -1,7 +1,7 @@
 /*
  * Author: Landon Fuller <landonf@plausiblelabs.com>
  *
- * Copyright (c) 2008-2009 Plausible Labs Cooperative, Inc.
+ * Copyright (c) 2013 Plausible Labs Cooperative, Inc.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -26,37 +26,23 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import <Foundation/Foundation.h>
+#ifndef PLCRASH_CONSTANTS_H
+#define PLCRASH_CONSTANTS_H
 
-@interface PLCrashReportApplicationInfo : NSObject {
-@private
-    /** Application identifier */
-    NSString *_applicationIdentifier;
-    
-    /** Application version */
-    NSString *_applicationVersion;
-    
-    /** Application marketing version */
-    NSString *_applicationMarketingVersion;
-}
+#if defined(__cplusplus)
+#   define PLCR_EXPORT extern "C"
+#   define PLCR_C_BEGIN_DECLS extern "C" {
+#   define PLCR_C_END_DECLS }
+#else
+#   define PLCR_EXPORT extern
+#   define PLCR_C_BEGIN_DECLS
+#   define PLCR_C_END_DECLS
+#endif
 
-- (id) initWithApplicationIdentifier: (NSString *) applicationIdentifier 
-                  applicationVersion: (NSString *) applicationVersion
-         applicationMarketingVersion: (NSString *) applicationMarketingVersion;
+#ifdef __clang__
+#  define PLCR_PRAGMA_CLANG(_p) _Pragma(_p)
+#else
+#  define PLCR_PRAGMA_CLANG(_p)
+#endif
 
-/**
- * The application identifier. This is usually the application's CFBundleIdentifier value.
- */
-@property(nonatomic, readonly) NSString *applicationIdentifier;
-
-/**
- * The application version. This is usually the application's CFBundleVersion value.
- */
-@property(nonatomic, readonly) NSString *applicationVersion;
-
-/**
- * The application marketing version. This is usually the application's CFBundleShortVersionString value if available. May be nil.
- */
-@property(nonatomic, readonly) NSString *applicationMarketingVersion;
-
-@end
+#endif /* PLCRASH_CONSTANTS_H */
