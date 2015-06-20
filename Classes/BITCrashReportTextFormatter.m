@@ -361,7 +361,12 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
     [text appendFormat: @"Process:         %@ [%@]\n", processName, processId];
     [text appendFormat: @"Path:            %@\n", processPath];
     [text appendFormat: @"Identifier:      %@\n", report.applicationInfo.applicationIdentifier];
-    [text appendFormat: @"Version:         %@\n", report.applicationInfo.applicationVersion];
+
+    NSString *marketingVersion = report.applicationInfo.applicationMarketingVersion;
+    NSString *appVersion = report.applicationInfo.applicationVersion;
+    NSString *versionString = marketingVersion ? [NSString stringWithFormat:@"%@ (%@)", marketingVersion, appVersion] : appVersion;
+    
+    [text appendFormat: @"Version:         %@\n", versionString];
     [text appendFormat: @"Code Type:       %@\n", codeType];
     [text appendFormat: @"Parent Process:  %@ [%@]\n", parentProcessName, parentProcessId];
   }

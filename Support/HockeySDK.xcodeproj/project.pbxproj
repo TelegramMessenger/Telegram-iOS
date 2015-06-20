@@ -126,6 +126,10 @@
 		1E7A45FC16F54FB5005B08F1 /* OCHamcrestIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E7A45FA16F54FB5005B08F1 /* OCHamcrestIOS.framework */; };
 		1E7A45FD16F54FB5005B08F1 /* OCMockitoIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E7A45FB16F54FB5005B08F1 /* OCMockitoIOS.framework */; };
 		1E84DB3417E099BA00AC83FD /* HockeySDKFeatureConfig.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E84DB3317E0977C00AC83FD /* HockeySDKFeatureConfig.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		1E85C5621B3438EB00CE2C0D /* live_report_exception_marketing.plcrash in Resources */ = {isa = PBXBuildFile; fileRef = 1E85C5601B3438E000CE2C0D /* live_report_exception_marketing.plcrash */; };
+		1E85C5631B3438EB00CE2C0D /* live_report_signal_marketing.plcrash in Resources */ = {isa = PBXBuildFile; fileRef = 1E85C5611B3438E000CE2C0D /* live_report_signal_marketing.plcrash */; };
+		1E85C5641B3438EC00CE2C0D /* live_report_exception_marketing.plcrash in Resources */ = {isa = PBXBuildFile; fileRef = 1E85C5601B3438E000CE2C0D /* live_report_exception_marketing.plcrash */; };
+		1E85C5651B3438EC00CE2C0D /* live_report_signal_marketing.plcrash in Resources */ = {isa = PBXBuildFile; fileRef = 1E85C5611B3438E000CE2C0D /* live_report_signal_marketing.plcrash */; };
 		1E90D97F19DAD8A800188C43 /* feedbackActivity.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E90D97A19DAD8A800188C43 /* feedbackActivity.png */; };
 		1E90D98019DAD8A800188C43 /* feedbackActivity@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E90D97B19DAD8A800188C43 /* feedbackActivity@2x.png */; };
 		1E90D98119DAD8A800188C43 /* feedbackActivity@2x~ipad.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E90D97C19DAD8A800188C43 /* feedbackActivity@2x~ipad.png */; };
@@ -463,6 +467,8 @@
 		1E7A45FB16F54FB5005B08F1 /* OCMockitoIOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = OCMockitoIOS.framework; sourceTree = "<group>"; };
 		1E7DE39619D44DC6009AB8E5 /* crashonly.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = crashonly.xcconfig; sourceTree = "<group>"; };
 		1E84DB3317E0977C00AC83FD /* HockeySDKFeatureConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HockeySDKFeatureConfig.h; sourceTree = "<group>"; };
+		1E85C5601B3438E000CE2C0D /* live_report_exception_marketing.plcrash */ = {isa = PBXFileReference; lastKnownFileType = file; path = live_report_exception_marketing.plcrash; sourceTree = "<group>"; };
+		1E85C5611B3438E000CE2C0D /* live_report_signal_marketing.plcrash */ = {isa = PBXFileReference; lastKnownFileType = file; path = live_report_signal_marketing.plcrash; sourceTree = "<group>"; };
 		1E90D97A19DAD8A800188C43 /* feedbackActivity.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = feedbackActivity.png; sourceTree = "<group>"; };
 		1E90D97B19DAD8A800188C43 /* feedbackActivity@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "feedbackActivity@2x.png"; sourceTree = "<group>"; };
 		1E90D97C19DAD8A800188C43 /* feedbackActivity@2x~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "feedbackActivity@2x~ipad.png"; sourceTree = "<group>"; };
@@ -825,6 +831,8 @@
 				1E70A22F17F2F982001BB32D /* live_report_empty.plcrash */,
 				1E70A23017F2F982001BB32D /* live_report_exception.plcrash */,
 				1E70A23117F2F982001BB32D /* live_report_signal.plcrash */,
+				1E85C5601B3438E000CE2C0D /* live_report_exception_marketing.plcrash */,
+				1E85C5611B3438E000CE2C0D /* live_report_signal_marketing.plcrash */,
 			);
 			path = Fixtures;
 			sourceTree = "<group>";
@@ -1324,7 +1332,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1E85C5621B3438EB00CE2C0D /* live_report_exception_marketing.plcrash in Resources */,
 				1E494AEC19491943001EFF74 /* AppIcon.png in Resources */,
+				1E85C5631B3438EB00CE2C0D /* live_report_signal_marketing.plcrash in Resources */,
 				1EA1170C16F54A64001C015C /* HockeySDKResources.bundle in Resources */,
 				1E5A459B16F0DFC200B55C04 /* InfoPlist.strings in Resources */,
 				1E70A23417F2F982001BB32D /* live_report_signal.plcrash in Resources */,
@@ -1348,7 +1358,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1E85C5641B3438EC00CE2C0D /* live_report_exception_marketing.plcrash in Resources */,
 				1E1508871B0C946700D7B9D9 /* AppIcon.png in Resources */,
+				1E85C5651B3438EC00CE2C0D /* live_report_signal_marketing.plcrash in Resources */,
 				1E1508891B0C946700D7B9D9 /* StoreBundleIdentifierUnknown.json in Resources */,
 				1E1508881B0C946700D7B9D9 /* AppIcon@2x.png in Resources */,
 				1E15088B1B0C946700D7B9D9 /* live_report_empty.plcrash in Resources */,

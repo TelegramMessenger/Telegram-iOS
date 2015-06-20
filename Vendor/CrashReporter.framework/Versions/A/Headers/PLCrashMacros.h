@@ -1,7 +1,7 @@
 /*
- * Author: Andreas Linde <mail@andreaslinde.de>
+ * Author: Landon Fuller <landonf@plausiblelabs.com>
  *
- * Copyright (c) 2012-2014 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2013 Plausible Labs Cooperative, Inc.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -26,23 +26,23 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-extern NSString *const __attribute__((unused)) kBITCrashKillSignal;
+#ifndef PLCRASH_CONSTANTS_H
+#define PLCRASH_CONSTANTS_H
 
-@interface BITCrashDetails () {
-  
-}
+#if defined(__cplusplus)
+#   define PLCR_EXPORT extern "C"
+#   define PLCR_C_BEGIN_DECLS extern "C" {
+#   define PLCR_C_END_DECLS }
+#else
+#   define PLCR_EXPORT extern
+#   define PLCR_C_BEGIN_DECLS
+#   define PLCR_C_END_DECLS
+#endif
 
-- (instancetype)initWithIncidentIdentifier:(NSString *)incidentIdentifier
-                               reporterKey:(NSString *)reporterKey
-                                    signal:(NSString *)signal
-                             exceptionName:(NSString *)exceptionName
-                           exceptionReason:(NSString *)exceptionReason
-                              appStartTime:(NSDate *)appStartTime
-                                 crashTime:(NSDate *)crashTime
-                                 osVersion:(NSString *)osVersion
-                                   osBuild:(NSString *)osBuild
-                                appVersion:(NSString *)appVersion
-                                  appBuild:(NSString *)appBuild
-                      appProcessIdentifier:(NSUInteger)appProcessIdentifier;
+#ifdef __clang__
+#  define PLCR_PRAGMA_CLANG(_p) _Pragma(_p)
+#else
+#  define PLCR_PRAGMA_CLANG(_p)
+#endif
 
-@end
+#endif /* PLCRASH_CONSTANTS_H */
