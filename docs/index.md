@@ -15,7 +15,7 @@ The main SDK class is `BITHockeyManager`. It initializes all modules and provide
 ## Prerequisites
 
 1. Before you integrate HockeySDK into your own app, you should add the app to HockeyApp if you haven't already. Read [this how-to](http://support.hockeyapp.net/kb/how-tos/how-to-create-a-new-app) on how to do it.
-2. We also assume that you already have a project in Xcode and that this project is opened in Xcode 5.
+2. We also assume that you already have a project in Xcode and that this project is opened in Xcode 6.
 3. The SDK supports iOS 6.0 or newer.
 
 ## Release Notes
@@ -25,16 +25,15 @@ The main SDK class is `BITHockeyManager`. It initializes all modules and provide
 ## Guides
 
 - [Installation & Setup](Guide-Installation-Setup)
-- [Installation & Setup Advanced](Guide-Installation-Setup-Advanced) (Using Git submodule and Xcode sub-project)
-- [Identify and authenticate users of Ad-Hoc or Enterprise builds](HowTo-Authenticating-Users-on-iOS)
 - [Migration from previous SDK Versions](Guide-Migration-Kits)
+- [Mac Desktop Uploader](http://support.hockeyapp.net/kb/services-webhooks-desktop-apps/how-to-upload-to-hockeyapp-on-a-mac)
 
 ## HowTos
 
 - [How to do app versioning](HowTo-App-Versioning)
 - [How to upload symbols for crash reporting](HowTo-Upload-Symbols)
 - [How to handle crashes on startup](http://support.hockeyapp.net/kb/client-integration-ios-mac-os-x/how-to-handle-crashes-during-startup-on-ios)
-- [How to add application specific log data](http://support.hockeyapp.net/kb/client-integration-ios-mac-os-x/how-to-add-application-specific-log-data-on-ios)
+- [How to add application specific log data](http://support.hockeyapp.net/kb/client-integration-ios-mac-os-x/how-to-add-application-specific-log-data-on-ios-or-osx)
 - [How to ask the user for more details about a crash](HowTo-Set-Custom-AlertViewHandler)
 
 ## Troubleshooting
