@@ -1,13 +1,28 @@
 language: objective-c
+
+env:
+  global:
+    - PROJECT="Support/HockeySDK.xcodeproj"
+    - SDK="iphonesimulator"
+    - CONFIGURATION="DEBUG"
+
+  matrix:
+    - SCHEME="HockeySDK"             DESTINATION="OS=7.0.3,name=iPad 2"                 RUN_TESTS="YES"
+    - SCHEME="HockeySDK"             DESTINATION="OS=7.1,name=iPhone 5"                 RUN_TESTS="YES"
+    - SCHEME="HockeySDK"             DESTINATION="OS=8.1,name=iPhone 6"                 RUN_TESTS="YES"
+    - SCHEME="HockeySDK"             DESTINATION="OS=8.1,name=iPhone 6 Plus"            RUN_TESTS="YES"
+    - SCHEME="HockeySDK Framework"   DESTINATION="platform=iOS Simulator,name=iPhone 6" RUN_TESTS="YES"
+    - SCHEME="HockeySDK Distribution"                                                   RUN_TESTS="NO"
+
 before_install:
-- gem install xcpretty -N cocoapods
+  - gem install cocoapods --no-rdoc --no-ri --no-document --quiet
+  - gem install xcpretty --no-rdoc --no-ri --no-document --quiet
+
 script:
-- set -o pipefail
-- cd Support
-- xcodebuild -project HockeySDK.xcodeproj -scheme "HockeySDK Framework" -sdk iphonesimulator
-  -configuration Debug -destination "platform=iOS Simulator,name=iPhone 6" clean test |
-  xcpretty -c
-- xcodebuild -project HockeySDK.xcodeproj -scheme "HockeySDK" -sdk iphonesimulator
-  -configuration Debug -destination "platform=iOS Simulator,name=iPhone 6" clean test |
-  xcpretty -c
-- cd ..
+  - set -o pipefail
+  - COMMAND="xcodebuild -project '$PROJECT' -scheme '$SCHEME' -sdk '$SDK' -configuration '$CONFIGURATION'"
+  - if [ $RUN_TESTS == "YES" ]; then
+      COMMAND+=" -destination '$DESTINATION' clean test";
+    fi
+  - COMMAND+=" | xcpretty -c"
+  - eval $COMMAND
