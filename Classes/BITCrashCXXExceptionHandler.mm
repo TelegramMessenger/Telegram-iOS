@@ -66,6 +66,8 @@ extern "C" void LIBCXXABI_NORETURN __cxxabiv1::__cxa_throw(void *exception_objec
   // implementation of objc_exception_throw(). It's weird, but it's fast. The
   // weak import and NULL checks should guard against the implementation
   // changing in a future version.
+  
+  // This works for C++ crashes in the main app but not yet in dynamic frameworks on iOS
   extern const void WEAK_IMPORT_ATTRIBUTE *objc_ehtype_vtable[];
   if (tinfo && objc_ehtype_vtable && // Guard from an ABI change
       *reinterpret_cast<void **>(tinfo) == objc_ehtype_vtable + 2) {
@@ -132,17 +134,12 @@ static void BITCrashUncaughtCXXTerminateHandler(void)
       BITCrashCXXExceptionTSInfo *recorded_info = reinterpret_cast<BITCrashCXXExceptionTSInfo *>(pthread_getspecific(_BITCrashCXXExceptionInfoTSDKey));
       
       if (recorded_info) {
-        if (__cxxabiv1::__cxa_current_primary_exception() != recorded_info->exception_object) {
-#if DEBUG
-          fprintf(stderr, "HockeyApp: Warning - using the backtrace from a non-matching C++ exception!\n");
-#endif
-        }
         info.exception_frames_count = recorded_info->num_frames - 1;
         info.exception_frames = &recorded_info->call_stack[1];
       } else {
         // There's no backtrace, grab this function's trace instead.
 #if DEBUG
-        fprintf(stderr, "HockeyApp: Warning - no backtrace available, where did this exception come from?\n");
+        fprintf(stderr, "[HockeySDK] WARNING: No backtrace available, where did this exception come from?\n");
 #endif
         void *frames[128] = { nullptr };
       
