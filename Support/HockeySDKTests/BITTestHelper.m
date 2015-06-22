@@ -67,7 +67,7 @@
   // the bundle identifier when running with unit tets is "otest"
   const char *progname = getprogname();
   if (progname == NULL) {
-    return NO;
+    return nil;
   }
 
   NSString *filePath = [[NSBundle bundleForClass:self.class] pathForResource:filename ofType:@"plcrash"];

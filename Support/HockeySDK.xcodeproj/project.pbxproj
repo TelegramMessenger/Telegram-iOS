@@ -469,6 +469,7 @@
 		1E84DB3317E0977C00AC83FD /* HockeySDKFeatureConfig.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HockeySDKFeatureConfig.h; sourceTree = "<group>"; };
 		1E85C5601B3438E000CE2C0D /* live_report_exception_marketing.plcrash */ = {isa = PBXFileReference; lastKnownFileType = file; path = live_report_exception_marketing.plcrash; sourceTree = "<group>"; };
 		1E85C5611B3438E000CE2C0D /* live_report_signal_marketing.plcrash */ = {isa = PBXFileReference; lastKnownFileType = file; path = live_report_signal_marketing.plcrash; sourceTree = "<group>"; };
+		1E85C5A11B35BD7000CE2C0D /* module_crashonly.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module_crashonly.modulemap; sourceTree = "<group>"; };
 		1E90D97A19DAD8A800188C43 /* feedbackActivity.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = feedbackActivity.png; sourceTree = "<group>"; };
 		1E90D97B19DAD8A800188C43 /* feedbackActivity@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "feedbackActivity@2x.png"; sourceTree = "<group>"; };
 		1E90D97C19DAD8A800188C43 /* feedbackActivity@2x~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "feedbackActivity@2x~ipad.png"; sourceTree = "<group>"; };
@@ -709,6 +710,7 @@
 				1E754DC61621BC170070AB92 /* HockeySDK.xcconfig */,
 				1E66CA9115D4100500F35BED /* buildnumber.xcconfig */,
 				1E7DE39619D44DC6009AB8E5 /* crashonly.xcconfig */,
+				1E85C5A11B35BD7000CE2C0D /* module_crashonly.modulemap */,
 				1E91D84619B924E600E9616D /* module.modulemap */,
 			);
 			name = Support;
