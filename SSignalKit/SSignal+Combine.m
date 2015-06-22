@@ -32,7 +32,10 @@
 
 + (SSignal *)combineSignals:(NSArray *)signals
 {
-    return [self combineSignals:signals withInitialStates:nil];
+    if (signals.count == 0)
+        return [SSignal single:@[]];
+    else
+        return [self combineSignals:signals withInitialStates:nil];
 }
 
 + (SSignal *)combineSignals:(NSArray *)signals withInitialStates:(NSArray *)initialStates

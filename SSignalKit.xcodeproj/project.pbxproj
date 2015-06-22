@@ -528,6 +528,7 @@
 		D0445DCF1A7C2CA500267924 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				LastSwiftUpdateCheck = 0700;
 				LastUpgradeCheck = 0610;
 				ORGANIZATIONNAME = Telegram;
 				TargetAttributes = {
