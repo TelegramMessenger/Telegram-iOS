@@ -54,23 +54,33 @@ static pthread_key_t _BITCrashCXXExceptionInfoTSDKey = 0;
 
 @implementation BITCrashUncaughtCXXExceptionHandlerManager
 
-extern "C" void LIBCXXABI_NORETURN __cxxabiv1::__cxa_throw(void *exception_object, std::type_info *tinfo, void (*dest)(void *))
+extern "C" void LIBCXXABI_NORETURN __cxa_throw(void *exception_object, std::type_info *tinfo, void (*dest)(void *))
 {
   // Purposely do not take a lock in this function. The aim is to be as fast as
   // possible. While we could really use some of the info set up by the real
   // __cxa_throw, if we call through we never get control back - the function is
   // noreturn and jumps to landing pads. Most of the stuff in __cxxabiv1 also
   // won't work yet. We therefore have to do these checks by hand.
-  
-  // This technique for distinguishing Objective-C exceptions is based on the
+
+  // The technique for distinguishing Objective-C exceptions is based on the
   // implementation of objc_exception_throw(). It's weird, but it's fast. The
-  // weak import and NULL checks should guard against the implementation
-  // changing in a future version.
+  // explicit symbol load and NULL checks should guard against the
+  // implementation changing in a future version. (Or not existing in an earlier
+  // version).
   
-  // This works for C++ crashes in the main app but not yet in dynamic frameworks on iOS
-  extern const void WEAK_IMPORT_ATTRIBUTE *objc_ehtype_vtable[];
-  if (tinfo && objc_ehtype_vtable && // Guard from an ABI change
-      *reinterpret_cast<void **>(tinfo) == objc_ehtype_vtable + 2) {
+  typedef void (*cxa_throw_func)(void *, std::type_info *, void (*)(void *)) LIBCXXABI_NORETURN;
+  static dispatch_once_t predicate = 0;
+  static cxa_throw_func __original__cxa_throw = nullptr;
+  static const void **__real_objc_ehtype_vtable = nullptr;
+
+  dispatch_once(&predicate, ^ {
+    __original__cxa_throw = reinterpret_cast<cxa_throw_func>(dlsym(RTLD_NEXT, "__cxa_throw"));
+    __real_objc_ehtype_vtable = reinterpret_cast<const void **>(dlsym(RTLD_DEFAULT, "objc_ehtype_vtable"));
+  });
+  
+  // Actually check for Objective-C exceptions.
+  if (tinfo && __real_objc_ehtype_vtable && // Guard from an ABI change
+      *reinterpret_cast<void **>(tinfo) == __real_objc_ehtype_vtable + 2) {
     goto callthrough;
   }
   
@@ -92,13 +102,6 @@ extern "C" void LIBCXXABI_NORETURN __cxxabiv1::__cxa_throw(void *exception_objec
   }
   
 callthrough:
-  typedef void (*cxa_throw_func)(void *, std::type_info *, void (*)(void *)) LIBCXXABI_NORETURN;
-  static dispatch_once_t predicate = 0;
-  static cxa_throw_func __original__cxa_throw = nullptr;
-
-  dispatch_once(&predicate, ^ {
-    __original__cxa_throw = reinterpret_cast<cxa_throw_func>(dlsym(RTLD_NEXT, "__cxa_throw"));
-  });
   if (__original__cxa_throw) {
     __original__cxa_throw(exception_object, tinfo, dest);
   } else {
@@ -114,7 +117,7 @@ __attribute__((always_inline))
 static inline void BITCrashIterateExceptionHandlers_unlocked(const BITCrashUncaughtCXXExceptionInfo &info)
 {
   for (const auto &handler : _BITCrashUncaughtExceptionHandlerList) {
-      handler(&info);
+    handler(&info);
   }
 }
 
@@ -140,10 +143,8 @@ static void BITCrashUncaughtCXXTerminateHandler(void)
         info.exception_frames_count = recorded_info->num_frames - 1;
         info.exception_frames = &recorded_info->call_stack[1];
       } else {
-        // There's no backtrace, grab this function's trace instead.
-#if DEBUG
-        fprintf(stderr, "[HockeySDK] WARNING: No backtrace available, where did this exception come from?\n");
-#endif
+        // There's no backtrace, grab this function's trace instead. Probably
+        // means the exception came from a dynamically loaded library.
         void *frames[128] = { nullptr };
       
         info.exception_frames_count = backtrace(&frames[0], sizeof(frames) / sizeof(frames[0])) - 1;
