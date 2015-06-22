@@ -104,7 +104,10 @@ callthrough:
   } else {
     abort();
   }
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunreachable-code"
   __builtin_unreachable();
+#pragma clang diagnostic pop
 }
 
 __attribute__((always_inline))
