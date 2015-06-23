@@ -22,6 +22,8 @@
 #import "BITHockeyBaseManagerPrivate.h"
 
 #import "BITTestHelper.h"
+#import "BITHockeyAppClient.h"
+
 
 #define kBITCrashMetaAttachment @"BITCrashMetaAttachment"
 
@@ -32,6 +34,7 @@
 
 @implementation BITCrashManagerTests {
   BITCrashManager *_sut;
+  BITHockeyAppClient *_hockeyAppClient;
   BOOL _startManagerInitialized;
 }
 
@@ -40,6 +43,11 @@
   
   _startManagerInitialized = NO;
   _sut = [[BITCrashManager alloc] initWithAppIdentifier:nil isAppStoreEnvironment:NO];
+
+  _hockeyAppClient = [[BITHockeyAppClient alloc] initWithBaseURL:[NSURL URLWithString: BITHOCKEYSDK_URL]];
+  _hockeyAppClient.baseURL = [NSURL URLWithString:BITHOCKEYSDK_URL];
+  
+  [_sut setHockeyAppClient:_hockeyAppClient];
 }
 
 - (void)tearDown {
