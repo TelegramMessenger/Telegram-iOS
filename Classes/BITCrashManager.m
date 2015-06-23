@@ -1590,6 +1590,8 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
  *	@param	xml	The XML data that needs to be send to the server
  */
 - (void)sendCrashReportWithFilename:(NSString *)filename xml:(NSString*)xml attachment:(BITHockeyAttachment *)attachment {
+  BOOL sendingWithURLSession = NO;
+  
   id nsurlsessionClass = NSClassFromString(@"NSURLSessionUploadTask");
   if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
     NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
@@ -1598,20 +1600,24 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     NSURLRequest *request = [self requestWithBoundary:kBITHockeyAppClientBoundary];
     NSData *data = [self postBodyWithXML:xml attachment:attachment boundary:kBITHockeyAppClientBoundary];
 
-    __weak typeof (self) weakSelf = self;
-    NSURLSessionUploadTask *uploadTask = [session uploadTaskWithRequest:request
-                                                               fromData:data
-                                                      completionHandler:^(NSData *responseData, NSURLResponse *response, NSError *error) {
-                                                        typeof (self) strongSelf = weakSelf;
-                                                        
-                                                        NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse*) response;
-                                                        NSInteger statusCode = [httpResponse statusCode];
-                                                        [strongSelf processUploadResultWithFilename:filename responseData:responseData statusCode:statusCode error:error];
-                                                      }];
-    
-    // 5
-    [uploadTask resume];
-  } else {
+    if (request && data) {
+      __weak typeof (self) weakSelf = self;
+      NSURLSessionUploadTask *uploadTask = [session uploadTaskWithRequest:request
+                                                                 fromData:data
+                                                        completionHandler:^(NSData *responseData, NSURLResponse *response, NSError *error) {
+                                                          typeof (self) strongSelf = weakSelf;
+                                                          
+                                                          NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse*) response;
+                                                          NSInteger statusCode = [httpResponse statusCode];
+                                                          [strongSelf processUploadResultWithFilename:filename responseData:responseData statusCode:statusCode error:error];
+                                                        }];
+      
+      [uploadTask resume];
+      sendingWithURLSession = YES;
+    }
+  }
+  
+  if (!sendingWithURLSession) {
     NSMutableURLRequest *request = [self requestWithBoundary:kBITHockeyAppClientBoundary];
     
     NSData *postBody = [self postBodyWithXML:xml attachment:attachment boundary:kBITHockeyAppClientBoundary];
