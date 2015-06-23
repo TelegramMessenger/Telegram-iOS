@@ -1,6 +1,6 @@
-## Version 3.6.4
+## Version 3.7.0
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.6.4/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.7.0/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -414,7 +414,7 @@ If you want to see beta analytics, use the beta distribution feature with in-app
 <a id="documentation"></a>
 ## 4. Documentation
 
-Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/3.6.4/index.html).
+Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/3.7.0/index.html).
 
 
 <a id="contributing"></a>
