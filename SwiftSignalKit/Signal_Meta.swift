@@ -151,3 +151,15 @@ public func then<T, E>(nextSignal: Signal<T, E>)(signal: Signal<T, E>) -> Signal
         return disposable
     }
 }
+
+public func defer<T, E>(generator: () -> Signal<T, E>) -> Signal<T, E> {
+    return Signal { subscriber in
+        return generator().start(next: { next in
+            subscriber.putNext(next)
+        }, error: { error in
+            subscriber.putError(error)
+        }, completed: {
+            subscriber.putCompletion()
+        })
+    }
+}
