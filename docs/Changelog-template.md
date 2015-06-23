@@ -2,13 +2,13 @@
 
 - [NEW] Simplified installation process. If support for modules is enabled in the target project (default for most projects), it’s no longer necessary to add the frameworks manually
 - [NEW] `CocoaPods`: Default pod uses binary distribution and offers crash only build as a subspec
-- [NEW] `CocoaPods`: New `HockeySDK-Source` pod integrates via source code and offers feature set customization via subspecs (We do not support building with Xcode 7 yet!)
+- [NEW] `CocoaPods`: New `HockeySDK-Source` pod integrates via source code and offers feature set customization via subspecs. Note: We do not support building with Xcode 7 yet!
 - [NEW] `BITCrashManager`: Added support for unhandled C++ exceptions (requires to link `libc++`)
 - [NEW] `BITCrashManager`: Added process ID to `BITCrashDetails`
 - [NEW] `BITCrashManager`: Added `CFBundleShortVersionString` value to crash reports
 - [NEW] `BITFeedbackManager`: "Add Image" button in feedback compose view can now be hidden using `feedbackComposeHideImageAttachmentButton` property
-- [NEW] `BITFeedbackManagerDelegate`: Added `allowAutomaticFetchingForNewFeedbackForManager:` to define if the SDK should fetch for new messages on app startup and when the app is coming into foreground. 
-- [NEW] Added `disableInstallTracking` property disable installation tracking (AppStore only).
+- [NEW] `BITFeedbackManagerDelegate`: Added `allowAutomaticFetchingForNewFeedbackForManager:` to define if the SDK should fetch new messages on app startup and when the app is coming into foreground. 
+- [NEW] Added disableInstallTracking property to disable installation tracking (AppStore only).
 - [UPDATE] Restructured installation documentation
 - [BUGFIX] `BITCrashManager`: Fixed offline issue showing crash alert over and over again with unsent crash reports
 - [BUGFIX] `BITFeedbackManager`: Improved screenshot handling on slow devices

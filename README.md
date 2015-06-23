@@ -80,7 +80,7 @@ From our experience, 3rd-party libraries usually reside inside a subdirectory (l
 2. Add the following line at the top of the file below your own `import` statements:
 
 	```objectivec
-    @import HockeySDK
+    @import HockeySDK;
 	```
 
 3. Search for the method `application:didFinishLaunchingWithOptions:`
