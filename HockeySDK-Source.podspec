@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name              = 'HockeySDK-Source'
-  s.version           = '3.6.4'
+  s.version           = '3.7.0'
 
   s.summary           = 'Collect live crash reports, get feedback from your users, distribute your betas, and analyze your test coverage with HockeyApp.'
   s.description       = <<-DESC
@@ -12,7 +12,7 @@ Pod::Spec.new do |s|
                         DESC
 
   s.homepage          = 'http://hockeyapp.net/'
-  s.documentation_url = 'http://hockeyapp.net/help/sdk/ios/3.6.4/'
+  s.documentation_url = 'http://hockeyapp.net/help/sdk/ios/3.7.0/'
 
   s.license           = { :type => 'MIT', :file => 'LICENSE' }
   s.author            = { 'Andreas Linde' => 'mail@andreaslinde.de', 'Thomas Dohmke' => "thomas@dohmke.de" }
@@ -26,7 +26,7 @@ Pod::Spec.new do |s|
   s.resource_bundle       = { 'HockeySDKResources' => ['Resources/*.lproj'] }
   s.preserve_path         = 'README.md'
   s.private_header_files  = 'Classes/*Private.h'
-  s.xcconfig              = {'GCC_PREPROCESSOR_DEFINITIONS' => %{$(inherited) BITHOCKEY_VERSION="@\\"#{s.version}\\"" BITHOCKEY_C_VERSION="\\"#{s.version}\\"" BITHOCKEY_BUILD="@\\"38\\"" BITHOCKEY_C_BUILD="\\"38\\""} }
+  s.xcconfig              = {'GCC_PREPROCESSOR_DEFINITIONS' => %{$(inherited) BITHOCKEY_VERSION="@\\"#{s.version}\\"" BITHOCKEY_C_VERSION="\\"#{s.version}\\"" BITHOCKEY_BUILD="@\\"40\\"" BITHOCKEY_C_BUILD="\\"40\\""} }
   
   s.default_subspec = 'AllFeatures'
 
