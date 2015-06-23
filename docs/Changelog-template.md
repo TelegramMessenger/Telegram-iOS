@@ -4,6 +4,7 @@
 - [NEW] `CocoaPods`: Default pod uses binary distribution and offers crash only build as a subspec
 - [NEW] `CocoaPods`: New `HockeySDK-Source` pod integrates via source code and offers feature set customization via subspecs. Note: We do not support building with Xcode 7 yet!
 - [NEW] `BITCrashManager`: Added support for unhandled C++ exceptions (requires to link `libc++`)
+- [NEW] `BITCrashManager`: Sending crash reports via `NSURLSession` whenever possible
 - [NEW] `BITCrashManager`: Added process ID to `BITCrashDetails`
 - [NEW] `BITCrashManager`: Added `CFBundleShortVersionString` value to crash reports
 - [NEW] `BITFeedbackManager`: "Add Image" button in feedback compose view can now be hidden using `feedbackComposeHideImageAttachmentButton` property
