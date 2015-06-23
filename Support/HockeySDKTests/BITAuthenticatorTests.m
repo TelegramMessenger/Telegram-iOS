@@ -15,8 +15,10 @@
 #import <OCMockitoIOS/OCMockitoIOS.h>
 
 #import "HockeySDK.h"
+#import "HockeySDKPrivate.h"
 #import "BITAuthenticator.h"
 #import "BITAuthenticator_Private.h"
+#import "BITHockeyBaseManagerPrivate.h"
 #import "BITHTTPOperation.h"
 #import "BITTestHelper.h"
 #import "BITHockeyAppClient.h"
@@ -60,11 +62,6 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 }
 
 - (void)tearDown {
-# pragma clang diagnostic push
-# pragma clang diagnostic ignored "-Wimplicit"
-  __gcov_flush();
-# pragma clang diagnostic pop
-  
   [_sut cleanupInternalStorage];
   _sut = nil;
   

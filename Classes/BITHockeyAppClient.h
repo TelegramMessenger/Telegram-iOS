@@ -30,6 +30,8 @@
 
 #import "BITHTTPOperation.h" //needed for typedef
 
+extern NSString * const kBITHockeyAppClientBoundary;
+
 /**
  *  Generic Hockey API client
  */

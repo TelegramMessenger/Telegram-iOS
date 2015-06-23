@@ -398,6 +398,21 @@
 @property (nonatomic, readonly) NSString *installString;
 
 
+/**
+ Disable tracking the installation of an app on a device
+ 
+ This will cause the app to generate a new `installString` value every time the
+ app is cold started.
+ 
+ This property is only considered in App Store Environment, since it would otherwise
+ affect the `BITUpdateManager` and `BITAuthenticator` functionalities!
+ 
+ @warning This property needs to be set before calling `startManager`
+ 
+ *Default*: _NO_
+ */
+@property (nonatomic, getter=isInstallTrackingDisabled) BOOL disableInstallTracking;
+
 ///-----------------------------------------------------------------------------
 /// @name Debug Logging
 ///-----------------------------------------------------------------------------

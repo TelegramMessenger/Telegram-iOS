@@ -27,6 +27,10 @@
  */
 
 
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_FEEDBACK
+
 #import "BITFeedbackMessage.h"
 #import "BITFeedbackMessageAttachment.h"
 
@@ -112,3 +116,5 @@
 
 
 @end
+
+#endif

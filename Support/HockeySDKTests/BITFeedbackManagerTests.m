@@ -41,11 +41,6 @@
 }
 
 - (void)tearDown {
-# pragma clang diagnostic push
-# pragma clang diagnostic ignored "-Wimplicit"
-  __gcov_flush();
-# pragma clang diagnostic pop
- 
   [_sut removeKeyFromKeychain:kBITHockeyMetaUserID];
   [_sut removeKeyFromKeychain:kBITHockeyMetaUserName];
   [_sut removeKeyFromKeychain:kBITHockeyMetaUserEmail];
@@ -212,5 +207,26 @@
   assertThat(_sut.userEmail, equalTo(@"test"));
 }
 
+- (void)testAllowFetchingNewMessages {
+    BOOL fetchMessages = NO;
+
+    // check the default
+    fetchMessages = [_sut allowFetchingNewMessages];
+    
+    assertThatBool(fetchMessages, equalToBool(YES));
+    
+    // check the delegate is implemented and returns NO
+    BITHockeyManager *hm = [BITHockeyManager sharedHockeyManager];
+    NSObject <BITHockeyManagerDelegate> *classMock = mockObjectAndProtocol([NSObject class], @protocol(BITHockeyManagerDelegate));
+    [given([classMock allowAutomaticFetchingForNewFeedbackForManager:_sut]) willReturn:@NO];
+    hm.delegate = classMock;
+    _sut.delegate = classMock;
+    
+    fetchMessages = [_sut allowFetchingNewMessages];
+    
+    assertThatBool(fetchMessages, equalToBool(NO));
+    
+    [verifyCount(classMock, times(1)) allowAutomaticFetchingForNewFeedbackForManager:_sut];
+}
 
 @end

@@ -52,15 +52,29 @@
     return NO;
   
 	NSString *filePath = [[NSBundle bundleForClass:self.class] pathForResource:filename ofType:@"plcrash"];
-  
   NSError *theError = NULL;
   
+  if (!filePath) return NO;
   [fm copyItemAtPath:filePath toPath:[plcrCrashesDir stringByAppendingPathComponent:@"live_report.plcrash"] error:&theError];
   
   if (theError)
     return NO;
   else
     return YES;
+}
+
++ (NSData *)dataOfFixtureCrashReportWithFileName:(NSString *)filename {
+  // the bundle identifier when running with unit tets is "otest"
+  const char *progname = getprogname();
+  if (progname == NULL) {
+    return nil;
+  }
+
+  NSString *filePath = [[NSBundle bundleForClass:self.class] pathForResource:filename ofType:@"plcrash"];
+  
+  if (!filePath) return nil;
+  NSData *data = [NSData dataWithContentsOfFile:filePath];
+  return data;
 }
 
 @end

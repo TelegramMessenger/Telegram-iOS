@@ -43,11 +43,6 @@
 
 - (void)tearDown {
   // Tear-down code here.
-# pragma clang diagnostic push
-# pragma clang diagnostic ignored "-Wimplicit"
-  __gcov_flush();
-# pragma clang diagnostic pop
-  
   _storeUpdateManager = nil;
   
   [super tearDown];
@@ -58,6 +53,8 @@
 
 - (NSDictionary *)jsonFromFixture:(NSString *)fixture {
   NSString *dataString = [BITTestHelper jsonFixture:fixture];
+  
+  if (!dataString) return nil;
   
   NSData *data = [dataString dataUsingEncoding:NSUTF8StringEncoding];
   NSError *error = nil;

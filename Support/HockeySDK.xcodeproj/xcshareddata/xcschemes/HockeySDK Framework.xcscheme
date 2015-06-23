@@ -14,9 +14,23 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "1E4F61E91621AD970033EFC5"
-               BuildableName = "HockeySDK Framework"
+               BlueprintIdentifier = "1EB6173E1B0A30480035A986"
+               BuildableName = "HockeySDK.framework"
                BlueprintName = "HockeySDK Framework"
+               ReferencedContainer = "container:HockeySDK.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "1EB617481B0A30480035A986"
+               BuildableName = "HockeySDK FrameworkTests.xctest"
+               BlueprintName = "HockeySDK FrameworkTests"
                ReferencedContainer = "container:HockeySDK.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -26,9 +40,28 @@
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
-      buildConfiguration = "Debug">
+      buildConfiguration = "CodeCoverage">
       <Testables>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "1EB617481B0A30480035A986"
+               BuildableName = "HockeySDK FrameworkTests.xctest"
+               BlueprintName = "HockeySDK FrameworkTests"
+               ReferencedContainer = "container:HockeySDK.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "1EB6173E1B0A30480035A986"
+            BuildableName = "HockeySDK.framework"
+            BlueprintName = "HockeySDK Framework"
+            ReferencedContainer = "container:HockeySDK.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
    </TestAction>
    <LaunchAction
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
@@ -42,8 +75,8 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "1E4F61E91621AD970033EFC5"
-            BuildableName = "HockeySDK Framework"
+            BlueprintIdentifier = "1EB6173E1B0A30480035A986"
+            BuildableName = "HockeySDK.framework"
             BlueprintName = "HockeySDK Framework"
             ReferencedContainer = "container:HockeySDK.xcodeproj">
          </BuildableReference>
@@ -57,6 +90,15 @@
       useCustomWorkingDirectory = "NO"
       buildConfiguration = "Release"
       debugDocumentVersioning = "YES">
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "1EB6173E1B0A30480035A986"
+            BuildableName = "HockeySDK.framework"
+            BlueprintName = "HockeySDK Framework"
+            ReferencedContainer = "container:HockeySDK.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
    </ProfileAction>
    <AnalyzeAction
       buildConfiguration = "Debug">

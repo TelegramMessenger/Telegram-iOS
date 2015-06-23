@@ -7,7 +7,17 @@
 //
 
 #import <XCTest/XCTest.h>
+
+#define HC_SHORTHAND
+#import <OCHamcrestIOS/OCHamcrestIOS.h>
+
+#define MOCKITO_SHORTHAND
+#import <OCMockitoIOS/OCMockitoIOS.h>
+
+#import <CrashReporter/CrashReporter.h>
 #import "BITCrashReportTextFormatter.h"
+
+#import "BITTestHelper.h"
 
 @interface BITCrashReportTextFormatterTests : XCTestCase
 
@@ -20,12 +30,7 @@
   // Put setup code here. This method is called before the invocation of each test method in the class.
 }
 
-- (void)tearDown {
-# pragma clang diagnostic push
-# pragma clang diagnostic ignored "-Wimplicit"
-  __gcov_flush();
-# pragma clang diagnostic pop
-  
+- (void)tearDown {  
   [super tearDown];
 }
 
@@ -192,5 +197,46 @@
   }
 }
 
+- (void)testSignalReport {
+  NSData *crashData = [BITTestHelper dataOfFixtureCrashReportWithFileName:@"live_report_signal"];
+  assertThat(crashData, notNilValue());
+  
+  NSError *error = nil;
+  BITPLCrashReport *report = [[BITPLCrashReport alloc] initWithData:crashData error:&error];
+  
+  NSString *crashLogString = [BITCrashReportTextFormatter stringValueForCrashReport:report crashReporterKey:@""];
+
+  assertThat(crashLogString, notNilValue());
+
+  crashData = [BITTestHelper dataOfFixtureCrashReportWithFileName:@"live_report_signal_marketing"];
+  assertThat(crashData, notNilValue());
+  
+  report = [[BITPLCrashReport alloc] initWithData:crashData error:&error];
+  
+  crashLogString = [BITCrashReportTextFormatter stringValueForCrashReport:report crashReporterKey:@""];
+  
+  assertThat(crashLogString, notNilValue());
+}
+
+- (void)testExceptionReport {
+  NSData *crashData = [BITTestHelper dataOfFixtureCrashReportWithFileName:@"live_report_exception"];
+  assertThat(crashData, notNilValue());
+  
+  NSError *error = nil;
+  BITPLCrashReport *report = [[BITPLCrashReport alloc] initWithData:crashData error:&error];
+  
+  NSString *crashLogString = [BITCrashReportTextFormatter stringValueForCrashReport:report crashReporterKey:@""];
+  
+  assertThat(crashLogString, notNilValue());
+
+  crashData = [BITTestHelper dataOfFixtureCrashReportWithFileName:@"live_report_exception_marketing"];
+  assertThat(crashData, notNilValue());
+  
+  report = [[BITPLCrashReport alloc] initWithData:crashData error:&error];
+  
+  crashLogString = [BITCrashReportTextFormatter stringValueForCrashReport:report crashReporterKey:@""];
+  
+  assertThat(crashLogString, notNilValue());
+}
 
 @end

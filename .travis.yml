@@ -1,0 +1,33 @@
+language: objective-c
+osx_image: beta-xcode6.3
+
+env:
+  global:
+    - PROJECT="Support/HockeySDK.xcodeproj"
+    - SDK="iphonesimulator"
+    - CONFIGURATION="DEBUG"
+
+  matrix:
+    - SCHEME="HockeySDK"             DESTINATION="OS=7.1,name=iPad 2"                 RUN_TESTS="YES"
+    - SCHEME="HockeySDK"             DESTINATION="OS=7.1,name=iPhone 5"                 RUN_TESTS="YES"
+    - SCHEME="HockeySDK"             DESTINATION="OS=8.1,name=iPad Air"                 RUN_TESTS="YES"
+    - SCHEME="HockeySDK"             DESTINATION="OS=8.2,name=iPhone 6"                 RUN_TESTS="YES"
+    - SCHEME="HockeySDK"             DESTINATION="OS=8.3,name=iPhone 6 Plus"            RUN_TESTS="YES"
+    - SCHEME="HockeySDK Framework"   DESTINATION="platform=iOS Simulator,name=iPhone 6" RUN_TESTS="YES"
+    - SCHEME="HockeySDK Distribution"                                                   RUN_TESTS="NO"
+
+before_install:
+  - gem install cocoapods --no-rdoc --no-ri --no-document --quiet
+  - gem install xcpretty --no-rdoc --no-ri --no-document --quiet
+  - brew tap homebrew/versions
+  - brew install appledoc22
+  - brew link --force appledoc22
+
+script:
+  - set -o pipefail
+  - COMMAND="xcodebuild -project '$PROJECT' -scheme '$SCHEME' -sdk '$SDK' -configuration '$CONFIGURATION'"
+  - if [ $RUN_TESTS == "YES" ]; then
+      COMMAND+=" -destination '$DESTINATION' clean test";
+    fi
+  - COMMAND+=" | xcpretty -c"
+  - eval $COMMAND

@@ -27,6 +27,10 @@
  */
 
 
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_FEEDBACK
+
 #import "BITFeedbackMessageAttachment.h"
 #import "BITHockeyHelper.h"
 #import "HockeySDKPrivate.h"
@@ -256,3 +260,5 @@
 }
 
 @end
+
+#endif

@@ -33,11 +33,6 @@
 
 - (void)tearDown {
   // Tear-down code here.
-# pragma clang diagnostic push
-# pragma clang diagnostic ignored "-Wimplicit"
-  __gcov_flush();
-# pragma clang diagnostic pop
-  
   [super tearDown];
 }
 
@@ -85,7 +80,7 @@
                            andServiceName:bit_keychainHockeySDKServiceName()
                                     error:&error];
   
-  NSString *resultString = bit_appAnonID();
+  NSString *resultString = bit_appAnonID(NO);
   assertThat(resultString, notNilValue());
   assertThatInteger([resultString length], equalToInteger(36));
 }

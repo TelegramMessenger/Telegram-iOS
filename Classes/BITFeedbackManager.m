@@ -114,7 +114,6 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
   [self unregisterObservers];
 }
 
-
 - (void)didBecomeActiveActions {
   if ([self isFeedbackManagerDisabled]) return;
   if (!_didEnterBackgroundState) return;
@@ -126,7 +125,10 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
   } else {
     [self updateAppDefinedUserData];
   }
-  [self updateMessagesList];
+  
+  if ([self allowFetchingNewMessages]) {
+    [self updateMessagesList];
+  }
 }
 
 - (void)didEnterBackgroundActions {
@@ -225,6 +227,7 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
 - (BITFeedbackComposeViewController *)feedbackComposeViewController {
   BITFeedbackComposeViewController *composeViewController = [[BITFeedbackComposeViewController alloc] init];
   [composeViewController prepareWithItems:self.feedbackComposerPreparedItems];
+  [composeViewController setHideImageAttachmentButton:self.feedbackComposeHideImageAttachmentButton];
     
   // by default set the delegate to be identical to the one of BITFeedbackManager
   [composeViewController setDelegate:self.delegate];
@@ -272,6 +275,16 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
       // do nothing, wait for active state
       break;
   }
+}
+
+- (BOOL)allowFetchingNewMessages {
+  BOOL fetchNewMessages = YES;
+  if ([BITHockeyManager sharedHockeyManager].delegate &&
+      [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(allowAutomaticFetchingForNewFeedbackForManager:)]) {
+    fetchNewMessages = [[BITHockeyManager sharedHockeyManager].delegate
+                        allowAutomaticFetchingForNewFeedbackForManager:self];
+  }
+  return fetchNewMessages;
 }
 
 - (void)updateMessagesList {
@@ -870,7 +883,7 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
     [postBody appendData:[BITHockeyAppClient dataWithPostValue:[message text] forKey:@"text" boundary:boundary]];
     [postBody appendData:[BITHockeyAppClient dataWithPostValue:[message token] forKey:@"message_token" boundary:boundary]];
     
-    NSString *installString = bit_appAnonID();
+    NSString *installString = bit_appAnonID(NO);
     if (installString) {
       [postBody appendData:[BITHockeyAppClient dataWithPostValue:installString forKey:@"install_string" boundary:boundary]];
     }
@@ -1109,7 +1122,7 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
 }
 
 -(void)screenshotNotificationReceived:(NSNotification *)notification {
-  double amountOfSeconds = 0.5;
+  double amountOfSeconds = 1.5;
   dispatch_time_t delayTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(amountOfSeconds * NSEC_PER_SEC));
   
   dispatch_after(delayTime, dispatch_get_main_queue(), ^{

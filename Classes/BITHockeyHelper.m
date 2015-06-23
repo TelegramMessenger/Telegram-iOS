@@ -158,7 +158,11 @@ NSString *bit_encodeAppIdentifier(NSString *inputString) {
 NSString *bit_appName(NSString *placeHolderString) {
   NSString *appName = [[[NSBundle mainBundle] localizedInfoDictionary] objectForKey:@"CFBundleDisplayName"];
   if (!appName)
-    appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"] ?: placeHolderString;
+    appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"];
+  if (!appName)
+    appName = [[[NSBundle mainBundle] localizedInfoDictionary] objectForKey:@"CFBundleName"];
+  if (!appName)
+    appName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleName"] ?: placeHolderString;
   
   return appName;
 }
@@ -187,34 +191,50 @@ NSString *bit_UUID(void) {
   return resultUUID;
 }
 
-NSString *bit_appAnonID(void) {
+NSString *bit_appAnonID(BOOL forceNewAnonID) {
   static NSString *appAnonID = nil;
   static dispatch_once_t predAppAnonID;
+  __block NSError *error = nil;
+  NSString *appAnonIDKey = @"appAnonID";
   
-  dispatch_once(&predAppAnonID, ^{
-    // first check if we already have an install string in the keychain
-    NSString *appAnonIDKey = @"appAnonID";
-    
-    __block NSError *error = nil;
-    appAnonID = [BITKeychainUtils getPasswordForUsername:appAnonIDKey andServiceName:bit_keychainHockeySDKServiceName() error:&error];
-    
-    if (!appAnonID) {
-      appAnonID = bit_UUID();
-      // store this UUID in the keychain (on this device only) so we can be sure to always have the same ID upon app startups
-      if (appAnonID) {
-        // add to keychain in a background thread, since we got reports that storing to the keychain may take several seconds sometimes and cause the app to be killed
-        // and we don't care about the result anyway
-        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
-          [BITKeychainUtils storeUsername:appAnonIDKey
-                              andPassword:appAnonID
-                           forServiceName:bit_keychainHockeySDKServiceName()
-                           updateExisting:YES
-                            accessibility:kSecAttrAccessibleAlwaysThisDeviceOnly
-                                    error:&error];
-        });
-      }
+  if (forceNewAnonID) {
+    appAnonID = bit_UUID();
+    // store this UUID in the keychain (on this device only) so we can be sure to always have the same ID upon app startups
+    if (appAnonID) {
+      // add to keychain in a background thread, since we got reports that storing to the keychain may take several seconds sometimes and cause the app to be killed
+      // and we don't care about the result anyway
+      dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
+        [BITKeychainUtils storeUsername:appAnonIDKey
+                            andPassword:appAnonID
+                         forServiceName:bit_keychainHockeySDKServiceName()
+                         updateExisting:YES
+                          accessibility:kSecAttrAccessibleAlwaysThisDeviceOnly
+                                  error:&error];
+      });
     }
-  });
+  } else {
+    dispatch_once(&predAppAnonID, ^{
+      // first check if we already have an install string in the keychain
+      appAnonID = [BITKeychainUtils getPasswordForUsername:appAnonIDKey andServiceName:bit_keychainHockeySDKServiceName() error:&error];
+      
+      if (!appAnonID) {
+        appAnonID = bit_UUID();
+        // store this UUID in the keychain (on this device only) so we can be sure to always have the same ID upon app startups
+        if (appAnonID) {
+          // add to keychain in a background thread, since we got reports that storing to the keychain may take several seconds sometimes and cause the app to be killed
+          // and we don't care about the result anyway
+          dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
+            [BITKeychainUtils storeUsername:appAnonIDKey
+                                andPassword:appAnonID
+                             forServiceName:bit_keychainHockeySDKServiceName()
+                             updateExisting:YES
+                              accessibility:kSecAttrAccessibleAlwaysThisDeviceOnly
+                                      error:&error];
+          });
+        }
+      }
+    });
+  }
   
   return appAnonID;
 }

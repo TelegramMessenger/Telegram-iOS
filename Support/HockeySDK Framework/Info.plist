@@ -3,17 +3,15 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>English</string>
+	<string>en</string>
 	<key>CFBundleExecutable</key>
-	<string>${EXECUTABLE_NAME}</string>
-	<key>CFBundleIconFile</key>
-	<string></string>
+	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
-	<string>net.hockeyapp.sdk.resources.ios</string>
+	<string>net.hockeyapp.sdk.ios</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>${PRODUCT_NAME}</string>
+	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
 	<string>FMWK</string>
 	<key>CFBundleShortVersionString</key>
@@ -21,9 +19,7 @@
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
-	<string>${BUILD_NUMBER}</string>
-	<key>NSHumanReadableCopyright</key>
-	<string>Copyright © 2012 HockeyApp, Bit Stadium GmbH. All rights reserved.</string>
+	<string>$(BUILD_NUMBER)</string>
 	<key>NSPrincipalClass</key>
 	<string></string>
 </dict>

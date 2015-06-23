@@ -1,7 +1,7 @@
 /*
- * Author: Andreas Linde <mail@andreaslinde.de>
+ * Author: Gwynne Raskind <gwraskin@microsoft.com>
  *
- * Copyright (c) 2012-2014 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2015 HockeyApp, Bit Stadium GmbH.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -26,23 +26,24 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-extern NSString *const __attribute__((unused)) kBITCrashKillSignal;
+#import <Foundation/Foundation.h>
+#import "HockeySDKNullability.h"
 
-@interface BITCrashDetails () {
-  
-}
+typedef struct {
+    const void * __nullable exception;
+    const char * __nullable exception_type_name;
+    const char * __nullable exception_message;
+    uint32_t exception_frames_count;
+    const uintptr_t * __nonnull exception_frames;
+} BITCrashUncaughtCXXExceptionInfo;
 
-- (instancetype)initWithIncidentIdentifier:(NSString *)incidentIdentifier
-                               reporterKey:(NSString *)reporterKey
-                                    signal:(NSString *)signal
-                             exceptionName:(NSString *)exceptionName
-                           exceptionReason:(NSString *)exceptionReason
-                              appStartTime:(NSDate *)appStartTime
-                                 crashTime:(NSDate *)crashTime
-                                 osVersion:(NSString *)osVersion
-                                   osBuild:(NSString *)osBuild
-                                appVersion:(NSString *)appVersion
-                                  appBuild:(NSString *)appBuild
-                      appProcessIdentifier:(NSUInteger)appProcessIdentifier;
+typedef void (*BITCrashUncaughtCXXExceptionHandler)(
+    const BITCrashUncaughtCXXExceptionInfo * __nonnull info
+);
+
+@interface BITCrashUncaughtCXXExceptionHandlerManager : NSObject
+
++ (void)addCXXExceptionHandler:(nonnull BITCrashUncaughtCXXExceptionHandler)handler;
++ (void)removeCXXExceptionHandler:(nonnull BITCrashUncaughtCXXExceptionHandler)handler;
 
 @end
