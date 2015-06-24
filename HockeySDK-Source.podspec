@@ -22,7 +22,6 @@ Pod::Spec.new do |s|
   s.requires_arc      = true
     
   s.prepare_command       = 'cp -f Classes/HockeySDKFeatureConfig_CP.h Classes/HockeySDKFeatureConfig.h' #Changes default of all features enabled to disabled
-  s.frameworks            = 'Security', 'UIKit'
   s.resource_bundle       = { 'HockeySDKResources' => ['Resources/*.lproj'] }
   s.preserve_path         = 'README.md'
   s.private_header_files  = 'Classes/*Private.h'
@@ -34,19 +33,33 @@ Pod::Spec.new do |s|
     ss.source_files  = 'Classes/HockeySDK*.{h,m}', 'Classes/BITHockeyManager*.{h,m}', 'Classes/BITHockeyAppClient.{h,m}', 'Classes/BITHTTPOperation.{h,m}', 'Classes/BITHockeyHelper.{h,m}', 'Classes/BITKeychain*.{h,m}', 'Classes/BITHockeyBaseManager*.{h,m}'
   end
   
+  s.subspec 'UserInterface' do |ss|
+    ss.dependency 'HockeySDK-Source/SharedRequirements'
+    ss.frameworks = 'UIKit'
+    ss.source_files = 'Classes/BITHockeyBaseViewController.{h,m}'
+  end
+
+  s.subspec 'Extendable' do |ss|
+    ss.dependency 'HockeySDK-Source/SharedRequirements'
+    ss.source_files = 'Classes/BITHockeyAttachment.{h,m}'
+  end
+
   s.subspec 'CrashReporter' do |ss|
     ss.dependency 'HockeySDK-Source/SharedRequirements'
+    ss.dependency 'HockeySDK-Source/Extendable'
     ss.vendored_frameworks = 'Vendor/CrashReporter.framework'
     ss.frameworks = 'SystemConfiguration'
     ss.libraries = 'c++'
-    ss.source_files = 'Classes/BITCrash*.{h,m,mm}', 'Classes/BITHockeyAttachment.{h,m}'
+    ss.source_files = 'Classes/BITCrash*.{h,m,mm}'
     ss.xcconfig = {'GCC_PREPROCESSOR_DEFINITIONS' => %{$(inherited) HOCKEYSDK_FEATURE_CRASH_REPORTER=1} }
   end
   
   s.subspec 'UserFeedback' do |ss|
     ss.dependency 'HockeySDK-Source/SharedRequirements'
+    ss.dependency 'HockeySDK-Source/Extendable'
+    ss.dependency 'HockeySDK-Source/UserInterface'
     ss.frameworks = 'AssetsLibrary', 'MobileCoreServices', 'QuickLook', 'CoreText'
-    ss.source_files = 'Classes/BITFeedback*.{h,m}', 'Classes/BIT*ImageAnnotation.{h,m}', 'Classes/BITImageAnnotationViewController.{h,m}', 'Classes/BITHockeyAttachment.{h,m}', 'Classes/BITHockeyBaseViewController.{h,m}', 'Classes/BITAttributedLabel.{h,m}', 'Classes/BITActivityIndicatorButton.{h,m}'
+    ss.source_files = 'Classes/BITFeedback*.{h,m}', 'Classes/BIT*ImageAnnotation.{h,m}', 'Classes/BITImageAnnotationViewController.{h,m}', 'Classes/BITAttributedLabel.{h,m}', 'Classes/BITActivityIndicatorButton.{h,m}'
     ss.xcconfig = {'GCC_PREPROCESSOR_DEFINITIONS' => %{$(inherited) HOCKEYSDK_FEATURE_FEEDBACK=1} }
   end
   
@@ -58,14 +71,16 @@ Pod::Spec.new do |s|
   
   s.subspec 'Authenticator' do |ss|
     ss.dependency 'HockeySDK-Source/SharedRequirements'
-    ss.source_files = 'Classes/BITAuthentica*.{h,m}', 'Classes/BITHockeyBaseViewController.{h,m}' 
+    ss.dependency 'HockeySDK-Source/UserInterface'
+    ss.source_files = 'Classes/BITAuthentica*.{h,m}'
     ss.xcconfig = {'GCC_PREPROCESSOR_DEFINITIONS' => %{$(inherited) HOCKEYSDK_FEATURE_AUTHENTICATOR=1} }
   end
   
   s.subspec 'AdHocUpdates' do |ss|
     ss.dependency 'HockeySDK-Source/SharedRequirements'
-    ss.source_files = 'Classes/BITUpdate*.{h,m}', 'Classes/BITAppVersionMetaInfo.{h,m}', 'Classes/BITHockeyBaseViewController.{h,m}', 'Classes/BITStoreButton.{h,m}', 'Classes/BITAppStoreHeader.{h,m}', 'Classes/BITWebTableViewCell.{h,m}'
-    ss.frameworks = 'CoreGraphics', 'QuartzCore', 'Security', 'UIKit'
+    ss.dependency 'HockeySDK-Source/UserInterface'
+    ss.source_files = 'Classes/BITUpdate*.{h,m}', 'Classes/BITAppVersionMetaInfo.{h,m}', 'Classes/BITStoreButton.{h,m}', 'Classes/BITAppStoreHeader.{h,m}', 'Classes/BITWebTableViewCell.{h,m}'
+    ss.frameworks = 'CoreGraphics', 'QuartzCore', 'Security'
     ss.xcconfig = {'GCC_PREPROCESSOR_DEFINITIONS' => %{$(inherited) HOCKEYSDK_FEATURE_UPDATES=1} }
   end
   
