@@ -1,8 +1,8 @@
 [![Build Status](https://travis-ci.org/bitstadium/HockeySDK-iOS.svg?branch=master)](https://travis-ci.org/bitstadium/HockeySDK-iOS)
 
-## Version 3.7.0
+## Version 3.7.1
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.7.0/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.7.1/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -80,7 +80,7 @@ From our experience, 3rd-party libraries usually reside inside a subdirectory (l
 2. Add the following line at the top of the file below your own `import` statements:
 
 	```objectivec
-    @import HockeySDK
+    @import HockeySDK;
 	```
 
 3. Search for the method `application:didFinishLaunchingWithOptions:`
@@ -179,19 +179,11 @@ You can alternative use a Crash Reporting build only by using the following line
 
 #### 3.2.2 Source Integration Options
 
-Alternatively you can integrate the SDK by source if you want to do any modifications or want a different feature set. The following entry will integrate all features:
+Alternatively you can integrate the SDK by source if you want to do any modifications or want a different feature set. The following entry will integrate the SDK:
 
      ```ruby
     pod "HockeySDK-Source"
     ```
-
-You can use `subspecs` to specify your own feature set using the following options: `CrashReporter`, `UserFeedback`, `StoreUpdates`, `Authenticator`, `AdHocUpdates`. An example could look like:
-
-    ```ruby
-    pod "HockeySDK-Source", :subspecs => ['CrashReporter', 'UserFeedback']
-    ```
-
-*Note:* The source will not build without warnings in Xcode 7!
 
 
 <a id="extensions"></a>
@@ -446,7 +438,7 @@ To check if data is send properly to HockeyApp and also see some additional SDK 
 <a id="documentation"></a>
 ## 4. Documentation
 
-Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/3.7.0/index.html).
+Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/3.7.1/index.html).
 
 
 <a id="contributing"></a>

@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name              = 'HockeySDK'
-  s.version           = '3.7.0'
+  s.version           = '3.7.1'
 
   s.summary           = 'Collect live crash reports, get feedback from your users, distribute your betas, and analyze your test coverage with HockeyApp.'
   s.description       = <<-DESC
@@ -12,7 +12,7 @@ Pod::Spec.new do |s|
                         DESC
 
   s.homepage          = 'http://hockeyapp.net/'
-  s.documentation_url = 'http://hockeyapp.net/help/sdk/ios/3.7.0/'
+  s.documentation_url = 'http://hockeyapp.net/help/sdk/ios/3.7.1/'
 
   s.license           = { :type => 'MIT', :file => 'HockeySDK-iOS/LICENSE' }
   s.author            = { 'Andreas Linde' => 'mail@andreaslinde.de', 'Thomas Dohmke' => "thomas@dohmke.de" }
@@ -30,12 +30,12 @@ Pod::Spec.new do |s|
   s.default_subspec   = 'AllFeaturesLib'
   
   s.subspec 'CrashOnlyLib' do |ss|
-    ss.resource_bundle = { 'HockeySDKResources' => ['Resources/*.lproj'] }
+    ss.resource_bundle = { 'HockeySDKResources' => ['HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDK.framework/Versions/A/Resources/HockeySDKResources.bundle/*.lproj'] }
     ss.vendored_frameworks = 'HockeySDK-iOS/HockeySDKCrashOnly/HockeySDK.framework'
   end
 
   s.subspec 'AllFeaturesLib' do |ss|
-    ss.resource_bundle = { 'HockeySDKResources' => ['Resources/*.png', 'Resources/*.lproj'] }
+    ss.resource_bundle = { 'HockeySDKResources' => ['HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDK.framework/Versions/A/Resources/HockeySDKResources.bundle/*.png', 'HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDK.framework/Versions/A/Resources/HockeySDKResources.bundle/*.lproj'] }
 
     ss.frameworks = 'CoreGraphics', 'QuartzCore', 'AssetsLibrary', 'MobileCoreServices', 'QuickLook', 'CoreText'
     ss.vendored_frameworks = 'HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDK.framework'
