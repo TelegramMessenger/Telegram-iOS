@@ -30,12 +30,12 @@ Pod::Spec.new do |s|
   s.default_subspec   = 'AllFeaturesLib'
   
   s.subspec 'CrashOnlyLib' do |ss|
-    ss.resource_bundle = { 'HockeySDKResources' => ['HockeySDK-iOS/HockeySDK.embeddedframework/Resources/*.lproj'] }
+    ss.resource_bundle = { 'HockeySDKResources' => ['HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDK.framework/Versions/A/Resources/HockeySDKResources.bundle/*.lproj'] }
     ss.vendored_frameworks = 'HockeySDK-iOS/HockeySDKCrashOnly/HockeySDK.framework'
   end
 
   s.subspec 'AllFeaturesLib' do |ss|
-    ss.resource_bundle = { 'HockeySDKResources' => ['HockeySDK-iOS/HockeySDK.embeddedframework/Resources/*.png', 'Resources/*.lproj'] }
+    ss.resource_bundle = { 'HockeySDKResources' => ['HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDK.framework/Versions/A/Resources/HockeySDKResources.bundle/*.png', 'HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDK.framework/Versions/A/Resources/HockeySDKResources.bundle/*.lproj'] }
 
     ss.frameworks = 'CoreGraphics', 'QuartzCore', 'AssetsLibrary', 'MobileCoreServices', 'QuickLook', 'CoreText'
     ss.vendored_frameworks = 'HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDK.framework'
