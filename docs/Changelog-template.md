@@ -1,3 +1,8 @@
+## Version 3.7.1
+
+- [BUGFIX] `CocoaPods`: Fixes the default podspec with binary distribution
+- [BUGFIX] `CocoaPods`: Changes `HockeySDK-Source` to use non configurable approach, since we couldn't make it work reliably in all scenarios
+
 ## Version 3.7.0
 
 - [NEW] Simplified installation process. If support for modules is enabled in the target project (default for most projects), it’s no longer necessary to add the frameworks manually
