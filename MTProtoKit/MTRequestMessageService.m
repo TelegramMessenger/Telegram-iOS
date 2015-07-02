@@ -352,8 +352,13 @@
         if (request.dependsOnPasswordEntry && [_context isPasswordInputRequiredForDatacenterWithId:mtProto.datacenterId])
             continue;
         
-        if (request.errorContext != nil && request.errorContext.minimalExecuteTime > currentTime)
-            continue;
+        if (request.errorContext != nil)
+        {
+            if (request.errorContext.minimalExecuteTime > currentTime)
+                continue;
+            if (request.errorContext.waitingForTokenExport)
+                continue;
+        }
         
         if (request.requestContext == nil || (!request.requestContext.delivered && request.requestContext.transactionId == nil))
         {
@@ -544,7 +549,18 @@
                             {
                                 id<MTRequestMessageServiceDelegate> delegate = _delegate;
                                 if ([delegate respondsToSelector:@selector(requestMessageServiceAuthorizationRequired:)])
+                                {
                                     [delegate requestMessageServiceAuthorizationRequired:self];
+                                }
+                                
+                                if ([rpcError.errorDescription rangeOfString:@"SESSION_REVOKED"].location != NSNotFound)
+                                {
+                                    if (request.errorContext == nil)
+                                        request.errorContext = [[MTRequestErrorContext alloc] init];
+                                    request.errorContext.waitingForTokenExport = true;
+                                    
+                                    restartRequest = true;
+                                }
                             }
                         }
                         else if (rpcError.errorCode == -500 || rpcError.errorCode == 500)
@@ -783,6 +799,22 @@
         {
             request.requestContext = nil;
             
+            resendSomeRequests = true;
+        }
+    }
+    
+    if (resendSomeRequests)
+        [mtProto requestTransportTransaction];
+}
+
+- (void)mtProtoAuthTokenUpdated:(MTProto *)mtProto
+{
+    bool resendSomeRequests = false;
+    for (MTRequest *request in _requests)
+    {
+        if (request.errorContext != nil && request.errorContext.waitingForTokenExport)
+        {
+            request.errorContext.waitingForTokenExport = false;
             resendSomeRequests = true;
         }
     }

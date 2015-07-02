@@ -37,4 +37,6 @@
 - (void)mtProtoConnectionContextUpdateStateChanged:(MTProto *)mtProto isUpdatingConnectionContext:(bool)isUpdatingConnectionContext;
 - (void)mtProtoServiceTasksStateChanged:(MTProto *)mtProto isPerformingServiceTasks:(bool)isPerformingServiceTasks;
 
+- (void)mtProtoAuthTokenUpdated:(MTProto *)mtProto;
+
 @end

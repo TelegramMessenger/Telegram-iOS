@@ -16,4 +16,6 @@
 @property (nonatomic) NSUInteger internalServerErrorCount;
 @property (nonatomic) NSUInteger floodWaitSeconds;
 
+@property (nonatomic) bool waitingForTokenExport;
+
 @end

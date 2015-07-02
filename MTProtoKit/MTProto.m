@@ -2047,6 +2047,14 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 [self resetTransport];
                 [self requestTransportTransaction];
             }
+            
+            for (NSInteger i = (NSInteger)_messageServices.count - 1; i >= 0; i--)
+            {
+                id<MTMessageService> messageService = _messageServices[(NSUInteger)i];
+                
+                if ([messageService respondsToSelector:@selector(mtProtoAuthTokenUpdated:)])
+                    [messageService mtProtoAuthTokenUpdated:self];
+            }
         }
     }];
 }

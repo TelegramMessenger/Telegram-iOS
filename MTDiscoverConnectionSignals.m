@@ -151,6 +151,9 @@ typedef struct {
             [bestAddressList addObject:address];
     }
     
+    if (bestAddressList.count == 0 && media)
+        [bestAddressList addObjectsFromArray:addressList];
+    
     NSMutableArray *bestTcp4Signals = [[NSMutableArray alloc] init];
     NSMutableArray *bestTcp6Signals = [[NSMutableArray alloc] init];
     NSMutableArray *bestHttpSignals = [[NSMutableArray alloc] init];
