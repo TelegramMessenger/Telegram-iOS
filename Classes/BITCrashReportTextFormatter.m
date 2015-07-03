@@ -344,10 +344,12 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
         processPath = report.processInfo.processPath;
         
         /* Remove username from the path */
+#if TARGET_IPHONE_SIMULATOR
         if ([processPath length] > 0)
           processPath = [processPath stringByAbbreviatingWithTildeInPath];
         if ([processPath length] > 0 && [[processPath substringToIndex:1] isEqualToString:@"~"])
           processPath = [NSString stringWithFormat:@"/Users/USER%@", [processPath substringFromIndex:1]];
+#endif
       }
       
       /* Parent Process Name */
@@ -562,11 +564,17 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
     
     /* Remove username from the image path */
     NSString *imageName = @"";
-    if (imageInfo.imageName && [imageInfo.imageName length] > 0)
+    if (imageInfo.imageName && [imageInfo.imageName length] > 0) {
+#if TARGET_IPHONE_SIMULATOR
       imageName = [imageInfo.imageName stringByAbbreviatingWithTildeInPath];
+#else
+      imageName = imageInfo.imageName;
+#endif
+    }
+#if TARGET_IPHONE_SIMULATOR
     if ([imageName length] > 0 && [[imageName substringToIndex:1] isEqualToString:@"~"])
       imageName = [NSString stringWithFormat:@"/Users/USER%@", [imageName substringFromIndex:1]];
-    
+#endif
     [text appendFormat: fmt,
      imageInfo.imageBaseAddress,
      imageInfo.imageBaseAddress + (MAX(1, imageInfo.imageSize) - 1), // The Apple format uses an inclusive range
