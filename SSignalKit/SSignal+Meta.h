@@ -9,5 +9,6 @@
 - (SSignal *)mapToQueue:(SSignal *(^)(id))f;
 - (SSignal *)then:(SSignal *)signal;
 - (SSignal *)queue;
++ (SSignal *)defer:(SSignal *(^)())generator;
 
 @end

@@ -6,6 +6,9 @@ public final class Bag<T> {
     private var items: [T] = []
     private var itemKeys: [Index] = []
     
+    public Bag() {
+    }
+    
     public func add(item: T) -> Index {
         let key = self.nextIndex
         self.nextIndex++

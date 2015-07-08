@@ -57,6 +57,16 @@ public final class Queue {
         }
     }
     
+    public func sync(f: Void -> Void) {
+        if self.specific != nil && dispatch_get_specific(QueueSpecificKey) == self.specific {
+            f()
+        } else if self.specialIsMainQueue && NSThread.isMainThread() {
+            f()
+        } else {
+            dispatch_sync(self.nativeQueue, f)
+        }
+    }
+    
     public func dispatch(f: Void -> Void) {
         if self.specific != nil && dispatch_get_specific(QueueSpecificKey) == self.specific {
             f()

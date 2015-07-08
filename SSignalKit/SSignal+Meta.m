@@ -224,4 +224,21 @@
     }];
 }
 
++ (SSignal *)defer:(SSignal *(^)())generator
+{
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        return [generator() startWithNext:^(id next)
+        {
+            [subscriber putNext:next];
+        } error:^(id error)
+        {
+            [subscriber putError:error];
+        } completed:^
+        {
+            [subscriber putCompletion];
+        }];
+    }];
+}
+
 @end
