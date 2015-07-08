@@ -228,7 +228,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
   NSString *codeType = nil;
   {
     /* Attempt to derive the code type from the binary images */
-    for (PLCrashReportBinaryImageInfo *image in report.images) {
+    for (BITPLCrashReportBinaryImageInfo *image in report.images) {
       /* Skip images with no specified type */
       if (image.codeType == nil)
         continue;
