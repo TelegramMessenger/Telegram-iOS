@@ -6,7 +6,7 @@ public final class Bag<T> {
     private var items: [T] = []
     private var itemKeys: [Index] = []
     
-    public Bag() {
+    public init() {
     }
     
     public func add(item: T) -> Index {
