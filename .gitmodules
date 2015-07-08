@@ -1,0 +1,3 @@
+[submodule "submodules/sqlite.swift"]
+	path = submodules/sqlite.swift
+	url = https://github.com/stephencelis/SQLite.swift.git
