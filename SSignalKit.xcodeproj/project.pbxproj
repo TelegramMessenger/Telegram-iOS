@@ -61,7 +61,6 @@
 		D0085B1C1B28285400EAF753 /* STimer.m in Sources */ = {isa = PBXBuildFile; fileRef = D0085AE61B28285400EAF753 /* STimer.m */; };
 		D0085B271B282B9800EAF753 /* SwiftSignalKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D0085B261B282B9800EAF753 /* SwiftSignalKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0085B2D1B282B9800EAF753 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0085B221B282B9800EAF753 /* SwiftSignalKit.framework */; };
-		D0085B4F1B282BEE00EAF753 /* SwiftSignalKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D0085B3B1B282BEE00EAF753 /* SwiftSignalKit.h */; };
 		D0085B501B282BEE00EAF753 /* Signal_Timing.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0085B3C1B282BEE00EAF753 /* Signal_Timing.swift */; };
 		D0085B511B282BEE00EAF753 /* Signal_SideEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0085B3D1B282BEE00EAF753 /* Signal_SideEffects.swift */; };
 		D0085B521B282BEE00EAF753 /* Signal_Dispatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0085B3E1B282BEE00EAF753 /* Signal_Dispatch.swift */; };
@@ -409,7 +408,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0085B271B282B9800EAF753 /* SwiftSignalKit.h in Headers */,
-				D0085B4F1B282BEE00EAF753 /* SwiftSignalKit.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -529,7 +527,7 @@
 			isa = PBXProject;
 			attributes = {
 				LastSwiftUpdateCheck = 0700;
-				LastUpgradeCheck = 0610;
+				LastUpgradeCheck = 0640;
 				ORGANIZATIONNAME = Telegram;
 				TargetAttributes = {
 					D0085B211B282B9800EAF753 = {

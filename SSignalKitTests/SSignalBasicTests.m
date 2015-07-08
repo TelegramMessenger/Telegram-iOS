@@ -171,42 +171,6 @@
     XCTAssertTrue(generated);
 }
 
-- (void)testInplaceMap
-{
-    bool deallocated = false;
-    __block bool disposed = false;
-    __block bool generated = false;
-    
-    @autoreleasepool
-    {
-        DeallocatingObject *object = [[DeallocatingObject alloc] initWithDeallocated:&deallocated];
-        SSignal *signal = [[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
-        {
-            [subscriber putNext:@1];
-            __unused id a0 = [object description];
-            return [[SBlockDisposable alloc] initWithBlock:^
-            {
-                __unused id a1 = [object description];
-                disposed = true;
-            }];
-        }] _mapInplace:^id(id value)
-        {
-            __unused id a1 = [object description];
-            return @([value intValue] * 2);
-        }];
-        
-        id<SDisposable> disposable = [signal startWithNext:^(id value)
-        {
-            generated = [value isEqual:@2];
-        } error:nil completed:nil];
-        [disposable dispose];
-    }
-    
-    XCTAssertTrue(deallocated);
-    XCTAssertTrue(disposed);
-    XCTAssertTrue(generated);
-}
-
 - (void)testSubscriberDisposal
 {
     __block bool disposed = false;
