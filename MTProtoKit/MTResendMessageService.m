@@ -135,7 +135,7 @@
         if ([delegate respondsToSelector:@selector(resendMessageServiceCompleted:)])
             [delegate resendMessageServiceCompleted:self];
     }
-    else if ([message.body isKindOfClass:[MTMsgsStateInfoMessage class]] && ((MTMsgsStateInfoMessage *)message.body).requestMessageId)
+    else if ([message.body isKindOfClass:[MTMsgsStateInfoMessage class]] && ((MTMsgsStateInfoMessage *)message.body).requestMessageId == _currentRequestMessageId)
     {
         id<MTResendMessageServiceDelegate> delegate = _delegate;
         if ([delegate respondsToSelector:@selector(resendMessageServiceCompleted:)])
