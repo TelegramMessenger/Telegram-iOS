@@ -1,11 +1,11 @@
 import Foundation
 
-public struct PeerId: Hashable, Printable {
+public struct PeerId: Hashable, Printable, Comparable {
     public typealias Namespace = Int32
     public typealias Id = Int32
     
-    let namespace: Namespace
-    let id: Id
+    public let namespace: Namespace
+    public let id: Id
     
     public init(namespace: Namespace, id: Id) {
         self.namespace = namespace
@@ -51,6 +51,18 @@ public struct PeerId: Hashable, Printable {
 
 public func ==(lhs: PeerId, rhs: PeerId) -> Bool {
     return lhs.id == rhs.id && lhs.namespace == rhs.namespace
+}
+
+public func <(lhs: PeerId, rhs: PeerId) -> Bool {
+    if lhs.namespace != rhs.namespace {
+        return lhs.namespace < rhs.namespace
+    }
+    
+    if lhs.id != rhs.id {
+        return lhs.id < rhs.id
+    }
+    
+    return false
 }
 
 public protocol Peer: Coding {

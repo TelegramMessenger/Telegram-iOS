@@ -3,6 +3,8 @@ import Foundation
 import SwiftSignalKit
 
 public final class Postbox {
+    static let PeerTagGeneral = 0
+    
     public class Modifier {
         private unowned var postbox: Postbox
         
@@ -20,7 +22,6 @@ public final class Postbox {
     }
     
     private let basePath: String
-    private let ownerId: PeerId
     private let messageNamespaces: [MessageId.Namespace]
     
     private let queue = SwiftSignalKit.Queue()
@@ -28,9 +29,8 @@ public final class Postbox {
     
     private var peerMessageViews: [PeerId : Bag<(MutableMessageView, Pipe<MessageView>)>] = [:]
     
-    public init(basePath: String, ownerId: PeerId, messageNamespaces: [MessageId.Namespace]) {
+    public init(basePath: String, messageNamespaces: [MessageId.Namespace]) {
         self.basePath = basePath
-        self.ownerId = ownerId
         self.messageNamespaces = messageNamespaces
         self.openDatabase()
     }
@@ -51,16 +51,11 @@ public final class Postbox {
     }
     
     private func createSchema() {
-        self.database.transaction()
-        
         //state
         self.database.execute("CREATE TABLE state (key INTEGER PRIMARY KEY, data BLOB)")
         
         //peer_messages
         self.database.execute("CREATE TABLE peer_messages (peerId INTEGER, namespace INTEGER, id INTEGER, data BLOB, associatedMediaIds BLOB, timestamp INTEGER, PRIMARY KEY(peerId, namespace, id))")
-        
-        //peer_maxread
-        self.database.execute("CREATE TABLE peer_maxread (peerId INTEGER, namespace INTEGER, id INTEGER)")
         
         //peer_media
         self.database.execute("CREATE TABLE peer_media (peerId INTEGER, mediaNamespace INTEGER, messageNamespace INTEGER, messageId INTEGER, PRIMARY KEY (peerId, mediaNamespace, messageNamespace, messageId))")
@@ -72,19 +67,95 @@ public final class Postbox {
         //media_cleanup
         self.database.execute("CREATE TABLE media_cleanup (namespace INTEGER, id INTEGER, data BLOB, PRIMARY KEY(namespace, id))")
         
-        //messages_readstate
-        self.database.execute("CREATE TABLE messages_readstate (peerId INTEGER, namespace INTEGER, maxUnreadIncomingId INTEGER, maxUnreadOutgoingId INTEGER, incomingUnreadCount INTEGER, PRIMARY KEY (peerId, namespace))")
-        
-        //top_messages
-        self.database.execute("CREATE TABLE top_messages (peerId INTEGER PRIMARY KEY, timestamp INTEGER)")
+        //peer_entries
+        self.database.execute("CREATE TABLE peer_entries (entry BLOB)")
+        self.database.execute("CREATE INDEX peer_entries_entry on peer_entries (entry)")
         
         //peers
         self.database.execute("CREATE TABLE peers (peerId INTEGER PRIMARY KEY, data BLOB)")
+    }
+    
+    public func _testBlobsPrepare(range: Int) {
+        self.database.execute("CREATE TABLE test_blobs (number INTEGER, data BLOB)")
+        self.database.execute("CREATE INDEX test_blobs_index_data ON test_blobs (data)")
         
-        //user_statuses
-        self.database.execute("CREATE TABLE user_statuses (id INTEGER PRIMARY KEY, data BLOB)")
+        self.database.transaction()
+        let insert = self.database.prepare("INSERT INTO test_blobs (number, data) VALUES (?, ?)")
         
+        for i in 0 ..< range {
+            var value = Int32(bigEndian: Int32(i))
+            let blob = Blob(bytes: &value, length: 4)
+            insert.run(Int64(i), blob)
+        }
         self.database.commit()
+    }
+    
+    public func _testBlobsTest(range: Int) {
+        let select = self.database.prepare("SELECT number FROM test_blobs WHERE data < ? ORDER BY data DESC LIMIT 1")
+        
+        for i in 1 ..< 1000 {
+            var value = 1 + Int32(arc4random_uniform(UInt32(range - 1)))
+            var binary = Int32(bigEndian: value)
+            var found = false
+            for row in select.run(Blob(bytes: &binary, length: 4)) {
+                found = true
+                let selected = Int32(row[0] as! Int64)
+                if selected != value - 1 {
+                    assertionFailure("invalid value \(selected) != \(value - 1)")
+                }
+                break
+            }
+            if !found {
+                assertionFailure("value not found for \(value - 1)")
+            }
+        }
+    }
+    
+    private class func peerViewEntryIndexForBlob(blob: Blob) -> PeerViewEntryIndex {
+        let buffer = ReadBuffer(memory: UnsafeMutablePointer(blob.data.bytes), length: blob.data.length, freeWhenDone: false)
+        var offset: Int = 0
+        
+        var timestamp: Int32 = 0
+        buffer.read(&timestamp, offset: offset, length: 4)
+        timestamp = Int32(bigEndian: timestamp)
+        offset += 4
+        
+        var namespace: Int32 = 0
+        buffer.read(&namespace, offset: offset, length: 4)
+        namespace = Int32(bigEndian: namespace)
+        offset += 4
+        
+        var id: Int32 = 0
+        buffer.read(&id, offset: offset, length: 4)
+        id = Int32(bigEndian: id)
+        offset += 4
+        
+        var peerIdRepresentation: Int64 = 0
+        buffer.read(&peerIdRepresentation, offset: offset, length: 8)
+        peerIdRepresentation = Int64(bigEndian: peerIdRepresentation)
+        offset += 8
+        
+        let peerId = PeerId(peerIdRepresentation)
+        
+        return PeerViewEntryIndex(peerId: peerId, messageIndex: MessageIndex(id: MessageId(peerId:peerId, namespace: namespace, id: id), timestamp: timestamp))
+    }
+    
+    private class func blobForPeerViewEntryIndex(index: PeerViewEntryIndex) -> Blob {
+        let buffer = WriteBuffer()
+        
+        var timestamp = Int32(bigEndian: index.messageIndex.timestamp)
+        buffer.write(&timestamp, offset: 0, length: 4)
+        
+        var namespace = Int32(bigEndian: index.messageIndex.id.namespace)
+        buffer.write(&namespace, offset: 0, length: 4)
+        
+        var id = Int32(bigEndian: index.messageIndex.id.id)
+        buffer.write(&id, offset: 0, length: 4)
+        
+        var peerIdRepresentation = Int64(bigEndian: index.peerId.toInt64())
+        buffer.write(&peerIdRepresentation, offset: 0, length: 8)
+        
+        return Blob(data: buffer.makeData())
     }
     
     private class func messageIdsGroupedByNamespace(ids: [MessageId]) -> [MessageId.Namespace : [MessageId]] {

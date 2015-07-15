@@ -175,7 +175,6 @@ public final class MutableMessageView: Printable {
             }
             
             self.later.removeAll(keepCapacity: true)
-            
             if anchorIndex + 1 < addedMessages.count {
                 for namespace in self.namespaces {
                     var i = anchorIndex + 1

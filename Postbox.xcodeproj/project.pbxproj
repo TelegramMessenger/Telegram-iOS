@@ -28,6 +28,7 @@
 		D0D224F21B4D6ABD0085E26D /* Functions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D224ED1B4D6ABD0085E26D /* Functions.swift */; };
 		D0D224F31B4D6ABD0085E26D /* Query.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D224EE1B4D6ABD0085E26D /* Query.swift */; };
 		D0D224F41B4D6ABD0085E26D /* Schema.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D224EF1B4D6ABD0085E26D /* Schema.swift */; };
+		D0D225261B4D84930085E26D /* PeerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D225251B4D84930085E26D /* PeerView.swift */; };
 		D0E3A7501B28A7E300A402D9 /* Postbox.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E3A74F1B28A7E300A402D9 /* Postbox.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0E3A7561B28A7E300A402D9 /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0E3A74A1B28A7E300A402D9 /* Postbox.framework */; };
 		D0E3A75D1B28A7E300A402D9 /* PostboxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E3A75C1B28A7E300A402D9 /* PostboxTests.swift */; };
@@ -71,6 +72,7 @@
 		D0D224ED1B4D6ABD0085E26D /* Functions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Functions.swift; path = submodules/sqlite.swift/SQLite/Functions.swift; sourceTree = SOURCE_ROOT; };
 		D0D224EE1B4D6ABD0085E26D /* Query.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Query.swift; path = submodules/sqlite.swift/SQLite/Query.swift; sourceTree = SOURCE_ROOT; };
 		D0D224EF1B4D6ABD0085E26D /* Schema.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Schema.swift; path = submodules/sqlite.swift/SQLite/Schema.swift; sourceTree = SOURCE_ROOT; };
+		D0D225251B4D84930085E26D /* PeerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerView.swift; sourceTree = "<group>"; };
 		D0E3A74A1B28A7E300A402D9 /* Postbox.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Postbox.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E3A74E1B28A7E300A402D9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0E3A74F1B28A7E300A402D9 /* Postbox.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Postbox.h; sourceTree = "<group>"; };
@@ -180,6 +182,7 @@
 				D0E3A79D1B28B50400A402D9 /* Message.swift */,
 				D0E3A7A11B28B7DC00A402D9 /* Media.swift */,
 				D003E4E51B38DBDB00C22CBC /* MessageView.swift */,
+				D0D225251B4D84930085E26D /* PeerView.swift */,
 				D0E3A7811B28ADD000A402D9 /* Postbox.swift */,
 				D0E3A74D1B28A7E300A402D9 /* Supporting Files */,
 			);
@@ -342,6 +345,7 @@
 				D07516791B2EC90400AE42E0 /* SQLite-Bridging.m in Sources */,
 				D0D224F21B4D6ABD0085E26D /* Functions.swift in Sources */,
 				D07516711B2EC7FE00AE42E0 /* Statement.swift in Sources */,
+				D0D225261B4D84930085E26D /* PeerView.swift in Sources */,
 				D0E3A7841B28AE0900A402D9 /* Peer.swift in Sources */,
 				D075166A1B2EC7FE00AE42E0 /* Database.swift in Sources */,
 				D0D224F41B4D6ABD0085E26D /* Schema.swift in Sources */,

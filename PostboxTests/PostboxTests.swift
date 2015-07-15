@@ -16,6 +16,22 @@ enum TestMediaNamespace: MediaId.Namespace {
     case Test = 0
 }
 
+class TestPeer: Peer {
+    var id: PeerId
+    
+    init(id: PeerId) {
+        self.id = id
+    }
+    
+    required init(decoder: Decoder) {
+        self.id = PeerId(decoder.decodeInt64ForKey("id"))
+    }
+    
+    func encode(encoder: Encoder) {
+        encoder.encodeInt64(self.id.toInt64(), forKey: "id")
+    }
+}
+
 class TestMessage: Message {
     var id: MessageId
     var authorId: PeerId
@@ -97,7 +113,7 @@ class PostboxTests: XCTestCase {
         
         let basePath = "/tmp/postboxtest"
         NSFileManager.defaultManager().removeItemAtPath(basePath, error: nil)
-        let postbox = Postbox(basePath: basePath, ownerId: ownerId, messageNamespaces: [messageNamespace])
+        let postbox = Postbox(basePath: basePath, messageNamespaces: [messageNamespace])
         postbox.modify { state in
             let testMedia = TestMedia(id: MediaId(namespace: TestMediaNamespace.Test.rawValue, id: 1))
             for i in 0 ..< 10 {
@@ -586,7 +602,7 @@ class PostboxTests: XCTestCase {
         
         let basePath = "/tmp/postboxtest"
         NSFileManager.defaultManager().removeItemAtPath(basePath, error: nil)
-        let postbox = Postbox(basePath: basePath, ownerId: ownerId, messageNamespaces: [messageNamespace])
+        let postbox = Postbox(basePath: basePath, messageNamespaces: [messageNamespace])
         
         postbox.modify { state in
             let testMedia = TestMedia(id: MediaId(namespace: TestMediaNamespace.Test.rawValue, id: 1))
@@ -626,7 +642,7 @@ class PostboxTests: XCTestCase {
         
         let basePath = "/tmp/postboxtest"
         NSFileManager.defaultManager().removeItemAtPath(basePath, error: nil)
-        let postbox = Postbox(basePath: basePath, ownerId: ownerId, messageNamespaces: [messageNamespaceCloud, messageNamespaceLocal])
+        let postbox = Postbox(basePath: basePath, messageNamespaces: [messageNamespaceCloud, messageNamespaceLocal])
         
         postbox.modify { state in
             let testMedia = TestMedia(id: MediaId(namespace: TestMediaNamespace.Test.rawValue, id: 1))
@@ -659,5 +675,102 @@ class PostboxTests: XCTestCase {
         }
         
         postbox._sync()
+    }
+    
+    func testPeerView() {
+        let view = MutablePeerView(tags: [], count: 3, earlier: nil, entries: [], later: nil)
+        let messageNamespaceCloud = TestMessageNamespace.Cloud.rawValue
+        let otherId = PeerId(namespace: TestPeerNamespace.User.rawValue, id: 2000)
+        
+        var entries: [PeerViewEntry] = []
+        
+        func print(entries: [PeerViewEntry]) {
+            var string = ""
+            string += "["
+            var first = true
+            for entry in entries {
+                if first {
+                    first = false
+                } else {
+                    string += ", "
+                }
+                string += "(p \(entry.peer.id.namespace):\(entry.peer.id.id), m \(entry.message.id.namespace):\(entry.message.id.id)—\(entry.message.timestamp))"
+            }
+            string += "]"
+            println("\(string)")
+        }
+        
+        func add(entry: PeerViewEntry) {
+            entries.append(entry)
+            entries.sort({ PeerViewEntryIndex($0) < PeerViewEntryIndex($1) })
+            
+            view.addEntry(entry)
+            
+            println("\n\(view)")
+            print(entries)
+        }
+        
+        func remove(peerId: PeerId, context: MutablePeerView.RemoveContext? = nil) -> MutablePeerView.RemoveContext {
+            entries = entries.filter({ $0.peer.id != peerId })
+            return view.removeEntry(context, peerId: peerId)
+        }
+        
+        func fetchEarlier(entries: [PeerViewEntry])(index: PeerViewEntryIndex?, count: Int) -> [PeerViewEntry] {
+            var filtered: [PeerViewEntry] = []
+            var i = entries.count - 1
+            while i >= 0 && filtered.count < count {
+                if index == nil || PeerViewEntryIndex(entries[i]) < index! {
+                    filtered.append(entries[i])
+                }
+                i--
+            }
+            
+            return filtered
+        }
+        
+        func fetchLater(entries: [PeerViewEntry])(index: PeerViewEntryIndex?, count: Int) -> [PeerViewEntry] {
+            var filtered: [PeerViewEntry] = []
+            var i = 0
+            while i < entries.count && filtered.count < count {
+                if index == nil || PeerViewEntryIndex(entries[i]) > index! {
+                    filtered.append(entries[i])
+                }
+                i++
+            }
+            
+            return filtered
+        }
+        
+        func complete(context: MutablePeerView.RemoveContext) {
+            view.complete(context, fetchEarlier: fetchEarlier(entries), fetchLater: fetchLater(entries))
+        }
+        
+        println("\(view)")
+        
+        for i in 1 ..< 10 {
+            let messageId = MessageId(peerId: otherId, namespace: messageNamespaceCloud, id: Int32(i * 2 * 100))
+            let message = TestMessage(id: messageId, authorId: otherId, date: Int32(i * 2 * 100), text: "\(i)", referencedMediaIds: [])
+            
+            add(PeerViewEntry(peer: TestPeer(id: PeerId(namespace: TestPeerNamespace.User.rawValue, id: Int32(i * 2))), message: message))
+        }
+        
+        if true {
+            let i = 15
+            let messageId = MessageId(peerId: otherId, namespace: messageNamespaceCloud, id: Int32(i * 100))
+            let message = TestMessage(id: messageId, authorId: otherId, date: Int32(i * 100), text: "\(i)", referencedMediaIds: [])
+            
+            add(PeerViewEntry(peer: TestPeer(id: PeerId(namespace: TestPeerNamespace.User.rawValue, id: Int32(i))), message: message))
+        }
+        
+        if true {
+            var context = remove(PeerId(namespace: TestPeerNamespace.User.rawValue, id: Int32(15)))
+            context = remove(PeerId(namespace: TestPeerNamespace.User.rawValue, id: Int32(14)), context: context)
+            context = remove(PeerId(namespace: TestPeerNamespace.User.rawValue, id: Int32(16)), context: context)
+            context = remove(PeerId(namespace: TestPeerNamespace.User.rawValue, id: Int32(18)), context: context)
+            println("\n\(view)")
+            print(entries)
+            complete(context)
+            println("\(view)")
+        }
     }
 }
