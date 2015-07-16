@@ -373,10 +373,16 @@ public final class Postbox<State: PostboxState> {
         return result
     }
     
-    public func setKeychainEntry(key: String, value: NSData) {
+    public func setKeychainEntryForKey(key: String, value: NSData) {
         self.queue.dispatch {
             let keyBlob = Blob(data: key.dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: true)!)
             self.database.prepareCached("INSERT OR REPLACE INTO keychain (key, data) VALUES (?, ?)").run(keyBlob, Blob(data: value))
+        }
+    }
+    
+    public func removeKeychainEntryForKey(key: String) {
+        self.queue.dispatch {
+            self.database.prepareCached("DELETE FROM keychain WHERE key = ?").run(keyBlob)
         }
     }
     
