@@ -358,23 +358,17 @@ public final class Postbox<State: PostboxState> {
         }
     }
     
-    public func keychainEntryForKey(key: String) -> Signal<ReadBuffer?, NoError> {
-        return Signal { subscriber in
-            self.queue.dispatch {
-                let blob = Blob(data: key.dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: true)!)
-                var buffer: ReadBuffer?
-                for row in self.database.prepareCached("SELECT data FROM keychain WHERE key = ?").run(blob) {
-                    let data = (row[0] as! Blob).data
-                    let memory = malloc(data.length)
-                    memcpy(memory, data.bytes, data.length)
-                    buffer = ReadBuffer(memory: UnsafeMutablePointer(memory), length: data.length, freeWhenDone: true)
-                    break
-                }
-                subscriber.putNext(buffer)
-                subscriber.putCompletion()
+    public func keychainEntryForKey(key: String) -> NSData? {
+        var result: NSData?
+        self.queue.sync {
+            let blob = Blob(data: key.dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: true)!)
+            var buffer: ReadBuffer?
+            for row in self.database.prepareCached("SELECT data FROM keychain WHERE key = ?").run(blob) {
+                result = (row[0] as! Blob).data
+                break
             }
-            return EmptyDisposable
         }
+        return result
     }
     
     public func setKeychainEntry(key: String, value: NSData) {
