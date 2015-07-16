@@ -3,25 +3,26 @@ import Foundation
 import SwiftSignalKit
 
 public protocol PostboxState: Coding {
+    
 }
 
 public class Modifier<State: PostboxState> {
-    private unowned var postbox: Postbox<State>
+    private weak var postbox: Postbox<State>?
     
     private init(postbox: Postbox<State>) {
         self.postbox = postbox
     }
     
     public func addMessages(messages: [Message], medias: [Media]) {
-        self.postbox.addMessages(messages, medias: medias)
+        self.postbox?.addMessages(messages, medias: medias)
     }
     
     public func deleteMessagesWithIds(ids: [MessageId]) {
-        self.postbox.deleteMessagesWithIds(ids)
+        self.postbox?.deleteMessagesWithIds(ids)
     }
     
     public func setState(state: State) {
-        self.postbox.setState(state)
+        self.postbox?.setState(state)
     }
 }
 
@@ -60,6 +61,9 @@ public final class Postbox<State: PostboxState> {
     private func createSchema() {
         //state
         self.database.execute("CREATE TABLE state (id INTEGER, data BLOB)")
+        
+        //keychain
+        self.database.execute("CREATE TABLE keychain (key BLOB, data BLOB)")
         
         //peer_messages
         self.database.execute("CREATE TABLE peer_messages (peerId INTEGER, namespace INTEGER, id INTEGER, data BLOB, associatedMediaIds BLOB, timestamp INTEGER, PRIMARY KEY(peerId, namespace, id))")
@@ -351,6 +355,32 @@ public final class Postbox<State: PostboxState> {
                 }))
             }
             return disposable
+        }
+    }
+    
+    public func keychainEntryForKey(key: String) -> Signal<ReadBuffer?, NoError> {
+        return Signal { subscriber in
+            self.queue.dispatch {
+                let blob = Blob(data: key.dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: true)!)
+                var buffer: ReadBuffer?
+                for row in self.database.prepareCached("SELECT data FROM keychain WHERE key = ?").run(blob) {
+                    let data = (row[0] as! Blob).data
+                    let memory = malloc(data.length)
+                    memcpy(memory, data.bytes, data.length)
+                    buffer = ReadBuffer(memory: UnsafeMutablePointer(memory), length: data.length, freeWhenDone: true)
+                    break
+                }
+                subscriber.putNext(buffer)
+                subscriber.putCompletion()
+            }
+            return EmptyDisposable
+        }
+    }
+    
+    public func setKeychainEntry(key: String, value: NSData) {
+        self.queue.dispatch {
+            let keyBlob = Blob(data: key.dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: true)!)
+            self.database.prepareCached("INSERT OR REPLACE INTO keychain (key, data) VALUES (?, ?)").run(keyBlob, Blob(data: value))
         }
     }
     
