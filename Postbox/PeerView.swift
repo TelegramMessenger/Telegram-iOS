@@ -1,11 +1,19 @@
 import Foundation
 
 public class PeerViewEntry {
-    public let peer: Peer
+    public let peerId: PeerId
+    public let peer: Peer?
     public let message: Message
     
     public init(peer: Peer, message: Message) {
+        self.peerId = peer.id
         self.peer = peer
+        self.message = message
+    }
+    
+    public init(peerId: PeerId, message: Message) {
+        self.peerId = peerId
+        self.peer = nil
         self.message = message
     }
 }
@@ -15,7 +23,7 @@ public struct PeerViewEntryIndex: Equatable, Comparable {
     public let messageIndex: MessageIndex
     
     public init(_ entry: PeerViewEntry) {
-        self.peerId = entry.peer.id
+        self.peerId = entry.peerId
         self.messageIndex = MessageIndex(entry.message)
     }
     
@@ -52,14 +60,12 @@ public final class MutablePeerView: Printable {
         var removedEntries = false
     }
     
-    let tags: [Int32]
     let count: Int
     var earlier: PeerViewEntry?
     var later: PeerViewEntry?
     var entries: [PeerViewEntry]
     
-    public init(tags: [Int32], count: Int, earlier: PeerViewEntry?, entries: [PeerViewEntry], later: PeerViewEntry?) {
-        self.tags = tags
+    public init(count: Int, earlier: PeerViewEntry?, entries: [PeerViewEntry], later: PeerViewEntry?) {
         self.count = count
         self.earlier = earlier
         self.entries = entries
@@ -70,20 +76,20 @@ public final class MutablePeerView: Printable {
         var invalidationContext = context ?? RemoveContext()
         
         if let earlier = self.earlier {
-            if peerId == earlier.peer.id {
+            if peerId == earlier.peerId {
                 invalidationContext.invalidEarlier = true
             }
         }
         
         if let later = self.later {
-            if peerId == later.peer.id {
+            if peerId == later.peerId {
                 invalidationContext.invalidLater = true
             }
         }
         
         var i = 0
         while i < self.entries.count {
-            if self.entries[i].peer.id == peerId {
+            if self.entries[i].peerId == peerId {
                 self.entries.removeAtIndex(i)
                 invalidationContext.removedEntries = true
                 break
@@ -251,7 +257,7 @@ public final class MutablePeerView: Printable {
         
         if let earlier = self.earlier {
             string += "more("
-            string += "(p \(earlier.peer.id.namespace):\(earlier.peer.id.id), m \(earlier.message.id.namespace):\(earlier.message.id.id)—\(earlier.message.timestamp)"
+            string += "(p \(earlier.peerId.namespace):\(earlier.peerId.id), m \(earlier.message.id.namespace):\(earlier.message.id.id)—\(earlier.message.timestamp)"
             string += ") "
         }
         
@@ -263,13 +269,65 @@ public final class MutablePeerView: Printable {
             } else {
                 string += ", "
             }
-            string += "(p \(entry.peer.id.namespace):\(entry.peer.id.id), m \(entry.message.id.namespace):\(entry.message.id.id)—\(entry.message.timestamp))"
+            string += "(p \(entry.peerId.namespace):\(entry.peerId.id), m \(entry.message.id.namespace):\(entry.message.id.id)—\(entry.message.timestamp))"
         }
         string += "]"
         
         if let later = self.later {
             string += " more("
-            string += "(p \(later.peer.id.namespace):\(later.peer.id.id), m \(later.message.id.namespace):\(later.message.id.id)—\(later.message.timestamp)"
+            string += "(p \(later.peerId.namespace):\(later.peerId), m \(later.message.id.namespace):\(later.message.id.id)—\(later.message.timestamp)"
+            string += ")"
+        }
+        
+        return string
+    }
+}
+
+public final class PeerView: Printable {
+    let earlier: PeerViewEntryIndex?
+    let later: PeerViewEntryIndex?
+    let entries: [PeerViewEntry]
+    
+    init(_ mutableView: MutablePeerView) {
+        if let earlier = mutableView.earlier {
+            self.earlier = PeerViewEntryIndex(earlier)
+        } else {
+            self.earlier = nil
+        }
+        
+        if let later = mutableView.later {
+            self.later = PeerViewEntryIndex(later)
+        } else {
+            self.later = nil
+        }
+        
+        self.entries = mutableView.entries
+    }
+    
+    public var description: String {
+        var string = ""
+        
+        if let earlier = self.earlier {
+            string += "more("
+            string += "(p \(earlier.peerId.namespace):\(earlier.peerId.id), m \(earlier.messageIndex.id.namespace):\(earlier.messageIndex.id.id)—\(earlier.messageIndex.timestamp)"
+            string += ") "
+        }
+        
+        string += "["
+        var first = true
+        for entry in self.entries {
+            if first {
+                first = false
+            } else {
+                string += ", "
+            }
+            string += "(p \(entry.peerId.namespace):\(entry.peerId.id), m \(entry.message.id.namespace):\(entry.message.id.id)—\(entry.message.timestamp))"
+        }
+        string += "]"
+        
+        if let later = self.later {
+            string += " more("
+            string += "(p \(later.peerId.namespace):\(later.peerId), m \(later.messageIndex.id.namespace):\(later.messageIndex.id.id)—\(later.messageIndex.timestamp)"
             string += ")"
         }
         

@@ -678,7 +678,7 @@ class PostboxTests: XCTestCase {
     }
     
     func testPeerView() {
-        let view = MutablePeerView(tags: [], count: 3, earlier: nil, entries: [], later: nil)
+        let view = MutablePeerView(count: 3, earlier: nil, entries: [], later: nil)
         let messageNamespaceCloud = TestMessageNamespace.Cloud.rawValue
         let otherId = PeerId(namespace: TestPeerNamespace.User.rawValue, id: 2000)
         
@@ -694,7 +694,7 @@ class PostboxTests: XCTestCase {
                 } else {
                     string += ", "
                 }
-                string += "(p \(entry.peer.id.namespace):\(entry.peer.id.id), m \(entry.message.id.namespace):\(entry.message.id.id)—\(entry.message.timestamp))"
+                string += "(p \(entry.peerId.namespace):\(entry.peerId.id), m \(entry.message.id.namespace):\(entry.message.id.id)—\(entry.message.timestamp))"
             }
             string += "]"
             println("\(string)")
@@ -711,7 +711,7 @@ class PostboxTests: XCTestCase {
         }
         
         func remove(peerId: PeerId, context: MutablePeerView.RemoveContext? = nil) -> MutablePeerView.RemoveContext {
-            entries = entries.filter({ $0.peer.id != peerId })
+            entries = entries.filter({ $0.peerId != peerId })
             return view.removeEntry(context, peerId: peerId)
         }
         
@@ -772,5 +772,47 @@ class PostboxTests: XCTestCase {
             complete(context)
             println("\(view)")
         }
+    }
+    
+    func testPeerViewTail() {
+        declareEncodable(TestMessage.self, { TestMessage(decoder: $0) })
+        declareEncodable(TestMedia.self, { TestMedia(decoder: $0) })
+        
+        let otherId = PeerId(namespace: TestPeerNamespace.User.rawValue, id: 2000)
+        let messageNamespace = TestMessageNamespace.Cloud.rawValue
+        
+        let basePath = "/tmp/postboxtest"
+        NSFileManager.defaultManager().removeItemAtPath(basePath, error: nil)
+        let postbox = Postbox(basePath: basePath, messageNamespaces: [messageNamespace])
+        
+        postbox.modify { state in
+            let testMedia = TestMedia(id: MediaId(namespace: TestMediaNamespace.Test.rawValue, id: 1))
+            for i in 0 ..< 10 {
+                let messageId = MessageId(peerId: otherId, namespace: messageNamespace, id: Int32(i + 1))
+                let message = TestMessage(id: messageId, authorId: otherId, date: Int32(i + 100), text: "\(i)", referencedMediaIds: [testMedia.id])
+                state.addMessages([message, message], medias: [testMedia])
+            }
+            return
+        }
+        
+        postbox.tailPeerView(3).start(next: { next in
+            println(next)
+        })
+        
+        postbox.tailMessageViewForPeerId(otherId, count: 4).start(next: { next in
+            println(next)
+        })
+        
+        postbox.modify { state in
+            let testMedia = TestMedia(id: MediaId(namespace: TestMediaNamespace.Test.rawValue, id: 1))
+            for i in 10 ..< 15 {
+                let messageId = MessageId(peerId: otherId, namespace: messageNamespace, id: Int32(i + 1))
+                let message = TestMessage(id: messageId, authorId: otherId, date: Int32(i + 100), text: "\(i)", referencedMediaIds: [testMedia.id])
+                state.addMessages([message, message], medias: [testMedia])
+            }
+            return
+        }
+        
+        postbox._sync()
     }
 }

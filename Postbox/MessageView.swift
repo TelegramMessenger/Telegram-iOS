@@ -11,6 +11,10 @@ public final class MutableMessageView: Printable {
             self.invalidLater = []
             self.removedMessages = false
         }
+        
+        func empty() -> Bool {
+            return !self.removedMessages && self.invalidEarlier.count == 0 && self.invalidLater.count == 0
+        }
     }
     
     let namespaces: [MessageId.Namespace]
