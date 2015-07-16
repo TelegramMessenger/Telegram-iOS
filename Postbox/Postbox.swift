@@ -359,6 +359,8 @@ public final class Postbox<State: PostboxState> {
     }
     
     public func keychainEntryForKey(key: String) -> NSData? {
+        //TODO: load keychain on first request then sync to disk
+        
         var result: NSData?
         self.queue.sync {
             let blob = Blob(data: key.dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: true)!)
