@@ -93,7 +93,7 @@ class TestMedia: Media {
     }
 }
 
-class EmptyState: Coding {
+class EmptyState: PostboxState {
     required init(decoder: Decoder) {
     }
     

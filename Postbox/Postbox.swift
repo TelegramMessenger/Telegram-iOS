@@ -2,7 +2,10 @@ import Foundation
 
 import SwiftSignalKit
 
-public class Modifier<State: Coding> {
+public protocol PostboxState: Coding {
+}
+
+public class Modifier<State: PostboxState> {
     private unowned var postbox: Postbox<State>
     
     private init(postbox: Postbox<State>) {
@@ -17,12 +20,12 @@ public class Modifier<State: Coding> {
         self.postbox.deleteMessagesWithIds(ids)
     }
     
-    public func setState(state: Coding) {
+    public func setState(state: State) {
         self.postbox.setState(state)
     }
 }
 
-public final class Postbox<State: Coding> {
+public final class Postbox<State: PostboxState> {
     private let basePath: String
     private let messageNamespaces: [MessageId.Namespace]
     
@@ -314,25 +317,34 @@ public final class Postbox<State: Coding> {
         return ids
     }
     
-    private func setState(state: Coding) {
-        let encoder = Encoder()
-        encoder.encodeRootObject(state)
-        let blob = Blob(data: encoder.makeData())
-        self.database.prepareCached("INSERT OR REPLACE INTO state (id, data) VALUES (?, ?)").run(Int64(0), blob)
+    private func setState(state: State) {
+        self.queue.dispatch {
+            let encoder = Encoder()
+            encoder.encodeRootObject(state)
+            let blob = Blob(data: encoder.makeData())
+            self.database.prepareCached("INSERT OR REPLACE INTO state (id, data) VALUES (?, ?)").run(Int64(0), blob)
+            
+            self.statePipe.putNext(state)
+        }
     }
     
-    public func state() -> Signal<State, NoError> {
+    public func state() -> Signal<State?, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.queue.dispatch {
+                var found = false
                 for row in self.database.prepareCached("SELECT data FROM state WHERE id = ?").run(Int64(0)) {
                     let data = (row[0] as! Blob).data
                     let buffer = ReadBuffer(memory: UnsafeMutablePointer(data.bytes), length: data.length, freeWhenDone: false)
                     let decoder = Decoder(buffer: buffer)
                     if let state = decoder.decodeRootObject() as? State {
+                        found = true
                         subscriber.putNext(state)
                     }
                     break
+                }
+                if !found {
+                    subscriber.putNext(nil)
                 }
                 disposable.set(self.statePipe.signal().start(next: { next in
                     subscriber.putNext(next)
