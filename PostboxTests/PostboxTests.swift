@@ -93,6 +93,14 @@ class TestMedia: Media {
     }
 }
 
+class EmptyState: Coding {
+    required init(decoder: Decoder) {
+    }
+    
+    func encode(encoder: Encoder) {
+    }
+}
+
 class PostboxTests: XCTestCase {
     
     override func setUp() {
@@ -113,8 +121,8 @@ class PostboxTests: XCTestCase {
         
         let basePath = "/tmp/postboxtest"
         NSFileManager.defaultManager().removeItemAtPath(basePath, error: nil)
-        let postbox = Postbox(basePath: basePath, messageNamespaces: [messageNamespace])
-        postbox.modify { state in
+        let postbox = Postbox<EmptyState>(basePath: basePath, messageNamespaces: [messageNamespace])
+        (postbox.modify { state -> Void in
             let testMedia = TestMedia(id: MediaId(namespace: TestMediaNamespace.Test.rawValue, id: 1))
             for i in 0 ..< 10 {
                 let messageId = MessageId(peerId: otherId, namespace: messageNamespace, id: Int32(i + 1))
@@ -122,27 +130,27 @@ class PostboxTests: XCTestCase {
                 state.addMessages([message, message], medias: [testMedia])
             }
             return
-        }
+        }).start()
         postbox._dumpTables()
         
-        postbox.modify { state in
+        (postbox.modify { state -> Void in
             var messageIds: [MessageId] = []
             for i in 0 ..< 5 {
                 let messageId = MessageId(peerId: otherId, namespace: messageNamespace, id: Int32(i + 1))
                 messageIds.append(messageId)
             }
             state.deleteMessagesWithIds(messageIds)
-        }
+        }).start()
         postbox._dumpTables();
         
-        postbox.modify { state in
+        (postbox.modify { state -> Void in
             var messageIds: [MessageId] = []
             for i in 0 ..< 10 {
                 let messageId = MessageId(peerId: otherId, namespace: messageNamespace, id: Int32(i + 1))
                 messageIds.append(messageId)
             }
             state.deleteMessagesWithIds(messageIds)
-        }
+        }).start()
         postbox._dumpTables();
     }
     
@@ -602,9 +610,9 @@ class PostboxTests: XCTestCase {
         
         let basePath = "/tmp/postboxtest"
         NSFileManager.defaultManager().removeItemAtPath(basePath, error: nil)
-        let postbox = Postbox(basePath: basePath, messageNamespaces: [messageNamespace])
+        let postbox = Postbox<EmptyState>(basePath: basePath, messageNamespaces: [messageNamespace])
         
-        postbox.modify { state in
+        (postbox.modify { state -> Void in
             let testMedia = TestMedia(id: MediaId(namespace: TestMediaNamespace.Test.rawValue, id: 1))
             for i in 0 ..< 10 {
                 let messageId = MessageId(peerId: otherId, namespace: messageNamespace, id: Int32(i + 1))
@@ -612,13 +620,13 @@ class PostboxTests: XCTestCase {
                 state.addMessages([message, message], medias: [testMedia])
             }
             return
-        }
+        }).start()
         
         postbox.tailMessageViewForPeerId(otherId, count: 4).start(next: { next in
             println(next)
         })
         
-        postbox.modify { state in
+        (postbox.modify { state -> Void in
             let testMedia = TestMedia(id: MediaId(namespace: TestMediaNamespace.Test.rawValue, id: 1))
             for i in 10 ..< 15 {
                 let messageId = MessageId(peerId: otherId, namespace: messageNamespace, id: Int32(i + 1))
@@ -626,7 +634,7 @@ class PostboxTests: XCTestCase {
                 state.addMessages([message, message], medias: [testMedia])
             }
             return
-        }
+        }).start()
         
         postbox._sync()
     }
@@ -642,9 +650,9 @@ class PostboxTests: XCTestCase {
         
         let basePath = "/tmp/postboxtest"
         NSFileManager.defaultManager().removeItemAtPath(basePath, error: nil)
-        let postbox = Postbox(basePath: basePath, messageNamespaces: [messageNamespaceCloud, messageNamespaceLocal])
+        let postbox = Postbox<EmptyState>(basePath: basePath, messageNamespaces: [messageNamespaceCloud, messageNamespaceLocal])
         
-        postbox.modify { state in
+        (postbox.modify { state -> Void in
             let testMedia = TestMedia(id: MediaId(namespace: TestMediaNamespace.Test.rawValue, id: 1))
             for i in 0 ..< 10 {
                 let messageId = MessageId(peerId: otherId, namespace: messageNamespaceCloud, id: Int32(i + 1))
@@ -657,14 +665,14 @@ class PostboxTests: XCTestCase {
                 state.addMessages([message, message], medias: [testMedia])
             }
             return
-        }
+        }).start()
         
         var i = 1000
         postbox.aroundMessageViewForPeerId(otherId, id: MessageId(peerId: otherId, namespace: messageNamespaceCloud, id: Int32(i + 1)), count: 3).start(next: { next in
             println(next)
         })
         
-        postbox.modify { state in
+        (postbox.modify { state -> Void in
             let testMedia = TestMedia(id: MediaId(namespace: TestMediaNamespace.Test.rawValue, id: 1))
             for i in 10 ..< 15 {
                 let messageId = MessageId(peerId: otherId, namespace: messageNamespaceCloud, id: Int32(i + 1))
@@ -672,7 +680,7 @@ class PostboxTests: XCTestCase {
                 state.addMessages([message, message], medias: [testMedia])
             }
             return
-        }
+        }).start()
         
         postbox._sync()
     }
@@ -783,9 +791,9 @@ class PostboxTests: XCTestCase {
         
         let basePath = "/tmp/postboxtest"
         NSFileManager.defaultManager().removeItemAtPath(basePath, error: nil)
-        let postbox = Postbox(basePath: basePath, messageNamespaces: [messageNamespace])
+        let postbox = Postbox<EmptyState>(basePath: basePath, messageNamespaces: [messageNamespace])
         
-        postbox.modify { state in
+        (postbox.modify { state -> Void in
             let testMedia = TestMedia(id: MediaId(namespace: TestMediaNamespace.Test.rawValue, id: 1))
             for i in 0 ..< 10 {
                 let messageId = MessageId(peerId: otherId, namespace: messageNamespace, id: Int32(i + 1))
@@ -793,7 +801,7 @@ class PostboxTests: XCTestCase {
                 state.addMessages([message, message], medias: [testMedia])
             }
             return
-        }
+        }).start()
         
         postbox.tailPeerView(3).start(next: { next in
             println(next)
@@ -803,7 +811,7 @@ class PostboxTests: XCTestCase {
             println(next)
         })
         
-        postbox.modify { state in
+        (postbox.modify { state -> Void in
             let testMedia = TestMedia(id: MediaId(namespace: TestMediaNamespace.Test.rawValue, id: 1))
             for i in 10 ..< 15 {
                 let messageId = MessageId(peerId: otherId, namespace: messageNamespace, id: Int32(i + 1))
@@ -811,7 +819,7 @@ class PostboxTests: XCTestCase {
                 state.addMessages([message, message], medias: [testMedia])
             }
             return
-        }
+        }).start()
         
         postbox._sync()
     }

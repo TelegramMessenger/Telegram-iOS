@@ -2,25 +2,27 @@ import Foundation
 
 import SwiftSignalKit
 
-public final class Postbox {
-    static let PeerTagGeneral = 0
+public class Modifier<State: Coding> {
+    private unowned var postbox: Postbox<State>
     
-    public class Modifier {
-        private unowned var postbox: Postbox
-        
-        private init(postbox: Postbox) {
-            self.postbox = postbox
-        }
-        
-        public func addMessages(messages: [Message], medias: [Media]) {
-            self.postbox.addMessages(messages, medias: medias)
-        }
-        
-        public func deleteMessagesWithIds(ids: [MessageId]) {
-            self.postbox.deleteMessagesWithIds(ids)
-        }
+    private init(postbox: Postbox<State>) {
+        self.postbox = postbox
     }
     
+    public func addMessages(messages: [Message], medias: [Media]) {
+        self.postbox.addMessages(messages, medias: medias)
+    }
+    
+    public func deleteMessagesWithIds(ids: [MessageId]) {
+        self.postbox.deleteMessagesWithIds(ids)
+    }
+    
+    public func setState(state: Coding) {
+        self.postbox.setState(state)
+    }
+}
+
+public final class Postbox<State: Coding> {
     private let basePath: String
     private let messageNamespaces: [MessageId.Namespace]
     
@@ -29,6 +31,7 @@ public final class Postbox {
     
     private var peerMessageViews: [PeerId : Bag<(MutableMessageView, Pipe<MessageView>)>] = [:]
     private var peerViews: Bag<(MutablePeerView, Pipe<PeerView>)> = Bag()
+    private var statePipe: Pipe<State> = Pipe()
     
     public init(basePath: String, messageNamespaces: [MessageId.Namespace]) {
         self.basePath = basePath
@@ -53,7 +56,7 @@ public final class Postbox {
     
     private func createSchema() {
         //state
-        self.database.execute("CREATE TABLE state (data BLOB)")
+        self.database.execute("CREATE TABLE state (id INTEGER, data BLOB)")
         
         //peer_messages
         self.database.execute("CREATE TABLE peer_messages (peerId INTEGER, namespace INTEGER, id INTEGER, data BLOB, associatedMediaIds BLOB, timestamp INTEGER, PRIMARY KEY(peerId, namespace, id))")
@@ -309,6 +312,34 @@ public final class Postbox {
         }
         
         return ids
+    }
+    
+    private func setState(state: Coding) {
+        let encoder = Encoder()
+        encoder.encodeRootObject(state)
+        let blob = Blob(data: encoder.makeData())
+        self.database.prepareCached("INSERT OR REPLACE INTO state (id, data) VALUES (?, ?)").run(Int64(0), blob)
+    }
+    
+    public func state() -> Signal<State, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.queue.dispatch {
+                for row in self.database.prepareCached("SELECT data FROM state WHERE id = ?").run(Int64(0)) {
+                    let data = (row[0] as! Blob).data
+                    let buffer = ReadBuffer(memory: UnsafeMutablePointer(data.bytes), length: data.length, freeWhenDone: false)
+                    let decoder = Decoder(buffer: buffer)
+                    if let state = decoder.decodeRootObject() as? State {
+                        subscriber.putNext(state)
+                    }
+                    break
+                }
+                disposable.set(self.statePipe.signal().start(next: { next in
+                    subscriber.putNext(next)
+                }))
+            }
+            return disposable
+        }
     }
     
     private func addMessages(messages: [Message], medias: [Media]) {
@@ -596,7 +627,6 @@ public final class Postbox {
                 }
             }
             
-            
             for (namespace, messageIds) in messageIdsByNamespace {
                 var queryString = "DELETE FROM peer_messages WHERE peerId = ? AND namespace = ? AND id IN ("
                 var first = true
@@ -671,11 +701,17 @@ public final class Postbox {
         }
     }
     
-    public func modify(f: Modifier -> Void) {
-        self.queue.dispatch {
-            self.database.transaction()
-            f(Modifier(postbox: self))
-            self.database.commit()
+    public func modify<T>(f: Modifier<State> -> T) -> Signal<T, NoError> {
+        return Signal { subscriber in
+            self.queue.dispatch {
+                self.database.transaction()
+                let result = f(Modifier(postbox: self))
+                self.database.commit()
+                
+                subscriber.putNext(result)
+                subscriber.putCompletion()
+            }
+            return EmptyDisposable
         }
     }
     
