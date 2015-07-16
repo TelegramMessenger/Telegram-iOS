@@ -382,6 +382,7 @@ public final class Postbox<State: PostboxState> {
     
     public func removeKeychainEntryForKey(key: String) {
         self.queue.dispatch {
+            let keyBlob = Blob(data: key.dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: true)!)
             self.database.prepareCached("DELETE FROM keychain WHERE key = ?").run(keyBlob)
         }
     }
