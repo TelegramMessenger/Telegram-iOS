@@ -376,7 +376,7 @@ You should never create your own instance of `BITFeedbackManager` but use the on
  
     ```objectivec
     [BITHockeyManager sharedHockeyManager].feedbackManager
-   ```
+    ```
 
 Please check the [documentation](#documentation) of the `BITFeedbachManager` class on more information on how to leverage this feature.
 
