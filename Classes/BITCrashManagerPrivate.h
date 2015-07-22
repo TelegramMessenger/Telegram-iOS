@@ -66,7 +66,9 @@
 
 @property (nonatomic) NSString *lastCrashFilename;
 
+#if TARGET_OS_IOS // exclude this from Watch OS 2
 @property (nonatomic, copy, setter = setAlertViewHandler:) BITCustomAlertViewHandler alertViewHandler;
+#endif
 
 @property (nonatomic, strong) NSString *crashesDir;
 

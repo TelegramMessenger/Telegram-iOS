@@ -176,8 +176,12 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
 - (instancetype)init {
   if ((self = [super init])) {
     _delegate = nil;
-    _showAlwaysButton = YES;
     _isSetup = NO;
+    
+#if TARGET_OS_IOS // exclude this from Watch OS 2
+    _showAlwaysButton = YES;
+    _alertViewHandler = nil;
+#endif
     
     _plCrashReporter = nil;
     _exceptionHandler = nil;
@@ -190,7 +194,6 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     _didLogLowMemoryWarning = NO;
     
     _approvedCrashReports = [[NSMutableDictionary alloc] init];
-    _alertViewHandler = nil;
 
     _fileManager = [[NSFileManager alloc] init];
     _crashFiles = [[NSMutableArray alloc] init];
@@ -691,9 +694,11 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
 }
 
 
+#if TARGET_OS_IOS // exclude this from Watch OS 2
 - (void)setAlertViewHandler:(BITCustomAlertViewHandler)alertViewHandler{
   _alertViewHandler = alertViewHandler;
 }
+#endif
 
 /**
  * Check if the debugger is attached
@@ -778,6 +783,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   }
 }
 
+#if TARGET_OS_IOS // exclude this from Watch OS 2
 - (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput withUserProvidedMetaData:(BITCrashMetaData *)userProvidedMetaData {
   switch (userInput) {
     case BITCrashManagerUserInputDontSend:
@@ -818,6 +824,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   }
   
 }
+#endif
 
 #pragma mark - PLCrashReporter
 
@@ -1022,6 +1029,9 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     if (!BITHockeyBundle() || bit_isRunningInAppExtension()) {
       [self approveLatestCrashReport];
       [self sendNextCrashReport];
+      
+#if TARGET_OS_IOS // exclude this from Watch OS 2
+
     } else if (_crashManagerStatus != BITCrashManagerStatusAutoSend && notApprovedReportFilename) {
       
       if (self.delegate != nil && [self.delegate respondsToSelector:@selector(crashManagerWillShowSubmitCrashReportAlert:)]) {
@@ -1103,6 +1113,9 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
 #pragma clang diagnostic pop
         }
       }
+      
+#endif
+      
     } else {
       [self approveLatestCrashReport];
       [self sendNextCrashReport];
@@ -1494,6 +1507,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   }
 }
 
+#if TARGET_OS_IOS // exclude this from Watch OS 2
 
 #pragma mark - UIAlertView Delegate
 
@@ -1513,6 +1527,8 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   }
 }
 #pragma clang diagnostic pop
+
+#endif 
 
 
 #pragma mark - Networking

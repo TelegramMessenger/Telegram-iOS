@@ -36,10 +36,13 @@
 @class BITCrashMetaData;
 
 
+#if TARGET_OS_IOS // exclude this from Watch OS 2
+
 /**
  * Custom block that handles the alert that prompts the user whether he wants to send crash reports
  */
 typedef void(^BITCustomAlertViewHandler)();
+#endif
 
 
 /**
@@ -89,6 +92,8 @@ typedef struct BITCrashManagerCallbacks {
   BITCrashManagerPostCrashSignalCallback handleSignal;
 } BITCrashManagerCallbacks;
 
+
+#if TARGET_OS_IOS // exclude this from Watch OS 2
 /**
  * Crash Manager alert user input
  */
@@ -107,6 +112,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
   BITCrashManagerUserInputAlwaysSend = 2
   
 };
+#endif
 
 
 @protocol BITCrashManagerDelegate;
@@ -288,6 +294,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
 - (void)setCrashCallbacks: (BITCrashManagerCallbacks *) callbacks;
 
 
+#if TARGET_OS_IOS // exclude this from Watch OS 2
 /**
  Flag that determines if an "Always" option should be shown
  
@@ -302,6 +309,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  @see crashManagerStatus
  */
 @property (nonatomic, assign, getter=shouldShowAlwaysButton) BOOL showAlwaysButton;
+#endif
 
 
 ///-----------------------------------------------------------------------------
@@ -322,6 +330,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  */
 @property (nonatomic, readonly) BOOL didCrashInLastSession;
 
+#if TARGET_OS_IOS // exclude this from Watch OS 2
 /**
  Provides an interface to pass user input from a custom alert to a crash report
  
@@ -349,11 +358,14 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  
  @param alertViewHandler A block that is responsible for loading, presenting and and dismissing your custom user interface which prompts the user if he wants to send crash reports. The block is also responsible for triggering further processing of the crash reports.
  
+ @warning This is not available when compiled for Watch OS!
+ 
  @warning Block needs to call the `[BITCrashManager handleUserInput:withUserProvidedMetaData:]` method!
  
  @warning This needs to be set before calling `[BITHockeyManager startManager]`!
  */
 - (void)setAlertViewHandler:(BITCustomAlertViewHandler)alertViewHandler;
+#endif
 
 /**
  * Provides details about the crash that occurred in the last app session
