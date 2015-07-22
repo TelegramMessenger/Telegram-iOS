@@ -1045,17 +1045,63 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
       if (_alertViewHandler) {
         _alertViewHandler();
       } else {
-        UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:[NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundTitle"), appName]
-                                                            message:alertDescription
-                                                           delegate:self
-                                                  cancelButtonTitle:BITHockeyLocalizedString(@"CrashDontSendReport")
-                                                  otherButtonTitles:BITHockeyLocalizedString(@"CrashSendReport"), nil];
-        
-        if (self.shouldShowAlwaysButton) {
-          [alertView addButtonWithTitle:BITHockeyLocalizedString(@"CrashSendReportAlways")];
+        // requires iOS 8
+        id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
+        if (uialertcontrollerClass) {
+          __weak typeof(self) weakSelf = self;
+          
+          UIAlertController *alertController = [UIAlertController alertControllerWithTitle:[NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundTitle"), appName]
+                                                                                   message:alertDescription
+                                                                            preferredStyle:UIAlertControllerStyleAlert];
+          
+          
+          UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"CrashDontSendReport")
+                                                                 style:UIAlertActionStyleCancel
+                                                               handler:^(UIAlertAction * action) {
+                                                                 typeof(self) strongSelf = weakSelf;
+                                                                 
+                                                                 [strongSelf handleUserInput:BITCrashManagerUserInputDontSend withUserProvidedMetaData:nil];
+                                                               }];
+          
+          [alertController addAction:cancelAction];
+          
+          UIAlertAction *sendAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"CrashSendReport")
+                                                               style:UIAlertActionStyleDefault
+                                                             handler:^(UIAlertAction * action) {
+                                                               typeof(self) strongSelf = weakSelf;
+                                                               [strongSelf handleUserInput:BITCrashManagerUserInputSend withUserProvidedMetaData:nil];
+                                                             }];
+          
+          [alertController addAction:sendAction];
+          
+          if (self.shouldShowAlwaysButton) {
+            UIAlertAction *alwaysSendAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"CrashSendReportAlways")
+                                                                       style:UIAlertActionStyleDefault
+                                                                     handler:^(UIAlertAction * action) {
+                                                                       typeof(self) strongSelf = weakSelf;
+                                                                       [strongSelf handleUserInput:BITCrashManagerUserInputAlwaysSend withUserProvidedMetaData:nil];
+                                                                     }];
+            
+            [alertController addAction:alwaysSendAction];
+          }
+          
+          [self showView:alertController];
+        } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+          UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:[NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundTitle"), appName]
+                                                              message:alertDescription
+                                                             delegate:self
+                                                    cancelButtonTitle:BITHockeyLocalizedString(@"CrashDontSendReport")
+                                                    otherButtonTitles:BITHockeyLocalizedString(@"CrashSendReport"), nil];
+          
+          if (self.shouldShowAlwaysButton) {
+            [alertView addButtonWithTitle:BITHockeyLocalizedString(@"CrashSendReportAlways")];
+          }
+          
+          [alertView show];
+#pragma clang diagnostic pop
         }
-        
-        [alertView show];
       }
     } else {
       [self approveLatestCrashReport];
@@ -1451,6 +1497,8 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
 
 #pragma mark - UIAlertView Delegate
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
   switch (buttonIndex) {
     case 0:
@@ -1464,8 +1512,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
       break;
   }
 }
-
-
+#pragma clang diagnostic pop
 
 
 #pragma mark - Networking

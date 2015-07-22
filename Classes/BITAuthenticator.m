@@ -256,13 +256,38 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     } else {
       BITHockeyLog(@"Validation failed with error: %@", error);
       
-      UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil
-                                                          message:error.localizedDescription
-                                                         delegate:self
-                                                cancelButtonTitle:BITHockeyLocalizedString(@"HockeyOK")
-                                                otherButtonTitles:nil];
-      [alertView setTag:0];
-      [alertView show];
+      // requires iOS 8
+      id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
+      if (uialertcontrollerClass) {
+        __weak typeof(self) weakSelf = self;
+        
+        UIAlertController *alertController = [UIAlertController alertControllerWithTitle:nil
+                                                                                 message:error.localizedDescription
+                                                                          preferredStyle:UIAlertControllerStyleAlert];
+        
+        
+        UIAlertAction *okAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyOK")
+                                                               style:UIAlertActionStyleDefault
+                                                             handler:^(UIAlertAction * action) {
+                                                               typeof(self) strongSelf = weakSelf;
+                                                               [strongSelf validate];
+                                                             }];
+        
+        [alertController addAction:okAction];
+        
+        [self showView:alertController];
+      } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil
+                                                            message:error.localizedDescription
+                                                           delegate:self
+                                                  cancelButtonTitle:BITHockeyLocalizedString(@"HockeyOK")
+                                                  otherButtonTitles:nil];
+        [alertView setTag:0];
+        [alertView show];
+#pragma clang diagnostic pop
+      }
     }
   }];
 }
@@ -906,11 +931,16 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 }
 
 #pragma mark - UIAlertViewDelegate
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
   if (alertView.tag == 0) {
     [self validate];
   }
 }
+#pragma clang diagnostic pop
+
 @end
 
 #endif

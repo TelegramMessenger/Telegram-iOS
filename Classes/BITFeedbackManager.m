@@ -1070,6 +1070,8 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
 
 #pragma mark - UIAlertViewDelegate
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 // invoke the selected action from the action sheet for a location element
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
   
@@ -1079,6 +1081,7 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
     [self showFeedbackListView];
   }
 }
+#pragma clang diagnostic pop
 
 #pragma mark - Observation Handling
 

@@ -417,13 +417,57 @@
   if (!_updateAlertShowing) {
     NSString *versionString = [NSString stringWithFormat:@"%@ %@", BITHockeyLocalizedString(@"UpdateVersion"), _newStoreVersion];
     
-    UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateAvailable")
-                                                        message:[NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateAlertTextWithAppVersion"), versionString]
-                                                       delegate:self
-                                              cancelButtonTitle:BITHockeyLocalizedString(@"UpdateIgnore")
-                                              otherButtonTitles:BITHockeyLocalizedString(@"UpdateRemindMe"), BITHockeyLocalizedString(@"UpdateShow"), nil
-                              ];
-    [alertView show];
+    // requires iOS 8
+    id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
+    if (uialertcontrollerClass) {
+      __weak typeof(self) weakSelf = self;
+      
+      UIAlertController *alertController = [UIAlertController alertControllerWithTitle:BITHockeyLocalizedString(@"UpdateAvailable")
+                                                                               message:[NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateAlertTextWithAppVersion"), versionString]
+                                                                        preferredStyle:UIAlertControllerStyleAlert];
+      
+      
+      UIAlertAction *ignoreAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"UpdateIgnore")
+                                                             style:UIAlertActionStyleCancel
+                                                           handler:^(UIAlertAction * action) {
+                                                             typeof(self) strongSelf = weakSelf;
+                                                             [strongSelf ignoreAction];
+                                                           }];
+      
+      [alertController addAction:ignoreAction];
+      
+      UIAlertAction *remindAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"UpdateRemindMe")
+                                                             style:UIAlertActionStyleDefault
+                                                           handler:^(UIAlertAction * action) {
+                                                             typeof(self) strongSelf = weakSelf;
+                                                             [strongSelf remindAction];
+                                                           }];
+      
+      [alertController addAction:remindAction];
+      
+      UIAlertAction *showAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"UpdateShow")
+                                                           style:UIAlertActionStyleDefault
+                                                         handler:^(UIAlertAction * action) {
+                                                           typeof(self) strongSelf = weakSelf;
+                                                           [strongSelf showAction];
+                                                         }];
+      
+      [alertController addAction:showAction];
+      
+      [self showView:alertController];
+    } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+      UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateAvailable")
+                                                          message:[NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateAlertTextWithAppVersion"), versionString]
+                                                         delegate:self
+                                                cancelButtonTitle:BITHockeyLocalizedString(@"UpdateIgnore")
+                                                otherButtonTitles:BITHockeyLocalizedString(@"UpdateRemindMe"), BITHockeyLocalizedString(@"UpdateShow"), nil
+                                ];
+      [alertView show];
+#pragma clang diagnostic pop
+    }
+    
     _updateAlertShowing = YES;
   }
 }
@@ -442,27 +486,43 @@
 
 #pragma mark - UIAlertViewDelegate
 
-// invoke the selected action from the action sheet for a location element
-- (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
+- (void)ignoreAction {
   _updateAlertShowing = NO;
-  if (buttonIndex == [alertView cancelButtonIndex]) {
-    // Ignore
-    [self.userDefaults setObject:_newStoreVersion forKey:kBITStoreUpdateIgnoreVersion];
-    [self.userDefaults synchronize];
-  } else if (buttonIndex == [alertView firstOtherButtonIndex]) {
-    // Remind button
-  } else if (buttonIndex == [alertView firstOtherButtonIndex] + 1) {
-    // Show button
-    [self.userDefaults setObject:_newStoreVersion forKey:kBITStoreUpdateIgnoreVersion];
-    [self.userDefaults synchronize];
-    
-    if (_appStoreURLString) {
-      [[UIApplication sharedApplication] openURL:[NSURL URLWithString:_appStoreURLString]];
-    } else {
-      BITHockeyLog(@"WARNING: The app store page couldn't be opened, since we did not get a valid URL from the store API.");
-    }
+  [self.userDefaults setObject:_newStoreVersion forKey:kBITStoreUpdateIgnoreVersion];
+  [self.userDefaults synchronize];
+}
+
+- (void)remindAction {
+  _updateAlertShowing = NO;
+}
+
+- (void)showAction {
+  _updateAlertShowing = NO;
+  [self.userDefaults setObject:_newStoreVersion forKey:kBITStoreUpdateIgnoreVersion];
+  [self.userDefaults synchronize];
+  
+  if (_appStoreURLString) {
+    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:_appStoreURLString]];
+  } else {
+    BITHockeyLog(@"WARNING: The app store page couldn't be opened, since we did not get a valid URL from the store API.");
   }
 }
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+// invoke the selected action from the action sheet for a location element
+- (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
+  if (buttonIndex == [alertView cancelButtonIndex]) {
+    [self ignoreAction];
+  } else if (buttonIndex == [alertView firstOtherButtonIndex]) {
+    // Remind button
+    [self remindAction];
+  } else if (buttonIndex == [alertView firstOtherButtonIndex] + 1) {
+    // Show button
+    [self showAction];
+  }
+}
+#pragma clang diagnostic pop
 
 @end
 

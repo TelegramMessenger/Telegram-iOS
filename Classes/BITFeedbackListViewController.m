@@ -287,25 +287,66 @@
 }
 
 - (void)deleteAllMessagesAction:(id)sender {
-  if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
-    UIActionSheet *deleteAction = [[UIActionSheet alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllTitle")
-                                                              delegate:self
-                                                     cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllCancel")
-                                                destructiveButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllDelete")
-                                                     otherButtonTitles:nil
-                                   ];
-    [deleteAction setTag:0];
-    [deleteAction setActionSheetStyle:UIActionSheetStyleBlackTranslucent];
-    [deleteAction showInView:[self viewForShowingActionSheetOnPhone]];
-  } else {
-    UIAlertView *deleteAction = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListButtonDeleteAllMessages")
-                                                           message:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllTitle")
-                                                          delegate:self
-                                                 cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllCancel")
-                                                 otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllDelete"), nil];
+  // requires iOS 8
+  id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
+  if (uialertcontrollerClass) {
     
-    [deleteAction setTag:0];
-    [deleteAction show];
+    NSString *title = BITHockeyLocalizedString(@"HockeyFeedbackListButtonDeleteAllMessages");
+    NSString *message = BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllTitle");
+    UIAlertControllerStyle controllerStyle = UIAlertControllerStyleAlert;
+    if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
+      controllerStyle = UIAlertControllerStyleActionSheet;
+      title = BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllTitle");
+      message = nil;
+    }
+    __weak typeof(self) weakSelf = self;
+    
+    UIAlertController *alertController = [UIAlertController alertControllerWithTitle:title
+                                                                             message:message
+                                                                      preferredStyle:controllerStyle];
+    
+    
+    UIAlertAction* cancelAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllCancel")
+                                                           style:UIAlertActionStyleCancel
+                                                         handler:^(UIAlertAction * action) {}];
+    
+    [alertController addAction:cancelAction];
+    
+    UIAlertAction* deleteAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllDelete")
+                                                           style:UIAlertActionStyleDestructive
+                                                         handler:^(UIAlertAction * action) {
+                                                           typeof(self) strongSelf = weakSelf;
+                                                           [strongSelf deleteAllMessages];
+                                                         }];
+    
+    [alertController addAction:deleteAction];
+    
+    
+    [self presentViewController:alertController animated:YES completion:nil];
+  } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
+      UIActionSheet *deleteAction = [[UIActionSheet alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllTitle")
+                                                                delegate:self
+                                                       cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllCancel")
+                                                  destructiveButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllDelete")
+                                                       otherButtonTitles:nil
+                                     ];
+      [deleteAction setTag:0];
+      [deleteAction setActionSheetStyle:UIActionSheetStyleBlackTranslucent];
+      [deleteAction showInView:[self viewForShowingActionSheetOnPhone]];
+    } else {
+      UIAlertView *deleteAction = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListButtonDeleteAllMessages")
+                                                             message:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllTitle")
+                                                            delegate:self
+                                                   cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllCancel")
+                                                   otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackListDeleteAllDelete"), nil];
+      
+      [deleteAction setTag:0];
+      [deleteAction show];
+    }
+#pragma clang diagnostic pop
   }
 }
 
@@ -767,32 +808,77 @@
 #pragma mark - BITAttributedLabelDelegate
 
 - (void)attributedLabel:(BITAttributedLabel *)label didSelectLinkWithURL:(NSURL *)url {
-  if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
-    UIActionSheet *linkAction = [[UIActionSheet alloc] initWithTitle:[url absoluteString]
-                                                            delegate:self
-                                                   cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionCancel")
-                                              destructiveButtonTitle:nil
-                                                   otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionOpen"), BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionCopy"), nil
-                                 ];
-    [linkAction setTag:1];
-    [linkAction setActionSheetStyle:UIActionSheetStyleBlackTranslucent];
-    [linkAction showInView:[self viewForShowingActionSheetOnPhone]];
-  } else {
-    UIAlertView *linkAction = [[UIAlertView alloc] initWithTitle:[url absoluteString]
-                                                         message:nil
-                                                        delegate:self
-                                               cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionCancel")
-                                               otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionOpen"), BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionCopy"), nil
-                               ];
+  // requires iOS 8
+  id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
+  if (uialertcontrollerClass) {
+    UIAlertControllerStyle controllerStyle = UIAlertControllerStyleAlert;
+    if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
+      controllerStyle = UIAlertControllerStyleActionSheet;
+    }
     
-    [linkAction setTag:1];
-    [linkAction show];
+    UIAlertController *linkAction = [UIAlertController alertControllerWithTitle:[url absoluteString]
+                                                                        message:nil
+                                                                 preferredStyle:controllerStyle];
+    
+    
+    UIAlertAction* cancelAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionCancel")
+                                                           style:UIAlertActionStyleCancel
+                                                         handler:^(UIAlertAction * action) {}];
+    
+    [linkAction addAction:cancelAction];
+    
+    UIAlertAction* openAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionOpen")
+                                                         style:UIAlertActionStyleDefault
+                                                       handler:^(UIAlertAction * action) {
+                                                         [[UIApplication sharedApplication] openURL:[NSURL URLWithString:[url absoluteString]]];
+                                                       }];
+    
+    [linkAction addAction:openAction];
+    
+    UIAlertAction* copyAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionCopy")
+                                                         style:UIAlertActionStyleDefault
+                                                       handler:^(UIAlertAction * action) {
+                                                         UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
+                                                         pasteboard.URL = [NSURL URLWithString:[url absoluteString]];
+                                                       }];
+    
+    [linkAction addAction:copyAction];
+    
+    
+    [self presentViewController:linkAction animated:YES completion:nil];
+  } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
+      UIActionSheet *linkAction = [[UIActionSheet alloc] initWithTitle:[url absoluteString]
+                                                              delegate:self
+                                                     cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionCancel")
+                                                destructiveButtonTitle:nil
+                                                     otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionOpen"), BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionCopy"), nil
+                                   ];
+      [linkAction setTag:1];
+      [linkAction setActionSheetStyle:UIActionSheetStyleBlackTranslucent];
+      [linkAction showInView:[self viewForShowingActionSheetOnPhone]];
+    } else {
+      UIAlertView *linkAction = [[UIAlertView alloc] initWithTitle:[url absoluteString]
+                                                           message:nil
+                                                          delegate:self
+                                                 cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionCancel")
+                                                 otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionOpen"), BITHockeyLocalizedString(@"HockeyFeedbackListLinkActionCopy"), nil
+                                 ];
+      
+      [linkAction setTag:1];
+      [linkAction show];
+    }
+#pragma clang diagnostic pop
   }
 }
 
 
 #pragma mark - UIAlertViewDelegate
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
   if (buttonIndex == alertView.cancelButtonIndex) {
     return;
@@ -811,7 +897,7 @@
     }
   }
 }
-
+#pragma clang diagnostic pop
 
 #pragma mark - UIActionSheetDelegate
 
