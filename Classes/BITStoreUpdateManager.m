@@ -352,7 +352,10 @@
   [request setHTTPMethod:@"GET"];
   [request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];
   
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *error){
+#pragma clang diagnostic pop
     self.checkInProgress = NO;
     
     if (error) {

@@ -921,7 +921,10 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
     [request setHTTPBody:postBody];
   }
   
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
+#pragma clang diagnostic pop
     _networkRequestInProgress = NO;
     
     if (err) {

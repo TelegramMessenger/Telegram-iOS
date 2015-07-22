@@ -494,7 +494,7 @@
       cell.textLabel.textColor = DEFAULT_TEXTCOLOR;
       cell.accessoryType = UITableViewCellAccessoryNone;
       cell.selectionStyle = UITableViewCellSelectionStyleNone;
-      cell.textLabel.textAlignment = kBITTextLabelAlignmentCenter;
+      cell.textLabel.textAlignment = NSTextAlignmentCenter;
     }
     
     cell.textLabel.text = [NSString stringWithFormat:BITHockeyLocalizedString(@"HockeyFeedbackListLastUpdated"),
@@ -619,7 +619,7 @@
         
         statusLabel.font = [UIFont systemFontOfSize:10];
         statusLabel.textColor = DEFAULT_TEXTCOLOR;
-        statusLabel.textAlignment = kBITTextLabelAlignmentCenter;
+        statusLabel.textAlignment = NSTextAlignmentCenter;
         if ([self.manager isPreiOS7Environment]) {
           statusLabel.backgroundColor = DEFAULT_BACKGROUNDCOLOR;
         } else {
@@ -672,7 +672,10 @@
       if (attachment.needsLoadingFromURL && !attachment.isLoading){
         attachment.isLoading = YES;
         NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
+#pragma clang diagnostic pop
           attachment.isLoading = NO;
           if (responseData.length) {
             dispatch_async(dispatch_get_main_queue(), ^{
@@ -873,7 +876,10 @@
     if (attachment.needsLoadingFromURL && !attachment.isLoading) {
       attachment.isLoading = YES;
       NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
       [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
+#pragma clang diagnostic pop
         attachment.isLoading = NO;
         if (responseData.length) {
           [attachment replaceData:responseData];

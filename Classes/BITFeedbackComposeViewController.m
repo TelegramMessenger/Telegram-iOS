@@ -47,7 +47,6 @@
 
 
 @interface BITFeedbackComposeViewController () <BITFeedbackUserDataDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate, UIActionSheetDelegate, BITImageAnnotationDelegate> {
-  UIStatusBarStyle _statusBarStyle;
 }
 
 @property (nonatomic, weak) BITFeedbackManager *manager;
@@ -275,24 +274,33 @@
   
   [super viewWillAppear:animated];
   
-  _statusBarStyle = [[UIApplication sharedApplication] statusBarStyle];
-#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
-  [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleLightContent];
-#else
-  [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleBlackOpaque];
-#endif
-  
   if (_text && self.textView.text.length == 0) {
     self.textView.text = _text;
   }
 
   if (self.isStatusBarHiddenBeforeShowingPhotoPicker) {
-    [[UIApplication sharedApplication] setStatusBarHidden:self.isStatusBarHiddenBeforeShowingPhotoPicker.boolValue];
+    // requires iOS 7
+    if ([self respondsToSelector:@selector(prefersStatusBarHidden)]) {
+      [self setNeedsStatusBarAppearanceUpdate];
+    } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+      [[UIApplication sharedApplication] setStatusBarHidden:self.isStatusBarHiddenBeforeShowingPhotoPicker.boolValue];
+#pragma clang diagnostic pop
+    }
   }
   
   self.isStatusBarHiddenBeforeShowingPhotoPicker = nil;
 
   [self updateBarButtonState];
+}
+
+- (BOOL)prefersStatusBarHidden {
+  if (self.isStatusBarHiddenBeforeShowingPhotoPicker) {
+    return self.isStatusBarHiddenBeforeShowingPhotoPicker.boolValue;
+  }
+  
+  return [super prefersStatusBarHidden];
 }
 
 - (void)viewDidAppear:(BOOL)animated {
@@ -318,8 +326,6 @@
   self.manager.currentFeedbackComposeViewController = nil;
   
 	[super viewWillDisappear:animated];
-  
-  [[UIApplication sharedApplication] setStatusBarStyle:_statusBarStyle];
 }
 
 - (void)viewDidDisappear:(BOOL)animated {

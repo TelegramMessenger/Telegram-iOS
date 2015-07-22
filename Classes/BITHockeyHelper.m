@@ -34,46 +34,52 @@
 #import <QuartzCore/QuartzCore.h>
 
 
-#if __IPHONE_OS_VERSION_MAX_ALLOWED < 70000
-@interface NSData (BITHockeySDKiOS7)
-- (NSString *)base64Encoding;
-@end
-#endif
-
-
 #pragma mark NSString helpers
 
 NSString *bit_URLEncodedString(NSString *inputString) {
-  return CFBridgingRelease(CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault,
-                                                                    (__bridge CFStringRef)inputString,
-                                                                    NULL,
-                                                                    CFSTR("!*'();:@&=+$,/?%#[]"),
-                                                                    kCFStringEncodingUTF8)
-                           );
+  // Requires iOS 7
+  if ([inputString respondsToSelector:@selector(stringByAddingPercentEncodingWithAllowedCharacters:)]) {
+    NSCharacterSet *allowedSet = [NSCharacterSet characterSetWithCharactersInString:@"!*'();:@&=+$,/?%#[]"];
+    return [inputString stringByAddingPercentEncodingWithAllowedCharacters:allowedSet];
+  } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    return CFBridgingRelease(CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault,
+                                                                     (__bridge CFStringRef)inputString,
+                                                                     NULL,
+                                                                     CFSTR("!*'();:@&=+$,/?%#[]"),
+                                                                     kCFStringEncodingUTF8)
+                             );
+#pragma clang diagnostic pop
+  }
 }
 
 NSString *bit_URLDecodedString(NSString *inputString) {
-  return CFBridgingRelease(CFURLCreateStringByReplacingPercentEscapesUsingEncoding(kCFAllocatorDefault,
-                                                                                   (__bridge CFStringRef)inputString,
-                                                                                   CFSTR(""),
-                                                                                   kCFStringEncodingUTF8)
-                           );
+  // Requires iOS 7
+  if ([inputString respondsToSelector:@selector(stringByRemovingPercentEncoding)]) {
+    return [inputString stringByRemovingPercentEncoding];
+  } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    return CFBridgingRelease(CFURLCreateStringByReplacingPercentEscapesUsingEncoding(kCFAllocatorDefault,
+                                                                                     (__bridge CFStringRef)inputString,
+                                                                                     CFSTR(""),
+                                                                                     kCFStringEncodingUTF8)
+                             );
+#pragma clang diagnostic pop
+  }
 }
 
 NSString *bit_base64String(NSData * data, unsigned long length) {
-#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
   SEL base64EncodingSelector = NSSelectorFromString(@"base64EncodedStringWithOptions:");
   if ([data respondsToSelector:base64EncodingSelector]) {
     return [data base64EncodedStringWithOptions:0];
   } else {
-#endif
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     return [data base64Encoding];
 #pragma clang diagnostic pop
-#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
   }
-#endif
 }
 
 NSString *bit_settingsDir(void) {

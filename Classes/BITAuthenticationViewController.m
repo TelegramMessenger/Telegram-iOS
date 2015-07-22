@@ -34,7 +34,6 @@
 #import "BITHockeyAppClient.h"
 
 @interface BITAuthenticationViewController ()<UITextFieldDelegate> {
-  UIStatusBarStyle _statusBarStyle;
   __weak UITextField *_emailField;
 }
 
@@ -66,22 +65,9 @@
 - (void)viewWillAppear:(BOOL)animated {
   [super viewWillAppear:animated];
   
-  _statusBarStyle = [[UIApplication sharedApplication] statusBarStyle];
-#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
-  [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleLightContent];
-#else
-  [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleBlackOpaque];
-#endif
-  
   [self updateBarButtons];
   
   self.navigationItem.rightBarButtonItem.enabled = [self allRequiredFieldsEntered];
-}
-
-- (void)viewWillDisappear:(BOOL)animated {
-	[super viewWillDisappear:animated];
-  
-  [[UIApplication sharedApplication] setStatusBarStyle:_statusBarStyle];
 }
 
 #pragma mark - Property overrides
@@ -242,7 +228,7 @@
     textField.backgroundColor = [UIColor whiteColor];
     textField.autocorrectionType = UITextAutocorrectionTypeNo;
     textField.autocapitalizationType = UITextAutocapitalizationTypeNone;
-    textField.textAlignment = kBITTextLabelAlignmentLeft;
+    textField.textAlignment = NSTextAlignmentLeft;
     textField.delegate = self;
     textField.tag = indexPath.row;
     

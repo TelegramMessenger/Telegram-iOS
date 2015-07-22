@@ -591,7 +591,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     
     UILabel *label = [[UILabel alloc] initWithFrame:frame];
     label.text = message;
-    label.textAlignment = kBITTextLabelAlignmentCenter;
+    label.textAlignment = NSTextAlignmentCenter;
     label.numberOfLines = 3;
     label.adjustsFontSizeToFitWidth = YES;
     label.backgroundColor = [UIColor clearColor];
@@ -720,7 +720,10 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   [request setValue:@"Hockey/iOS" forHTTPHeaderField:@"User-Agent"];
   [request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];
   
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   self.urlConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
+#pragma clang diagnostic pop
   if (!_urlConnection) {
     self.checkInProgress = NO;
     [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain

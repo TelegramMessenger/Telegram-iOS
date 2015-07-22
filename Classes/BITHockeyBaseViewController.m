@@ -32,7 +32,6 @@
 
 @implementation BITHockeyBaseViewController {
   BOOL _modal;
-  UIStatusBarStyle _statusBarStyle;
 }
 
 
@@ -81,30 +80,6 @@
     }
   } else {
     [self.navigationController popViewControllerAnimated:YES];
-  }
-  
-  [[UIApplication sharedApplication] setStatusBarStyle:_statusBarStyle];
-}
-
-
-- (void)viewWillAppear:(BOOL)animated {
-  [super viewWillAppear:animated];
-  
-  _statusBarStyle = [[UIApplication sharedApplication] statusBarStyle];
-  if ([self.navigationController.navigationBar.tintColor isEqual:BIT_RGBCOLOR(25, 25, 25)]) {
-#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
-    [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleLightContent];
-#else
-    [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleBlackOpaque];
-#endif
-  }
-}
-
-- (void)viewWillDisappear:(BOOL)animated {
-  [super viewWillDisappear:animated];
-  
-  if ([self.navigationController.navigationBar.tintColor isEqual:BIT_RGBCOLOR(25, 25, 25)]) {
-    [[UIApplication sharedApplication] setStatusBarStyle:_statusBarStyle];
   }
 }
 
