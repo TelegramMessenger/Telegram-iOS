@@ -8,14 +8,11 @@
 
 #import <Foundation/Foundation.h>
 
-@interface MTKeychain : NSObject
+@protocol MTKeychain <NSObject>
 
-+ (instancetype)unencryptedKeychainWithName:(NSString *)name documentsPath:(NSString *)documentsPath;
-+ (instancetype)keychainWithName:(NSString *)name documentsPath:(NSString *)documentsPath;
-
-- (void)setObject:(id)object forKey:(id<NSCopying>)aKey group:(NSString *)group;
-- (id)objectForKey:(id<NSCopying>)aKey group:(NSString *)group;
-- (void)removeObjectForKey:(id<NSCopying>)aKey group:(NSString *)group;
+- (void)setObject:(id)object forKey:(NSString *)aKey group:(NSString *)group;
+- (id)objectForKey:(NSString *)aKey group:(NSString *)group;
+- (void)removeObjectForKey:(NSString *)aKey group:(NSString *)group;
 
 - (void)dropGroup:(NSString *)group;
 

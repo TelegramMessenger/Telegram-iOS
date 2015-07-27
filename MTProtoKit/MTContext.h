@@ -14,7 +14,7 @@
 @protocol MTSerialization;
 @class MTContext;
 @class MTTransportScheme;
-@class MTKeychain;
+@protocol MTKeychain;
 @class MTSessionInfo;
 @class MTApiEnvironment;
 
@@ -38,7 +38,7 @@
 
 @interface MTContext : NSObject
 
-@property (nonatomic, strong) MTKeychain *keychain;
+@property (nonatomic, strong) id<MTKeychain> keychain;
 
 @property (nonatomic, strong, readonly) id<MTSerialization> serialization;
 @property (nonatomic, strong, readonly) MTApiEnvironment *apiEnvironment;

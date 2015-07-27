@@ -401,7 +401,7 @@ static NSString *hexStringFromData(NSData *data)
     return string;
 }
 
-bool MTCheckIsSafePrime(NSData *numberBytes, MTKeychain *keychain)
+bool MTCheckIsSafePrime(NSData *numberBytes, id<MTKeychain> keychain)
 {
     NSString *primeKey = [[NSString alloc] initWithFormat:@"isPrimeSafe_%@", hexStringFromData(numberBytes)];
     
@@ -507,7 +507,7 @@ bool MTCheckIsSafeGAOrB(NSData *gAOrB, NSData *p)
     return result;
 }
 
-bool MTCheckMod(NSData *numberBytes, unsigned int g, MTKeychain *keychain)
+bool MTCheckMod(NSData *numberBytes, unsigned int g, id<MTKeychain> keychain)
 {
     NSString *modKey = [[NSString alloc] initWithFormat:@"isPrimeModSafe_%@_%d", hexStringFromData(numberBytes), g];
     NSNumber *nCachedResult = [keychain objectForKey:modKey group:@"primes"];

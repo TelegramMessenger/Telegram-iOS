@@ -194,7 +194,7 @@
         [[MTContext contextQueue] dispatchOnQueue:block];
 }
 
-- (void)setKeychain:(MTKeychain *)keychain
+- (void)setKeychain:(id<MTKeychain>)keychain
 {
     [[MTContext contextQueue] dispatchOnQueue:^
     {

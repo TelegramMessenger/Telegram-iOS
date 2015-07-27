@@ -12,6 +12,8 @@
 		D0580AC31B0F3E9C00E8235B /* MTDiscoverConnectionSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = D0580AC11B0F3E9C00E8235B /* MTDiscoverConnectionSignals.m */; };
 		D079AB9C1AF39B8000076F59 /* MtProtoKitMac.h in Headers */ = {isa = PBXBuildFile; fileRef = D079AB9B1AF39B8000076F59 /* MtProtoKitMac.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D079ABB01AF39BA400076F59 /* MTProtoKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A31D18B158AE00C65116 /* MTProtoKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D09A59581B582EFF00FC3724 /* MTFileBasedKeychain.h in Headers */ = {isa = PBXBuildFile; fileRef = D09A59561B582EFF00FC3724 /* MTFileBasedKeychain.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D09A59591B582EFF00FC3724 /* MTFileBasedKeychain.m in Sources */ = {isa = PBXBuildFile; fileRef = D09A59571B582EFF00FC3724 /* MTFileBasedKeychain.m */; };
 		D0CB05FC1ADC4483005E298F /* MtProtoKit.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CB05FB1ADC4483005E298F /* MtProtoKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0CB06101ADC44B7005E298F /* MTTime.m in Sources */ = {isa = PBXBuildFile; fileRef = 93DBD23418B2DA1E00631ADC /* MTTime.m */; };
 		D0CB06111ADC44B7005E298F /* MTTimer.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84D818AFE81C007F1076 /* MTTimer.m */; };
@@ -119,7 +121,7 @@
 		D0D1A03D1ADD983C007D9ED6 /* MTDestroySessionResponseMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = D0D1A00B1ADD983C007D9ED6 /* MTDestroySessionResponseMessage.m */; };
 		D0D1A03E1ADD983C007D9ED6 /* MTDropRpcResultMessage.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D1A00C1ADD983C007D9ED6 /* MTDropRpcResultMessage.h */; };
 		D0D1A03F1ADD983C007D9ED6 /* MTDropRpcResultMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = D0D1A00D1ADD983C007D9ED6 /* MTDropRpcResultMessage.m */; };
-		D0D1A0401ADD983C007D9ED6 /* MTExportedAuthorizationData.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D1A00E1ADD983C007D9ED6 /* MTExportedAuthorizationData.h */; };
+		D0D1A0401ADD983C007D9ED6 /* MTExportedAuthorizationData.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D1A00E1ADD983C007D9ED6 /* MTExportedAuthorizationData.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0D1A0411ADD983C007D9ED6 /* MTExportedAuthorizationData.m in Sources */ = {isa = PBXBuildFile; fileRef = D0D1A00F1ADD983C007D9ED6 /* MTExportedAuthorizationData.m */; };
 		D0D1A0421ADD983C007D9ED6 /* MTFutureSaltsMessage.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D1A0101ADD983C007D9ED6 /* MTFutureSaltsMessage.h */; };
 		D0D1A0431ADD983C007D9ED6 /* MTFutureSaltsMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = D0D1A0111ADD983C007D9ED6 /* MTFutureSaltsMessage.m */; };
@@ -149,7 +151,7 @@
 		D0D1A05B1ADD983C007D9ED6 /* MTPongMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = D0D1A0291ADD983C007D9ED6 /* MTPongMessage.m */; };
 		D0D1A05C1ADD983C007D9ED6 /* MTResPqMessage.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D1A02A1ADD983C007D9ED6 /* MTResPqMessage.h */; };
 		D0D1A05D1ADD983C007D9ED6 /* MTResPqMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = D0D1A02B1ADD983C007D9ED6 /* MTResPqMessage.m */; };
-		D0D1A05E1ADD983C007D9ED6 /* MTRpcError.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D1A02C1ADD983C007D9ED6 /* MTRpcError.h */; };
+		D0D1A05E1ADD983C007D9ED6 /* MTRpcError.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D1A02C1ADD983C007D9ED6 /* MTRpcError.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0D1A05F1ADD983C007D9ED6 /* MTRpcError.m in Sources */ = {isa = PBXBuildFile; fileRef = D0D1A02D1ADD983C007D9ED6 /* MTRpcError.m */; };
 		D0D1A0601ADD983C007D9ED6 /* MTRpcResultMessage.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D1A02E1ADD983C007D9ED6 /* MTRpcResultMessage.h */; };
 		D0D1A0611ADD983C007D9ED6 /* MTRpcResultMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = D0D1A02F1ADD983C007D9ED6 /* MTRpcResultMessage.m */; };
@@ -159,10 +161,23 @@
 		D0D1A0651ADD983C007D9ED6 /* MTServerDhParamsMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = D0D1A0331ADD983C007D9ED6 /* MTServerDhParamsMessage.m */; };
 		D0D1A0661ADD983C007D9ED6 /* MTSetClientDhParamsResponseMessage.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D1A0341ADD983C007D9ED6 /* MTSetClientDhParamsResponseMessage.h */; };
 		D0D1A0671ADD983C007D9ED6 /* MTSetClientDhParamsResponseMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = D0D1A0351ADD983C007D9ED6 /* MTSetClientDhParamsResponseMessage.m */; };
-		D0D1A06B1ADD987A007D9ED6 /* MTDatacenterAddressListData.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D1A0691ADD987A007D9ED6 /* MTDatacenterAddressListData.h */; };
+		D0D1A06B1ADD987A007D9ED6 /* MTDatacenterAddressListData.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D1A0691ADD987A007D9ED6 /* MTDatacenterAddressListData.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0D1A06C1ADD987A007D9ED6 /* MTDatacenterAddressListData.m in Sources */ = {isa = PBXBuildFile; fileRef = D0D1A06A1ADD987A007D9ED6 /* MTDatacenterAddressListData.m */; };
 		D0D1A0721ADDE2FC007D9ED6 /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D1A0711ADDE2FC007D9ED6 /* libz.dylib */; };
+		D0D225101B4D817B0085E26D /* MtProtoKitDynamic.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D2250F1B4D817B0085E26D /* MtProtoKitDynamic.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0D225161B4D817B0085E26D /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D2250B1B4D817B0085E26D /* MtProtoKitDynamic.framework */; };
+		D0D2251D1B4D817B0085E26D /* MtProtoKitDynamicTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D0D2251C1B4D817B0085E26D /* MtProtoKitDynamicTests.m */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		D0D225171B4D817B0085E26D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D05A830A18AFB3F9007F1076 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D0D2250A1B4D817B0085E26D;
+			remoteInfo = MtProtoKitDynamic;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		93DBD22F18B2D72800631ADC /* MTRequestErrorContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTRequestErrorContext.h; path = MtProtoKit/MTRequestErrorContext.h; sourceTree = "<group>"; };
@@ -367,6 +382,8 @@
 		D079AB9B1AF39B8000076F59 /* MtProtoKitMac.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MtProtoKitMac.h; sourceTree = "<group>"; };
 		D079ABA71AF39B8000076F59 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D079ABA81AF39B8000076F59 /* MtProtoKitMacTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MtProtoKitMacTests.m; sourceTree = "<group>"; };
+		D09A59561B582EFF00FC3724 /* MTFileBasedKeychain.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MTFileBasedKeychain.h; sourceTree = "<group>"; };
+		D09A59571B582EFF00FC3724 /* MTFileBasedKeychain.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MTFileBasedKeychain.m; sourceTree = "<group>"; };
 		D0A44E4D18B24A6000B64FC6 /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libcrypto.a; sourceTree = "<group>"; };
 		D0CB05F71ADC4483005E298F /* MtProtoKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MtProtoKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0CB05FA1ADC4483005E298F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -426,6 +443,12 @@
 		D0D1A0691ADD987A007D9ED6 /* MTDatacenterAddressListData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTDatacenterAddressListData.h; path = MTProtoKit/MTDatacenterAddressListData.h; sourceTree = "<group>"; };
 		D0D1A06A1ADD987A007D9ED6 /* MTDatacenterAddressListData.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTDatacenterAddressListData.m; path = MTProtoKit/MTDatacenterAddressListData.m; sourceTree = "<group>"; };
 		D0D1A0711ADDE2FC007D9ED6 /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
+		D0D2250B1B4D817B0085E26D /* MtProtoKitDynamic.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MtProtoKitDynamic.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0D2250E1B4D817B0085E26D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D0D2250F1B4D817B0085E26D /* MtProtoKitDynamic.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MtProtoKitDynamic.h; sourceTree = "<group>"; };
+		D0D225151B4D817B0085E26D /* MtProtoKitDynamicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MtProtoKitDynamicTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0D2251B1B4D817B0085E26D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D0D2251C1B4D817B0085E26D /* MtProtoKitDynamicTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MtProtoKitDynamicTests.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -443,6 +466,21 @@
 				D0580ABF1B0F3E7100E8235B /* SSignalKit.framework in Frameworks */,
 				D0D1A0721ADDE2FC007D9ED6 /* libz.dylib in Frameworks */,
 				D0CB066B1ADC48C4005E298F /* libcrypto.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0D225071B4D817B0085E26D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0D225121B4D817B0085E26D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0D225161B4D817B0085E26D /* MtProtoKitDynamic.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -564,6 +602,8 @@
 				D0CB06051ADC4483005E298F /* MtProtoKitTests */,
 				D079AB981AF39B8000076F59 /* MtProtoKitMac */,
 				D079ABA51AF39B8000076F59 /* MtProtoKitMacTests */,
+				D0D2250C1B4D817B0085E26D /* MtProtoKitDynamic */,
+				D0D225191B4D817B0085E26D /* MtProtoKitDynamicTests */,
 				D05A831618AFB3F9007F1076 /* Frameworks */,
 				D05A831518AFB3F9007F1076 /* Products */,
 			);
@@ -574,6 +614,8 @@
 			children = (
 				D0CB05F71ADC4483005E298F /* MtProtoKit.framework */,
 				D079AB971AF39B8000076F59 /* MtProtoKitMac.framework */,
+				D0D2250B1B4D817B0085E26D /* MtProtoKitDynamic.framework */,
+				D0D225151B4D817B0085E26D /* MtProtoKitDynamicTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -695,6 +737,8 @@
 			children = (
 				D05A83C018AFB75B007F1076 /* MTKeychain.h */,
 				D05A83A318AFB75B007F1076 /* MTKeychain.m */,
+				D09A59561B582EFF00FC3724 /* MTFileBasedKeychain.h */,
+				D09A59571B582EFF00FC3724 /* MTFileBasedKeychain.m */,
 			);
 			name = Keychain;
 			sourceTree = "<group>";
@@ -1065,6 +1109,40 @@
 			name = Messages;
 			sourceTree = "<group>";
 		};
+		D0D2250C1B4D817B0085E26D /* MtProtoKitDynamic */ = {
+			isa = PBXGroup;
+			children = (
+				D0D2250F1B4D817B0085E26D /* MtProtoKitDynamic.h */,
+				D0D2250D1B4D817B0085E26D /* Supporting Files */,
+			);
+			path = MtProtoKitDynamic;
+			sourceTree = "<group>";
+		};
+		D0D2250D1B4D817B0085E26D /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				D0D2250E1B4D817B0085E26D /* Info.plist */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		D0D225191B4D817B0085E26D /* MtProtoKitDynamicTests */ = {
+			isa = PBXGroup;
+			children = (
+				D0D2251C1B4D817B0085E26D /* MtProtoKitDynamicTests.m */,
+				D0D2251A1B4D817B0085E26D /* Supporting Files */,
+			);
+			path = MtProtoKitDynamicTests;
+			sourceTree = "<group>";
+		};
+		D0D2251A1B4D817B0085E26D /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				D0D2251B1B4D817B0085E26D /* Info.plist */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -1132,6 +1210,7 @@
 				D0D1A05E1ADD983C007D9ED6 /* MTRpcError.h in Headers */,
 				D0CB063A1ADC4591005E298F /* MTTimeFixContext.h in Headers */,
 				D0CB065D1ADC45CE005E298F /* MTTcpConnectionBehaviour.h in Headers */,
+				D09A59581B582EFF00FC3724 /* MTFileBasedKeychain.h in Headers */,
 				D0CB06311ADC4583005E298F /* MTDatacenterAddressSet.h in Headers */,
 				D0D1A03C1ADD983C007D9ED6 /* MTDestroySessionResponseMessage.h in Headers */,
 				D0CB061E1ADC4541005E298F /* MTOutputStream.h in Headers */,
@@ -1156,6 +1235,14 @@
 				D0CB064B1ADC45B1005E298F /* MTRequest.h in Headers */,
 				D0CB062C1ADC4575005E298F /* MTDatacenterAuthMessageService.h in Headers */,
 				D0CB061C1ADC4541005E298F /* MTInternalId.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0D225081B4D817B0085E26D /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0D225101B4D817B0085E26D /* MtProtoKitDynamic.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1198,6 +1285,42 @@
 			productReference = D0CB05F71ADC4483005E298F /* MtProtoKit.framework */;
 			productType = "com.apple.product-type.framework";
 		};
+		D0D2250A1B4D817B0085E26D /* MtProtoKitDynamic */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D0D225221B4D817B0085E26D /* Build configuration list for PBXNativeTarget "MtProtoKitDynamic" */;
+			buildPhases = (
+				D0D225061B4D817B0085E26D /* Sources */,
+				D0D225071B4D817B0085E26D /* Frameworks */,
+				D0D225081B4D817B0085E26D /* Headers */,
+				D0D225091B4D817B0085E26D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MtProtoKitDynamic;
+			productName = MtProtoKitDynamic;
+			productReference = D0D2250B1B4D817B0085E26D /* MtProtoKitDynamic.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		D0D225141B4D817B0085E26D /* MtProtoKitDynamicTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D0D225231B4D817B0085E26D /* Build configuration list for PBXNativeTarget "MtProtoKitDynamicTests" */;
+			buildPhases = (
+				D0D225111B4D817B0085E26D /* Sources */,
+				D0D225121B4D817B0085E26D /* Frameworks */,
+				D0D225131B4D817B0085E26D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D0D225181B4D817B0085E26D /* PBXTargetDependency */,
+			);
+			name = MtProtoKitDynamicTests;
+			productName = MtProtoKitDynamicTests;
+			productReference = D0D225151B4D817B0085E26D /* MtProtoKitDynamicTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -1212,6 +1335,12 @@
 					};
 					D0CB05F61ADC4483005E298F = {
 						CreatedOnToolsVersion = 6.3;
+					};
+					D0D2250A1B4D817B0085E26D = {
+						CreatedOnToolsVersion = 6.4;
+					};
+					D0D225141B4D817B0085E26D = {
+						CreatedOnToolsVersion = 6.4;
 					};
 				};
 			};
@@ -1229,6 +1358,8 @@
 			targets = (
 				D0CB05F61ADC4483005E298F /* MtProtoKit */,
 				D079AB961AF39B8000076F59 /* MtProtoKitMac */,
+				D0D2250A1B4D817B0085E26D /* MtProtoKitDynamic */,
+				D0D225141B4D817B0085E26D /* MtProtoKitDynamicTests */,
 			);
 		};
 /* End PBXProject section */
@@ -1242,6 +1373,20 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		D0CB05F51ADC4483005E298F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0D225091B4D817B0085E26D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0D225131B4D817B0085E26D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -1282,6 +1427,7 @@
 				D0D1A0511ADD983C007D9ED6 /* MTMsgsAckMessage.m in Sources */,
 				D0CB066F1ADC49FF005E298F /* AFHTTPRequestOperation.m in Sources */,
 				D0D1A06C1ADD987A007D9ED6 /* MTDatacenterAddressListData.m in Sources */,
+				D09A59591B582EFF00FC3724 /* MTFileBasedKeychain.m in Sources */,
 				D0CB06681ADC45DA005E298F /* MTHttpWorker.m in Sources */,
 				D0CB06561ADC45BA005E298F /* MTApiEnvironment.m in Sources */,
 				D0D1A05F1ADD983C007D9ED6 /* MTRpcError.m in Sources */,
@@ -1340,7 +1486,30 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D0D225061B4D817B0085E26D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0D225111B4D817B0085E26D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0D2251D1B4D817B0085E26D /* MtProtoKitDynamicTests.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D0D225181B4D817B0085E26D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D0D2250A1B4D817B0085E26D /* MtProtoKitDynamic */;
+			targetProxy = D0D225171B4D817B0085E26D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		D05A833518AFB3F9007F1076 /* InfoPlist.strings */ = {
@@ -1591,6 +1760,110 @@
 			};
 			name = Release;
 		};
+		D0D2251E1B4D817B0085E26D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.4;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		D0D2251F1B4D817B0085E26D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.4;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		D0D225201B4D817B0085E26D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)/Developer/Library/Frameworks",
+					"$(inherited)",
+				);
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = MtProtoKitDynamicTests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.4;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		D0D225211B4D817B0085E26D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)/Developer/Library/Frameworks",
+					"$(inherited)",
+				);
+				GCC_NO_COMMON_BLOCKS = YES;
+				INFOPLIST_FILE = MtProtoKitDynamicTests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.4;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1617,6 +1890,24 @@
 			buildConfigurations = (
 				D0CB060A1ADC4483005E298F /* Debug */,
 				D0CB060B1ADC4483005E298F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D0D225221B4D817B0085E26D /* Build configuration list for PBXNativeTarget "MtProtoKitDynamic" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0D2251E1B4D817B0085E26D /* Debug */,
+				D0D2251F1B4D817B0085E26D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D0D225231B4D817B0085E26D /* Build configuration list for PBXNativeTarget "MtProtoKitDynamicTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0D225201B4D817B0085E26D /* Debug */,
+				D0D225211B4D817B0085E26D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
