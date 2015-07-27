@@ -25,3 +25,15 @@ public func filter<T, E>(f: T -> Bool)(signal: Signal<T, E>) -> Signal<T, E> {
         })
     }
 }
+
+public func mapError<T, E, R>(f: E -> R)(signal: Signal<T, E>) -> Signal<T, R> {
+    return Signal<T, R> { subscriber in
+        return signal.start(next: { next in
+            subscriber.putNext(next)
+        }, error: { error in
+            subscriber.putError(f(error))
+        }, completed: {
+            subscriber.putCompletion()
+        })
+    }
+}

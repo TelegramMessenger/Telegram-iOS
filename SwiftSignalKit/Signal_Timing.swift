@@ -3,7 +3,7 @@ import Foundation
 public func delay<T, E>(timeout: NSTimeInterval, queue: Queue)(signal: Signal<T, E>) -> Signal<T, E> {
     return Signal<T, E> { subscriber in
         let disposable = MetaDisposable()
-        let timer = Timer(timeout: timeout, repeat: false, completion: {
+        let timer = Timer(timeout: timeout, `repeat`: false, completion: {
             disposable.set(signal.start(next: { next in
                 subscriber.putNext(next)
             }, error: { error in
@@ -23,7 +23,7 @@ public func delay<T, E>(timeout: NSTimeInterval, queue: Queue)(signal: Signal<T,
 public func timeout<T, E>(timeout: NSTimeInterval, queue: Queue, alternate: Signal<T, E>)(signal: Signal<T, E>) -> Signal<T, E> {
     return Signal<T, E> { subscriber in
         let disposable = MetaDisposable()
-        let timer = Timer(timeout: timeout, repeat: false, completion: {
+        let timer = Timer(timeout: timeout, `repeat`: false, completion: {
             disposable.set(alternate.start(next: { next in
                 subscriber.putNext(next)
             }, error: { error in

@@ -8,7 +8,6 @@ private struct SignalCombineState {
 
 private func combineLatestAny<E, R>(signals: [Signal<Any, E>], combine: [Any] -> R) -> Signal<R, E> {
     return Signal { subscriber in
-        
         let state = Atomic(value: SignalCombineState(values: [:], completed: Set(), error: false))
         let disposable = DisposableSet()
         
@@ -36,6 +35,9 @@ private func combineLatestAny<E, R>(signals: [Signal<Any, E>], combine: [Any] ->
                     } else {
                         return current
                     }
+                }
+                if emitError {
+                    subscriber.putError(error)
                 }
             }, completed: {
                 var emitCompleted = false
@@ -72,20 +74,20 @@ private func signalOfAny<T, E>(signal: Signal<T, E>) -> Signal<Any, E> {
     }
 }
 
-public func combineLatest<T1, T2, E>(s1: Signal<T1, E>, s2: Signal<T2, E>) -> Signal<(T1, T2), E> {
-    return combineLatestAny([signalOfAny(s1), signalOfAny(s2)], { values in
+public func combineLatest<T1, T2, E>(s1: Signal<T1, E>, _ s2: Signal<T2, E>) -> Signal<(T1, T2), E> {
+    return combineLatestAny([signalOfAny(s1), signalOfAny(s2)], combine: { values in
         return (values[0] as! T1, values[1] as! T2)
     })
 }
 
-public func combineLatest<T1, T2, T3, E>(s1: Signal<T1, E>, s2: Signal<T2, E>, s3: Signal<T3, E>) -> Signal<(T1, T2, T3), E> {
-    return combineLatestAny([signalOfAny(s1), signalOfAny(s2), signalOfAny(s3)], { values in
+public func combineLatest<T1, T2, T3, E>(s1: Signal<T1, E>, _ s2: Signal<T2, E>, _ s3: Signal<T3, E>) -> Signal<(T1, T2, T3), E> {
+    return combineLatestAny([signalOfAny(s1), signalOfAny(s2), signalOfAny(s3)], combine: { values in
         return (values[0] as! T1, values[1] as! T2, values[2] as! T3)
     })
 }
 
-public func combineLatest<T1, T2, T3, T4, E>(s1: Signal<T1, E>, s2: Signal<T2, E>, s3: Signal<T3, E>, s4: Signal<T4, E>) -> Signal<(T1, T2, T3, T4), E> {
-    return combineLatestAny([signalOfAny(s1), signalOfAny(s2), signalOfAny(s3), signalOfAny(s4)], { values in
+public func combineLatest<T1, T2, T3, T4, E>(s1: Signal<T1, E>, _ s2: Signal<T2, E>, _ s3: Signal<T3, E>, s4: Signal<T4, E>) -> Signal<(T1, T2, T3, T4), E> {
+    return combineLatestAny([signalOfAny(s1), signalOfAny(s2), signalOfAny(s3), signalOfAny(s4)], combine: { values in
         return (values[0] as! T1, values[1] as! T2, values[2] as! T3, values[3] as! T4)
     })
 }

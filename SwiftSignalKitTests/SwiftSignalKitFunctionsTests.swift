@@ -177,7 +177,7 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
             return EmptyDisposable
         }
         
-        let catchSignal = failingSignal |> catch { error in
+        let catchSignal = failingSignal |> `catch` { error in
             return Signal<Int, Int> { subscriber in
                 subscriber.putNext(error * 2)
                 return EmptyDisposable
@@ -454,7 +454,7 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
         let signal = singleSignalInt(one) |> then(singleSignalInt(two)) |> then(singleSignalInt(three)) |> queue
         
         signal.start(next: { next in
-            println("next: \(next)")
+            print("next: \(next)")
             result.append(next)
         }, completed: {
             completedAll = true
@@ -656,5 +656,66 @@ class SwiftSignalKitFunctionsTests: XCTestCase {
         
         XCTAssert(result1 == 1, "result1 != 1")
         XCTAssert(result2 == 2, "result2 != 2")
+    }
+    
+    func testQueueRecursive() {
+        let q = Queue()
+        
+        let signal = Signal<Int, NoError> { subscriber in
+            for _ in 0 ..< 1000 {
+                subscriber.putNext(1)
+            }
+            subscriber.putCompletion()
+            return EmptyDisposable
+        }
+        
+        let queued = signal
+            |> mapToQueue { _ -> Signal<Void, NoError> in
+                return complete(Void.self, NoError.self) |> deliverOn(q)
+            }
+        
+        queued.start()
+    }
+    
+    func testReduceSignal() {
+        let q = Queue()
+        
+        let signal = Signal<Int, NoError> { subscriber in
+            for i in 0 ..< 1000 {
+                subscriber.putNext(i)
+            }
+            subscriber.putCompletion()
+            return EmptyDisposable
+        }
+        
+        let reduced = signal
+            |> reduceLeft(0, generator: { current, next -> Signal<(Int, Passthrough<Int>), NoError> in
+                return Signal { subscriber in
+                    subscriber.putNext((current + next, Passthrough.Some(current + next)))
+                    subscriber.putCompletion()
+                    return EmptyDisposable
+                } |> deliverOn(q)
+            })
+        
+        var values: [Int] = []
+        reduced.start(next: { next in
+            values.append(next)
+        })
+        
+        q.sync { }
+        
+        XCTAssert(values.count == 1001, "count \(values.count) != 1001")
+        var previous = 0
+        for i in 0 ..< 1001 {
+            let value: Int
+            if i >= 1000 {
+                value = previous
+            } else {
+                value = previous + i
+                previous = value
+            }
+            previous = value
+            XCTAssert(values[i] == value, "at \(i): \(values[i]) != \(value)")
+        }
     }
 }

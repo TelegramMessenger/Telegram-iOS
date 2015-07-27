@@ -58,7 +58,7 @@ public func ==(lhs: ThreadPoolQueue, rhs: ThreadPoolQueue) -> Bool {
     return lhs === rhs
 }
 
-@objc public final class ThreadPool {
+@objc public final class ThreadPool: NSObject {
     private var threads: [NSThread] = []
     private var queues: [ThreadPoolQueue] = []
     private var takenQueues: [ThreadPoolQueue] = []
@@ -74,7 +74,7 @@ public func ==(lhs: ThreadPoolQueue, rhs: ThreadPoolQueue) -> Bool {
             pthread_mutex_lock(&threadPool.mutex);
             
             if queue != nil {
-                if let index = find(threadPool.takenQueues, queue) {
+                if let index = threadPool.takenQueues.indexOf(queue) {
                     threadPool.takenQueues.removeAtIndex(index)
                 }
                 
@@ -97,7 +97,7 @@ public func ==(lhs: ThreadPoolQueue, rhs: ThreadPoolQueue) -> Bool {
                     task = queue.popFirstTask()
                     threadPool.takenQueues.append(queue)
                     
-                    if let index = find(threadPool.queues, queue) {
+                    if let index = threadPool.queues.indexOf(queue) {
                         threadPool.queues.removeAtIndex(index)
                     }
                     
@@ -120,8 +120,10 @@ public func ==(lhs: ThreadPoolQueue, rhs: ThreadPoolQueue) -> Bool {
         pthread_mutex_init(&self.mutex, nil)
         pthread_cond_init(&self.condition, nil)
         
-        for i in 0 ..< threadCount {
-            var thread = NSThread(target: ThreadPool.self, selector: Selector("threadEntryPoint"), object: self)
+        super.init()
+        
+        for _ in 0 ..< threadCount {
+            let thread = NSThread(target: ThreadPool.self, selector: Selector("threadEntryPoint"), object: self)
             thread.threadPriority = threadPriority
             self.threads.append(thread)
             thread.start()
@@ -141,7 +143,7 @@ public func ==(lhs: ThreadPoolQueue, rhs: ThreadPoolQueue) -> Bool {
     private func workOnQueue(queue: ThreadPoolQueue, action: () -> ()) {
         pthread_mutex_lock(&self.mutex)
         action()
-        if !contains(self.queues, queue) && !contains(self.takenQueues, queue) {
+        if !self.queues.contains(queue) && !self.takenQueues.contains(queue) {
             self.queues.append(queue)
         }
         pthread_cond_broadcast(&self.condition)

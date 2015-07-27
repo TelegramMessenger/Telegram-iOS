@@ -45,34 +45,46 @@ private final class SignalQueueState<T, E> : Disposable {
     }
     
     func headCompleted() {
-        var nextSignal: Signal<T, E>! = nil
-        
-        var terminated = false
-        OSSpinLockLock(&self.lock)
-        self.executingSignal = false
-        if self.queueMode {
-            if self.queuedSignals.count != 0 {
-                nextSignal = self.queuedSignals[0]
-                self.queuedSignals.removeAtIndex(0)
-                self.executingSignal = true
+        while true {
+            let leftFunction = Atomic(value: false)
+            
+            var nextSignal: Signal<T, E>! = nil
+            
+            var terminated = false
+            OSSpinLockLock(&self.lock)
+            self.executingSignal = false
+            if self.queueMode {
+                if self.queuedSignals.count != 0 {
+                    nextSignal = self.queuedSignals[0]
+                    self.queuedSignals.removeAtIndex(0)
+                    self.executingSignal = true
+                } else {
+                    terminated = self.terminated
+                }
             } else {
                 terminated = self.terminated
             }
-        } else {
-            terminated = self.terminated
-        }
-        OSSpinLockUnlock(&self.lock)
-        
-        if terminated {
-            self.subscriber.putCompletion()
-        } else if nextSignal != nil {
-            let disposable = nextSignal.start(next: { next in
-                self.subscriber.putNext(next)
-            }, error: { error in
-                self.subscriber.putError(error)
-            }, completed: {
-                self.headCompleted()
-            })
+            OSSpinLockUnlock(&self.lock)
+            
+            if terminated {
+                self.subscriber.putCompletion()
+            } else if nextSignal != nil {
+                let disposable = nextSignal.start(next: { next in
+                    self.subscriber.putNext(next)
+                }, error: { error in
+                    self.subscriber.putError(error)
+                }, completed: {
+                    if leftFunction.swap(true) == true {
+                        self.headCompleted()
+                    }
+                })
+                
+                currentDisposable.set(disposable)
+            }
+            
+            if leftFunction.swap(true) == false {
+                break
+            }
         }
     }
     
@@ -152,7 +164,7 @@ public func then<T, E>(nextSignal: Signal<T, E>)(signal: Signal<T, E>) -> Signal
     }
 }
 
-public func defer<T, E>(generator: () -> Signal<T, E>) -> Signal<T, E> {
+public func `defer`<T, E>(generator: () -> Signal<T, E>) -> Signal<T, E> {
     return Signal { subscriber in
         return generator().start(next: { next in
             subscriber.putNext(next)

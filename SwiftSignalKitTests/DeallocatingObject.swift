@@ -1,6 +1,6 @@
 import Foundation
 
-internal class DeallocatingObject : Printable {
+internal class DeallocatingObject : CustomStringConvertible {
     private var deallocated: UnsafeMutablePointer<Bool>
     
     init(deallocated: UnsafeMutablePointer<Bool>) {
@@ -11,7 +11,7 @@ internal class DeallocatingObject : Printable {
         self.deallocated.memory = true
     }
     
-    public var description: String {
+    var description: String {
         get {
             return ""
         }

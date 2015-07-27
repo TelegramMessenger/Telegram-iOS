@@ -1,6 +1,6 @@
 import Foundation
 
-public func catch<T, E>(f: E -> Signal<T, E>)(signal: Signal<T, E>) -> Signal<T, E> {
+public func `catch`<T, E>(f: E -> Signal<T, E>)(signal: Signal<T, E>) -> Signal<T, E> {
     return Signal<T, E> { subscriber in
         let disposable = DisposableSet()
         
@@ -56,6 +56,45 @@ public func restart<T, E>(signal: Signal<T, E>) -> Signal<T, E> {
         return ActionDisposable {
             currentDisposable.dispose()
             shouldRestart.swap(false)
+        }
+    }
+}
+
+public func retry<T, E>(exponentialDecay: Double, onQueue queue: Queue)(signal: Signal<T, E>) -> Signal<T, E> {
+    return Signal { subscriber in
+        let shouldRetry = Atomic(value: true)
+        let currentDelay = Atomic(value: 0.0)
+        let currentDisposable = MetaDisposable()
+        
+        let start = recursiveFunction { recurse in
+            let currentShouldRetry = shouldRetry.with { value in
+                return value
+            }
+            if currentShouldRetry {
+                let disposable = signal.start(next: { next in
+                    subscriber.putNext(next)
+                }, error: { error in
+                    let delay = currentDelay.modify { value in
+                        return value
+                    }
+                    
+                    let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(delay * Double(NSEC_PER_SEC)))
+                    dispatch_after(delayTime, queue.queue) {
+                        recurse()
+                    }
+                }, completed: {
+                    shouldRetry.swap(false)
+                    subscriber.putCompletion()
+                })
+                currentDisposable.set(disposable)
+            }
+        }
+        
+        start()
+        
+        return ActionDisposable {
+            currentDisposable.dispose()
+            shouldRetry.swap(false)
         }
     }
 }

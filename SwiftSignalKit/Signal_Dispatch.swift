@@ -49,7 +49,7 @@ public func deliverOn<T, E>(threadPool: ThreadPool)(signal: Signal<T, E>) -> Sig
 
 public func runOn<T, E>(threadPool: ThreadPool)(signal: Signal<T, E>) -> Signal<T, E> {
     return Signal { subscriber in
-        var cancelled = false
+        let cancelled = false
         let disposable = MetaDisposable()
         
         let task = ThreadPoolTask { state in

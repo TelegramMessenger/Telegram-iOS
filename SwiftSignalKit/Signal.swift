@@ -36,7 +36,7 @@ public struct Signal<T, E> {
         self.generator = generator
     }
     
-    public func start(next: (T -> Void)! = nil, error: (E -> Void)! = nil, completed: (() -> Void)! = nil) -> Disposable {
+    public func start(next next: (T -> Void)! = nil, error: (E -> Void)! = nil, completed: (() -> Void)! = nil) -> Disposable {
         let subscriber = Subscriber<T, E>(next: next, error: error, completed: completed)
         let disposable = self.generator(subscriber)
         subscriber.assignDisposable(disposable)

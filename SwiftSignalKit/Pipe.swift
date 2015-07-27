@@ -10,7 +10,7 @@ public final class Pipe<T> {
     public func signal() -> Signal<T, Void> {
         return Signal { [weak self] subscriber in
             if let strongSelf = self {
-                var index = strongSelf.subscribers.with { value -> Bag<T>.Index in
+                let index = strongSelf.subscribers.with { value -> Bag<T>.Index in
                     return value.add { next in
                         subscriber.putNext(next)
                     }
