@@ -53,7 +53,7 @@ public func <(lhs: PeerViewEntryIndex, rhs: PeerViewEntryIndex) -> Bool {
     return lhs.peerId < rhs.peerId
 }
 
-public final class MutablePeerView: Printable {
+public final class MutablePeerView: CustomStringConvertible {
     public struct RemoveContext {
         var invalidEarlier = false
         var invalidLater = false
@@ -104,8 +104,8 @@ public final class MutablePeerView: Printable {
         if self.entries.count == 0 {
             self.entries.append(entry)
         } else {
-            var first = PeerViewEntryIndex(self.entries[self.entries.count - 1])
-            var last = PeerViewEntryIndex(self.entries[0])
+            let first = PeerViewEntryIndex(self.entries[self.entries.count - 1])
+            let last = PeerViewEntryIndex(self.entries[0])
             
             let index = PeerViewEntryIndex(entry)
             
@@ -179,7 +179,7 @@ public final class MutablePeerView: Printable {
             }
             
             addedEntries += self.entries
-            addedEntries.sort({ PeerViewEntryIndex($0) < PeerViewEntryIndex($1) })
+            addedEntries.sortInPlace({ PeerViewEntryIndex($0) < PeerViewEntryIndex($1) })
             
             var i = addedEntries.count - 1
             while i >= 1 {
@@ -204,7 +204,7 @@ public final class MutablePeerView: Printable {
             
             self.later = nil
             if anchorIndex + 1 < addedEntries.count {
-                var i = anchorIndex + 1
+                let i = anchorIndex + 1
                 while i < addedEntries.count {
                     self.later = addedEntries[i]
                     break
@@ -283,10 +283,10 @@ public final class MutablePeerView: Printable {
     }
 }
 
-public final class PeerView: Printable {
+public final class PeerView: CustomStringConvertible {
     let earlier: PeerViewEntryIndex?
     let later: PeerViewEntryIndex?
-    let entries: [PeerViewEntry]
+    public let entries: [PeerViewEntry]
     
     init(_ mutableView: MutablePeerView) {
         if let earlier = mutableView.earlier {

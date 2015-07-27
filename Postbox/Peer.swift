@@ -1,6 +1,6 @@
 import Foundation
 
-public struct PeerId: Hashable, Printable, Comparable {
+public struct PeerId: Hashable, CustomStringConvertible, Comparable {
     public typealias Namespace = Int32
     public typealias Id = Int32
     

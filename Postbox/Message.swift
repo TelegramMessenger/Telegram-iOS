@@ -1,6 +1,6 @@
 import Foundation
 
-public struct MessageId: Hashable, Printable {
+public struct MessageId: Hashable, CustomStringConvertible {
     public typealias Namespace = Int32
     public typealias Id = Int32
     
@@ -59,7 +59,6 @@ public struct MessageId: Hashable, Printable {
     
     public static func decodeArrayFromBuffer(buffer: ReadBuffer) -> [MessageId] {
         var length: Int32 = 0
-        var offset = 0
         memcpy(&length, buffer.memory, 4)
         buffer.offset += 4
         var i = 0
@@ -109,7 +108,6 @@ public func <(lhs: MessageIndex, rhs: MessageIndex) -> Bool {
 
 public protocol Message: Coding {
     var id: MessageId { get }
-    var authorId: PeerId { get }
     var timestamp: Int32 { get }
     var text: String { get }
     var referencedMediaIds: [MediaId] { get }

@@ -1,6 +1,6 @@
 import Foundation
 
-public final class MutableMessageView: Printable {
+public final class MutableMessageView: CustomStringConvertible {
     public struct RemoveContext {
         var invalidEarlier: Set<MessageId.Namespace>
         var invalidLater: Set<MessageId.Namespace>
@@ -35,8 +35,8 @@ public final class MutableMessageView: Printable {
         if self.messages.count == 0 {
             self.messages.append(message)
         } else {
-            var first = MessageIndex(self.messages[self.messages.count - 1])
-            var last = MessageIndex(self.messages[0])
+            let first = MessageIndex(self.messages[self.messages.count - 1])
+            let last = MessageIndex(self.messages[0])
             
             var next: MessageIndex?
             for namespace in self.namespaces {
@@ -156,7 +156,7 @@ public final class MutableMessageView: Printable {
             }
             
             addedMessages += self.messages
-            addedMessages.sort({ MessageIndex($0) < MessageIndex($1) })
+            addedMessages.sortInPlace({ MessageIndex($0) < MessageIndex($1) })
             var i = addedMessages.count - 1
             while i >= 1 {
                 if addedMessages[i].id == addedMessages[i - 1].id {
@@ -299,7 +299,7 @@ public final class MutableMessageView: Printable {
     }
 }
 
-public final class MessageView: Printable {
+public final class MessageView: CustomStringConvertible {
     public let hasEarlier: Bool
     private let earlierIds: [MessageIndex]
     public let hasLater: Bool

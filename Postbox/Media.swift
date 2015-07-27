@@ -1,6 +1,6 @@
 import Foundation
 
-public struct MediaId: Hashable, Printable {
+public struct MediaId: Hashable, CustomStringConvertible {
     public typealias Namespace = Int32
     public typealias Id = Int64
     
@@ -50,7 +50,6 @@ public struct MediaId: Hashable, Printable {
     
     public static func decodeArrayFromBuffer(buffer: ReadBuffer) -> [MediaId] {
         var length: Int32 = 0
-        var offset = 0
         memcpy(&length, buffer.memory, 4)
         buffer.offset += 4
         var i = 0

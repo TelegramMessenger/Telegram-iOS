@@ -20,7 +20,8 @@ private struct EncodableTypeStore {
 private var typeStore = EncodableTypeStore()
 
 public func declareEncodable(type: Any.Type, f: Decoder -> Coding) {
-    let hash = murMurHashString32("\(type)")
+    let string = "\(type)"
+    let hash = murMurHashString32(string)
     if typeStore.dict[hash] != nil {
         assertionFailure("Encodable type hash collision for \(type)")
     }
@@ -186,7 +187,8 @@ public final class Encoder {
         var type: Int8 = ValueType.Object.rawValue
         self.buffer.write(&type, offset: 0, length: 1)
         
-        var typeHash: Int32 = murMurHashString32(_stdlib_getDemangledTypeName(value))
+        let string = "\(value.dynamicType)"
+        var typeHash: Int32 = murMurHashString32(string)
         self.buffer.write(&typeHash, offset: 0, length: 4)
         
         let innerEncoder = Encoder()
@@ -346,7 +348,7 @@ public final class Decoder {
     
     private class func positionOnKey(bytes: UnsafePointer<Int8>, inout offset: Int, maxOffset: Int, length: Int, key: UnsafePointer<Int8>, valueType: ValueType) -> Bool
     {
-        var startOffset = offset
+        let startOffset = offset
         
         let keyLength: Int = Int(strlen(key))
         while (offset < maxOffset)
@@ -444,10 +446,28 @@ public final class Decoder {
             var length: Int32 = 0
             memcpy(&length, self.buffer.memory + self.buffer.offset, 4)
 
-            var innerDecoder = Decoder(buffer: ReadBuffer(memory: self.buffer.memory + (self.buffer.offset + 4), length: Int(length), freeWhenDone: false))
+            let innerDecoder = Decoder(buffer: ReadBuffer(memory: self.buffer.memory + (self.buffer.offset + 4), length: Int(length), freeWhenDone: false))
             self.buffer.offset += 4 + Int(length)
             
             return typeStore.decode(typeHash, decoder: innerDecoder)
+        } else {
+            return nil
+        }
+    }
+    
+    public func decodeObjectForKey(key: UnsafePointer<Int8>, decoder: Decoder -> Coding) -> Coding? {
+        if Decoder.positionOnKey(UnsafePointer<Int8>(self.buffer.memory), offset: &self.buffer.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Object) {
+            var typeHash: Int32 = 0
+            memcpy(&typeHash, self.buffer.memory + self.buffer.offset, 4)
+            self.buffer.offset += 4
+            
+            var length: Int32 = 0
+            memcpy(&length, self.buffer.memory + self.buffer.offset, 4)
+            
+            let innerDecoder = Decoder(buffer: ReadBuffer(memory: self.buffer.memory + (self.buffer.offset + 4), length: Int(length), freeWhenDone: false))
+            self.buffer.offset += 4 + Int(length)
+            
+            return decoder(innerDecoder)
         } else {
             return nil
         }
@@ -512,7 +532,7 @@ public final class Decoder {
                 var objectLength: Int32 = 0
                 memcpy(&objectLength, self.buffer.memory + self.buffer.offset, 4)
                 
-                var innerDecoder = Decoder(buffer: ReadBuffer(memory: self.buffer.memory + (self.buffer.offset + 4), length: Int(objectLength), freeWhenDone: false))
+                let innerDecoder = Decoder(buffer: ReadBuffer(memory: self.buffer.memory + (self.buffer.offset + 4), length: Int(objectLength), freeWhenDone: false))
                 self.buffer.offset += 4 + Int(objectLength)
                 
                 if !failed {
