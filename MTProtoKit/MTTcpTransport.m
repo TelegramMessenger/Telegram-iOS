@@ -224,7 +224,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 {
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-#if !TARGET_OS_IPHONE
+#if false
         if (_sleepWatchdogTimer == nil)
         {
             _sleepWatchdogTimerLastTime = MTAbsoluteSystemTime();
