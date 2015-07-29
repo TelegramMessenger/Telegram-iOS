@@ -752,7 +752,7 @@ public final class Postbox<State: PostboxState> {
     private func deferMessageViewUpdate(view: MutableMessageView, pipe: Pipe<MessageView>) {
         var i = 0
         var found = false
-        while i < self.deferredPeerViewsToUpdate.count {
+        while i < self.deferredMessageViewsToUpdate.count {
             if self.deferredMessageViewsToUpdate[i].1 === pipe {
                 self.deferredMessageViewsToUpdate[i] = (view, pipe)
                 found = true
