@@ -10,6 +10,45 @@
 		D05CC2671B69316F00E235A3 /* Display.h in Headers */ = {isa = PBXBuildFile; fileRef = D05CC2661B69316F00E235A3 /* Display.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D05CC26E1B69316F00E235A3 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D05CC2631B69316F00E235A3 /* Display.framework */; };
 		D05CC2731B69316F00E235A3 /* DisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC2721B69316F00E235A3 /* DisplayTests.swift */; };
+		D05CC29A1B69323B00E235A3 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D05CC2991B69323B00E235A3 /* SwiftSignalKit.framework */; };
+		D05CC2A01B69326400E235A3 /* NavigationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC29F1B69326400E235A3 /* NavigationController.swift */; };
+		D05CC2A21B69326C00E235A3 /* Window.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC2A11B69326C00E235A3 /* Window.swift */; };
+		D05CC2B61B69339A00E235A3 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D05CC2B21B6932E900E235A3 /* AsyncDisplayKit.framework */; };
+		D05CC2E31B69552C00E235A3 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC2E21B69552C00E235A3 /* ViewController.swift */; };
+		D05CC2E71B69555800E235A3 /* CAAnimationUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC2E41B69555800E235A3 /* CAAnimationUtils.swift */; };
+		D05CC2E81B69555800E235A3 /* CALayer+ImplicitAnimations.m in Sources */ = {isa = PBXBuildFile; fileRef = D05CC2E51B69555800E235A3 /* CALayer+ImplicitAnimations.m */; };
+		D05CC2E91B69555800E235A3 /* CALayer+ImplicitAnimations.h in Headers */ = {isa = PBXBuildFile; fileRef = D05CC2E61B69555800E235A3 /* CALayer+ImplicitAnimations.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05CC2EC1B69558A00E235A3 /* RuntimeUtils.m in Sources */ = {isa = PBXBuildFile; fileRef = D05CC2EA1B69558A00E235A3 /* RuntimeUtils.m */; };
+		D05CC2ED1B69558A00E235A3 /* RuntimeUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = D05CC2EB1B69558A00E235A3 /* RuntimeUtils.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05CC2F71B6955D000E235A3 /* UIKitUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC2EE1B6955D000E235A3 /* UIKitUtils.swift */; };
+		D05CC2F81B6955D000E235A3 /* UIViewController+Navigation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05CC2EF1B6955D000E235A3 /* UIViewController+Navigation.m */; };
+		D05CC2F91B6955D000E235A3 /* UIViewController+Navigation.h in Headers */ = {isa = PBXBuildFile; fileRef = D05CC2F01B6955D000E235A3 /* UIViewController+Navigation.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05CC2FA1B6955D000E235A3 /* UINavigationItem+Proxy.m in Sources */ = {isa = PBXBuildFile; fileRef = D05CC2F11B6955D000E235A3 /* UINavigationItem+Proxy.m */; };
+		D05CC2FB1B6955D000E235A3 /* UINavigationItem+Proxy.h in Headers */ = {isa = PBXBuildFile; fileRef = D05CC2F21B6955D000E235A3 /* UINavigationItem+Proxy.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05CC2FC1B6955D000E235A3 /* UIKitUtils.m in Sources */ = {isa = PBXBuildFile; fileRef = D05CC2F31B6955D000E235A3 /* UIKitUtils.m */; };
+		D05CC2FD1B6955D000E235A3 /* UIKitUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = D05CC2F41B6955D000E235A3 /* UIKitUtils.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05CC2FE1B6955D000E235A3 /* UIWindow+OrientationChange.m in Sources */ = {isa = PBXBuildFile; fileRef = D05CC2F51B6955D000E235A3 /* UIWindow+OrientationChange.m */; };
+		D05CC2FF1B6955D000E235A3 /* UIWindow+OrientationChange.h in Headers */ = {isa = PBXBuildFile; fileRef = D05CC2F61B6955D000E235A3 /* UIWindow+OrientationChange.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05CC3031B69568600E235A3 /* NotificationCenterUtils.m in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3011B69568600E235A3 /* NotificationCenterUtils.m */; };
+		D05CC3041B69568600E235A3 /* NotificationCenterUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = D05CC3021B69568600E235A3 /* NotificationCenterUtils.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05CC3071B69575900E235A3 /* NSBag.m in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3051B69575900E235A3 /* NSBag.m */; };
+		D05CC3081B69575900E235A3 /* NSBag.h in Headers */ = {isa = PBXBuildFile; fileRef = D05CC3061B69575900E235A3 /* NSBag.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05CC3151B695A9600E235A3 /* NavigationTransitionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3091B695A9500E235A3 /* NavigationTransitionView.swift */; };
+		D05CC3161B695A9600E235A3 /* NavigationBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC30A1B695A9500E235A3 /* NavigationBar.swift */; };
+		D05CC3171B695A9600E235A3 /* NavigationItemWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC30B1B695A9500E235A3 /* NavigationItemWrapper.swift */; };
+		D05CC3181B695A9600E235A3 /* NavigationItemTransitionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC30C1B695A9500E235A3 /* NavigationItemTransitionState.swift */; };
+		D05CC3191B695A9600E235A3 /* NavigationBackButtonNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC30D1B695A9500E235A3 /* NavigationBackButtonNode.swift */; };
+		D05CC31A1B695A9600E235A3 /* NavigationButtonNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC30E1B695A9500E235A3 /* NavigationButtonNode.swift */; };
+		D05CC31B1B695A9600E235A3 /* NavigationTitleNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC30F1B695A9500E235A3 /* NavigationTitleNode.swift */; };
+		D05CC31C1B695A9600E235A3 /* BarButtonItemWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3101B695A9600E235A3 /* BarButtonItemWrapper.swift */; };
+		D05CC31D1B695A9600E235A3 /* UIBarButtonItem+Proxy.m in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3111B695A9600E235A3 /* UIBarButtonItem+Proxy.m */; };
+		D05CC31E1B695A9600E235A3 /* UIBarButtonItem+Proxy.h in Headers */ = {isa = PBXBuildFile; fileRef = D05CC3121B695A9600E235A3 /* UIBarButtonItem+Proxy.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05CC31F1B695A9600E235A3 /* NavigationControllerProxy.m in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3131B695A9600E235A3 /* NavigationControllerProxy.m */; };
+		D05CC3201B695A9600E235A3 /* NavigationControllerProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = D05CC3141B695A9600E235A3 /* NavigationControllerProxy.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05CC3241B695B0700E235A3 /* NavigationBarProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = D05CC3221B695B0700E235A3 /* NavigationBarProxy.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D05CC3251B695B0700E235A3 /* NavigationBarProxy.m in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3231B695B0700E235A3 /* NavigationBarProxy.m */; };
+		D05CC3271B69725400E235A3 /* NavigationBackArrowLight@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D05CC3261B69725400E235A3 /* NavigationBackArrowLight@2x.png */; };
+		D05CC3291B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -20,6 +59,41 @@
 			remoteGlobalIDString = D05CC2621B69316F00E235A3;
 			remoteInfo = Display;
 		};
+		D05CC2AB1B6932E900E235A3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D05CC2A41B6932E800E235A3 /* AsyncDisplayKit.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 058D09AC195D04C000B7D73C;
+			remoteInfo = AsyncDisplayKit;
+		};
+		D05CC2AD1B6932E900E235A3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D05CC2A41B6932E800E235A3 /* AsyncDisplayKit.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 058D09BC195D04C000B7D73C;
+			remoteInfo = AsyncDisplayKitTests;
+		};
+		D05CC2AF1B6932E900E235A3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D05CC2A41B6932E800E235A3 /* AsyncDisplayKit.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 057D02BF1AC0A66700C7AC3C;
+			remoteInfo = AsyncDisplayKitTestHost;
+		};
+		D05CC2B11B6932E900E235A3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D05CC2A41B6932E800E235A3 /* AsyncDisplayKit.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = B35061DA1B010EDF0018CF92;
+			remoteInfo = "AsyncDisplayKit-iOS";
+		};
+		D05CC32A1B697C0900E235A3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D05CC2A41B6932E800E235A3 /* AsyncDisplayKit.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = B35061D91B010EDF0018CF92;
+			remoteInfo = "AsyncDisplayKit-iOS";
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
@@ -29,6 +103,45 @@
 		D05CC26D1B69316F00E235A3 /* DisplayTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DisplayTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D05CC2721B69316F00E235A3 /* DisplayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayTests.swift; sourceTree = "<group>"; };
 		D05CC2741B69316F00E235A3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D05CC2991B69323B00E235A3 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftSignalKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-gbpsmqzuwcmmxadrqcwyrluaftwp/Build/Products/Debug-iphoneos/SwiftSignalKit.framework"; sourceTree = "<group>"; };
+		D05CC29F1B69326400E235A3 /* NavigationController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationController.swift; sourceTree = "<group>"; };
+		D05CC2A11B69326C00E235A3 /* Window.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Window.swift; sourceTree = "<group>"; };
+		D05CC2A41B6932E800E235A3 /* AsyncDisplayKit.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = AsyncDisplayKit.xcodeproj; path = submodules/AsyncDisplayKit/AsyncDisplayKit.xcodeproj; sourceTree = "<group>"; };
+		D05CC2E21B69552C00E235A3 /* ViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		D05CC2E41B69555800E235A3 /* CAAnimationUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CAAnimationUtils.swift; sourceTree = "<group>"; };
+		D05CC2E51B69555800E235A3 /* CALayer+ImplicitAnimations.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "CALayer+ImplicitAnimations.m"; sourceTree = "<group>"; };
+		D05CC2E61B69555800E235A3 /* CALayer+ImplicitAnimations.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "CALayer+ImplicitAnimations.h"; sourceTree = "<group>"; };
+		D05CC2EA1B69558A00E235A3 /* RuntimeUtils.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RuntimeUtils.m; sourceTree = "<group>"; };
+		D05CC2EB1B69558A00E235A3 /* RuntimeUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RuntimeUtils.h; sourceTree = "<group>"; };
+		D05CC2EE1B6955D000E235A3 /* UIKitUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UIKitUtils.swift; sourceTree = "<group>"; };
+		D05CC2EF1B6955D000E235A3 /* UIViewController+Navigation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIViewController+Navigation.m"; sourceTree = "<group>"; };
+		D05CC2F01B6955D000E235A3 /* UIViewController+Navigation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIViewController+Navigation.h"; sourceTree = "<group>"; };
+		D05CC2F11B6955D000E235A3 /* UINavigationItem+Proxy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UINavigationItem+Proxy.m"; sourceTree = "<group>"; };
+		D05CC2F21B6955D000E235A3 /* UINavigationItem+Proxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UINavigationItem+Proxy.h"; sourceTree = "<group>"; };
+		D05CC2F31B6955D000E235A3 /* UIKitUtils.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = UIKitUtils.m; sourceTree = "<group>"; };
+		D05CC2F41B6955D000E235A3 /* UIKitUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UIKitUtils.h; sourceTree = "<group>"; };
+		D05CC2F51B6955D000E235A3 /* UIWindow+OrientationChange.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIWindow+OrientationChange.m"; sourceTree = "<group>"; };
+		D05CC2F61B6955D000E235A3 /* UIWindow+OrientationChange.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIWindow+OrientationChange.h"; sourceTree = "<group>"; };
+		D05CC3011B69568600E235A3 /* NotificationCenterUtils.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NotificationCenterUtils.m; sourceTree = "<group>"; };
+		D05CC3021B69568600E235A3 /* NotificationCenterUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NotificationCenterUtils.h; sourceTree = "<group>"; };
+		D05CC3051B69575900E235A3 /* NSBag.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NSBag.m; sourceTree = "<group>"; };
+		D05CC3061B69575900E235A3 /* NSBag.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSBag.h; sourceTree = "<group>"; };
+		D05CC3091B695A9500E235A3 /* NavigationTransitionView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationTransitionView.swift; sourceTree = "<group>"; };
+		D05CC30A1B695A9500E235A3 /* NavigationBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationBar.swift; sourceTree = "<group>"; };
+		D05CC30B1B695A9500E235A3 /* NavigationItemWrapper.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationItemWrapper.swift; sourceTree = "<group>"; };
+		D05CC30C1B695A9500E235A3 /* NavigationItemTransitionState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationItemTransitionState.swift; sourceTree = "<group>"; };
+		D05CC30D1B695A9500E235A3 /* NavigationBackButtonNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationBackButtonNode.swift; sourceTree = "<group>"; };
+		D05CC30E1B695A9500E235A3 /* NavigationButtonNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationButtonNode.swift; sourceTree = "<group>"; };
+		D05CC30F1B695A9500E235A3 /* NavigationTitleNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationTitleNode.swift; sourceTree = "<group>"; };
+		D05CC3101B695A9600E235A3 /* BarButtonItemWrapper.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BarButtonItemWrapper.swift; sourceTree = "<group>"; };
+		D05CC3111B695A9600E235A3 /* UIBarButtonItem+Proxy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIBarButtonItem+Proxy.m"; sourceTree = "<group>"; };
+		D05CC3121B695A9600E235A3 /* UIBarButtonItem+Proxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIBarButtonItem+Proxy.h"; sourceTree = "<group>"; };
+		D05CC3131B695A9600E235A3 /* NavigationControllerProxy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NavigationControllerProxy.m; sourceTree = "<group>"; };
+		D05CC3141B695A9600E235A3 /* NavigationControllerProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NavigationControllerProxy.h; sourceTree = "<group>"; };
+		D05CC3221B695B0700E235A3 /* NavigationBarProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NavigationBarProxy.h; sourceTree = "<group>"; };
+		D05CC3231B695B0700E235A3 /* NavigationBarProxy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NavigationBarProxy.m; sourceTree = "<group>"; };
+		D05CC3261B69725400E235A3 /* NavigationBackArrowLight@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "NavigationBackArrowLight@2x.png"; sourceTree = "<group>"; };
+		D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InteractiveTransitionGestureRecognizer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -36,6 +149,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D05CC2B61B69339A00E235A3 /* AsyncDisplayKit.framework in Frameworks */,
+				D05CC29A1B69323B00E235A3 /* SwiftSignalKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -53,6 +168,7 @@
 		D05CC2591B69316F00E235A3 = {
 			isa = PBXGroup;
 			children = (
+				D05CC2A31B6932D500E235A3 /* Frameworks */,
 				D05CC2651B69316F00E235A3 /* Display */,
 				D05CC2711B69316F00E235A3 /* DisplayTests */,
 				D05CC2641B69316F00E235A3 /* Products */,
@@ -71,8 +187,11 @@
 		D05CC2651B69316F00E235A3 /* Display */ = {
 			isa = PBXGroup;
 			children = (
-				D05CC2661B69316F00E235A3 /* Display.h */,
-				D05CC2681B69316F00E235A3 /* Info.plist */,
+				D05CC3001B6955D500E235A3 /* Utils */,
+				D05CC3211B695AA600E235A3 /* Navigation */,
+				D05CC2A11B69326C00E235A3 /* Window.swift */,
+				D05CC2E21B69552C00E235A3 /* ViewController.swift */,
+				D05CC2E11B69534100E235A3 /* Supporting Files */,
 			);
 			path = Display;
 			sourceTree = "<group>";
@@ -86,6 +205,84 @@
 			path = DisplayTests;
 			sourceTree = "<group>";
 		};
+		D05CC2A31B6932D500E235A3 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D05CC2A41B6932E800E235A3 /* AsyncDisplayKit.xcodeproj */,
+				D05CC2991B69323B00E235A3 /* SwiftSignalKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		D05CC2A51B6932E800E235A3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D05CC2AC1B6932E900E235A3 /* libAsyncDisplayKit.a */,
+				D05CC2AE1B6932E900E235A3 /* AsyncDisplayKitTests.xctest */,
+				D05CC2B01B6932E900E235A3 /* AsyncDisplayKitTestHost.app */,
+				D05CC2B21B6932E900E235A3 /* AsyncDisplayKit.framework */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D05CC2E11B69534100E235A3 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				D05CC3261B69725400E235A3 /* NavigationBackArrowLight@2x.png */,
+				D05CC2661B69316F00E235A3 /* Display.h */,
+				D05CC2681B69316F00E235A3 /* Info.plist */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		D05CC3001B6955D500E235A3 /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				D05CC2EB1B69558A00E235A3 /* RuntimeUtils.h */,
+				D05CC2EA1B69558A00E235A3 /* RuntimeUtils.m */,
+				D05CC2F01B6955D000E235A3 /* UIViewController+Navigation.h */,
+				D05CC2EF1B6955D000E235A3 /* UIViewController+Navigation.m */,
+				D05CC2EE1B6955D000E235A3 /* UIKitUtils.swift */,
+				D05CC2F41B6955D000E235A3 /* UIKitUtils.h */,
+				D05CC2F31B6955D000E235A3 /* UIKitUtils.m */,
+				D05CC2F21B6955D000E235A3 /* UINavigationItem+Proxy.h */,
+				D05CC2F11B6955D000E235A3 /* UINavigationItem+Proxy.m */,
+				D05CC2F61B6955D000E235A3 /* UIWindow+OrientationChange.h */,
+				D05CC2F51B6955D000E235A3 /* UIWindow+OrientationChange.m */,
+				D05CC3021B69568600E235A3 /* NotificationCenterUtils.h */,
+				D05CC3011B69568600E235A3 /* NotificationCenterUtils.m */,
+				D05CC2E61B69555800E235A3 /* CALayer+ImplicitAnimations.h */,
+				D05CC2E51B69555800E235A3 /* CALayer+ImplicitAnimations.m */,
+				D05CC3061B69575900E235A3 /* NSBag.h */,
+				D05CC3051B69575900E235A3 /* NSBag.m */,
+				D05CC3121B695A9600E235A3 /* UIBarButtonItem+Proxy.h */,
+				D05CC3111B695A9600E235A3 /* UIBarButtonItem+Proxy.m */,
+				D05CC3141B695A9600E235A3 /* NavigationControllerProxy.h */,
+				D05CC3131B695A9600E235A3 /* NavigationControllerProxy.m */,
+				D05CC3221B695B0700E235A3 /* NavigationBarProxy.h */,
+				D05CC3231B695B0700E235A3 /* NavigationBarProxy.m */,
+				D05CC2E41B69555800E235A3 /* CAAnimationUtils.swift */,
+			);
+			name = Utils;
+			sourceTree = "<group>";
+		};
+		D05CC3211B695AA600E235A3 /* Navigation */ = {
+			isa = PBXGroup;
+			children = (
+				D05CC3091B695A9500E235A3 /* NavigationTransitionView.swift */,
+				D05CC30A1B695A9500E235A3 /* NavigationBar.swift */,
+				D05CC30C1B695A9500E235A3 /* NavigationItemTransitionState.swift */,
+				D05CC30D1B695A9500E235A3 /* NavigationBackButtonNode.swift */,
+				D05CC30E1B695A9500E235A3 /* NavigationButtonNode.swift */,
+				D05CC30F1B695A9500E235A3 /* NavigationTitleNode.swift */,
+				D05CC30B1B695A9500E235A3 /* NavigationItemWrapper.swift */,
+				D05CC3101B695A9600E235A3 /* BarButtonItemWrapper.swift */,
+				D05CC29F1B69326400E235A3 /* NavigationController.swift */,
+				D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */,
+			);
+			name = Navigation;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -93,7 +290,18 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D05CC3041B69568600E235A3 /* NotificationCenterUtils.h in Headers */,
+				D05CC2ED1B69558A00E235A3 /* RuntimeUtils.h in Headers */,
+				D05CC3201B695A9600E235A3 /* NavigationControllerProxy.h in Headers */,
+				D05CC2E91B69555800E235A3 /* CALayer+ImplicitAnimations.h in Headers */,
+				D05CC2FB1B6955D000E235A3 /* UINavigationItem+Proxy.h in Headers */,
+				D05CC3241B695B0700E235A3 /* NavigationBarProxy.h in Headers */,
+				D05CC31E1B695A9600E235A3 /* UIBarButtonItem+Proxy.h in Headers */,
+				D05CC2FF1B6955D000E235A3 /* UIWindow+OrientationChange.h in Headers */,
+				D05CC2FD1B6955D000E235A3 /* UIKitUtils.h in Headers */,
+				D05CC3081B69575900E235A3 /* NSBag.h in Headers */,
 				D05CC2671B69316F00E235A3 /* Display.h in Headers */,
+				D05CC2F91B6955D000E235A3 /* UIViewController+Navigation.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +320,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				D05CC32B1B697C0900E235A3 /* PBXTargetDependency */,
 			);
 			name = Display;
 			productName = Display;
@@ -142,6 +351,7 @@
 		D05CC25A1B69316F00E235A3 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				LastSwiftUpdateCheck = 0700;
 				LastUpgradeCheck = 0700;
 				ORGANIZATIONNAME = Telegram;
 				TargetAttributes = {
@@ -163,6 +373,12 @@
 			mainGroup = D05CC2591B69316F00E235A3;
 			productRefGroup = D05CC2641B69316F00E235A3 /* Products */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = D05CC2A51B6932E800E235A3 /* Products */;
+					ProjectRef = D05CC2A41B6932E800E235A3 /* AsyncDisplayKit.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				D05CC2621B69316F00E235A3 /* Display */,
@@ -171,11 +387,43 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXReferenceProxy section */
+		D05CC2AC1B6932E900E235A3 /* libAsyncDisplayKit.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libAsyncDisplayKit.a;
+			remoteRef = D05CC2AB1B6932E900E235A3 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		D05CC2AE1B6932E900E235A3 /* AsyncDisplayKitTests.xctest */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.cfbundle;
+			path = AsyncDisplayKitTests.xctest;
+			remoteRef = D05CC2AD1B6932E900E235A3 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		D05CC2B01B6932E900E235A3 /* AsyncDisplayKitTestHost.app */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.application;
+			path = AsyncDisplayKitTestHost.app;
+			remoteRef = D05CC2AF1B6932E900E235A3 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		D05CC2B21B6932E900E235A3 /* AsyncDisplayKit.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = AsyncDisplayKit.framework;
+			remoteRef = D05CC2B11B6932E900E235A3 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
+
 /* Begin PBXResourcesBuildPhase section */
 		D05CC2611B69316F00E235A3 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D05CC3271B69725400E235A3 /* NavigationBackArrowLight@2x.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -193,6 +441,31 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D05CC3181B695A9600E235A3 /* NavigationItemTransitionState.swift in Sources */,
+				D05CC2F81B6955D000E235A3 /* UIViewController+Navigation.m in Sources */,
+				D05CC31F1B695A9600E235A3 /* NavigationControllerProxy.m in Sources */,
+				D05CC3031B69568600E235A3 /* NotificationCenterUtils.m in Sources */,
+				D05CC2E31B69552C00E235A3 /* ViewController.swift in Sources */,
+				D05CC2A01B69326400E235A3 /* NavigationController.swift in Sources */,
+				D05CC3251B695B0700E235A3 /* NavigationBarProxy.m in Sources */,
+				D05CC2F71B6955D000E235A3 /* UIKitUtils.swift in Sources */,
+				D05CC3161B695A9600E235A3 /* NavigationBar.swift in Sources */,
+				D05CC31D1B695A9600E235A3 /* UIBarButtonItem+Proxy.m in Sources */,
+				D05CC3171B695A9600E235A3 /* NavigationItemWrapper.swift in Sources */,
+				D05CC3191B695A9600E235A3 /* NavigationBackButtonNode.swift in Sources */,
+				D05CC3071B69575900E235A3 /* NSBag.m in Sources */,
+				D05CC31A1B695A9600E235A3 /* NavigationButtonNode.swift in Sources */,
+				D05CC2E71B69555800E235A3 /* CAAnimationUtils.swift in Sources */,
+				D05CC31B1B695A9600E235A3 /* NavigationTitleNode.swift in Sources */,
+				D05CC31C1B695A9600E235A3 /* BarButtonItemWrapper.swift in Sources */,
+				D05CC2FA1B6955D000E235A3 /* UINavigationItem+Proxy.m in Sources */,
+				D05CC2E81B69555800E235A3 /* CALayer+ImplicitAnimations.m in Sources */,
+				D05CC2EC1B69558A00E235A3 /* RuntimeUtils.m in Sources */,
+				D05CC2FC1B6955D000E235A3 /* UIKitUtils.m in Sources */,
+				D05CC3291B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift in Sources */,
+				D05CC2FE1B6955D000E235A3 /* UIWindow+OrientationChange.m in Sources */,
+				D05CC2A21B69326C00E235A3 /* Window.swift in Sources */,
+				D05CC3151B695A9600E235A3 /* NavigationTransitionView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -211,6 +484,11 @@
 			isa = PBXTargetDependency;
 			target = D05CC2621B69316F00E235A3 /* Display */;
 			targetProxy = D05CC26F1B69316F00E235A3 /* PBXContainerItemProxy */;
+		};
+		D05CC32B1B697C0900E235A3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "AsyncDisplayKit-iOS";
+			targetProxy = D05CC32A1B697C0900E235A3 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -307,28 +585,35 @@
 		D05CC2781B69316F00E235A3 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Display/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Display;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
 		};
 		D05CC2791B69316F00E235A3 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Display/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Display;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -375,6 +660,7 @@
 				D05CC2791B69316F00E235A3 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		D05CC27A1B69316F00E235A3 /* Build configuration list for PBXNativeTarget "DisplayTests" */ = {
 			isa = XCConfigurationList;
@@ -383,6 +669,7 @@
 				D05CC27C1B69316F00E235A3 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
