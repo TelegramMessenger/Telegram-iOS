@@ -1,3 +1,0 @@
-[submodule "submodules/AsyncDisplayKit"]
-	path = submodules/AsyncDisplayKit
-	url = https://github.com/facebook/AsyncDisplayKit.git

@@ -13,7 +13,6 @@
 		D05CC29A1B69323B00E235A3 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D05CC2991B69323B00E235A3 /* SwiftSignalKit.framework */; };
 		D05CC2A01B69326400E235A3 /* NavigationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC29F1B69326400E235A3 /* NavigationController.swift */; };
 		D05CC2A21B69326C00E235A3 /* Window.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC2A11B69326C00E235A3 /* Window.swift */; };
-		D05CC2B61B69339A00E235A3 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D05CC2B21B6932E900E235A3 /* AsyncDisplayKit.framework */; };
 		D05CC2E31B69552C00E235A3 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC2E21B69552C00E235A3 /* ViewController.swift */; };
 		D05CC2E71B69555800E235A3 /* CAAnimationUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC2E41B69555800E235A3 /* CAAnimationUtils.swift */; };
 		D05CC2E81B69555800E235A3 /* CALayer+ImplicitAnimations.m in Sources */ = {isa = PBXBuildFile; fileRef = D05CC2E51B69555800E235A3 /* CALayer+ImplicitAnimations.m */; };
@@ -59,41 +58,6 @@
 			remoteGlobalIDString = D05CC2621B69316F00E235A3;
 			remoteInfo = Display;
 		};
-		D05CC2AB1B6932E900E235A3 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = D05CC2A41B6932E800E235A3 /* AsyncDisplayKit.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = 058D09AC195D04C000B7D73C;
-			remoteInfo = AsyncDisplayKit;
-		};
-		D05CC2AD1B6932E900E235A3 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = D05CC2A41B6932E800E235A3 /* AsyncDisplayKit.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = 058D09BC195D04C000B7D73C;
-			remoteInfo = AsyncDisplayKitTests;
-		};
-		D05CC2AF1B6932E900E235A3 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = D05CC2A41B6932E800E235A3 /* AsyncDisplayKit.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = 057D02BF1AC0A66700C7AC3C;
-			remoteInfo = AsyncDisplayKitTestHost;
-		};
-		D05CC2B11B6932E900E235A3 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = D05CC2A41B6932E800E235A3 /* AsyncDisplayKit.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = B35061DA1B010EDF0018CF92;
-			remoteInfo = "AsyncDisplayKit-iOS";
-		};
-		D05CC32A1B697C0900E235A3 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = D05CC2A41B6932E800E235A3 /* AsyncDisplayKit.xcodeproj */;
-			proxyType = 1;
-			remoteGlobalIDString = B35061D91B010EDF0018CF92;
-			remoteInfo = "AsyncDisplayKit-iOS";
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
@@ -106,7 +70,6 @@
 		D05CC2991B69323B00E235A3 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftSignalKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-gbpsmqzuwcmmxadrqcwyrluaftwp/Build/Products/Debug-iphoneos/SwiftSignalKit.framework"; sourceTree = "<group>"; };
 		D05CC29F1B69326400E235A3 /* NavigationController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationController.swift; sourceTree = "<group>"; };
 		D05CC2A11B69326C00E235A3 /* Window.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Window.swift; sourceTree = "<group>"; };
-		D05CC2A41B6932E800E235A3 /* AsyncDisplayKit.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = AsyncDisplayKit.xcodeproj; path = submodules/AsyncDisplayKit/AsyncDisplayKit.xcodeproj; sourceTree = "<group>"; };
 		D05CC2E21B69552C00E235A3 /* ViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
 		D05CC2E41B69555800E235A3 /* CAAnimationUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CAAnimationUtils.swift; sourceTree = "<group>"; };
 		D05CC2E51B69555800E235A3 /* CALayer+ImplicitAnimations.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "CALayer+ImplicitAnimations.m"; sourceTree = "<group>"; };
@@ -149,7 +112,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D05CC2B61B69339A00E235A3 /* AsyncDisplayKit.framework in Frameworks */,
 				D05CC29A1B69323B00E235A3 /* SwiftSignalKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -208,21 +170,9 @@
 		D05CC2A31B6932D500E235A3 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				D05CC2A41B6932E800E235A3 /* AsyncDisplayKit.xcodeproj */,
 				D05CC2991B69323B00E235A3 /* SwiftSignalKit.framework */,
 			);
 			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		D05CC2A51B6932E800E235A3 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				D05CC2AC1B6932E900E235A3 /* libAsyncDisplayKit.a */,
-				D05CC2AE1B6932E900E235A3 /* AsyncDisplayKitTests.xctest */,
-				D05CC2B01B6932E900E235A3 /* AsyncDisplayKitTestHost.app */,
-				D05CC2B21B6932E900E235A3 /* AsyncDisplayKit.framework */,
-			);
-			name = Products;
 			sourceTree = "<group>";
 		};
 		D05CC2E11B69534100E235A3 /* Supporting Files */ = {
@@ -320,7 +270,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				D05CC32B1B697C0900E235A3 /* PBXTargetDependency */,
 			);
 			name = Display;
 			productName = Display;
@@ -373,12 +322,6 @@
 			mainGroup = D05CC2591B69316F00E235A3;
 			productRefGroup = D05CC2641B69316F00E235A3 /* Products */;
 			projectDirPath = "";
-			projectReferences = (
-				{
-					ProductGroup = D05CC2A51B6932E800E235A3 /* Products */;
-					ProjectRef = D05CC2A41B6932E800E235A3 /* AsyncDisplayKit.xcodeproj */;
-				},
-			);
 			projectRoot = "";
 			targets = (
 				D05CC2621B69316F00E235A3 /* Display */,
@@ -386,37 +329,6 @@
 			);
 		};
 /* End PBXProject section */
-
-/* Begin PBXReferenceProxy section */
-		D05CC2AC1B6932E900E235A3 /* libAsyncDisplayKit.a */ = {
-			isa = PBXReferenceProxy;
-			fileType = archive.ar;
-			path = libAsyncDisplayKit.a;
-			remoteRef = D05CC2AB1B6932E900E235A3 /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		D05CC2AE1B6932E900E235A3 /* AsyncDisplayKitTests.xctest */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.cfbundle;
-			path = AsyncDisplayKitTests.xctest;
-			remoteRef = D05CC2AD1B6932E900E235A3 /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		D05CC2B01B6932E900E235A3 /* AsyncDisplayKitTestHost.app */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.application;
-			path = AsyncDisplayKitTestHost.app;
-			remoteRef = D05CC2AF1B6932E900E235A3 /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-		D05CC2B21B6932E900E235A3 /* AsyncDisplayKit.framework */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.framework;
-			path = AsyncDisplayKit.framework;
-			remoteRef = D05CC2B11B6932E900E235A3 /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-/* End PBXReferenceProxy section */
 
 /* Begin PBXResourcesBuildPhase section */
 		D05CC2611B69316F00E235A3 /* Resources */ = {
@@ -484,11 +396,6 @@
 			isa = PBXTargetDependency;
 			target = D05CC2621B69316F00E235A3 /* Display */;
 			targetProxy = D05CC26F1B69316F00E235A3 /* PBXContainerItemProxy */;
-		};
-		D05CC32B1B697C0900E235A3 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			name = "AsyncDisplayKit-iOS";
-			targetProxy = D05CC32A1B697C0900E235A3 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
