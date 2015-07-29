@@ -1,19 +1,25 @@
 import Foundation
 
-public class PeerViewEntry {
+public final class PeerViewEntry {
     public let peerId: PeerId
     public let peer: Peer?
-    public let message: Message
+    public let message: RenderedMessage
     
-    public init(peer: Peer, message: Message) {
+    public init(peer: Peer, message: RenderedMessage) {
         self.peerId = peer.id
         self.peer = peer
         self.message = message
     }
     
-    public init(peerId: PeerId, message: Message) {
+    public init(peerId: PeerId, message: RenderedMessage) {
         self.peerId = peerId
         self.peer = nil
+        self.message = message
+    }
+    
+    private init(peer: Peer?, peerId: PeerId, message: RenderedMessage) {
+        self.peer = peer
+        self.peerId = peerId
         self.message = message
     }
 }
@@ -24,7 +30,7 @@ public struct PeerViewEntryIndex: Equatable, Comparable {
     
     public init(_ entry: PeerViewEntry) {
         self.peerId = entry.peerId
-        self.messageIndex = MessageIndex(entry.message)
+        self.messageIndex = MessageIndex(entry.message.message)
     }
     
     public init(peerId: PeerId, messageIndex: MessageIndex) {
@@ -252,12 +258,85 @@ public final class MutablePeerView: CustomStringConvertible {
         }
     }
     
+    public func updatePeers(peers: [PeerId : Peer]) -> Bool {
+        var updated = false
+        
+        if let earlier = self.earlier {
+            if let peer = peers[earlier.peerId] {
+                self.earlier = PeerViewEntry(peer: peer, message: earlier.message)
+                updated = true
+            }
+        }
+        
+        if let later = self.later {
+            if let peer = peers[later.peerId] {
+                self.later = PeerViewEntry(peer: peer, message: later.message)
+                updated = true
+            }
+        }
+        
+        var i = 0
+        while i < self.entries.count {
+            if let peer = peers[self.entries[i].peerId] {
+                self.entries[i] = PeerViewEntry(peer: peer, message: self.entries[i].message)
+                updated = true
+            }
+            i++
+        }
+        
+        return updated
+    }
+    
+    public func incompleteMessages() -> [Message] {
+        var result: [Message] = []
+        
+        if let earlier = self.earlier {
+            if earlier.message.incomplete {
+                result.append(earlier.message.message)
+            }
+        }
+        if let later = self.later {
+            if later.message.incomplete {
+                result.append(later.message.message)
+            }
+        }
+        
+        for entry in self.entries {
+            if entry.message.incomplete {
+                result.append(entry.message.message)
+            }
+        }
+        
+        return result
+    }
+    
+    public func completeMessages(messages: [MessageId : RenderedMessage]) {
+        if let earlier = self.earlier {
+            if let message = messages[earlier.message.message.id] {
+                self.earlier = PeerViewEntry(peer: earlier.peer, peerId: earlier.peerId, message: message)
+            }
+        }
+        if let later = self.later {
+            if let message = messages[later.message.message.id] {
+                self.later = PeerViewEntry(peer: later.peer, peerId: later.peerId, message: message)
+            }
+        }
+        
+        var i = 0
+        while i < self.entries.count {
+            if let message = messages[self.entries[i].message.message.id] {
+                self.entries[i] = PeerViewEntry(peer: self.entries[i].peer, peerId: self.entries[i].peerId, message: message)
+            }
+            i++
+        }
+    }
+    
     public var description: String {
         var string = ""
         
         if let earlier = self.earlier {
             string += "more("
-            string += "(p \(earlier.peerId.namespace):\(earlier.peerId.id), m \(earlier.message.id.namespace):\(earlier.message.id.id)—\(earlier.message.timestamp)"
+            string += "(p \(earlier.peerId.namespace):\(earlier.peerId.id), m \(earlier.message.message.id.namespace):\(earlier.message.message.id.id)—\(earlier.message.message.timestamp)"
             string += ") "
         }
         
@@ -269,13 +348,13 @@ public final class MutablePeerView: CustomStringConvertible {
             } else {
                 string += ", "
             }
-            string += "(p \(entry.peerId.namespace):\(entry.peerId.id), m \(entry.message.id.namespace):\(entry.message.id.id)—\(entry.message.timestamp))"
+            string += "(p \(entry.peerId.namespace):\(entry.peerId.id), m \(entry.message.message.id.namespace):\(entry.message.message.id.id)—\(entry.message.message.timestamp))"
         }
         string += "]"
         
         if let later = self.later {
             string += " more("
-            string += "(p \(later.peerId.namespace):\(later.peerId), m \(later.message.id.namespace):\(later.message.id.id)—\(later.message.timestamp)"
+            string += "(p \(later.peerId.namespace):\(later.peerId), m \(later.message.message.id.namespace):\(later.message.message.id.id)—\(later.message.message.timestamp)"
             string += ")"
         }
         
@@ -321,7 +400,7 @@ public final class PeerView: CustomStringConvertible {
             } else {
                 string += ", "
             }
-            string += "(p \(entry.peerId.namespace):\(entry.peerId.id), m \(entry.message.id.namespace):\(entry.message.id.id)—\(entry.message.timestamp))"
+            string += "(p \(entry.peerId.namespace):\(entry.peerId.id), m \(entry.message.message.id.namespace):\(entry.message.message.id.id)—\(entry.message.message.timestamp))"
         }
         string += "]"
         

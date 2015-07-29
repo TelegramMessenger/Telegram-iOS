@@ -21,6 +21,30 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable {
         return (Int64(self.namespace) << 32) | Int64(self.id)
     }
     
+    public static func encodeArrayToBuffer(array: [PeerId], buffer: WriteBuffer) {
+        var length: Int32 = Int32(array.count)
+        buffer.write(&length, offset: 0, length: 4)
+        for id in array {
+            var value = id.toInt64()
+            buffer.write(&value, offset: 0, length: 8)
+        }
+    }
+    
+    public static func decodeArrayFromBuffer(buffer: ReadBuffer) -> [PeerId] {
+        var length: Int32 = 0
+        memcpy(&length, buffer.memory, 4)
+        buffer.offset += 4
+        var i = 0
+        var array: [PeerId] = []
+        while i < Int(length) {
+            var value: Int64 = 0
+            buffer.read(&value, offset: 0, length: 8)
+            array.append(PeerId(value))
+            i++
+        }
+        return array
+    }
+    
     public var hashValue: Int {
         get {
             return Int(self.id)
@@ -67,4 +91,6 @@ public func <(lhs: PeerId, rhs: PeerId) -> Bool {
 
 public protocol Peer: Coding {
     var id: PeerId { get }
+    
+    func equalsTo(other: Peer) -> Bool
 }

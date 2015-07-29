@@ -110,5 +110,28 @@ public protocol Message: Coding {
     var id: MessageId { get }
     var timestamp: Int32 { get }
     var text: String { get }
-    var referencedMediaIds: [MediaId] { get }
+    var mediaIds: [MediaId] { get }
+    var peerIds: [PeerId] { get }
+}
+
+public struct RenderedMessage {
+    public let message: Message
+    
+    internal let incomplete: Bool
+    public let peers: [Peer]
+    public let media: [Media]
+    
+    internal init(message: Message) {
+        self.message = message
+        self.peers = []
+        self.media = []
+        self.incomplete = true
+    }
+    
+    internal init(message: Message, peers: [Peer], media: [Media]) {
+        self.message = message
+        self.peers = peers
+        self.media = media
+        self.incomplete = false
+    }
 }

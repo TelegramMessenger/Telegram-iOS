@@ -136,7 +136,22 @@ public final class Encoder {
         self.buffer.write(UnsafePointer<Void>(key), offset: 0, length: Int(length))
     }
     
+    public func encodeKey(key: Int8) {
+        var length: Int8 = 1
+        self.buffer.write(&length, offset: 0, length: 1)
+        var keyValue = key
+        self.buffer.write(&keyValue, offset: 0, length: Int(length))
+    }
+    
     public func encodeInt32(value: Int32, forKey key: UnsafePointer<Int8>) {
+        self.encodeKey(key)
+        var type: Int8 = ValueType.Int32.rawValue
+        self.buffer.write(&type, offset: 0, length: 1)
+        var v = value
+        self.buffer.write(&v, offset: 0, length: 4)
+    }
+    
+    public func encodeInt32(value: Int32, forKey key: Int8) {
         self.encodeKey(key)
         var type: Int8 = ValueType.Int32.rawValue
         self.buffer.write(&type, offset: 0, length: 1)
@@ -152,7 +167,23 @@ public final class Encoder {
         self.buffer.write(&v, offset: 0, length: 8)
     }
     
+    public func encodeInt64(value: Int64, forKey key: Int8) {
+        self.encodeKey(key)
+        var type: Int8 = ValueType.Int64.rawValue
+        self.buffer.write(&type, offset: 0, length: 1)
+        var v = value
+        self.buffer.write(&v, offset: 0, length: 8)
+    }
+    
     public func encodeBool(value: Bool, forKey key: UnsafePointer<Int8>) {
+        self.encodeKey(key)
+        var type: Int8 = ValueType.Bool.rawValue
+        self.buffer.write(&type, offset: 0, length: 1)
+        var v: Int8 = value ? 1 : 0
+        self.buffer.write(&v, offset: 0, length: 1)
+    }
+    
+    public func encodeBool(value: Bool, forKey key: Int8) {
         self.encodeKey(key)
         var type: Int8 = ValueType.Bool.rawValue
         self.buffer.write(&type, offset: 0, length: 1)
@@ -168,7 +199,35 @@ public final class Encoder {
         self.buffer.write(&v, offset: 0, length: 8)
     }
     
+    public func encodeDouble(value: Double, forKey key: Int8) {
+        self.encodeKey(key)
+        var type: Int8 = ValueType.Double.rawValue
+        self.buffer.write(&type, offset: 0, length: 1)
+        var v = value
+        self.buffer.write(&v, offset: 0, length: 8)
+    }
+    
     public func encodeString(value: String, forKey key: UnsafePointer<Int8>) {
+        self.encodeKey(key)
+        var type: Int8 = ValueType.String.rawValue
+        self.buffer.write(&type, offset: 0, length: 1)
+        let data = value.dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: true)!
+        var length: Int32 = Int32(data.length)
+        self.buffer.write(&length, offset: 0, length: 4)
+        self.buffer.write(data.bytes, offset: 0, length: Int(length))
+    }
+    
+    public func encodeString(value: DeferredString, forKey key: UnsafePointer<Int8>) {
+        self.encodeKey(key)
+        var type: Int8 = ValueType.String.rawValue
+        self.buffer.write(&type, offset: 0, length: 1)
+        let data = value.data
+        var length: Int32 = Int32(data.length)
+        self.buffer.write(&length, offset: 0, length: 4)
+        self.buffer.write(data.bytes, offset: 0, length: Int(length))
+    }
+    
+    public func encodeString(value: String, forKey key: Int8) {
         self.encodeKey(key)
         var type: Int8 = ValueType.String.rawValue
         self.buffer.write(&type, offset: 0, length: 1)
@@ -278,6 +337,8 @@ public final class Encoder {
         self.buffer.write(&bytesLength, offset: 0, length: 4)
         self.buffer.write(bytes.memory, offset: 0, length: bytes.offset)
     }
+
+    public let sharedWriteBuffer = WriteBuffer()
 }
 
 public final class Decoder {
@@ -376,6 +437,37 @@ public final class Decoder {
         return false
     }
     
+    private class func positionOnKey(bytes: UnsafePointer<Int8>, inout offset: Int, maxOffset: Int, length: Int, key: Int16, valueType: ValueType) -> Bool
+    {
+        var keyValue = key
+        let startOffset = offset
+        
+        let keyLength: Int = 2
+        while (offset < maxOffset)
+        {
+            let readKeyLength = bytes[offset]
+            offset += 1
+            offset += Int(readKeyLength)
+            
+            let readValueType = bytes[offset]
+            offset += 1
+            
+            if readValueType != valueType.rawValue || keyLength != Int(readKeyLength) || memcmp(bytes + (offset - Int(readKeyLength) - 1), &keyValue, keyLength) != 0 {
+                skipValue(bytes, offset: &offset, length: length, valueType: ValueType(rawValue: readValueType)!)
+            } else {
+                return true
+            }
+        }
+        
+        if (startOffset != 0)
+        {
+            offset = 0
+            return positionOnKey(bytes, offset: &offset, maxOffset: startOffset, length: length, key: key, valueType: valueType)
+        }
+        
+        return false
+    }
+    
     public func decodeInt32ForKey(key: UnsafePointer<Int8>) -> Int32 {
         if Decoder.positionOnKey(UnsafePointer<Int8>(self.buffer.memory), offset: &self.buffer.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Int32) {
             var value: Int32 = 0
@@ -430,6 +522,43 @@ public final class Decoder {
             return (value as? String) ?? ""
         } else {
             return ""
+        }
+    }
+    
+    public func decodeStringForKey(key: UnsafePointer<Int8>) -> String? {
+        if Decoder.positionOnKey(UnsafePointer<Int8>(self.buffer.memory), offset: &self.buffer.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .String) {
+            var length: Int32 = 0
+            memcpy(&length, self.buffer.memory + self.buffer.offset, 4)
+            let data = NSData(bytes: self.buffer.memory + (self.buffer.offset + 4), length: Int(length))
+            self.buffer.offset += 4 + Int(length)
+            let value = NSString(data: data, encoding: NSUTF8StringEncoding)
+            return value as? String
+        } else {
+            return nil
+        }
+    }
+
+    public func decodeStringForKey(key: UnsafePointer<Int8>) -> DeferredString {
+        if Decoder.positionOnKey(UnsafePointer<Int8>(self.buffer.memory), offset: &self.buffer.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .String) {
+            var length: Int32 = 0
+            memcpy(&length, self.buffer.memory + self.buffer.offset, 4)
+            let data = NSData(bytes: self.buffer.memory + (self.buffer.offset + 4), length: Int(length))
+            self.buffer.offset += 4 + Int(length)
+            return DeferredStringValue(data)
+        } else {
+            return DeferredStringValue("")
+        }
+    }
+    
+    public func decodeStringForKey(key: UnsafePointer<Int8>) -> DeferredString? {
+        if Decoder.positionOnKey(UnsafePointer<Int8>(self.buffer.memory), offset: &self.buffer.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .String) {
+            var length: Int32 = 0
+            memcpy(&length, self.buffer.memory + self.buffer.offset, 4)
+            let data = NSData(bytes: self.buffer.memory + (self.buffer.offset + 4), length: Int(length))
+            self.buffer.offset += 4 + Int(length)
+            return DeferredStringValue(data)
+        } else {
+            return nil
         }
     }
     

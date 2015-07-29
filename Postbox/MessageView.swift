@@ -19,11 +19,11 @@ public final class MutableMessageView: CustomStringConvertible {
     
     let namespaces: [MessageId.Namespace]
     let count: Int
-    var earlier: [MessageId.Namespace : Message] = [:]
-    var later: [MessageId.Namespace : Message] = [:]
-    var messages: [Message]
+    var earlier: [MessageId.Namespace : RenderedMessage] = [:]
+    var later: [MessageId.Namespace : RenderedMessage] = [:]
+    var messages: [RenderedMessage]
     
-    public init(namespaces: [MessageId.Namespace], count: Int, earlier: [MessageId.Namespace : Message], messages: [Message], later: [MessageId.Namespace : Message]) {
+    public init(namespaces: [MessageId.Namespace], count: Int, earlier: [MessageId.Namespace : RenderedMessage], messages: [RenderedMessage], later: [MessageId.Namespace : RenderedMessage]) {
         self.namespaces = namespaces
         self.count = count
         self.earlier = earlier
@@ -31,56 +31,60 @@ public final class MutableMessageView: CustomStringConvertible {
         self.messages = messages
     }
     
-    public func add(message: Message) {
+    public func add(message: RenderedMessage) -> Bool {
         if self.messages.count == 0 {
             self.messages.append(message)
+            return true
         } else {
-            let first = MessageIndex(self.messages[self.messages.count - 1])
-            let last = MessageIndex(self.messages[0])
+            let first = MessageIndex(self.messages[self.messages.count - 1].message)
+            let last = MessageIndex(self.messages[0].message)
             
             var next: MessageIndex?
             for namespace in self.namespaces {
                 if let message = later[namespace] {
-                    let messageIndex = MessageIndex(message)
+                    let messageIndex = MessageIndex(message.message)
                     if next == nil || messageIndex < next! {
                         next = messageIndex
                     }
                 }
             }
             
-            let index = MessageIndex(message)
+            let index = MessageIndex(message.message)
             
             if index < last {
-                let earlierMessage = self.earlier[message.id.namespace]
-                if earlierMessage == nil || earlierMessage!.id.id < message.id.id {
+                let earlierMessage = self.earlier[message.message.id.namespace]
+                if earlierMessage == nil || earlierMessage!.message.id.id < message.message.id.id {
                     if self.messages.count < self.count {
                         self.messages.insert(message, atIndex: 0)
                     } else {
-                        self.earlier[message.id.namespace] = message
+                        self.earlier[message.message.id.namespace] = message
                     }
                 }
+                
+                return true
             } else if index > first {
                 if next != nil && index > next! {
-                    let laterMessage = self.later[message.id.namespace]
-                    if laterMessage == nil || laterMessage!.id.id > message.id.id {
+                    let laterMessage = self.later[message.message.id.namespace]
+                    if laterMessage == nil || laterMessage!.message.id.id > message.message.id.id {
                         if self.messages.count < self.count {
                             self.messages.append(message)
                         } else {
-                            self.later[message.id.namespace] = message
+                            self.later[message.message.id.namespace] = message
                         }
                     }
                 } else {
                     self.messages.append(message)
                     if self.messages.count > self.count {
                         let earliest = self.messages[0]
-                        self.earlier[earliest.id.namespace] = earliest
+                        self.earlier[earliest.message.id.namespace] = earliest
                         self.messages.removeAtIndex(0)
                     }
                 }
+                return true
             } else if index != last && index != first {
                 var i = self.messages.count
                 while i >= 1 {
-                    if MessageIndex(self.messages[i - 1]) < index {
+                    if MessageIndex(self.messages[i - 1].message) < index {
                         break
                     }
                     i--
@@ -88,9 +92,12 @@ public final class MutableMessageView: CustomStringConvertible {
                 self.messages.insert(message, atIndex: i)
                 if self.messages.count > self.count {
                     let earliest = self.messages[0]
-                    self.earlier[earliest.id.namespace] = earliest
+                    self.earlier[earliest.message.id.namespace] = earliest
                     self.messages.removeAtIndex(0)
                 }
+                return true
+            } else {
+                return false
             }
         }
     }
@@ -102,21 +109,21 @@ public final class MutableMessageView: CustomStringConvertible {
         }
         
         for (_, message) in self.earlier {
-            if ids.contains(message.id) {
-                updatedContext.invalidEarlier.insert(message.id.namespace)
+            if ids.contains(message.message.id) {
+                updatedContext.invalidEarlier.insert(message.message.id.namespace)
             }
         }
 
         for (_, message) in self.later {
-            if ids.contains(message.id) {
-                updatedContext.invalidLater.insert(message.id.namespace)
+            if ids.contains(message.message.id) {
+                updatedContext.invalidLater.insert(message.message.id.namespace)
             }
         }
         
         if self.messages.count != 0 {
             var i = self.messages.count - 1
             while i >= 0 {
-                if ids.contains(self.messages[i].id) {
+                if ids.contains(self.messages[i].message.id) {
                     self.messages.removeAtIndex(i)
                     updatedContext.removedMessages = true
                 }
@@ -127,19 +134,18 @@ public final class MutableMessageView: CustomStringConvertible {
         return updatedContext
     }
     
-    public func complete(context: RemoveContext, fetchEarlier: (MessageId.Namespace, MessageId.Id?, Int) -> [Message], fetchLater: (MessageId.Namespace, MessageId.Id?, Int) -> [Message]) {
+    public func complete(context: RemoveContext, fetchEarlier: (MessageId.Namespace, MessageId.Id?, Int) -> [RenderedMessage], fetchLater: (MessageId.Namespace, MessageId.Id?, Int) -> [RenderedMessage]) {
         if context.removedMessages {
-            var addedMessages: [Message] = []
+            var addedMessages: [RenderedMessage] = []
             
             var latestAnchor: MessageIndex?
             if let lastMessage = self.messages.last {
-                latestAnchor = MessageIndex(lastMessage)
+                latestAnchor = MessageIndex(lastMessage.message)
             }
             
             if latestAnchor == nil {
-                var laterMessages: [Message] = []
                 for (_, message) in self.later {
-                    let messageIndex = MessageIndex(message)
+                    let messageIndex = MessageIndex(message.message)
                     if latestAnchor == nil || latestAnchor! > messageIndex {
                         latestAnchor = messageIndex
                     }
@@ -148,18 +154,18 @@ public final class MutableMessageView: CustomStringConvertible {
             
             for namespace in self.namespaces {
                 if let later = self.later[namespace] {
-                    addedMessages += fetchLater(namespace, later.id.id - 1, self.count)
+                    addedMessages += fetchLater(namespace, later.message.id.id - 1, self.count)
                 }
                 if let earlier = self.earlier[namespace] {
-                    addedMessages += fetchEarlier(namespace, earlier.id.id + 1, self.count)
+                    addedMessages += fetchEarlier(namespace, earlier.message.id.id + 1, self.count)
                 }
             }
             
             addedMessages += self.messages
-            addedMessages.sortInPlace({ MessageIndex($0) < MessageIndex($1) })
+            addedMessages.sortInPlace({ MessageIndex($0.message) < MessageIndex($1.message) })
             var i = addedMessages.count - 1
             while i >= 1 {
-                if addedMessages[i].id == addedMessages[i - 1].id {
+                if addedMessages[i].message.id == addedMessages[i - 1].message.id {
                     addedMessages.removeAtIndex(i)
                 }
                 i--
@@ -170,7 +176,7 @@ public final class MutableMessageView: CustomStringConvertible {
             if let latestAnchor = latestAnchor {
                 var i = addedMessages.count - 1
                 while i >= 0 {
-                    if MessageIndex(addedMessages[i]) <= latestAnchor {
+                    if MessageIndex(addedMessages[i].message) <= latestAnchor {
                         anchorIndex = i
                         break
                     }
@@ -183,7 +189,7 @@ public final class MutableMessageView: CustomStringConvertible {
                 for namespace in self.namespaces {
                     var i = anchorIndex + 1
                     while i < addedMessages.count {
-                        if addedMessages[i].id.namespace == namespace {
+                        if addedMessages[i].message.id.namespace == namespace {
                             self.later[namespace] = addedMessages[i]
                             break
                         }
@@ -203,7 +209,7 @@ public final class MutableMessageView: CustomStringConvertible {
                 for namespace in self.namespaces {
                     i = anchorIndex - self.count
                     while i >= 0 {
-                        if addedMessages[i].id.namespace == namespace {
+                        if addedMessages[i].message.id.namespace == namespace {
                             self.earlier[namespace] = addedMessages[i]
                             break
                         }
@@ -217,8 +223,8 @@ public final class MutableMessageView: CustomStringConvertible {
                 var earlyId: MessageId.Id?
                 var i = 0
                 while i < self.messages.count {
-                    if self.messages[i].id.namespace == namespace {
-                        earlyId = self.messages[i].id.id
+                    if self.messages[i].message.id.namespace == namespace {
+                        earlyId = self.messages[i].message.id.id
                         break
                     }
                     i++
@@ -236,8 +242,8 @@ public final class MutableMessageView: CustomStringConvertible {
                 var lateId: MessageId.Id?
                 var i = self.messages.count - 1
                 while i >= 0 {
-                    if self.messages[i].id.namespace == namespace {
-                        lateId = self.messages[i].id.id
+                    if self.messages[i].message.id.namespace == namespace {
+                        lateId = self.messages[i].message.id.id
                         break
                     }
                     i--
@@ -253,6 +259,56 @@ public final class MutableMessageView: CustomStringConvertible {
         }
     }
     
+    
+    public func incompleteMessages() -> [Message] {
+        var result: [Message] = []
+        
+        for (_, message) in self.earlier {
+            if message.incomplete {
+                result.append(message.message)
+            }
+        }
+        for (_, message) in self.later {
+            if message.incomplete {
+                result.append(message.message)
+            }
+        }
+        
+        for message in self.messages {
+            if message.incomplete {
+                result.append(message.message)
+            }
+        }
+        
+        return result
+    }
+    
+    public func completeMessages(messages: [MessageId : RenderedMessage]) {
+        var earlier = self.earlier
+        for (namespace, message) in self.earlier {
+            if let message = messages[message.message.id] {
+                earlier[namespace] = message
+            }
+        }
+        self.earlier = earlier
+        
+        var later = self.later
+        for (namespace, message) in self.later {
+            if let message = messages[message.message.id] {
+                later[namespace] = message
+            }
+        }
+        self.later = later
+        
+        var i = 0
+        while i < self.messages.count {
+            if let message = messages[self.messages[i].message.id] {
+                self.messages[i] = message
+            }
+            i++
+        }
+    }
+    
     public var description: String {
         var string = ""
         string += "...("
@@ -264,7 +320,7 @@ public final class MutableMessageView: CustomStringConvertible {
                 } else {
                     string += ", "
                 }
-                string += "\(namespace): \(value.id.id)—\(value.timestamp)"
+                string += "\(namespace): \(value.message.id.id)—\(value.message.timestamp)"
             }
         }
         string += ") —— "
@@ -277,7 +333,7 @@ public final class MutableMessageView: CustomStringConvertible {
             } else {
                 string += ", "
             }
-            string += "\(message.id.namespace): \(message.id.id)—\(message.timestamp)"
+            string += "\(message.message.id.namespace): \(message.message.id.id)—\(message.message.timestamp)"
         }
         string += "]"
         
@@ -290,7 +346,7 @@ public final class MutableMessageView: CustomStringConvertible {
                 } else {
                     string += ", "
                 }
-                string += "\(namespace): \(value.id.id)—\(value.timestamp)"
+                string += "\(namespace): \(value.message.id.id)—\(value.message.timestamp)"
             }
         }
         string += ")..."
@@ -304,7 +360,7 @@ public final class MessageView: CustomStringConvertible {
     private let earlierIds: [MessageIndex]
     public let hasLater: Bool
     private let laterIds: [MessageIndex]
-    public let messages: [Message]
+    public let messages: [RenderedMessage]
     
     init(_ mutableView: MutableMessageView) {
         self.hasEarlier = mutableView.earlier.count != 0
@@ -313,13 +369,13 @@ public final class MessageView: CustomStringConvertible {
         
         var earlierIds: [MessageIndex] = []
         for (_, message) in mutableView.earlier {
-            earlierIds.append(MessageIndex(message))
+            earlierIds.append(MessageIndex(message.message))
         }
         self.earlierIds = earlierIds
         
         var laterIds: [MessageIndex] = []
         for (_, message) in mutableView.later {
-            laterIds.append(MessageIndex(message))
+            laterIds.append(MessageIndex(message.message))
         }
         self.laterIds = laterIds
     }
@@ -347,7 +403,7 @@ public final class MessageView: CustomStringConvertible {
             } else {
                 string += ", "
             }
-            string += "\(message.id.namespace): \(message.id.id)—\(message.timestamp)"
+            string += "\(message.message.id.namespace): \(message.message.id.id)—\(message.message.timestamp)"
         }
         string += "]"
         if self.hasLater {
