@@ -75,3 +75,18 @@ public func runOn<T, E>(threadPool: ThreadPool)(signal: Signal<T, E>) -> Signal<
         return disposable
     }
 }
+
+public func bufferOn<T, E>(queue: Queue, timeout: Double)(signal: Signal<T, E>) -> Signal<[T], E> {
+    return Signal { subscriber in
+        let timer = Timer(timeout: timeout, `repeat`: false, completion: {
+            
+        }, queue: queue)
+        return signal.start(next: { next in
+            
+        }, error: { error in
+            subscriber.putError(error)
+        }, completed: {
+            
+        })
+    }
+}

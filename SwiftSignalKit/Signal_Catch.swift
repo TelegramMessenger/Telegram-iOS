@@ -60,6 +60,36 @@ public func restart<T, E>(signal: Signal<T, E>) -> Signal<T, E> {
     }
 }
 
+public func recurse<T, E>(latestValue: T?)(signal: Signal<T, E>) -> Signal<T, E> {
+    return Signal { subscriber in
+        let shouldRestart = Atomic(value: true)
+        let currentDisposable = MetaDisposable()
+        
+        let start = recursiveFunction { recurse in
+            let currentShouldRestart = shouldRestart.with { value in
+                return value
+            }
+            if currentShouldRestart {
+                let disposable = signal.start(next: { next in
+                    subscriber.putNext(next)
+                    }, error: { error in
+                        subscriber.putError(error)
+                    }, completed: {
+                        recurse()
+                })
+                currentDisposable.set(disposable)
+            }
+        }
+        
+        start()
+        
+        return ActionDisposable {
+            currentDisposable.dispose()
+            shouldRestart.swap(false)
+        }
+    }
+}
+
 public func retry<T, E>(exponentialDecay: Double, onQueue queue: Queue)(signal: Signal<T, E>) -> Signal<T, E> {
     return Signal { subscriber in
         let shouldRetry = Atomic(value: true)
