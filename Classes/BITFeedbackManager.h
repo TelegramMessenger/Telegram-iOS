@@ -228,7 +228,6 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
  All NSString-Content in the array will be concatenated and result in the message,
  while all UIImage and NSData-instances will be turned into attachments.
  
- @param items an NSArray with objects that should be attached
  @see `[BITFeedbackComposeViewController prepareWithItems:]`
  */
 @property (nonatomic, copy) NSArray *feedbackComposerPreparedItems;
