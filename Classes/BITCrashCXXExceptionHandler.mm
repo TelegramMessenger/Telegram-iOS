@@ -26,6 +26,10 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER
+
 #import "BITCrashCXXExceptionHandler.h"
 #import <vector>
 #import <cxxabi.h>
@@ -231,3 +235,5 @@ static void BITCrashUncaughtCXXTerminateHandler(void)
 }
 
 @end
+
+#endif

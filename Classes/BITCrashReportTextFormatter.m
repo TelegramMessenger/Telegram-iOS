@@ -31,6 +31,10 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER
+
 #import <CrashReporter/CrashReporter.h>
 
 #import <mach-o/dyld.h>
@@ -877,3 +881,5 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
 }
 
 @end
+
+#endif

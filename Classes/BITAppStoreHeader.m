@@ -28,6 +28,9 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_UPDATES
 
 #import "BITAppStoreHeader.h"
 #import "BITHockeyHelper.h"
@@ -158,3 +161,5 @@
 }
 
 @end
+
+#endif

@@ -39,8 +39,7 @@
 NSString *bit_URLEncodedString(NSString *inputString) {
   // Requires iOS 7
   if ([inputString respondsToSelector:@selector(stringByAddingPercentEncodingWithAllowedCharacters:)]) {
-    NSCharacterSet *allowedSet = [NSCharacterSet characterSetWithCharactersInString:@"!*'();:@&=+$,/?%#[]"];
-    return [inputString stringByAddingPercentEncodingWithAllowedCharacters:allowedSet];
+    return [inputString stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLHostAllowedCharacterSet]];
   } else {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"

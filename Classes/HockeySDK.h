@@ -27,10 +27,13 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import <Foundation/Foundation.h>
 
-#ifndef TARGET_OS_IOS // Defined starting in iOS 9
+
+#if !defined (TARGET_OS_IOS) // Defined starting in iOS 9
 #define TARGET_OS_IOS 1
 #endif
+
 
 #import "HockeySDKFeatureConfig.h"
 

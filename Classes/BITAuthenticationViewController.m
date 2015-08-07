@@ -26,10 +26,13 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR
+
 #import "BITAuthenticationViewController.h"
 #import "BITAuthenticator_Private.h"
 #import "HockeySDKPrivate.h"
-#import "HockeySDK.h"
 #import "BITHockeyHelper.h"
 #import "BITHockeyAppClient.h"
 
@@ -330,3 +333,5 @@
 }
 
 @end
+
+#endif

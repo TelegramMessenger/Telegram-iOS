@@ -26,6 +26,10 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_FEEDBACK
+
 #import "BITHockeyBaseViewController.h"
 #import "HockeySDKPrivate.h"
 
@@ -105,3 +109,5 @@
 
 
 @end
+
+#endif

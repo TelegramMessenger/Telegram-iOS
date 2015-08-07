@@ -26,6 +26,10 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_FEEDBACK
+
 #import "BITImageAnnotationViewController.h"
 #import "BITImageAnnotation.h"
 #import "BITRectangleImageAnnotation.h"
@@ -414,3 +418,5 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
   return [self.editingControls selectedSegmentIndex] != UISegmentedControlNoSegment;
 }
 @end
+
+#endif
