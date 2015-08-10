@@ -50,12 +50,12 @@ internal class NavigationItemWrapper {
         })
         
         self.setLeftBarButtonItemListenerKey = navigationItem.addSetLeftBarButtonItemListener({ [weak self] barButtonItem, animated in
-            self?.setLeftBarButtonItem(barButtonItem, animated: animated)
+            self?.setLeftBarButtonItem(barButtonItem, animated: animated.boolValue)
             return
         })
         
         self.setRightBarButtonItemListenerKey = navigationItem.addSetRightBarButtonItemListener({ [weak self] barButtonItem, animated in
-            self?.setRightBarButtonItem(barButtonItem, animated: animated)
+            self?.setRightBarButtonItem(barButtonItem, animated: animated.boolValue)
             return
         })
         

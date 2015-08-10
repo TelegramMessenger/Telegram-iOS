@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D02BDB021B6AC703008AFAD2 /* RuntimeUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02BDB011B6AC703008AFAD2 /* RuntimeUtils.swift */; };
 		D05CC2671B69316F00E235A3 /* Display.h in Headers */ = {isa = PBXBuildFile; fileRef = D05CC2661B69316F00E235A3 /* Display.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D05CC26E1B69316F00E235A3 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D05CC2631B69316F00E235A3 /* Display.framework */; };
 		D05CC2731B69316F00E235A3 /* DisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC2721B69316F00E235A3 /* DisplayTests.swift */; };
@@ -48,6 +49,10 @@
 		D05CC3251B695B0700E235A3 /* NavigationBarProxy.m in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3231B695B0700E235A3 /* NavigationBarProxy.m */; };
 		D05CC3271B69725400E235A3 /* NavigationBackArrowLight@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D05CC3261B69725400E235A3 /* NavigationBackArrowLight@2x.png */; };
 		D05CC3291B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */; };
+		D05CC3651B69960300E235A3 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D05CC3641B69960300E235A3 /* AsyncDisplayKit.framework */; };
+		D06EE8451B7140FF00837186 /* Font.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06EE8441B7140FF00837186 /* Font.swift */; };
+		D07921A91B6FC0C0005C23D9 /* KeyboardHostWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07921A81B6FC0C0005C23D9 /* KeyboardHostWindow.swift */; };
+		D07921AC1B6FC92B005C23D9 /* StatusBarHostWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07921AB1B6FC92B005C23D9 /* StatusBarHostWindow.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -61,6 +66,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		D02BDB011B6AC703008AFAD2 /* RuntimeUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RuntimeUtils.swift; sourceTree = "<group>"; };
 		D05CC2631B69316F00E235A3 /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D05CC2661B69316F00E235A3 /* Display.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Display.h; sourceTree = "<group>"; };
 		D05CC2681B69316F00E235A3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -105,6 +111,10 @@
 		D05CC3231B695B0700E235A3 /* NavigationBarProxy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NavigationBarProxy.m; sourceTree = "<group>"; };
 		D05CC3261B69725400E235A3 /* NavigationBackArrowLight@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "NavigationBackArrowLight@2x.png"; sourceTree = "<group>"; };
 		D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InteractiveTransitionGestureRecognizer.swift; sourceTree = "<group>"; };
+		D05CC3641B69960300E235A3 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AsyncDisplayKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-gbpsmqzuwcmmxadrqcwyrluaftwp/Build/Products/Debug-iphoneos/AsyncDisplayKit.framework"; sourceTree = "<group>"; };
+		D06EE8441B7140FF00837186 /* Font.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Font.swift; sourceTree = "<group>"; };
+		D07921A81B6FC0C0005C23D9 /* KeyboardHostWindow.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = KeyboardHostWindow.swift; sourceTree = "<group>"; };
+		D07921AB1B6FC92B005C23D9 /* StatusBarHostWindow.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StatusBarHostWindow.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -112,6 +122,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D05CC3651B69960300E235A3 /* AsyncDisplayKit.framework in Frameworks */,
 				D05CC29A1B69323B00E235A3 /* SwiftSignalKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -127,6 +138,13 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		D02BDAEC1B6A7053008AFAD2 /* Nodes */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Nodes;
+			sourceTree = "<group>";
+		};
 		D05CC2591B69316F00E235A3 = {
 			isa = PBXGroup;
 			children = (
@@ -150,7 +168,10 @@
 			isa = PBXGroup;
 			children = (
 				D05CC3001B6955D500E235A3 /* Utils */,
+				D07921AA1B6FC911005C23D9 /* Status Bar */,
+				D07921A71B6FC0AE005C23D9 /* Keyboard */,
 				D05CC3211B695AA600E235A3 /* Navigation */,
+				D02BDAEC1B6A7053008AFAD2 /* Nodes */,
 				D05CC2A11B69326C00E235A3 /* Window.swift */,
 				D05CC2E21B69552C00E235A3 /* ViewController.swift */,
 				D05CC2E11B69534100E235A3 /* Supporting Files */,
@@ -170,6 +191,7 @@
 		D05CC2A31B6932D500E235A3 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D05CC3641B69960300E235A3 /* AsyncDisplayKit.framework */,
 				D05CC2991B69323B00E235A3 /* SwiftSignalKit.framework */,
 			);
 			name = Frameworks;
@@ -212,6 +234,8 @@
 				D05CC3221B695B0700E235A3 /* NavigationBarProxy.h */,
 				D05CC3231B695B0700E235A3 /* NavigationBarProxy.m */,
 				D05CC2E41B69555800E235A3 /* CAAnimationUtils.swift */,
+				D02BDB011B6AC703008AFAD2 /* RuntimeUtils.swift */,
+				D06EE8441B7140FF00837186 /* Font.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -231,6 +255,22 @@
 				D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */,
 			);
 			name = Navigation;
+			sourceTree = "<group>";
+		};
+		D07921A71B6FC0AE005C23D9 /* Keyboard */ = {
+			isa = PBXGroup;
+			children = (
+				D07921A81B6FC0C0005C23D9 /* KeyboardHostWindow.swift */,
+			);
+			name = Keyboard;
+			sourceTree = "<group>";
+		};
+		D07921AA1B6FC911005C23D9 /* Status Bar */ = {
+			isa = PBXGroup;
+			children = (
+				D07921AB1B6FC92B005C23D9 /* StatusBarHostWindow.swift */,
+			);
+			name = "Status Bar";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -354,11 +394,15 @@
 			buildActionMask = 2147483647;
 			files = (
 				D05CC3181B695A9600E235A3 /* NavigationItemTransitionState.swift in Sources */,
+				D07921AC1B6FC92B005C23D9 /* StatusBarHostWindow.swift in Sources */,
 				D05CC2F81B6955D000E235A3 /* UIViewController+Navigation.m in Sources */,
+				D02BDB021B6AC703008AFAD2 /* RuntimeUtils.swift in Sources */,
 				D05CC31F1B695A9600E235A3 /* NavigationControllerProxy.m in Sources */,
 				D05CC3031B69568600E235A3 /* NotificationCenterUtils.m in Sources */,
 				D05CC2E31B69552C00E235A3 /* ViewController.swift in Sources */,
 				D05CC2A01B69326400E235A3 /* NavigationController.swift in Sources */,
+				D06EE8451B7140FF00837186 /* Font.swift in Sources */,
+				D07921A91B6FC0C0005C23D9 /* KeyboardHostWindow.swift in Sources */,
 				D05CC3251B695B0700E235A3 /* NavigationBarProxy.m in Sources */,
 				D05CC2F71B6955D000E235A3 /* UIKitUtils.swift in Sources */,
 				D05CC3161B695A9600E235A3 /* NavigationBar.swift in Sources */,

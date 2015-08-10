@@ -1,7 +1,21 @@
 import UIKit
 
-extension CALayer {
-    internal func animate(from from: NSValue, to: NSValue, keyPath: String, timingFunction: String, duration: NSTimeInterval) {
+@objc private class CALayerAnimationDelegate: NSObject {
+    let completion: Bool -> Void
+    
+    init(completion: Bool -> Void) {
+        self.completion = completion
+        
+        super.init()
+    }
+    
+    @objc override func animationDidStop(anim: CAAnimation, finished flag: Bool) {
+        self.completion(flag)
+    }
+}
+
+public extension CALayer {
+    public func animate(from from: NSValue, to: NSValue, keyPath: String, timingFunction: String, duration: NSTimeInterval, completion: (Bool -> Void)? = nil) {
         let k = Float(UIView.animationDurationFactor())
         var speed: Float = 1.0
         if k != 0 && k != 1 {
@@ -16,13 +30,16 @@ extension CALayer {
         animation.removedOnCompletion = true
         animation.fillMode = kCAFillModeForwards
         animation.speed = speed
+        if let completion = completion {
+            animation.delegate = CALayerAnimationDelegate(completion: completion)
+        }
         
         self.addAnimation(animation, forKey: keyPath)
         
         self.setValue(to, forKey: keyPath)
     }
     
-    internal func animateAlpha(from from: CGFloat, to: CGFloat, duration: NSTimeInterval) {
+    public func animateAlpha(from from: CGFloat, to: CGFloat, duration: NSTimeInterval) {
         self.animate(from: NSNumber(float: Float(from)), to: NSNumber(float: Float(to)), keyPath: "opacity", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: duration)
     }
     

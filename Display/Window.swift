@@ -13,7 +13,7 @@ public class WindowRootViewController: UIViewController {
 
 @objc
 public protocol WindowContentController {
-    func setViewSize(toSize: CGSize, duration: NSTimeInterval)
+    func setViewSize(size: CGSize, insets: UIEdgeInsets, duration: NSTimeInterval)
     var view: UIView! { get }
 }
 
@@ -93,7 +93,7 @@ public class Window: UIWindow {
             let sizeUpdated = super.frame.size != value.size
             super.frame = value
             if sizeUpdated {
-                self.viewController?.setViewSize(value.size, duration: self.isRotating() ? 0.3 : 0.0)
+                self.viewController?.setViewSize(value.size, insets: UIEdgeInsets(), duration: self.isRotating() ? 0.3 : 0.0)
             }
         }
     }
@@ -106,7 +106,7 @@ public class Window: UIWindow {
             let sizeUpdated = super.bounds.size != value.size
             super.bounds = value
             if sizeUpdated {
-                self.viewController?.setViewSize(value.size, duration: self.isRotating() ? 0.3 : 0.0)
+                self.viewController?.setViewSize(value.size, insets: UIEdgeInsets(), duration: self.isRotating() ? 0.3 : 0.0)
             }
         }
     }

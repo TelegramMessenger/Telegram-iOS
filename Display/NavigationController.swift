@@ -1,19 +1,28 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
+import SwiftSignalKit
 
 public class NavigationController: NavigationControllerProxy, WindowContentController, UIGestureRecognizerDelegate {
-    private var _navigationBar: NavigationBar?
+    private var _navigationBar: NavigationBar!
     private var navigationTransitionCoordinator: NavigationTransitionCoordinator?
     
+    private var currentPushDisposable = MetaDisposable()
+    
     public override init() {
+        self._navigationBar = nil
+        
         super.init()
+        
         self._navigationBar = NavigationBar()
-        self._navigationBar?.frame = CGRect(x: 0.0, y: 0.0, width: 320.0, height: 44.0)
-        self._navigationBar?.proxy = self.navigationBar as? NavigationBarProxy
-        self._navigationBar?.backPressed = { [weak self] in
-            if self?.viewControllers.count > 1 {
-                self?.popViewControllerAnimated(true)
+    
+        self._navigationBar.frame = CGRect(x: 0.0, y: 0.0, width: 320.0, height: 44.0)
+        self._navigationBar.proxy = self.navigationBar as? NavigationBarProxy
+        self._navigationBar.backPressed = { [weak self] in
+            if let strongSelf = self {
+                if strongSelf.viewControllers.count > 1 {
+                    strongSelf.popViewControllerAnimated(true)
+                }
             }
             return
         }
@@ -30,12 +39,10 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
     public override func loadView() {
         super.loadView()
         
-        if let _navigationBar = self._navigationBar {
-            self.navigationBar.superview?.insertSubview(_navigationBar.view, aboveSubview: self.navigationBar)
-        }
+        self.navigationBar.superview?.insertSubview(_navigationBar.view, aboveSubview: self.navigationBar)
         self.navigationBar.removeFromSuperview()
         
-        self._navigationBar?.frame = navigationBarFrame(self.view.frame.size)
+        self._navigationBar.frame = navigationBarFrame(self.view.frame.size)
         
         let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: Selector("panGesture:"))
         panRecognizer.delegate = self
@@ -59,10 +66,10 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
                     bottomController.viewWillAppear(true)
                     let bottomView = bottomController.view
                     
-                    let navigationTransitionCoordinator = NavigationTransitionCoordinator(container: self.view, topView: topView, bottomView: bottomView, navigationBar: self._navigationBar!)
+                    let navigationTransitionCoordinator = NavigationTransitionCoordinator(container: self.view, topView: topView, bottomView: bottomView, navigationBar: self._navigationBar)
                     self.navigationTransitionCoordinator = navigationTransitionCoordinator
                     
-                    self._navigationBar?.beginInteractivePopProgress(bottomController.navigationItem, evenMorePreviousItem: self.viewControllers.count >= 3 ? (self.viewControllers[self.viewControllers.count - 3] as UIViewController).navigationItem : nil)
+                    self._navigationBar.beginInteractivePopProgress(bottomController.navigationItem, evenMorePreviousItem: self.viewControllers.count >= 3 ? (self.viewControllers[self.viewControllers.count - 3] as UIViewController).navigationItem : nil)
                 }
             case UIGestureRecognizerState.Changed:
                 if let navigationTransitionCoordinator = self.navigationTransitionCoordinator {
@@ -77,7 +84,7 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
                         navigationTransitionCoordinator.animateCompletion(velocity, completion: {
                             self.navigationTransitionCoordinator = nil
                             
-                            self._navigationBar?.endInteractivePopProgress()
+                            self._navigationBar.endInteractivePopProgress()
                             
                             if self.viewControllers.count >= 2 && self.navigationTransitionCoordinator == nil {
                                 let topController = self.viewControllers[self.viewControllers.count - 1] as UIViewController
@@ -106,7 +113,7 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
                         navigationTransitionCoordinator.animateCancel({
                             self.navigationTransitionCoordinator = nil
                             
-                            self._navigationBar?.endInteractivePopProgress()
+                            self._navigationBar.endInteractivePopProgress()
                             
                             if self.viewControllers.count >= 2 && self.navigationTransitionCoordinator == nil {
                                 let topController = self.viewControllers[self.viewControllers.count - 1] as UIViewController
@@ -145,7 +152,19 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
         }
     }
     
+    public func pushViewController(signal: Signal<ViewController, NoError>) -> Disposable {
+        let disposable = (signal |> deliverOnMainQueue).start(next: {[weak self] controller in
+            if let strongSelf = self {
+                strongSelf.pushViewController(controller, animated: true)
+            }
+        })
+        self.currentPushDisposable.set(disposable)
+        return disposable
+    }
+    
     public override func pushViewController(viewController: UIViewController, animated: Bool) {
+        self.currentPushDisposable.set(nil)
+        
         var controllers = self.viewControllers
         controllers.append(viewController)
         self.setViewControllers(controllers, animated: animated)
@@ -167,7 +186,7 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
             let topViewController = viewControllers[viewControllers.count - 1] as UIViewController
             
             if let controller = topViewController as? WindowContentController {
-                controller.setViewSize(self.view.bounds.size, duration: 0.0)
+                controller.setViewSize(self.view.bounds.size, insets: UIEdgeInsets(top: CGRectGetMaxY(self._navigationBar.frame), left: 0.0, bottom: 0.0, right: 0.0), duration: 0.0)
             } else {
                 topViewController.view.frame = CGRect(origin: CGPoint(), size: self.view.bounds.size)
             }
@@ -177,23 +196,23 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
     }
     
     private func navigationBarFrame(size: CGSize) -> CGRect {
-        let condensedBar = (size.height < size.width || size.height <= 320.0) && size.height < 768.0
+        //let condensedBar = (size.height < size.width || size.height <= 320.0) && size.height < 768.0
         return CGRect(x: 0.0, y: 0.0, width: size.width, height: 20.0 + (size.height >= size.width ? 44.0 : 32.0))
     }
     
-    public func setViewSize(toSize: CGSize, duration: NSTimeInterval) {
+    public func setViewSize(size: CGSize, insets: UIEdgeInsets, duration: NSTimeInterval) {
         if duration > DBL_EPSILON {
-            animateRotation(self.view, toFrame: CGRect(x: 0.0, y: 0.0, width: toSize.width, height: toSize.height), duration: duration)
+            animateRotation(self.view, toFrame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height), duration: duration)
         }
         else {
-            self.view.frame = CGRect(x: 0.0, y: 0.0, width: toSize.width, height: toSize.height)
+            self.view.frame = CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height)
         }
         
         if duration > DBL_EPSILON {
-            animateRotation(self._navigationBar, toFrame: self.navigationBarFrame(toSize), duration: duration)
+            animateRotation(self._navigationBar, toFrame: self.navigationBarFrame(size), duration: duration)
         }
         else {
-            self._navigationBar?.frame = self.navigationBarFrame(toSize)
+            self._navigationBar.frame = self.navigationBarFrame(size)
         }
         
         if let navigationTransitionCoordinator = self.navigationTransitionCoordinator {
@@ -203,17 +222,18 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
                 let bottomController = self.viewControllers[self.viewControllers.count - 2] as UIViewController
                 
                 if let controller = bottomController as? WindowContentController {
-                    controller.setViewSize(toSize, duration: duration)
+                    controller.setViewSize(size, insets: UIEdgeInsets(top: CGRectGetMaxY(self._navigationBar.frame), left: 0.0, bottom: 0.0, right: 0.0), duration: duration)
+                } else {
+                    bottomController.view.frame = CGRectMake(0.0, 0.0, size.width, size.height)
                 }
-                bottomController.view.frame = CGRectMake(0.0, 0.0, toSize.width, toSize.height)
             }
         }
         
         if let topViewController = self.topViewController {
             if let controller = topViewController as? WindowContentController {
-                controller.setViewSize(toSize, duration: duration)
+                controller.setViewSize(size, insets: UIEdgeInsets(top: CGRectGetMaxY(self._navigationBar.frame), left: 0.0, bottom: 0.0, right: 0.0), duration: duration)
             } else {
-                topViewController.view.frame = CGRectMake(0.0, 0.0, toSize.width, toSize.height)
+                topViewController.view.frame = CGRectMake(0.0, 0.0, size.width, size.height)
             }
         }
         
@@ -227,6 +247,6 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
     }
     
     public func gestureRecognizer(gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailByGestureRecognizer otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        return true
+        return otherGestureRecognizer is UIPanGestureRecognizer
     }
 }

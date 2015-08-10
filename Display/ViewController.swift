@@ -40,12 +40,12 @@ import AsyncDisplayKit
         self.displayNode = ASDisplayNode()
     }
     
-    public func setViewSize(toSize: CGSize, duration: NSTimeInterval) {
+    public func setViewSize(size: CGSize, insets: UIEdgeInsets, duration: NSTimeInterval) {
         if duration > DBL_EPSILON {
-            animateRotation(self.displayNode, toFrame: CGRect(x: 0.0, y: 0.0, width: toSize.width, height: toSize.height), duration: duration)
+            animateRotation(self.displayNode, toFrame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height), duration: duration)
         }
         else {
-            self.displayNode.frame = CGRect(x: 0.0, y: 0.0, width: toSize.width, height: toSize.height)
+            self.displayNode.frame = CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height)
         }
     }
 }

@@ -28,11 +28,13 @@ class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         let translation = CGPoint(x: location.x - firstLocation.x, y: location.y - firstLocation.y)
         
         if !validatedGesture {
-            if translation.x < 0.0 {
+            if self.firstLocation.x < 16.0 {
+                validatedGesture = true
+            } else if translation.x < 0.0 {
                 self.state = .Failed
-            } else if abs(translation.y) >= 2.0 {
+            } else if abs(translation.y) > 2.0 && abs(translation.y) > abs(translation.x) * 2.0 {
                 self.state = .Failed
-            } else if translation.x >= 3.0 && translation.x / 3.0 > translation.y {
+            } else if abs(translation.x) > 2.0 && abs(translation.y) * 2.0 < abs(translation.x) {
                 validatedGesture = true
             }
         }
