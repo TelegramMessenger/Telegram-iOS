@@ -553,7 +553,8 @@
                                     [delegate requestMessageServiceAuthorizationRequired:self];
                                 }
                                 
-                                if ([rpcError.errorDescription rangeOfString:@"SESSION_REVOKED"].location != NSNotFound)
+                                MTProto *mtProto = _mtProto;
+                                if (mtProto.requiredAuthToken != nil && [rpcError.errorDescription rangeOfString:@"SESSION_REVOKED"].location != NSNotFound)
                                 {
                                     if (request.errorContext == nil)
                                         request.errorContext = [[MTRequestErrorContext alloc] init];
