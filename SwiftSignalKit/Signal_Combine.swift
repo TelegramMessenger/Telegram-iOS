@@ -6,10 +6,18 @@ private struct SignalCombineState {
     let error: Bool
 }
 
-private func combineLatestAny<E, R>(signals: [Signal<Any, E>], combine: [Any] -> R) -> Signal<R, E> {
+private func combineLatestAny<E, R>(signals: [Signal<Any, E>], combine: [Any] -> R, initialValues: [Int : Any]) -> Signal<R, E> {
     return Signal { subscriber in
-        let state = Atomic(value: SignalCombineState(values: [:], completed: Set(), error: false))
+        let state = Atomic(value: SignalCombineState(values: initialValues, completed: Set(), error: false))
         let disposable = DisposableSet()
+        
+        if initialValues.count == signals.count {
+            var values: [Any] = []
+            for i in 0 ..< initialValues.count {
+                values.append(initialValues[i]!)
+            }
+            subscriber.putNext(combine(values))
+        }
         
         let count = signals.count
         for index in 0 ..< count {
@@ -77,17 +85,23 @@ private func signalOfAny<T, E>(signal: Signal<T, E>) -> Signal<Any, E> {
 public func combineLatest<T1, T2, E>(s1: Signal<T1, E>, _ s2: Signal<T2, E>) -> Signal<(T1, T2), E> {
     return combineLatestAny([signalOfAny(s1), signalOfAny(s2)], combine: { values in
         return (values[0] as! T1, values[1] as! T2)
-    })
+    }, initialValues: [:])
+}
+
+public func combineLatest<T1, T2, E>(s1: Signal<T1, E>, _ v1: T1, _ s2: Signal<T2, E>, _ v2: T2) -> Signal<(T1, T2), E> {
+    return combineLatestAny([signalOfAny(s1), signalOfAny(s2)], combine: { values in
+        return (values[0] as! T1, values[1] as! T2)
+    }, initialValues: [0: v1, 1: v2])
 }
 
 public func combineLatest<T1, T2, T3, E>(s1: Signal<T1, E>, _ s2: Signal<T2, E>, _ s3: Signal<T3, E>) -> Signal<(T1, T2, T3), E> {
     return combineLatestAny([signalOfAny(s1), signalOfAny(s2), signalOfAny(s3)], combine: { values in
         return (values[0] as! T1, values[1] as! T2, values[2] as! T3)
-    })
+    }, initialValues: [:])
 }
 
 public func combineLatest<T1, T2, T3, T4, E>(s1: Signal<T1, E>, _ s2: Signal<T2, E>, _ s3: Signal<T3, E>, s4: Signal<T4, E>) -> Signal<(T1, T2, T3, T4), E> {
     return combineLatestAny([signalOfAny(s1), signalOfAny(s2), signalOfAny(s3), signalOfAny(s4)], combine: { values in
         return (values[0] as! T1, values[1] as! T2, values[2] as! T3, values[3] as! T4)
-    })
+    }, initialValues: [:])
 }
