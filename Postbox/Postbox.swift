@@ -1,6 +1,6 @@
 import Foundation
-
 import SwiftSignalKit
+import sqlcipher
 
 public protocol PostboxState: Coding {
     
@@ -21,6 +21,13 @@ public final class Modifier<State: PostboxState> {
         self.postbox?.deleteMessagesWithIds(ids)
     }
     
+    public func deleteMessagesWithAbsoluteIndexedIds(ids: [Int32]) {
+        if let postbox = self.postbox {
+            let messageIds = postbox.messageIdsForAbsoluteIndexedIds(ids)
+            postbox.deleteMessagesWithIds(messageIds)
+        }
+    }
+    
     public func getState() -> State? {
         return self.postbox?.getState()
     }
@@ -32,11 +39,16 @@ public final class Modifier<State: PostboxState> {
     public func updatePeers(peers: [Peer], update: (Peer, Peer) -> Peer) {
         self.postbox?.updatePeers(peers, update: update)
     }
+    
+    public func peersWithIds(ids: [PeerId]) -> [PeerId : Peer] {
+        return self.postbox?.peersWithIds(ids) ?? [:]
+    }
 }
 
 public final class Postbox<State: PostboxState> {
     private let basePath: String
     private let messageNamespaces: [MessageId.Namespace]
+    private let absoluteIndexedMessageNamespaces: [MessageId.Namespace]
     
     private let queue = SwiftSignalKit.Queue()
     private var database: Database!
@@ -48,9 +60,10 @@ public final class Postbox<State: PostboxState> {
     
     private var statePipe: Pipe<State> = Pipe()
     
-    public init(basePath: String, messageNamespaces: [MessageId.Namespace]) {
+    public init(basePath: String, messageNamespaces: [MessageId.Namespace], absoluteIndexedMessageNamespaces: [MessageId.Namespace]) {
         self.basePath = basePath
         self.messageNamespaces = messageNamespaces
+        self.absoluteIndexedMessageNamespaces = absoluteIndexedMessageNamespaces
         self.openDatabase()
     }
     
@@ -62,10 +75,10 @@ public final class Postbox<State: PostboxState> {
                 try NSFileManager.defaultManager().createDirectoryAtPath(self.basePath, withIntermediateDirectories: true, attributes: nil)
             } catch _ {
             }
-            self.database = Database(self.basePath.stringByAppendingPathComponent("db"))
+            self.database = Database(self.basePath + "/db")
             
             let result = self.database.scalar("PRAGMA user_version") as! Int64
-            let version: Int64 = 7
+            let version: Int64 = 11
             if result == version {
                 print("(Postbox schema version \(result))")
             } else {
@@ -77,7 +90,7 @@ public final class Postbox<State: PostboxState> {
                     } catch (_) {
                     }
                     
-                    self.database = Database(self.basePath.stringByAppendingPathComponent("db"))
+                    self.database = Database(self.basePath + "/db")
                 }
                 print("(Postbox creating schema)")
                 self.createSchema()
@@ -108,6 +121,9 @@ public final class Postbox<State: PostboxState> {
         //peer_messages
         self.database.execute("CREATE TABLE peer_messages (peerId INTEGER, namespace INTEGER, id INTEGER, data BLOB, associatedMediaIds BLOB, timestamp INTEGER, PRIMARY KEY(peerId, namespace, id))")
         
+        //peer_absolute_indexed_message_ids
+        self.database.execute("CREATE TABLE peer_absolute_indexed_message_ids (id INTEGER PRIMARY KEY, completeId BLOB)")
+        
         //peer_media
         self.database.execute("CREATE TABLE peer_media (peerId INTEGER, mediaNamespace INTEGER, messageNamespace INTEGER, messageId INTEGER, PRIMARY KEY (peerId, mediaNamespace, messageNamespace, messageId))")
         self.database.execute("CREATE INDEX peer_media_peerId_messageNamespace_messageId ON peer_media (peerId, messageNamespace, messageId)")
@@ -126,9 +142,7 @@ public final class Postbox<State: PostboxState> {
         self.database.execute("CREATE TABLE peers (id INTEGER PRIMARY KEY, data BLOB)")
     }
     
-    private class func peerViewEntryIndexForBlob(blob: Blob) -> PeerViewEntryIndex {
-        let buffer = ReadBuffer(memory: UnsafeMutablePointer(blob.data.bytes), length: blob.data.length, freeWhenDone: false)
-
+    private class func peerViewEntryIndexForBuffer(buffer: ReadBuffer) -> PeerViewEntryIndex {
         var timestamp: Int32 = 0
         buffer.read(&timestamp, offset: 0, length: 4)
         timestamp = Int32(bigEndian: timestamp)
@@ -373,6 +387,9 @@ public final class Postbox<State: PostboxState> {
             
             let encoder = Encoder()
             encoder.encodeRootObject(state)
+            
+            
+            
             let blob = Blob(data: encoder.makeData())
             self.database.prepareCached("INSERT OR REPLACE INTO state (id, data) VALUES (?, ?)").run(Int64(0), blob)
             
@@ -444,6 +461,7 @@ public final class Postbox<State: PostboxState> {
     
     private func addMessages(messages: [Message], medias: [Media]) {
         let messageInsertStatement = self.database.prepareCached("INSERT INTO peer_messages (peerId, namespace, id, data, associatedMediaIds, timestamp) VALUES (?, ?, ?, ?, ?, ?)")
+        let absoluteMessageIdsInsertStatement = self.database.prepareCached("INSERT INTO peer_absolute_indexed_message_ids (id, completeId) VALUES (?, ?)")
         let peerMediaInsertStatement = self.database.prepareCached("INSERT INTO peer_media (peerId, mediaNamespace, messageNamespace, messageId) VALUES (?, ?, ?, ?)")
         let mediaInsertStatement = self.database.prepareCached("INSERT INTO media (namespace, id, data, associatedMessageIds) VALUES (?, ?, ?, ?)")
         let referencedMessageIdsStatement = self.database.prepareCached("SELECT associatedMessageIds FROM media WHERE namespace = ? AND id = ?")
@@ -486,6 +504,13 @@ public final class Postbox<State: PostboxState> {
                 }
             }
             
+            let completeIdData = NSMutableData(capacity: 8 + 4 + 4)!
+            var zero: Int64 = 0
+            completeIdData.appendBytes(&zero, length: 8)
+            completeIdData.appendBytes(&zero, length: 8)
+            let completeIdDataMutableBytes = completeIdData.mutableBytes
+            let completeIdBlob = Blob(data: completeIdData)
+            
             for message in peerMessages {
                 if existingMessageIds.contains(message.id) {
                     continue
@@ -511,6 +536,16 @@ public final class Postbox<State: PostboxState> {
                 }
                 
                 messageInsertStatement.run(peerId.toInt64(), Int64(message.id.namespace), Int64(message.id.id), messageBlob, referencedMediaIdsMediaIdsBlob, Int64(message.timestamp))
+                
+                if self.absoluteIndexedMessageNamespaces.contains(message.id.namespace) {
+                    var peerIdValue = peerId.toInt64()
+                    memcpy(completeIdDataMutableBytes, &peerIdValue, 8)
+                    var messageIdNamespaceValue: Int32 = message.id.namespace
+                    memcpy(completeIdDataMutableBytes + 8, &messageIdNamespaceValue, 4)
+                    var messageIdIdValue: Int32 = message.id.id
+                    memcpy(completeIdDataMutableBytes + 12, &messageIdIdValue, 4)
+                    absoluteMessageIdsInsertStatement.run(Int64(message.id.id), completeIdBlob)
+                }
                 
                 for id in message.mediaIds {
                     peerMediaInsertStatement.run(peerId.toInt64(), Int64(id.namespace), Int64(message.id.namespace), Int64(message.id.id))
@@ -649,7 +684,7 @@ public final class Postbox<State: PostboxState> {
             for id in ids {
                 for row in select.run(Int64(id.namespace), id.id) {
                     let blob = row[0] as! Blob
-                    if let media = Decoder(buffer: ReadBuffer(memory: UnsafeMutablePointer<Void>(blob.data.bytes), length: blob.data.length, freeWhenDone: false)) as? Media {
+                    if let media = Decoder(buffer: ReadBuffer(memory: UnsafeMutablePointer<Void>(blob.data.bytes), length: blob.data.length, freeWhenDone: false)).decodeRootObject() as? Media {
                         result[media.id] = media
                     }
                     break
@@ -802,7 +837,8 @@ public final class Postbox<State: PostboxState> {
     private func updatePeerEntry(peerId: PeerId, message: RenderedMessage?, replace: Bool = false) {
         var currentIndex: PeerViewEntryIndex?
         for row in self.database.prepareCached("SELECT entry FROM peer_entries WHERE peerId = ?").run(peerId.toInt64()) {
-            currentIndex = Postbox.peerViewEntryIndexForBlob(row[0] as! Blob)
+            let blob = row[0] as! Blob
+            currentIndex = Postbox.peerViewEntryIndexForBuffer(ReadBuffer(memory: UnsafeMutablePointer(blob.data.bytes), length: blob.data.length, freeWhenDone: false))
             break
         }
         
@@ -859,6 +895,40 @@ public final class Postbox<State: PostboxState> {
         }
     }
     
+    private func messageIdsForAbsoluteIndexedIds(ids: [Int32]) -> [MessageId] {
+        if ids.count == 0 {
+            return []
+        }
+        
+        var queryString = "SELECT completeId FROM peer_absolute_indexed_message_ids WHERE id IN ("
+        var first = true
+        for id in ids {
+            if first {
+                first = false
+            } else {
+                queryString += ","
+            }
+            queryString += "\(id)"
+        }
+        queryString += ")"
+        
+        var result: [MessageId] = []
+        for row in self.database.prepare(queryString).run() {
+            let blob = row[0] as! Blob
+            let blobBytes = blob.data.bytes
+            
+            var peerIdValue: Int64 = 0
+            memcpy(&peerIdValue, blobBytes, 8)
+            var messageIdNamespaceValue: Int32 = 0
+            memcpy(&messageIdNamespaceValue, blobBytes + 8, 4)
+            var messageIdIdValue: Int32 = 0
+            memcpy(&messageIdIdValue, blobBytes + 12, 4)
+            result.append(MessageId(peerId: PeerId(peerIdValue), namespace: messageIdNamespaceValue, id: messageIdIdValue))
+        }
+        
+        return result
+    }
+    
     private func deleteMessagesWithIds(ids: [MessageId]) {
         for (peerId, messageIds) in Postbox.messageIdsGroupedByPeerId(ids) {
             let messageIdsByNamespace = Postbox.messageIdsGroupedByNamespace(messageIds)
@@ -889,6 +959,21 @@ public final class Postbox<State: PostboxState> {
                 }
                 queryString += ")"
                 self.database.prepare(queryString).run(peerId.toInt64(), Int64(namespace))
+                
+                if self.absoluteIndexedMessageNamespaces.contains(namespace) {
+                    var queryString = "DELETE FROM peer_absolute_indexed_message_ids WHERE id IN ("
+                    var first = true
+                    for id in messageIds {
+                        if first {
+                            first = false
+                        } else {
+                            queryString += ","
+                        }
+                        queryString += "\(id.id)"
+                    }
+                    queryString += ")"
+                    self.database.prepare(queryString).run()
+                }
             }
             
             for (namespace, messageIds) in messageIdsByNamespace {
@@ -1263,7 +1348,6 @@ public final class Postbox<State: PostboxState> {
         
         let sign = earlier ? "<" : ">"
         let order = earlier ? "DESC" : "ASC"
-        let statement = self.database.prepareCached("SELECT data, associatedMediaIds FROM peer_messages WHERE peerId = ? AND namespace = ? AND id \(sign) ? ORDER BY id \(order) LIMIT ?")
         let bound: Int64
         if let id = id {
             bound = Int64(id)
@@ -1273,15 +1357,25 @@ public final class Postbox<State: PostboxState> {
             bound = Int64(Int32.min)
         }
         
-        for row in statement.run(Int64(peerId.toInt64()), Int64(namespace), bound, Int64(count)) {
-            let data = (row[0] as! Blob).data
-            let decoder = Decoder(buffer: ReadBuffer(memory: UnsafeMutablePointer(data.bytes), length: data.length, freeWhenDone: false))
-            if let message = decoder.decodeRootObject() as? Message {
-                messages.append(message)
+        var statement: COpaquePointer = nil
+        sqlite3_prepare_v2(self.database.handle, "SELECT data, associatedMediaIds FROM peer_messages WHERE peerId=\(peerId.toInt64()) AND namespace=\(namespace) AND id \(sign) \(bound) ORDER BY id \(order) LIMIT \(count)", -1, &statement, nil)
+        
+        while true {
+            let result = sqlite3_step(statement)
+            if result == SQLITE_ROW {
+                let length = sqlite3_column_bytes(statement, 0)
+                let data = sqlite3_column_blob(statement, 0)
+                let decoder = Decoder(buffer: ReadBuffer(memory: UnsafeMutablePointer<Void>(data), length: Int(length), freeWhenDone: false))
+                if let message = decoder.decodeRootObject() as? Message {
+                    messages.append(message)
+                } else {
+                    print("(PostBox: can't decode message)")
+                }
             } else {
-                print("(PostBox: can't decode message)")
+                break
             }
         }
+        sqlite3_finalize(statement)
         
         return self.renderedMessages(messages)
     }
@@ -1289,23 +1383,32 @@ public final class Postbox<State: PostboxState> {
     private func fetchPeerEntryIndicesRelative(earlier: Bool)(index: PeerViewEntryIndex?, count: Int) -> [PeerViewEntryIndex] {
         var entries: [PeerViewEntryIndex] = []
         
-        let rows: Statement
+        var statement: COpaquePointer = nil
         
         if let index = index {
             let bound = Postbox.blobForPeerViewEntryIndex(index)
             let sign = earlier ? "<" : ">"
             let order = earlier ? "DESC" : "ASC"
-            let statement = self.database.prepareCached("SELECT entry FROM peer_entries WHERE entry \(sign) ? ORDER BY entry \(order) LIMIT ?")
-            rows = statement.run(bound, Int64(count))
+            
+            sqlite3_prepare_v2(self.database.handle, "SELECT entry FROM peer_entries WHERE entry \(sign) ? ORDER BY entry \(order) LIMIT \(count)", -1, &statement, nil)
+            sqlite3_bind_blob(statement, 0, bound.data.bytes, Int32(bound.data.length), nil)
+            
         } else {
             let order = earlier ? "DESC" : "ASC"
-            let statement = self.database.prepareCached("SELECT entry FROM peer_entries ORDER BY entry \(order) LIMIT ?")
-            rows = statement.run(Int64(count))
+            sqlite3_prepare_v2(self.database.handle, "SELECT entry FROM peer_entries ORDER BY entry \(order) LIMIT \(count)", -1, &statement, nil)
         }
         
-        for row in rows {
-            entries.append(Postbox.peerViewEntryIndexForBlob(row[0] as! Blob))
+        while true {
+            let result = sqlite3_step(statement)
+            if result == SQLITE_ROW {
+                let length = sqlite3_column_bytes(statement, 0)
+                let data = sqlite3_column_blob(statement, 0)
+                entries.append(Postbox.peerViewEntryIndexForBuffer(ReadBuffer(memory: UnsafeMutablePointer(data), length: Int(length), freeWhenDone: false)))
+            } else {
+                break
+            }
         }
+        sqlite3_finalize(statement)
         
         return entries
     }
@@ -1350,7 +1453,14 @@ public final class Postbox<State: PostboxState> {
                 
                 entries.append(entry)
             } else {
-                print("(PostBox: missing message for peer entry)")
+                let entry: PeerViewEntry
+                if let peer = peer {
+                    entry = PeerViewEntry(peer: peer, peerId: entryIndex.peerId, messageIndex: entryIndex.messageIndex)
+                } else {
+                    entry = PeerViewEntry(peer: nil, peerId: entryIndex.peerId, messageIndex: entryIndex.messageIndex)
+                }
+                
+                entries.append(entry)
             }
         }
         
@@ -1501,6 +1611,8 @@ public final class Postbox<State: PostboxState> {
             self.queue.dispatch {
                 let mutableView: MutableMessageView
                 
+                let startTime = CFAbsoluteTimeGetCurrent()
+                
                 let around = self.fetchMessagesAround(peerId, anchorId: id, count: count)
                 if around.0.count == 0 {
                     let tail = self.fetchMessagesTail(peerId, count: count + 1)
@@ -1529,6 +1641,8 @@ public final class Postbox<State: PostboxState> {
                 } else {
                     mutableView = MutableMessageView(namespaces: self.messageNamespaces, count: count, earlier: around.1, messages: around.0, later: around.2)
                 }
+                
+                print("aroundMessageViewForPeerId fetch: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
                 
                 let record = (mutableView, Pipe<MessageView>())
                 
@@ -1573,7 +1687,6 @@ public final class Postbox<State: PostboxState> {
                 let startTime = CFAbsoluteTimeGetCurrent()
                 
                 let tail = self.fetchPeerEntriesRelative(true)(index: nil, count: count + 1)
-                self.fetchPeerEntriesRelative(true)(index: nil, count: count + 1)
                 
                 print("(Postbox fetchPeerEntriesRelative took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms)")
                 

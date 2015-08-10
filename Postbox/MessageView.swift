@@ -59,9 +59,10 @@ public final class MutableMessageView: CustomStringConvertible {
                     } else {
                         self.earlier[message.message.id.namespace] = message
                     }
+                    return true
+                } else {
+                    return false
                 }
-                
-                return true
             } else if index > first {
                 if next != nil && index > next! {
                     let laterMessage = self.later[message.message.id.namespace]
@@ -71,6 +72,9 @@ public final class MutableMessageView: CustomStringConvertible {
                         } else {
                             self.later[message.message.id.namespace] = message
                         }
+                        return true
+                    } else {
+                        return false
                     }
                 } else {
                     self.messages.append(message)
@@ -79,8 +83,8 @@ public final class MutableMessageView: CustomStringConvertible {
                         self.earlier[earliest.message.id.namespace] = earliest
                         self.messages.removeAtIndex(0)
                     }
+                    return true
                 }
-                return true
             } else if index != last && index != first {
                 var i = self.messages.count
                 while i >= 1 {

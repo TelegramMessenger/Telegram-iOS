@@ -479,6 +479,17 @@ public final class Decoder {
         }
     }
     
+    public func decodeInt32ForKey(key: UnsafePointer<Int8>) -> Int32? {
+        if Decoder.positionOnKey(UnsafePointer<Int8>(self.buffer.memory), offset: &self.buffer.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Int32) {
+            var value: Int32 = 0
+            memcpy(&value, self.buffer.memory + self.buffer.offset, 4)
+            self.buffer.offset += 4
+            return value
+        } else {
+            return nil
+        }
+    }
+    
     public func decodeInt64ForKey(key: UnsafePointer<Int8>) -> Int64 {
         if Decoder.positionOnKey(UnsafePointer<Int8>(self.buffer.memory), offset: &self.buffer.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Int64) {
             var value: Int64 = 0

@@ -27,14 +27,20 @@ public struct MessageId: Hashable, CustomStringConvertible {
     }
     
     public init(_ buffer: ReadBuffer) {
-        self.peerId = PeerId(namespace: 0, id: 0)
-        self.namespace = 0
-        self.id = 0
         
-        memcpy(&self.peerId.namespace, buffer.memory + buffer.offset, 4)
-        memcpy(&self.peerId.id, buffer.memory + (buffer.offset + 4), 4)
-        memcpy(&self.namespace, buffer.memory + (buffer.offset + 8), 4)
-        memcpy(&self.id, buffer.memory + (buffer.offset + 12), 4)
+        var peerIdNamespaceValue: Int32 = 0
+        memcpy(&peerIdNamespaceValue, buffer.memory + buffer.offset, 4)
+        var peerIdIdValue: Int32 = 0
+        memcpy(&peerIdIdValue, buffer.memory + (buffer.offset + 4), 4)
+        self.peerId = PeerId(namespace: peerIdNamespaceValue, id: peerIdIdValue)
+        
+        var namespaceValue: Int32 = 0
+        memcpy(&namespaceValue, buffer.memory + (buffer.offset + 8), 4)
+        self.namespace = namespaceValue
+        var idValue: Int32 = 0
+        memcpy(&idValue, buffer.memory + (buffer.offset + 12), 4)
+        self.id = idValue
+        
         buffer.offset += 16
     }
     
@@ -114,7 +120,7 @@ public protocol Message: Coding {
     var peerIds: [PeerId] { get }
 }
 
-public struct RenderedMessage {
+public struct RenderedMessage: Equatable, Comparable {
     public let message: Message
     
     internal let incomplete: Bool
@@ -134,4 +140,12 @@ public struct RenderedMessage {
         self.media = media
         self.incomplete = false
     }
+}
+
+public func ==(lhs: RenderedMessage, rhs: RenderedMessage) -> Bool {
+    return lhs.message.id == rhs.message.id
+}
+
+public func <(lhs: RenderedMessage, rhs: RenderedMessage) -> Bool {
+    return MessageIndex(lhs.message) < MessageIndex(rhs.message)
 }

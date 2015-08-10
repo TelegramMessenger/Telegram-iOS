@@ -36,6 +36,7 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable {
         buffer.offset += 4
         var i = 0
         var array: [PeerId] = []
+        array.reserveCapacity(Int(length))
         while i < Int(length) {
             var value: Int64 = 0
             buffer.read(&value, offset: 0, length: 8)

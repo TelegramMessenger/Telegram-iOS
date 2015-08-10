@@ -9,7 +9,7 @@ public struct MediaId: Hashable, CustomStringConvertible {
     
     public var hashValue: Int {
         get {
-            return Int(self.id)
+            return Int((self.id & 0xffffffff) ^ ((self.id >> 32) & 0xffffffff))
         }
     }
     
