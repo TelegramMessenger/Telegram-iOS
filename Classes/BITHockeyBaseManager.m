@@ -149,6 +149,7 @@
   return @"";
 }
 
+#if !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions)
 - (UIWindow *)findVisibleWindow {
   UIWindow *visibleWindow = [UIApplication sharedApplication].keyWindow;
   
@@ -266,6 +267,8 @@
   }
 #endif
 }
+#endif // HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions && HOCKEYSDK_CONFIGURATION_RelaseCrashOnlyWatchOS
+
 
 - (BOOL)addStringValueToKeychain:(NSString *)stringValue forKey:(NSString *)key {
 	if (!key || !stringValue)

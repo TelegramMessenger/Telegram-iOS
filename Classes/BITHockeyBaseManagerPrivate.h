@@ -67,10 +67,12 @@
 - (NSString *)getDevicePlatform;
 - (NSString *)executableUUID;
 
+#if !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions)
 // UI helpers
 - (UIWindow *)findVisibleWindow;
 - (UINavigationController *)customNavigationControllerWithRootViewController:(UIViewController *)viewController presentationStyle:(UIModalPresentationStyle)presentationStyle;
 - (void)showView:(UIViewController *)viewController;
+#endif
 
 // Date helpers
 - (NSDate *)parseRFC3339Date:(NSString *)dateString;

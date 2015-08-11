@@ -178,10 +178,8 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     _delegate = nil;
     _isSetup = NO;
     
-#if TARGET_OS_IOS // exclude this from Watch OS 2
     _showAlwaysButton = YES;
     _alertViewHandler = nil;
-#endif
     
     _plCrashReporter = nil;
     _exceptionHandler = nil;
@@ -694,11 +692,9 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
 }
 
 
-#if TARGET_OS_IOS // exclude this from Watch OS 2
 - (void)setAlertViewHandler:(BITCustomAlertViewHandler)alertViewHandler{
   _alertViewHandler = alertViewHandler;
 }
-#endif
 
 /**
  * Check if the debugger is attached
@@ -783,7 +779,6 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   }
 }
 
-#if TARGET_OS_IOS // exclude this from Watch OS 2
 - (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput withUserProvidedMetaData:(BITCrashMetaData *)userProvidedMetaData {
   switch (userInput) {
     case BITCrashManagerUserInputDontSend:
@@ -824,7 +819,6 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   }
   
 }
-#endif
 
 #pragma mark - PLCrashReporter
 
@@ -997,10 +991,12 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
  * - Send pending approved crash reports
  */
 - (void)invokeDelayedProcessing {
+#if !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions)
   if (!bit_isRunningInAppExtension() &&
       [[UIApplication sharedApplication] applicationState] != UIApplicationStateActive) {
     return;
   }
+#endif
   
   BITHockeyLog(@"INFO: Start delayed CrashManager processing");
   
@@ -1030,7 +1026,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
       [self approveLatestCrashReport];
       [self sendNextCrashReport];
       
-#if TARGET_OS_IOS // exclude this from Watch OS 2
+#if !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions)
 
     } else if (_crashManagerStatus != BITCrashManagerStatusAutoSend && notApprovedReportFilename) {
       
@@ -1113,7 +1109,6 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
 #pragma clang diagnostic pop
         }
       }
-      
 #endif
       
     } else {
@@ -1244,9 +1239,13 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     }
   }
   
+#if !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions)
   if ([[UIApplication sharedApplication] applicationState] == UIApplicationStateActive) {
     [self appEnteredForeground];
   }
+#else
+  [self appEnteredForeground];
+#endif
   
   [[NSUserDefaults standardUserDefaults] setBool:NO forKey:kBITAppDidReceiveLowMemoryNotification];
   [[NSUserDefaults standardUserDefaults] synchronize];
@@ -1268,6 +1267,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     return;
   
   NSString *fakeReportOSVersion = [[NSUserDefaults standardUserDefaults] objectForKey:kBITAppOSVersion] ?: [[UIDevice currentDevice] systemVersion];
+  
   NSString *fakeReportOSVersionString = fakeReportOSVersion;
   NSString *fakeReportOSBuild = [[NSUserDefaults standardUserDefaults] objectForKey:kBITAppOSBuild] ?: [self osBuild];
   if (fakeReportOSBuild) {
@@ -1507,7 +1507,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   }
 }
 
-#if TARGET_OS_IOS // exclude this from Watch OS 2
+#if !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions)
 
 #pragma mark - UIAlertView Delegate
 

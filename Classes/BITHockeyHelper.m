@@ -31,8 +31,9 @@
 #import "BITKeychainUtils.h"
 #import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
+#if !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnly) && !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions)
 #import <QuartzCore/QuartzCore.h>
-
+#endif
 
 #pragma mark NSString helpers
 
@@ -294,6 +295,8 @@ BOOL bit_isRunningInAppExtension(void) {
   
   return isRunningInAppExtension;
 }
+
+#if !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnly) && !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions)
 
 /**
  Find a valid app icon filename that points to a proper app icon image
@@ -828,3 +831,5 @@ UIImage *bit_screenshot(void) {
   
   return image;
 }
+
+#endif
