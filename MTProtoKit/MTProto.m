@@ -1943,9 +1943,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             
             for (id<MTMessageService> messageService in _messageServices)
             {
-                if ([messageService respondsToSelector:@selector(mtProto:shouldRequestMessageInResponseToMessageId:currentTransactionId:)])
+                if ([messageService respondsToSelector:@selector(mtProto:shouldRequestMessageWithId:inResponseToMessageId:currentTransactionId:)])
                 {
-                    if ([messageService mtProto:self shouldRequestMessageInResponseToMessageId:requestMessageId currentTransactionId:transactionId])
+                    if ([messageService mtProto:self shouldRequestMessageWithId:detailedInfoMessage.responseMessageId inResponseToMessageId:requestMessageId currentTransactionId:transactionId])
                     {
                         shouldRequest = true;
                         break;
@@ -2086,6 +2086,20 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     
     if ([self canAskForTransactions] || [self canAskForServiceTransactions])
         [self requestTransportTransaction];
+}
+
+- (void)_messageResendRequestFailed:(int64_t)messageId
+{
+    [[MTProto managerQueue] dispatchOnQueue:^
+    {
+        for (id<MTMessageService> service in _messageServices)
+        {
+            if ([service respondsToSelector:@selector(mtProto:messageResendRequestFailed:)])
+            {
+                [service mtProto:self messageResendRequestFailed:messageId];
+            }
+        }
+    }];
 }
 
 @end

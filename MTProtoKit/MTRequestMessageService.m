@@ -662,7 +662,7 @@
 {
     for (MTRequest *request in _requests)
     {
-        if (request.requestContext != 0 && request.requestContext.quickAckId == quickAckId)
+        if (request.requestContext != nil && request.requestContext.quickAckId == quickAckId)
         {
             if (request.acknowledgementReceived != nil)
                 request.acknowledgementReceived();
@@ -697,6 +697,7 @@
         if (request.requestContext != nil && request.requestContext.messageId == messageId)
         {
             request.requestContext = nil;
+            requestTransaction = true;
             
             break;
         }
@@ -708,6 +709,7 @@
         {
             dropContext.messageId = 0;
             dropContext.messageSeqNo = 0;
+            requestTransaction = true;
             
             break;
         }
@@ -751,17 +753,35 @@
         [mtProto requestTransportTransaction];
 }
 
-- (bool)mtProto:(MTProto *)__unused mtProto shouldRequestMessageInResponseToMessageId:(int64_t)messageId currentTransactionId:(id)currentTransactionId
+- (bool)mtProto:(MTProto *)__unused mtProto shouldRequestMessageWithId:(int64_t)responseMessageId inResponseToMessageId:(int64_t)messageId currentTransactionId:(id)currentTransactionId
 {
     for (MTRequest *request in _requests)
     {
         if (request.requestContext != nil && request.requestContext.messageId == messageId && (request.requestContext.transactionId == nil || [request.requestContext.transactionId isEqual:currentTransactionId]))
         {
+            request.requestContext.responseMessageId = responseMessageId;
             return true;
         }
     }
     
     return false;
+}
+
+- (void)mtProto:(MTProto *)mtProto messageResendRequestFailed:(int64_t)messageId
+{
+    bool requestTransaction = false;
+    
+    for (MTRequest *request in _requests)
+    {
+        if (request.requestContext != nil && request.requestContext.responseMessageId == messageId)
+        {
+            request.requestContext = nil;
+            requestTransaction = true;
+        }
+    }
+    
+    if (requestTransaction)
+        [mtProto requestTransportTransaction];
 }
 
 - (void)mtProto:(MTProto *)mtProto updateReceiveProgressForToken:(id)progressToken progress:(float)progress packetLength:(NSInteger)packetLength

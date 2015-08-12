@@ -137,6 +137,8 @@
     }
     else if ([message.body isKindOfClass:[MTMsgsStateInfoMessage class]] && ((MTMsgsStateInfoMessage *)message.body).requestMessageId == _currentRequestMessageId)
     {
+        [mtProto _messageResendRequestFailed:_messageId];
+        
         id<MTResendMessageServiceDelegate> delegate = _delegate;
         if ([delegate respondsToSelector:@selector(resendMessageServiceCompleted:)])
             [delegate resendMessageServiceCompleted:self];
