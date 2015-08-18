@@ -95,13 +95,7 @@ typedef enum {
     PLCrashReporterErrorCrashReportInvalid = 2,
 
     /** An attempt to use a resource which was in use at the time in a manner which would have conflicted with the request. */
-    PLCrashReporterErrorResourceBusy = 3,
-    
-    /** The requested resource could not be found. */
-    PLCRashReporterErrorNotFound = 4,
-    
-    /** Allocation failed. */
-    PLCRashReporterErrorInsufficientMemory = 4
+    PLCrashReporterErrorResourceBusy = 3
 } PLCrashReporterError;
 
 
