@@ -28,7 +28,7 @@ This document contains the following sections:
    1. [Linking System Frameworks manually](#linkmanually)   
    2. [Setup with CocoaPods](#cocoapods)
    3. [iOS 8 Extensions](#extensions)
-   4. [WatchKit Extensions](#watchkit)
+   4. [WatchKit 1 Extensions](#watchkit)
    5. [Crash Reporting](#crashreporting)
    6. [Feedback](#feedback)
    7. [Store Updates](#storeupdates)
@@ -68,7 +68,12 @@ From our experience, 3rd-party libraries usually reside inside a subdirectory (l
 
 1. We recommend to use Xcode's group-feature to create a group for 3rd-party-libraries similar to the structure of our files on disk. For example,  similar to the file structure in 2.3 above, our projects have a group called `Vendor`.
 2. Make sure the `Project Navigator` is visible (⌘+1)
-3. The SDK comes in two flavours: full featured `HockeySDK.embeddedframework` and crash reporting only `HockeySDK.framework` in the subfolder `HockeySDKCrashOnly` (which is required to be used for extensions!). Our examples will use the full featured one.
+3. The SDK comes in three flavours:
+	1. Full featured `HockeySDK.embeddedframework`
+	2. Crash reporting only `HockeySDK.framework` in the subfolder `HockeySDKCrashOnly`
+	3. Crash reporting only for extensions `HockeySDK.framework` in the subfolder `HockeySDKCrashOnlyExtension` (which is required to be used for extensions when build into native frameworks).
+	
+	Our examples will use the full featured one.
 4. Drag & drop `HockeySDK.embeddedframework` from your window in the `Finder` into your project in Xcode and move it to the desired location in the `Project Navigator` (e.g. into the group called `Vendor`)
 5. A popup will appear. Select `Create groups for any added folders` and set the checkmark for your target. Then click `Finish`.
 
@@ -91,7 +96,7 @@ From our experience, 3rd-party libraries usually reside inside a subdirectory (l
     [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
     // Do some additional configuration if needed here
     [[BITHockeyManager sharedHockeyManager] startManager];
-    [[BITHockeyManager sharedHockeyManager].authenticator authenticateInstallation]; // This line is obsolete in the crash only build
+    [[BITHockeyManager sharedHockeyManager].authenticator authenticateInstallation]; // This line is obsolete in the crash only builds
     ```
 
 **Swift**
@@ -114,7 +119,7 @@ From our experience, 3rd-party libraries usually reside inside a subdirectory (l
     ```swift
     BITHockeyManager.sharedHockeyManager().configureWithIdentifier("APP_IDENTIFIER");
     BITHockeyManager.sharedHockeyManager().startManager();
-    BITHockeyManager.sharedHockeyManager().authenticator.authenticateInstallation(); // This line is obsolete in the crash only build
+    BITHockeyManager.sharedHockeyManager().authenticator.authenticateInstallation(); // This line is obsolete in the crash only builds
     ```
 
 *Note:* The SDK is optimized to defer everything possible to a later time while making sure e.g. crashes on startup can also be caught and each module executes other code with a delay some seconds. This ensures that `applicationDidFinishLaunching` will process as fast as possible and the SDK will not block the startup sequence resulting in a possible kill by the watchdog process.
@@ -152,6 +157,11 @@ If you are working with an older project which doesn't support clang modules yet
     + `SystemConfiguration`
     + `UIKit`
     + `libc++`
+  2. Crash reporting only for extensions:
+    + `Foundation`
+    + `Security`
+    + `SystemConfiguration`
+    + `libc++`
 
 Note that this also means that you can't use the `@import` syntax mentioned in the [Modify Code](#modify) section but have to stick to the old `#import <HockeySDK/HockeySDK.h>`.
 
@@ -175,6 +185,12 @@ You can alternative use a Crash Reporting build only by using the following line
 
 ```ruby
 pod "HockeySDK", :subspecs => ['CrashOnlyLib']
+```
+
+Or you can use the Crash Reporting build only for extensions by using the following line in your `Podfile`:
+
+```ruby
+pod "HockeySDK", :subspecs => ['CrashOnlyExtensionsLib']
 ```
 
 #### 3.2.2 Source Integration Options
@@ -213,13 +229,13 @@ The following points need to be considered to use the HockeySDK SDK with iOS 8 E
     }
     ```
 
-3. The binary distribution provides a special framework build in the `HockeySDKCrashOnly` folder of the distribution zip file, which only contains crash reporting functionality (also automatic sending crash reports only). You can use this to further slim down the binary size of your extensions. 
+3. The binary distribution provides a special framework build in the `HockeySDKCrashOnly` or `HockeySDKCrashOnlyExtension` folder of the distribution zip file, which only contains crash reporting functionality (also automatic sending crash reports only).
 
 
 <a id="watchkit"></a>
-### 3.4 WatchKit Extensions
+### 3.4 WatchKit 1 Extensions
 
-The following points need to be considered to use HockeySDK with WatchKit Extensions:
+The following points need to be considered to use HockeySDK with WatchKit 1 Extensions:
 
 1. WatchKit extensions don't use regular `UIViewControllers` but rather `WKInterfaceController` subclasses. These have a different lifecycle than you might be used to.
 
@@ -279,7 +295,7 @@ The following points need to be considered to use HockeySDK with WatchKit Extens
     @end
     ```
 
-2. The binary distribution provides a special framework build in the `HockeySDKCrashOnly` folder of the distribution zip file, which only contains crash reporting functionality (also automatic sending crash reports only). You can use this to further slim down the binary size of your extensions. 
+2. The binary distribution provides a special framework build in the `HockeySDKCrashOnly` or `HockeySDKCrashOnlyExtension` folder of the distribution zip file, which only contains crash reporting functionality (also automatic sending crash reports only).
 
 <a name="crashreporting"></a>
 ### 3.5 Crash Reporting
