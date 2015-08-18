@@ -24,20 +24,25 @@ Pod::Spec.new do |s|
 
   s.source = { :http => "https://github.com/bitstadium/HockeySDK-iOS/releases/download/#{s.version}/HockeySDK-iOS-#{s.version}.zip" }
 
-  s.frameworks = 'SystemConfiguration', 'Security', 'UIKit'
+  s.frameworks = 'SystemConfiguration', 'Security', 'Foundation'
   s.libraries = 'c++'
 
   s.default_subspec   = 'AllFeaturesLib'
   
   s.subspec 'CrashOnlyLib' do |ss|
+    ss.frameworks = 'UIKit'
     ss.resource_bundle = { 'HockeySDKResources' => ['HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDK.framework/Versions/A/Resources/HockeySDKResources.bundle/*.lproj'] }
     ss.vendored_frameworks = 'HockeySDK-iOS/HockeySDKCrashOnly/HockeySDK.framework'
+  end
+
+  s.subspec 'CrashOnlyExtensionsLib' do |ss|
+    ss.vendored_frameworks = 'HockeySDK-iOS/HockeySDKCrashOnlyExtension/HockeySDK.framework'
   end
 
   s.subspec 'AllFeaturesLib' do |ss|
     ss.resource_bundle = { 'HockeySDKResources' => ['HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDK.framework/Versions/A/Resources/HockeySDKResources.bundle/*.png', 'HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDK.framework/Versions/A/Resources/HockeySDKResources.bundle/*.lproj'] }
 
-    ss.frameworks = 'CoreGraphics', 'QuartzCore', 'AssetsLibrary', 'MobileCoreServices', 'QuickLook', 'CoreText'
+    ss.frameworks = 'UIKit', 'CoreGraphics', 'QuartzCore', 'AssetsLibrary', 'MobileCoreServices', 'QuickLook', 'CoreText'
     ss.vendored_frameworks = 'HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDK.framework'
   end
 
