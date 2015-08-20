@@ -1,8 +1,8 @@
 [![Build Status](https://travis-ci.org/bitstadium/HockeySDK-iOS.svg?branch=develop)](https://travis-ci.org/bitstadium/HockeySDK-iOS)
 
-## Version 3.7.1
+## Version 3.7.2
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.7.1/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.7.2/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -289,7 +289,7 @@ The following options only show some of possibilities to interact and fine-tune 
 #### 3.5.1 Disable Crash Reporting
 The HockeySDK enables crash reporting **per default**. Crashes will be immediately sent to the server the next time the app is launched.
 
-To provide you with the best crash reporting, we are using [PLCrashReporter]("https://github.com/plausiblelabs/plcrashreporter") in [Version 1.3 / Commit 73f4ad5aa1796978f22b63aed3f8490b215b2c07]("https://github.com/plausiblelabs/plcrashreporter/commit/73f4ad5aa1796978f22b63aed3f8490b215b2c07").
+To provide you with the best crash reporting, we are using [PLCrashReporter]("https://github.com/plausiblelabs/plcrashreporter") in [Version 1.2 / Commit 356901d7f3ca3d46fbc8640f469304e2b755e461]("https://github.com/plausiblelabs/plcrashreporter/commit/356901d7f3ca3d46fbc8640f469304e2b755e461").
 
 This feature can be disabled as follows:
 
@@ -438,7 +438,7 @@ To check if data is send properly to HockeyApp and also see some additional SDK 
 <a id="documentation"></a>
 ## 4. Documentation
 
-Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/3.7.1/index.html).
+Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/3.7.2/index.html).
 
 
 <a id="contributing"></a>
