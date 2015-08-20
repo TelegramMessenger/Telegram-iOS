@@ -81,6 +81,9 @@
 @implementation BITFeedbackListViewController {
   NSInteger _deleteButtonSection;
   NSInteger _userButtonSection;
+  
+  NSInteger _numberOfSectionsBeforeRotation;
+  NSInteger _numberOfMessagesBeforeRotation;
 }
 
 - (instancetype)initWithStyle:(UITableViewStyle)style {
@@ -90,6 +93,10 @@
     _deleteButtonSection = -1;
     _userButtonSection = -1;
     _userDataComposeFlow = NO;
+    
+    _numberOfSectionsBeforeRotation = -1;
+    _numberOfMessagesBeforeRotation = -1;
+    
     
     _lastUpdateDateFormatter = [[NSDateFormatter alloc] init];
 		[_lastUpdateDateFormatter setDateStyle:NSDateFormatterShortStyle];
@@ -394,8 +401,17 @@
 #pragma mark - UIViewController Rotation
 
 - (void)willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration {
+  _numberOfSectionsBeforeRotation = [self numberOfSectionsInTableView:self.tableView];
+  _numberOfMessagesBeforeRotation = [self.manager numberOfMessages];
+  [self.tableView reloadData];
   [self.tableView beginUpdates];
   [self.tableView endUpdates];
+  
+  _numberOfSectionsBeforeRotation = -1;
+  _numberOfMessagesBeforeRotation = -1;
+  [self.tableView reloadData];
+  
+  [super willRotateToInterfaceOrientation:toInterfaceOrientation duration:duration];
 }
 
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)orientation {
@@ -406,6 +422,9 @@
 #pragma mark - Table view data source
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+  if (_numberOfSectionsBeforeRotation >= 0)
+    return _numberOfSectionsBeforeRotation;
+  
   NSInteger sections = 2;
   _deleteButtonSection = -1;
   _userButtonSection = -1;
@@ -425,6 +444,8 @@
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
   if (section == 1) {
+    if (_numberOfMessagesBeforeRotation >= 0)
+      return _numberOfMessagesBeforeRotation;
     return [self.manager numberOfMessages];
   } else {
     return 1;

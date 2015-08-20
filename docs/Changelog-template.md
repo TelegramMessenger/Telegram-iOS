@@ -1,3 +1,10 @@
+## Version 3.7.2
+
+- [BUGFIX] `BITCrashManager`: Added workaround for a bug observed in iOS 9 beta's dyld triggering an infinite loop on startup
+- [BUGFIX] `BITFeedbackManager`: Fixed a crash in the feedback UI that can occur when rotating the device while data is being loaded
+- [BUGFIX] Fixed `Info.plist` entries in `HockeySDKResources.bundle` which cause Xcode 7 to show an error when uploading an app to iTunes Connect
+- [BUGFIX] Additional minor fixes
+
 ## Version 3.7.1
 
 - [BUGFIX] `CocoaPods`: Fixes the default podspec with binary distribution

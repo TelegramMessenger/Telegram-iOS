@@ -1,8 +1,8 @@
-[![Build Status](https://travis-ci.org/bitstadium/HockeySDK-iOS.svg?branch=master)](https://travis-ci.org/bitstadium/HockeySDK-iOS)
+[![Build Status](https://travis-ci.org/bitstadium/HockeySDK-iOS.svg?branch=develop)](https://travis-ci.org/bitstadium/HockeySDK-iOS)
 
-## Version 3.7.1
+## Version 3.7.2
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.7.1/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.7.2/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -36,7 +36,8 @@ This document contains the following sections:
    9. [Debug information](#debug)
 4. [Documentation](#documentation)
 5. [Contributing](#contributing)
-6. [Contact](#contact)
+6. [Contributor License](#contributorlicense)
+7. [Contact](#contact)
 
 <a id="requirements"></a> 
 ## 1. Requirements
@@ -79,42 +80,42 @@ From our experience, 3rd-party libraries usually reside inside a subdirectory (l
 1. Open your `AppDelegate.m` file.
 2. Add the following line at the top of the file below your own `import` statements:
 
-	```objectivec
+    ```objectivec
     @import HockeySDK;
-	```
+    ```
 
 3. Search for the method `application:didFinishLaunchingWithOptions:`
 4. Add the following lines to setup and start the Application Insights SDK:
 
-	```objectivec
+    ```objectivec
     [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
-	// Do some additional configuration if needed here
+    // Do some additional configuration if needed here
     [[BITHockeyManager sharedHockeyManager] startManager];
     [[BITHockeyManager sharedHockeyManager].authenticator authenticateInstallation]; // This line is obsolete in the crash only build
-	```
+    ```
 
 **Swift**
 
 1. Open your `AppDelegate.swift` file.
 2. Add the following line at the top of the file below your own import statements:
     
-	```swift
-	import HockeySDK
-	```
+    ```swift
+    import HockeySDK
+    ```
 
 3. Search for the method 
     
-	```swift
-	application(application: UIApplication, didFinishLaunchingWithOptions launchOptions:[NSObject: AnyObject]?) -> Bool
-	```
+    ```swift
+    application(application: UIApplication, didFinishLaunchingWithOptions launchOptions:[NSObject: AnyObject]?) -> Bool
+    ```
 
 4. Add the following lines to setup and start the Application Insights SDK:
     
-	```swift
+    ```swift
     BITHockeyManager.sharedHockeyManager().configureWithIdentifier("APP_IDENTIFIER");
     BITHockeyManager.sharedHockeyManager().startManager();
     BITHockeyManager.sharedHockeyManager().authenticator.authenticateInstallation(); // This line is obsolete in the crash only build
-	```
+    ```
 
 *Note:* The SDK is optimized to defer everything possible to a later time while making sure e.g. crashes on startup can also be caught and each module executes other code with a delay some seconds. This ensures that `applicationDidFinishLaunching` will process as fast as possible and the SDK will not block the startup sequence resulting in a possible kill by the watchdog process.
 
@@ -133,25 +134,24 @@ If you are working with an older project which doesn't support clang modules yet
 3. Select the tab `Build Phases`.
 4. Expand `Link Binary With Libraries`.
 5. Add the following system frameworks, if they are missing:
-
-    1. Full Featured: 
-        - `AssetsLibrary`
-        - `CoreText`
-        - `CoreGraphics`
-        - `Foundation`
-	    - `MobileCoreServices`
-	    - `QuartzCore`
-	    - `QuickLook`
-	    - `Security`
-	    - `SystemConfiguration`
-	    - `UIKit`
-	    - `libc++`
-	 2. Crash reporting only:
-   		- `Foundation`
-    	- `Security`
-    	- `SystemConfiguration`
-	    - `UIKit`
-	    - `libc++`
+  1. Full Featured: 
+    + `AssetsLibrary`
+    + `CoreText`
+    + `CoreGraphics`
+    + `Foundation`
+    + `MobileCoreServices`
+    + `QuartzCore`
+    + `QuickLook`
+    + `Security`
+    + `SystemConfiguration`
+    + `UIKit`
+    + `libc++`
+  2. Crash reporting only:
+    + `Foundation`
+    + `Security`
+    + `SystemConfiguration`
+    + `UIKit`
+    + `libc++`
 
 Note that this also means that you can't use the `@import` syntax mentioned in the [Modify Code](#modify) section but have to stick to the old `#import <HockeySDK/HockeySDK.h>`.
 
@@ -162,10 +162,10 @@ Note that this also means that you can't use the `@import` syntax mentioned in t
 
 **Podfile**
 
-    ```ruby
-    platform :ios, '8.0'
-    pod "HockeySDK"
-    ```
+```ruby
+platform :ios, '8.0'
+pod "HockeySDK"
+```
 
 #### 3.2.1 Binary Distribution Options
 
@@ -173,17 +173,17 @@ The default and recommended distribution is a binary (static library) and a reso
 
 You can alternative use a Crash Reporting build only by using the following line in your `Podfile`:
 
-    ```ruby
-    pod "HockeySDK", :subspecs => ['CrashOnlyLib']
-    ```
+```ruby
+pod "HockeySDK", :subspecs => ['CrashOnlyLib']
+```
 
 #### 3.2.2 Source Integration Options
 
 Alternatively you can integrate the SDK by source if you want to do any modifications or want a different feature set. The following entry will integrate the SDK:
 
-     ```ruby
-    pod "HockeySDK-Source"
-    ```
+```ruby
+pod "HockeySDK-Source"
+```
 
 
 <a id="extensions"></a>
@@ -194,24 +194,24 @@ The following points need to be considered to use the HockeySDK SDK with iOS 8 E
 1. Each extension is required to use the same values for version (`CFBundleShortVersionString`) and build number (`CFBundleVersion`) as the main app uses. (This is required only if you are using the same `APP_IDENTIFIER` for your app and extensions).
 2. You need to make sure the SDK setup code is only invoked **once**. Since there is no `applicationDidFinishLaunching:` equivalent and `viewDidLoad` can run multiple times, you need to use a setup like the following example:
 
-        ```objectivec
-        @interface TodayViewController () <NCWidgetProviding>
+    ```objectivec
+    @interface TodayViewController () <NCWidgetProviding>
 
-        @property (nonatomic, assign) BOOL didSetupHockeySDK;
+    @property (nonatomic, assign) BOOL didSetupHockeySDK;
 
-        @end
+    @end
 
-        @implementation TodayViewController
+    @implementation TodayViewController
 
-        - (void)viewDidLoad {
-          [super viewDidLoad];
-          if (!self.didSetupHockeySDK) {
-            [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
-            [[BITHockeyManager sharedHockeyManager] startManager];
-            self.didSetupHockeySDK = YES;
-          }
-        }
-        ```        
+    * (void)viewDidLoad {
+      [super viewDidLoad];
+      if (!self.didSetupHockeySDK) {
+        [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
+        [[BITHockeyManager sharedHockeyManager] startManager];
+        self.didSetupHockeySDK = YES;
+      }
+    }
+    ```
 
 3. The binary distribution provides a special framework build in the `HockeySDKCrashOnly` folder of the distribution zip file, which only contains crash reporting functionality (also automatic sending crash reports only). You can use this to further slim down the binary size of your extensions. 
 
@@ -225,59 +225,59 @@ The following points need to be considered to use HockeySDK with WatchKit Extens
 
    To make sure that the HockeySDK is only instantiated once in the WatchKit extension's lifecycle we recommend using a helper class similar to this:
 
-        ```objectivec
-        @import Foundation;
+    ```objectivec
+    @import Foundation;
+    
+    @interface BITWatchSDKSetup : NSObject
+    
+    - (void)setupHockeySDKIfNeeded;
+    
+    @end
+    ```
         
-        @interface BITWatchSDKSetup : NSObject
-        
-        + (void)setupHockeySDKIfNeeded;
-        
-        @end
-        ```
-        
-        ```objectivec
-        #import "BITWatchSDKSetup.h"
-        @import HockeySDK
-        
-        static BOOL hockeySDKIsSetup = NO;
-        
-        @implementation BITWatchSDKSetup
-        
-        + (void)setupHockeySDKIfNeeded {
-          if (!hockeySDKIsSetup) {
-            [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
-            [[BITHockeyManager sharedHockeyManager] startManager];
-            hockeySDKIsSetup = YES;
-          }
-        }
-        
-        @end
-        ```
+    ```objectivec
+    #import "BITWatchSDKSetup.h"
+    @import HockeySDK
+    
+    static BOOL hockeySDKIsSetup = NO;
+    
+    @implementation BITWatchSDKSetup
+    
+    - (void)setupHockeySDKIfNeeded {
+      if (!hockeySDKIsSetup) {
+        [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
+        [[BITHockeyManager sharedHockeyManager] startManager];
+        hockeySDKIsSetup = YES;
+      }
+    }
+    
+    @end
+    ```
 
    Then, in each of your WKInterfaceControllers where you want to use the Application Insights SDK, you should do this:
 
-        ```objectivec
-        #import "InterfaceController.h"
-        @import HockeySDK
-        #import "BITWatchSDKSetup.h"
-        
-        @implementation InterfaceController
-        
-        - (void)awakeWithContext:(id)context {
-          [super awakeWithContext:context];
-          [BITWatchSDKSetup setupHockeySDKIfNeeded];
-        }
-        
-        - (void)willActivate {
-          [super willActivate];
-        }
-        
-        - (void)didDeactivate {
-          [super didDeactivate];
-        }
-        
-        @end
-        ```
+    ```objectivec
+    #import "InterfaceController.h"
+    @import HockeySDK
+    #import "BITWatchSDKSetup.h"
+    
+    @implementation InterfaceController
+    
+    * (void)awakeWithContext:(id)context {
+      [super awakeWithContext:context];
+      [BITWatchSDKSetup setupHockeySDKIfNeeded];
+    }
+    
+    * (void)willActivate {
+      [super willActivate];
+    }
+    
+    * (void)didDeactivate {
+      [super didDeactivate];
+    }
+    
+    @end
+    ```
 
 2. The binary distribution provides a special framework build in the `HockeySDKCrashOnly` folder of the distribution zip file, which only contains crash reporting functionality (also automatic sending crash reports only). You can use this to further slim down the binary size of your extensions. 
 
@@ -289,29 +289,29 @@ The following options only show some of possibilities to interact and fine-tune 
 #### 3.5.1 Disable Crash Reporting
 The HockeySDK enables crash reporting **per default**. Crashes will be immediately sent to the server the next time the app is launched.
 
-To provide you with the best crash reporting, we are using [PLCrashReporter]("https://github.com/plausiblelabs/plcrashreporter") in [Version 1.2 / Commit 273a7e7cd4b77485a584ac82e77b7c857558e2f9]("https://github.com/plausiblelabs/plcrashreporter/commit/273a7e7cd4b77485a584ac82e77b7c857558e2f9").
+To provide you with the best crash reporting, we are using [PLCrashReporter]("https://github.com/plausiblelabs/plcrashreporter") in [Version 1.2 / Commit 356901d7f3ca3d46fbc8640f469304e2b755e461]("https://github.com/plausiblelabs/plcrashreporter/commit/356901d7f3ca3d46fbc8640f469304e2b755e461").
 
 This feature can be disabled as follows:
 
-    ```objectivec
-    [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
+```objectivec
+[[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
-    [[BITHockeyManager sharedHockeyManager] setDisableCrashManager: YES]; //disable crash reporting
+[[BITHockeyManager sharedHockeyManager] setDisableCrashManager: YES]; //disable crash reporting
 
-    [[BITHockeyManager sharedHockeyManager] startManager];
-    ```
+[[BITHockeyManager sharedHockeyManager] startManager];
+```
 
 #### 3.5.2 Autosend crash reports
 
 Crashes are send the next time the app starts. If `crashManagerStatus` is set to `BITCrashManagerStatusAutoSend`, crashes will be send without any user interaction, otherwise an alert will appear allowing the users to decide whether they want to send the report or not.
 
-    ```objectivec
-    [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
+```objectivec
+[[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
-    [[BITHockeyManager sharedHockeyManager].crashManager setCrashManagerStatus: BITCrashManagerStatusAutoSend];
+[[BITHockeyManager sharedHockeyManager].crashManager setCrashManagerStatus: BITCrashManagerStatusAutoSend];
 
-    [[BITHockeyManager sharedHockeyManager] startManager];
-    ```
+[[BITHockeyManager sharedHockeyManager] startManager];
+```
 
 The SDK is not sending the reports right when the crash happens deliberately, because if is not safe to implement such a mechanism while being async-safe (any Objective-C code is _NOT_ async-safe!) and not causing more danger like a deadlock of the device, than helping. We found that users do start the app again because most don't know what happened, and you will get by far most of the reports.
 
@@ -325,13 +325,13 @@ We strongly advice _NOT_ to enable Mach exception handler in release versions of
 
 *Warning:* The Mach exception handler executes in-process, and will interfere with debuggers when they attempt to suspend all active threads (which will include the Mach exception handler). Mach-based handling should _NOT_ be used when a debugger is attached. The SDK will not enabled catching exceptions if the app is started with the debugger running. If you attach the debugger during runtime, this may cause issues the Mach exception handler is enabled!
  
-    ```objectivec
-    [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
+```objectivec
+[[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
-    [[BITHockeyManager sharedHockeyManager].crashManager setEnableMachExceptionHandler: YES];
+[[BITHockeyManager sharedHockeyManager].crashManager setEnableMachExceptionHandler: YES];
 
-    [[BITHockeyManager sharedHockeyManager] startManager];
-    ```
+[[BITHockeyManager sharedHockeyManager] startManager];
+```
 
 #### 3.5.4 Attach additional data
 
@@ -350,21 +350,21 @@ The `BITCrashManagerDelegate` protocol (which is automatically included in `BITH
 
 Make sure to implement the protocol
 
-    ```objectivec
-    @interface YourAppDelegate () <BITHockeyManagerDelegate> {}
+```objectivec
+@interface YourAppDelegate () <BITHockeyManagerDelegate> {}
 
-    @end
-    ```
+@end
+```
 
 and set the delegate:
 
-    ```objectivec
-    [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
+```objectivec
+[[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
-    [[BITHockeyManager sharedHockeyManager] setDelegate: self];
+[[BITHockeyManager sharedHockeyManager] setDelegate: self];
 
-    [[BITHockeyManager sharedHockeyManager] startManager];
-    ```
+[[BITHockeyManager sharedHockeyManager] startManager];
+```
 
  
 <a name="feedback"></a>
@@ -374,9 +374,9 @@ and set the delegate:
  
 You should never create your own instance of `BITFeedbackManager` but use the one provided by the `[BITHockeyManager sharedHockeyManager]`:
  
-    ```objectivec
-    [BITHockeyManager sharedHockeyManager].feedbackManager
-   ```
+```objectivec
+[BITHockeyManager sharedHockeyManager].feedbackManager
+```
 
 Please check the [documentation](#documentation) of the `BITFeedbachManager` class on more information on how to leverage this feature.
 
@@ -389,13 +389,13 @@ When an update is detected, this module will show an alert asking the user if he
 
 By default this module is **NOT** enabled! To enable it use the following code:
 
-    ```objectivec
-    [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
+```objectivec
+[[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
-    [[BITHockeyManager sharedHockeyManager] setEnableStoreUpdateManager: YES];
+[[BITHockeyManager sharedHockeyManager] setEnableStoreUpdateManager: YES];
 
-    [[BITHockeyManager sharedHockeyManager] startManager];
-    ```
+[[BITHockeyManager sharedHockeyManager] startManager];
+```
 
 When this module is enabled and **NOT** running in an App Store build/environment, it won't do any checks!
 
@@ -412,13 +412,13 @@ This module automatically disables itself when running in an App Store build by 
 
 This feature can be disabled manually as follows:
 
-    ```objectivec
-    [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
-	
-	[[BITHockeyManager sharedHockeyManager] setDisableUpdateManager: YES]; //disable crash reporting
-	
-    [[BITHockeyManager sharedHockeyManager] startManager];
-    ```
+```objectivec
+[[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
+
+[[BITHockeyManager sharedHockeyManager] setDisableUpdateManager: YES]; //disable crash reporting
+
+[[BITHockeyManager sharedHockeyManager] startManager];
+```
 
 If you want to see beta analytics, use the beta distribution feature with in-app updates, restrict versions to specific users, or want to know who is actually testing your app, you need to follow the instructions on our guide [Authenticating Users on iOS](http://support.hockeyapp.net/kb/client-integration-ios-mac-os-x/authenticating-users-on-ios)
 
@@ -427,18 +427,18 @@ If you want to see beta analytics, use the beta distribution feature with in-app
 
 To check if data is send properly to HockeyApp and also see some additional SDK debug log data in the console, add the following line before `startManager`:
 
-    ```objectivec
-    [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
+```objectivec
+[[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
-    [[BITHockeyManager sharedHockeyManager] setDebugLogEnabled:YES];
+[[BITHockeyManager sharedHockeyManager] setDebugLogEnabled:YES];
 
-    [[BITHockeyManager sharedHockeyManager] startManager];
-    ```
+[[BITHockeyManager sharedHockeyManager] startManager];
+```
 
 <a id="documentation"></a>
 ## 4. Documentation
 
-Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/3.7.1/index.html).
+Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/3.7.2/index.html).
 
 
 <a id="contributing"></a>
@@ -453,7 +453,12 @@ We're looking forward to your contributions via pull requests.
 * [AppleDoc](https://github.com/tomaz/appledoc) 
 * [Cocoapods](https://cocoapods.org/)
 
+<a id="contributorlicense"></a>
+## 6. Contributor License
+
+You must sign a [Contributor License Agreement](https://cla.microsoft.com/) before submitting your pull request. To complete the Contributor License Agreement (CLA), you will need to submit a request via the [form](https://cla.microsoft.com/) and then electronically sign the CLA when you receive the email containing the link to the document. You need to sign the CLA only once to cover submission to any Microsoft OSS project. 
+
 <a id="contact"></a>
-## 6. Contact
+## 7. Contact
 
 If you have further questions or are running into trouble that cannot be resolved by any of the steps here, feel free to open a Github issue here or contact us at [support@hockeyapp.net](mailto:support@hockeyapp.net)

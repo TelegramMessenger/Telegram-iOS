@@ -1,6 +1,6 @@
-## Version 3.7.1
+## Version 3.7.2
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.7.1/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.7.2/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -20,7 +20,8 @@ This document contains the following sections:
    9. [Debug information](#debug)
 4. [Documentation](#documentation)
 5. [Contributing](#contributing)
-6. [Contact](#contact)
+6. [Contributor License](#contributorlicense)
+7. [Contact](#contact)
 
 <a id="requirements"></a> 
 ## 1. Requirements
@@ -273,7 +274,7 @@ The following options only show some of possibilities to interact and fine-tune 
 #### 3.5.1 Disable Crash Reporting
 The HockeySDK enables crash reporting **per default**. Crashes will be immediately sent to the server the next time the app is launched.
 
-To provide you with the best crash reporting, we are using [PLCrashReporter]("https://github.com/plausiblelabs/plcrashreporter") in [Version 1.2 / Commit 273a7e7cd4b77485a584ac82e77b7c857558e2f9]("https://github.com/plausiblelabs/plcrashreporter/commit/273a7e7cd4b77485a584ac82e77b7c857558e2f9").
+To provide you with the best crash reporting, we are using [PLCrashReporter]("https://github.com/plausiblelabs/plcrashreporter") in [Version 1.2 / Commit 356901d7f3ca3d46fbc8640f469304e2b755e461]("https://github.com/plausiblelabs/plcrashreporter/commit/356901d7f3ca3d46fbc8640f469304e2b755e461").
 
 This feature can be disabled as follows:
 
@@ -422,7 +423,7 @@ To check if data is send properly to HockeyApp and also see some additional SDK 
 <a id="documentation"></a>
 ## 4. Documentation
 
-Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/3.7.1/index.html).
+Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/3.7.2/index.html).
 
 
 <a id="contributing"></a>
@@ -437,7 +438,12 @@ We're looking forward to your contributions via pull requests.
 * [AppleDoc](https://github.com/tomaz/appledoc) 
 * [Cocoapods](https://cocoapods.org/)
 
+<a id="contributorlicense"></a>
+## 6. Contributor License
+
+You must sign a [Contributor License Agreement](https://cla.microsoft.com/) before submitting your pull request. To complete the Contributor License Agreement (CLA), you will need to submit a request via the [form](https://cla.microsoft.com/) and then electronically sign the CLA when you receive the email containing the link to the document. You need to sign the CLA only once to cover submission to any Microsoft OSS project. 
+
 <a id="contact"></a>
-## 6. Contact
+## 7. Contact
 
 If you have further questions or are running into trouble that cannot be resolved by any of the steps here, feel free to open a Github issue here or contact us at [support@hockeyapp.net](mailto:support@hockeyapp.net)
