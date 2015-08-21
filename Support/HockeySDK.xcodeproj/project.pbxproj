@@ -384,7 +384,7 @@
 		1E27E60A1B74F01400192AE2 /* crashonlyextensions.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = crashonlyextensions.xcconfig; sourceTree = "<group>"; };
 		1E36D8B816667611000B134C /* hr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = hr; path = hr.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		1E3A260E1B2B207900D59683 /* HockeySDKNullability.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HockeySDKNullability.h; sourceTree = "<group>"; };
-		1E45A90E1B78DB0C002CA772 /* crashonlywatchos.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = crashonlywatchos.xcconfig; sourceTree = "<group>"; };
+		1E45A90E1B78DB0C002CA772 /* release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = release.xcconfig; sourceTree = "<group>"; };
 		1E494AEA19491943001EFF74 /* AppIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = AppIcon.png; sourceTree = "<group>"; };
 		1E494AEB19491943001EFF74 /* AppIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AppIcon@2x.png"; sourceTree = "<group>"; };
 		1E49A42D1612223B00463151 /* BITFeedbackComposeViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITFeedbackComposeViewController.h; sourceTree = "<group>"; };
@@ -711,9 +711,9 @@
 			children = (
 				1E754DC61621BC170070AB92 /* HockeySDK.xcconfig */,
 				1E66CA9115D4100500F35BED /* buildnumber.xcconfig */,
+				1E45A90E1B78DB0C002CA772 /* release.xcconfig */,
 				1E7DE39619D44DC6009AB8E5 /* crashonly.xcconfig */,
 				1E27E60A1B74F01400192AE2 /* crashonlyextensions.xcconfig */,
-				1E45A90E1B78DB0C002CA772 /* crashonlywatchos.xcconfig */,
 				1E85C5A11B35BD7000CE2C0D /* module_crashonly.modulemap */,
 				1E91D84619B924E600E9616D /* module.modulemap */,
 			);
@@ -1649,10 +1649,6 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
 				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 7.0;
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
-				OTHER_CFLAGS = (
-					"-Wshorten-64-to-32",
-					"-Wall",
-				);
 				RUN_CLANG_STATIC_ANALYZER = YES;
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = NO;
@@ -1667,16 +1663,12 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				DSTROOT = /tmp/HockeySDK.dst;
+				ENABLE_NS_ASSERTIONS = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SRCROOT)/../Vendor\"",
 				);
 				GCC_THUMB_SUPPORT = NO;
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"-DNS_BLOCK_ASSERTIONS=1",
-					"-fembed-bitcode",
-				);
 				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
 				PRODUCT_NAME = HockeySDK;
 				PUBLIC_HEADERS_FOLDER_PATH = "include/$(PRODUCT_NAME)";
@@ -1884,16 +1876,12 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				DSTROOT = /tmp/HockeySDK.dst;
+				ENABLE_NS_ASSERTIONS = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SRCROOT)/../Vendor\"",
 				);
 				GCC_THUMB_SUPPORT = NO;
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"-DNS_BLOCK_ASSERTIONS=1",
-					"-fembed-bitcode",
-				);
 				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
 				PRODUCT_NAME = HockeySDK;
 				PUBLIC_HEADERS_FOLDER_PATH = "include/$(PRODUCT_NAME)";
@@ -2033,10 +2021,6 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
 				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 7.0;
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
-				OTHER_CFLAGS = (
-					"-Wshorten-64-to-32",
-					"-Wall",
-				);
 				RUN_CLANG_STATIC_ANALYZER = YES;
 				SDKROOT = iphoneos;
 			};
@@ -2159,10 +2143,6 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
 				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 7.0;
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
-				OTHER_CFLAGS = (
-					"-Wshorten-64-to-32",
-					"-Wall",
-				);
 				RUN_CLANG_STATIC_ANALYZER = YES;
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = NO;
@@ -2176,16 +2156,12 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				DSTROOT = /tmp/HockeySDK.dst;
+				ENABLE_NS_ASSERTIONS = NO;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SRCROOT)/../Vendor\"",
 				);
 				GCC_THUMB_SUPPORT = NO;
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"-DNS_BLOCK_ASSERTIONS=1",
-					"-fembed-bitcode",
-				);
 				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
 				PRODUCT_NAME = HockeySDK;
 				PUBLIC_HEADERS_FOLDER_PATH = "include/$(PRODUCT_NAME)";
@@ -2671,10 +2647,6 @@
 				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 7.0;
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				ONLY_ACTIVE_ARCH = YES;
-				OTHER_CFLAGS = (
-					"-Wshorten-64-to-32",
-					"-Wall",
-				);
 				RUN_CLANG_STATIC_ANALYZER = YES;
 				SDKROOT = iphoneos;
 			};
@@ -2682,7 +2654,7 @@
 		};
 		E400563D148D79B500EB22B9 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 1E66CA9115D4100500F35BED /* buildnumber.xcconfig */;
+			baseConfigurationReference = 1E45A90E1B78DB0C002CA772 /* release.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -2707,10 +2679,6 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
 				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 7.0;
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
-				OTHER_CFLAGS = (
-					"-Wshorten-64-to-32",
-					"-Wall",
-				);
 				RUN_CLANG_STATIC_ANALYZER = YES;
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = NO;
