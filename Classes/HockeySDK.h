@@ -69,7 +69,10 @@
 #import "BITAuthenticator.h"
 #endif
 
-// Notification message which HockeyManager is listening to, to retry requesting updated from the server
+// Notification message which HockeyManager is listening to, to retry requesting updated from the server.
+// This can be used by app developers to trigger additional points where the HockeySDK can try sending
+// pending crash reports or feedback messages.
+// By default the SDK retries sending pending data only when the app becomes active.
 #define BITHockeyNetworkDidBecomeReachableNotification @"BITHockeyNetworkDidBecomeReachable"
 
 
