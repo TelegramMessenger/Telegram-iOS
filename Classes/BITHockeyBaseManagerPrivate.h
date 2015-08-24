@@ -71,6 +71,7 @@
 // UI helpers
 - (UIWindow *)findVisibleWindow;
 - (UINavigationController *)customNavigationControllerWithRootViewController:(UIViewController *)viewController presentationStyle:(UIModalPresentationStyle)presentationStyle;
+- (void)showAlertController:(UIViewController *)alertController;
 - (void)showView:(UIViewController *)viewController;
 #endif
 

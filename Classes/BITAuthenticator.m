@@ -275,7 +275,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
         
         [alertController addAction:okAction];
         
-        [self showView:alertController];
+        [self showAlertController:alertController];
       } else {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"

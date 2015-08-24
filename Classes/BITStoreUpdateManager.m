@@ -454,7 +454,7 @@
       
       [alertController addAction:showAction];
       
-      [self showView:alertController];
+      [self showAlertController:alertController];
     } else {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"

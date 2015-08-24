@@ -201,12 +201,12 @@
   return navController;
 }
 
-- (void)showView:(UIViewController *)viewController {
+- (UIViewController *)visibleWindowRootViewController {
   // if we compile Crash only, then BITHockeyBaseViewController is not included
   // in the headers and will cause a warning with the modulemap file
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_FEEDBACK
   UIViewController *parentViewController = nil;
-    
+  
   if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(viewControllerForHockeyManager:componentManager:)]) {
     parentViewController = [[BITHockeyManager sharedHockeyManager].delegate viewControllerForHockeyManager:[BITHockeyManager sharedHockeyManager] componentManager:self];
   }
@@ -222,14 +222,6 @@
     parentViewController = parentViewController.presentedViewController;
   }
   
-  // as per documentation this only works if called from within viewWillAppear: or viewDidAppear:
-  // in tests this also worked fine on iOS 6 and 7 but not on iOS 5 so we are still trying this
-  if ([parentViewController isBeingPresented]) {
-    BITHockeyLog(@"WARNING: There is already a view controller being presented onto the parentViewController. Delaying presenting the new view controller by 0.5s.");
-    [self performSelector:@selector(showView:) withObject:viewController afterDelay:0.5];
-    return;
-  }
-  
   // special addition to get rootViewController from three20 which has it's own controller handling
   if (NSClassFromString(@"TTNavigator")) {
 #pragma clang diagnostic push
@@ -239,6 +231,46 @@
     if (ttParentViewController)
       parentViewController = ttParentViewController;
 #pragma clang diagnostic pop
+  }
+  
+  return parentViewController;
+#else
+  return nil;
+#endif
+}
+
+- (void)showAlertController:(UIViewController *)alertController {
+  // if we compile Crash only, then BITHockeyBaseViewController is not included
+  // in the headers and will cause a warning with the modulemap file
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_FEEDBACK
+  UIViewController *parentViewController = [self visibleWindowRootViewController];
+  
+  // as per documentation this only works if called from within viewWillAppear: or viewDidAppear:
+  // in tests this also worked fine on iOS 6 and 7 but not on iOS 5 so we are still trying this
+  if ([parentViewController isBeingPresented]) {
+    BITHockeyLog(@"WARNING: There is already a view controller being presented onto the parentViewController. Delaying presenting the new view controller by 0.5s.");
+    [self performSelector:@selector(showAlertController:) withObject:alertController afterDelay:0.5];
+    return;
+  }
+  
+  if (parentViewController) {
+    [parentViewController presentViewController:alertController animated:YES completion:nil];
+  }
+#endif
+}
+
+- (void)showView:(UIViewController *)viewController {
+  // if we compile Crash only, then BITHockeyBaseViewController is not included
+  // in the headers and will cause a warning with the modulemap file
+#if HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_FEEDBACK
+  UIViewController *parentViewController = [self visibleWindowRootViewController];
+    
+  // as per documentation this only works if called from within viewWillAppear: or viewDidAppear:
+  // in tests this also worked fine on iOS 6 and 7 but not on iOS 5 so we are still trying this
+  if ([parentViewController isBeingPresented]) {
+    BITHockeyLog(@"WARNING: There is already a view controller being presented onto the parentViewController. Delaying presenting the new view controller by 0.5s.");
+    [self performSelector:@selector(showView:) withObject:viewController afterDelay:0.5];
+    return;
   }
   
   if (_navController != nil) _navController = nil;
@@ -260,6 +292,8 @@
   } else {
     // if not, we add a subview to the window. A bit hacky but should work in most circumstances.
     // Also, we don't get a nice animation for free, but hey, this is for beta not production users ;)
+    UIWindow *visibleWindow = [self findVisibleWindow];
+
     BITHockeyLog(@"INFO: No rootViewController found, using UIWindow-approach: %@", visibleWindow);
     if ([viewController isKindOfClass:[BITHockeyBaseViewController class]])
       [(BITHockeyBaseViewController *)viewController setModalAnimated:NO];

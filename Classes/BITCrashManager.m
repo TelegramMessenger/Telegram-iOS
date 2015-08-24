@@ -1091,7 +1091,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
             [alertController addAction:alwaysSendAction];
           }
           
-          [self showView:alertController];
+          [self showAlertController:alertController];
         } else {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"

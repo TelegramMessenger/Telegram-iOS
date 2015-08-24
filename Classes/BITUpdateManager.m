@@ -103,7 +103,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
       
       [alertController addAction:okAction];
       
-      [self showView:alertController];
+      [self showAlertController:alertController];
     } else {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -576,7 +576,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
         
         [alertController addAction:installAction];
       
-        [self showView:alertController];
+        [self showAlertController:alertController];
       } else {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -640,7 +640,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
           [alertController addAction:installAction];
         }
         
-        [self showView:alertController];
+        [self showAlertController:alertController ];
       } else {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -759,7 +759,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
       [alertController addAction:checkAction];
     }
     
-    [self showView:alertController];
+    [self showAlertController:alertController];
   } else {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -903,7 +903,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     
     [alertController addAction:okAction];
     
-    [self showView:alertController];
+    [self showAlertController:alertController];
   } else {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -1115,7 +1115,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
           
           [alertController addAction:okAction];
           
-          [self showView:alertController];
+          [self showAlertController:alertController];
         } else {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
