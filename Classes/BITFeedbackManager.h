@@ -126,7 +126,9 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
  New messages are automatically loaded on startup, when the app becomes active again
  or when the notification `BITHockeyNetworkDidBecomeReachableNotification` is fired. This
  only happens if the user ever did initiate a conversation by writing the first
- feedback message.
+ feedback message. The app developer has to fire this notification to trigger another retry
+ when it detects the device having network access again. The SDK only retries automatically
+ when the app becomes active again.
  
  Implementing the `BITFeedbackManagerDelegate` protocol will notify your app when a new
  message was received from the server. The `BITFeedbackComposeViewControllerDelegate`
