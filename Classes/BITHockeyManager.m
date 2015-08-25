@@ -30,7 +30,7 @@
 #import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
 
-#if HOCKEYSDK_FEATURE_CRASH_REPORTER || HOCKEYSDK_FEATURE_FEEDBACK || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_STORE_UPDATES
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER || HOCKEYSDK_FEATURE_FEEDBACK || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_STORE_UPDATES || HOCKEYSDK_FEATURE_TELEMETRY
 #import "BITHockeyBaseManagerPrivate.h"
 #endif
 
@@ -72,6 +72,10 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
 #import "BITAuthenticator_Private.h"
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
+
+#if HOCKEYSDK_FEATURE_TELEMETRY
+#import "BITTelemetryManagerPrivate.h"
+#endif /* HOCKEYSDK_FEATURE_TELEMETRY */
 
 @interface BITHockeyManager ()
 
@@ -154,6 +158,10 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 
 #if HOCKEYSDK_FEATURE_STORE_UPDATES
     _enableStoreUpdateManager = NO;
+#endif
+    
+#if HOCKEYSDK_FEATURE_TELEMETRY
+    _disableTelemetryManager = NO;
 #endif
     
     _appStoreEnvironment = NO;
@@ -311,6 +319,14 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     [self invokeStartUpdateManager];
   }
 #endif /* HOCKEYSDK_FEATURE_UPDATES */
+  
+#if HOCKEYSDK_FEATURE_TELEMETRY
+  // start TelemetryManager
+  if (![self isTelemetryManagerDisabled]) {
+    BITHockeyLog(@"INFO: Start Telemetry Manager");
+    [_telemetryManager startManager];
+  }
+#endif /* HOCKEYSDK_FEATURE_TELEMETRY */
 }
 
 
@@ -660,6 +676,11 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     _authenticator.hockeyAppClient = [self hockeyAppClient];
     _authenticator.delegate = _delegate;
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
+    
+#if HOCKEYSDK_FEATURE_TELEMETRY
+    BITHockeyLog(@"INFO: Setup TelemetryManager");
+    _telemetryManager = [[BITTelemetryManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironment:_appStoreEnvironment];
+#endif /* HOCKEYSDK_FEATURE_TELEMETRY */
 
     if (![self isAppStoreEnvironment]) {
       NSString *integrationFlowTime = [self integrationFlowTimeString];
