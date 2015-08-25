@@ -33,6 +33,8 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		1B87EFB51B8D0C540007C96B /* BITTelemetryManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B87EFB31B8D0C540007C96B /* BITTelemetryManager.h */; };
+		1B87EFB61B8D0C540007C96B /* BITTelemetryManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B87EFB41B8D0C540007C96B /* BITTelemetryManager.m */; };
 		1E0829001708F69A0073050E /* BITStoreUpdateManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E0828FF1708F69A0073050E /* BITStoreUpdateManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E0FEE28173BDB260061331F /* BITKeychainUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E0FEE26173BDB260061331F /* BITKeychainUtils.h */; };
 		1E0FEE29173BDB260061331F /* BITKeychainUtils.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E0FEE27173BDB260061331F /* BITKeychainUtils.m */; };
@@ -369,6 +371,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		1B87EFB31B8D0C540007C96B /* BITTelemetryManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITTelemetryManager.h; sourceTree = "<group>"; };
+		1B87EFB41B8D0C540007C96B /* BITTelemetryManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITTelemetryManager.m; sourceTree = "<group>"; };
+		1B87EFB71B8D0F800007C96B /* BITTelemetryManagerPrivate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BITTelemetryManagerPrivate.h; sourceTree = "<group>"; };
 		1E0828FF1708F69A0073050E /* BITStoreUpdateManagerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITStoreUpdateManagerDelegate.h; sourceTree = "<group>"; };
 		1E0FEE26173BDB260061331F /* BITKeychainUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITKeychainUtils.h; sourceTree = "<group>"; };
 		1E0FEE27173BDB260061331F /* BITKeychainUtils.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITKeychainUtils.m; sourceTree = "<group>"; };
@@ -630,6 +635,16 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		1B87EFB21B8D0B260007C96B /* Telemetry */ = {
+			isa = PBXGroup;
+			children = (
+				1B87EFB31B8D0C540007C96B /* BITTelemetryManager.h */,
+				1B87EFB41B8D0C540007C96B /* BITTelemetryManager.m */,
+				1B87EFB71B8D0F800007C96B /* BITTelemetryManagerPrivate.h */,
+			);
+			name = Telemetry;
+			sourceTree = "<group>";
+		};
 		1E5955A415B71BDC00A03429 /* Images */ = {
 			isa = PBXGroup;
 			children = (
@@ -976,6 +991,7 @@
 				1E754E461621FA9A0070AB92 /* Feedback */,
 				1E754E471621FAD00070AB92 /* Update */,
 				1E94F9DE16E912DD006570AD /* StoreUpdate */,
+				1B87EFB21B8D0B260007C96B /* Telemetry */,
 				E41EB465148D7BF50015DEDC /* BITHockeyManager.h */,
 				E41EB466148D7BF50015DEDC /* BITHockeyManager.m */,
 				1E5955FA15B7877A00A03429 /* BITHockeyManagerDelegate.h */,
@@ -1043,6 +1059,7 @@
 				1E49A43C1612223B00463151 /* BITFeedbackComposeViewController.h in Headers */,
 				E40E0B0C17DA1AFF005E38C1 /* BITHockeyAppClient.h in Headers */,
 				1EF95CAA162CB314000AE3AD /* BITFeedbackComposeViewControllerDelegate.h in Headers */,
+				1B87EFB51B8D0C540007C96B /* BITTelemetryManager.h in Headers */,
 				1EF95CA6162CB037000AE3AD /* BITFeedbackActivity.h in Headers */,
 				1E49A4B8161222B900463151 /* BITHockeyBaseViewController.h in Headers */,
 				1EB92E731955C38C0093C8B6 /* BITHockeyAttachment.h in Headers */,
@@ -1453,6 +1470,7 @@
 				1E49A4D3161222B900463151 /* BITWebTableViewCell.m in Sources */,
 				1EB92E741955C38C0093C8B6 /* BITHockeyAttachment.m in Sources */,
 				E48A3DED17B3ED1C00924C3D /* BITAuthenticator.m in Sources */,
+				1B87EFB61B8D0C540007C96B /* BITTelemetryManager.m in Sources */,
 				1E49A4DB161222D400463151 /* HockeySDKPrivate.m in Sources */,
 				1E754E5D1621FBB70070AB92 /* BITCrashManager.m in Sources */,
 				1E754E611621FBB70070AB92 /* BITCrashReportTextFormatter.m in Sources */,
