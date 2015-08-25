@@ -51,6 +51,9 @@
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
 @class BITAuthenticator;
 #endif
+#if HOCKEYSDK_FEATURE_TELEMETRY
+@class BITTelemetryManager;
+#endif
 
 /** 
  The HockeySDK manager. Responsible for setup and management of all components
@@ -370,6 +373,16 @@
 
 #endif
 
+#if HOCKEYSDK_FEATURE_TELEMETRY
+
+/**
+ Reference to the initialized BITTelemetryManager module
+ 
+ Returns the BITTelemetryManager instance initialized by BITHockeyManager
+ */
+@property (nonatomic, strong, readonly) BITTelemetryManager *telemetryManager;
+
+#endif
 
 ///-----------------------------------------------------------------------------
 /// @name Environment
