@@ -33,8 +33,10 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
-		1B87EFB51B8D0C540007C96B /* BITTelemetryManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B87EFB31B8D0C540007C96B /* BITTelemetryManager.h */; };
+		1B87EFB51B8D0C540007C96B /* BITTelemetryManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B87EFB31B8D0C540007C96B /* BITTelemetryManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1B87EFB61B8D0C540007C96B /* BITTelemetryManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B87EFB41B8D0C540007C96B /* BITTelemetryManager.m */; };
+		1B87EFB81B8D1F930007C96B /* BITTelemetryManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B87EFB31B8D0C540007C96B /* BITTelemetryManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		1B87EFB91B8D1F9D0007C96B /* BITTelemetryManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B87EFB41B8D0C540007C96B /* BITTelemetryManager.m */; };
 		1E0829001708F69A0073050E /* BITStoreUpdateManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E0828FF1708F69A0073050E /* BITStoreUpdateManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E0FEE28173BDB260061331F /* BITKeychainUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E0FEE26173BDB260061331F /* BITKeychainUtils.h */; };
 		1E0FEE29173BDB260061331F /* BITKeychainUtils.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E0FEE27173BDB260061331F /* BITKeychainUtils.m */; };
@@ -1119,6 +1121,7 @@
 				1EB6175C1B0A30920035A986 /* HockeySDKPrivate.h in Headers */,
 				1EB617781B0A31060035A986 /* BITCrashDetails.h in Headers */,
 				1EB617601B0A30A20035A986 /* BITHockeyBaseManagerPrivate.h in Headers */,
+				1B87EFB81B8D1F930007C96B /* BITTelemetryManager.h in Headers */,
 				1EB6177D1B0A311A0035A986 /* BITCrashAttachment.h in Headers */,
 				1EB617AA1B0A31B10035A986 /* BITStoreUpdateManagerPrivate.h in Headers */,
 				1EB617CD1B0A34440035A986 /* BITHTTPOperation.h in Headers */,
@@ -1540,6 +1543,7 @@
 				1EB617661B0A30B60035A986 /* BITKeychainUtils.m in Sources */,
 				1EB617CE1B0A34470035A986 /* BITHTTPOperation.m in Sources */,
 				1EB617741B0A30EE0035A986 /* BITAuthenticator.m in Sources */,
+				1B87EFB91B8D1F9D0007C96B /* BITTelemetryManager.m in Sources */,
 				1EB6176A1B0A30C30035A986 /* BITAppStoreHeader.m in Sources */,
 				1EB617831B0A31350035A986 /* BITImageAnnotation.m in Sources */,
 				1EB617681B0A30BD0035A986 /* BITAttributedLabel.m in Sources */,
