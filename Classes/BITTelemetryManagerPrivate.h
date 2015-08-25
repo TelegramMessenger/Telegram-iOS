@@ -25,8 +25,18 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
-#import <Foundation/Foundation.h>
+
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_TELEMETRY
 
 @interface BITTelemetryManager ()
 
+/**
+ *  A concurrent queue which creates and processes telemetry items.
+ */
+@property (nonatomic, strong, readonly)dispatch_queue_t telemetryEventQueue;
+
 @end
+
+#endif /* HOCKEYSDK_FEATURE_TELEMETRY */

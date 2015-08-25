@@ -27,6 +27,8 @@
  */
 #import <Foundation/Foundation.h>
 
-@interface BITTelemetryManager : NSObject
+#import "BITHockeyBaseManager.h"
+
+@interface BITTelemetryManager : BITHockeyBaseManager
 
 @end
