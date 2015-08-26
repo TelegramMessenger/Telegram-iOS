@@ -37,6 +37,46 @@
  */
 @property (nonatomic, strong, readonly)dispatch_queue_t telemetryEventQueue;
 
+///-----------------------------------------------------------------------------
+/// @name Session Management
+///-----------------------------------------------------------------------------
+
+/**
+ *  The Interval an app has to be in the background until the current session gets renewed.
+ */
+@property (nonatomic, assign)NSUInteger appBackgroundTimeBeforeSessionExpires;
+
+/**
+ *  Registers manager for several notifications, which influence the session state.
+ */
+- (void)registerObservers;
+
+/**
+ *  Unregisters manager for several notifications, which influence the session state.
+ */
+- (void)unregisterObservers;
+
+/**
+ *  Stores the current date before app is sent to background.
+ *
+ *  @see appBackgroundTimeBeforeSessionExpires
+ *  @see startNewSessionIfNeeded
+ */
+- (void)updateDidEnterBackgroundTime;
+
+/**
+ *  Determines whether the current session needs to be renewed or not.
+ *
+ *  @see appBackgroundTimeBeforeSessionExpires
+ *  @see updateDidEnterBackgroundTime
+ */
+- (void)startNewSessionIfNeeded;
+
+/**
+ *  Creates a new session and sends it to the server.
+ */
+- (void)startNewSession;
+  
 @end
 
 #endif /* HOCKEYSDK_FEATURE_TELEMETRY */
