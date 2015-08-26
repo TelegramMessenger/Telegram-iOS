@@ -90,13 +90,15 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
 
 - (void)startNewSession {
   NSString *newSessionId = bit_UUID();
-  [self startNewSessionWithId:newSessionId];
+  BITSession *newSession = [self createNewSessionWithId:newSessionId];
+  // TODO: Send session event to server
+  BITHockeyLog(@"TELEMETRY: Session with ID %@ has been tracked", newSession.sessionId);
 }
 
-- (void)startNewSessionWithId:(NSString *)sessionId {
+- (BITSession *)createNewSessionWithId:(NSString *)sessionId {
   BITSession *session = [BITSession new];
   session.sessionId = sessionId;
-  session.isNew = @"false";
+  session.isNew = @"true";
   
   if(![[NSUserDefaults standardUserDefaults] boolForKey:kBITApplicationWasLaunched]) {
     session.isFirst = @"true";
@@ -105,9 +107,7 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
   } else {
     session.isFirst = @"false";
   }
-  
-  // TODO: Send session event to server
-  BITHockeyLog(@"TELEMETRY: Session with ID %@ has been tracked", sessionId);
+  return session;
 }
 
 @end

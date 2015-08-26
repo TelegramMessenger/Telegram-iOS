@@ -30,6 +30,8 @@
 
 #if HOCKEYSDK_FEATURE_TELEMETRY
 
+@class BITSession;
+
 @interface BITTelemetryManager ()
 
 /**
@@ -76,6 +78,13 @@
  *  Creates a new session and sends it to the server.
  */
 - (void)startNewSession;
+
+/**
+ *  Creates a new session and stores it to NSUserDefaults.
+ *
+ *  @return the newly created session
+ */
+- (BITSession *)createNewSessionWithId:(NSString *)sessionId;
   
 @end
 
