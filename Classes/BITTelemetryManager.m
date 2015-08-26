@@ -32,7 +32,9 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
 }
 
 - (void)startManager {
+  [self startNewSession];
   [self registerObservers];
+  
 }
 
 #pragma mark - Sessions
