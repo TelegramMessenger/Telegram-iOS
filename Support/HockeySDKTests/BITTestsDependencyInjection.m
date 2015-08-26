@@ -23,8 +23,8 @@ static id mockCenter;
 }
 
 - (void)tearDown {
-  [super tearDown];
   mockUserDefaults = nil;
+  [super tearDown];
 }
 
 # pragma mark - Helper
