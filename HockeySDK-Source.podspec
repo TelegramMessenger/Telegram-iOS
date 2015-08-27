@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name              = 'HockeySDK-Source'
-  s.version           = '3.7.2'
+  s.version           = '3.8-Beta.1'
 
   s.summary           = 'Collect live crash reports, get feedback from your users, distribute your betas, and analyze your test coverage with HockeyApp.'
   s.description       = <<-DESC
@@ -12,7 +12,7 @@ Pod::Spec.new do |s|
                         DESC
 
   s.homepage          = 'http://hockeyapp.net/'
-  s.documentation_url = 'http://hockeyapp.net/help/sdk/ios/3.7.2/'
+  s.documentation_url = 'http://hockeyapp.net/help/sdk/ios/3.8-Beta.1/'
 
   s.license           = 'MIT'
   s.author            = { 'Andreas Linde' => 'mail@andreaslinde.de', 'Thomas Dohmke' => "thomas@dohmke.de" }

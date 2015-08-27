@@ -1,6 +1,6 @@
-## Version 3.7.2
+## Version 3.8-Beta.1
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.7.2/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.8-Beta.1/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -11,7 +11,7 @@ This document contains the following sections:
 3. [Advanced Setup](#advancedsetup) 
    1. [Linking System Frameworks manually](#linkmanually)   
    2. [Setup with CocoaPods](#cocoapods)
-   3. [iOS 8 Extensions](#extensions)
+   3. [iOS Extensions](#extensions)
    4. [WatchKit 1 Extensions](#watchkit)
    5. [Crash Reporting](#crashreporting)
    6. [Feedback](#feedback)
@@ -27,7 +27,7 @@ This document contains the following sections:
 <a id="requirements"></a> 
 ## 1. Requirements
 
-1. We assume that you already have a project in Xcode and that this project is opened in Xcode 6 or later.
+1. We assume that you already have a project in Xcode and that this project is opened in Xcode 7 or later.
 2. The SDK supports iOS 6.0 and later.
 
 <a id="setup"></a>
@@ -188,9 +188,9 @@ pod "HockeySDK-Source"
 
 
 <a id="extensions"></a>
-### 3.3 iOS 8 Extensions
+### 3.3 iOExtensions
 
-The following points need to be considered to use the HockeySDK SDK with iOS 8 Extensions:
+The following points need to be considered to use the HockeySDK SDK with iOS Extensions:
 
 1. Each extension is required to use the same values for version (`CFBundleShortVersionString`) and build number (`CFBundleVersion`) as the main app uses. (This is required only if you are using the same `APP_IDENTIFIER` for your app and extensions).
 2. You need to make sure the SDK setup code is only invoked **once**. Since there is no `applicationDidFinishLaunching:` equivalent and `viewDidLoad` can run multiple times, you need to use a setup like the following example:
@@ -439,7 +439,7 @@ To check if data is send properly to HockeyApp and also see some additional SDK 
 <a id="documentation"></a>
 ## 4. Documentation
 
-Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/3.7.2/index.html).
+Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/3.8-Beta.1/index.html).
 
 <a id="troubleshooting"></a>
 ## 5.Troubleshooting
