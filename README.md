@@ -35,9 +35,10 @@ This document contains the following sections:
    8. [In-App-Updates (Beta & Enterprise only)](#betaupdates)
    9. [Debug information](#debug)
 4. [Documentation](#documentation)
-5. [Contributing](#contributing)
-6. [Contributor License](#contributorlicense)
-7. [Contact](#contact)
+5. [Troubleshooting](#troubleshooting)
+6. [Contributing](#contributing)
+7. [Contributor License](#contributorlicense)
+8. [Contact](#contact)
 
 <a id="requirements"></a> 
 ## 1. Requirements
@@ -456,9 +457,28 @@ To check if data is send properly to HockeyApp and also see some additional SDK 
 
 Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/3.7.2/index.html).
 
+<a id="troubleshooting"></a>
+## 5.Troubleshooting
+
+1. Linker warnings
+
+    Make sure that all mentioned frameworks and libraries are linked
+
+2. iTunes Connect rejection
+
+    Make sure none of the following files are copied into your app bundle, check under app target, `Build Phases`, `Copy Bundle Resources` or in the `.app` bundle after building:
+
+        - `HockeySDK.framework` (except you build a dynamic framework version of the SDK yourself!)
+        - `de.bitstadium.HockeySDK-iOS-3.7.2.docset`
+
+3. Feature are not working as expected
+
+    Enable debug output to the console to see additional information from the SDK initializing the modules,  sending and receiving network requests and more by adding the following code before calling `startManager`:
+
+        [[BITHockeyManager sharedHockeyManager] setDebugLogEnabled: YES];
 
 <a id="contributing"></a>
-## 5. Contributing
+## 6. Contributing
 
 We're looking forward to your contributions via pull requests.
 
@@ -470,11 +490,11 @@ We're looking forward to your contributions via pull requests.
 * [Cocoapods](https://cocoapods.org/)
 
 <a id="contributorlicense"></a>
-## 6. Contributor License
+## 7. Contributor License
 
 You must sign a [Contributor License Agreement](https://cla.microsoft.com/) before submitting your pull request. To complete the Contributor License Agreement (CLA), you will need to submit a request via the [form](https://cla.microsoft.com/) and then electronically sign the CLA when you receive the email containing the link to the document. You need to sign the CLA only once to cover submission to any Microsoft OSS project. 
 
 <a id="contact"></a>
-## 7. Contact
+## 8. Contact
 
 If you have further questions or are running into trouble that cannot be resolved by any of the steps here, feel free to open a Github issue here or contact us at [support@hockeyapp.net](mailto:support@hockeyapp.net)
