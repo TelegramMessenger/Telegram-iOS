@@ -468,7 +468,7 @@ Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/
 
     Make sure none of the following files are copied into your app bundle, check under app target, `Build Phases`, `Copy Bundle Resources` or in the `.app` bundle after building:
 
-        - `HockeySDK.framework` (except you build a dynamic framework version of the SDK yourself!)
+        - `HockeySDK.framework` (except if you build a dynamic framework version of the SDK yourself!)
         - `de.bitstadium.HockeySDK-iOS-3.7.2.docset`
 
 3. Feature are not working as expected
