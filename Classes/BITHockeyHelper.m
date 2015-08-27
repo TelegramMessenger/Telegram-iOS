@@ -38,10 +38,12 @@
 #pragma mark NSString helpers
 
 NSString *bit_URLEncodedString(NSString *inputString) {
+
   // Requires iOS 7
-  if ([inputString respondsToSelector:@selector(stringByAddingPercentEncodingWithAllowedCharacters:)]) {
-    return [inputString stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLHostAllowedCharacterSet]];
-  } else {
+  // TODO: This is not fully working as expected yet, need to fix for release
+//  if ([inputString respondsToSelector:@selector(stringByAddingPercentEncodingWithAllowedCharacters:)]) {
+//    return [inputString stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLHostAllowedCharacterSet]];
+//  } else {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     return CFBridgingRelease(CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault,
@@ -51,14 +53,15 @@ NSString *bit_URLEncodedString(NSString *inputString) {
                                                                      kCFStringEncodingUTF8)
                              );
 #pragma clang diagnostic pop
-  }
+//  }
 }
 
 NSString *bit_URLDecodedString(NSString *inputString) {
   // Requires iOS 7
-  if ([inputString respondsToSelector:@selector(stringByRemovingPercentEncoding)]) {
-    return [inputString stringByRemovingPercentEncoding];
-  } else {
+  // TODO: This is not fully working as expected yet, need to fix for release
+//  if ([inputString respondsToSelector:@selector(stringByRemovingPercentEncoding)]) {
+//    return [inputString stringByRemovingPercentEncoding];
+//  } else {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     return CFBridgingRelease(CFURLCreateStringByReplacingPercentEscapesUsingEncoding(kCFAllocatorDefault,
@@ -67,7 +70,7 @@ NSString *bit_URLDecodedString(NSString *inputString) {
                                                                                      kCFStringEncodingUTF8)
                              );
 #pragma clang diagnostic pop
-  }
+//  }
 }
 
 NSString *bit_base64String(NSData * data, unsigned long length) {
