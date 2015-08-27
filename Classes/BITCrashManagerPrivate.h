@@ -103,6 +103,8 @@
 
 - (void)setLastCrashFilename:(NSString *)lastCrashFilename;
 
+- (void)leavingAppSafely;
+
 @end
 
 
