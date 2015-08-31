@@ -42,6 +42,10 @@
 #import "BITUpdateViewControllerPrivate.h"
 #import "BITAppVersionMetaInfo.h"
 
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER
+#import "BITCrashManagerPrivate.h"
+#endif
+
 typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   BITUpdateAlertViewTagDefaultUpdate = 0,
   BITUpdateAlertViewTagNeverEndingAlertView = 1,
@@ -116,6 +120,10 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     if (self.delegate != nil && [self.delegate respondsToSelector:@selector(updateManagerWillExitApp:)]) {
       [self.delegate updateManagerWillExitApp:self];
     }
+    
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER
+    [[BITHockeyManager sharedHockeyManager].crashManager leavingAppSafely];
+#endif
     
     // for now we simply exit the app, later SDK versions might optionally show an alert with localized text
     // describing the user to press the home button to start the update process
@@ -398,12 +406,15 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 }
 
 - (void)saveAppCache {
-  if (_companyName)
+  if (_companyName) {
     [[NSUserDefaults standardUserDefaults] setObject:_companyName forKey:kBITUpdateCurrentCompanyName];
-  if (_versionUUID)
+  }
+  if (_versionUUID) {
     [[NSUserDefaults standardUserDefaults] setObject:_versionUUID forKey:kBITUpdateInstalledUUID];
-  if (_versionID)
+  }
+  if (_versionID) {
     [[NSUserDefaults standardUserDefaults] setObject:_versionID forKey:kBITUpdateInstalledVersionID];
+  }
   NSData *data = [NSKeyedArchiver archivedDataWithRootObject:self.appVersions];
   [[NSUserDefaults standardUserDefaults] setObject:data forKey:kBITUpdateArrayOfLastCheck];
   [[NSUserDefaults standardUserDefaults] synchronize];
