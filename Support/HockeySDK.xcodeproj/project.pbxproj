@@ -55,6 +55,8 @@
 		1B87EFCA1B8D30AC0007C96B /* BITOrderedDictionary.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B87EFC71B8D30AC0007C96B /* BITOrderedDictionary.h */; };
 		1B87EFCB1B8D30AC0007C96B /* BITOrderedDictionary.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B87EFC81B8D30AC0007C96B /* BITOrderedDictionary.m */; };
 		1B87EFCC1B8D30AC0007C96B /* BITOrderedDictionary.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B87EFC81B8D30AC0007C96B /* BITOrderedDictionary.m */; };
+		1BD33EAA1B950BC200C3368B /* BITSessionTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1BD33EA91B950BC200C3368B /* BITSessionTests.m */; };
+		1BD33EAB1B950BC200C3368B /* BITSessionTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1BD33EA91B950BC200C3368B /* BITSessionTests.m */; };
 		1E0829001708F69A0073050E /* BITStoreUpdateManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E0828FF1708F69A0073050E /* BITStoreUpdateManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E0FEE28173BDB260061331F /* BITKeychainUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E0FEE26173BDB260061331F /* BITKeychainUtils.h */; };
 		1E0FEE29173BDB260061331F /* BITKeychainUtils.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E0FEE27173BDB260061331F /* BITKeychainUtils.m */; };
@@ -413,6 +415,7 @@
 		1B87EFC21B8D2FBA0007C96B /* BITTelemetryObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITTelemetryObject.m; sourceTree = "<group>"; };
 		1B87EFC71B8D30AC0007C96B /* BITOrderedDictionary.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITOrderedDictionary.h; sourceTree = "<group>"; };
 		1B87EFC81B8D30AC0007C96B /* BITOrderedDictionary.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITOrderedDictionary.m; sourceTree = "<group>"; };
+		1BD33EA91B950BC200C3368B /* BITSessionTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITSessionTests.m; sourceTree = "<group>"; };
 		1E0828FF1708F69A0073050E /* BITStoreUpdateManagerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITStoreUpdateManagerDelegate.h; sourceTree = "<group>"; };
 		1E0FEE26173BDB260061331F /* BITKeychainUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITKeychainUtils.h; sourceTree = "<group>"; };
 		1E0FEE27173BDB260061331F /* BITKeychainUtils.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITKeychainUtils.m; sourceTree = "<group>"; };
@@ -772,6 +775,7 @@
 				E4507E4217F0658F00171A0D /* BITKeychainUtilsTests.m */,
 				1E70A23517F31B82001BB32D /* BITHockeyHelperTests.m */,
 				1E566D061A275C4C0070F514 /* BITCrashReportTextFormatterTests.m */,
+				1BD33EA91B950BC200C3368B /* BITSessionTests.m */,
 				1B460AB31B8E72FD0000C344 /* BITTelemetryManagerTests.m */,
 			);
 			path = HockeySDKTests;
@@ -1591,6 +1595,7 @@
 				E48A3DEF17B3EFF100924C3D /* BITAuthenticatorTests.m in Sources */,
 				1EA1170716F53B91001C015C /* BITTestHelper.m in Sources */,
 				1E61CCAF18E0585A00A5E38E /* BITFeedbackManagerTests.m in Sources */,
+				1BD33EAA1B950BC200C3368B /* BITSessionTests.m in Sources */,
 				E4507E4317F0658F00171A0D /* BITKeychainUtilsTests.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1659,6 +1664,7 @@
 				1EB617B41B0A31D30035A986 /* BITHockeyAppClientTests.m in Sources */,
 				1EB617D71B0A387B0035A986 /* BITAuthenticatorTests.m in Sources */,
 				1EB617B61B0A31D30035A986 /* BITHockeyHelperTests.m in Sources */,
+				1BD33EAB1B950BC200C3368B /* BITSessionTests.m in Sources */,
 				1EB617B21B0A31D30035A986 /* BITCrashManagerTests.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
