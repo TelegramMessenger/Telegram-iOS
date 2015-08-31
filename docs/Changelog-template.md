@@ -1,3 +1,9 @@
+## Version 3.7.3
+
+- [BUGFIX] `BITCrashManager`: Updated PLCrashReporter build created with Xcode 6.4 to solve a duplicate symbol error some users are experiencing
+- [BUGFIX] `BITUpdateManager`: Fixed updating an app not triggering a crash report if `enableAppNotTerminatingCleanlyDetection` is enabled
+- [BUGFIX] Additional minor fixes
+
 ## Version 3.7.2
 
 - [BUGFIX] `BITCrashManager`: Added workaround for a bug observed in iOS 9 beta's dyld triggering an infinite loop on startup
