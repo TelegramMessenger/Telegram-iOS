@@ -355,6 +355,10 @@
 		97F0F9FD18ABAECD00EF50AA /* iconCamera.png in Resources */ = {isa = PBXBuildFile; fileRef = 97F0F9FB18ABAECD00EF50AA /* iconCamera.png */; };
 		97F0F9FE18ABAECD00EF50AA /* iconCamera@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 97F0F9FC18ABAECD00EF50AA /* iconCamera@2x.png */; };
 		97F0FA0518B2294D00EF50AA /* BITFeedbackMessageAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 97F0FA0318AE5AED00EF50AA /* BITFeedbackMessageAttachment.m */; };
+		B27FBEFD1B9622700082406A /* BITPersistence.h in Headers */ = {isa = PBXBuildFile; fileRef = B27FBEFB1B9622700082406A /* BITPersistence.h */; };
+		B27FBEFE1B9622700082406A /* BITPersistence.h in Headers */ = {isa = PBXBuildFile; fileRef = B27FBEFB1B9622700082406A /* BITPersistence.h */; };
+		B27FBEFF1B9622700082406A /* BITPersistence.m in Sources */ = {isa = PBXBuildFile; fileRef = B27FBEFC1B9622700082406A /* BITPersistence.m */; };
+		B27FBF001B9622700082406A /* BITPersistence.m in Sources */ = {isa = PBXBuildFile; fileRef = B27FBEFC1B9622700082406A /* BITPersistence.m */; };
 		E405266217A2AD300096359C /* BITFeedbackManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = E405266117A2AD300096359C /* BITFeedbackManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		E40E0B0917DA19DC005E38C1 /* BITHockeyAppClientTests.m in Sources */ = {isa = PBXBuildFile; fileRef = E40E0B0817DA19DC005E38C1 /* BITHockeyAppClientTests.m */; };
 		E40E0B0C17DA1AFF005E38C1 /* BITHockeyAppClient.h in Headers */ = {isa = PBXBuildFile; fileRef = E40E0B0A17DA1AFF005E38C1 /* BITHockeyAppClient.h */; };
@@ -623,6 +627,8 @@
 		97F0FA0018AE375E00EF50AA /* BITImageAnnotationViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITImageAnnotationViewController.m; sourceTree = "<group>"; };
 		97F0FA0218AE5AED00EF50AA /* BITFeedbackMessageAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITFeedbackMessageAttachment.h; sourceTree = "<group>"; };
 		97F0FA0318AE5AED00EF50AA /* BITFeedbackMessageAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITFeedbackMessageAttachment.m; sourceTree = "<group>"; };
+		B27FBEFB1B9622700082406A /* BITPersistence.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITPersistence.h; sourceTree = "<group>"; };
+		B27FBEFC1B9622700082406A /* BITPersistence.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITPersistence.m; sourceTree = "<group>"; };
 		BEE0207C16C5107E004426EA /* hu */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = hu; path = hu.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		E400561D148D79B500EB22B9 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		E405266117A2AD300096359C /* BITFeedbackManagerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITFeedbackManagerDelegate.h; sourceTree = "<group>"; };
@@ -737,6 +743,8 @@
 				1B87EFB71B8D0F800007C96B /* BITTelemetryManagerPrivate.h */,
 				1BD33EAD1B950DC700C3368B /* BITChannel.h */,
 				1BD33EAE1B950DC700C3368B /* BITChannel.m */,
+				B27FBEFB1B9622700082406A /* BITPersistence.h */,
+				B27FBEFC1B9622700082406A /* BITPersistence.m */,
 			);
 			name = Telemetry;
 			sourceTree = "<group>";
@@ -1203,6 +1211,7 @@
 				1E49A46D1612226D00463151 /* BITAppVersionMetaInfo.h in Headers */,
 				1E49A47C1612226D00463151 /* BITUpdateManagerPrivate.h in Headers */,
 				1E49A4851612226D00463151 /* BITUpdateViewControllerPrivate.h in Headers */,
+				B27FBEFD1B9622700082406A /* BITPersistence.h in Headers */,
 				1E49A4B5161222B900463151 /* BITHockeyBaseManagerPrivate.h in Headers */,
 				9774BCFF192CB20A00085EB5 /* BITActivityIndicatorButton.h in Headers */,
 				E4933E8017B66CDA00B11ACC /* BITHTTPOperation.h in Headers */,
@@ -1272,6 +1281,7 @@
 				1EB617A71B0A31A30035A986 /* BITUpdateViewController.h in Headers */,
 				1EB617631B0A30AE0035A986 /* BITHockeyHelper.h in Headers */,
 				1EB617A51B0A319A0035A986 /* BITUpdateManagerDelegate.h in Headers */,
+				B27FBEFE1B9622700082406A /* BITPersistence.h in Headers */,
 				1EB617CF1B0A344A0035A986 /* BITHockeyAppClient.h in Headers */,
 				1EB617711B0A30E10035A986 /* BITAuthenticationViewController.h in Headers */,
 				1EB6179B1B0A31700035A986 /* BITFeedbackUserDataViewController.h in Headers */,
@@ -1607,6 +1617,7 @@
 				E4B4DB7E17B435550099C67F /* BITAuthenticationViewController.m in Sources */,
 				1B87EFBE1B8D2EF50007C96B /* BITSession.m in Sources */,
 				1E49A4B2161222B900463151 /* BITHockeyBaseManager.m in Sources */,
+				B27FBEFF1B9622700082406A /* BITPersistence.m in Sources */,
 				973EC8C018BE2B5B00DBFFBB /* BITBlurImageAnnotation.m in Sources */,
 				9760F6D018BB685600959B93 /* BITImageAnnotation.m in Sources */,
 				1E49A4BB161222B900463151 /* BITHockeyBaseViewController.m in Sources */,
@@ -1688,6 +1699,7 @@
 				1EB617721B0A30E40035A986 /* BITAuthenticationViewController.m in Sources */,
 				1B87EFBF1B8D2EF50007C96B /* BITSession.m in Sources */,
 				1EB617851B0A313A0035A986 /* BITRectangleImageAnnotation.m in Sources */,
+				B27FBF001B9622700082406A /* BITPersistence.m in Sources */,
 				1EB6177E1B0A31200035A986 /* BITCrashAttachment.m in Sources */,
 				1EB6176E1B0A30CF0035A986 /* BITWebTableViewCell.m in Sources */,
 				1EB6178F1B0A31510035A986 /* BITFeedbackManager.m in Sources */,
