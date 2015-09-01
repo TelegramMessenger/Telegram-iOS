@@ -6,7 +6,7 @@
 #import "BITTelemetryManagerPrivate.h"
 #import "BITHockeyHelper.h"
 #import "HockeySDKPrivate.h"
-
+#import "BITChannel.h"
 #import "BITSession.h"
 
 static char *const kBITTelemetryEventQueue =
@@ -21,6 +21,8 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
   id _appDidEnterBackgroundObserver;
 }
 
+@synthesize channel = _channel;
+
 #pragma mark - Create & start instance
 
 - (instancetype)init {
@@ -31,10 +33,16 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
   return self;
 }
 
+- (instancetype)initWithChannel:(BITChannel *)channel{
+  if((self = [self init])) {
+    _channel = channel;
+  }
+  return self;
+}
+
 - (void)startManager {
   [self startNewSession];
   [self registerObservers];
-  
 }
 
 #pragma mark - Sessions
@@ -108,6 +116,15 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
     session.isFirst = @"false";
   }
   return session;
+}
+
+#pragma mark - Custom getter
+
+- (BITChannel *)channel {
+  if(!_channel){
+    _channel = [BITChannel new];
+  }
+  return _channel;
 }
 
 @end

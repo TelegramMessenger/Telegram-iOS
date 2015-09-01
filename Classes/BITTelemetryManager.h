@@ -26,7 +26,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 #import <Foundation/Foundation.h>
-
 #import "BITHockeyBaseManager.h"
 
 @interface BITTelemetryManager : BITHockeyBaseManager

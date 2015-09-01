@@ -30,9 +30,20 @@
 
 #if HOCKEYSDK_FEATURE_TELEMETRY
 
+@class BITChannel;
 @class BITSession;
 
 @interface BITTelemetryManager ()
+
+/**
+ *  Create a new channel instance by passing the channel instance to use for queuing metrics.
+ */
+- (instancetype)initWithChannel:(BITChannel *)channel;
+
+/**
+ *  A channel for collecting new events before storing and sending them.
+ */
+@property (nonatomic, strong, readonly) BITChannel *channel;
 
 /**
  *  A concurrent queue which creates and processes telemetry items.
@@ -86,6 +97,12 @@
  */
 - (BITSession *)createNewSessionWithId:(NSString *)sessionId;
   
+///-----------------------------------------------------------------------------
+/// @name Dependencies
+///-----------------------------------------------------------------------------
+
+- (BITChannel *)channel;
+
 @end
 
 #endif /* HOCKEYSDK_FEATURE_TELEMETRY */
