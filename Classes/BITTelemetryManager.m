@@ -8,6 +8,8 @@
 #import "HockeySDKPrivate.h"
 #import "BITChannel.h"
 #import "BITSession.h"
+#import "BITSessionState.h"
+#import "BITSessionStateData.h"
 
 static char *const kBITTelemetryEventQueue =
 "com.microsoft.ApplicationInsights.telemetryEventQueue";
@@ -99,8 +101,9 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
 - (void)startNewSession {
   NSString *newSessionId = bit_UUID();
   BITSession *newSession = [self createNewSessionWithId:newSessionId];
-  // TODO: Send session event to server
-  BITHockeyLog(@"TELEMETRY: Session with ID %@ has been tracked", newSession.sessionId);
+  //TODO: Update context
+  
+  [self trackSessionWithState:BITSessionState_start];
 }
 
 - (BITSession *)createNewSessionWithId:(NSString *)sessionId {
@@ -116,6 +119,18 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
     session.isFirst = @"false";
   }
   return session;
+}
+
+#pragma mark - Track telemetry
+
+- (void)trackSessionWithState:(BITSessionState) state {
+  __weak typeof(self) weakSelf = self;
+  dispatch_async(_telemetryEventQueue, ^{
+    typeof(self) strongSelf = weakSelf;
+    BITSessionStateData *sessionStateData = [BITSessionStateData new];
+    sessionStateData.state = state;
+    [[strongSelf channel] enqueueTelemetryItem:sessionStateData];
+  });
 }
 
 #pragma mark - Custom getter

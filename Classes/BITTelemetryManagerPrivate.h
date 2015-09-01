@@ -30,6 +30,8 @@
 
 #if HOCKEYSDK_FEATURE_TELEMETRY
 
+#import "BITSessionState.h"
+
 @class BITChannel;
 @class BITSession;
 
@@ -96,7 +98,16 @@
  *  @return the newly created session
  */
 - (BITSession *)createNewSessionWithId:(NSString *)sessionId;
-  
+
+///-----------------------------------------------------------------------------
+/// @name Track telemetry data
+///-----------------------------------------------------------------------------
+
+/**
+ *  Creates and enqueues a session event for the given state.
+ */
+- (void)trackSessionWithState:(BITSessionState) state;
+
 ///-----------------------------------------------------------------------------
 /// @name Dependencies
 ///-----------------------------------------------------------------------------
