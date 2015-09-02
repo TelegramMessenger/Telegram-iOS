@@ -447,34 +447,53 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   NSParameterAssert(email && email.length);
   NSParameterAssert(self.identificationType == BITAuthenticatorIdentificationTypeHockeyAppEmail || (password && password.length));
   NSURLRequest* request = [self requestForAuthenticationEmail:email password:password];
+  
   __weak typeof (self) weakSelf = self;
-  BITHTTPOperation *operation = [self.hockeyAppClient operationWithURLRequest:request
-                                                                   completion:^(BITHTTPOperation *operation, NSData* responseData, NSError *error) {
-                                                                     typeof (self) strongSelf = weakSelf;
-                                                                     NSError *authParseError = nil;
-                                                                     NSString *authToken = [strongSelf.class authenticationTokenFromURLResponse:operation.response
-                                                                                                                                           data:responseData
-                                                                                                                                          error:&authParseError];
-                                                                     BOOL identified;
-                                                                     if(authToken) {
-                                                                       identified = YES;
-                                                                       [strongSelf storeInstallationIdentifier:authToken withType:strongSelf.identificationType];
-                                                                       [strongSelf dismissAuthenticationControllerAnimated:YES completion:nil];
-                                                                       strongSelf->_authenticationController = nil;
-                                                                       BOOL success = [self addStringValueToKeychain:email forKey:kBITAuthenticatorUserEmailKey];
-                                                                       if (!success) {
-                                                                         [strongSelf alertOnFailureStoringTokenInKeychain];
-                                                                       }
-                                                                     } else {
-                                                                       identified = NO;
-                                                                     }
-                                                                     strongSelf.identified = identified;
-                                                                     completion(identified, authParseError);
-                                                                     if(strongSelf.identificationCompletion) strongSelf.identificationCompletion(identified, authParseError);
-                                                                     strongSelf.identificationCompletion = nil;
-                                                                     
-                                                                   }];
-  [self.hockeyAppClient enqeueHTTPOperation:operation];
+  
+  id nsurlsessionClass = NSClassFromString(@"NSURLSessionUploadTask");
+  if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
+    NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+    
+    NSURLSessionDataTask *task = [session dataTaskWithRequest:request
+                                            completionHandler: ^(NSData *data, NSURLResponse *response, NSError *error) {
+                                              typeof (self) strongSelf = weakSelf;
+                                              NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse*) response;
+                                              [strongSelf handleAuthenticationWithResponse:httpResponse email:email data:data completion:completion];
+                                            }];
+    [task resume];
+  }else{
+    BITHTTPOperation *operation = [self.hockeyAppClient operationWithURLRequest:request
+                                                                     completion:^(BITHTTPOperation *operation, NSData* responseData, NSError *error) {
+                                                                       typeof (self) strongSelf = weakSelf;
+                                                                       [strongSelf handleAuthenticationWithResponse:operation.response email:email data:responseData completion:completion];
+                                                                     }];
+    [self.hockeyAppClient enqeueHTTPOperation:operation];
+  }
+}
+
+- (void)handleAuthenticationWithResponse:(NSHTTPURLResponse *)response email:(NSString *)email data:(NSData *)data completion:(void (^)(BOOL, NSError *))completion{
+  NSError *authParseError = nil;
+  NSString *authToken = [self.class authenticationTokenFromURLResponse:response
+                                                                        data:data
+                                                                       error:&authParseError];
+  BOOL identified;
+  if(authToken) {
+    identified = YES;
+    [self storeInstallationIdentifier:authToken withType:self.identificationType];
+    [self dismissAuthenticationControllerAnimated:YES completion:nil];
+    self->_authenticationController = nil;
+    BOOL success = [self addStringValueToKeychain:email forKey:kBITAuthenticatorUserEmailKey];
+    if (!success) {
+      [self alertOnFailureStoringTokenInKeychain];
+    }
+  } else {
+    identified = NO;
+  }
+  self.identified = identified;
+  completion(identified, authParseError);
+  if(self.identificationCompletion) self.identificationCompletion(identified, authParseError);
+  self.identificationCompletion = nil;
 }
 
 - (NSURLRequest *) requestForAuthenticationEmail:(NSString*) email password:(NSString*) password {
