@@ -713,19 +713,26 @@
       if (attachment.needsLoadingFromURL && !attachment.isLoading){
         attachment.isLoading = YES;
         NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
+
+        id nsurlsessionClass = NSClassFromString(@"NSURLSessionDataTask");
+        if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
+          NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
+          NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+          
+          NSURLSessionDataTask *task = [session dataTaskWithRequest:request
+                                                  completionHandler: ^(NSData *data, NSURLResponse *response, NSError *error) {
+                                                    
+                                                    [self handleResponseForAttachment:attachment responseData:data error:error];
+                                                  }];
+          [task resume];
+        }else{
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-        [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
+          [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
 #pragma clang diagnostic pop
-          attachment.isLoading = NO;
-          if (responseData.length) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-              [attachment replaceData:responseData];
-              [[NSNotificationCenter defaultCenter] postNotificationName:kBITFeedbackUpdateAttachmentThumbnail object:attachment];
-              [[BITHockeyManager sharedHockeyManager].feedbackManager saveMessages];
-            });
-          }
-        }];
+            [self handleResponseForAttachment:attachment responseData:responseData error:err];
+          }];
+        }
       }
     }
     
@@ -740,6 +747,17 @@
     }
     
     return cell;
+  }
+}
+
+- (void)handleResponseForAttachment:(BITFeedbackMessageAttachment *)attachment responseData:(NSData *)responseData error:(NSError *)error {
+  attachment.isLoading = NO;
+  if (responseData.length) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+      [attachment replaceData:responseData];
+      [[NSNotificationCenter defaultCenter] postNotificationName:kBITFeedbackUpdateAttachmentThumbnail object:attachment];
+      [[BITHockeyManager sharedHockeyManager].feedbackManager saveMessages];
+    });
   }
 }
 
@@ -962,21 +980,27 @@
     if (attachment.needsLoadingFromURL && !attachment.isLoading) {
       attachment.isLoading = YES;
       NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
+      
+      id nsurlsessionClass = NSClassFromString(@"NSURLSessionDataTask");
+      if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
+        NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
+        NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+        
+        NSURLSessionDataTask *task = [session dataTaskWithRequest:request
+                                                completionHandler: ^(NSData *data, NSURLResponse *response, NSError *error) {
+                                                  dispatch_async(dispatch_get_main_queue(), ^{
+                                                    [self previewController:blockController updateAttachment:attachment data:data];
+                                                  });
+                                                }];
+        [task resume];
+      }else{
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-      [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
+        [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
 #pragma clang diagnostic pop
-        attachment.isLoading = NO;
-        if (responseData.length) {
-          [attachment replaceData:responseData];
-          [blockController reloadData];
-          
-          [[BITHockeyManager sharedHockeyManager].feedbackManager saveMessages];
-        } else {
-          [blockController reloadData];
-        }
-      }];
-      
+          [self previewController:blockController updateAttachment:attachment data:responseData];
+        }];
+      }
       return attachment;
     } else {
       return self.cachedPreviewItems[index];
@@ -984,6 +1008,18 @@
   }
   
   return nil;
+}
+
+- (void)previewController:(QLPreviewController *)controller updateAttachment:(BITFeedbackMessageAttachment *)attachment data:( NSData *)data {
+  attachment.isLoading = NO;
+  if (data.length) {
+    [attachment replaceData:data];
+    [controller reloadData];
+    
+    [[BITHockeyManager sharedHockeyManager].feedbackManager saveMessages];
+  } else {
+    [controller reloadData];
+  }
 }
 
 @end
