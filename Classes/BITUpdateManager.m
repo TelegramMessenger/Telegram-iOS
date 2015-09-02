@@ -994,6 +994,156 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   [self registerObservers];
 }
 
+#pragma mark - Handle responses
+
+- (void)handleError:(NSError *)error {
+  self.receivedData = nil;
+  self.urlConnection = nil;
+  self.checkInProgress = NO;
+  if ([self expiryDateReached]) {
+    if (!self.blockingView) {
+      [self alertFallback:_blockingScreenMessage];
+    }
+  } else {
+    [self reportError:error];
+  }
+}
+
+- (void)finishLoading {
+  {
+    self.checkInProgress = NO;
+    
+    if ([self.receivedData length]) {
+      NSString *responseString = [[NSString alloc] initWithBytes:[_receivedData bytes] length:[_receivedData length] encoding: NSUTF8StringEncoding];
+      BITHockeyLog(@"INFO: Received API response: %@", responseString);
+      
+      if (!responseString || ![responseString dataUsingEncoding:NSUTF8StringEncoding]) {
+        self.receivedData = nil;
+        self.urlConnection = nil;
+        return;
+      }
+      
+      NSError *error = nil;
+      NSDictionary *json = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:0 error:&error];
+      
+      self.companyName = (([[json valueForKey:@"company"] isKindOfClass:[NSString class]]) ? [json valueForKey:@"company"] : nil);
+      
+      if (![self isAppStoreEnvironment]) {
+        NSArray *feedArray = (NSArray *)[json valueForKey:@"versions"];
+        
+        // remember that we just checked the server
+        self.lastCheck = [NSDate date];
+        
+        // server returned empty response?
+        if (![feedArray count]) {
+          BITHockeyLog(@"WARNING: No versions available for download on HockeyApp.");
+          self.receivedData = nil;
+          self.urlConnection = nil;
+          return;
+        } else {
+          _lastCheckFailed = NO;
+        }
+        
+        
+        NSString *currentAppCacheVersion = [[self newestAppVersion].version copy];
+        
+        // clear cache and reload with new data
+        NSMutableArray *tmpAppVersions = [NSMutableArray arrayWithCapacity:[feedArray count]];
+        for (NSDictionary *dict in feedArray) {
+          BITAppVersionMetaInfo *appVersionMetaInfo = [BITAppVersionMetaInfo appVersionMetaInfoFromDict:dict];
+          if ([appVersionMetaInfo isValid]) {
+            // check if minOSVersion is set and this device qualifies
+            BOOL deviceOSVersionQualifies = YES;
+            if ([appVersionMetaInfo minOSVersion] && ![[appVersionMetaInfo minOSVersion] isKindOfClass:[NSNull class]]) {
+              NSComparisonResult comparisonResult = bit_versionCompare(appVersionMetaInfo.minOSVersion, [[UIDevice currentDevice] systemVersion]);
+              if (comparisonResult == NSOrderedDescending) {
+                deviceOSVersionQualifies = NO;
+              }
+            }
+            
+            if (deviceOSVersionQualifies)
+              [tmpAppVersions addObject:appVersionMetaInfo];
+          } else {
+            [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
+                                                  code:BITUpdateAPIServerReturnedInvalidData
+                                              userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Invalid data received from server.", NSLocalizedDescriptionKey, nil]]];
+          }
+        }
+        // only set if different!
+        if (![self.appVersions isEqualToArray:tmpAppVersions]) {
+          self.appVersions = [tmpAppVersions copy];
+        }
+        [self saveAppCache];
+        
+        [self checkUpdateAvailable];
+        BOOL newVersionDiffersFromCachedVersion = ![self.newestAppVersion.version isEqualToString:currentAppCacheVersion];
+        
+        // show alert if we are on the latest & greatest
+        if (_showFeedback && !self.isUpdateAvailable) {
+          // use currentVersionString, as version still may differ (e.g. server: 1.2, client: 1.3)
+          NSString *versionString = [self currentAppVersion];
+          NSString *shortVersionString = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
+          shortVersionString = shortVersionString ? [NSString stringWithFormat:@"%@ ", shortVersionString] : @"";
+          versionString = [shortVersionString length] ? [NSString stringWithFormat:@"(%@)", versionString] : versionString;
+          NSString *currentVersionString = [NSString stringWithFormat:@"%@ %@ %@%@", self.newestAppVersion.name, BITHockeyLocalizedString(@"UpdateVersion"), shortVersionString, versionString];
+          NSString *alertMsg = [NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateNoUpdateAvailableMessage"), currentVersionString];
+          
+          // requires iOS 8
+          id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
+          if (uialertcontrollerClass) {
+            __weak typeof(self) weakSelf = self;
+            UIAlertController *alertController = [UIAlertController alertControllerWithTitle:BITHockeyLocalizedString(@"UpdateNoUpdateAvailableTitle")
+                                                                                     message:alertMsg
+                                                                              preferredStyle:UIAlertControllerStyleAlert];
+            
+            
+            UIAlertAction *okAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyOK")
+                                                               style:UIAlertActionStyleDefault
+                                                             handler:^(UIAlertAction * action) {
+                                                               typeof(self) strongSelf = weakSelf;
+                                                               _updateAlertShowing = NO;
+                                                               if ([strongSelf expiryDateReached] && !strongSelf.blockingView) {
+                                                                 [strongSelf alertFallback:_blockingScreenMessage];
+                                                               }
+                                                             }];
+            
+            [alertController addAction:okAction];
+            
+            [self showAlertController:alertController];
+          } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+            UIAlertView *alert = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateNoUpdateAvailableTitle")
+                                                            message:alertMsg
+                                                           delegate:nil
+                                                  cancelButtonTitle:BITHockeyLocalizedString(@"HockeyOK")
+                                                  otherButtonTitles:nil];
+            [alert show];
+#pragma clang diagnostic pop
+          }
+        }
+        
+        if (self.isUpdateAvailable && (self.alwaysShowUpdateReminder || newVersionDiffersFromCachedVersion || [self hasNewerMandatoryVersion])) {
+          if (_updateAvailable && !_currentHockeyViewController) {
+            [self showCheckForUpdateAlert];
+          }
+        }
+        _showFeedback = NO;
+      }
+    } else if (![self expiryDateReached]) {
+      [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
+                                            code:BITUpdateAPIServerReturnedEmptyResponse
+                                        userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Server returned an empty response.", NSLocalizedDescriptionKey, nil]]];
+    }
+    
+    if (!_updateAlertShowing && [self expiryDateReached] && !self.blockingView) {
+      [self alertFallback:_blockingScreenMessage];
+    }
+    
+    self.receivedData = nil;
+    self.urlConnection = nil;
+  }
+}
 
 #pragma mark - NSURLRequest
 
@@ -1027,151 +1177,18 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 }
 
 - (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error {
-  self.receivedData = nil;
-  self.urlConnection = nil;
-  self.checkInProgress = NO;
-  if ([self expiryDateReached]) {
-    if (!self.blockingView) {
-      [self alertFallback:_blockingScreenMessage];
-    }
-  } else {
-    [self reportError:error];
-  }
+  [self handleError:error];
 }
 
 // api call returned, parsing
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection {
-  self.checkInProgress = NO;
+  [self finishLoading];
   
-  if ([self.receivedData length]) {
-    NSString *responseString = [[NSString alloc] initWithBytes:[_receivedData bytes] length:[_receivedData length] encoding: NSUTF8StringEncoding];
-    BITHockeyLog(@"INFO: Received API response: %@", responseString);
-    
-    if (!responseString || ![responseString dataUsingEncoding:NSUTF8StringEncoding]) {
-      self.receivedData = nil;
-      self.urlConnection = nil;
-      return;
     }
-    
-    NSError *error = nil;
-    NSDictionary *json = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:[responseString dataUsingEncoding:NSUTF8StringEncoding] options:0 error:&error];
-    
-    self.companyName = (([[json valueForKey:@"company"] isKindOfClass:[NSString class]]) ? [json valueForKey:@"company"] : nil);
-    
-    if (![self isAppStoreEnvironment]) {
-      NSArray *feedArray = (NSArray *)[json valueForKey:@"versions"];
-      
-      // remember that we just checked the server
-      self.lastCheck = [NSDate date];
-      
-      // server returned empty response?
-      if (![feedArray count]) {
-        BITHockeyLog(@"WARNING: No versions available for download on HockeyApp.");
-        self.receivedData = nil;
-        self.urlConnection = nil;
-        return;
-      } else {
-        _lastCheckFailed = NO;
-      }
-      
-      
-      NSString *currentAppCacheVersion = [[self newestAppVersion].version copy];
-      
-      // clear cache and reload with new data
-      NSMutableArray *tmpAppVersions = [NSMutableArray arrayWithCapacity:[feedArray count]];
-      for (NSDictionary *dict in feedArray) {
-        BITAppVersionMetaInfo *appVersionMetaInfo = [BITAppVersionMetaInfo appVersionMetaInfoFromDict:dict];
-        if ([appVersionMetaInfo isValid]) {
-          // check if minOSVersion is set and this device qualifies
-          BOOL deviceOSVersionQualifies = YES;
-          if ([appVersionMetaInfo minOSVersion] && ![[appVersionMetaInfo minOSVersion] isKindOfClass:[NSNull class]]) {
-            NSComparisonResult comparisonResult = bit_versionCompare(appVersionMetaInfo.minOSVersion, [[UIDevice currentDevice] systemVersion]);
-            if (comparisonResult == NSOrderedDescending) {
-              deviceOSVersionQualifies = NO;
-            }
-          }
-          
-          if (deviceOSVersionQualifies)
-            [tmpAppVersions addObject:appVersionMetaInfo];
-        } else {
-          [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
-                                                code:BITUpdateAPIServerReturnedInvalidData
-                                            userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Invalid data received from server.", NSLocalizedDescriptionKey, nil]]];
-        }
-      }
-      // only set if different!
-      if (![self.appVersions isEqualToArray:tmpAppVersions]) {
-        self.appVersions = [tmpAppVersions copy];
-      }
-      [self saveAppCache];
-      
-      [self checkUpdateAvailable];
-      BOOL newVersionDiffersFromCachedVersion = ![self.newestAppVersion.version isEqualToString:currentAppCacheVersion];
-      
-      // show alert if we are on the latest & greatest
-      if (_showFeedback && !self.isUpdateAvailable) {
-        // use currentVersionString, as version still may differ (e.g. server: 1.2, client: 1.3)
-        NSString *versionString = [self currentAppVersion];
-        NSString *shortVersionString = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
-        shortVersionString = shortVersionString ? [NSString stringWithFormat:@"%@ ", shortVersionString] : @"";
-        versionString = [shortVersionString length] ? [NSString stringWithFormat:@"(%@)", versionString] : versionString;
-        NSString *currentVersionString = [NSString stringWithFormat:@"%@ %@ %@%@", self.newestAppVersion.name, BITHockeyLocalizedString(@"UpdateVersion"), shortVersionString, versionString];
-        NSString *alertMsg = [NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateNoUpdateAvailableMessage"), currentVersionString];
-        
-        // requires iOS 8
-        id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
-        if (uialertcontrollerClass) {
-          __weak typeof(self) weakSelf = self;
-          UIAlertController *alertController = [UIAlertController alertControllerWithTitle:BITHockeyLocalizedString(@"UpdateNoUpdateAvailableTitle")
-                                                                                   message:alertMsg
-                                                                            preferredStyle:UIAlertControllerStyleAlert];
-          
-          
-          UIAlertAction *okAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyOK")
-                                                             style:UIAlertActionStyleDefault
-                                                           handler:^(UIAlertAction * action) {
-                                                             typeof(self) strongSelf = weakSelf;
-                                                             _updateAlertShowing = NO;
-                                                             if ([strongSelf expiryDateReached] && !strongSelf.blockingView) {
-                                                               [strongSelf alertFallback:_blockingScreenMessage];
-                                                             }
-                                                           }];
-          
-          [alertController addAction:okAction];
-          
-          [self showAlertController:alertController];
-        } else {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-          UIAlertView *alert = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateNoUpdateAvailableTitle")
-                                                          message:alertMsg
-                                                         delegate:nil
-                                                cancelButtonTitle:BITHockeyLocalizedString(@"HockeyOK")
-                                                otherButtonTitles:nil];
-          [alert show];
-#pragma clang diagnostic pop
-        }
-      }
-      
-      if (self.isUpdateAvailable && (self.alwaysShowUpdateReminder || newVersionDiffersFromCachedVersion || [self hasNewerMandatoryVersion])) {
-        if (_updateAvailable && !_currentHockeyViewController) {
-          [self showCheckForUpdateAlert];
-        }
-      }
-      _showFeedback = NO;
     }
-  } else if (![self expiryDateReached]) {
-    [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
-                                          code:BITUpdateAPIServerReturnedEmptyResponse
-                                      userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Server returned an empty response.", NSLocalizedDescriptionKey, nil]]];
   }
   
-  if (!_updateAlertShowing && [self expiryDateReached] && !self.blockingView) {
-    [self alertFallback:_blockingScreenMessage];
   }
-    
-  self.receivedData = nil;
-  self.urlConnection = nil;
 }
 
 - (BOOL)hasNewerMandatoryVersion {
