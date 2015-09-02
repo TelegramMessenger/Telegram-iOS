@@ -331,33 +331,49 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   }
   
   NSString *validationPath = [NSString stringWithFormat:@"api/3/apps/%@/identity/validate", self.encodedAppIdentifier];
-  __weak typeof (self) weakSelf = self;
-  [self.hockeyAppClient getPath:validationPath
-                     parameters:[self validationParameters]
-                     completion:^(BITHTTPOperation *operation, NSData* responseData, NSError *error) {
-                       typeof (self) strongSelf = weakSelf;
-                       if(nil == responseData) {
-                         NSDictionary *userInfo = @{NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"HockeyAuthenticationFailedAuthenticate")};
-                         if(error) {
-                           NSMutableDictionary *dict = [userInfo mutableCopy];
-                           dict[NSUnderlyingErrorKey] = error;
-                           userInfo = dict;
-                         }
-                         NSError *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
-                                                              code:BITAuthenticatorNetworkError
-                                                          userInfo:userInfo];
-                         strongSelf.validated = NO;
-                         if(completion) completion(NO, error);
-                       } else {
-                         NSError *validationParseError = nil;
-                         BOOL valid = [strongSelf.class isValidationResponseValid:responseData error:&validationParseError];
-                         strongSelf.validated = valid;
-                         if(valid) {
-                           [self setLastAuthenticatedVersion:self.executableUUID];
-                         }
-                         if(completion) completion(valid, validationParseError);
-                       }
-                     }];
+  
+  id nsurlsessionClass = NSClassFromString(@"NSURLSessionUploadTask");
+  if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
+    NSURLRequest *request = [self.hockeyAppClient requestWithMethod:@"GET" path:validationPath parameters:[self validationParameters]];
+    NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+    
+    NSURLSessionDataTask *task = [session dataTaskWithRequest:request
+                                            completionHandler: ^(NSData *data, NSURLResponse *response, NSError *error) {
+                                              [self handleValidationResponseWithData:data error:error completion:completion];
+                                            }];
+    [task resume];
+  }else{
+    [self.hockeyAppClient getPath:validationPath
+                       parameters:[self validationParameters]
+                       completion:^(BITHTTPOperation *operation, NSData* responseData, NSError *error) {
+                         [self handleValidationResponseWithData:responseData error:error completion:completion];
+                       }];
+  }
+}
+
+- (void)handleValidationResponseWithData:(NSData *) responseData error:(NSError *)error completion:(void (^)(BOOL validated, NSError *))completion {
+  if(nil == responseData) {
+    NSDictionary *userInfo = @{NSLocalizedDescriptionKey : BITHockeyLocalizedString(@"HockeyAuthenticationFailedAuthenticate")};
+    if(error) {
+      NSMutableDictionary *dict = [userInfo mutableCopy];
+      dict[NSUnderlyingErrorKey] = error;
+      userInfo = dict;
+    }
+    NSError *error = [NSError errorWithDomain:kBITAuthenticatorErrorDomain
+                                         code:BITAuthenticatorNetworkError
+                                     userInfo:userInfo];
+    self.validated = NO;
+    if(completion) completion(NO, error);
+  } else {
+    NSError *validationParseError = nil;
+    BOOL valid = [self.class isValidationResponseValid:responseData error:&validationParseError];
+    self.validated = valid;
+    if(valid) {
+      [self setLastAuthenticatedVersion:self.executableUUID];
+    }
+    if(completion) completion(valid, validationParseError);
+  }
 }
 
 - (NSDictionary*) validationParameters {
