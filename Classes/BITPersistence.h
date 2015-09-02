@@ -4,11 +4,10 @@
 NS_ASSUME_NONNULL_BEGIN
 
 /**
- * The MSAIPersistenceType determines the way how a bundle is saved.
- * Bundles of type MSAIPersistenceTypeHighPriority will be loaded before all bundles if type MSAIPersistenceTypeRegular.
+ * The BITPersistenceType determines if we have a bundle of meta data or telemetry that we want to safe.
  */
 typedef NS_ENUM(NSInteger, BITPersistenceType) {
-    BITPersistenceTypeRegular = 0,
+    BITPersistenceTypeTelemetry = 0,
     BITPersistenceTypeMetaData = 1
 };
 
@@ -21,7 +20,7 @@ typedef NS_ENUM(NSInteger, BITPersistenceType) {
  * Notification that will be send on the main thread to notifiy observers of a successfully saved bundle.
  * This is typically used to trigger sending to the server.
  */
-FOUNDATION_EXPORT NSString *const MSAIPersistenceSuccessNotification;
+FOUNDATION_EXPORT NSString *const BITPersistenceSuccessNotification;
 
 
 ///-----------------------------------------------------------------------------
@@ -34,7 +33,7 @@ FOUNDATION_EXPORT NSString *const MSAIPersistenceSuccessNotification;
 @property (nonatomic, strong) dispatch_queue_t persistenceQueue;
 
 /**
- *  Determines how many files (regular prio) can be on disk at a time.
+ *  Determines how many telemetry files can be on disk at a time.
  */
 @property NSUInteger maxFileCount;
 
@@ -66,7 +65,7 @@ FOUNDATION_EXPORT NSString *const MSAIPersistenceSuccessNotification;
  *
  *  @param path the path of the file, which should be deleted
  */
-- (void)deleteFileAtPath:(NSString *)path ;
+- (void)deleteFileAtPath:(NSString *)path;
 
 /**
  *  Determines whether the persistence layer is able to write more files to disk.
@@ -75,17 +74,16 @@ FOUNDATION_EXPORT NSString *const MSAIPersistenceSuccessNotification;
  */
 - (BOOL)isFreeSpaceAvailable;
 
-  ///-----------------------------------------------------------------------------
-  /// @name Get a bundle of saved data
-  ///-----------------------------------------------------------------------------
+///-----------------------------------------------------------------------------
+/// @name Get a bundle of saved data
+///-----------------------------------------------------------------------------
 
 /**
  * Get a bundle of previously saved data from disk and deletes it using dispatch_sync.
  *
  * @warning Make sure nextBundle is not called from the main thread.
  *
- * It will return bundles of MSAIPersistenceType first.
- * Between bundles of the same MSAIPersistenceType, the order is arbitrary.
+ * It will return a bundle of Telemtry in arbitrary order.
  * Returns 'nil' if no bundle is available
  *
  * @return a bundle of data that's ready to be sent to the server
@@ -113,9 +111,9 @@ FOUNDATION_EXPORT NSString *const MSAIPersistenceSuccessNotification;
  *
  *  @param path the path of the bundle.
  *
- *  @return an array with all envelope objects.
+ *  @return All envelope objects.
  */
-- (NSArray *)bundleAtPath:(NSString *)path;
+- (id)bundleAtPath:(NSString *)path;
 
 /**
  *  Return the json data for a given path
@@ -133,17 +131,16 @@ FOUNDATION_EXPORT NSString *const MSAIPersistenceSuccessNotification;
  */
 - (NSDictionary *)metaData;
 
-  ///-----------------------------------------------------------------------------
-  /// @name Getting a path
-  ///-----------------------------------------------------------------------------
+///-----------------------------------------------------------------------------
+/// @name Getting a path
+///-----------------------------------------------------------------------------
 
 /**
  *  Returns a folder path for items of a given type.
- * *
+ *  @param the type
  *  @return a folder path for items of a given type
  */
-- (NSString *)folderPath;//TODO remove this one?
-
+- (NSString *)folderPathForType:(BITPersistenceType)type;
 
 ///-----------------------------------------------------------------------------
 /// @name Getting a path
@@ -155,7 +152,7 @@ FOUNDATION_EXPORT NSString *const MSAIPersistenceSuccessNotification;
  *
  * @param the type of
 */
- - (NSString *)fileURLForType:(BITPersistenceType)type;
+- (NSString *)fileURLForType:(BITPersistenceType)type;
 
 @end
 
