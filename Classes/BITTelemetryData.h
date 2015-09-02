@@ -1,6 +1,6 @@
 #import "BITTelemetryObject.h"
 
-///Data contract class for type MSAITelemetryData.
+///Data contract class for type BITTelemetryData.
 @interface BITTelemetryData : BITTelemetryObject <NSCoding>
 
 @property (nonatomic, readonly, copy) NSString *envelopeTypeName;

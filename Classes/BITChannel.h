@@ -63,7 +63,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)enqueueTelemetryItem:(BITTelemetryData *)item;
 
 /**
- *  Manually trigger the MSAIChannel to persist all items currently in its data item queue.
+ *  Manually trigger the BITChannel to persist all items currently in its data item queue.
  */
 - (void)persistDataItemQueue;
 
@@ -87,7 +87,7 @@ NS_ASSUME_NONNULL_BEGIN
 void bit_appendStringToSafeJsonStream(NSString *string, char *__nonnull*__nonnull jsonStream);
 
 /**
- *  Reset MSAISafeJsonEventsString so we can start appending JSON dictionaries.
+ *  Reset BITSafeJsonEventsString so we can start appending JSON dictionaries.
  *
  *  @param string The string that will be reset.
  */
