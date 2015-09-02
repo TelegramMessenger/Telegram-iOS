@@ -352,25 +352,41 @@
   [request setHTTPMethod:@"GET"];
   [request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];
   
+  id nsurlsessionClass = NSClassFromString(@"NSURLSessionUploadTask");
+  if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
+    NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+    
+    NSURLSessionDataTask *task = [session dataTaskWithRequest:request
+                                            completionHandler: ^(NSData *data, NSURLResponse *response, NSError *error) {
+                                              [self handleResponeWithData:data error:error];
+                                            }];
+    [task resume];
+  }else{
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-  [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *error){
+    [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *error){
 #pragma clang diagnostic pop
-    self.checkInProgress = NO;
+      [self handleResponeWithData:responseData error:error];
+    }];
+  }
+}
+
+- (void)handleResponeWithData:(NSData *)responseData error:(NSError *)error{
+  self.checkInProgress = NO;
+  
+  if (error) {
+    [self reportError:error];
+  } else if ([responseData length]) {
+    NSString *responseString = [[NSString alloc] initWithBytes:[responseData bytes] length:[responseData length] encoding: NSUTF8StringEncoding];
+    BITHockeyLog(@"INFO: Received API response: %@", responseString);
     
-    if (error) {
-      [self reportError:error];
-    } else if ([responseData length]) {
-      NSString *responseString = [[NSString alloc] initWithBytes:[responseData bytes] length:[responseData length] encoding: NSUTF8StringEncoding];
-      BITHockeyLog(@"INFO: Received API response: %@", responseString);
-      
-      if (!responseString || ![responseString dataUsingEncoding:NSUTF8StringEncoding]) {
-        return;
-      }
-      
-      [self processStoreResponseWithString:responseString];
+    if (!responseString || ![responseString dataUsingEncoding:NSUTF8StringEncoding]) {
+      return;
     }
-  }];
+    
+    [self processStoreResponseWithString:responseString];
+  }
 }
 
 - (void)checkForUpdateDelayed {
