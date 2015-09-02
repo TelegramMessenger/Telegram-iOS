@@ -713,7 +713,7 @@
       if (attachment.needsLoadingFromURL && !attachment.isLoading){
         attachment.isLoading = YES;
         NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
-
+        __weak typeof (self) weakSelf = self;
         id nsurlsessionClass = NSClassFromString(@"NSURLSessionDataTask");
         if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
           NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
@@ -721,8 +721,8 @@
           
           NSURLSessionDataTask *task = [session dataTaskWithRequest:request
                                                   completionHandler: ^(NSData *data, NSURLResponse *response, NSError *error) {
-                                                    
-                                                    [self handleResponseForAttachment:attachment responseData:data error:error];
+                                                    typeof (self) strongSelf = weakSelf;
+                                                    [strongSelf handleResponseForAttachment:attachment responseData:data error:error];
                                                   }];
           [task resume];
         }else{
@@ -730,7 +730,8 @@
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
           [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
 #pragma clang diagnostic pop
-            [self handleResponseForAttachment:attachment responseData:responseData error:err];
+            typeof (self) strongSelf = weakSelf;
+            [strongSelf handleResponseForAttachment:attachment responseData:responseData error:err];
           }];
         }
       }
@@ -981,6 +982,7 @@
       attachment.isLoading = YES;
       NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
       
+      __weak typeof (self) weakSelf = self;
       id nsurlsessionClass = NSClassFromString(@"NSURLSessionDataTask");
       if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
         NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
@@ -989,7 +991,8 @@
         NSURLSessionDataTask *task = [session dataTaskWithRequest:request
                                                 completionHandler: ^(NSData *data, NSURLResponse *response, NSError *error) {
                                                   dispatch_async(dispatch_get_main_queue(), ^{
-                                                    [self previewController:blockController updateAttachment:attachment data:data];
+                                                    typeof (self) strongSelf = weakSelf;
+                                                    [strongSelf previewController:blockController updateAttachment:attachment data:data];
                                                   });
                                                 }];
         [task resume];
@@ -998,7 +1001,8 @@
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
         [NSURLConnection sendAsynchronousRequest:request queue:self.thumbnailQueue completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
 #pragma clang diagnostic pop
-          [self previewController:blockController updateAttachment:attachment data:responseData];
+          typeof (self) strongSelf = weakSelf;
+          [strongSelf previewController:blockController updateAttachment:attachment data:responseData];
         }];
       }
       return attachment;

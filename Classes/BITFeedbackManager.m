@@ -920,7 +920,7 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
     
     [request setHTTPBody:postBody];
   }
-  
+  __weak typeof (self) weakSelf = self;
   id nsurlsessionClass = NSClassFromString(@"NSURLSessionDataTask");
   if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
     NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
@@ -928,8 +928,8 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
     
     NSURLSessionDataTask *task = [session dataTaskWithRequest:request
                                             completionHandler: ^(NSData *data, NSURLResponse *response, NSError *error) {
-                                              
-                                              [self handleFeedbackMessageResponse:response data:data error:error completion:completionHandler];
+                                              typeof (self) strongSelf = weakSelf;
+                                              [strongSelf handleFeedbackMessageResponse:response data:data error:error completion:completionHandler];
                                             }];
     [task resume];
 
@@ -938,7 +938,8 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
 #pragma clang diagnostic pop
-      [self handleFeedbackMessageResponse:response data:responseData error:err completion:completionHandler];
+      typeof (self) strongSelf = weakSelf;
+      [strongSelf handleFeedbackMessageResponse:response data:responseData error:err completion:completionHandler];
     }];
   }
 

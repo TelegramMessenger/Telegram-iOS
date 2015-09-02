@@ -332,6 +332,8 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   
   NSString *validationPath = [NSString stringWithFormat:@"api/3/apps/%@/identity/validate", self.encodedAppIdentifier];
   
+  __weak typeof (self) weakSelf = self;
+  
   id nsurlsessionClass = NSClassFromString(@"NSURLSessionUploadTask");
   if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
     NSURLRequest *request = [self.hockeyAppClient requestWithMethod:@"GET" path:validationPath parameters:[self validationParameters]];
@@ -340,14 +342,16 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     
     NSURLSessionDataTask *task = [session dataTaskWithRequest:request
                                             completionHandler: ^(NSData *data, NSURLResponse *response, NSError *error) {
-                                              [self handleValidationResponseWithData:data error:error completion:completion];
+                                              typeof (self) strongSelf = weakSelf;
+                                              [strongSelf handleValidationResponseWithData:data error:error completion:completion];
                                             }];
     [task resume];
   }else{
     [self.hockeyAppClient getPath:validationPath
                        parameters:[self validationParameters]
                        completion:^(BITHTTPOperation *operation, NSData* responseData, NSError *error) {
-                         [self handleValidationResponseWithData:responseData error:error completion:completion];
+                         typeof (self) strongSelf = weakSelf;
+                         [strongSelf handleValidationResponseWithData:responseData error:error completion:completion];
                        }];
   }
 }

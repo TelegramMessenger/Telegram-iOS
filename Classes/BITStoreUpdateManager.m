@@ -352,6 +352,7 @@
   [request setHTTPMethod:@"GET"];
   [request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];
   
+  __weak typeof (self) weakSelf = self;
   id nsurlsessionClass = NSClassFromString(@"NSURLSessionUploadTask");
   if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
     NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
@@ -359,7 +360,8 @@
     
     NSURLSessionDataTask *task = [session dataTaskWithRequest:request
                                             completionHandler: ^(NSData *data, NSURLResponse *response, NSError *error) {
-                                              [self handleResponeWithData:data error:error];
+                                              typeof (self) strongSelf = weakSelf;
+                                              [strongSelf handleResponeWithData:data error:error];
                                             }];
     [task resume];
   }else{
@@ -367,7 +369,8 @@
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *error){
 #pragma clang diagnostic pop
-      [self handleResponeWithData:responseData error:error];
+      typeof (self) strongSelf = weakSelf;
+      [strongSelf handleResponeWithData:responseData error:error];
     }];
   }
 }
