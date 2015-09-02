@@ -1155,6 +1155,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   return newRequest;
 }
 
+
 - (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response {
   if ([response respondsToSelector:@selector(statusCode)]) {
     NSInteger statusCode = [((NSHTTPURLResponse *)response) statusCode];
@@ -1183,12 +1184,51 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 // api call returned, parsing
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection {
   [self finishLoading];
+}
+
+#pragma mark - NSURLSession
+
+- (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error {
   
+  dispatch_async(dispatch_get_main_queue(), ^{
+    if(error){
+      [self handleError:error];
+    }else{
+      [self finishLoading];
     }
+  });
+}
+
+- (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)dataTask didReceiveData:(NSData *)data {
+  [_receivedData appendData:data];
+}
+
+- (void)URLSession:(NSURLSession *)session dataTask:(NSURLSessionDataTask *)dataTask didReceiveResponse:(NSURLResponse *)response completionHandler:(void (^)(NSURLSessionResponseDisposition disposition))completionHandler {
+  
+  if ([response respondsToSelector:@selector(statusCode)]) {
+    NSInteger statusCode = [((NSHTTPURLResponse *)response) statusCode];
+    if (statusCode == 404) {
+      [dataTask cancel];
+      NSString *errorStr = [NSString stringWithFormat:@"Hockey API received HTTP Status Code %ld", (long)statusCode];
+      [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
+                                            code:BITUpdateAPIServerReturnedInvalidStatus
+                                        userInfo:[NSDictionary dictionaryWithObjectsAndKeys:errorStr, NSLocalizedDescriptionKey, nil]]];
+      completionHandler(NSURLSessionResponseCancel);
+      return;
     }
+    completionHandler(NSURLSessionResponseAllow);
   }
   
+  self.receivedData = [NSMutableData data];
+  [_receivedData setLength:0];
+}
+
+- (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task willPerformHTTPRedirection:(NSHTTPURLResponse *)response newRequest:(NSURLRequest *)request completionHandler:(void (^)(NSURLRequest *))completionHandler {
+  NSURLRequest *newRequest = request;
+  if (response) {
+    newRequest = nil;
   }
+  completionHandler(newRequest);
 }
 
 - (BOOL)hasNewerMandatoryVersion {
@@ -1206,7 +1246,6 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   
   return result;
 }
-
 
 #pragma mark - Properties
 
