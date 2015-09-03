@@ -65,7 +65,7 @@ public func ==(lhs: ThreadPoolQueue, rhs: ThreadPoolQueue) -> Bool {
     private var mutex: pthread_mutex_t
     private var condition: pthread_cond_t
     
-    private class func threadEntryPoint(threadPool: ThreadPool) {
+    @objc class func threadEntryPoint(threadPool: ThreadPool) {
         var queue: ThreadPoolQueue!
         
         while (true) {
@@ -107,7 +107,9 @@ public func ==(lhs: ThreadPoolQueue, rhs: ThreadPoolQueue) -> Bool {
             pthread_mutex_unlock(&threadPool.mutex);
             
             if task != nil {
-                task.execute()
+                autoreleasepool {
+                    task.execute()
+                }
             }
         }
     }
@@ -123,7 +125,7 @@ public func ==(lhs: ThreadPoolQueue, rhs: ThreadPoolQueue) -> Bool {
         super.init()
         
         for _ in 0 ..< threadCount {
-            let thread = NSThread(target: ThreadPool.self, selector: Selector("threadEntryPoint"), object: self)
+            let thread = NSThread(target: ThreadPool.self, selector: Selector("threadEntryPoint:"), object: self)
             thread.threadPriority = threadPriority
             self.threads.append(thread)
             thread.start()
@@ -152,5 +154,15 @@ public func ==(lhs: ThreadPoolQueue, rhs: ThreadPoolQueue) -> Bool {
     
     public func nextQueue() -> ThreadPoolQueue {
         return ThreadPoolQueue(threadPool: self)
+    }
+    
+    public func isCurrentThreadInPool() -> Bool {
+        let currentThread = NSThread.currentThread()
+        for thread in self.threads {
+            if currentThread.isEqual(thread) {
+                return true
+            }
+        }
+        return false
     }
 }

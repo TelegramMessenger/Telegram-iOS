@@ -38,8 +38,12 @@ public final class Queue {
         self.specialIsMainQueue = specialIsMainQueue
     }
     
-    public init() {
-        self.nativeQueue = dispatch_queue_create(nil, DISPATCH_QUEUE_SERIAL)
+    public init(name: String? = nil) {
+        if let name = name {
+            self.nativeQueue = dispatch_queue_create(name, DISPATCH_QUEUE_SERIAL)
+        } else {
+            self.nativeQueue = dispatch_queue_create(nil, DISPATCH_QUEUE_SERIAL)
+        }
         self.specific = nil
         self.specialIsMainQueue = false
         

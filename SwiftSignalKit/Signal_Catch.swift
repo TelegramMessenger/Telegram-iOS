@@ -90,7 +90,7 @@ public func recurse<T, E>(latestValue: T?)(signal: Signal<T, E>) -> Signal<T, E>
     }
 }
 
-public func retry<T, E>(exponentialDecay: Double, onQueue queue: Queue)(signal: Signal<T, E>) -> Signal<T, E> {
+public func retry<T, E>(delayIncrement: Double, maxDelay: Double, onQueue queue: Queue)(signal: Signal<T, E>) -> Signal<T, NoError> {
     return Signal { subscriber in
         let shouldRetry = Atomic(value: true)
         let currentDelay = Atomic(value: 0.0)
@@ -105,7 +105,7 @@ public func retry<T, E>(exponentialDecay: Double, onQueue queue: Queue)(signal: 
                     subscriber.putNext(next)
                 }, error: { error in
                     let delay = currentDelay.modify { value in
-                        return value
+                        return min(maxDelay, value + delayIncrement)
                     }
                     
                     let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(delay * Double(NSEC_PER_SEC)))
