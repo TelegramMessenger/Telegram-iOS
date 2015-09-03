@@ -355,6 +355,8 @@
 		97F0F9FD18ABAECD00EF50AA /* iconCamera.png in Resources */ = {isa = PBXBuildFile; fileRef = 97F0F9FB18ABAECD00EF50AA /* iconCamera.png */; };
 		97F0F9FE18ABAECD00EF50AA /* iconCamera@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 97F0F9FC18ABAECD00EF50AA /* iconCamera@2x.png */; };
 		97F0FA0518B2294D00EF50AA /* BITFeedbackMessageAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 97F0FA0318AE5AED00EF50AA /* BITFeedbackMessageAttachment.m */; };
+		B274DDB31B966914007F2B9E /* BITPersistenceTests.m in Sources */ = {isa = PBXBuildFile; fileRef = B274DDB21B966914007F2B9E /* BITPersistenceTests.m */; };
+		B274DDB41B96691E007F2B9E /* BITPersistenceTests.m in Sources */ = {isa = PBXBuildFile; fileRef = B274DDB21B966914007F2B9E /* BITPersistenceTests.m */; };
 		B27FBEFD1B9622700082406A /* BITPersistence.h in Headers */ = {isa = PBXBuildFile; fileRef = B27FBEFB1B9622700082406A /* BITPersistence.h */; };
 		B27FBEFE1B9622700082406A /* BITPersistence.h in Headers */ = {isa = PBXBuildFile; fileRef = B27FBEFB1B9622700082406A /* BITPersistence.h */; };
 		B27FBEFF1B9622700082406A /* BITPersistence.m in Sources */ = {isa = PBXBuildFile; fileRef = B27FBEFC1B9622700082406A /* BITPersistence.m */; };
@@ -627,6 +629,7 @@
 		97F0FA0018AE375E00EF50AA /* BITImageAnnotationViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITImageAnnotationViewController.m; sourceTree = "<group>"; };
 		97F0FA0218AE5AED00EF50AA /* BITFeedbackMessageAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITFeedbackMessageAttachment.h; sourceTree = "<group>"; };
 		97F0FA0318AE5AED00EF50AA /* BITFeedbackMessageAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITFeedbackMessageAttachment.m; sourceTree = "<group>"; };
+		B274DDB21B966914007F2B9E /* BITPersistenceTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITPersistenceTests.m; sourceTree = "<group>"; };
 		B27FBEFB1B9622700082406A /* BITPersistence.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITPersistence.h; sourceTree = "<group>"; };
 		B27FBEFC1B9622700082406A /* BITPersistence.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITPersistence.m; sourceTree = "<group>"; };
 		BEE0207C16C5107E004426EA /* hu */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = hu; path = hu.lproj/HockeySDK.strings; sourceTree = "<group>"; };
@@ -829,6 +832,7 @@
 				1E566D061A275C4C0070F514 /* BITCrashReportTextFormatterTests.m */,
 				1BD33EA91B950BC200C3368B /* BITSessionTests.m */,
 				1B460AB31B8E72FD0000C344 /* BITTelemetryManagerTests.m */,
+				B274DDB21B966914007F2B9E /* BITPersistenceTests.m */,
 			);
 			path = HockeySDKTests;
 			sourceTree = "<group>";
@@ -1665,6 +1669,7 @@
 				E40E0B0917DA19DC005E38C1 /* BITHockeyAppClientTests.m in Sources */,
 				1E70A23617F31B82001BB32D /* BITHockeyHelperTests.m in Sources */,
 				E48A3DEF17B3EFF100924C3D /* BITAuthenticatorTests.m in Sources */,
+				B274DDB31B966914007F2B9E /* BITPersistenceTests.m in Sources */,
 				1EA1170716F53B91001C015C /* BITTestHelper.m in Sources */,
 				1E61CCAF18E0585A00A5E38E /* BITFeedbackManagerTests.m in Sources */,
 				1BD33EAA1B950BC200C3368B /* BITSessionTests.m in Sources */,
@@ -1740,6 +1745,7 @@
 				1EB617B51B0A31D30035A986 /* BITKeychainUtilsTests.m in Sources */,
 				1EB617B01B0A31D30035A986 /* BITStoreUpdateManagerTests.m in Sources */,
 				1EB617B41B0A31D30035A986 /* BITHockeyAppClientTests.m in Sources */,
+				B274DDB41B96691E007F2B9E /* BITPersistenceTests.m in Sources */,
 				1EB617D71B0A387B0035A986 /* BITAuthenticatorTests.m in Sources */,
 				1EB617B61B0A31D30035A986 /* BITHockeyHelperTests.m in Sources */,
 				1BD33EAB1B950BC200C3368B /* BITSessionTests.m in Sources */,

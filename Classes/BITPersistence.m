@@ -51,7 +51,7 @@ NSUInteger const defaultFileCount = 50;
 }
 
 /**
- * Creates a serial background queue that saves the Bundle using NSKeyedArchiver and NSData's writeToFile:atomically
+ * Saves the Bundle using NSKeyedArchiver and NSData's writeToFile:atomically
  * Sends out a BITHockeyPersistenceSuccessNotification in case of success
  */
 - (void)persistBundle:(NSData *)bundle {
@@ -79,7 +79,7 @@ NSUInteger const defaultFileCount = 50;
 
 - (void)persistMetaData:(NSDictionary *)metaData {
   NSString *fileURL = [self fileURLForType:BITPersistenceTypeMetaData];
-
+    //TODO send out a notification, too?!
   dispatch_async(self.persistenceQueue, ^{
     [NSKeyedArchiver archiveRootObject:metaData toFile:fileURL];
   });
