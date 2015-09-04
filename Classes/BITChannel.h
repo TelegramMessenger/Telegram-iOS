@@ -36,15 +36,15 @@
 @class BITOrderedDictionary;
 @class BITConfiguration;
 @class BITTelemetryData;
-
+@class BITTelemetryContext;
+@class BITPersistence;
 NS_ASSUME_NONNULL_BEGIN
 
 @interface BITChannel : NSObject
 
-///-----------------------------------------------------------------------------
-/// @name Queue management
-///-----------------------------------------------------------------------------
+@property (nonatomic, strong) BITTelemetryContext *telemetryContext;
 
+@property (nonatomic, strong) BITPersistence *persistence;
 /**
  *  A queue which makes array operations thread safe.
  */
@@ -54,6 +54,13 @@ NS_ASSUME_NONNULL_BEGIN
  *  An integer value that keeps tracks of the number of data items added to the JSON Stream string.
  */
 @property (nonatomic, assign) NSUInteger dataItemCount;
+
+/**
+ *  A timer source which is used to flush the queue after a cretain time.
+ */
+@property (nonatomic, strong, null_unspecified) dispatch_source_t timerSource;
+
+- (instancetype)initWithTelemetryContext:(BITTelemetryContext *)telemetryContext persistence:(BITPersistence *) persistence;
 
 /**
  *  Enqueue telemetry data (events, metrics, exceptions, traces) before processing it.
@@ -66,10 +73,6 @@ NS_ASSUME_NONNULL_BEGIN
  *  Manually trigger the BITChannel to persist all items currently in its data item queue.
  */
 - (void)persistDataItemQueue;
-
-///-----------------------------------------------------------------------------
-/// @name JSON Stream
-///-----------------------------------------------------------------------------
 
 /**
  *  Adds the specified dictionary to the JSON Stream string.
@@ -92,15 +95,6 @@ void bit_appendStringToSafeJsonStream(NSString *string, char *__nonnull*__nonnul
  *  @param string The string that will be reset.
  */
 void bit_resetSafeJsonStream(char *__nonnull*__nonnull jsonStream);
-
-///-----------------------------------------------------------------------------
-/// @name Batching
-///-----------------------------------------------------------------------------
-
-/**
- *  A timer source which is used to flush the queue after a cretain time.
- */
-@property (nonatomic, strong, null_unspecified) dispatch_source_t timerSource;
 
 /**
  *  Starts the timer.

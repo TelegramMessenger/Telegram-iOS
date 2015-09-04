@@ -3,6 +3,7 @@
 #if HOCKEYSDK_FEATURE_TELEMETRY
 
 #import "HockeySDK.h"
+#import "BITTelemetryContext.h"
 #import "BITTelemetryData.h"
 #import "HockeySDKPrivate.h"
 
@@ -24,6 +25,14 @@ static BITChannel *_sharedChannel = nil;
     _dataItemCount = 0;
     dispatch_queue_t serialQueue = dispatch_queue_create(BITDataItemsOperationsQueue, DISPATCH_QUEUE_SERIAL);
     _dataItemsOperations = serialQueue;
+  }
+  return self;
+}
+
+- (instancetype)initWithTelemetryContext:(BITTelemetryContext *)telemetryContext persistence:(BITPersistence *) persistence {
+  if(self = [self init]) {
+    _telemetryContext = telemetryContext;
+    _persistence = persistence;
   }
   return self;
 }
