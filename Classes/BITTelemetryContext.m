@@ -69,6 +69,7 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
     _internal = internalContext;
     _operation = operationContext;
     _session = sessionContext;
+    _tags = [self tags];
 
     [self configureNetworkStatusTracking];
   }
@@ -433,19 +434,25 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
 #pragma mark - Custom getter
 #pragma mark - Helper
 
-// TODO: Cache context
 - (BITOrderedDictionary *)contextDictionary {
-  __block BITOrderedDictionary *contextDictionary = [BITOrderedDictionary new];
-  dispatch_sync(_operationsQueue, ^{
-    [contextDictionary addEntriesFromDictionary:[self.session serializeToDictionary]];
-    [contextDictionary addEntriesFromDictionary:[self.user serializeToDictionary]];
-    [contextDictionary addEntriesFromDictionary:[self.device serializeToDictionary]];
-    [contextDictionary addEntriesFromDictionary:[self.application serializeToDictionary]];
-    [contextDictionary addEntriesFromDictionary:[self.location serializeToDictionary]];
-    [contextDictionary addEntriesFromDictionary:[self.internal serializeToDictionary]];
-    [contextDictionary addEntriesFromDictionary:[self.operation serializeToDictionary]];
-  });
+  BITOrderedDictionary *contextDictionary = [BITOrderedDictionary new];
+  [contextDictionary addEntriesFromDictionary:self.tags];
+  [contextDictionary addEntriesFromDictionary:[self.session serializeToDictionary]];
+  [contextDictionary addEntriesFromDictionary:[self.user serializeToDictionary]];
+  [contextDictionary addEntriesFromDictionary:[self.device serializeToDictionary]];
+  
   return contextDictionary;
+}
+
+- (BITOrderedDictionary *)tags {
+  if(!_tags){
+    _tags = [self.application serializeToDictionary];
+    [_tags addEntriesFromDictionary:[self.application serializeToDictionary]];
+    [_tags addEntriesFromDictionary:[self.location serializeToDictionary]];
+    [_tags addEntriesFromDictionary:[self.internal serializeToDictionary]];
+    [_tags addEntriesFromDictionary:[self.operation serializeToDictionary]];
+  }
+  return _tags;
 }
 
 @end

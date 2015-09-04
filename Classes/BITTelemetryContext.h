@@ -28,6 +28,7 @@ FOUNDATION_EXPORT NSString *const kBITApplicationWasLaunched;
 ///-----------------------------------------------------------------------------
 
 /**
+ *  The persistence instance used to save/load metadata.
  */
 @property(nonatomic, strong) BITPersistence *persistence;
 
@@ -98,6 +99,11 @@ FOUNDATION_EXPORT NSString *const kBITApplicationWasLaunched;
 ///-----------------------------------------------------------------------------
 /// @name Helper
 ///-----------------------------------------------------------------------------
+
+/**
+ *  A dictionary which holds static tag fields for the purpose of caching
+ */
+@property (nonatomic, strong)BITOrderedDictionary *tags;
 
 /**
  *  Returns context objects as dictionary.
