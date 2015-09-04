@@ -10,7 +10,6 @@
 NSString *const kTelemetry = @"Telemetry";
 NSString *const kMetaData = @"MetaData";
 NSString *const kFileBaseString = @"hockey-app-bundle-";
-NSString *const kHockeyAppDirectory = @"com.microsoft.HockeyApp/";
 NSString *const kTelemetryDirectoryPath = @"com.microsoft.HockeyApp/Telemetry/";
 NSString *const kMetaDataDirectoryPath = @"com.microsoft.HockeyApp/MetaData/";
 
@@ -169,7 +168,7 @@ NSUInteger const defaultFileCount = 50;
 #pragma mark - Private
 
 - (NSString *)fileURLForType:(BITPersistenceType)type {
-  static NSString *fileDir;
+  NSString *appSupportPath = [NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES) lastObject];
 
   NSString *uuid = bit_UUID();
   NSString *fileName = [NSString stringWithFormat:@"%@%@", kFileBaseString, uuid];
@@ -177,14 +176,16 @@ NSUInteger const defaultFileCount = 50;
 
   switch(type) {
     case BITPersistenceTypeMetaData: {
-      filePath = [[fileDir stringByAppendingPathComponent:kMetaData] stringByAppendingPathComponent:kMetaData];
+      filePath = [appSupportPath stringByAppendingPathComponent:kMetaDataDirectoryPath];
       break;
     };
     default: {
-      filePath = [[fileDir stringByAppendingPathComponent:kTelemetry] stringByAppendingPathComponent:fileName];
+      filePath = [appSupportPath stringByAppendingPathComponent:kTelemetryDirectoryPath];
       break;
     };
   }
+
+  filePath = [filePath stringByAppendingPathComponent:fileName];
 
   return filePath;
 }
@@ -195,8 +196,7 @@ NSUInteger const defaultFileCount = 50;
 - (void)createDirectoryStructureIfNeeded {
   //Application Support Dir
   NSFileManager *fileManager = [NSFileManager defaultManager];
-  NSArray *urls = [fileManager URLsForDirectory:NSApplicationDirectory inDomains:NSUserDomainMask];
-  NSURL *appSupportURL = [urls lastObject];
+  NSURL *appSupportURL = [[fileManager URLsForDirectory:NSApplicationDirectory inDomains:NSUserDomainMask] lastObject];
   if(appSupportURL) {
     NSError *error = nil;
     //App Support and Telemetry Directory
@@ -234,14 +234,12 @@ NSUInteger const defaultFileCount = 50;
  * @returns the URL to the next file depending on the specified type. If there's no file, return nil.
  */
 - (NSString *)nextURLOfType:(BITPersistenceType)type {
-
   NSString *directoryPath = [self folderPathForType:type];
   NSError *error = nil;
   NSArray *fileNames = [[NSFileManager defaultManager] contentsOfDirectoryAtURL:[NSURL fileURLWithPath:directoryPath]
                                                      includingPropertiesForKeys:@[NSURLNameKey]
                                                                         options:NSDirectoryEnumerationSkipsHiddenFiles
-                                                                          error:&error];
-
+                                                                        error:&error];
   // each track method asks, if space is still available. Getting the file count for each event would be too expensive,
   // so let's get it here
   if(type == BITPersistenceTypeTelemetry) {
@@ -260,23 +258,19 @@ NSUInteger const defaultFileCount = 50;
 }
 
 - (NSString *)folderPathForType:(BITPersistenceType)type {
-  NSString *persistenceFolder;
-  NSString *appSupportFolder = [NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES) lastObject];
-  persistenceFolder = [appSupportFolder stringByAppendingPathComponent:kHockeyAppDirectory];
-
-  NSString *subfolderPath;
-
+  NSString *path = [NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES) lastObject];
+  NSString *subFolder = @"";
   switch(type) {
     case BITPersistenceTypeTelemetry: {
-      subfolderPath = kTelemetry;
+      subFolder = kTelemetryDirectoryPath;
       break;
     }
     case BITPersistenceTypeMetaData: {
-      subfolderPath = kMetaData;
+      subFolder = kMetaDataDirectoryPath;
       break;
     }
   }
-  NSString *path = [persistenceFolder stringByAppendingPathComponent:subfolderPath];
+  path = [path stringByAppendingPathComponent:subFolder];
 
   return path;
 }

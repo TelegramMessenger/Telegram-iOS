@@ -118,7 +118,7 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
   
   [self trackSessionWithState:BITSessionState_start];
 }
-å
+
 - (BITSession *)createNewSessionWithId:(NSString *)sessionId {
   BITSession *session = [BITSession new];
   session.sessionId = sessionId;

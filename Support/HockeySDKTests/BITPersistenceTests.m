@@ -16,7 +16,6 @@
 
 @property (strong) BITPersistence *sut;
 
-
 @end
 
 @implementation BITPersistenceTests
@@ -57,6 +56,15 @@
   path = [self.sut folderPathForType:BITPersistenceTypeMetaData];
   XCTAssertFalse([path rangeOfString:@"com.microsoft.HockeyApp/MetaData"].location == NSNotFound);
 }
+
+- (void)testFileUrlForType {
+  NSString *path = [self.sut fileURLForType:BITPersistenceTypeTelemetry];
+  XCTAssertFalse([path rangeOfString:@"com.microsoft.HockeyApp/Telemetry/hockey-app-bundle-"].location == NSNotFound);
+  path = [self.sut fileURLForType:BITPersistenceTypeMetaData];
+  XCTAssertFalse([path rangeOfString:@"com.microsoft.HockeyApp/MetaData/hockey-app-bundle-"].location == NSNotFound);
+}
+
+
 
 
 @end
