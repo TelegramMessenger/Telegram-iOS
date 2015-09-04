@@ -1,10 +1,14 @@
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_TELEMETRY
+
 #import "BITPersistence.h"
+#import "BITPersistencePrivate.h"
 #import "HockeySDKPrivate.h"
-#import "BITHockeyManager.h"
 #import "BITHockeyHelper.h"
 
-NSString *const kTelemetry = @"telemetry";
-NSString *const kMetaData = @"metaData";
+NSString *const kTelemetry = @"Telemetry";
+NSString *const kMetaData = @"MetaData";
 NSString *const kFileBaseString = @"hockey-app-bundle-";
 NSString *const kHockeyAppDirectory = @"com.microsoft.HockeyApp/";
 NSString *const kTelemetryDirectoryPath = @"com.microsoft.HockeyApp/Telemetry/";
@@ -293,3 +297,6 @@ NSUInteger const defaultFileCount = 50;
 }
 
 @end
+
+#endif /* HOCKEYSDK_FEATURE_TELEMETRY */
+

@@ -2,11 +2,14 @@
 #import <OCMock/OCMock.h>
 #import "BITTestsDependencyInjection.h"
 #import "BITPersistence.h"
+#import "BITPersistencePrivate.h"
 
 #define HC_SHORTHAND
+
 #import <OCHamcrestIOS/OCHamcrestIOS.h>
 
 #define MOCKITO_SHORTHAND
+
 #import <OCMockitoIOS/OCMockitoIOS.h>
 
 @interface BITPersistenceTests : BITTestsDependencyInjection
@@ -24,7 +27,7 @@
 }
 
 - (void)tearDown {
-    [super tearDown];
+  [super tearDown];
 }
 
 - (void)testPersistenceSetupWorks {
@@ -37,17 +40,23 @@
 }
 
 - (void)testSuccessNotificationIsSent {
-  id observerMock  = [OCMockObject observerMock];
+  id observerMock = [OCMockObject observerMock];
   [self.mockNotificationCenter addMockObserver:observerMock name:@"BITHockeyPersistenceSuccessNotification" object:nil];
-  
-  NSData *testData = [NSKeyedArchiver archivedDataWithRootObject:@{@"key1":@"value1", @"key2":@"value2"}];
+
+  NSData *testData = [NSKeyedArchiver archivedDataWithRootObject:@{@"key1" : @"value1", @"key2" : @"value2"}];
   [self.sut persistBundle:testData];
-  
+
   [observerMock verify];
-  
+
   [self.mockNotificationCenter removeObserver:observerMock];
 }
 
+- (void)testFolderPathForType {
+  NSString *path = [self.sut folderPathForType:BITPersistenceTypeTelemetry];
+  XCTAssertFalse([path rangeOfString:@"com.microsoft.HockeyApp/Telemetry"].location == NSNotFound);
+  path = [self.sut folderPathForType:BITPersistenceTypeMetaData];
+  XCTAssertFalse([path rangeOfString:@"com.microsoft.HockeyApp/MetaData"].location == NSNotFound);
+}
 
 
 @end
