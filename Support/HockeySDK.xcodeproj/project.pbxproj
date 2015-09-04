@@ -33,6 +33,38 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		1B330A551B98DEB4007844AB /* BITEnvelope.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B330A531B98DEB4007844AB /* BITEnvelope.h */; };
+		1B330A561B98DEB4007844AB /* BITEnvelope.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B330A531B98DEB4007844AB /* BITEnvelope.h */; };
+		1B330A571B98DEB4007844AB /* BITEnvelope.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B330A541B98DEB4007844AB /* BITEnvelope.m */; };
+		1B330A581B98DEB4007844AB /* BITEnvelope.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B330A541B98DEB4007844AB /* BITEnvelope.m */; };
+		1B330A5B1B98DFC7007844AB /* BITData.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B330A591B98DFC7007844AB /* BITData.h */; };
+		1B330A5C1B98DFC7007844AB /* BITData.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B330A591B98DFC7007844AB /* BITData.h */; };
+		1B330A5D1B98DFC7007844AB /* BITData.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B330A5A1B98DFC7007844AB /* BITData.m */; };
+		1B330A5E1B98DFC7007844AB /* BITData.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B330A5A1B98DFC7007844AB /* BITData.m */; };
+		1B330A611B98E13C007844AB /* BITDevice.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B330A5F1B98E13C007844AB /* BITDevice.h */; };
+		1B330A621B98E13C007844AB /* BITDevice.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B330A5F1B98E13C007844AB /* BITDevice.h */; };
+		1B330A631B98E13C007844AB /* BITDevice.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B330A601B98E13C007844AB /* BITDevice.m */; };
+		1B330A641B98E13C007844AB /* BITDevice.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B330A601B98E13C007844AB /* BITDevice.m */; };
+		1B330A791B98E64A007844AB /* BITApplication.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B330A771B98E64A007844AB /* BITApplication.h */; };
+		1B330A7A1B98E64A007844AB /* BITApplication.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B330A771B98E64A007844AB /* BITApplication.h */; };
+		1B330A7B1B98E64A007844AB /* BITApplication.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B330A781B98E64A007844AB /* BITApplication.m */; };
+		1B330A7C1B98E64A007844AB /* BITApplication.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B330A781B98E64A007844AB /* BITApplication.m */; };
+		1B330A7F1B98E6A2007844AB /* BITOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B330A7D1B98E6A2007844AB /* BITOperation.h */; };
+		1B330A801B98E6A2007844AB /* BITOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B330A7D1B98E6A2007844AB /* BITOperation.h */; };
+		1B330A811B98E6A2007844AB /* BITOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B330A7E1B98E6A2007844AB /* BITOperation.m */; };
+		1B330A821B98E6A2007844AB /* BITOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B330A7E1B98E6A2007844AB /* BITOperation.m */; };
+		1B330A851B98E6F7007844AB /* BITInternal.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B330A831B98E6F7007844AB /* BITInternal.h */; };
+		1B330A861B98E6F7007844AB /* BITInternal.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B330A831B98E6F7007844AB /* BITInternal.h */; };
+		1B330A871B98E6F7007844AB /* BITInternal.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B330A841B98E6F7007844AB /* BITInternal.m */; };
+		1B330A881B98E6F7007844AB /* BITInternal.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B330A841B98E6F7007844AB /* BITInternal.m */; };
+		1B330A8B1B98E789007844AB /* BITUser.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B330A891B98E789007844AB /* BITUser.h */; };
+		1B330A8C1B98E789007844AB /* BITUser.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B330A891B98E789007844AB /* BITUser.h */; };
+		1B330A8D1B98E789007844AB /* BITUser.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B330A8A1B98E789007844AB /* BITUser.m */; };
+		1B330A8E1B98E789007844AB /* BITUser.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B330A8A1B98E789007844AB /* BITUser.m */; };
+		1B330A911B98EDE5007844AB /* BITLocation.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B330A8F1B98EDE5007844AB /* BITLocation.h */; };
+		1B330A921B98EDE5007844AB /* BITLocation.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B330A8F1B98EDE5007844AB /* BITLocation.h */; };
+		1B330A931B98EDE5007844AB /* BITLocation.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B330A901B98EDE5007844AB /* BITLocation.m */; };
+		1B330A941B98EDE5007844AB /* BITLocation.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B330A901B98EDE5007844AB /* BITLocation.m */; };
 		1B460AA41B8E5D910000C344 /* BITTestsDependencyInjection.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B460AA31B8E5D910000C344 /* BITTestsDependencyInjection.m */; };
 		1B460AA51B8E5D910000C344 /* BITTestsDependencyInjection.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B460AA31B8E5D910000C344 /* BITTestsDependencyInjection.m */; };
 		1B460AB11B8E64AF0000C344 /* libOCMock.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1B460AB01B8E64AF0000C344 /* libOCMock.a */; };
@@ -421,6 +453,22 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		1B330A531B98DEB4007844AB /* BITEnvelope.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITEnvelope.h; sourceTree = "<group>"; };
+		1B330A541B98DEB4007844AB /* BITEnvelope.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITEnvelope.m; sourceTree = "<group>"; };
+		1B330A591B98DFC7007844AB /* BITData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITData.h; sourceTree = "<group>"; };
+		1B330A5A1B98DFC7007844AB /* BITData.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITData.m; sourceTree = "<group>"; };
+		1B330A5F1B98E13C007844AB /* BITDevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITDevice.h; sourceTree = "<group>"; };
+		1B330A601B98E13C007844AB /* BITDevice.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITDevice.m; sourceTree = "<group>"; };
+		1B330A771B98E64A007844AB /* BITApplication.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITApplication.h; sourceTree = "<group>"; };
+		1B330A781B98E64A007844AB /* BITApplication.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITApplication.m; sourceTree = "<group>"; };
+		1B330A7D1B98E6A2007844AB /* BITOperation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITOperation.h; sourceTree = "<group>"; };
+		1B330A7E1B98E6A2007844AB /* BITOperation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITOperation.m; sourceTree = "<group>"; };
+		1B330A831B98E6F7007844AB /* BITInternal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITInternal.h; sourceTree = "<group>"; };
+		1B330A841B98E6F7007844AB /* BITInternal.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITInternal.m; sourceTree = "<group>"; };
+		1B330A891B98E789007844AB /* BITUser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITUser.h; sourceTree = "<group>"; };
+		1B330A8A1B98E789007844AB /* BITUser.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITUser.m; sourceTree = "<group>"; };
+		1B330A8F1B98EDE5007844AB /* BITLocation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITLocation.h; sourceTree = "<group>"; };
+		1B330A901B98EDE5007844AB /* BITLocation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITLocation.m; sourceTree = "<group>"; };
 		1B460AA21B8E5D910000C344 /* BITTestsDependencyInjection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITTestsDependencyInjection.h; sourceTree = "<group>"; };
 		1B460AA31B8E5D910000C344 /* BITTestsDependencyInjection.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITTestsDependencyInjection.m; sourceTree = "<group>"; };
 		1B460AA71B8E64A60000C344 /* NSNotificationCenter+OCMAdditions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSNotificationCenter+OCMAdditions.h"; sourceTree = "<group>"; };
@@ -755,19 +803,35 @@
 		1B87EFC01B8D2F870007C96B /* Contract Files */ = {
 			isa = PBXGroup;
 			children = (
+				1B330A771B98E64A007844AB /* BITApplication.h */,
+				1B330A781B98E64A007844AB /* BITApplication.m */,
+				1B6852C61B952BE900D5C387 /* BITBase.h */,
+				1B6852C71B952BE900D5C387 /* BITBase.m */,
+				1B330A591B98DFC7007844AB /* BITData.h */,
+				1B330A5A1B98DFC7007844AB /* BITData.m */,
+				1B330A5F1B98E13C007844AB /* BITDevice.h */,
+				1B330A601B98E13C007844AB /* BITDevice.m */,
 				1B6852E41B95368800D5C387 /* BITDomain.h */,
 				1B6852E51B95368800D5C387 /* BITDomain.m */,
+				1B330A531B98DEB4007844AB /* BITEnvelope.h */,
+				1B330A541B98DEB4007844AB /* BITEnvelope.m */,
+				1B330A831B98E6F7007844AB /* BITInternal.h */,
+				1B330A841B98E6F7007844AB /* BITInternal.m */,
+				1B330A8F1B98EDE5007844AB /* BITLocation.h */,
+				1B330A901B98EDE5007844AB /* BITLocation.m */,
 				1B6852DB1B95361D00D5C387 /* BITSessionState.h */,
+				1B330A7D1B98E6A2007844AB /* BITOperation.h */,
+				1B330A7E1B98E6A2007844AB /* BITOperation.m */,
+				1B87EFBA1B8D2EF50007C96B /* BITSession.h */,
+				1B87EFBB1B8D2EF50007C96B /* BITSession.m */,
 				1B6852DC1B95361D00D5C387 /* BITSessionStateData.h */,
 				1B6852DD1B95361D00D5C387 /* BITSessionStateData.m */,
 				1B6852CC1B952C0500D5C387 /* BITTelemetryData.h */,
 				1B6852CD1B952C0500D5C387 /* BITTelemetryData.m */,
-				1B6852C61B952BE900D5C387 /* BITBase.h */,
-				1B6852C71B952BE900D5C387 /* BITBase.m */,
-				1B87EFBA1B8D2EF50007C96B /* BITSession.h */,
-				1B87EFBB1B8D2EF50007C96B /* BITSession.m */,
 				1B87EFC11B8D2FBA0007C96B /* BITTelemetryObject.h */,
 				1B87EFC21B8D2FBA0007C96B /* BITTelemetryObject.m */,
+				1B330A891B98E789007844AB /* BITUser.h */,
+				1B330A8A1B98E789007844AB /* BITUser.m */,
 				1B87EFC71B8D30AC0007C96B /* BITOrderedDictionary.h */,
 				1B87EFC81B8D30AC0007C96B /* BITOrderedDictionary.m */,
 			);
@@ -1184,20 +1248,25 @@
 				1ECA8F51192B6954006B9416 /* BITCrashMetaData.h in Headers */,
 				1E90FD7318EDB86400CF0417 /* BITCrashDetails.h in Headers */,
 				1E49A4731612226D00463151 /* BITUpdateManager.h in Headers */,
+				1B330A551B98DEB4007844AB /* BITEnvelope.h in Headers */,
 				1E49A4791612226D00463151 /* BITUpdateManagerDelegate.h in Headers */,
 				846A901F1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h in Headers */,
 				1E49A44E1612223B00463151 /* BITFeedbackManager.h in Headers */,
 				E405266217A2AD300096359C /* BITFeedbackManagerDelegate.h in Headers */,
 				973EC8BF18BE2B5B00DBFFBB /* BITBlurImageAnnotation.h in Headers */,
 				E4B4DB7D17B435550099C67F /* BITAuthenticationViewController.h in Headers */,
+				1B330A8B1B98E789007844AB /* BITUser.h in Headers */,
 				1E49A4481612223B00463151 /* BITFeedbackListViewController.h in Headers */,
 				1B6852DE1B95361D00D5C387 /* BITSessionState.h in Headers */,
 				1ECA8F4D192B5BD8006B9416 /* BITCrashDetailsPrivate.h in Headers */,
 				1E94F9E116E91330006570AD /* BITStoreUpdateManager.h in Headers */,
 				1BD33EAF1B950DC700C3368B /* BITChannel.h in Headers */,
+				1B330A851B98E6F7007844AB /* BITInternal.h in Headers */,
+				1B330A611B98E13C007844AB /* BITDevice.h in Headers */,
 				1E49A47F1612226D00463151 /* BITUpdateViewController.h in Headers */,
 				1E49A43C1612223B00463151 /* BITFeedbackComposeViewController.h in Headers */,
 				E40E0B0C17DA1AFF005E38C1 /* BITHockeyAppClient.h in Headers */,
+				1B330A791B98E64A007844AB /* BITApplication.h in Headers */,
 				1EF95CAA162CB314000AE3AD /* BITFeedbackComposeViewControllerDelegate.h in Headers */,
 				1B87EFB51B8D0C540007C96B /* BITTelemetryManager.h in Headers */,
 				1EF95CA6162CB037000AE3AD /* BITFeedbackActivity.h in Headers */,
@@ -1207,6 +1276,7 @@
 				1E49A4AF161222B900463151 /* BITHockeyBaseManager.h in Headers */,
 				1E0829001708F69A0073050E /* BITStoreUpdateManagerDelegate.h in Headers */,
 				1E49A4421612223B00463151 /* BITFeedbackListViewCell.h in Headers */,
+				1B330A5B1B98DFC7007844AB /* BITData.h in Headers */,
 				1E49A4541612223B00463151 /* BITFeedbackManagerPrivate.h in Headers */,
 				1E49A4571612223B00463151 /* BITFeedbackMessage.h in Headers */,
 				1E49A45D1612223B00463151 /* BITFeedbackUserDataViewController.h in Headers */,
@@ -1234,7 +1304,9 @@
 				1E0FEE28173BDB260061331F /* BITKeychainUtils.h in Headers */,
 				1E94F9E416E9136B006570AD /* BITStoreUpdateManagerPrivate.h in Headers */,
 				1B87EFC91B8D30AC0007C96B /* BITOrderedDictionary.h in Headers */,
+				1B330A7F1B98E6A2007844AB /* BITOperation.h in Headers */,
 				9760F6CF18BB685600959B93 /* BITImageAnnotation.h in Headers */,
+				1B330A911B98EDE5007844AB /* BITLocation.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1254,20 +1326,25 @@
 				1EB617AE1B0A31C50035A986 /* HockeySDK.h in Headers */,
 				1EB617991B0A31650035A986 /* BITFeedbackComposeViewController.h in Headers */,
 				1EB617651B0A30B30035A986 /* BITKeychainUtils.h in Headers */,
+				1B330A561B98DEB4007844AB /* BITEnvelope.h in Headers */,
 				1EB617821B0A31310035A986 /* BITImageAnnotation.h in Headers */,
 				846A90201B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h in Headers */,
 				1EB617961B0A31550035A986 /* BITArrowImageAnnotation.h in Headers */,
 				1EB617801B0A31260035A986 /* BITCrashReportTextFormatter.h in Headers */,
 				1EB6179C1B0A31730035A986 /* BITFeedbackListViewCell.h in Headers */,
 				1EB617A81B0A31A80035A986 /* BITUpdateViewControllerPrivate.h in Headers */,
+				1B330A8C1B98E789007844AB /* BITUser.h in Headers */,
 				1EB617671B0A30B90035A986 /* BITAttributedLabel.h in Headers */,
 				1B6852DF1B95361D00D5C387 /* BITSessionState.h in Headers */,
 				1EB617771B0A31000035A986 /* BITCrashManagerDelegate.h in Headers */,
 				1EB6179A1B0A316B0035A986 /* BITFeedbackComposeViewControllerDelegate.h in Headers */,
 				1BD33EB01B950DC700C3368B /* BITChannel.h in Headers */,
+				1B330A861B98E6F7007844AB /* BITInternal.h in Headers */,
+				1B330A621B98E13C007844AB /* BITDevice.h in Headers */,
 				1EB6175E1B0A30990035A986 /* BITHockeyBaseManager.h in Headers */,
 				1EB6175C1B0A30920035A986 /* HockeySDKPrivate.h in Headers */,
 				1EB617781B0A31060035A986 /* BITCrashDetails.h in Headers */,
+				1B330A7A1B98E64A007844AB /* BITApplication.h in Headers */,
 				1EB617601B0A30A20035A986 /* BITHockeyBaseManagerPrivate.h in Headers */,
 				1B87EFB81B8D1F930007C96B /* BITTelemetryManager.h in Headers */,
 				1EB6177D1B0A311A0035A986 /* BITCrashAttachment.h in Headers */,
@@ -1277,6 +1354,7 @@
 				1EB617A11B0A318B0035A986 /* BITFeedbackManagerPrivate.h in Headers */,
 				1EB6177B1B0A31120035A986 /* BITCrashMetaData.h in Headers */,
 				1EB6176F1B0A30D20035A986 /* BITHockeyAttachment.h in Headers */,
+				1B330A5C1B98DFC7007844AB /* BITData.h in Headers */,
 				1EB617A61B0A319F0035A986 /* BITUpdateManagerPrivate.h in Headers */,
 				1EB617A41B0A31940035A986 /* BITUpdateManager.h in Headers */,
 				1EB617AC1B0A31BA0035A986 /* BITHockeyManager.h in Headers */,
@@ -1304,7 +1382,9 @@
 				1EB617AD1B0A31BF0035A986 /* BITHockeyManagerDelegate.h in Headers */,
 				1EB617971B0A31580035A986 /* BITBlurImageAnnotation.h in Headers */,
 				1B87EFCA1B8D30AC0007C96B /* BITOrderedDictionary.h in Headers */,
+				1B330A801B98E6A2007844AB /* BITOperation.h in Headers */,
 				1EB617611B0A30A50035A986 /* BITHockeyBaseViewController.h in Headers */,
+				1B330A921B98EDE5007844AB /* BITLocation.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1603,14 +1683,19 @@
 				E40E0B0D17DA1AFF005E38C1 /* BITHockeyAppClient.m in Sources */,
 				1E49A4451612223B00463151 /* BITFeedbackListViewCell.m in Sources */,
 				973EC8B818BCA8A200DBFFBB /* BITRectangleImageAnnotation.m in Sources */,
+				1B330A631B98E13C007844AB /* BITDevice.m in Sources */,
 				1E49A44B1612223B00463151 /* BITFeedbackListViewController.m in Sources */,
 				1E49A4511612223B00463151 /* BITFeedbackManager.m in Sources */,
+				1B330A871B98E6F7007844AB /* BITInternal.m in Sources */,
 				1B6852E81B95368800D5C387 /* BITDomain.m in Sources */,
 				1ECA8F52192B6954006B9416 /* BITCrashMetaData.m in Sources */,
+				1B330A571B98DEB4007844AB /* BITEnvelope.m in Sources */,
 				E4933E8117B66CDA00B11ACC /* BITHTTPOperation.m in Sources */,
+				1B330A811B98E6A2007844AB /* BITOperation.m in Sources */,
 				1E49A45A1612223B00463151 /* BITFeedbackMessage.m in Sources */,
 				1B6852E21B95361D00D5C387 /* BITSessionStateData.m in Sources */,
 				1ED570C818BF878C00AB3350 /* BITCrashAttachment.m in Sources */,
+				1B330A5D1B98DFC7007844AB /* BITData.m in Sources */,
 				1E49A4601612223B00463151 /* BITFeedbackUserDataViewController.m in Sources */,
 				1E49A4701612226D00463151 /* BITAppVersionMetaInfo.m in Sources */,
 				1E49A4761612226D00463151 /* BITUpdateManager.m in Sources */,
@@ -1621,6 +1706,7 @@
 				E4B4DB7E17B435550099C67F /* BITAuthenticationViewController.m in Sources */,
 				1B87EFBE1B8D2EF50007C96B /* BITSession.m in Sources */,
 				1E49A4B2161222B900463151 /* BITHockeyBaseManager.m in Sources */,
+				1B330A931B98EDE5007844AB /* BITLocation.m in Sources */,
 				B27FBEFF1B9622700082406A /* BITPersistence.m in Sources */,
 				973EC8C018BE2B5B00DBFFBB /* BITBlurImageAnnotation.m in Sources */,
 				9760F6D018BB685600959B93 /* BITImageAnnotation.m in Sources */,
@@ -1630,6 +1716,8 @@
 				1B6852CA1B952BE900D5C387 /* BITBase.m in Sources */,
 				1E49A4CD161222B900463151 /* BITStoreButton.m in Sources */,
 				1E90FD7418EDB86400CF0417 /* BITCrashDetails.m in Sources */,
+				1B330A8D1B98E789007844AB /* BITUser.m in Sources */,
+				1B330A7B1B98E64A007844AB /* BITApplication.m in Sources */,
 				1E49A4D3161222B900463151 /* BITWebTableViewCell.m in Sources */,
 				1EB92E741955C38C0093C8B6 /* BITHockeyAttachment.m in Sources */,
 				E48A3DED17B3ED1C00924C3D /* BITAuthenticator.m in Sources */,
@@ -1686,14 +1774,19 @@
 				1EB617761B0A30FA0035A986 /* BITCrashManager.m in Sources */,
 				1EB617891B0A31510035A986 /* BITFeedbackMessageAttachment.m in Sources */,
 				1EB6178C1B0A31510035A986 /* BITFeedbackListViewCell.m in Sources */,
+				1B330A641B98E13C007844AB /* BITDevice.m in Sources */,
 				1EB6175F1B0A309F0035A986 /* BITHockeyBaseManager.m in Sources */,
 				1EB617811B0A312E0035A986 /* BITImageAnnotationViewController.m in Sources */,
+				1B330A881B98E6F7007844AB /* BITInternal.m in Sources */,
 				1B6852E91B95368800D5C387 /* BITDomain.m in Sources */,
 				1EB617871B0A31510035A986 /* BITBlurImageAnnotation.m in Sources */,
+				1B330A581B98DEB4007844AB /* BITEnvelope.m in Sources */,
 				1EB617941B0A31510035A986 /* BITStoreUpdateManager.m in Sources */,
+				1B330A821B98E6A2007844AB /* BITOperation.m in Sources */,
 				1EB6177F1B0A31230035A986 /* BITCrashReportTextFormatter.m in Sources */,
 				1B6852E31B95361D00D5C387 /* BITSessionStateData.m in Sources */,
 				1EB6178D1B0A31510035A986 /* BITFeedbackListViewController.m in Sources */,
+				1B330A5E1B98DFC7007844AB /* BITData.m in Sources */,
 				1EB617D01B0A344D0035A986 /* BITHockeyAppClient.m in Sources */,
 				1EB617641B0A30B10035A986 /* BITHockeyHelper.m in Sources */,
 				1EB617911B0A31510035A986 /* BITAppVersionMetaInfo.m in Sources */,
@@ -1704,6 +1797,7 @@
 				1EB617721B0A30E40035A986 /* BITAuthenticationViewController.m in Sources */,
 				1B87EFBF1B8D2EF50007C96B /* BITSession.m in Sources */,
 				1EB617851B0A313A0035A986 /* BITRectangleImageAnnotation.m in Sources */,
+				1B330A941B98EDE5007844AB /* BITLocation.m in Sources */,
 				B27FBF001B9622700082406A /* BITPersistence.m in Sources */,
 				1EB6177E1B0A31200035A986 /* BITCrashAttachment.m in Sources */,
 				1EB6176E1B0A30CF0035A986 /* BITWebTableViewCell.m in Sources */,
@@ -1713,6 +1807,8 @@
 				1B6852CB1B952BE900D5C387 /* BITBase.m in Sources */,
 				1EB617901B0A31510035A986 /* BITActivityIndicatorButton.m in Sources */,
 				1EB6178E1B0A31510035A986 /* BITFeedbackActivity.m in Sources */,
+				1B330A8E1B98E789007844AB /* BITUser.m in Sources */,
+				1B330A7C1B98E64A007844AB /* BITApplication.m in Sources */,
 				1EB617661B0A30B60035A986 /* BITKeychainUtils.m in Sources */,
 				1EB617CE1B0A34470035A986 /* BITHTTPOperation.m in Sources */,
 				1EB617741B0A30EE0035A986 /* BITAuthenticator.m in Sources */,
