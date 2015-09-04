@@ -11,7 +11,7 @@
 #import "BITEnvelope.h"
 #import "BITData.h"
 #import "BITDevice.h"
-#import "BITPersistence.h"
+#import "BITPersistencePrivate.h"
 
 static char *const BITDataItemsOperationsQueue = "com.microsoft.ApplicationInsights.senderQueue";
 char *BITSafeJsonEventsString;

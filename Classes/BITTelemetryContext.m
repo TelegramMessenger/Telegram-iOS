@@ -8,6 +8,7 @@
 #import "BITReachability.h"
 #import "BITOrderedDictionary.h"
 #import "BITPersistence.h"
+#import "BITPersistencePrivate.h"
 
 NSString *const kBITTelemetrySessionId = @"BITTelemetrySessionId";
 NSString *const kBITSessionAcquisitionTime = @"BITSessionAcquisitionTime";
