@@ -802,8 +802,8 @@
 			children = (
 				1B87EFC01B8D2F870007C96B /* Contract Files */,
 				1B87EFB31B8D0C540007C96B /* BITTelemetryManager.h */,
-				1B87EFB41B8D0C540007C96B /* BITTelemetryManager.m */,
 				1B87EFB71B8D0F800007C96B /* BITTelemetryManagerPrivate.h */,
+				1B87EFB41B8D0C540007C96B /* BITTelemetryManager.m */,
 				1B98D4571B98F6CA00B8000B /* BITReachability.h */,
 				1B98D4581B98F6CA00B8000B /* BITReachability.m */,
 				1B330A6E1B98E267007844AB /* BITTelemetryContext.h */,

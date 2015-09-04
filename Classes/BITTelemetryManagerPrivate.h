@@ -33,19 +33,32 @@
 #import "BITSessionState.h"
 
 @class BITChannel;
+@class BITTelemetryContext;
 @class BITSession;
+@class BITPersistence;
 
 @interface BITTelemetryManager ()
 
 /**
- *  Create a new channel instance by passing the channel instance to use for queuing metrics.
+ *  Create a new telemetry manager instance by passing the channel, the telemetry context, and persistence instance to use 
+ for processing metrics.
  */
-- (instancetype)initWithChannel:(BITChannel *)channel;
+- (instancetype)initWithChannel:(BITChannel *)channel telemetryContext:(BITTelemetryContext *)telemetryContext persistence:(BITPersistence *)persistence;
+
+/**
+ *  A channel for collecting new events before storing and sending them.
+ */
+@property (nonatomic, strong, readonly) BITPersistence *persistence;
 
 /**
  *  A channel for collecting new events before storing and sending them.
  */
 @property (nonatomic, strong, readonly) BITChannel *channel;
+
+/**
+ *  A telemetry context which is used to add meta info to events, before they're sent out.
+ */
+@property (nonatomic, strong, readonly) BITTelemetryContext *telemetryContext;
 
 /**
  *  A concurrent queue which creates and processes telemetry items.
