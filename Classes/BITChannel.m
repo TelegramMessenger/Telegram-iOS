@@ -2,16 +2,22 @@
 
 #if HOCKEYSDK_FEATURE_TELEMETRY
 
+#import "BITHockeyHelper.h"
 #import "HockeySDK.h"
 #import "BITTelemetryContext.h"
 #import "BITTelemetryData.h"
 #import "HockeySDKPrivate.h"
+#import "BITOrderedDictionary.h"
+#import "BITEnvelope.h"
+#import "BITData.h"
+#import "BITDevice.h"
 
 static char *const BITDataItemsOperationsQueue = "com.microsoft.ApplicationInsights.senderQueue";
 char *BITSafeJsonEventsString;
 
 NSInteger const defaultBatchInterval  = 20;
 NSInteger const defaultMaxBatchCount  = 50;
+static NSInteger const schemaVersion  = 2;
 
 @implementation BITChannel
 
@@ -91,10 +97,41 @@ static BITChannel *_sharedChannel = nil;
 #pragma mark - Envelope telemerty items
 
 - (BITOrderedDictionary *)dictionaryForTelemetryData:(BITTelemetryData *) telemetryData {
-  BITOrderedDictionary *dict = nil;
   
-  // TODO: Put telemetry data into envelope and convert to ordered dict
+  BITEnvelope *envelope = [self envelopeForTelemetryData:telemetryData];
+  BITOrderedDictionary *dict = [envelope serializeToDictionary];
   return dict;
+}
+
+- (BITEnvelope *)envelopeForTelemetryData:(BITTelemetryData *)telemetryData {
+  telemetryData.version = @(schemaVersion);
+  
+  BITData *data = [BITData new];
+  data.baseData = telemetryData;
+  data.baseType = telemetryData.dataTypeName;
+  
+  BITEnvelope *envelope = [BITEnvelope new];
+  envelope.appId = bit_mainBundleIdentifier();
+  envelope.appVer = _telemetryContext.application.version;
+  envelope.time = bit_utcDateString([NSDate date]);
+  envelope.iKey = _telemetryContext.instrumentationKey;
+  
+  BITDevice *deviceContext = _telemetryContext.device;
+  if (deviceContext.deviceId) {
+    envelope.deviceId = deviceContext.deviceId;
+  }
+  if (deviceContext.os) {
+    envelope.os = deviceContext.os;
+  }
+  if (deviceContext.osVersion) {
+    envelope.osVer = deviceContext.osVersion;
+  }
+  
+  envelope.tags = _telemetryContext.contextDictionary;
+  envelope.data = data;
+  envelope.name = telemetryData.envelopeTypeName;
+  
+  return envelope;
 }
 
 #pragma mark - Serialization Helper
