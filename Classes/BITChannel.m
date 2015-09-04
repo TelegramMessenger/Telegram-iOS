@@ -11,6 +11,7 @@
 #import "BITEnvelope.h"
 #import "BITData.h"
 #import "BITDevice.h"
+#import "BITPersistence.h"
 
 static char *const BITDataItemsOperationsQueue = "com.microsoft.ApplicationInsights.senderQueue";
 char *BITSafeJsonEventsString;
@@ -21,7 +22,7 @@ static NSInteger const schemaVersion  = 2;
 
 @implementation BITChannel
 
-static BITChannel *_sharedChannel = nil;
+@synthesize persistence = _persistence;
 
 #pragma mark - Initialisation
 
@@ -47,7 +48,7 @@ static BITChannel *_sharedChannel = nil;
 
 - (BOOL)isQueueBusy{
   
-  // TODO: Check file count
+  [self.persistence isFreeSpaceAvailable];
   return true;
 }
 
@@ -58,7 +59,7 @@ static BITChannel *_sharedChannel = nil;
   }
   
   NSData *bundle = [NSData dataWithBytes:BITSafeJsonEventsString length:strlen(BITSafeJsonEventsString)];
-  // TODO: Persist bundle
+  [self.persistence persistBundle:bundle];
   
   // Reset both, the async-signal-safe and item counter.
   [self resetQueue];
