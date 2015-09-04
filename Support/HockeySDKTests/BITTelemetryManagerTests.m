@@ -1,7 +1,6 @@
 #import <XCTest/XCTest.h>
 #import <OCMock/OCMock.h>
 #import "BITTestsDependencyInjection.h"
-#import "BITTelemetryManager.h"
 #import "BITTelemetryManagerPrivate.h"
 #import "BITHockeyBaseManagerPrivate.h"
 #import "BITSession.h"

@@ -47,9 +47,6 @@ NSUInteger const defaultFileCount = 50;
                                                                           options:NSDirectoryEnumerationSkipsHiddenFiles
                                                                             error:&error];
       _maxFileCountReached = fileNames.count >= _maxFileCount;
-    
-
-    
   }
   return self;
 }

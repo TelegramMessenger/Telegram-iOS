@@ -3,6 +3,7 @@
 #if HOCKEYSDK_FEATURE_TELEMETRY
 
 #import "BITTelemetryManager.h"
+#import "BITTelemetryContext.h"
 #import "BITTelemetryManagerPrivate.h"
 #import "BITHockeyHelper.h"
 #import "HockeySDKPrivate.h"
@@ -10,6 +11,8 @@
 #import "BITSession.h"
 #import "BITSessionState.h"
 #import "BITSessionStateData.h"
+#import "BITPersistence.h"
+#import "BITHockeyBaseManagerPrivate.h"
 
 static char *const kBITTelemetryEventQueue =
 "com.microsoft.ApplicationInsights.telemetryEventQueue";
@@ -24,7 +27,8 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
 }
 
 @synthesize channel = _channel;
-
+@synthesize telemetryContext = _telemetryContext;
+@synthesize persistence = _persistence;
 #pragma mark - Create & start instance
 
 - (instancetype)init {
@@ -35,9 +39,11 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
   return self;
 }
 
-- (instancetype)initWithChannel:(BITChannel *)channel{
+- (instancetype)initWithChannel:(BITChannel *)channel telemetryContext:(BITTelemetryContext *)telemetryContext persistence:(BITPersistence *)persistence {
   if((self = [self init])) {
     _channel = channel;
+    _telemetryContext = telemetryContext;
+    _persistence = persistence;
   }
   return self;
 }
@@ -137,9 +143,23 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
 
 - (BITChannel *)channel {
   if(!_channel){
-    _channel = [BITChannel new];
+    _channel = [[BITChannel alloc]initWithTelemetryContext:self.telemetryContext persistence:self.persistence];
   }
   return _channel;
+}
+
+- (BITTelemetryContext *)telemetryContext {
+  if(!_telemetryContext){
+    _telemetryContext = [[BITTelemetryContext alloc] initWithInstrumentationKey:self.appIdentifier persistence:self.persistence];
+  }
+  return _telemetryContext;
+}
+
+- (BITPersistence *)persistence {
+  if(!_persistence){
+    _persistence = [BITPersistence new];
+  }
+  return _persistence;
 }
 
 @end

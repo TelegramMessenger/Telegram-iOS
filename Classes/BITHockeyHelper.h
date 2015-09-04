@@ -63,3 +63,16 @@ UIImage *bit_imageWithContentsOfResolutionIndependentFile(NSString * path);
 UIImage *bit_imageNamed(NSString *imageName, NSString *bundleName);
 UIImage *bit_screenshot(void);
 UIImage *bit_appIcon(void);
+
+/* context helpers */
+NSString *bit_utcDateString(NSDate *date);
+NSString *bit_devicePlatform(void);
+NSString *bit_devicePlatform(void);
+NSString *bit_deviceType(void);
+NSString *bit_osVersionBuild(void);
+NSString *bit_osName(void);
+NSString *bit_deviceLocale(void);
+NSString *bit_deviceLanguage(void);
+NSString *bit_screenSize(void);
+NSString *bit_sdkVersion(void);
+NSString *bit_appVersion(void);

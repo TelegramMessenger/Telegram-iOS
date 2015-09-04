@@ -2,19 +2,27 @@
 
 #if HOCKEYSDK_FEATURE_TELEMETRY
 
+#import "BITHockeyHelper.h"
 #import "HockeySDK.h"
+#import "BITTelemetryContext.h"
 #import "BITTelemetryData.h"
 #import "HockeySDKPrivate.h"
+#import "BITOrderedDictionary.h"
+#import "BITEnvelope.h"
+#import "BITData.h"
+#import "BITDevice.h"
+#import "BITPersistence.h"
 
 static char *const BITDataItemsOperationsQueue = "com.microsoft.ApplicationInsights.senderQueue";
 char *BITSafeJsonEventsString;
 
 NSInteger const defaultBatchInterval  = 20;
 NSInteger const defaultMaxBatchCount  = 50;
+static NSInteger const schemaVersion  = 2;
 
 @implementation BITChannel
 
-static BITChannel *_sharedChannel = nil;
+@synthesize persistence = _persistence;
 
 #pragma mark - Initialisation
 
@@ -28,11 +36,19 @@ static BITChannel *_sharedChannel = nil;
   return self;
 }
 
+- (instancetype)initWithTelemetryContext:(BITTelemetryContext *)telemetryContext persistence:(BITPersistence *) persistence {
+  if(self = [self init]) {
+    _telemetryContext = telemetryContext;
+    _persistence = persistence;
+  }
+  return self;
+}
+
 #pragma mark - Queue management
 
 - (BOOL)isQueueBusy{
   
-  // TODO: Check file count
+  [self.persistence isFreeSpaceAvailable];
   return true;
 }
 
@@ -43,7 +59,7 @@ static BITChannel *_sharedChannel = nil;
   }
   
   NSData *bundle = [NSData dataWithBytes:BITSafeJsonEventsString length:strlen(BITSafeJsonEventsString)];
-  // TODO: Persist bundle
+  [self.persistence persistBundle:bundle];
   
   // Reset both, the async-signal-safe and item counter.
   [self resetQueue];
@@ -82,10 +98,41 @@ static BITChannel *_sharedChannel = nil;
 #pragma mark - Envelope telemerty items
 
 - (BITOrderedDictionary *)dictionaryForTelemetryData:(BITTelemetryData *) telemetryData {
-  BITOrderedDictionary *dict = nil;
   
-  // TODO: Put telemetry data into envelope and convert to ordered dict
+  BITEnvelope *envelope = [self envelopeForTelemetryData:telemetryData];
+  BITOrderedDictionary *dict = [envelope serializeToDictionary];
   return dict;
+}
+
+- (BITEnvelope *)envelopeForTelemetryData:(BITTelemetryData *)telemetryData {
+  telemetryData.version = @(schemaVersion);
+  
+  BITData *data = [BITData new];
+  data.baseData = telemetryData;
+  data.baseType = telemetryData.dataTypeName;
+  
+  BITEnvelope *envelope = [BITEnvelope new];
+  envelope.appId = bit_mainBundleIdentifier();
+  envelope.appVer = _telemetryContext.application.version;
+  envelope.time = bit_utcDateString([NSDate date]);
+  envelope.iKey = _telemetryContext.instrumentationKey;
+  
+  BITDevice *deviceContext = _telemetryContext.device;
+  if (deviceContext.deviceId) {
+    envelope.deviceId = deviceContext.deviceId;
+  }
+  if (deviceContext.os) {
+    envelope.os = deviceContext.os;
+  }
+  if (deviceContext.osVersion) {
+    envelope.osVer = deviceContext.osVersion;
+  }
+  
+  envelope.tags = _telemetryContext.contextDictionary;
+  envelope.data = data;
+  envelope.name = telemetryData.envelopeTypeName;
+  
+  return envelope;
 }
 
 #pragma mark - Serialization Helper
@@ -155,7 +202,7 @@ void bit_resetSafeJsonStream(char **string) {
   }
   
   self.timerSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, self.dataItemsOperations);
-  dispatch_source_set_timer(self.timerSource, dispatch_walltime(NULL, NSEC_PER_SEC * defaultMaxBatchCount), 1ull * NSEC_PER_SEC, 1ull * NSEC_PER_SEC);
+  dispatch_source_set_timer(self.timerSource, dispatch_walltime(NULL, NSEC_PER_SEC * defaultBatchInterval), 1ull * NSEC_PER_SEC, 1ull * NSEC_PER_SEC);
   dispatch_source_set_event_handler(self.timerSource, ^{
     
     // On completion: Reset timer and persist items
