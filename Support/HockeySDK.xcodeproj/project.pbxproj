@@ -113,6 +113,24 @@
 		1B98D45B1B98F6CA00B8000B /* BITReachability.h in Headers */ = {isa = PBXBuildFile; fileRef = 1B98D4571B98F6CA00B8000B /* BITReachability.h */; };
 		1B98D45C1B98F6CA00B8000B /* BITReachability.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D4581B98F6CA00B8000B /* BITReachability.m */; };
 		1B98D45D1B98F6CA00B8000B /* BITReachability.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D4581B98F6CA00B8000B /* BITReachability.m */; };
+		1B98D4831B9A1B6F00B8000B /* BITApplicationTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D47A1B9A1B6F00B8000B /* BITApplicationTests.m */; };
+		1B98D4841B9A1B6F00B8000B /* BITApplicationTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D47A1B9A1B6F00B8000B /* BITApplicationTests.m */; };
+		1B98D4851B9A1B6F00B8000B /* BITBaseTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D47B1B9A1B6F00B8000B /* BITBaseTests.m */; };
+		1B98D4861B9A1B6F00B8000B /* BITBaseTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D47B1B9A1B6F00B8000B /* BITBaseTests.m */; };
+		1B98D4871B9A1B6F00B8000B /* BITDataTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D47C1B9A1B6F00B8000B /* BITDataTests.m */; };
+		1B98D4881B9A1B6F00B8000B /* BITDataTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D47C1B9A1B6F00B8000B /* BITDataTests.m */; };
+		1B98D4891B9A1B6F00B8000B /* BITDeviceTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D47D1B9A1B6F00B8000B /* BITDeviceTests.m */; };
+		1B98D48A1B9A1B6F00B8000B /* BITDeviceTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D47D1B9A1B6F00B8000B /* BITDeviceTests.m */; };
+		1B98D48B1B9A1B6F00B8000B /* BITDomainTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D47E1B9A1B6F00B8000B /* BITDomainTests.m */; };
+		1B98D48C1B9A1B6F00B8000B /* BITDomainTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D47E1B9A1B6F00B8000B /* BITDomainTests.m */; };
+		1B98D48D1B9A1B6F00B8000B /* BITInternalTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D47F1B9A1B6F00B8000B /* BITInternalTests.m */; };
+		1B98D48E1B9A1B6F00B8000B /* BITInternalTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D47F1B9A1B6F00B8000B /* BITInternalTests.m */; };
+		1B98D48F1B9A1B6F00B8000B /* BITLocationTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D4801B9A1B6F00B8000B /* BITLocationTests.m */; };
+		1B98D4901B9A1B6F00B8000B /* BITLocationTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D4801B9A1B6F00B8000B /* BITLocationTests.m */; };
+		1B98D4911B9A1B6F00B8000B /* BITOperationTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D4811B9A1B6F00B8000B /* BITOperationTests.m */; };
+		1B98D4921B9A1B6F00B8000B /* BITOperationTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D4811B9A1B6F00B8000B /* BITOperationTests.m */; };
+		1B98D4931B9A1B6F00B8000B /* BITUserTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D4821B9A1B6F00B8000B /* BITUserTests.m */; };
+		1B98D4941B9A1B6F00B8000B /* BITUserTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D4821B9A1B6F00B8000B /* BITUserTests.m */; };
 		1BD33EAA1B950BC200C3368B /* BITSessionTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1BD33EA91B950BC200C3368B /* BITSessionTests.m */; };
 		1BD33EAB1B950BC200C3368B /* BITSessionTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1BD33EA91B950BC200C3368B /* BITSessionTests.m */; };
 		1BD33EAF1B950DC700C3368B /* BITChannel.h in Headers */ = {isa = PBXBuildFile; fileRef = 1BD33EAD1B950DC700C3368B /* BITChannel.h */; };
@@ -512,6 +530,15 @@
 		1B87EFC81B8D30AC0007C96B /* BITOrderedDictionary.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITOrderedDictionary.m; sourceTree = "<group>"; };
 		1B98D4571B98F6CA00B8000B /* BITReachability.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITReachability.h; sourceTree = "<group>"; };
 		1B98D4581B98F6CA00B8000B /* BITReachability.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITReachability.m; sourceTree = "<group>"; };
+		1B98D47A1B9A1B6F00B8000B /* BITApplicationTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITApplicationTests.m; sourceTree = "<group>"; };
+		1B98D47B1B9A1B6F00B8000B /* BITBaseTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITBaseTests.m; sourceTree = "<group>"; };
+		1B98D47C1B9A1B6F00B8000B /* BITDataTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITDataTests.m; sourceTree = "<group>"; };
+		1B98D47D1B9A1B6F00B8000B /* BITDeviceTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITDeviceTests.m; sourceTree = "<group>"; };
+		1B98D47E1B9A1B6F00B8000B /* BITDomainTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITDomainTests.m; sourceTree = "<group>"; };
+		1B98D47F1B9A1B6F00B8000B /* BITInternalTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITInternalTests.m; sourceTree = "<group>"; };
+		1B98D4801B9A1B6F00B8000B /* BITLocationTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITLocationTests.m; sourceTree = "<group>"; };
+		1B98D4811B9A1B6F00B8000B /* BITOperationTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITOperationTests.m; sourceTree = "<group>"; };
+		1B98D4821B9A1B6F00B8000B /* BITUserTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITUserTests.m; sourceTree = "<group>"; };
 		1BD33EA91B950BC200C3368B /* BITSessionTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITSessionTests.m; sourceTree = "<group>"; };
 		1BD33EAD1B950DC700C3368B /* BITChannel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITChannel.h; sourceTree = "<group>"; };
 		1BD33EAE1B950DC700C3368B /* BITChannel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITChannel.m; sourceTree = "<group>"; };
@@ -854,6 +881,22 @@
 			name = "Contract Files";
 			sourceTree = "<group>";
 		};
+		1B98D4641B9A183500B8000B /* Contract Files */ = {
+			isa = PBXGroup;
+			children = (
+				1B98D47A1B9A1B6F00B8000B /* BITApplicationTests.m */,
+				1B98D47B1B9A1B6F00B8000B /* BITBaseTests.m */,
+				1B98D47C1B9A1B6F00B8000B /* BITDataTests.m */,
+				1B98D47D1B9A1B6F00B8000B /* BITDeviceTests.m */,
+				1B98D47E1B9A1B6F00B8000B /* BITDomainTests.m */,
+				1B98D47F1B9A1B6F00B8000B /* BITInternalTests.m */,
+				1B98D4801B9A1B6F00B8000B /* BITLocationTests.m */,
+				1B98D4811B9A1B6F00B8000B /* BITOperationTests.m */,
+				1B98D4821B9A1B6F00B8000B /* BITUserTests.m */,
+			);
+			name = "Contract Files";
+			sourceTree = "<group>";
+		};
 		1E5955A415B71BDC00A03429 /* Images */ = {
 			isa = PBXGroup;
 			children = (
@@ -900,6 +943,7 @@
 		1E5A459616F0DFC200B55C04 /* HockeySDKTests */ = {
 			isa = PBXGroup;
 			children = (
+				1B98D4641B9A183500B8000B /* Contract Files */,
 				1EA1170216F53B49001C015C /* Fixtures */,
 				1E5A459716F0DFC200B55C04 /* Supporting Files */,
 				1E5A459D16F0DFC200B55C04 /* BITStoreUpdateManagerTests.m */,
@@ -1773,17 +1817,26 @@
 			files = (
 				1B460AA41B8E5D910000C344 /* BITTestsDependencyInjection.m in Sources */,
 				1B460AB61B8E72FD0000C344 /* BITTelemetryManagerTests.m in Sources */,
+				1B98D4851B9A1B6F00B8000B /* BITBaseTests.m in Sources */,
 				1E5A459E16F0DFC200B55C04 /* BITStoreUpdateManagerTests.m in Sources */,
 				1E566D071A275C4C0070F514 /* BITCrashReportTextFormatterTests.m in Sources */,
 				1EFF03E517F2485500A5F13C /* BITCrashManagerTests.m in Sources */,
 				E40E0B0917DA19DC005E38C1 /* BITHockeyAppClientTests.m in Sources */,
 				1E70A23617F31B82001BB32D /* BITHockeyHelperTests.m in Sources */,
+				1B98D4871B9A1B6F00B8000B /* BITDataTests.m in Sources */,
 				E48A3DEF17B3EFF100924C3D /* BITAuthenticatorTests.m in Sources */,
 				B274DDB31B966914007F2B9E /* BITPersistenceTests.m in Sources */,
 				1EA1170716F53B91001C015C /* BITTestHelper.m in Sources */,
+				1B98D4911B9A1B6F00B8000B /* BITOperationTests.m in Sources */,
+				1B98D48F1B9A1B6F00B8000B /* BITLocationTests.m in Sources */,
+				1B98D4891B9A1B6F00B8000B /* BITDeviceTests.m in Sources */,
 				1E61CCAF18E0585A00A5E38E /* BITFeedbackManagerTests.m in Sources */,
 				1BD33EAA1B950BC200C3368B /* BITSessionTests.m in Sources */,
 				E4507E4317F0658F00171A0D /* BITKeychainUtilsTests.m in Sources */,
+				1B98D4931B9A1B6F00B8000B /* BITUserTests.m in Sources */,
+				1B98D48B1B9A1B6F00B8000B /* BITDomainTests.m in Sources */,
+				1B98D48D1B9A1B6F00B8000B /* BITInternalTests.m in Sources */,
+				1B98D4831B9A1B6F00B8000B /* BITApplicationTests.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1859,17 +1912,26 @@
 			files = (
 				1B460AA51B8E5D910000C344 /* BITTestsDependencyInjection.m in Sources */,
 				1B460AB71B8E72FD0000C344 /* BITTelemetryManagerTests.m in Sources */,
+				1B98D4861B9A1B6F00B8000B /* BITBaseTests.m in Sources */,
 				1EB617B31B0A31D30035A986 /* BITFeedbackManagerTests.m in Sources */,
 				1EB617B81B0A31DB0035A986 /* BITTestHelper.m in Sources */,
 				1EB617B71B0A31D30035A986 /* BITCrashReportTextFormatterTests.m in Sources */,
 				1EB617B51B0A31D30035A986 /* BITKeychainUtilsTests.m in Sources */,
 				1EB617B01B0A31D30035A986 /* BITStoreUpdateManagerTests.m in Sources */,
+				1B98D4881B9A1B6F00B8000B /* BITDataTests.m in Sources */,
 				1EB617B41B0A31D30035A986 /* BITHockeyAppClientTests.m in Sources */,
 				B274DDB41B96691E007F2B9E /* BITPersistenceTests.m in Sources */,
 				1EB617D71B0A387B0035A986 /* BITAuthenticatorTests.m in Sources */,
+				1B98D4921B9A1B6F00B8000B /* BITOperationTests.m in Sources */,
+				1B98D4901B9A1B6F00B8000B /* BITLocationTests.m in Sources */,
+				1B98D48A1B9A1B6F00B8000B /* BITDeviceTests.m in Sources */,
 				1EB617B61B0A31D30035A986 /* BITHockeyHelperTests.m in Sources */,
 				1BD33EAB1B950BC200C3368B /* BITSessionTests.m in Sources */,
 				1EB617B21B0A31D30035A986 /* BITCrashManagerTests.m in Sources */,
+				1B98D4941B9A1B6F00B8000B /* BITUserTests.m in Sources */,
+				1B98D48C1B9A1B6F00B8000B /* BITDomainTests.m in Sources */,
+				1B98D48E1B9A1B6F00B8000B /* BITInternalTests.m in Sources */,
+				1B98D4841B9A1B6F00B8000B /* BITApplicationTests.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
