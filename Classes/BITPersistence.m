@@ -196,7 +196,7 @@ NSUInteger const defaultFileCount = 50;
 - (void)createDirectoryStructureIfNeeded {
   //Application Support Dir
   NSFileManager *fileManager = [NSFileManager defaultManager];
-  NSURL *appSupportURL = [[fileManager URLsForDirectory:NSApplicationDirectory inDomains:NSUserDomainMask] lastObject];
+  NSURL *appSupportURL = [[fileManager URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask] lastObject];
   if(appSupportURL) {
     NSError *error = nil;
     //App Support and Telemetry Directory
