@@ -131,6 +131,10 @@
 		1B98D4921B9A1B6F00B8000B /* BITOperationTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D4811B9A1B6F00B8000B /* BITOperationTests.m */; };
 		1B98D4931B9A1B6F00B8000B /* BITUserTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D4821B9A1B6F00B8000B /* BITUserTests.m */; };
 		1B98D4941B9A1B6F00B8000B /* BITUserTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D4821B9A1B6F00B8000B /* BITUserTests.m */; };
+		1B98D4961B9A1CFD00B8000B /* BITReachabilityTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D4951B9A1CFD00B8000B /* BITReachabilityTests.m */; };
+		1B98D4971B9A1CFD00B8000B /* BITReachabilityTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1B98D4951B9A1CFD00B8000B /* BITReachabilityTests.m */; };
+		1B98D4991B9A1D9F00B8000B /* CoreTelephony.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1B98D4981B9A1D9F00B8000B /* CoreTelephony.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
+		1B98D49A1B9A1DB000B8000B /* CoreTelephony.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1B98D4981B9A1D9F00B8000B /* CoreTelephony.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		1BD33EAA1B950BC200C3368B /* BITSessionTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1BD33EA91B950BC200C3368B /* BITSessionTests.m */; };
 		1BD33EAB1B950BC200C3368B /* BITSessionTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1BD33EA91B950BC200C3368B /* BITSessionTests.m */; };
 		1BD33EAF1B950DC700C3368B /* BITChannel.h in Headers */ = {isa = PBXBuildFile; fileRef = 1BD33EAD1B950DC700C3368B /* BITChannel.h */; };
@@ -539,6 +543,8 @@
 		1B98D4801B9A1B6F00B8000B /* BITLocationTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITLocationTests.m; sourceTree = "<group>"; };
 		1B98D4811B9A1B6F00B8000B /* BITOperationTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITOperationTests.m; sourceTree = "<group>"; };
 		1B98D4821B9A1B6F00B8000B /* BITUserTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITUserTests.m; sourceTree = "<group>"; };
+		1B98D4951B9A1CFD00B8000B /* BITReachabilityTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITReachabilityTests.m; sourceTree = "<group>"; };
+		1B98D4981B9A1D9F00B8000B /* CoreTelephony.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreTelephony.framework; path = System/Library/Frameworks/CoreTelephony.framework; sourceTree = SDKROOT; };
 		1BD33EA91B950BC200C3368B /* BITSessionTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITSessionTests.m; sourceTree = "<group>"; };
 		1BD33EAD1B950DC700C3368B /* BITChannel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITChannel.h; sourceTree = "<group>"; };
 		1BD33EAE1B950DC700C3368B /* BITChannel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITChannel.m; sourceTree = "<group>"; };
@@ -763,6 +769,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1B98D49A1B9A1DB000B8000B /* CoreTelephony.framework in Frameworks */,
 				97CC11FA1917C0390028768F /* MobileCoreServices.framework in Frameworks */,
 				97CC11F71917AB7C0028768F /* QuickLook.framework in Frameworks */,
 				1EA1170016F4D32C001C015C /* libHockeySDK.a in Frameworks */,
@@ -796,6 +803,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1B98D4991B9A1D9F00B8000B /* CoreTelephony.framework in Frameworks */,
 				1EB617D51B0A36AE0035A986 /* Foundation.framework in Frameworks */,
 				1EB6174A1B0A30480035A986 /* HockeySDK.framework in Frameworks */,
 				1EB617CC1B0A34040035A986 /* CrashReporter.framework in Frameworks */,
@@ -954,6 +962,7 @@
 				E4507E4217F0658F00171A0D /* BITKeychainUtilsTests.m */,
 				1E70A23517F31B82001BB32D /* BITHockeyHelperTests.m */,
 				1E566D061A275C4C0070F514 /* BITCrashReportTextFormatterTests.m */,
+				1B98D4951B9A1CFD00B8000B /* BITReachabilityTests.m */,
 				1BD33EA91B950BC200C3368B /* BITSessionTests.m */,
 				1B460AB31B8E72FD0000C344 /* BITTelemetryManagerTests.m */,
 				B274DDB21B966914007F2B9E /* BITPersistenceTests.m */,
@@ -1215,6 +1224,7 @@
 		E400561C148D79B500EB22B9 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				1B98D4981B9A1D9F00B8000B /* CoreTelephony.framework */,
 				1EB617C81B0A33140035A986 /* UIKit.framework */,
 				1EB617C61B0A330C0035A986 /* SystemConfiguration.framework */,
 				1EB617C41B0A33020035A986 /* Security.framework */,
@@ -1816,6 +1826,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1B460AA41B8E5D910000C344 /* BITTestsDependencyInjection.m in Sources */,
+				1B98D4961B9A1CFD00B8000B /* BITReachabilityTests.m in Sources */,
 				1B460AB61B8E72FD0000C344 /* BITTelemetryManagerTests.m in Sources */,
 				1B98D4851B9A1B6F00B8000B /* BITBaseTests.m in Sources */,
 				1E5A459E16F0DFC200B55C04 /* BITStoreUpdateManagerTests.m in Sources */,
@@ -1911,6 +1922,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1B460AA51B8E5D910000C344 /* BITTestsDependencyInjection.m in Sources */,
+				1B98D4971B9A1CFD00B8000B /* BITReachabilityTests.m in Sources */,
 				1B460AB71B8E72FD0000C344 /* BITTelemetryManagerTests.m in Sources */,
 				1B98D4861B9A1B6F00B8000B /* BITBaseTests.m in Sources */,
 				1EB617B31B0A31D30035A986 /* BITFeedbackManagerTests.m in Sources */,
