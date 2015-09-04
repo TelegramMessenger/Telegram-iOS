@@ -416,7 +416,7 @@ This feature can be disabled manually as follows:
 ```objectivec
 [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
-[[BITHockeyManager sharedHockeyManager] setDisableUpdateManager: YES]; //disable crash reporting
+[[BITHockeyManager sharedHockeyManager] setDisableUpdateManager: YES]; //disable auto update
 
 [[BITHockeyManager sharedHockeyManager] startManager];
 ```
