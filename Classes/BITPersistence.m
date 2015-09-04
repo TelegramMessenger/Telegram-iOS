@@ -10,6 +10,7 @@
 NSString *const kTelemetry = @"Telemetry";
 NSString *const kMetaData = @"MetaData";
 NSString *const kFileBaseString = @"hockey-app-bundle-";
+NSString *const kFileBaseStringMeta = @"metadata";
 NSString *const kTelemetryDirectoryPath = @"com.microsoft.HockeyApp/Telemetry/";
 NSString *const kMetaDataDirectoryPath = @"com.microsoft.HockeyApp/MetaData/";
 
@@ -118,9 +119,13 @@ NSUInteger const defaultFileCount = 50;
   return bundle;
 }
 
-- (NSDictionary *)metaData {
+- (id)metaData {
   NSString *path = [self fileURLForType:BITPersistenceTypeMetaData];
-  return [self bundleAtPath:path];
+  id bundle = nil;
+  if(path && [path rangeOfString:kFileBaseStringMeta].location != NSNotFound) {
+    bundle = [NSKeyedUnarchiver unarchiveObjectWithFile:path];
+  }
+  return bundle;
 }
 
 - (NSData *)dataAtPath:(NSString *)path {
@@ -170,16 +175,19 @@ NSUInteger const defaultFileCount = 50;
 - (NSString *)fileURLForType:(BITPersistenceType)type {
   NSString *appSupportPath = [NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES) lastObject];
 
-  NSString *uuid = bit_UUID();
-  NSString *fileName = [NSString stringWithFormat:@"%@%@", kFileBaseString, uuid];
+  
+  NSString *fileName = nil;
   NSString *filePath;
 
   switch(type) {
     case BITPersistenceTypeMetaData: {
+      fileName = kFileBaseStringMeta;
       filePath = [appSupportPath stringByAppendingPathComponent:kMetaDataDirectoryPath];
       break;
     };
     default: {
+      NSString *uuid = bit_UUID();
+      fileName = [NSString stringWithFormat:@"%@%@", kFileBaseString, uuid];
       filePath = [appSupportPath stringByAppendingPathComponent:kTelemetryDirectoryPath];
       break;
     };
