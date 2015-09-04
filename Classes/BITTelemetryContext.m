@@ -10,8 +10,7 @@
 #import "BITPersistence.h"
 #import "BITPersistencePrivate.h"
 
-NSString *const kBITTelemetrySessionId = @"BITTelemetrySessionId";
-NSString *const kBITSessionAcquisitionTime = @"BITSessionAcquisitionTime";
+NSString *const kBITUserMetaData = @"BITUserMetaData";
 
 static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQueue";
 
@@ -54,14 +53,10 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
     
     BITOperation *operationContext = [BITOperation new];
     
-    NSMutableDictionary *restoredMetaData = [[_persistence metaData] mutableCopy];
-    _metaData = restoredMetaData ?: @{}.mutableCopy;
-    _metaData[@"users"] = restoredMetaData[@"users"] ?: @{}.mutableCopy;
-    
-    BITUser *userContext = [self userForDate:[NSDate date]];
+    BITUser *userContext = [self loadUser];
     if (!userContext) {
       userContext = [self newUser];
-      [self addUser:userContext forDate:[NSDate date]];
+      [self saveUser:userContext];
     }
     
     BITLocation *locationContext = [BITLocation new];
@@ -94,54 +89,15 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
   });
 }
 
-- (void)addUser:(BITUser *)user forDate:(NSDate *)date {
-  NSString *timestamp = [self unixTimestampFromDate:date ?: [NSDate date]];
-  
-  __weak typeof(self) weakSelf = self;
-  dispatch_sync(self.operationsQueue, ^{
-    typeof(self) strongSelf = weakSelf;
-    NSMutableDictionary *users = strongSelf.metaData[@"users"];
-    users[timestamp] = user;
-    [self.persistence persistMetaData:strongSelf.metaData];
-  });
+- (void)saveUser:(BITUser *)user{
+  NSDictionary *userMetaData = @{kBITUserMetaData : user};
+  [self.persistence persistMetaData:userMetaData];
 }
 
-- (BITUser *)userForDate:(NSDate *)date {
-  NSString *timestamp = [self unixTimestampFromDate:date];
-  NSMutableDictionary *users = self.metaData[@"users"];
-  
-  __block BITUser *user = nil;
-  
-  __weak typeof(self) weakSelf = self;
-  dispatch_sync(self.operationsQueue, ^{
-    typeof(self) strongSelf = weakSelf;
-    
-    NSString *userKey = [strongSelf keyForTimestamp:timestamp inDictionary:users];
-    user = users[userKey];
-  });
-  
+- (BITUser *)loadUser{
+  NSDictionary *metaData =[self.persistence metaData];
+  BITUser *user = [metaData objectForKey:kBITUserMetaData];
   return user;
-}
-
-- (NSString *)unixTimestampFromDate:(NSDate *)date {
-  return [NSString stringWithFormat:@"%ld", (time_t) [date timeIntervalSince1970]];
-}
-
-- (NSString *)keyForTimestamp:(NSString *)timestamp inDictionary:(NSDictionary *)dict {
-  for(NSString *key in [self sortedKeysOfDictionay:dict]) {
-    if([timestamp doubleValue] >= [key doubleValue]) {
-      return key;
-    }
-  }
-  return nil;
-}
-
-- (NSArray *)sortedKeysOfDictionay:(NSDictionary *)dict {
-  NSMutableArray *keys = [[dict allKeys] mutableCopy];
-  NSArray *sortedArray = [keys sortedArrayUsingComparator:^(id a, id b) {
-    return [b compare:a options:NSNumericSearch];
-  }];
-  return sortedArray;
 }
 
 #pragma mark - Network

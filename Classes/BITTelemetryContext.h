@@ -23,11 +23,6 @@ FOUNDATION_EXPORT NSString *const kBITApplicationWasLaunched;
 @interface BITTelemetryContext : NSObject
 
 /**
- *  A Dictionary which holds content of property list in memory.
- */
-@property (nonatomic, strong) NSMutableDictionary *metaData;
-
-/**
  *  The instrumentation key of the app.
  */
 @property(nonatomic, strong) BITPersistence *persistence;
