@@ -17,24 +17,24 @@
 NS_ASSUME_NONNULL_BEGIN
 
 FOUNDATION_EXPORT NSString *const kBITApplicationWasLaunched;
+
 /**
  *  Context object which contains information about the device, user, session etc.
  */
 @interface BITTelemetryContext : NSObject
 
+///-----------------------------------------------------------------------------
+/// @name Initialisation
+///-----------------------------------------------------------------------------
+
 /**
- *  The instrumentation key of the app.
  */
 @property(nonatomic, strong) BITPersistence *persistence;
 
 /**
  *  The instrumentation key of the app.
  */
-@property(nonatomic, copy) NSString *instrumentationKey;
-
-///-----------------------------------------------------------------------------
-/// @name Initialisation
-///-----------------------------------------------------------------------------
+@property(nonatomic, copy) NSString *appIdentifier;
 
 /**
  *  A queue which makes array operations thread safe.
@@ -79,12 +79,12 @@ FOUNDATION_EXPORT NSString *const kBITApplicationWasLaunched;
 /**
  *  Initializes a telemetry context.
  *
- *  @param instrumentationKey the instrumentation key of the app.
+ *  @param appIdentifier the appIdentifier of the app
  *  @param persistence the persistence used to save and load metadata
  *
  *  @return the telemetry context
  */
-- (instancetype)initWithInstrumentationKey:(NSString *)instrumentationKey persistence:(BITPersistence *)persistence;
+- (instancetype)initWithAppIdentifier:(NSString *)appIdentifier persistence:(BITPersistence *)persistence;
 
 ///-----------------------------------------------------------------------------
 /// @name Network status

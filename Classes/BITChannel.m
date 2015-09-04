@@ -115,7 +115,7 @@ static NSInteger const schemaVersion  = 2;
   envelope.appId = bit_mainBundleIdentifier();
   envelope.appVer = _telemetryContext.application.version;
   envelope.time = bit_utcDateString([NSDate date]);
-  envelope.iKey = _telemetryContext.instrumentationKey;
+  envelope.iKey = _telemetryContext.appIdentifier;
   
   BITDevice *deviceContext = _telemetryContext.device;
   if (deviceContext.deviceId) {

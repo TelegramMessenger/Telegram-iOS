@@ -137,13 +137,9 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
 #pragma mark - Track telemetry
 
 - (void)trackSessionWithState:(BITSessionState) state {
-  __weak typeof(self) weakSelf = self;
-  dispatch_async(_telemetryEventQueue, ^{
-    typeof(self) strongSelf = weakSelf;
-    BITSessionStateData *sessionStateData = [BITSessionStateData new];
-    sessionStateData.state = state;
-    [[strongSelf channel] enqueueTelemetryItem:sessionStateData];
-  });
+  BITSessionStateData *sessionStateData = [BITSessionStateData new];
+  sessionStateData.state = state;
+  [self.channel enqueueTelemetryItem:sessionStateData];
 }
 
 #pragma mark - Custom getter
@@ -157,7 +153,7 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
 
 - (BITTelemetryContext *)telemetryContext {
   if(!_telemetryContext){
-    _telemetryContext = [[BITTelemetryContext alloc] initWithInstrumentationKey:self.appIdentifier persistence:self.persistence];
+    _telemetryContext = [[BITTelemetryContext alloc] initWithAppIdentifier:self.appIdentifier persistence:self.persistence];
   }
   return _telemetryContext;
 }

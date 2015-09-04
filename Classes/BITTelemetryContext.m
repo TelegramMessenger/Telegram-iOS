@@ -16,7 +16,7 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
 
 @implementation BITTelemetryContext
 
-@synthesize instrumentationKey = _instrumentationKey;
+@synthesize appIdentifier = _appIdentifier;
 @synthesize persistence = _persistence;
 
 #pragma mark - Initialisation
@@ -29,11 +29,11 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
   return self;
 }
       
-- (instancetype)initWithInstrumentationKey:(NSString *)instrumentationKey persistence:(BITPersistence *)persistence {
+- (instancetype)initWithAppIdentifier:(NSString *)appIdentifier persistence:(BITPersistence *)persistence {
   
   if ((self = [self init])) {
     _persistence = persistence;
-    _instrumentationKey = instrumentationKey;
+    _appIdentifier = appIdentifier;
     BITDevice *deviceContext = [BITDevice new];
     deviceContext.model = bit_devicePlatform();
     deviceContext.type = bit_deviceType();
@@ -115,18 +115,18 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
 
 #pragma mark - Getter/Setter properties
 
-- (NSString *)instrumentationKey {
+- (NSString *)appIdentifier {
   __block NSString *tmp;
   dispatch_sync(_operationsQueue, ^{
-    tmp = _instrumentationKey;
+    tmp = _appIdentifier;
   });
   return tmp;
 }
 
-- (void)setInstrumentationKey:(NSString *)instrumentationKey {
-  NSString* tmp = [instrumentationKey copy];
+- (void)setAppIdentifier:(NSString *)appIdentifier {
+  NSString* tmp = [appIdentifier copy];
   dispatch_barrier_async(_operationsQueue, ^{
-    _instrumentationKey = tmp;
+    _appIdentifier = tmp;
   });
 }
 
