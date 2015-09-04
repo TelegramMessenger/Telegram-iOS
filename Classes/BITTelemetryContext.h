@@ -155,6 +155,14 @@ FOUNDATION_EXPORT NSString *const kBITApplicationWasLaunched;
 
 - (void)setSessionId:(NSString *)sessionId;
 
+- (NSString *)isFirstSession;
+
+- (void)setIsFirstSession:(NSString *)isFirstSession;
+
+- (NSString *)isNewSession;
+
+- (void)setIsNewSession:(NSString *)isNewSession;
+
 - (NSString *)osVersion;
 
 - (void)setOsVersion:(NSString *)osVersion;

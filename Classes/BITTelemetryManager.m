@@ -29,6 +29,7 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
 @synthesize channel = _channel;
 @synthesize telemetryContext = _telemetryContext;
 @synthesize persistence = _persistence;
+
 #pragma mark - Create & start instance
 
 - (instancetype)init {
@@ -107,11 +108,17 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
 - (void)startNewSession {
   NSString *newSessionId = bit_UUID();
   BITSession *newSession = [self createNewSessionWithId:newSessionId];
-  //TODO: Update context
+  __weak typeof(self) weakSelf = self;
+  dispatch_async(_telemetryEventQueue, ^{
+    typeof(self) strongSelf = weakSelf;
+    [strongSelf.telemetryContext setSessionId:newSession.sessionId];
+    [strongSelf.telemetryContext setIsFirstSession:newSession.isFirst];
+    [strongSelf.telemetryContext setIsNewSession:newSession.isNew];
+  });
   
   [self trackSessionWithState:BITSessionState_start];
 }
-
+å
 - (BITSession *)createNewSessionWithId:(NSString *)sessionId {
   BITSession *session = [BITSession new];
   session.sessionId = sessionId;

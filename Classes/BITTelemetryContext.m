@@ -324,6 +324,36 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
   });
 }
 
+- (NSString *)isFirstSession {
+  __block NSString *tmp;
+  dispatch_sync(_operationsQueue, ^{
+    tmp = _session.isFirst;
+  });
+  return tmp;
+}
+
+- (void)setIsFirstSession:(NSString *)isFirstSession {
+  NSString* tmp = [isFirstSession copy];
+  dispatch_barrier_async(_operationsQueue, ^{
+    _session.isFirst = tmp;
+  });
+}
+
+- (NSString *)isNewSession {
+  __block NSString *tmp;
+  dispatch_sync(_operationsQueue, ^{
+    tmp = _session.isNew;
+  });
+  return tmp;
+}
+
+- (void)setIsNewSession:(NSString *)isNewSession {
+  NSString* tmp = [isNewSession copy];
+  dispatch_barrier_async(_operationsQueue, ^{
+    _session.isNew = tmp;
+  });
+}
+
 - (NSString *)osVersion {
   __block NSString *tmp;
   dispatch_sync(_operationsQueue, ^{
