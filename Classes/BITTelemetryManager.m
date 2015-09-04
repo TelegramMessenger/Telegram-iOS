@@ -114,9 +114,8 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
     [strongSelf.telemetryContext setSessionId:newSession.sessionId];
     [strongSelf.telemetryContext setIsFirstSession:newSession.isFirst];
     [strongSelf.telemetryContext setIsNewSession:newSession.isNew];
+    [strongSelf trackSessionWithState:BITSessionState_start];
   });
-  
-  [self trackSessionWithState:BITSessionState_start];
 }
 
 - (BITSession *)createNewSessionWithId:(NSString *)sessionId {
