@@ -4,6 +4,9 @@
 #import "BITTelemetryManagerPrivate.h"
 #import "BITHockeyBaseManagerPrivate.h"
 #import "BITSession.h"
+#import "BITChannel.h"
+#import "BITTelemetryContext.h"
+#import "BITSessionStateData.h"
 
 #define HC_SHORTHAND
 #import <OCHamcrestIOS/OCHamcrestIOS.h>
@@ -33,6 +36,22 @@
   XCTAssertNotNil(self.sut, @"Should not be nil.");
 }
 
+- (void)testDependenciesAreCreatedCorrectly {
+  self.sut = [BITTelemetryManager new];
+  
+  BITPersistence *persistence = self.sut.persistence;
+  XCTAssertNotNil(persistence);
+  
+  BITTelemetryContext *context = self.sut.telemetryContext;
+  XCTAssertNotNil(persistence);
+  XCTAssertEqualObjects(persistence, context.persistence);
+  
+  BITChannel *channel = self.sut.channel;
+  XCTAssertNotNil(persistence);
+  XCTAssertEqualObjects(persistence, channel.persistence);
+  XCTAssertEqualObjects(context, channel.telemetryContext);
+}
+
 - (void)testNewSessionIsCreatedCorrectly {
   self.sut = [BITTelemetryManager new];
   [self.mockUserDefaults setBool:NO forKey:@"BITApplicationWasLaunched"];
@@ -59,6 +78,34 @@
   
   [verify((id)self.mockNotificationCenter) addObserverForName:UIApplicationDidEnterBackgroundNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:(id)anything()];
   [verify((id)self.mockNotificationCenter) addObserverForName:UIApplicationWillEnterForegroundNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:(id)anything()];
+}
+
+- (void)testTrackSessionEnqueuesObject {
+  BITChannel *channel = [BITChannel new];
+  id mockChannel = OCMPartialMock(channel);
+  self.sut = [[BITTelemetryManager alloc] initWithChannel:mockChannel telemetryContext:nil persistence:nil];
+  
+  OCMExpect([mockChannel enqueueTelemetryItem:[OCMArg checkWithBlock:^BOOL(NSObject *value)
+                                             {
+                                               return [value isKindOfClass:[BITSessionStateData class]];
+                                             }]]);
+  [self.sut trackSessionWithState:BITSessionState_start];
+  OCMVerifyAll(mockChannel);
+}
+
+- (void)testNewSessionUpdatesSessionContext {
+  [self.mockUserDefaults setBool:NO forKey:@"BITApplicationWasLaunched"];
+  BITTelemetryContext *context = [BITTelemetryContext new];
+  id mockContext = OCMPartialMock(context);
+  self.sut = [[BITTelemetryManager alloc] initWithChannel:nil telemetryContext:mockContext persistence:nil];
+  NSString *testSessionId = @"sessionId";
+  
+  OCMExpect([mockContext setSessionId:testSessionId]);
+  OCMExpect([mockContext setIsNewSession:@"true"]);
+  OCMExpect([mockContext setIsFirstSession:@"true"]);
+  
+  [self.sut startNewSessionWithId:testSessionId];
+  OCMVerifyAll(mockContext);
 }
 
 @end

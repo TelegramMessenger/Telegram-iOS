@@ -50,7 +50,7 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
 }
 
 - (void)startManager {
-  [self startNewSession];
+  [self startNewSessionWithId:bit_UUID()];
   [self registerObservers];
 }
 
@@ -94,28 +94,26 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
 
 - (void)startNewSessionIfNeeded {
   if(self.appBackgroundTimeBeforeSessionExpires == 0) {
-    [self startNewSession];
-    return;
+    __weak typeof(self) weakSelf = self;
+    dispatch_async(_telemetryEventQueue, ^{
+      typeof(self) strongSelf = weakSelf;
+      [strongSelf startNewSessionWithId:bit_UUID()];
+    });
   }
   
   double appDidEnterBackgroundTime = [[NSUserDefaults standardUserDefaults] doubleForKey:kBITApplicationDidEnterBackgroundTime];
   double timeSinceLastBackground = [[NSDate date] timeIntervalSince1970] - appDidEnterBackgroundTime;
   if(timeSinceLastBackground > self.appBackgroundTimeBeforeSessionExpires) {
-    [self startNewSession];
+    [self startNewSessionWithId:bit_UUID()];
   }
 }
 
-- (void)startNewSession {
-  NSString *newSessionId = bit_UUID();
-  BITSession *newSession = [self createNewSessionWithId:newSessionId];
-  __weak typeof(self) weakSelf = self;
-  dispatch_async(_telemetryEventQueue, ^{
-    typeof(self) strongSelf = weakSelf;
-    [strongSelf.telemetryContext setSessionId:newSession.sessionId];
-    [strongSelf.telemetryContext setIsFirstSession:newSession.isFirst];
-    [strongSelf.telemetryContext setIsNewSession:newSession.isNew];
-    [strongSelf trackSessionWithState:BITSessionState_start];
-  });
+- (void)startNewSessionWithId:(NSString *)sessionId {
+  BITSession *newSession = [self createNewSessionWithId:sessionId];
+  [self.telemetryContext setSessionId:newSession.sessionId];
+  [self.telemetryContext setIsFirstSession:newSession.isFirst];
+  [self.telemetryContext setIsNewSession:newSession.isNew];
+  [self trackSessionWithState:BITSessionState_start];
 }
 
 - (BITSession *)createNewSessionWithId:(NSString *)sessionId {

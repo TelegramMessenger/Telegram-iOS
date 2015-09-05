@@ -103,7 +103,7 @@
 /**
  *  Creates a new session and sends it to the server.
  */
-- (void)startNewSession;
+- (void)startNewSessionWithId:(NSString *)sessionId;
 
 /**
  *  Creates a new session and stores it to NSUserDefaults.
