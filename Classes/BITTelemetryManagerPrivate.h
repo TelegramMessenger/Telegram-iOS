@@ -41,9 +41,11 @@
 
 /**
  *  Create a new telemetry manager instance by passing the channel, the telemetry context, and persistence instance to use 
- for processing metrics.
+ for processing metrics. This method can be used for dependency injection.
  */
-- (instancetype)initWithChannel:(BITChannel *)channel telemetryContext:(BITTelemetryContext *)telemetryContext persistence:(BITPersistence *)persistence;
+- (instancetype)initWithChannel:(BITChannel *)channel
+               telemetryContext:(BITTelemetryContext *)telemetryContext
+                    persistence:(BITPersistence *)persistence;
 
 /**
  *  A channel for collecting new events before storing and sending them.
@@ -101,13 +103,16 @@
 - (void)startNewSessionIfNeeded;
 
 /**
- *  Creates a new session and sends it to the server.
+ *  Creates a new session, updates the session context and sends it to the channel.
+ *
+ *  @param sessionId the id for the new session
  */
 - (void)startNewSessionWithId:(NSString *)sessionId;
 
 /**
  *  Creates a new session and stores it to NSUserDefaults.
  *
+ *  @param sessionId the id for the new session
  *  @return the newly created session
  */
 - (BITSession *)createNewSessionWithId:(NSString *)sessionId;
@@ -118,14 +123,10 @@
 
 /**
  *  Creates and enqueues a session event for the given state.
+ *
+ *  @param state value that determines whether the session started or ended
  */
 - (void)trackSessionWithState:(BITSessionState) state;
-
-///-----------------------------------------------------------------------------
-/// @name Dependencies
-///-----------------------------------------------------------------------------
-
-- (BITChannel *)channel;
 
 @end
 
