@@ -883,7 +883,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   id nsurlsessionClass = NSClassFromString(@"NSURLSessionDataTask");
   if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
     NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
-    NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration delegate:self delegateQueue:nil];
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration delegate:(id<NSURLSessionDelegate>)self delegateQueue:nil];
     
     NSURLSessionDataTask *sessionTask = [session dataTaskWithRequest:request];
     if (!sessionTask) {
