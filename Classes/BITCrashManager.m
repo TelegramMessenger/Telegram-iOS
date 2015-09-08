@@ -718,7 +718,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     name[3] = getpid();
     
     if (sysctl(name, 4, &info, &info_size, NULL, 0) == -1) {
-      NSLog(@"[HockeySDK] ERROR: Checking for a running debugger via sysctl() failed: %s", strerror(errno));
+      NSLog(@"[HockeySDK] ERROR: Checking for a running debugger via sysctl() failed.");
       debuggerIsAttached = false;
     }
     
