@@ -11,7 +11,4 @@
 - (void)setMockNotificationCenter:(id)mockNotificationCenter;
 - (id)mockNotificationCenter;
 
-- (void)setMockUserDefaults:(NSUserDefaults *)userDefaults;
-- (NSUserDefaults *)mockUserDefaults;
-
 @end

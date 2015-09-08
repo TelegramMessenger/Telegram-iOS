@@ -1,20 +1,8 @@
 #import "BITTestsDependencyInjection.h"
 #import <OCMock/OCMock.h>
 
-static NSUserDefaults *mockUserDefaults;
 static id testNotificationCenter;
 static id mockCenter;
-
-@implementation NSUserDefaults (UnitTests)
-
-+ (instancetype)standardUserDefaults {
-  if (!mockUserDefaults) {
-    mockUserDefaults = OCMPartialMock([NSUserDefaults new]);
-  }
-  return mockUserDefaults;
-}
-
-@end
 
 @implementation BITTestsDependencyInjection
 
@@ -23,7 +11,6 @@ static id mockCenter;
 }
 
 - (void)tearDown {
-  mockUserDefaults = nil;
   [super tearDown];
 }
 
@@ -37,14 +24,6 @@ static id mockCenter;
 
 - (id)mockNotificationCenter {
   return testNotificationCenter;
-}
-
-- (void)setMockUserDefaults:(NSUserDefaults *)userDefaults {
-  mockUserDefaults = userDefaults;
-}
-
-- (NSUserDefaults *)mockUserDefaults {
-  return mockUserDefaults;
 }
 
 @end

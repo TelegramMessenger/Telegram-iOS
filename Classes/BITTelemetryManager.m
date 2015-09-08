@@ -29,6 +29,7 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
 @synthesize channel = _channel;
 @synthesize telemetryContext = _telemetryContext;
 @synthesize persistence = _persistence;
+@synthesize userDefaults = _userDefaults;
 
 #pragma mark - Create & start instance
 
@@ -40,11 +41,12 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
   return self;
 }
 
-- (instancetype)initWithChannel:(BITChannel *)channel telemetryContext:(BITTelemetryContext *)telemetryContext persistence:(BITPersistence *)persistence {
+- (instancetype)initWithChannel:(BITChannel *)channel telemetryContext:(BITTelemetryContext *)telemetryContext persistence:(BITPersistence *)persistence userDefaults:(NSUserDefaults *)userDefaults {
   if((self = [self init])) {
     _channel = channel;
     _telemetryContext = telemetryContext;
     _persistence = persistence;
+    _userDefaults = userDefaults;
   }
   return self;
 }
@@ -88,8 +90,8 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
 }
 
 - (void)updateDidEnterBackgroundTime {
-  [[NSUserDefaults standardUserDefaults] setDouble:[[NSDate date] timeIntervalSince1970] forKey:kBITApplicationDidEnterBackgroundTime];
-  [[NSUserDefaults standardUserDefaults] synchronize];
+  [self.userDefaults setDouble:[[NSDate date] timeIntervalSince1970] forKey:kBITApplicationDidEnterBackgroundTime];
+  [self.userDefaults synchronize];
 }
 
 - (void)startNewSessionIfNeeded {
@@ -101,7 +103,7 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
     });
   }
   
-  double appDidEnterBackgroundTime = [[NSUserDefaults standardUserDefaults] doubleForKey:kBITApplicationDidEnterBackgroundTime];
+  double appDidEnterBackgroundTime = [self.userDefaults doubleForKey:kBITApplicationDidEnterBackgroundTime];
   double timeSinceLastBackground = [[NSDate date] timeIntervalSince1970] - appDidEnterBackgroundTime;
   if(timeSinceLastBackground > self.appBackgroundTimeBeforeSessionExpires) {
     [self startNewSessionWithId:bit_UUID()];
@@ -116,15 +118,16 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
   [self trackSessionWithState:BITSessionState_start];
 }
 
+// iOS 8 Sim Bug: iOS Simulator -> Reset Content and Settings
 - (BITSession *)createNewSessionWithId:(NSString *)sessionId {
   BITSession *session = [BITSession new];
   session.sessionId = sessionId;
   session.isNew = @"true";
   
-  if(![[NSUserDefaults standardUserDefaults] boolForKey:kBITApplicationWasLaunched]) {
+  if([self.userDefaults boolForKey:kBITApplicationWasLaunched] == NO) {
     session.isFirst = @"true";
-    [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITApplicationWasLaunched];
-    [[NSUserDefaults standardUserDefaults] synchronize];
+    [self.userDefaults setBool:YES forKey:kBITApplicationWasLaunched];
+    [self.userDefaults synchronize];
   } else {
     session.isFirst = @"false";
   }
@@ -160,6 +163,13 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
     _persistence = [BITPersistence new];
   }
   return _persistence;
+}
+
+- (NSUserDefaults *)userDefaults {
+  if(!_userDefaults){
+    _userDefaults = [NSUserDefaults standardUserDefaults];
+  }
+  return _userDefaults;
 }
 
 @end

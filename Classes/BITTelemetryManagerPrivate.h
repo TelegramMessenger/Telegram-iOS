@@ -45,7 +45,13 @@
  */
 - (instancetype)initWithChannel:(BITChannel *)channel
                telemetryContext:(BITTelemetryContext *)telemetryContext
-                    persistence:(BITPersistence *)persistence;
+                    persistence:(BITPersistence *)persistence
+                   userDefaults:(NSUserDefaults *)userDefaults;
+
+/**
+ *  The user defaults object used to store meta data.
+ */
+@property (nonatomic, strong, readonly) NSUserDefaults *userDefaults;
 
 /**
  *  A channel for collecting new events before storing and sending them.

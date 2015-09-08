@@ -53,8 +53,8 @@
 }
 
 - (void)testNewSessionIsCreatedCorrectly {
-  self.sut = [BITTelemetryManager new];
-  [self.mockUserDefaults setBool:NO forKey:@"BITApplicationWasLaunched"];
+  NSUserDefaults *defaults = [NSUserDefaults new];
+  self.sut = [[BITTelemetryManager alloc]initWithChannel:nil telemetryContext:nil persistence:nil userDefaults:defaults];
   NSString *testSessionId1 = @"12345";
   NSString *testSessionId2 = @"67890";
   
@@ -83,7 +83,7 @@
 - (void)testTrackSessionEnqueuesObject {
   BITChannel *channel = [BITChannel new];
   id mockChannel = OCMPartialMock(channel);
-  self.sut = [[BITTelemetryManager alloc] initWithChannel:mockChannel telemetryContext:nil persistence:nil];
+  self.sut = [[BITTelemetryManager alloc] initWithChannel:mockChannel telemetryContext:nil persistence:nil userDefaults:nil];
   
   OCMExpect([mockChannel enqueueTelemetryItem:[OCMArg checkWithBlock:^BOOL(NSObject *value)
                                              {
@@ -94,10 +94,10 @@
 }
 
 - (void)testNewSessionUpdatesSessionContext {
-  [self.mockUserDefaults setBool:NO forKey:@"BITApplicationWasLaunched"];
   BITTelemetryContext *context = [BITTelemetryContext new];
   id mockContext = OCMPartialMock(context);
-  self.sut = [[BITTelemetryManager alloc] initWithChannel:nil telemetryContext:mockContext persistence:nil];
+  NSUserDefaults *defaults = [NSUserDefaults new];
+  self.sut = [[BITTelemetryManager alloc]initWithChannel:nil telemetryContext:nil persistence:nil userDefaults:defaults];
   NSString *testSessionId = @"sessionId";
   
   OCMExpect([mockContext setSessionId:testSessionId]);
