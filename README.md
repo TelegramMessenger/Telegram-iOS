@@ -432,7 +432,7 @@ This feature can be disabled manually as follows:
 ```objectivec
 [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
-[[BITHockeyManager sharedHockeyManager] setDisableUpdateManager: YES]; //disable crash reporting
+[[BITHockeyManager sharedHockeyManager] setDisableUpdateManager: YES]; //disable auto update
 
 [[BITHockeyManager sharedHockeyManager] startManager];
 ```
@@ -469,7 +469,7 @@ Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/
     Make sure none of the following files are copied into your app bundle, check under app target, `Build Phases`, `Copy Bundle Resources` or in the `.app` bundle after building:
 
         - `HockeySDK.framework` (except if you build a dynamic framework version of the SDK yourself!)
-        - `de.bitstadium.HockeySDK-iOS-3.7.2.docset`
+        - `de.bitstadium.HockeySDK-iOS-3.8-Beta.1.docset`
 
 3. Feature are not working as expected
 
