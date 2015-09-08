@@ -144,5 +144,57 @@
   assertThat(resultString, notNilValue());
 }
 
+- (void)testDevicePlattform {
+  NSString *resultString = bit_devicePlatform();
+  assertThat(resultString, notNilValue());
+}
+
+- (void)testDeviceModel {
+  NSString *resultString = bit_devicePlatform();
+  assertThat(resultString, notNilValue());
+}
+
+- (void)testOsVersion {
+  NSString *resultString = bit_osVersionBuild();
+  assertThat(resultString, notNilValue());
+  assertThatFloat([resultString floatValue], greaterThan(@(0.0)));
+}
+
+- (void)testOsName {
+  NSString *resultString = bit_osName();
+  assertThat(resultString, notNilValue());
+  assertThatInteger([resultString length], greaterThan(@(0)));
+}
+
+- (void)testDeviceType {
+  NSString *resultString = bit_deviceType();
+  assertThat(resultString, notNilValue());
+  NSArray *typesArray = @[@"Phone", @"Tablet", @"Unknown"];
+  assertThat(typesArray, hasItem(resultString));
+}
+
+- (void)testSdkVersion {
+  NSString *resultString = bit_sdkVersion();
+  assertThat(resultString, notNilValue());
+  assertThatInteger([resultString length], greaterThan(@(0)));
+}
+
+- (void)testUtcDateString{
+  NSDate *testDate = [NSDate dateWithTimeIntervalSince1970:0];
+  NSString *utcDateString = bit_utcDateString(testDate);
+  
+  assertThat(utcDateString, equalTo(@"1970-01-01T00:00:00.000Z"));
+}
+
+#ifndef CI
+- (void)testUtcDateStringPerformane {
+  [self measureBlock:^{
+    for (int i = 0; i < 100; i++) {
+      NSDate *testDate = [NSDate dateWithTimeIntervalSince1970:0];
+      NSString *utcDateString = bit_utcDateString(testDate);
+    }
+  }];
+}
+#endif
 
 @end
