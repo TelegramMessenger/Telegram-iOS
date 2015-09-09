@@ -131,6 +131,8 @@
 		1BD33EB01B950DC700C3368B /* BITChannel.h in Headers */ = {isa = PBXBuildFile; fileRef = 1BD33EAD1B950DC700C3368B /* BITChannel.h */; };
 		1BD33EB11B950DC700C3368B /* BITChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 1BD33EAE1B950DC700C3368B /* BITChannel.m */; };
 		1BD33EB21B950DC700C3368B /* BITChannel.m in Sources */ = {isa = PBXBuildFile; fileRef = 1BD33EAE1B950DC700C3368B /* BITChannel.m */; };
+		1BEBBB211B9FBF7A005EDABD /* BITChannelTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1BEBBB201B9FBF7A005EDABD /* BITChannelTests.m */; };
+		1BEBBB221B9FBF7A005EDABD /* BITChannelTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1BEBBB201B9FBF7A005EDABD /* BITChannelTests.m */; };
 		1E0829001708F69A0073050E /* BITStoreUpdateManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E0828FF1708F69A0073050E /* BITStoreUpdateManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E0FEE28173BDB260061331F /* BITKeychainUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E0FEE26173BDB260061331F /* BITKeychainUtils.h */; };
 		1E0FEE29173BDB260061331F /* BITKeychainUtils.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E0FEE27173BDB260061331F /* BITKeychainUtils.m */; };
@@ -535,6 +537,7 @@
 		1BD33EA91B950BC200C3368B /* BITSessionTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITSessionTests.m; sourceTree = "<group>"; };
 		1BD33EAD1B950DC700C3368B /* BITChannel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITChannel.h; sourceTree = "<group>"; };
 		1BD33EAE1B950DC700C3368B /* BITChannel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITChannel.m; sourceTree = "<group>"; };
+		1BEBBB201B9FBF7A005EDABD /* BITChannelTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITChannelTests.m; sourceTree = "<group>"; };
 		1E0828FF1708F69A0073050E /* BITStoreUpdateManagerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITStoreUpdateManagerDelegate.h; sourceTree = "<group>"; };
 		1E0FEE26173BDB260061331F /* BITKeychainUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITKeychainUtils.h; sourceTree = "<group>"; };
 		1E0FEE27173BDB260061331F /* BITKeychainUtils.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITKeychainUtils.m; sourceTree = "<group>"; };
@@ -950,6 +953,7 @@
 				1B460AB31B8E72FD0000C344 /* BITTelemetryManagerTests.m */,
 				B274DDB21B966914007F2B9E /* BITPersistenceTests.m */,
 				1B50A9151B9FA82800ADECD1 /* BITTelemetryContextTests.m */,
+				1BEBBB201B9FBF7A005EDABD /* BITChannelTests.m */,
 			);
 			path = HockeySDKTests;
 			sourceTree = "<group>";
@@ -1808,6 +1812,7 @@
 				1B460AA41B8E5D910000C344 /* BITTestsDependencyInjection.m in Sources */,
 				1B98D4961B9A1CFD00B8000B /* BITReachabilityTests.m in Sources */,
 				1B460AB61B8E72FD0000C344 /* BITTelemetryManagerTests.m in Sources */,
+				1BEBBB211B9FBF7A005EDABD /* BITChannelTests.m in Sources */,
 				1B98D4851B9A1B6F00B8000B /* BITBaseTests.m in Sources */,
 				1E5A459E16F0DFC200B55C04 /* BITStoreUpdateManagerTests.m in Sources */,
 				1E566D071A275C4C0070F514 /* BITCrashReportTextFormatterTests.m in Sources */,
@@ -1901,6 +1906,7 @@
 				1B460AA51B8E5D910000C344 /* BITTestsDependencyInjection.m in Sources */,
 				1B98D4971B9A1CFD00B8000B /* BITReachabilityTests.m in Sources */,
 				1B460AB71B8E72FD0000C344 /* BITTelemetryManagerTests.m in Sources */,
+				1BEBBB221B9FBF7A005EDABD /* BITChannelTests.m in Sources */,
 				1B98D4861B9A1B6F00B8000B /* BITBaseTests.m in Sources */,
 				1EB617B31B0A31D30035A986 /* BITFeedbackManagerTests.m in Sources */,
 				1EB617B81B0A31DB0035A986 /* BITTestHelper.m in Sources */,
