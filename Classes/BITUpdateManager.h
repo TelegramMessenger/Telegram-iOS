@@ -59,10 +59,10 @@ typedef NS_ENUM (NSUInteger, BITUpdateSetting) {
  The update manager module.
  
  This is the HockeySDK module for handling app updates when using Ad-Hoc or Enterprise provisioning profiles.
- This module handles version updates, presents update and version information in a App Store like user interface,
+ This module handles version updates, presents update and version information in an App Store like user interface,
  collects usage information and provides additional authorization options when using Ad-Hoc provisioning profiles.
  
- This module automatically disables itself when running in an App Store build by default!
+ By default, this module automatically disables itself when running in an App Store build!
  
  The protocol `BITUpdateManagerDelegate` provides delegates to inform about events and adjust a few behaviors.
  
@@ -83,7 +83,7 @@ typedef NS_ENUM (NSUInteger, BITUpdateSetting) {
 /**
  When to check for new updates.
  
- Defines when a the SDK should check if there is a new update available on the
+ Defines when the SDK should check if there is a new update available on the
  server. This must be assigned one of the following, see `BITUpdateSetting`:
  
  - `BITUpdateCheckStartup`: On every startup or or when the app comes to the foreground
@@ -129,7 +129,7 @@ typedef NS_ENUM (NSUInteger, BITUpdateSetting) {
  
  Call this to trigger a check if there is a new update available on the HockeyApp servers.
  
- When running the app from the App Store, this setting is ignored.
+ When running the app from the App Store, this method call is ignored.
 
  @see updateSetting
  @see checkForUpdateOnLaunch
@@ -142,7 +142,7 @@ typedef NS_ENUM (NSUInteger, BITUpdateSetting) {
 ///-----------------------------------------------------------------------------
 
 /**
- Flag that determines if updates alert should be repeatedly shown
+ Flag that determines if update alerts should be repeatedly shown
  
  If enabled the update alert shows on every startup and whenever the app becomes active,
  until the update is installed.
@@ -157,10 +157,10 @@ typedef NS_ENUM (NSUInteger, BITUpdateSetting) {
 
 
 /**
- Flag that determines if the update alert should show an direct install option
+ Flag that determines if the update alert should show a direct install option
  
  If enabled the update alert shows an additional option which allows to invoke the update
- installation process directly, instead of viewing the update UI first.
+ installation process directly instead of viewing the update UI first.
  By default the alert only shows a `Show` and `Ignore` option.
  
  When running the app from the App Store, this setting is ignored.
@@ -178,7 +178,7 @@ typedef NS_ENUM (NSUInteger, BITUpdateSetting) {
  Expiry date of the current app version
  
  If set, the app will get unusable at the given date by presenting a blocking view on
- top of the apps UI so that no interaction is possible. To present a custom you, check
+ top of the apps UI so that no interaction is possible. To present a custom UI, check
  the documentation of the 
  `[BITUpdateManagerDelegate shouldDisplayExpiryAlertForUpdateManager:]` delegate.
  
@@ -227,7 +227,7 @@ typedef NS_ENUM (NSUInteger, BITUpdateSetting) {
 /**
  Create an update view
 
- @param modal Return a view ready for modal presentation with integrated navigation bar
+ @param modal Return a view which is ready for modal presentation with an integrated navigation bar
  @return BITUpdateViewController The update user interface view controller,
  e.g. to push it onto a navigation stack.
  */
