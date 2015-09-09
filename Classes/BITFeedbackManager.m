@@ -279,8 +279,7 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
 
 - (BOOL)allowFetchingNewMessages {
   BOOL fetchNewMessages = YES;
-  if ([BITHockeyManager sharedHockeyManager].delegate &&
-      [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(allowAutomaticFetchingForNewFeedbackForManager:)]) {
+  if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(allowAutomaticFetchingForNewFeedbackForManager:)]) {
     fetchNewMessages = [[BITHockeyManager sharedHockeyManager].delegate
                         allowAutomaticFetchingForNewFeedbackForManager:self];
   }
@@ -310,8 +309,7 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
   
   NSString *userID = [self stringValueFromKeychainForKey:kBITHockeyMetaUserID];
   
-  if ([BITHockeyManager sharedHockeyManager].delegate &&
-      [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
+  if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
     userID = [[BITHockeyManager sharedHockeyManager].delegate
               userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
               componentManager:self];
@@ -330,8 +328,7 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
   
   NSString *userName = [self stringValueFromKeychainForKey:kBITHockeyMetaUserName];
   
-  if ([BITHockeyManager sharedHockeyManager].delegate &&
-      [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
+  if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
     userName = [[BITHockeyManager sharedHockeyManager].delegate
                 userNameForHockeyManager:[BITHockeyManager sharedHockeyManager]
                 componentManager:self];
@@ -351,8 +348,7 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
   
   NSString *userEmail = [self stringValueFromKeychainForKey:kBITHockeyMetaUserEmail];
   
-  if ([BITHockeyManager sharedHockeyManager].delegate &&
-      [[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userEmailForHockeyManager:componentManager:)]) {
+  if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userEmailForHockeyManager:componentManager:)]) {
     userEmail = [[BITHockeyManager sharedHockeyManager].delegate
                  userEmailForHockeyManager:[BITHockeyManager sharedHockeyManager]
                  componentManager:self];

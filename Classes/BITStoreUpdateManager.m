@@ -293,7 +293,7 @@
   }
   
   if ([self isUpdateAvailable]) {
-    if (self.delegate && [self.delegate respondsToSelector:@selector(detectedUpdateFromStoreUpdateManager:newVersion:storeURL:)]) {
+    if ([self.delegate respondsToSelector:@selector(detectedUpdateFromStoreUpdateManager:newVersion:storeURL:)]) {
       [self.delegate detectedUpdateFromStoreUpdateManager:self newVersion:_newStoreVersion storeURL:[NSURL URLWithString:_appStoreURLString]];
     }
     

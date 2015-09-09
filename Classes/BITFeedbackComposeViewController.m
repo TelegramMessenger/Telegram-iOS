@@ -467,9 +467,9 @@
 }
 
 - (void)dismissWithResult:(BITFeedbackComposeResult) result {
-  if(self.delegate && [self.delegate respondsToSelector:@selector(feedbackComposeViewController:didFinishWithResult:)]) {
+  if([self.delegate respondsToSelector:@selector(feedbackComposeViewController:didFinishWithResult:)]) {
     [self.delegate feedbackComposeViewController:self didFinishWithResult:result];
-  } else if (self.delegate && [self.delegate respondsToSelector:@selector(feedbackComposeViewControllerDidFinish:)]) {
+  } else if ([self.delegate respondsToSelector:@selector(feedbackComposeViewControllerDidFinish:)]) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated"
     [self.delegate feedbackComposeViewControllerDidFinish:self];

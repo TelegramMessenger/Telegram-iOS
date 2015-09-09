@@ -117,7 +117,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     // we only care about iOS 8 or later
     if (bit_isPreiOS8Environment()) return;
     
-    if (self.delegate != nil && [self.delegate respondsToSelector:@selector(updateManagerWillExitApp:)]) {
+    if ([self.delegate respondsToSelector:@selector(updateManagerWillExitApp:)]) {
       [self.delegate updateManagerWillExitApp:self];
     }
     
@@ -220,7 +220,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   
   BOOL shouldShowDefaultAlert = YES;
   
-  if (self.delegate != nil && [self.delegate respondsToSelector:@selector(shouldDisplayExpiryAlertForUpdateManager:)]) {
+  if ([self.delegate respondsToSelector:@selector(shouldDisplayExpiryAlertForUpdateManager:)]) {
     shouldShowDefaultAlert = [self.delegate shouldDisplayExpiryAlertForUpdateManager:self];
   }
   
@@ -230,7 +230,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
       _blockingScreenMessage = [NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateExpired"), appName];
     [self showBlockingScreen:_blockingScreenMessage image:@"authorize_denied.png"];
 
-    if (self.delegate != nil && [self.delegate respondsToSelector:@selector(didDisplayExpiryAlertForUpdateManager:)]) {
+    if ([self.delegate respondsToSelector:@selector(didDisplayExpiryAlertForUpdateManager:)]) {
       [self.delegate didDisplayExpiryAlertForUpdateManager:self];
     }
     
@@ -767,7 +767,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   NSString *iOSUpdateURL = [NSString stringWithFormat:@"itms-services://?action=download-manifest&url=%@", bit_URLEncodedString(hockeyAPIURL)];
 
   // Notify delegate of update intent before placing the call
-  if (self.delegate != nil && [self.delegate respondsToSelector:@selector(willStartDownloadAndUpdate:)]) {
+  if ([self.delegate respondsToSelector:@selector(willStartDownloadAndUpdate:)]) {
     [self.delegate willStartDownloadAndUpdate:self];
   }
 
@@ -790,7 +790,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     
     BITHockeyLog(@"INFO: Starting UpdateManager");
     
-    if (self.delegate != nil && [self.delegate respondsToSelector:@selector(updateManagerShouldSendUsageData:)]) {
+    if ([self.delegate respondsToSelector:@selector(updateManagerShouldSendUsageData:)]) {
       _sendUsageData = [self.delegate updateManagerShouldSendUsageData:self];
     }
     
