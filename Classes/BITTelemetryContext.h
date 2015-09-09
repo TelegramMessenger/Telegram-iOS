@@ -112,25 +112,9 @@ FOUNDATION_EXPORT NSString *const kBITApplicationWasLaunched;
 
 - (void)setAppVersion:(NSString *)appVersion;
 
-- (NSString *)userId;
+- (NSString *)anonymousUserId;
 
-- (void)setUserId:(NSString *)userId;
-
-- (NSString *)userAcquisitionDate;
-
-- (void)setUserAcquisitionDate:(NSString *)userAcqusitionDate;
-
-- (NSString *)accountId;
-
-- (void)setAccountId:(NSString *)accountId;
-
-- (NSString *)authenticatedUserId;
-
-- (void)setAuthenticatedUserId:(NSString *)authenticatedUserId;
-
-- (NSString *)authenticatedUserAcquisitionDate;
-
-- (void)setAuthenticatedUserAcquisitionDate:(NSString *)authenticatedUserAcquisitionDate;
+- (void)setAnonymousUserId:(NSString *)anonymous;
 
 - (NSString *)anonymousUserAquisitionDate;
 
@@ -171,6 +155,10 @@ FOUNDATION_EXPORT NSString *const kBITApplicationWasLaunched;
 - (NSString *)osLocale;
 
 - (void)setOsLocale:(NSString *)osLocale;
+
+- (NSString *)osLanguage;
+
+- (void)setOsLanguage:(NSString *)osLanguage;
 
 - (NSString *)deviceId;
 

@@ -156,7 +156,7 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
   });
 }
 
-- (NSString *)userId {
+- (NSString *)anonymousUserId {
   __block NSString *tmp;
   dispatch_sync(_operationsQueue, ^{
     tmp = _user.userId;
@@ -164,70 +164,10 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
   return tmp;
 }
 
-- (void)setUserId:(NSString *)userId {
+- (void)setAnonymousUserId:(NSString *)userId {
   NSString* tmp = [userId copy];
   dispatch_barrier_async(_operationsQueue, ^{
     _user.userId = tmp;
-  });
-}
-
-- (NSString *)userAcquisitionDate {
-  __block NSString *tmp;
-  dispatch_sync(_operationsQueue, ^{
-    tmp = _user.accountAcquisitionDate;
-  });
-  return tmp;
-}
-
-- (void)setUserAcquisitionDate:(NSString *)userAcqusitionDate {
-  NSString* tmp = [userAcqusitionDate copy];
-  dispatch_barrier_async(_operationsQueue, ^{
-    _user.accountAcquisitionDate = tmp;
-  });
-}
-
-- (NSString *)accountId {
-  __block NSString *tmp;
-  dispatch_sync(_operationsQueue, ^{
-    tmp = _user.accountId;
-  });
-  return tmp;
-}
-
-- (void)setAccountId:(NSString *)accountId {
-  NSString* tmp = [accountId copy];
-  dispatch_barrier_async(_operationsQueue, ^{
-    _user.accountId = tmp;
-  });
-}
-
-- (NSString *)authenticatedUserId {
-  __block NSString *tmp;
-  dispatch_sync(_operationsQueue, ^{
-    tmp = _user.authUserId;
-  });
-  return tmp;
-}
-
-- (void)setAuthenticatedUserId:(NSString *)authenticatedUserId {
-  NSString* tmp = [authenticatedUserId copy];
-  dispatch_barrier_async(_operationsQueue, ^{
-    _user.authUserId = tmp;
-  });
-}
-
-- (NSString *)authenticatedUserAcquisitionDate {
-  __block NSString *tmp;
-  dispatch_sync(_operationsQueue, ^{
-    tmp = _user.authUserAcquisitionDate;
-  });
-  return tmp;
-}
-
-- (void)setAuthenticatedUserAcquisitionDate:(NSString *)authenticatedUserAcquisitionDate {
-  NSString* tmp = [authenticatedUserAcquisitionDate copy];
-  dispatch_barrier_async(_operationsQueue, ^{
-    _user.authUserAcquisitionDate = tmp;
   });
 }
 
@@ -381,6 +321,21 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
   });
 }
 
+- (NSString *)osLanguage {
+  __block NSString *tmp;
+  dispatch_sync(_operationsQueue, ^{
+    tmp = _device.language;
+  });
+  return tmp;
+}
+
+- (void)setOsLanguage:(NSString *)osLanguage {
+  NSString* tmp = [osLanguage copy];
+  dispatch_barrier_async(_operationsQueue, ^{
+    _device.language = tmp;
+  });
+}
+
 - (NSString *)deviceId {
   __block NSString *tmp;
   dispatch_sync(_operationsQueue, ^{
@@ -434,6 +389,7 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
   [contextDictionary addEntriesFromDictionary:self.tags];
   [contextDictionary addEntriesFromDictionary:[self.session serializeToDictionary]];
   [contextDictionary addEntriesFromDictionary:[self.user serializeToDictionary]];
+  // TODO: Only update networkType rather than all device context values
   [contextDictionary addEntriesFromDictionary:[self.device serializeToDictionary]];
   
   return contextDictionary;
