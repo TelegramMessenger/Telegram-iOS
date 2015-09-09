@@ -40,11 +40,25 @@
 @class BITPersistence;
 NS_ASSUME_NONNULL_BEGIN
 
+FOUNDATION_EXPORT char *BITSafeJsonEventsString;
+
 @interface BITChannel : NSObject
 
+/**
+ *  Telemetry context used by the channel to create the payload (testing).
+ */
 @property (nonatomic, strong) BITTelemetryContext *telemetryContext;
 
+/**
+ *  Persistence instance for storing files after the queue gets flushed (testing).
+ */
 @property (nonatomic, strong) BITPersistence *persistence;
+
+/**
+ *  Number of queue items which will trigger a flush (testing).
+ */
+@property (nonatomic) NSInteger maxBatchCount;
+
 /**
  *  A queue which makes array operations thread safe.
  */
