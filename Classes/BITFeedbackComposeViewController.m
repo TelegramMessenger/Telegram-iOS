@@ -47,7 +47,6 @@
 
 
 @interface BITFeedbackComposeViewController () <BITFeedbackUserDataDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate, UIActionSheetDelegate, BITImageAnnotationDelegate> {
-  UIStatusBarStyle _statusBarStyle;
 }
 
 @property (nonatomic, weak) BITFeedbackManager *manager;
@@ -276,24 +275,33 @@
   
   [super viewWillAppear:animated];
   
-  _statusBarStyle = [[UIApplication sharedApplication] statusBarStyle];
-#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
-  [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleLightContent];
-#else
-  [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleBlackOpaque];
-#endif
-  
   if (_text && self.textView.text.length == 0) {
     self.textView.text = _text;
   }
 
   if (self.isStatusBarHiddenBeforeShowingPhotoPicker) {
-    [[UIApplication sharedApplication] setStatusBarHidden:self.isStatusBarHiddenBeforeShowingPhotoPicker.boolValue];
+    // requires iOS 7
+    if ([self respondsToSelector:@selector(prefersStatusBarHidden)]) {
+      [self setNeedsStatusBarAppearanceUpdate];
+    } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+      [[UIApplication sharedApplication] setStatusBarHidden:self.isStatusBarHiddenBeforeShowingPhotoPicker.boolValue];
+#pragma clang diagnostic pop
+    }
   }
   
   self.isStatusBarHiddenBeforeShowingPhotoPicker = nil;
 
   [self updateBarButtonState];
+}
+
+- (BOOL)prefersStatusBarHidden {
+  if (self.isStatusBarHiddenBeforeShowingPhotoPicker) {
+    return self.isStatusBarHiddenBeforeShowingPhotoPicker.boolValue;
+  }
+  
+  return [super prefersStatusBarHidden];
 }
 
 - (void)viewDidAppear:(BOOL)animated {
@@ -319,8 +327,6 @@
   self.manager.currentFeedbackComposeViewController = nil;
   
 	[super viewWillDisappear:animated];
-  
-  [[UIApplication sharedApplication] setStatusBarStyle:_statusBarStyle];
 }
 
 - (void)viewDidDisappear:(BOOL)animated {
@@ -533,6 +539,47 @@
   
   self.selectedAttachmentIndex = (self.attachmentScrollViewImageViews.count - index - 1);
   
+  // requires iOS 8
+  id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
+  if (uialertcontrollerClass) {
+    __weak typeof(self) weakSelf = self;
+
+    UIAlertController *alertController = [UIAlertController alertControllerWithTitle:nil
+                                                                             message:nil
+                                                                      preferredStyle:UIAlertControllerStyleActionSheet];
+    
+    
+    UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentCancel")
+                                                           style:UIAlertActionStyleCancel
+                                                         handler:^(UIAlertAction * action) {
+                                                           typeof(self) strongSelf = weakSelf;
+                                                           [strongSelf cancelAction];
+                                                         }];
+    
+    [alertController addAction:cancelAction];
+    
+    UIAlertAction *editAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentEdit")
+                                                         style:UIAlertActionStyleDefault
+                                                       handler:^(UIAlertAction * action) {
+                                                         typeof(self) strongSelf = weakSelf;
+                                                         [strongSelf editAction];
+                                                       }];
+    
+    [alertController addAction:editAction];
+    
+    UIAlertAction *deleteAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentDelete")
+                                                         style:UIAlertActionStyleDestructive
+                                                       handler:^(UIAlertAction * action) {
+                                                         typeof(self) strongSelf = weakSelf;
+                                                         [strongSelf deleteAction];
+                                                       }];
+    
+    [alertController addAction:deleteAction];
+    
+    [self presentViewController:alertController animated:YES completion:nil];
+  } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithTitle: nil
                                                            delegate: self
                                                   cancelButtonTitle: BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentCancel")
@@ -540,7 +587,9 @@
                                                   otherButtonTitles: BITHockeyLocalizedString(@"HockeyFeedbackComposeAttachmentEdit"), nil];
   
   [actionSheet showFromRect: sender.frame inView: self.attachmentScrollView animated: YES];
-
+#pragma clang diagnostic push
+  }
+  
   _actionSheetVisible = YES;
   if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
     [self.textView resignFirstResponder];
@@ -584,38 +633,49 @@
 
 #pragma mark - UIActionSheet Delegate
 
+- (void)deleteAction {
+  if (self.selectedAttachmentIndex != NSNotFound){
+    UIButton *imageButton = self.attachmentScrollViewImageViews[self.selectedAttachmentIndex];
+    BITFeedbackMessageAttachment *attachment = self.imageAttachments[self.selectedAttachmentIndex];
+    [attachment deleteContents]; // mandatory call to delete the files associated.
+    [self.imageAttachments removeObject:attachment];
+    [self.attachments removeObject:attachment];
+    [imageButton removeFromSuperview];
+    [self.attachmentScrollViewImageViews removeObject:imageButton];
+  }
+  self.selectedAttachmentIndex = NSNotFound;
+  
+  [self refreshAttachmentScrollview];
+  
+  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+    [self.textView becomeFirstResponder];
+  }
+}
+
+- (void)editAction {
+  if (self.selectedAttachmentIndex != NSNotFound){
+    BITFeedbackMessageAttachment *attachment = self.imageAttachments[self.selectedAttachmentIndex];
+    BITImageAnnotationViewController *annotationEditor = [[BITImageAnnotationViewController alloc ] init];
+    annotationEditor.delegate = self;
+    UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:annotationEditor];
+    annotationEditor.image = attachment.imageRepresentation;
+    [self presentViewController:navController animated:YES completion:nil];
+  }
+}
+
+- (void)cancelAction {
+  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+    [self.textView becomeFirstResponder];
+  }
+}
+
 - (void)actionSheet:(UIActionSheet *)actionSheet didDismissWithButtonIndex:(NSInteger)buttonIndex {
   if (buttonIndex == [actionSheet destructiveButtonIndex]) {
-    
-    if (self.selectedAttachmentIndex != NSNotFound){
-      UIButton *imageButton = self.attachmentScrollViewImageViews[self.selectedAttachmentIndex];
-      BITFeedbackMessageAttachment *attachment = self.imageAttachments[self.selectedAttachmentIndex];
-      [attachment deleteContents]; // mandatory call to delete the files associated.
-      [self.imageAttachments removeObject:attachment];
-      [self.attachments removeObject:attachment];
-      [imageButton removeFromSuperview];
-      [self.attachmentScrollViewImageViews removeObject:imageButton];
-    }
-    self.selectedAttachmentIndex = NSNotFound;
-
-    [self refreshAttachmentScrollview];
-    
-    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
-      [self.textView becomeFirstResponder];
-    }
+    [self deleteAction];
   } else if (buttonIndex != [actionSheet cancelButtonIndex]) {
-    if (self.selectedAttachmentIndex != NSNotFound){
-      BITFeedbackMessageAttachment *attachment = self.imageAttachments[self.selectedAttachmentIndex];
-      BITImageAnnotationViewController *annotationEditor = [[BITImageAnnotationViewController alloc ] init];
-      annotationEditor.delegate = self;
-      UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:annotationEditor];
-      annotationEditor.image = attachment.imageRepresentation;
-      [self presentViewController:navController animated:YES completion:nil];
-    }
+    [self editAction];
   } else {
-    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
-      [self.textView becomeFirstResponder];
-    }
+    [self cancelAction];
   }
   _actionSheetVisible = NO;
 }

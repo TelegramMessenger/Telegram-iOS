@@ -20,6 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_FEEDBACK
+
 #import "BITAttributedLabel.h"
 
 #define kBITLineBreakWordWrapTextWidthScalingFactor (M_PI / M_E)
@@ -1020,3 +1024,5 @@ static inline NSAttributedString * NSAttributedStringBySettingColorFromContext(N
 @end
 
 #pragma clang diagnostic pop
+
+#endif

@@ -7,6 +7,7 @@
 //
 
 #import <XCTest/XCTest.h>
+#import <OCMock/OCMock.h>
 
 #define HC_SHORTHAND
 #import <OCHamcrestIOS/OCHamcrestIOS.h>
@@ -16,7 +17,6 @@
 
 #import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
-#import "BITAuthenticator.h"
 #import "BITAuthenticator_Private.h"
 #import "BITHockeyBaseManagerPrivate.h"
 #import "BITHTTPOperation.h"
@@ -230,10 +230,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   _sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppEmail;
   [_sut storeInstallationIdentifier:@"meh" withType:BITAuthenticatorIdentificationTypeHockeyAppEmail];
   _sut.authenticationSecret = @"double";
-  [_sut authenticationViewController:nil
-       handleAuthenticationWithEmail:@"stephan@dd.de"
-                            password:@"nopass"
-                          completion:nil];
+  [_sut authenticationViewController:nil handleAuthenticationWithEmail:@"stephan@dd.de" request:nil urlSessionSupported:NO completion:nil];
   [verify(httpClientMock) enqeueHTTPOperation:anything()];
 }
 
@@ -265,7 +262,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   _sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppEmail;
   [_sut storeInstallationIdentifier:@"meh" withType:BITAuthenticatorIdentificationTypeHockeyAppEmail];
   _sut.authenticationSecret = @"double";
-  [_sut validateWithCompletion:nil];
+  [_sut validateWithCompletion:nil sessionSupported:NO];
   [verify(httpClientMock) getPath:(id)anything()
                        parameters:(id)anything()
                        completion:(id)anything()];
@@ -273,15 +270,16 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 
 #pragma mark - Authentication
 - (void) testThatEnabledRestrictionTriggersValidation {
-  id clientMock = mock(BITHockeyAppClient.class);
-  _sut.hockeyAppClient = clientMock;
+  id mockAuthenticator = OCMPartialMock(_sut);
   _sut.authenticationSecret = @"sekret";
   _sut.restrictApplicationUsage = YES;
   _sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppEmail;
   [_sut storeInstallationIdentifier:@"asd" withType:BITAuthenticatorIdentificationTypeHockeyAppEmail];
-  [_sut authenticate];
   
-  [verify(clientMock) getPath:(id)anything() parameters:(id)anything() completion:(id)anything()];
+  
+  OCMExpect([mockAuthenticator validateWithCompletion:(id)anything() sessionSupported:YES]);
+  [_sut authenticate];
+  OCMVerifyAll(mockAuthenticator);
 }
 
 - (void) testThatDisabledRestrictionDoesntTriggerValidation {

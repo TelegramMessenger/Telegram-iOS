@@ -26,6 +26,10 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_FEEDBACK
+
 #import "BITImageAnnotation.h"
 
 @implementation BITImageAnnotation
@@ -43,3 +47,5 @@
 }
 
 @end
+
+#endif

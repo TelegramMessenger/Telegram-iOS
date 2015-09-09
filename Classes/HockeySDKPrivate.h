@@ -79,21 +79,6 @@ NSString *BITHockeyMD5(NSString *str);
 #define __IPHONE_8_0     80000
 #endif
 
-#ifdef __IPHONE_6_0
-
-#define kBITTextLabelAlignmentCenter        NSTextAlignmentCenter
-#define kBITTextLabelAlignmentLeft          NSTextAlignmentLeft
-#define kBITTextLabelAlignmentRight         NSTextAlignmentRight
-#define kBITLineBreakModeMiddleTruncation   NSLineBreakByTruncatingMiddle
-
-#else
-
-#define kBITTextLabelAlignmentCenter        UITextAlignmentCenter
-#define kBITTextLabelAlignmentLeft          UITextAlignmentLeft
-#define kBITTextLabelAlignmentRight         UITextAlignmentRight
-#define kBITLineBreakModeMiddleTruncation   UILineBreakModeMiddleTruncation
-
-#endif /* __IPHONE_6_0 */
 
 #if __IPHONE_OS_VERSION_MIN_REQUIRED > __IPHONE_6_1
 

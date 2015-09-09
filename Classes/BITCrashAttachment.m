@@ -26,6 +26,10 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER
+
 #import "BITCrashAttachment.h"
 
 @implementation BITCrashAttachment
@@ -40,3 +44,5 @@
 }
 
 @end
+
+#endif

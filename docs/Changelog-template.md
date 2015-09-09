@@ -1,3 +1,14 @@
+## Version 3.8-Beta.1
+
+- [NEW] Added Bitcode support
+- [UPDATE] Requires Xcode 7 or later to build
+- [UPDATE] Requires iOS 7 or later as base SDK
+- [UPDATE] Silenced deprecation warnings for `NSURLConnection` calls, these will be refactored in a future update
+- [UPDATE] Removed statusbar adjustment code (which isn't needed any longer)
+- [UPDATE] Removed kBITTextLabel... defines and use NSText.. instead
+- [UPDATE] Removed a few `#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1` since iOS 7 or later is now required as base SDK
+- [UPDATE] Use `UIAlertController` when available
+
 ## Version 3.7.3
 
 - [BUGFIX] `BITCrashManager`: Updated PLCrashReporter build created with Xcode 6.4 to solve a duplicate symbol error some users are experiencing

@@ -28,8 +28,11 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import "BITWebTableViewCell.h"
+#import "HockeySDK.h"
 
+#if HOCKEYSDK_FEATURE_UPDATES
+
+#import "BITWebTableViewCell.h"
 
 @implementation BITWebTableViewCell
 
@@ -179,3 +182,5 @@ body { font: 13px 'Helvetica Neue', Helvetica; color:#626262; word-wrap:break-wo
 }
 
 @end
+
+#endif
