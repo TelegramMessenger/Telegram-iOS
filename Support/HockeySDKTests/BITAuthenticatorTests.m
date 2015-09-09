@@ -277,7 +277,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   [_sut storeInstallationIdentifier:@"asd" withType:BITAuthenticatorIdentificationTypeHockeyAppEmail];
   
   
-  OCMExpect([mockAuthenticator validateWithCompletion:(id)anything() sessionSupported:(id)anything()]);
+  OCMExpect([mockAuthenticator validateWithCompletion:(id)anything() sessionSupported:YES]);
   [_sut authenticate];
   OCMVerifyAll(mockAuthenticator);
 }
