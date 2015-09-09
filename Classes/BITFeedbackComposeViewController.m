@@ -349,6 +349,8 @@
   }
   
   if (!alreadySetup) {
+    CGSize tempTextViewSize = CGSizeMake(self.contentViewContainer.frame.size.width, self.contentViewContainer.frame.size.height);
+    textViewFrame.size = tempTextViewSize;
     textViewFrame.size.width -= scrollViewWidth;
     // height has to be identical to the textview!
     scrollViewFrame = CGRectMake(CGRectGetMaxX(textViewFrame), self.view.frame.origin.y, scrollViewWidth, CGRectGetHeight(self.textView.bounds));
