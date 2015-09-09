@@ -30,4 +30,5 @@ script:
       COMMAND+=" -destination '$DESTINATION' clean test";
     fi
   - COMMAND+=" | xcpretty -c"
+  - echo $COMMAND
   - eval $COMMAND
