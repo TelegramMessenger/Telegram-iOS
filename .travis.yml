@@ -16,6 +16,7 @@ env:
     - SCHEME="HockeySDK Distribution"                                                   RUN_TESTS="NO"
 
 before_install:
+  - xcrun simctl list
   - gem install cocoapods --no-rdoc --no-ri --no-document --quiet
   - gem install xcpretty --no-rdoc --no-ri --no-document --quiet
   - brew tap homebrew/versions
