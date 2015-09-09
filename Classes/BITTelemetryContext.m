@@ -51,23 +51,18 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
     BITApplication *applicationContext = [BITApplication new];
     applicationContext.version = bit_appVersion();
     
-    BITOperation *operationContext = [BITOperation new];
-    
     BITUser *userContext = [self loadUser];
     if (!userContext) {
       userContext = [self newUser];
       [self saveUser:userContext];
     }
-    
-    BITLocation *locationContext = [BITLocation new];
+
     BITSession *sessionContext = [BITSession new];
     
     _application = applicationContext;
     _device = deviceContext;
-    _location = locationContext;
     _user = userContext;
     _internal = internalContext;
-    _operation = operationContext;
     _session = sessionContext;
     _tags = [self tags];
 
@@ -448,9 +443,7 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
   if(!_tags){
     _tags = [self.application serializeToDictionary];
     [_tags addEntriesFromDictionary:[self.application serializeToDictionary]];
-    [_tags addEntriesFromDictionary:[self.location serializeToDictionary]];
     [_tags addEntriesFromDictionary:[self.internal serializeToDictionary]];
-    [_tags addEntriesFromDictionary:[self.operation serializeToDictionary]];
   }
   return _tags;
 }

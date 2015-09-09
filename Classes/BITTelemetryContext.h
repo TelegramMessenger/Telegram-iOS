@@ -6,11 +6,9 @@
 #import "HockeySDKPrivate.h"
 #import "BITApplication.h"
 #import "BITDevice.h"
-#import "BITOperation.h"
 #import "BITInternal.h"
 #import "BITUser.h"
 #import "BITSession.h"
-#import "BITLocation.h"
 
 @class BITPersistence;
 
@@ -53,11 +51,6 @@ FOUNDATION_EXPORT NSString *const kBITApplicationWasLaunched;
 @property (nonatomic, strong, readonly)BITDevice *device;
 
 /**
- *  The location context.
- */
-@property (nonatomic, strong, readonly)BITLocation *location;
-
-/**
  *  The session context.
  */
 @property (nonatomic, strong, readonly)BITSession *session;
@@ -71,11 +64,6 @@ FOUNDATION_EXPORT NSString *const kBITApplicationWasLaunched;
  *  The internal context.
  */
 @property (nonatomic, strong, readonly)BITInternal *internal;
-
-/**
- *  The operation context.
- */
-@property (nonatomic, strong, readonly)BITOperation *operation;
 
 /**
  *  Initializes a telemetry context.
