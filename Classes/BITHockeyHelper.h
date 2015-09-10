@@ -31,7 +31,6 @@
 
 /* NSString helpers */
 NSString *bit_URLEncodedString(NSString *inputString);
-NSString *bit_URLDecodedString(NSString *inputString);
 NSString *bit_base64String(NSData * data, unsigned long length);
 
 NSString *bit_settingsDir(void);

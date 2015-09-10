@@ -56,23 +56,6 @@ NSString *bit_URLEncodedString(NSString *inputString) {
 //  }
 }
 
-NSString *bit_URLDecodedString(NSString *inputString) {
-  // Requires iOS 7
-  // TODO: This is not fully working as expected yet, need to fix for release
-//  if ([inputString respondsToSelector:@selector(stringByRemovingPercentEncoding)]) {
-//    return [inputString stringByRemovingPercentEncoding];
-//  } else {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    return CFBridgingRelease(CFURLCreateStringByReplacingPercentEscapesUsingEncoding(kCFAllocatorDefault,
-                                                                                     (__bridge CFStringRef)inputString,
-                                                                                     CFSTR(""),
-                                                                                     kCFStringEncodingUTF8)
-                             );
-#pragma clang diagnostic pop
-//  }
-}
-
 NSString *bit_base64String(NSData * data, unsigned long length) {
   SEL base64EncodingSelector = NSSelectorFromString(@"base64EncodedStringWithOptions:");
   if ([data respondsToSelector:base64EncodingSelector]) {
