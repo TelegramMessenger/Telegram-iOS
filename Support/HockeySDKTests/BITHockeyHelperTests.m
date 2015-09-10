@@ -197,4 +197,25 @@
 }
 #endif
 
+- (void)testConvertAppIdToGuidWorks {
+	NSString *myAppID = @"    ca2aba1482cb9458a67b917930b202c8      ";
+	NSString *expected = @"ca2aba14-82cb-9458-a67b-917930b202c8";
+	
+	// Test
+	NSString *result = bit_appIdToGuid(myAppID);
+	
+	// Verify
+	assertThat(result, equalTo(expected));
+}
+
+- (void)testConvertInvalidAppIdToGuidReturnsNil {
+	NSString *myAppID = @"ca2aba1482cb9458a6";
+	
+	// Test
+	NSString *result = bit_appIdToGuid(myAppID);
+	
+	// Verify
+  assertThat(result, nilValue());
+}
+
 @end

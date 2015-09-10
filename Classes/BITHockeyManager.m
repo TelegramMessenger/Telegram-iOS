@@ -681,7 +681,8 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     
 #if HOCKEYSDK_FEATURE_TELEMETRY
     BITHockeyLog(@"INFO: Setup TelemetryManager");
-    _telemetryManager = [[BITTelemetryManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironment:_appStoreEnvironment];
+    NSString *iKey = bit_appIdToGuid(_appIdentifier);
+    _telemetryManager = [[BITTelemetryManager alloc] initWithAppIdentifier:iKey isAppStoreEnvironment:_appStoreEnvironment];
 #endif /* HOCKEYSDK_FEATURE_TELEMETRY */
 
     if (![self isAppStoreEnvironment]) {

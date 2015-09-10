@@ -64,6 +64,8 @@ UIImage *bit_imageNamed(NSString *imageName, NSString *bundleName);
 UIImage *bit_screenshot(void);
 UIImage *bit_appIcon(void);
 
+NSString *bit_appIdToGuid(NSString *appIdentifier);
+
 /* context helpers */
 NSString *bit_utcDateString(NSDate *date);
 NSString *bit_devicePlatform(void);
