@@ -75,6 +75,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 
 #if HOCKEYSDK_FEATURE_TELEMETRY
 #import "BITTelemetryManagerPrivate.h"
+#import "BITCategoryContainer.h"
 #endif /* HOCKEYSDK_FEATURE_TELEMETRY */
 
 @interface BITHockeyManager ()
@@ -325,6 +326,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
   if (![self isTelemetryManagerDisabled]) {
     BITHockeyLog(@"INFO: Start Telemetry Manager");
     [_telemetryManager startManager];
+    [BITCategoryContainer activateCategory];
   }
 #endif /* HOCKEYSDK_FEATURE_TELEMETRY */
 }
