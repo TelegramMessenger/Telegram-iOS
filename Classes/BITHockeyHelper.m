@@ -38,12 +38,12 @@
 #pragma mark NSString helpers
 
 NSString *bit_URLEncodedString(NSString *inputString) {
-
+  
   // Requires iOS 7
-  // TODO: This is not fully working as expected yet, need to fix for release
-//  if ([inputString respondsToSelector:@selector(stringByAddingPercentEncodingWithAllowedCharacters:)]) {
-//    return [inputString stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLHostAllowedCharacterSet]];
-//  } else {
+  if ([inputString respondsToSelector:@selector(stringByAddingPercentEncodingWithAllowedCharacters:)]) {
+    return [inputString stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet characterSetWithCharactersInString:@"!*'();:@&=+$,/?%#[]"].invertedSet];
+    
+  } else {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     return CFBridgingRelease(CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault,
@@ -53,7 +53,7 @@ NSString *bit_URLEncodedString(NSString *inputString) {
                                                                      kCFStringEncodingUTF8)
                              );
 #pragma clang diagnostic pop
-//  }
+  }
 }
 
 NSString *bit_base64String(NSData * data, unsigned long length) {
@@ -518,7 +518,7 @@ UIImage *bit_imageToFitSize(UIImage *inputImage, CGSize fitSize, BOOL honorScale
     return nil;
   }
   
-	float imageScaleFactor = 1.0;
+  float imageScaleFactor = 1.0;
   if (honorScaleFactor) {
     if ([inputImage respondsToSelector:@selector(scale)]) {
       imageScaleFactor = [inputImage scale];
@@ -557,7 +557,7 @@ UIImage *bit_imageToFitSize(UIImage *inputImage, CGSize fitSize, BOOL honorScale
   destRect = CGRectMake(0, 0, scaledWidth, scaledHeight);
   
   // Create appropriately modified image.
-	UIImage *image = nil;
+  UIImage *image = nil;
   UIGraphicsBeginImageContextWithOptions(destRect.size, NO, honorScaleFactor ? 0.0 : 1.0); // 0.0 for scale means "correct scale for device's main screen".
   CGImageRef sourceImg = CGImageCreateWithImageInRect([inputImage CGImage], sourceRect); // cropping happens here.
   image = [UIImage imageWithCGImage:sourceImg scale:0.0 orientation:inputImage.imageOrientation]; // create cropped UIImage.
@@ -566,7 +566,7 @@ UIImage *bit_imageToFitSize(UIImage *inputImage, CGSize fitSize, BOOL honorScale
   image = UIGraphicsGetImageFromCurrentImageContext();
   UIGraphicsEndImageContext();
   
-	if (!image) {
+  if (!image) {
     // Try older method.
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
     CGContextRef context = CGBitmapContextCreate(NULL,  scaledWidth, scaledHeight, 8, (fitSize.width * 4),
