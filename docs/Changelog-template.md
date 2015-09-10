@@ -1,3 +1,10 @@
+## Version 3.8-RC.1
+
+- [UPDATE] Added full support for `NSURLSession`
+- [BUGFIX] `BITFeedbackManager`: Fixed feedback compose view rotation issue
+- [BUGFIX] `BITFeedbackManager`: Fixed `Add Image` button not always presented centered
+- [BUGFIX] Additional minor fixes
+
 ## Version 3.8-Beta.1
 
 - [NEW] Added Bitcode support
