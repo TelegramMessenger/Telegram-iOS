@@ -36,6 +36,7 @@
 @class BITTelemetryContext;
 @class BITSession;
 @class BITPersistence;
+@class BITSender;
 
 @interface BITTelemetryManager ()
 
@@ -72,6 +73,11 @@
  *  A concurrent queue which creates and processes telemetry items.
  */
 @property (nonatomic, strong, readonly)dispatch_queue_t telemetryEventQueue;
+
+/**
+ *  Sender instance to send out telemetry data.
+ */
+@property (nonatomic, strong) BITSender *sender;
 
 ///-----------------------------------------------------------------------------
 /// @name Session Management

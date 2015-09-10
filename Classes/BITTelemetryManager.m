@@ -13,6 +13,7 @@
 #import "BITSessionStateData.h"
 #import "BITPersistence.h"
 #import "BITHockeyBaseManagerPrivate.h"
+#import "BITSender.h"
 
 static char *const kBITTelemetryEventQueue =
 "net.hockeyapp.telemetryEventQueue";
@@ -20,6 +21,8 @@ static char *const kBITTelemetryEventQueue =
 NSString *const kBITSessionFileType = @"plist";
 NSString *const kBITApplicationDidEnterBackgroundTime = @"BITApplicationDidEnterBackgroundTime";
 NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
+
+NSString *const BITTelemetryEndpoint = @"https://dc-int.services.visualstudio.com/v2/track";
 
 @implementation BITTelemetryManager {
   id _appWillEnterForegroundObserver;
@@ -38,6 +41,7 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
     _telemetryEventQueue = dispatch_queue_create(kBITTelemetryEventQueue, DISPATCH_QUEUE_CONCURRENT);
     _appBackgroundTimeBeforeSessionExpires = 20;
   }
+  self.serverURL = nil;
   return self;
 }
 
@@ -52,6 +56,10 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
 }
 
 - (void)startManager {
+  if(!self.serverURL){
+    self.serverURL = BITTelemetryEndpoint;
+  }
+  _sender = [[BITSender alloc]initWithPersistence:self.persistence serverURL:[NSURL URLWithString:self.serverURL]];
   [self startNewSessionWithId:bit_UUID()];
   [self registerObservers];
 }
