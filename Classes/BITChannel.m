@@ -202,7 +202,7 @@ void bit_resetSafeJsonStream(char **string) {
   }
   
   self.timerSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, self.dataItemsOperations);
-  dispatch_source_set_timer(self.timerSource, dispatch_walltime(NULL, NSEC_PER_SEC * self.maxBatchCount), 1ull * NSEC_PER_SEC, 1ull * NSEC_PER_SEC);
+  dispatch_source_set_timer(self.timerSource, dispatch_walltime(NULL, NSEC_PER_SEC * defaultBatchInterval), 1ull * NSEC_PER_SEC, 1ull * NSEC_PER_SEC);
   dispatch_source_set_event_handler(self.timerSource, ^{
     
     // On completion: Reset timer and persist items
