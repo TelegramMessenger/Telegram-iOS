@@ -14,7 +14,7 @@ NSString *const kFileBaseStringMeta = @"metadata";
 NSString *const kTelemetryDirectoryPath = @"com.microsoft.HockeyApp/Telemetry/";
 NSString *const kMetaDataDirectoryPath = @"com.microsoft.HockeyApp/MetaData/";
 
-NSString *const BITHockeyPersistenceSuccessNotification = @"BITHockeyPersistenceSuccessNotification";
+NSString *const BITPersistenceSuccessNotification = @"BITHockeyPersistenceSuccessNotification";
 char const *kPersistenceQueueString = "com.microsoft.HockeyApp.persistenceQueue";
 NSUInteger const defaultFileCount = 50;
 
@@ -289,7 +289,7 @@ NSUInteger const defaultFileCount = 50;
  */
 - (void)sendBundleSavedNotification {
   dispatch_async(dispatch_get_main_queue(), ^{
-    [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyPersistenceSuccessNotification
+    [[NSNotificationCenter defaultCenter] postNotificationName:BITPersistenceSuccessNotification
                                                         object:nil
                                                       userInfo:nil];
   });

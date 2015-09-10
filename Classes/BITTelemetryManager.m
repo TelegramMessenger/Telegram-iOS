@@ -15,7 +15,7 @@
 #import "BITHockeyBaseManagerPrivate.h"
 
 static char *const kBITTelemetryEventQueue =
-"com.microsoft.ApplicationInsights.telemetryEventQueue";
+"net.hockeyapp.telemetryEventQueue";
 
 NSString *const kBITSessionFileType = @"plist";
 NSString *const kBITApplicationDidEnterBackgroundTime = @"BITApplicationDidEnterBackgroundTime";

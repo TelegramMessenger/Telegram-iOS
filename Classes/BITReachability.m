@@ -12,8 +12,8 @@ NSString * const kBITReachabilityTypeChangedNotification = @"BITReachabilityType
 NSString* const kBITReachabilityUserInfoName = @"kName";
 NSString* const kBITReachabilityUserInfoType = @"kType";
 
-static char *const BITReachabilitySingletonQueue = "com.microsoft.ApplicationInsights.singletonQueue";
-static char *const BITReacabilityNetworkQueue = "com.microsoft.ApplicationInsights.networkQueue";
+static char *const BITReachabilitySingletonQueue = "net.hockeyapp.singletonQueue";
+static char *const BITReacabilityNetworkQueue = "net.hockeyapp.networkQueue";
 
 static void BITReachabilityCallback(SCNetworkReachabilityRef target, SCNetworkReachabilityFlags flags, void* info){
   if(info != NULL && [(__bridge NSObject*) info isKindOfClass: [BITReachability class]]){

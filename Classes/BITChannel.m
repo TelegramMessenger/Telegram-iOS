@@ -13,7 +13,7 @@
 #import "BITDevice.h"
 #import "BITPersistencePrivate.h"
 
-static char *const BITDataItemsOperationsQueue = "com.microsoft.ApplicationInsights.senderQueue";
+static char *const BITDataItemsOperationsQueue = "net.hockeyapp.senderQueue";
 char *BITSafeJsonEventsString;
 
 NSInteger const defaultBatchInterval  = 20;
