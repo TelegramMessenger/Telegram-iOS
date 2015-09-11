@@ -61,10 +61,8 @@ static NSUInteger const defaultRequestLimit = 10;
 
 - (void)sendData:(NSData * __nonnull)data withPath:(NSString * __nonnull)path {
   if(data && data.length > 0) {
-    NSString *contentType = [self contentTypeForData:data];
-
     NSData *gzippedData = [data gzippedData];
-    NSURLRequest *request = [self requestForData:gzippedData withContentType:contentType];
+    NSURLRequest *request = [self requestForData:gzippedData];
     id nsurlsessionClass = NSClassFromString(@"NSURLSessionUploadTask");
     BOOL isUrlSessionSupported = (nsurlsessionClass && !bit_isRunningInAppExtension());
     
@@ -120,7 +118,7 @@ static NSUInteger const defaultRequestLimit = 10;
 
 #pragma mark - Helper
 
-- (NSURLRequest *)requestForData:(NSData * __nonnull)data withContentType:(NSString * __nonnull)contentType {
+- (NSURLRequest *)requestForData:(NSData * __nonnull)data {
 
   NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:self.serverURL];
   request.HTTPMethod = @"POST";
@@ -130,7 +128,7 @@ static NSUInteger const defaultRequestLimit = 10;
   
   NSDictionary *headers = @{@"Charset": @"UTF-8",
                             @"Content-Encoding": @"gzip",
-                            @"Content-Type": contentType,
+                            @"Content-Type": @"application/x-json-stream",
                             @"Accept-Encoding": @"gzip"};
   [request setAllHTTPHeaderFields:headers];
   
@@ -143,22 +141,6 @@ static NSUInteger const defaultRequestLimit = 10;
   NSArray *recoverableStatusCodes = @[@429, @408, @500, @503, @511];
 
   return ![recoverableStatusCodes containsObject:@(statusCode)];
-}
-
-- (NSString *)contentTypeForData:(NSData *)data {
-  NSString *contentType;
-  static const uint8_t LINEBREAK_SIGNATURE = (0x0a);
-  UInt8 lastByte = 0;
-  if (data && data.length > 0) {
-    [data getBytes:&lastByte range:NSMakeRange(data.length-1, 1)];
-  }
-  
-  if (data && (data.length > sizeof(uint8_t)) && (lastByte == LINEBREAK_SIGNATURE)) {
-    contentType = @"application/x-json-stream";
-  } else {
-    contentType = @"application/json";
-  }
-  return contentType;
 }
 
 #pragma mark - Getter/Setter

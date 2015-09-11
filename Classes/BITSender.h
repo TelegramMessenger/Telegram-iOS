@@ -89,7 +89,7 @@ NS_ASSUME_NONNULL_BEGIN
  *
  *  @return a request which contains the given data
  */
-- (NSURLRequest *)requestForData:(NSData *)data withContentType:(NSString *)contentType;
+- (NSURLRequest *)requestForData:(NSData *)data;
 
 /**
  *  Returns if data should be deleted based on a given status code.
@@ -99,15 +99,6 @@ NS_ASSUME_NONNULL_BEGIN
  *  @return YES if data should be deleted, NO if the payload should be sent at a later time again.
  */
 - (BOOL)shouldDeleteDataWithStatusCode:(NSInteger)statusCode;
-
-/**
- *  This method tries to detect whether the given data object is regular JSON or JSON Stream and returns the appropriate HTTP content type.
- *
- *  @param data The data object whose content type should be returned.
- *
- *  @returns "application/json" if the data is regular JSON or "application/x-json-stream" if it is JSON Stream. Defaults to "application/json".
- */
-- (NSString *)contentTypeForData:(NSData *)data;
 
 @end
 NS_ASSUME_NONNULL_END
