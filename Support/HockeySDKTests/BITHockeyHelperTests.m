@@ -204,7 +204,7 @@
   [self measureBlock:^{
     for (int i = 0; i < 100; i++) {
       NSDate *testDate = [NSDate dateWithTimeIntervalSince1970:0];
-      NSString *utcDateString = bit_utcDateString(testDate);
+      bit_utcDateString(testDate);
     }
   }];
 }
