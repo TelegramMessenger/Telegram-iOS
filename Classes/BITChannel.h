@@ -70,10 +70,13 @@ FOUNDATION_EXPORT char *BITSafeJsonEventsString;
 @property (nonatomic, assign) NSUInteger dataItemCount;
 
 /**
- *  A timer source which is used to flush the queue after a cretain time.
+ *  Initializes a new BITChannel instance.
+ *
+ *  @param telemetryContext the context used to add context values to the metrics payload
+ *  @param persistence the persistence used to save metrics after the queue gets flushed
+ *
+ *  @return the telemetry context
  */
-@property (nonatomic, strong, null_unspecified) dispatch_source_t timerSource;
-
 - (instancetype)initWithTelemetryContext:(BITTelemetryContext *)telemetryContext persistence:(BITPersistence *) persistence;
 
 /**
@@ -109,16 +112,6 @@ void bit_appendStringToSafeJsonStream(NSString *string, char *__nonnull*__nonnul
  *  @param string The string that will be reset.
  */
 void bit_resetSafeJsonStream(char *__nonnull*__nonnull jsonStream);
-
-/**
- *  Starts the timer.
- */
-- (void)startTimer;
-
-/**
- *  Stops the timer if currently running.
- */
-- (void)invalidateTimer;
 
 /**
  *  A method which indicates whether the telemetry pipeline is busy and no new data should be enqueued.

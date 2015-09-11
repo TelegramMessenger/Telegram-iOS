@@ -16,8 +16,7 @@
 static char *const BITDataItemsOperationsQueue = "net.hockeyapp.senderQueue";
 char *BITSafeJsonEventsString;
 
-NSInteger const defaultBatchInterval  = 20;
-NSInteger const defaultMaxBatchCount  = 50;
+NSInteger const defaultMaxBatchCount  = 1;
 static NSInteger const schemaVersion  = 2;
 
 @implementation BITChannel
@@ -53,7 +52,6 @@ static NSInteger const schemaVersion  = 2;
 }
 
 - (void)persistDataItemQueue {
-  [self invalidateTimer];
   if(!BITSafeJsonEventsString || strlen(BITSafeJsonEventsString) == 0) {
     return;
   }
@@ -87,9 +85,6 @@ static NSInteger const schemaVersion  = 2;
         // Max batch count has been reached, so write queue to disk and delete all items.
         [strongSelf persistDataItemQueue];
         
-      } else if(strongSelf->_dataItemCount == 1) {
-        // It is the first item, let's start the timer
-        [strongSelf startTimer];
       }
     });
   }
@@ -186,30 +181,6 @@ void bit_resetSafeJsonStream(char **string) {
 }
 
 #pragma mark - Batching
-
-- (void)invalidateTimer {
-  if(self.timerSource) {
-    dispatch_source_cancel(self.timerSource);
-    self.timerSource = nil;
-  }
-}
-
-- (void)startTimer {
-  
-  // Reset timer, if it is already running
-  if(self.timerSource) {
-    [self invalidateTimer];
-  }
-  
-  self.timerSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, self.dataItemsOperations);
-  dispatch_source_set_timer(self.timerSource, dispatch_walltime(NULL, NSEC_PER_SEC * defaultBatchInterval), 1ull * NSEC_PER_SEC, 1ull * NSEC_PER_SEC);
-  dispatch_source_set_event_handler(self.timerSource, ^{
-    
-    // On completion: Reset timer and persist items
-    [self persistDataItemQueue];
-  });
-  dispatch_resume(self.timerSource);
-}
 
 - (NSInteger)maxBatchCount {
   if(_maxBatchCount <= 0){

@@ -45,6 +45,7 @@
 
 - (void)testEnqueueEnvelopeWithOneEnvelopeAndJSONStream {
   _sut = OCMPartialMock(_sut);
+  _sut.maxBatchCount = 3;
   BITTelemetryData *testData = [BITTelemetryData new];
   
   [_sut enqueueTelemetryItem:testData];
@@ -52,7 +53,6 @@
   dispatch_sync(_sut.dataItemsOperations, ^{
     assertThatUnsignedInteger(_sut.dataItemCount, equalToUnsignedInteger(1));
     XCTAssertTrue(strlen(BITSafeJsonEventsString) > 0);
-    OCMVerify([_sut startTimer]);
   });
 }
 
@@ -78,7 +78,6 @@
   
   [_sut enqueueTelemetryItem:testData];
   dispatch_sync(_sut.dataItemsOperations, ^{
-    OCMVerify([_sut invalidateTimer]);
     assertThatUnsignedInteger(_sut.dataItemCount, equalToUnsignedInteger(0));
     XCTAssertTrue(strcmp(BITSafeJsonEventsString, "") == 0);
   });
