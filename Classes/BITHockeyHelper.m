@@ -855,9 +855,7 @@ UIImage *bit_screenshot(void) {
   return image;
 }
 
-#endif
-
-#pragma mark context helpers
+#pragma mark Context helpers
 
 // Return ISO 8601 string representation of the date
 NSString *bit_utcDateString(NSDate *date){
@@ -999,3 +997,5 @@ NSString *bit_appVersion(void){
     return build;
   }
 }
+
+#endif /* HOCKEYSDK_CONFIGURATION_ReleaseCrashOnly && HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions */

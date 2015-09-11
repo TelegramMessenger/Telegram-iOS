@@ -1,4 +1,7 @@
 #import "BITSender.h"
+
+#if HOCKEYSDK_FEATURE_TELEMETRY
+
 #import "BITPersistencePrivate.h"
 #import "BITGZIP.h"
 #import "HockeySDKPrivate.h"
@@ -172,3 +175,6 @@ static NSUInteger const defaultRequestLimit = 10;
 }
 
 @end
+
+#endif /* HOCKEYSDK_FEATURE_TELEMETRY */
+
