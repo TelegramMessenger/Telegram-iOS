@@ -103,7 +103,7 @@ NS_ASSUME_NONNULL_BEGIN
  *  Deletes or unblocks sent file according to the given response code.
  *
  *  @param statusCode the status code of the response
- *  @param responseCode the data of the response
+ *  @param responseData the data of the response
  *  @param filePath the path of the file which content has been sent to the server
  *  @param error an error object sent from the server
  */

@@ -42,6 +42,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 FOUNDATION_EXPORT char *BITSafeJsonEventsString;
 
+/**
+ *  Items get queued before they are persisted and sent out as a batch. This class managed the queue, and forwards the batch
+ *  to the persistence layer once the max batch count has been reached.
+ */
 @interface BITChannel : NSObject
 
 /**
@@ -82,7 +86,7 @@ FOUNDATION_EXPORT char *BITSafeJsonEventsString;
 /**
  *  Enqueue telemetry data (events, metrics, exceptions, traces) before processing it.
  *
- *  @param dictionary The dictionary object, which should be processed.
+ *  @param item the telemetry object, which should be processed
  */
 - (void)enqueueTelemetryItem:(BITTelemetryData *)item;
 
@@ -118,8 +122,6 @@ void bit_resetSafeJsonStream(char *__nonnull*__nonnull jsonStream);
  *  Currently, we drop telemetry data if this returns YES.
  *  This depends on defaultMaxBatchCount and defaultBatchInterval.
  *
- *  @see defaultMaxBatchCount
- *  @see defaultBatchInterval
  *  @return Returns yes if currently no new data should be enqueued on the channel.
  */
 - (BOOL)isQueueBusy;
