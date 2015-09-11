@@ -182,7 +182,7 @@ void bit_resetSafeJsonStream(char **string) {
 
 #pragma mark - Batching
 
-- (NSInteger)maxBatchCount {
+- (NSUInteger)maxBatchCount {
   if(_maxBatchCount <= 0){
     return defaultMaxBatchCount;
   }

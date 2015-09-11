@@ -61,7 +61,7 @@ FOUNDATION_EXPORT char *BITSafeJsonEventsString;
 /**
  *  Number of queue items which will trigger a flush (testing).
  */
-@property (nonatomic) NSInteger maxBatchCount;
+@property (nonatomic) NSUInteger maxBatchCount;
 
 /**
  *  A queue which makes array operations thread safe.
