@@ -5,7 +5,6 @@
 
 #import "BITTelemetryManagerPrivate.h"
 #import "BITHockeyHelper.h"
-#import "BITReachability.h"
 #import "BITOrderedDictionary.h"
 #import "BITPersistence.h"
 #import "BITPersistencePrivate.h"
@@ -65,8 +64,6 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
     _internal = internalContext;
     _session = sessionContext;
     _tags = [self tags];
-
-    [self configureNetworkStatusTracking];
   }
   return self;
 }
@@ -97,17 +94,6 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
 }
 
 #pragma mark - Network
-
-- (void)configureNetworkStatusTracking {
-  [[BITReachability sharedInstance] startNetworkStatusTracking];
-  _device.network = [[BITReachability sharedInstance] descriptionForActiveReachabilityType];
-  NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
-  [center addObserver:self selector:@selector(updateNetworkType:) name:kBITReachabilityTypeChangedNotification object:nil];
-}
-
-- (void)updateNetworkType:(NSNotification *)notification {
-    [self setNetworkType:[notification userInfo][kBITReachabilityUserInfoName]];
-}
 
 #pragma mark - Getter/Setter properties
 
@@ -366,21 +352,6 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
   });
 }
 
-- (NSString *)networkType {
-  __block NSString *tmp;
-  dispatch_sync(_operationsQueue, ^{
-    tmp = _device.network;
-  });
-  return tmp;
-}
-
-- (void)setNetworkType:(NSString *)networkType {
-  NSString* tmp = [networkType copy];
-  dispatch_barrier_async(_operationsQueue, ^{
-    _device.network = tmp;
-  });
-}
-
 #pragma mark - Custom getter
 #pragma mark - Helper
 
@@ -389,8 +360,6 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
   [contextDictionary addEntriesFromDictionary:self.tags];
   [contextDictionary addEntriesFromDictionary:[self.session serializeToDictionary]];
   [contextDictionary addEntriesFromDictionary:[self.user serializeToDictionary]];
-  // TODO: Only update networkType rather than all device context values
-  [contextDictionary addEntriesFromDictionary:[self.device serializeToDictionary]];
   
   return contextDictionary;
 }
@@ -400,6 +369,7 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
     _tags = [self.application serializeToDictionary];
     [_tags addEntriesFromDictionary:[self.application serializeToDictionary]];
     [_tags addEntriesFromDictionary:[self.internal serializeToDictionary]];
+    [_tags addEntriesFromDictionary:[self.device serializeToDictionary]];
   }
   return _tags;
 }

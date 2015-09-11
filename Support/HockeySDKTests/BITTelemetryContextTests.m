@@ -78,10 +78,6 @@
   _sut.deviceOemName = @"OemName";
   [self wait];
   XCTAssertEqualObjects(_sut.device.oemName, _sut.deviceOemName);
-  
-  _sut.networkType = @"NetworkType";
-  [self wait];
-  XCTAssertEqualObjects(_sut.device.network, _sut.networkType);
 
   // Internal context
   _sut.sdkVersion = @"SdkVersion";

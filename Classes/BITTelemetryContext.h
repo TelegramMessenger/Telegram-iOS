@@ -76,15 +76,6 @@ FOUNDATION_EXPORT NSString *const kBITApplicationWasLaunched;
 - (instancetype)initWithAppIdentifier:(NSString *)appIdentifier persistence:(BITPersistence *)persistence;
 
 ///-----------------------------------------------------------------------------
-/// @name Network status
-///-----------------------------------------------------------------------------
-
-/**
- *  Get current network type and register for updates.
- */
-- (void)configureNetworkStatusTracking;
-
-///-----------------------------------------------------------------------------
 /// @name Helper
 ///-----------------------------------------------------------------------------
 
@@ -167,10 +158,6 @@ FOUNDATION_EXPORT NSString *const kBITApplicationWasLaunched;
 - (NSString *)deviceType;
 
 - (void)setDeviceType:(NSString *)deviceType;
-
-- (NSString *)networkType;
-
-- (void)setNetworkType:(NSString *)networkType;
 
 @end
 NS_ASSUME_NONNULL_END
