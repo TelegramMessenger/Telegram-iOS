@@ -215,7 +215,7 @@
 	NSString *expected = @"ca2aba14-82cb-9458-a67b-917930b202c8";
 	
 	// Test
-	NSString *result = bit_appIdToGuid(myAppID);
+	NSString *result = bit_appIdentifierToGuid(myAppID);
 	
 	// Verify
 	assertThat(result, equalTo(expected));
@@ -225,7 +225,7 @@
 	NSString *myAppID = @"ca2aba1482cb9458a6";
 	
 	// Test
-	NSString *result = bit_appIdToGuid(myAppID);
+	NSString *result = bit_appIdentifierToGuid(myAppID);
 	
 	// Verify
   assertThat(result, nilValue());
