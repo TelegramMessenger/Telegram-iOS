@@ -5,7 +5,7 @@
 #import "BITHTTPOperation.h"
 #import "BITHockeyHelper.h"
 
-static char const *kPersistenceQueueString = "net.hockeyapp.senderQueue";
+static char const *kSenderQueueString = "net.hockeyapp.senderQueue";
 static NSUInteger const defaultRequestLimit = 10;
 
 @implementation BITSender
@@ -17,7 +17,7 @@ static NSUInteger const defaultRequestLimit = 10;
 
 - (instancetype)initWithPersistence:(BITPersistence *)persistence serverURL:(NSURL *)serverURL {
   if ((self = [super init])) {
-    _senderQueue = dispatch_queue_create(kPersistenceQueueString, DISPATCH_QUEUE_CONCURRENT);
+    _senderQueue = dispatch_queue_create(kSenderQueueString, DISPATCH_QUEUE_CONCURRENT);
     _maxRequestCount = defaultRequestLimit;
     _serverURL = serverURL;
     _persistence = persistence;
