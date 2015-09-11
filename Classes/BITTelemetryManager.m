@@ -22,7 +22,7 @@ NSString *const kBITSessionFileType = @"plist";
 NSString *const kBITApplicationDidEnterBackgroundTime = @"BITApplicationDidEnterBackgroundTime";
 NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
 
-NSString *const BITTelemetryEndpoint = @"https://dc-int.services.visualstudio.com/v2/track";
+NSString *const BITTelemetryEndpoint = @"https://dc.services.visualstudio.com/v2/track";
 
 @implementation BITTelemetryManager {
   id _appWillEnterForegroundObserver;
