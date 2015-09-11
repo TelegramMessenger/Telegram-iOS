@@ -170,6 +170,20 @@ NSString *bit_encodeAppIdentifier(NSString *inputString) {
   return (inputString ? bit_URLEncodedString(inputString) : bit_URLEncodedString(bit_mainBundleIdentifier()));
 }
 
+NSString *bit_appIdentifierToGuid(NSString *appIdentifier) {
+  NSMutableString *guid;
+  NSString *cleanAppId = [appIdentifier stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+  if(cleanAppId && cleanAppId.length == 32) {
+    // Insert dashes so that DC will accept th appidentifier (as a replacement for iKey)
+    guid = [NSMutableString stringWithString:cleanAppId];
+    [guid insertString:@"-" atIndex:20];
+    [guid insertString:@"-" atIndex:16];
+    [guid insertString:@"-" atIndex:12];
+    [guid insertString:@"-" atIndex:8];
+  }
+  return [guid copy];
+}
+
 NSString *bit_appName(NSString *placeHolderString) {
   NSString *appName = [[[NSBundle mainBundle] localizedInfoDictionary] objectForKey:@"CFBundleDisplayName"];
   if (!appName)
@@ -984,18 +998,4 @@ NSString *bit_appVersion(void){
   }else{
     return build;
   }
-}
-
-NSString *bit_appIdToGuid(NSString *appIdentifier) {
-  NSMutableString *guid;
-  NSString *cleanAppId = [appIdentifier stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
-  if(cleanAppId && cleanAppId.length == 32) {
-    // Insert dashes so that DC will accept th appidentifier (as a replacement for iKey)
-    guid = [NSMutableString stringWithString:cleanAppId];
-    [guid insertString:@"-" atIndex:20];
-    [guid insertString:@"-" atIndex:16];
-    [guid insertString:@"-" atIndex:12];
-    [guid insertString:@"-" atIndex:8];
-  }
-  return [guid copy];
 }

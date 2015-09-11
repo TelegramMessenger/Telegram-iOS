@@ -41,6 +41,7 @@ NSString *bit_keychainHockeySDKServiceName(void);
 NSComparisonResult bit_versionCompare(NSString *stringA, NSString *stringB);
 NSString *bit_mainBundleIdentifier(void);
 NSString *bit_encodeAppIdentifier(NSString *inputString);
+NSString *bit_appIdentifierToGuid(NSString *appIdentifier);
 NSString *bit_appName(NSString *placeHolderString);
 NSString *bit_UUIDPreiOS6(void);
 NSString *bit_UUID(void);
@@ -63,8 +64,6 @@ UIImage *bit_imageWithContentsOfResolutionIndependentFile(NSString * path);
 UIImage *bit_imageNamed(NSString *imageName, NSString *bundleName);
 UIImage *bit_screenshot(void);
 UIImage *bit_appIcon(void);
-
-NSString *bit_appIdToGuid(NSString *appIdentifier);
 
 /* context helpers */
 NSString *bit_utcDateString(NSDate *date);
