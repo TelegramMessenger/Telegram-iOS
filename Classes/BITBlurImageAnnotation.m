@@ -26,6 +26,10 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_FEEDBACK
+
 #import "BITBlurImageAnnotation.h"
 
 @interface BITBlurImageAnnotation()
@@ -99,3 +103,5 @@
 }
 
 @end
+
+#endif

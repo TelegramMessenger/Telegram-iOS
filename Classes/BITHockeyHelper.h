@@ -31,7 +31,6 @@
 
 /* NSString helpers */
 NSString *bit_URLEncodedString(NSString *inputString);
-NSString *bit_URLDecodedString(NSString *inputString);
 NSString *bit_base64String(NSData * data, unsigned long length);
 
 NSString *bit_settingsDir(void);
@@ -50,6 +49,7 @@ BOOL bit_isPreiOS7Environment(void);
 BOOL bit_isPreiOS8Environment(void);
 BOOL bit_isRunningInAppExtension(void);
 
+#if !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnly) && !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions)
 NSString *bit_validAppIconStringFromIcons(NSBundle *resourceBundle, NSArray *icons);
 NSString *bit_validAppIconFilename(NSBundle *bundle, NSBundle *resourceBundle);
 
@@ -78,3 +78,4 @@ NSString *bit_deviceLanguage(void);
 NSString *bit_screenSize(void);
 NSString *bit_sdkVersion(void);
 NSString *bit_appVersion(void);
+#endif

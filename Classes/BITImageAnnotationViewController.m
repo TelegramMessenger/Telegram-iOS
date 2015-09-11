@@ -26,6 +26,10 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_FEEDBACK
+
 #import "BITImageAnnotationViewController.h"
 #import "BITImageAnnotation.h"
 #import "BITRectangleImageAnnotation.h"
@@ -97,7 +101,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
   self.imageView.image = self.image;
   self.imageView.contentMode = UIViewContentModeScaleToFill;
   
-  self.view.frame = UIScreen.mainScreen.applicationFrame;
+  self.view.frame = UIScreen.mainScreen.bounds;
   
   [self.view addSubview:self.imageView];
   // Erm.
@@ -113,13 +117,8 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
   
   self.imageView.userInteractionEnabled = YES;
   
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_8_0
   self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc ] initWithImage:bit_imageNamed(@"Cancel.png", BITHOCKEYSDK_BUNDLE) landscapeImagePhone:bit_imageNamed(@"Cancel.png", BITHOCKEYSDK_BUNDLE) style:UIBarButtonItemStylePlain target:self action:@selector(discard:)];
   self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc ] initWithImage:bit_imageNamed(@"Ok.png", BITHOCKEYSDK_BUNDLE) landscapeImagePhone:bit_imageNamed(@"Ok.png", BITHOCKEYSDK_BUNDLE) style:UIBarButtonItemStylePlain target:self action:@selector(save:)];
-#else
-  self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc ] initWithImage:bit_imageNamed(@"Cancel.png", BITHOCKEYSDK_BUNDLE) landscapeImagePhone:bit_imageNamed(@"Cancel.png", BITHOCKEYSDK_BUNDLE) style:UIBarButtonItemStyleBordered target:self action:@selector(discard:)];
-  self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc ] initWithImage:bit_imageNamed(@"Ok.png", BITHOCKEYSDK_BUNDLE) landscapeImagePhone:bit_imageNamed(@"Ok.png", BITHOCKEYSDK_BUNDLE) style:UIBarButtonItemStyleBordered target:self action:@selector(save:)];
-#endif
   
   self.view.autoresizesSubviews = NO;
 }
@@ -364,7 +363,14 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
         self.navigationController.navigationBar.alpha = 1.0;
       }
       
-      [[UIApplication sharedApplication] setStatusBarHidden:NO];
+      if ([self respondsToSelector:@selector(prefersStatusBarHidden)]) {
+        [self setNeedsStatusBarAppearanceUpdate];
+      } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        [[UIApplication sharedApplication] setStatusBarHidden:NO];
+#pragma clang diagnostic pop
+      }
       
     } completion:^(BOOL finished) {
       [self fitImageViewFrame];
@@ -379,7 +385,14 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
         self.navigationController.navigationBar.alpha = 0.0;
       }
       
-      [[UIApplication sharedApplication] setStatusBarHidden:YES];
+      if ([self respondsToSelector:@selector(prefersStatusBarHidden)]) {
+        [self setNeedsStatusBarAppearanceUpdate];
+      } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        [[UIApplication sharedApplication] setStatusBarHidden:YES];
+#pragma clang diagnostic pop
+      }
       
     } completion:^(BOOL finished) {
       [self fitImageViewFrame];
@@ -405,3 +418,5 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
   return [self.editingControls selectedSegmentIndex] != UISegmentedControlNoSegment;
 }
 @end
+
+#endif

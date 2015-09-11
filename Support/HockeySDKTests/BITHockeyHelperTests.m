@@ -36,6 +36,19 @@
   [super tearDown];
 }
 
+- (void)testURLEncodedString {
+  assertThat(bit_URLEncodedString(@"7902c5a8ecee4b17a758880253090569"), equalTo(@"7902c5a8ecee4b17a758880253090569"));
+  assertThat(bit_URLEncodedString(@"udid"), equalTo(@"udid"));
+  assertThat(bit_URLEncodedString(@"983024C8-A861-4649-89BC-4D92896269A4"), equalTo(@"983024C8-A861-4649-89BC-4D92896269A4"));
+  assertThat(bit_URLEncodedString(@"16"), equalTo(@"16"));
+  assertThat(bit_URLEncodedString(@"9.0"), equalTo(@"9.0"));
+  assertThat(bit_URLEncodedString(@"x86_64"), equalTo(@"x86_64"));
+  assertThat(bit_URLEncodedString(@"en"), equalTo(@"en"));
+  assertThat(bit_URLEncodedString(@"09/10/2015"), equalTo(@"09%2F10%2F2015"));
+  assertThat(bit_URLEncodedString(@"https://sdk.hockeyapp.net/api/2/apps/fd51a3647d651add2171dd59d3b6e5ec/app_versions/21?format=plist&udid=82610469-C064-412D-AEAC-F453EB506726"), equalTo(@"https%3A%2F%2Fsdk.hockeyapp.net%2Fapi%2F2%2Fapps%2Ffd51a3647d651add2171dd59d3b6e5ec%2Fapp_versions%2F21%3Fformat%3Dplist%26udid%3D82610469-C064-412D-AEAC-F453EB506726"));
+  assertThat(bit_URLEncodedString(@"net.hockeyapp.sdk"), equalTo(@"net.hockeyapp.sdk"));
+}
+
 - (void)testValidateEmail {
   BOOL result = NO;
   

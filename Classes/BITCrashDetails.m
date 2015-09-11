@@ -26,6 +26,10 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER
+
 #import "BITCrashDetails.h"
 #import "BITCrashDetailsPrivate.h"
 
@@ -73,3 +77,5 @@ NSString *const kBITCrashKillSignal = @"SIGKILL";
 }
 
 @end
+
+#endif

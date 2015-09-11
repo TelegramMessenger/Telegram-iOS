@@ -24,6 +24,10 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_FEEDBACK
+
 #import "BITActivityIndicatorButton.h"
 
 @interface BITActivityIndicatorButton()
@@ -74,3 +78,5 @@
 
 
 @end
+
+#endif

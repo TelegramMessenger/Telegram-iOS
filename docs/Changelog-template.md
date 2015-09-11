@@ -1,3 +1,27 @@
+## Version 3.8-RC.1
+
+- [UPDATE] Added full support for `NSURLSession`
+- [BUGFIX] `BITFeedbackManager`: Fixed feedback compose view rotation issue
+- [BUGFIX] `BITFeedbackManager`: Fixed `Add Image` button not always presented centered
+- [BUGFIX] Additional minor fixes
+
+## Version 3.8-Beta.1
+
+- [NEW] Added Bitcode support
+- [UPDATE] Requires Xcode 7 or later to build
+- [UPDATE] Requires iOS 7 or later as base SDK
+- [UPDATE] Silenced deprecation warnings for `NSURLConnection` calls, these will be refactored in a future update
+- [UPDATE] Removed statusbar adjustment code (which isn't needed any longer)
+- [UPDATE] Removed kBITTextLabel... defines and use NSText.. instead
+- [UPDATE] Removed a few `#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1` since iOS 7 or later is now required as base SDK
+- [UPDATE] Use `UIAlertController` when available
+
+## Version 3.7.3
+
+- [BUGFIX] `BITCrashManager`: Updated PLCrashReporter build created with Xcode 6.4 to solve a duplicate symbol error some users are experiencing
+- [BUGFIX] `BITUpdateManager`: Fixed updating an app not triggering a crash report if `enableAppNotTerminatingCleanlyDetection` is enabled
+- [BUGFIX] Additional minor fixes
+
 ## Version 3.7.2
 
 - [BUGFIX] `BITCrashManager`: Added workaround for a bug observed in iOS 9 beta's dyld triggering an infinite loop on startup
