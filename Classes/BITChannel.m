@@ -16,7 +16,7 @@
 static char *const BITDataItemsOperationsQueue = "net.hockeyapp.senderQueue";
 char *BITSafeJsonEventsString;
 
-NSInteger const defaultMaxBatchCount  = 1;
+static NSInteger const defaultMaxBatchCount  = 1;
 static NSInteger const schemaVersion  = 2;
 
 @implementation BITChannel
