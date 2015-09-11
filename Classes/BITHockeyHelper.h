@@ -50,6 +50,19 @@ BOOL bit_isPreiOS7Environment(void);
 BOOL bit_isPreiOS8Environment(void);
 BOOL bit_isRunningInAppExtension(void);
 
+/* Context helpers */
+NSString *bit_utcDateString(NSDate *date);
+NSString *bit_devicePlatform(void);
+NSString *bit_devicePlatform(void);
+NSString *bit_deviceType(void);
+NSString *bit_osVersionBuild(void);
+NSString *bit_osName(void);
+NSString *bit_deviceLocale(void);
+NSString *bit_deviceLanguage(void);
+NSString *bit_screenSize(void);
+NSString *bit_sdkVersion(void);
+NSString *bit_appVersion(void);
+
 #if !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnly) && !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions)
 NSString *bit_validAppIconStringFromIcons(NSBundle *resourceBundle, NSArray *icons);
 NSString *bit_validAppIconFilename(NSBundle *bundle, NSBundle *resourceBundle);
@@ -64,17 +77,4 @@ UIImage *bit_imageWithContentsOfResolutionIndependentFile(NSString * path);
 UIImage *bit_imageNamed(NSString *imageName, NSString *bundleName);
 UIImage *bit_screenshot(void);
 UIImage *bit_appIcon(void);
-
-/* context helpers */
-NSString *bit_utcDateString(NSDate *date);
-NSString *bit_devicePlatform(void);
-NSString *bit_devicePlatform(void);
-NSString *bit_deviceType(void);
-NSString *bit_osVersionBuild(void);
-NSString *bit_osName(void);
-NSString *bit_deviceLocale(void);
-NSString *bit_deviceLanguage(void);
-NSString *bit_screenSize(void);
-NSString *bit_sdkVersion(void);
-NSString *bit_appVersion(void);
 #endif
