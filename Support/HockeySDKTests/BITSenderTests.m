@@ -122,10 +122,11 @@
   NSInteger testStatusCode = 999;
   OCMStub([_sut shouldDeleteDataWithStatusCode:testStatusCode]).andReturn(YES);
   _sut.runningRequestsCount = 8;
+   NSData *testData = [@"test" dataUsingEncoding:NSUTF8StringEncoding];
   NSString *testFilePath = @"path/to/file";
   
   // test
-  [_sut handleResponseWithStatusCode:testStatusCode responseData:[NSData new] filePath:testFilePath error:[NSError new]];
+  [_sut handleResponseWithStatusCode:testStatusCode responseData:testData filePath:testFilePath error:[NSError new]];
   
   //verify
   [verify(_mockPersistence) deleteFileAtPath:testFilePath];
@@ -139,10 +140,11 @@
   NSInteger testStatusCode = 999;
   OCMStub([_sut shouldDeleteDataWithStatusCode:testStatusCode]).andReturn(NO);
   _sut.runningRequestsCount = 8;
+  NSData *testData = [@"test" dataUsingEncoding:NSUTF8StringEncoding];
   NSString *testFilePath = @"path/to/file";
   
   // test
-  [_sut handleResponseWithStatusCode:testStatusCode responseData:[NSData new] filePath:testFilePath error:[NSError new]];
+  [_sut handleResponseWithStatusCode:testStatusCode responseData:testData filePath:testFilePath error:[NSError new]];
   
   //verify
   [verify(_mockPersistence) giveBackRequestedPath:testFilePath];

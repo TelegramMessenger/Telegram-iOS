@@ -109,7 +109,7 @@ static NSUInteger const defaultRequestLimit = 10;
 - (void)handleResponseWithStatusCode:(NSInteger)statusCode responseData:(NSData *)responseData filePath:(NSString *)filePath error:(NSError *)error{
   self.runningRequestsCount -= 1;
   
-  if(responseData && [self shouldDeleteDataWithStatusCode:statusCode]) {
+  if(responseData && responseData.length > 0 && [self shouldDeleteDataWithStatusCode:statusCode]) {
     //we delete data that was either sent successfully or if we have a non-recoverable error
     BITHockeyLog(@"Sent data with status code: %ld", (long) statusCode);
     BITHockeyLog(@"Response data:\n%@", [NSJSONSerialization JSONObjectWithData:responseData options:0 error:nil]);
