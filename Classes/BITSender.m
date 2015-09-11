@@ -78,7 +78,7 @@ static NSUInteger const defaultRequestLimit = 10;
   if(!path || !request) return;
   __weak typeof(self) weakSelf = self;
   
-  if(!isUrlSessionSupported) {
+  if(isUrlSessionSupported) {
     NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
     NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
     
