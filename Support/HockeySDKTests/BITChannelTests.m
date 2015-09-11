@@ -28,7 +28,9 @@
 - (void)setUp {
   [super setUp];
   _mockPersistence = mock(BITPersistence.class);
-  _sut = [[BITChannel alloc]initWithTelemetryContext:nil persistence:_mockPersistence];
+  BITTelemetryContext *mockContext = mock(BITTelemetryContext.class);
+  
+  _sut = [[BITChannel alloc]initWithTelemetryContext:mockContext persistence:_mockPersistence];
   BITSafeJsonEventsString = NULL;
 }
 
