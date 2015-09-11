@@ -36,11 +36,17 @@ static NSUInteger const defaultRequestLimit = 10;
                        queue:nil
                   usingBlock:^(NSNotification *notification) {
                     typeof(self) strongSelf = weakSelf;
-                    [strongSelf sendSavedData];
+                    [strongSelf sendSavedDataAsync];
                   }];
 }
 
 #pragma mark - Sending
+
+- (void)sendSavedDataAsync{
+  dispatch_async(self.senderQueue, ^{
+    [self sendSavedData];
+  });
+}
 
 - (void)sendSavedData{
   @synchronized(self){
@@ -50,13 +56,9 @@ static NSUInteger const defaultRequestLimit = 10;
       return;
     }
   }
-  __weak typeof(self) weakSelf = self;
-  dispatch_async(self.senderQueue, ^{
-    typeof(self) strongSelf = weakSelf;
-    NSString *path = [self.persistence requestNextPath];
-    NSData *data = [self.persistence dataAtPath:path];
-    [strongSelf sendData:data withPath:path];
-  });
+  NSString *path = [self.persistence requestNextPath];
+  NSData *data = [self.persistence dataAtPath:path];
+  [self sendData:data withPath:path];
 }
 
 - (void)sendData:(NSData * __nonnull)data withPath:(NSString * __nonnull)path {
@@ -87,7 +89,7 @@ static NSUInteger const defaultRequestLimit = 10;
                                               NSInteger statusCode = httpResponse.statusCode;
                                               [strongSelf handleResponseWithStatusCode:statusCode responseData:data filePath:path error:error];
                                             }];
-    [task resume];
+    [self resumeSessionDataTask:task];
   }else{
     BITHTTPOperation *operation = [BITHTTPOperation operationWithRequest:request];
     [operation setCompletion:^(BITHTTPOperation *operation, NSData *responseData, NSError *error) {
@@ -98,6 +100,10 @@ static NSUInteger const defaultRequestLimit = 10;
     
     [self.operationQueue addOperation:operation];
   }
+}
+
+- (void)resumeSessionDataTask:(NSURLSessionDataTask *)sessionDataTask {
+  [sessionDataTask resume];
 }
 
 - (void)handleResponseWithStatusCode:(NSInteger)statusCode responseData:(NSData *)responseData filePath:(NSString *)filePath error:(NSError *)error{
