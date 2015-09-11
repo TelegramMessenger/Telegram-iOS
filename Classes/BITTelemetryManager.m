@@ -60,6 +60,7 @@ NSString *const BITTelemetryEndpoint = @"https://dc-int.services.visualstudio.co
     self.serverURL = BITTelemetryEndpoint;
   }
   _sender = [[BITSender alloc]initWithPersistence:self.persistence serverURL:[NSURL URLWithString:self.serverURL]];
+  [_sender sendSavedDataAsync];
   [self startNewSessionWithId:bit_UUID()];
   [self registerObservers];
 }
