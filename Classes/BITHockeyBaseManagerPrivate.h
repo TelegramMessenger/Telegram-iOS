@@ -71,6 +71,15 @@
 // UI helpers
 - (UIWindow *)findVisibleWindow;
 - (UINavigationController *)customNavigationControllerWithRootViewController:(UIViewController *)viewController presentationStyle:(UIModalPresentationStyle)presentationStyle;
+
+/**
+ *  Present an UIAlertController on the visible root UIViewController.
+ *
+ *  Uses `visibleWindowRootViewController` to find a controller on which to present the UIAlertController on.
+ *  This method is always dispatched on the main queue.
+ *
+ *  @param alertController The UIAlertController to be presented.
+ */
 - (void)showAlertController:(UIViewController *)alertController;
 - (void)showView:(UIViewController *)viewController;
 #endif

@@ -801,14 +801,38 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *latestImage);
         }
         
         if(self.showAlertOnIncomingMessages && !self.currentFeedbackListViewController && !self.currentFeedbackComposeViewController) {
-          UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageTitle")
-                                                              message:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageText")
-                                                             delegate:self
-                                                    cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackIgnore")
-                                                    otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackShow"), nil
-                                    ];
-          [alertView setTag:0];
-          [alertView show];
+          // Requires iOS 8
+          id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
+          if (uialertcontrollerClass) {
+            UIAlertController *alertController = [UIAlertController alertControllerWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageTitle")
+                                                                                     message:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageText")
+                                                                              preferredStyle:UIAlertControllerStyleAlert];
+            
+            UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackIgnore")
+                                                                   style:UIAlertActionStyleCancel
+                                                                 handler:nil];
+            UIAlertAction *showAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackShow")
+                                                                 style:UIAlertActionStyleDefault
+                                                               handler:^(UIAlertAction * _Nonnull action) {
+                                                                 [self showFeedbackListView];
+                                                               }];
+            [alertController addAction:cancelAction];
+            [alertController addAction:showAction];
+            
+            [self showAlertController:alertController];
+          } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+            UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageTitle")
+                                                                message:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageText")
+                                                               delegate:self
+                                                      cancelButtonTitle:BITHockeyLocalizedString(@"HockeyFeedbackIgnore")
+                                                      otherButtonTitles:BITHockeyLocalizedString(@"HockeyFeedbackShow"), nil
+                                      ];
+            [alertView setTag:0];
+            [alertView show];
+#pragma clang diagnostic pop
+          }
           _incomingMessagesAlertShowing = YES;
         }
       }
