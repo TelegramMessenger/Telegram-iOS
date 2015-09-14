@@ -130,12 +130,14 @@ If you are working with an older project which doesn't support clang modules yet
     + `CoreGraphics`
     + `Foundation`
     + `MobileCoreServices`
+    + `Photos`
     + `QuartzCore`
     + `QuickLook`
     + `Security`
     + `SystemConfiguration`
     + `UIKit`
     + `libc++`
+    + `libz`
   2. Crash reporting only:
     + `Foundation`
     + `Security`

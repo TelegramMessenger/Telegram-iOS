@@ -148,10 +148,12 @@ If you are working with an older project which doesn't support clang modules yet
     + `MobileCoreServices`
     + `QuartzCore`
     + `QuickLook`
+    + `Photos`
     + `Security`
     + `SystemConfiguration`
     + `UIKit`
     + `libc++`
+    + `libz`
   2. Crash reporting only:
     + `Foundation`
     + `Security`

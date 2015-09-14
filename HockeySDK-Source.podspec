@@ -22,7 +22,7 @@ Pod::Spec.new do |s|
   s.source_files      = 'Classes'
   s.requires_arc      = true
   
-  s.frameworks              = 'AssetsLibrary', 'CoreGraphics', 'CoreTelephony', 'CoreText', 'MobileCoreServices', 'QuartzCore', 'QuickLook', 'Security', 'SystemConfiguration', 'UIKit'
+  s.frameworks              = 'AssetsLibrary', 'CoreGraphics', 'CoreTelephony', 'CoreText', 'MobileCoreServices', 'Photos', 'QuartzCore', 'QuickLook', 'Security', 'SystemConfiguration', 'UIKit'
   s.libraries = 'c++', 'z'
   s.ios.vendored_frameworks = 'Vendor/CrashReporter.framework'
   s.pod_target_xcconfig     = {'GCC_PREPROCESSOR_DEFINITIONS' => %{$(inherited) BITHOCKEY_VERSION="@\\"#{s.version}\\"" BITHOCKEY_C_VERSION="\\"#{s.version}\\"" BITHOCKEY_BUILD="@\\"51\\"" BITHOCKEY_C_BUILD="\\"51\\""} }
