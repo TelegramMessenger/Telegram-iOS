@@ -243,7 +243,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *latestImage);
 
 - (void)showFeedbackComposeViewWithPreparedItems:(NSArray *)items{
   if (_currentFeedbackComposeViewController) {
-    BITHockeyLog(@"INFO: update view already visible, aborting");
+    BITHockeyLog(@"INFO: Feedback view already visible, aborting");
     return;
   }
   BITFeedbackComposeViewController *composeView = [self feedbackComposeViewController];
