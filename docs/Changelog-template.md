@@ -1,3 +1,7 @@
+## Version 4.0-Alpha.1
+
+- [NEW] Added `BITTelemetryManager` to track users and sessions
+
 ## Version 3.8-RC.1
 
 - [UPDATE] Added full support for `NSURLSession`
