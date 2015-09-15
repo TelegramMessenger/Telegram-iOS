@@ -27,9 +27,14 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)initWithPersistence:(BITPersistence *)persistence serverURL:(NSURL *)serverURL;
 
 /**
+ * We use this queue to keep track of the number of currently running requests
+ */
+@property (nonatomic, strong) dispatch_queue_t requestsCountQueue;
+
+/**
  *  A queue which is used to handle BITHTTPOperation completion blocks.
  */
-@property (nonatomic, strong) dispatch_queue_t senderQueue;
+@property (nonatomic, strong) dispatch_queue_t senderTasksQueue;
 
 /**
  *  A queue for processing http operations (iOS < 7)
@@ -69,9 +74,9 @@ NS_ASSUME_NONNULL_BEGIN
  *  Creates a request for the given data and forwards that in order to send it out.
  *
  *  @param data the telemetry data which should be sent
- *  @param path a reference of path to the file which should be sent (needed to delete it after sending)
+ *  @param filePath a reference of filePath to the file which should be sent (needed to delete it after sending)
  */
-- (void)sendData:(NSData * __nonnull)data withPath:(NSString * __nonnull)path;
+- (void)sendData:(NSData *)data withFilePath:(NSString * )filePath;
 
 /**
  *  Triggers sending the saved data on a background thread. Does nothing if nothing has been persisted, yet. This method should be called by BITTelemetryManager on app start.
@@ -90,7 +95,18 @@ NS_ASSUME_NONNULL_BEGIN
  *  @param path path to the file which should be sent
  *  @param isUrlSessionSupported a flag which determines whether to use NSURLConnection or NSURLSession for sending out data
  */
-- (void)sendRequest:(NSURLRequest * __nonnull)request path:(NSString * __nonnull)path urlSessionSupported:(BOOL)isUrlSessionSupported;
+- (void)sendRequest:(NSURLRequest *)request filePath:(NSString *)path;
+
+/**
+ * Helper method that checks whether the current OS supports NSURLSession
+ *
+ * @returns YES if NSURLSession is available
+ */
+- (BOOL)isURLSessionSupported;
+
+- (void)sendUsingURLSessionWithRequest:(NSURLRequest *)request filePath:(NSString *)filePath;
+
+- (void)sendUsingURLConnectionWithRequest:(NSURLRequest *)request filePath:(NSString *)filePath;
 
 /**
  *  Resumes the given NSURLSessionDataTask instance.
