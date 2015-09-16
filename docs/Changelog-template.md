@@ -1,3 +1,36 @@
+## Version 3.8
+
+- [NEW] Added Bitcode support
+- [UPDATE] Requires Xcode 7 or later
+- [UPDATE] Requires iOS 9 or later as base SDK, deployment target iOS 6 or later
+- [UPDATE] Updated PLCrashReporter build using Xcode 7
+- [UPDATE] Use `UIAlertController` when available
+- [UPDATE] Added full support for `NSURLSession`
+- [UPDATE] Removed statusbar adjustment code (which isn't needed any longer)
+- [UPDATE] Removed kBITTextLabel... defines and use NSText.. instead
+- [UPDATE] Removed a few `#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1` since iOS 7 or later is now required as base SDK
+- [BUGFIX] `BITFeedbackManager`: Fixed feedback compose view rotation issue
+- [BUGFIX] `BITFeedbackManager`: Fixed `Add Image` button not always presented centered
+- [BUGFIX] Additional minor fixes
+
+## Version 3.8-RC.1
+
+- [UPDATE] Added full support for `NSURLSession`
+- [BUGFIX] `BITFeedbackManager`: Fixed feedback compose view rotation issue
+- [BUGFIX] `BITFeedbackManager`: Fixed `Add Image` button not always presented centered
+- [BUGFIX] Additional minor fixes
+
+## Version 3.8-Beta.1
+
+- [NEW] Added Bitcode support
+- [UPDATE] Requires Xcode 7 or later
+- [UPDATE] Requires iOS 7 or later as base SDK
+- [UPDATE] Silenced deprecation warnings for `NSURLConnection` calls, these will be refactored in a future update
+- [UPDATE] Removed statusbar adjustment code (which isn't needed any longer)
+- [UPDATE] Removed kBITTextLabel... defines and use NSText.. instead
+- [UPDATE] Removed a few `#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1` since iOS 7 or later is now required as base SDK
+- [UPDATE] Use `UIAlertController` when available
+
 ## Version 3.7.3
 
 - [BUGFIX] `BITCrashManager`: Updated PLCrashReporter build created with Xcode 6.4 to solve a duplicate symbol error some users are experiencing

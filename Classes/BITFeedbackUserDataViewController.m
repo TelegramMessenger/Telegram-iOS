@@ -38,7 +38,6 @@
 #import "BITFeedbackManagerPrivate.h"
 
 @interface BITFeedbackUserDataViewController () {
-  UIStatusBarStyle _statusBarStyle;
 }
 
 @property (nonatomic, weak) BITFeedbackManager *manager;
@@ -74,13 +73,6 @@
 - (void)viewWillAppear:(BOOL)animated {
   [super viewWillAppear:animated];
 
-  _statusBarStyle = [[UIApplication sharedApplication] statusBarStyle];
-#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
-  [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleLightContent];
-#else
-  [[UIApplication sharedApplication] setStatusBarStyle:(self.navigationController.navigationBar.barStyle == UIBarStyleDefault) ? UIStatusBarStyleDefault : UIStatusBarStyleBlackOpaque];
-#endif
-  
   // Do any additional setup after loading the view.
   self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemCancel
                                                                                         target:self
@@ -99,12 +91,6 @@
   [self.manager updateDidAskUserData];
   
   self.navigationItem.rightBarButtonItem.enabled = [self allRequiredFieldsEntered];
-}
-
-- (void)viewWillDisappear:(BOOL)animated {
-	[super viewWillDisappear:animated];
-  
-  [[UIApplication sharedApplication] setStatusBarStyle:_statusBarStyle];
 }
 
 #pragma mark - UIViewController Rotation
@@ -227,7 +213,7 @@
     
     textField.backgroundColor = [UIColor whiteColor];
     textField.autocorrectionType = UITextAutocorrectionTypeNo;
-    textField.textAlignment = kBITTextLabelAlignmentLeft;
+    textField.textAlignment = NSTextAlignmentLeft;
     textField.delegate = self;
     textField.tag = indexPath.row;
     

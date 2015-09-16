@@ -66,9 +66,9 @@ NSString *BITHockeyLocalizedString(NSString *stringToken) {
 }
 
 NSString *BITHockeyMD5(NSString *str) {
-  const char *cStr = [str UTF8String];
-  unsigned char result[CC_MD5_DIGEST_LENGTH];
-  CC_MD5( cStr, (CC_LONG)strlen(cStr), result );
+  NSData *utf8Bytes = [str dataUsingEncoding:NSUTF8StringEncoding];
+  unsigned char result[CC_MD5_DIGEST_LENGTH] = {0};
+  CC_MD5( utf8Bytes.bytes, (CC_LONG)utf8Bytes.length, result );
   return [NSString
           stringWithFormat: @"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
           result[0], result[1],

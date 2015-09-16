@@ -28,6 +28,9 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_UPDATES
 
 #import "BITStoreButton.h"
 #import "HockeySDKPrivate.h"
@@ -221,7 +224,6 @@
   CGSize constr = (CGSize){.height = self.frame.size.height, .width = BIT_MAX_WIDTH};
   CGSize newSize;
   
-#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
   if ([self.buttonData.label respondsToSelector:@selector(boundingRectWithSize:options:attributes:context:)]) {
     CGRect calculatedRect = [self.buttonData.label boundingRectWithSize:constr
                                                                 options:NSStringDrawingUsesFontLeading
@@ -229,16 +231,13 @@
                                                                 context:nil];
     newSize = calculatedRect.size;
   } else {
-#endif
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     newSize = [self.buttonData.label sizeWithFont:self.titleLabel.font
                                 constrainedToSize:constr
-                                    lineBreakMode:kBITLineBreakModeMiddleTruncation];
+                                    lineBreakMode:NSLineBreakByTruncatingMiddle];
 #pragma clang diagnostic pop
-#if __IPHONE_OS_VERSION_MAX_ALLOWED > __IPHONE_6_1
   }
-#endif
   
   CGFloat newWidth = newSize.width + (BIT_PADDING * 2);
   CGFloat newHeight = BIT_MIN_HEIGHT > newSize.height ? BIT_MIN_HEIGHT : newSize.height;
@@ -276,3 +275,5 @@
 }
 
 @end
+
+#endif

@@ -77,9 +77,12 @@
   _isExecuting = YES;
   [self didChangeValueForKey:@"isExecuting"];
   
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   _connection = [[NSURLConnection alloc] initWithRequest:_URLRequest
                                                 delegate:self
                                         startImmediately:YES];
+#pragma clang diagnostic pop
 }
 
 - (void) finish {

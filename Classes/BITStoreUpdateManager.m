@@ -293,7 +293,7 @@
   }
   
   if ([self isUpdateAvailable]) {
-    if (self.delegate && [self.delegate respondsToSelector:@selector(detectedUpdateFromStoreUpdateManager:newVersion:storeURL:)]) {
+    if ([self.delegate respondsToSelector:@selector(detectedUpdateFromStoreUpdateManager:newVersion:storeURL:)]) {
       [self.delegate detectedUpdateFromStoreUpdateManager:self newVersion:_newStoreVersion storeURL:[NSURL URLWithString:_appStoreURLString]];
     }
     
@@ -352,22 +352,44 @@
   [request setHTTPMethod:@"GET"];
   [request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];
   
-  [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *error){
-    self.checkInProgress = NO;
+  __weak typeof (self) weakSelf = self;
+  id nsurlsessionClass = NSClassFromString(@"NSURLSessionUploadTask");
+  if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
+    NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
     
-    if (error) {
-      [self reportError:error];
-    } else if ([responseData length]) {
-      NSString *responseString = [[NSString alloc] initWithBytes:[responseData bytes] length:[responseData length] encoding: NSUTF8StringEncoding];
-      BITHockeyLog(@"INFO: Received API response: %@", responseString);
-      
-      if (!responseString || ![responseString dataUsingEncoding:NSUTF8StringEncoding]) {
-        return;
-      }
-      
-      [self processStoreResponseWithString:responseString];
+    NSURLSessionDataTask *task = [session dataTaskWithRequest:request
+                                            completionHandler: ^(NSData *data, NSURLResponse *response, NSError *error) {
+                                              typeof (self) strongSelf = weakSelf;
+                                              [strongSelf handleResponeWithData:data error:error];
+                                            }];
+    [task resume];
+  }else{
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *error){
+#pragma clang diagnostic pop
+      typeof (self) strongSelf = weakSelf;
+      [strongSelf handleResponeWithData:responseData error:error];
+    }];
+  }
+}
+
+- (void)handleResponeWithData:(NSData *)responseData error:(NSError *)error{
+  self.checkInProgress = NO;
+  
+  if (error) {
+    [self reportError:error];
+  } else if ([responseData length]) {
+    NSString *responseString = [[NSString alloc] initWithBytes:[responseData bytes] length:[responseData length] encoding: NSUTF8StringEncoding];
+    BITHockeyLog(@"INFO: Received API response: %@", responseString);
+    
+    if (!responseString || ![responseString dataUsingEncoding:NSUTF8StringEncoding]) {
+      return;
     }
-  }];
+    
+    [self processStoreResponseWithString:responseString];
+  }
 }
 
 - (void)checkForUpdateDelayed {
@@ -414,13 +436,57 @@
   if (!_updateAlertShowing) {
     NSString *versionString = [NSString stringWithFormat:@"%@ %@", BITHockeyLocalizedString(@"UpdateVersion"), _newStoreVersion];
     
-    UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateAvailable")
-                                                        message:[NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateAlertTextWithAppVersion"), versionString]
-                                                       delegate:self
-                                              cancelButtonTitle:BITHockeyLocalizedString(@"UpdateIgnore")
-                                              otherButtonTitles:BITHockeyLocalizedString(@"UpdateRemindMe"), BITHockeyLocalizedString(@"UpdateShow"), nil
-                              ];
-    [alertView show];
+    // requires iOS 8
+    id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
+    if (uialertcontrollerClass) {
+      __weak typeof(self) weakSelf = self;
+      
+      UIAlertController *alertController = [UIAlertController alertControllerWithTitle:BITHockeyLocalizedString(@"UpdateAvailable")
+                                                                               message:[NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateAlertTextWithAppVersion"), versionString]
+                                                                        preferredStyle:UIAlertControllerStyleAlert];
+      
+      
+      UIAlertAction *ignoreAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"UpdateIgnore")
+                                                             style:UIAlertActionStyleCancel
+                                                           handler:^(UIAlertAction * action) {
+                                                             typeof(self) strongSelf = weakSelf;
+                                                             [strongSelf ignoreAction];
+                                                           }];
+      
+      [alertController addAction:ignoreAction];
+      
+      UIAlertAction *remindAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"UpdateRemindMe")
+                                                             style:UIAlertActionStyleDefault
+                                                           handler:^(UIAlertAction * action) {
+                                                             typeof(self) strongSelf = weakSelf;
+                                                             [strongSelf remindAction];
+                                                           }];
+      
+      [alertController addAction:remindAction];
+      
+      UIAlertAction *showAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"UpdateShow")
+                                                           style:UIAlertActionStyleDefault
+                                                         handler:^(UIAlertAction * action) {
+                                                           typeof(self) strongSelf = weakSelf;
+                                                           [strongSelf showAction];
+                                                         }];
+      
+      [alertController addAction:showAction];
+      
+      [self showAlertController:alertController];
+    } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+      UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateAvailable")
+                                                          message:[NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateAlertTextWithAppVersion"), versionString]
+                                                         delegate:self
+                                                cancelButtonTitle:BITHockeyLocalizedString(@"UpdateIgnore")
+                                                otherButtonTitles:BITHockeyLocalizedString(@"UpdateRemindMe"), BITHockeyLocalizedString(@"UpdateShow"), nil
+                                ];
+      [alertView show];
+#pragma clang diagnostic pop
+    }
+    
     _updateAlertShowing = YES;
   }
 }
@@ -439,27 +505,43 @@
 
 #pragma mark - UIAlertViewDelegate
 
-// invoke the selected action from the action sheet for a location element
-- (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
+- (void)ignoreAction {
   _updateAlertShowing = NO;
-  if (buttonIndex == [alertView cancelButtonIndex]) {
-    // Ignore
-    [self.userDefaults setObject:_newStoreVersion forKey:kBITStoreUpdateIgnoreVersion];
-    [self.userDefaults synchronize];
-  } else if (buttonIndex == [alertView firstOtherButtonIndex]) {
-    // Remind button
-  } else if (buttonIndex == [alertView firstOtherButtonIndex] + 1) {
-    // Show button
-    [self.userDefaults setObject:_newStoreVersion forKey:kBITStoreUpdateIgnoreVersion];
-    [self.userDefaults synchronize];
-    
-    if (_appStoreURLString) {
-      [[UIApplication sharedApplication] openURL:[NSURL URLWithString:_appStoreURLString]];
-    } else {
-      BITHockeyLog(@"WARNING: The app store page couldn't be opened, since we did not get a valid URL from the store API.");
-    }
+  [self.userDefaults setObject:_newStoreVersion forKey:kBITStoreUpdateIgnoreVersion];
+  [self.userDefaults synchronize];
+}
+
+- (void)remindAction {
+  _updateAlertShowing = NO;
+}
+
+- (void)showAction {
+  _updateAlertShowing = NO;
+  [self.userDefaults setObject:_newStoreVersion forKey:kBITStoreUpdateIgnoreVersion];
+  [self.userDefaults synchronize];
+  
+  if (_appStoreURLString) {
+    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:_appStoreURLString]];
+  } else {
+    BITHockeyLog(@"WARNING: The app store page couldn't be opened, since we did not get a valid URL from the store API.");
   }
 }
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+// invoke the selected action from the action sheet for a location element
+- (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
+  if (buttonIndex == [alertView cancelButtonIndex]) {
+    [self ignoreAction];
+  } else if (buttonIndex == [alertView firstOtherButtonIndex]) {
+    // Remind button
+    [self remindAction];
+  } else if (buttonIndex == [alertView firstOtherButtonIndex] + 1) {
+    // Show button
+    [self showAction];
+  }
+}
+#pragma clang diagnostic pop
 
 @end
 
