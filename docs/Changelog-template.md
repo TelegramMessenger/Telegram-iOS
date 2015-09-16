@@ -1,3 +1,7 @@
+## Version 3.8.1
+
+- [UPDATE] Updated PLCrashReporter build using Xcode 7 (7A220)
+
 ## Version 3.8
 
 - [NEW] Added Bitcode support
