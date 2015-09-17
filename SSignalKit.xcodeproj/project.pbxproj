@@ -88,6 +88,8 @@
 		D06F106C1A85561E00485185 /* SSignalBasicTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D06F106B1A85561E00485185 /* SSignalBasicTests.m */; };
 		D06F10711A855E2D00485185 /* DeallocatingObject.m in Sources */ = {isa = PBXBuildFile; fileRef = D06F10701A855E2D00485185 /* DeallocatingObject.m */; };
 		D06F10731A85882000485185 /* SSignalPerformanceTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D06F10721A85882000485185 /* SSignalPerformanceTests.m */; };
+		D09FD73E1BA9BAB900FF0A4F /* SVariable.h in Headers */ = {isa = PBXBuildFile; fileRef = D09FD73C1BA9BAB900FF0A4F /* SVariable.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D09FD73F1BA9BAB900FF0A4F /* SVariable.m in Sources */ = {isa = PBXBuildFile; fileRef = D09FD73D1BA9BAB900FF0A4F /* SVariable.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -197,6 +199,8 @@
 		D06F106F1A855E2D00485185 /* DeallocatingObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DeallocatingObject.h; sourceTree = "<group>"; };
 		D06F10701A855E2D00485185 /* DeallocatingObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DeallocatingObject.m; sourceTree = "<group>"; };
 		D06F10721A85882000485185 /* SSignalPerformanceTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SSignalPerformanceTests.m; sourceTree = "<group>"; };
+		D09FD73C1BA9BAB900FF0A4F /* SVariable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SVariable.h; sourceTree = "<group>"; };
+		D09FD73D1BA9BAB900FF0A4F /* SVariable.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SVariable.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -365,6 +369,8 @@
 				D0085AD21B28285400EAF753 /* SSignal+Multicast.m */,
 				D0085ABA1B28285400EAF753 /* SMulticastSignalManager.h */,
 				D0085ABB1B28285400EAF753 /* SMulticastSignalManager.m */,
+				D09FD73C1BA9BAB900FF0A4F /* SVariable.h */,
+				D09FD73D1BA9BAB900FF0A4F /* SVariable.m */,
 				D0085AB91B28285400EAF753 /* SSignalKit.h */,
 				D0445DDB1A7C2CA500267924 /* Supporting Files */,
 			);
@@ -417,6 +423,7 @@
 			files = (
 				D0085AF61B28285400EAF753 /* SSignal+SideEffects.h in Headers */,
 				D0085AFD1B28285400EAF753 /* SSignal+Meta.h in Headers */,
+				D09FD73E1BA9BAB900FF0A4F /* SVariable.h in Headers */,
 				D0085AFE1B28285400EAF753 /* SSignal+Timing.h in Headers */,
 				D0085B0A1B28285400EAF753 /* SDisposable.h in Headers */,
 				D0085B111B28285400EAF753 /* SBag.h in Headers */,
@@ -638,6 +645,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0085AE91B28285400EAF753 /* SQueue.m in Sources */,
+				D09FD73F1BA9BAB900FF0A4F /* SVariable.m in Sources */,
 				D0085B141B28285400EAF753 /* SBlockDisposable.m in Sources */,
 				D0085B001B28285400EAF753 /* SSignal+Dispatch.m in Sources */,
 				D0085AE71B28285400EAF753 /* SSignal+Timing.m in Sources */,

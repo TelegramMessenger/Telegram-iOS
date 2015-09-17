@@ -42,3 +42,4 @@ FOUNDATION_EXPORT const unsigned char SSignalKitVersionString[];
 #import <SSignalKit/SSignal+Pipe.h>
 #import <SSignalKit/SMulticastSignalManager.h>
 #import <SSignalKit/STimer.h>
+#import <SSignalKit/SVariable.h>

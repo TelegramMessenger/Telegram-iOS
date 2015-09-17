@@ -98,4 +98,13 @@ static const void *SQueueSpecificKey = &SQueueSpecificKey;
         dispatch_sync(_queue, block);
 }
 
+- (bool)isCurrentQueue
+{
+    if (_queueSpecific != NULL && dispatch_get_specific(SQueueSpecificKey) == _queueSpecific)
+        return true;
+    else if (_specialIsMainQueue && [NSThread isMainThread])
+        return true;
+    return false;
+}
+
 @end

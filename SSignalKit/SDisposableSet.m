@@ -1,5 +1,7 @@
 #import "SDisposableSet.h"
 
+#import "SSignal.h"
+
 #import <libkern/OSAtomic.h>
 
 @interface SDisposableSet ()
@@ -46,6 +48,21 @@
     
     if (dispose)
         [disposable dispose];
+}
+
+- (void)remove:(id<SDisposable>)disposable {
+    OSSpinLockLock(&_lock);
+    if (_multipleDisposables != nil)
+    {
+        NSMutableArray *multipleDisposables = [[NSMutableArray alloc] initWithArray:_multipleDisposables];
+        [multipleDisposables removeObject:disposable];
+        _multipleDisposables = multipleDisposables;
+    }
+    else if (_singleDisposable == disposable)
+    {
+        _singleDisposable = nil;
+    }
+    OSSpinLockUnlock(&_lock);
 }
 
 - (void)dispose

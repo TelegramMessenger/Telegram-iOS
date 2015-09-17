@@ -65,7 +65,7 @@
             signal = producer();
         if (signal != nil)
         {
-            signal = [[signal multicast] onDispose:^
+            signal = [[signal onDispose:^
             {
                 __strong SMulticastSignalManager *strongSelf = weakSelf;
                 if (strongSelf != nil)
@@ -74,7 +74,7 @@
                     [strongSelf->_multicastSignals removeObjectForKey:key];
                     OSSpinLockUnlock(&strongSelf->_lock);
                 }
-            }];
+            }] multicast];
             _multicastSignals[key] = signal;
         }
     }
@@ -146,7 +146,11 @@
         return [[SBlockDisposable alloc] initWithBlock:^
         {
             OSSpinLockLock(&_lock);
-            [(SBag *)_pipeListeners[key] removeItem:index];
+            SBag *bag = _pipeListeners[key];
+            [bag removeItem:index];
+            if ([bag isEmpty]) {
+                [_pipeListeners removeObjectForKey:key];
+            }
             OSSpinLockUnlock(&_lock);
         }];
     }];

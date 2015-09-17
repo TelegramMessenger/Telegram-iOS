@@ -13,4 +13,6 @@
 
 - (dispatch_queue_t)_dispatch_queue;
 
+- (bool)isCurrentQueue;
+
 @end
