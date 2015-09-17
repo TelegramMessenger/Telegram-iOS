@@ -21,10 +21,11 @@ FOUNDATION_EXPORT const unsigned char MtProtoKitVersionString[];
 #import <MTProtoKit/MTProto.h>
 #import <MTProtoKit/MTRequestMessageService.h>
 #import <MTProtoKit/MTRequest.h>
-#import <MTProtoKit/MTKeychain.h>
+#import <MTProtoKit/MTFileBasedKeychain.h>
 #import <MTProtoKit/MTSerialization.h>
 #import <MTProtoKit/MTDatacenterAddress.h>
 #import <MTProtoKit/MTDatacenterAddressSet.h>
+#import <MTProtoKit/MTDatacenterAuthInfo.h>
 #import <MTProtoKit/MTApiEnvironment.h>
 #import <MTProtoKit/MTEncryption.h>
 #import <MTProtoKit/MTIncomingMessage.h>

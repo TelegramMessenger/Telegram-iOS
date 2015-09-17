@@ -381,8 +381,8 @@
 		D079AB9B1AF39B8000076F59 /* MtProtoKitMac.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MtProtoKitMac.h; sourceTree = "<group>"; };
 		D079ABA71AF39B8000076F59 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D079ABA81AF39B8000076F59 /* MtProtoKitMacTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MtProtoKitMacTests.m; sourceTree = "<group>"; };
-		D09A59561B582EFF00FC3724 /* MTFileBasedKeychain.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MTFileBasedKeychain.h; sourceTree = "<group>"; };
-		D09A59571B582EFF00FC3724 /* MTFileBasedKeychain.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MTFileBasedKeychain.m; sourceTree = "<group>"; };
+		D09A59561B582EFF00FC3724 /* MTFileBasedKeychain.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTFileBasedKeychain.h; path = MTProtoKit/MTFileBasedKeychain.h; sourceTree = "<group>"; };
+		D09A59571B582EFF00FC3724 /* MTFileBasedKeychain.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTFileBasedKeychain.m; path = MTProtoKit/MTFileBasedKeychain.m; sourceTree = "<group>"; };
 		D0A44E4D18B24A6000B64FC6 /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libcrypto.a; sourceTree = "<group>"; };
 		D0CB05F71ADC4483005E298F /* MtProtoKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MtProtoKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0CB05FA1ADC4483005E298F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
