@@ -1,3 +1,9 @@
+## Version 3.8.2
+
+- [UPDATE] Added support for Xcode 6.x 
+- [UPDATE] Requires iOS 7 or later as base SDK, deployment target iOS 6 or later
+- [UPDATE] Updated PLCrashReporter build to exclude Bitcode in Simulator slices
+
 ## Version 3.8.1
 
 - [UPDATE] Updated PLCrashReporter build using Xcode 7 (7A220)
