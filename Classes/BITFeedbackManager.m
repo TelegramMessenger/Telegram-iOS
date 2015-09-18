@@ -40,6 +40,7 @@
 #import "BITFeedbackManagerPrivate.h"
 #import "BITHockeyBaseManagerPrivate.h"
 
+#import "HockeySDKNullability.h"
 #import "BITHockeyHelper.h"
 #import "BITHockeyAppClient.h"
 
@@ -810,7 +811,7 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
                                                                  handler:nil];
             UIAlertAction *showAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackShow")
                                                                  style:UIAlertActionStyleDefault
-                                                               handler:^(UIAlertAction * _Nonnull action) {
+                                                               handler:^(UIAlertAction *__nonnull action) {
                                                                  [self showFeedbackListView];
                                                                }];
             [alertController addAction:cancelAction];
