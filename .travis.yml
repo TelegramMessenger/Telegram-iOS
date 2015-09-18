@@ -27,7 +27,7 @@ script:
   - set -o pipefail
   - COMMAND="xcodebuild -project '$PROJECT' -scheme '$SCHEME' -sdk '$SDK' -configuration '$CONFIGURATION'"
   - if [ $RUN_TESTS == "YES" ]; then
-      COMMAND+=" -destination '$DESTINATION' clean test";
+      COMMAND+=" -destination '$DESTINATION' XCODEBUILD_GCC_PREPROCESSOR_DEFINITIONS="CI=1" clean test";
     fi
   - COMMAND+=" | xcpretty -c"
   - echo $COMMAND

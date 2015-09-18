@@ -1,4 +1,4 @@
 #include "buildnumber.xcconfig"
 
 OTHER_CFLAGS[sdk=iphoneos9.*] = -Wall -Wextra -Wshorten-64-to-32 -Wno-unused-parameter -fembed-bitcode
-OTHER_CFLAGS[sdk=iphonesimulator9.*] = -Wall -Wextra -Wshorten-64-to-32 -Wno-unused-parameter -fembed-bitcode
+OTHER_CFLAGS[sdk=iphonesimulator9.*] = -Wall -Wextra -Wshorten-64-to-32 -Wno-unused-parameter

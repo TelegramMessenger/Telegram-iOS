@@ -205,18 +205,19 @@
 }
 
 #pragma mark - Debugger
-
+/**
+ * The test is currently disabled because it fails for unknown reasons when being run using xcodebuild.
+ * This occurs for example on our current CI solution. Will be reenabled as soon as we find a fix.
+*/
+#ifndef CI
 /**
  *  We are running this usually witin Xcode
  *  TODO: what to do if we do run this e.g. on Jenkins or Xcode bots ?
  */
-/*
- * The test is currently disabled because it fails for unknown reasons when being run using xcodebuild.
- * This occurs for example on our current CI solution. Will be reenabled as soon as we find a fix.
 - (void)testIsDebuggerAttached {
   assertThatBool([_sut isDebuggerAttached], equalToBool(YES));
 }
-*/
+#endif
 
 #pragma mark - Helper
 

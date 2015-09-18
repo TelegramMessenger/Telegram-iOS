@@ -41,6 +41,7 @@
 #import "BITFeedbackManagerPrivate.h"
 #import "BITHockeyBaseManagerPrivate.h"
 
+#import "HockeySDKNullability.h"
 #import "BITHockeyHelper.h"
 #import "BITHockeyAppClient.h"
 
@@ -813,7 +814,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *latestImage);
                                                                  handler:nil];
             UIAlertAction *showAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackShow")
                                                                  style:UIAlertActionStyleDefault
-                                                               handler:^(UIAlertAction * _Nonnull action) {
+                                                               handler:^(UIAlertAction *__nonnull action) {
                                                                  [self showFeedbackListView];
                                                                }];
             [alertController addAction:cancelAction];
