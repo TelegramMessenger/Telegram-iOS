@@ -50,20 +50,24 @@ public final class Postbox<State: PostboxState> {
     private let messageNamespaces: [MessageId.Namespace]
     private let absoluteIndexedMessageNamespaces: [MessageId.Namespace]
     
-    private let queue = SwiftSignalKit.Queue()
-    private var database: Database!
+    private let queue = Queue(name: "org.telegram.postbox.Postbox")
+    private var valueBox: ValueBox!
     
     private var peerMessageViews: [PeerId : Bag<(MutableMessageView, Pipe<MessageView>)>] = [:]
     private var deferredMessageViewsToUpdate: [(MutableMessageView, Pipe<MessageView>)] = []
     private var peerViews: Bag<(MutablePeerView, Pipe<PeerView>)> = Bag()
     private var deferredPeerViewsToUpdate: [(MutablePeerView, Pipe<PeerView>)] = []
+    private var peerPipes: [PeerId : Pipe<Peer>] = [:]
     
     private var statePipe: Pipe<State> = Pipe()
+    
+    public let mediaBox: MediaBox
     
     public init(basePath: String, messageNamespaces: [MessageId.Namespace], absoluteIndexedMessageNamespaces: [MessageId.Namespace]) {
         self.basePath = basePath
         self.messageNamespaces = messageNamespaces
         self.absoluteIndexedMessageNamespaces = absoluteIndexedMessageNamespaces
+        self.mediaBox = MediaBox(basePath: self.basePath + "/media")
         self.openDatabase()
     }
     
@@ -75,308 +79,26 @@ public final class Postbox<State: PostboxState> {
                 try NSFileManager.defaultManager().createDirectoryAtPath(self.basePath, withIntermediateDirectories: true, attributes: nil)
             } catch _ {
             }
-            self.database = Database(self.basePath + "/db")
             
-            let result = self.database.scalar("PRAGMA user_version") as! Int64
-            let version: Int64 = 11
-            if result == version {
-                print("(Postbox schema version \(result))")
-            } else {
-                if result != 0 {
-                    print("(Postbox migrating to version \(version))")
-                    do {
-                        try NSFileManager.defaultManager().removeItemAtPath(self.basePath)
-                        try NSFileManager.defaultManager().createDirectoryAtPath(self.basePath, withIntermediateDirectories: true, attributes: nil)
-                    } catch (_) {
-                    }
-                    
-                    self.database = Database(self.basePath + "/db")
-                }
-                print("(Postbox creating schema)")
-                self.createSchema()
-                self.database.execute("PRAGMA user_version = \(version)")
+            self.valueBox = SqliteValueBox(basePath: self.basePath + "/db")
+            //self.valueBox = LmdbValueBox(basePath: self.basePath + "/db")
+            var userVersion: Int32 = 0
+            let currentUserVersion: Int32 = 3
+            
+            if let value = self.valueBox.get(Table_Meta.id, key: Table_Meta.key()) {
+                value.read(&userVersion, offset: 0, length: 4)
             }
             
-            self.database.adjustChunkSize()
-            self.database.execute("PRAGMA page_size=1024")
-            self.database.execute("PRAGMA cache_size=-2097152")
-            self.database.execute("PRAGMA synchronous=NORMAL")
-            self.database.execute("PRAGMA journal_mode=truncate")
-            self.database.execute("PRAGMA temp_store=MEMORY")
-            //self.database.execute("PRAGMA wal_autocheckpoint=32")
-            //self.database.execute("PRAGMA journal_size_limit=1536")
+            if userVersion != currentUserVersion {
+                self.valueBox.drop()
+                let buffer = WriteBuffer()
+                var currentVersion: Int32 = currentUserVersion
+                buffer.write(&currentVersion, offset: 0, length: 4)
+                self.valueBox.set(Table_Meta.id, key: Table_Meta.key(), value: buffer)
+            }
             
             print("(Postbox initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
         }
-    }
-    
-    private func createSchema() {
-        //state
-        self.database.execute("CREATE TABLE state (id INTEGER PRIMARY KEY, data BLOB)")
-        
-        //keychain
-        self.database.execute("CREATE TABLE keychain (key BLOB, data BLOB)")
-        self.database.execute("CREATE INDEX keychain_key ON keychain (key)")
-        
-        //peer_messages
-        self.database.execute("CREATE TABLE peer_messages (peerId INTEGER, namespace INTEGER, id INTEGER, data BLOB, associatedMediaIds BLOB, timestamp INTEGER, PRIMARY KEY(peerId, namespace, id))")
-        
-        //peer_absolute_indexed_message_ids
-        self.database.execute("CREATE TABLE peer_absolute_indexed_message_ids (id INTEGER PRIMARY KEY, completeId BLOB)")
-        
-        //peer_media
-        self.database.execute("CREATE TABLE peer_media (peerId INTEGER, mediaNamespace INTEGER, messageNamespace INTEGER, messageId INTEGER, PRIMARY KEY (peerId, mediaNamespace, messageNamespace, messageId))")
-        self.database.execute("CREATE INDEX peer_media_peerId_messageNamespace_messageId ON peer_media (peerId, messageNamespace, messageId)")
-        
-        //media
-        self.database.execute("CREATE TABLE media (namespace INTEGER, id INTEGER, data BLOB, associatedMessageIds BLOB, PRIMARY KEY (namespace, id))")
-        
-        //media_cleanup
-        self.database.execute("CREATE TABLE media_cleanup (namespace INTEGER, id INTEGER, data BLOB, PRIMARY KEY(namespace, id))")
-        
-        //peer_entries
-        self.database.execute("CREATE TABLE peer_entries (peerId INTEGER PRIMARY KEY, entry BLOB)")
-        self.database.execute("CREATE INDEX peer_entries_entry on peer_entries (entry)")
-        
-        //peers
-        self.database.execute("CREATE TABLE peers (id INTEGER PRIMARY KEY, data BLOB)")
-    }
-    
-    private class func peerViewEntryIndexForBuffer(buffer: ReadBuffer) -> PeerViewEntryIndex {
-        var timestamp: Int32 = 0
-        buffer.read(&timestamp, offset: 0, length: 4)
-        timestamp = Int32(bigEndian: timestamp)
-        
-        var namespace: Int32 = 0
-        buffer.read(&namespace, offset: 0, length: 4)
-        namespace = Int32(bigEndian: namespace)
-        
-        var id: Int32 = 0
-        buffer.read(&id, offset: 0, length: 4)
-        id = Int32(bigEndian: id)
-        
-        var peerIdRepresentation: Int64 = 0
-        buffer.read(&peerIdRepresentation, offset: 0, length: 8)
-        peerIdRepresentation = Int64(bigEndian: peerIdRepresentation)
-        
-        let peerId = PeerId(peerIdRepresentation)
-        
-        return PeerViewEntryIndex(peerId: peerId, messageIndex: MessageIndex(id: MessageId(peerId:peerId, namespace: namespace, id: id), timestamp: timestamp))
-    }
-    
-    private class func blobForPeerViewEntryIndex(index: PeerViewEntryIndex) -> Blob {
-        let buffer = WriteBuffer()
-        
-        var timestamp = Int32(bigEndian: index.messageIndex.timestamp)
-        buffer.write(&timestamp, offset: 0, length: 4)
-        
-        var namespace = Int32(bigEndian: index.messageIndex.id.namespace)
-        buffer.write(&namespace, offset: 0, length: 4)
-        
-        var id = Int32(bigEndian: index.messageIndex.id.id)
-        buffer.write(&id, offset: 0, length: 4)
-        
-        var peerIdRepresentation = Int64(bigEndian: index.peerId.toInt64())
-        buffer.write(&peerIdRepresentation, offset: 0, length: 8)
-        
-        return Blob(data: buffer.makeData())
-    }
-    
-    private class func messageIdsGroupedByNamespace(ids: [MessageId]) -> [MessageId.Namespace : [MessageId]] {
-        var grouped: [MessageId.Namespace : [MessageId]] = [:]
-        
-        for id in ids {
-            if grouped[id.namespace] != nil {
-                grouped[id.namespace]!.append(id)
-            } else {
-                grouped[id.namespace] = [id]
-            }
-        }
-        
-        return grouped
-    }
-    
-    private class func mediaIdsGroupedByNamespaceFromMediaArray(mediaArray: [Media]) -> [MediaId.Namespace : [MediaId]] {
-        var grouped: [MediaId.Namespace : [MediaId]] = [:]
-        var seenMediaIds = Set<MediaId>()
-        
-        for media in mediaArray {
-            if !seenMediaIds.contains(media.id) {
-                seenMediaIds.insert(media.id)
-                if grouped[media.id.namespace] != nil {
-                    grouped[media.id.namespace]!.append(media.id)
-                } else {
-                    grouped[media.id.namespace] = [media.id]
-                }
-            }
-        }
-    
-        return grouped
-    }
-    
-    private class func mediaIdsGroupedByNamespaceFromSet(ids: Set<MediaId>) -> [MediaId.Namespace : [MediaId]] {
-        var grouped: [MediaId.Namespace : [MediaId]] = [:]
-        
-        for id in ids {
-            if let _ = grouped[id.namespace] {
-                grouped[id.namespace]!.append(id)
-            } else {
-                grouped[id.namespace] = [id]
-            }
-        }
-        
-        return grouped
-    }
-    
-    private class func mediaIdsGroupedByNamespaceFromDictionaryKeys<T>(dict: [MediaId : T]) -> [MediaId.Namespace : [MediaId]] {
-        var grouped: [MediaId.Namespace : [MediaId]] = [:]
-        
-        for (id, _) in dict {
-            if grouped[id.namespace] != nil {
-                grouped[id.namespace]!.append(id)
-            } else {
-                grouped[id.namespace] = [id]
-            }
-        }
-        
-        return grouped
-    }
-    
-    private class func messagesGroupedByPeerId(messages: [Message]) -> [(PeerId, [Message])] {
-        var grouped: [(PeerId, [Message])] = []
-        
-        for message in messages {
-            var i = 0
-            let count = grouped.count
-            var found = false
-            while i < count {
-                if grouped[i].0 == message.id.peerId {
-                    grouped[i].1.append(message)
-                    found = true
-                    break
-                }
-                i++
-            }
-            if !found {
-                grouped.append((message.id.peerId, [message]))
-            }
-        }
-        
-        return grouped
-    }
-    
-    private class func messageIdsGroupedByPeerId(messageIds: [MessageId]) -> [PeerId : [MessageId]] {
-        var grouped: [PeerId : [MessageId]] = [:]
-        
-        for id in messageIds {
-            if grouped[id.peerId] != nil {
-                grouped[id.peerId]!.append(id)
-            } else {
-                grouped[id.peerId] = [id]
-            }
-        }
-        
-        return grouped
-    }
-    
-    private class func blobForMediaIds(ids: [MediaId]) -> Blob {
-        let data = NSMutableData()
-        var version: Int8 = 1
-        data.appendBytes(&version, length: 1)
-
-        var count = Int32(ids.count)
-        data.appendBytes(&count, length:4)
-        
-        for id in ids {
-            var mNamespace = id.namespace
-            var mId = id.id
-            data.appendBytes(&mNamespace, length: 4)
-            data.appendBytes(&mId, length: 8)
-        }
-        
-        return Blob(data: data)
-    }
-    
-    private static func mediaIdsForBlob(blob: Blob) -> [MediaId] {
-        var ids: [MediaId] = []
-        
-        var offset: Int = 0
-        var version = 0
-        blob.data.getBytes(&version, range: NSMakeRange(offset, 1))
-        offset += 1
-        
-        if version == 1 {
-            var count: Int32 = 0
-            blob.data.getBytes(&count, range: NSMakeRange(offset, 4))
-            offset += 4
-            
-            var i = 0
-            while i < Int(count) {
-                var mNamespace: Int32 = 0
-                var mId: Int64 = 0
-                blob.data.getBytes(&mNamespace, range: NSMakeRange(offset, 4))
-                blob.data.getBytes(&mId, range: NSMakeRange(offset + 4, 8))
-                ids.append(MediaId(namespace: mNamespace, id: mId))
-                offset += 12
-                i++
-            }
-        }
-        
-        return ids
-    }
-    
-    private class func blobForMessageIds(ids: [MessageId]) -> Blob {
-        let data = NSMutableData()
-        var version: Int8 = 1
-        data.appendBytes(&version, length: 1)
-        
-        var count = Int32(ids.count)
-        data.appendBytes(&count, length:4)
-        
-        for id in ids {
-            var mPeerNamespace = id.peerId.namespace
-            var mPeerId = id.peerId.id
-            var mNamespace = id.namespace
-            var mId = id.id
-            data.appendBytes(&mPeerNamespace, length: 4)
-            data.appendBytes(&mPeerId, length: 4)
-            data.appendBytes(&mNamespace, length: 4)
-            data.appendBytes(&mId, length: 4)
-        }
-        
-        return Blob(data: data)
-    }
-    
-    private static func messageIdsForBlob(blob: Blob) -> [MessageId] {
-        var ids: [MessageId] = []
-        
-        var offset: Int = 0
-        var version = 0
-        blob.data.getBytes(&version, range: NSMakeRange(offset, 1))
-        offset += 1
-        
-        if version == 1 {
-            var count: Int32 = 0
-            blob.data.getBytes(&count, range: NSMakeRange(offset, 4))
-            offset += 4
-            
-            var i = 0
-            while i < Int(count) {
-                var mPeerNamespace: Int32 = 0
-                var mPeerId: Int32 = 0
-                var mNamespace: Int32 = 0
-                var mId: Int32 = 0
-                blob.data.getBytes(&mPeerNamespace, range: NSMakeRange(offset, 4))
-                blob.data.getBytes(&mPeerId, range: NSMakeRange(offset + 4, 4))
-                blob.data.getBytes(&mNamespace, range: NSMakeRange(offset + 8, 4))
-                blob.data.getBytes(&mId, range: NSMakeRange(offset + 12, 4))
-                ids.append(MessageId(peerId: PeerId(namespace: mPeerNamespace, id: mPeerId), namespace: mNamespace, id: mId))
-                offset += 16
-                i++
-            }
-        }
-        
-        return ids
     }
     
     private var cachedState: State?
@@ -388,10 +110,7 @@ public final class Postbox<State: PostboxState> {
             let encoder = Encoder()
             encoder.encodeRootObject(state)
             
-            
-            
-            let blob = Blob(data: encoder.makeData())
-            self.database.prepareCached("INSERT OR REPLACE INTO state (id, data) VALUES (?, ?)").run(Int64(0), blob)
+            self.valueBox.set(Table_State.id, key: Table_State.key(), value: encoder.memoryBuffer())
             
             self.statePipe.putNext(state)
         }
@@ -401,16 +120,14 @@ public final class Postbox<State: PostboxState> {
         if let cachedState = self.cachedState {
             return cachedState
         } else {
-            for row in self.database.prepareCached("SELECT data FROM state WHERE id = ?").run(Int64(0)) {
-                let data = (row[0] as! Blob).data
-                let buffer = ReadBuffer(memory: UnsafeMutablePointer(data.bytes), length: data.length, freeWhenDone: false)
-                let decoder = Decoder(buffer: buffer)
+            if let value = self.valueBox.get(Table_State.id, key: Table_State.key()) {
+                let decoder = Decoder(buffer: value)
                 if let state = decoder.decodeRootObject() as? State {
                     self.cachedState = state
                     return state
                 }
-                break
             }
+            
             return nil
         }
     }
@@ -424,53 +141,34 @@ public final class Postbox<State: PostboxState> {
                     subscriber.putNext(next)
                 }))
             }
+            
             return disposable
         }
     }
     
     public func keychainEntryForKey(key: String) -> NSData? {
-        //TODO: load keychain on first request then sync to disk
-        
-        let blob = Blob(data: key.dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: true)!)
-        for row in self.database.prepareCached("SELECT data FROM keychain WHERE key = ?").run(blob) {
-            return (row[0] as! Blob).data
+        if let value = self.valueBox.get(Table_Keychain.id, key: Table_Keychain.key(key)) {
+            print("get \(key) -> \(value.length) bytes")
+            return NSData(bytes: value.memory, length: value.length)
         }
+        print("get \(key) -> nil")
+        
         return nil
     }
     
     public func setKeychainEntryForKey(key: String, value: NSData) {
-        let keyBlob = Blob(data: key.dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: true)!)
-        var rowId: Int64?
-        for row in self.database.prepareCached("SELECT rowid FROM keychain WHERE key = ? LIMIT 1").run(keyBlob) {
-            rowId = row[0] as? Int64
-            break
-        }
-        if let rowId = rowId {
-            self.database.prepareCached("UPDATE keychain SET data = ? WHERE rowid = ?").run(Blob(data: value), rowId)
-        } else {
-            self.database.prepareCached("INSERT INTO keychain (key, data) VALUES (?, ?)").run(keyBlob, Blob(data: value))
-        }
+        print("set \(key) -> \(value.length) bytes")
+        self.valueBox.set(Table_Keychain.id, key: Table_Keychain.key(key), value: MemoryBuffer(data: value))
     }
     
     public func removeKeychainEntryForKey(key: String) {
-        self.queue.dispatch {
-            let keyBlob = Blob(data: key.dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: true)!)
-            self.database.prepareCached("DELETE FROM keychain WHERE key = ?").run(keyBlob)
-        }
+        self.valueBox.remove(Table_Keychain.id, key: Table_Keychain.key(key))
     }
     
     private func addMessages(messages: [Message], medias: [Media]) {
-        let messageInsertStatement = self.database.prepareCached("INSERT INTO peer_messages (peerId, namespace, id, data, associatedMediaIds, timestamp) VALUES (?, ?, ?, ?, ?, ?)")
-        let absoluteMessageIdsInsertStatement = self.database.prepareCached("INSERT INTO peer_absolute_indexed_message_ids (id, completeId) VALUES (?, ?)")
-        let peerMediaInsertStatement = self.database.prepareCached("INSERT INTO peer_media (peerId, mediaNamespace, messageNamespace, messageId) VALUES (?, ?, ?, ?)")
-        let mediaInsertStatement = self.database.prepareCached("INSERT INTO media (namespace, id, data, associatedMessageIds) VALUES (?, ?, ?, ?)")
-        let referencedMessageIdsStatement = self.database.prepareCached("SELECT associatedMessageIds FROM media WHERE namespace = ? AND id = ?")
-        let updateReferencedMessageIdsStatement = self.database.prepareCached("UPDATE media SET associatedMessageIds = ? WHERE namespace = ? AND id = ?")
-        
         let encoder = Encoder()
         
-        var messageIdsByMediaId: [MediaId : [MessageId]] = [:]
-        for (peerId, peerMessages) in Postbox.messagesGroupedByPeerId(messages) {
+        for (peerId, peerMessages) in messagesGroupedByPeerId(messages) {
             var maxMessage: (MessageIndex, Message)?
             
             var messageIds: [MessageId] = []
@@ -484,38 +182,23 @@ public final class Postbox<State: PostboxState> {
             
             var existingMessageIds = Set<MessageId>()
             
-            let messageIdsByNamespace = Postbox.messageIdsGroupedByNamespace(messageIds)
-            for (namespace, ids) in messageIdsByNamespace {
-                var queryString = "SELECT id FROM peer_messages WHERE peerId = ? AND namespace = ? AND id IN ("
-                var first = true
-                for id in ids {
-                    if first {
-                        first = false
-                    } else {
-                        queryString += ","
-                    }
-                    queryString += "\(id.id)"
-                }
-                queryString += ")"
-                
-                let statement = self.database.prepare(queryString)
-                for row in statement.run(peerId.toInt64(), Int64(namespace)) {
-                    existingMessageIds.insert(MessageId(peerId: peerId, namespace: namespace, id: Int32(row[0] as! Int64)))
+            let existingMessageKey = Table_Message.emptyKey()
+            existingMessageKey.setInt64(0, value: peerId.toInt64())
+            for id in messageIds {
+                if self.valueBox.exists(Table_Message.id, key: Table_Message.key(id, key: existingMessageKey)) {
+                    existingMessageIds.insert(id)
                 }
             }
             
-            let completeIdData = NSMutableData(capacity: 8 + 4 + 4)!
-            var zero: Int64 = 0
-            completeIdData.appendBytes(&zero, length: 8)
-            completeIdData.appendBytes(&zero, length: 8)
-            let completeIdDataMutableBytes = completeIdData.mutableBytes
-            let completeIdBlob = Blob(data: completeIdData)
+            var addedMessages: [Message] = []
             
+            let mediaMessageIdKey = Table_Media_MessageIds.emptyKey()
             for message in peerMessages {
                 if existingMessageIds.contains(message.id) {
                     continue
                 }
                 existingMessageIds.insert(message.id)
+                addedMessages.append(message)
                 
                 let index = MessageIndex(message)
                 if maxMessage == nil || index > maxMessage!.0 {
@@ -524,38 +207,23 @@ public final class Postbox<State: PostboxState> {
                 
                 encoder.reset()
                 encoder.encodeRootObject(message)
-                let messageBlob = Blob(data: encoder.makeData())
                 
-                let referencedMediaIdsMediaIdsBlob = Postbox.blobForMediaIds(message.mediaIds)
                 for id in message.mediaIds {
-                    if messageIdsByMediaId[id] != nil {
-                        messageIdsByMediaId[id]!.append(message.id)
-                    } else {
-                        messageIdsByMediaId[id] = [message.id]
-                    }
+                    self.valueBox.set(Table_Media_MessageIds.id, key: Table_Media_MessageIds.key(id, messageId: message.id, key: mediaMessageIdKey), value: MemoryBuffer())
                 }
                 
-                messageInsertStatement.run(peerId.toInt64(), Int64(message.id.namespace), Int64(message.id.id), messageBlob, referencedMediaIdsMediaIdsBlob, Int64(message.timestamp))
+                self.valueBox.set(Table_Message.id, key: Table_Message.key(message.id), value: Table_Message.set(message))
                 
+                let absoluteKey = Table_AbsoluteMessageId.emptyKey()
                 if self.absoluteIndexedMessageNamespaces.contains(message.id.namespace) {
-                    var peerIdValue = peerId.toInt64()
-                    memcpy(completeIdDataMutableBytes, &peerIdValue, 8)
-                    var messageIdNamespaceValue: Int32 = message.id.namespace
-                    memcpy(completeIdDataMutableBytes + 8, &messageIdNamespaceValue, 4)
-                    var messageIdIdValue: Int32 = message.id.id
-                    memcpy(completeIdDataMutableBytes + 12, &messageIdIdValue, 4)
-                    absoluteMessageIdsInsertStatement.run(Int64(message.id.id), completeIdBlob)
-                }
-                
-                for id in message.mediaIds {
-                    peerMediaInsertStatement.run(peerId.toInt64(), Int64(id.namespace), Int64(message.id.namespace), Int64(message.id.id))
+                    self.valueBox.set(Table_AbsoluteMessageId.id, key: Table_AbsoluteMessageId.key(message.id.id, key: absoluteKey), value: Table_AbsoluteMessageId.set(message.id))
                 }
             }
             
             if let relatedViews = self.peerMessageViews[peerId] {
                 for record in relatedViews.copyItems() {
                     var updated = false
-                    for message in peerMessages {
+                    for message in addedMessages {
                         if record.0.add(RenderedMessage(message: message)) {
                             updated = true
                         }
@@ -574,120 +242,42 @@ public final class Postbox<State: PostboxState> {
         
         var existingMediaIds = Set<MediaId>()
         
-        for (namespace, ids) in Postbox.mediaIdsGroupedByNamespaceFromMediaArray(medias) {
-            var queryString = "SELECT id FROM media WHERE namespace = ? AND id IN (";
-            var first = true
-            for id in ids {
-                if first {
-                    first = false
-                } else {
-                    queryString += ","
-                }
-                queryString += "\(id.id)"
-            }
-            queryString += ")"
-            for row in self.database.prepare(queryString).run(Int64(namespace)) {
-                existingMediaIds.insert(MediaId(namespace: namespace, id: row[0] as! Int64))
-            }
-        }
-        
-        var processedMediaIdsForMessageIds = Set<MediaId>()
+        let existingMediaKey = Table_Media.emptyKey()
         for media in medias {
-            if existingMediaIds.contains(media.id) {
-                continue
-            }
-            existingMediaIds.insert(media.id)
-            
-            encoder.reset()
-            encoder.encodeRootObject(media)
-            let mediaBlob = Blob(data: encoder.makeData())
-            
-            processedMediaIdsForMessageIds.insert(media.id)
-            if let messageIds = messageIdsByMediaId[media.id] {
-                let referencedMessageIdsBlob = Postbox.blobForMessageIds(messageIds)
-                mediaInsertStatement.run(Int64(media.id.namespace), media.id.id, mediaBlob, referencedMessageIdsBlob)
-            }
-        }
-        
-        var updatedMessageIdsBlobByMediaId: [MediaId : Blob] = [:]
-        for (mediaId, messageIds) in messageIdsByMediaId {
-            if !processedMediaIdsForMessageIds.contains(mediaId) {
-                for row in referencedMessageIdsStatement.run(Int64(mediaId.namespace), mediaId.id) {
-                    var currentMessageIds = Postbox.messageIdsForBlob(row[0] as! Blob)
-                    currentMessageIds += messageIds
-                    updatedMessageIdsBlobByMediaId[mediaId] = Postbox.blobForMessageIds(currentMessageIds)
+            if let id = media.id {
+                if self.valueBox.exists(Table_Media.id, key: Table_Media.key(id, key: existingMediaKey)) {
+                    existingMediaIds.insert(id)
                 }
             }
         }
         
-        for (mediaId, messageIds) in updatedMessageIdsBlobByMediaId {
-            updateReferencedMessageIdsStatement.run(messageIds, Int64(mediaId.namespace), mediaId.id)
-        }
-    }
-    
-    private func loadMessageIdsByMediaIdForPeerId(peerId: PeerId, idsByNamespace: [MessageId.Namespace : [MessageId]]) -> [MediaId : [MessageId]] {
-        var grouped: [MediaId : [MessageId]] = [:]
-        
-        for (namespace, ids) in idsByNamespace {
-            var messageIdByNamespaceAndIdQuery = "SELECT messageId FROM peer_media WHERE peerId = ? AND messageNamespace = ? AND messageId IN ("
-            var first = true
-            for id in ids {
-                if first {
-                    first = false
-                } else {
-                    messageIdByNamespaceAndIdQuery += ","
+        let mediaKey = Table_Media.emptyKey()
+        for media in medias {
+            if let id = media.id {
+                if existingMediaIds.contains(id) {
+                    continue
                 }
-                messageIdByNamespaceAndIdQuery += "\(id.id)"
-            }
-            messageIdByNamespaceAndIdQuery += ")"
-            
-            var messageIdsWithMedia: [MessageId] = []
-            for row in self.database.prepare(messageIdByNamespaceAndIdQuery).run(peerId.toInt64(), Int64(namespace)) {
-                messageIdsWithMedia.append(MessageId(peerId: peerId, namespace: namespace, id:Int32(row[0] as! Int64)))
-            }
-            
-            var associatedMediaIdsQueryString = "SELECT id, associatedMediaIds FROM peer_messages WHERE peerId = ? AND namespace = ? AND id IN ("
-            first = true
-            for id in messageIdsWithMedia {
-                if first {
-                    first = false
-                } else {
-                    associatedMediaIdsQueryString += ","
-                }
-                associatedMediaIdsQueryString += "\(id.id)"
-            }
-            associatedMediaIdsQueryString += ")"
-            
-            for row in self.database.prepare(associatedMediaIdsQueryString).run(peerId.toInt64(), Int64(namespace)) {
-                let id = MessageId(peerId: peerId, namespace: namespace, id: Int32(row[0] as! Int64))
-                let referencedMediaIds = Postbox.mediaIdsForBlob(row[1] as! Blob)
-                for mediaId in referencedMediaIds {
-                    if grouped[mediaId] != nil {
-                        grouped[mediaId]!.append(id)
-                    } else {
-                        grouped[mediaId] = [id]
-                    }
-                }
+                existingMediaIds.insert(id)
+
+                self.valueBox.set(Table_Media.id, key: Table_Media.key(id, key: mediaKey), value: Table_Media.set(media))
             }
         }
-        
-        return grouped
     }
     
     private func mediaWithIds(ids: [MediaId]) -> [MediaId : Media] {
         if ids.count == 0 {
             return [:]
         } else {
-            let select = self.database.prepareCached("SELECT data FROM media WHERE namespace = ? AND id = ?")
             var result: [MediaId : Media] = [:]
             
+            let mediaKey = Table_Media.emptyKey()
             for id in ids {
-                for row in select.run(Int64(id.namespace), id.id) {
-                    let blob = row[0] as! Blob
-                    if let media = Decoder(buffer: ReadBuffer(memory: UnsafeMutablePointer<Void>(blob.data.bytes), length: blob.data.length, freeWhenDone: false)).decodeRootObject() as? Media {
-                        result[media.id] = media
+                if let value = self.valueBox.get(Table_Media.id, key: Table_Media.key(id, key: mediaKey)) {
+                    if let media = Table_Media.get(value) {
+                        result[id] = media
+                    } else {
+                        print("can't parse media")
                     }
-                    break
                 }
             }
             
@@ -701,17 +291,15 @@ public final class Postbox<State: PostboxState> {
         if let cachedPeer = cachedPeers[peerId] {
             return cachedPeer
         } else {
-            for row in self.database.prepareCached("SELECT data FROM peers WHERE id = ?").run(peerId.toInt64()) {
-                let data = (row[0] as! Blob).data
-                let decoder = Decoder(buffer: ReadBuffer(memory: UnsafeMutablePointer(data.bytes), length: data.length, freeWhenDone: false))
+            let peerKey = Table_Peer.emptyKey()
+            if let value = self.valueBox.get(Table_Peer.id, key: Table_Peer.key(peerId, key: peerKey)) {
+                let decoder = Decoder(buffer: value)
                 if let peer = decoder.decodeRootObject() as? Peer {
                     cachedPeers[peer.id] = peer
                     return peer
                 } else {
                     print("(PostBox: can't decode peer)")
                 }
-                
-                break
             }
             
             return nil
@@ -722,45 +310,11 @@ public final class Postbox<State: PostboxState> {
         if ids.count == 0 {
             return [:]
         } else {
-            var remainingIds: [PeerId] = []
-            
             var peers: [PeerId : Peer] = [:]
             
             for id in ids {
-                if let cachedPeer = cachedPeers[id] {
-                    peers[id] = cachedPeer
-                } else {
-                    remainingIds.append(id)
-                }
-            }
-            
-            if remainingIds.count != 0 {
-                let rows: Statement
-                if ids.count == 1 {
-                    rows = self.database.prepareCached("SELECT data FROM peers WHERE id = ?").run(ids[0].toInt64())
-                } else if ids.count == 2 {
-                    rows = self.database.prepareCached("SELECT data FROM peers WHERE id IN (?, ?)").run(ids[0].toInt64(), ids[1].toInt64())
-                } else {
-                    var query = "SELECT data FROM peers WHERE id IN ("
-                    var first = true
-                    for id in ids {
-                        if first {
-                            first = false
-                            query += "\(id.toInt64())"
-                        } else {
-                            query += ",\(id.toInt64())"
-                        }
-                    }
-                    query += ")"
-                    rows = self.database.prepare(query).run()
-                }
-                
-                for row in rows {
-                    let blob = row[0] as! Blob
-                    if let peer = Decoder(buffer: ReadBuffer(memory: UnsafeMutablePointer<Void>(blob.data.bytes), length: blob.data.length, freeWhenDone: false)).decodeRootObject() as? Peer {
-                        self.cachedPeers[peer.id] = peer
-                        peers[peer.id] = peer
-                    }
+                if let peer: Peer = self.peerWithId(id) {
+                    peers[id] = peer
                 }
             }
             
@@ -836,10 +390,9 @@ public final class Postbox<State: PostboxState> {
     
     private func updatePeerEntry(peerId: PeerId, message: RenderedMessage?, replace: Bool = false) {
         var currentIndex: PeerViewEntryIndex?
-        for row in self.database.prepareCached("SELECT entry FROM peer_entries WHERE peerId = ?").run(peerId.toInt64()) {
-            let blob = row[0] as! Blob
-            currentIndex = Postbox.peerViewEntryIndexForBuffer(ReadBuffer(memory: UnsafeMutablePointer(blob.data.bytes), length: blob.data.length, freeWhenDone: false))
-            break
+        
+        if let value = self.valueBox.get(Table_PeerEntry.id, key: Table_PeerEntry.key(peerId)) {
+            currentIndex = Table_PeerEntry.get(peerId, value: value)
         }
         
         var updatedPeerMessage: RenderedMessage?
@@ -850,8 +403,10 @@ public final class Postbox<State: PostboxState> {
                 if replace || currentIndex.messageIndex < messageIndex {
                     let updatedIndex = PeerViewEntryIndex(peerId: peerId, messageIndex: messageIndex)
                     updatedPeerMessage = message
-                    let updatedBlob = Postbox.blobForPeerViewEntryIndex(updatedIndex)
-                    self.database.prepareCached("UPDATE peer_entries SET entry = ? WHERE peerId = ?").run(updatedBlob, peerId.toInt64())
+                    
+                    self.valueBox.remove(Table_PeerEntry_Sorted.id, key: Table_PeerEntry_Sorted.key(currentIndex))
+                    self.valueBox.set(Table_PeerEntry_Sorted.id, key: Table_PeerEntry_Sorted.key(updatedIndex), value: MemoryBuffer())
+                    self.valueBox.set(Table_PeerEntry.id, key: Table_PeerEntry.key(peerId), value: Table_PeerEntry.set(updatedIndex))
                 }
             } else if replace {
                 //TODO: remove?
@@ -859,8 +414,9 @@ public final class Postbox<State: PostboxState> {
         } else if let message = message {
             updatedPeerMessage = message
             let updatedIndex = PeerViewEntryIndex(peerId: peerId, messageIndex: MessageIndex(message.message))
-            let updatedBlob = Postbox.blobForPeerViewEntryIndex(updatedIndex)
-            self.database.prepareCached("INSERT INTO peer_entries (peerId, entry) VALUES (?, ?)").run(peerId.toInt64(), updatedBlob)
+
+            self.valueBox.set(Table_PeerEntry_Sorted.id, key: Table_PeerEntry_Sorted.key(updatedIndex), value: MemoryBuffer())
+            self.valueBox.set(Table_PeerEntry.id, key: Table_PeerEntry.key(peerId), value: Table_PeerEntry.set(updatedIndex))
         }
         
         if let updatedPeerMessage = updatedPeerMessage {
@@ -900,132 +456,61 @@ public final class Postbox<State: PostboxState> {
             return []
         }
         
-        var queryString = "SELECT completeId FROM peer_absolute_indexed_message_ids WHERE id IN ("
-        var first = true
-        for id in ids {
-            if first {
-                first = false
-            } else {
-                queryString += ","
-            }
-            queryString += "\(id)"
-        }
-        queryString += ")"
-        
         var result: [MessageId] = []
-        for row in self.database.prepare(queryString).run() {
-            let blob = row[0] as! Blob
-            let blobBytes = blob.data.bytes
-            
-            var peerIdValue: Int64 = 0
-            memcpy(&peerIdValue, blobBytes, 8)
-            var messageIdNamespaceValue: Int32 = 0
-            memcpy(&messageIdNamespaceValue, blobBytes + 8, 4)
-            var messageIdIdValue: Int32 = 0
-            memcpy(&messageIdIdValue, blobBytes + 12, 4)
-            result.append(MessageId(peerId: PeerId(peerIdValue), namespace: messageIdNamespaceValue, id: messageIdIdValue))
+        
+        let key = Table_AbsoluteMessageId.emptyKey()
+        for id in ids {
+            if let value = self.valueBox.get(Table_AbsoluteMessageId.id, key: Table_AbsoluteMessageId.key(id, key: key)) {
+                result.append(Table_AbsoluteMessageId.get(id, value: value))
+            }
         }
         
         return result
     }
     
     private func deleteMessagesWithIds(ids: [MessageId]) {
-        for (peerId, messageIds) in Postbox.messageIdsGroupedByPeerId(ids) {
-            let messageIdsByNamespace = Postbox.messageIdsGroupedByNamespace(messageIds)
-            let messageIdsByMediaId = self.loadMessageIdsByMediaIdForPeerId(peerId, idsByNamespace: messageIdsByNamespace)
-            
-            for (peerId, messageIds) in Postbox.messageIdsGroupedByPeerId(ids) {
-                if let relatedViews = self.peerMessageViews[peerId] {
-                    for (view, pipe) in relatedViews.copyItems() {
-                        let context = view.remove(Set<MessageId>(messageIds))
-                        if !context.empty() {
-                            view.complete(context, fetchEarlier: self.fetchMessagesRelative(peerId, earlier: true), fetchLater: self.fetchMessagesRelative(peerId, earlier: false))
-                            self.deferMessageViewUpdate(view, pipe: pipe)
+        for (peerId, messageIds) in messageIdsGroupedByPeerId(ids) {
+            if let relatedViews = self.peerMessageViews[peerId] {
+                for (view, pipe) in relatedViews.copyItems() {
+                    let context = view.remove(Set<MessageId>(messageIds))
+                    if !context.empty() {
+                        view.complete(context, fetchEarlier: self.fetchMessagesRelative(peerId, earlier: true), fetchLater: self.fetchMessagesRelative(peerId, earlier: false))
+                        self.deferMessageViewUpdate(view, pipe: pipe)
+                    }
+                }
+            }
+        }
+        
+        var touchedMediaIds = Set<MediaId>()
+        
+        let removeMediaMessageIdKey = Table_Media_MessageIds.emptyKey()
+        for (peerId, messageIds) in messageIdsGroupedByPeerId(ids) {
+            let messageKey = Table_Message.emptyKey()
+            for id in messageIds {
+                if let value = self.valueBox.get(Table_Message.id, key: Table_Message.key(id, key: messageKey)) {
+                    if let message = Table_Message.get(value) {
+                        for mediaId in message.mediaIds {
+                            touchedMediaIds.insert(mediaId)
+                            self.valueBox.remove(Table_Media_MessageIds.id, key: Table_Media_MessageIds.key(mediaId, messageId: message.id, key: removeMediaMessageIdKey))
                         }
                     }
                 }
             }
+
+            for id in messageIds {
+                self.valueBox.remove(Table_Message.id, key: Table_Message.key(id, key: messageKey))
+            }
             
-            for (namespace, messageIds) in messageIdsByNamespace {
-                var queryString = "DELETE FROM peer_messages WHERE peerId = ? AND namespace = ? AND id IN ("
-                var first = true
-                for id in messageIds {
-                    if first {
-                        first = false
-                    } else {
-                        queryString += ","
-                    }
-                    queryString += "\(id.id)"
-                }
-                queryString += ")"
-                self.database.prepare(queryString).run(peerId.toInt64(), Int64(namespace))
+            for mediaId in touchedMediaIds {
+                var referenced = false
+                self.valueBox.range(Table_Media_MessageIds.id, start: Table_Media_MessageIds.lowerBoundKey(mediaId), end: Table_Media_MessageIds.upperBoundKey(mediaId), keys: { key in
+                    referenced = true
+                    return false
+                }, limit: 1)
                 
-                if self.absoluteIndexedMessageNamespaces.contains(namespace) {
-                    var queryString = "DELETE FROM peer_absolute_indexed_message_ids WHERE id IN ("
-                    var first = true
-                    for id in messageIds {
-                        if first {
-                            first = false
-                        } else {
-                            queryString += ","
-                        }
-                        queryString += "\(id.id)"
-                    }
-                    queryString += ")"
-                    self.database.prepare(queryString).run()
-                }
-            }
-            
-            for (namespace, messageIds) in messageIdsByNamespace {
-                var queryString = "DELETE FROM peer_media WHERE peerId = ? AND messageNamespace = ? AND messageId IN ("
-                var first = true
-                for id in messageIds {
-                    if first {
-                        first = false
-                    } else {
-                        queryString += ","
-                    }
-                    queryString += "\(id.id)"
-                }
-                queryString += ")"
-                self.database.prepare(queryString).run(peerId.toInt64(), Int64(namespace))
-            }
-            
-            let mediaIdsByNamespace = Postbox.mediaIdsGroupedByNamespaceFromDictionaryKeys(messageIdsByMediaId)
-            var updatedMessageIdsByMediaId: [MediaId : [MessageId]] = [:]
-            
-            for (namespace, mediaIds) in mediaIdsByNamespace {
-                var queryString = "SELECT id, data, associatedMessageIds FROM media WHERE namespace = ? AND id in ("
-                var first = true
-                for id in mediaIds {
-                    if first {
-                        first = false
-                    } else {
-                        queryString += ","
-                    }
-                    queryString += "\(id.id)"
-                }
-                queryString += ")"
-                for row in self.database.prepare(queryString).run(Int64(namespace)) {
-                    let mediaId = MediaId(namespace: namespace, id: row[0] as! Int64)
-                    if let removedMessageIds = messageIdsByMediaId[mediaId] {
-                        var messageIds = Postbox.messageIdsForBlob(row[2] as! Blob).filter {
-                            !removedMessageIds.contains($0)
-                        }
-                        updatedMessageIdsByMediaId[mediaId] = messageIds
-                        
-                        if messageIds.count == 0 {
-                            self.database.prepareCached("INSERT OR IGNORE INTO media_cleanup (namespace, id, data) VALUES (?, ?, ?)").run(Int64(namespace), mediaId.id, row[1] as! Blob)
-                        }
-                    }
-                }
-                
-                for (mediaId, messageIds) in updatedMessageIdsByMediaId {
-                    if messageIds.count == 0 {
-                        self.database.prepareCached("DELETE FROM media WHERE namespace = ? AND id = ?").run(Int64(mediaId.namespace), mediaId.id)
-                    } else {
-                        self.database.prepareCached("UPDATE media SET associatedMessageIds = ? WHERE namespace = ? AND id = ?").run(Postbox.blobForMessageIds(messageIds), Int64(mediaId.namespace), mediaId.id)
-                    }
+                if !referenced {
+                    //TODO write to cleanup queue
+                    self.valueBox.remove(Table_Media.id, key: Table_Media.key(mediaId))
                 }
             }
             
@@ -1050,12 +535,11 @@ public final class Postbox<State: PostboxState> {
             
             let currentPeers = self.peersWithIds(peerIds)
             
-            let updatePeer = self.database.prepareCached("UPDATE peers SET data = ? WHERE id = ?")
-            let insertPeer = self.database.prepareCached("INSERT INTO peers (id, data) VALUES (?, ?)")
             let encoder = Encoder()
             
             var updatedPeers: [PeerId : Peer] = [:]
             
+            let peerKey = Table_Peer.emptyKey()
             for updatedPeer in peers {
                 let currentPeer = currentPeers[updatedPeer.id]
                 
@@ -1071,11 +555,8 @@ public final class Postbox<State: PostboxState> {
                     encoder.reset()
                     encoder.encodeRootObject(finalPeer)
                     
-                    if currentPeer != nil {
-                        updatePeer.run(Blob(data: encoder.makeData()), finalPeer.id.toInt64())
-                    } else {
-                        insertPeer.run(finalPeer.id.toInt64(), Blob(data: encoder.makeData()))
-                    }
+                    peerKey.setInt64(0, value: updatedPeer.id.toInt64())
+                    self.valueBox.set(Table_Peer.id, key: Table_Peer.key(finalPeer.id, key: peerKey), value: encoder.memoryBuffer())
                 }
             }
             
@@ -1094,13 +575,13 @@ public final class Postbox<State: PostboxState> {
                     let startTime = CFAbsoluteTimeGetCurrent()
                 //#endif
                 
-                self.database.transaction()
+                self.valueBox.begin()
                 let result = f(Modifier(postbox: self))
                     //print("(Postbox modify took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms)")
                 //#if DEBUG
                 //startTime = CFAbsoluteTimeGetCurrent()
                 //#endif
-                self.database.commit()
+                self.valueBox.commit()
                 
                 //#if DEBUG
                     print("(Postbox commit took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms)")
@@ -1116,8 +597,21 @@ public final class Postbox<State: PostboxState> {
     }
     
     private func findAdjacentMessageIds(peerId: PeerId, namespace: MessageId.Namespace, index: MessageIndex) -> (MessageId.Id?, MessageId.Id?) {
-        var minId: MessageId.Id?
+        /*var minId: MessageId.Id?
         var maxId: MessageId.Id?
+        
+        let lowerBoundKey = ValueBoxKey(length: 8 + 4)
+        lowerBoundKey.setInt64(0, value: peerId.toInt64())
+        lowerBoundKey.setInt32(8, value: namespace)
+        
+        let upperBoundKey = ValueBoxKey(length: 8 + 4)
+        upperBoundKey.setInt64(0, value: peerId.toInt64())
+        upperBoundKey.setInt32(8, value: namespace)
+        
+        self.valueBox.range("peer_messages", start: lowerBoundKey, end: upperBoundKey.successor, keys: { key in
+            
+        }, limit: 1)
+        
         for row in self.database.prepareCached("SELECT MIN(id), MAX(id) FROM peer_messages WHERE peerId = ? AND namespace = ?").run(peerId.toInt64(), Int64(namespace)) {
             minId = MessageId.Id(row[0] as! Int64)
             maxId = MessageId.Id(row[1] as! Int64)
@@ -1226,7 +720,9 @@ public final class Postbox<State: PostboxState> {
             }
         } else {
             return (nil, nil)
-        }
+        }*/
+        
+        return (nil, nil)
     }
     
     private func fetchMessagesAround(peerId: PeerId, anchorId: MessageId, count: Int) -> ([RenderedMessage], [MessageId.Namespace : RenderedMessage], [MessageId.Namespace : RenderedMessage]) {
@@ -1346,36 +842,32 @@ public final class Postbox<State: PostboxState> {
     private func fetchMessagesRelative(peerId: PeerId, earlier: Bool)(namespace: MessageId.Namespace, id: MessageId.Id?, count: Int) -> [RenderedMessage] {
         var messages: [Message] = []
         
-        let sign = earlier ? "<" : ">"
-        let order = earlier ? "DESC" : "ASC"
-        let bound: Int64
+        let lowerBound = Table_Message.lowerBoundKey(peerId, namespace: namespace)
+        let upperBound = Table_Message.upperBoundKey(peerId, namespace: namespace)
+        
+        let bound: ValueBoxKey
         if let id = id {
-            bound = Int64(id)
+            bound = Table_Message.key(MessageId(peerId: peerId, namespace: namespace, id: id))
         } else if earlier {
-            bound = Int64(Int32.max)
+            bound = upperBound
         } else {
-            bound = Int64(Int32.min)
+            bound = lowerBound
         }
         
-        var statement: COpaquePointer = nil
-        sqlite3_prepare_v2(self.database.handle, "SELECT data, associatedMediaIds FROM peer_messages WHERE peerId=\(peerId.toInt64()) AND namespace=\(namespace) AND id \(sign) \(bound) ORDER BY id \(order) LIMIT \(count)", -1, &statement, nil)
-        
-        while true {
-            let result = sqlite3_step(statement)
-            if result == SQLITE_ROW {
-                let length = sqlite3_column_bytes(statement, 0)
-                let data = sqlite3_column_blob(statement, 0)
-                let decoder = Decoder(buffer: ReadBuffer(memory: UnsafeMutablePointer<Void>(data), length: Int(length), freeWhenDone: false))
-                if let message = decoder.decodeRootObject() as? Message {
-                    messages.append(message)
-                } else {
-                    print("(PostBox: can't decode message)")
-                }
+        let values: (ValueBoxKey, ReadBuffer) -> Bool = { _, value in
+            if let message = Table_Message.get(value) {
+                messages.append(message)
             } else {
-                break
+                print("can't parse message")
             }
+            return true
         }
-        sqlite3_finalize(statement)
+        
+        if earlier {
+            self.valueBox.range(Table_Message.id, start: bound, end: lowerBound, values: values, limit: count)
+        } else {
+            self.valueBox.range(Table_Message.id, start: bound, end: upperBound, values: values, limit: count)
+        }
         
         return self.renderedMessages(messages)
     }
@@ -1383,49 +875,31 @@ public final class Postbox<State: PostboxState> {
     private func fetchPeerEntryIndicesRelative(earlier: Bool)(index: PeerViewEntryIndex?, count: Int) -> [PeerViewEntryIndex] {
         var entries: [PeerViewEntryIndex] = []
         
-        var statement: COpaquePointer = nil
+        let lowerBound = Table_PeerEntry_Sorted.lowerBoundKey()
+        let upperBound = Table_PeerEntry_Sorted.upperBoundKey()
         
+        let bound: ValueBoxKey
         if let index = index {
-            let bound = Postbox.blobForPeerViewEntryIndex(index)
-            let sign = earlier ? "<" : ">"
-            let order = earlier ? "DESC" : "ASC"
-            
-            sqlite3_prepare_v2(self.database.handle, "SELECT entry FROM peer_entries WHERE entry \(sign) ? ORDER BY entry \(order) LIMIT \(count)", -1, &statement, nil)
-            sqlite3_bind_blob(statement, 0, bound.data.bytes, Int32(bound.data.length), nil)
-            
+            bound = Table_PeerEntry_Sorted.key(index)
+        } else if earlier {
+            bound = upperBound
         } else {
-            let order = earlier ? "DESC" : "ASC"
-            sqlite3_prepare_v2(self.database.handle, "SELECT entry FROM peer_entries ORDER BY entry \(order) LIMIT \(count)", -1, &statement, nil)
+            bound = lowerBound
         }
         
-        while true {
-            let result = sqlite3_step(statement)
-            if result == SQLITE_ROW {
-                let length = sqlite3_column_bytes(statement, 0)
-                let data = sqlite3_column_blob(statement, 0)
-                entries.append(Postbox.peerViewEntryIndexForBuffer(ReadBuffer(memory: UnsafeMutablePointer(data), length: Int(length), freeWhenDone: false)))
-            } else {
-                break
-            }
+        let keys: ValueBoxKey -> Bool = { key in
+            entries.append(Table_PeerEntry_Sorted.get(key))
+            
+            return true
         }
-        sqlite3_finalize(statement)
+        
+        if earlier {
+            self.valueBox.range(Table_PeerEntry_Sorted.id, start: bound, end: lowerBound, keys: keys, limit: count)
+        } else {
+            self.valueBox.range(Table_PeerEntry_Sorted.id, start: bound, end: upperBound, keys: keys, limit: count)
+        }
         
         return entries
-    }
-    
-    private func messageForPeer(peerId: PeerId, id: MessageId) -> RenderedMessage? {
-        for row in self.database.prepareCached("SELECT data, associatedMediaIds FROM peer_messages WHERE peerId = ? AND namespace = ? AND id = ?").run(peerId.toInt64(), Int64(id.namespace), Int64(id.id)) {
-            let data = (row[0] as! Blob).data
-            let decoder = Decoder(buffer: ReadBuffer(memory: UnsafeMutablePointer(data.bytes), length: data.length, freeWhenDone: false))
-            if let message = decoder.decodeRootObject() as? Message {
-                return self.renderedMessages([message]).first
-            } else {
-                print("(PostBox: can't decode message)")
-            }
-            break
-        }
-        
-        return nil
     }
     
     private func fetchPeerEntriesRelative(earlier: Bool)(index: PeerViewEntryIndex?, count: Int) -> [PeerViewEntry] {
@@ -1437,18 +911,23 @@ public final class Postbox<State: PostboxState> {
             if let cachedPeer = peers[entryIndex.peerId] {
                 peer = cachedPeer
             } else {
-                if let fetchedPeer = self.peerWithId(entryIndex.peerId) {
+                if let fetchedPeer: Peer = self.peerWithId(entryIndex.peerId) {
                     peer = fetchedPeer
                     peers[fetchedPeer.id] = fetchedPeer
                 }
             }
             
-            if let message = self.messageForPeer(entryIndex.peerId, id: entryIndex.messageIndex.id) {
+            var message: Message?
+            if let value = self.valueBox.get(Table_Message.id, key: Table_Message.key(entryIndex.messageIndex.id)) {
+                message = Table_Message.get(value)
+            }
+            
+            if let message = message, renderedMessage = self.renderedMessages([message]).first {
                 let entry: PeerViewEntry
                 if let peer = peer {
-                    entry = PeerViewEntry(peer: peer, message: message)
+                    entry = PeerViewEntry(peer: peer, message: renderedMessage)
                 } else {
-                    entry = PeerViewEntry(peerId: entryIndex.peerId, message: message)
+                    entry = PeerViewEntry(peerId: entryIndex.peerId, message: renderedMessage)
                 }
                 
                 entries.append(entry)
@@ -1732,54 +1211,15 @@ public final class Postbox<State: PostboxState> {
         }
     }
     
-    func printMessages(messages: [Message]) {
-        var string = ""
-        string += "["
-        var first = true
-        for message in messages {
-            if first {
-                first = false
-            } else {
-                string += ", "
+    public func peerWithId(id: PeerId) -> Signal<Peer, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.queue.dispatch {
+                if let peer: Peer = self.peerWithId(id) {
+                    subscriber.putNext(peer)
+                }
             }
-            string += "\(message.id.namespace): \(message.id.id)—\(message.timestamp)"
-        }
-        string += "]"
-        print(string)
-    }
-    
-    public func _dumpTables() {
-        print("\n------------")
-        print("peer_messages")
-        print("-------------")
-        for row in self.database.prepare("SELECT peerId, namespace, id, timestamp, associatedMediaIds FROM peer_messages").run() {
-            print("peer(\(PeerId(row[0] as! Int64))) id(\(MessageId(peerId: PeerId(row[0] as! Int64), namespace: Int32(row[1] as! Int64), id:(Int32(row[2] as! Int64))))) timestamp(\(row[3] as! Int64)) media(\(Postbox.mediaIdsForBlob(row[4] as! Blob)))")
-        }
-        
-        print("\n---------")
-        print("peer_media")
-        print("----------")
-        for row in self.database.prepare("SELECT peerId, mediaNamespace, messageNamespace, messageId FROM peer_media").run() {
-            print("peer(\(PeerId(row[0] as! Int64))) namespace(\(row[1] as! Int64)) id(\(MessageId(peerId: PeerId(row[0] as! Int64), namespace: Int32(row[2] as! Int64), id:Int32(row[3] as! Int64))))")
-        }
-        
-        print("\n----")
-        print("media")
-        print("-----")
-        for row in self.database.prepare("SELECT namespace, id, associatedMessageIds FROM media").run() {
-            print("id(\(MediaId(namespace: Int32(row[0] as! Int64), id:(row[1] as! Int64)))) messages(\(Postbox.messageIdsForBlob(row[2] as! Blob)))")
-        }
-        
-        print("\n------------")
-        print("media_cleanup")
-        print("-------------")
-        for row in self.database.prepare("SELECT namespace, id FROM media_cleanup").run() {
-            print("id(\(MediaId(namespace: Int32(row[0] as! Int64), id:(row[1] as! Int64))))")
-        }
-    }
-    
-    public func _sync() {
-        self.queue.sync {
+            return disposable
         }
     }
 }

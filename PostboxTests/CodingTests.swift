@@ -97,6 +97,14 @@ func ==(lhs: TestKey, rhs: TestKey) -> Bool {
     return lhs.value == rhs.value
 }
 
+class EmptyState: PostboxState {
+    required init(decoder: Decoder) {
+    }
+    
+    func encode(encoder: Encoder) {
+    }
+}
+
 class SerializationTests: XCTestCase {
     override func setUp() {
         super.setUp()
@@ -107,9 +115,9 @@ class SerializationTests: XCTestCase {
     }
 
     func testExample() {
-        declareEncodable(TestParent.self, { TestParent(decoder: $0) })
-        declareEncodable(TestObject.self, { TestObject(decoder: $0) })
-        declareEncodable(TestKey.self, { TestKey(decoder: $0) })
+        declareEncodable(TestParent.self, f: { TestParent(decoder: $0) })
+        declareEncodable(TestObject.self, f: { TestObject(decoder: $0) })
+        declareEncodable(TestKey.self, f: { TestKey(decoder: $0) })
         
         let encoder = Encoder()
         encoder.encodeInt32(12345, forKey: "a")
@@ -155,5 +163,99 @@ class SerializationTests: XCTestCase {
         XCTAssert(decoder.decodeBoolForKey("c"), "bool failed")
         XCTAssert(decoder.decodeInt64ForKey("b") == Int64(12345), "int64 failed")
         XCTAssert(decoder.decodeInt32ForKey("a") == 12345, "int32 failed")
+    }
+    
+    func testIndexBaselinePerformance() {
+        let basePath = "/tmp/postboxtest"
+        do {
+            try NSFileManager.defaultManager().removeItemAtPath(basePath)
+        } catch _ { }
+        let postbox = Postbox<EmptyState>(basePath: basePath, messageNamespaces: [], absoluteIndexedMessageNamespaces: [])
+        postbox._prepareBaselineIndexPerformance()
+        
+        measureBlock {
+            postbox._measureBaselineIndexPerformance()
+        }
+    }
+    
+    func testBlobReadPerformance() {
+        let basePath = "/tmp/postboxtest"
+        do {
+            try NSFileManager.defaultManager().removeItemAtPath(basePath)
+        } catch _ { }
+        let postbox = Postbox<EmptyState>(basePath: basePath, messageNamespaces: [], absoluteIndexedMessageNamespaces: [])
+        postbox._prepareBlobIndexPerformance()
+        
+        measureBlock {
+            postbox._measureBlobReadPerformance()
+        }
+    }
+    
+    func testBlobIndexPerformance() {
+        let basePath = "/tmp/postboxtest"
+        do {
+            try NSFileManager.defaultManager().removeItemAtPath(basePath)
+        } catch _ { }
+        let postbox = Postbox<EmptyState>(basePath: basePath, messageNamespaces: [], absoluteIndexedMessageNamespaces: [])
+        postbox._prepareBlobIndexPerformance()
+        
+        measureBlock {
+            postbox._measureBlobIndexPerformance()
+        }
+    }
+    
+    func testKeys() {
+        let key1 = ValueBoxKey(length: 8)
+        let key2 = ValueBoxKey(length: 8)
+        
+        key1.setInt32(0, value: 1)
+        key1.setInt32(4, value: 2)
+        
+        key2.setInt32(0, value: 1)
+        key2.setInt32(4, value: 3)
+        
+        let lowerBound = ValueBoxKey(length: 4)
+        lowerBound.setInt32(0, value: 0)
+        let upperBound = ValueBoxKey(length: 4)
+        upperBound.setInt32(0, value: 2)
+        
+        XCTAssert(key1 > lowerBound, "key1 <= lowerBound")
+        XCTAssert(key1 < upperBound, "key1 >= upperBound")
+        XCTAssert(key2 > lowerBound, "key2 <= lowerBound")
+        XCTAssert(key2 < upperBound, "key2 >= upperBound")
+        
+        XCTAssert(key1 < key2, "key1 >= key2")
+        XCTAssert(key1.successor == key2, "key1.next != key2")
+        XCTAssert(key2.predecessor == key1, "key2.previous != key1")
+    }
+    
+    func testKeyValue() {
+        let basePath = "/tmp/postboxtest"
+        do {
+            try NSFileManager.defaultManager().removeItemAtPath(basePath)
+        } catch _ { }
+        
+        let box = SqliteValueBox(basePath: basePath)
+        box.transaction { transaction in
+            let key = ValueBoxKey(length: 4)
+            let value = WriteBuffer()
+            for i in 1 ... 100 {
+                key.setInt32(0, value: Int32(i))
+                transaction.set("test", key: key, value: value)
+            }
+        }
+        
+        do {
+            box.transaction { transaction in
+                let lowerBound = ValueBoxKey(length: 4)
+                lowerBound.setInt32(0, value: 2)
+                let upperBound = ValueBoxKey(length: 4)
+                upperBound.setInt32(0, value: 99)
+                transaction.range("test", start: upperBound, end: lowerBound, values: { key, value in
+                    print("\(key.getInt32(0))")
+                    return true
+                }, limit: 10)
+            }
+        }
     }
 }

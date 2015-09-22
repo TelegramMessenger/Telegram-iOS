@@ -8,9 +8,16 @@
 
 /* Begin PBXBuildFile section */
 		D003E4E61B38DBDB00C22CBC /* MessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D003E4E51B38DBDB00C22CBC /* MessageView.swift */; };
+		D00E0FB31B84CEDA002E4EB5 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D00E0FB21B84CEDA002E4EB5 /* Display.framework */; };
+		D00E0FB81B85D192002E4EB5 /* lmdb.h in Headers */ = {isa = PBXBuildFile; fileRef = D00E0FB41B85D192002E4EB5 /* lmdb.h */; };
+		D00E0FB91B85D192002E4EB5 /* mdb.c in Sources */ = {isa = PBXBuildFile; fileRef = D00E0FB51B85D192002E4EB5 /* mdb.c */; };
+		D00E0FBA1B85D192002E4EB5 /* midl.c in Sources */ = {isa = PBXBuildFile; fileRef = D00E0FB61B85D192002E4EB5 /* midl.c */; };
+		D00E0FBB1B85D192002E4EB5 /* midl.h in Headers */ = {isa = PBXBuildFile; fileRef = D00E0FB71B85D192002E4EB5 /* midl.h */; };
+		D00E0FBE1B85D1B5002E4EB5 /* LmdbValueBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00E0FBD1B85D1B5002E4EB5 /* LmdbValueBox.swift */; };
 		D044E15E1B2ACB9C001EE087 /* CodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D044E15D1B2ACB9C001EE087 /* CodingTests.swift */; };
 		D044E1631B2AD677001EE087 /* MurMurHash32.m in Sources */ = {isa = PBXBuildFile; fileRef = D044E1621B2AD677001EE087 /* MurMurHash32.m */; };
 		D044E1641B2AD718001EE087 /* MurMurHash32.h in Headers */ = {isa = PBXBuildFile; fileRef = D044E1611B2AD667001EE087 /* MurMurHash32.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D055BD331B7D3D2D00F06C0A /* MediaBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D055BD321B7D3D2D00F06C0A /* MediaBox.swift */; };
 		D07516441B2D9CEF00AE42E0 /* sqlite3.c in Sources */ = {isa = PBXBuildFile; fileRef = D07516401B2D9CEF00AE42E0 /* sqlite3.c */; };
 		D07516451B2D9CEF00AE42E0 /* sqlite3.h in Headers */ = {isa = PBXBuildFile; fileRef = D07516411B2D9CEF00AE42E0 /* sqlite3.h */; };
 		D07516461B2D9CEF00AE42E0 /* sqlite3ext.h in Headers */ = {isa = PBXBuildFile; fileRef = D07516421B2D9CEF00AE42E0 /* sqlite3ext.h */; };
@@ -22,13 +29,17 @@
 		D07516771B2EC90400AE42E0 /* fts3_tokenizer.h in Headers */ = {isa = PBXBuildFile; fileRef = D07516741B2EC90400AE42E0 /* fts3_tokenizer.h */; };
 		D07516781B2EC90400AE42E0 /* SQLite-Bridging.h in Headers */ = {isa = PBXBuildFile; fileRef = D07516751B2EC90400AE42E0 /* SQLite-Bridging.h */; };
 		D07516791B2EC90400AE42E0 /* SQLite-Bridging.m in Sources */ = {isa = PBXBuildFile; fileRef = D07516761B2EC90400AE42E0 /* SQLite-Bridging.m */; };
+		D0977F9C1B822DB4009994B2 /* ValueBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977F9B1B822DB4009994B2 /* ValueBox.swift */; };
+		D0977F9E1B8234DF009994B2 /* ValueBoxKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977F9D1B8234DF009994B2 /* ValueBoxKey.swift */; };
+		D0977FA01B8244D7009994B2 /* SqliteValueBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977F9F1B8244D7009994B2 /* SqliteValueBox.swift */; };
+		D0977FA21B82930C009994B2 /* PostboxCodingUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977FA11B82930C009994B2 /* PostboxCodingUtils.swift */; };
+		D0977FA41B829F87009994B2 /* PostboxTables.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977FA31B829F87009994B2 /* PostboxTables.swift */; };
 		D0B76BE71B66639F0095CF45 /* DeferredString.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B76BE61B66639F0095CF45 /* DeferredString.swift */; };
 		D0C07F6A1B67DB4800966E43 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C07F691B67DB4800966E43 /* SwiftSignalKit.framework */; };
 		D0D224F21B4D6ABD0085E26D /* Functions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D224ED1B4D6ABD0085E26D /* Functions.swift */; };
 		D0D225261B4D84930085E26D /* PeerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D225251B4D84930085E26D /* PeerView.swift */; };
 		D0E3A7501B28A7E300A402D9 /* Postbox.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E3A74F1B28A7E300A402D9 /* Postbox.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0E3A7561B28A7E300A402D9 /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0E3A74A1B28A7E300A402D9 /* Postbox.framework */; };
-		D0E3A75D1B28A7E300A402D9 /* PostboxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E3A75C1B28A7E300A402D9 /* PostboxTests.swift */; };
 		D0E3A7821B28ADD000A402D9 /* Postbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E3A7811B28ADD000A402D9 /* Postbox.swift */; };
 		D0E3A7841B28AE0900A402D9 /* Peer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E3A7831B28AE0900A402D9 /* Peer.swift */; };
 		D0E3A7881B28AE9C00A402D9 /* Coding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E3A7871B28AE9C00A402D9 /* Coding.swift */; };
@@ -48,9 +59,16 @@
 
 /* Begin PBXFileReference section */
 		D003E4E51B38DBDB00C22CBC /* MessageView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageView.swift; sourceTree = "<group>"; };
+		D00E0FB21B84CEDA002E4EB5 /* Display.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Display.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-gbpsmqzuwcmmxadrqcwyrluaftwp/Build/Products/Debug-iphoneos/Display.framework"; sourceTree = "<group>"; };
+		D00E0FB41B85D192002E4EB5 /* lmdb.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = lmdb.h; path = submodules/lmdb/libraries/liblmdb/lmdb.h; sourceTree = SOURCE_ROOT; };
+		D00E0FB51B85D192002E4EB5 /* mdb.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = mdb.c; path = submodules/lmdb/libraries/liblmdb/mdb.c; sourceTree = SOURCE_ROOT; };
+		D00E0FB61B85D192002E4EB5 /* midl.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = midl.c; path = submodules/lmdb/libraries/liblmdb/midl.c; sourceTree = SOURCE_ROOT; };
+		D00E0FB71B85D192002E4EB5 /* midl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = midl.h; path = submodules/lmdb/libraries/liblmdb/midl.h; sourceTree = SOURCE_ROOT; };
+		D00E0FBD1B85D1B5002E4EB5 /* LmdbValueBox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LmdbValueBox.swift; sourceTree = "<group>"; };
 		D044E15D1B2ACB9C001EE087 /* CodingTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CodingTests.swift; sourceTree = "<group>"; };
 		D044E1611B2AD667001EE087 /* MurMurHash32.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MurMurHash32.h; sourceTree = "<group>"; };
 		D044E1621B2AD677001EE087 /* MurMurHash32.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MurMurHash32.m; sourceTree = "<group>"; };
+		D055BD321B7D3D2D00F06C0A /* MediaBox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaBox.swift; sourceTree = "<group>"; };
 		D07516401B2D9CEF00AE42E0 /* sqlite3.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqlite3.c; sourceTree = "<group>"; };
 		D07516411B2D9CEF00AE42E0 /* sqlite3.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqlite3.h; sourceTree = "<group>"; };
 		D07516421B2D9CEF00AE42E0 /* sqlite3ext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqlite3ext.h; sourceTree = "<group>"; };
@@ -63,6 +81,11 @@
 		D07516741B2EC90400AE42E0 /* fts3_tokenizer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fts3_tokenizer.h; sourceTree = "<group>"; };
 		D07516751B2EC90400AE42E0 /* SQLite-Bridging.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "SQLite-Bridging.h"; sourceTree = "<group>"; };
 		D07516761B2EC90400AE42E0 /* SQLite-Bridging.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "SQLite-Bridging.m"; sourceTree = "<group>"; };
+		D0977F9B1B822DB4009994B2 /* ValueBox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ValueBox.swift; sourceTree = "<group>"; };
+		D0977F9D1B8234DF009994B2 /* ValueBoxKey.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ValueBoxKey.swift; sourceTree = "<group>"; };
+		D0977F9F1B8244D7009994B2 /* SqliteValueBox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SqliteValueBox.swift; sourceTree = "<group>"; };
+		D0977FA11B82930C009994B2 /* PostboxCodingUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PostboxCodingUtils.swift; sourceTree = "<group>"; };
+		D0977FA31B829F87009994B2 /* PostboxTables.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PostboxTables.swift; sourceTree = "<group>"; };
 		D0B76BE61B66639F0095CF45 /* DeferredString.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeferredString.swift; sourceTree = "<group>"; };
 		D0C07F691B67DB4800966E43 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftSignalKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-gbpsmqzuwcmmxadrqcwyrluaftwp/Build/Products/Debug-iphoneos/SwiftSignalKit.framework"; sourceTree = "<group>"; };
 		D0D224ED1B4D6ABD0085E26D /* Functions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Functions.swift; path = submodules/sqlite.swift/SQLite/Functions.swift; sourceTree = SOURCE_ROOT; };
@@ -72,7 +95,6 @@
 		D0E3A74F1B28A7E300A402D9 /* Postbox.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Postbox.h; sourceTree = "<group>"; };
 		D0E3A7551B28A7E300A402D9 /* PostboxTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PostboxTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E3A75B1B28A7E300A402D9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		D0E3A75C1B28A7E300A402D9 /* PostboxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostboxTests.swift; sourceTree = "<group>"; };
 		D0E3A7811B28ADD000A402D9 /* Postbox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Postbox.swift; sourceTree = "<group>"; };
 		D0E3A7831B28AE0900A402D9 /* Peer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Peer.swift; sourceTree = "<group>"; };
 		D0E3A7871B28AE9C00A402D9 /* Coding.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Coding.swift; sourceTree = "<group>"; };
@@ -85,6 +107,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D00E0FB31B84CEDA002E4EB5 /* Display.framework in Frameworks */,
 				D0C07F6A1B67DB4800966E43 /* SwiftSignalKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -100,9 +123,21 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		D00E0FBC1B85D194002E4EB5 /* lmdb */ = {
+			isa = PBXGroup;
+			children = (
+				D00E0FB41B85D192002E4EB5 /* lmdb.h */,
+				D00E0FB51B85D192002E4EB5 /* mdb.c */,
+				D00E0FB61B85D192002E4EB5 /* midl.c */,
+				D00E0FB71B85D192002E4EB5 /* midl.h */,
+			);
+			name = lmdb;
+			sourceTree = "<group>";
+		};
 		D07515FC1B2C44A200AE42E0 /* thirdparty */ = {
 			isa = PBXGroup;
 			children = (
+				D00E0FBC1B85D194002E4EB5 /* lmdb */,
 				D07516731B2EC8C700AE42E0 /* sqlite.swift */,
 			);
 			name = thirdparty;
@@ -144,6 +179,7 @@
 		D0E3A7401B28A7E300A402D9 = {
 			isa = PBXGroup;
 			children = (
+				D00E0FB21B84CEDA002E4EB5 /* Display.framework */,
 				D0C07F691B67DB4800966E43 /* SwiftSignalKit.framework */,
 				D07516491B2D9E2500AE42E0 /* Postbox.xcconfig */,
 				D0E3A74C1B28A7E300A402D9 /* Postbox */,
@@ -174,7 +210,14 @@
 				D0E3A7A11B28B7DC00A402D9 /* Media.swift */,
 				D003E4E51B38DBDB00C22CBC /* MessageView.swift */,
 				D0D225251B4D84930085E26D /* PeerView.swift */,
+				D0977FA11B82930C009994B2 /* PostboxCodingUtils.swift */,
 				D0E3A7811B28ADD000A402D9 /* Postbox.swift */,
+				D0977FA31B829F87009994B2 /* PostboxTables.swift */,
+				D055BD321B7D3D2D00F06C0A /* MediaBox.swift */,
+				D0977F9D1B8234DF009994B2 /* ValueBoxKey.swift */,
+				D0977F9B1B822DB4009994B2 /* ValueBox.swift */,
+				D0977F9F1B8244D7009994B2 /* SqliteValueBox.swift */,
+				D00E0FBD1B85D1B5002E4EB5 /* LmdbValueBox.swift */,
 				D0E3A74D1B28A7E300A402D9 /* Supporting Files */,
 			);
 			path = Postbox;
@@ -194,7 +237,6 @@
 		D0E3A7591B28A7E300A402D9 /* PostboxTests */ = {
 			isa = PBXGroup;
 			children = (
-				D0E3A75C1B28A7E300A402D9 /* PostboxTests.swift */,
 				D0E3A75A1B28A7E300A402D9 /* Supporting Files */,
 				D044E15D1B2ACB9C001EE087 /* CodingTests.swift */,
 			);
@@ -216,7 +258,9 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D00E0FB81B85D192002E4EB5 /* lmdb.h in Headers */,
 				D07516771B2EC90400AE42E0 /* fts3_tokenizer.h in Headers */,
+				D00E0FBB1B85D192002E4EB5 /* midl.h in Headers */,
 				D07516451B2D9CEF00AE42E0 /* sqlite3.h in Headers */,
 				D07516781B2EC90400AE42E0 /* SQLite-Bridging.h in Headers */,
 				D0E3A7501B28A7E300A402D9 /* Postbox.h in Headers */,
@@ -327,16 +371,25 @@
 				D0E3A7821B28ADD000A402D9 /* Postbox.swift in Sources */,
 				D0E3A79E1B28B50400A402D9 /* Message.swift in Sources */,
 				D044E1631B2AD677001EE087 /* MurMurHash32.m in Sources */,
+				D00E0FBE1B85D1B5002E4EB5 /* LmdbValueBox.swift in Sources */,
 				D07516721B2EC7FE00AE42E0 /* Value.swift in Sources */,
+				D0977FA41B829F87009994B2 /* PostboxTables.swift in Sources */,
 				D0E3A7A21B28B7DC00A402D9 /* Media.swift in Sources */,
 				D0E3A7881B28AE9C00A402D9 /* Coding.swift in Sources */,
+				D0977F9E1B8234DF009994B2 /* ValueBoxKey.swift in Sources */,
+				D00E0FB91B85D192002E4EB5 /* mdb.c in Sources */,
 				D003E4E61B38DBDB00C22CBC /* MessageView.swift in Sources */,
 				D075165E1B2EC5B500AE42E0 /* module.modulemap in Sources */,
 				D07516791B2EC90400AE42E0 /* SQLite-Bridging.m in Sources */,
+				D0977FA01B8244D7009994B2 /* SqliteValueBox.swift in Sources */,
 				D0D224F21B4D6ABD0085E26D /* Functions.swift in Sources */,
+				D00E0FBA1B85D192002E4EB5 /* midl.c in Sources */,
 				D07516711B2EC7FE00AE42E0 /* Statement.swift in Sources */,
 				D0D225261B4D84930085E26D /* PeerView.swift in Sources */,
 				D0E3A7841B28AE0900A402D9 /* Peer.swift in Sources */,
+				D055BD331B7D3D2D00F06C0A /* MediaBox.swift in Sources */,
+				D0977FA21B82930C009994B2 /* PostboxCodingUtils.swift in Sources */,
+				D0977F9C1B822DB4009994B2 /* ValueBox.swift in Sources */,
 				D0B76BE71B66639F0095CF45 /* DeferredString.swift in Sources */,
 				D075166A1B2EC7FE00AE42E0 /* Database.swift in Sources */,
 				D07516441B2D9CEF00AE42E0 /* sqlite3.c in Sources */,
@@ -348,7 +401,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				D044E15E1B2ACB9C001EE087 /* CodingTests.swift in Sources */,
-				D0E3A75D1B28A7E300A402D9 /* PostboxTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

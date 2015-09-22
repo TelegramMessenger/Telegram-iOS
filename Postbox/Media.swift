@@ -9,7 +9,7 @@ public struct MediaId: Hashable, CustomStringConvertible {
     
     public var hashValue: Int {
         get {
-            return Int((self.id & 0xffffffff) ^ ((self.id >> 32) & 0xffffffff))
+            return Int((self.id & 0x7fffffff) ^ ((self.id >> 32) & 0x7fffffff))
         }
     }
     
@@ -67,5 +67,5 @@ public func ==(lhs: MediaId, rhs: MediaId) -> Bool {
 }
 
 public protocol Media: Coding {
-    var id: MediaId { get }
+    var id: MediaId? { get }
 }
