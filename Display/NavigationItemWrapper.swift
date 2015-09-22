@@ -192,8 +192,6 @@ internal class NavigationItemWrapper {
         if suspendLayout {
             return
         }
-        self.titleNode.measure(self.parentNode.bounds.size)
-        self.titleNode.frame = self.titleFrame
         
         self.backButtonNode.measure(self.parentNode.frame.size)
         self.backButtonNode.frame = self.backButtonFrame
@@ -208,6 +206,9 @@ internal class NavigationItemWrapper {
             rightBarButtonItemWrapper.buttonNode.measure(self.parentNode.frame.size)
             rightBarButtonItemWrapper.buttonNode.frame = self.rightButtonFrame!
         }
+        
+        self.titleNode.measure(CGSize(width: self.parentNode.bounds.size.width - 140.0, height: CGFloat.max))
+        self.titleNode.frame = self.titleFrame
     }
     
     func interpolatePosition(from: CGPoint, _ to: CGPoint, value: CGFloat) -> CGPoint {

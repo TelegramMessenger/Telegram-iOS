@@ -36,7 +36,7 @@ public extension CALayer {
         
         self.addAnimation(animation, forKey: keyPath)
         
-        self.setValue(to, forKey: keyPath)
+        //self.setValue(to, forKey: keyPath)
     }
     
     public func animateAlpha(from from: CGFloat, to: CGFloat, duration: NSTimeInterval) {

@@ -34,6 +34,10 @@ public extension UIColor {
     convenience init(_ rgb: Int) {
         self.init(red: CGFloat((rgb >> 16) & 0xff) / 255.0, green: CGFloat((rgb >> 8) & 0xff) / 255.0, blue: CGFloat(rgb & 0xff) / 255.0, alpha: 1.0)
     }
+    
+    convenience init(_ rgb: Int, _ alpha: CGFloat) {
+        self.init(red: CGFloat((rgb >> 16) & 0xff) / 255.0, green: CGFloat((rgb >> 8) & 0xff) / 255.0, blue: CGFloat(rgb & 0xff) / 255.0, alpha: alpha)
+    }
 }
 
 public extension CGSize {
@@ -47,4 +51,13 @@ public extension CGSize {
         }
         return fittedSize
     }
+    
+    public func aspectFilled(size: CGSize) -> CGSize {
+        let scale = max(size.width / max(1.0, self.width), size.height / max(1.0, self.height))
+        return CGSize(width: floor(self.width * scale), height: floor(self.height * scale))
+    }
+}
+
+public func assertNotOnMainThread(file: String = __FILE__, line: Int = __LINE__) {
+    assert(!NSThread.isMainThread(), "\(file):\(line) running on main thread")
 }
