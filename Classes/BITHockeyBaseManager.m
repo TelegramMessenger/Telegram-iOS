@@ -202,9 +202,6 @@
 }
 
 - (UIViewController *)visibleWindowRootViewController {
-  // if we compile Crash only, then BITHockeyBaseViewController is not included
-  // in the headers and will cause a warning with the modulemap file
-#if HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_FEEDBACK
   UIViewController *parentViewController = nil;
   
   if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(viewControllerForHockeyManager:componentManager:)]) {
@@ -234,19 +231,12 @@
   }
   
   return parentViewController;
-#else
-  return nil;
-#endif
 }
 
 - (void)showAlertController:(UIViewController *)alertController {
   
   // always execute this on the main thread
   dispatch_async(dispatch_get_main_queue(), ^{
-    
-    // if we compile Crash only, then BITHockeyBaseViewController is not included
-    // in the headers and will cause a warning with the modulemap file
-#if HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_FEEDBACK
     UIViewController *parentViewController = [self visibleWindowRootViewController];
     
     // as per documentation this only works if called from within viewWillAppear: or viewDidAppear:
@@ -260,7 +250,6 @@
     if (parentViewController) {
       [parentViewController presentViewController:alertController animated:YES completion:nil];
     }
-#endif
   });
 }
 
