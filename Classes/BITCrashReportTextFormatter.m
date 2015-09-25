@@ -539,7 +539,15 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
   
   /* Images. The iPhone crash report format sorts these in ascending order, by the base address */
   [text appendString: @"Binary Images:\n"];
+  NSMutableArray *addedImagesBaseAddresses = @[].mutableCopy;
   for (BITPLCrashReportBinaryImageInfo *imageInfo in [report.images sortedArrayUsingFunction: bit_binaryImageSort context: nil]) {
+    // Make sure we don't add duplicates
+    if ([addedImagesBaseAddresses containsObject:@(imageInfo.imageBaseAddress)]) {
+      continue;
+    } else {
+      [addedImagesBaseAddresses addObject:@(imageInfo.imageBaseAddress)];
+    }
+    
     NSString *uuid;
     /* Fetch the UUID if it exists */
     if (imageInfo.hasImageUUID)
