@@ -293,7 +293,7 @@
       [(BITHockeyBaseViewController *)viewController setModalAnimated:NO];
     [visibleWindow addSubview:_navController.view];
   }
-#endif
+#endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_FEEDBACK */
 }
 #endif // HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions && HOCKEYSDK_CONFIGURATION_RelaseCrashOnlyWatchOS
 

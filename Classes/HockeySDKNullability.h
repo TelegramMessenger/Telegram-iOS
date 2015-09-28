@@ -30,4 +30,4 @@
 #define NS_ASSUME_NONNULL_END _Pragma("clang assume_nonnull end")
 #endif
 
-#endif
+#endif /* HockeySDK_HockeyNullability_h */

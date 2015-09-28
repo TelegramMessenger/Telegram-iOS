@@ -162,4 +162,4 @@
 
 @end
 
-#endif
+#endif /* HOCKEYSDK_FEATURE_UPDATES */

@@ -996,4 +996,4 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 
 @end
 
-#endif
+#endif  /* HOCKEYSDK_FEATURE_AUTHENTICATOR */

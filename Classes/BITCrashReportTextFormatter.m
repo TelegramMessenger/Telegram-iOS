@@ -876,4 +876,4 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
 
 @end
 
-#endif
+#endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */

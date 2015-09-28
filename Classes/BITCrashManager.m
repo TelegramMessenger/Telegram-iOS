@@ -1106,7 +1106,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
 #pragma clang diagnostic pop
         }
       }
-#endif
+#endif /* !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions) */
       
     } else {
       [self approveLatestCrashReport];
@@ -1524,7 +1524,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
 }
 #pragma clang diagnostic pop
 
-#endif 
+#endif /* !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions) */
 
 
 #pragma mark - Networking

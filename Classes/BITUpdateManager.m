@@ -970,7 +970,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   
   return success;
 
-#endif
+#endif /* TARGET_IPHONE_SIMULATOR */
 }
 
 
