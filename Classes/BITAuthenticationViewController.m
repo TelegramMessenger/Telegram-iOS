@@ -294,7 +294,7 @@
                                      if(succeeded) {
                                        //controller should dismiss us shortly..
                                      } else {
-                                       
+                                       /* We won't use this for now until we have a more robust solution for displaying UIAlertController
                                        // requires iOS 8
                                        id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
                                        if (uialertcontrollerClass) {
@@ -311,6 +311,7 @@
                                          
                                          [self presentViewController:alertController animated:YES completion:nil];
                                        } else {
+                                        */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
                                          UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil
@@ -320,7 +321,7 @@
                                                                                    otherButtonTitles:nil];
                                          [alertView show];
 #pragma clang diagnostic pop
-                                       }
+                                       /*}*/
                                        typeof(self) strongSelf = weakSelf;
                                        [strongSelf setLoginUIEnabled:YES];
                                      }

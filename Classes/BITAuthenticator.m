@@ -255,7 +255,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
       [self dismissAuthenticationControllerAnimated:YES completion:nil];
     } else {
       BITHockeyLog(@"Validation failed with error: %@", error);
-      
+      /* We won't use this for now until we have a more robust solution for displaying UIAlertController
       // requires iOS 8
       id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
       if (uialertcontrollerClass) {
@@ -277,6 +277,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
         
         [self showAlertController:alertController];
       } else {
+       */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
         UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil
@@ -287,7 +288,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
         [alertView setTag:0];
         [alertView show];
 #pragma clang diagnostic pop
-      }
+      /*}*/
     }
   }];
 }

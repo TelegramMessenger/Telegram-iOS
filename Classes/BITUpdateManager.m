@@ -93,6 +93,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   
   // only show error if we enable that
   if (_showFeedback) {
+    /* We won't use this for now until we have a more robust solution for displaying UIAlertController
     // requires iOS 8
     id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
     if (uialertcontrollerClass) {
@@ -109,6 +110,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
       
       [self showAlertController:alertController];
     } else {
+     */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
       UIAlertView *alert = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateError")
@@ -118,7 +120,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
                                             otherButtonTitles:nil];
       [alert show];
 #pragma clang diagnostic pop
-    }
+    /*}*/
     _showFeedback = NO;
   }
 }
@@ -555,6 +557,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     NSString *title = BITHockeyLocalizedString(@"UpdateAvailable");
     NSString *message = [NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateAlertMandatoryTextWithAppVersion"), [self.newestAppVersion nameAndVersionString]];
     if ([self hasNewerMandatoryVersion]) {
+      /* We won't use this for now until we have a more robust solution for displaying UIAlertController
       // requires iOS 8
       id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
       if (uialertcontrollerClass) {
@@ -589,6 +592,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
       
         [self showAlertController:alertController];
       } else {
+       */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
         UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:title
@@ -600,11 +604,11 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
         [alertView setTag:BITUpdateAlertViewTagMandatoryUpdate];
         [alertView show];
 #pragma clang diagnostic pop
-      }
+      /*}*/
       _updateAlertShowing = YES;
     } else {
       message = [NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateAlertTextWithAppVersion"), [self.newestAppVersion nameAndVersionString]];
-      
+      /* We won't use this for now until we have a more robust solution for displaying UIAlertController
       // requires iOS 8
       id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
       if (uialertcontrollerClass) {
@@ -653,6 +657,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
         
         [self showAlertController:alertController ];
       } else {
+       */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
         UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:title
@@ -667,7 +672,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
         [alertView setTag:BITUpdateAlertViewTagDefaultUpdate];
         [alertView show];
 #pragma clang diagnostic pop
-      }
+      /*}*/
       _updateAlertShowing = YES;
     }
   }
@@ -741,6 +746,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 
 // nag the user with neverending alerts if we cannot find out the window for presenting the covering sheet
 - (void)alertFallback:(NSString *)message {
+  /* We won't use this for now until we have a more robust solution for displaying UIAlertController
   // requires iOS 8
   id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
   if (uialertcontrollerClass) {
@@ -772,6 +778,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     
     [self showAlertController:alertController];
   } else {
+   */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:nil
@@ -787,7 +794,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     
     [alertView setTag:BITUpdateAlertViewTagNeverEndingAlertView];
     [alertView show];
-  }
+  /*}*/
 }
 
 #pragma mark - RequestComments
@@ -917,6 +924,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   }
   
 #if TARGET_IPHONE_SIMULATOR
+  /* We won't use this for now until we have a more robust solution for displaying UIAlertController
   // requires iOS 8
   id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
   if (uialertcontrollerClass) {
@@ -932,6 +940,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     
     [self showAlertController:alertController];
   } else {
+   */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     UIAlertView *alert = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateWarning")
@@ -941,7 +950,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
                                           otherButtonTitles:nil];
     [alert show];
 #pragma clang diagnostic pop
-  }
+  /*}*/
   return NO;
 
 #else
@@ -1090,7 +1099,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
           versionString = [shortVersionString length] ? [NSString stringWithFormat:@"(%@)", versionString] : versionString;
           NSString *currentVersionString = [NSString stringWithFormat:@"%@ %@ %@%@", self.newestAppVersion.name, BITHockeyLocalizedString(@"UpdateVersion"), shortVersionString, versionString];
           NSString *alertMsg = [NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateNoUpdateAvailableMessage"), currentVersionString];
-          
+          /* We won't use this for now until we have a more robust solution for displaying UIAlertController
           // requires iOS 8
           id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
           if (uialertcontrollerClass) {
@@ -1114,6 +1123,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
             
             [self showAlertController:alertController];
           } else {
+           */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
             UIAlertView *alert = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateNoUpdateAvailableTitle")
@@ -1123,7 +1133,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
                                                   otherButtonTitles:nil];
             [alert show];
 #pragma clang diagnostic pop
-          }
+          /*}*/
         }
         
         if (self.isUpdateAvailable && (self.alwaysShowUpdateReminder || newVersionDiffersFromCachedVersion || [self hasNewerMandatoryVersion])) {

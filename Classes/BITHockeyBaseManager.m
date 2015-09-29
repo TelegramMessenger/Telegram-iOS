@@ -232,7 +232,7 @@
   
   return parentViewController;
 }
-
+/* We won't use this for now until we have a more robust solution for displaying UIAlertController
 - (void)showAlertController:(UIViewController *)alertController {
   
   // always execute this on the main thread
@@ -252,6 +252,7 @@
     }
   });
 }
+*/
 
 - (void)showView:(UIViewController *)viewController {
   // if we compile Crash only, then BITHockeyBaseViewController is not included
