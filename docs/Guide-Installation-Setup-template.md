@@ -188,7 +188,7 @@ pod "HockeySDK-Source"
 
 
 <a id="extensions"></a>
-### 3.3 iOExtensions
+### 3.3 iOS Extensions
 
 The following points need to be considered to use the HockeySDK SDK with iOS Extensions:
 
