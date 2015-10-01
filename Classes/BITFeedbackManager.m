@@ -1186,6 +1186,8 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
 }
 
 -(void)extractLastPictureFromLibraryAndLaunchFeedback {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   ALAssetsLibrary *library = [[ALAssetsLibrary alloc] init];
   
   [library enumerateGroupsWithTypes:ALAssetsGroupSavedPhotos usingBlock:^(ALAssetsGroup *group, BOOL *stop) {
@@ -1205,6 +1207,7 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
       }
     }];
   } failureBlock: nil];
+#pragma clang diagnostic pop
 }
 
 - (void)screenshotTripleTap:(UITapGestureRecognizer *)tapRecognizer {
