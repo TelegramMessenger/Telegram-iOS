@@ -75,6 +75,15 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 
 @interface BITHockeyManager ()
 
+/**
+ Flag that determines whether the application is installed and running
+ from an App Store installation.
+ 
+ Returns _YES_ if the app is installed and running from the App Store
+ Returns _NO_ if the app is installed via debug, ad-hoc or enterprise distribution
+ */
+@property (nonatomic, readonly, getter=isTestFlightEnvironment) BOOL testFlightEnvironment;
+
 - (BOOL)shouldUseLiveIdentifier;
 
 @end
@@ -156,6 +165,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     _enableStoreUpdateManager = NO;
 #endif
     
+    _testFlightEnvironment = NO;
     _appStoreEnvironment = NO;
     _startManagerIsInvoked = NO;
     _startUpdateManagerIsInvoked = NO;
@@ -166,8 +176,11 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     
 #if !TARGET_IPHONE_SIMULATOR
     // check if we are really in an app store environment
-    if (![[NSBundle mainBundle] pathForResource:@"embedded" ofType:@"mobileprovision"]) {
+    if (bit_isRunningInAppStoreEnvironment()) {
       _appStoreEnvironment = YES;
+    }
+    if (bit_isRunningInTestFlightEnvironment()) {
+      _testFlightEnvironment = YES;
     }
 #endif
 
