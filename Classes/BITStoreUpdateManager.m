@@ -342,7 +342,7 @@
   
   NSString *appBundleIdentifier = [self.mainBundle objectForInfoDictionaryKey:@"CFBundleIdentifier"];
   
-  NSString *url = [NSString stringWithFormat:@"http://itunes.apple.com/lookup?bundleId=%@%@",
+  NSString *url = [NSString stringWithFormat:@"https://itunes.apple.com/lookup?bundleId=%@%@",
                    bit_URLEncodedString(appBundleIdentifier),
                    country];
   
