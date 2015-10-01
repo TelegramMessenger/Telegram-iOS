@@ -799,6 +799,7 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
         }
         
         if(self.showAlertOnIncomingMessages && !self.currentFeedbackListViewController && !self.currentFeedbackComposeViewController) {
+          dispatch_async(dispatch_get_main_queue(), ^{
           /*
           // Requires iOS 8
           id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
@@ -817,9 +818,9 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
                                                                }];
             [alertController addAction:cancelAction];
             [alertController addAction:showAction];
-            
-            [self showAlertController:alertController];
-          } else {
+           
+           [self showAlertController:alertController];
+           } else {
            */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -832,8 +833,9 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
             [alertView setTag:0];
             [alertView show];
 #pragma clang diagnostic pop
-          /*}*/
-          _incomingMessagesAlertShowing = YES;
+            /*}*/
+            _incomingMessagesAlertShowing = YES;
+          });
         }
       }
     }
