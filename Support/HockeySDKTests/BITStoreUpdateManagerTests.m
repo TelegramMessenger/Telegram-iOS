@@ -38,7 +38,7 @@
   [super setUp];
   
   // Set-up code here.
-  _storeUpdateManager = [[BITStoreUpdateManager alloc] initWithAppIdentifier:nil isAppStoreEnvironment:YES];
+  _storeUpdateManager = [[BITStoreUpdateManager alloc] initWithAppIdentifier:nil isTestFlightEnvironment:NO isAppStoreEnvironment:YES];
 }
 
 - (void)tearDown {

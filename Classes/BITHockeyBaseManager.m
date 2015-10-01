@@ -51,8 +51,6 @@
   UINavigationController *_navController;
   
   NSDateFormatter *_rfc3339Formatter;
-  
-  BOOL _isAppStoreEnvironment;
 }
 
 
@@ -77,10 +75,11 @@
   return self;
 }
 
-- (instancetype)initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironment:(BOOL)isAppStoreEnvironment {
+- (instancetype)initWithAppIdentifier:(NSString *)appIdentifier isTestFlightEnvironment:(BOOL)isTestFlightEnvironment isAppStoreEnvironment:(BOOL)isAppStoreEnvironment {
   if ((self = [self init])) {
     _appIdentifier = appIdentifier;
-    _isAppStoreEnvironment = isAppStoreEnvironment;
+    _testFlightEnvironment = isTestFlightEnvironment;
+    _appStoreEnvironment = isAppStoreEnvironment;
   }
   return self;
 }
@@ -90,10 +89,6 @@
 
 - (void)reportError:(NSError *)error {
   BITHockeyLog(@"ERROR: %@", [error localizedDescription]);
-}
-
-- (BOOL)isAppStoreEnvironment {
-  return _isAppStoreEnvironment;
 }
 
 - (NSString *)encodedAppIdentifier {

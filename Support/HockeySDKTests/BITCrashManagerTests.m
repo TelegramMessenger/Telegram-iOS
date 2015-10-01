@@ -41,7 +41,7 @@
   [super setUp];
   
   _startManagerInitialized = NO;
-  _sut = [[BITCrashManager alloc] initWithAppIdentifier:nil isAppStoreEnvironment:NO];
+  _sut = [[BITCrashManager alloc] initWithAppIdentifier:nil isTestFlightEnvironment:NO isAppStoreEnvironment:NO];
 
   _hockeyAppClient = [[BITHockeyAppClient alloc] initWithBaseURL:[NSURL URLWithString: BITHOCKEYSDK_URL]];
   _hockeyAppClient.baseURL = [NSURL URLWithString:BITHOCKEYSDK_URL];

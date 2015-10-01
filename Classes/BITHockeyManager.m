@@ -664,32 +664,32 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
   if (_validAppIdentifier) {
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
     BITHockeyLog(@"INFO: Setup CrashManager");
-    _crashManager = [[BITCrashManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironment:_appStoreEnvironment];
+    _crashManager = [[BITCrashManager alloc] initWithAppIdentifier:_appIdentifier isTestFlightEnvironment:_testFlightEnvironment isAppStoreEnvironment:_appStoreEnvironment];
     _crashManager.hockeyAppClient = [self hockeyAppClient];
     _crashManager.delegate = _delegate;
 #endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */
     
 #if HOCKEYSDK_FEATURE_UPDATES
     BITHockeyLog(@"INFO: Setup UpdateManager");
-    _updateManager = [[BITUpdateManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironment:_appStoreEnvironment];
+    _updateManager = [[BITUpdateManager alloc] initWithAppIdentifier:_appIdentifier isTestFlightEnvironment:_testFlightEnvironment isAppStoreEnvironment:_appStoreEnvironment];
     _updateManager.delegate = _delegate;
 #endif /* HOCKEYSDK_FEATURE_UPDATES */
 
 #if HOCKEYSDK_FEATURE_STORE_UPDATES
     BITHockeyLog(@"INFO: Setup StoreUpdateManager");
-    _storeUpdateManager = [[BITStoreUpdateManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironment:_appStoreEnvironment];
+    _storeUpdateManager = [[BITStoreUpdateManager alloc] initWithAppIdentifier:_appIdentifier isTestFlightEnvironment:_testFlightEnvironment isAppStoreEnvironment:_appStoreEnvironment];
     _storeUpdateManager.delegate = _delegate;
 #endif /* HOCKEYSDK_FEATURE_STORE_UPDATES */
     
 #if HOCKEYSDK_FEATURE_FEEDBACK
     BITHockeyLog(@"INFO: Setup FeedbackManager");
-    _feedbackManager = [[BITFeedbackManager alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironment:_appStoreEnvironment];
+    _feedbackManager = [[BITFeedbackManager alloc] initWithAppIdentifier:_appIdentifier isTestFlightEnvironment:_testFlightEnvironment isAppStoreEnvironment:_appStoreEnvironment];
     _feedbackManager.delegate = _delegate;
 #endif /* HOCKEYSDK_FEATURE_FEEDBACK */
 
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
     BITHockeyLog(@"INFO: Setup Authenticator");
-    _authenticator = [[BITAuthenticator alloc] initWithAppIdentifier:_appIdentifier isAppStoreEnvironment:_appStoreEnvironment];
+    _authenticator = [[BITAuthenticator alloc] initWithAppIdentifier:_appIdentifier isTestFlightEnvironment:_testFlightEnvironment isAppStoreEnvironment:_appStoreEnvironment];
     _authenticator.hockeyAppClient = [self hockeyAppClient];
     _authenticator.delegate = _delegate;
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */

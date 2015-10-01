@@ -36,7 +36,7 @@
 
   BITHockeyManager *hm = [BITHockeyManager sharedHockeyManager];
   hm.delegate = nil;
-  _sut = [[BITFeedbackManager alloc] initWithAppIdentifier:nil isAppStoreEnvironment:NO];
+  _sut = [[BITFeedbackManager alloc] initWithAppIdentifier:nil isTestFlightEnvironment:NO isAppStoreEnvironment:NO];
   _sut.delegate = nil;
 }
 

@@ -36,12 +36,13 @@
 
 @property (nonatomic, strong) NSString *appIdentifier;
 
-- (instancetype)initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironment:(BOOL)isAppStoreEnvironment;
+@property (nonatomic, assign, readonly, getter=isTestFlightEnvironment) BOOL testFlightEnvironment;
+
+@property (nonatomic, assign, readonly, getter=isAppStoreEnvironment) BOOL appStoreEnvironment;
+
+- (instancetype)initWithAppIdentifier:(NSString *)appIdentifier isTestFlightEnvironment:(BOOL)isTestFlightEnvironment isAppStoreEnvironment:(BOOL)isAppStoreEnvironment;
 
 - (void)startManager;
-
-/** the value this object was initialized with */
-- (BOOL)isAppStoreEnvironment;
 
 /** Check if the device is running an iOS version previous to iOS 7 */
 - (BOOL)isPreiOS7Environment;
