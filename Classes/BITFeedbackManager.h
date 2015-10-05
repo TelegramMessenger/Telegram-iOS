@@ -287,6 +287,8 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
 
 /**
  Present the modal feedback list user interface.
+ 
+ @warning This methods needs to be called on the main thread!
  */
 - (void)showFeedbackListView;
 
@@ -303,6 +305,8 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
 
 /**
  Present the modal feedback compose message user interface.
+ 
+ @warning This methods needs to be called on the main thread!
  */
 - (void)showFeedbackComposeView;
 
@@ -314,6 +318,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
  
  @param items an NSArray with objects that should be attached
  @see `[BITFeedbackComposeViewController prepareWithItems:]`
+ @warning This methods needs to be called on the main thread!
  */
 - (void)showFeedbackComposeViewWithPreparedItems:(NSArray *)items;
 
@@ -325,6 +330,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
      [[BITHockeyManager sharedHockeyManager].feedbackManager showFeedbackComposeViewWithGeneratedScreenshot];
  
  @see feedbackObservationMode
+ @warning This methods needs to be called on the main thread!
  */
 - (void)showFeedbackComposeViewWithGeneratedScreenshot;
 

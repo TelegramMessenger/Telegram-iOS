@@ -169,7 +169,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   NSLog(@"[HockeySDK] ERROR: The authentication token could not be stored due to a keychain error. This is most likely a signing or keychain entitlement issue!");
 }
 
-- (void) identifyWithCompletion:(void (^)(BOOL identified, NSError *))completion {
+- (void)identifyWithCompletion:(void (^)(BOOL identified, NSError *))completion {
   if(_authenticationController) {
     BITHockeyLog(@"Authentication controller already visible. Ignoring identify request");
     if(completion) completion(NO, nil);
@@ -246,7 +246,9 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   viewController.email = [self stringValueFromKeychainForKey:kBITAuthenticatorUserEmailKey];
   _authenticationController = viewController;
   _identificationCompletion = completion;
-  [self showView:viewController];
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [self showView:viewController];
+  });
 }
 
 #pragma mark - Validation

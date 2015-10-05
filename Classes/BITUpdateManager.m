@@ -545,7 +545,9 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   if ([self hasNewerMandatoryVersion] || [self expiryDateReached]) {
     [updateViewController setMandatoryUpdate: YES];
   }
-  [self showView:updateViewController];
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [self showView:updateViewController];
+  });
 }
 
 

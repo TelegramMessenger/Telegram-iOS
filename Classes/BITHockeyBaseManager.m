@@ -258,7 +258,6 @@
   // if we compile Crash only, then BITHockeyBaseViewController is not included
   // in the headers and will cause a warning with the modulemap file
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_FEEDBACK
-  dispatch_async(dispatch_get_main_queue(), ^{
     UIViewController *parentViewController = [self visibleWindowRootViewController];
     
     // as per documentation this only works if called from within viewWillAppear: or viewDidAppear:
@@ -295,7 +294,6 @@
         [(BITHockeyBaseViewController *)viewController setModalAnimated:NO];
       [visibleWindow addSubview:_navController.view];
     }
-  });
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_FEEDBACK */
 }
 #endif // HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions && HOCKEYSDK_CONFIGURATION_RelaseCrashOnlyWatchOS

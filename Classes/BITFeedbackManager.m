@@ -220,8 +220,9 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
     BITHockeyLog(@"INFO: update view already visible, aborting");
     return;
   }
-  
-  [self showView:[self feedbackListViewController:YES]];
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [self showView:[self feedbackListViewController:YES]];
+  });
 }
 
 
@@ -246,9 +247,9 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
   }
   BITFeedbackComposeViewController *composeView = [self feedbackComposeViewController];
   [composeView prepareWithItems:items];
-  
-  [self showView:composeView];
-  
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [self showView:composeView];
+  });
 }
 
 - (void)showFeedbackComposeViewWithGeneratedScreenshot {
