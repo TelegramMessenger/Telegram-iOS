@@ -851,9 +851,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     return;
   }
   
-  NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@?format=json&extended=true%@&sdk=%@&sdk_version=%@&uuid=%@",
+  NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@?format=json&extended=true&sdk=%@&sdk_version=%@&uuid=%@",
                                 bit_URLEncodedString([self encodedAppIdentifier]),
-                                ([self isAppStoreEnvironment] ? @"&udid=appstore" : @""),
                                 BITHOCKEY_NAME,
                                 BITHOCKEY_VERSION,
                                 _uuid];
