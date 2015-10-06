@@ -396,7 +396,7 @@ typedef NS_ENUM(NSInteger, BITEnvironment) {
  Returns _YES_ if the app is installed and running from the App Store
  Returns _NO_ if the app is installed via debug, ad-hoc or enterprise distribution
  */
-@property (nonatomic, readonly, getter=isAppStoreEnvironment) BOOL appStoreEnvironment;
+@property (nonatomic, readonly, getter=isAppStoreEnvironment) BOOL appStoreEnvironment DEPRECATED_MSG_ATTRIBUTE("Use appEnvironment instead!");
 
 
 /**
