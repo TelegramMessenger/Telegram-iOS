@@ -83,7 +83,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 #pragma mark - BITHockeyBaseManager overrides
 - (void)startManager {
   //disabled in TestFlight and the AppStore
-  if([self isTestFlightEnvironment] || [self isAppStoreEnvironment]) return;
+  if(self.appEnvironment != BITEnvironmentOther) return;
   
   _isSetup = YES;
 }
@@ -110,7 +110,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 
 - (void)authenticateInstallation {
   //disabled in TestFlight and the AppStore
-  if([self isTestFlightEnvironment] || [self isAppStoreEnvironment]) return;
+  if(self.appEnvironment != BITEnvironmentOther) return;
   
   // make sure this is called after startManager so all modules are fully setup
   if (!_isSetup) {

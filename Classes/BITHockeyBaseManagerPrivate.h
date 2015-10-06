@@ -28,6 +28,7 @@
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
+#import "BITHockeyManager.h"
 
 @class BITHockeyBaseManager;
 @class BITHockeyBaseViewController;
@@ -36,9 +37,7 @@
 
 @property (nonatomic, strong) NSString *appIdentifier;
 
-@property (nonatomic, assign, readonly, getter=isTestFlightEnvironment) BOOL testFlightEnvironment;
-
-@property (nonatomic, assign, readonly, getter=isAppStoreEnvironment) BOOL appStoreEnvironment;
+@property (nonatomic, assign, readonly) BITEnvironment appEnvironment;
 
 - (instancetype)initWithAppIdentifier:(NSString *)appIdentifier appEnvironment:(BITEnvironment)environment;
 

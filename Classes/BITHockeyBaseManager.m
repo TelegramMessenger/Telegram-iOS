@@ -78,17 +78,7 @@
 - (instancetype)initWithAppIdentifier:(NSString *)appIdentifier appEnvironment:(BITEnvironment)environment {
   if ((self = [self init])) {
     _appIdentifier = appIdentifier;
-    _appStoreEnvironment = NO;
-    _testFlightEnvironment = NO;
-    switch (environment) {
-      case BITEnvironmentAppStore:
-        _appStoreEnvironment = YES;
-        break;
-      case BITEnvironmentTestFlight:
-        _testFlightEnvironment = YES;
-      default:
-        break;
-    }
+    _appEnvironment = environment;
   }
   return self;
 }

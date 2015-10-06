@@ -75,15 +75,6 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 
 @interface BITHockeyManager ()
 
-/**
- Flag that determines whether the application is installed and running
- from an App Store installation.
- 
- Returns _YES_ if the app is installed and running from the App Store
- Returns _NO_ if the app is installed via debug, ad-hoc or enterprise distribution
- */
-@property (nonatomic, readonly, getter=isTestFlightEnvironment) BOOL testFlightEnvironment;
-
 - (BOOL)shouldUseLiveIdentifier;
 
 @end
@@ -119,7 +110,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 }
 
 - (void)logInvalidIdentifier:(NSString *)environment {
-  if (!_appStoreEnvironment) {
+  if (self.appEnvironment != BITEnvironmentAppStore) {
     if ([environment isEqualToString:@"liveIdentifier"]) {
       NSLog(@"[HockeySDK] WARNING: The liveIdentifier is invalid! The SDK will be disabled when deployed to the App Store without setting a valid app identifier!");
     } else {
@@ -143,7 +134,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
   return sharedInstance;
 }
 
-- (id) init {
+- (id)init {
   if ((self = [super init])) {
     _serverURL = nil;
     _delegate = nil;
@@ -164,8 +155,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 #if HOCKEYSDK_FEATURE_STORE_UPDATES
     _enableStoreUpdateManager = NO;
 #endif
-    
-    _testFlightEnvironment = NO;
+    _appEnvironment = BITEnvironmentOther;
     _appStoreEnvironment = NO;
     _startManagerIsInvoked = NO;
     _startUpdateManagerIsInvoked = NO;
@@ -177,10 +167,12 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 #if !TARGET_IPHONE_SIMULATOR
     // check if we are really in an app store environment
     if (bit_isRunningInAppStoreEnvironment()) {
+      _appEnvironment = BITEnvironmentAppStore;
       _appStoreEnvironment = YES;
-    }
-    if (bit_isRunningInTestFlightEnvironment()) {
-      _testFlightEnvironment = YES;
+    } else if (bit_isRunningInTestFlightEnvironment()) {
+      _appEnvironment = BITEnvironmentTestFlight;
+    } else {
+      _appEnvironment = BITEnvironmentOther;
     }
 #endif
 
@@ -596,7 +588,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 }
 
 - (void)validateStartManagerIsInvoked {
-  if (_validAppIdentifier && !_appStoreEnvironment) {
+  if (_validAppIdentifier && (self.appEnvironment != BITEnvironmentAppStore)) {
     if (!_startManagerIsInvoked) {
       NSLog(@"[HockeySDK] ERROR: You did not call [[BITHockeyManager sharedHockeyManager] startManager] to startup the HockeySDK! Please do so after setting up all properties. The SDK is NOT running.");
     }
@@ -646,7 +638,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     delegateResult = [(NSObject <BITHockeyManagerDelegate>*)_delegate shouldUseLiveIdentifierForHockeyManager:self];
   }
 
-  return (delegateResult) || (_appStoreEnvironment);
+  return (delegateResult) || (_appEnvironment == BITEnvironmentAppStore);
 }
 
 - (void)initializeModules {

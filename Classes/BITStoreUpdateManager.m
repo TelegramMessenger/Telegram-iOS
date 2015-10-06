@@ -261,7 +261,7 @@
 #pragma mark - Private
 
 - (BOOL)shouldCancelProcessing {
-  if (![self isAppStoreEnvironment]) return YES;
+  if (self.appEnvironment != BITEnvironmentAppStore) return YES;
   if (![self isStoreUpdateManagerEnabled]) return YES;
   return NO;
 }
