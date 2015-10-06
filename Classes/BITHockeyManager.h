@@ -375,6 +375,20 @@
 /// @name Environment
 ///-----------------------------------------------------------------------------
 
+typedef NS_ENUM(NSInteger, BITEnvironment) {
+  BITEnvironmentAppStore = 0,
+  BITEnvironmentTestFlight = 1,
+  BITEnvironmentOther = 99
+};
+
+/**
+ Enum that determines what kind of environment the application is installed and running in.
+ 
+ See `BITEnvironment`
+ */
+@property (nonatomic, readonly) BITEnvironment appEnvironment;
+
+
 /**
  Flag that determines whether the application is installed and running
  from an App Store installation.

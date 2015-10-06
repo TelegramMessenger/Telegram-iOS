@@ -258,8 +258,8 @@
 - (instancetype)initWithStyle:(UITableViewStyle)style {
   if ((self = [super initWithStyle:UITableViewStylePlain])) {
     _updateManager = [BITHockeyManager sharedHockeyManager].updateManager ;
-    _isAppStoreEnvironment = [BITHockeyManager sharedHockeyManager].isAppStoreEnvironment;
-
+    _isAppStoreEnvironment = [BITHockeyManager sharedHockeyManager].appEnvironment == BITEnvironmentAppStore;
+    
     self.title = BITHockeyLocalizedString(@"UpdateScreenTitle");
     
     _cells = [[NSMutableArray alloc] initWithCapacity:5];

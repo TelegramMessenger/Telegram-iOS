@@ -67,8 +67,8 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   [self unregisterObservers];
 }
 
-- (instancetype)initWithAppIdentifier:(NSString *)appIdentifier isTestFlightEnvironment:(BOOL)isTestFlightEnvironment isAppStoreEnvironment:(BOOL)isAppStoreEnvironment {
-  self = [super initWithAppIdentifier:appIdentifier isTestFlightEnvironment:isTestFlightEnvironment isAppStoreEnvironment:isAppStoreEnvironment];
+- (instancetype)initWithAppIdentifier:(NSString *)appIdentifier appEnvironment:(BITEnvironment)environment {
+  self = [super initWithAppIdentifier:appIdentifier appEnvironment:environment];
   if( self ) {
     _webpageURL = [NSURL URLWithString:@"https://rink.hockeyapp.net/"];
     

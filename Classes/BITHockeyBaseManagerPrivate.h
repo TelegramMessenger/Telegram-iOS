@@ -40,7 +40,7 @@
 
 @property (nonatomic, assign, readonly, getter=isAppStoreEnvironment) BOOL appStoreEnvironment;
 
-- (instancetype)initWithAppIdentifier:(NSString *)appIdentifier isTestFlightEnvironment:(BOOL)isTestFlightEnvironment isAppStoreEnvironment:(BOOL)isAppStoreEnvironment;
+- (instancetype)initWithAppIdentifier:(NSString *)appIdentifier appEnvironment:(BITEnvironment)environment;
 
 - (void)startManager;
 
