@@ -36,6 +36,7 @@
 
 
 #import "HockeySDKFeatureConfig.h"
+#import "HockeySDKEnums.h"
 
 #import "BITHockeyManager.h"
 #import "BITHockeyManagerDelegate.h"
@@ -82,137 +83,9 @@
 // By default the SDK retries sending pending data only when the app becomes active.
 #define BITHockeyNetworkDidBecomeReachableNotification @"BITHockeyNetworkDidBecomeReachable"
 
-
-/**
- *  HockeySDK Crash Reporter error domain
- */
-typedef NS_ENUM (NSInteger, BITCrashErrorReason) {
-  /**
-   *  Unknown error
-   */
-  BITCrashErrorUnknown,
-  /**
-   *  API Server rejected app version
-   */
-  BITCrashAPIAppVersionRejected,
-  /**
-   *  API Server returned empty response
-   */
-  BITCrashAPIReceivedEmptyResponse,
-  /**
-   *  Connection error with status code
-   */
-  BITCrashAPIErrorWithStatusCode
-};
 extern NSString *const __attribute__((unused)) kBITCrashErrorDomain;
-
-/**
- *  HockeySDK Update error domain
- */
-typedef NS_ENUM (NSInteger, BITUpdateErrorReason) {
-  /**
-   *  Unknown error
-   */
-  BITUpdateErrorUnknown,
-  /**
-   *  API Server returned invalid status
-   */
-  BITUpdateAPIServerReturnedInvalidStatus,
-  /**
-   *  API Server returned invalid data
-   */
-  BITUpdateAPIServerReturnedInvalidData,
-  /**
-   *  API Server returned empty response
-   */
-  BITUpdateAPIServerReturnedEmptyResponse,
-  /**
-   *  Authorization secret missing
-   */
-  BITUpdateAPIClientAuthorizationMissingSecret,
-  /**
-   *  No internet connection
-   */
-  BITUpdateAPIClientCannotCreateConnection
-};
 extern NSString *const __attribute__((unused)) kBITUpdateErrorDomain;
-
-
-/**
- *  HockeySDK Feedback error domain
- */
-typedef NS_ENUM(NSInteger, BITFeedbackErrorReason) {
-  /**
-   *  Unknown error
-   */
-  BITFeedbackErrorUnknown,
-  /**
-   *  API Server returned invalid status
-   */
-  BITFeedbackAPIServerReturnedInvalidStatus,
-  /**
-   *  API Server returned invalid data
-   */
-  BITFeedbackAPIServerReturnedInvalidData,
-  /**
-   *  API Server returned empty response
-   */
-  BITFeedbackAPIServerReturnedEmptyResponse,
-  /**
-   *  Authorization secret missing
-   */
-  BITFeedbackAPIClientAuthorizationMissingSecret,
-  /**
-   *  No internet connection
-   */
-  BITFeedbackAPIClientCannotCreateConnection
-};
 extern NSString *const __attribute__((unused)) kBITFeedbackErrorDomain;
-
-/**
- *  HockeySDK Authenticator error domain
- */
-typedef NS_ENUM(NSInteger, BITAuthenticatorReason) {
-  /**
-   *  Unknown error
-   */
-  BITAuthenticatorErrorUnknown,
-  /**
-   *  Network error
-   */
-  BITAuthenticatorNetworkError,
-  
-  /**
-   *  API Server returned invalid response
-   */
-  BITAuthenticatorAPIServerReturnedInvalidResponse,
-  /**
-   *  Not Authorized
-   */
-  BITAuthenticatorNotAuthorized,
-  /**
-   *  Unknown Application ID (configuration error)
-   */
-  BITAuthenticatorUnknownApplicationID,
-  /**
-   *  Authorization secret missing
-   */
-  BITAuthenticatorAuthorizationSecretMissing,
-  /**
-   *  Not yet identified
-   */
-  BITAuthenticatorNotIdentified,
-};
 extern NSString *const __attribute__((unused)) kBITAuthenticatorErrorDomain;
-
-/**
- *  HockeySDK global error domain
- */
-typedef NS_ENUM(NSInteger, BITHockeyErrorReason) {
-  /**
-   *  Unknown error
-   */
-  BITHockeyErrorUnknown
-};
 extern NSString *const __attribute__((unused)) kBITHockeyErrorDomain;
 

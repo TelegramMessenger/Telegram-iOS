@@ -16,7 +16,7 @@
 #define MOCKITO_SHORTHAND
 #import <OCMockitoIOS/OCMockitoIOS.h>
 
-#import "HockeySDKFeatureConfig.h"
+#import "HockeySDK.h"
 #import "BITStoreUpdateManager.h"
 #import "BITStoreUpdateManagerPrivate.h"
 #import "BITHockeyBaseManager.h"

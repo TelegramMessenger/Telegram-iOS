@@ -31,7 +31,7 @@
 #import <UIKit/UIKit.h>
 
 #import "HockeySDKFeatureConfig.h"
-
+#import "HockeySDKEnums.h"
 
 @protocol BITHockeyManagerDelegate;
 
@@ -375,23 +375,6 @@
 /// @name Environment
 ///-----------------------------------------------------------------------------
 
-/**
- *  HockeySDK App environment
- */
-typedef NS_ENUM(NSInteger, BITEnvironment) {
-  /**
-   *  App has been downloaded from the AppStore
-   */
-  BITEnvironmentAppStore = 0,
-  /**
-   *  App has been downloaded from TestFlight
-   */
-  BITEnvironmentTestFlight = 1,
-  /**
-   *  App has been installed by some other mechanism
-   */
-  BITEnvironmentOther = 99
-};
 
 /**
  Enum that determines what kind of environment the application is installed and running in.
