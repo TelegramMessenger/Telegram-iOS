@@ -90,4 +90,4 @@ NSString *BITHockeyMD5(NSString *str);
 
 #endif
 
-#endif //HockeySDK_HockeySDKPrivate_h
+#endif /* HockeySDK_HockeySDKPrivate_h */

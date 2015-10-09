@@ -214,9 +214,9 @@ The following points need to be considered to use the HockeySDK SDK with iOS Ext
 2. You need to make sure the SDK setup code is only invoked **once**. Since there is no `applicationDidFinishLaunching:` equivalent and `viewDidLoad` can run multiple times, you need to use a setup like the following example:
 
     ```objectivec
-    @interface TodayViewController () <NCWidgetProviding>
+    static BOOL didSetupHockeySDK = NO;
 
-    @property (nonatomic, assign) BOOL didSetupHockeySDK;
+    @interface TodayViewController () <NCWidgetProviding>
 
     @end
 
@@ -224,10 +224,10 @@ The following points need to be considered to use the HockeySDK SDK with iOS Ext
 
     * (void)viewDidLoad {
       [super viewDidLoad];
-      if (!self.didSetupHockeySDK) {
+      if (!didSetupHockeySDK) {
         [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
         [[BITHockeyManager sharedHockeyManager] startManager];
-        self.didSetupHockeySDK = YES;
+        didSetupHockeySDK = YES;
       }
     }
     ```

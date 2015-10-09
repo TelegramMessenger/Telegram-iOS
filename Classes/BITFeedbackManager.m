@@ -223,8 +223,9 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *latestImage);
     BITHockeyLog(@"INFO: update view already visible, aborting");
     return;
   }
-  
-  [self showView:[self feedbackListViewController:YES]];
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [self showView:[self feedbackListViewController:YES]];
+  });
 }
 
 
@@ -249,9 +250,9 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *latestImage);
   }
   BITFeedbackComposeViewController *composeView = [self feedbackComposeViewController];
   [composeView prepareWithItems:items];
-  
-  [self showView:composeView];
-  
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [self showView:composeView];
+  });
 }
 
 - (void)showFeedbackComposeViewWithGeneratedScreenshot {
@@ -802,6 +803,8 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *latestImage);
         }
         
         if(self.showAlertOnIncomingMessages && !self.currentFeedbackListViewController && !self.currentFeedbackComposeViewController) {
+          dispatch_async(dispatch_get_main_queue(), ^{
+          /*
           // Requires iOS 8
           id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
           if (uialertcontrollerClass) {
@@ -819,9 +822,10 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *latestImage);
                                                                }];
             [alertController addAction:cancelAction];
             [alertController addAction:showAction];
-            
-            [self showAlertController:alertController];
-          } else {
+           
+           [self showAlertController:alertController];
+           } else {
+           */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
             UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageTitle")
@@ -833,8 +837,9 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *latestImage);
             [alertView setTag:0];
             [alertView show];
 #pragma clang diagnostic pop
-          }
-          _incomingMessagesAlertShowing = YES;
+            /*}*/
+            _incomingMessagesAlertShowing = YES;
+          });
         }
       }
     }
@@ -856,7 +861,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *latestImage);
 }
 
 
-- (void)sendNetworkRequestWithHTTPMethod:(NSString *)httpMethod withMessage:(BITFeedbackMessage *)message completionHandler:(void (^)(NSError *err))completionHandler {
+- (void)sendNetworkRequestWithHTTPMethod:(NSString *)httpMethod withMessage:(BITFeedbackMessage *)message completionHandler:(void (^)(NSError *error))completionHandler {
   NSString *boundary = @"----FOO";
   
   _networkRequestInProgress = YES;
@@ -960,22 +965,24 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *latestImage);
   }else{
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *err) {
+    [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *error) {
 #pragma clang diagnostic pop
       typeof (self) strongSelf = weakSelf;
-      [strongSelf handleFeedbackMessageResponse:response data:responseData error:err completion:completionHandler];
+      [strongSelf handleFeedbackMessageResponse:response data:responseData error:error completion:completionHandler];
     }];
   }
 
 }
 
-- (void)handleFeedbackMessageResponse:(NSURLResponse *)response data:(NSData *)responseData error:(NSError * )err completion:(void (^)(NSError *err))completionHandler{
+- (void)handleFeedbackMessageResponse:(NSURLResponse *)response data:(NSData *)responseData error:(NSError * )error completion:(void (^)(NSError *error))completionHandler{
   _networkRequestInProgress = NO;
   
-  if (err) {
-    [self reportError:err];
+  if (error) {
+    [self reportError:error];
     [self markSendInProgressMessagesAsPending];
-    completionHandler(err);
+    if (completionHandler) {
+      completionHandler(error);
+    }
   } else {
     NSInteger statusCode = [(NSHTTPURLResponse *)response statusCode];
     if (statusCode == 404) {
@@ -1034,7 +1041,9 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *latestImage);
     }
     
     [self markSendInProgressMessagesAsPending];
-    completionHandler(err);
+    if (completionHandler) {
+      completionHandler(error);
+    }
   }
 }
 
@@ -1048,7 +1057,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *latestImage);
   
   [self sendNetworkRequestWithHTTPMethod:@"GET"
                              withMessage:nil
-                       completionHandler:^(NSError *err){
+                       completionHandler:^(NSError *error){
                          // inform the UI to update its data in case the list is already showing
                          [[NSNotificationCenter defaultCenter] postNotificationName:BITHockeyFeedbackMessagesLoadingFinished object:nil];
                        }];
@@ -1069,7 +1078,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *latestImage);
   
   if ([pendingMessages count] > 0) {
     // we send one message at a time
-    BITFeedbackMessage *messageToSend = [pendingMessages objectAtIndex:0];
+    BITFeedbackMessage *messageToSend = pendingMessages[0];
     
     [messageToSend setStatus:BITFeedbackMessageStatusSendInProgress];
     if (self.userID)
@@ -1086,8 +1095,8 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *latestImage);
     
     [self sendNetworkRequestWithHTTPMethod:httpMethod
                                withMessage:messageToSend
-                         completionHandler:^(NSError *err){
-                           if (err) {
+                         completionHandler:^(NSError *error){
+                           if (error) {
                              [self markSendInProgressMessagesAsPending];
                              [self saveMessages];
                            }

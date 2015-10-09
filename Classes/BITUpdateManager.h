@@ -220,6 +220,8 @@ typedef NS_ENUM (NSUInteger, BITUpdateSetting) {
 
 /**
  Present the modal update user interface.
+ 
+ @warning Make sure to call this method from the main thread!
  */
 - (void)showUpdateView;
 

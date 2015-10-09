@@ -225,7 +225,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  *  EXPERIMENTAL: Enable heuristics to detect the app not terminating cleanly
  *
  *  This allows it to get a crash report if the app got killed while being in the foreground
- *  because of now of the following reasons:
+ *  because of one of the following reasons:
  *  - The main thread was blocked for too long
  *  - The app took too long to start up
  *  - The app tried to allocate too much memory. If iOS did send a memory warning before killing the app because of this reason, `didReceiveMemoryWarningInLastSession` returns `YES`.

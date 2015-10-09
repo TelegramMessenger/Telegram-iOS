@@ -1048,6 +1048,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
       if (_alertViewHandler) {
         _alertViewHandler();
       } else {
+        /* We won't use this for now until we have a more robust solution for displaying UIAlertController
         // requires iOS 8
         id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
         if (uialertcontrollerClass) {
@@ -1090,6 +1091,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
           
           [self showAlertController:alertController];
         } else {
+         */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
           UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:[NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundTitle"), appName]
@@ -1104,9 +1106,9 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
           
           [alertView show];
 #pragma clang diagnostic pop
-        }
+        /*}*/
       }
-#endif
+#endif /* !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions) */
       
     } else {
       [self approveLatestCrashReport];
@@ -1524,7 +1526,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
 }
 #pragma clang diagnostic pop
 
-#endif 
+#endif /* !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions) */
 
 
 #pragma mark - Networking

@@ -183,4 +183,4 @@ body { font: 13px 'Helvetica Neue', Helvetica; color:#626262; word-wrap:break-wo
 
 @end
 
-#endif
+#endif /* HOCKEYSDK_FEATURE_UPDATES */

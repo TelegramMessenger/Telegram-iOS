@@ -419,4 +419,4 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
 }
 @end
 
-#endif
+#endif /* HOCKEYSDK_FEATURE_FEEDBACK */
