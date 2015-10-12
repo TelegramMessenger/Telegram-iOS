@@ -67,8 +67,8 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   [self unregisterObservers];
 }
 
-- (instancetype) initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironment:(BOOL)isAppStoreEnvironment {
-  self = [super initWithAppIdentifier:appIdentifier isAppStoreEnvironment:isAppStoreEnvironment];
+- (instancetype)initWithAppIdentifier:(NSString *)appIdentifier appEnvironment:(BITEnvironment)environment {
+  self = [super initWithAppIdentifier:appIdentifier appEnvironment:environment];
   if( self ) {
     _webpageURL = [NSURL URLWithString:@"https://rink.hockeyapp.net/"];
     
@@ -82,8 +82,8 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 
 #pragma mark - BITHockeyBaseManager overrides
 - (void)startManager {
-  //disabled in the appStore
-  if([self isAppStoreEnvironment]) return;
+  //disabled in TestFlight and the AppStore
+  if(self.appEnvironment != BITEnvironmentOther) return;
   
   _isSetup = YES;
 }
@@ -109,8 +109,8 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 }
 
 - (void)authenticateInstallation {
-  //disabled in the appStore
-  if([self isAppStoreEnvironment]) return;
+  //disabled in TestFlight and the AppStore
+  if(self.appEnvironment != BITEnvironmentOther) return;
   
   // make sure this is called after startManager so all modules are fully setup
   if (!_isSetup) {

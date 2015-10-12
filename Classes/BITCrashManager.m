@@ -728,7 +728,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
 
 
 - (void)generateTestCrash {
-  if (![self isAppStoreEnvironment]) {
+  if (self.appEnvironment == BITEnvironmentOther) {
     
     if ([self isDebuggerAttached]) {
       NSLog(@"[HockeySDK] WARNING: The debugger is attached. The following crash cannot be detected by the SDK!");
@@ -1158,7 +1158,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
       // We only check for this if we are not in the App Store environment
       
       BOOL debuggerIsAttached = NO;
-      if (![self isAppStoreEnvironment]) {
+      if (self.appEnvironment != BITEnvironmentAppStore) {
         if ([self isDebuggerAttached]) {
           debuggerIsAttached = YES;
           NSLog(@"[HockeySDK] WARNING: Detecting crashes is NOT enabled due to running the app with a debugger attached.");

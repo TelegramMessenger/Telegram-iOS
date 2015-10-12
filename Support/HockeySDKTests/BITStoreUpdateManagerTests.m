@@ -16,7 +16,7 @@
 #define MOCKITO_SHORTHAND
 #import <OCMockitoIOS/OCMockitoIOS.h>
 
-#import "HockeySDKFeatureConfig.h"
+#import "HockeySDK.h"
 #import "BITStoreUpdateManager.h"
 #import "BITStoreUpdateManagerPrivate.h"
 #import "BITHockeyBaseManager.h"
@@ -38,7 +38,7 @@
   [super setUp];
   
   // Set-up code here.
-  _storeUpdateManager = [[BITStoreUpdateManager alloc] initWithAppIdentifier:nil isAppStoreEnvironment:YES];
+  _storeUpdateManager = [[BITStoreUpdateManager alloc] initWithAppIdentifier:nil appEnvironment:BITEnvironmentAppStore];
 }
 
 - (void)tearDown {
