@@ -377,9 +377,18 @@
 
 
 /**
- Enum that determines what kind of environment the application is installed and running in.
+ Enum that indicates what kind of environment the application is installed and running in.
  
- See `BITEnvironment`
+ This property can be used to disable or enable specific funtionality 
+ only when specific conditions are met.
+ That could mean for example, to only enable debug UI elements 
+ when the app has been installed over HockeyApp but not in the AppStore.
+ 
+ The underlying enum type at the moment only specifies values for the AppStore,
+ TestFlight and Other. Other summarizes several different distribution methods
+ and we might define additional specifc values for other environments in the future.
+ 
+ @see `BITEnvironment`
  */
 @property (nonatomic, readonly) BITEnvironment appEnvironment;
 

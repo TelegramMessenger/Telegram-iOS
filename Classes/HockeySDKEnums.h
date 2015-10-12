@@ -22,7 +22,8 @@ typedef NS_ENUM(NSInteger, BITEnvironment) {
    */
   BITEnvironmentTestFlight = 1,
   /**
-   *  App has been installed by some other mechanism
+   *  App has been installed by some other mechanism.
+   *  This could be Ad-Hoc, Enterprise, etc.
    */
   BITEnvironmentOther = 99
 };
