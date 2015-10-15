@@ -2,6 +2,24 @@
 
 #import "SAtomic.h"
 
+@interface SSignal_ValueContainer : NSObject
+
+@property (nonatomic, strong, readonly) id value;
+
+@end
+
+@implementation SSignal_ValueContainer
+
+- (instancetype)initWithValue:(id)value {
+    self = [super init];
+    if (self != nil) {
+        _value = value;
+    }
+    return self;
+}
+
+@end
+
 @implementation SSignal (Take)
 
 - (SSignal *)take:(NSUInteger)count
@@ -32,6 +50,31 @@
             [subscriber putError:error];
         } completed:^
         {
+            [subscriber putCompletion];
+        }];
+    }];
+}
+
+- (SSignal *)takeLast
+{
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
+    {
+        SAtomic *last = [[SAtomic alloc] initWithValue:nil];
+        return [self startWithNext:^(id next)
+        {
+            [last swap:[[SSignal_ValueContainer alloc] initWithValue:next]];
+        } error:^(id error)
+        {
+            [subscriber putError:error];
+        } completed:^
+        {
+            SSignal_ValueContainer *value = [last with:^id(id value) {
+                return value;
+            }];
+            if (value != nil)
+            {
+                [subscriber putNext:value.value];
+            }
             [subscriber putCompletion];
         }];
     }];

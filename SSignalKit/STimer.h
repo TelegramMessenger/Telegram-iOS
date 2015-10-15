@@ -8,5 +8,6 @@
 
 - (void)start;
 - (void)invalidate;
+- (void)fireAndInvalidate;
 
 @end
