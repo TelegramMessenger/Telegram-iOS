@@ -728,7 +728,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
 
 
 - (void)generateTestCrash {
-  if (self.appEnvironment == BITEnvironmentOther) {
+  if (self.appEnvironment != BITEnvironmentAppStore) {
     
     if ([self isDebuggerAttached]) {
       NSLog(@"[HockeySDK] WARNING: The debugger is attached. The following crash cannot be detected by the SDK!");
