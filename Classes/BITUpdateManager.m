@@ -1227,10 +1227,10 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
       [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
                                             code:BITUpdateAPIServerReturnedInvalidStatus
                                         userInfo:[NSDictionary dictionaryWithObjectsAndKeys:errorStr, NSLocalizedDescriptionKey, nil]]];
-      completionHandler(NSURLSessionResponseCancel);
+      if (completionHandler) { completionHandler(NSURLSessionResponseCancel); }
       return;
     }
-    completionHandler(NSURLSessionResponseAllow);
+    if (completionHandler) { completionHandler(NSURLSessionResponseAllow);}
   }
   
   self.receivedData = [NSMutableData data];
@@ -1242,7 +1242,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   if (response) {
     newRequest = nil;
   }
-  completionHandler(newRequest);
+  if (completionHandler) { completionHandler(newRequest); }
 }
 
 - (BOOL)hasNewerMandatoryVersion {
