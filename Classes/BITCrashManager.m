@@ -583,9 +583,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
  *	@return The userID value
  */
 - (NSString *)userIDForCrashReport {
-  // first check the global keychain storage
-  NSString *userID = [self stringValueFromKeychainForKey:kBITHockeyMetaUserID] ?: @"";
-  
+  NSString *userID;
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
   // if we have an identification from BITAuthenticator, use this as a default.
   if ((
@@ -597,13 +595,19 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   }
 #endif
   
+  // first check the global keychain storage
+  NSString *userIdFromKeychain = [self stringValueFromKeychainForKey:kBITHockeyMetaUserID];
+  if (userIdFromKeychain) {
+    userID = userIdFromKeychain;
+  }
+  
   if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
     userID = [[BITHockeyManager sharedHockeyManager].delegate
                 userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                componentManager:self] ?: @"";
+                componentManager:self];
   }
   
-  return userID;
+  return userID  ?: @"";
 }
 
 /**
