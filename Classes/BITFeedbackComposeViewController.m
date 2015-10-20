@@ -592,7 +592,7 @@
   /*}*/
   
   _actionSheetVisible = YES;
-  if ((UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) || ([[NSProcessInfo processInfo] isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){9,0,0}])) {
+  if ((UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) || ([[NSProcessInfo processInfo] respondsToSelector:@selector(isOperatingSystemAtLeastVersion:)] && [[NSProcessInfo processInfo] isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){9,0,0}])) {
     [self.textView resignFirstResponder];
   }
 }
@@ -648,7 +648,7 @@
   
   [self refreshAttachmentScrollview];
   
-  if ((UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) || ([[NSProcessInfo processInfo] isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){9,0,0}])) {
+  if ((UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) || ([[NSProcessInfo processInfo] respondsToSelector:@selector(isOperatingSystemAtLeastVersion:)] && [[NSProcessInfo processInfo] isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){9,0,0}])) {
     [self.textView becomeFirstResponder];
   }
 }
@@ -665,7 +665,7 @@
 }
 
 - (void)cancelAction {
-  if ((UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) || ([[NSProcessInfo processInfo] isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){9,0,0}])) {
+  if ((UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) || ([[NSProcessInfo processInfo] respondsToSelector:@selector(isOperatingSystemAtLeastVersion:)] && [[NSProcessInfo processInfo] isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){9,0,0}])) {
     [self.textView becomeFirstResponder];
   }
 }
