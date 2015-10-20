@@ -794,6 +794,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   int fd = open([path UTF8String], O_RDONLY, 0);
   if (fstat(fd, &fs) < 0) {
     // File not found
+    free(fd);
     return;
   }
   
