@@ -28,6 +28,7 @@
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
+#import "BITHockeyManager.h"
 
 @class BITHockeyBaseManager;
 @class BITHockeyBaseViewController;
@@ -36,12 +37,11 @@
 
 @property (nonatomic, strong) NSString *appIdentifier;
 
-- (instancetype)initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironment:(BOOL)isAppStoreEnvironment;
+@property (nonatomic, assign, readonly) BITEnvironment appEnvironment;
+
+- (instancetype)initWithAppIdentifier:(NSString *)appIdentifier appEnvironment:(BITEnvironment)environment;
 
 - (void)startManager;
-
-/** the value this object was initialized with */
-- (BOOL)isAppStoreEnvironment;
 
 /** Check if the device is running an iOS version previous to iOS 7 */
 - (BOOL)isPreiOS7Environment;

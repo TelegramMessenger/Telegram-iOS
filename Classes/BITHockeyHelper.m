@@ -308,6 +308,45 @@ BOOL bit_isPreiOS8Environment(void) {
   return isPreiOS8Environment;
 }
 
+BOOL bit_isAppStoreReceiptSandbox(void) {
+#if TARGET_IPHONE_SIMULATOR
+  return NO;
+#else
+  NSURL *appStoreReceiptURL = NSBundle.mainBundle.appStoreReceiptURL;
+  NSString *appStoreReceiptLastComponent = appStoreReceiptURL.lastPathComponent;
+  
+  BOOL isSandboxReceipt = [appStoreReceiptLastComponent isEqualToString:@"sandboxReceipt"];
+  return isSandboxReceipt;
+#endif
+}
+
+BOOL bit_hasEmbeddedMobileProvision(void) {
+  BOOL hasEmbeddedMobileProvision = [[NSBundle mainBundle] pathForResource:@"embedded" ofType:@"mobileprovision"];
+  return hasEmbeddedMobileProvision;
+}
+
+BOOL bit_isRunningInTestFlightEnvironment(void) {
+#if TARGET_IPHONE_SIMULATOR
+  return NO;
+#else
+  if (bit_isAppStoreReceiptSandbox() && !bit_hasEmbeddedMobileProvision()) {
+    return YES;
+  }
+  return NO;
+#endif
+}
+
+BOOL bit_isRunningInAppStoreEnvironment(void) {
+#if TARGET_IPHONE_SIMULATOR
+  return NO;
+#else
+  if (bit_isAppStoreReceiptSandbox() || bit_hasEmbeddedMobileProvision()) {
+    return NO;
+  }
+  return YES;
+#endif
+}
+
 BOOL bit_isRunningInAppExtension(void) {
   static BOOL isRunningInAppExtension = NO;
   static dispatch_once_t checkAppExtension;

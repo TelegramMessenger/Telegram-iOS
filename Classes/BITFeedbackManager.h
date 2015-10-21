@@ -93,7 +93,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
  
      [BITHockeyManager sharedHockeyManager].feedbackManager
 
- The user interface provides a list view than can be presented modally using
+ The user interface provides a list view that can be presented modally using
  `[BITFeedbackManager showFeedbackListView]` or adding
  `[BITFeedbackManager feedbackListViewController:]` to push onto a navigation stack.
  This list integrates all features to load new messages, write new messages, view messages

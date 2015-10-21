@@ -227,7 +227,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 #pragma mark - Expiry
 
 - (BOOL)expiryDateReached {
-  if ([self isAppStoreEnvironment]) return NO;
+  if (self.appEnvironment != BITEnvironmentOther) return NO;
   
   if (_expiryDate) {
     NSDate *currentDate = [NSDate date];
@@ -314,7 +314,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 }
 
 - (void)stopUsage {
-  if ([self isAppStoreEnvironment]) return;
+  if (self.appEnvironment != BITEnvironmentOther) return;
   if ([self expiryDateReached]) return;
   
   double timeDifference = [[NSDate date] timeIntervalSinceReferenceDate] - [_usageStartTimestamp timeIntervalSinceReferenceDate];
@@ -324,7 +324,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 }
 
 - (void) storeUsageTimeForCurrentVersion:(NSNumber *)usageTime {
-  if ([self isAppStoreEnvironment]) return;
+  if (self.appEnvironment != BITEnvironmentOther) return;
   
   NSMutableData *data = [[NSMutableData alloc] init];
   NSKeyedArchiver *archiver = [[NSKeyedArchiver alloc] initForWritingWithMutableData:data];
@@ -518,7 +518,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 #pragma mark - BetaUpdateUI
 
 - (BITUpdateViewController *)hockeyViewController:(BOOL)modal {
-  if ([self isAppStoreEnvironment]) {
+  if (self.appEnvironment != BITEnvironmentOther) {
     NSLog(@"[HockeySDK] This should not be called from an app store build!");
     // return an empty view controller instead
     BITHockeyBaseViewController *blankViewController = [[BITHockeyBaseViewController alloc] initWithModalStyle:modal];
@@ -528,7 +528,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 }
 
 - (void)showUpdateView {
-  if ([self isAppStoreEnvironment]) {
+  if (self.appEnvironment != BITEnvironmentOther) {
     NSLog(@"[HockeySDK] This should not be called from an app store build!");
     return;
   }
@@ -552,7 +552,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 
 
 - (void)showCheckForUpdateAlert {
-  if ([self isAppStoreEnvironment]) return;
+  if (self.appEnvironment != BITEnvironmentOther) return;
   if ([self isUpdateManagerDisabled]) return;
   
   if (!_updateAlertShowing) {
@@ -827,7 +827,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 }
 
 - (void)checkForUpdate {
-  if (![self isAppStoreEnvironment] && ![self isUpdateManagerDisabled]) {
+  if ((self.appEnvironment == BITEnvironmentOther) && ![self isUpdateManagerDisabled]) {
     if ([self expiryDateReached]) return;
     if (![self installationIdentified]) return;
     
@@ -840,7 +840,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 }
 
 - (void)checkForUpdateShowFeedback:(BOOL)feedback {
-  if ([self isAppStoreEnvironment]) return;
+  if (self.appEnvironment != BITEnvironmentOther) return;
   if (self.isCheckInProgress) return;
   
   _showFeedback = feedback;
@@ -853,9 +853,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     return;
   }
   
-  NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@?format=json&extended=true%@&sdk=%@&sdk_version=%@&uuid=%@",
+  NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@?format=json&extended=true&sdk=%@&sdk_version=%@&uuid=%@",
                                 bit_URLEncodedString([self encodedAppIdentifier]),
-                                ([self isAppStoreEnvironment] ? @"&udid=appstore" : @""),
                                 BITHOCKEY_NAME,
                                 BITHOCKEY_VERSION,
                                 _uuid];
@@ -918,7 +917,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 }
 
 - (BOOL)initiateAppDownload {
-  if ([self isAppStoreEnvironment]) return NO;
+  if (self.appEnvironment != BITEnvironmentOther) return NO;
   
   if (!self.isUpdateAvailable) {
     BITHockeyLog(@"WARNING: No update available. Aborting.");
@@ -987,7 +986,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 
 // begin the startup process
 - (void)startManager {
-  if (![self isAppStoreEnvironment]) {
+  if (self.appEnvironment == BITEnvironmentOther) {
     if ([self isUpdateManagerDisabled]) return;
     
     BITHockeyLog(@"INFO: Starting UpdateManager");
@@ -1042,7 +1041,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
       
       self.companyName = (([[json valueForKey:@"company"] isKindOfClass:[NSString class]]) ? [json valueForKey:@"company"] : nil);
       
-      if (![self isAppStoreEnvironment]) {
+      if (self.appEnvironment == BITEnvironmentOther) {
         NSArray *feedArray = (NSArray *)[json valueForKey:@"versions"];
         
         // remember that we just checked the server
@@ -1228,10 +1227,10 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
       [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
                                             code:BITUpdateAPIServerReturnedInvalidStatus
                                         userInfo:[NSDictionary dictionaryWithObjectsAndKeys:errorStr, NSLocalizedDescriptionKey, nil]]];
-      completionHandler(NSURLSessionResponseCancel);
+      if (completionHandler) { completionHandler(NSURLSessionResponseCancel); }
       return;
     }
-    completionHandler(NSURLSessionResponseAllow);
+    if (completionHandler) { completionHandler(NSURLSessionResponseAllow);}
   }
   
   self.receivedData = [NSMutableData data];
@@ -1243,7 +1242,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   if (response) {
     newRequest = nil;
   }
-  completionHandler(newRequest);
+  if (completionHandler) { completionHandler(newRequest); }
 }
 
 - (BOOL)hasNewerMandatoryVersion {
