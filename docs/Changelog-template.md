@@ -1,3 +1,17 @@
+## Version 3.8.3
+
+- [NEW] Adds new `appEnvironment` property to indicate the environment the app is running in. This replaces the old `isAppStoreEnvironment` which is now deprecated. We can now differentiate between apps installed via TestFlight or the AppStore
+- [NEW] Distributed zip file now also contains our documentation
+- [UPDATE] Prevent issues with duplicate symbols from PLCrashReporter
+- [UPDATE] Remove several typos in our documentation and improve instructions for use in extensions
+- [UPDATE] Add additional nil-checks before calling blocks
+- [UPDATE] Minor code readability improvements
+- [BUGFIX] `BITFeedbackManager`: Fix Feedback Annotations not working on iPhones running iOS 9
+- [BUGFIX] Switch back to using UIAlertView to prevent several issues. We will add a more robust solution which uses UIAlertController in a future update.
+- [BUGFIX] Fix several small issues in our CrashOnly builds
+- [BUGFIX] Minor fixes for memory leaks
+- [BUGFIX] Fix crashes because completion blocks were not properly dispatched on the main thread
+
 ## Version 3.8.2
 
 - [UPDATE] Added support for Xcode 6.x 
