@@ -47,6 +47,10 @@ NSString *bit_UUID(void);
 NSString *bit_appAnonID(BOOL forceNewAnonID);
 BOOL bit_isPreiOS7Environment(void);
 BOOL bit_isPreiOS8Environment(void);
+BOOL bit_isAppStoreReceiptSandbox(void);
+BOOL bit_hasEmbeddedMobileProvision(void);
+BOOL bit_isRunningInTestFlightEnvironment(void);
+BOOL bit_isRunningInAppStoreEnvironment(void);
 BOOL bit_isRunningInAppExtension(void);
 
 #if !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnly) && !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions)

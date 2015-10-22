@@ -289,6 +289,7 @@
 }
 
 - (void)deleteAllMessagesAction:(id)sender {
+  /* We won't use this for now until we have a more robust solution for displaying UIAlertController
   // requires iOS 8
   id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
   if (uialertcontrollerClass) {
@@ -326,6 +327,7 @@
     
     [self presentViewController:alertController animated:YES completion:nil];
   } else {
+   */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
@@ -349,7 +351,7 @@
       [deleteAction show];
     }
 #pragma clang diagnostic pop
-  }
+  /*}*/
 }
 
 - (UIView*) viewForShowingActionSheetOnPhone {
@@ -828,6 +830,7 @@
 #pragma mark - BITAttributedLabelDelegate
 
 - (void)attributedLabel:(BITAttributedLabel *)label didSelectLinkWithURL:(NSURL *)url {
+  /*
   // requires iOS 8
   id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
   if (uialertcontrollerClass) {
@@ -867,6 +870,7 @@
     
     [self presentViewController:linkAction animated:YES completion:nil];
   } else {
+   */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     if (UI_USER_INTERFACE_IDIOM() != UIUserInterfaceIdiomPad) {
@@ -891,7 +895,7 @@
       [linkAction show];
     }
 #pragma clang diagnostic pop
-  }
+  /*}*/
 }
 
 

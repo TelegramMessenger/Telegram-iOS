@@ -236,4 +236,4 @@ static void BITCrashUncaughtCXXTerminateHandler(void)
 
 @end
 
-#endif
+#endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */

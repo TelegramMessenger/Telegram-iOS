@@ -413,7 +413,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   NSArray *uuidArray = [BITCrashReportTextFormatter arrayOfAppUUIDsForCrashReport:report];
   
   for (NSDictionary *element in uuidArray) {
-    if ([element objectForKey:kBITBinaryImageKeyUUID] && [element objectForKey:kBITBinaryImageKeyArch] && [element objectForKey:kBITBinaryImageKeyUUID]) {
+    if ([element objectForKey:kBITBinaryImageKeyType] && [element objectForKey:kBITBinaryImageKeyArch] && [element objectForKey:kBITBinaryImageKeyUUID]) {
       [uuidString appendFormat:@"<uuid type=\"%@\" arch=\"%@\">%@</uuid>",
        [element objectForKey:kBITBinaryImageKeyType],
        [element objectForKey:kBITBinaryImageKeyArch],
@@ -583,9 +583,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
  *	@return The userID value
  */
 - (NSString *)userIDForCrashReport {
-  // first check the global keychain storage
-  NSString *userID = [self stringValueFromKeychainForKey:kBITHockeyMetaUserID] ?: @"";
-  
+  NSString *userID;
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
   // if we have an identification from BITAuthenticator, use this as a default.
   if ((
@@ -597,13 +595,19 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   }
 #endif
   
+  // first check the global keychain storage
+  NSString *userIdFromKeychain = [self stringValueFromKeychainForKey:kBITHockeyMetaUserID];
+  if (userIdFromKeychain) {
+    userID = userIdFromKeychain;
+  }
+  
   if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userIDForHockeyManager:componentManager:)]) {
     userID = [[BITHockeyManager sharedHockeyManager].delegate
                 userIDForHockeyManager:[BITHockeyManager sharedHockeyManager]
-                componentManager:self] ?: @"";
+                componentManager:self];
   }
   
-  return userID;
+  return userID  ?: @"";
 }
 
 /**
@@ -728,7 +732,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
 
 
 - (void)generateTestCrash {
-  if (![self isAppStoreEnvironment]) {
+  if (self.appEnvironment != BITEnvironmentAppStore) {
     
     if ([self isDebuggerAttached]) {
       NSLog(@"[HockeySDK] WARNING: The debugger is attached. The following crash cannot be detected by the SDK!");
@@ -1048,6 +1052,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
       if (_alertViewHandler) {
         _alertViewHandler();
       } else {
+        /* We won't use this for now until we have a more robust solution for displaying UIAlertController
         // requires iOS 8
         id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
         if (uialertcontrollerClass) {
@@ -1090,6 +1095,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
           
           [self showAlertController:alertController];
         } else {
+         */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
           UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:[NSString stringWithFormat:BITHockeyLocalizedString(@"CrashDataFoundTitle"), appName]
@@ -1104,9 +1110,9 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
           
           [alertView show];
 #pragma clang diagnostic pop
-        }
+        /*}*/
       }
-#endif
+#endif /* !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions) */
       
     } else {
       [self approveLatestCrashReport];
@@ -1156,7 +1162,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
       // We only check for this if we are not in the App Store environment
       
       BOOL debuggerIsAttached = NO;
-      if (![self isAppStoreEnvironment]) {
+      if (self.appEnvironment != BITEnvironmentAppStore) {
         if ([self isDebuggerAttached]) {
           debuggerIsAttached = YES;
           NSLog(@"[HockeySDK] WARNING: Detecting crashes is NOT enabled due to running the app with a debugger attached.");
@@ -1524,7 +1530,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
 }
 #pragma clang diagnostic pop
 
-#endif 
+#endif /* !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions) */
 
 
 #pragma mark - Networking

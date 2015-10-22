@@ -28,6 +28,7 @@
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
+#import "BITHockeyManager.h"
 
 @class BITHockeyBaseManager;
 @class BITHockeyBaseViewController;
@@ -36,12 +37,11 @@
 
 @property (nonatomic, strong) NSString *appIdentifier;
 
-- (instancetype)initWithAppIdentifier:(NSString *)appIdentifier isAppStoreEnvironment:(BOOL)isAppStoreEnvironment;
+@property (nonatomic, assign, readonly) BITEnvironment appEnvironment;
+
+- (instancetype)initWithAppIdentifier:(NSString *)appIdentifier appEnvironment:(BITEnvironment)environment;
 
 - (void)startManager;
-
-/** the value this object was initialized with */
-- (BOOL)isAppStoreEnvironment;
 
 /** Check if the device is running an iOS version previous to iOS 7 */
 - (BOOL)isPreiOS7Environment;
@@ -80,8 +80,10 @@
  *
  *  @param alertController The UIAlertController to be presented.
  */
+/* We won't use this for now until we have a more robust solution for displaying UIAlertController
 - (void)showAlertController:(UIViewController *)alertController;
-- (void)showView:(UIViewController *)viewController;
+*/
+ - (void)showView:(UIViewController *)viewController;
 #endif
 
 // Date helpers

@@ -58,7 +58,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 - (void)setUp {
   [super setUp];
   
-  _sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil isAppStoreEnvironment:NO];
+  _sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil appEnvironment:BITEnvironmentOther];
 }
 
 - (void)tearDown {
@@ -87,7 +87,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 #pragma mark - Persistence Tests
 - (void) testThatLastAuthenticatedVersionIsPersisted {
   _sut.lastAuthenticatedVersion = @"1.2.1";
-  _sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil isAppStoreEnvironment:YES];
+  _sut = [[BITAuthenticator alloc] initWithAppIdentifier:nil appEnvironment:BITEnvironmentAppStore];
   assertThat(_sut.lastAuthenticatedVersion, equalTo(@"1.2.1"));
 }
 

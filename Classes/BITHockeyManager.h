@@ -31,7 +31,7 @@
 #import <UIKit/UIKit.h>
 
 #import "HockeySDKFeatureConfig.h"
-
+#import "HockeySDKEnums.h"
 
 @protocol BITHockeyManagerDelegate;
 
@@ -375,6 +375,24 @@
 /// @name Environment
 ///-----------------------------------------------------------------------------
 
+
+/**
+ Enum that indicates what kind of environment the application is installed and running in.
+ 
+ This property can be used to disable or enable specific funtionality 
+ only when specific conditions are met.
+ That could mean for example, to only enable debug UI elements 
+ when the app has been installed over HockeyApp but not in the AppStore.
+ 
+ The underlying enum type at the moment only specifies values for the AppStore,
+ TestFlight and Other. Other summarizes several different distribution methods
+ and we might define additional specifc values for other environments in the future.
+ 
+ @see `BITEnvironment`
+ */
+@property (nonatomic, readonly) BITEnvironment appEnvironment;
+
+
 /**
  Flag that determines whether the application is installed and running
  from an App Store installation.
@@ -382,7 +400,7 @@
  Returns _YES_ if the app is installed and running from the App Store
  Returns _NO_ if the app is installed via debug, ad-hoc or enterprise distribution
  */
-@property (nonatomic, readonly, getter=isAppStoreEnvironment) BOOL appStoreEnvironment;
+@property (nonatomic, readonly, getter=isAppStoreEnvironment) BOOL appStoreEnvironment DEPRECATED_MSG_ATTRIBUTE("Use appEnvironment instead!");
 
 
 /**

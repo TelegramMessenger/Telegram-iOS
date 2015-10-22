@@ -538,7 +538,7 @@
   NSInteger index = [self.attachmentScrollViewImageViews indexOfObject:sender];
   
   self.selectedAttachmentIndex = (self.attachmentScrollViewImageViews.count - index - 1);
-  
+  /* We won't use this for now until we have a more robust solution for displaying UIAlertController
   // requires iOS 8
   id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
   if (uialertcontrollerClass) {
@@ -578,6 +578,7 @@
     
     [self presentViewController:alertController animated:YES completion:nil];
   } else {
+   */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
   UIActionSheet *actionSheet = [[UIActionSheet alloc] initWithTitle: nil
@@ -588,10 +589,10 @@
   
   [actionSheet showFromRect: sender.frame inView: self.attachmentScrollView animated: YES];
 #pragma clang diagnostic push
-  }
+  /*}*/
   
   _actionSheetVisible = YES;
-  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+  if ((UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) || ([[NSProcessInfo processInfo] respondsToSelector:@selector(isOperatingSystemAtLeastVersion:)] && [[NSProcessInfo processInfo] isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){9,0,0}])) {
     [self.textView resignFirstResponder];
   }
 }
@@ -647,7 +648,7 @@
   
   [self refreshAttachmentScrollview];
   
-  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+  if ((UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) || ([[NSProcessInfo processInfo] respondsToSelector:@selector(isOperatingSystemAtLeastVersion:)] && [[NSProcessInfo processInfo] isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){9,0,0}])) {
     [self.textView becomeFirstResponder];
   }
 }
@@ -664,7 +665,7 @@
 }
 
 - (void)cancelAction {
-  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+  if ((UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) || ([[NSProcessInfo processInfo] respondsToSelector:@selector(isOperatingSystemAtLeastVersion:)] && [[NSProcessInfo processInfo] isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){9,0,0}])) {
     [self.textView becomeFirstResponder];
   }
 }

@@ -59,7 +59,7 @@
   
   NSMutableArray *_cells;
   
-  BOOL _isAppStoreEnvironment;
+  BITEnvironment _appEnvironment;
 }
 
 
@@ -74,7 +74,7 @@
 }
 
 - (void)restoreStoreButtonStateAnimated:(BOOL)animated {
-  if (_isAppStoreEnvironment) {
+  if (_appEnvironment == BITEnvironmentAppStore) {
     [self setAppStoreButtonState:AppStoreButtonStateOffline animated:animated];
   } else if ([_updateManager isUpdateAvailable]) {
     [self setAppStoreButtonState:AppStoreButtonStateUpdate animated:animated];
@@ -258,8 +258,8 @@
 - (instancetype)initWithStyle:(UITableViewStyle)style {
   if ((self = [super initWithStyle:UITableViewStylePlain])) {
     _updateManager = [BITHockeyManager sharedHockeyManager].updateManager ;
-    _isAppStoreEnvironment = [BITHockeyManager sharedHockeyManager].isAppStoreEnvironment;
-
+    _appEnvironment = [BITHockeyManager sharedHockeyManager].appEnvironment;
+    
     self.title = BITHockeyLocalizedString(@"UpdateScreenTitle");
     
     _cells = [[NSMutableArray alloc] initWithCapacity:5];
@@ -351,7 +351,7 @@
 }
 
 - (void)viewWillAppear:(BOOL)animated {
-  if (_isAppStoreEnvironment) {
+  if (_appEnvironment != BITEnvironmentOther) {
     self.appStoreButtonState = AppStoreButtonStateOffline;
   } else if (self.mandatoryUpdate) {
     self.navigationItem.leftBarButtonItem = nil;

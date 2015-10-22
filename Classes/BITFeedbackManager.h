@@ -93,7 +93,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
  
      [BITHockeyManager sharedHockeyManager].feedbackManager
 
- The user interface provides a list view than can be presented modally using
+ The user interface provides a list view that can be presented modally using
  `[BITFeedbackManager showFeedbackListView]` or adding
  `[BITFeedbackManager feedbackListViewController:]` to push onto a navigation stack.
  This list integrates all features to load new messages, write new messages, view messages
@@ -287,6 +287,8 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
 
 /**
  Present the modal feedback list user interface.
+ 
+ @warning This methods needs to be called on the main thread!
  */
 - (void)showFeedbackListView;
 
@@ -303,6 +305,8 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
 
 /**
  Present the modal feedback compose message user interface.
+ 
+ @warning This methods needs to be called on the main thread!
  */
 - (void)showFeedbackComposeView;
 
@@ -314,6 +318,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
  
  @param items an NSArray with objects that should be attached
  @see `[BITFeedbackComposeViewController prepareWithItems:]`
+ @warning This methods needs to be called on the main thread!
  */
 - (void)showFeedbackComposeViewWithPreparedItems:(NSArray *)items;
 
@@ -325,6 +330,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
      [[BITHockeyManager sharedHockeyManager].feedbackManager showFeedbackComposeViewWithGeneratedScreenshot];
  
  @see feedbackObservationMode
+ @warning This methods needs to be called on the main thread!
  */
 - (void)showFeedbackComposeViewWithGeneratedScreenshot;
 

@@ -1,8 +1,8 @@
-[![Build Status](https://travis-ci.org/bitstadium/HockeySDK-iOS.svg?branch=master)](https://travis-ci.org/bitstadium/HockeySDK-iOS)
+[![Build Status](https://travis-ci.org/bitstadium/HockeySDK-iOS.svg?branch=develop)](https://travis-ci.org/bitstadium/HockeySDK-iOS)
 
-## Version 3.8.2
+## Version 3.8.3
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.8.2/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.8.3/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -212,9 +212,9 @@ The following points need to be considered to use the HockeySDK SDK with iOS Ext
 2. You need to make sure the SDK setup code is only invoked **once**. Since there is no `applicationDidFinishLaunching:` equivalent and `viewDidLoad` can run multiple times, you need to use a setup like the following example:
 
     ```objectivec
-    @interface TodayViewController () <NCWidgetProviding>
+    static BOOL didSetupHockeySDK = NO;
 
-    @property (nonatomic, assign) BOOL didSetupHockeySDK;
+    @interface TodayViewController () <NCWidgetProviding>
 
     @end
 
@@ -222,10 +222,10 @@ The following points need to be considered to use the HockeySDK SDK with iOS Ext
 
     * (void)viewDidLoad {
       [super viewDidLoad];
-      if (!self.didSetupHockeySDK) {
+      if (!didSetupHockeySDK) {
         [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
         [[BITHockeyManager sharedHockeyManager] startManager];
-        self.didSetupHockeySDK = YES;
+        didSetupHockeySDK = YES;
       }
     }
     ```
@@ -455,7 +455,7 @@ To check if data is send properly to HockeyApp and also see some additional SDK 
 <a id="documentation"></a>
 ## 4. Documentation
 
-Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/3.8.2/index.html).
+Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/3.8.3/index.html).
 
 <a id="troubleshooting"></a>
 ## 5.Troubleshooting
@@ -469,7 +469,7 @@ Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/
     Make sure none of the following files are copied into your app bundle, check under app target, `Build Phases`, `Copy Bundle Resources` or in the `.app` bundle after building:
 
         - `HockeySDK.framework` (except if you build a dynamic framework version of the SDK yourself!)
-        - `de.bitstadium.HockeySDK-iOS-3.8.2.docset`
+        - `de.bitstadium.HockeySDK-iOS-3.8.3.docset`
 
 3. Feature are not working as expected
 

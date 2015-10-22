@@ -261,7 +261,7 @@
 #pragma mark - Private
 
 - (BOOL)shouldCancelProcessing {
-  if (![self isAppStoreEnvironment]) return YES;
+  if (self.appEnvironment != BITEnvironmentAppStore) return YES;
   if (![self isStoreUpdateManagerEnabled]) return YES;
   return NO;
 }
@@ -342,7 +342,7 @@
   
   NSString *appBundleIdentifier = [self.mainBundle objectForInfoDictionaryKey:@"CFBundleIdentifier"];
   
-  NSString *url = [NSString stringWithFormat:@"http://itunes.apple.com/lookup?bundleId=%@%@",
+  NSString *url = [NSString stringWithFormat:@"https://itunes.apple.com/lookup?bundleId=%@%@",
                    bit_URLEncodedString(appBundleIdentifier),
                    country];
   
@@ -435,7 +435,7 @@
 - (void)showUpdateAlert {
   if (!_updateAlertShowing) {
     NSString *versionString = [NSString stringWithFormat:@"%@ %@", BITHockeyLocalizedString(@"UpdateVersion"), _newStoreVersion];
-    
+    /* We won't use this for now until we have a more robust solution for displaying UIAlertController
     // requires iOS 8
     id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
     if (uialertcontrollerClass) {
@@ -475,6 +475,7 @@
       
       [self showAlertController:alertController];
     } else {
+     */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
       UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"UpdateAvailable")
@@ -485,7 +486,7 @@
                                 ];
       [alertView show];
 #pragma clang diagnostic pop
-    }
+    /*}*/
     
     _updateAlertShowing = YES;
   }
