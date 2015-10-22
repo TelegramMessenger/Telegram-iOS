@@ -278,6 +278,8 @@
 		1EF95CA7162CB037000AE3AD /* BITFeedbackActivity.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EF95CA5162CB036000AE3AD /* BITFeedbackActivity.m */; };
 		1EF95CAA162CB314000AE3AD /* BITFeedbackComposeViewControllerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EF95CA9162CB313000AE3AD /* BITFeedbackComposeViewControllerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1EFF03E517F2485500A5F13C /* BITCrashManagerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EFF03E417F2485500A5F13C /* BITCrashManagerTests.m */; };
+		802C45B31BD9629B000D043C /* HockeySDKNullability.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E3A260E1B2B207900D59683 /* HockeySDKNullability.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		802C45B41BD9629C000D043C /* HockeySDKNullability.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E3A260E1B2B207900D59683 /* HockeySDKNullability.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		807756401BC6A44E0037C3DA /* HockeySDKEnums.h in Headers */ = {isa = PBXBuildFile; fileRef = 8077563F1BC6A44D0037C3DA /* HockeySDKEnums.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		807756411BC6B6050037C3DA /* HockeySDKEnums.h in Headers */ = {isa = PBXBuildFile; fileRef = 8077563F1BC6A44D0037C3DA /* HockeySDKEnums.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		846A901F1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h in Headers */ = {isa = PBXBuildFile; fileRef = 846A901D1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h */; };
@@ -1110,6 +1112,7 @@
 				1E754E601621FBB70070AB92 /* BITCrashReportTextFormatter.h in Headers */,
 				1E84DB3417E099BA00AC83FD /* HockeySDKFeatureConfig.h in Headers */,
 				1EACC97B162F041E007578C5 /* BITAttributedLabel.h in Headers */,
+				802C45B41BD9629C000D043C /* HockeySDKNullability.h in Headers */,
 				1E0FEE28173BDB260061331F /* BITKeychainUtils.h in Headers */,
 				1E94F9E416E9136B006570AD /* BITStoreUpdateManagerPrivate.h in Headers */,
 				9760F6CF18BB685600959B93 /* BITImageAnnotation.h in Headers */,
@@ -1170,6 +1173,7 @@
 				1EB617981B0A315F0035A986 /* BITFeedbackMessage.h in Headers */,
 				1EB617A91B0A31AB0035A986 /* BITStoreUpdateManager.h in Headers */,
 				1EB617AB1B0A31B40035A986 /* BITStoreUpdateManagerDelegate.h in Headers */,
+				802C45B31BD9629B000D043C /* HockeySDKNullability.h in Headers */,
 				1EB617AD1B0A31BF0035A986 /* BITHockeyManagerDelegate.h in Headers */,
 				1EB617971B0A31580035A986 /* BITBlurImageAnnotation.h in Headers */,
 				1EB617611B0A30A50035A986 /* BITHockeyBaseViewController.h in Headers */,
