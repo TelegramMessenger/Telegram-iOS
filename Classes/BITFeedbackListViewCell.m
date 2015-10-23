@@ -359,7 +359,7 @@
 
 - (void)imageButtonPressed:(id)sender {
   if ([self.delegate respondsToSelector:@selector(listCell:didSelectAttachment:)]) {
-    NSInteger index = [self.attachmentViews indexOfObject:sender];
+    NSUInteger index = [self.attachmentViews indexOfObject:sender];
     if (index != NSNotFound && [self.message previewableAttachments].count > index) {
       BITFeedbackMessageAttachment *attachment = [self.message previewableAttachments][index];
       [self.delegate listCell:self didSelectAttachment:attachment];

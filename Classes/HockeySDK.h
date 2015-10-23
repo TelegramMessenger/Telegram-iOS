@@ -37,6 +37,7 @@
 
 #import "HockeySDKFeatureConfig.h"
 #import "HockeySDKEnums.h"
+#import "HockeySDKNullability.h"
 
 #import "BITHockeyManager.h"
 #import "BITHockeyManagerDelegate.h"

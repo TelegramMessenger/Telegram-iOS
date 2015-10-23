@@ -962,7 +962,7 @@
   self.cachedPreviewItems = nil;
   NSMutableArray *collectedAttachments = [NSMutableArray new];
   
-  for (int i = 0; i < self.manager.numberOfMessages; i++) {
+  for (uint i = 0; i < self.manager.numberOfMessages; i++) {
     BITFeedbackMessage *message = [self.manager messageAtIndex:i];
     [collectedAttachments addObjectsFromArray:message.previewableAttachments];
   }

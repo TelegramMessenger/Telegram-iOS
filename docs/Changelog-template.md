@@ -1,3 +1,8 @@
+## Version 3.8.4
+
+- [BUGFIX] Fix a missing header in the `HockeySDK.h` umbrella
+- [BUGFIX] Fix several type comparison warnings
+
 ## Version 3.8.3
 
 - [NEW] Adds new `appEnvironment` property to indicate the environment the app is running in. This replaces the old `isAppStoreEnvironment` which is now deprecated. We can now differentiate between apps installed via TestFlight or the AppStore
