@@ -1900,6 +1900,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "net.hockeyapp.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VALIDATE_PRODUCT = YES;
+				VALID_ARCHS = "armv7 arm64";
 			};
 			name = ReleaseCrashOnlyExtensions;
 		};
@@ -2520,6 +2521,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "net.hockeyapp.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				VALID_ARCHS = "armv7 arm64";
 			};
 			name = Debug;
 		};
@@ -2591,6 +2593,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "net.hockeyapp.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VALIDATE_PRODUCT = YES;
+				VALID_ARCHS = "armv7 arm64";
 			};
 			name = Release;
 		};
@@ -2662,6 +2665,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "net.hockeyapp.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VALIDATE_PRODUCT = YES;
+				VALID_ARCHS = "armv7 arm64";
 			};
 			name = ReleaseCrashOnly;
 		};
