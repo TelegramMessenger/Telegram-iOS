@@ -388,7 +388,7 @@
  TestFlight and Other. Other summarizes several different distribution methods
  and we might define additional specifc values for other environments in the future.
  
- @see `BITEnvironment`
+ @see BITEnvironment
  */
 @property (nonatomic, readonly) BITEnvironment appEnvironment;
 
