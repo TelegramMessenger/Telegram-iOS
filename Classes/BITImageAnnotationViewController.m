@@ -301,7 +301,7 @@ typedef NS_ENUM(NSInteger, BITImageAnnotationViewControllerInteractionMode) {
     BITImageAnnotation *candidate = nil;
     BOOL validView = YES;
     
-    for (uint i = 0; i<gestureRecognizer.numberOfTouches; i++){
+    for (uint i = 0; i < gestureRecognizer.numberOfTouches; i++){
       BITImageAnnotation *newCandidate = (BITImageAnnotation *)[self.view hitTest:[gestureRecognizer locationOfTouch:i inView:self.view] withEvent:nil];
       
       if (![newCandidate isKindOfClass:[BITImageAnnotation class]]){

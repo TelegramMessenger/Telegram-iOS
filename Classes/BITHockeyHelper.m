@@ -321,7 +321,7 @@ BOOL bit_isAppStoreReceiptSandbox(void) {
 }
 
 BOOL bit_hasEmbeddedMobileProvision(void) {
-  BOOL hasEmbeddedMobileProvision = [[NSBundle mainBundle] pathForResource:@"embedded" ofType:@"mobileprovision"];
+  BOOL hasEmbeddedMobileProvision = !![[NSBundle mainBundle] pathForResource:@"embedded" ofType:@"mobileprovision"];
   return hasEmbeddedMobileProvision;
 }
 

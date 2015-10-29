@@ -427,8 +427,10 @@
  
  Returns _YES_ if the app is installed and running from the App Store
  Returns _NO_ if the app is installed via debug, ad-hoc or enterprise distribution
+ 
+ @deprecated Please use `appEnvironment` instead!
  */
-@property (nonatomic, readonly, getter=isAppStoreEnvironment) BOOL appStoreEnvironment DEPRECATED_MSG_ATTRIBUTE("Use appEnvironment instead!");
+@property (nonatomic, readonly, getter=isAppStoreEnvironment) BOOL appStoreEnvironment DEPRECATED_ATTRIBUTE;
 
 
 /**
