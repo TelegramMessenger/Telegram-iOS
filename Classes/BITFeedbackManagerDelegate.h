@@ -27,9 +27,9 @@
  */
 
 #import <Foundation/Foundation.h>
+#import "BITFeedbackComposeViewControllerDelegate.h"
 
 @class BITFeedbackManager;
-@protocol BITFeedbackComposeViewControllerDelegate;
 
 /**
  *	Delegate protocol which is notified about changes in the feedbackManager
