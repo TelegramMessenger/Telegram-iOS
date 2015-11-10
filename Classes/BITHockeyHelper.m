@@ -275,7 +275,7 @@ BOOL bit_isAppStoreReceiptSandbox(void) {
 #if TARGET_IPHONE_SIMULATOR
   return NO;
 #else
-  if (floor(NSFoundationVersionNumber) <= NSFoundationVersionNumber_iOS_6_1) {
+  if (![NSBundle.mainBundle respondsToSelector:@selector(appStoreReceiptURL)]) {
     return NO;
   }
   NSURL *appStoreReceiptURL = NSBundle.mainBundle.appStoreReceiptURL;
