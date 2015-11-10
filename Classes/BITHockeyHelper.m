@@ -292,15 +292,21 @@ BITEnvironment bit_currentAppEnvironment(void) {
 #if TARGET_IPHONE_SIMULATOR
   return BITEnvironmentOther;
 #else
+  
+  // MobilePovision profiles are a clear indicator for Ad-Hoc distribution
   if (bit_hasEmbeddedMobileProvision()) {
     return BITEnvironmentOther;
   }
+  
+  // TestFlight is only supported from iOS 8 onwards, so at this point we have to be in the AppStore
   if (floor(NSFoundationVersionNumber) <= NSFoundationVersionNumber_iOS_6_1) {
     return BITEnvironmentAppStore;
   }
+  
   if (bit_isAppStoreReceiptSandbox()) {
     return BITEnvironmentTestFlight;
   }
+  
   return BITEnvironmentAppStore;
 #endif
 }
