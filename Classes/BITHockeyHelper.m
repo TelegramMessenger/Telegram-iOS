@@ -310,6 +310,22 @@ BOOL bit_isRunningInAppStoreEnvironment(void) {
 #endif
 }
 
+BITEnvironment bit_currentAppEnvironment(void) {
+#if TARGET_IPHONE_SIMULATOR
+  return BITEnvironmentOther;
+#endif
+  if (bit_hasEmbeddedMobileProvision()) {
+    return BITEnvironmentOther;
+  }
+  if (floor(NSFoundationVersionNumber) <= NSFoundationVersionNumber_iOS_6_1) {
+    return BITEnvironmentAppStore;
+  }
+  if (bit_isAppStoreReceiptSandbox()) {
+    return BITEnvironmentTestFlight;
+  }
+  return BITEnvironmentAppStore;
+}
+
 BOOL bit_isRunningInAppExtension(void) {
   static BOOL isRunningInAppExtension = NO;
   static dispatch_once_t checkAppExtension;
