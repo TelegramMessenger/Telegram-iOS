@@ -291,7 +291,7 @@ BOOL bit_hasEmbeddedMobileProvision(void) {
 BITEnvironment bit_currentAppEnvironment(void) {
 #if TARGET_IPHONE_SIMULATOR
   return BITEnvironmentOther;
-#endif
+#else
   if (bit_hasEmbeddedMobileProvision()) {
     return BITEnvironmentOther;
   }
@@ -302,6 +302,7 @@ BITEnvironment bit_currentAppEnvironment(void) {
     return BITEnvironmentTestFlight;
   }
   return BITEnvironmentAppStore;
+#endif
 }
 
 BOOL bit_isRunningInAppExtension(void) {
