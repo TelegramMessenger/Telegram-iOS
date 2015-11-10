@@ -288,28 +288,6 @@ BOOL bit_hasEmbeddedMobileProvision(void) {
   return hasEmbeddedMobileProvision;
 }
 
-BOOL bit_isRunningInTestFlightEnvironment(void) {
-#if TARGET_IPHONE_SIMULATOR
-  return NO;
-#else
-  if (bit_isAppStoreReceiptSandbox() && !bit_hasEmbeddedMobileProvision()) {
-    return YES;
-  }
-  return NO;
-#endif
-}
-
-BOOL bit_isRunningInAppStoreEnvironment(void) {
-#if TARGET_IPHONE_SIMULATOR
-  return NO;
-#else
-  if (bit_isAppStoreReceiptSandbox() || bit_hasEmbeddedMobileProvision()) {
-    return NO;
-  }
-  return YES;
-#endif
-}
-
 BITEnvironment bit_currentAppEnvironment(void) {
 #if TARGET_IPHONE_SIMULATOR
   return BITEnvironmentOther;
