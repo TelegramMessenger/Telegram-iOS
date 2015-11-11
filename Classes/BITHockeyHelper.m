@@ -272,9 +272,12 @@ BOOL bit_isPreiOS8Environment(void) {
 }
 
 BOOL bit_isAppStoreReceiptSandbox(void) {
-#if TARGET_IPHONE_SIMULATOR
+#if TARGET_OS_SIMULATOR
   return NO;
 #else
+  if (![NSBundle.mainBundle respondsToSelector:@selector(appStoreReceiptURL)]) {
+    return NO;
+  }
   NSURL *appStoreReceiptURL = NSBundle.mainBundle.appStoreReceiptURL;
   NSString *appStoreReceiptLastComponent = appStoreReceiptURL.lastPathComponent;
   
@@ -288,25 +291,26 @@ BOOL bit_hasEmbeddedMobileProvision(void) {
   return hasEmbeddedMobileProvision;
 }
 
-BOOL bit_isRunningInTestFlightEnvironment(void) {
-#if TARGET_IPHONE_SIMULATOR
-  return NO;
+BITEnvironment bit_currentAppEnvironment(void) {
+#if TARGET_OS_SIMULATOR
+  return BITEnvironmentOther;
 #else
-  if (bit_isAppStoreReceiptSandbox() && !bit_hasEmbeddedMobileProvision()) {
-    return YES;
+  
+  // MobilePovision profiles are a clear indicator for Ad-Hoc distribution
+  if (bit_hasEmbeddedMobileProvision()) {
+    return BITEnvironmentOther;
   }
-  return NO;
-#endif
-}
-
-BOOL bit_isRunningInAppStoreEnvironment(void) {
-#if TARGET_IPHONE_SIMULATOR
-  return NO;
-#else
-  if (bit_isAppStoreReceiptSandbox() || bit_hasEmbeddedMobileProvision()) {
-    return NO;
+  
+  // TestFlight is only supported from iOS 8 onwards, so at this point we have to be in the AppStore
+  if (floor(NSFoundationVersionNumber) <= NSFoundationVersionNumber_iOS_6_1) {
+    return BITEnvironmentAppStore;
   }
-  return YES;
+  
+  if (bit_isAppStoreReceiptSandbox()) {
+    return BITEnvironmentTestFlight;
+  }
+  
+  return BITEnvironmentAppStore;
 #endif
 }
 

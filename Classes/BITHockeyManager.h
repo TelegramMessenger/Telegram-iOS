@@ -388,7 +388,7 @@
  TestFlight and Other. Other summarizes several different distribution methods
  and we might define additional specifc values for other environments in the future.
  
- @see `BITEnvironment`
+ @see BITEnvironment
  */
 @property (nonatomic, readonly) BITEnvironment appEnvironment;
 
@@ -399,8 +399,10 @@
  
  Returns _YES_ if the app is installed and running from the App Store
  Returns _NO_ if the app is installed via debug, ad-hoc or enterprise distribution
+ 
+ @deprecated Please use `appEnvironment` instead!
  */
-@property (nonatomic, readonly, getter=isAppStoreEnvironment) BOOL appStoreEnvironment DEPRECATED_MSG_ATTRIBUTE("Use appEnvironment instead!");
+@property (nonatomic, readonly, getter=isAppStoreEnvironment) BOOL appStoreEnvironment DEPRECATED_ATTRIBUTE;
 
 
 /**

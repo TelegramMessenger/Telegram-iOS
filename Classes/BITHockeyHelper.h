@@ -28,6 +28,7 @@
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
+#import "HockeySDKEnums.h"
 
 /* NSString helpers */
 NSString *bit_URLEncodedString(NSString *inputString);
@@ -49,8 +50,7 @@ BOOL bit_isPreiOS7Environment(void);
 BOOL bit_isPreiOS8Environment(void);
 BOOL bit_isAppStoreReceiptSandbox(void);
 BOOL bit_hasEmbeddedMobileProvision(void);
-BOOL bit_isRunningInTestFlightEnvironment(void);
-BOOL bit_isRunningInAppStoreEnvironment(void);
+BITEnvironment bit_currentAppEnvironment(void);
 BOOL bit_isRunningInAppExtension(void);
 
 #if !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnly) && !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions)

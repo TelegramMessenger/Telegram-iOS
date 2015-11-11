@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name              = 'HockeySDK-Source'
-  s.version           = '3.8.4'
+  s.version           = '3.8.5'
 
   s.summary           = 'Collect live crash reports, get feedback from your users, distribute your betas, and analyze your test coverage with HockeyApp.'
   s.description       = <<-DESC
@@ -15,7 +15,7 @@ Pod::Spec.new do |s|
   s.documentation_url = "http://hockeyapp.net/help/sdk/ios/#{s.version}/"
 
   s.license           = 'MIT'
-  s.author            = { 'Andreas Linde' => 'mail@andreaslinde.de', 'Thomas Dohmke' => "thomas@dohmke.de" }
+  s.author            = { 'Microsoft' => 'support@hockeyapp.net' }
   s.source            = { :git => 'https://github.com/bitstadium/HockeySDK-iOS.git', :tag => s.version.to_s }
 
   s.platform          = :ios, '7.0'
@@ -26,7 +26,7 @@ Pod::Spec.new do |s|
   s.frameworks              = 'AssetsLibrary', 'CoreText', 'CoreGraphics', 'MobileCoreServices', 'QuartzCore', 'QuickLook', 'Security', 'SystemConfiguration', 'UIKit'
   s.libraries = 'c++'
   s.ios.vendored_frameworks = 'Vendor/CrashReporter.framework'
-  s.xcconfig                = {'GCC_PREPROCESSOR_DEFINITIONS' => %{$(inherited) BITHOCKEY_VERSION="@\\"#{s.version}\\"" BITHOCKEY_C_VERSION="\\"#{s.version}\\"" BITHOCKEY_BUILD="@\\"56\\"" BITHOCKEY_C_BUILD="\\"56\\""} }
+  s.xcconfig                = {'GCC_PREPROCESSOR_DEFINITIONS' => %{$(inherited) BITHOCKEY_VERSION="@\\"#{s.version}\\"" BITHOCKEY_C_VERSION="\\"#{s.version}\\"" BITHOCKEY_BUILD="@\\"57\\"" BITHOCKEY_C_BUILD="\\"57\\""} }
   s.resource_bundle         = { 'HockeySDKResources' => ['Resources/*.png', 'Resources/*.lproj'] }
   s.preserve_paths          = 'Resources', 'Support'
   s.private_header_files  = 'Classes/*Private.h'

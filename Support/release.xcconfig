@@ -1,4 +1,4 @@
 #include "buildnumber.xcconfig"
 
-OTHER_CFLAGS[sdk=iphoneos9.*] = -Wshorten-64-to-32 -Wall -fembed-bitcode
-OTHER_CFLAGS[sdk=iphonesimulator9.*] = -Wshorten-64-to-32 -Wall
+OTHER_CFLAGS[sdk=iphoneos9.*] = $(HOCKEYSDK_WARNING_FLAGS) -fembed-bitcode
+OTHER_CFLAGS[sdk=iphonesimulator9.*] = $(HOCKEYSDK_WARNING_FLAGS)
