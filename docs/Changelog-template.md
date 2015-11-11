@@ -1,3 +1,9 @@
+## Version 3.8.5
+
+- [UPDATE] Some minor improvements to our documentation
+- [BUGFIX] Fix a crash where `appStoreReceiptURL` was accidentally accessed on iOS 6
+- [BUGFIX] Fix a warning when implementing `BITHockeyManagerDelegate`
+
 ## Version 3.8.4
 
 - [BUGFIX] Fix a missing header in the `HockeySDK.h` umbrella
