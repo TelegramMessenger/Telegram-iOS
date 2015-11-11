@@ -272,7 +272,7 @@ BOOL bit_isPreiOS8Environment(void) {
 }
 
 BOOL bit_isAppStoreReceiptSandbox(void) {
-#if TARGET_IPHONE_SIMULATOR
+#if TARGET_OS_SIMULATOR
   return NO;
 #else
   if (![NSBundle.mainBundle respondsToSelector:@selector(appStoreReceiptURL)]) {
@@ -292,7 +292,7 @@ BOOL bit_hasEmbeddedMobileProvision(void) {
 }
 
 BITEnvironment bit_currentAppEnvironment(void) {
-#if TARGET_IPHONE_SIMULATOR
+#if TARGET_OS_SIMULATOR
   return BITEnvironmentOther;
 #else
   
