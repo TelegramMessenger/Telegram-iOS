@@ -348,7 +348,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
         processPath = report.processInfo.processPath;
         
         /* Remove username from the path */
-#if TARGET_IPHONE_SIMULATOR
+#if TARGET_OS_SIMULATOR
         if ([processPath length] > 0)
           processPath = [processPath stringByAbbreviatingWithTildeInPath];
         if ([processPath length] > 0 && [[processPath substringToIndex:1] isEqualToString:@"~"])
@@ -438,7 +438,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
     NSString *foundSelector = nil;
 
     // search the registers value for the current arch
-#if TARGET_IPHONE_SIMULATOR
+#if TARGET_OS_SIMULATOR
     if (lp64) {
       foundSelector = [[self class] selectorForRegisterWithName:@"rsi" ofThread:crashed_thread report:report];
       if (foundSelector == NULL)
@@ -577,13 +577,13 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
     /* Remove username from the image path */
     NSString *imageName = @"";
     if (imageInfo.imageName && [imageInfo.imageName length] > 0) {
-#if TARGET_IPHONE_SIMULATOR
+#if TARGET_OS_SIMULATOR
       imageName = [imageInfo.imageName stringByAbbreviatingWithTildeInPath];
 #else
       imageName = imageInfo.imageName;
 #endif
     }
-#if TARGET_IPHONE_SIMULATOR
+#if TARGET_OS_SIMULATOR
     if ([imageName length] > 0 && [[imageName substringToIndex:1] isEqualToString:@"~"])
       imageName = [NSString stringWithFormat:@"/Users/USER%@", [imageName substringFromIndex:1]];
 #endif
