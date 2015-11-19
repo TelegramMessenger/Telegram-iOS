@@ -107,21 +107,8 @@ static NSInteger const schemaVersion  = 2;
   data.baseType = telemetryData.dataTypeName;
   
   BITEnvelope *envelope = [BITEnvelope new];
-  envelope.appId = bit_mainBundleIdentifier();
-  envelope.appVer = _telemetryContext.application.version;
   envelope.time = bit_utcDateString([NSDate date]);
   envelope.iKey = _telemetryContext.appIdentifier;
-  
-  BITDevice *deviceContext = _telemetryContext.device;
-  if (deviceContext.deviceId) {
-    envelope.deviceId = deviceContext.deviceId;
-  }
-  if (deviceContext.os) {
-    envelope.os = deviceContext.os;
-  }
-  if (deviceContext.osVersion) {
-    envelope.osVer = deviceContext.osVersion;
-  }
   
   envelope.tags = _telemetryContext.contextDictionary;
   envelope.data = data;
