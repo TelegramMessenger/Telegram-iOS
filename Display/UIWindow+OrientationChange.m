@@ -5,21 +5,27 @@
 
 static const void *isRotatingKey = &isRotatingKey;
 
+static NSMutableArray *postDeviceDidChangeOrientationBlocks() {
+    static NSMutableArray *array = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        array = [[NSMutableArray alloc] init];
+    });
+    return array;
+}
+
+static bool _isDeviceRotating = false;
+
 @implementation UIWindow (OrientationChange)
 
-+ (void)load
-{
++ (void)load {
     static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^
-    {
-        [NotificationCenterUtils addNotificationHandler:^bool(NSString *name, id object, NSDictionary *userInfo)
-        {
-            if ([name isEqualToString:@"UIWindowWillRotateNotification"])
-            {
+    dispatch_once(&onceToken, ^ {
+        [NotificationCenterUtils addNotificationHandler:^bool(NSString *name, id object, NSDictionary *userInfo, void (^passNotification)()) {
+            if ([name isEqualToString:@"UIWindowWillRotateNotification"]) {
                 [(UIWindow *)object setRotating:true];
                 
-                if (NSClassFromString(@"NSUserActivity") == NULL)
-                {
+                if (NSClassFromString(@"NSUserActivity") == NULL) {
                     UIInterfaceOrientation orientation = [userInfo[@"UIWindowNewOrientationUserInfoKey"] integerValue];
                     CGSize screenSize = [UIScreen mainScreen].bounds.size;
                     if (screenSize.width > screenSize.height)
@@ -61,15 +67,41 @@ static const void *isRotatingKey = &isRotatingKey;
                         ((UIWindow *)object).bounds = CGRectMake(0.0f, 0.0f, windowSize.width, windowSize.height);
                     }];
                 }
-            }
-            else if ([name isEqualToString:@"UIWindowDidRotateNotification"])
-            {
+                
+                passNotification();
+                
+                return true;
+            } else if ([name isEqualToString:@"UIWindowDidRotateNotification"]) {
                 [(UIWindow *)object setRotating:false];
+            } else if ([name isEqualToString:UIDeviceOrientationDidChangeNotification]) {
+                //NSLog(@"notification start: %@", name);
+                
+                _isDeviceRotating = true;
+                
+                passNotification();
+                
+                if (postDeviceDidChangeOrientationBlocks().count != 0) {
+                    NSArray *blocks = [postDeviceDidChangeOrientationBlocks() copy];
+                    [postDeviceDidChangeOrientationBlocks() removeAllObjects];
+                    for (dispatch_block_t block in blocks) {
+                        block();
+                    }
+                }
+                
+                _isDeviceRotating = false;
+                
+                //NSLog(@"notification end: %@", name);
+                
+                return true;
             }
             
             return false;
         }];
     });
+}
+
++ (void)addPostDeviceOrientationDidChangeBlock:(void (^)())block {
+    [postDeviceDidChangeOrientationBlocks() addObject:[block copy]];
 }
 
 - (void)setRotating:(bool)rotating
@@ -80,6 +112,10 @@ static const void *isRotatingKey = &isRotatingKey;
 - (bool)isRotating
 {
     return [[self associatedObjectForKey:isRotatingKey] boolValue];
+}
+
++ (bool)isDeviceRotating {
+    return _isDeviceRotating;
 }
 
 @end

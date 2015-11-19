@@ -5,3 +5,9 @@
 + (double)animationDurationFactor;
 
 @end
+
+@interface CASpringAnimation (AnimationUtils)
+
+- (CGFloat)valueAt:(CGFloat)t;
+
+@end

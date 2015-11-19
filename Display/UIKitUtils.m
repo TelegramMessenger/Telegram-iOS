@@ -16,3 +16,17 @@ UIKIT_EXTERN float UIAnimationDragCoefficient(); // UIKit private drag coeffient
 }
 
 @end
+
+@interface CASpringAnimation ()
+
+- (float)_solveForInput:(float)arg1;
+
+@end
+
+@implementation CASpringAnimation (AnimationUtils)
+
+- (CGFloat)valueAt:(CGFloat)t {
+    return [self _solveForInput:t];
+}
+
+@end

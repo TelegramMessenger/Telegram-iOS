@@ -14,6 +14,8 @@ public class NavigationBar: ASDisplayNode {
     private var tempItem: UINavigationItem?
     private var tempItemWrapper: NavigationItemWrapper?
     
+    private let stripeHeight: CGFloat = 1.0 / UIScreen.mainScreen().scale
+    
     var backPressed: () -> () = { }
     
     private var collapsed: Bool {
@@ -112,7 +114,8 @@ public class NavigationBar: ASDisplayNode {
     }
     
     public override func layout() {
-        self.stripeView.frame = CGRect(x: 0.0, y: self.frame.size.height - 0.5, width: self.frame.size.width, height: 0.5)
+        
+        self.stripeView.frame = CGRect(x: 0.0, y: self.frame.size.height - stripeHeight, width: self.frame.size.width, height: stripeHeight)
         
         self.topItemWrapper?.layoutItems()
         self.tempItemWrapper?.layoutItems()

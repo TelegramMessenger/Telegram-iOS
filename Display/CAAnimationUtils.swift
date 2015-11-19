@@ -1,16 +1,38 @@
 import UIKit
 
 @objc private class CALayerAnimationDelegate: NSObject {
-    let completion: Bool -> Void
+    var completion: (Bool -> Void)?
     
-    init(completion: Bool -> Void) {
+    init(completion: (Bool -> Void)?) {
         self.completion = completion
         
         super.init()
     }
     
     @objc override func animationDidStop(anim: CAAnimation, finished flag: Bool) {
-        self.completion(flag)
+        if let completion = self.completion {
+            completion(flag)
+        }
+    }
+}
+
+private let completionKey = "CAAnimationUtils_completion"
+
+public extension CAAnimation {
+    public var completion: (Bool -> Void)? {
+        get {
+            if let delegate = self.delegate as? CALayerAnimationDelegate {
+                return delegate.completion
+            } else {
+                return nil
+            }
+        } set(value) {
+            if let delegate = self.delegate as? CALayerAnimationDelegate {
+                delegate.completion = value
+            } else {
+                self.delegate = CALayerAnimationDelegate(completion: value)
+            }
+        }
     }
 }
 

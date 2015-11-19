@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 
 public class KeyboardHostWindow: UIWindow {
-    let textField: UITextField
+    public let textField: UITextField
     
     convenience public init() {
         self.init(frame: CGRect())
@@ -13,7 +13,7 @@ public class KeyboardHostWindow: UIWindow {
         
         super.init(frame: frame)
         
-        self.windowLevel = 1000.0
+        self.windowLevel = -1.0
         self.rootViewController = UIViewController()
         self.addSubview(self.textField)
     }

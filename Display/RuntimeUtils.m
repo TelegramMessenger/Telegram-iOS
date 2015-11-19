@@ -4,20 +4,34 @@
 
 @implementation RuntimeUtils
 
-+ (void)swizzleInstanceMethodOfClass:(Class)targetClass currentSelector:(SEL)currentSelector newSelector:(SEL)newSelector
-{
++ (void)swizzleInstanceMethodOfClass:(Class)targetClass currentSelector:(SEL)currentSelector newSelector:(SEL)newSelector {
     Method origMethod = nil, newMethod = nil;
     
     origMethod = class_getInstanceMethod(targetClass, currentSelector);
     newMethod = class_getInstanceMethod(targetClass, newSelector);
-    if ((origMethod != nil) && (newMethod != nil))
-    {
-        if(class_addMethod(targetClass, currentSelector, method_getImplementation(newMethod), method_getTypeEncoding(newMethod)))
-        {
+    if ((origMethod != nil) && (newMethod != nil)) {
+        if(class_addMethod(targetClass, currentSelector, method_getImplementation(newMethod), method_getTypeEncoding(newMethod))) {
             class_replaceMethod(targetClass, newSelector, method_getImplementation(origMethod), method_getTypeEncoding(origMethod));
-        }
-        else
+        } else {
             method_exchangeImplementations(origMethod, newMethod);
+        }
+    }
+}
+
++ (void)swizzleClassMethodOfClass:(Class)targetClass currentSelector:(SEL)currentSelector newSelector:(SEL)newSelector {
+    Method origMethod = nil, newMethod = nil;
+    
+    origMethod = class_getClassMethod(targetClass, currentSelector);
+    newMethod = class_getClassMethod(targetClass, newSelector);
+    
+    targetClass = object_getClass((id)targetClass);
+    
+    if ((origMethod != nil) && (newMethod != nil)) {
+        if(class_addMethod(targetClass, currentSelector, method_getImplementation(newMethod), method_getTypeEncoding(newMethod))) {
+            class_replaceMethod(targetClass, newSelector, method_getImplementation(origMethod), method_getTypeEncoding(origMethod));
+        } else {
+            method_exchangeImplementations(origMethod, newMethod);
+        }
     }
 }
 

@@ -53,6 +53,9 @@
 		D06EE8451B7140FF00837186 /* Font.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06EE8441B7140FF00837186 /* Font.swift */; };
 		D07921A91B6FC0C0005C23D9 /* KeyboardHostWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07921A81B6FC0C0005C23D9 /* KeyboardHostWindow.swift */; };
 		D07921AC1B6FC92B005C23D9 /* StatusBarHostWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07921AB1B6FC92B005C23D9 /* StatusBarHostWindow.swift */; };
+		D0DC48541BF93D8B00F672FD /* TabBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DC48531BF93D8A00F672FD /* TabBarController.swift */; };
+		D0DC48561BF945DD00F672FD /* TabBarNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DC48551BF945DD00F672FD /* TabBarNode.swift */; };
+		D0DC485F1BF949FB00F672FD /* TabBarContollerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DC485E1BF949FB00F672FD /* TabBarContollerNode.swift */; };
 		D0E49C881B83A3580099E553 /* ImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E49C871B83A3580099E553 /* ImageCache.swift */; };
 /* End PBXBuildFile section */
 
@@ -116,6 +119,9 @@
 		D06EE8441B7140FF00837186 /* Font.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Font.swift; sourceTree = "<group>"; };
 		D07921A81B6FC0C0005C23D9 /* KeyboardHostWindow.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = KeyboardHostWindow.swift; sourceTree = "<group>"; };
 		D07921AB1B6FC92B005C23D9 /* StatusBarHostWindow.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StatusBarHostWindow.swift; sourceTree = "<group>"; };
+		D0DC48531BF93D8A00F672FD /* TabBarController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TabBarController.swift; sourceTree = "<group>"; };
+		D0DC48551BF945DD00F672FD /* TabBarNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TabBarNode.swift; sourceTree = "<group>"; };
+		D0DC485E1BF949FB00F672FD /* TabBarContollerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TabBarContollerNode.swift; sourceTree = "<group>"; };
 		D0E49C871B83A3580099E553 /* ImageCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageCache.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -173,6 +179,7 @@
 				D07921AA1B6FC911005C23D9 /* Status Bar */,
 				D07921A71B6FC0AE005C23D9 /* Keyboard */,
 				D05CC3211B695AA600E235A3 /* Navigation */,
+				D0DC48521BF93D7C00F672FD /* Tabs */,
 				D02BDAEC1B6A7053008AFAD2 /* Nodes */,
 				D0E49C861B83A1680099E553 /* Image Cache */,
 				D05CC2A11B69326C00E235A3 /* Window.swift */,
@@ -274,6 +281,16 @@
 				D07921AB1B6FC92B005C23D9 /* StatusBarHostWindow.swift */,
 			);
 			name = "Status Bar";
+			sourceTree = "<group>";
+		};
+		D0DC48521BF93D7C00F672FD /* Tabs */ = {
+			isa = PBXGroup;
+			children = (
+				D0DC48531BF93D8A00F672FD /* TabBarController.swift */,
+				D0DC485E1BF949FB00F672FD /* TabBarContollerNode.swift */,
+				D0DC48551BF945DD00F672FD /* TabBarNode.swift */,
+			);
+			name = Tabs;
 			sourceTree = "<group>";
 		};
 		D0E49C861B83A1680099E553 /* Image Cache */ = {
@@ -419,13 +436,16 @@
 				D05CC2F71B6955D000E235A3 /* UIKitUtils.swift in Sources */,
 				D05CC3161B695A9600E235A3 /* NavigationBar.swift in Sources */,
 				D05CC31D1B695A9600E235A3 /* UIBarButtonItem+Proxy.m in Sources */,
+				D0DC48541BF93D8B00F672FD /* TabBarController.swift in Sources */,
 				D05CC3171B695A9600E235A3 /* NavigationItemWrapper.swift in Sources */,
 				D05CC3191B695A9600E235A3 /* NavigationBackButtonNode.swift in Sources */,
 				D05CC3071B69575900E235A3 /* NSBag.m in Sources */,
+				D0DC48561BF945DD00F672FD /* TabBarNode.swift in Sources */,
 				D05CC31A1B695A9600E235A3 /* NavigationButtonNode.swift in Sources */,
 				D05CC2E71B69555800E235A3 /* CAAnimationUtils.swift in Sources */,
 				D05CC31B1B695A9600E235A3 /* NavigationTitleNode.swift in Sources */,
 				D05CC31C1B695A9600E235A3 /* BarButtonItemWrapper.swift in Sources */,
+				D0DC485F1BF949FB00F672FD /* TabBarContollerNode.swift in Sources */,
 				D05CC2FA1B6955D000E235A3 /* UINavigationItem+Proxy.m in Sources */,
 				D05CC2E81B69555800E235A3 /* CALayer+ImplicitAnimations.m in Sources */,
 				D05CC2EC1B69558A00E235A3 /* RuntimeUtils.m in Sources */,
@@ -549,6 +569,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -569,6 +590,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;

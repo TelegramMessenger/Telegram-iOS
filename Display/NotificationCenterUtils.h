@@ -1,6 +1,6 @@
 #import <Foundation/Foundation.h>
 
-typedef bool (^NotificationHandlerBlock)(NSString *, id, NSDictionary *);
+typedef bool (^NotificationHandlerBlock)(NSString *, id, NSDictionary *, void (^)());
 
 @interface NotificationCenterUtils : NSObject
 

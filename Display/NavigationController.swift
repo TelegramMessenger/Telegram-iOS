@@ -3,11 +3,21 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 
+private struct NavigationControllerLayout {
+    let layout: ViewControllerLayout
+    let statusBarHeight: CGFloat
+}
+
 public class NavigationController: NavigationControllerProxy, WindowContentController, UIGestureRecognizerDelegate {
     private var _navigationBar: NavigationBar!
     private var navigationTransitionCoordinator: NavigationTransitionCoordinator?
     
     private var currentPushDisposable = MetaDisposable()
+    
+    private var statusBarChangeObserver: AnyObject?
+    
+    private var layout: NavigationControllerLayout?
+    private var pendingLayout: (NavigationControllerLayout, NSTimeInterval, Bool)?
     
     public override init() {
         self._navigationBar = nil
@@ -26,6 +36,23 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
             }
             return
         }
+        
+        self.statusBarChangeObserver = NSNotificationCenter.defaultCenter().addObserverForName(UIApplicationWillChangeStatusBarFrameNotification, object: nil, queue: NSOperationQueue.mainQueue(), usingBlock: { [weak self] notification in
+            if let strongSelf = self {
+                let statusBarHeight: CGFloat = (notification.userInfo?[UIApplicationStatusBarFrameUserInfoKey] as? NSValue)?.CGRectValue().height ?? 20.0
+                
+                let previousLayout: NavigationControllerLayout?
+                if let pendingLayout = strongSelf.pendingLayout {
+                    previousLayout = pendingLayout.0
+                } else {
+                    previousLayout = strongSelf.layout
+                }
+                
+                strongSelf.pendingLayout = (NavigationControllerLayout(layout: ViewControllerLayout(size: previousLayout?.layout.size ?? CGSize(), insets: previousLayout?.layout.insets ?? UIEdgeInsets(), inputViewHeight: 0.0), statusBarHeight: statusBarHeight), (strongSelf.pendingLayout?.2 ?? false) ? (strongSelf.pendingLayout?.1 ?? 0.3) : max(strongSelf.pendingLayout?.1 ?? 0.0, 0.35), true)
+                
+                strongSelf.view.setNeedsLayout()
+            }
+        })
     }
     
     public override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: NSBundle?) {
@@ -41,8 +68,6 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
         
         self.navigationBar.superview?.insertSubview(_navigationBar.view, aboveSubview: self.navigationBar)
         self.navigationBar.removeFromSuperview()
-        
-        self._navigationBar.frame = navigationBarFrame(self.view.frame.size)
         
         let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: Selector("panGesture:"))
         panRecognizer.delegate = self
@@ -152,14 +177,19 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
         }
     }
     
-    public func pushViewController(signal: Signal<ViewController, NoError>) -> Disposable {
-        let disposable = (signal |> deliverOnMainQueue).start(next: {[weak self] controller in
+    public func pushViewController(controller: ViewController) {
+        let layout: NavigationControllerLayout
+        if let currentLayout = self.layout {
+            layout = currentLayout
+        } else {
+            layout = NavigationControllerLayout(layout: ViewControllerLayout(size: self.view.bounds.size, insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0), inputViewHeight: 0.0), statusBarHeight: 20.0)
+        }
+        controller.setParentLayout(self.childControllerLayoutForLayout(layout), duration: 0.0, curve: 0)
+        self.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: {[weak self] _ in
             if let strongSelf = self {
                 strongSelf.pushViewController(controller, animated: true)
             }
-        })
-        self.currentPushDisposable.set(disposable)
-        return disposable
+        }))
     }
     
     public override func pushViewController(viewController: UIViewController, animated: Bool) {
@@ -186,7 +216,14 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
             let topViewController = viewControllers[viewControllers.count - 1] as UIViewController
             
             if let controller = topViewController as? WindowContentController {
-                controller.setViewSize(self.view.bounds.size, insets: UIEdgeInsets(top: CGRectGetMaxY(self._navigationBar.frame), left: 0.0, bottom: 0.0, right: 0.0), duration: 0.0)
+                let layout: NavigationControllerLayout
+                if let currentLayout = self.layout {
+                    layout = currentLayout
+                } else {
+                    layout = NavigationControllerLayout(layout: ViewControllerLayout(size: self.view.bounds.size, insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0), inputViewHeight: 0.0), statusBarHeight: 20.0)
+                }
+                
+                controller.setParentLayout(self.childControllerLayoutForLayout(layout), duration: 0.0, curve: 0)
             } else {
                 topViewController.view.frame = CGRect(origin: CGPoint(), size: self.view.bounds.size)
             }
@@ -195,50 +232,78 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
         super.setViewControllers(viewControllers, animated: animated)
     }
     
-    private func navigationBarFrame(size: CGSize) -> CGRect {
-        //let condensedBar = (size.height < size.width || size.height <= 320.0) && size.height < 768.0
-        return CGRect(x: 0.0, y: 0.0, width: size.width, height: 20.0 + (size.height >= size.width ? 44.0 : 32.0))
+    private func navigationBarFrame(layout: NavigationControllerLayout) -> CGRect {
+        return CGRect(x: 0.0, y: layout.statusBarHeight - 20.0, width: layout.layout.size.width, height: 20.0 + (layout.layout.size.height >= layout.layout.size.width ? 44.0 : 32.0))
     }
     
-    public func setViewSize(size: CGSize, insets: UIEdgeInsets, duration: NSTimeInterval) {
-        if duration > DBL_EPSILON {
-            animateRotation(self.view, toFrame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height), duration: duration)
-        }
-        else {
-            self.view.frame = CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height)
+    private func childControllerLayoutForLayout(layout: NavigationControllerLayout) -> ViewControllerLayout {
+        var insets = layout.layout.insets
+        insets.top = self.navigationBarFrame(layout).maxY
+        return ViewControllerLayout(size: layout.layout.size, insets: insets, inputViewHeight: 0.0)
+    }
+    
+    public func setParentLayout(layout: ViewControllerLayout, duration: NSTimeInterval, curve: UInt) {
+        let previousLayout: NavigationControllerLayout?
+        if let pendingLayout = self.pendingLayout {
+            previousLayout = pendingLayout.0
+        } else {
+            previousLayout = self.layout
         }
         
-        if duration > DBL_EPSILON {
-            animateRotation(self._navigationBar, toFrame: self.navigationBarFrame(size), duration: duration)
-        }
-        else {
-            self._navigationBar.frame = self.navigationBarFrame(size)
-        }
+        self.pendingLayout = (NavigationControllerLayout(layout: layout, statusBarHeight: previousLayout?.statusBarHeight ?? 20.0), duration, false)
         
-        if let navigationTransitionCoordinator = self.navigationTransitionCoordinator {
-            //navigationTransitionView.frame = CGRectMake(0.0, 0.0, toSize.width, toSize.height)
+        self.view.setNeedsLayout()
+    }
+    
+    public override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        
+        if let pendingLayout = self.pendingLayout {
+            self.layout = pendingLayout.0
             
-            if self.viewControllers.count >= 2 {
-                let bottomController = self.viewControllers[self.viewControllers.count - 2] as UIViewController
+            if pendingLayout.1 > DBL_EPSILON {
+                animateRotation(self.view, toFrame: CGRect(x: 0.0, y: 0.0, width: pendingLayout.0.layout.size.width, height: pendingLayout.0.layout.size.height), duration: pendingLayout.1)
+            }
+            else {
+                self.view.frame = CGRect(x: 0.0, y: 0.0, width: pendingLayout.0.layout.size.width, height: pendingLayout.0.layout.size.height)
+            }
+            
+            if pendingLayout.1 > DBL_EPSILON {
+                animateRotation(self._navigationBar, toFrame: self.navigationBarFrame(pendingLayout.0), duration: pendingLayout.1)
+            }
+            else {
+                self._navigationBar.frame = self.navigationBarFrame(pendingLayout.0)
+            }
+            
+            if let navigationTransitionCoordinator = self.navigationTransitionCoordinator {
+                //navigationTransitionView.frame = CGRectMake(0.0, 0.0, toSize.width, toSize.height)
                 
-                if let controller = bottomController as? WindowContentController {
-                    controller.setViewSize(size, insets: UIEdgeInsets(top: CGRectGetMaxY(self._navigationBar.frame), left: 0.0, bottom: 0.0, right: 0.0), duration: duration)
+                if self.viewControllers.count >= 2 {
+                    let bottomController = self.viewControllers[self.viewControllers.count - 2] as UIViewController
+                    
+                    if let controller = bottomController as? WindowContentController {
+                        controller.setParentLayout(self.childControllerLayoutForLayout(pendingLayout.0), duration: pendingLayout.1, curve: 0)
+                    } else {
+                        bottomController.view.frame = CGRectMake(0.0, 0.0, pendingLayout.0.layout.size.width, pendingLayout.0.layout.size.height)
+                    }
+                }
+                
+                self._navigationBar.setInteractivePopProgress(navigationTransitionCoordinator.progress)
+            }
+            
+            if let topViewController = self.topViewController {
+                if let controller = topViewController as? WindowContentController {
+                    controller.setParentLayout(self.childControllerLayoutForLayout(pendingLayout.0), duration: pendingLayout.1, curve: 0)
                 } else {
-                    bottomController.view.frame = CGRectMake(0.0, 0.0, size.width, size.height)
+                    topViewController.view.frame = CGRectMake(0.0, 0.0, pendingLayout.0.layout.size.width, pendingLayout.0.layout.size.height)
                 }
             }
-        }
-        
-        if let topViewController = self.topViewController {
-            if let controller = topViewController as? WindowContentController {
-                controller.setViewSize(size, insets: UIEdgeInsets(top: CGRectGetMaxY(self._navigationBar.frame), left: 0.0, bottom: 0.0, right: 0.0), duration: duration)
-            } else {
-                topViewController.view.frame = CGRectMake(0.0, 0.0, size.width, size.height)
+            
+            if let navigationTransitionCoordinator = self.navigationTransitionCoordinator {
+                navigationTransitionCoordinator.updateProgress()
             }
-        }
-        
-        if let navigationTransitionCoordinator = self.navigationTransitionCoordinator {
-            navigationTransitionCoordinator.updateProgress()
+            
+            self.pendingLayout = nil
         }
     }
     

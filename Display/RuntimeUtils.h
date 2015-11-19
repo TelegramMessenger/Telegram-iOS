@@ -8,6 +8,7 @@ typedef enum {
 @interface RuntimeUtils : NSObject
 
 + (void)swizzleInstanceMethodOfClass:(Class)targetClass currentSelector:(SEL)currentSelector newSelector:(SEL)newSelector;
++ (void)swizzleClassMethodOfClass:(Class)targetClass currentSelector:(SEL)currentSelector newSelector:(SEL)newSelector;
 
 @end
 

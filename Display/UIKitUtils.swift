@@ -26,8 +26,9 @@ private func dumpLayers(layer: CALayer, indent: String = "") {
     }
 }
 
+private let screenScale = UIScreen.mainScreen().scale
 public func floorToScreenPixels(value: CGFloat) -> CGFloat {
-    return floor(value * 2.0) / 2.0
+    return floor(value * screenScale) / screenScale
 }
 
 public extension UIColor {
@@ -60,4 +61,17 @@ public extension CGSize {
 
 public func assertNotOnMainThread(file: String = __FILE__, line: Int = __LINE__) {
     assert(!NSThread.isMainThread(), "\(file):\(line) running on main thread")
+}
+
+public extension UIImage {
+    public func precomposed() -> UIImage {
+        UIGraphicsBeginImageContextWithOptions(self.size, false, self.scale)
+        self.drawAtPoint(CGPoint())
+        let result = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext()
+        if !UIEdgeInsetsEqualToEdgeInsets(self.capInsets, UIEdgeInsetsZero) {
+            return result.resizableImageWithCapInsets(self.capInsets, resizingMode: self.resizingMode)
+        }
+        return result
+    }
 }

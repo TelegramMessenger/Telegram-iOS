@@ -3,18 +3,16 @@ import UIKit
 
 public struct Font {
     public static func regular(size: CGFloat) -> UIFont {
-        if matchMinimumSystemVersion(9) {
-            return UIFont(name: ".SFUIDisplay-Regular", size: size)!
-        } else {
-            return UIFont(name: "HelveticaNeue", size: size)!
-        }
+        return UIFont.systemFontOfSize(size)
     }
     
     public static func medium(size: CGFloat) -> UIFont {
-        if matchMinimumSystemVersion(9) {
-            return UIFont(name: ".SFUIDisplay-Medium", size: size)!
-        } else {
-            return UIFont(name: "HelveticaNeue-Medium", size: size)!
-        }
+        return UIFont.boldSystemFontOfSize(size)
+    }
+}
+
+public extension NSAttributedString {
+    convenience init(string: String, font: CTFontRef, textColor: UIColor = UIColor.blackColor()) {
+        self.init(string: string, attributes: [kCTFontAttributeName as String: font, kCTForegroundColorAttributeName as String: textColor.CGColor])
     }
 }
