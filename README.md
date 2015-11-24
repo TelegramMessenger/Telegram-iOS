@@ -12,13 +12,15 @@ The following features are currently supported:
 
 1. **Collect crash reports:** If your app crashes, a crash log with the same format as from the Apple Crash Reporter is written to the device's storage. If the user starts the app again, he is asked to submit the crash report to HockeyApp. This works for both beta and letive apps, i.e. those submitted to the App Store!
 
-2. **Update Ad-Hoc / Enterprise apps:** The app will check with HockeyApp if a new version for your Ad-Hoc or Enterprise build is available. If yes, it will show an alert view to the user and let him see the release notes, the version history and start the installation process right away. 
+2. **Metrics** Get nice statistics about how many users you have and how they are using your app.
 
-3. **Update notification for app store:** The app will check if a new version for your app store release is available. If yes, it will show an alert view to the user and let him open your app in the App Store app. (Disabled by default!)
+3. **Update Ad-Hoc / Enterprise apps:** The app will check with HockeyApp if a new version for your Ad-Hoc or Enterprise build is available. If yes, it will show an alert view to the user and let him see the release notes, the version history and start the installation process right away. 
 
-4. **Feedback:** Collect feedback from your users from within your app and communicate directly with them using the HockeyApp backend.
+4. **Update notification for app store:** The app will check if a new version for your app store release is available. If yes, it will show an alert view to the user and let him open your app in the App Store app. (Disabled by default!)
 
-5. **Authenticate:** Identify and authenticate users of Ad-Hoc or Enterprise builds
+5. **Feedback:** Collect feedback from your users from within your app and communicate directly with them using the HockeyApp backend.
+
+6. **Authenticate:** Identify and authenticate users of Ad-Hoc or Enterprise builds
 
 This document contains the following sections:
 
@@ -30,10 +32,11 @@ This document contains the following sections:
    3. [iOS Extensions](#extensions)
    4. [WatchKit 1 Extensions](#watchkit)
    5. [Crash Reporting](#crashreporting)
-   6. [Feedback](#feedback)
-   7. [Store Updates](#storeupdates)
-   8. [In-App-Updates (Beta & Enterprise only)](#betaupdates)
-   9. [Debug information](#debug)
+   6. [Metrics](#metrics)
+   7. [Feedback](#feedback)
+   8. [Store Updates](#storeupdates)
+   9. [In-App-Updates (Beta & Enterprise only)](#betaupdates)
+   10. [Debug information](#debug)
 4. [Documentation](#documentation)
 5. [Troubleshooting](#troubleshooting)
 6. [Contributing](#contributing)
@@ -385,9 +388,25 @@ and set the delegate:
 [[BITHockeyManager sharedHockeyManager] startManager];
 ```
 
- 
+
+<a name="metrics"></a>
+### 3.6 Metrics
+
+HockeyApp automatically provides you with nice intelligible and informative metrics about how your app is used and by whom.
+
+Just in case you want to opt-out of this feature, there is a way to turn this functionality off:
+
+```objectivec
+[[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
+
+[BITHockeyManager sharedHockeyManager].disableTelemetryManager = YES;
+
+[[BITHockeyManager sharedHockeyManager] startManager];
+
+```
+
 <a name="feedback"></a>
-### 3.6 Feedback
+### 3.7 Feedback
 
 `BITFeedbackManager` lets your users communicate directly with you via the app and an integrated user interface. It provides a single threaded discussion with a user running your app. This feature is only enabled, if you integrate the actual view controllers into your app.
  
@@ -400,7 +419,7 @@ You should never create your own instance of `BITFeedbackManager` but use the on
 Please check the [documentation](#documentation) of the `BITFeedbachManager` class on more information on how to leverage this feature.
 
 <a name="storeupdates"></a>
-### 3.7 Store Updates
+### 3.8 Store Updates
 
 This is the HockeySDK module for handling app updates when having your app released in the App Store.
 
@@ -421,7 +440,7 @@ When this module is enabled and **NOT** running in an App Store build/environmen
 Please check the [documentation](#documentation) of the `BITStoreUpdateManager` class on more information on how to leverage this feature and know about its limits.
 
 <a name="betaupdates"></a>
-### 3.8 In-App-Updates (Beta & Enterprise only)
+### 3.9 In-App-Updates (Beta & Enterprise only)
 
 The following options only show some of possibilities to interact and fine-tune the update feature when using Ad-Hoc or Enterprise provisioning profiles. For more please check the full documentation of the `BITUpdateManager` class in our [documentation](#documentation).
 
@@ -442,7 +461,7 @@ This feature can be disabled manually as follows:
 If you want to see beta analytics, use the beta distribution feature with in-app updates, restrict versions to specific users, or want to know who is actually testing your app, you need to follow the instructions on our guide [Authenticating Users on iOS](http://support.hockeyapp.net/kb/client-integration-ios-mac-os-x/authenticating-users-on-ios)
 
 <a id="debug"></a>
-### 3.9 Debug information
+### 3.10 Debug information
 
 To check if data is send properly to HockeyApp and also see some additional SDK debug log data in the console, add the following line before `startManager`:
 

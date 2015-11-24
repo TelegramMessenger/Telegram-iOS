@@ -14,10 +14,11 @@ This document contains the following sections:
    3. [iOS Extensions](#extensions)
    4. [WatchKit 1 Extensions](#watchkit)
    5. [Crash Reporting](#crashreporting)
-   6. [Feedback](#feedback)
-   7. [Store Updates](#storeupdates)
-   8. [In-App-Updates (Beta & Enterprise only)](#betaupdates)
-   9. [Debug information](#debug)
+   6. [Metrics](#metrics)
+   7. [Feedback](#feedback)
+   8. [Store Updates](#storeupdates)
+   9. [In-App-Updates (Beta & Enterprise only)](#betaupdates)
+   10. [Debug information](#debug)
 4. [Documentation](#documentation)
 5. [Troubleshooting](#troubleshooting)
 6. [Contributing](#contributing)
@@ -54,11 +55,11 @@ From our experience, 3rd-party libraries usually reside inside a subdirectory (l
 1. We recommend to use Xcode's group-feature to create a group for 3rd-party-libraries similar to the structure of our files on disk. For example,  similar to the file structure in 2.3 above, our projects have a group called `Vendor`.
 2. Make sure the `Project Navigator` is visible (⌘+1)
 3. The SDK comes in three flavours:
-	1. Full featured `HockeySDK.embeddedframework`
-	2. Crash reporting only `HockeySDK.framework` in the subfolder `HockeySDKCrashOnly`
-	3. Crash reporting only for extensions `HockeySDK.framework` in the subfolder `HockeySDKCrashOnlyExtension` (which is required to be used for extensions when build into native frameworks).
-	
-	Our examples will use the full featured one.
+  1. Full featured `HockeySDK.embeddedframework`
+  2. Crash reporting only `HockeySDK.framework` in the subfolder `HockeySDKCrashOnly`
+  3. Crash reporting only for extensions `HockeySDK.framework` in the subfolder `HockeySDKCrashOnlyExtension` (which is required to be used for extensions when build into native frameworks).
+  
+  Our examples will use the full featured one.
 4. Drag & drop `HockeySDK.embeddedframework` from your window in the `Finder` into your project in Xcode and move it to the desired location in the `Project Navigator` (e.g. into the group called `Vendor`)
 5. A popup will appear. Select `Create groups for any added folders` and set the checkmark for your target. Then click `Finish`.
 
@@ -130,9 +131,9 @@ If you are working with an older project which doesn't support clang modules yet
     + `CoreGraphics`
     + `Foundation`
     + `MobileCoreServices`
-    + `Photos`
     + `QuartzCore`
     + `QuickLook`
+    + `Photos`
     + `Security`
     + `SystemConfiguration`
     + `UIKit`
@@ -369,9 +370,25 @@ and set the delegate:
 [[BITHockeyManager sharedHockeyManager] startManager];
 ```
 
- 
+
+<a name="metrics"></a>
+### 3.6 Metrics
+
+HockeyApp automatically provides you with nice intelligible and informative metrics about how your app is used and by whom.
+
+Just in case you want to opt-out of this feature, there is a way to turn this functionality off:
+
+```objectivec
+[[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
+
+[BITHockeyManager sharedHockeyManager].disableTelemetryManager = YES;
+
+[[BITHockeyManager sharedHockeyManager] startManager];
+
+```
+
 <a name="feedback"></a>
-### 3.6 Feedback
+### 3.7 Feedback
 
 `BITFeedbackManager` lets your users communicate directly with you via the app and an integrated user interface. It provides a single threaded discussion with a user running your app. This feature is only enabled, if you integrate the actual view controllers into your app.
  
@@ -384,7 +401,7 @@ You should never create your own instance of `BITFeedbackManager` but use the on
 Please check the [documentation](#documentation) of the `BITFeedbachManager` class on more information on how to leverage this feature.
 
 <a name="storeupdates"></a>
-### 3.7 Store Updates
+### 3.8 Store Updates
 
 This is the HockeySDK module for handling app updates when having your app released in the App Store.
 
@@ -405,7 +422,7 @@ When this module is enabled and **NOT** running in an App Store build/environmen
 Please check the [documentation](#documentation) of the `BITStoreUpdateManager` class on more information on how to leverage this feature and know about its limits.
 
 <a name="betaupdates"></a>
-### 3.8 In-App-Updates (Beta & Enterprise only)
+### 3.9 In-App-Updates (Beta & Enterprise only)
 
 The following options only show some of possibilities to interact and fine-tune the update feature when using Ad-Hoc or Enterprise provisioning profiles. For more please check the full documentation of the `BITUpdateManager` class in our [documentation](#documentation).
 
@@ -418,7 +435,7 @@ This feature can be disabled manually as follows:
 ```objectivec
 [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
-[[BITHockeyManager sharedHockeyManager] setDisableUpdateManager: YES]; //disable crash reporting
+[[BITHockeyManager sharedHockeyManager] setDisableUpdateManager: YES]; //disable auto updating
 
 [[BITHockeyManager sharedHockeyManager] startManager];
 ```
@@ -426,7 +443,7 @@ This feature can be disabled manually as follows:
 If you want to see beta analytics, use the beta distribution feature with in-app updates, restrict versions to specific users, or want to know who is actually testing your app, you need to follow the instructions on our guide [Authenticating Users on iOS](http://support.hockeyapp.net/kb/client-integration-ios-mac-os-x/authenticating-users-on-ios)
 
 <a id="debug"></a>
-### 3.9 Debug information
+### 3.10 Debug information
 
 To check if data is send properly to HockeyApp and also see some additional SDK debug log data in the console, add the following line before `startManager`:
 
