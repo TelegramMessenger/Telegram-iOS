@@ -150,20 +150,19 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
     _disableCrashManager = NO;
 #endif
-#if HOCKEYSDK_FEATURE_UPDATES
-    _disableUpdateManager = NO;
+#if HOCKEYSDK_FEATURE_TELEMETRY
+    _disableTelemetryManager = NO;
 #endif
 #if HOCKEYSDK_FEATURE_FEEDBACK
     _disableFeedbackManager = NO;
 #endif
-
+#if HOCKEYSDK_FEATURE_UPDATES
+    _disableUpdateManager = NO;
+#endif
 #if HOCKEYSDK_FEATURE_STORE_UPDATES
     _enableStoreUpdateManager = NO;
 #endif
     _appEnvironment = BITEnvironmentOther;
-#if HOCKEYSDK_FEATURE_TELEMETRY
-    _disableTelemetryManager = NO;
-#endif
     
     _appStoreEnvironment = NO;
     _startManagerIsInvoked = NO;
@@ -328,7 +327,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
   
 #if HOCKEYSDK_FEATURE_TELEMETRY
   // start TelemetryManager
-  if (![self isTelemetryManagerDisabled]) {
+  if (!self.isTelemetryManagerDisabled) {
     BITHockeyLog(@"INFO: Start Telemetry Manager");
     [_telemetryManager startManager];
     [BITCategoryContainer activateCategory];
