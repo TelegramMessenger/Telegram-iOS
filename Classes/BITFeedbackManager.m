@@ -1234,7 +1234,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *latestImage);
 - (void)fetchLatestImageUsingPhotoLibraryWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler {
   [PHPhotoLibrary requestAuthorization:^(PHAuthorizationStatus status) {
     if ((status == PHAuthorizationStatusDenied) || (status == PHAuthorizationStatusRestricted)) {
-      BITHockeyLog(@"INFO: The latest image could not be fetched, not permissions.");
+      BITHockeyLog(@"INFO: The latest image could not be fetched, no permissions.");
       completionHandler(nil);
       
     } else if (status == PHAuthorizationStatusAuthorized) {
