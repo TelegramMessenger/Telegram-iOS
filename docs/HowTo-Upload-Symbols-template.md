@@ -21,3 +21,5 @@ Once you have your app ready for beta testing or even to submit it to the App St
 ## Mac Desktop Uploader
 
 As an alternative, you can use our [HockeyApp for Mac](http://hockeyapp.net/releases/mac/) app to upload the complete archive in one step.
+
+Also check out the guide on [how to upload to HockeyApp from Mac OS X](http://support.hockeyapp.net/kb/client-integration-ios-mac-os-x/how-to-upload-to-hockeyapp-from-mac-os-x).
