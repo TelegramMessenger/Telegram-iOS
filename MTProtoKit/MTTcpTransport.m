@@ -96,18 +96,11 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 - (void)dealloc
 {
     MTTcpConnection *connection = _connection;
-    _connection = nil;
-    
     MTTcpConnectionBehaviour *connectionBehaviour = _connectionBehaviour;
-    _connectionBehaviour = nil;
-    
     MTTimer *actualizationPingResendTimer = _actualizationPingResendTimer;
-    _actualizationPingResendTimer = nil;
     
     MTTimer *connectionWatchdogTimer = _connectionWatchdogTimer;
-    _connectionWatchdogTimer = nil;
     MTTimer *sleepWatchdogTimer = _sleepWatchdogTimer;
-    _sleepWatchdogTimer = nil;
     
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
@@ -556,50 +549,59 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
                 {
                     if (preparedMessage != nil)
                     {
-                        _currentActualizationPingMessageId = preparedMessage.messageId;
-                        
                         __strong MTTcpTransport *strongSelf = weakSelf;
-                        id<MTTransportDelegate> delegate = strongSelf.delegate;
-                        if ([delegate respondsToSelector:@selector(transportConnectionContextUpdateStateChanged:isUpdatingConnectionContext:)])
-                            [delegate transportConnectionContextUpdateStateChanged:strongSelf isUpdatingConnectionContext:true];
+                        if (strongSelf != nil) {
+                            strongSelf->_currentActualizationPingMessageId = preparedMessage.messageId;
+                            
+                            id<MTTransportDelegate> delegate = strongSelf.delegate;
+                            if ([delegate respondsToSelector:@selector(transportConnectionContextUpdateStateChanged:isUpdatingConnectionContext:)]) {
+                                [delegate transportConnectionContextUpdateStateChanged:strongSelf isUpdatingConnectionContext:true];
+                            }
+                        }
                     }
                 }];
             }];
             transportSpecificTransaction.requiresEncryption = true;
         }
         
+        __weak MTTcpTransport *weakSelf = self;
         [delegate transportReadyForTransaction:self transportSpecificTransaction:transportSpecificTransaction forceConfirmations:transportSpecificTransaction != nil transactionReady:^(NSArray *transactionList)
         {
             [[MTTcpConnection tcpQueue] dispatchOnQueue:^
             {
-                for (MTTransportTransaction *transaction in transactionList)
-                {
-                    if (transaction.payload.length != 0)
-                    {
-                        if (_connection != nil)
-                        {
-                            id transactionId = _connection.internalId;
-                            [_connection sendDatas:@[transaction.payload] completion:^(bool success)
-                            {
-                                if (transaction.completion)
-                                    transaction.completion(success, transactionId);
-                            } requestQuickAck:transaction.needsQuickAck expectDataInResponse:transaction.expectsDataInResponse];
-                        }
-                        else if (transaction.completion != nil)
-                            transaction.completion(false, nil);
-                    }
-                }
-                
-                [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
-                {
-                    _isWaitingForTransactionToBecomeReady = false;
+                __strong MTTcpTransport *strongSelf = weakSelf;
+                if (strongSelf != nil) {
+                    //crashes here
                     
-                    if (_requestAnotherTransactionWhenReady)
+                    for (MTTransportTransaction *transaction in transactionList)
                     {
-                        _requestAnotherTransactionWhenReady = false;
-                        [self _requestTransactionFromDelegate];
+                        if (transaction.payload.length != 0)
+                        {
+                            if (strongSelf->_connection != nil)
+                            {
+                                id transactionId = strongSelf->_connection.internalId;
+                                [strongSelf->_connection sendDatas:@[transaction.payload] completion:^(bool success)
+                                {
+                                    if (transaction.completion)
+                                        transaction.completion(success, transactionId);
+                                } requestQuickAck:transaction.needsQuickAck expectDataInResponse:transaction.expectsDataInResponse];
+                            }
+                            else if (transaction.completion != nil)
+                                transaction.completion(false, nil);
+                        }
                     }
-                }];
+                    
+                    [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
+                    {
+                        strongSelf->_isWaitingForTransactionToBecomeReady = false;
+                        
+                        if (strongSelf->_requestAnotherTransactionWhenReady)
+                        {
+                            strongSelf->_requestAnotherTransactionWhenReady = false;
+                            [strongSelf _requestTransactionFromDelegate];
+                        }
+                    }];
+                }
             }];
         }];
     }
