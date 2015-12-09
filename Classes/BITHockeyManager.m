@@ -172,18 +172,13 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     _installString = bit_appAnonID(NO);
     _disableInstallTracking = NO;
     
-#if !TARGET_IPHONE_SIMULATOR
+    _appStoreEnvironment = NO;
     // check if we are really in an app store environment
-    if (bit_isRunningInAppStoreEnvironment()) {
-      _appEnvironment = BITEnvironmentAppStore;
+      _appEnvironment = bit_currentAppEnvironment();
+    if (_appEnvironment == BITEnvironmentAppStore) {
       _appStoreEnvironment = YES;
-    } else if (bit_isRunningInTestFlightEnvironment()) {
-      _appEnvironment = BITEnvironmentTestFlight;
-    } else {
-      _appEnvironment = BITEnvironmentOther;
     }
-#endif
-
+    
     [self performSelector:@selector(validateStartManagerIsInvoked) withObject:nil afterDelay:0.0f];
   }
   return self;

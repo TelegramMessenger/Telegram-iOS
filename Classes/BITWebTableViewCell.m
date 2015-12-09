@@ -155,15 +155,25 @@ body { font: 13px 'Helvetica Neue', Helvetica; color:#626262; word-wrap:break-wo
 }
 
 
-#pragma mark - UIWebView
+#pragma mark - UIWebViewDelegate
 
 - (BOOL)webView:(UIWebView *)webView shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(UIWebViewNavigationType)navigationType {
-  if(navigationType == UIWebViewNavigationTypeOther)
-    return YES;
-  
-  return NO;
+  switch (navigationType) {
+    case UIWebViewNavigationTypeLinkClicked:
+      [self openURL:request.URL];
+      return NO;
+      break;
+    case UIWebViewNavigationTypeOther:
+      return YES;
+      break;
+    case UIWebViewNavigationTypeBackForward:
+    case UIWebViewNavigationTypeFormResubmitted:
+    case UIWebViewNavigationTypeFormSubmitted:
+    case UIWebViewNavigationTypeReload:
+      return NO;
+      break;
+  }
 }
-
 
 - (void)webViewDidFinishLoad:(UIWebView *)webView {
   if(_webViewContent)
@@ -179,6 +189,12 @@ body { font: 13px 'Helvetica Neue', Helvetica; color:#626262; word-wrap:break-wo
   // sizeThatFits is not reliable - use javascript for optimal height
   NSString *output = [_webView stringByEvaluatingJavaScriptFromString:@"document.body.scrollHeight;"];
   self.webViewSize = CGSizeMake(fittingSize.width, [output integerValue]);
+}
+
+#pragma mark - Helper
+
+- (void)openURL:(NSURL *)URL {
+  [[UIApplication sharedApplication] openURL:URL];
 }
 
 @end

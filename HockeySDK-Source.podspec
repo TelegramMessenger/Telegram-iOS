@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name              = 'HockeySDK-Source'
-  s.version           = '3.8.4'
+  s.version           = '3.8.5'
 
   s.summary           = 'Collect live crash reports, get feedback from your users, distribute your betas, and analyze your test coverage with HockeyApp.'
   s.description       = <<-DESC
@@ -15,7 +15,7 @@ Pod::Spec.new do |s|
   s.documentation_url = "http://hockeyapp.net/help/sdk/ios/#{s.version}/"
 
   s.license           = 'MIT'
-  s.author            = { 'Andreas Linde' => 'mail@andreaslinde.de', 'Thomas Dohmke' => "thomas@dohmke.de" }
+  s.author            = { 'Microsoft' => 'support@hockeyapp.net' }
   s.source            = { :git => 'https://github.com/bitstadium/HockeySDK-iOS.git', :tag => s.version.to_s }
 
   s.platform          = :ios, '7.0'
