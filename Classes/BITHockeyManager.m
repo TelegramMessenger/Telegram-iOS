@@ -254,7 +254,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
   // start CrashManager
   if (![self isCrashManagerDisabled]) {
     BITHockeyLog(@"INFO: Start CrashManager");
-    if (_serverURL) {
+    if (!_crashManager.serverURL && _serverURL) {
       [_crashManager setServerURL:_serverURL];
     }
     
