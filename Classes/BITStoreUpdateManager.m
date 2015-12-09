@@ -205,7 +205,6 @@
       // since they could change at any time
       [self.userDefaults setObject:_currentUUID forKey:kBITStoreUpdateLastUUID];
       [self.userDefaults setObject:_newStoreVersion forKey:kBITStoreUpdateLastStoreVersion];
-      [self.userDefaults synchronize];
       return NO;
     } else {
       BITHockeyLog(@"INFO: Compare new version string %@ with %@", _newStoreVersion, lastStoreVersion);
@@ -302,7 +301,6 @@
     } else {
       // Ignore this version
       [self.userDefaults setObject:_newStoreVersion forKey:kBITStoreUpdateIgnoreVersion];
-      [self.userDefaults synchronize];
     }
   }
   
@@ -500,7 +498,6 @@
     _lastCheck = aLastCheck;
     
     [self.userDefaults setObject:self.lastCheck forKey:kBITStoreUpdateDateOfLastCheck];
-    [self.userDefaults synchronize];
   }
 }
 
@@ -509,7 +506,6 @@
 - (void)ignoreAction {
   _updateAlertShowing = NO;
   [self.userDefaults setObject:_newStoreVersion forKey:kBITStoreUpdateIgnoreVersion];
-  [self.userDefaults synchronize];
 }
 
 - (void)remindAction {
@@ -519,7 +515,6 @@
 - (void)showAction {
   _updateAlertShowing = NO;
   [self.userDefaults setObject:_newStoreVersion forKey:kBITStoreUpdateIgnoreVersion];
-  [self.userDefaults synchronize];
   
   if (_appStoreURLString) {
     [[UIApplication sharedApplication] openURL:[NSURL URLWithString:_appStoreURLString]];
