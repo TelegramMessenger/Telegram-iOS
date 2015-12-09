@@ -30,31 +30,43 @@
 
 static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 
+@interface MTTcpTransportContext : NSObject
+
+@property (nonatomic, strong) MTDatacenterAddress *address;
+@property (nonatomic, strong) MTTcpConnection *connection;
+
+@property (nonatomic) bool connectionConnected;
+@property (nonatomic) bool connectionIsValid;
+@property (nonatomic, strong) MTTcpConnectionBehaviour *connectionBehaviour;
+@property (nonatomic) bool stopped;
+
+@property (nonatomic) bool isNetworkAvailable;
+
+@property (nonatomic) bool willRequestTransactionOnNextQueuePass;
+
+@property (nonatomic) NSTimeInterval transactionLockTime;
+@property (nonatomic) bool isWaitingForTransactionToBecomeReady;
+@property (nonatomic) bool requestAnotherTransactionWhenReady;
+
+@property (nonatomic) bool didSendActualizationPingAfterConnection;
+@property (nonatomic) int64_t currentActualizationPingMessageId;
+@property (nonatomic, strong) MTTimer *actualizationPingResendTimer;
+
+@property (nonatomic, strong) MTTimer *connectionWatchdogTimer;
+@property (nonatomic, strong) MTTimer *sleepWatchdogTimer;
+@property (nonatomic) CFAbsoluteTime sleepWatchdogTimerLastTime;
+
+@end
+
+@implementation MTTcpTransportContext
+
+
+
+@end
+
 @interface MTTcpTransport () <MTTcpConnectionDelegate, MTTcpConnectionBehaviourDelegate>
 {
-    MTDatacenterAddress *_address;
-    
-    MTTcpConnection *_connection;
-    bool _connectionConnected;
-    bool _connectionIsValid;
-    MTTcpConnectionBehaviour *_connectionBehaviour;
-    bool _stopped;
-    
-    bool _isNetworkAvailable;
-    
-    bool _willRequestTransactionOnNextQueuePass;
-    
-    NSTimeInterval _transactionLockTime;
-    bool _isWaitingForTransactionToBecomeReady;
-    bool _requestAnotherTransactionWhenReady;
-    
-    bool _didSendActualizationPingAfterConnection;
-    int64_t _currentActualizationPingMessageId;
-    MTTimer *_actualizationPingResendTimer;
-    
-    MTTimer *_connectionWatchdogTimer;
-    MTTimer *_sleepWatchdogTimer;
-    CFAbsoluteTime _sleepWatchdogTimerLastTime;
+    MTTcpTransportContext *_transportContext;
 }
 
 @end
@@ -83,36 +95,38 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     self = [super initWithDelegate:delegate context:context datacenterId:datacenterId address:address];
     if (self != nil)
     {
-        _address = address;
+        MTTcpTransportContext *transportContext = [[MTTcpTransportContext alloc] init];
+        _transportContext = transportContext;
         
-        _connectionBehaviour = [[MTTcpConnectionBehaviour alloc] initWithQueue:[MTTcpTransport tcpTransportQueue]];
-        _connectionBehaviour.delegate = self;
-        
-        _isNetworkAvailable = true;
+        [[MTTcpConnection tcpQueue] dispatchOnQueue:^{
+            transportContext.address = address;
+            
+            transportContext.connectionBehaviour = [[MTTcpConnectionBehaviour alloc] initWithQueue:[MTTcpTransport tcpTransportQueue]];
+            transportContext.connectionBehaviour.delegate = self;
+            
+            transportContext.isNetworkAvailable = true;
+        }];
     }
     return self;
 }
 
 - (void)dealloc
 {
-    MTTcpConnection *connection = _connection;
-    MTTcpConnectionBehaviour *connectionBehaviour = _connectionBehaviour;
-    MTTimer *actualizationPingResendTimer = _actualizationPingResendTimer;
-    
-    MTTimer *connectionWatchdogTimer = _connectionWatchdogTimer;
-    MTTimer *sleepWatchdogTimer = _sleepWatchdogTimer;
-    
-    [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
-    {
-        connection.delegate = nil;
+    MTTcpTransportContext *transportContext = _transportContext;
+    [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^{
+        transportContext.connection.delegate = nil;
         
-        connectionBehaviour.needsReconnection = false;
-        connectionBehaviour.delegate = nil;
+        transportContext.connectionBehaviour.needsReconnection = false;
+        transportContext.connectionBehaviour.delegate = nil;
         
-        [actualizationPingResendTimer invalidate];
+        [transportContext.actualizationPingResendTimer invalidate];
+        transportContext.actualizationPingResendTimer = nil;
         
-        [connectionWatchdogTimer invalidate];
-        [sleepWatchdogTimer invalidate];
+        [transportContext.connectionWatchdogTimer invalidate];
+        transportContext.connectionWatchdogTimer = nil;
+        
+        [transportContext.sleepWatchdogTimer invalidate];
+        transportContext.sleepWatchdogTimer = nil;
     }];
 }
 
@@ -123,33 +137,35 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 
 - (void)updateConnectionState
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
         id<MTTransportDelegate> delegate = self.delegate;
         if ([delegate respondsToSelector:@selector(transportNetworkAvailabilityChanged:isNetworkAvailable:)])
-            [delegate transportNetworkAvailabilityChanged:self isNetworkAvailable:_isNetworkAvailable];
+            [delegate transportNetworkAvailabilityChanged:self isNetworkAvailable:transportContext.isNetworkAvailable];
         if ([delegate respondsToSelector:@selector(transportConnectionStateChanged:isConnected:)])
-            [delegate transportConnectionStateChanged:self isConnected:_connectionConnected];
+            [delegate transportConnectionStateChanged:self isConnected:transportContext.connectionConnected];
         if ([delegate respondsToSelector:@selector(transportConnectionContextUpdateStateChanged:isUpdatingConnectionContext:)])
-            [delegate transportConnectionContextUpdateStateChanged:self isUpdatingConnectionContext:_currentActualizationPingMessageId != 0];
+            [delegate transportConnectionContextUpdateStateChanged:self isUpdatingConnectionContext:transportContext.currentActualizationPingMessageId != 0];
     }];
 }
 
 - (void)setDelegateNeedsTransaction
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-        if (!_willRequestTransactionOnNextQueuePass)
+        if (!transportContext.willRequestTransactionOnNextQueuePass)
         {
-            _willRequestTransactionOnNextQueuePass = true;
+            transportContext.willRequestTransactionOnNextQueuePass = true;
             
             dispatch_async([MTTcpTransport tcpTransportQueue].nativeQueue, ^
             {
-                _willRequestTransactionOnNextQueuePass = false;
+                transportContext.willRequestTransactionOnNextQueuePass = false;
                 
-                if (_connection == nil)
-                    [_connectionBehaviour requestConnection];
-                else if (_connectionConnected)
+                if (transportContext.connection == nil)
+                    [transportContext.connectionBehaviour requestConnection];
+                else if (transportContext.connectionConnected)
                     [self _requestTransactionFromDelegate];
             });
         }
@@ -158,30 +174,33 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 
 - (void)startIfNeeded
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-        if (_connection == nil)
+        if (transportContext.connection == nil)
         {
             [self startConnectionWatchdogTimer];
             [self startSleepWatchdogTimer];
             
-            _connection = [[MTTcpConnection alloc] initWithAddress:_address interface:nil];
-            _connection.delegate = self;
-            [_connection start];
+            transportContext.connection = [[MTTcpConnection alloc] initWithAddress:transportContext.address interface:nil];
+            transportContext.connection.delegate = self;
+            [transportContext.connection start];
         }
     }];
 }
 
 - (void)reset
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-        [_connection stop];
+        [transportContext.connection stop];
     }];
 }
 
 - (void)stop
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
         [self activeTransactionIds:^(NSArray *activeTransactionId)
@@ -191,107 +210,113 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
                 [delegate transportTransactionsMayHaveFailed:self transactionIds:activeTransactionId];
         }];
         
-        _stopped = true;
-        _connectionConnected = false;
-        _connectionIsValid = false;
+        transportContext.stopped = true;
+        transportContext.connectionConnected = false;
+        transportContext.connectionIsValid = false;
         
         id<MTTransportDelegate> delegate = self.delegate;
         if ([delegate respondsToSelector:@selector(transportConnectionStateChanged:isConnected:)])
             [delegate transportConnectionStateChanged:self isConnected:false];
         
-        _connectionBehaviour.needsReconnection = false;
+        transportContext.connectionBehaviour.needsReconnection = false;
         
-        _connection.delegate = nil;
-        [_connection stop];
-        _connection = nil;
+        transportContext.connection.delegate = nil;
+        [transportContext.connection stop];
+        transportContext.connection = nil;
         
         [self stopConnectionWatchdogTimer];
         [self stopSleepWatchdogTimer];
         
-        [_actualizationPingResendTimer invalidate];
-        _actualizationPingResendTimer = nil;
+        [transportContext.actualizationPingResendTimer invalidate];
+        transportContext.actualizationPingResendTimer = nil;
     }];
 }
 
 - (void)startSleepWatchdogTimer
 {
+#if false
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-#if false
-        if (_sleepWatchdogTimer == nil)
+        if (transportContext.sleepWatchdogTimer == nil)
         {
-            _sleepWatchdogTimerLastTime = MTAbsoluteSystemTime();
+            transportContext.sleepWatchdogTimerLastTime = MTAbsoluteSystemTime();
             
             __weak MTTcpTransport *weakSelf = self;
-            _sleepWatchdogTimer = [[MTTimer alloc] initWithTimeout:MTTcpTransportSleepWatchdogTimeout repeat:true completion:^
+            transportContext.sleepWatchdogTimer = [[MTTimer alloc] initWithTimeout:MTTcpTransportSleepWatchdogTimeout repeat:true completion:^
             {
                 CFAbsoluteTime currentTime = CFAbsoluteTimeGetCurrent();
                 
                 __strong MTTcpTransport *strongSelf = weakSelf;
                 if (strongSelf != nil)
                 {
-                    if (ABS(currentTime - strongSelf->_sleepWatchdogTimerLastTime) > MTTcpTransportSleepWatchdogTimeout * 2.0)
+                    if (ABS(currentTime - strongSelf->_transportContext.sleepWatchdogTimerLastTime) > MTTcpTransportSleepWatchdogTimeout * 2.0)
                     {
                         MTLog(@"[MTTcpTransport#%p system sleep detected, resetting connection]", strongSelf);
                         [strongSelf reset];
                     }
-                    strongSelf->_sleepWatchdogTimerLastTime = currentTime;
+                    strongSelf->_transportContext.sleepWatchdogTimerLastTime = currentTime;
                 }
             } queue:[MTTcpConnection tcpQueue].nativeQueue];
             [_sleepWatchdogTimer start];
         }
-#endif
     }];
+#endif
 }
 
 - (void)restartSleepWatchdogTimer
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-        _sleepWatchdogTimerLastTime = MTAbsoluteSystemTime();
-        [_sleepWatchdogTimer resetTimeout:MTTcpTransportSleepWatchdogTimeout];
+        transportContext.sleepWatchdogTimerLastTime = MTAbsoluteSystemTime();
+        [transportContext.sleepWatchdogTimer resetTimeout:MTTcpTransportSleepWatchdogTimeout];
     }];
 }
 
 - (void)stopSleepWatchdogTimer
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-        [_sleepWatchdogTimer invalidate];
-        _sleepWatchdogTimer = nil;
+        [transportContext.sleepWatchdogTimer invalidate];
+        transportContext.sleepWatchdogTimer = nil;
     }];
 }
 
 - (void)startConnectionWatchdogTimer
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-        if (_connectionWatchdogTimer == nil)
+        if (transportContext.connectionWatchdogTimer == nil)
         {
             __weak MTTcpTransport *weakSelf = self;
-            _connectionWatchdogTimer = [[MTTimer alloc] initWithTimeout:10.0 repeat:false completion:^
+            transportContext.connectionWatchdogTimer = [[MTTimer alloc] initWithTimeout:10.0 repeat:false completion:^
             {
                 __strong MTTcpTransport *strongSelf = weakSelf;
                 [strongSelf connectionWatchdogTimeout];
             } queue:[MTTcpTransport tcpTransportQueue].nativeQueue];
-            [_connectionWatchdogTimer start];
+            [transportContext.connectionWatchdogTimer start];
         }
     }];
 }
 
 - (void)stopConnectionWatchdogTimer
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-        [_connectionWatchdogTimer invalidate];
-        _connectionWatchdogTimer = nil;
+        [transportContext.connectionWatchdogTimer invalidate];
+        transportContext.connectionWatchdogTimer = nil;
     }];
 }
 
 - (void)connectionWatchdogTimeout
 {
-    [_connectionWatchdogTimer invalidate];
-    _connectionWatchdogTimer = nil;
+    MTTcpTransportContext *transportContext = _transportContext;
+    [transportContext.connectionWatchdogTimer invalidate];
+    transportContext.connectionWatchdogTimer = nil;
     
     id<MTTransportDelegate> delegate = self.delegate;
     if ([delegate respondsToSelector:@selector(transportConnectionProblemsStatusChanged:hasConnectionProblems:isProbablyHttp:)])
@@ -300,43 +325,46 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 
 - (void)startActualizationPingResendTimer
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-        if (_actualizationPingResendTimer != nil)
-            [_actualizationPingResendTimer invalidate];
+        if (transportContext.actualizationPingResendTimer != nil)
+            [transportContext.actualizationPingResendTimer invalidate];
         
         __weak MTTcpTransport *weakSelf = self;
-        _actualizationPingResendTimer = [[MTTimer alloc] initWithTimeout:3 repeat:false completion:^
+        transportContext.actualizationPingResendTimer = [[MTTimer alloc] initWithTimeout:3 repeat:false completion:^
         {
             __strong MTTcpTransport *strongSelf = weakSelf;
             [strongSelf resendActualizationPing];
         } queue:[MTTcpTransport tcpTransportQueue].nativeQueue];
-        [_actualizationPingResendTimer start];
+        [transportContext.actualizationPingResendTimer start];
     }];
 }
 
 - (void)stopActualizationPingResendTimer
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-        if (_actualizationPingResendTimer != nil)
+        if (transportContext.actualizationPingResendTimer != nil)
         {
-            [_actualizationPingResendTimer invalidate];
-            _actualizationPingResendTimer = nil;
+            [transportContext.actualizationPingResendTimer invalidate];
+            transportContext.actualizationPingResendTimer = nil;
         }
     }];
 }
 
 - (void)resendActualizationPing
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
         [self stopActualizationPingResendTimer];
         
-        if (_currentActualizationPingMessageId != 0)
+        if (transportContext.currentActualizationPingMessageId != 0)
         {
-            _didSendActualizationPingAfterConnection = false;
-            _currentActualizationPingMessageId = 0;
+            transportContext.didSendActualizationPingAfterConnection = false;
+            transportContext.currentActualizationPingMessageId = 0;
             
             [self _requestTransactionFromDelegate];
         }
@@ -345,21 +373,22 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 
 - (void)tcpConnectionOpened:(MTTcpConnection *)connection
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-        if (_connection != connection)
+        if (transportContext.connection != connection)
             return;
         
-        _connectionConnected = true;
-        _connectionIsValid = false;
-        [_connectionBehaviour connectionOpened];
+        transportContext.connectionConnected = true;
+        transportContext.connectionIsValid = false;
+        [transportContext.connectionBehaviour connectionOpened];
         
         id<MTTransportDelegate> delegate = self.delegate;
         if ([delegate respondsToSelector:@selector(transportConnectionStateChanged:isConnected:)])
             [delegate transportConnectionStateChanged:self isConnected:true];
         
-        _didSendActualizationPingAfterConnection = false;
-        _currentActualizationPingMessageId = 0;
+        transportContext.didSendActualizationPingAfterConnection = false;
+        transportContext.currentActualizationPingMessageId = 0;
         
         [self _requestTransactionFromDelegate];
     }];
@@ -367,20 +396,21 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 
 - (void)tcpConnectionClosed:(MTTcpConnection *)connection
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-        if (_connection != connection)
+        if (transportContext.connection != connection)
             return;
         
-        _connectionConnected = false;
-        _connectionIsValid = false;
-        _connection.delegate = nil;
-        _connection = nil;
+        transportContext.connectionConnected = false;
+        transportContext.connectionIsValid = false;
+        transportContext.connection.delegate = nil;
+        transportContext.connection = nil;
         
-        [_connectionBehaviour connectionClosed];
+        [transportContext.connectionBehaviour connectionClosed];
         
-        _didSendActualizationPingAfterConnection = false;
-        _currentActualizationPingMessageId = 0;
+        transportContext.didSendActualizationPingAfterConnection = false;
+        transportContext.currentActualizationPingMessageId = 0;
         
         [self restartSleepWatchdogTimer];
         
@@ -395,12 +425,13 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 
 - (void)tcpConnectionReceivedData:(MTTcpConnection *)connection data:(NSData *)data
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-        if (_connection != connection)
+        if (transportContext.connection != connection)
             return;
         
-        if (_currentActualizationPingMessageId != 0 && _actualizationPingResendTimer == nil)
+        if (transportContext.currentActualizationPingMessageId != 0 && transportContext.actualizationPingResendTimer == nil)
             [self startActualizationPingResendTimer];
         
         __weak MTTcpTransport *weakSelf = self;
@@ -422,12 +453,13 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 
 - (void)connectionIsValid:(id)transactionId
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-        if (_connection != nil && [_connection.internalId isEqual:transactionId])
+        if (transportContext.connection != nil && [transportContext.connection.internalId isEqual:transactionId])
         {
-            _connectionIsValid = true;
-            [_connectionBehaviour connectionValidDataReceived];
+            transportContext.connectionIsValid = true;
+            [transportContext.connectionBehaviour connectionValidDataReceived];
         }
         
         [self stopConnectionWatchdogTimer];
@@ -446,9 +478,10 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 
 - (void)tcpConnectionReceivedQuickAck:(MTTcpConnection *)connection quickAck:(int32_t)quickAck
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-        if (_connection != connection)
+        if (transportContext.connection != connection)
             return;
         
         id<MTTransportDelegate> delegate = self.delegate;
@@ -459,9 +492,10 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 
 - (void)tcpConnectionDecodePacketProgressToken:(MTTcpConnection *)connection data:(NSData *)data token:(int64_t)token completion:(void (^)(int64_t token, id packetProgressToken))completion
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-        if (_connection != connection)
+        if (transportContext.connection != connection)
             return;
         
         id<MTTransportDelegate> delegate = self.delegate;
@@ -472,9 +506,10 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 
 - (void)tcpConnectionProgressUpdated:(MTTcpConnection *)connection packetProgressToken:(id)packetProgressToken packetLength:(NSUInteger)packetLength progress:(float)progress
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-        if (_connection != connection)
+        if (transportContext.connection != connection)
             return;
         
         id<MTTransportDelegate> delegate = self.delegate;
@@ -485,36 +520,38 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 
 - (void)tcpConnectionBehaviourRequestsReconnection:(MTTcpConnectionBehaviour *)behaviour
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-        if (_connectionBehaviour != behaviour)
+        if (transportContext.connectionBehaviour != behaviour)
             return;
         
-        if (!_stopped)
+        if (!transportContext.stopped)
             [self startIfNeeded];
     }];
 }
 
 - (void)_requestTransactionFromDelegate
 {
-    if (_isWaitingForTransactionToBecomeReady)
+    MTTcpTransportContext *transportContext = _transportContext;
+    if (transportContext.isWaitingForTransactionToBecomeReady)
     {
-        if (!_didSendActualizationPingAfterConnection)
+        if (!transportContext.didSendActualizationPingAfterConnection)
         {
             MTLog(@"[MTTcpTransport#%x unlocking transaction processing due to connection context update task]", (int)self);
-            _isWaitingForTransactionToBecomeReady = false;
-            _transactionLockTime = 0.0;
+            transportContext.isWaitingForTransactionToBecomeReady = false;
+            transportContext.transactionLockTime = 0.0;
         }
-        else if (CFAbsoluteTimeGetCurrent() > _transactionLockTime + 1.0)
+        else if (CFAbsoluteTimeGetCurrent() > transportContext.transactionLockTime + 1.0)
         {
             MTLog(@"[MTTcpTransport#%x unlocking transaction processing due to timeout]", (int)self);
-            _isWaitingForTransactionToBecomeReady = false;
-            _transactionLockTime = 0.0;
+            transportContext.isWaitingForTransactionToBecomeReady = false;
+            transportContext.transactionLockTime = 0.0;
         }
         else
         {
             MTLog(@"[MTTcpTransport#%x skipping transaction request]", (int)self);
-            _requestAnotherTransactionWhenReady = true;
+            transportContext.requestAnotherTransactionWhenReady = true;
             
             return;
         }
@@ -523,13 +560,13 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     id<MTTransportDelegate> delegate = self.delegate;
     if ([delegate respondsToSelector:@selector(transportReadyForTransaction:transportSpecificTransaction:forceConfirmations:transactionReady:)])
     {
-        _isWaitingForTransactionToBecomeReady = true;
-        _transactionLockTime = CFAbsoluteTimeGetCurrent();
+        transportContext.isWaitingForTransactionToBecomeReady = true;
+        transportContext.transactionLockTime = CFAbsoluteTimeGetCurrent();
         
         MTMessageTransaction *transportSpecificTransaction = nil;
-        if (!_didSendActualizationPingAfterConnection)
+        if (!transportContext.didSendActualizationPingAfterConnection)
         {
-            _didSendActualizationPingAfterConnection = true;
+            transportContext.didSendActualizationPingAfterConnection = true;
             
             int64_t randomId = 0;
             arc4random_buf(&randomId, 8);
@@ -551,7 +588,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
                     {
                         __strong MTTcpTransport *strongSelf = weakSelf;
                         if (strongSelf != nil) {
-                            strongSelf->_currentActualizationPingMessageId = preparedMessage.messageId;
+                            transportContext.currentActualizationPingMessageId = preparedMessage.messageId;
                             
                             id<MTTransportDelegate> delegate = strongSelf.delegate;
                             if ([delegate respondsToSelector:@selector(transportConnectionContextUpdateStateChanged:isUpdatingConnectionContext:)]) {
@@ -577,10 +614,10 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
                     {
                         if (transaction.payload.length != 0)
                         {
-                            if (strongSelf->_connection != nil)
+                            if (transportContext.connection != nil)
                             {
-                                id transactionId = strongSelf->_connection.internalId;
-                                [strongSelf->_connection sendDatas:@[transaction.payload] completion:^(bool success)
+                                id transactionId = transportContext.connection.internalId;
+                                [transportContext.connection sendDatas:@[transaction.payload] completion:^(bool success)
                                 {
                                     if (transaction.completion)
                                         transaction.completion(success, transactionId);
@@ -593,11 +630,11 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
                     
                     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
                     {
-                        strongSelf->_isWaitingForTransactionToBecomeReady = false;
+                        transportContext.isWaitingForTransactionToBecomeReady = false;
                         
-                        if (strongSelf->_requestAnotherTransactionWhenReady)
+                        if (transportContext.requestAnotherTransactionWhenReady)
                         {
-                            strongSelf->_requestAnotherTransactionWhenReady = false;
+                            transportContext.requestAnotherTransactionWhenReady = false;
                             [strongSelf _requestTransactionFromDelegate];
                         }
                     }];
@@ -609,34 +646,37 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 
 - (void)activeTransactionIds:(void (^)(NSArray *activeTransactionId))completion
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-        if (completion && _connection != nil)
-            completion(@[_connection.internalId]);
+        if (completion && transportContext.connection != nil)
+            completion(@[transportContext.connection.internalId]);
     }];
 }
 
 - (void)_networkAvailabilityChanged:(bool)networkAvailable
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [super _networkAvailabilityChanged:networkAvailable];
     
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-        _isNetworkAvailable = networkAvailable;
+        transportContext.isNetworkAvailable = networkAvailable;
         
         if (networkAvailable)
-            [_connectionBehaviour clearBackoff];
+            [transportContext.connectionBehaviour clearBackoff];
         
-        [_connection stop];
+        [transportContext.connection stop];
     }];
 }
 
 - (void)mtProtoDidChangeSession:(MTProto *)__unused mtProto
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
         [self stopActualizationPingResendTimer];
-        _currentActualizationPingMessageId = 0;
+        transportContext.currentActualizationPingMessageId = 0;
         
         id<MTTransportDelegate> delegate = self.delegate;
         if ([delegate respondsToSelector:@selector(transportConnectionContextUpdateStateChanged:isUpdatingConnectionContext:)])
@@ -646,13 +686,14 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 
 - (void)mtProtoServerDidChangeSession:(MTProto *)__unused mtProto firstValidMessageId:(int64_t)firstValidMessageId otherValidMessageIds:(NSArray *)otherValidMessageIds
 {
+    MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-        if (_currentActualizationPingMessageId != 0 && (_currentActualizationPingMessageId < firstValidMessageId && ![otherValidMessageIds containsObject:@(_currentActualizationPingMessageId)]))
+        if (transportContext.currentActualizationPingMessageId != 0 && (transportContext.currentActualizationPingMessageId < firstValidMessageId && ![otherValidMessageIds containsObject:@(transportContext.currentActualizationPingMessageId)]))
         {
             [self stopActualizationPingResendTimer];
             
-            _currentActualizationPingMessageId = 0;
+            transportContext.currentActualizationPingMessageId = 0;
             
             id<MTTransportDelegate> delegate = self.delegate;
             if ([delegate respondsToSelector:@selector(transportConnectionContextUpdateStateChanged:isUpdatingConnectionContext:)])
@@ -665,13 +706,14 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 {
     if ([incomingMessage.body isKindOfClass:[MTPongMessage class]])
     {
+        MTTcpTransportContext *transportContext = _transportContext;
         [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
         {
-            if (_currentActualizationPingMessageId != 0 && ((MTPongMessage *)incomingMessage.body).messageId == _currentActualizationPingMessageId)
+            if (transportContext.currentActualizationPingMessageId != 0 && ((MTPongMessage *)incomingMessage.body).messageId == transportContext.currentActualizationPingMessageId)
             {
                 [self stopActualizationPingResendTimer];
                 
-                _currentActualizationPingMessageId = 0;
+                transportContext.currentActualizationPingMessageId = 0;
                 
                 id<MTTransportDelegate> delegate = self.delegate;
                 if ([delegate respondsToSelector:@selector(transportConnectionContextUpdateStateChanged:isUpdatingConnectionContext:)])
@@ -685,10 +727,11 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 {
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
-        if (_currentActualizationPingMessageId != 0 && messageId == _currentActualizationPingMessageId)
+        MTTcpTransportContext *transportContext = _transportContext;
+        if (transportContext.currentActualizationPingMessageId != 0 && messageId == transportContext.currentActualizationPingMessageId)
         {
             [self stopActualizationPingResendTimer];
-            _currentActualizationPingMessageId = 0;
+            transportContext.currentActualizationPingMessageId = 0;
             
             id<MTTransportDelegate> delegate = self.delegate;
             if ([delegate respondsToSelector:@selector(transportConnectionContextUpdateStateChanged:isUpdatingConnectionContext:)])
