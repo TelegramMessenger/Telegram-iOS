@@ -98,7 +98,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         MTTcpTransportContext *transportContext = [[MTTcpTransportContext alloc] init];
         _transportContext = transportContext;
         
-        [[MTTcpConnection tcpQueue] dispatchOnQueue:^{
+        [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^{
             transportContext.address = address;
             
             transportContext.connectionBehaviour = [[MTTcpConnectionBehaviour alloc] initWithQueue:[MTTcpTransport tcpTransportQueue]];
@@ -234,7 +234,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 
 - (void)startSleepWatchdogTimer
 {
-#if false
+/*#if false
     MTTcpTransportContext *transportContext = _transportContext;
     [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
     {
@@ -261,7 +261,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
             [_sleepWatchdogTimer start];
         }
     }];
-#endif
+#endif*/
 }
 
 - (void)restartSleepWatchdogTimer
@@ -604,12 +604,10 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
         __weak MTTcpTransport *weakSelf = self;
         [delegate transportReadyForTransaction:self transportSpecificTransaction:transportSpecificTransaction forceConfirmations:transportSpecificTransaction != nil transactionReady:^(NSArray *transactionList)
         {
-            [[MTTcpConnection tcpQueue] dispatchOnQueue:^
+            [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^
             {
                 __strong MTTcpTransport *strongSelf = weakSelf;
                 if (strongSelf != nil) {
-                    //crashes here
-                    
                     for (MTTransportTransaction *transaction in transactionList)
                     {
                         if (transaction.payload.length != 0)
