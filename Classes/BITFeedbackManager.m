@@ -57,7 +57,7 @@
 
 NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttachmentThumbnail";
 
-typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *latestImage);
+typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage);
 
 @interface BITFeedbackManager()<UIGestureRecognizerDelegate>
 
@@ -1231,42 +1231,51 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *latestImage);
 #pragma clang diagnostic pop
 }
 
-- (void)fetchLatestImageUsingPhotoLibraryWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler {
+- (void)fetchLatestImageUsingPhotoLibraryWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler NS_AVAILABLE_IOS(8_0){
   [PHPhotoLibrary requestAuthorization:^(PHAuthorizationStatus status) {
-    if ((status == PHAuthorizationStatusDenied) || (status == PHAuthorizationStatusRestricted)) {
-      BITHockeyLog(@"INFO: The latest image could not be fetched, no permissions.");
-      completionHandler(nil);
-      
-    } else if (status == PHAuthorizationStatusAuthorized) {
-      
-      PHImageManager *imageManager = PHImageManager.defaultManager;
-      
-      PHFetchOptions *fetchOptions = [PHFetchOptions new];
-      fetchOptions.sortDescriptors = @[[NSSortDescriptor sortDescriptorWithKey:@"creationDate" ascending:YES]];
-      
-      PHFetchResult *fetchResult = [PHAsset fetchAssetsWithMediaType:PHAssetMediaTypeImage options:fetchOptions];
-      
-      if (fetchResult.count > 0) {
-        PHAsset *latestImageAsset = (PHAsset *)fetchResult.lastObject;
-        if (latestImageAsset) {
-          PHImageRequestOptions *options = [PHImageRequestOptions new];
-          options.version = PHImageRequestOptionsVersionCurrent;
-          options.deliveryMode = PHImageRequestOptionsDeliveryModeHighQualityFormat;
-          options.resizeMode = PHImageRequestOptionsResizeModeNone;
-          
-          [imageManager requestImageDataForAsset:latestImageAsset options:options resultHandler:^(NSData * _Nullable imageData, NSString * _Nullable dataUTI, UIImageOrientation orientation, NSDictionary * _Nullable info) {
-            if (imageData) {
-              completionHandler([UIImage imageWithData:imageData]);
-              return;
-            }
-          }];
-        }
-      } else {
-        BITHockeyLog(@"INFO: The latest image could not be fetched, the fetch result was empty.");
-      }
-      completionHandler(nil);
+    switch (status) {
+      case PHAuthorizationStatusDenied:
+      case PHAuthorizationStatusRestricted:
+        BITHockeyLog(@"INFO: The latest image could not be fetched, no permissions.");
+        break;
+        
+      case PHAuthorizationStatusAuthorized:
+        [self loadLatestImageAssetWithCompletionHandler:completionHandler];
+        break;
+      case PHAuthorizationStatusNotDetermined:
+        BITHockeyLog(@"INFO: The Photo Library authorization status is undetermined. This should not happen.");
+        break;
     }
   }];
+}
+
+- (void)loadLatestImageAssetWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler NS_AVAILABLE_IOS(8_0){
+  PHImageManager *imageManager = PHImageManager.defaultManager;
+  
+  PHFetchOptions *fetchOptions = [PHFetchOptions new];
+  fetchOptions.sortDescriptors = @[[NSSortDescriptor sortDescriptorWithKey:@"creationDate" ascending:YES]];
+  
+  PHFetchResult *fetchResult = [PHAsset fetchAssetsWithMediaType:PHAssetMediaTypeImage options:fetchOptions];
+  
+  if (fetchResult.count > 0) {
+    PHAsset *latestImageAsset = (PHAsset *)fetchResult.lastObject;
+    if (latestImageAsset) {
+      PHImageRequestOptions *options = [PHImageRequestOptions new];
+      options.version = PHImageRequestOptionsVersionOriginal;
+      options.deliveryMode = PHImageRequestOptionsDeliveryModeHighQualityFormat;
+      options.resizeMode = PHImageRequestOptionsResizeModeNone;
+      
+      [imageManager requestImageDataForAsset:latestImageAsset options:options resultHandler:^(NSData * _Nullable imageData, NSString * _Nullable dataUTI, UIImageOrientation orientation, NSDictionary * _Nullable info) {
+        if (imageData) {
+          completionHandler([UIImage imageWithData:imageData]);
+        } else {
+          BITHockeyLog(@"INFO: The latest image could not be fetched, requested image data was empty.");
+        }
+      }];
+    }
+  } else {
+    BITHockeyLog(@"INFO: The latest image could not be fetched, the fetch result was empty.");
+  }
 }
 
 - (void)screenshotTripleTap:(UITapGestureRecognizer *)tapRecognizer {
