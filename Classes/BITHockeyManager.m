@@ -139,7 +139,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
   return sharedInstance;
 }
 
-- (id)init {
+- (instancetype)init {
   if ((self = [super init])) {
     _serverURL = nil;
     _delegate = nil;
