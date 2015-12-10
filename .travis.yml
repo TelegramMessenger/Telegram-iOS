@@ -20,9 +20,6 @@ env:
 before_install:
   - xcrun simctl list
   - gem install xcpretty --no-rdoc --no-ri --no-document --quiet
-  - brew update
-  - brew install appledoc22
-  - brew link --force appledoc22
 
 script:
   - set -o pipefail
