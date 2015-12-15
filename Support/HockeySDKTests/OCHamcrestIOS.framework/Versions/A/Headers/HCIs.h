@@ -1,54 +1,50 @@
-//
-//  OCHamcrest - HCIs.h
-//  Copyright 2013 hamcrest.org. See LICENSE.txt
-//
-//  Created by: Jon Reid, http://qualitycoding.org/
-//  Docs: http://hamcrest.github.com/OCHamcrest/
-//  Source: https://github.com/hamcrest/OCHamcrest
-//
+//  OCHamcrest by Jon Reid, http://qualitycoding.org/about/
+//  Copyright 2015 hamcrest.org. See LICENSE.txt
 
 #import <OCHamcrestIOS/HCBaseMatcher.h>
 
 
+/*!
+ * @abstract Decorates another matcher.
+ */
 @interface HCIs : HCBaseMatcher
-{
-    id<HCMatcher> matcher;
-}
 
-+ (instancetype)is:(id<HCMatcher>)aMatcher;
-- (instancetype)initWithMatcher:(id<HCMatcher>)aMatcher;
+- (instancetype)initWithMatcher:(id <HCMatcher>)matcher;
 
 @end
 
 
-OBJC_EXPORT id<HCMatcher> HC_is(id match);
+FOUNDATION_EXPORT id HC_is(id value);
 
-/**
-    is(aMatcher) -
-    Decorates another matcher, or provides a shortcut to the frequently used @ref is(equalTo(x)).
-
-    @param aMatcher  The matcher to satisfy, or an expected value for @ref equalTo matching.
-
-    This matcher compares the evaluated object to the given matcher.
-    
-    If the @a aMatcher argument is a matcher, its behavior is retained, but the test may be more
-    expressive. For example:
-    @li <code>@ref assertThatInt(value, equalToInt(5))</code>
-    @li <code>@ref assertThatInt(value, is(equalToInt(5)))</code>
-
-    If the @a aMatcher argument is not a matcher, it is wrapped in an @ref equalTo matcher. This
-    makes the following statements equivalent:
-    @li <code>@ref assertThat(cheese, equalTo(smelly))</code>
-    @li <code>@ref assertThat(cheese, is(equalTo(smelly)))</code>
-    @li <code>@ref assertThat(cheese, is(smelly))</code>
-
-    Choose the style that makes your expression most readable. This will vary depending on context.
-
-    (In the event of a name clash, don't \#define @c HC_SHORTHAND and use the synonym
-    @c HC_is instead.)
-
-    @ingroup decorator_matchers
+#ifndef HC_DISABLE_SHORT_SYNTAX
+/*!
+ * @abstract Wraps an existing matcher, or provides a shortcut to the frequently
+ * used <code>is(equalTo(x))</code>.
+ * @param value The matcher to satisfy, or an expected value for <em>equalTo</em> matching.
+ * @discussion
+ * If <em>value</em>is a matcher, its behavior is retained, but the test may be slightly more
+ * expressive. For example:
+ * <ul>
+ *   <li><code>assertThat(\@(value), equalTo(\@5))</code></li>
+ *   <li><code>assertThat(\@(value), is(equalTo(\@5)))</code></li>
+ * </ul>
+ *
+ * If <em>value</em>is not a matcher, it is wrapped in an <em>equalTo</em> matcher. This makes the
+ * following statements equivalent:
+ * <ul>
+ *   <li><code>assertThat(cheese, equalTo(smelly))</code></li>
+ *   <li><code>assertThat(cheese, is(equalTo(smelly)))</code></li>
+ *   <li><code>assertThat(cheese, is(smelly))</code></li>
+ * </ul>
+ *
+ * Choose the style that makes your expression most readable. This will vary depending on context.
+ *
+ * <b>Name Clash</b><br />
+ * In the event of a name clash, <code>#define HC_DISABLE_SHORT_SYNTAX</code> and use the synonym
+ * HC_is instead.
  */
-#ifdef HC_SHORTHAND
-    #define is HC_is
+static inline id is(id value)
+{
+    return HC_is(value);
+}
 #endif

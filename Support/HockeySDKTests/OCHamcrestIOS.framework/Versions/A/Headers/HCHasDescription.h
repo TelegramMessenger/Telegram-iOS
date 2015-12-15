@@ -1,44 +1,40 @@
-//
-//  OCHamcrest - HCHasDescription.h
-//  Copyright 2013 hamcrest.org. See LICENSE.txt
-//
-//  Created by: Jon Reid, http://qualitycoding.org/
-//  Docs: http://hamcrest.github.com/OCHamcrest/
-//  Source: https://github.com/hamcrest/OCHamcrest
-//
+//  OCHamcrest by Jon Reid, http://qualitycoding.org/about/
+//  Copyright 2015 hamcrest.org. See LICENSE.txt
 
 #import <OCHamcrestIOS/HCInvocationMatcher.h>
 
 
+/*!
+ * @abstract Matches objects whose description satisfies a nested matcher.
+ */
 @interface HCHasDescription : HCInvocationMatcher
 
-+ (instancetype)hasDescription:(id<HCMatcher>)descriptionMatcher;
-- (instancetype)initWithDescription:(id<HCMatcher>)descriptionMatcher;
+- (instancetype)initWithDescription:(id <HCMatcher>)descriptionMatcher;
 
 @end
 
 
-OBJC_EXPORT id<HCMatcher> HC_hasDescription(id match);
+FOUNDATION_EXPORT id HC_hasDescription(id descriptionMatcher);
 
-/**
-    hasDescription(aMatcher) -
-    Matches if object's @c -description satisfies a given matcher.
-
-    @param aMatcher  The matcher to satisfy, or an expected value for @ref equalTo matching.
-    
-    This matcher invokes @c -description on the evaluated object to get its description, passing the
-    result to a given matcher for evaluation. If the @a aMatcher argument is not a matcher, it is
-    implicitly wrapped in an @ref equalTo matcher to check for equality.
-    
-    Examples:
-    @li @ref hasDescription(@ref startsWith(\@"foo"))
-    @li @ref hasDescription(\@"bar")
-
-    (In the event of a name clash, don't \#define @c HC_SHORTHAND and use the synonym
-    @c HC_hasDescription instead.)
-
-    @ingroup object_matchers
+#ifndef HC_DISABLE_SHORT_SYNTAX
+/*!
+ * @abstract Creates a matcher that matches when the examined object's <code>-description</code>
+ * satisfies the specified matcher.
+ * @param descriptionMatcher The matcher used to verify the description result, or an expected value
+ * for <em>equalTo</em> matching.
+ * @discussion If <em>descriptionMatcher</em> is not a matcher, it is implicitly wrapped in
+ * an <em>equalTo</em> matcher to check for equality.
+ *
+ * <b>Examples</b><br />
+ * <pre>assertThat(myObject, hasDescription(equalTo(\@"foo"))</pre>
+ * <pre>assertThat(myObject, hasDescription(\@"foo"))</pre>
+ *
+ * <b>Name Clash</b><br />
+ * In the event of a name clash, <code>#define HC_DISABLE_SHORT_SYNTAX</code> and use the synonym
+ * HC_hasDescription instead.
  */
-#ifdef HC_SHORTHAND
-    #define hasDescription HC_hasDescription
+static inline id hasDescription(id descriptionMatcher)
+{
+    return HC_hasDescription(descriptionMatcher);
+}
 #endif

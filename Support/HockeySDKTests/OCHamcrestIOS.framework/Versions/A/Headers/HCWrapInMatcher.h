@@ -1,22 +1,13 @@
-//
-//  OCHamcrest - HCWrapInMatcher.h
-//  Copyright 2013 hamcrest.org. See LICENSE.txt
-//
-//  Created by: Jon Reid, http://qualitycoding.org/
-//  Docs: http://hamcrest.github.com/OCHamcrest/
-//  Source: https://github.com/hamcrest/OCHamcrest
-//
+//  OCHamcrest by Jon Reid, http://qualitycoding.org/about/
+//  Copyright 2015 hamcrest.org. See LICENSE.txt
 
-#import <objc/objc-api.h>
+#import <Foundation/Foundation.h>
 
 @protocol HCMatcher;
 
 
-/**
-    Wraps argument in a matcher, if necessary.
-    
-    @return The argument as-if if it is already a matcher, otherwise wrapped in an @ref equalTo matcher.
-    
-    @ingroup helpers
+/*!
+ * @abstract Wraps argument in a matcher, if necessary.
+ * @return The argument as-is if it is already a matcher, otherwise wrapped in an <em>equalTo</em> matcher.
  */
-OBJC_EXPORT id<HCMatcher> HCWrapInMatcher(id matcherOrValue);
+FOUNDATION_EXPORT id <HCMatcher> HCWrapInMatcher(id matcherOrValue);

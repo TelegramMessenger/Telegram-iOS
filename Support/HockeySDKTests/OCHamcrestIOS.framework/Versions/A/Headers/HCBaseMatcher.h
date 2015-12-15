@@ -1,27 +1,21 @@
-//
-//  OCHamcrest - HCBaseMatcher.h
-//  Copyright 2013 hamcrest.org. See LICENSE.txt
-//
-//  Created by: Jon Reid, http://qualitycoding.org/
-//  Docs: http://hamcrest.github.com/OCHamcrest/
-//  Source: https://github.com/hamcrest/OCHamcrest
-//
+//  OCHamcrest by Jon Reid, http://qualitycoding.org/about/
+//  Copyright 2015 hamcrest.org. See LICENSE.txt
 
 #import <Foundation/Foundation.h>
 #import <OCHamcrestIOS/HCMatcher.h>
 
-#import <objc/objc-api.h>   // Convenience header, to provide OBJC_EXPORT
+#define HC_ABSTRACT_METHOD [self subclassResponsibility:_cmd]
 
 
-/**
-    Base class for all HCMatcher implementations.
-
-    Most implementations can just implement @c -matches: and let
-    <code>-matches:describingMismatchTo:</code> call it. But if it makes more sense to generate the
-    mismatch description during the matching, override <code>-matches:describingMismatchTo:</code>
-    and have @c -matches: call it with a @c nil description.
-
-    @ingroup core
+/*!
+ * @abstract Base class for all @ref HCMatcher implementations.
+ * @discussion Simple matchers can just subclass HCBaseMatcher and implement <code>-matches:</code>
+ * and <code>-describeTo:</code>. But if the matching algorithm has several "no match" paths,
+ * consider subclassing @ref HCDiagnosingMatcher instead.
  */
-@interface HCBaseMatcher : NSObject <HCMatcher>
+@interface HCBaseMatcher : NSObject <HCMatcher, NSCopying>
+
+/*! @abstract Raises exception that command (a pseudo-abstract method) is not implemented. */
+- (void)subclassResponsibility:(SEL)command;
+
 @end

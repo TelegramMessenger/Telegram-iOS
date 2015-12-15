@@ -1,49 +1,41 @@
-//
-//  OCHamcrest - HCIsDictionaryContainingValue.h
-//  Copyright 2013 hamcrest.org. See LICENSE.txt
-//
-//  Created by: Jon Reid, http://qualitycoding.org/
-//  Docs: http://hamcrest.github.com/OCHamcrest/
-//  Source: https://github.com/hamcrest/OCHamcrest
-//
+//  OCHamcrest by Jon Reid, http://qualitycoding.org/about/
+//  Copyright 2015 hamcrest.org. See LICENSE.txt
 
 #import <OCHamcrestIOS/HCBaseMatcher.h>
 
 
+/*!
+ * @abstract Matches if any entry in a dictionary has a value satisfying the nested matcher.
+ */
 @interface HCIsDictionaryContainingValue : HCBaseMatcher
-{
-    id<HCMatcher> valueMatcher;
-}
 
-+ (instancetype)isDictionaryContainingValue:(id<HCMatcher>)theValueMatcher;
-- (instancetype)initWithValueMatcher:(id<HCMatcher>)theValueMatcher;
+- (instancetype)initWithValueMatcher:(id <HCMatcher>)valueMatcher;
 
 @end
 
 
-OBJC_EXPORT id<HCMatcher> HC_hasValue(id valueMatch);
+FOUNDATION_EXPORT id HC_hasValue(id valueMatcher);
 
-/**
-    hasValue(valueMatcher) -
-    Matches if dictionary contains an entry whose value satisfies a given matcher.
-    
-    @param valueMatcher  The matcher to satisfy for the value, or an expected value for @ref equalTo matching.
-    
-    This matcher iterates the evaluated dictionary, searching for any key-value entry whose value
-    satisfies the given matcher. If a matching entry is found, @c hasValue is satisfied.
-    
-    Any argument that is not a matcher is implicitly wrapped in an @ref equalTo matcher to check for
-    equality.
-    
-    Examples:
-    @li @ref hasValue(equalTo(@"bar"))
-    @li @ref hasValue(@"bar")
-    
-    (In the event of a name clash, don't \#define @c HC_SHORTHAND and use the synonym
-    @c HC_hasValue instead.)
-
-    @ingroup collection_matchers
+#ifndef HC_DISABLE_SHORT_SYNTAX
+/*!
+ * @abstract Creates a matcher for NSDictionaries that matches when the examined dictionary contains
+ * at least value that satisfies the specified matcher.
+ * @param valueMatcher The matcher to satisfy for the value, or an expected value for <em>equalTo</em> matching.
+ * @discussion This matcher works on any collection that has an <code>-allValues</code> method.
+ *
+ * Any argument that is not a matcher is implicitly wrapped in an <em>equalTo</em> matcher to check
+ * for equality.
+ *
+ * <b>Examples</b><br />
+ * <pre>assertThat(myDictionary, hasValue(equalTo(\@"bar")))</pre>
+ * <pre>assertThat(myDictionary, hasValue(\@"bar"))</pre>
+ *
+ * <b>Name Clash</b><br />
+ * In the event of a name clash, <code>#define HC_DISABLE_SHORT_SYNTAX</code> and use the synonym
+ * HC_hasValue instead.
  */
-#ifdef HC_SHORTHAND
-    #define hasValue HC_hasValue
+static inline id hasValue(id valueMatcher)
+{
+    return HC_hasValue(valueMatcher);
+}
 #endif

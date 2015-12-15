@@ -1,54 +1,42 @@
-//
-//  OCHamcrest - HCIsDictionaryContaining.h
-//  Copyright 2013 hamcrest.org. See LICENSE.txt
-//
-//  Created by: Jon Reid, http://qualitycoding.org/
-//  Docs: http://hamcrest.github.com/OCHamcrest/
-//  Source: https://github.com/hamcrest/OCHamcrest
-//
+//  OCHamcrest by Jon Reid, http://qualitycoding.org/about/
+//  Copyright 2015 hamcrest.org. See LICENSE.txt
 
 #import <OCHamcrestIOS/HCBaseMatcher.h>
 
 
+/*!
+ * @abstract Matches if any entry in a dictionary satisfies the nested pair of matchers.
+ */
 @interface HCIsDictionaryContaining : HCBaseMatcher
-{
-    id<HCMatcher> keyMatcher;
-    id<HCMatcher> valueMatcher;
-}
 
-+ (instancetype)isDictionaryContainingKey:(id<HCMatcher>)aKeyMatcher
-                                    value:(id<HCMatcher>)aValueMatcher;
-
-- (instancetype)initWithKeyMatcher:(id<HCMatcher>)aKeyMatcher
-                      valueMatcher:(id<HCMatcher>)aValueMatcher;
+- (instancetype)initWithKeyMatcher:(id <HCMatcher>)keyMatcher
+                      valueMatcher:(id <HCMatcher>)valueMatcher;
 
 @end
 
 
-OBJC_EXPORT id<HCMatcher> HC_hasEntry(id keyMatch, id valueMatch);
+FOUNDATION_EXPORT id HC_hasEntry(id keyMatcher, id valueMatcher);
 
-/**
-    hasEntry(keyMatcher, valueMatcher) -
-    Matches if dictionary contains key-value entry satisfying a given pair of matchers.
-    
-    @param keyMatcher    The matcher to satisfy for the key, or an expected value for @ref equalTo matching.
-    @param valueMatcher  The matcher to satisfy for the value, or an expected value for @ref equalTo matching.
-    
-    This matcher iterates the evaluated dictionary, searching for any key-value entry that satisfies
-    @a keyMatcher and @a valueMatcher. If a matching entry is found, @c hasEntry is satisfied.
-    
-    Any argument that is not a matcher is implicitly wrapped in an @ref equalTo matcher to check for
-    equality.
-    
-    Examples:
-    @li @ref hasEntry(@ref equalTo(@"foo"), equalTo(@"bar"))
-    @li @ref hasEntry(@"foo", @"bar")
-
-    (In the event of a name clash, don't \#define @c HC_SHORTHAND and use the synonym
-    @c HC_hasEntry instead.)
-
-    @ingroup collection_matchers
+#ifndef HC_DISABLE_SHORT_SYNTAX
+/*!
+ * @abstract Creates a matcher for NSDictionaries that matches when the examined dictionary contains
+ * at least one entry whose key satisfies the specified <code>keyMatcher</code> <b>and</b> whose
+ * value satisfies the specified <code>valueMatcher</code>.
+ * @param keyMatcher The matcher to satisfy for the key, or an expected value for <em>equalTo</em> matching.
+ * @param valueMatcher The matcher to satisfy for the value, or an expected value for <em>equalTo</em> matching.
+ * @discussion Any argument that is not a matcher is implicitly wrapped in an <em>equalTo</em>
+ * matcher to check for equality.
+ *
+ * <b>Examples</b><br />
+ * <pre>assertThat(myDictionary, hasEntry(equalTo(\@"foo"), equalTo(\@"bar")))</pre>
+ * <pre>assertThat(myDictionary, hasEntry(\@"foo", \@"bar"))</pre>
+ *
+ * <b>Name Clash</b><br />
+ * In the event of a name clash, <code>#define HC_DISABLE_SHORT_SYNTAX</code> and use the synonym
+ * HC_hasEntry instead.
  */
-#ifdef HC_SHORTHAND
-    #define hasEntry HC_hasEntry
+static inline id hasEntry(id keyMatcher, id valueMatcher)
+{
+    return HC_hasEntry(keyMatcher, valueMatcher);
+}
 #endif

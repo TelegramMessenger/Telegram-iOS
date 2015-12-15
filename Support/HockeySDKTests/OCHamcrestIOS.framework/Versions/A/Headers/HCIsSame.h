@@ -1,42 +1,36 @@
-//
-//  OCHamcrest - HCIsSame.h
-//  Copyright 2013 hamcrest.org. See LICENSE.txt
-//
-//  Created by: Jon Reid, http://qualitycoding.org/
-//  Docs: http://hamcrest.github.com/OCHamcrest/
-//  Source: https://github.com/hamcrest/OCHamcrest
-//
+//  OCHamcrest by Jon Reid, http://qualitycoding.org/about/
+//  Copyright 2015 hamcrest.org. See LICENSE.txt
 
 #import <OCHamcrestIOS/HCBaseMatcher.h>
 
 
+/*!
+ * @abstract Is the value the same object as another value?
+ */
 @interface HCIsSame : HCBaseMatcher
-{
-    id object;
-}
 
-+ (instancetype)isSameAs:(id)anObject;
-- (instancetype)initSameAs:(id)anObject;
+- (instancetype)initSameAs:(id)object;
 
 @end
 
 
-OBJC_EXPORT id<HCMatcher> HC_sameInstance(id object);
+FOUNDATION_EXPORT id HC_sameInstance(id expectedInstance);
 
-/**
-    sameInstance(anObject) -
-    Matches if evaluated object is the same instance as a given object.
-
-    @param anObject  The object to compare against as the expected value.
-    
-    This matcher compares the address of the evaluated object to determine if it is the same object
-    as @a anObject.
-    
-    (In the event of a name clash, don't \#define @c HC_SHORTHAND and use the synonym
-    @c HC_sameInstance instead.)
-
-    @ingroup object_matchers
+#ifndef HC_DISABLE_SHORT_SYNTAX
+/*!
+ * @abstract Creates a matcher that matches only when the examined object is the same instance as
+ * the specified target object.
+ * @param expectedInstance The expected instance.
+ * @discussion
+ * <b>Example</b><br />
+ * <pre>assertThat(delegate, sameInstance(expectedDelegate))</pre>
+ *
+ * <b>Name Clash</b><br />
+ * In the event of a name clash, <code>#define HC_DISABLE_SHORT_SYNTAX</code> and use the synonym
+ * HC_sameInstance instead.
  */
-#ifdef HC_SHORTHAND
-    #define sameInstance HC_sameInstance
+static inline id sameInstance(id expectedInstance)
+{
+    return HC_sameInstance(expectedInstance);
+}
 #endif

@@ -1,44 +1,36 @@
-//
-//  OCHamcrest - HCIsEqual.h
-//  Copyright 2013 hamcrest.org. See LICENSE.txt
-//
-//  Created by: Jon Reid, http://qualitycoding.org/
-//  Docs: http://hamcrest.github.com/OCHamcrest/
-//  Source: https://github.com/hamcrest/OCHamcrest
-//
+//  OCHamcrest by Jon Reid, http://qualitycoding.org/about/
+//  Copyright 2015 hamcrest.org. See LICENSE.txt
 
 #import <OCHamcrestIOS/HCBaseMatcher.h>
 
 
+/*!
+ * @abstract Is the value equal to another value, as tested by the <code>-isEqual:</code> method?
+ */
 @interface HCIsEqual : HCBaseMatcher
-{
-    id object;
-}
 
-+ (instancetype)isEqualTo:(id)anObject;
-- (instancetype)initEqualTo:(id)anObject;
+- (instancetype)initEqualTo:(id)expectedValue;
 
 @end
 
 
-OBJC_EXPORT id<HCMatcher> HC_equalTo(id object);
+FOUNDATION_EXPORT id HC_equalTo(id operand);
 
-/**
-    equalTo(anObject) -
-    Matches if object is equal to a given object.
-    
-    @param anObject  The object to compare against as the expected value.
-    
-    This matcher compares the evaluated object to @a anObject for equality, as determined by the
-    @c -isEqual: method.
-    
-    If @a anObject is @c nil, the matcher will successfully match @c nil.
-
-    (In the event of a name clash, don't \#define @c HC_SHORTHAND and use the synonym
-    @c HC_equalTo instead.)
-
-    @ingroup object_matchers
+#ifndef HC_DISABLE_SHORT_SYNTAX
+/*!
+ * @abstract Creates a matcher that matches when the examined object is equal to the specified
+ * object, as determined by calling the <code>-isEqual:</code> method on the <b>examined</b> object.
+ * @param operand The object to compare against as the expected value.
+ * @discussion If the specified operand is <code>nil</code>, then the created matcher will match if
+ * the examined object itself is <code>nil</code>, or if the examined object's <code>-isEqual:</code>
+ * method returns <code>YES</code> when passed a <code>nil</code>.
+ *
+ * <b>Name Clash</b><br />
+ * In the event of a name clash, <code>#define HC_DISABLE_SHORT_SYNTAX</code> and use the synonym
+ * HC_equalTo instead.
  */
-#ifdef HC_SHORTHAND
-    #define equalTo HC_equalTo
+static inline id equalTo(id operand)
+{
+    return HC_equalTo(operand);
+}
 #endif

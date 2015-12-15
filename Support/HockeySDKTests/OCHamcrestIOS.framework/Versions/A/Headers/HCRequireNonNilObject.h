@@ -1,19 +1,10 @@
-//
-//  OCHamcrest - HCRequireNonNilObject.h
-//  Copyright 2013 hamcrest.org. See LICENSE.txt
-//
-//  Created by: Jon Reid, http://qualitycoding.org/
-//  Docs: http://hamcrest.github.com/OCHamcrest/
-//  Source: https://github.com/hamcrest/OCHamcrest
-//
+//  OCHamcrest by Jon Reid, http://qualitycoding.org/about/
+//  Copyright 2015 hamcrest.org. See LICENSE.txt
 
 #import <Foundation/Foundation.h>
-#import <objc/objc-api.h>
 
 
-/**
-    Throws an NSException if @a obj is @c nil.
-    
-    @ingroup helpers
+/*!
+ * @abstract Throws an NSException if <em>obj</em> is <code>nil</code>.
 */
-OBJC_EXPORT void HCRequireNonNilObject(id obj);
+FOUNDATION_EXPORT void HCRequireNonNilObject(id obj);

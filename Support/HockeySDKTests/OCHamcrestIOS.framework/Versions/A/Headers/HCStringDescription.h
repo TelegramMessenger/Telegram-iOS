@@ -1,42 +1,33 @@
-//
-//  OCHamcrest - HCStringDescription.h
-//  Copyright 2013 hamcrest.org. See LICENSE.txt
-//
-//  Created by: Jon Reid, http://qualitycoding.org/
-//  Docs: http://hamcrest.github.com/OCHamcrest/
-//  Source: https://github.com/hamcrest/OCHamcrest
-//
+//  OCHamcrest by Jon Reid, http://qualitycoding.org/about/
+//  Copyright 2015 hamcrest.org. See LICENSE.txt
 
 #import <OCHamcrestIOS/HCBaseDescription.h>
 
 @protocol HCSelfDescribing;
 
 
-/**
-    An HCDescription that is stored as a string.
-
-    @ingroup core
+/*!
+ * @abstract An @ref HCDescription that is stored as a string.
  */
 @interface HCStringDescription : HCBaseDescription
 {
     NSMutableString *accumulator;
 }
 
-/**
-    Returns the description of an HCSelfDescribing object as a string.
-
-    @param selfDescribing  The object to be described.
-    @return The description of the object.
+/*!
+ * @abstract Returns the description of an HCSelfDescribing object as a string.
+ * @param selfDescribing The object to be described.
+ * @return The description of the object.
  */
-+ (NSString *)stringFrom:(id<HCSelfDescribing>)selfDescribing;
++ (NSString *)stringFrom:(id <HCSelfDescribing>)selfDescribing;
 
-/**
-    Returns an empty description.
+/*!
+ * @abstract Creates and returns an empty description.
  */
 + (instancetype)stringDescription;
 
-/**
-    Returns an initialized HCStringDescription object that is empty.
+/*!
+ * @abstract Initializes a newly allocated HCStringDescription that is initially empty.
  */
 - (instancetype)init;
 

@@ -15,24 +15,13 @@
  */
 
 #import <Foundation/Foundation.h>
-#import "OCMFunctions.h"
 
 
-@interface OCMLocation : NSObject
-{
-    id          testCase;
-    NSString    *file;
-    NSUInteger  line;
-}
+#if defined(__cplusplus)
+#define OCMOCK_EXTERN extern "C"
+#else
+#define OCMOCK_EXTERN extern
+#endif
 
-+ (instancetype)locationWithTestCase:(id)aTestCase file:(NSString *)aFile line:(NSUInteger)aLine;
 
-- (instancetype)initWithTestCase:(id)aTestCase file:(NSString *)aFile line:(NSUInteger)aLine;
-
-- (id)testCase;
-- (NSString *)file;
-- (NSUInteger)line;
-
-@end
-
-OCMOCK_EXTERN OCMLocation *OCMMakeLocation(id testCase, const char *file, int line);
+OCMOCK_EXTERN BOOL OCMIsObjectType(const char *objCType);

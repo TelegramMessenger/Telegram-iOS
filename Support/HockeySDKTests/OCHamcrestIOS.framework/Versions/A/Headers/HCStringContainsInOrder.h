@@ -1,50 +1,57 @@
-//
-//  OCHamcrest - HCStringContainsInOrder.h
-//  Copyright 2013 hamcrest.org. See LICENSE.txt
-//
-//  Created by: Jon Reid, http://qualitycoding.org/
-//  Docs: http://hamcrest.github.com/OCHamcrest/
-//  Source: https://github.com/hamcrest/OCHamcrest
-//
+//  OCHamcrest by Jon Reid, http://qualitycoding.org/about/
+//  Copyright 2015 hamcrest.org. See LICENSE.txt
 
 #import <OCHamcrestIOS/HCBaseMatcher.h>
 
 
+/*!
+ * @abstract Tests if string that contains a list of substrings in relative order.
+ */
 @interface HCStringContainsInOrder : HCBaseMatcher
-{
-    NSArray *substrings;
-}
 
-+ (instancetype)containsInOrder:(NSArray *)substringList;
-- (instancetype)initWithSubstrings:(NSArray *)substringList;
+- (instancetype)initWithSubstrings:(NSArray *)substrings;
 
 @end
 
 
-OBJC_EXPORT id<HCMatcher> HC_stringContainsInOrder(NSString *substring, ...) NS_REQUIRES_NIL_TERMINATION;
+FOUNDATION_EXPORT id HC_stringContainsInOrderIn(NSArray *substrings);
 
-/**
-    stringContainsInOrder(firstString, ...) -
-    Matches if object is a string containing a given list of substrings in relative order.
-
-    @param firstString,...  A comma-separated list of strings ending with @c nil.
-    
-    This matcher first checks whether the evaluated object is a string. If so, it checks whether it 
-    contains a given list of strings, in relative order to each other. The searches are performed 
-    starting from the beginning of the evaluated string.
-    
-    Example:
-
-    @par
-    @ref stringContainsInOrder(@"bc", @"fg", @"jkl", nil)
-
-    will match "abcdefghijklm".
-
-    (In the event of a name clash, don't \#define @c HC_SHORTHAND and use the synonym
-    @c HC_stringContainsInOrder instead.)
-
-    @ingroup text_matchers
+#ifndef HC_DISABLE_SHORT_SYNTAX
+/*!
+ * @abstract Creates matcher for NSStrings that matches when the examined string contains all of the
+ * specified substrings, considering the order of their appearance.
+ * @param substrings An array of strings.
+ * @discussion
+ * <b>Example</b><br />
+ * <pre>assertThat(\@"myfoobarbaz", stringContainsInOrderIn(\@[\@"bar", \@"foo"]))</pre>
+ * fails as "foo" occurs before "bar" in the string "myfoobarbaz"
+ *
+ * <b>Name Clash</b><br />
+ * In the event of a name clash, <code>#define HC_DISABLE_SHORT_SYNTAX</code> and use the synonym
+ * HC_stringContainsInOrderIn instead.
  */
-#ifdef HC_SHORTHAND
-    #define stringContainsInOrder HC_stringContainsInOrder
+static inline id stringContainsInOrderIn(NSArray *substrings)
+{
+    return HC_stringContainsInOrderIn(substrings);
+}
+#endif
+
+
+FOUNDATION_EXPORT id HC_stringContainsInOrder(NSString *substrings, ...) NS_REQUIRES_NIL_TERMINATION;
+
+#ifndef HC_DISABLE_SHORT_SYNTAX
+/*!
+ * @abstract Creates matcher for NSStrings that matches when the examined string contains all of the
+ * specified substrings, considering the order of their appearance.
+ * @param substrings... A comma-separated list of strings, ending with <code>nil</code>.
+ * @discussion
+ * <b>Example</b><br />
+ * <pre>assertThat(\@"myfoobarbaz", stringContainsInOrder(\@"bar", \@"foo", nil))</pre>
+ * fails as "foo" occurs before "bar" in the string "myfoobarbaz"
+ *
+ * <b>Name Clash</b><br />
+ * In the event of a name clash, <code>#define HC_DISABLE_SHORT_SYNTAX</code> and use the synonym
+ * HC_stringContainsInOrder instead.
+ */
+#define stringContainsInOrder(substrings...) HC_stringContainsInOrder(substrings)
 #endif

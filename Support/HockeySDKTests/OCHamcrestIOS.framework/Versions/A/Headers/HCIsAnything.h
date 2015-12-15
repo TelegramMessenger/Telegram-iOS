@@ -1,63 +1,51 @@
-//
-//  OCHamcrest - HCIsAnything.h
-//  Copyright 2013 hamcrest.org. See LICENSE.txt
-//
-//  Created by: Jon Reid, http://qualitycoding.org/
-//  Docs: http://hamcrest.github.com/OCHamcrest/
-//  Source: https://github.com/hamcrest/OCHamcrest
-//
+//  OCHamcrest by Jon Reid, http://qualitycoding.org/about/
+//  Copyright 2015 hamcrest.org. See LICENSE.txt
 
 #import <OCHamcrestIOS/HCBaseMatcher.h>
 
 
+/*!
+ * @abstract Matches anything.
+ */
 @interface HCIsAnything : HCBaseMatcher
-{
-    NSString *description;
-}
-
-+ (instancetype)isAnything;
-+ (instancetype)isAnythingWithDescription:(NSString *)aDescription;
 
 - (instancetype)init;
-- (instancetype)initWithDescription:(NSString *)aDescription;
+- (instancetype)initWithDescription:(NSString *)description;
 
 @end
 
 
-OBJC_EXPORT id<HCMatcher> HC_anything(void);
+FOUNDATION_EXPORT id HC_anything(void);
 
-/**
-    Matches anything.
-    
-    This matcher always evaluates to @c YES. Specify this in composite matchers when the value of a 
-    particular element is unimportant.
-    
-    (In the event of a name clash, don't \#define @c HC_SHORTHAND and use the synonym
-    @c HC_anything instead.)
-
-    @ingroup logical_matchers
+#ifndef HC_DISABLE_SHORT_SYNTAX
+/*!
+ * @abstract Creates a matcher that always matches, regardless of the examined object.
+ * @discussion
+ * <b>Name Clash</b><br />
+ * In the event of a name clash, <code>#define HC_DISABLE_SHORT_SYNTAX</code> and use the synonym
+ * HC_anything instead.
  */
-#ifdef HC_SHORTHAND
-    #define anything() HC_anything()
+static inline id anything(void)
+{
+    return HC_anything();
+}
 #endif
 
 
-OBJC_EXPORT id<HCMatcher> HC_anythingWithDescription(NSString *aDescription);
+FOUNDATION_EXPORT id HC_anythingWithDescription(NSString *description);
 
-/**
-    anythingWithDescription(description) -
-    Matches anything.
-    
-    @param description  A string used to describe this matcher.
-    
-    This matcher always evaluates to @c YES. Specify this in collection matchers when the value of a 
-    particular element in a collection is unimportant.
-    
-    (In the event of a name clash, don't \#define @c HC_SHORTHAND and use the synonym
-    @c HC_anything instead.)
-
-    @ingroup logical_matchers
+#ifndef HC_DISABLE_SHORT_SYNTAX
+/*!
+ * @abstract Creates a matcher that matches anything, regardless of the examined object, but
+ * describes itself with the specified NSString.
+ * @param description A meaningful string used to describe this matcher.
+ * @discussion
+ * <b>Name Clash</b><br />
+ * In the event of a name clash, <code>#define HC_DISABLE_SHORT_SYNTAX</code> and use the synonym
+ * HC_anything instead.
  */
-#ifdef HC_SHORTHAND
-    #define anythingWithDescription HC_anythingWithDescription
+static inline id anythingWithDescription(NSString *description)
+{
+    return HC_anythingWithDescription(description);
+}
 #endif

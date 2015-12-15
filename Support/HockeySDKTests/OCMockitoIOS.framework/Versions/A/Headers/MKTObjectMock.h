@@ -1,20 +1,15 @@
-//
-//  OCMockito - MKTObjectMock.h
-//  Copyright 2013 Jonathan M. Reid. See LICENSE.txt
-//
-//  Created by: Jon Reid, http://qualitycoding.org/
-//  Source: https://github.com/jonreid/OCMockito
-//
+//  OCMockito by Jon Reid, http://qualitycoding.org/about/
+//  Copyright 2015 Jonathan M. Reid. See LICENSE.txt
 
 #import "MKTBaseMockObject.h"
 
 
-/**
-    Mock object of a given class.
+/*!
+ * @abstract Mock object of a given class.
  */
 @interface MKTObjectMock : MKTBaseMockObject
 
-+ (id)mockForClass:(Class)aClass;
-- (id)initWithClass:(Class)aClass;
++ (instancetype)mockForClass:(Class)aClass;
+- (instancetype)initWithClass:(Class)aClass;
 
 @end

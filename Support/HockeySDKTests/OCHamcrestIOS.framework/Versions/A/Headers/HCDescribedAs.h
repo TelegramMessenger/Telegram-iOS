@@ -1,50 +1,36 @@
-//
-//  OCHamcrest - HCDescribedAs.h
-//  Copyright 2013 hamcrest.org. See LICENSE.txt
-//
-//  Created by: Jon Reid, http://qualitycoding.org/
-//  Docs: http://hamcrest.github.com/OCHamcrest/
-//  Source: https://github.com/hamcrest/OCHamcrest
-//
+//  OCHamcrest by Jon Reid, http://qualitycoding.org/about/
+//  Copyright 2015 hamcrest.org. See LICENSE.txt
 
 #import <OCHamcrestIOS/HCBaseMatcher.h>
 
 
+/*!
+ * @abstract Provides a custom description to another matcher.
+ */
 @interface HCDescribedAs : HCBaseMatcher
-{
-    NSString *descriptionTemplate;
-    id<HCMatcher> matcher;
-    NSArray *values;
-}
-
-+ (instancetype)describedAs:(NSString *)description
-                 forMatcher:(id<HCMatcher>)aMatcher
-                 overValues:(NSArray *)templateValues;
 
 - (instancetype)initWithDescription:(NSString *)description
-                         forMatcher:(id<HCMatcher>)aMatcher
+                         forMatcher:(id <HCMatcher>)matcher
                          overValues:(NSArray *)templateValues;
 
 @end
 
 
-OBJC_EXPORT id<HCMatcher> HC_describedAs(NSString *description, id<HCMatcher> matcher, ...) NS_REQUIRES_NIL_TERMINATION;
+FOUNDATION_EXPORT id HC_describedAs(NSString *description, id <HCMatcher> matcher, ...) NS_REQUIRES_NIL_TERMINATION;
 
-/**
-    describedAs(description, matcher, ...) -
-    Adds custom failure description to a given matcher.
-    
-    @param description  Overrides the matcher's description.
-    @param matcher,...  The matcher to satisfy, followed by a comma-separated list of substitution values ending with @c nil.
-    
-    The description may contain substitution placeholders \%0, \%1, etc. These will be replaced by
-    any values that follow the matcher.
-    
-    (In the event of a name clash, don't \#define @c HC_SHORTHAND and use the synonym
-    @c HC_describedAs instead.)
-    
-    @ingroup decorator_matchers
+#ifndef HC_DISABLE_SHORT_SYNTAX
+/*!
+ * @abstract Wraps an existing matcher, overriding its description with that specified. All other
+ * functions are delegated to the decorated matcher, including its mismatch description.
+ * @param description The new description for the wrapped matcher.
+ * @param matcher The matcher to wrap, followed by a comma-separated list of substitution
+ * values ending with <code>nil</code>.
+ * @discussion The description may contain substitution placeholders %0, %1, etc. These will be
+ * replaced by any values that follow the matcher.
+ *
+ * <b>Name Clash</b><br />
+ * In the event of a name clash, <code>#define HC_DISABLE_SHORT_SYNTAX</code> and use the synonym
+ * HC_describedAs instead.
  */
-#ifdef HC_SHORTHAND
-    #define describedAs HC_describedAs
+#define describedAs(description, matcher, ...) HC_describedAs(description, matcher, ##__VA_ARGS__)
 #endif

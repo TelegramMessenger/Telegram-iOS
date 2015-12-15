@@ -1,45 +1,57 @@
-//
-//  OCHamcrest - HCAnyOf.h
-//  Copyright 2013 hamcrest.org. See LICENSE.txt
-//
-//  Created by: Jon Reid, http://qualitycoding.org/
-//  Docs: http://hamcrest.github.com/OCHamcrest/
-//  Source: https://github.com/hamcrest/OCHamcrest
-//
+//  OCHamcrest by Jon Reid, http://qualitycoding.org/about/
+//  Copyright 2015 hamcrest.org. See LICENSE.txt
 
 #import <OCHamcrestIOS/HCBaseMatcher.h>
 
 
+/*!
+ * @abstract Calculates the logical disjunction of multiple matchers.
+ * @discussion Evaluation is shortcut, so subsequent matchers are not called if an earlier matcher
+ * returns <code>NO</code>.
+ */
 @interface HCAnyOf : HCBaseMatcher
-{
-    NSArray *matchers;
-}
 
-+ (instancetype)anyOf:(NSArray *)theMatchers;
-- (instancetype)initWithMatchers:(NSArray *)theMatchers;
+- (instancetype)initWithMatchers:(NSArray *)matchers;
 
 @end
 
+FOUNDATION_EXPORT id HC_anyOfIn(NSArray *matchers);
 
-OBJC_EXPORT id<HCMatcher> HC_anyOf(id match, ...) NS_REQUIRES_NIL_TERMINATION;
-
-/**
-    anyOf(firstMatcher, ...) -
-    Matches if any of the given matchers evaluate to @c YES.
-    
-    @param firstMatcher,...  A comma-separated list of matchers ending with @c nil.
-    
-    The matchers are evaluated from left to right using short-circuit evaluation, so evaluation
-    stops as soon as a matcher returns @c YES.
-    
-    Any argument that is not a matcher is implicitly wrapped in an @ref equalTo matcher to check for
-    equality.
-    
-    (In the event of a name clash, don't \#define @c HC_SHORTHAND and use the synonym
-    @c HC_anyOf instead.)
-
-    @ingroup logical_matchers
+#ifndef HC_DISABLE_SHORT_SYNTAX
+/*!
+ * @abstract Creates a matcher that matches when the examined object matches <b>any</b> of the
+ * specified matchers.
+ * @param matchers An array of matchers. Any element that is not a matcher is implicitly wrapped in
+ * an <em>equalTo</em> matcher to check for equality.
+ * @discussion
+ * <b>Example</b><br />
+ * <pre>assertThat(\@"myValue", allOf(\@[startsWith(\@"foo"), containsSubstring(\@"Val")]))</pre>
+ *
+ * <b>Name Clash</b><br />
+ * In the event of a name clash, <code>#define HC_DISABLE_SHORT_SYNTAX</code> and use the synonym
+ * HC_anyOf instead.
  */
-#ifdef HC_SHORTHAND
-    #define anyOf HC_anyOf
+static inline id anyOfIn(NSArray *matchers)
+{
+    return HC_anyOfIn(matchers);
+}
+#endif
+
+FOUNDATION_EXPORT id HC_anyOf(id matchers, ...) NS_REQUIRES_NIL_TERMINATION;
+
+#ifndef HC_DISABLE_SHORT_SYNTAX
+/*!
+ * @abstract Creates a matcher that matches when the examined object matches <b>any</b> of the
+ * specified matchers.
+ * @param matchers... A comma-separated list of matchers ending with <code>nil</code>. Any argument
+ * that is not a matcher is implicitly wrapped in an <em>equalTo</em> matcher to check for equality.
+ * @discussion
+ * <b>Example</b><br />
+ * <pre>assertThat(\@"myValue", allOf(startsWith(\@"foo"), containsSubstring(\@"Val"), nil))</pre>
+ *
+ * <b>Name Clash</b><br />
+ * In the event of a name clash, <code>#define HC_DISABLE_SHORT_SYNTAX</code> and use the synonym
+ * HC_anyOf instead.
+ */
+#define anyOf(matchers...) HC_anyOf(matchers)
 #endif
