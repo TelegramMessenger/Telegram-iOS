@@ -466,7 +466,6 @@
 		1E5A459816F0DFC200B55C04 /* HockeySDKTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "HockeySDKTests-Info.plist"; sourceTree = "<group>"; };
 		1E5A459A16F0DFC200B55C04 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		1E5A459D16F0DFC200B55C04 /* BITStoreUpdateManagerTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BITStoreUpdateManagerTests.m; sourceTree = "<group>"; };
-		1E5A459F16F0DFC200B55C04 /* HockeySDKTests-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "HockeySDKTests-Prefix.pch"; sourceTree = "<group>"; };
 		1E61CCAE18E0585A00A5E38E /* BITFeedbackManagerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITFeedbackManagerTests.m; sourceTree = "<group>"; };
 		1E66CA9115D4100500F35BED /* buildnumber.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = buildnumber.xcconfig; sourceTree = "<group>"; };
 		1E6F0450167B5E5600ED1C86 /* pt-PT */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-PT"; path = "pt-PT.lproj/HockeySDK.strings"; sourceTree = "<group>"; };
@@ -736,7 +735,6 @@
 				1E7A45FB16F54FB5005B08F1 /* OCMockitoIOS.framework */,
 				1E5A459816F0DFC200B55C04 /* HockeySDKTests-Info.plist */,
 				1E5A459916F0DFC200B55C04 /* InfoPlist.strings */,
-				1E5A459F16F0DFC200B55C04 /* HockeySDKTests-Prefix.pch */,
 				1EA1170516F53B91001C015C /* BITTestHelper.h */,
 				1EA1170616F53B91001C015C /* BITTestHelper.m */,
 			);
@@ -1723,8 +1721,7 @@
 					"\"$(SRCROOT)/../Vendor\"",
 					"\"$(SRCROOT)/HockeySDKTests\"",
 				);
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "HockeySDKTests/HockeySDKTests-Prefix.pch";
+				GCC_PREFIX_HEADER = "";
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/HockeySDKTests/";
 				INFOPLIST_FILE = "HockeySDKTests/HockeySDKTests-Info.plist";
@@ -2023,8 +2020,7 @@
 					"\"$(SRCROOT)/../Vendor\"",
 					"\"$(SRCROOT)/HockeySDKTests\"",
 				);
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "HockeySDKTests/HockeySDKTests-Prefix.pch";
+				GCC_PREFIX_HEADER = "";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
@@ -2085,8 +2081,7 @@
 					"\"$(SRCROOT)/../Vendor\"",
 					"\"$(SRCROOT)/HockeySDKTests\"",
 				);
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "HockeySDKTests/HockeySDKTests-Prefix.pch";
+				GCC_PREFIX_HEADER = "";
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/HockeySDKTests/";
 				INFOPLIST_FILE = "HockeySDKTests/HockeySDKTests-Info.plist";
@@ -2231,8 +2226,7 @@
 					"\"$(SRCROOT)/../Vendor\"",
 					"\"$(SRCROOT)/HockeySDKTests\"",
 				);
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "HockeySDKTests/HockeySDKTests-Prefix.pch";
+				GCC_PREFIX_HEADER = "";
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/HockeySDKTests/";
 				INFOPLIST_FILE = "HockeySDKTests/HockeySDKTests-Info.plist";
