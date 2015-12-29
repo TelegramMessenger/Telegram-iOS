@@ -226,6 +226,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  *
  *  This allows it to get a crash report if the app got killed while being in the foreground
  *  because of one of the following reasons:
+ *
  *  - The main thread was blocked for too long
  *  - The app took too long to start up
  *  - The app tried to allocate too much memory. If iOS did send a memory warning before killing the app because of this reason, `didReceiveMemoryWarningInLastSession` returns `YES`.
@@ -234,6 +235,7 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  *  - If `enableMachExceptionHandler` is not activated, crashed due to stack overflow will also be reported
  *
  *  The following kills can _NOT_ be detected:
+ *
  *  - Terminating the app takes too long
  *  - Permitted background duration too long for all other cases
  *  - App failed to resume in time for all other cases
