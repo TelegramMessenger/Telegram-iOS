@@ -1377,6 +1377,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   
   // we start sending always with the oldest pending one
   NSString *filename = [_crashFiles objectAtIndex:0];
+  NSString *attachmentFilename = filename;
   NSString *cacheFilename = [filename lastPathComponent];
   NSData *crashData = [NSData dataWithContentsOfFile:filename];
   
@@ -1412,6 +1413,8 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
       osVersion = [fakeReportDict objectForKey:kBITFakeCrashOSVersion];
       
       metaFilename = [cacheFilename stringByReplacingOccurrencesOfString:@".fake" withString:@".meta"];
+      attachmentFilename = [attachmentFilename stringByReplacingOccurrencesOfString:@".fake" withString:@""];
+      
       if ([appBundleVersion compare:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]] == NSOrderedSame) {
         _crashIdenticalCurrentVersion = YES;
       }
@@ -1471,7 +1474,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
       userid = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserID]] ?: @"";
       applicationLog = [metaDict objectForKey:kBITCrashMetaApplicationLog] ?: @"";
       description = [NSString stringWithContentsOfFile:[NSString stringWithFormat:@"%@.desc", [_crashesDir stringByAppendingPathComponent: cacheFilename]] encoding:NSUTF8StringEncoding error:&error];
-      attachment = [self attachmentForCrashReport:filename];
+      attachment = [self attachmentForCrashReport:attachmentFilename];
     } else {
       BITHockeyLog(@"ERROR: Reading crash meta data. %@", error);
     }
