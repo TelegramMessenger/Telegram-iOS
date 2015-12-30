@@ -38,6 +38,10 @@
     return self;
 }
 
+- (void)dealloc {
+    int bp = 1;
+}
+
 - (void)beginWithDisposable:(id<SDisposable>)disposable
 {
     _disposable = disposable;
@@ -60,6 +64,7 @@
     
     if (startSignal)
     {
+        __weak SSignalQueueState *weakSelf = self;
         id<SDisposable> disposable = [signal startWithNext:^(id next)
         {
             [_subscriber putNext:next];
@@ -68,7 +73,10 @@
             [_subscriber putError:error];
         } completed:^
         {
-            [self headCompleted];
+            __strong SSignalQueueState *strongSelf = weakSelf;
+            if (strongSelf != nil) {
+                [strongSelf headCompleted];
+            }
         }];
         
         [_currentDisposable setDisposable:disposable];
@@ -102,6 +110,7 @@
         [_subscriber putCompletion];
     else if (nextSignal != nil)
     {
+        __weak SSignalQueueState *weakSelf = self;
         id<SDisposable> disposable = [nextSignal startWithNext:^(id next)
         {
             [_subscriber putNext:next];
@@ -110,7 +119,10 @@
             [_subscriber putError:error];
         } completed:^
         {
-            [self headCompleted];
+            __strong SSignalQueueState *strongSelf = weakSelf;
+            if (strongSelf != nil) {
+                [strongSelf headCompleted];
+            }
         }];
         
         [_currentDisposable setDisposable:disposable];

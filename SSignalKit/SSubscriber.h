@@ -2,10 +2,6 @@
 
 @interface SSubscriber : NSObject <SDisposable>
 {
-    @public
-    void (^_next)(id);
-    void (^_error)(id);
-    void (^_completed)();
 }
 
 - (instancetype)initWithNext:(void (^)(id))next error:(void (^)(id))error completed:(void (^)())completed;

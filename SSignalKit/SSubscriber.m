@@ -2,12 +2,36 @@
 
 #import <libkern/OSAtomic.h>
 
+@interface SSubscriberBlocks : NSObject {
+    @public
+    void (^_next)(id);
+    void (^_error)(id);
+    void (^_completed)();
+}
+
+@end
+
+@implementation SSubscriberBlocks
+
+- (instancetype)initWithNext:(void (^)(id))next error:(void (^)(id))error completed:(void (^)())completed {
+    self = [super init];
+    if (self != nil) {
+        _next = [next copy];
+        _error = [error copy];
+        _completed = [completed copy];
+    }
+    return self;
+}
+
+@end
+
 @interface SSubscriber ()
 {
     @protected
     OSSpinLock _lock;
     bool _terminated;
     id<SDisposable> _disposable;
+    SSubscriberBlocks *_blocks;
 }
 
 @end
@@ -19,9 +43,7 @@
     self = [super init];
     if (self != nil)
     {
-        _next = [next copy];
-        _error = [error copy];
-        _completed = [completed copy];
+        _blocks = [[SSubscriberBlocks alloc] initWithNext:next error:error completed:completed];
     }
     return self;
 }
@@ -37,48 +59,55 @@
 - (void)_markTerminatedWithoutDisposal
 {
     OSSpinLockLock(&_lock);
+    SSubscriberBlocks *blocks = nil;
     if (!_terminated)
     {
+        blocks = _blocks;
+        _blocks = nil;
+        
         _terminated = true;
-        _next = nil;
-        _error = nil;
-        _completed = nil;
     }
     OSSpinLockUnlock(&_lock);
+    
+    if (blocks) {
+        blocks = nil;
+    }
 }
 
 - (void)putNext:(id)next
 {
-    void (^fnext)(id) = nil;
+    SSubscriberBlocks *blocks = nil;
     
     OSSpinLockLock(&_lock);
-    if (!_terminated)
-        fnext = self->_next;
+    if (!_terminated) {
+        blocks = _blocks;
+    }
     OSSpinLockUnlock(&_lock);
     
-    if (fnext)
-        fnext(next);
+    if (blocks && blocks->_next) {
+        blocks->_next(next);
+    }
 }
 
 - (void)putError:(id)error
 {
     bool shouldDispose = false;
-    void (^ferror)(id) = nil;
+    SSubscriberBlocks *blocks = nil;
     
     OSSpinLockLock(&_lock);
     if (!_terminated)
     {
-        ferror = self->_error;
+        blocks = _blocks;
+        _blocks = nil;
+        
         shouldDispose = true;
-        self->_next = nil;
-        self->_error = nil;
-        self->_completed = nil;
         _terminated = true;
     }
     OSSpinLockUnlock(&_lock);
     
-    if (ferror)
-        ferror(error);
+    if (blocks && blocks->_error) {
+        blocks->_error(error);
+    }
     
     if (shouldDispose)
         [self->_disposable dispose];
@@ -87,22 +116,21 @@
 - (void)putCompletion
 {
     bool shouldDispose = false;
-    void (^completed)() = nil;
+    SSubscriberBlocks *blocks = nil;
     
     OSSpinLockLock(&_lock);
     if (!_terminated)
     {
-        completed = self->_completed;
+        blocks = _blocks;
+        _blocks = nil;
+        
         shouldDispose = true;
-        self->_next = nil;
-        self->_error = nil;
-        self->_completed = nil;
         _terminated = true;
     }
     OSSpinLockUnlock(&_lock);
     
-    if (completed)
-        completed();
+    if (blocks && blocks->_completed)
+        blocks->_completed();
     
     if (shouldDispose)
         [self->_disposable dispose];
@@ -126,18 +154,15 @@
 
 - (instancetype)initWithName:(NSString *)name next:(void (^)(id))next error:(void (^)(id))error completed:(void (^)())completed
 {
-    self = [super init];
+    self = [super initWithNext:next error:error completed:completed];
     if (self != nil)
     {
         _name = name;
-        _next = [next copy];
-        _error = [error copy];
-        _completed = [completed copy];
     }
     return self;
 }
 
-- (void)_assignDisposable:(id<SDisposable>)disposable
+/*- (void)_assignDisposable:(id<SDisposable>)disposable
 {
     if (_terminated)
         [disposable dispose];
@@ -239,6 +264,6 @@
 {
     NSLog(@"trace(%@ dispose)", _name);
     [self->_disposable dispose];
-}
+}*/
 
 @end

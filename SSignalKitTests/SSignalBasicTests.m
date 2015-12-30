@@ -9,6 +9,31 @@
 
 #import "DeallocatingObject.h"
 
+@interface DisposableHolder : NSObject {
+}
+
+@property (nonatomic, strong) id<SDisposable> disposable;
+
+@end
+
+@implementation DisposableHolder
+
+- (instancetype)init {
+    self = [super init];
+    if (self != nil) {
+        _disposable = [[[SSignal single:nil] delay:1.0 onQueue:[SQueue concurrentDefaultQueue]] startWithNext:^(__unused id next){
+            [self description];
+        }];
+    }
+    return self;
+}
+
+- (void)dealloc {
+    [_disposable dispose];
+}
+
+@end
+
 @interface SSignalBasicTests : XCTestCase
 
 @end
@@ -667,6 +692,14 @@
     
     XCTAssertEqual(result1, 1);
     XCTAssertEqual(result2, 2);
+}
+
+- (void)testDisposableDeadlock {
+    @autoreleasepool {
+        DisposableHolder *holder = [[DisposableHolder alloc] init];
+        holder = nil;
+        sleep(10);
+    }
 }
 
 @end
