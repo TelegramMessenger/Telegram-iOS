@@ -38,10 +38,6 @@
     return self;
 }
 
-- (void)dealloc {
-    int bp = 1;
-}
-
 - (void)beginWithDisposable:(id<SDisposable>)disposable
 {
     _disposable = disposable;
