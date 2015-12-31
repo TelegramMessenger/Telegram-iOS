@@ -4,5 +4,6 @@
 
 - (SSignal *)take:(NSUInteger)count;
 - (SSignal *)takeLast;
+- (SSignal *)takeUntilReplacement:(SSignal *)replacement;
 
 @end

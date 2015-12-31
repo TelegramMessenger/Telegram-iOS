@@ -4,6 +4,7 @@
 #import "SMetaDisposable.h"
 #import "SSignal+Mapping.h"
 #import "SAtomic.h"
+#import "SSignal+Pipe.h"
 
 #import <libkern/OSAtomic.h>
 
@@ -245,6 +246,52 @@
         } completed:^
         {
             [subscriber putCompletion];
+        }];
+    }];
+}
+
+@end
+
+@interface SSignalQueue () {
+    SPipe *_pipe;
+    id<SDisposable> _disposable;
+}
+
+@end
+
+@implementation SSignalQueue
+
+- (instancetype)init {
+    self = [super init];
+    if (self != nil) {
+        _pipe = [[SPipe alloc] init];
+        _disposable = [[_pipe.signalProducer() queue] startWithNext:nil];
+    }
+    return self;
+}
+
+- (void)dealloc {
+    [_disposable dispose];
+}
+
+- (SSignal *)enqueue:(SSignal *)signal {
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
+        SPipe *disposePipe = [[SPipe alloc] init];
+        
+        SSignal *proxy = [[[[signal onNext:^(id next) {
+            [subscriber putNext:next];
+        }] onError:^(id error) {
+            [subscriber putError:error];
+        }] onCompletion:^{
+            [subscriber putCompletion];
+        }] catch:^SSignal *(__unused id error) {
+            return [SSignal complete];
+        }];
+        
+        _pipe.sink([proxy takeUntilReplacement:disposePipe.signalProducer()]);
+        
+        return [[SBlockDisposable alloc] initWithBlock:^{
+            disposePipe.sink([SSignal complete]);
         }];
     }];
 }

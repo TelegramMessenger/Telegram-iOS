@@ -80,4 +80,43 @@
     }];
 }
 
+- (SSignal *)takeUntilReplacement:(SSignal *)replacement {
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
+        SDisposableSet *disposable = [[SDisposableSet alloc] init];
+        
+        SMetaDisposable *selfDisposable = [[SMetaDisposable alloc] init];
+        SMetaDisposable *replacementDisposable = [[SMetaDisposable alloc] init];
+        
+        [disposable add:selfDisposable];
+        [disposable add:replacementDisposable];
+        
+        [disposable add:[replacement startWithNext:^(SSignal *next) {
+            [selfDisposable dispose];
+            
+            [replacementDisposable setDisposable:[next startWithNext:^(id next) {
+                [subscriber putNext:next];
+            } error:^(id error) {
+                [subscriber putError:error];
+            } completed:^{
+                [subscriber putCompletion];
+            }]];
+        } error:^(id error) {
+            [subscriber putError:error];
+        } completed:^{
+        }]];
+        
+        [selfDisposable setDisposable:[self startWithNext:^(id next) {
+            [subscriber putNext:next];
+        } error:^(id error) {
+            [replacementDisposable dispose];
+            [subscriber putError:error];
+        } completed:^{
+            [replacementDisposable dispose];
+            [subscriber putCompletion];
+        }]];
+        
+        return disposable;
+    }];
+}
+
 @end

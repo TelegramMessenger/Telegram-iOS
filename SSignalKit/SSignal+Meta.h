@@ -12,3 +12,9 @@
 + (SSignal *)defer:(SSignal *(^)())generator;
 
 @end
+
+@interface SSignalQueue : NSObject
+
+- (SSignal *)enqueue:(SSignal *)signal;
+
+@end
