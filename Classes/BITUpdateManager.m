@@ -1205,6 +1205,8 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 - (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error {
   
   dispatch_async(dispatch_get_main_queue(), ^{
+    [session finishTasksAndInvalidate];
+    
     if(error){
       [self handleError:error];
     }else{
