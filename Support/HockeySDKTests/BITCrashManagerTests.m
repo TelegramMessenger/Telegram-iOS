@@ -171,14 +171,14 @@
   id <BITCrashManagerDelegate> delegateMock = mockProtocol(@protocol(BITCrashManagerDelegate));
   _sut.delegate = delegateMock;
   
-  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputDontSend withUserProvidedMetaData:nil], equalToBool(YES));
+  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputDontSend withUserProvidedMetaData:nil], isTrue());
   
   [verify(delegateMock) crashManagerWillCancelSendingCrashReport:_sut];
   
 }
 
 - (void)testHandleUserInputSend {
-  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputSend withUserProvidedMetaData:nil], equalToBool(YES));
+  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputSend withUserProvidedMetaData:nil], isTrue());
 }
 
 - (void)testHandleUserInputAlwaysSend {
@@ -190,7 +190,7 @@
   [given([mockUserDefaults integerForKey:@"BITCrashManagerStatus"]) willReturn:nil];
   
   //Test if method runs through
-  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputAlwaysSend withUserProvidedMetaData:nil], equalToBool(YES));
+  assertThatBool([_sut handleUserInput:BITCrashManagerUserInputAlwaysSend withUserProvidedMetaData:nil], isTrue());
   
   //Test if correct CrashManagerStatus is now set
   [given([mockUserDefaults integerForKey:@"BITCrashManagerStauts"]) willReturnInt:BITCrashManagerStatusAutoSend];
@@ -201,7 +201,7 @@
 }
 
 - (void)testHandleUserInputWithInvalidInput {
-  assertThatBool([_sut handleUserInput:3 withUserProvidedMetaData:nil], equalToBool(NO));
+  assertThatBool([_sut handleUserInput:3 withUserProvidedMetaData:nil], isFalse());
 }
 
 #pragma mark - Debugger
@@ -215,7 +215,7 @@
  *  TODO: what to do if we do run this e.g. on Jenkins or Xcode bots ?
  */
 - (void)testIsDebuggerAttached {
-  assertThatBool([_sut isDebuggerAttached], equalToBool(YES));
+  assertThatBool([_sut isDebuggerAttached], isTrue());
 }
 #endif
 
@@ -223,7 +223,7 @@
 
 - (void)testHasPendingCrashReportWithNoFiles {
   _sut.crashManagerStatus = BITCrashManagerStatusAutoSend;
-  assertThatBool([_sut hasPendingCrashReport], equalToBool(NO));
+  assertThatBool([_sut hasPendingCrashReport], isFalse());
 }
 
 - (void)testFirstNotApprovedCrashReportWithNoFiles {
@@ -260,27 +260,27 @@
   
   BOOL result = (_sut.exceptionHandler == currentHandler);
   
-  assertThatBool(result, equalToBool(YES));
+  assertThatBool(result, isTrue());
   
   // No files at startup
-  assertThatBool([_sut hasPendingCrashReport], equalToBool(NO));
+  assertThatBool([_sut hasPendingCrashReport], isFalse());
   assertThat([_sut firstNotApprovedCrashReport], equalTo(nil));
   
   [_sut invokeDelayedProcessing];
   
   // handle a new empty crash report
-  assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_empty"], equalToBool(YES));
+  assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_empty"], isTrue());
   
   [_sut handleCrashReport];
   
   // we should have 0 pending crash report
-  assertThatBool([_sut hasPendingCrashReport], equalToBool(NO));
+  assertThatBool([_sut hasPendingCrashReport], isFalse());
   assertThat([_sut firstNotApprovedCrashReport], equalTo(nil));
   
   [_sut cleanCrashReports];
   
   // handle a new signal crash report
-  assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_signal"], equalToBool(YES));
+  assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_signal"], isTrue());
   
   [_sut handleCrashReport];
 
@@ -291,7 +291,7 @@
   [verifyCount(delegateMock, times(1)) attachmentForCrashManager:_sut];
   
   // we should have now 1 pending crash report
-  assertThatBool([_sut hasPendingCrashReport], equalToBool(YES));
+  assertThatBool([_sut hasPendingCrashReport], isTrue());
   assertThat([_sut firstNotApprovedCrashReport], notNilValue());
   
   // this is currently sending blindly, needs refactoring to test properly
@@ -301,7 +301,7 @@
   [_sut cleanCrashReports];
 
   // handle a new signal crash report
-  assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_exception"], equalToBool(YES));
+  assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_exception"], isTrue());
   
   [_sut handleCrashReport];
   
@@ -312,13 +312,13 @@
   [verifyCount(delegateMock, times(2)) attachmentForCrashManager:_sut];
   
   // we should have now 1 pending crash report
-  assertThatBool([_sut hasPendingCrashReport], equalToBool(YES));
+  assertThatBool([_sut hasPendingCrashReport], isTrue());
   assertThat([_sut firstNotApprovedCrashReport], notNilValue());
   
   [_sut cleanCrashReports];
   
   // handle a new signal crash report
-  assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_signal_marketing"], equalToBool(YES));
+  assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_signal_marketing"], isTrue());
   
   [_sut handleCrashReport];
   
@@ -329,7 +329,7 @@
   [verifyCount(delegateMock, times(3)) attachmentForCrashManager:_sut];
   
   // we should have now 1 pending crash report
-  assertThatBool([_sut hasPendingCrashReport], equalToBool(YES));
+  assertThatBool([_sut hasPendingCrashReport], isTrue());
   assertThat([_sut firstNotApprovedCrashReport], notNilValue());
   
   // this is currently sending blindly, needs refactoring to test properly
@@ -339,7 +339,7 @@
   [_sut cleanCrashReports];
   
   // handle a new signal crash report
-  assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_exception_marketing"], equalToBool(YES));
+  assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_exception_marketing"], isTrue());
   
   [_sut handleCrashReport];
   
@@ -350,7 +350,7 @@
   [verifyCount(delegateMock, times(4)) attachmentForCrashManager:_sut];
   
   // we should have now 1 pending crash report
-  assertThatBool([_sut hasPendingCrashReport], equalToBool(YES));
+  assertThatBool([_sut hasPendingCrashReport], isTrue());
   assertThat([_sut firstNotApprovedCrashReport], notNilValue());
   
   [_sut cleanCrashReports];
