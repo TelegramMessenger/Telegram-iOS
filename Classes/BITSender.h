@@ -79,7 +79,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)sendData:(NSData *)data withFilePath:(NSString * )filePath;
 
 /**
- *  Triggers sending the saved data on a background thread. Does nothing if nothing has been persisted, yet. This method should be called by BITTelemetryManager on app start.
+ *  Triggers sending the saved data on a background thread. Does nothing if nothing has been persisted, yet. This method should be called on app start.
  */
 - (void)sendSavedDataAsync;
 

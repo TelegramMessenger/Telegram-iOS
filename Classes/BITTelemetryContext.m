@@ -3,7 +3,7 @@
 
 #if HOCKEYSDK_FEATURE_METRICS
 
-#import "BITTelemetryManagerPrivate.h"
+#import "BITMetricsManagerPrivate.h"
 #import "BITHockeyHelper.h"
 #import "BITOrderedDictionary.h"
 #import "BITPersistence.h"

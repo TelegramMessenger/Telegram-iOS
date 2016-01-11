@@ -74,7 +74,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
 
 #if HOCKEYSDK_FEATURE_METRICS
-#import "BITTelemetryManagerPrivate.h"
+#import "BITMetricsManagerPrivate.h"
 #import "BITCategoryContainer.h"
 #endif /* HOCKEYSDK_FEATURE_METRICS */
 
@@ -151,7 +151,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     _disableCrashManager = NO;
 #endif
 #if HOCKEYSDK_FEATURE_METRICS
-    _disableTelemetryManager = NO;
+    _disableMetricsManager = NO;
 #endif
 #if HOCKEYSDK_FEATURE_FEEDBACK
     _disableFeedbackManager = NO;
@@ -321,10 +321,10 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 #endif /* HOCKEYSDK_FEATURE_UPDATES */
   
 #if HOCKEYSDK_FEATURE_METRICS
-  // start TelemetryManager
-  if (!self.isTelemetryManagerDisabled) {
-    BITHockeyLog(@"INFO: Start Telemetry Manager");
-    [_telemetryManager startManager];
+  // start MetricsManager
+  if (!self.disableMetricsManager) {
+    BITHockeyLog(@"INFO: Start MetricsManager");
+    [_metricsManager startManager];
     [BITCategoryContainer activateCategory];
   }
 #endif /* HOCKEYSDK_FEATURE_METRICS */
@@ -699,9 +699,9 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
     
 #if HOCKEYSDK_FEATURE_METRICS
-    BITHockeyLog(@"INFO: Setup TelemetryManager");
+    BITHockeyLog(@"INFO: Setup MetricsManager");
     NSString *iKey = bit_appIdentifierToGuid(_appIdentifier);
-    _telemetryManager = [[BITTelemetryManager alloc] initWithAppIdentifier:iKey appEnvironment:_appEnvironment];
+    _metricsManager = [[BITMetricsManager alloc] initWithAppIdentifier:iKey appEnvironment:_appEnvironment];
 #endif /* HOCKEYSDK_FEATURE_METRICS */
 
     if (self.appEnvironment != BITEnvironmentAppStore) {

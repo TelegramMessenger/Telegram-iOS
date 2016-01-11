@@ -80,7 +80,7 @@
 #endif /* HOCKEYSDK_FEATURE_UPDATES */
 
 /**
- * If true, include support for auto collecting telemetry data such as sessions and user
+ * If true, include support for auto collecting metrics data such as sessions and user
  *
  * _Default_: Enabled
  */
