@@ -1,7 +1,7 @@
 #import <Foundation/Foundation.h>
 #import "HockeySDK.h"
 
-#if HOCKEYSDK_FEATURE_TELEMETRY
+#if HOCKEYSDK_FEATURE_METRICS
 
 #import "HockeySDKNullability.h"
 @class BITPersistence;
@@ -150,4 +150,4 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 NS_ASSUME_NONNULL_END
 
-#endif /* HOCKEYSDK_FEATURE_TELEMETRY */
+#endif /* HOCKEYSDK_FEATURE_METRICS */

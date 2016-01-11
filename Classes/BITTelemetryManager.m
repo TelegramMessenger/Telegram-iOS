@@ -1,6 +1,6 @@
 #import "HockeySDK.h"
 
-#if HOCKEYSDK_FEATURE_TELEMETRY
+#if HOCKEYSDK_FEATURE_METRICS
 
 #import "BITTelemetryManager.h"
 #import "BITTelemetryContext.h"
@@ -183,4 +183,4 @@ NSString *const BITTelemetryEndpoint = @"https://gate.hockeyapp.net/v2/track";
 
 @end
 
-#endif /* HOCKEYSDK_FEATURE_TELEMETRY */
+#endif /* HOCKEYSDK_FEATURE_METRICS */

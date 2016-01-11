@@ -51,7 +51,7 @@
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
 @class BITAuthenticator;
 #endif
-#if HOCKEYSDK_FEATURE_TELEMETRY
+#if HOCKEYSDK_FEATURE_METRICS
 @class BITTelemetryManager;
 #endif
 
@@ -373,7 +373,7 @@
 
 #endif
 
-#if HOCKEYSDK_FEATURE_TELEMETRY
+#if HOCKEYSDK_FEATURE_METRICS
 
 /**
  Reference to the initialized BITTelemetryManager module

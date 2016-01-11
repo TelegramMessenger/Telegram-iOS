@@ -29,7 +29,7 @@
 #import <Foundation/Foundation.h>
 #import "HockeySDK.h"
 
-#if HOCKEYSDK_FEATURE_TELEMETRY
+#if HOCKEYSDK_FEATURE_METRICS
 
 #import "HockeySDKNullability.h"
 
@@ -129,4 +129,4 @@ void bit_resetSafeJsonStream(char *__nonnull*__nonnull jsonStream);
 @end
 NS_ASSUME_NONNULL_END
 
-#endif /* HOCKEYSDK_FEATURE_TELEMETRY */
+#endif /* HOCKEYSDK_FEATURE_METRICS */

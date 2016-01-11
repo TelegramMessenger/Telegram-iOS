@@ -84,8 +84,8 @@
  *
  * _Default_: Enabled
  */
-#ifndef HOCKEYSDK_FEATURE_TELEMETRY
-#    define HOCKEYSDK_FEATURE_TELEMETRY 1
-#endif /* HOCKEYSDK_FEATURE_TELEMETRY */
+#ifndef HOCKEYSDK_FEATURE_METRICS
+#    define HOCKEYSDK_FEATURE_METRICS 1
+#endif /* HOCKEYSDK_FEATURE_METRICS */
 
 #endif /* HockeySDK_HockeySDKFeatureConfig_h */
