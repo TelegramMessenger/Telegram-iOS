@@ -720,11 +720,14 @@
         id nsurlsessionClass = NSClassFromString(@"NSURLSessionDataTask");
         if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
           NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
-          NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+          __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
           
           NSURLSessionDataTask *task = [session dataTaskWithRequest:request
                                                   completionHandler: ^(NSData *data, NSURLResponse *response, NSError *error) {
                                                     typeof (self) strongSelf = weakSelf;
+                                                    
+                                                    [session finishTasksAndInvalidate];
+                                                    
                                                     [strongSelf handleResponseForAttachment:attachment responseData:data error:error];
                                                   }];
           [task resume];
@@ -991,12 +994,15 @@
       id nsurlsessionClass = NSClassFromString(@"NSURLSessionDataTask");
       if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
         NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
-        NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+        __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
         
         NSURLSessionDataTask *task = [session dataTaskWithRequest:request
                                                 completionHandler: ^(NSData *data, NSURLResponse *response, NSError *error) {
                                                   dispatch_async(dispatch_get_main_queue(), ^{
                                                     typeof (self) strongSelf = weakSelf;
+                                                    
+                                                    [session finishTasksAndInvalidate];
+                                                    
                                                     [strongSelf previewController:blockController updateAttachment:attachment data:data];
                                                   });
                                                 }];
