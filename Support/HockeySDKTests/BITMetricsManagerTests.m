@@ -1,7 +1,7 @@
 #import <XCTest/XCTest.h>
 #import <OCMock/OCMock.h>
 #import "BITTestsDependencyInjection.h"
-#import "BITTelemetryManagerPrivate.h"
+#import "BITMetricsManagerPrivate.h"
 #import "BITHockeyBaseManagerPrivate.h"
 #import "BITSession.h"
 #import "BITChannel.h"
@@ -14,13 +14,13 @@
 #define MOCKITO_SHORTHAND
 #import <OCMockitoIOS/OCMockitoIOS.h>
 
-@interface BITTelemetryManagerTests : BITTestsDependencyInjection
+@interface BITMetricsManagerTests : BITTestsDependencyInjection
 
-@property (strong) BITTelemetryManager *sut;
+@property (strong) BITMetricsManager *sut;
 
 @end
 
-@implementation BITTelemetryManagerTests
+@implementation BITMetricsManagerTests
 
 - (void)setUp {
     [super setUp];
@@ -31,13 +31,13 @@
     [super tearDown];
 }
 
-- (void)testTelemetryManagerGetsInstantiated {
-  self.sut = [BITTelemetryManager new];
+- (void)testMetricsManagerGetsInstantiated {
+  self.sut = [BITMetricsManager new];
   XCTAssertNotNil(self.sut, @"Should not be nil.");
 }
 
 - (void)testDependenciesAreCreatedCorrectly {
-  self.sut = [BITTelemetryManager new];
+  self.sut = [BITMetricsManager new];
   
   BITPersistence *persistence = self.sut.persistence;
   XCTAssertNotNil(persistence);
@@ -56,7 +56,7 @@
   NSUserDefaults *testUserDefaults = [NSUserDefaults new];
   [testUserDefaults setBool:NO forKey:kBITApplicationWasLaunched];
   
-  self.sut = [[BITTelemetryManager alloc]initWithChannel:nil telemetryContext:nil persistence:nil userDefaults:testUserDefaults];
+  self.sut = [[BITMetricsManager alloc] initWithChannel:nil telemetryContext:nil persistence:nil userDefaults:testUserDefaults];
   NSString *testSessionId1 = @"12345";
   NSString *testSessionId2 = @"67890";
   
@@ -75,7 +75,7 @@
 
 - (void)testRegisterObserversOnStart {
   self.mockNotificationCenter = mock(NSNotificationCenter.class);
-  self.sut = [BITTelemetryManager new];
+  self.sut = [BITMetricsManager new];
   [self.sut startManager];
   
   [verify((id)self.mockNotificationCenter) addObserverForName:UIApplicationDidEnterBackgroundNotification object:nil queue:NSOperationQueue.mainQueue usingBlock:(id)anything()];
@@ -85,7 +85,7 @@
 - (void)testTrackSessionEnqueuesObject {
   BITChannel *channel = [BITChannel new];
   id mockChannel = OCMPartialMock(channel);
-  self.sut = [[BITTelemetryManager alloc] initWithChannel:mockChannel telemetryContext:nil persistence:nil userDefaults:nil];
+  self.sut = [[BITMetricsManager alloc] initWithChannel:mockChannel telemetryContext:nil persistence:nil userDefaults:nil];
   
   OCMExpect([mockChannel enqueueTelemetryItem:[OCMArg checkWithBlock:^BOOL(NSObject *value)
                                              {
@@ -101,7 +101,7 @@
   NSUserDefaults *testUserDefaults = [NSUserDefaults new];
   [testUserDefaults setBool:NO forKey:kBITApplicationWasLaunched];
 
-  self.sut = [[BITTelemetryManager alloc]initWithChannel:nil telemetryContext:mockContext persistence:nil userDefaults:testUserDefaults];
+  self.sut = [[BITMetricsManager alloc] initWithChannel:nil telemetryContext:mockContext persistence:nil userDefaults:testUserDefaults];
   NSString *testSessionId = @"sessionId";
   
   OCMExpect([mockContext setSessionId:testSessionId]);

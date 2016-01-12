@@ -1,9 +1,9 @@
 #import <Foundation/Foundation.h>
 #import "BITTelemetryContext.h"
 
-#if HOCKEYSDK_FEATURE_TELEMETRY
+#if HOCKEYSDK_FEATURE_METRICS
 
-#import "BITTelemetryManagerPrivate.h"
+#import "BITMetricsManagerPrivate.h"
 #import "BITHockeyHelper.h"
 #import "BITOrderedDictionary.h"
 #import "BITPersistence.h"
@@ -376,4 +376,4 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
 
 @end
 
-#endif /* HOCKEYSDK_FEATURE_TELEMETRY */
+#endif /* HOCKEYSDK_FEATURE_METRICS */

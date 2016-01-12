@@ -399,7 +399,7 @@ Just in case you want to opt-out of this feature, there is a way to turn this fu
 ```objectivec
 [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
-[BITHockeyManager sharedHockeyManager].disableTelemetryManager = YES;
+[BITHockeyManager sharedHockeyManager].disableMetricsManager = YES;
 
 [[BITHockeyManager sharedHockeyManager] startManager];
 

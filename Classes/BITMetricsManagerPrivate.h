@@ -28,7 +28,7 @@
 
 #import "HockeySDK.h"
 
-#if HOCKEYSDK_FEATURE_TELEMETRY
+#if HOCKEYSDK_FEATURE_METRICS
 
 #import "BITSessionState.h"
 
@@ -38,10 +38,10 @@
 @class BITPersistence;
 @class BITSender;
 
-@interface BITTelemetryManager ()
+@interface BITMetricsManager ()
 
 /**
- *  Create a new telemetry manager instance by passing the channel, the telemetry context, and persistence instance to use 
+ *  Create a new BITMetricsManager instance by passing the channel, the telemetry context, and persistence instance to use 
  for processing metrics. This method can be used for dependency injection.
  */
 - (instancetype)initWithChannel:(BITChannel *)channel
@@ -72,7 +72,7 @@
 /**
  *  A concurrent queue which creates and processes telemetry items.
  */
-@property (nonatomic, strong, readonly)dispatch_queue_t telemetryEventQueue;
+@property (nonatomic, strong, readonly)dispatch_queue_t metricsEventQueue;
 
 /**
  *  Sender instance to send out telemetry data.
@@ -142,4 +142,4 @@
 
 @end
 
-#endif /* HOCKEYSDK_FEATURE_TELEMETRY */
+#endif /* HOCKEYSDK_FEATURE_METRICS */

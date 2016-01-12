@@ -1,6 +1,6 @@
 #import "BITChannel.h"
 
-#if HOCKEYSDK_FEATURE_TELEMETRY
+#if HOCKEYSDK_FEATURE_METRICS
 
 #import "BITHockeyHelper.h"
 #import "HockeySDK.h"
@@ -178,4 +178,4 @@ void bit_resetSafeJsonStream(char **string) {
 
 @end
 
-#endif /* HOCKEYSDK_FEATURE_TELEMETRY */
+#endif /* HOCKEYSDK_FEATURE_METRICS */

@@ -1,6 +1,6 @@
 #import "HockeySDK.h"
 
-#if HOCKEYSDK_FEATURE_TELEMETRY
+#if HOCKEYSDK_FEATURE_METRICS
 
 #import "BITPersistence.h"
 #import "BITPersistencePrivate.h"
@@ -292,5 +292,5 @@ NSUInteger const defaultFileCount = 50;
 
 @end
 
-#endif /* HOCKEYSDK_FEATURE_TELEMETRY */
+#endif /* HOCKEYSDK_FEATURE_METRICS */
 

@@ -40,7 +40,7 @@ typedef NS_ENUM(NSInteger, BITPersistenceType) {
     BITPersistenceTypeMetaData = 1
 };
 
-#if HOCKEYSDK_FEATURE_TELEMETRY
+#if HOCKEYSDK_FEATURE_METRICS
 
 /**
  * Notification that will be send on the main thread to notifiy observers of a successfully saved bundle.
@@ -172,6 +172,6 @@ FOUNDATION_EXPORT NSString *const BITPersistenceSuccessNotification;
 - (NSString *)fileURLForType:(BITPersistenceType)type;
 
 
-#endif /* HOCKEYSDK_FEATURE_TELEMETRY */
+#endif /* HOCKEYSDK_FEATURE_METRICS */
 
 @end

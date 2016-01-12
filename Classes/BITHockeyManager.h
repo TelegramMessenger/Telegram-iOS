@@ -51,8 +51,8 @@
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
 @class BITAuthenticator;
 #endif
-#if HOCKEYSDK_FEATURE_TELEMETRY
-@class BITTelemetryManager;
+#if HOCKEYSDK_FEATURE_METRICS
+@class BITMetricsManager;
 #endif
 
 /** 
@@ -373,29 +373,29 @@
 
 #endif
 
-#if HOCKEYSDK_FEATURE_TELEMETRY
+#if HOCKEYSDK_FEATURE_METRICS
 
 /**
- Reference to the initialized BITTelemetryManager module
+ Reference to the initialized BITMetricsManager module
  
- Returns the BITTelemetryManager instance initialized by BITHockeyManager
+ Returns the BITMetricsManager instance initialized by BITHockeyManager
  */
-@property (nonatomic, strong, readonly) BITTelemetryManager *telemetryManager;
+@property (nonatomic, strong, readonly) BITMetricsManager *metricsManager;
 
 /**
- Flag the determines whether the Telemetry Manager should be disabled
+ Flag the determines whether the BITMetricsManager should be disabled
  
- If this flag is enabled, then sending telemetry data such as sessions and users 
+ If this flag is enabled, then sending metrics data such as sessions and users 
  will be turned off!
  
- Please note that the Telemetry Manager instance will be initialized anyway!
+ Please note that the BITMetricsManager instance will be initialized anyway!
  
  @warning This property needs to be set before calling `startManager`
  
  *Default*: _NO_
- @see telemetryManager
+ @see metricsManager
  */
-@property (nonatomic, getter = isTelemetryManagerDisabled) BOOL disableTelemetryManager;
+@property (nonatomic, getter = isMetricsManagerDisabled) BOOL disableMetricsManager;
 
 #endif
 

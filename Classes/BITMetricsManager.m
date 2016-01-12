@@ -1,10 +1,10 @@
 #import "HockeySDK.h"
 
-#if HOCKEYSDK_FEATURE_TELEMETRY
+#if HOCKEYSDK_FEATURE_METRICS
 
-#import "BITTelemetryManager.h"
+#import "BITMetricsManager.h"
 #import "BITTelemetryContext.h"
-#import "BITTelemetryManagerPrivate.h"
+#import "BITMetricsManagerPrivate.h"
 #import "BITHockeyHelper.h"
 #import "HockeySDKPrivate.h"
 #import "BITChannel.h"
@@ -15,16 +15,16 @@
 #import "BITHockeyBaseManagerPrivate.h"
 #import "BITSender.h"
 
-static char *const kBITTelemetryEventQueue =
+static char *const kBITMetricsEventQueue =
 "net.hockeyapp.telemetryEventQueue";
 
 NSString *const kBITSessionFileType = @"plist";
 NSString *const kBITApplicationDidEnterBackgroundTime = @"BITApplicationDidEnterBackgroundTime";
 NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
 
-NSString *const BITTelemetryEndpoint = @"https://gate.hockeyapp.net/v2/track";
+NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
 
-@implementation BITTelemetryManager {
+@implementation BITMetricsManager {
   id _appWillEnterForegroundObserver;
   id _appDidEnterBackgroundObserver;
 }
@@ -38,7 +38,7 @@ NSString *const BITTelemetryEndpoint = @"https://gate.hockeyapp.net/v2/track";
 
 - (instancetype)init {
   if((self = [super init])) {
-    _telemetryEventQueue = dispatch_queue_create(kBITTelemetryEventQueue, DISPATCH_QUEUE_CONCURRENT);
+    _metricsEventQueue = dispatch_queue_create(kBITMetricsEventQueue, DISPATCH_QUEUE_CONCURRENT);
     _appBackgroundTimeBeforeSessionExpires = 20;
   }
   self.serverURL = nil;
@@ -57,7 +57,7 @@ NSString *const BITTelemetryEndpoint = @"https://gate.hockeyapp.net/v2/track";
 
 - (void)startManager {
   if(!self.serverURL){
-    self.serverURL = BITTelemetryEndpoint;
+    self.serverURL = BITMetricsEndpoint;
   }
   _sender = [[BITSender alloc] initWithPersistence:self.persistence serverURL:[NSURL URLWithString:self.serverURL]];
   [_sender sendSavedDataAsync];
@@ -106,7 +106,7 @@ NSString *const BITTelemetryEndpoint = @"https://gate.hockeyapp.net/v2/track";
 - (void)startNewSessionIfNeeded {
   if(self.appBackgroundTimeBeforeSessionExpires == 0) {
     __weak typeof(self) weakSelf = self;
-    dispatch_async(_telemetryEventQueue, ^{
+    dispatch_async(_metricsEventQueue, ^{
       typeof(self) strongSelf = weakSelf;
       [strongSelf startNewSessionWithId:bit_UUID()];
     });
@@ -183,4 +183,4 @@ NSString *const BITTelemetryEndpoint = @"https://gate.hockeyapp.net/v2/track";
 
 @end
 
-#endif /* HOCKEYSDK_FEATURE_TELEMETRY */
+#endif /* HOCKEYSDK_FEATURE_METRICS */

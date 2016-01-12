@@ -28,6 +28,6 @@
 #import <Foundation/Foundation.h>
 #import "BITHockeyBaseManager.h"
 
-@interface BITTelemetryManager : BITHockeyBaseManager
+@interface BITMetricsManager : BITHockeyBaseManager
 
 @end

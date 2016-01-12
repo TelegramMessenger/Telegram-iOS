@@ -1,7 +1,7 @@
 #import <Foundation/Foundation.h>
 #import "HockeySDK.h"
 
-#if HOCKEYSDK_FEATURE_TELEMETRY
+#if HOCKEYSDK_FEATURE_METRICS
 
 #import "HockeySDKNullability.h"
 @class BITPersistence;
@@ -79,7 +79,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)sendData:(NSData *)data withFilePath:(NSString * )filePath;
 
 /**
- *  Triggers sending the saved data on a background thread. Does nothing if nothing has been persisted, yet. This method should be called by BITTelemetryManager on app start.
+ *  Triggers sending the saved data on a background thread. Does nothing if nothing has been persisted, yet. This method should be called on app start.
  */
 - (void)sendSavedDataAsync;
 
@@ -150,4 +150,4 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 NS_ASSUME_NONNULL_END
 
-#endif /* HOCKEYSDK_FEATURE_TELEMETRY */
+#endif /* HOCKEYSDK_FEATURE_METRICS */
