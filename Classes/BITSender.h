@@ -93,7 +93,6 @@ NS_ASSUME_NONNULL_BEGIN
  *
  *  @param request a request for sending a data object to the telemetry server
  *  @param path path to the file which should be sent
- *  @param isUrlSessionSupported a flag which determines whether to use NSURLConnection or NSURLSession for sending out data
  */
 - (void)sendRequest:(NSURLRequest *)request filePath:(NSString *)path;
 
