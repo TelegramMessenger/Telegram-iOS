@@ -1,6 +1,6 @@
 ## Version 4.0.0-alpha.1
 
-- [NEW] Added `BITTelemetryManager` to track users and sessions
+- [NEW] Added `BITMetricsManager` to track users and sessions
 - [UPDATE] Remove previously deprecated UpdateManagerDelegate method `-viewControllerForUpdateManager:`
 - [UPDATE] Remove previously deprecated CrashManagerDelegate methods `-userNameForCrashManager:` and `-userEmailForCrashManager:`
 - [UPDATE] Remove previously deprecated property `appStoreEnvironment`
