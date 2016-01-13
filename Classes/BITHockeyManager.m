@@ -162,22 +162,14 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 #if HOCKEYSDK_FEATURE_STORE_UPDATES
     _enableStoreUpdateManager = NO;
 #endif
-    _appEnvironment = BITEnvironmentOther;
     
-    _appStoreEnvironment = NO;
+    _appEnvironment = bit_currentAppEnvironment();
     _startManagerIsInvoked = NO;
     _startUpdateManagerIsInvoked = NO;
     
     _liveIdentifier = nil;
     _installString = bit_appAnonID(NO);
     _disableInstallTracking = NO;
-    
-    _appStoreEnvironment = NO;
-    // check if we are really in an app store environment
-      _appEnvironment = bit_currentAppEnvironment();
-    if (_appEnvironment == BITEnvironmentAppStore) {
-      _appStoreEnvironment = YES;
-    }
     
     [self performSelector:@selector(validateStartManagerIsInvoked) withObject:nil afterDelay:0.0f];
   }

@@ -422,18 +422,6 @@
 
 
 /**
- Flag that determines whether the application is installed and running
- from an App Store installation.
- 
- Returns _YES_ if the app is installed and running from the App Store
- Returns _NO_ if the app is installed via debug, ad-hoc or enterprise distribution
- 
- @deprecated Please use `appEnvironment` instead!
- */
-@property (nonatomic, readonly, getter=isAppStoreEnvironment) BOOL appStoreEnvironment DEPRECATED_ATTRIBUTE;
-
-
-/**
  Returns the app installation specific anonymous UUID
  
  The value returned by this method is unique and persisted per app installation
