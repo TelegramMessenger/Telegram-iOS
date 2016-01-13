@@ -337,14 +337,11 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     return;
   }
   
-  BOOL isSessionSupported = ([NSURLSessionDataTask class] && !bit_isRunningInAppExtension());
-  [self validateWithCompletion:completion sessionSupported:isSessionSupported];
-}
-
--(void)validateWithCompletion:(void (^)(BOOL validated, NSError *))completion sessionSupported:(BOOL)isSessionSupported {
   NSString *validationPath = [NSString stringWithFormat:@"api/3/apps/%@/identity/validate", self.encodedAppIdentifier];
   
   __weak typeof (self) weakSelf = self;
+  id nsurlsessionClass = NSClassFromString(@"NSURLSessionUploadTask");
+  BOOL isSessionSupported = (nsurlsessionClass && !bit_isRunningInAppExtension());
   if (isSessionSupported) {
     NSURLRequest *request = [self.hockeyAppClient requestWithMethod:@"GET" path:validationPath parameters:[self validationParameters]];
     NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
@@ -465,18 +462,16 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   NSParameterAssert(self.identificationType == BITAuthenticatorIdentificationTypeHockeyAppEmail || (password && password.length));
   NSURLRequest* request = [self requestForAuthenticationEmail:email password:password];
   
-  
-  
-  BOOL isURLSessionSupported = ([NSURLSessionDataTask class] && !bit_isRunningInAppExtension());
-  [self authenticationViewController:viewController handleAuthenticationWithEmail:email request:request urlSessionSupported:isURLSessionSupported completion:completion];
+  [self authenticationViewController:viewController handleAuthenticationWithEmail:email request:request completion:completion];
 }
 
 - (void)authenticationViewController:(UIViewController *)viewController
        handleAuthenticationWithEmail:(NSString *)email
                              request:(NSURLRequest *)request
-                 urlSessionSupported:(BOOL)isURLSessionSupported
                           completion:(void (^)(BOOL, NSError *))completion {
   __weak typeof (self) weakSelf = self;
+  id nsurlsessionClass = NSClassFromString(@"NSURLSessionUploadTask");
+  BOOL isURLSessionSupported = (nsurlsessionClass && !bit_isRunningInAppExtension());
   if(isURLSessionSupported) {
     NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
     __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];

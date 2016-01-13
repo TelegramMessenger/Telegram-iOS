@@ -898,10 +898,10 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
       [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
                                             code:BITUpdateAPIClientCannotCreateConnection
                                         userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Url Connection could not be created.", NSLocalizedDescriptionKey, nil]]];
-    }else{
+    } else {
       [sessionTask resume];
     }
-  }else{
+  } else {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     self.urlConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
