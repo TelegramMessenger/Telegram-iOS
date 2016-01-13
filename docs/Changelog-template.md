@@ -1,6 +1,10 @@
 ## Version 4.0-Alpha.1
 
 - [NEW] Added `BITTelemetryManager` to track users and sessions
+- [UPDATE] Remove previously deprecated UpdateManagerDelegate method `-viewControllerForUpdateManager:`
+- [UPDATE] Remove previously deprecated CrashManagerDelegate methods `-userNameForCrashManager:` and `-userEmailForCrashManager:`
+- [UPDATE] Remove previously deprecated misspelled `timeintervalCrashInLastSessionOccured` property
+- [UPDATE] Remove previously deprecated misspelled `BITFeedbackListViewCellPresentatationStyle` enum
 
 ## Version 3.8.5
 

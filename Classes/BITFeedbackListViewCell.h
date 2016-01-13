@@ -85,13 +85,4 @@ typedef NS_ENUM(NSUInteger, BITFeedbackListViewCellBackgroundStyle) {
 
 - (void)setAttachments:(NSArray *)attachments;
 
-///-----------------------------------------------------------------------------
-/// @name Deprecated
-///-----------------------------------------------------------------------------
-
-typedef DEPRECATED_MSG_ATTRIBUTE("Use the properly spelled enum `BITFeedbackListViewCellPresentationStyle` instead.") NS_ENUM(NSUInteger, BITFeedbackListViewCellPresentatationStyle) {
-  BITFeedbackListViewCellPresentatationStyleDefault DEPRECATED_MSG_ATTRIBUTE("Use the properly spelled constant `BITFeedbackListViewCellPresentationStyleDefault` instead.") = 0,
-  BITFeedbackListViewCellPresentatationStyleOS7 DEPRECATED_MSG_ATTRIBUTE("Use the properly spelled constant `BITFeedbackListViewCellPresentationStyleOS7` instead.") = 1
-};
-
 @end
