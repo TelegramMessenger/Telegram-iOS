@@ -698,6 +698,7 @@
 			isa = PBXGroup;
 			children = (
 				1EA1170216F53B49001C015C /* Fixtures */,
+				802326BB1C46AC1F00B6BF22 /* Frameworks */,
 				1E5A459716F0DFC200B55C04 /* Supporting Files */,
 				1E5A459D16F0DFC200B55C04 /* BITStoreUpdateManagerTests.m */,
 				E48A3DEE17B3EFF100924C3D /* BITAuthenticatorTests.m */,
@@ -887,10 +888,6 @@
 		1EB6174E1B0A30480035A986 /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
-				8084416A1C20617C00644A40 /* OCMock */,
-				808441611C20617200644A40 /* libOCMock.a */,
-				808441621C20617200644A40 /* OCHamcrestIOS.framework */,
-				808441631C20617200644A40 /* OCMockitoIOS.framework */,
 				1EB6174F1B0A30480035A986 /* Info.plist */,
 			);
 			name = "Supporting Files";
@@ -914,6 +911,18 @@
 				E4B4DB7C17B435550099C67F /* BITAuthenticationViewController.m */,
 			);
 			name = Private;
+			sourceTree = "<group>";
+		};
+		802326BB1C46AC1F00B6BF22 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				8084416A1C20617C00644A40 /* OCMock */,
+				808441611C20617200644A40 /* libOCMock.a */,
+				808441621C20617200644A40 /* OCHamcrestIOS.framework */,
+				808441631C20617200644A40 /* OCMockitoIOS.framework */,
+			);
+			name = Frameworks;
+			path = "../HockeySDK FrameworkTests";
 			sourceTree = "<group>";
 		};
 		8084416A1C20617C00644A40 /* OCMock */ = {
