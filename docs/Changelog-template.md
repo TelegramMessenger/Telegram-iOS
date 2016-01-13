@@ -1,4 +1,4 @@
-## Version 4.0-Alpha.1
+## Version 4.0.0-alpha.1
 
 - [NEW] Added `BITTelemetryManager` to track users and sessions
 - [UPDATE] Remove previously deprecated UpdateManagerDelegate method `-viewControllerForUpdateManager:`
