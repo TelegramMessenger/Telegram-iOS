@@ -30,6 +30,12 @@
 #import <UIKit/UIKit.h>
 #import "HockeySDKEnums.h"
 
+@interface BITHockeyHelper : NSObject
+
++ (BOOL)isURLSessionSupported;
+
+@end
+
 NSString *bit_settingsDir(void);
 
 BOOL bit_validateEmail(NSString *email);

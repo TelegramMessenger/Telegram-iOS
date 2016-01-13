@@ -713,7 +713,7 @@
         attachment.isLoading = YES;
         NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
         __weak typeof (self) weakSelf = self;
-        if ([NSURLSessionDataTask class] && !bit_isRunningInAppExtension()) {
+        if ([BITHockeyHelper isURLSessionSupported]) {
           NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
           __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
           
@@ -986,7 +986,7 @@
       NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
       
       __weak typeof (self) weakSelf = self;
-      if ([NSURLSessionDataTask class] && !bit_isRunningInAppExtension()) {
+      if ([BITHockeyHelper isURLSessionSupported]) {
         NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
         __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
         

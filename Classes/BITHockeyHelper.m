@@ -35,6 +35,16 @@
 #import <QuartzCore/QuartzCore.h>
 #endif
 
+@implementation BITHockeyHelper
+
++ (BOOL)isURLSessionSupported {
+  id nsurlsessionClass = NSClassFromString(@"NSURLSessionUploadTask");
+  BOOL isUrlSessionSupported = (nsurlsessionClass && !bit_isRunningInAppExtension());
+  return isUrlSessionSupported;
+}
+
+@end
+
 #pragma mark - Helpers
 
 NSString *bit_settingsDir(void) {

@@ -353,7 +353,7 @@
   [request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];
   
   __weak typeof (self) weakSelf = self;
-  if ([NSURLSessionTask class] && !bit_isRunningInAppExtension()) {
+  if ([BITHockeyHelper isURLSessionSupported]) {
     NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
     __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
     
