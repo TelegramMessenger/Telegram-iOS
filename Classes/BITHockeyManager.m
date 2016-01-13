@@ -556,10 +556,12 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
   id nsurlsessionClass = NSClassFromString(@"NSURLSessionUploadTask");
   if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
     NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
-    NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+    __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
     NSURLRequest *request = [[self hockeyAppClient] requestWithMethod:@"POST" path:integrationPath parameters:params];
     NSURLSessionDataTask *task = [session dataTaskWithRequest:request
                                             completionHandler: ^(NSData *data, NSURLResponse *response, NSError *error) {
+                                              [session finishTasksAndInvalidate];
+                                              
                                               NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse*) response;
                                               [self logPingMessageForStatusCode:httpResponse.statusCode];
                                             }];

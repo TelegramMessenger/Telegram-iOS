@@ -356,11 +356,14 @@
   id nsurlsessionClass = NSClassFromString(@"NSURLSessionUploadTask");
   if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
     NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
-    NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+    __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
     
     NSURLSessionDataTask *task = [session dataTaskWithRequest:request
                                             completionHandler: ^(NSData *data, NSURLResponse *response, NSError *error) {
                                               typeof (self) strongSelf = weakSelf;
+                                              
+                                              [session finishTasksAndInvalidate];
+                                              
                                               [strongSelf handleResponeWithData:data error:error];
                                             }];
     [task resume];
