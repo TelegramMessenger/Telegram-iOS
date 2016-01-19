@@ -947,8 +947,7 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
     [request setHTTPBody:postBody];
   }
   __weak typeof (self) weakSelf = self;
-  id nsurlsessionClass = NSClassFromString(@"NSURLSessionDataTask");
-  if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
+  if ([BITHockeyHelper isURLSessionSupported]) {
     NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
     __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
     
@@ -962,7 +961,7 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
                                             }];
     [task resume];
 
-  }else{
+  } else {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse *response, NSData *responseData, NSError *error) {

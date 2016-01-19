@@ -888,8 +888,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   [request setValue:@"Hockey/iOS" forHTTPHeaderField:@"User-Agent"];
   [request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];
   
-  id nsurlsessionClass = NSClassFromString(@"NSURLSessionDataTask");
-  if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
+  if ([BITHockeyHelper isURLSessionSupported]) {
     NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
     NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration delegate:(id<NSURLSessionDelegate>)self delegateQueue:nil];
     
@@ -899,10 +898,10 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
       [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
                                             code:BITUpdateAPIClientCannotCreateConnection
                                         userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Url Connection could not be created.", NSLocalizedDescriptionKey, nil]]];
-    }else{
+    } else {
       [sessionTask resume];
     }
-  }else{
+  } else {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     self.urlConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
