@@ -337,8 +337,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     return;
   }
   
-  id nsurlsessionClass = NSClassFromString(@"NSURLSessionUploadTask");
-  BOOL isSessionSupported = (nsurlsessionClass && !bit_isRunningInAppExtension());
+  BOOL isSessionSupported = ([NSURLSessionDataTask class] && !bit_isRunningInAppExtension());
   [self validateWithCompletion:completion sessionSupported:isSessionSupported];
 }
 
@@ -468,8 +467,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   
   
   
-  id nsurlsessionClass = NSClassFromString(@"NSURLSessionUploadTask");
-  BOOL isURLSessionSupported = (nsurlsessionClass && !bit_isRunningInAppExtension());
+  BOOL isURLSessionSupported = ([NSURLSessionDataTask class] && !bit_isRunningInAppExtension());
   [self authenticationViewController:viewController handleAuthenticationWithEmail:email request:request urlSessionSupported:isURLSessionSupported completion:completion];
 }
 

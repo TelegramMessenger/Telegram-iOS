@@ -1664,8 +1664,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
 - (void)sendCrashReportWithFilename:(NSString *)filename xml:(NSString*)xml attachment:(BITHockeyAttachment *)attachment {
   BOOL sendingWithURLSession = NO;
   
-  id nsurlsessionClass = NSClassFromString(@"NSURLSessionUploadTask");
-  if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
+  if ([NSURLSessionTask class] && !bit_isRunningInAppExtension()) {
     NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
     __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
     

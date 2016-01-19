@@ -888,8 +888,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   [request setValue:@"Hockey/iOS" forHTTPHeaderField:@"User-Agent"];
   [request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];
   
-  id nsurlsessionClass = NSClassFromString(@"NSURLSessionDataTask");
-  if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
+  if ([NSURLSessionDataTask class] && !bit_isRunningInAppExtension()) {
     NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
     NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration delegate:(id<NSURLSessionDelegate>)self delegateQueue:nil];
     

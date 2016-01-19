@@ -947,8 +947,7 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
     [request setHTTPBody:postBody];
   }
   __weak typeof (self) weakSelf = self;
-  id nsurlsessionClass = NSClassFromString(@"NSURLSessionDataTask");
-  if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
+  if ([NSURLSessionDataTask class] && !bit_isRunningInAppExtension()) {
     NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
     __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
     

@@ -173,8 +173,7 @@ NSString *bit_UUIDPreiOS6(void) {
 NSString *bit_UUID(void) {
   NSString *resultUUID = nil;
   
-  id uuidClass = NSClassFromString(@"NSUUID");
-  if (uuidClass) {
+  if ([NSUUID class]) {
     resultUUID = [[NSUUID UUID] UUIDString];
   } else {
     resultUUID = bit_UUIDPreiOS6();

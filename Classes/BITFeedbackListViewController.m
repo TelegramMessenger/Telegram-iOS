@@ -151,8 +151,7 @@
     //    self.view.backgroundColor = DEFAULT_BACKGROUNDCOLOR_OS7;
   }
   
-  id refreshClass = NSClassFromString(@"UIRefreshControl");
-  if (refreshClass) {
+  if ([UIRefreshControl class]) {
     self.refreshControl = [[UIRefreshControl alloc] init];
     [self.refreshControl addTarget:self action:@selector(reloadList) forControlEvents:UIControlEventValueChanged];
   } else {
@@ -163,8 +162,7 @@
 }
 
 - (void)startLoadingIndicator {
-  id refreshClass = NSClassFromString(@"UIRefreshControl");
-  if (refreshClass) {
+  if ([UIRefreshControl class]) {
     [self.refreshControl beginRefreshing];
   } else {
     self.navigationItem.rightBarButtonItem.enabled = NO;
@@ -172,8 +170,7 @@
 }
 
 - (void)stopLoadingIndicator {
-  id refreshClass = NSClassFromString(@"UIRefreshControl");
-  if (refreshClass) {
+  if ([UIRefreshControl class]) {
     [self.refreshControl endRefreshing];
   } else {
     self.navigationItem.rightBarButtonItem.enabled = YES;
@@ -181,8 +178,7 @@
 }
 
 - (BOOL)isRefreshingWithNewControl {
-  id refreshClass = NSClassFromString(@"UIRefreshControl");
-  if (refreshClass) {
+  if ([UIRefreshControl class]) {
     return [self.refreshControl isRefreshing];
   }
   return NO;
@@ -717,8 +713,7 @@
         attachment.isLoading = YES;
         NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
         __weak typeof (self) weakSelf = self;
-        id nsurlsessionClass = NSClassFromString(@"NSURLSessionDataTask");
-        if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
+        if ([NSURLSessionDataTask class] && !bit_isRunningInAppExtension()) {
           NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
           __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
           
@@ -991,8 +986,7 @@
       NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:attachment.sourceURL]];
       
       __weak typeof (self) weakSelf = self;
-      id nsurlsessionClass = NSClassFromString(@"NSURLSessionDataTask");
-      if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
+      if ([NSURLSessionDataTask class] && !bit_isRunningInAppExtension()) {
         NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
         __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
         
