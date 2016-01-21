@@ -49,8 +49,8 @@
 
  @param crashManager The `BITCrashManager` instance invoking this delegate
  @see attachmentForCrashManager:
- @see userNameForCrashManager:
- @see userEmailForCrashManager:
+ @see BITHockeyManagerDelegate userNameForHockeyManager:componentManager:
+ @see BITHockeyManagerDelegate userEmailForHockeyManager:componentManager:
  */
 -(NSString *)applicationLogForCrashManager:(BITCrashManager *)crashManager;
 
@@ -74,8 +74,8 @@
  @param crashManager The `BITCrashManager` instance invoking this delegate
  @see BITHockeyAttachment
  @see applicationLogForCrashManager:
- @see userNameForCrashManager:
- @see userEmailForCrashManager:
+ @see BITHockeyManagerDelegate userNameForHockeyManager:componentManager:
+ @see BITHockeyManagerDelegate userEmailForHockeyManager:componentManager:
  */
 -(BITHockeyAttachment *)attachmentForCrashManager:(BITCrashManager *)crashManager;
 
