@@ -17,6 +17,7 @@
 
 #import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
+#import "BITHockeyHelper.h"
 #import "BITAuthenticator_Private.h"
 #import "BITHockeyBaseManagerPrivate.h"
 #import "BITHTTPOperation.h"
@@ -225,12 +226,17 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 }
 
 - (void) testThatEmailIdentificationQueuesAnOperation {
+  id helperMock = OCMClassMock([BITHockeyHelper class]);
+  OCMStub([helperMock isURLSessionSupported]).andReturn(NO);
+  
   id httpClientMock = mock(BITHockeyAppClient.class);
   _sut.hockeyAppClient = httpClientMock;
   _sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppEmail;
   [_sut storeInstallationIdentifier:@"meh" withType:BITAuthenticatorIdentificationTypeHockeyAppEmail];
   _sut.authenticationSecret = @"double";
-  [_sut authenticationViewController:nil handleAuthenticationWithEmail:@"stephan@dd.de" request:nil urlSessionSupported:NO completion:nil];
+  
+  [_sut authenticationViewController:nil handleAuthenticationWithEmail:@"stephan@dd.de" request:[NSURLRequest new] completion:nil];
+  
   [verify(httpClientMock) enqeueHTTPOperation:anything()];
 }
 
@@ -257,12 +263,14 @@ static void *kInstallationIdentification = &kInstallationIdentification;
 }
 
 - (void) testThatValidationCreatesAGETRequest {
+  id helperMock = OCMClassMock([BITHockeyHelper class]);
+  OCMStub([helperMock isURLSessionSupported]).andReturn(NO);
   id httpClientMock = mock(BITHockeyAppClient.class);
   _sut.hockeyAppClient = httpClientMock;
   _sut.identificationType = BITAuthenticatorIdentificationTypeHockeyAppEmail;
   [_sut storeInstallationIdentifier:@"meh" withType:BITAuthenticatorIdentificationTypeHockeyAppEmail];
   _sut.authenticationSecret = @"double";
-  [_sut validateWithCompletion:nil sessionSupported:NO];
+  [_sut validateWithCompletion:nil];
   [verify(httpClientMock) getPath:(id)anything()
                        parameters:(id)anything()
                        completion:(id)anything()];
@@ -277,7 +285,7 @@ static void *kInstallationIdentification = &kInstallationIdentification;
   [_sut storeInstallationIdentifier:@"asd" withType:BITAuthenticatorIdentificationTypeHockeyAppEmail];
   
   
-  OCMExpect([mockAuthenticator validateWithCompletion:(id)anything() sessionSupported:YES]);
+  OCMExpect([mockAuthenticator validateWithCompletion:(id)anything()]);
   [_sut authenticate];
   OCMVerifyAll(mockAuthenticator);
 }

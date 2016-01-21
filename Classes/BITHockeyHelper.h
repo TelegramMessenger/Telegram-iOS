@@ -30,9 +30,11 @@
 #import <UIKit/UIKit.h>
 #import "HockeySDKEnums.h"
 
-/* NSString helpers */
-NSString *bit_URLEncodedString(NSString *inputString);
-NSString *bit_base64String(NSData * data, unsigned long length);
+@interface BITHockeyHelper : NSObject
+
++ (BOOL)isURLSessionSupported;
+
+@end
 
 NSString *bit_settingsDir(void);
 
@@ -54,7 +56,12 @@ BOOL bit_hasEmbeddedMobileProvision(void);
 BITEnvironment bit_currentAppEnvironment(void);
 BOOL bit_isRunningInAppExtension(void);
 
+/* NSString helpers */
+NSString *bit_URLEncodedString(NSString *inputString);
+NSString *bit_base64String(NSData * data, unsigned long length);
+
 #if !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnly) && !defined (HOCKEYSDK_CONFIGURATION_ReleaseCrashOnlyExtensions)
+/* AppIcon helper */
 NSString *bit_validAppIconStringFromIcons(NSBundle *resourceBundle, NSArray *icons);
 NSString *bit_validAppIconFilename(NSBundle *bundle, NSBundle *resourceBundle);
 
