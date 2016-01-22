@@ -26,5 +26,8 @@ profile
 **/.idea/
 **/.idea/**
 
+# Infer
+**/infer-out
+
 documentation/
 Products/
