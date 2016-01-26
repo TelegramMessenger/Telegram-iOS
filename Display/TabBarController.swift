@@ -45,7 +45,11 @@ public class TabBarController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = TabBarControllerNode()
+        self.displayNode = TabBarControllerNode(itemSelected: { [weak self] index in
+            if let strongSelf = self {
+                strongSelf.selectedIndex = index
+            }
+        })
         
         self.updateSelectedIndex()
     }
@@ -54,6 +58,8 @@ public class TabBarController: ViewController {
         if !self.isNodeLoaded {
             return
         }
+        
+        self.tabBarControllerNode.tabBarNode.selectedIndex = self.selectedIndex
         
         if let currentController = self.currentController {
             currentController.willMoveToParentViewController(nil)
@@ -78,6 +84,14 @@ public class TabBarController: ViewController {
             self.tabBarControllerNode.currentControllerView = currentController.view
             self.addChildViewController(currentController)
             currentController.didMoveToParentViewController(self)
+            
+            self.navigationItem.title = currentController.navigationItem.title
+            self.navigationItem.leftBarButtonItem = currentController.navigationItem.leftBarButtonItem
+            self.navigationItem.rightBarButtonItem = currentController.navigationItem.rightBarButtonItem
+        } else {
+            self.navigationItem.title = nil
+            self.navigationItem.leftBarButtonItem = nil
+            self.navigationItem.rightBarButtonItem = nil
         }
     }
     

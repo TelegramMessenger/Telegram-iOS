@@ -115,8 +115,8 @@ static NSMutableArray *currentLayerAnimations()
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^
     {
-        [RuntimeUtils swizzleInstanceMethodOfClass:[CALayer class] currentSelector:@selector(setBounds:) newSelector:@selector(_ca836a62_setBounds:)];
-        [RuntimeUtils swizzleInstanceMethodOfClass:[CALayer class] currentSelector:@selector(setPosition:) newSelector:@selector(_ca836a62_setPosition:)];
+        //[RuntimeUtils swizzleInstanceMethodOfClass:[CALayer class] currentSelector:@selector(setBounds:) newSelector:@selector(_ca836a62_setBounds:)];
+        //[RuntimeUtils swizzleInstanceMethodOfClass:[CALayer class] currentSelector:@selector(setPosition:) newSelector:@selector(_ca836a62_setPosition:)];
     });
 }
 

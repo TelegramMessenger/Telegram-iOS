@@ -14,8 +14,8 @@ class TabBarControllerNode: ASDisplayNode {
         }
     }
     
-    override init() {
-        self.tabBarNode = TabBarNode()
+    init(itemSelected: Int -> Void) {
+        self.tabBarNode = TabBarNode(itemSelected: itemSelected)
         
         super.init()
         

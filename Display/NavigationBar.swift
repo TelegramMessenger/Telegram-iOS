@@ -16,6 +16,8 @@ public class NavigationBar: ASDisplayNode {
     
     private let stripeHeight: CGFloat = 1.0 / UIScreen.mainScreen().scale
     
+    //private let effectView: UIVisualEffectView
+    
     var backPressed: () -> () = { }
     
     private var collapsed: Bool {
@@ -58,9 +60,12 @@ public class NavigationBar: ASDisplayNode {
         stripeView = UIView()
         stripeView.backgroundColor = UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0)
         
+        //self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: .Light))
+        
         super.init()
         
         self.backgroundColor = UIColor(red: 0.968626451, green: 0.968626451, blue: 0.968626451, alpha: 1.0)
+        //self.view.addSubview(self.effectView)
         
         self.view.addSubview(stripeView)
     }
@@ -115,9 +120,11 @@ public class NavigationBar: ASDisplayNode {
     
     public override func layout() {
         
-        self.stripeView.frame = CGRect(x: 0.0, y: self.frame.size.height - stripeHeight, width: self.frame.size.width, height: stripeHeight)
+        self.stripeView.frame = CGRect(x: 0.0, y: self.frame.size.height, width: self.frame.size.width, height: stripeHeight)
         
         self.topItemWrapper?.layoutItems()
         self.tempItemWrapper?.layoutItems()
+        
+        //self.effectView.frame = self.bounds
     }
 }
