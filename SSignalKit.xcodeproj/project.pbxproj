@@ -88,6 +88,7 @@
 		D06F106C1A85561E00485185 /* SSignalBasicTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D06F106B1A85561E00485185 /* SSignalBasicTests.m */; };
 		D06F10711A855E2D00485185 /* DeallocatingObject.m in Sources */ = {isa = PBXBuildFile; fileRef = D06F10701A855E2D00485185 /* DeallocatingObject.m */; };
 		D06F10731A85882000485185 /* SSignalPerformanceTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D06F10721A85882000485185 /* SSignalPerformanceTests.m */; };
+		D07A5CFD1BBDE6E400451791 /* Promise.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07A5CFC1BBDE6E400451791 /* Promise.swift */; };
 		D09FD73E1BA9BAB900FF0A4F /* SVariable.h in Headers */ = {isa = PBXBuildFile; fileRef = D09FD73C1BA9BAB900FF0A4F /* SVariable.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D09FD73F1BA9BAB900FF0A4F /* SVariable.m in Sources */ = {isa = PBXBuildFile; fileRef = D09FD73D1BA9BAB900FF0A4F /* SVariable.m */; };
 /* End PBXBuildFile section */
@@ -199,6 +200,7 @@
 		D06F106F1A855E2D00485185 /* DeallocatingObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DeallocatingObject.h; sourceTree = "<group>"; };
 		D06F10701A855E2D00485185 /* DeallocatingObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DeallocatingObject.m; sourceTree = "<group>"; };
 		D06F10721A85882000485185 /* SSignalPerformanceTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SSignalPerformanceTests.m; sourceTree = "<group>"; };
+		D07A5CFC1BBDE6E400451791 /* Promise.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Promise.swift; sourceTree = "<group>"; };
 		D09FD73C1BA9BAB900FF0A4F /* SVariable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SVariable.h; sourceTree = "<group>"; };
 		D09FD73D1BA9BAB900FF0A4F /* SVariable.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SVariable.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -260,6 +262,7 @@
 				D0085B4C1B282BEE00EAF753 /* Disposable.swift */,
 				D0085B4D1B282BEE00EAF753 /* Signal_Mapping.swift */,
 				D0085B4E1B282BEE00EAF753 /* Subscriber.swift */,
+				D07A5CFC1BBDE6E400451791 /* Promise.swift */,
 				D0085B261B282B9800EAF753 /* SwiftSignalKit.h */,
 				D0085B241B282B9800EAF753 /* Supporting Files */,
 			);
@@ -615,6 +618,7 @@
 				D0085B601B282BEE00EAF753 /* Disposable.swift in Sources */,
 				D0085B531B282BEE00EAF753 /* ThreadPool.swift in Sources */,
 				D0085B5F1B282BEE00EAF753 /* Signal.swift in Sources */,
+				D07A5CFD1BBDE6E400451791 /* Promise.swift in Sources */,
 				D0085B5E1B282BEE00EAF753 /* Signal_Reduce.swift in Sources */,
 				D0085B621B282BEE00EAF753 /* Subscriber.swift in Sources */,
 				D0085B581B282BEE00EAF753 /* Signal_Take.swift in Sources */,

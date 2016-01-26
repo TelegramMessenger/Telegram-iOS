@@ -3,6 +3,8 @@ import Foundation
 private let _QueueSpecificKey = NSObject()
 private let QueueSpecificKey: UnsafePointer<Void> = UnsafePointer<Void>(Unmanaged<AnyObject>.passUnretained(_QueueSpecificKey).toOpaque())
 
+private let globalMainQueue = Queue(queue: dispatch_get_main_queue(), specialIsMainQueue: true)
+
 public final class Queue {
     private let nativeQueue: dispatch_queue_t
     private var specific: UnsafeMutablePointer<Void>
@@ -15,7 +17,7 @@ public final class Queue {
     }
     
     public class func mainQueue() -> Queue {
-        return Queue(queue: dispatch_get_main_queue(), specialIsMainQueue: true)
+        return globalMainQueue
     }
     
     public class func concurrentDefaultQueue() -> Queue {
