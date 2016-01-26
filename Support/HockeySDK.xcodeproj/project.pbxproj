@@ -385,6 +385,16 @@
 		80CA638A1C67BD5400362DBF /* libOCMock.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 80CA63881C67BD5400362DBF /* libOCMock.a */; };
 		80CA638F1C67F78000362DBF /* BITUpdateManagerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 80CA638E1C67F78000362DBF /* BITUpdateManagerTests.m */; };
 		80CA63901C67F78000362DBF /* BITUpdateManagerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 80CA638E1C67F78000362DBF /* BITUpdateManagerTests.m */; };
+		8080576D1C5818AE00BB319D /* BITHockeyLogger.h in Headers */ = {isa = PBXBuildFile; fileRef = 8080576B1C5818AE00BB319D /* BITHockeyLogger.h */; };
+		8080576E1C5818AE00BB319D /* BITHockeyLogger.h in Headers */ = {isa = PBXBuildFile; fileRef = 8080576B1C5818AE00BB319D /* BITHockeyLogger.h */; };
+		8080576F1C5818AE00BB319D /* BITHockeyLogger.m in Sources */ = {isa = PBXBuildFile; fileRef = 8080576C1C5818AE00BB319D /* BITHockeyLogger.m */; };
+		808057701C5818AE00BB319D /* BITHockeyLogger.m in Sources */ = {isa = PBXBuildFile; fileRef = 8080576C1C5818AE00BB319D /* BITHockeyLogger.m */; };
+		808441641C20617200644A40 /* libOCMock.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 808441611C20617200644A40 /* libOCMock.a */; };
+		808441651C20617300644A40 /* libOCMock.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 808441611C20617200644A40 /* libOCMock.a */; };
+		808441661C20617300644A40 /* OCHamcrestIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 808441621C20617200644A40 /* OCHamcrestIOS.framework */; };
+		808441671C20617300644A40 /* OCHamcrestIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 808441621C20617200644A40 /* OCHamcrestIOS.framework */; };
+		808441681C20617300644A40 /* OCMockitoIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 808441631C20617200644A40 /* OCMockitoIOS.framework */; };
+		808441691C20617300644A40 /* OCMockitoIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 808441631C20617200644A40 /* OCMockitoIOS.framework */; };
 		846A901F1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h in Headers */ = {isa = PBXBuildFile; fileRef = 846A901D1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h */; };
 		846A90201B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h in Headers */ = {isa = PBXBuildFile; fileRef = 846A901D1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h */; };
 		846A90211B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.mm in Sources */ = {isa = PBXBuildFile; fileRef = 846A901E1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.mm */; };
@@ -683,6 +693,11 @@
 		80807B861C46BF0100F4C44F /* OCMStubRecorder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMStubRecorder.h; sourceTree = "<group>"; };
 		80807B8A1C46BF2F00F4C44F /* OCHamcrestIOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OCHamcrestIOS.framework; path = HockeySDKTests/Vendor/OCHamcrestIOS.framework; sourceTree = SOURCE_ROOT; };
 		80807B8B1C46BF2F00F4C44F /* OCMockitoIOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OCMockitoIOS.framework; path = HockeySDKTests/Vendor/OCMockitoIOS.framework; sourceTree = SOURCE_ROOT; };
+		8080576B1C5818AE00BB319D /* BITHockeyLogger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITHockeyLogger.h; sourceTree = "<group>"; };
+		8080576C1C5818AE00BB319D /* BITHockeyLogger.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITHockeyLogger.m; sourceTree = "<group>"; };
+		808441611C20617200644A40 /* libOCMock.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libOCMock.a; path = HockeySDKTests/Vendor/libOCMock.a; sourceTree = SOURCE_ROOT; };
+		808441621C20617200644A40 /* OCHamcrestIOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OCHamcrestIOS.framework; path = HockeySDKTests/Vendor/OCHamcrestIOS.framework; sourceTree = SOURCE_ROOT; };
+		808441631C20617200644A40 /* OCMockitoIOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OCMockitoIOS.framework; path = HockeySDKTests/Vendor/OCMockitoIOS.framework; sourceTree = SOURCE_ROOT; };
 		8084416B1C20617C00644A40 /* NSNotificationCenter+OCMAdditions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSNotificationCenter+OCMAdditions.h"; sourceTree = "<group>"; };
 		8084416C1C20617C00644A40 /* OCMArg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMArg.h; sourceTree = "<group>"; };
 		8084416D1C20617C00644A40 /* OCMConstraint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMConstraint.h; sourceTree = "<group>"; };
@@ -916,6 +931,8 @@
 				1E49A4A4161222B900463151 /* BITHockeyBaseViewController.m */,
 				1E49A4A5161222B900463151 /* BITHockeyHelper.h */,
 				1E49A4A6161222B900463151 /* BITHockeyHelper.m */,
+				8080576B1C5818AE00BB319D /* BITHockeyLogger.h */,
+				8080576C1C5818AE00BB319D /* BITHockeyLogger.m */,
 				1E0FEE26173BDB260061331F /* BITKeychainUtils.h */,
 				1E0FEE27173BDB260061331F /* BITKeychainUtils.m */,
 				1E49A4A9161222B900463151 /* BITStoreButton.h */,
@@ -1379,6 +1396,7 @@
 				1EACC97B162F041E007578C5 /* BITAttributedLabel.h in Headers */,
 				802C45B41BD9629C000D043C /* HockeySDKNullability.h in Headers */,
 				8034E64C1BA31AFF00D83A30 /* BITPersistencePrivate.h in Headers */,
+				8080576D1C5818AE00BB319D /* BITHockeyLogger.h in Headers */,
 				1E0FEE28173BDB260061331F /* BITKeychainUtils.h in Headers */,
 				1E94F9E416E9136B006570AD /* BITStoreUpdateManagerPrivate.h in Headers */,
 				9760F6CF18BB685600959B93 /* BITImageAnnotation.h in Headers */,
@@ -1463,6 +1481,7 @@
 				1EB617AB1B0A31B40035A986 /* BITStoreUpdateManagerDelegate.h in Headers */,
 				802C45B31BD9629B000D043C /* HockeySDKNullability.h in Headers */,
 				8034E64D1BA31AFF00D83A30 /* BITPersistencePrivate.h in Headers */,
+				8080576E1C5818AE00BB319D /* BITHockeyLogger.h in Headers */,
 				1EB617AD1B0A31BF0035A986 /* BITHockeyManagerDelegate.h in Headers */,
 				8034E69B1BA3216000D83A30 /* BITInternal.h in Headers */,
 				1EB617971B0A31580035A986 /* BITBlurImageAnnotation.h in Headers */,
@@ -1759,6 +1778,7 @@
 				973EC8B818BCA8A200DBFFBB /* BITRectangleImageAnnotation.m in Sources */,
 				1E49A44B1612223B00463151 /* BITFeedbackListViewController.m in Sources */,
 				8034E6521BA31BE400D83A30 /* BITChannel.m in Sources */,
+				8080576F1C5818AE00BB319D /* BITHockeyLogger.m in Sources */,
 				1E49A4511612223B00463151 /* BITFeedbackManager.m in Sources */,
 				8034E69C1BA3216000D83A30 /* BITInternal.m in Sources */,
 				8034E67F1BA31D7C00D83A30 /* BITEnvelope.m in Sources */,
@@ -1865,6 +1885,7 @@
 				1EB6175F1B0A309F0035A986 /* BITHockeyBaseManager.m in Sources */,
 				8034E6531BA31BE400D83A30 /* BITChannel.m in Sources */,
 				8034E69F1BA3216500D83A30 /* BITCategoryContainer.m in Sources */,
+				808057701C5818AE00BB319D /* BITHockeyLogger.m in Sources */,
 				1EB617811B0A312E0035A986 /* BITImageAnnotationViewController.m in Sources */,
 				8034E6801BA31D7C00D83A30 /* BITEnvelope.m in Sources */,
 				1EB617871B0A31510035A986 /* BITBlurImageAnnotation.m in Sources */,
