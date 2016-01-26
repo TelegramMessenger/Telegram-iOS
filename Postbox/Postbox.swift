@@ -48,13 +48,13 @@ public final class Modifier<State: PostboxState> {
 public final class Postbox<State: PostboxState> {
     private let basePath: String
     private let messageNamespaces: [MessageId.Namespace]
-    private let absoluteIndexedMessageNamespaces: [MessageId.Namespace]
+    private let absoluteIndexedMessageNamespace: MessageId.Namespace
     
     private let queue = Queue(name: "org.telegram.postbox.Postbox")
     private var valueBox: ValueBox!
     
-    private var peerMessageViews: [PeerId : Bag<(MutableMessageView, Pipe<MessageView>)>] = [:]
-    private var deferredMessageViewsToUpdate: [(MutableMessageView, Pipe<MessageView>)] = []
+    private var peerMessageHistoryViews: [PeerId : Bag<(MutableMessageHistoryView, Pipe<MessageHistoryView>)>] = [:]
+    private var deferredMessageHistoryViewsToUpdate: [(MutableMessageHistoryView, Pipe<MessageHistoryView>)] = []
     private var peerViews: Bag<(MutablePeerView, Pipe<PeerView>)> = Bag()
     private var deferredPeerViewsToUpdate: [(MutablePeerView, Pipe<PeerView>)] = []
     private var peerPipes: [PeerId : Pipe<Peer>] = [:]
@@ -63,10 +63,14 @@ public final class Postbox<State: PostboxState> {
     
     public let mediaBox: MediaBox
     
-    public init(basePath: String, messageNamespaces: [MessageId.Namespace], absoluteIndexedMessageNamespaces: [MessageId.Namespace]) {
+    public init(basePath: String, messageNamespaces: [MessageId.Namespace], absoluteIndexedMessageNamespace: MessageId.Namespace?) {
         self.basePath = basePath
         self.messageNamespaces = messageNamespaces
-        self.absoluteIndexedMessageNamespaces = absoluteIndexedMessageNamespaces
+        if let absoluteIndexedMessageNamespace = absoluteIndexedMessageNamespace {
+            self.absoluteIndexedMessageNamespace = absoluteIndexedMessageNamespace
+        } else {
+            self.absoluteIndexedMessageNamespace = MessageId.Namespace.max
+        }
         self.mediaBox = MediaBox(basePath: self.basePath + "/media")
         self.openDatabase()
     }
@@ -83,7 +87,7 @@ public final class Postbox<State: PostboxState> {
             self.valueBox = SqliteValueBox(basePath: self.basePath + "/db")
             //self.valueBox = LmdbValueBox(basePath: self.basePath + "/db")
             var userVersion: Int32 = 0
-            let currentUserVersion: Int32 = 3
+            let currentUserVersion: Int32 = 4
             
             if let value = self.valueBox.get(Table_Meta.id, key: Table_Meta.key()) {
                 value.read(&userVersion, offset: 0, length: 4)
@@ -166,123 +170,11 @@ public final class Postbox<State: PostboxState> {
     }
     
     private func addMessages(messages: [Message], medias: [Media]) {
-        let encoder = Encoder()
         
-        for (peerId, peerMessages) in messagesGroupedByPeerId(messages) {
-            var maxMessage: (MessageIndex, Message)?
-            
-            var messageIds: [MessageId] = []
-            var seenMessageIds = Set<MessageId>()
-            for message in peerMessages {
-                if !seenMessageIds.contains(message.id) {
-                    seenMessageIds.insert(message.id)
-                    messageIds.append(message.id)
-                }
-            }
-            
-            var existingMessageIds = Set<MessageId>()
-            
-            let existingMessageKey = Table_Message.emptyKey()
-            existingMessageKey.setInt64(0, value: peerId.toInt64())
-            for id in messageIds {
-                if self.valueBox.exists(Table_Message.id, key: Table_Message.key(id, key: existingMessageKey)) {
-                    existingMessageIds.insert(id)
-                }
-            }
-            
-            var addedMessages: [Message] = []
-            
-            let mediaMessageIdKey = Table_Media_MessageIds.emptyKey()
-            for message in peerMessages {
-                if existingMessageIds.contains(message.id) {
-                    continue
-                }
-                existingMessageIds.insert(message.id)
-                addedMessages.append(message)
-                
-                let index = MessageIndex(message)
-                if maxMessage == nil || index > maxMessage!.0 {
-                    maxMessage = (index, message)
-                }
-                
-                encoder.reset()
-                encoder.encodeRootObject(message)
-                
-                for id in message.mediaIds {
-                    self.valueBox.set(Table_Media_MessageIds.id, key: Table_Media_MessageIds.key(id, messageId: message.id, key: mediaMessageIdKey), value: MemoryBuffer())
-                }
-                
-                self.valueBox.set(Table_Message.id, key: Table_Message.key(message.id), value: Table_Message.set(message))
-                
-                let absoluteKey = Table_AbsoluteMessageId.emptyKey()
-                if self.absoluteIndexedMessageNamespaces.contains(message.id.namespace) {
-                    self.valueBox.set(Table_AbsoluteMessageId.id, key: Table_AbsoluteMessageId.key(message.id.id, key: absoluteKey), value: Table_AbsoluteMessageId.set(message.id))
-                }
-            }
-            
-            if let relatedViews = self.peerMessageViews[peerId] {
-                for record in relatedViews.copyItems() {
-                    var updated = false
-                    for message in addedMessages {
-                        if record.0.add(RenderedMessage(message: message)) {
-                            updated = true
-                        }
-                    }
-                    
-                    if updated {
-                        self.deferMessageViewUpdate(record.0, pipe: record.1)
-                    }
-                }
-            }
-            
-            if let maxMessage = maxMessage {
-                self.updatePeerEntry(peerId, message: RenderedMessage(message: maxMessage.1))
-            }
-        }
-        
-        var existingMediaIds = Set<MediaId>()
-        
-        let existingMediaKey = Table_Media.emptyKey()
-        for media in medias {
-            if let id = media.id {
-                if self.valueBox.exists(Table_Media.id, key: Table_Media.key(id, key: existingMediaKey)) {
-                    existingMediaIds.insert(id)
-                }
-            }
-        }
-        
-        let mediaKey = Table_Media.emptyKey()
-        for media in medias {
-            if let id = media.id {
-                if existingMediaIds.contains(id) {
-                    continue
-                }
-                existingMediaIds.insert(id)
-
-                self.valueBox.set(Table_Media.id, key: Table_Media.key(id, key: mediaKey), value: Table_Media.set(media))
-            }
-        }
     }
     
     private func mediaWithIds(ids: [MediaId]) -> [MediaId : Media] {
-        if ids.count == 0 {
-            return [:]
-        } else {
-            var result: [MediaId : Media] = [:]
-            
-            let mediaKey = Table_Media.emptyKey()
-            for id in ids {
-                if let value = self.valueBox.get(Table_Media.id, key: Table_Media.key(id, key: mediaKey)) {
-                    if let media = Table_Media.get(value) {
-                        result[id] = media
-                    } else {
-                        print("can't parse media")
-                    }
-                }
-            }
-            
-            return result
-        }
+        return [:]
     }
     
     var cachedPeers: [PeerId : Peer] = [:]
@@ -338,19 +230,19 @@ public final class Postbox<State: PostboxState> {
         }
     }
     
-    private func deferMessageViewUpdate(view: MutableMessageView, pipe: Pipe<MessageView>) {
+    private func deferMessageHistoryViewUpdate(view: MutableMessageHistoryView, pipe: Pipe<MessageHistoryView>) {
         var i = 0
         var found = false
-        while i < self.deferredMessageViewsToUpdate.count {
-            if self.deferredMessageViewsToUpdate[i].1 === pipe {
-                self.deferredMessageViewsToUpdate[i] = (view, pipe)
+        while i < self.deferredMessageHistoryViewsToUpdate.count {
+            if self.deferredMessageHistoryViewsToUpdate[i].1 === pipe {
+                self.deferredMessageHistoryViewsToUpdate[i] = (view, pipe)
                 found = true
                 break
             }
             i++
         }
         if !found {
-            self.deferredMessageViewsToUpdate.append((view, pipe))
+            self.deferredMessageHistoryViewsToUpdate.append((view, pipe))
         }
     }
     
@@ -371,10 +263,10 @@ public final class Postbox<State: PostboxState> {
             entry.1.putNext(PeerView(entry.0))
         }
         
-        let deferredMessageViewsToUpdate = self.deferredMessageViewsToUpdate
-        self.deferredMessageViewsToUpdate.removeAll()
+        let deferredMessageHistoryViewsToUpdate = self.deferredMessageHistoryViewsToUpdate
+        self.deferredMessageHistoryViewsToUpdate.removeAll()
         
-        for entry in deferredMessageViewsToUpdate {
+        for entry in deferredMessageHistoryViewsToUpdate {
             let viewRenderedMessages = self.renderedMessages(entry.0.incompleteMessages())
             if viewRenderedMessages.count != 0 {
                 var viewRenderedMessagesDict: [MessageId : RenderedMessage] = [:]
@@ -384,7 +276,7 @@ public final class Postbox<State: PostboxState> {
                 entry.0.completeMessages(viewRenderedMessagesDict)
             }
             
-            entry.1.putNext(MessageView(entry.0))
+            entry.1.putNext(MessageHistoryView(entry.0))
         }
     }
     
@@ -458,10 +350,10 @@ public final class Postbox<State: PostboxState> {
         
         var result: [MessageId] = []
         
-        let key = Table_AbsoluteMessageId.emptyKey()
+        let key = Table_GlobalMessageId.emptyKey()
         for id in ids {
-            if let value = self.valueBox.get(Table_AbsoluteMessageId.id, key: Table_AbsoluteMessageId.key(id, key: key)) {
-                result.append(Table_AbsoluteMessageId.get(id, value: value))
+            if let value = self.valueBox.get(Table_GlobalMessageId.id, key: Table_GlobalMessageId.key(id, key: key)) {
+                result.append(Table_GlobalMessageId.get(id, value: value))
             }
         }
         
@@ -469,55 +361,7 @@ public final class Postbox<State: PostboxState> {
     }
     
     private func deleteMessagesWithIds(ids: [MessageId]) {
-        for (peerId, messageIds) in messageIdsGroupedByPeerId(ids) {
-            if let relatedViews = self.peerMessageViews[peerId] {
-                for (view, pipe) in relatedViews.copyItems() {
-                    let context = view.remove(Set<MessageId>(messageIds))
-                    if !context.empty() {
-                        view.complete(context, fetchEarlier: self.fetchMessagesRelative(peerId, earlier: true), fetchLater: self.fetchMessagesRelative(peerId, earlier: false))
-                        self.deferMessageViewUpdate(view, pipe: pipe)
-                    }
-                }
-            }
-        }
         
-        var touchedMediaIds = Set<MediaId>()
-        
-        let removeMediaMessageIdKey = Table_Media_MessageIds.emptyKey()
-        for (peerId, messageIds) in messageIdsGroupedByPeerId(ids) {
-            let messageKey = Table_Message.emptyKey()
-            for id in messageIds {
-                if let value = self.valueBox.get(Table_Message.id, key: Table_Message.key(id, key: messageKey)) {
-                    if let message = Table_Message.get(value) {
-                        for mediaId in message.mediaIds {
-                            touchedMediaIds.insert(mediaId)
-                            self.valueBox.remove(Table_Media_MessageIds.id, key: Table_Media_MessageIds.key(mediaId, messageId: message.id, key: removeMediaMessageIdKey))
-                        }
-                    }
-                }
-            }
-
-            for id in messageIds {
-                self.valueBox.remove(Table_Message.id, key: Table_Message.key(id, key: messageKey))
-            }
-            
-            for mediaId in touchedMediaIds {
-                var referenced = false
-                self.valueBox.range(Table_Media_MessageIds.id, start: Table_Media_MessageIds.lowerBoundKey(mediaId), end: Table_Media_MessageIds.upperBoundKey(mediaId), keys: { key in
-                    referenced = true
-                    return false
-                }, limit: 1)
-                
-                if !referenced {
-                    //TODO write to cleanup queue
-                    self.valueBox.remove(Table_Media.id, key: Table_Media.key(mediaId))
-                }
-            }
-            
-            let tail = self.fetchMessagesTail(peerId, count: 1)
-            
-            self.updatePeerEntry(peerId, message: tail.first, replace: true)
-        }
     }
     
     private func updatePeers(peers: [Peer], update: (Peer, Peer) -> Peer) {
@@ -572,19 +416,21 @@ public final class Postbox<State: PostboxState> {
         return Signal { subscriber in
             self.queue.dispatch {
                 //#if DEBUG
-                    let startTime = CFAbsoluteTimeGetCurrent()
+                    //let startTime = CFAbsoluteTimeGetCurrent()
                 //#endif
                 
+                //self.valueBox.beginStats()
                 self.valueBox.begin()
                 let result = f(Modifier(postbox: self))
-                    //print("(Postbox modify took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms)")
+                //print("(Postbox modify took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms)")
                 //#if DEBUG
                 //startTime = CFAbsoluteTimeGetCurrent()
                 //#endif
                 self.valueBox.commit()
                 
                 //#if DEBUG
-                    print("(Postbox commit took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms)")
+                    //print("(Postbox commit took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms)")
+                //self.valueBox.endStats()
                 //#endif
                 
                 self.performDeferredUpdates()
@@ -594,282 +440,6 @@ public final class Postbox<State: PostboxState> {
             }
             return EmptyDisposable
         }
-    }
-    
-    private func findAdjacentMessageIds(peerId: PeerId, namespace: MessageId.Namespace, index: MessageIndex) -> (MessageId.Id?, MessageId.Id?) {
-        /*var minId: MessageId.Id?
-        var maxId: MessageId.Id?
-        
-        let lowerBoundKey = ValueBoxKey(length: 8 + 4)
-        lowerBoundKey.setInt64(0, value: peerId.toInt64())
-        lowerBoundKey.setInt32(8, value: namespace)
-        
-        let upperBoundKey = ValueBoxKey(length: 8 + 4)
-        upperBoundKey.setInt64(0, value: peerId.toInt64())
-        upperBoundKey.setInt32(8, value: namespace)
-        
-        self.valueBox.range("peer_messages", start: lowerBoundKey, end: upperBoundKey.successor, keys: { key in
-            
-        }, limit: 1)
-        
-        for row in self.database.prepareCached("SELECT MIN(id), MAX(id) FROM peer_messages WHERE peerId = ? AND namespace = ?").run(peerId.toInt64(), Int64(namespace)) {
-            minId = MessageId.Id(row[0] as! Int64)
-            maxId = MessageId.Id(row[1] as! Int64)
-        }
-        
-        if let minId = minId, maxId = maxId {
-            var minTimestamp: Int32!
-            var maxTimestamp: Int32!
-            for row in self.database.prepareCached("SELECT id, timestamp FROM peer_messages WHERE peerId = ? AND namespace = ? AND id IN (?, ?)").run(peerId.toInt64(), Int64(namespace), Int64(minId), Int64(maxId)) {
-                let id = Int32(row[0] as! Int64)
-                let timestamp = Int32(row[1] as! Int64)
-                if id == minId {
-                    minTimestamp = timestamp
-                } else {
-                    maxTimestamp = timestamp
-                }
-            }
-            
-            let earlierMidStatement = self.database.prepareCached("SELECT id, timestamp FROM peer_messages WHERE peerId = ? AND namespace = ? AND id <= ? LIMIT 1")
-            let laterMidStatement = self.database.prepareCached("SELECT id, timestamp FROM peer_messages WHERE peerId = ? AND namespace = ? AND id >= ? LIMIT 1")
-            
-            func lowerBound(timestamp: Int32) -> MessageId.Id? {
-                var leftId = minId
-                var leftTimestamp = minTimestamp
-                var rightId = maxId
-                var rightTimestamp = maxTimestamp
-                
-                while leftTimestamp <= timestamp && rightTimestamp >= timestamp {
-                    let approximateMiddleId = leftId + (rightId - leftId) / 2
-                    if approximateMiddleId == leftId {
-                        return rightId
-                    }
-                    var middleId: MessageId.Id?
-                    var middleTimestamp: Int32?
-                    for row in earlierMidStatement.run(peerId.toInt64(), Int64(namespace), Int64(approximateMiddleId)) {
-                        middleId = MessageId.Id(row[0] as! Int64)
-                        middleTimestamp = Int32(row[1] as! Int64)
-                        break
-                    }
-                    if middleId == leftId {
-                        return rightId
-                    }
-                    
-                    if let middleId = middleId, middleTimestamp = middleTimestamp {
-                        if middleTimestamp >= timestamp {
-                            rightId = middleId
-                            rightTimestamp = middleTimestamp
-                        } else {
-                            leftId = middleId
-                            leftTimestamp = middleTimestamp
-                        }
-                    } else {
-                        return nil
-                    }
-                }
-                
-                return leftId
-            }
-            
-            func upperBound(timestamp: Int32) -> MessageId.Id? {
-                var leftId = minId
-                var leftTimestamp = minTimestamp
-                var rightId = maxId
-                var rightTimestamp = maxTimestamp
-                
-                while leftTimestamp <= timestamp && rightTimestamp >= timestamp {
-                    let approximateMiddleId = leftId + (rightId - leftId) / 2
-                    if approximateMiddleId == leftId {
-                        return leftId
-                    }
-                    var middleId: MessageId.Id?
-                    var middleTimestamp: Int32?
-                    for row in earlierMidStatement.run(peerId.toInt64(), Int64(namespace), Int64(approximateMiddleId)) {
-                        middleId = MessageId.Id(row[0] as! Int64)
-                        middleTimestamp = Int32(row[1] as! Int64)
-                        break
-                    }
-                    if middleId == leftId {
-                        return leftId
-                    }
-                    
-                    if let middleId = middleId, middleTimestamp = middleTimestamp {
-                        if middleTimestamp <= timestamp {
-                            rightId = middleId
-                            rightTimestamp = middleTimestamp
-                        } else {
-                            leftId = middleId
-                            leftTimestamp = middleTimestamp
-                        }
-                    } else {
-                        return nil
-                    }
-                }
-                
-                return rightTimestamp
-            }
-            
-            if index.id.namespace < namespace {
-                let left = upperBound(index.timestamp - 1)
-                let right = lowerBound(index.timestamp)
-                return (left, right)
-            } else {
-                let left = upperBound(index.timestamp)
-                let right = lowerBound(index.timestamp + 1)
-                return (left, right)
-            }
-        } else {
-            return (nil, nil)
-        }*/
-        
-        return (nil, nil)
-    }
-    
-    private func fetchMessagesAround(peerId: PeerId, anchorId: MessageId, count: Int) -> ([RenderedMessage], [MessageId.Namespace : RenderedMessage], [MessageId.Namespace : RenderedMessage]) {
-        var messages: [RenderedMessage] = []
-        
-        messages += self.fetchMessagesRelative(peerId, earlier: true)(namespace: anchorId.namespace, id: anchorId.id, count: count + 1)
-        messages += self.fetchMessagesRelative(peerId, earlier: false)(namespace: anchorId.namespace, id: anchorId.id - 1, count: count + 1)
-        
-        messages.sortInPlace({ MessageIndex($0.message) < MessageIndex($1.message) })
-        var i = messages.count - 1
-        while i >= 1 {
-            if messages[i].message.id == messages[i - 1].message.id {
-                messages.removeAtIndex(i)
-            }
-            i--
-        }
-        
-        if messages.count == 0 {
-            return ([], [:], [:])
-        } else {
-            var index: MessageIndex!
-            for message in messages {
-                if message.message.id == anchorId {
-                    index = MessageIndex(message.message)
-                    break
-                }
-            }
-            if index == nil {
-                var closestId: MessageId.Id = messages[0].message.id.id
-                var closestDistance = abs(closestId - anchorId.id)
-                let closestTimestamp: Int32 = messages[0].message.timestamp
-                for message in messages {
-                    if abs(message.message.id.id - anchorId.id) < closestDistance {
-                        closestId = message.message.id.id
-                        closestDistance = abs(message.message.id.id - anchorId.id)
-                    }
-                }
-                index = MessageIndex(id: MessageId(peerId: peerId, namespace: anchorId.namespace, id: closestId), timestamp: closestTimestamp)
-            }
-            
-            for namespace in self.messageNamespaces {
-                if namespace != anchorId.namespace {
-                    let (left, right) = self.findAdjacentMessageIds(peerId, namespace: namespace, index: index)
-                    if let left = left {
-                        messages += self.fetchMessagesRelative(peerId, earlier: true)(namespace: namespace, id: left + 1, count: count + 1)
-                    }
-                    if let right = right {
-                        messages += self.fetchMessagesRelative(peerId, earlier: false)(namespace: namespace, id: right - 1, count: count + 1)
-                    }
-                }
-            }
-            
-            messages.sortInPlace({ MessageIndex($0.message) < MessageIndex($1.message) })
-            var i = messages.count - 1
-            while i >= 1 {
-                if messages[i].message.id == messages[i - 1].message.id {
-                    messages.removeAtIndex(i)
-                }
-                i--
-            }
-            
-            var anchorIndex = messages.count / 2
-            i = 0
-            while i < messages.count {
-                if messages[i].message.id == index.id {
-                    anchorIndex = i
-                    break
-                }
-                i++
-            }
-            
-            var filteredMessages: [RenderedMessage] = []
-            var earlier: [MessageId.Namespace : RenderedMessage] = [:]
-            var later: [MessageId.Namespace : RenderedMessage] = [:]
-            
-            i = anchorIndex
-            var j = anchorIndex - 1
-            var leftIndex = j
-            var rightIndex = i
-            
-            while i < messages.count || j >= 0 {
-                if i < messages.count && filteredMessages.count < count {
-                    filteredMessages.append(messages[i])
-                    rightIndex = i
-                }
-                if j >= 0 && filteredMessages.count < count {
-                    filteredMessages.append(messages[j])
-                    leftIndex = j
-                }
-                
-                i++
-                j--
-            }
-            
-            i = leftIndex - 1
-            while i >= 0 {
-                if earlier[messages[i].message.id.namespace] == nil {
-                    earlier[messages[i].message.id.namespace] = messages[i]
-                }
-                i--
-            }
-            
-            i = rightIndex + 1
-            while i < messages.count {
-                if later[messages[i].message.id.namespace] == nil {
-                    later[messages[i].message.id.namespace] = messages[i]
-                }
-                i++
-            }
-            
-            filteredMessages.sortInPlace({ MessageIndex($0.message) < MessageIndex($1.message) })
-            
-            return (filteredMessages, earlier, later)
-        }
-    }
-    
-    private func fetchMessagesRelative(peerId: PeerId, earlier: Bool)(namespace: MessageId.Namespace, id: MessageId.Id?, count: Int) -> [RenderedMessage] {
-        var messages: [Message] = []
-        
-        let lowerBound = Table_Message.lowerBoundKey(peerId, namespace: namespace)
-        let upperBound = Table_Message.upperBoundKey(peerId, namespace: namespace)
-        
-        let bound: ValueBoxKey
-        if let id = id {
-            bound = Table_Message.key(MessageId(peerId: peerId, namespace: namespace, id: id))
-        } else if earlier {
-            bound = upperBound
-        } else {
-            bound = lowerBound
-        }
-        
-        let values: (ValueBoxKey, ReadBuffer) -> Bool = { _, value in
-            if let message = Table_Message.get(value) {
-                messages.append(message)
-            } else {
-                print("can't parse message")
-            }
-            return true
-        }
-        
-        if earlier {
-            self.valueBox.range(Table_Message.id, start: bound, end: lowerBound, values: values, limit: count)
-        } else {
-            self.valueBox.range(Table_Message.id, start: bound, end: upperBound, values: values, limit: count)
-        }
-        
-        return self.renderedMessages(messages)
     }
     
     private func fetchPeerEntryIndicesRelative(earlier: Bool)(index: PeerViewEntryIndex?, count: Int) -> [PeerViewEntryIndex] {
@@ -918,7 +488,7 @@ public final class Postbox<State: PostboxState> {
             }
             
             var message: Message?
-            if let value = self.valueBox.get(Table_Message.id, key: Table_Message.key(entryIndex.messageIndex.id)) {
+            if let value = self.valueBox.get(Table_Message.id, key: Table_Message.key(entryIndex.messageIndex)) {
                 message = Table_Message.get(value)
             }
             
@@ -943,123 +513,38 @@ public final class Postbox<State: PostboxState> {
             }
         }
         
-        entries.sortInPlace({ PeerViewEntryIndex($0) < PeerViewEntryIndex($1) })
+        //entries.sortInPlace()
         
-        return entries
+        return entries.sort({ PeerViewEntryIndex($0) < PeerViewEntryIndex($1) })
     }
     
     private func renderedMessages(messages: [Message]) -> [RenderedMessage] {
-        if messages.count == 0 {
-            return []
-        }
-        
-        var peerIds = Set<PeerId>()
-        var mediaIds = Set<MediaId>()
-        
-        for message in messages {
-            for peerId in message.peerIds {
-                peerIds.insert(peerId)
-            }
-            for mediaId in message.mediaIds {
-                mediaIds.insert(mediaId)
-            }
-        }
-        
-        var arrayPeerIds: [PeerId] = []
-        for id in peerIds {
-            arrayPeerIds.append(id)
-        }
-        let peers = self.peersWithIds(arrayPeerIds)
-        
-        var arrayMediaIds: [MediaId] = []
-        for id in mediaIds {
-            arrayMediaIds.append(id)
-        }
-        let medias = self.mediaWithIds(arrayMediaIds)
-        
-        var result: [RenderedMessage] = []
-        
-        for message in messages {
-            if message.peerIds.count == 0 && message.mediaIds.count == 0 {
-                result.append(RenderedMessage(message: message, peers: [], media: []))
-            } else {
-                var messagePeers: [Peer] = []
-                for id in message.peerIds {
-                    if let peer = peers[id] {
-                        messagePeers.append(peer)
-                    }
-                }
-                
-                var messageMedia: [Media] = []
-                for id in message.mediaIds {
-                    if let media = medias[id] {
-                        messageMedia.append(media)
-                    }
-                }
-                
-                result.append(RenderedMessage(message: message, peers: messagePeers, media: messageMedia))
-            }
-        }
-        
-        return result
+        return []
     }
     
-    private func fetchMessagesTail(peerId: PeerId, count: Int) -> [RenderedMessage] {
-        var messages: [RenderedMessage] = []
-        
-        for namespace in self.messageNamespaces {
-            messages += self.fetchMessagesRelative(peerId, earlier: true)(namespace: namespace, id: nil, count: count)
-        }
-        
-        messages.sortInPlace({ MessageIndex($0.message) < MessageIndex($1.message)})
-        
-        return messages
-    }
-    
-    public func tailMessageViewForPeerId(peerId: PeerId, count: Int) -> Signal<MessageView, NoError> {
+    public func tailMessageHistoryViewForPeerId(peerId: PeerId, count: Int) -> Signal<MessageHistoryView, NoError> {
         return Signal { subscriber in
             let startTime = CFAbsoluteTimeGetCurrent()
             
             let disposable = MetaDisposable()
             
             self.queue.dispatch {
-                let tail = self.fetchMessagesTail(peerId, count: count + 1)
                 
-                print("tailMessageViewForPeerId fetch: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+                print("tailMessageHistoryViewForPeerId fetch: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
                 
-                var messages: [RenderedMessage] = []
-                var i = tail.count - 1
-                while i >= 0 && i >= tail.count - count {
-                    messages.insert(tail[i], atIndex: 0)
-                    i--
-                }
+                let mutableView = MutableMessageHistoryView(count: count, earlierMessage: nil, messages: [], laterMessage: nil)
+                let record = (mutableView, Pipe<MessageHistoryView>())
                 
-                var earlier: [MessageId.Namespace : RenderedMessage] = [:]
-                
-                for namespace in self.messageNamespaces {
-                    var i = tail.count - count - 1
-                    while i >= 0 {
-                        if tail[i].message.id.namespace == namespace {
-                            earlier[namespace] = tail[i]
-                            break
-                        }
-                        i--
-                    }
-                }
-                
-                let mutableView = MutableMessageView(namespaces: self.messageNamespaces, count: count, earlier: earlier, messages: messages, later: [:])
-                let record = (mutableView, Pipe<MessageView>())
-                
-                let index: Bag<(MutableMessageView, Pipe<MessageView>)>.Index
-                if let bag = self.peerMessageViews[peerId] {
+                let index: Bag<(MutableMessageHistoryView, Pipe<MessageHistoryView>)>.Index
+                if let bag = self.peerMessageHistoryViews[peerId] {
                     index = bag.add(record)
                 } else {
-                    let bag = Bag<(MutableMessageView, Pipe<MessageView>)>()
+                    let bag = Bag<(MutableMessageHistoryView, Pipe<MessageHistoryView>)>()
                     index = bag.add(record)
-                    self.peerMessageViews[peerId] = bag
+                    self.peerMessageHistoryViews[peerId] = bag
                 }
                 
-                subscriber.putNext(MessageView(mutableView))
+                subscriber.putNext(MessageHistoryView(mutableView))
                 
                 let pipeDisposable = record.1.signal().start(next: { next in
                     subscriber.putNext(next)
@@ -1070,7 +555,7 @@ public final class Postbox<State: PostboxState> {
                     
                     if let strongSelf = self {
                         strongSelf.queue.dispatch {
-                            if let bag = strongSelf.peerMessageViews[peerId] {
+                            if let bag = strongSelf.peerMessageHistoryViews[peerId] {
                                 bag.remove(index)
                             }
                         }
@@ -1083,58 +568,31 @@ public final class Postbox<State: PostboxState> {
         }
     }
     
-    public func aroundMessageViewForPeerId(peerId: PeerId, id: MessageId, count: Int) -> Signal<MessageView, NoError> {
+    public func aroundMessageHistoryViewForPeerId(peerId: PeerId, index: MessageIndex, count: Int) -> Signal<MessageHistoryView, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
             self.queue.dispatch {
-                let mutableView: MutableMessageView
+                let mutableView: MutableMessageHistoryView
                 
                 let startTime = CFAbsoluteTimeGetCurrent()
                 
-                let around = self.fetchMessagesAround(peerId, anchorId: id, count: count)
-                if around.0.count == 0 {
-                    let tail = self.fetchMessagesTail(peerId, count: count + 1)
-                    
-                    var messages: [RenderedMessage] = []
-                    var i = tail.count - 1
-                    while i >= 0 && i >= tail.count - count {
-                        messages.insert(tail[i], atIndex: 0)
-                        i--
-                    }
-                    
-                    var earlier: [MessageId.Namespace : RenderedMessage] = [:]
-                    
-                    for namespace in self.messageNamespaces {
-                        var i = tail.count - count - 1
-                        while i >= 0 {
-                            if tail[i].message.id.namespace == namespace {
-                                earlier[namespace] = tail[i]
-                                break
-                            }
-                            i--
-                        }
-                    }
-                    
-                    mutableView = MutableMessageView(namespaces: self.messageNamespaces, count: count, earlier: earlier, messages: messages, later: [:])
-                } else {
-                    mutableView = MutableMessageView(namespaces: self.messageNamespaces, count: count, earlier: around.1, messages: around.0, later: around.2)
-                }
+                mutableView = MutableMessageHistoryView(count: count, earlierMessage: nil, messages: [], laterMessage: nil)
                 
                 print("aroundMessageViewForPeerId fetch: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
                 
-                let record = (mutableView, Pipe<MessageView>())
+                let record = (mutableView, Pipe<MessageHistoryView>())
                 
-                let index: Bag<(MutableMessageView, Pipe<MessageView>)>.Index
-                if let bag = self.peerMessageViews[peerId] {
+                let index: Bag<(MutableMessageHistoryView, Pipe<MessageHistoryView>)>.Index
+                if let bag = self.peerMessageHistoryViews[peerId] {
                     index = bag.add(record)
                 } else {
-                    let bag = Bag<(MutableMessageView, Pipe<MessageView>)>()
+                    let bag = Bag<(MutableMessageHistoryView, Pipe<MessageHistoryView>)>()
                     index = bag.add(record)
-                    self.peerMessageViews[peerId] = bag
+                    self.peerMessageHistoryViews[peerId] = bag
                 }
                 
-                subscriber.putNext(MessageView(mutableView))
+                subscriber.putNext(MessageHistoryView(mutableView))
                 
                 let pipeDisposable = record.1.signal().start(next: { next in
                     subscriber.putNext(next)
@@ -1145,7 +603,7 @@ public final class Postbox<State: PostboxState> {
                     
                     if let strongSelf = self {
                         strongSelf.queue.dispatch {
-                            if let bag = strongSelf.peerMessageViews[peerId] {
+                            if let bag = strongSelf.peerMessageHistoryViews[peerId] {
                                 bag.remove(index)
                             }
                         }

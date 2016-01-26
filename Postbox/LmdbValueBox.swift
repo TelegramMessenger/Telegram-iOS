@@ -98,6 +98,10 @@ public final class LmdbValueBox: ValueBox {
     
     private var sharedTxn: COpaquePointer = nil
     
+    private var readQueryTime: CFAbsoluteTime = 0.0
+    private var writeQueryTime: CFAbsoluteTime = 0.0
+    private var commitTime: CFAbsoluteTime = 0.0
+    
     public init?(basePath: String) {
         var result = mdb_env_create(&self.env)
         if result != MDB_SUCCESS {
@@ -163,6 +167,16 @@ public final class LmdbValueBox: ValueBox {
         return LmdbTable(dbi: dbi)
     }
     
+    public func beginStats() {
+        self.readQueryTime = 0.0
+        self.writeQueryTime = 0.0
+        self.commitTime = 0.0
+    }
+    
+    public func endStats() {
+        print("(LmdbValueBox stats read: \(self.readQueryTime * 1000.0) ms, write: \(self.writeQueryTime * 1000.0) ms, commit: \(self.commitTime * 1000.0) ms")
+    }
+    
     public func begin() {
         if self.sharedTxn != nil {
             print("(LmdbValueBox already in transaction)")
@@ -176,11 +190,13 @@ public final class LmdbValueBox: ValueBox {
     }
     
     public func commit() {
+        let startTime = CFAbsoluteTimeGetCurrent()
         if self.sharedTxn == nil {
             print("(LmdbValueBox already no current transaction)")
         } else {
             let result = mdb_txn_commit(self.sharedTxn)
             self.sharedTxn = nil
+            self.commitTime += CFAbsoluteTimeGetCurrent() - startTime
             if result != MDB_SUCCESS {
                 print("(LmdbValueBox txn_commit failed with \(result))")
                 return
@@ -208,6 +224,7 @@ public final class LmdbValueBox: ValueBox {
         }
         
         if let nativeTable = nativeTable {
+            var startTime = CFAbsoluteTimeGetCurrent()
             var cursorPtr: COpaquePointer = nil
             let result = mdb_cursor_open(self.sharedTxn, nativeTable.dbi, &cursorPtr)
             if result != MDB_SUCCESS {
@@ -223,6 +240,10 @@ public final class LmdbValueBox: ValueBox {
                         }
                     }
                     
+                    var currentTime = CFAbsoluteTimeGetCurrent()
+                    readQueryTime += currentTime - startTime
+                    startTime = currentTime
+                    
                     var count = 0
                     if value != nil && value!.0 < end {
                         count++
@@ -230,19 +251,31 @@ public final class LmdbValueBox: ValueBox {
                     }
                     
                     while value != nil && value!.0 < end && count < limit {
+                        startTime = CFAbsoluteTimeGetCurrent()
+                        
                         value = cursor.next()
+                        
+                        currentTime = CFAbsoluteTimeGetCurrent()
+                        readQueryTime += currentTime - startTime
+                        startTime = currentTime
+                        
                         if value != nil && value!.0 < end {
                             count++
                             values(value!.0, value!.1)
                         }
                     }
                 } else {
+                    var startTime = CFAbsoluteTimeGetCurrent()
                     var value = cursor.seekTo(start, forward: false)
                     if value != nil {
                         if value!.0 == start {
                             value = cursor.previous()
                         }
                     }
+                    
+                    var currentTime = CFAbsoluteTimeGetCurrent()
+                    readQueryTime += currentTime - startTime
+                    startTime = currentTime
                     
                     var count = 0
                     if value != nil && value!.0 > end {
@@ -251,7 +284,14 @@ public final class LmdbValueBox: ValueBox {
                     }
                     
                     while value != nil && value!.0 > end && count < limit {
+                        startTime = CFAbsoluteTimeGetCurrent()
+                        
                         value = cursor.previous()
+                        
+                        currentTime = CFAbsoluteTimeGetCurrent()
+                        readQueryTime += currentTime - startTime
+                        startTime = currentTime
+                        
                         if value != nil && value!.0 > end {
                             count++
                             values(value!.0, value!.1)
@@ -264,7 +304,11 @@ public final class LmdbValueBox: ValueBox {
         }
         
         if commit {
+            let startTime = CFAbsoluteTimeGetCurrent()
+            
             self.commit()
+            
+            readQueryTime += CFAbsoluteTimeGetCurrent() - startTime
         }
     }
     
@@ -275,6 +319,8 @@ public final class LmdbValueBox: ValueBox {
     }
     
     public func get(table: Int32, key: ValueBoxKey) -> ReadBuffer? {
+        let startTime = CFAbsoluteTimeGetCurrent()
+        
         var commit = false
         if self.sharedTxn == nil {
             self.begin()
@@ -315,6 +361,8 @@ public final class LmdbValueBox: ValueBox {
             self.commit()
         }
         
+        readQueryTime += CFAbsoluteTimeGetCurrent() - startTime
+        
         return resultValue
     }
     
@@ -323,6 +371,8 @@ public final class LmdbValueBox: ValueBox {
     }
     
     public func set(table: Int32, key: ValueBoxKey, value: MemoryBuffer) {
+        let startTime = CFAbsoluteTimeGetCurrent()
+        
         var commit = false
         if self.sharedTxn == nil {
             self.begin()
@@ -355,9 +405,13 @@ public final class LmdbValueBox: ValueBox {
         if commit {
             self.commit()
         }
+        
+        writeQueryTime += CFAbsoluteTimeGetCurrent() - startTime
     }
     
     public func remove(table: Int32, key: ValueBoxKey) {
+        let startTime = CFAbsoluteTimeGetCurrent()
+        
         var commit = false
         if self.sharedTxn == nil {
             self.begin()
@@ -387,6 +441,8 @@ public final class LmdbValueBox: ValueBox {
         if commit {
             self.commit()
         }
+        
+        writeQueryTime += CFAbsoluteTimeGetCurrent() - startTime
     }
     
     public func drop() {

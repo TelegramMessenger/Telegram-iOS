@@ -165,45 +165,6 @@ class SerializationTests: XCTestCase {
         XCTAssert(decoder.decodeInt32ForKey("a") == 12345, "int32 failed")
     }
     
-    func testIndexBaselinePerformance() {
-        let basePath = "/tmp/postboxtest"
-        do {
-            try NSFileManager.defaultManager().removeItemAtPath(basePath)
-        } catch _ { }
-        let postbox = Postbox<EmptyState>(basePath: basePath, messageNamespaces: [], absoluteIndexedMessageNamespaces: [])
-        postbox._prepareBaselineIndexPerformance()
-        
-        measureBlock {
-            postbox._measureBaselineIndexPerformance()
-        }
-    }
-    
-    func testBlobReadPerformance() {
-        let basePath = "/tmp/postboxtest"
-        do {
-            try NSFileManager.defaultManager().removeItemAtPath(basePath)
-        } catch _ { }
-        let postbox = Postbox<EmptyState>(basePath: basePath, messageNamespaces: [], absoluteIndexedMessageNamespaces: [])
-        postbox._prepareBlobIndexPerformance()
-        
-        measureBlock {
-            postbox._measureBlobReadPerformance()
-        }
-    }
-    
-    func testBlobIndexPerformance() {
-        let basePath = "/tmp/postboxtest"
-        do {
-            try NSFileManager.defaultManager().removeItemAtPath(basePath)
-        } catch _ { }
-        let postbox = Postbox<EmptyState>(basePath: basePath, messageNamespaces: [], absoluteIndexedMessageNamespaces: [])
-        postbox._prepareBlobIndexPerformance()
-        
-        measureBlock {
-            postbox._measureBlobIndexPerformance()
-        }
-    }
-    
     func testKeys() {
         let key1 = ValueBoxKey(length: 8)
         let key2 = ValueBoxKey(length: 8)
@@ -230,7 +191,7 @@ class SerializationTests: XCTestCase {
     }
     
     func testKeyValue() {
-        let basePath = "/tmp/postboxtest"
+        /*let basePath = "/tmp/postboxtest"
         do {
             try NSFileManager.defaultManager().removeItemAtPath(basePath)
         } catch _ { }
@@ -256,6 +217,6 @@ class SerializationTests: XCTestCase {
                     return true
                 }, limit: 10)
             }
-        }
+        }*/
     }
 }

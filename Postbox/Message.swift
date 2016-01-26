@@ -1,6 +1,6 @@
 import Foundation
 
-public struct MessageId: Hashable, CustomStringConvertible {
+public struct MessageId: Hashable, Comparable, CustomStringConvertible {
     public typealias Namespace = Int32
     public typealias Id = Int32
     
@@ -81,6 +81,14 @@ public func ==(lhs: MessageId, rhs: MessageId) -> Bool {
     return lhs.id == rhs.id && lhs.namespace == rhs.namespace
 }
 
+public func <(lhs: MessageId, rhs: MessageId) -> Bool {
+    if lhs.namespace == rhs.namespace {
+        return lhs.id < rhs.id
+    } else {
+        return lhs.namespace < rhs.namespace
+    }
+}
+
 public struct MessageIndex: Equatable, Comparable {
     public let id: MessageId
     public let timestamp: Int32
@@ -90,9 +98,22 @@ public struct MessageIndex: Equatable, Comparable {
         self.timestamp = message.timestamp
     }
     
+    init(_ message: StoreMessage) {
+        self.id = message.id
+        self.timestamp = message.timestamp
+    }
+    
     public init(id: MessageId, timestamp: Int32) {
         self.id = id
         self.timestamp = timestamp
+    }
+    
+    public func predecessor() -> MessageIndex {
+        return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: self.id.namespace, id: self.id.id - 1), timestamp: self.timestamp)
+    }
+    
+    public func successor() -> MessageIndex {
+        return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: self.id.namespace, id: self.id.id + 1), timestamp: self.timestamp)
     }
 }
 
@@ -112,12 +133,54 @@ public func <(lhs: MessageIndex, rhs: MessageIndex) -> Bool {
     return lhs.id.id < rhs.id.id
 }
 
-public protocol Message: Coding {
-    var id: MessageId { get }
-    var timestamp: Int32 { get }
-    var text: String { get }
-    var mediaIds: [MediaId] { get }
-    var peerIds: [PeerId] { get }
+public class Message {
+    let id: MessageId
+    let timestamp: Int32
+    let text: String
+    let attributes: [Coding]
+    let media: [Media]
+    
+    init(id: MessageId, timestamp: Int32, text: String, attributes: [Coding], media: [Media]) {
+        self.id = id
+        self.timestamp = timestamp
+        self.text = text
+        self.attributes = attributes
+        self.media = media
+    }
+}
+
+class StoreMessage {
+    let id: MessageId
+    let timestamp: Int32
+    let text: String
+    let attributes: [Coding]
+    let media: [Media]
+    
+    init(id: MessageId, timestamp: Int32, text: String, attributes: [Coding], media: [Media]) {
+        self.id = id
+        self.timestamp = timestamp
+        self.text = text
+        self.attributes = attributes
+        self.media = media
+    }
+}
+
+class IntermediateMessage {
+    let id: MessageId
+    let timestamp: Int32
+    let text: String
+    let attributesData: ReadBuffer
+    let embeddedMediaData: ReadBuffer
+    let referencedMedia: [MediaId]
+    
+    init(id: MessageId, timestamp: Int32, text: String, attributesData: ReadBuffer, embeddedMediaData: ReadBuffer, referencedMedia: [MediaId]) {
+        self.id = id
+        self.timestamp = timestamp
+        self.text = text
+        self.attributesData = attributesData
+        self.embeddedMediaData = embeddedMediaData
+        self.referencedMedia = referencedMedia
+    }
 }
 
 public struct RenderedMessage: Equatable, Comparable {

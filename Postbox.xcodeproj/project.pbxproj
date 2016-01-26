@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D003E4E61B38DBDB00C22CBC /* MessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D003E4E51B38DBDB00C22CBC /* MessageView.swift */; };
+		D003E4E61B38DBDB00C22CBC /* MessageHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D003E4E51B38DBDB00C22CBC /* MessageHistoryView.swift */; };
 		D00E0FB31B84CEDA002E4EB5 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D00E0FB21B84CEDA002E4EB5 /* Display.framework */; };
 		D00E0FB81B85D192002E4EB5 /* lmdb.h in Headers */ = {isa = PBXBuildFile; fileRef = D00E0FB41B85D192002E4EB5 /* lmdb.h */; };
 		D00E0FB91B85D192002E4EB5 /* mdb.c in Sources */ = {isa = PBXBuildFile; fileRef = D00E0FB51B85D192002E4EB5 /* mdb.c */; };
@@ -29,11 +29,15 @@
 		D07516771B2EC90400AE42E0 /* fts3_tokenizer.h in Headers */ = {isa = PBXBuildFile; fileRef = D07516741B2EC90400AE42E0 /* fts3_tokenizer.h */; };
 		D07516781B2EC90400AE42E0 /* SQLite-Bridging.h in Headers */ = {isa = PBXBuildFile; fileRef = D07516751B2EC90400AE42E0 /* SQLite-Bridging.h */; };
 		D07516791B2EC90400AE42E0 /* SQLite-Bridging.m in Sources */ = {isa = PBXBuildFile; fileRef = D07516761B2EC90400AE42E0 /* SQLite-Bridging.m */; };
+		D08C713A1C501F0700779C0F /* MessageHistoryHole.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08C71391C501F0700779C0F /* MessageHistoryHole.swift */; };
+		D08C713C1C51283C00779C0F /* MessageHistoryIndexTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08C713B1C51283C00779C0F /* MessageHistoryIndexTable.swift */; };
+		D08C713E1C512EA500779C0F /* MessageHistoryTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08C713D1C512EA500779C0F /* MessageHistoryTable.swift */; };
 		D0977F9C1B822DB4009994B2 /* ValueBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977F9B1B822DB4009994B2 /* ValueBox.swift */; };
 		D0977F9E1B8234DF009994B2 /* ValueBoxKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977F9D1B8234DF009994B2 /* ValueBoxKey.swift */; };
 		D0977FA01B8244D7009994B2 /* SqliteValueBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977F9F1B8244D7009994B2 /* SqliteValueBox.swift */; };
 		D0977FA21B82930C009994B2 /* PostboxCodingUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977FA11B82930C009994B2 /* PostboxCodingUtils.swift */; };
 		D0977FA41B829F87009994B2 /* PostboxTables.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977FA31B829F87009994B2 /* PostboxTables.swift */; };
+		D0A7D9451C556CFE0016A115 /* MessageHistoryIndexTableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A7D9441C556CFE0016A115 /* MessageHistoryIndexTableTests.swift */; };
 		D0B76BE71B66639F0095CF45 /* DeferredString.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B76BE61B66639F0095CF45 /* DeferredString.swift */; };
 		D0C07F6A1B67DB4800966E43 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C07F691B67DB4800966E43 /* SwiftSignalKit.framework */; };
 		D0D224F21B4D6ABD0085E26D /* Functions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D224ED1B4D6ABD0085E26D /* Functions.swift */; };
@@ -45,6 +49,9 @@
 		D0E3A7881B28AE9C00A402D9 /* Coding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E3A7871B28AE9C00A402D9 /* Coding.swift */; };
 		D0E3A79E1B28B50400A402D9 /* Message.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E3A79D1B28B50400A402D9 /* Message.swift */; };
 		D0E3A7A21B28B7DC00A402D9 /* Media.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E3A7A11B28B7DC00A402D9 /* Media.swift */; };
+		D0F9E85B1C565EBB00037222 /* MessageMediaTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F9E85A1C565EBB00037222 /* MessageMediaTable.swift */; };
+		D0F9E8611C57766A00037222 /* MessageHistoryTableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F9E8601C57766A00037222 /* MessageHistoryTableTests.swift */; };
+		D0F9E8631C579F0200037222 /* MediaCleanupTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F9E8621C579F0200037222 /* MediaCleanupTable.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -58,7 +65,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		D003E4E51B38DBDB00C22CBC /* MessageView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageView.swift; sourceTree = "<group>"; };
+		D003E4E51B38DBDB00C22CBC /* MessageHistoryView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryView.swift; sourceTree = "<group>"; };
 		D00E0FB21B84CEDA002E4EB5 /* Display.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Display.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-gbpsmqzuwcmmxadrqcwyrluaftwp/Build/Products/Debug-iphoneos/Display.framework"; sourceTree = "<group>"; };
 		D00E0FB41B85D192002E4EB5 /* lmdb.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = lmdb.h; path = submodules/lmdb/libraries/liblmdb/lmdb.h; sourceTree = SOURCE_ROOT; };
 		D00E0FB51B85D192002E4EB5 /* mdb.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = mdb.c; path = submodules/lmdb/libraries/liblmdb/mdb.c; sourceTree = SOURCE_ROOT; };
@@ -81,11 +88,15 @@
 		D07516741B2EC90400AE42E0 /* fts3_tokenizer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fts3_tokenizer.h; sourceTree = "<group>"; };
 		D07516751B2EC90400AE42E0 /* SQLite-Bridging.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "SQLite-Bridging.h"; sourceTree = "<group>"; };
 		D07516761B2EC90400AE42E0 /* SQLite-Bridging.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "SQLite-Bridging.m"; sourceTree = "<group>"; };
+		D08C71391C501F0700779C0F /* MessageHistoryHole.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryHole.swift; sourceTree = "<group>"; };
+		D08C713B1C51283C00779C0F /* MessageHistoryIndexTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryIndexTable.swift; sourceTree = "<group>"; };
+		D08C713D1C512EA500779C0F /* MessageHistoryTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryTable.swift; sourceTree = "<group>"; };
 		D0977F9B1B822DB4009994B2 /* ValueBox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ValueBox.swift; sourceTree = "<group>"; };
 		D0977F9D1B8234DF009994B2 /* ValueBoxKey.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ValueBoxKey.swift; sourceTree = "<group>"; };
 		D0977F9F1B8244D7009994B2 /* SqliteValueBox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SqliteValueBox.swift; sourceTree = "<group>"; };
 		D0977FA11B82930C009994B2 /* PostboxCodingUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PostboxCodingUtils.swift; sourceTree = "<group>"; };
 		D0977FA31B829F87009994B2 /* PostboxTables.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PostboxTables.swift; sourceTree = "<group>"; };
+		D0A7D9441C556CFE0016A115 /* MessageHistoryIndexTableTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryIndexTableTests.swift; sourceTree = "<group>"; };
 		D0B76BE61B66639F0095CF45 /* DeferredString.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeferredString.swift; sourceTree = "<group>"; };
 		D0C07F691B67DB4800966E43 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftSignalKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-gbpsmqzuwcmmxadrqcwyrluaftwp/Build/Products/Debug-iphoneos/SwiftSignalKit.framework"; sourceTree = "<group>"; };
 		D0D224ED1B4D6ABD0085E26D /* Functions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Functions.swift; path = submodules/sqlite.swift/SQLite/Functions.swift; sourceTree = SOURCE_ROOT; };
@@ -100,6 +111,9 @@
 		D0E3A7871B28AE9C00A402D9 /* Coding.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Coding.swift; sourceTree = "<group>"; };
 		D0E3A79D1B28B50400A402D9 /* Message.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
 		D0E3A7A11B28B7DC00A402D9 /* Media.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Media.swift; sourceTree = "<group>"; };
+		D0F9E85A1C565EBB00037222 /* MessageMediaTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageMediaTable.swift; sourceTree = "<group>"; };
+		D0F9E8601C57766A00037222 /* MessageHistoryTableTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryTableTests.swift; sourceTree = "<group>"; };
+		D0F9E8621C579F0200037222 /* MediaCleanupTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaCleanupTable.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -207,8 +221,9 @@
 				D0B76BE61B66639F0095CF45 /* DeferredString.swift */,
 				D0E3A7831B28AE0900A402D9 /* Peer.swift */,
 				D0E3A79D1B28B50400A402D9 /* Message.swift */,
+				D08C71391C501F0700779C0F /* MessageHistoryHole.swift */,
 				D0E3A7A11B28B7DC00A402D9 /* Media.swift */,
-				D003E4E51B38DBDB00C22CBC /* MessageView.swift */,
+				D003E4E51B38DBDB00C22CBC /* MessageHistoryView.swift */,
 				D0D225251B4D84930085E26D /* PeerView.swift */,
 				D0977FA11B82930C009994B2 /* PostboxCodingUtils.swift */,
 				D0E3A7811B28ADD000A402D9 /* Postbox.swift */,
@@ -218,6 +233,10 @@
 				D0977F9B1B822DB4009994B2 /* ValueBox.swift */,
 				D0977F9F1B8244D7009994B2 /* SqliteValueBox.swift */,
 				D00E0FBD1B85D1B5002E4EB5 /* LmdbValueBox.swift */,
+				D08C713B1C51283C00779C0F /* MessageHistoryIndexTable.swift */,
+				D08C713D1C512EA500779C0F /* MessageHistoryTable.swift */,
+				D0F9E85A1C565EBB00037222 /* MessageMediaTable.swift */,
+				D0F9E8621C579F0200037222 /* MediaCleanupTable.swift */,
 				D0E3A74D1B28A7E300A402D9 /* Supporting Files */,
 			);
 			path = Postbox;
@@ -239,6 +258,8 @@
 			children = (
 				D0E3A75A1B28A7E300A402D9 /* Supporting Files */,
 				D044E15D1B2ACB9C001EE087 /* CodingTests.swift */,
+				D0A7D9441C556CFE0016A115 /* MessageHistoryIndexTableTests.swift */,
+				D0F9E8601C57766A00037222 /* MessageHistoryTableTests.swift */,
 			);
 			path = PostboxTests;
 			sourceTree = "<group>";
@@ -367,24 +388,29 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0F9E8631C579F0200037222 /* MediaCleanupTable.swift in Sources */,
 				D075165C1B2EC5B000AE42E0 /* module.private.modulemap in Sources */,
 				D0E3A7821B28ADD000A402D9 /* Postbox.swift in Sources */,
 				D0E3A79E1B28B50400A402D9 /* Message.swift in Sources */,
 				D044E1631B2AD677001EE087 /* MurMurHash32.m in Sources */,
 				D00E0FBE1B85D1B5002E4EB5 /* LmdbValueBox.swift in Sources */,
 				D07516721B2EC7FE00AE42E0 /* Value.swift in Sources */,
+				D08C713A1C501F0700779C0F /* MessageHistoryHole.swift in Sources */,
+				D0F9E85B1C565EBB00037222 /* MessageMediaTable.swift in Sources */,
+				D08C713E1C512EA500779C0F /* MessageHistoryTable.swift in Sources */,
 				D0977FA41B829F87009994B2 /* PostboxTables.swift in Sources */,
 				D0E3A7A21B28B7DC00A402D9 /* Media.swift in Sources */,
 				D0E3A7881B28AE9C00A402D9 /* Coding.swift in Sources */,
 				D0977F9E1B8234DF009994B2 /* ValueBoxKey.swift in Sources */,
 				D00E0FB91B85D192002E4EB5 /* mdb.c in Sources */,
-				D003E4E61B38DBDB00C22CBC /* MessageView.swift in Sources */,
+				D003E4E61B38DBDB00C22CBC /* MessageHistoryView.swift in Sources */,
 				D075165E1B2EC5B500AE42E0 /* module.modulemap in Sources */,
 				D07516791B2EC90400AE42E0 /* SQLite-Bridging.m in Sources */,
 				D0977FA01B8244D7009994B2 /* SqliteValueBox.swift in Sources */,
 				D0D224F21B4D6ABD0085E26D /* Functions.swift in Sources */,
 				D00E0FBA1B85D192002E4EB5 /* midl.c in Sources */,
 				D07516711B2EC7FE00AE42E0 /* Statement.swift in Sources */,
+				D08C713C1C51283C00779C0F /* MessageHistoryIndexTable.swift in Sources */,
 				D0D225261B4D84930085E26D /* PeerView.swift in Sources */,
 				D0E3A7841B28AE0900A402D9 /* Peer.swift in Sources */,
 				D055BD331B7D3D2D00F06C0A /* MediaBox.swift in Sources */,
@@ -401,6 +427,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				D044E15E1B2ACB9C001EE087 /* CodingTests.swift in Sources */,
+				D0F9E8611C57766A00037222 /* MessageHistoryTableTests.swift in Sources */,
+				D0A7D9451C556CFE0016A115 /* MessageHistoryIndexTableTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

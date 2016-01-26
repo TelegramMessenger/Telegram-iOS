@@ -41,33 +41,31 @@ struct Table_Message {
     static let id: Int32 = 4
     
     static func emptyKey() -> ValueBoxKey {
-        return ValueBoxKey(length: 8 + 4 + 4)
+        return ValueBoxKey(length: 8 + 4 + 4 + 4)
     }
     
-    static func lowerBoundKey(peerId: PeerId, namespace: Int32) -> ValueBoxKey {
-        let key = ValueBoxKey(length: 8 + 4)
+    static func lowerBoundKey(peerId: PeerId) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 8)
         key.setInt64(0, value: peerId.toInt64())
-        key.setInt32(8, value: namespace)
         return key
     }
     
-    static func upperBoundKey(peerId: PeerId, namespace: Int32) -> ValueBoxKey {
-        let key = ValueBoxKey(length: 8 + 4)
+    static func upperBoundKey(peerId: PeerId) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 8)
         key.setInt64(0, value: peerId.toInt64())
-        key.setInt32(8, value: namespace)
         return key.successor
     }
     
-    static func key(messageId: MessageId, key: ValueBoxKey = Table_Message.emptyKey()) -> ValueBoxKey {
-        key.setInt64(0, value: messageId.peerId.toInt64())
-        key.setInt32(8, value: messageId.namespace)
-        key.setInt32(8 + 4, value: messageId.id)
+    static func key(index: MessageIndex, key: ValueBoxKey = Table_Message.emptyKey()) -> ValueBoxKey {
+        key.setInt64(0, value: index.id.peerId.toInt64())
+        key.setInt32(8, value: index.timestamp)
+        key.setInt32(8 + 4, value: index.id.namespace)
+        key.setInt32(8 + 4 + 4, value: index.id.id)
         return key
     }
     
     static func set(message: Message, encoder: Encoder = Encoder()) -> MemoryBuffer {
         encoder.reset()
-        encoder.encodeRootObject(message)
         return encoder.memoryBuffer()
     }
     
@@ -79,14 +77,14 @@ struct Table_Message {
     }
 }
 
-struct Table_AbsoluteMessageId {
+struct Table_GlobalMessageId {
     static let id: Int32 = 5
     
     static func emptyKey() -> ValueBoxKey {
         return ValueBoxKey(length: 4)
     }
     
-    static func key(id: Int32, key: ValueBoxKey = Table_AbsoluteMessageId.emptyKey()) -> ValueBoxKey {
+    static func key(id: Int32, key: ValueBoxKey = Table_GlobalMessageId.emptyKey()) -> ValueBoxKey {
         key.setInt32(0, value: id)
         return key
     }
@@ -270,5 +268,33 @@ struct Table_PeerEntry {
         value.offset = offset
         
         return index
+    }
+}
+
+struct Table_MessageIndex {
+    static let id: Int32 = 11
+    
+    static func emptyKey() -> ValueBoxKey {
+        return ValueBoxKey(length: 8 + 4 + 4)
+    }
+    
+    static func key(id: MessageId, key: ValueBoxKey = Table_MessageIndex.emptyKey()) -> ValueBoxKey {
+        key.setInt64(0, value: id.peerId.toInt64())
+        key.setInt32(8, value: id.namespace)
+        key.setInt32(8 + 4, value: id.id)
+        return key
+    }
+    
+    static func set(index: MessageIndex) -> MemoryBuffer {
+        let buffer = WriteBuffer()
+        var timestamp = index.timestamp
+        buffer.write(&timestamp, offset: 0, length: 4)
+        return buffer.readBufferNoCopy()
+    }
+    
+    static func get(id: MessageId, value: ReadBuffer) -> MessageIndex {
+        var timestamp: Int32 = 0
+        value.read(&timestamp, offset: 0, length: 4)
+        return MessageIndex(id: MessageId(peerId: id.peerId, namespace: id.namespace, id: id.id), timestamp: timestamp)
     }
 }

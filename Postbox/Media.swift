@@ -25,11 +25,13 @@ public struct MediaId: Hashable, CustomStringConvertible {
     }
     
     public init(_ buffer: ReadBuffer) {
-        self.namespace = 0
-        self.id = 0
+        var namespace: Int32 = 0
+        var id: Int64 = 0
         
-        memcpy(&self.namespace, buffer.memory + buffer.offset, 4)
-        memcpy(&self.id, buffer.memory + (buffer.offset + 4), 8)
+        memcpy(&namespace, buffer.memory + buffer.offset, 4)
+        self.namespace = namespace
+        memcpy(&id, buffer.memory + (buffer.offset + 4), 8)
+        self.id = id
         buffer.offset += 12
     }
     
@@ -68,4 +70,6 @@ public func ==(lhs: MediaId, rhs: MediaId) -> Bool {
 
 public protocol Media: Coding {
     var id: MediaId? { get }
+    
+    func isEqual(other: Media) -> Bool
 }

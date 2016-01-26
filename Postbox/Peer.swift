@@ -59,11 +59,13 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable {
     }
     
     public init(_ buffer: ReadBuffer) {
-        self.namespace = 0
-        self.id = 0
         
-        memcpy(&self.namespace, buffer.memory, 4)
-        memcpy(&self.id, buffer.memory + 4, 4)
+        var namespace: Int32 = 0
+        var id: Int32 = 0
+        memcpy(&namespace, buffer.memory, 4)
+        self.namespace = namespace
+        memcpy(&id, buffer.memory + 4, 4)
+        self.id = id
     }
     
     public func encodeToBuffer(buffer: WriteBuffer) {

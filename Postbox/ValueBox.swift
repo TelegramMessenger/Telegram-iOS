@@ -4,6 +4,9 @@ public protocol ValueBox {
     func begin()
     func commit()
     
+    func beginStats()
+    func endStats()
+    
     func range(table: Int32, start: ValueBoxKey, end: ValueBoxKey, @noescape values: (ValueBoxKey, ReadBuffer) -> Bool, limit: Int)
     func range(table: Int32, start: ValueBoxKey, end: ValueBoxKey, keys: ValueBoxKey -> Bool, limit: Int)
     func get(table: Int32, key: ValueBoxKey) -> ReadBuffer?

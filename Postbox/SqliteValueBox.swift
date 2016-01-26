@@ -65,6 +65,10 @@ public final class SqliteValueBox: ValueBox {
     private var insertStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var deleteStatements: [Int32 : SqlitePreparedStatement] = [:]
     
+    private var readQueryTime: CFAbsoluteTime = 0.0
+    private var writeQueryTime: CFAbsoluteTime = 0.0
+    private var commitTime: CFAbsoluteTime = 0.0
+    
     public init(basePath: String) {
         do {
             try NSFileManager.defaultManager().createDirectoryAtPath(basePath, withIntermediateDirectories: true, attributes: nil)
@@ -91,12 +95,28 @@ public final class SqliteValueBox: ValueBox {
         }
     }
     
+    deinit {
+        self.clearStatements()
+    }
+    
+    public func beginStats() {
+        self.readQueryTime = 0.0
+        self.writeQueryTime = 0.0
+        self.commitTime = 0.0
+    }
+    
+    public func endStats() {
+        print("(SqliteValueBox stats read: \(self.readQueryTime * 1000.0) ms, write: \(self.writeQueryTime * 1000.0) ms, commit: \(self.commitTime * 1000.0) ms")
+    }
+    
     public func begin() {
         self.database.transaction()
     }
     
     public func commit() {
+        let startTime = CFAbsoluteTimeGetCurrent()
         self.database.commit()
+        self.commitTime += CFAbsoluteTimeGetCurrent() - startTime
     }
     
     private func getStatement(table: Int32, key: ValueBoxKey) -> SqlitePreparedStatement {
@@ -372,6 +392,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     public func get(table: Int32, key: ValueBoxKey) -> ReadBuffer? {
+        let startTime = CFAbsoluteTimeGetCurrent()
         if self.tables.contains(table) {
             let statement = self.getStatement(table, key: key)
             
@@ -383,6 +404,8 @@ public final class SqliteValueBox: ValueBox {
             }
             
             statement.reset()
+            
+            self.readQueryTime += CFAbsoluteTimeGetCurrent() - startTime
             
             return buffer
         }
@@ -405,6 +428,8 @@ public final class SqliteValueBox: ValueBox {
         if self.tables.contains(table) {
             let statement: SqlitePreparedStatement
             
+            var startTime = CFAbsoluteTimeGetCurrent()
+            
             if start < end {
                 if limit <= 0 {
                     statement = self.rangeValueAscStatementNoLimit(table, start: start, end: end)
@@ -419,9 +444,19 @@ public final class SqliteValueBox: ValueBox {
                 }
             }
             
+            var currentTime = CFAbsoluteTimeGetCurrent()
+            self.readQueryTime += currentTime - startTime
+            
+            startTime = currentTime
+            
             while statement.step() {
+                startTime = CFAbsoluteTimeGetCurrent()
+                
                 let key = statement.keyAt(0)
                 let value = statement.valueAt(1)
+                
+                currentTime = CFAbsoluteTimeGetCurrent()
+                self.readQueryTime += currentTime - startTime
                 
                 if !values(key, value) {
                     break
@@ -435,6 +470,8 @@ public final class SqliteValueBox: ValueBox {
     public func range(table: Int32, start: ValueBoxKey, end: ValueBoxKey, keys: ValueBoxKey -> Bool, limit: Int) {
         if self.tables.contains(table) {
             let statement: SqlitePreparedStatement
+            
+            var startTime = CFAbsoluteTimeGetCurrent()
             
             if start < end {
                 if limit <= 0 {
@@ -450,8 +487,18 @@ public final class SqliteValueBox: ValueBox {
                 }
             }
             
+            var currentTime = CFAbsoluteTimeGetCurrent()
+            self.readQueryTime += currentTime - startTime
+            
+            startTime = currentTime
+            
             while statement.step() {
+                startTime = CFAbsoluteTimeGetCurrent()
+                
                 let key = statement.keyAt(0)
+                
+                currentTime = CFAbsoluteTimeGetCurrent()
+                self.readQueryTime += currentTime - startTime
                 
                 if !keys(key) {
                     break
@@ -469,6 +516,8 @@ public final class SqliteValueBox: ValueBox {
             self.tables.insert(table)
             self.database.execute("INSERT INTO __meta_tables(name) VALUES (\(table))")
         }
+        
+        let startTime = CFAbsoluteTimeGetCurrent()
         
         var exists = false
         let existsStatement = self.existsStatement(table, key: key)
@@ -488,19 +537,25 @@ public final class SqliteValueBox: ValueBox {
             }
             statement.reset()
         }
+        
+        self.writeQueryTime += CFAbsoluteTimeGetCurrent() - startTime
     }
     
     public func remove(table: Int32, key: ValueBoxKey) {
         if self.tables.contains(table) {
             
+            let startTime = CFAbsoluteTimeGetCurrent()
+            
             let statement = self.deleteStatement(table, key: key)
             while statement.step() {
             }
             statement.reset()
+            
+            self.writeQueryTime += CFAbsoluteTimeGetCurrent() - startTime
         }
     }
     
-    public func drop() {
+    private func clearStatements() {
         for (_, statement) in self.getStatements {
             statement.destroy()
         }
@@ -565,6 +620,10 @@ public final class SqliteValueBox: ValueBox {
             statement.destroy()
         }
         self.deleteStatements.removeAll()
+    }
+    
+    public func drop() {
+        self.clearStatements()
 
         for table in self.tables {
             self.database.execute("DROP TABLE IF EXISTS t\(table)")

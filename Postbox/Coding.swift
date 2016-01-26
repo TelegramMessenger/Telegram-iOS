@@ -137,6 +137,10 @@ public final class ReadBuffer: MemoryBuffer {
         self.offset += length
     }
     
+    func skip(length: Int) {
+        self.offset += length
+    }
+    
     func reset() {
         self.offset = 0
     }
