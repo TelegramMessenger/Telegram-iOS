@@ -32,6 +32,7 @@
  */
 
 #import "HockeySDK.h"
+#import "HockeySDKPrivate.h"
 
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
 
@@ -71,7 +72,7 @@
 /**
  * Sort PLCrashReportBinaryImageInfo instances by their starting address.
  */
-static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context) {
+static NSInteger bit_binaryImageSort(id binary1, id binary2, void *__unused context) {
   uint64_t addr1 = [binary1 imageBaseAddress];
   uint64_t addr2 = [binary2 imageBaseAddress];
   
@@ -341,7 +342,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
         processName = report.processInfo.processName;
       
       /* PID */
-      processId = [[NSNumber numberWithUnsignedInteger: report.processInfo.processID] stringValue];
+      processId = [@(report.processInfo.processID) stringValue];
       
       /* Process Path */
       if (report.processInfo.processPath != nil) {
@@ -349,10 +350,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
         
         /* Remove username from the path */
 #if TARGET_OS_SIMULATOR
-        if ([processPath length] > 0)
-          processPath = [processPath stringByAbbreviatingWithTildeInPath];
-        if ([processPath length] > 0 && [[processPath substringToIndex:1] isEqualToString:@"~"])
-          processPath = [NSString stringWithFormat:@"/Users/USER%@", [processPath substringFromIndex:1]];
+        processPath = [self anonymizedProcessPathFromProcessPath:processPath];
 #endif
       }
       
@@ -473,7 +471,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
     /* Write out the frames. In raw reports, Apple writes this out as a simple list of PCs. In the minimally
      * post-processed report, Apple writes this out as full frame entries. We use the latter format. */
     for (NSUInteger frame_idx = 0; frame_idx < [exception.stackFrames count]; frame_idx++) {
-      BITPLCrashReportStackFrameInfo *frameInfo = [exception.stackFrames objectAtIndex: frame_idx];
+      BITPLCrashReportStackFrameInfo *frameInfo = exception.stackFrames[frame_idx];
       [text appendString: [[self class] bit_formatStackFrame: frameInfo frameIndex: frame_idx report: report lp64: lp64]];
     }
     [text appendString: @"\n"];
@@ -488,8 +486,8 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
       [text appendFormat: @"Thread %ld:\n", (long) thread.threadNumber];
     }
     for (NSUInteger frame_idx = 0; frame_idx < [thread.stackFrames count]; frame_idx++) {
-      BITPLCrashReportStackFrameInfo *frameInfo = [thread.stackFrames objectAtIndex: frame_idx];
-      [text appendString: [[self class] bit_formatStackFrame: frameInfo frameIndex: frame_idx report: report lp64: lp64]];
+      BITPLCrashReportStackFrameInfo *frameInfo = thread.stackFrames[frame_idx];
+      [text appendString:[[self class] bit_formatStackFrame:frameInfo frameIndex:frame_idx report:report lp64:lp64]];
     }
     [text appendString: @"\n"];
     
@@ -515,7 +513,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
       NSString *regName = reg.registerName;
       if (report.machineInfo != nil && report.machineInfo.processorInfo.typeEncoding == PLCrashReportProcessorTypeEncodingMach) {
         BITPLCrashReportProcessorInfo *pinfo = report.machineInfo.processorInfo;
-        cpu_type_t arch_type = pinfo.type & ~CPU_ARCH_MASK;
+        cpu_type_t arch_type = (cpu_type_t)(pinfo.type & ~CPU_ARCH_MASK);
         
         /* Apple uses 'ip' rather than 'r12' on ARM */
         if (arch_type == CPU_TYPE_ARM && [regName isEqual: @"r12"]) {
@@ -653,10 +651,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
   for (BITPLCrashReportBinaryImageInfo *imageInfo in [report.images sortedArrayUsingFunction: bit_binaryImageSort context: nil]) {
     NSString *uuid;
     /* Fetch the UUID if it exists */
-    if (imageInfo.hasImageUUID)
-      uuid = imageInfo.imageUUID;
-    else
-      uuid = @"???";
+    uuid = imageInfo.hasImageUUID ? imageInfo.imageUUID : @"???";
     
     /* Determine the architecture string */
     NSString *archName = [[self class] bit_archNameFromImageInfo:imageInfo];
@@ -664,9 +659,9 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
     /* Determine if this is the app executable or app specific framework */
     BITBinaryImageType imageType = [[self class] bit_imageTypeForImagePath:imageInfo.imageName
                                                                processPath:report.processInfo.processPath];
-    NSString *imageTypeString = @"";
-    
     if (imageType != BITBinaryImageTypeOther) {
+      NSString *imageTypeString;
+
       if (imageType == BITBinaryImageTypeAppBinary) {
         imageTypeString = @"app";
       } else {
@@ -799,7 +794,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
 + (NSString *)bit_formatStackFrame: (BITPLCrashReportStackFrameInfo *) frameInfo
                         frameIndex: (NSUInteger) frameIndex
                             report: (BITPLCrashReport *) report
-                              lp64: (BOOL) lp64
+                              lp64: (boolean_t) lp64
 {
   /* Base image address containing instrumentation pointer, offset of the IP from that base
    * address, and the associated image name */
@@ -831,7 +826,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
     }
   }
   if (index-offset < 36) {
-    imageName = [imageName stringByPaddingToLength:36+offset withString:@" " startingAtIndex:0];
+    imageName = [imageName stringByPaddingToLength:(NSUInteger)(36 + offset) withString:@" " startingAtIndex:0];
   }
   
   /* If symbol info is available, the format used in Apple's reports is Sym + OffsetFromSym. Otherwise,
@@ -872,6 +867,30 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
           (const uint16_t *)[imageName cStringUsingEncoding: NSUTF16StringEncoding],
           lp64 ? 16 : 8, frameInfo.instructionPointer,
           symbolString];
+}
+
+/**
+ *  Remove the user's name from a crash's process path.
+ *  This is only necessary when sending crashes from the simulator as the path
+ *  then contains the username of the Mac the simulator is running on.
+ *
+ *  @param processPath A string containing the username
+ *
+ *  @return An anonymized string where the real username is replaced by "USER"
+ */
++ (NSString *)anonymizedProcessPathFromProcessPath:(NSString *)processPath {
+  
+  NSString *anonymizedProcessPath = [NSString string];
+  
+  if (([processPath length] > 0) && [processPath hasPrefix:@"/Users/"]) {
+    NSError *error = nil;
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"(/Users/[^/]+/)" options:0 error:&error];
+    anonymizedProcessPath = [regex stringByReplacingMatchesInString:processPath options:0 range:NSMakeRange(0, [processPath length]) withTemplate:@"/Users/USER/"];
+    if (error) {
+      BITHockeyLog("ERROR: String replacing failed - %@", error.localizedDescription);
+    }
+  }
+  return anonymizedProcessPath;
 }
 
 @end
