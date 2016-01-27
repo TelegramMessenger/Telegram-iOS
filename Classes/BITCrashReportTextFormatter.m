@@ -72,7 +72,7 @@
 /**
  * Sort PLCrashReportBinaryImageInfo instances by their starting address.
  */
-static NSInteger bit_binaryImageSort(id binary1, id binary2, void *context) {
+static NSInteger bit_binaryImageSort(id binary1, id binary2, void *__unused context) {
   uint64_t addr1 = [binary1 imageBaseAddress];
   uint64_t addr2 = [binary2 imageBaseAddress];
   
@@ -513,7 +513,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
       NSString *regName = reg.registerName;
       if (report.machineInfo != nil && report.machineInfo.processorInfo.typeEncoding == PLCrashReportProcessorTypeEncodingMach) {
         BITPLCrashReportProcessorInfo *pinfo = report.machineInfo.processorInfo;
-        cpu_type_t arch_type = pinfo.type & ~CPU_ARCH_MASK;
+        cpu_type_t arch_type = (cpu_type_t)(pinfo.type & ~CPU_ARCH_MASK);
         
         /* Apple uses 'ip' rather than 'r12' on ARM */
         if (arch_type == CPU_TYPE_ARM && [regName isEqual: @"r12"]) {
@@ -659,9 +659,9 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
     /* Determine if this is the app executable or app specific framework */
     BITBinaryImageType imageType = [[self class] bit_imageTypeForImagePath:imageInfo.imageName
                                                                processPath:report.processInfo.processPath];
-    NSString *imageTypeString = @"";
-    
     if (imageType != BITBinaryImageTypeOther) {
+      NSString *imageTypeString;
+
       if (imageType == BITBinaryImageTypeAppBinary) {
         imageTypeString = @"app";
       } else {
@@ -794,7 +794,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
 + (NSString *)bit_formatStackFrame: (BITPLCrashReportStackFrameInfo *) frameInfo
                         frameIndex: (NSUInteger) frameIndex
                             report: (BITPLCrashReport *) report
-                              lp64: (BOOL) lp64
+                              lp64: (boolean_t) lp64
 {
   /* Base image address containing instrumentation pointer, offset of the IP from that base
    * address, and the associated image name */
@@ -826,7 +826,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
     }
   }
   if (index-offset < 36) {
-    imageName = [imageName stringByPaddingToLength:36+offset withString:@" " startingAtIndex:0];
+    imageName = [imageName stringByPaddingToLength:(NSUInteger)(36 + offset) withString:@" " startingAtIndex:0];
   }
   
   /* If symbol info is available, the format used in Apple's reports is Sym + OffsetFromSym. Otherwise,
