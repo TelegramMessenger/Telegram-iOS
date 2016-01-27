@@ -73,7 +73,7 @@ static NSUInteger const BITDefaultRequestLimit = 10;
   @synchronized(self){
     if(_runningRequestsCount < _maxRequestCount){
       _runningRequestsCount++;
-      BITHockeyLog(@"Create new sender thread. Current count is %ld", (long) _runningRequestsCount);
+      BITHockeyLogDebug(@"INFO: Create new sender thread. Current count is %ld", (long) _runningRequestsCount);
     }else{
       return;
     }
@@ -93,7 +93,7 @@ static NSUInteger const BITDefaultRequestLimit = 10;
     [self sendRequest:request filePath:filePath];
   } else {
     self.runningRequestsCount -= 1;
-    BITHockeyLog(@"Close sender thread due empty package. Current count is %ld", (long) _runningRequestsCount);
+    BITHockeyLogDebug(@"INFO: Close sender thread due empty package. Current count is %ld", (long) _runningRequestsCount);
     // TODO: Delete data and send next file
   }
 }
@@ -141,17 +141,17 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 
 - (void)handleResponseWithStatusCode:(NSInteger)statusCode responseData:(nonnull NSData *)responseData filePath:(nonnull NSString *)filePath error:(nonnull NSError *)error {
   self.runningRequestsCount -= 1;
-  BITHockeyLog(@"Close sender thread due incoming response. Current count is %ld", (long) _runningRequestsCount);
+  BITHockeyLogDebug(@"INFO: Close sender thread due incoming response. Current count is %ld", (long) _runningRequestsCount);
 
   if (responseData && (responseData.length > 0) && [self shouldDeleteDataWithStatusCode:statusCode]) {
     //we delete data that was either sent successfully or if we have a non-recoverable error
-    BITHockeyLog(@"Sent data with status code: %ld", (long) statusCode);
-    BITHockeyLog(@"Response data:\n%@", [NSJSONSerialization JSONObjectWithData:responseData options:0 error:nil]);
+    BITHockeyLogDebug(@"INFO: Sent data with status code: %ld", (long) statusCode);
+    BITHockeyLogDebug(@"INFO: Response data:\n%@", [NSJSONSerialization JSONObjectWithData:responseData options:0 error:nil]);
     [self.persistence deleteFileAtPath:filePath];
     [self sendSavedData];
   } else {
-    BITHockeyLog(@"Sending telemetry data failed");
-    BITHockeyLog(@"Error description: %@", error.localizedDescription);
+    BITHockeyLogError(@"ERROR: Sending telemetry data failed");
+    BITHockeyLogError(@"Error description: %@", error.localizedDescription);
     [self.persistence giveBackRequestedFilePath:filePath];
   }
 }

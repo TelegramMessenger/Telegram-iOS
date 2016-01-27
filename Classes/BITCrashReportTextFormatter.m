@@ -913,7 +913,7 @@ NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
     NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"(/Users/[^/]+/)" options:0 error:&error];
     anonymizedProcessPath = [regex stringByReplacingMatchesInString:processPath options:0 range:NSMakeRange(0, [processPath length]) withTemplate:@"/Users/USER/"];
     if (error) {
-      BITHockeyLog("ERROR: String replacing failed - %@", error.localizedDescription);
+      BITHockeyLogError(@"ERROR: String replacing failed - %@", error.localizedDescription);
     }
   }
   return anonymizedProcessPath;

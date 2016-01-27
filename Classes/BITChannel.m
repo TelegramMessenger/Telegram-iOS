@@ -96,7 +96,7 @@ NS_ASSUME_NONNULL_BEGIN
   
   if (!item) {
     // Case 1: Item is nil: Do not enqueue item and abort operation
-    BITHockeyLog(@"WARNING: TelemetryItem was nil.");
+    BITHockeyLogWarning(@"WARNING: TelemetryItem was nil.");
     return;
   }
   
@@ -106,7 +106,7 @@ NS_ASSUME_NONNULL_BEGIN
 
     if (strongSelf.isQueueBusy) {
       // Case 2: Channel is in blocked state: Trigger sender, start timer to check after again after a while and abort operation.
-      BITHockeyLog(@"The channel is saturated. %@ was dropped.", item.debugDescription);
+      BITHockeyLogDebug(@"INFO: The channel is saturated. %@ was dropped.", item.debugDescription);
       if (![strongSelf timerIsRunning]) {
         [strongSelf startTimer];
       }
@@ -163,7 +163,7 @@ NS_ASSUME_NONNULL_BEGIN
   NSError *error;
   NSData *data = [NSJSONSerialization dataWithJSONObject:dictionary options:(NSJSONWritingOptions)0 error:&error];
   if (!data) {
-    BITHockeyLog(@"ERROR: JSONSerialization error: %@", error.localizedDescription);
+    BITHockeyLogError(@"ERROR: JSONSerialization error: %@", error.localizedDescription);
     return @"{}";
   } else {
     return [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
