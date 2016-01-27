@@ -342,7 +342,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
         processName = report.processInfo.processName;
       
       /* PID */
-      processId = [[NSNumber numberWithUnsignedInteger: report.processInfo.processID] stringValue];
+      processId = [@(report.processInfo.processID) stringValue];
       
       /* Process Path */
       if (report.processInfo.processPath != nil) {
@@ -471,7 +471,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
     /* Write out the frames. In raw reports, Apple writes this out as a simple list of PCs. In the minimally
      * post-processed report, Apple writes this out as full frame entries. We use the latter format. */
     for (NSUInteger frame_idx = 0; frame_idx < [exception.stackFrames count]; frame_idx++) {
-      BITPLCrashReportStackFrameInfo *frameInfo = [exception.stackFrames objectAtIndex: frame_idx];
+      BITPLCrashReportStackFrameInfo *frameInfo = exception.stackFrames[frame_idx];
       [text appendString: [[self class] bit_formatStackFrame: frameInfo frameIndex: frame_idx report: report lp64: lp64]];
     }
     [text appendString: @"\n"];
@@ -486,8 +486,8 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
       [text appendFormat: @"Thread %ld:\n", (long) thread.threadNumber];
     }
     for (NSUInteger frame_idx = 0; frame_idx < [thread.stackFrames count]; frame_idx++) {
-      BITPLCrashReportStackFrameInfo *frameInfo = [thread.stackFrames objectAtIndex: frame_idx];
-      [text appendString: [[self class] bit_formatStackFrame: frameInfo frameIndex: frame_idx report: report lp64: lp64]];
+      BITPLCrashReportStackFrameInfo *frameInfo = thread.stackFrames[frame_idx];
+      [text appendString:[[self class] bit_formatStackFrame:frameInfo frameIndex:frame_idx report:report lp64:lp64]];
     }
     [text appendString: @"\n"];
     
@@ -651,10 +651,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
   for (BITPLCrashReportBinaryImageInfo *imageInfo in [report.images sortedArrayUsingFunction: bit_binaryImageSort context: nil]) {
     NSString *uuid;
     /* Fetch the UUID if it exists */
-    if (imageInfo.hasImageUUID)
-      uuid = imageInfo.imageUUID;
-    else
-      uuid = @"???";
+    uuid = imageInfo.hasImageUUID ? imageInfo.imageUUID : @"???";
     
     /* Determine the architecture string */
     NSString *archName = [[self class] bit_archNameFromImageInfo:imageInfo];
