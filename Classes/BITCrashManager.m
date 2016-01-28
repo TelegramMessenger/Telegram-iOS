@@ -198,7 +198,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     
     _crashManagerStatus = BITCrashManagerStatusAlwaysAsk;
     
-    if ([[NSUserDefaults standardUserDefaults] valueForKey:kBITCrashManagerStatus]) {
+    if ([[NSUserDefaults standardUserDefaults] stringForKey:kBITCrashManagerStatus]) {
       _crashManagerStatus = (BITCrashManagerStatus)[[NSUserDefaults standardUserDefaults] integerForKey:kBITCrashManagerStatus];
     } else {
       // migrate previous setting if available
