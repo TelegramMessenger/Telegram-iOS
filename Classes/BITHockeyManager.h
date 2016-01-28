@@ -82,6 +82,9 @@
 
  */
 
+#import "HockeySDKNullability.h"
+NS_ASSUME_NONNULL_BEGIN
+
 @interface BITHockeyManager : NSObject
 
 #pragma mark - Public Methods
@@ -496,7 +499,7 @@
  @see userEmail
  @see `[BITHockeyManagerDelegate userIDForHockeyManager:componentManager:]`
  */
-@property (nonatomic, retain) NSString *userID;
+@property (nonatomic, copy) NSString *userID;
 
 
 /** Set the user name that should used in the SDK components
@@ -521,7 +524,7 @@
  @see userEmail
  @see `[BITHockeyManagerDelegate userNameForHockeyManager:componentManager:]`
  */
-@property (nonatomic, retain) NSString *userName;
+@property (nonatomic, copy) NSString *userName;
 
 
 /** Set the users email address that should used in the SDK components
@@ -544,9 +547,9 @@
 
  @see userID
  @see userName
- @see `[BITHockeyManagerDelegate userEmailForHockeyManager:componentManager:]`
+ @see [BITHockeyManagerDelegate userEmailForHockeyManager:componentManager:]
  */
-@property (nonatomic, retain) NSString *userEmail;
+@property (nonatomic, copy) NSString *userEmail;
 
 
 ///-----------------------------------------------------------------------------
@@ -564,3 +567,5 @@
 - (NSString *)build;
 
 @end
+
+NS_ASSUME_NONNULL_END
