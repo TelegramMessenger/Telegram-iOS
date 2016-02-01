@@ -8,6 +8,10 @@ private struct SqlitePreparedStatement {
         sqlite3_bind_blob(statement, Int32(index), data, Int32(length), nil)
     }
     
+    func bindNull(index: Int) {
+        sqlite3_bind_null(statement, Int32(index))
+    }
+    
     func bind(index: Int, number: Int32) {
         sqlite3_bind_int(statement, Int32(index), number)
     }
@@ -366,7 +370,11 @@ public final class SqliteValueBox: ValueBox {
         resultStatement.reset()
         
         resultStatement.bind(1, data: key.memory, length: key.length)
-        resultStatement.bind(2, data: value.memory, length: value.length)
+        if value.memory == nil {
+            resultStatement.bindNull(2)
+        } else {
+            resultStatement.bind(2, data: value.memory, length: value.length)
+        }
         
         return resultStatement
     }

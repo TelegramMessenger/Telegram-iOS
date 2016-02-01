@@ -8,21 +8,58 @@ import Postbox
 
 private let peerId = PeerId(namespace: 1, id: 1)
 private let namespace: Int32 = 1
+private let authorPeerId = PeerId(namespace: 1, id: 6)
+private let peer = TestPeer(id: 6, data: "abc")
 
-private func ==(lhs: (Int32, Int32, String, [Media]), rhs: (Int32, Int32, String, [Media])) -> Bool {
-    if lhs.3.count != rhs.3.count {
+private func ==(lhs: [Media], rhs: [Media]) -> Bool {
+    if lhs.count != rhs.count {
         return false
     }
-    for i in 0 ..< lhs.3.count {
-        if !lhs.3[i].isEqual(rhs.3[i]) {
+    
+    for i in 0 ..< lhs.count {
+        if !lhs[i].isEqual(rhs[i]) {
             return false
         }
     }
-    return lhs.0 == rhs.0 && lhs.1 == rhs.1 && lhs.2 == rhs.2
+    return true
+}
+
+private enum Entry: Equatable, CustomStringConvertible {
+    case Message(Int32, Int32, String, [Media])
+    case Hole(Int32, Int32, Int32)
+    
+    var description: String {
+        switch self {
+            case let .Message(id, timestamp, text, media):
+                return "Message(\(id), \(timestamp), \(text), \(media))"
+            case let .Hole(min, max, timestamp):
+                return "Hole(\(min), \(max), \(timestamp))"
+        }
+    }
+}
+
+private func ==(lhs: Entry, rhs: Entry) -> Bool {
+    switch lhs {
+        case let .Message(lhsId, lhsTimestamp, lhsText, lhsMedia):
+            switch rhs {
+                case let .Message(rhsId, rhsTimestamp, rhsText, rhsMedia):
+                    return lhsId == rhsId && lhsTimestamp == rhsTimestamp && lhsText == rhsText && lhsMedia == rhsMedia
+                case .Hole:
+                    return false
+            }
+        case let .Hole(lhsMin, lhsMax, lhsMaxTimestamp):
+            switch rhs {
+                case .Message:
+                    return false
+                case let .Hole(rhsMin, rhsMax, rhsMaxTimestamp):
+                    return lhsMin == rhsMin && lhsMax == rhsMax && lhsMaxTimestamp == rhsMaxTimestamp
+            }
+    }
 }
 
 private class TestEmbeddedMedia: Media, CustomStringConvertible {
     var id: MediaId? { return nil }
+    var peerIds: [PeerId] = []
     let data: String
     
     init(data: String) {
@@ -51,6 +88,7 @@ private class TestEmbeddedMedia: Media, CustomStringConvertible {
 
 private class TestExternalMedia: Media {
     let id: MediaId?
+    var peerIds: [PeerId] = []
     let data: String
     
     init(id: Int64, data: String) {
@@ -78,6 +116,38 @@ private class TestExternalMedia: Media {
     
     var description: String {
         return "TestExternalMedia(\(self.id!.id), \(self.data))"
+    }
+}
+
+private class TestPeer: Peer {
+    let id: PeerId
+    let data: String
+    
+    init(id: Int32, data: String) {
+        self.id = PeerId(namespace: namespace, id: id)
+        self.data = data
+    }
+    
+    required init(decoder: Decoder) {
+        self.id = PeerId(namespace: decoder.decodeInt32ForKey("i.n"), id: decoder.decodeInt32ForKey("i.i"))
+        self.data = decoder.decodeStringForKey("s")
+    }
+    
+    func encode(encoder: Encoder) {
+        encoder.encodeInt32(self.id.namespace, forKey: "i.n")
+        encoder.encodeInt32(self.id.id, forKey: "i.i")
+        encoder.encodeString(self.data, forKey: "s")
+    }
+    
+    func isEqual(other: Peer) -> Bool {
+        if let other = other as? TestPeer {
+            return self.id == other.id && self.data == other.data
+        }
+        return false
+    }
+    
+    var description: String {
+        return "TestPeer(\(self.id.id), \(self.data))"
     }
 }
 
@@ -118,6 +188,8 @@ class MessageHistoryTableTests: XCTestCase {
     var valueBox: ValueBox?
     var path: String?
     
+    var peerTable: PeerTable?
+    var globalMessageIdsTable: GlobalMessageIdsTable?
     var indexTable: MessageHistoryIndexTable?
     var mediaTable: MessageMediaTable?
     var mediaCleanupTable: MediaCleanupTable?
@@ -128,6 +200,7 @@ class MessageHistoryTableTests: XCTestCase {
         
         declareEncodable(TestEmbeddedMedia.self, f: {TestEmbeddedMedia(decoder: $0)})
         declareEncodable(TestExternalMedia.self, f: {TestExternalMedia(decoder: $0)})
+        declareEncodable(TestPeer.self, f: {TestPeer(decoder: $0)})
     }
     
     override func setUp() {
@@ -138,10 +211,13 @@ class MessageHistoryTableTests: XCTestCase {
         path = NSTemporaryDirectory().stringByAppendingString("\(randomId)")
         self.valueBox = SqliteValueBox(basePath: path!)
         
-        self.indexTable = MessageHistoryIndexTable(valueBox: self.valueBox!, tableId: 1)
+        self.globalMessageIdsTable = GlobalMessageIdsTable(valueBox: self.valueBox!, tableId: 5, namespace: namespace)
+        self.indexTable = MessageHistoryIndexTable(valueBox: self.valueBox!, tableId: 1, globalMessageIdsTable: self.globalMessageIdsTable!)
         self.mediaCleanupTable = MediaCleanupTable(valueBox: self.valueBox!, tableId: 3)
         self.mediaTable = MessageMediaTable(valueBox: self.valueBox!, tableId: 2, mediaCleanupTable: self.mediaCleanupTable!)
         self.historyTable = MessageHistoryTable(valueBox: self.valueBox!, tableId: 4, messageHistoryIndexTable: self.indexTable!, messageMediaTable: self.mediaTable!)
+        self.peerTable = PeerTable(valueBox: self.valueBox!, tableId: 6)
+        self.peerTable!.set(peer)
     }
     
     override func tearDown() {
@@ -151,36 +227,53 @@ class MessageHistoryTableTests: XCTestCase {
         self.indexTable = nil
         self.mediaTable = nil
         self.mediaCleanupTable = nil
+        self.peerTable = nil
         
         self.valueBox = nil
         let _ = try? NSFileManager.defaultManager().removeItemAtPath(path!)
         self.path = nil
     }
     
-    private func addMessage(id: Int32, _ timestamp: Int32, _ text: String, _ media: [Media] = []) {
-        self.historyTable!.addMessages([StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, text: text, attributes: [], media: media)])
+    private func addMessage(id: Int32, _ timestamp: Int32, _ text: String = "", _ media: [Media] = []) {
+        var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
+        self.historyTable!.addMessages([StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, authorId: authorPeerId, text: text, attributes: [], media: media)], location: .Random, operationsByPeerId: &operationsByPeerId)
+        //print("\(operationsByPeerId[peerId]!)")
+    }
+    
+    private func addHole(id: Int32) {
+        var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
+        self.historyTable!.addHoles([MessageId(peerId: peerId, namespace: namespace, id: id)], operationsByPeerId: &operationsByPeerId)
     }
     
     private func removeMessages(ids: [Int32]) {
-        self.historyTable!.removeMessages(ids.map({ MessageId(peerId: peerId, namespace: namespace, id: $0) }))
+        var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
+        self.historyTable!.removeMessages(ids.map({ MessageId(peerId: peerId, namespace: namespace, id: $0) }), operationsByPeerId: &operationsByPeerId)
+        //print("\(operationsByPeerId[peerId]!)")
     }
     
-    func expectMessages(messages: [(Int32, Int32, String, [Media])]) {
-        let actualMessages = self.historyTable!.debugList(peerId).map({ ($0.id.id, $0.timestamp, $0.text, $0.media) })
-        var equal = true
-        if messages.count != actualMessages.count {
-            equal = false
-        } else {
-            for i in 0 ..< messages.count {
-                if !(messages[i] == actualMessages[i]) {
-                    equal = false
-                    break
-                }
+    private func fillHole(id: Int32, _ fillType: HoleFillType, _ messages: [(Int32, Int32, String, [Media])]) {
+        var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
+        self.historyTable!.fillHole(MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, messages: messages.map({ StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), timestamp: $0.1, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId)
+    }
+    
+    private func expectEntries(entries: [Entry]) {
+        let actualEntries = self.historyTable!.debugList(peerId, peerTable: self.peerTable!).map({ entry -> Entry in
+            switch entry {
+                case let .RenderedMessage(message):
+                    if let messagePeer = message.author {
+                        if !peer.isEqual(messagePeer) {
+                            XCTFail("Expected peer \(peer), actual: \(messagePeer)")
+                        }
+                    } else {
+                        XCTFail("Expected peer \(peer), actual: nil")
+                    }
+                    return .Message(message.id.id, message.timestamp, message.text, message.media)
+                case let .Hole(hole):
+                    return .Hole(hole.min, hole.maxIndex.id.id, hole.maxIndex.timestamp)
             }
-        }
-        
-        if !equal {
-            XCTFail("Expected\n\(messages)\nActual\n\(actualMessages)")
+        })
+        if actualEntries != entries {
+            XCTFail("Expected\n\(entries)\nActual\n\(actualEntries)")
         }
     }
     
@@ -214,20 +307,20 @@ class MessageHistoryTableTests: XCTestCase {
         addMessage(100, 100, "t100")
         addMessage(200, 200, "t200")
         
-        expectMessages([(100, 100, "t100", []), (200, 200, "t200", [])])
+        expectEntries([.Message(100, 100, "t100", []), .Message(200, 200, "t200", [])])
     }
     
     func testInsertMessageIgnoreOverwrite() {
         addMessage(100, 100, "t100")
         addMessage(100, 200, "t200")
         
-        expectMessages([(100, 100, "t100", [])])
+        expectEntries([.Message(100, 100, "t100", [])])
     }
     
     func testInsertMessageWithEmbeddedMedia() {
         addMessage(100, 100, "t100", [TestEmbeddedMedia(data: "abc1")])
         
-        expectMessages([(100, 100, "t100", [TestEmbeddedMedia(data: "abc1")])])
+        expectEntries([.Message(100, 100, "t100", [TestEmbeddedMedia(data: "abc1")])])
         expectMedia([])
     }
     
@@ -235,7 +328,7 @@ class MessageHistoryTableTests: XCTestCase {
         let media = TestExternalMedia(id: 10, data: "abc1")
         addMessage(100, 100, "t100", [media])
         
-        expectMessages([(100, 100, "t100", [media])])
+        expectEntries([.Message(100, 100, "t100", [media])])
         expectMedia([.MessageReference(100)])
     }
     
@@ -244,7 +337,7 @@ class MessageHistoryTableTests: XCTestCase {
         addMessage(100, 100, "t100", [media])
         addMessage(200, 200, "t200", [media])
         
-        expectMessages([(100, 100, "t100", [media]), (200, 200, "t200", [media])])
+        expectEntries([.Message(100, 100, "t100", [media]), .Message(200, 200, "t200", [media])])
         expectMedia([.Direct(media, 2)])
     }
     
@@ -254,7 +347,7 @@ class MessageHistoryTableTests: XCTestCase {
         addMessage(100, 100, "t100", [media])
         addMessage(200, 200, "t200", [media1])
         
-        expectMessages([(100, 100, "t100", [media]), (200, 200, "t200", [media])])
+        expectEntries([.Message(100, 100, "t100", [media]), .Message(200, 200, "t200", [media])])
         expectMedia([.Direct(media, 2)])
     }
     
@@ -263,7 +356,7 @@ class MessageHistoryTableTests: XCTestCase {
         
         removeMessages([100])
         
-        expectMessages([])
+        expectEntries([])
         expectMedia([])
     }
     
@@ -272,7 +365,7 @@ class MessageHistoryTableTests: XCTestCase {
         addMessage(100, 100, "t100", [media])
         self.removeMessages([100])
         
-        expectMessages([])
+        expectEntries([])
         expectMedia([])
         expectCleanupMedia([media])
     }
@@ -282,7 +375,7 @@ class MessageHistoryTableTests: XCTestCase {
         addMessage(100, 100, "t100", [media])
         removeMessages([100])
         
-        expectMessages([])
+        expectEntries([])
         expectMedia([])
         expectCleanupMedia([media])
     }
@@ -293,14 +386,321 @@ class MessageHistoryTableTests: XCTestCase {
         addMessage(200, 200, "t200", [media])
         removeMessages([100])
         
-        expectMessages([(200, 200, "t200", [media])])
+        expectEntries([.Message(200, 200, "t200", [media])])
         expectMedia([.Direct(media, 1)])
         expectCleanupMedia([])
         
         removeMessages([200])
         
-        expectMessages([])
+        expectEntries([])
         expectMedia([])
         expectCleanupMedia([media])
+    }
+    
+    func testAddHoleToEmpty() {
+        addHole(100)
+        expectEntries([.Hole(1, Int32.max, Int32.max)])
+    }
+    
+    func testAddHoleToFullHole() {
+        addHole(100)
+        expectEntries([.Hole(1, Int32.max, Int32.max)])
+        addHole(110)
+        expectEntries([.Hole(1, Int32.max, Int32.max)])
+    }
+    
+    func testAddMessageToFullHole() {
+        addHole(100)
+        expectEntries([.Hole(1, Int32.max, Int32.max)])
+        addMessage(90, 90, "m90")
+        expectEntries([.Hole(1, 89, 90), .Message(90, 90, "m90", []), .Hole(91, Int32.max, Int32.max)])
+    }
+    
+    func testAddMessageDividingUpperHole() {
+        addHole(100)
+        expectEntries([.Hole(1, Int32.max, Int32.max)])
+        addMessage(90, 90, "m90")
+        expectEntries([.Hole(1, 89, 90), .Message(90, 90, "m90", []), .Hole(91, Int32.max, Int32.max)])
+        addMessage(100, 100, "m100")
+        expectEntries([.Hole(1, 89, 90), .Message(90, 90, "m90", []), .Hole(91, 99, 100), .Message(100, 100, "m100", []), .Hole(101, Int32.max, Int32.max)])
+    }
+    
+    func testAddMessageDividingLowerHole() {
+        addHole(100)
+        expectEntries([.Hole(1, Int32.max, Int32.max)])
+        addMessage(90, 90, "m90")
+        expectEntries([.Hole(1, 89, 90), .Message(90, 90, "m90", []), .Hole(91, Int32.max, Int32.max)])
+        addMessage(80, 80, "m80")
+        expectEntries([.Hole(1, 79, 80), .Message(80, 80, "m80", []), .Hole(81, 89, 90), .Message(90, 90, "m90", []), .Hole(91, Int32.max, Int32.max)])
+    }
+    
+    func testAddMessageOffsettingUpperHole() {
+        addHole(100)
+        expectEntries([.Hole(1, Int32.max, Int32.max)])
+        
+        addMessage(90, 90, "m90")
+        expectEntries([.Hole(1, 89, 90), .Message(90, 90, "m90", []), .Hole(91, Int32.max, Int32.max)])
+        addMessage(91, 91, "m91")
+        expectEntries([.Hole(1, 89, 90), .Message(90, 90, "m90", []), .Message(91, 91, "m91", []), .Hole(92, Int32.max, Int32.max)])
+    }
+    
+    func testAddMessageOffsettingLowerHole() {
+        addHole(100)
+        expectEntries([.Hole(1, Int32.max, Int32.max)])
+        
+        addMessage(90, 90, "m90")
+        expectEntries([.Hole(1, 89, 90), .Message(90, 90, "m90", []), .Hole(91, Int32.max, Int32.max)])
+        addMessage(89, 89, "m89")
+        expectEntries([.Hole(1, 88, 89), .Message(89, 89, "m89", []), .Message(90, 90, "m90", []), .Hole(91, Int32.max, Int32.max)])
+    }
+    
+    func testAddMessageOffsettingLeftmostHole() {
+        addHole(100)
+        expectEntries([.Hole(1, Int32.max, Int32.max)])
+        
+        addMessage(1, 1, "m1")
+        
+        expectEntries([.Message(1, 1, "m1", []), .Hole(2, Int32.max, Int32.max)])
+    }
+    
+    func testAddMessageRemovingLefmostHole() {
+        addHole(100)
+        expectEntries([.Hole(1, Int32.max, Int32.max)])
+        
+        addMessage(2, 2, "m2")
+        expectEntries([.Hole(1, 1, 2), .Message(2, 2, "m2", []), .Hole(3, Int32.max, Int32.max)])
+        
+        addMessage(1, 1, "m1")
+        expectEntries([.Message(1, 1, "m1", []), .Message(2, 2, "m2", []), .Hole(3, Int32.max, Int32.max)])
+    }
+    
+    func testAddHoleLowerThanMessage() {
+        addMessage(100, 100, "m100")
+        addHole(1)
+        
+        expectEntries([.Hole(1, 99, 100), .Message(100, 100, "m100", [])])
+    }
+    
+    func testAddHoleHigherThanMessage() {
+        addMessage(100, 100, "m100")
+        addHole(200)
+        
+        expectEntries([.Message(100, 100, "m100", []), .Hole(101, Int32.max, Int32.max)])
+    }
+    
+    func testIgnoreHigherHole() {
+        addHole(200)
+        expectEntries([.Hole(1, Int32.max, Int32.max)])
+        addHole(400)
+        expectEntries([.Hole(1, Int32.max, Int32.max)])
+    }
+    
+    func testIgnoreHigherHoleAfterMessage() {
+        addMessage(100, 100, "m100")
+        addHole(200)
+        expectEntries([.Message(100, 100, "m100", []), .Hole(101, Int32.max, Int32.max)])
+        addHole(400)
+        expectEntries([.Message(100, 100, "m100", []), .Hole(101, Int32.max, Int32.max)])
+    }
+    
+    func testAddHoleBetweenMessages() {
+        addMessage(100, 100, "m100")
+        addMessage(200, 200, "m200")
+        addHole(150)
+        
+        expectEntries([.Message(100, 100, "m100", []), .Hole(101, 199, 200), .Message(200, 200, "m200", [])])
+    }
+    
+    func testFillHoleEmpty() {
+        fillHole(1, .Complete, [])
+        expectEntries([])
+    }
+    
+    func testFillHoleComplete() {
+        addHole(100)
+        
+        fillHole(1, .Complete, [(100, 100, "m100", []), (200, 200, "m200", [])])
+        expectEntries([.Message(100, 100, "m100", []), .Message(200, 200, "m200", [])])
+    }
+    
+    func testFillHoleUpperToLowerPartial() {
+        addHole(100)
+        
+        fillHole(1, .UpperToLower, [(100, 100, "m100", []), (200, 200, "m200", [])])
+        expectEntries([.Hole(1, 99, 100), .Message(100, 100, "m100", []), .Message(200, 200, "m200", [])])
+    }
+    
+    func testFillHoleUpperToLowerToBounds() {
+        addHole(100)
+        
+        fillHole(1, .UpperToLower, [(1, 1, "m1", []), (200, 200, "m200", [])])
+        expectEntries([.Message(1, 1, "m1", []), .Message(200, 200, "m200", [])])
+    }
+    
+    func testFillHoleLowerToUpperToBounds() {
+        addHole(100)
+        
+        fillHole(1, .LowerToUpper, [(100, 100, "m100", []), (Int32.max, 200, "m200", [])])
+        expectEntries([.Message(100, 100, "m100", []), .Message(Int32.max, 200, "m200", [])])
+    }
+    
+    func testFillHoleLowerToUpperPartial() {
+        addHole(100)
+        
+        fillHole(1, .LowerToUpper, [(100, 100, "m100", []), (200, 200, "m200", [])])
+        expectEntries([.Message(100, 100, "m100", []), .Message(200, 200, "m200", []), .Hole(201, Int32.max, Int32.max)])
+    }
+    
+    func testFillHoleBetweenMessagesUpperToLower() {
+        addHole(1)
+        
+        addMessage(100, 100, "m100")
+        addMessage(200, 200, "m200")
+        
+        fillHole(199, .UpperToLower, [(150, 150, "m150", [])])
+        
+        expectEntries([.Hole(1, 99, 100), .Message(100, 100, "m100", []), .Hole(101, 149, 150), .Message(150, 150, "m150", []), .Message(200, 200, "m200", []), .Hole(201, Int32.max, Int32.max)])
+    }
+    
+    func testFillHoleBetweenMessagesLowerToUpper() {
+        addHole(1)
+        
+        addMessage(100, 100, "m100")
+        addMessage(200, 200, "m200")
+        
+        fillHole(199, .LowerToUpper, [(150, 150, "m150", [])])
+        
+        expectEntries([.Hole(1, 99, 100), .Message(100, 100, "m100", []), .Message(150, 150, "m150", []), .Hole(151, 199, 200), .Message(200, 200, "m200", []), .Hole(201, Int32.max, Int32.max)])
+    }
+    
+    func testFillHoleBetweenMessagesComplete() {
+        addHole(1)
+        
+        addMessage(100, 100, "m100")
+        addMessage(200, 200, "m200")
+        
+        fillHole(199, .Complete, [(150, 150, "m150", [])])
+        
+        expectEntries([.Hole(1, 99, 100), .Message(100, 100, "m100", []), .Message(150, 150, "m150", []), .Message(200, 200, "m200", []), .Hole(201, Int32.max, Int32.max)])
+    }
+    
+    func testFillHoleBetweenMessagesWithMessage() {
+        addMessage(200, 200, "m200")
+        addMessage(202, 202, "m202")
+        addHole(201)
+        addMessage(201, 201, "m201")
+        
+        expectEntries([.Message(200, 200, "m200", []), .Message(201, 201, "m201", []), .Message(202, 202, "m202", [])])
+    }
+    
+    func testFillHoleWithNoMessagesComplete() {
+        addMessage(100, 100, "m100")
+        addHole(1)
+        
+        fillHole(99, .Complete, [])
+        
+        expectEntries([.Message(100, 100, "m100", [])])
+    }
+    
+    func testFillHoleIgnoreOverMessage() {
+        addMessage(100, 100, "m100")
+        addMessage(101, 101, "m101")
+        
+        fillHole(100, .Complete, [(90, 90, "m90", [])])
+        
+        expectEntries([.Message(90, 90, "m90", []), .Message(100, 100, "m100", []), .Message(101, 101, "m101", [])])
+    }
+    
+    func testFillHoleWithOverflow() {
+        addMessage(100, 100, "m100")
+        addMessage(200, 200, "m200")
+        addHole(150)
+        
+        fillHole(199, .UpperToLower, [(150, 150, "m150", []), (300, 300, "m300", [])])
+        
+        expectEntries([.Message(100, 100, "m100", []), .Hole(101, 149, 150), .Message(150, 150, "m150", []), .Message(200, 200, "m200", []), .Message(300, 300, "m300", [])])
+    }
+    
+    func testIgnoreHoleOverMessageBetweenMessages() {
+        addMessage(199, 199, "m199")
+        addMessage(200, 200, "m200")
+        addHole(200)
+        
+        expectEntries([.Message(199, 199, "m199", []), .Message(200, 200, "m200", [])])
+    }
+    
+    func testMergeHoleAfterDeletingMessage() {
+        addMessage(100, 100, "m100")
+        addHole(1)
+        addHole(200)
+        
+        expectEntries([.Hole(1, 99, 100), .Message(100, 100, "m100", []), .Hole(101, Int32.max, Int32.max)])
+        
+        removeMessages([100])
+        
+        expectEntries([.Hole(1, Int32.max, Int32.max)])
+    }
+    
+    func testMergeHoleLowerAfterDeletingMessage() {
+        addMessage(100, 100, "m100")
+        addHole(1)
+        addMessage(200, 200, "m200")
+        
+        removeMessages([100])
+        
+        expectEntries([.Hole(1, 199, 200), .Message(200, 200, "m200", [])])
+    }
+    
+    func testMergeHoleUpperAfterDeletingMessage() {
+        addMessage(100, 100, "m100")
+        addMessage(200, 200, "m200")
+        addHole(300)
+        
+        removeMessages([200])
+        
+        expectEntries([.Message(100, 100, "m100", []), .Hole(101, Int32.max, Int32.max)])
+    }
+    
+    func testExtendLowerHoleAfterDeletingMessage() {
+        addMessage(100, 100, "m100")
+        addHole(100)
+        
+        removeMessages([100])
+        
+        expectEntries([.Hole(1, Int32.max, Int32.max)])
+    }
+    
+    func testExtendUpperHoleAfterDeletingMessage() {
+        addMessage(100, 100, "m100")
+        addHole(101)
+        
+        removeMessages([100])
+        
+        expectEntries([.Hole(1, Int32.max, Int32.max)])
+    }
+    
+    func testDeleteMessageBelowMessage() {
+        addMessage(100, 100, "m100")
+        addMessage(200, 200, "m200")
+        removeMessages([100])
+        
+        expectEntries([.Message(200, 200, "m200", [])])
+    }
+    
+    func testDeleteMessageAboveMessage() {
+        addMessage(100, 100, "m100")
+        addMessage(200, 200, "m200")
+        removeMessages([200])
+        
+        expectEntries([.Message(100, 100, "m100", [])])
+    }
+    
+    func testDeleteMessageBetweenMessages() {
+        addMessage(100, 100, "m100")
+        addMessage(200, 200, "m200")
+        addMessage(300, 300, "m300")
+        removeMessages([200])
+        
+        expectEntries([.Message(100, 100, "m100", []), .Message(300, 300, "m300", [])])
     }
 }

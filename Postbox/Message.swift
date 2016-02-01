@@ -89,7 +89,7 @@ public func <(lhs: MessageId, rhs: MessageId) -> Bool {
     }
 }
 
-public struct MessageIndex: Equatable, Comparable {
+public struct MessageIndex: Equatable, Comparable, Hashable {
     public let id: MessageId
     public let timestamp: Int32
     
@@ -115,6 +115,14 @@ public struct MessageIndex: Equatable, Comparable {
     public func successor() -> MessageIndex {
         return MessageIndex(id: MessageId(peerId: self.id.peerId, namespace: self.id.namespace, id: self.id.id + 1), timestamp: self.timestamp)
     }
+    
+    public var hashValue: Int {
+        return self.id.hashValue
+    }
+    
+    static func upperBound(peerId: PeerId) -> MessageIndex {
+        return MessageIndex(id: MessageId(peerId: peerId, namespace: Int32.max, id: Int32.max), timestamp: Int32.max)
+    }
 }
 
 public func ==(lhs: MessageIndex, rhs: MessageIndex) -> Bool {
@@ -134,30 +142,36 @@ public func <(lhs: MessageIndex, rhs: MessageIndex) -> Bool {
 }
 
 public class Message {
-    let id: MessageId
-    let timestamp: Int32
-    let text: String
-    let attributes: [Coding]
-    let media: [Media]
+    public let id: MessageId
+    public let timestamp: Int32
+    public let author: Peer?
+    public let text: String
+    public let attributes: [Coding]
+    public let media: [Media]
+    public let peers: SimpleDictionary<PeerId, Peer>
     
-    init(id: MessageId, timestamp: Int32, text: String, attributes: [Coding], media: [Media]) {
+    init(id: MessageId, timestamp: Int32, author: Peer?, text: String, attributes: [Coding], media: [Media], peers: SimpleDictionary<PeerId, Peer>) {
         self.id = id
         self.timestamp = timestamp
+        self.author = author
         self.text = text
         self.attributes = attributes
         self.media = media
+        self.peers = peers
     }
 }
 
-class StoreMessage {
-    let id: MessageId
-    let timestamp: Int32
-    let text: String
-    let attributes: [Coding]
-    let media: [Media]
+public final class StoreMessage {
+    public let id: MessageId
+    public let timestamp: Int32
+    public let authorId: PeerId?
+    public let text: String
+    public let attributes: [Coding]
+    public let media: [Media]
     
-    init(id: MessageId, timestamp: Int32, text: String, attributes: [Coding], media: [Media]) {
+    public init(id: MessageId, timestamp: Int32, authorId: PeerId?, text: String, attributes: [Coding], media: [Media]) {
         self.id = id
+        self.authorId = authorId
         self.timestamp = timestamp
         self.text = text
         self.attributes = attributes
@@ -168,47 +182,19 @@ class StoreMessage {
 class IntermediateMessage {
     let id: MessageId
     let timestamp: Int32
+    let authorId: PeerId?
     let text: String
     let attributesData: ReadBuffer
     let embeddedMediaData: ReadBuffer
     let referencedMedia: [MediaId]
     
-    init(id: MessageId, timestamp: Int32, text: String, attributesData: ReadBuffer, embeddedMediaData: ReadBuffer, referencedMedia: [MediaId]) {
+    init(id: MessageId, timestamp: Int32, authorId: PeerId?, text: String, attributesData: ReadBuffer, embeddedMediaData: ReadBuffer, referencedMedia: [MediaId]) {
         self.id = id
         self.timestamp = timestamp
+        self.authorId = authorId
         self.text = text
         self.attributesData = attributesData
         self.embeddedMediaData = embeddedMediaData
         self.referencedMedia = referencedMedia
     }
-}
-
-public struct RenderedMessage: Equatable, Comparable {
-    public let message: Message
-    
-    internal let incomplete: Bool
-    public let peers: [Peer]
-    public let media: [Media]
-    
-    internal init(message: Message) {
-        self.message = message
-        self.peers = []
-        self.media = []
-        self.incomplete = true
-    }
-    
-    internal init(message: Message, peers: [Peer], media: [Media]) {
-        self.message = message
-        self.peers = peers
-        self.media = media
-        self.incomplete = false
-    }
-}
-
-public func ==(lhs: RenderedMessage, rhs: RenderedMessage) -> Bool {
-    return lhs.message.id == rhs.message.id
-}
-
-public func <(lhs: RenderedMessage, rhs: RenderedMessage) -> Bool {
-    return MessageIndex(lhs.message) < MessageIndex(rhs.message)
 }

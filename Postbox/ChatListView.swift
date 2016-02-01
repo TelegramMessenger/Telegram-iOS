@@ -1,45 +1,45 @@
 import Foundation
 
-enum MutableMessageHistoryEntry {
+public enum ChatListEntry: Comparable {
+    case MessageEntry(Message)
+    case Nothing(MessageIndex)
+    
+    public var index: MessageIndex {
+        switch self {
+            case let .MessageEntry(message):
+                return MessageIndex(message)
+            case let .Nothing(index):
+                return index
+        }
+    }
+}
+
+public func ==(lhs: ChatListEntry, rhs: ChatListEntry) -> Bool {
+    return lhs.index == rhs.index
+}
+
+public func <(lhs: ChatListEntry, rhs: ChatListEntry) -> Bool {
+    return lhs.index < rhs.index
+}
+
+enum MutableChatListEntry {
     case IntermediateMessageEntry(IntermediateMessage)
     case MessageEntry(Message)
-    case HoleEntry(MessageHistoryHole)
+    case Nothing(MessageIndex)
     
     var index: MessageIndex {
         switch self {
             case let .IntermediateMessageEntry(message):
                 return MessageIndex(id: message.id, timestamp: message.timestamp)
             case let .MessageEntry(message):
-                return MessageIndex(id: message.id, timestamp: message.timestamp)
-            case let .HoleEntry(hole):
-                return hole.maxIndex
+                return MessageIndex(message)
+            case let .Nothing(index):
+                return index
         }
     }
 }
 
-public enum MessageHistoryEntry: Comparable {
-    case MessageEntry(Message)
-    case HoleEntry(MessageHistoryHole)
-    
-    public var index: MessageIndex {
-        switch self {
-            case let .MessageEntry(message):
-                return MessageIndex(id: message.id, timestamp: message.timestamp)
-            case let .HoleEntry(hole):
-                return hole.maxIndex
-        }
-    }
-}
-
-public func ==(lhs: MessageHistoryEntry, rhs: MessageHistoryEntry) -> Bool {
-    return lhs.index == rhs.index
-}
-
-public func <(lhs: MessageHistoryEntry, rhs: MessageHistoryEntry) -> Bool {
-    return lhs.index < rhs.index
-}
-
-final class MutableMessageHistoryViewReplayContext {
+final class MutableChatListViewReplayContext {
     var invalidEarlier: Bool = false
     var invalidLater: Bool = false
     var removedEntries: Bool = false
@@ -49,29 +49,29 @@ final class MutableMessageHistoryViewReplayContext {
     }
 }
 
-final class MutableMessageHistoryView {
-    private let count: Int
-    private var earlier: MutableMessageHistoryEntry?
-    private var later: MutableMessageHistoryEntry?
-    private var entries: [MutableMessageHistoryEntry]
+final class MutableChatListView {
+    private var earlier: MutableChatListEntry?
+    private var later: MutableChatListEntry?
+    private var entries: [MutableChatListEntry]
+    private var count: Int
     
-    init(earlier: MutableMessageHistoryEntry?, entries: [MutableMessageHistoryEntry], later: MutableMessageHistoryEntry?, count: Int) {
+    init(earlier: MutableChatListEntry?, entries: [MutableChatListEntry], later: MutableChatListEntry?, count: Int) {
         self.earlier = earlier
         self.entries = entries
         self.later = later
         self.count = count
     }
     
-    func replay(operations: [MessageHistoryOperation], context: MutableMessageHistoryViewReplayContext) -> Bool {
+    func replay(operations: [ChatListOperation], context: MutableChatListViewReplayContext) -> Bool {
         var hasChanges = false
         for operation in operations {
             switch operation {
-                case let .InsertHole(hole):
-                    if self.add(.HoleEntry(hole)) {
+                case let .InsertMessage(message):
+                    if self.add(.IntermediateMessageEntry(message)) {
                         hasChanges = true
                     }
-                case let .InsertMessage(intermediateMessage):
-                    if self.add(.IntermediateMessageEntry(intermediateMessage)) {
+                case let .InsertNothing(index):
+                    if self.add(.Nothing(index)) {
                         hasChanges = true
                     }
                 case let .Remove(indices):
@@ -83,7 +83,7 @@ final class MutableMessageHistoryView {
         return hasChanges
     }
     
-    private func add(entry: MutableMessageHistoryEntry) -> Bool {
+    func add(entry: MutableChatListEntry) -> Bool {
         if self.entries.count == 0 {
             self.entries.append(entry)
             return true
@@ -149,7 +149,7 @@ final class MutableMessageHistoryView {
         }
     }
     
-    private func remove(indices: Set<MessageIndex>, context: MutableMessageHistoryViewReplayContext) -> Bool {
+    func remove(indices: Set<MessageIndex>, context: MutableChatListViewReplayContext) -> Bool {
         var hasChanges = false
         if let earlier = self.earlier where indices.contains(earlier.index) {
             context.invalidEarlier = true
@@ -176,13 +176,9 @@ final class MutableMessageHistoryView {
         return hasChanges
     }
     
-    func updatePeers(peers: [PeerId: Peer]) -> Bool {
-        return false
-    }
-    
-    func complete(context: MutableMessageHistoryViewReplayContext, fetchEarlier: (MessageIndex?, Int) -> [MutableMessageHistoryEntry], fetchLater: (MessageIndex?, Int) -> [MutableMessageHistoryEntry]) {
+    func complete(context: MutableChatListViewReplayContext, fetchEarlier: (MessageIndex?, Int) -> [MutableChatListEntry], fetchLater: (MessageIndex?, Int) -> [MutableChatListEntry]) {
         if context.removedEntries {
-            var addedEntries: [MutableMessageHistoryEntry] = []
+            var addedEntries: [MutableChatListEntry] = []
             
             var latestAnchor: MessageIndex?
             if let last = self.entries.last {
@@ -265,52 +261,52 @@ final class MutableMessageHistoryView {
         }
     }
     
-    func render(renderIntermediateMessage: IntermediateMessage -> Message) {
-        if let earlier = self.earlier, case let .IntermediateMessageEntry(intermediateMessage) = earlier {
-            self.earlier = .MessageEntry(renderIntermediateMessage(intermediateMessage))
-        }
-        if let later = self.later, case let .IntermediateMessageEntry(intermediateMessage) = later {
-            self.later = .MessageEntry(renderIntermediateMessage(intermediateMessage))
-        }
-        
-        for i in  0 ..< self.entries.count {
-            if case let .IntermediateMessageEntry(intermediateMessage) = self.entries[i] {
-                self.entries[i] = .MessageEntry(renderIntermediateMessage(intermediateMessage))
+    func updatePeers(peers: [PeerId: Peer]) -> Bool {
+        var hasChanges = false
+        /*for i in 0 ..< self.entries.count {
+            switch self.entries[i] {
+                case let .MessageEntry(message):
+                    var updatedAuthor: Peer?
+                    if let author = message.author, let peer = peers[author.id] {
+                        updatedAuthor = peer
+                    }
+                    
+                    for peer in message.peers {
+                        
+                    }
+                    
+                    break
+                default:
+                    break
             }
-        }
+        }*/
+        return hasChanges
     }
     
-    func firstHole() -> MessageHistoryHole? {
-        for entry in self.entries {
-            if case let .HoleEntry(hole) = entry {
-                return hole
+    func render(renderMessage: IntermediateMessage -> Message) {
+        for i in 0 ..< self.entries.count {
+            if case let .IntermediateMessageEntry(message) = self.entries[i] {
+                self.entries[i] = .MessageEntry(renderMessage(message))
             }
         }
-        
-        return nil
     }
 }
 
-public final class MessageHistoryView {
-    public let earlierId: MessageIndex?
-    public let laterId: MessageIndex?
-    public let entries: [MessageHistoryEntry]
+public final class ChatListView {
+    public let entries: [ChatListEntry]
     
-    init(_ mutableView: MutableMessageHistoryView) {
-        var entries: [MessageHistoryEntry] = []
+    init(_ mutableView: MutableChatListView) {
+        var entries: [ChatListEntry] = []
         for entry in mutableView.entries {
             switch entry {
-                case let .HoleEntry(hole):
-                    entries.append(.HoleEntry(hole))
                 case let .MessageEntry(message):
                     entries.append(.MessageEntry(message))
+                case let .Nothing(index):
+                    entries.append(.Nothing(index))
                 case .IntermediateMessageEntry:
-                    assertionFailure("got IntermediateMessageEntry")
+                    assertionFailure()
             }
         }
         self.entries = entries
-        
-        self.earlierId = mutableView.earlier?.index
-        self.laterId = mutableView.later?.index
     }
 }

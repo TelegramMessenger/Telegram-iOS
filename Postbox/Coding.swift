@@ -174,6 +174,10 @@ public final class Encoder {
         return self.buffer.makeReadBufferAndReset()
     }
     
+    public func readBufferNoCopy() -> ReadBuffer {
+        return self.buffer.readBufferNoCopy()
+    }
+    
     public func makeData() -> NSData {
         return self.buffer.makeData()
     }

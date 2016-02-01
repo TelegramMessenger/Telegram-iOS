@@ -58,6 +58,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
     var path: String?
     
     var indexTable: MessageHistoryIndexTable?
+    var globalMessageIdsTable: GlobalMessageIdsTable?
     
     override func setUp() {
         super.setUp()
@@ -67,7 +68,8 @@ class MessageHistoryIndexTableTests: XCTestCase {
         path = NSTemporaryDirectory().stringByAppendingString("\(randomId)")
         self.valueBox = SqliteValueBox(basePath: path!)
         
-        self.indexTable = MessageHistoryIndexTable(valueBox: self.valueBox!, tableId: 1)
+        self.globalMessageIdsTable = GlobalMessageIdsTable(valueBox: self.valueBox!, tableId: 2, namespace: namespace)
+        self.indexTable = MessageHistoryIndexTable(valueBox: self.valueBox!, tableId: 1, globalMessageIdsTable: self.globalMessageIdsTable!)
     }
     
     override func tearDown() {
@@ -81,23 +83,41 @@ class MessageHistoryIndexTableTests: XCTestCase {
     }
     
     func addHole(id: Int32) {
-        self.indexTable!.addHole(MessageId(peerId: peerId, namespace: namespace, id: id))
+        var operations: [MessageHistoryIndexOperation] = []
+        self.indexTable!.addHole(MessageId(peerId: peerId, namespace: namespace, id: id), operations: &operations)
     }
     
     func addMessage(id: Int32, _ timestamp: Int32) {
-        self.indexTable!.addMessage(MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp))
+        var operations: [MessageHistoryIndexOperation] = []
+        self.indexTable!.addMessages([StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, authorId: peerId, text: "", attributes: [], media: [])], location: .Random, operations: &operations)
+    }
+    
+    func addMessagesUpperBlock(messages: [(Int32, Int32)]) {
+        var operations: [MessageHistoryIndexOperation] = []
+        self.indexTable!.addMessages(messages.map { (id, timestamp) in
+            return StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, authorId: peerId, text: "", attributes: [], media: [])
+        }, location: .UpperHistoryBlock, operations: &operations)
     }
     
     func fillHole(id: Int32, _ fillType: HoleFillType, _ messages: [(Int32, Int32)]) {
-        self.indexTable!.fillHole(MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, indices: messages.map({MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), timestamp: $0.1)}))
+        var operations: [MessageHistoryIndexOperation] = []
+        let zeroData = WriteBuffer()
+        var zero: Int32 = 0
+        zeroData.write(&zero, offset: 0, length: 4)
+        
+        self.indexTable!.fillHole(MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, messages: messages.map({
+            return StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), timestamp: $0.1, authorId: peerId, text: "", attributes: [], media: [])
+        }), operations: &operations)
     }
     
     func removeMessage(id: Int32) {
-        self.indexTable!.removeMessage(MessageId(peerId: peerId, namespace: namespace, id: id))
+        var operations: [MessageHistoryIndexOperation] = []
+        self.indexTable!.removeMessage(MessageId(peerId: peerId, namespace: namespace, id: id), operations: &operations)
     }
     
     private func expect(items: [Item]) {
-        let actualItems = self.indexTable!.debugList(peerId, namespace: namespace).map { return Item($0) }
+        let actualList = self.indexTable!.debugList(peerId, namespace: namespace)
+        let actualItems = actualList.map { return Item($0) }
         if items != actualItems {
             XCTFail("Expected\n\(items)\nGot\n\(actualItems)")
         }
@@ -116,6 +136,14 @@ class MessageHistoryIndexTableTests: XCTestCase {
         
         addMessage(90, 90)
         expect([.Message(90, 90), .Message(100, 100), .Message(110, 110)])
+    }
+    
+    func testAddMessageIgnoreOverwrite() {
+        addMessage(100, 100)
+        expect([.Message(100, 100)])
+        
+        addMessage(100, 110)
+        expect([.Message(100, 100)])
     }
     
     func testAddHoleToEmpty() {
@@ -423,5 +451,51 @@ class MessageHistoryIndexTableTests: XCTestCase {
         removeMessage(200)
         
         expect([.Message(100, 100), .Message(300, 300)])
+    }
+    
+    func testAddMessageCutInitialHole() {
+        addHole(1)
+        expect([.Hole(1, Int32.max, Int32.max)])
+        addMessagesUpperBlock([(100, 100)])
+        expect([.Hole(1, 99, 100), .Message(100, 100)])
+    }
+    
+    func testAddMessageRemoveInitialHole() {
+        addHole(1)
+        expect([.Hole(1, Int32.max, Int32.max)])
+        addMessagesUpperBlock([(1, 100)])
+        expect([.Message(1, 100)])
+    }
+    
+    func testAddMessageCutHoleAfterMessage1() {
+        addMessage(10, 10)
+        addHole(11)
+        expect([.Message(10, 10), .Hole(11, Int32.max, Int32.max)])
+        addMessagesUpperBlock([(100, 100)])
+        expect([.Message(10, 10), .Hole(11, 99, 100), .Message(100, 100)])
+    }
+    
+    func testAddMessageCutHoleAfterMessage2() {
+        addMessage(10, 10)
+        addHole(11)
+        expect([.Message(10, 10), .Hole(11, Int32.max, Int32.max)])
+        addMessagesUpperBlock([(12, 12)])
+        expect([.Message(10, 10), .Hole(11, 11, 12), .Message(12, 12)])
+    }
+    
+    func testAddMessageRemoveHoleAfterMessage() {
+        addMessage(10, 10)
+        addHole(11)
+        expect([.Message(10, 10), .Hole(11, Int32.max, Int32.max)])
+        addMessagesUpperBlock([(11, 11)])
+        expect([.Message(10, 10), .Message(11, 11)])
+    }
+    
+    func testAddMessageRemoveHoleIgnoreOverwriteMessage() {
+        addMessage(10, 10)
+        addHole(11)
+        expect([.Message(10, 10), .Hole(11, Int32.max, Int32.max)])
+        addMessagesUpperBlock([(10, 11)])
+        expect([.Message(10, 10)])
     }
 }

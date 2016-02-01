@@ -70,6 +70,7 @@ public func ==(lhs: MediaId, rhs: MediaId) -> Bool {
 
 public protocol Media: Coding {
     var id: MediaId? { get }
+    var peerIds: [PeerId] { get }
     
     func isEqual(other: Media) -> Bool
 }

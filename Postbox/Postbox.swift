@@ -2,75 +2,91 @@ import Foundation
 import SwiftSignalKit
 import sqlcipher
 
-public protocol PostboxState: Coding {
+public final class Modifier {
+    private weak var postbox: Postbox?
     
-}
-
-public final class Modifier<State: PostboxState> {
-    private weak var postbox: Postbox<State>?
-    
-    private init(postbox: Postbox<State>) {
+    private init(postbox: Postbox) {
         self.postbox = postbox
     }
     
-    public func addMessages(messages: [Message], medias: [Media]) {
-        self.postbox?.addMessages(messages, medias: medias)
+    public func addMessages(messages: [StoreMessage], location: AddMessagesLocation) {
+        self.postbox?.addMessages(messages, location: location)
     }
     
-    public func deleteMessagesWithIds(ids: [MessageId]) {
-        self.postbox?.deleteMessagesWithIds(ids)
+    public func initializeHole(peerId: PeerId, namespace: MessageId.Namespace) {
+        self.postbox?.addHole(MessageId(peerId: peerId, namespace: namespace, id: 1))
     }
     
-    public func deleteMessagesWithAbsoluteIndexedIds(ids: [Int32]) {
+    public func fillHole(hole: MessageHistoryHole, fillType: HoleFillType, messages: [StoreMessage]) {
+        self.postbox?.fillHole(hole, fillType: fillType, messages: messages)
+    }
+    
+    public func deleteMessages(messageIds: [MessageId]) {
+        self.postbox?.deleteMessages(messageIds)
+    }
+    
+    public func deleteMessagesWithGlobalIds(ids: [Int32]) {
         if let postbox = self.postbox {
-            let messageIds = postbox.messageIdsForAbsoluteIndexedIds(ids)
-            postbox.deleteMessagesWithIds(messageIds)
+            let messageIds = postbox.messageIdsForGlobalIds(ids)
+            postbox.deleteMessages(messageIds)
         }
     }
     
-    public func getState() -> State? {
+    public func getState() -> Coding? {
         return self.postbox?.getState()
     }
     
-    public func setState(state: State) {
+    public func setState(state: Coding) {
         self.postbox?.setState(state)
     }
     
-    public func updatePeers(peers: [Peer], update: (Peer, Peer) -> Peer) {
+    public func updatePeers(peers: [Peer], update: (Peer, Peer) -> Peer?) {
         self.postbox?.updatePeers(peers, update: update)
     }
     
-    public func peersWithIds(ids: [PeerId]) -> [PeerId : Peer] {
-        return self.postbox?.peersWithIds(ids) ?? [:]
+    public func knownPeerIds(ids: Set<PeerId>) -> Set<PeerId> {
+        return self.postbox?.knownPeerIds(ids) ?? Set()
     }
 }
 
-public final class Postbox<State: PostboxState> {
+public final class Postbox {
     private let basePath: String
-    private let messageNamespaces: [MessageId.Namespace]
-    private let absoluteIndexedMessageNamespace: MessageId.Namespace
+    private let globalMessageIdsNamespace: MessageId.Namespace
     
     private let queue = Queue(name: "org.telegram.postbox.Postbox")
     private var valueBox: ValueBox!
     
-    private var peerMessageHistoryViews: [PeerId : Bag<(MutableMessageHistoryView, Pipe<MessageHistoryView>)>] = [:]
-    private var deferredMessageHistoryViewsToUpdate: [(MutableMessageHistoryView, Pipe<MessageHistoryView>)] = []
-    private var peerViews: Bag<(MutablePeerView, Pipe<PeerView>)> = Bag()
-    private var deferredPeerViewsToUpdate: [(MutablePeerView, Pipe<PeerView>)] = []
-    private var peerPipes: [PeerId : Pipe<Peer>] = [:]
+    private var viewTracker: ViewTracker!
     
-    private var statePipe: Pipe<State> = Pipe()
+    private var peerPipes: [PeerId: Pipe<Peer>] = [:]
+    
+    private var currentOperationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
+    private var currentFilledHolesByPeerId = Set<PeerId>()
+    private var currentUpdatedPeers: [PeerId: Peer] = [:]
+    
+    private var statePipe: Pipe<Coding> = Pipe()
+    
+    private let fetchMessageHistoryHoleImpl = Promise<MessageHistoryHole -> Signal<Void, NoError>>()
+    public func setFetchMessageHistoryHole(fetch: MessageHistoryHole -> Signal<Void, NoError>) {
+        self.fetchMessageHistoryHoleImpl.set(single(fetch, NoError.self))
+    }
     
     public let mediaBox: MediaBox
     
-    public init(basePath: String, messageNamespaces: [MessageId.Namespace], absoluteIndexedMessageNamespace: MessageId.Namespace?) {
+    var metadataTable: MetadataTable!
+    var keychainTable: KeychainTable!
+    var peerTable: PeerTable!
+    var globalMessageIdsTable: GlobalMessageIdsTable!
+    var messageHistoryIndexTable: MessageHistoryIndexTable!
+    var messageHistoryTable: MessageHistoryTable!
+    var mediaTable: MessageMediaTable!
+    var mediaCleanupTable: MediaCleanupTable!
+    var chatListIndexTable: ChatListIndexTable!
+    var chatListTable: ChatListTable!
+    
+    public init(basePath: String, globalMessageIdsNamespace: MessageId.Namespace) {
         self.basePath = basePath
-        self.messageNamespaces = messageNamespaces
-        if let absoluteIndexedMessageNamespace = absoluteIndexedMessageNamespace {
-            self.absoluteIndexedMessageNamespace = absoluteIndexedMessageNamespace
-        } else {
-            self.absoluteIndexedMessageNamespace = MessageId.Namespace.max
-        }
+        self.globalMessageIdsNamespace = globalMessageIdsNamespace
         self.mediaBox = MediaBox(basePath: self.basePath + "/media")
         self.openDatabase()
     }
@@ -85,58 +101,58 @@ public final class Postbox<State: PostboxState> {
             }
             
             self.valueBox = SqliteValueBox(basePath: self.basePath + "/db")
-            //self.valueBox = LmdbValueBox(basePath: self.basePath + "/db")
-            var userVersion: Int32 = 0
-            let currentUserVersion: Int32 = 4
+            self.metadataTable = MetadataTable(valueBox: self.valueBox, tableId: 0)
             
-            if let value = self.valueBox.get(Table_Meta.id, key: Table_Meta.key()) {
-                value.read(&userVersion, offset: 0, length: 4)
-            }
+            let userVersion: Int32? = self.metadataTable.userVersion()
+            let currentUserVersion: Int32 = 5
             
             if userVersion != currentUserVersion {
                 self.valueBox.drop()
-                let buffer = WriteBuffer()
-                var currentVersion: Int32 = currentUserVersion
-                buffer.write(&currentVersion, offset: 0, length: 4)
-                self.valueBox.set(Table_Meta.id, key: Table_Meta.key(), value: buffer)
+                self.metadataTable.setUserVersion(currentUserVersion)
             }
+            
+            self.keychainTable = KeychainTable(valueBox: self.valueBox, tableId: 1)
+            self.peerTable = PeerTable(valueBox: self.valueBox, tableId: 2)
+            self.globalMessageIdsTable = GlobalMessageIdsTable(valueBox: self.valueBox, tableId: 3, namespace: self.globalMessageIdsNamespace)
+            self.messageHistoryIndexTable = MessageHistoryIndexTable(valueBox: self.valueBox, tableId: 4, globalMessageIdsTable: self.globalMessageIdsTable)
+            self.mediaCleanupTable = MediaCleanupTable(valueBox: self.valueBox, tableId: 5)
+            self.mediaTable = MessageMediaTable(valueBox: self.valueBox, tableId: 6, mediaCleanupTable: self.mediaCleanupTable)
+            self.messageHistoryTable = MessageHistoryTable(valueBox: self.valueBox, tableId: 7, messageHistoryIndexTable: self.messageHistoryIndexTable, messageMediaTable: self.mediaTable)
+            self.chatListIndexTable = ChatListIndexTable(valueBox: self.valueBox, tableId: 8)
+            self.chatListTable = ChatListTable(valueBox: self.valueBox, tableId: 9, indexTable: self.chatListIndexTable)
+            
+            self.viewTracker = ViewTracker(queue: self.queue, fetchEarlierHistoryEntries: self.fetchEarlierHistoryEntries, fetchLaterHistoryEntries: self.fetchLaterHistoryEntries, fetchEarlierChatEntries: self.fetchEarlierChatEntries, fetchLaterChatEntries: self.fetchLaterChatEntries, renderMessage: self.renderIntermediateMessage, fetchMessageHistoryHole: self.fetchMessageHistoryHoleWrapper)
             
             print("(Postbox initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
         }
     }
     
-    private var cachedState: State?
+    private var cachedState: Coding?
     
-    private func setState(state: State) {
+    private func setState(state: Coding) {
         self.queue.dispatch {
             self.cachedState = state
             
-            let encoder = Encoder()
-            encoder.encodeRootObject(state)
-            
-            self.valueBox.set(Table_State.id, key: Table_State.key(), value: encoder.memoryBuffer())
+            self.metadataTable.setState(state)
             
             self.statePipe.putNext(state)
         }
     }
     
-    private func getState() -> State? {
+    private func getState() -> Coding? {
         if let cachedState = self.cachedState {
             return cachedState
         } else {
-            if let value = self.valueBox.get(Table_State.id, key: Table_State.key()) {
-                let decoder = Decoder(buffer: value)
-                if let state = decoder.decodeRootObject() as? State {
-                    self.cachedState = state
-                    return state
-                }
+            if let state = self.metadataTable.state() {
+                self.cachedState = state
+                return state
             }
             
             return nil
         }
     }
     
-    public func state() -> Signal<State?, NoError> {
+    public func state() -> Signal<Coding?, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.queue.dispatch {
@@ -151,289 +167,168 @@ public final class Postbox<State: PostboxState> {
     }
     
     public func keychainEntryForKey(key: String) -> NSData? {
-        if let value = self.valueBox.get(Table_Keychain.id, key: Table_Keychain.key(key)) {
-            print("get \(key) -> \(value.length) bytes")
-            return NSData(bytes: value.memory, length: value.length)
-        }
-        print("get \(key) -> nil")
-        
-        return nil
+        return self.keychainTable.get(key)
     }
     
     public func setKeychainEntryForKey(key: String, value: NSData) {
-        print("set \(key) -> \(value.length) bytes")
-        self.valueBox.set(Table_Keychain.id, key: Table_Keychain.key(key), value: MemoryBuffer(data: value))
+        self.keychainTable.set(key, value: value)
     }
     
     public func removeKeychainEntryForKey(key: String) {
-        self.valueBox.remove(Table_Keychain.id, key: Table_Keychain.key(key))
+        self.keychainTable.remove(key)
     }
     
-    private func addMessages(messages: [Message], medias: [Media]) {
-        
+    private func addMessages(messages: [StoreMessage], location: AddMessagesLocation) {
+        self.messageHistoryTable.addMessages(messages, location: location, operationsByPeerId: &self.currentOperationsByPeerId)
     }
     
-    private func mediaWithIds(ids: [MediaId]) -> [MediaId : Media] {
-        return [:]
+    private func addHole(id: MessageId) {
+        self.messageHistoryTable.addHoles([id], operationsByPeerId: &self.currentOperationsByPeerId)
     }
     
-    var cachedPeers: [PeerId : Peer] = [:]
-    
-    private func peerWithId(peerId: PeerId) -> Peer? {
-        if let cachedPeer = cachedPeers[peerId] {
-            return cachedPeer
-        } else {
-            let peerKey = Table_Peer.emptyKey()
-            if let value = self.valueBox.get(Table_Peer.id, key: Table_Peer.key(peerId, key: peerKey)) {
-                let decoder = Decoder(buffer: value)
-                if let peer = decoder.decodeRootObject() as? Peer {
-                    cachedPeers[peer.id] = peer
-                    return peer
-                } else {
-                    print("(PostBox: can't decode peer)")
-                }
-            }
-            
-            return nil
-        }
+    private func fillHole(hole: MessageHistoryHole, fillType: HoleFillType, messages: [StoreMessage]) {
+        self.messageHistoryTable.fillHole(hole.id, fillType: fillType, messages: messages, operationsByPeerId: &self.currentOperationsByPeerId)
+        self.currentFilledHolesByPeerId.insert(hole.id.peerId)
     }
     
-    private func peersWithIds(ids: [PeerId]) -> [PeerId : Peer] {
-        if ids.count == 0 {
-            return [:]
-        } else {
-            var peers: [PeerId : Peer] = [:]
-            
-            for id in ids {
-                if let peer: Peer = self.peerWithId(id) {
-                    peers[id] = peer
-                }
-            }
-            
-            return peers
-        }
+    private func deleteMessages(messageIds: [MessageId]) {
+        self.messageHistoryTable.removeMessages(messageIds, operationsByPeerId: &self.currentOperationsByPeerId)
     }
     
-    private func deferPeerViewUpdate(view: MutablePeerView, pipe: Pipe<PeerView>) {
-        var i = 0
-        var found = false
-        while i < self.deferredPeerViewsToUpdate.count {
-            if self.deferredPeerViewsToUpdate[i].1 === pipe {
-                self.deferredPeerViewsToUpdate[i] = (view, pipe)
-                found = true
-                break
-            }
-            i++
-        }
-        if !found {
-            self.deferredPeerViewsToUpdate.append((view, pipe))
-        }
-    }
-    
-    private func deferMessageHistoryViewUpdate(view: MutableMessageHistoryView, pipe: Pipe<MessageHistoryView>) {
-        var i = 0
-        var found = false
-        while i < self.deferredMessageHistoryViewsToUpdate.count {
-            if self.deferredMessageHistoryViewsToUpdate[i].1 === pipe {
-                self.deferredMessageHistoryViewsToUpdate[i] = (view, pipe)
-                found = true
-                break
-            }
-            i++
-        }
-        if !found {
-            self.deferredMessageHistoryViewsToUpdate.append((view, pipe))
-        }
-    }
-    
-    private func performDeferredUpdates() {
-        let deferredPeerViewsToUpdate = self.deferredPeerViewsToUpdate
-        self.deferredPeerViewsToUpdate.removeAll()
+    private func knownPeerIds(ids: Set<PeerId>) -> Set<PeerId> {
+        var result = Set<PeerId>()
         
-        for entry in deferredPeerViewsToUpdate {
-            let viewRenderedMessages = self.renderedMessages(entry.0.incompleteMessages())
-            if viewRenderedMessages.count != 0 {
-                var viewRenderedMessagesDict: [MessageId : RenderedMessage] = [:]
-                for message in viewRenderedMessages {
-                    viewRenderedMessagesDict[message.message.id] = message
-                }
-                entry.0.completeMessages(viewRenderedMessagesDict)
-            }
-            
-            entry.1.putNext(PeerView(entry.0))
-        }
-        
-        let deferredMessageHistoryViewsToUpdate = self.deferredMessageHistoryViewsToUpdate
-        self.deferredMessageHistoryViewsToUpdate.removeAll()
-        
-        for entry in deferredMessageHistoryViewsToUpdate {
-            let viewRenderedMessages = self.renderedMessages(entry.0.incompleteMessages())
-            if viewRenderedMessages.count != 0 {
-                var viewRenderedMessagesDict: [MessageId : RenderedMessage] = [:]
-                for message in viewRenderedMessages {
-                    viewRenderedMessagesDict[message.message.id] = message
-                }
-                entry.0.completeMessages(viewRenderedMessagesDict)
-            }
-            
-            entry.1.putNext(MessageHistoryView(entry.0))
-        }
-    }
-    
-    private func updatePeerEntry(peerId: PeerId, message: RenderedMessage?, replace: Bool = false) {
-        var currentIndex: PeerViewEntryIndex?
-        
-        if let value = self.valueBox.get(Table_PeerEntry.id, key: Table_PeerEntry.key(peerId)) {
-            currentIndex = Table_PeerEntry.get(peerId, value: value)
-        }
-        
-        var updatedPeerMessage: RenderedMessage?
-        
-        if let currentIndex = currentIndex {
-            if let message = message {
-                let messageIndex = MessageIndex(message.message)
-                if replace || currentIndex.messageIndex < messageIndex {
-                    let updatedIndex = PeerViewEntryIndex(peerId: peerId, messageIndex: messageIndex)
-                    updatedPeerMessage = message
-                    
-                    self.valueBox.remove(Table_PeerEntry_Sorted.id, key: Table_PeerEntry_Sorted.key(currentIndex))
-                    self.valueBox.set(Table_PeerEntry_Sorted.id, key: Table_PeerEntry_Sorted.key(updatedIndex), value: MemoryBuffer())
-                    self.valueBox.set(Table_PeerEntry.id, key: Table_PeerEntry.key(peerId), value: Table_PeerEntry.set(updatedIndex))
-                }
-            } else if replace {
-                //TODO: remove?
-            }
-        } else if let message = message {
-            updatedPeerMessage = message
-            let updatedIndex = PeerViewEntryIndex(peerId: peerId, messageIndex: MessageIndex(message.message))
-
-            self.valueBox.set(Table_PeerEntry_Sorted.id, key: Table_PeerEntry_Sorted.key(updatedIndex), value: MemoryBuffer())
-            self.valueBox.set(Table_PeerEntry.id, key: Table_PeerEntry.key(peerId), value: Table_PeerEntry.set(updatedIndex))
-        }
-        
-        if let updatedPeerMessage = updatedPeerMessage {
-            var peer: Peer?
-            for (view, pipe) in self.peerViews.copyItems() {
-                if peer == nil {
-                    for entry in view.entries {
-                        if entry.peerId == peerId {
-                            peer = entry.peer
-                            break
-                        }
-                    }
-                    
-                    if peer == nil {
-                        peer = self.peerWithId(peerId)
-                    }
-                }
-
-                let entry: PeerViewEntry
-                if let peer = peer {
-                    entry = PeerViewEntry(peer: peer, message: updatedPeerMessage)
-                } else {
-                    entry = PeerViewEntry(peerId: peerId, message: updatedPeerMessage)
-                }
-                
-                let context = view.removeEntry(nil, peerId: peerId)
-                view.addEntry(entry)
-                view.complete(context, fetchEarlier: self.fetchPeerEntriesRelative(true), fetchLater: self.fetchPeerEntriesRelative(false))
-                
-                self.deferPeerViewUpdate(view, pipe: pipe)
-            }
-        }
-    }
-    
-    private func messageIdsForAbsoluteIndexedIds(ids: [Int32]) -> [MessageId] {
-        if ids.count == 0 {
-            return []
-        }
-        
-        var result: [MessageId] = []
-        
-        let key = Table_GlobalMessageId.emptyKey()
         for id in ids {
-            if let value = self.valueBox.get(Table_GlobalMessageId.id, key: Table_GlobalMessageId.key(id, key: key)) {
-                result.append(Table_GlobalMessageId.get(id, value: value))
+            if let _ = self.peerTable.get(id) {
+                result.insert(id)
             }
         }
         
         return result
     }
     
-    private func deleteMessagesWithIds(ids: [MessageId]) {
-        
-    }
-    
-    private func updatePeers(peers: [Peer], update: (Peer, Peer) -> Peer) {
-        if peers.count == 0 {
-            return
-        }
-        
-        if peers.count == -1 {
-            
-        } else {
-            var peerIds: [PeerId] = []
-            for peer in peers {
-                peerIds.append(peer.id)
-            }
-            
-            let currentPeers = self.peersWithIds(peerIds)
-            
-            let encoder = Encoder()
-            
-            var updatedPeers: [PeerId : Peer] = [:]
-            
-            let peerKey = Table_Peer.emptyKey()
-            for updatedPeer in peers {
-                let currentPeer = currentPeers[updatedPeer.id]
-                
-                var finalPeer = updatedPeer
-                if let currentPeer = currentPeer {
-                    finalPeer = update(currentPeer, updatedPeer)
-                }
-                
-                if currentPeer == nil || !finalPeer.equalsTo(currentPeer!) {
-                    updatedPeers[finalPeer.id] = finalPeer
-                    self.cachedPeers[finalPeer.id] = finalPeer
-                    
-                    encoder.reset()
-                    encoder.encodeRootObject(finalPeer)
-                    
-                    peerKey.setInt64(0, value: updatedPeer.id.toInt64())
-                    self.valueBox.set(Table_Peer.id, key: Table_Peer.key(finalPeer.id, key: peerKey), value: encoder.memoryBuffer())
-                }
-            }
-            
-            for record in self.peerViews.copyItems() {
-                if record.0.updatePeers(updatedPeers) {
-                    deferPeerViewUpdate(record.0, pipe: record.1)
-                }
+    private func fetchEarlierHistoryEntries(peerId: PeerId, index: MessageIndex?, count: Int) -> [MutableMessageHistoryEntry] {
+        let intermediateEntries = self.messageHistoryTable.earlierEntries(peerId, index: index, count: count)
+        var entries: [MutableMessageHistoryEntry] = []
+        for entry in intermediateEntries {
+            switch entry {
+                case let .Message(message):
+                    entries.append(.IntermediateMessageEntry(message))
+                case let .Hole(index):
+                    entries.append(.HoleEntry(index))
             }
         }
+        return entries
     }
     
-    public func modify<T>(f: Modifier<State> -> T) -> Signal<T, NoError> {
+    private func fetchAroundHistoryEntries(index: MessageIndex, count: Int) -> [MutableMessageHistoryEntry] {
+        let intermediateEntries = self.messageHistoryTable.entriesAround(index, count: count)
+        var entries: [MutableMessageHistoryEntry] = []
+        for entry in intermediateEntries {
+            switch entry {
+            case let .Message(message):
+                entries.append(.IntermediateMessageEntry(message))
+            case let .Hole(index):
+                entries.append(.HoleEntry(index))
+            }
+        }
+        return entries
+    }
+    
+    private func fetchLaterHistoryEntries(peerId: PeerId, index: MessageIndex?, count: Int) -> [MutableMessageHistoryEntry] {
+        let intermediateEntries = self.messageHistoryTable.laterEntries(peerId, index: index, count: count)
+        var entries: [MutableMessageHistoryEntry] = []
+        for entry in intermediateEntries {
+            switch entry {
+            case let .Message(message):
+                entries.append(.IntermediateMessageEntry(message))
+            case let .Hole(index):
+                entries.append(.HoleEntry(index))
+            }
+        }
+        return entries
+    }
+    
+    private func fetchEarlierChatEntries(index: MessageIndex?, count: Int) -> [MutableChatListEntry] {
+        let intermediateEntries = self.chatListTable.earlierEntries(index, messageHistoryTable: self.messageHistoryTable, count: count)
+        var entries: [MutableChatListEntry] = []
+        for entry in intermediateEntries {
+            switch entry {
+                case let .Message(message):
+                    entries.append(.IntermediateMessageEntry(message))
+                case let .Nothing(index):
+                    entries.append(.Nothing(index))
+            }
+        }
+        return entries
+    }
+    
+    private func fetchLaterChatEntries(index: MessageIndex?, count: Int) -> [MutableChatListEntry] {
+        let intermediateEntries = self.chatListTable.laterEntries(index, messageHistoryTable: self.messageHistoryTable, count: count)
+        var entries: [MutableChatListEntry] = []
+        for entry in intermediateEntries {
+            switch entry {
+            case let .Message(message):
+                entries.append(.IntermediateMessageEntry(message))
+            case let .Nothing(index):
+                entries.append(.Nothing(index))
+            }
+        }
+        return entries
+    }
+    
+    private func renderIntermediateMessage(message: IntermediateMessage) -> Message {
+        return self.messageHistoryTable.renderMessage(message, peerTable: self.peerTable)
+    }
+    
+    private func fetchMessageHistoryHoleWrapper(hole: MessageHistoryHole) -> Disposable {
+        return (self.fetchMessageHistoryHoleImpl.get() |> mapToSignal { fetch in
+            return fetch(hole)
+        }).start()
+    }
+    
+    private func beforeCommit() {
+        var chatListOperations: [ChatListOperation] = []
+        self.chatListTable.replay(self.currentOperationsByPeerId, messageHistoryTable: self.messageHistoryTable, operations: &chatListOperations)
+        
+        self.viewTracker.updateViews(currentOperationsByPeerId: self.currentOperationsByPeerId, peerIdsWithFilledHoles: self.currentFilledHolesByPeerId, chatListOperations: chatListOperations, currentUpdatedPeers: self.currentUpdatedPeers)
+        
+        self.currentOperationsByPeerId.removeAll()
+        self.currentFilledHolesByPeerId.removeAll()
+        self.currentUpdatedPeers.removeAll()
+    }
+    
+    private func messageIdsForGlobalIds(ids: [Int32]) -> [MessageId] {
+        var result: [MessageId] = []
+        for globalId in ids {
+            if let id = self.globalMessageIdsTable.get(globalId) {
+                result.append(id)
+            }
+        }
+        return result
+    }
+    
+    private func updatePeers(peers: [Peer], update: (Peer, Peer) -> Peer?) {
+        for peer in peers {
+            if let currentPeer = self.peerTable.get(peer.id) {
+                if let updatedPeer = update(currentPeer, peer) {
+                    self.peerTable.set(updatedPeer)
+                    self.currentUpdatedPeers[updatedPeer.id] = updatedPeer
+                }
+            } else {
+                self.peerTable.set(peer)
+            }
+        }
+    }
+    
+    public func modify<T>(f: Modifier -> T) -> Signal<T, NoError> {
         return Signal { subscriber in
             self.queue.dispatch {
-                //#if DEBUG
-                    //let startTime = CFAbsoluteTimeGetCurrent()
-                //#endif
-                
                 //self.valueBox.beginStats()
                 self.valueBox.begin()
                 let result = f(Modifier(postbox: self))
-                //print("(Postbox modify took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms)")
-                //#if DEBUG
-                //startTime = CFAbsoluteTimeGetCurrent()
-                //#endif
+                self.beforeCommit()
                 self.valueBox.commit()
-                
-                //#if DEBUG
-                    //print("(Postbox commit took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms)")
-                //self.valueBox.endStats()
-                //#endif
-                
-                self.performDeferredUpdates()
                 
                 subscriber.putNext(result)
                 subscriber.putCompletion()
@@ -442,111 +337,43 @@ public final class Postbox<State: PostboxState> {
         }
     }
     
-    private func fetchPeerEntryIndicesRelative(earlier: Bool)(index: PeerViewEntryIndex?, count: Int) -> [PeerViewEntryIndex] {
-        var entries: [PeerViewEntryIndex] = []
-        
-        let lowerBound = Table_PeerEntry_Sorted.lowerBoundKey()
-        let upperBound = Table_PeerEntry_Sorted.upperBoundKey()
-        
-        let bound: ValueBoxKey
-        if let index = index {
-            bound = Table_PeerEntry_Sorted.key(index)
-        } else if earlier {
-            bound = upperBound
-        } else {
-            bound = lowerBound
-        }
-        
-        let keys: ValueBoxKey -> Bool = { key in
-            entries.append(Table_PeerEntry_Sorted.get(key))
-            
-            return true
-        }
-        
-        if earlier {
-            self.valueBox.range(Table_PeerEntry_Sorted.id, start: bound, end: lowerBound, keys: keys, limit: count)
-        } else {
-            self.valueBox.range(Table_PeerEntry_Sorted.id, start: bound, end: upperBound, keys: keys, limit: count)
-        }
-        
-        return entries
+    public func tailMessageHistoryViewForPeerId(peerId: PeerId, count: Int) -> Signal<(MessageHistoryView, ViewUpdateType), NoError> {
+        return self.aroundMessageHistoryViewForPeerId(peerId, index: MessageIndex.upperBound(peerId), count: count)
     }
     
-    private func fetchPeerEntriesRelative(earlier: Bool)(index: PeerViewEntryIndex?, count: Int) -> [PeerViewEntry] {
-        var entries: [PeerViewEntry] = []
-        var peers: [PeerId : Peer] = [:]
-        for entryIndex in self.fetchPeerEntryIndicesRelative(earlier)(index: index, count: count) {
-            var peer: Peer?
-            
-            if let cachedPeer = peers[entryIndex.peerId] {
-                peer = cachedPeer
-            } else {
-                if let fetchedPeer: Peer = self.peerWithId(entryIndex.peerId) {
-                    peer = fetchedPeer
-                    peers[fetchedPeer.id] = fetchedPeer
-                }
-            }
-            
-            var message: Message?
-            if let value = self.valueBox.get(Table_Message.id, key: Table_Message.key(entryIndex.messageIndex)) {
-                message = Table_Message.get(value)
-            }
-            
-            if let message = message, renderedMessage = self.renderedMessages([message]).first {
-                let entry: PeerViewEntry
-                if let peer = peer {
-                    entry = PeerViewEntry(peer: peer, message: renderedMessage)
-                } else {
-                    entry = PeerViewEntry(peerId: entryIndex.peerId, message: renderedMessage)
-                }
-                
-                entries.append(entry)
-            } else {
-                let entry: PeerViewEntry
-                if let peer = peer {
-                    entry = PeerViewEntry(peer: peer, peerId: entryIndex.peerId, messageIndex: entryIndex.messageIndex)
-                } else {
-                    entry = PeerViewEntry(peer: nil, peerId: entryIndex.peerId, messageIndex: entryIndex.messageIndex)
-                }
-                
-                entries.append(entry)
-            }
-        }
-        
-        //entries.sortInPlace()
-        
-        return entries.sort({ PeerViewEntryIndex($0) < PeerViewEntryIndex($1) })
-    }
-    
-    private func renderedMessages(messages: [Message]) -> [RenderedMessage] {
-        return []
-    }
-    
-    public func tailMessageHistoryViewForPeerId(peerId: PeerId, count: Int) -> Signal<MessageHistoryView, NoError> {
+    public func aroundMessageHistoryViewForPeerId(peerId: PeerId, index: MessageIndex, count: Int) -> Signal<(MessageHistoryView, ViewUpdateType), NoError> {
         return Signal { subscriber in
-            let startTime = CFAbsoluteTimeGetCurrent()
-            
             let disposable = MetaDisposable()
             
             self.queue.dispatch {
+                let list = self.fetchAroundHistoryEntries(index, count: count + 2)
                 
-                print("tailMessageHistoryViewForPeerId fetch: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+                var entries: [MutableMessageHistoryEntry] = []
+                var earlier: MutableMessageHistoryEntry?
+                var later: MutableMessageHistoryEntry?
                 
-                let mutableView = MutableMessageHistoryView(count: count, earlierMessage: nil, messages: [], laterMessage: nil)
-                let record = (mutableView, Pipe<MessageHistoryView>())
-                
-                let index: Bag<(MutableMessageHistoryView, Pipe<MessageHistoryView>)>.Index
-                if let bag = self.peerMessageHistoryViews[peerId] {
-                    index = bag.add(record)
+                if list.count >= count + 2 {
+                    earlier = list[0]
+                    for i in 1 ..< count + 1 {
+                        entries.append(list[i])
+                    }
+                    later = list[count + 1]
+                } else if list.count >= count + 1 {
+                    for i in 0 ..< count {
+                        entries.append(list[i])
+                    }
+                    later = list[count]
                 } else {
-                    let bag = Bag<(MutableMessageHistoryView, Pipe<MessageHistoryView>)>()
-                    index = bag.add(record)
-                    self.peerMessageHistoryViews[peerId] = bag
+                    entries = list
                 }
                 
-                subscriber.putNext(MessageHistoryView(mutableView))
+                let mutableView = MutableMessageHistoryView(earlier: earlier, entries: entries, later: later, count: count)
+                mutableView.render(self.renderIntermediateMessage)
+                subscriber.putNext((MessageHistoryView(mutableView), .Generic))
                 
-                let pipeDisposable = record.1.signal().start(next: { next in
+                let (index, signal) = self.viewTracker.addMessageHistoryView(peerId, view: mutableView)
+                    
+                let pipeDisposable = signal.start(next: { next in
                     subscriber.putNext(next)
                 })
                 
@@ -555,9 +382,7 @@ public final class Postbox<State: PostboxState> {
                     
                     if let strongSelf = self {
                         strongSelf.queue.dispatch {
-                            if let bag = strongSelf.peerMessageHistoryViews[peerId] {
-                                bag.remove(index)
-                            }
+                            strongSelf.viewTracker.removeMessageHistoryView(peerId, index: index)
                         }
                     }
                     return
@@ -568,88 +393,34 @@ public final class Postbox<State: PostboxState> {
         }
     }
     
-    public func aroundMessageHistoryViewForPeerId(peerId: PeerId, index: MessageIndex, count: Int) -> Signal<MessageHistoryView, NoError> {
+    public func tailChatListView(count: Int) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
             self.queue.dispatch {
-                let mutableView: MutableMessageHistoryView
+                let tail = self.fetchEarlierChatEntries(nil, count: count + 1).reverse()
+                var entries: [MutableChatListEntry] = []
+                var earlier: MutableChatListEntry?
                 
-                let startTime = CFAbsoluteTimeGetCurrent()
-                
-                mutableView = MutableMessageHistoryView(count: count, earlierMessage: nil, messages: [], laterMessage: nil)
-                
-                print("aroundMessageViewForPeerId fetch: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
-                
-                let record = (mutableView, Pipe<MessageHistoryView>())
-                
-                let index: Bag<(MutableMessageHistoryView, Pipe<MessageHistoryView>)>.Index
-                if let bag = self.peerMessageHistoryViews[peerId] {
-                    index = bag.add(record)
-                } else {
-                    let bag = Bag<(MutableMessageHistoryView, Pipe<MessageHistoryView>)>()
-                    index = bag.add(record)
-                    self.peerMessageHistoryViews[peerId] = bag
-                }
-                
-                subscriber.putNext(MessageHistoryView(mutableView))
-                
-                let pipeDisposable = record.1.signal().start(next: { next in
-                    subscriber.putNext(next)
-                })
-                
-                disposable.set(ActionDisposable { [weak self] in
-                    pipeDisposable.dispose()
-                    
-                    if let strongSelf = self {
-                        strongSelf.queue.dispatch {
-                            if let bag = strongSelf.peerMessageHistoryViews[peerId] {
-                                bag.remove(index)
-                            }
-                        }
+                var i = 0
+                for entry in tail {
+                    if i < count {
+                        entries.append(entry)
+                    } else if i < count + 1 {
+                        earlier = entry
+                    } else {
+                        break
                     }
-                    return
-                })
-            }
-            
-            return disposable
-        }
-    }
-    
-    public func tailPeerView(count: Int) -> Signal<PeerView, NoError> {
-        return Signal { subscriber in
-            let disposable = MetaDisposable()
-            
-            self.queue.dispatch {
-                let startTime = CFAbsoluteTimeGetCurrent()
-                
-                let tail = self.fetchPeerEntriesRelative(true)(index: nil, count: count + 1)
-                
-                print("(Postbox fetchPeerEntriesRelative took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms)")
-                
-                var entries: [PeerViewEntry] = []
-                var i = tail.count - 1
-                while i >= 0 && i >= tail.count - count {
-                    entries.insert(tail[i], atIndex: 0)
-                    i--
+                    i++
                 }
                 
-                var earlier: PeerViewEntry?
+                let mutableView = MutableChatListView(earlier: earlier, entries: entries, later: nil, count: count)
+                mutableView.render(self.renderIntermediateMessage)
+                subscriber.putNext((ChatListView(mutableView), .Generic))
                 
-                i = tail.count - count - 1
-                while i >= 0 {
-                    earlier = tail[i]
-                    break
-                }
+                let (index, signal) = self.viewTracker.addChatListView(mutableView)
                 
-                let mutableView = MutablePeerView(count: count, earlier: earlier, entries: entries, later: nil)
-                let record = (mutableView, Pipe<PeerView>())
-                
-                let index = self.peerViews.add(record)
-                
-                subscriber.putNext(PeerView(mutableView))
-                
-                let pipeDisposable = record.1.signal().start(next: { next in
+                let pipeDisposable = signal.start(next: { next in
                     subscriber.putNext(next)
                 })
                 
@@ -658,7 +429,7 @@ public final class Postbox<State: PostboxState> {
                     
                     if let strongSelf = self {
                         strongSelf.queue.dispatch {
-                            strongSelf.peerViews.remove(index)
+                            strongSelf.viewTracker.removeChatListView(index)
                         }
                     }
                     return
@@ -673,7 +444,7 @@ public final class Postbox<State: PostboxState> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.queue.dispatch {
-                if let peer: Peer = self.peerWithId(id) {
+                if let peer: Peer = self.peerTable.get(id) {
                     subscriber.putNext(peer)
                 }
             }

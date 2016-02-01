@@ -97,7 +97,7 @@ func ==(lhs: TestKey, rhs: TestKey) -> Bool {
     return lhs.value == rhs.value
 }
 
-class EmptyState: PostboxState {
+class EmptyState: Coding {
     required init(decoder: Decoder) {
     }
     

@@ -95,5 +95,5 @@ public func <(lhs: PeerId, rhs: PeerId) -> Bool {
 public protocol Peer: Coding {
     var id: PeerId { get }
     
-    func equalsTo(other: Peer) -> Bool
+    func isEqual(other: Peer) -> Bool
 }
