@@ -15,12 +15,14 @@ env:
     - SCHEME="HockeySDK"             DESTINATION="OS=9.1,name=iPad Pro"                 RUN_TESTS="YES"
     - SCHEME="HockeySDK"             DESTINATION="OS=9.2,name=iPhone 6s"                RUN_TESTS="YES"
     - SCHEME="HockeySDK Framework"   DESTINATION="platform=iOS Simulator,name=iPhone 6" RUN_TESTS="YES"
-    - SCHEME="HockeySDK Distribution"                                                   RUN_TESTS="NO"
+    - SCHEME="HockeySDK Distribution"                                                   RUN_TESTS="NO" LINT="YES"
 
 before_install:
   - xcrun simctl list
   - gem install xcpretty --no-rdoc --no-ri --no-document --quiet
   - gem install xcpretty-travis-formatter --no-rdoc --no-ri --no-document --quiet
+  - gem install cocoapods --no-rdoc --no-ri --no-document --quiet
+  - brew install carthage
 
 script:
   - set -o pipefail
@@ -38,6 +40,11 @@ script:
 
   - echo $COMMAND
   - eval $COMMAND && rm xcodebuild.log
+  - if [ $LINT == "YES" ]; then
+      cp -R Products/HockeySDK-iOS/ HockeySDK-iOS;
+      pod lib lint;
+      carthage build --no-skip-current;
+    fi
 
 # Use better failure diagnostics, copied from https://github.com/0xced/XCDYouTubeKit
 after_failure:
