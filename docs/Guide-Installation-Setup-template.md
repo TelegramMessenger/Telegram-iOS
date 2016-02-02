@@ -9,16 +9,16 @@ This document contains the following sections:
 1. [Requirements](#requirements)
 2. [Setup](#setup)
 3. [Advanced Setup](#advancedsetup) 
-   1. [Linking System Frameworks manually](#linkmanually)   
-   2. [Setup with CocoaPods](#cocoapods)
-   3. [iOS Extensions](#extensions)
-   4. [WatchKit 1 Extensions](#watchkit)
-   5. [Crash Reporting](#crashreporting)
-   6. [Metrics](#metrics)
-   7. [Feedback](#feedback)
-   8. [Store Updates](#storeupdates)
-   9. [In-App-Updates (Beta & Enterprise only)](#betaupdates)
-   10. [Debug information](#debug)
+    1. [Linking System Frameworks manually](#linkmanually)   
+    2. [Setup with CocoaPods](#cocoapods)
+    3. [iOS Extensions](#extensions)
+    4. [WatchKit 1 Extensions](#watchkit)
+    5. [Crash Reporting](#crashreporting)
+    6. [User Metrics](#user-metrics)
+    7. [Feedback](#feedback)
+    8. [Store Updates](#storeupdates)
+    9. [In-App-Updates (Beta & Enterprise only)](#betaupdates)
+    10. [Debug information](#debug)
 4. [Documentation](#documentation)
 5. [Troubleshooting](#troubleshooting)
 6. [Contributing](#contributing)
@@ -371,8 +371,8 @@ and set the delegate:
 ```
 
 
-<a name="metrics"></a>
-### 3.6 Metrics
+<a name="user-metrics"></a>
+### 3.6 User Metrics
 
 HockeyApp automatically provides you with nice intelligible and informative metrics about how your app is used and by whom.
 

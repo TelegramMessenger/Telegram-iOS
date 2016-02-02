@@ -12,7 +12,7 @@ The following features are currently supported:
 
 1. **Collect crash reports:** If your app crashes, a crash log with the same format as from the Apple Crash Reporter is written to the device's storage. If the user starts the app again, he is asked to submit the crash report to HockeyApp. This works for both beta and letive apps, i.e. those submitted to the App Store!
 
-2. **Metrics** Get nice statistics about how many users you have and how they are using your app.
+2. **User Metrics** Get nice statistics about how many users you have and how they are using your app.
 
 3. **Update Ad-Hoc / Enterprise apps:** The app will check with HockeyApp if a new version for your Ad-Hoc or Enterprise build is available. If yes, it will show an alert view to the user and let him see the release notes, the version history and start the installation process right away. 
 
@@ -27,16 +27,16 @@ This document contains the following sections:
 1. [Requirements](#requirements)
 2. [Setup](#setup)
 3. [Advanced Setup](#advancedsetup) 
-   1. [Linking System Frameworks manually](#linkmanually)   
-   2. [Setup with CocoaPods](#cocoapods)
-   3. [iOS Extensions](#extensions)
-   4. [WatchKit 1 Extensions](#watchkit)
-   5. [Crash Reporting](#crashreporting)
-   6. [Metrics](#metrics)
-   7. [Feedback](#feedback)
-   8. [Store Updates](#storeupdates)
-   9. [In-App-Updates (Beta & Enterprise only)](#betaupdates)
-   10. [Debug information](#debug)
+    1. [Linking System Frameworks manually](#linkmanually)   
+    2. [Setup with CocoaPods](#cocoapods)
+    3. [iOS Extensions](#extensions)
+    4. [WatchKit 1 Extensions](#watchkit)
+    5. [Crash Reporting](#crashreporting)
+    6. [User Metrics](#user-metrics)
+    7. [Feedback](#feedback)
+    8. [Store Updates](#storeupdates)
+    9. [In-App-Updates (Beta & Enterprise only)](#betaupdates)
+    10. [Debug information](#debug)
 4. [Documentation](#documentation)
 5. [Troubleshooting](#troubleshooting)
 6. [Contributing](#contributing)
@@ -389,8 +389,8 @@ and set the delegate:
 ```
 
 
-<a name="metrics"></a>
-### 3.6 Metrics
+<a name="user-metrics"></a>
+### 3.6 User Metrics
 
 HockeyApp automatically provides you with nice intelligible and informative metrics about how your app is used and by whom.
 
