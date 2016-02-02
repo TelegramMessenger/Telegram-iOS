@@ -193,8 +193,19 @@ Alternatively you can integrate the SDK by source if you want to do any modifica
 pod "HockeySDK-Source"
 ```
 
+<a id="carthage"></a>
+### 3.3 Carthage
+
+[Carthage](https://github.com/Carthage/Carthage) is an alternative way to add frameworks to your app. For general information about how to use Carthage, please follow their [documentation](https://github.com/Carthage/Carthage#adding-frameworks-to-an-application).
+
+To add HockeySDK to your project, simply put this line into your `Cartfile`:
+
+`github "bitstadium/HockeySDK-iOS"`
+
+and then follow the steps described in the [Carthage documentation](https://github.com/Carthage/Carthage#if-youre-building-for-ios-tvos-or-watchos).
+
 <a id="extensions"></a>
-### 3.3 iOS Extensions
+### 3.4 iOS Extensions
 
 The following points need to be considered to use the HockeySDK SDK with iOS Extensions:
 
@@ -223,7 +234,7 @@ The following points need to be considered to use the HockeySDK SDK with iOS Ext
 3. The binary distribution provides a special framework build in the `HockeySDKCrashOnly` or `HockeySDKCrashOnlyExtension` folder of the distribution zip file, which only contains crash reporting functionality (also automatic sending crash reports only).
 
 <a id="watchkit"></a>
-### 3.4 WatchKit 1 Extensions
+### 3.5 WatchKit 1 Extensions
 
 The following points need to be considered to use HockeySDK with WatchKit 1 Extensions:
 
@@ -288,11 +299,11 @@ The following points need to be considered to use HockeySDK with WatchKit 1 Exte
 2. The binary distribution provides a special framework build in the `HockeySDKCrashOnly` or `HockeySDKCrashOnlyExtension` folder of the distribution zip file, which only contains crash reporting functionality (also automatic sending crash reports only).
 
 <a name="crashreporting"></a>
-### 3.5 Crash Reporting
+### 3.6 Crash Reporting
 
 The following options only show some of possibilities to interact and fine-tune the crash reporting feature. For more please check the full documentation of the `BITCrashManager` class in our [documentation](#documentation).
 
-#### 3.5.1 Disable Crash Reporting
+#### 3.6.1 Disable Crash Reporting
 The HockeySDK enables crash reporting **per default**. Crashes will be immediately sent to the server the next time the app is launched.
 
 To provide you with the best crash reporting, we are using [PLCrashReporter]("https://github.com/plausiblelabs/plcrashreporter") in [Version 1.2 / Commit 356901d7f3ca3d46fbc8640f469304e2b755e461]("https://github.com/plausiblelabs/plcrashreporter/commit/356901d7f3ca3d46fbc8640f469304e2b755e461").
@@ -307,7 +318,7 @@ This feature can be disabled as follows:
 [[BITHockeyManager sharedHockeyManager] startManager];
 ```
 
-#### 3.5.2 Autosend crash reports
+#### 3.6.2 Autosend crash reports
 
 Crashes are send the next time the app starts. If `crashManagerStatus` is set to `BITCrashManagerStatusAutoSend`, crashes will be send without any user interaction, otherwise an alert will appear allowing the users to decide whether they want to send the report or not.
 
@@ -323,7 +334,7 @@ The SDK is not sending the reports right when the crash happens deliberately, be
 
 Sending the reports on startup is done asynchronously (non-blocking). This is the only safe way to ensure that the app won't be possibly killed by the iOS watchdog process, because startup could take too long and the app could not react to any user input when network conditions are bad or connectivity might be very slow.
 
-#### 3.5.3 Mach Exception Handling
+#### 3.6.3 Mach Exception Handling
 
 By default the SDK is using the safe and proven in-process BSD Signals for catching crashes. This option provides an option to enable catching fatal signals via a Mach exception server instead.
 
@@ -339,7 +350,7 @@ We strongly advice _NOT_ to enable Mach exception handler in release versions of
 [[BITHockeyManager sharedHockeyManager] startManager];
 ```
 
-#### 3.5.4 Attach additional data
+#### 3.6.4 Attach additional data
 
 The `BITHockeyManagerDelegate` protocol provides methods to add additional data to a crash report:
 
@@ -495,6 +506,7 @@ We're looking forward to your contributions via pull requests.
 * Get the latest Xcode from the Mac App Store
 * [AppleDoc](https://github.com/tomaz/appledoc) 
 * [CocoaPods](https://cocoapods.org/)
+* [Carthage](https://github.com/Carthage/Carthage)
 
 <a id="contributorlicense"></a>
 ## 7. Contributor License
