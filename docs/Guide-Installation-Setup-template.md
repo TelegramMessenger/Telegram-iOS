@@ -9,15 +9,15 @@ This document contains the following sections:
 1. [Requirements](#requirements)
 2. [Setup](#setup)
 3. [Advanced Setup](#advancedsetup) 
-   1. [Linking System Frameworks manually](#linkmanually)   
-   2. [Setup with CocoaPods](#cocoapods)
-   3. [iOS Extensions](#extensions)
-   4. [WatchKit 1 Extensions](#watchkit)
-   5. [Crash Reporting](#crashreporting)
-   6. [Feedback](#feedback)
-   7. [Store Updates](#storeupdates)
-   8. [In-App-Updates (Beta & Enterprise only)](#betaupdates)
-   9. [Debug information](#debug)
+  1. [Linking System Frameworks manually](#linkmanually)   
+  2. [Setup with CocoaPods](#cocoapods)
+  3. [iOS Extensions](#extensions)
+  4. [WatchKit 1 Extensions](#watchkit)
+  5. [Crash Reporting](#crashreporting)
+  6. [Feedback](#feedback)
+  7. [Store Updates](#storeupdates)
+  8. [In-App-Updates (Beta & Enterprise only)](#betaupdates)
+  9. [Debug information](#debug)
 4. [Documentation](#documentation)
 5. [Troubleshooting](#troubleshooting)
 6. [Contributing](#contributing)
@@ -54,11 +54,11 @@ From our experience, 3rd-party libraries usually reside inside a subdirectory (l
 1. We recommend to use Xcode's group-feature to create a group for 3rd-party-libraries similar to the structure of our files on disk. For example,  similar to the file structure in 2.3 above, our projects have a group called `Vendor`.
 2. Make sure the `Project Navigator` is visible (⌘+1)
 3. The SDK comes in three flavours:
-	1. Full featured `HockeySDK.embeddedframework`
-	2. Crash reporting only `HockeySDK.framework` in the subfolder `HockeySDKCrashOnly`
-	3. Crash reporting only for extensions `HockeySDK.framework` in the subfolder `HockeySDKCrashOnlyExtension` (which is required to be used for extensions when build into native frameworks).
-	
-	Our examples will use the full featured one.
+  1. Full featured `HockeySDK.embeddedframework`
+  2. Crash reporting only `HockeySDK.framework` in the subfolder `HockeySDKCrashOnly`
+  3. Crash reporting only for extensions `HockeySDK.framework` in the subfolder `HockeySDKCrashOnlyExtension` (which is required to be used for extensions when build into native frameworks).
+
+  Our examples will use the full featured one.
 4. Drag & drop `HockeySDK.embeddedframework` from your window in the `Finder` into your project in Xcode and move it to the desired location in the `Project Navigator` (e.g. into the group called `Vendor`)
 5. A popup will appear. Select `Create groups for any added folders` and set the checkmark for your target. Then click `Finish`.
 
@@ -70,42 +70,42 @@ From our experience, 3rd-party libraries usually reside inside a subdirectory (l
 1. Open your `AppDelegate.m` file.
 2. Add the following line at the top of the file below your own `import` statements:
 
-    ```objectivec
-    @import HockeySDK;
-    ```
+  ```objectivec
+  @import HockeySDK;
+  ```
 
 3. Search for the method `application:didFinishLaunchingWithOptions:`
 4. Add the following lines to setup and start the Application Insights SDK:
 
-    ```objectivec
-    [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
-    // Do some additional configuration if needed here
-    [[BITHockeyManager sharedHockeyManager] startManager];
-    [[BITHockeyManager sharedHockeyManager].authenticator authenticateInstallation]; // This line is obsolete in the crash only builds
-    ```
+  ```objectivec
+  [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
+  // Do some additional configuration if needed here
+  [[BITHockeyManager sharedHockeyManager] startManager];
+  [[BITHockeyManager sharedHockeyManager].authenticator authenticateInstallation]; // This line is obsolete in the crash only builds
+  ```
 
 **Swift**
 
 1. Open your `AppDelegate.swift` file.
 2. Add the following line at the top of the file below your own import statements:
-    
-    ```swift
-    import HockeySDK
-    ```
+
+  ```swift
+  import HockeySDK
+  ```
 
 3. Search for the method 
-    
-    ```swift
-    application(application: UIApplication, didFinishLaunchingWithOptions launchOptions:[NSObject: AnyObject]?) -> Bool
-    ```
+
+  ```swift
+  application(application: UIApplication, didFinishLaunchingWithOptions launchOptions:[NSObject: AnyObject]?) -> Bool
+  ```
 
 4. Add the following lines to setup and start the Application Insights SDK:
-    
-    ```swift
-    BITHockeyManager.sharedHockeyManager().configureWithIdentifier("APP_IDENTIFIER");
-    BITHockeyManager.sharedHockeyManager().startManager();
-    BITHockeyManager.sharedHockeyManager().authenticator.authenticateInstallation(); // This line is obsolete in the crash only builds
-    ```
+
+  ```swift
+  BITHockeyManager.sharedHockeyManager().configureWithIdentifier("APP_IDENTIFIER");
+  BITHockeyManager.sharedHockeyManager().startManager();
+  BITHockeyManager.sharedHockeyManager().authenticator.authenticateInstallation(); // This line is obsolete in the crash only builds
+  ```
 
 *Note:* The SDK is optimized to defer everything possible to a later time while making sure e.g. crashes on startup can also be caught and each module executes other code with a delay some seconds. This ensures that `applicationDidFinishLaunching` will process as fast as possible and the SDK will not block the startup sequence resulting in a possible kill by the watchdog process.
 
@@ -142,7 +142,7 @@ If you are working with an older project which doesn't support clang modules yet
     + `SystemConfiguration`
     + `UIKit`
     + `libc++`
-  2. Crash reporting only for extensions:
+  3. Crash reporting only for extensions:
     + `Foundation`
     + `Security`
     + `SystemConfiguration`
@@ -186,7 +186,6 @@ Alternatively you can integrate the SDK by source if you want to do any modifica
 pod "HockeySDK-Source"
 ```
 
-
 <a id="extensions"></a>
 ### 3.3 iOS Extensions
 
@@ -195,27 +194,26 @@ The following points need to be considered to use the HockeySDK SDK with iOS Ext
 1. Each extension is required to use the same values for version (`CFBundleShortVersionString`) and build number (`CFBundleVersion`) as the main app uses. (This is required only if you are using the same `APP_IDENTIFIER` for your app and extensions).
 2. You need to make sure the SDK setup code is only invoked **once**. Since there is no `applicationDidFinishLaunching:` equivalent and `viewDidLoad` can run multiple times, you need to use a setup like the following example:
 
-    ```objectivec
-    static BOOL didSetupHockeySDK = NO;
+  ```objectivec
+  static BOOL didSetupHockeySDK = NO;
 
-    @interface TodayViewController () <NCWidgetProviding>
+  @interface TodayViewController () <NCWidgetProviding>
 
-    @end
+  @end
 
-    @implementation TodayViewController
+  @implementation TodayViewController
 
-    * (void)viewDidLoad {
-      [super viewDidLoad];
-      if (!didSetupHockeySDK) {
-        [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
-        [[BITHockeyManager sharedHockeyManager] startManager];
-        didSetupHockeySDK = YES;
-      }
+  + (void)viewDidLoad {
+    [super viewDidLoad];
+    if (!didSetupHockeySDK) {
+      [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
+      [[BITHockeyManager sharedHockeyManager] startManager];
+      didSetupHockeySDK = YES;
     }
-    ```
+  }
+  ```
 
 3. The binary distribution provides a special framework build in the `HockeySDKCrashOnly` or `HockeySDKCrashOnlyExtension` folder of the distribution zip file, which only contains crash reporting functionality (also automatic sending crash reports only).
-
 
 <a id="watchkit"></a>
 ### 3.4 WatchKit 1 Extensions
@@ -224,61 +222,61 @@ The following points need to be considered to use HockeySDK with WatchKit 1 Exte
 
 1. WatchKit extensions don't use regular `UIViewControllers` but rather `WKInterfaceController` subclasses. These have a different lifecycle than you might be used to.
 
-   To make sure that the HockeySDK is only instantiated once in the WatchKit extension's lifecycle we recommend using a helper class similar to this:
+  To make sure that the HockeySDK is only instantiated once in the WatchKit extension's lifecycle we recommend using a helper class similar to this:
 
-    ```objectivec
-    @import Foundation;
-    
-    @interface BITWatchSDKSetup : NSObject
-    
-    - (void)setupHockeySDKIfNeeded;
-    
-    @end
-    ```
-        
-    ```objectivec
-    #import "BITWatchSDKSetup.h"
-    @import HockeySDK
-    
-    static BOOL hockeySDKIsSetup = NO;
-    
-    @implementation BITWatchSDKSetup
-    
-    - (void)setupHockeySDKIfNeeded {
-      if (!hockeySDKIsSetup) {
-        [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
-        [[BITHockeyManager sharedHockeyManager] startManager];
-        hockeySDKIsSetup = YES;
-      }
-    }
-    
-    @end
-    ```
+  ```objectivec
+  @import Foundation;
+  
+  @interface BITWatchSDKSetup : NSObject
+  
+  * (void)setupHockeySDKIfNeeded;
+  
+  @end
+  ```
 
-   Then, in each of your WKInterfaceControllers where you want to use the Application Insights SDK, you should do this:
+  ```objectivec
+  #import "BITWatchSDKSetup.h"
+  @import HockeySDK
+  
+  static BOOL hockeySDKIsSetup = NO;
+  
+  @implementation BITWatchSDKSetup
+  
+  * (void)setupHockeySDKIfNeeded {
+    if (!hockeySDKIsSetup) {
+      [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
+      [[BITHockeyManager sharedHockeyManager] startManager];
+      hockeySDKIsSetup = YES;
+    }
+  }
+  
+  @end
+  ```
 
-    ```objectivec
-    #import "InterfaceController.h"
-    @import HockeySDK
-    #import "BITWatchSDKSetup.h"
-    
-    @implementation InterfaceController
-    
-    * (void)awakeWithContext:(id)context {
-      [super awakeWithContext:context];
-      [BITWatchSDKSetup setupHockeySDKIfNeeded];
-    }
-    
-    * (void)willActivate {
-      [super willActivate];
-    }
-    
-    * (void)didDeactivate {
-      [super didDeactivate];
-    }
-    
-    @end
-    ```
+  Then, in each of your WKInterfaceControllers where you want to use the HockeySDK, you should do this:
+
+  ```objectivec
+  #import "InterfaceController.h"
+  @import HockeySDK
+  #import "BITWatchSDKSetup.h"
+  
+  @implementation InterfaceController
+  
+  + (void)awakeWithContext:(id)context {
+    [super awakeWithContext:context];
+    [BITWatchSDKSetup setupHockeySDKIfNeeded];
+  }
+  
+  + (void)willActivate {
+    [super willActivate];
+  }
+  
+  + (void)didDeactivate {
+    [super didDeactivate];
+  }
+  
+  @end
+  ```
 
 2. The binary distribution provides a special framework build in the `HockeySDKCrashOnly` or `HockeySDKCrashOnlyExtension` folder of the distribution zip file, which only contains crash reporting functionality (also automatic sending crash reports only).
 
@@ -346,7 +344,7 @@ The `BITCrashManagerDelegate` protocol (which is automatically included in `BITH
 
 1. Text attachments: `-(NSString *)applicationLogForCrashManager:(BITCrashManager *)crashManager`
 
-   Check the following tutorial for an example on how to add CocoaLumberjack log data: [How to Add Application Specific Log Data on iOS or OS X](http://support.hockeyapp.net/kb/client-integration-ios-mac-os-x/how-to-add-application-specific-log-data-on-ios-or-os-x)
+  Check the following tutorial for an example on how to add CocoaLumberjack log data: [How to Add Application Specific Log Data on iOS or OS X](http://support.hockeyapp.net/kb/client-integration-ios-mac-os-x/how-to-add-application-specific-log-data-on-ios-or-os-x)
 2. Binary attachments: `-(BITHockeyAttachment *)attachmentForCrashManager:(BITCrashManager *)crashManager`
 
 Make sure to implement the protocol
@@ -444,22 +442,22 @@ Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/
 <a id="troubleshooting"></a>
 ## 5.Troubleshooting
 
-1. Linker warnings
+### Linker warnings
 
-    Make sure that all mentioned frameworks and libraries are linked
+  Make sure that all mentioned frameworks and libraries are linked
 
-2. iTunes Connect rejection
+### iTunes Connect rejection
 
-    Make sure none of the following files are copied into your app bundle, check under app target, `Build Phases`, `Copy Bundle Resources` or in the `.app` bundle after building:
+  Make sure none of the following files are copied into your app bundle, check under app target, `Build Phases`, `Copy Bundle Resources` or in the `.app` bundle after building:
 
-        - `HockeySDK.framework` (except if you build a dynamic framework version of the SDK yourself!)
-        - `de.bitstadium.HockeySDK-iOS-3.8.5.docset`
+  - `HockeySDK.framework` (except if you build a dynamic framework version of the SDK yourself!)
+  - `de.bitstadium.HockeySDK-iOS-3.8.5.docset`
 
-3. Feature are not working as expected
+### Feature are not working as expected
 
-    Enable debug output to the console to see additional information from the SDK initializing the modules,  sending and receiving network requests and more by adding the following code before calling `startManager`:
+  Enable debug output to the console to see additional information from the SDK initializing the modules,  sending and receiving network requests and more by adding the following code before calling `startManager`:
 
-        [[BITHockeyManager sharedHockeyManager] setDebugLogEnabled: YES];
+  `[[BITHockeyManager sharedHockeyManager] setDebugLogEnabled: YES];`
 
 <a id="contributing"></a>
 ## 6. Contributing
