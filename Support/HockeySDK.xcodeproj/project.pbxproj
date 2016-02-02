@@ -376,6 +376,14 @@
 		80807B8E1C46BF2F00F4C44F /* OCMockitoIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80807B8B1C46BF2F00F4C44F /* OCMockitoIOS.framework */; };
 		80807B8F1C46BF2F00F4C44F /* OCMockitoIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80807B8B1C46BF2F00F4C44F /* OCMockitoIOS.framework */; };
 		80807B901C46C01E00F4C44F /* BITUser.m in Sources */ = {isa = PBXBuildFile; fileRef = 8034E6681BA31D7C00D83A30 /* BITUser.m */; };
+		808441641C20617200644A40 /* libOCMock.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 808441611C20617200644A40 /* libOCMock.a */; };
+		808441651C20617300644A40 /* libOCMock.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 808441611C20617200644A40 /* libOCMock.a */; };
+		808441661C20617300644A40 /* OCHamcrestIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 808441621C20617200644A40 /* OCHamcrestIOS.framework */; };
+		808441671C20617300644A40 /* OCHamcrestIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 808441621C20617200644A40 /* OCHamcrestIOS.framework */; };
+		808441681C20617300644A40 /* OCMockitoIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 808441631C20617200644A40 /* OCMockitoIOS.framework */; };
+		808441691C20617300644A40 /* OCMockitoIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 808441631C20617200644A40 /* OCMockitoIOS.framework */; };
+		80A4662E1C58F4DF00199909 /* BITCrashReportTextFormatterPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 80A4662D1C58F4DF00199909 /* BITCrashReportTextFormatterPrivate.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		80A4662F1C58F4DF00199909 /* BITCrashReportTextFormatterPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 80A4662D1C58F4DF00199909 /* BITCrashReportTextFormatterPrivate.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		846A901F1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h in Headers */ = {isa = PBXBuildFile; fileRef = 846A901D1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h */; };
 		846A90201B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h in Headers */ = {isa = PBXBuildFile; fileRef = 846A901D1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h */; };
 		846A90211B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.mm in Sources */ = {isa = PBXBuildFile; fileRef = 846A901E1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.mm */; };
@@ -681,6 +689,20 @@
 		80807B861C46BF0100F4C44F /* OCMStubRecorder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMStubRecorder.h; sourceTree = "<group>"; };
 		80807B8A1C46BF2F00F4C44F /* OCHamcrestIOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OCHamcrestIOS.framework; path = HockeySDKTests/Vendor/OCHamcrestIOS.framework; sourceTree = SOURCE_ROOT; };
 		80807B8B1C46BF2F00F4C44F /* OCMockitoIOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OCMockitoIOS.framework; path = HockeySDKTests/Vendor/OCMockitoIOS.framework; sourceTree = SOURCE_ROOT; };
+		808441611C20617200644A40 /* libOCMock.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libOCMock.a; path = HockeySDKTests/Vendor/libOCMock.a; sourceTree = SOURCE_ROOT; };
+		808441621C20617200644A40 /* OCHamcrestIOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OCHamcrestIOS.framework; path = HockeySDKTests/Vendor/OCHamcrestIOS.framework; sourceTree = SOURCE_ROOT; };
+		808441631C20617200644A40 /* OCMockitoIOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OCMockitoIOS.framework; path = HockeySDKTests/Vendor/OCMockitoIOS.framework; sourceTree = SOURCE_ROOT; };
+		8084416B1C20617C00644A40 /* NSNotificationCenter+OCMAdditions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSNotificationCenter+OCMAdditions.h"; sourceTree = "<group>"; };
+		8084416C1C20617C00644A40 /* OCMArg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMArg.h; sourceTree = "<group>"; };
+		8084416D1C20617C00644A40 /* OCMConstraint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMConstraint.h; sourceTree = "<group>"; };
+		8084416E1C20617C00644A40 /* OCMFunctions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMFunctions.h; sourceTree = "<group>"; };
+		8084416F1C20617C00644A40 /* OCMLocation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMLocation.h; sourceTree = "<group>"; };
+		808441701C20617C00644A40 /* OCMMacroState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMMacroState.h; sourceTree = "<group>"; };
+		808441711C20617C00644A40 /* OCMock.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMock.h; sourceTree = "<group>"; };
+		808441721C20617C00644A40 /* OCMockObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMockObject.h; sourceTree = "<group>"; };
+		808441731C20617C00644A40 /* OCMRecorder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMRecorder.h; sourceTree = "<group>"; };
+		808441741C20617C00644A40 /* OCMStubRecorder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMStubRecorder.h; sourceTree = "<group>"; };
+		80A4662D1C58F4DF00199909 /* BITCrashReportTextFormatterPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashReportTextFormatterPrivate.h; sourceTree = "<group>"; };
 		846A901D1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashCXXExceptionHandler.h; sourceTree = "<group>"; };
 		846A901E1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = BITCrashCXXExceptionHandler.mm; sourceTree = "<group>"; };
 		973EC8B518BCA8A200DBFFBB /* BITRectangleImageAnnotation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITRectangleImageAnnotation.h; sourceTree = "<group>"; };
@@ -972,6 +994,7 @@
 				1ED570C518BF878C00AB3350 /* BITCrashAttachment.h */,
 				1ED570C618BF878C00AB3350 /* BITCrashAttachment.m */,
 				1E754E5A1621FBB70070AB92 /* BITCrashReportTextFormatter.h */,
+				80A4662D1C58F4DF00199909 /* BITCrashReportTextFormatterPrivate.h */,
 				1E754E5B1621FBB70070AB92 /* BITCrashReportTextFormatter.m */,
 				846A901D1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h */,
 				846A901E1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.mm */,
@@ -1345,6 +1368,7 @@
 				8034E62F1BA31AD600D83A30 /* BITMetricsManager.h in Headers */,
 				8034E6331BA31AD600D83A30 /* BITMetricsManagerPrivate.h in Headers */,
 				8034E6691BA31D7C00D83A30 /* BITApplication.h in Headers */,
+				80A4662E1C58F4DF00199909 /* BITCrashReportTextFormatterPrivate.h in Headers */,
 				1E84DB3417E099BA00AC83FD /* HockeySDKFeatureConfig.h in Headers */,
 				1EACC97B162F041E007578C5 /* BITAttributedLabel.h in Headers */,
 				802C45B41BD9629C000D043C /* HockeySDKNullability.h in Headers */,
@@ -1428,6 +1452,7 @@
 				8034E6301BA31AD600D83A30 /* BITMetricsManager.h in Headers */,
 				8034E6341BA31AD600D83A30 /* BITMetricsManagerPrivate.h in Headers */,
 				8034E66A1BA31D7C00D83A30 /* BITApplication.h in Headers */,
+				80A4662F1C58F4DF00199909 /* BITCrashReportTextFormatterPrivate.h in Headers */,
 				1EB617A91B0A31AB0035A986 /* BITStoreUpdateManager.h in Headers */,
 				1EB617AB1B0A31B40035A986 /* BITStoreUpdateManagerDelegate.h in Headers */,
 				802C45B31BD9629B000D043C /* HockeySDKNullability.h in Headers */,

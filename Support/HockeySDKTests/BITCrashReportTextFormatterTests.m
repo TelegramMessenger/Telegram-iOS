@@ -18,6 +18,7 @@
 #import "BITCrashReportTextFormatter.h"
 
 #import "BITTestHelper.h"
+#import "BITCrashReportTextFormatterPrivate.h"
 
 @interface BITCrashReportTextFormatterTests : XCTestCase
 
@@ -237,6 +238,15 @@
   crashLogString = [BITCrashReportTextFormatter stringValueForCrashReport:report crashReporterKey:@""];
   
   assertThat(crashLogString, notNilValue());
+}
+
+- (void)testAnonymizedProcessPathFromProcessPath {
+  NSString *testProcessPath = @"/Users/sampleuser/Library/Developer/CoreSimulator/Devices/CDF13B63-8B8A-4191-A528-1A2FAFC9A915/data/Containers/Bundle/Application/FF127199-5B93-4E84-87AF-5C11F1E639DB/Test.app/Test";
+
+  NSString *anonymizedProcessPath = [BITCrashReportTextFormatter anonymizedProcessPathFromProcessPath:testProcessPath];
+
+  XCTAssertFalse([anonymizedProcessPath containsString:@"sampleuser"]);
+  XCTAssertTrue([anonymizedProcessPath hasPrefix:@"/Users/USER/"]);
 }
 
 @end
