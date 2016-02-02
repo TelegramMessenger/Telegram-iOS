@@ -429,11 +429,6 @@
   
   if ([self.manager.delegate respondsToSelector:@selector(feedbackComposeViewController:didFinishWithResult:)]) {
     [self.manager.delegate feedbackComposeViewController:composeViewController didFinishWithResult:composeResult];
-  } else if ([self.manager.delegate respondsToSelector:@selector(feedbackComposeViewControllerDidFinish:)]) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated"
-    [self.manager.delegate feedbackComposeViewControllerDidFinish:composeViewController];
-#pragma clang diagnostic pop
   }
 }
 
