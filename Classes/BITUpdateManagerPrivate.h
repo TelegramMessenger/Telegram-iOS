@@ -89,6 +89,8 @@
 // checks for update, informs the user (error, no update found, etc)
 - (void)checkForUpdateShowFeedback:(BOOL)feedback;
 
+- (NSURLRequest *)requestForUpdateCheck;
+
 // initiates app-download call. displays an system UIAlertView
 - (BOOL)initiateAppDownload;
 
