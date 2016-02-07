@@ -852,6 +852,36 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     return;
   }
   
+  NSURLRequest *request = [self requestForUpdateCheck];
+  
+  if ([BITHockeyHelper isURLSessionSupported]) {
+    NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration delegate:(id<NSURLSessionDelegate>)self delegateQueue:nil];
+    
+    NSURLSessionDataTask *sessionTask = [session dataTaskWithRequest:request];
+    if (!sessionTask) {
+      self.checkInProgress = NO;
+      [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
+                                            code:BITUpdateAPIClientCannotCreateConnection
+                                        userInfo:@{NSLocalizedDescriptionKey : @"Url Connection could not be created."}]];
+    } else {
+      [sessionTask resume];
+    }
+  } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    self.urlConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
+#pragma clang diagnostic pop
+    if (!self.urlConnection) {
+      self.checkInProgress = NO;
+      [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
+                                            code:BITUpdateAPIClientCannotCreateConnection
+                                        userInfo:@{NSLocalizedDescriptionKey : @"Url Connection could not be created."}]];
+    }
+  }
+}
+
+- (NSURLRequest *)requestForUpdateCheck {
   NSMutableString *parameter = [NSMutableString stringWithFormat:@"api/2/apps/%@?format=json&extended=true&sdk=%@&sdk_version=%@&uuid=%@",
                                 bit_URLEncodedString([self encodedAppIdentifier]),
                                 BITHOCKEY_NAME,
@@ -872,7 +902,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
      bit_URLEncodedString([[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]),
      bit_URLEncodedString([[UIDevice currentDevice] systemVersion]),
      bit_URLEncodedString([self getDevicePlatform]),
-     bit_URLEncodedString([[[NSBundle mainBundle] preferredLocalizations] objectAtIndex:0]),
+     bit_URLEncodedString([[NSBundle mainBundle] preferredLocalizations][0]),
      bit_URLEncodedString([self installationDateString]),
      bit_URLEncodedString([self currentUsageString])
      ];
@@ -882,36 +912,14 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   NSString *url = [NSString stringWithFormat:@"%@%@", self.serverURL, parameter];
   BITHockeyLog(@"INFO: Sending api request to %@", url);
   
-  NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url] cachePolicy:1 timeoutInterval:10.0];
+  NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url]
+                                                         cachePolicy:NSURLRequestReloadIgnoringLocalCacheData
+                                                     timeoutInterval:10.0];
   [request setHTTPMethod:@"GET"];
   [request setValue:@"Hockey/iOS" forHTTPHeaderField:@"User-Agent"];
   [request setValue:@"gzip" forHTTPHeaderField:@"Accept-Encoding"];
   
-  if ([BITHockeyHelper isURLSessionSupported]) {
-    NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
-    NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration delegate:(id<NSURLSessionDelegate>)self delegateQueue:nil];
-    
-    NSURLSessionDataTask *sessionTask = [session dataTaskWithRequest:request];
-    if (!sessionTask) {
-      self.checkInProgress = NO;
-      [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
-                                            code:BITUpdateAPIClientCannotCreateConnection
-                                        userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Url Connection could not be created.", NSLocalizedDescriptionKey, nil]]];
-    } else {
-      [sessionTask resume];
-    }
-  } else {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    self.urlConnection = [[NSURLConnection alloc] initWithRequest:request delegate:self];
-#pragma clang diagnostic pop
-    if (!self.urlConnection) {
-      self.checkInProgress = NO;
-      [self reportError:[NSError errorWithDomain:kBITUpdateErrorDomain
-                                            code:BITUpdateAPIClientCannotCreateConnection
-                                        userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Url Connection could not be created.", NSLocalizedDescriptionKey, nil]]];
-    }
-  }
+  return request;
 }
 
 - (BOOL)initiateAppDownload {
