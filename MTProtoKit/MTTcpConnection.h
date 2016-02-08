@@ -8,6 +8,7 @@
 
 #import <MTProtoKit/MTDatacenterAddress.h>
 
+@class MTContext;
 @class MTQueue;
 @class MTTcpConnection;
 
@@ -44,7 +45,7 @@
 
 + (MTQueue *)tcpQueue;
 
-- (instancetype)initWithAddress:(MTDatacenterAddress *)address interface:(NSString *)interface;
+- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address interface:(NSString *)interface;
 
 - (void)start;
 - (void)stop;

@@ -29,6 +29,8 @@
 #define IPHONE_5S_NAMESTRING             @"iPhone 5S"
 #define IPHONE_6_NAMESTRING             @"iPhone 6"
 #define IPHONE_6Plus_NAMESTRING             @"iPhone 6 Plus"
+#define IPHONE_6S_NAMESTRING             @"iPhone 6S"
+#define IPHONE_6SPlus_NAMESTRING             @"iPhone 6S Plus"
 #define IPHONE_UNKNOWN_NAMESTRING       @"Unknown iPhone"
 
 #define IPOD_1G_NAMESTRING              @"iPod touch 1G"
@@ -42,6 +44,8 @@
 #define IPAD_2G_NAMESTRING              @"iPad 2G"
 #define IPAD_3G_NAMESTRING              @"iPad 3G"
 #define IPAD_4G_NAMESTRING              @"iPad 4G"
+#define IPAD_5G_NAMESTRING              @"iPad Air 2"
+#define IPAD_6G_NAMESTRING  @"iPad Pro"
 #define IPAD_UNKNOWN_NAMESTRING         @"Unknown iPad"
 
 #define APPLETV_2G_NAMESTRING           @"Apple TV 2G"
@@ -73,6 +77,8 @@ typedef enum {
     UIDevice5SiPhone,
     UIDevice6iPhone,
     UIDevice6PlusiPhone,
+    UIDevice6siPhone,
+    UIDevice6SPlusiPhone,
     
     UIDevice1GiPod,
     UIDevice2GiPod,
@@ -84,6 +90,8 @@ typedef enum {
     UIDevice2GiPad,
     UIDevice3GiPad,
     UIDevice4GiPad,
+    UIDevice5GiPad,
+    UIDevice6GiPad,
     
     UIDeviceAppleTV2,
     UIDeviceAppleTV3,
@@ -146,6 +154,8 @@ typedef enum {
         case UIDevice5SiPhone: return IPHONE_5S_NAMESTRING;
         case UIDevice6iPhone: return IPHONE_6_NAMESTRING;
         case UIDevice6PlusiPhone: return IPHONE_6Plus_NAMESTRING;
+        case UIDevice6siPhone: return IPHONE_6S_NAMESTRING;
+        case UIDevice6SPlusiPhone: return IPHONE_6SPlus_NAMESTRING;
         case UIDeviceUnknowniPhone: return IPHONE_UNKNOWN_NAMESTRING;
             
         case UIDevice1GiPod: return IPOD_1G_NAMESTRING;
@@ -159,6 +169,8 @@ typedef enum {
         case UIDevice2GiPad : return IPAD_2G_NAMESTRING;
         case UIDevice3GiPad : return IPAD_3G_NAMESTRING;
         case UIDevice4GiPad : return IPAD_4G_NAMESTRING;
+        case UIDevice5GiPad : return IPAD_5G_NAMESTRING;
+        case UIDevice6GiPad : return IPAD_6G_NAMESTRING;
         case UIDeviceUnknowniPad : return IPAD_UNKNOWN_NAMESTRING;
             
         case UIDeviceAppleTV2 : return APPLETV_2G_NAMESTRING;
@@ -194,10 +206,12 @@ typedef enum {
     if ([platform hasPrefix:@"iPhone3"])            return UIDevice4iPhone;
     if ([platform hasPrefix:@"iPhone4"])            return UIDevice4SiPhone;
     if ([platform hasPrefix:@"iPhone5"])            return UIDevice5iPhone;
-    if ([platform hasPrefix:@"iPhone6,1"])            return UIDevice5SiPhone;
-    if ([platform hasPrefix:@"iPhone6,2"])            return UIDevice5SiPhone;
-    if ([platform hasPrefix:@"iPhone7,1"])            return UIDevice6PlusiPhone;
-    if ([platform hasPrefix:@"iPhone7,2"])            return UIDevice6iPhone;
+    if ([platform hasPrefix:@"iPhone6"])            return UIDevice5SiPhone;
+    
+    if ([platform isEqualToString:@"iPhone7,1"])    return UIDevice6PlusiPhone;
+    if ([platform isEqualToString:@"iPhone7,2"])    return UIDevice6iPhone;
+    if ([platform isEqualToString:@"iPhone8,1"])    return UIDevice6siPhone;
+    if ([platform isEqualToString:@"iPhone8,2"])    return UIDevice6SPlusiPhone;
     
     // iPod
     if ([platform hasPrefix:@"iPod1"])              return UIDevice1GiPod;
@@ -211,6 +225,8 @@ typedef enum {
     if ([platform hasPrefix:@"iPad2"])              return UIDevice2GiPad;
     if ([platform hasPrefix:@"iPad3"])              return UIDevice3GiPad;
     if ([platform hasPrefix:@"iPad4"])              return UIDevice4GiPad;
+    if ([platform hasPrefix:@"iPad5"])              return UIDevice5GiPad;
+    if ([platform hasPrefix:@"iPad6"])              return UIDevice6GiPad;
     
     // Apple TV
     if ([platform hasPrefix:@"AppleTV2"])           return UIDeviceAppleTV2;

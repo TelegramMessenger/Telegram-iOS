@@ -67,7 +67,7 @@
         
         MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:getFutureSaltsBuffer.data metadata:@"getFutureSalts"];
         
-        return [[MTMessageTransaction alloc] initWithMessagePayload:@[outgoingMessage] completion:^(NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
+        return [[MTMessageTransaction alloc] initWithMessagePayload:@[outgoingMessage] prepared:nil failed:nil completion:^(NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
         {
             MTPreparedMessage *preparedMessage = messageInternalIdToPreparedMessage[outgoingMessage.internalId];
             if (preparedMessage != nil && messageInternalIdToTransactionId[outgoingMessage.internalId] != nil)

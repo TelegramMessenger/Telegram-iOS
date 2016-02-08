@@ -17,6 +17,9 @@
 
 #import <MTProtoKit/MTInternalId.h>
 
+#import <MTProtoKit/MTContext.h>
+#import <MTProtoKit/MTApiEnvironment.h>
+
 MTInternalIdClass(MTTcpConnection)
 
 typedef enum {
@@ -45,6 +48,9 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
     NSUInteger _packetRestReceivedLength;
     
     bool _delegateImplementsProgressUpdated;
+    NSData *_firstPacketControlByte;
+    
+    bool _addedControlHeader;
 }
 
 @property (nonatomic) int64_t packetHeadDecodeToken;
@@ -65,7 +71,7 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
     return queue;
 }
 
-- (instancetype)initWithAddress:(MTDatacenterAddress *)address interface:(NSString *)interface
+- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId address:(MTDatacenterAddress *)address interface:(NSString *)interface
 {
 #ifdef DEBUG
     NSAssert(address != nil, @"address should not be nil");
@@ -78,6 +84,10 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
         
         _address = address;
         _interface = interface;
+        
+        if (context.apiEnvironment.datacenterAddressOverrides[@(datacenterId)] != nil) {
+            _firstPacketControlByte = [context.apiEnvironment tcpPayloadPrefix];
+        }
     }
     return self;
 }
@@ -206,7 +216,27 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
                     
                     completeDataLength += packetData.length;
                     
-                    [_socket writeData:packetData withTimeout:-1 tag:0];
+                    if (!_addedControlHeader) {
+                        _addedControlHeader = true;
+                        uint8_t controlBytes[64];
+                        arc4random_buf(controlBytes, 64);
+                        
+                        int32_t *firstByte = (int32_t *)controlBytes;
+                        while (*firstByte == 0x44414548 || *firstByte == 0x54534f50 || *firstByte == 0x20544547 || *firstByte == 0x4954504f || *firstByte == 0xeeeeeeee) {
+                            arc4random_buf(controlBytes, 4);
+                        }
+                        
+                        while (controlBytes[0] == 0xef) {
+                            arc4random_buf(controlBytes, 1);
+                        }
+                        
+                        NSMutableData *controlData = [[NSMutableData alloc] init];
+                        [controlData appendBytes:controlBytes length:64];
+                        [controlData appendData:packetData];
+                        [_socket writeData:controlData withTimeout:-1 tag:0];
+                    } else {
+                        [_socket writeData:packetData withTimeout:-1 tag:0];
+                    }
                 }
                 
                 if (expectDataInResponse && _responseTimeoutTimer == nil)

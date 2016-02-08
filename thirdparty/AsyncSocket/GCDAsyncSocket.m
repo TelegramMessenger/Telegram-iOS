@@ -183,8 +183,6 @@ enum GCDAsyncSocketConfig
 
 @interface GCDAsyncSocket ()
 
-@property (nonatomic) bool shouldAddControlByteToFirstPacket;
-
 // Accepting
 - (BOOL)doAccept:(int)socketFD;
 
@@ -2556,8 +2554,6 @@ enum GCDAsyncSocketConfig
 	[self setupReadAndWriteSourcesForNewlyConnectedSocket:socketFD];
 	
 	// Dequeue any pending read/write requests
-	
-    _shouldAddControlByteToFirstPacket = true;
     
 	[self maybeDequeueRead];
 	[self maybeDequeueWrite];
@@ -5578,38 +5574,6 @@ enum GCDAsyncSocketConfig
         
         ssize_t result = 0;
         
-        if (_shouldAddControlByteToFirstPacket)
-        {
-            uint8_t *tmpBuffer = malloc(bytesToWrite + 1);
-            tmpBuffer[0] = 0xef;
-            memcpy(tmpBuffer + 1, (const uint8_t *)[currentWrite->buffer bytes], bytesToWrite);
-            
-            result = write(socketFD, tmpBuffer, (size_t)(bytesToWrite + 1));
-            if (result < 0)
-            {
-                if (errno == EWOULDBLOCK)
-                {
-                    waiting = YES;
-                }
-                else
-                {
-                    error = [self errnoErrorWithReason:@"Error in write() function"];
-                }
-            }
-            else
-            {
-                if (result >= 1)
-                {
-                    _shouldAddControlByteToFirstPacket = false;
-                    result--;
-                }
-                
-                bytesWritten = result;
-            }
-            
-            free(tmpBuffer);
-        }
-        else
         {
             result = write(socketFD, buffer, (size_t)bytesToWrite);
 		

@@ -67,6 +67,8 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 @interface MTTcpTransport () <MTTcpConnectionDelegate, MTTcpConnectionBehaviourDelegate>
 {
     MTTcpTransportContext *_transportContext;
+    __weak MTContext *_context;
+    NSInteger _datacenterId;
 }
 
 @end
@@ -95,6 +97,9 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     self = [super initWithDelegate:delegate context:context datacenterId:datacenterId address:address];
     if (self != nil)
     {
+        _context = context;
+        _datacenterId = datacenterId;
+        
         MTTcpTransportContext *transportContext = [[MTTcpTransportContext alloc] init];
         _transportContext = transportContext;
         
@@ -182,7 +187,8 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
             [self startConnectionWatchdogTimer];
             [self startSleepWatchdogTimer];
             
-            transportContext.connection = [[MTTcpConnection alloc] initWithAddress:transportContext.address interface:nil];
+            MTContext *context = _context;
+            transportContext.connection = [[MTTcpConnection alloc] initWithContext:context datacenterId:_datacenterId address:transportContext.address interface:nil];
             transportContext.connection.delegate = self;
             [transportContext.connection start];
         }
@@ -579,7 +585,7 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
             outgoingMessage.requiresConfirmation = false;
             
             __weak MTTcpTransport *weakSelf = self;
-            transportSpecificTransaction = [[MTMessageTransaction alloc] initWithMessagePayload:@[outgoingMessage] completion:^(__unused NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
+            transportSpecificTransaction = [[MTMessageTransaction alloc] initWithMessagePayload:@[outgoingMessage] prepared:nil failed:nil completion:^(__unused NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
             {
                 MTPreparedMessage *preparedMessage = messageInternalIdToPreparedMessage[outgoingMessage.internalId];
                 [[MTTcpTransport tcpTransportQueue] dispatchOnQueue:^

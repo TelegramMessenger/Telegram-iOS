@@ -14,7 +14,7 @@ MTInternalIdClass(MTMessageTransaction)
 
 @implementation MTMessageTransaction
 
-- (instancetype)initWithMessagePayload:(NSArray *)messagePayload completion:(void (^)(NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, NSDictionary *messageInternalIdToQuickAckId))completion
+- (instancetype)initWithMessagePayload:(NSArray *)messagePayload prepared:(void (^)(NSDictionary *messageInternalIdToPreparedMessage))prepared failed:(void (^)())failed completion:(void (^)(NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, NSDictionary *messageInternalIdToQuickAckId))completion
 {
     self = [super init];
     if (self != nil)
@@ -22,7 +22,9 @@ MTInternalIdClass(MTMessageTransaction)
         _internalId = [[MTInternalId(MTMessageTransaction) alloc] init];
         
         _messagePayload = messagePayload;
-        _completion = completion;
+        _completion = [completion copy];
+        _prepared = [prepared copy];
+        _failed = [failed copy];
     }
     return self;
 }

@@ -63,14 +63,14 @@ typedef struct {
     return success == 1;
 }
 
-+ (SSignal *)tcpConnectionWithAddress:(MTDatacenterAddress *)address;
++ (SSignal *)tcpConnectionWithContext:(MTContext *)context datacenterId:(NSUInteger)datacenterId address:(MTDatacenterAddress *)address;
 {
     return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
     {
         MTPayloadData payloadData;
         NSData *data = [self payloadData:&payloadData];
         
-        MTTcpConnection *connection = [[MTTcpConnection alloc] initWithAddress:address interface:nil];
+        MTTcpConnection *connection = [[MTTcpConnection alloc] initWithContext:context datacenterId:datacenterId address:address interface:nil];
         __weak MTTcpConnection *weakConnection = connection;
         connection.connectionOpened = ^
         {
@@ -165,7 +165,7 @@ typedef struct {
         
         if ([self isIpv6:address.ip])
         {
-            SSignal *signal = [[[[self tcpConnectionWithAddress:address] then:[SSignal single:tcpTransportScheme]] timeout:5.0 onQueue:[SQueue concurrentDefaultQueue] orSignal:[SSignal fail:nil]] catch:^SSignal *(__unused id error)
+            SSignal *signal = [[[[self tcpConnectionWithContext:context datacenterId:0 address:address] then:[SSignal single:tcpTransportScheme]] timeout:5.0 onQueue:[SQueue concurrentDefaultQueue] orSignal:[SSignal fail:nil]] catch:^SSignal *(__unused id error)
             {
                 return [SSignal complete];
             }];
@@ -173,7 +173,7 @@ typedef struct {
         }
         else
         {
-            SSignal *tcpConnectionWithTimeout = [[[self tcpConnectionWithAddress:address] then:[SSignal single:tcpTransportScheme]] timeout:5.0 onQueue:[SQueue concurrentDefaultQueue] orSignal:[SSignal fail:nil]];
+            SSignal *tcpConnectionWithTimeout = [[[self tcpConnectionWithContext:context datacenterId:0 address:address] then:[SSignal single:tcpTransportScheme]] timeout:5.0 onQueue:[SQueue concurrentDefaultQueue] orSignal:[SSignal fail:nil]];
             SSignal *signal = [tcpConnectionWithTimeout catch:^SSignal *(__unused id error)
             {
                 return [SSignal complete];

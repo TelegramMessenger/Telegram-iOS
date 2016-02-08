@@ -20,6 +20,8 @@
 @property (nonatomic, strong, readonly) NSString *apiInitializationHash;
 
 @property (nonatomic) bool disableUpdates;
+@property (nonatomic) NSData *tcpPayloadPrefix;
+@property (nonatomic) NSDictionary *datacenterAddressOverrides;
 
 @property (nonatomic, copy) void (^passwordInputHandler)();
 
