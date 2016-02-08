@@ -107,7 +107,7 @@
     return self.internalData;
   }
   
-  return nil;
+  return [NSData data];
 }
 
 - (void)replaceData:(NSData *)data {
@@ -128,7 +128,7 @@
     return [NSURL fileURLWithPath:self.filename];
   }
   
-  return nil;
+  return [NSURL URLWithString:@""];
 }
 
 

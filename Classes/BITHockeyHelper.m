@@ -758,7 +758,7 @@ UIImage *bit_roundedCornerImage(UIImage *inputImage, NSInteger cornerSize, NSInt
 }
 
 UIImage *bit_appIcon() {
-  NSString *iconString = nil;
+  NSString *iconString = [NSString string];
   NSArray *icons = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIconFiles"];
   if (!icons) {
     icons = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIcons"];
