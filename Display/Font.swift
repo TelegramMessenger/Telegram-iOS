@@ -12,7 +12,7 @@ public struct Font {
 }
 
 public extension NSAttributedString {
-    convenience init(string: String, font: CTFontRef, textColor: UIColor = UIColor.blackColor()) {
-        self.init(string: string, attributes: [kCTFontAttributeName as String: font, kCTForegroundColorAttributeName as String: textColor.CGColor])
+    convenience init(string: String, font: UIFont, textColor: UIColor = UIColor.blackColor()) {
+        self.init(string: string, attributes: [kCTFontAttributeName as String: font, kCTForegroundColorAttributeName as String: textColor])
     }
 }

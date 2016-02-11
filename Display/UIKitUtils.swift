@@ -26,9 +26,9 @@ private func dumpLayers(layer: CALayer, indent: String = "") {
     }
 }
 
-private let screenScale = UIScreen.mainScreen().scale
+public let UIScreenScale = UIScreen.mainScreen().scale
 public func floorToScreenPixels(value: CGFloat) -> CGFloat {
-    return floor(value * screenScale) / screenScale
+    return floor(value * UIScreenScale) / UIScreenScale
 }
 
 public extension UIColor {

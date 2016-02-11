@@ -1,4 +1,5 @@
 #import <UIKit/UIKit.h>
+#import <Foundation/Foundation.h>
 
 @interface UIView (AnimationUtils)
 
@@ -11,3 +12,4 @@
 - (CGFloat)valueAt:(CGFloat)t;
 
 @end
+
