@@ -487,7 +487,7 @@ We're looking forward to your contributions via pull requests.
 * Mac running the latest version of OS X
 * Get the latest Xcode from the Mac App Store
 * [AppleDoc](https://github.com/tomaz/appledoc) 
-* [Cocoapods](https://cocoapods.org/)
+* [CocoaPods](https://cocoapods.org/)
 
 <a id="contributorlicense"></a>
 ## 7. Contributor License
