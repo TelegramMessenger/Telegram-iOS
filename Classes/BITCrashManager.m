@@ -198,9 +198,8 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     
     _crashManagerStatus = BITCrashManagerStatusAlwaysAsk;
     
-    NSString *testValue = [[NSUserDefaults standardUserDefaults] stringForKey:kBITCrashManagerStatus];
-    if (testValue) {
-      _crashManagerStatus = (BITCrashManagerStatus) [[NSUserDefaults standardUserDefaults] integerForKey:kBITCrashManagerStatus];
+    if ([[NSUserDefaults standardUserDefaults] stringForKey:kBITCrashManagerStatus]) {
+      _crashManagerStatus = (BITCrashManagerStatus)[[NSUserDefaults standardUserDefaults] integerForKey:kBITCrashManagerStatus];
     } else {
       // migrate previous setting if available
       if ([[NSUserDefaults standardUserDefaults] boolForKey:@"BITCrashAutomaticallySendReports"]) {
@@ -791,7 +790,6 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     case BITCrashManagerUserInputAlwaysSend:
       _crashManagerStatus = BITCrashManagerStatusAutoSend;
       [[NSUserDefaults standardUserDefaults] setInteger:_crashManagerStatus forKey:kBITCrashManagerStatus];
-      [[NSUserDefaults standardUserDefaults] synchronize];
       if ([self.delegate respondsToSelector:@selector(crashManagerWillSendCrashReportsAlways:)]) {
         [self.delegate crashManagerWillSendCrashReportsAlways:self];
       }
@@ -1456,10 +1454,10 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
                                                 options:NSPropertyListMutableContainersAndLeaves
                                                 format:&format
                                                 error:&error];
-      
-      username = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserName]] ?: @"";
-      useremail = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserEmail]] ?: @"";
-      userid = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserID]] ?: @"";
+
+      username = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", attachmentFilename.lastPathComponent, kBITCrashMetaUserName]] ?: @"";
+      useremail = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", attachmentFilename.lastPathComponent, kBITCrashMetaUserEmail]] ?: @"";
+      userid = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", attachmentFilename.lastPathComponent, kBITCrashMetaUserID]] ?: @"";
       applicationLog = [metaDict objectForKey:kBITCrashMetaApplicationLog] ?: @"";
       description = [NSString stringWithContentsOfFile:[NSString stringWithFormat:@"%@.desc", [_crashesDir stringByAppendingPathComponent: cacheFilename]] encoding:NSUTF8StringEncoding error:&error];
       attachment = [self attachmentForCrashReport:attachmentFilename];

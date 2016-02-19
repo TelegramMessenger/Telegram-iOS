@@ -440,7 +440,6 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   }
   NSData *data = [NSKeyedArchiver archivedDataWithRootObject:self.appVersions];
   [[NSUserDefaults standardUserDefaults] setObject:data forKey:kBITUpdateArrayOfLastCheck];
-  [[NSUserDefaults standardUserDefaults] synchronize];
 }
 
 
@@ -1280,7 +1279,6 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     _lastCheck = [aLastCheck copy];
     
     [[NSUserDefaults standardUserDefaults] setObject:_lastCheck forKey:kBITUpdateDateOfLastCheck];
-    [[NSUserDefaults standardUserDefaults] synchronize];
   }
 }
 
