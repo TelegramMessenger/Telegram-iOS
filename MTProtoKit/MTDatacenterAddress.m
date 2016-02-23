@@ -13,7 +13,7 @@
 
 @implementation MTDatacenterAddress
 
-- (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port preferForMedia:(bool)preferForMedia
+- (instancetype)initWithIp:(NSString *)ip port:(uint16_t)port preferForMedia:(bool)preferForMedia restrictToTcp:(bool)restrictToTcp
 {
     self = [super init];
     if (self != nil)
@@ -21,6 +21,7 @@
         _ip = ip;
         _port = port;
         _preferForMedia = preferForMedia;
+        _restrictToTcp = restrictToTcp;
     }
     return self;
 }
@@ -34,6 +35,7 @@
         _host = [aDecoder decodeObjectForKey:@"host"];
         _port = (uint16_t)[aDecoder decodeIntForKey:@"port"];
         _preferForMedia = [aDecoder decodeBoolForKey:@"preferForMedia"];
+        _restrictToTcp = [aDecoder decodeBoolForKey:@"restrictToTcp"];
     }
     return self;
 }
@@ -44,6 +46,7 @@
     [aCoder encodeObject:_host forKey:@"host"];
     [aCoder encodeInt:_port forKey:@"port"];
     [aCoder encodeBool:_preferForMedia forKey:@"preferForMedia"];
+    [aCoder encodeBool:_restrictToTcp forKey:@"restrictToTcp"];
 }
 
 - (BOOL)isEqual:(id)object
@@ -67,6 +70,10 @@
     
     if (_preferForMedia != other.preferForMedia)
         return false;
+    
+    if (_restrictToTcp != other.restrictToTcp) {
+        return false;
+    }
     
     return true;
 }

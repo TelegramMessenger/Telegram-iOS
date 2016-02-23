@@ -618,7 +618,13 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
                     {
                         if (transaction.payload.length != 0)
                         {
-                            if (transportContext.connection != nil)
+                            bool acceptTransaction = true;
+/*#ifdef DEBUG
+                            if (arc4random_uniform(10) < 5) {
+                                acceptTransaction = false;
+                            }
+#endif*/
+                            if (transportContext.connection != nil && acceptTransaction)
                             {
                                 id transactionId = transportContext.connection.internalId;
                                 [transportContext.connection sendDatas:@[transaction.payload] completion:^(bool success)

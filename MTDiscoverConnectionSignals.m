@@ -181,11 +181,13 @@ typedef struct {
             [bestTcp4Signals addObject:signal];
         }
         
-        SSignal *signal = [[[[self httpConnectionWithAddress:address] then:[SSignal single:httpTransportScheme]] timeout:5.0 onQueue:[SQueue concurrentDefaultQueue] orSignal:[SSignal fail:nil]] catch:^SSignal *(__unused id error)
-        {
-            return [SSignal complete];
-        }];
-        [bestHttpSignals addObject:signal];
+        if (!address.restrictToTcp) {
+            SSignal *signal = [[[[self httpConnectionWithAddress:address] then:[SSignal single:httpTransportScheme]] timeout:5.0 onQueue:[SQueue concurrentDefaultQueue] orSignal:[SSignal fail:nil]] catch:^SSignal *(__unused id error)
+            {
+                return [SSignal complete];
+            }];
+            [bestHttpSignals addObject:signal];
+        }
     }
     
     SSignal *repeatDelaySignal = [[SSignal complete] delay:1.0 onQueue:[SQueue concurrentDefaultQueue]];
