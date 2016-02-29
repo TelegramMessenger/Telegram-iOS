@@ -44,16 +44,22 @@
   // Test with default OS X app path
   processPath = [appBundlePath stringByAppendingString:@"/Contents/MacOS/MyApp"];
   [self testOSXNonAppSpecificImagesForProcessPath:processPath];
+  [self assertIsOtherWithImagePath:processPath processPath:nil];
+  [self assertIsOtherWithImagePath:nil processPath:processPath];
   [self assertIsAppBinaryWithImagePath:processPath processPath:processPath];
   
   // Test with OS X LoginItems app helper path
   processPath = [appBundlePath stringByAppendingString:@"/Contents/Library/LoginItems/net.hockeyapp.helper.app/Contents/MacOS/Helper"];
   [self testOSXNonAppSpecificImagesForProcessPath:processPath];
+  [self assertIsOtherWithImagePath:processPath processPath:nil];
+  [self assertIsOtherWithImagePath:nil processPath:processPath];
   [self assertIsAppBinaryWithImagePath:processPath processPath:processPath];
   
   // Test with OS X app in Resources folder
   processPath = @"/Applications/MyTestApp.App/Contents/Resources/Helper";
   [self testOSXNonAppSpecificImagesForProcessPath:processPath];
+  [self assertIsOtherWithImagePath:processPath processPath:nil];
+  [self assertIsOtherWithImagePath:nil processPath:processPath];
   [self assertIsAppBinaryWithImagePath:processPath processPath:processPath];
 }
 
@@ -66,6 +72,8 @@
   // Test with iOS App
   processPath = [appBundlePath stringByAppendingString:@"/MyApp"];
   [self testiOSNonAppSpecificImagesForProcessPath:processPath];
+  [self assertIsOtherWithImagePath:processPath processPath:nil];
+  [self assertIsOtherWithImagePath:nil processPath:processPath];
   [self assertIsAppBinaryWithImagePath:processPath processPath:processPath];
   [self testiOSAppFrameworkAtProcessPath:processPath appBundlePath:appBundlePath];
   
@@ -73,6 +81,8 @@
   // Test with iOS App Extension
   processPath = [appBundlePath stringByAppendingString:@"/Plugins/MyAppExtension.appex/MyAppExtension"];
   [self testiOSNonAppSpecificImagesForProcessPath:processPath];
+  [self assertIsOtherWithImagePath:processPath processPath:nil];
+  [self assertIsOtherWithImagePath:nil processPath:processPath];
   [self assertIsAppBinaryWithImagePath:processPath processPath:processPath];
   [self testiOSAppFrameworkAtProcessPath:processPath appBundlePath:appBundlePath];
 }
