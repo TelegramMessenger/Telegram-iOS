@@ -44,17 +44,17 @@
   // Test with default OS X app path
   processPath = [appBundlePath stringByAppendingString:@"/Contents/MacOS/MyApp"];
   [self testOSXNonAppSpecificImagesForProcessPath:processPath];
-  [self testAppBinaryWithImagePath:processPath processPath:processPath];
+  [self assertIsAppBinaryWithImagePath:processPath processPath:processPath];
   
   // Test with OS X LoginItems app helper path
   processPath = [appBundlePath stringByAppendingString:@"/Contents/Library/LoginItems/net.hockeyapp.helper.app/Contents/MacOS/Helper"];
   [self testOSXNonAppSpecificImagesForProcessPath:processPath];
-  [self testAppBinaryWithImagePath:processPath processPath:processPath];
+  [self assertIsAppBinaryWithImagePath:processPath processPath:processPath];
   
   // Test with OS X app in Resources folder
   processPath = @"/Applications/MyTestApp.App/Contents/Resources/Helper";
   [self testOSXNonAppSpecificImagesForProcessPath:processPath];
-  [self testAppBinaryWithImagePath:processPath processPath:processPath];
+  [self assertIsAppBinaryWithImagePath:processPath processPath:processPath];
 }
 
 - (void)testiOSImages {
@@ -66,38 +66,52 @@
   // Test with iOS App
   processPath = [appBundlePath stringByAppendingString:@"/MyApp"];
   [self testiOSNonAppSpecificImagesForProcessPath:processPath];
-  [self testAppBinaryWithImagePath:processPath processPath:processPath];
+  [self assertIsAppBinaryWithImagePath:processPath processPath:processPath];
   [self testiOSAppFrameworkAtProcessPath:processPath appBundlePath:appBundlePath];
+  
 
   // Test with iOS App Extension
   processPath = [appBundlePath stringByAppendingString:@"/Plugins/MyAppExtension.appex/MyAppExtension"];
   [self testiOSNonAppSpecificImagesForProcessPath:processPath];
-  [self testAppBinaryWithImagePath:processPath processPath:processPath];
+  [self assertIsAppBinaryWithImagePath:processPath processPath:processPath];
   [self testiOSAppFrameworkAtProcessPath:processPath appBundlePath:appBundlePath];
 }
 
 
 #pragma mark - Test Helper
 
-- (void)testAppBinaryWithImagePath:(NSString *)imagePath processPath:(NSString *)processPath {
-  BITBinaryImageType imageType = [BITCrashReportTextFormatter bit_imageTypeForImagePath:imagePath
+- (void)assertIsAppFrameworkWithFrameworkPath:(NSString *)frameworkPath processPath:(NSString *)processPath {
+  BITBinaryImageType imageType = [BITCrashReportTextFormatter bit_imageTypeForImagePath:frameworkPath
                                                                             processPath:processPath];
-  XCTAssert((imageType == BITBinaryImageTypeAppBinary), @"Test app %@ with process %@", imagePath, processPath);
+  XCTAssertEqual(imageType, BITBinaryImageTypeAppFramework, @"Test framework %@ with process %@", frameworkPath, processPath);
 }
 
+- (void)assertIsAppBinaryWithImagePath:(NSString *)imagePath processPath:(NSString *)processPath {
+  BITBinaryImageType imageType = [BITCrashReportTextFormatter bit_imageTypeForImagePath:imagePath
+                                                                            processPath:processPath];
+  XCTAssertEqual(imageType, BITBinaryImageTypeAppBinary, @"Test app %@ with process %@", imagePath, processPath);
+}
+
+- (void)assertIsSwiftFrameworkWithFrameworkPath:(NSString *)swiftFrameworkPath processPath:(NSString *)processPath {
+  BITBinaryImageType imageType = [BITCrashReportTextFormatter bit_imageTypeForImagePath:swiftFrameworkPath
+                                                                            processPath:processPath];
+  XCTAssertEqual(imageType, BITBinaryImageTypeOther, @"Test swift image %@ with process %@", swiftFrameworkPath, processPath);
+}
+
+- (void)assertIsOtherWithImagePath:(NSString *)imagePath processPath:(NSString *)processPath {
+  BITBinaryImageType imageType = [BITCrashReportTextFormatter bit_imageTypeForImagePath:imagePath
+                                                                            processPath:processPath];
+  XCTAssertEqual(imageType, BITBinaryImageTypeOther, @"Test other image %@ with process %@", imagePath, processPath);
+}
 
 #pragma mark - OS X Test Helper
 
 - (void)testOSXAppFrameworkAtProcessPath:(NSString *)processPath appBundlePath:(NSString *)appBundlePath {
   NSString *frameworkPath = [appBundlePath stringByAppendingString:@"/Contents/Frameworks/MyFrameworkLib.framework/Versions/A/MyFrameworkLib"];
-  BITBinaryImageType imageType = [BITCrashReportTextFormatter bit_imageTypeForImagePath:frameworkPath
-                                                                            processPath:processPath];
-  XCTAssert((imageType == BITBinaryImageTypeAppFramework), @"Test framework %@ with process %@", frameworkPath, processPath);
+  [self assertIsAppFrameworkWithFrameworkPath:frameworkPath processPath:processPath];
 
   frameworkPath = [appBundlePath stringByAppendingString:@"/Contents/Frameworks/libSwiftMyLib.framework/Versions/A/libSwiftMyLib"];
-  imageType = [BITCrashReportTextFormatter bit_imageTypeForImagePath:frameworkPath
-                                                         processPath:processPath];
-  XCTAssert((imageType == BITBinaryImageTypeAppFramework), @"Test framework %@ with process %@", frameworkPath, processPath);
+  [self assertIsAppFrameworkWithFrameworkPath:frameworkPath processPath:processPath];
 
   NSMutableArray *swiftFrameworkPaths = [NSMutableArray new];
   [swiftFrameworkPaths addObject:[appBundlePath stringByAppendingString:@"/Contents/Frameworks/libswiftCore.dylib"]];
@@ -108,10 +122,8 @@
   [swiftFrameworkPaths addObject:[appBundlePath stringByAppendingString:@"/Contents/Frameworks/libswiftSecurity.dylib"]];
   [swiftFrameworkPaths addObject:[appBundlePath stringByAppendingString:@"/Contents/Frameworks/libswiftCoreGraphics.dylib"]];
   
-  for (NSString *imagePath in swiftFrameworkPaths) {
-    BITBinaryImageType imageType = [BITCrashReportTextFormatter bit_imageTypeForImagePath:imagePath
-                                                                              processPath:processPath];
-    XCTAssert((imageType == BITBinaryImageTypeOther), @"Test swift image %@ with process %@", imagePath, processPath);
+  for (NSString *swiftFrameworkPath in swiftFrameworkPaths) {
+    [self assertIsSwiftFrameworkWithFrameworkPath:swiftFrameworkPath processPath:processPath];
   }
 }
 
@@ -130,9 +142,7 @@
   [nonAppSpecificImagePaths addObject:@"/usr/lib/libbsm.0.dylib"];
   
   for (NSString *imagePath in nonAppSpecificImagePaths) {
-    BITBinaryImageType imageType = [BITCrashReportTextFormatter bit_imageTypeForImagePath:imagePath
-                                                                              processPath:processPath];
-    XCTAssert((imageType == BITBinaryImageTypeOther), @"Test other image %@ with process %@", imagePath, processPath);
+    [self assertIsOtherWithImagePath:imagePath processPath:processPath];
   }
 }
 
@@ -141,14 +151,11 @@
 
 - (void)testiOSAppFrameworkAtProcessPath:(NSString *)processPath appBundlePath:(NSString *)appBundlePath {
   NSString *frameworkPath = [appBundlePath stringByAppendingString:@"/Frameworks/MyFrameworkLib.framework/MyFrameworkLib"];
-  BITBinaryImageType imageType = [BITCrashReportTextFormatter bit_imageTypeForImagePath:frameworkPath
-                                                                            processPath:processPath];
-  XCTAssert((imageType == BITBinaryImageTypeAppFramework), @"Test framework %@ with process %@", frameworkPath, processPath);
+  [self assertIsAppFrameworkWithFrameworkPath:frameworkPath processPath:processPath];
+
   
   frameworkPath = [appBundlePath stringByAppendingString:@"/Frameworks/libSwiftMyLib.framework/libSwiftMyLib"];
-  imageType = [BITCrashReportTextFormatter bit_imageTypeForImagePath:frameworkPath
-                                                         processPath:processPath];
-  XCTAssert((imageType == BITBinaryImageTypeAppFramework), @"Test framework %@ with process %@", frameworkPath, processPath);
+  [self assertIsAppFrameworkWithFrameworkPath:frameworkPath processPath:processPath];
 
   NSMutableArray *swiftFrameworkPaths = [NSMutableArray new];
   [swiftFrameworkPaths addObject:[appBundlePath stringByAppendingString:@"/Frameworks/libswiftCore.dylib"]];
@@ -159,10 +166,8 @@
   [swiftFrameworkPaths addObject:[appBundlePath stringByAppendingString:@"/Frameworks/libswiftSecurity.dylib"]];
   [swiftFrameworkPaths addObject:[appBundlePath stringByAppendingString:@"/Frameworks/libswiftCoreGraphics.dylib"]];
   
-  for (NSString *imagePath in swiftFrameworkPaths) {
-    BITBinaryImageType imageType = [BITCrashReportTextFormatter bit_imageTypeForImagePath:imagePath
-                                                                              processPath:processPath];
-    XCTAssert((imageType == BITBinaryImageTypeOther), @"Test swift image %@ with process %@", imagePath, processPath);
+  for (NSString *swiftFrameworkPath in swiftFrameworkPaths) {
+    [self assertIsSwiftFrameworkWithFrameworkPath:swiftFrameworkPath processPath:processPath];
   }
 }
 
@@ -192,9 +197,7 @@
   [nonAppSpecificImagePaths addObject:@"/Library/MobileSubstrate/DynamicLibraries/WinterBoard.dylib"];
   
   for (NSString *imagePath in nonAppSpecificImagePaths) {
-    BITBinaryImageType imageType = [BITCrashReportTextFormatter bit_imageTypeForImagePath:imagePath
-                                                                              processPath:processPath];
-    XCTAssert((imageType == BITBinaryImageTypeOther), @"Test other image %@ with process %@", imagePath, processPath);
+    [self assertIsOtherWithImagePath:imagePath processPath:processPath];
   }
 }
 
