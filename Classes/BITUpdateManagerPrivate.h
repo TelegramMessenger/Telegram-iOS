@@ -89,11 +89,15 @@
 // checks for update, informs the user (error, no update found, etc)
 - (void)checkForUpdateShowFeedback:(BOOL)feedback;
 
+- (NSURLRequest *)requestForUpdateCheck;
+
 // initiates app-download call. displays an system UIAlertView
 - (BOOL)initiateAppDownload;
 
 // get/set current active hockey view controller
 @property (nonatomic, strong) BITUpdateViewController *currentHockeyViewController;
+
+@property(nonatomic) BOOL sendUsageData;
 
 // convenience method to get current running version string
 - (NSString *)currentAppVersion;
