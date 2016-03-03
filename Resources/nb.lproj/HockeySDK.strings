@@ -1,0 +1,276 @@
+/*
+ Localization provided by Wordcrafts
+ The Mac OS X and iOS localization experts.
+ http://www.wordcrafts.de
+ */
+
+
+/* General */
+
+/* For dialogs yes buttons */
+"HockeyYes" = "Ja";
+
+/* For dialogs no buttons */
+"HockeyNo" = "Nei";
+
+/* For dialogs ok buttons */
+"HockeyOK" = "OK";
+
+/* Replacement for app name, if it could not be detected */
+"HockeyAppNamePlaceholder" = "Denne appen";
+
+/* Crash */
+
+
+/* Crash dialog */
+
+/* Title showing in the alert box when crash report data has been found */
+"CrashDataFoundTitle" = "%@ avsluttet uventet";
+
+/* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
+"CrashDataFoundAnonymousDescription" = "Ønsker du å sende en anonym rapport til utvikleren for å bistå i å løse problemet?";
+
+/* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
+"CrashDataFoundDescription" = "Ønsker du å sende en rapport til utvikleren for å bistå i å løse problemet?";
+
+/* Alert box button if the users wants to send crash data always automatically */
+"CrashSendReportAlways" = "Alltid send";
+
+/* Alert box button to send the crash report once */
+"CrashSendReport" = "Send rapport";
+
+/* Alert box button to decline sending the report */
+"CrashDontSendReport" = "Ikke send";
+
+/* Text showing in a processing box that the crash data is being uploaded to the server */
+"CrashReportSending" = "Sender…";
+
+
+/* Update */
+
+
+/* Update Alert view */
+
+/* Update available */
+"UpdateAvailable" = "En oppdatering er tilgjengelig";
+
+"UpdateAlertTextWithAppVersion" = "%@ er tilgjengelig.";
+
+"UpdateAlertMandatoryTextWithAppVersion" = "%@ er tilgjengelig som en påkrevd oppdatering!";
+
+"UpdateIgnore" = "Ignorer";
+
+"UpdateShow" = "Vis";
+
+"UpdateInstall" = "Installer";
+
+"UpdateRemindMe" = "Minn meg på";
+
+
+/* Update Details */
+
+"UpdateScreenTitle" = "Oppdater";
+
+"UpdateButtonCheck" = "KONTROLLER";
+
+"UpdateButtonSearching" = "KONTROLLERER";
+
+"UpdateButtonUpdate" = "OPPDATERER";
+
+"UpdateButtonInstalling" = "INSTALLERER";
+
+"UpdateButtonOffline" = "FRAKOBLET";
+
+"UpdateInstalled" = "INSTALLERT";
+
+"UpdateVersion" = "Versjon";
+
+"UpdateShowPreviousVersions" = "Vis tidligere versjoner...";
+
+"UpdateNoUpdateAvailableTitle" = "Ingen oppdateringer tilgjengelig";
+
+"UpdateNoUpdateAvailableMessage" = "%@ er nyeste versjon.";
+
+"UpdateError" = "Feil";
+
+"UpdateWarning" = "Advarsel";
+
+"UpdateNoReleaseNotesAvailable" = "Ingen tilgjengelige utgivelsesnotater.";
+
+
+/* Update Authorization  */
+
+"UpdateAuthorizationProgress" = "Autoriserer...";
+
+"UpdateAuthorizationOffline" = "Oppkobling til Internett er påkrevd!";
+
+"UpdateAuthorizationDenied" = "Autorisering avslått. Vennligst kontakt utvikleren.";
+
+
+/* Update Expiry  */
+
+"UpdateExpired" = "%@ har utløpt og kan ikke lengre benyttes.";
+
+
+/* Update Simulator Warning */
+
+"UpdateSimulatorMessage" = "Hockey Update vil ikke fungere i simulator.\nItms-services:// url-oppsettet er implementert, men ikke fungerende.";
+
+
+/* Feedback */
+
+
+/* New Message Alert */
+
+/* Alert Title */
+"HockeyFeedbackNewMessageTitle" = "Nytt svar på tilbakemelding";
+
+/* Alert Text */
+"HockeyFeedbackNewMessageText" = "Et nytt svar på din tilbakemelding er tilgjengelig, ønsker du å lese?";
+
+/* Alert Ignore Button */
+"HockeyFeedbackIgnore" = "Ignorer";
+
+/* Alert Show Button */
+"HockeyFeedbackShow" = "Vis";
+
+
+/* List View */
+
+/* Title */
+"HockeyFeedbackListTitle" = "Tilbakemelding";
+
+/* Last Updated */
+"HockeyFeedbackListLastUpdated" = "Sist oppdatert: %@";
+
+/* Never Updated */
+"HockeyFeedbackListNeverUpdated" = "Aldri";
+
+/* Provide Feedback Button Title */
+"HockeyFeedbackListButtonWriteFeedback" = "Gi tilbakemelding";
+
+/* Add a Response Button Title */
+"HockeyFeedbackListButtonWriteResponse" = "Nytt svar";
+
+/* User Data Set Name Button Title */
+"HockeyFeedbackListButtonUserDataSetName" = "Oppgi navn";
+
+/* User Data Set Email Button Title */
+"HockeyFeedbackListButtonUserDataSetEmail" = "Oppgi e-post";
+
+/* User Data With Name Button Title */
+"HockeyFeedbackListButtonUserDataWithName" = "Navn: %@";
+
+/* User Data With Email Button Title */
+"HockeyFeedbackListButtonUserDataWithEmail" = "E-post: %@";
+
+/* Button title for deleting all local messages*/
+"HockeyFeedbackListButtonDeleteAllMessages" = "Slett alle meldinger";
+
+/* Message pending to be send */
+"HockeyFeedbackListMessagePending" = "Venter";
+
+
+/* Delete All Messages Action Sheet / Alert View */
+
+/* Title for the Action Sheet */
+"HockeyFeedbackListDeleteAllTitle" = "Slett alle meldinger på denne enheten.";
+
+/* Button Title to perform delete action */
+"HockeyFeedbackListDeleteAllDelete" = "Slett";
+
+/* Button Title to cancel delete action */
+"HockeyFeedbackListDeleteAllCancel" = "Avbryt";
+
+
+/* Open Link In Safari Action Sheet / Alert View */
+
+/* Button Title to cancel */
+"HockeyFeedbackListLinkActionCancel" = "Avbryt";
+
+/* Button Title to Open the Link */
+"HockeyFeedbackListLinkActionOpen" = "Åpne";
+
+/* Button Title to Copy the Link */
+"HockeyFeedbackListLinkActionCopy" = "Kopier";
+
+
+/* UIActivity */
+
+/* Activity Sharing Button Title, App Name will be inserted */
+"HockeyFeedbackActivityButtonTitle" = "%@ tilbakemelding";
+
+/* if there can no app name be found, use this instead for HockeyFeedbackActivityButtonTitle */
+"HockeyFeedbackActivityAppPlaceholder" = "App";
+
+
+/* Compose Message */
+
+/* Title */
+"HockeyFeedbackComposeTitle" = "Ny tilbakemelding";
+
+/* Send button */
+"HockeyFeedbackComposeSend" = "Send";
+
+/* Add Image button for attachment actions */
+"HockeyFeedbackComposeAttachmentAddImage" = "Legg til bilde";
+
+/* Edit button for attachment actions */
+"HockeyFeedbackComposeAttachmentEdit" = "Rediger bilde";
+
+/* Delete button for attachment actions */
+"HockeyFeedbackComposeAttachmentDelete" = "Fjern bilde";
+
+/* Cancel button for attachment actions */
+"HockeyFeedbackComposeAttachmentCancel" = "Avbryt";
+
+
+/* Set User Data */
+
+/* Title */
+"HockeyFeedbackUserDataTitle" = "Min informasjon";
+
+/* Description On What Should Be Entered */
+"HockeyFeedbackUserDataDescription" = "Du må fylle inn din informasjon før tilbakemelding kan sendes.";
+
+/* Name Field */
+"HockeyFeedbackUserDataName" = "Navn";
+
+/* Name Placeholder */
+"HockeyFeedbackUserDataNamePlaceHolder" = "Ola Nordmann";
+
+/* Email Field */
+"HockeyFeedbackUserDataEmail" = "E-post";
+
+/* Email Placeholder */
+"HockeyFeedbackUserDataEmailPlaceholder" = "epost@eksempel.no";
+
+
+/* Authenticator */
+
+/* View Controller Title*/
+"HockeyAuthenticatorViewControllerTitle" = "HockeyApp";
+
+/* BITAuthenticatorAuthTypeUDIDProvider */
+"HockeyAuthenticationViewControllerWebUDIDLoginDescription" = "Utvikleren har spurt om denne enheten sin UDID. Trykk for å gå til HockeyApp-hjemmesiden og godkjenn tilgang.";
+"HockeyAuthenticationViewControllerWebLoginButtonTitle" = "Åpne HockeyApp";
+
+/* BITAuthenticatorIdentificationTypeWebAuth */
+"HockeyAuthenticationViewControllerWebAuthLoginDescription" = "Utvikleren har spurt om din e-postadresse. Trykk for å gå til HockeyApp-hjemmesiden og godkjenn tilgang.";
+
+/* BITAuthenticatorAuthTypeEmail and BITAuthenticatorAuthTypeEmailAndPassword */
+"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "Vennligst oppgi din e-postadresse og passord registrert på HockeyApp for å få tilgang til appen.";
+"HockeyAuthenticationViewControllerDataEmailDescription" = "Vennligst oppgi din e-postadresse registrert på HockeyApp for å få tilgang til appen.";
+"HockeyAuthenticationViewControllerEmailPlaceholder" = "epost@eksempel.no";
+"HockeyAuthenticationViewControllerPasswordPlaceholder" = "Påkrevd";
+"HockeyAuthenticationViewControllerEmailDescription" = "E-post";
+"HockeyAuthenticationViewControllerPasswordDescription" = "Passord";
+
+/* Error presented to the user if authentication failed because of networking issues */
+"HockeyAuthenticationViewControllerNetworkError" = "Autentisering mislykket på grunn av manglende oppkobling til Internett, vennligst prøv igjen.";
+
+"HockeyAuthenticationFailedAuthenticate" = "Autentisering mislykket, vennligst kontakt utvikleren av appen.";
+"HockeyAuthenticationNotMember" = "Du har ikke godkjent tilgang til denne appen, vennligst kontakt utvikleren.";
+"HockeyAuthenticationContactDeveloper" = "Autentiseringsfeil, vennligst kontakt utvikleren av appen.";
+"HockeyAuthenticationWrongEmailPassword" = "Du har ikke oppgitt en gyldig e-postadresse eller passord, kontroller opplysningene og prøv igjen.";
+"HockeyAuthenticationAuthSecretMissing" = "HockeySDKet mangler autentiseringshemmelighet, vennligst kontakt utvikleren av appen.";
