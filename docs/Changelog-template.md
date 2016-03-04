@@ -7,7 +7,6 @@
 - [BUGFIX] Include username, email, etc. in `appNotTerminatingCleanly` reports
 - [BUGFIX] Fix NSURLSession memory leak in Swift apps
 - [BUGFIX] Fix issue preventing attachment from being included when sending non-clean termination report
-- [BUGFIX] Fix issue preventing attachment from being included when sending non-clean termination report
 - [IMPROVEMENT] Anonymize binary path in crash report
 - [IMPROVEMENT] Support escaping of additional characters (URL encoding)
 - [IMPROVEMENT] Support Bundle Identifiers which contain whitespaces
