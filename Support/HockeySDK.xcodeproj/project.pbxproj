@@ -73,7 +73,7 @@
 		1E49A4731612226D00463151 /* BITUpdateManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4641612226D00463151 /* BITUpdateManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E49A4761612226D00463151 /* BITUpdateManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4651612226D00463151 /* BITUpdateManager.m */; };
 		1E49A4791612226D00463151 /* BITUpdateManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4661612226D00463151 /* BITUpdateManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		1E49A47C1612226D00463151 /* BITUpdateManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4671612226D00463151 /* BITUpdateManagerPrivate.h */; };
+		1E49A47C1612226D00463151 /* BITUpdateManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4671612226D00463151 /* BITUpdateManagerPrivate.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		1E49A47F1612226D00463151 /* BITUpdateViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4681612226D00463151 /* BITUpdateViewController.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1E49A4821612226D00463151 /* BITUpdateViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4691612226D00463151 /* BITUpdateViewController.m */; };
 		1E49A4851612226D00463151 /* BITUpdateViewControllerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A46A1612226D00463151 /* BITUpdateViewControllerPrivate.h */; };
@@ -222,7 +222,7 @@
 		1EB617A31B0A31910035A986 /* BITAppVersionMetaInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4621612226D00463151 /* BITAppVersionMetaInfo.h */; };
 		1EB617A41B0A31940035A986 /* BITUpdateManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4641612226D00463151 /* BITUpdateManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1EB617A51B0A319A0035A986 /* BITUpdateManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4661612226D00463151 /* BITUpdateManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		1EB617A61B0A319F0035A986 /* BITUpdateManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4671612226D00463151 /* BITUpdateManagerPrivate.h */; };
+		1EB617A61B0A319F0035A986 /* BITUpdateManagerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4671612226D00463151 /* BITUpdateManagerPrivate.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		1EB617A71B0A31A30035A986 /* BITUpdateViewController.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4681612226D00463151 /* BITUpdateViewController.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1EB617A81B0A31A80035A986 /* BITUpdateViewControllerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A46A1612226D00463151 /* BITUpdateViewControllerPrivate.h */; };
 		1EB617A91B0A31AB0035A986 /* BITStoreUpdateManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E94F9DF16E91330006570AD /* BITStoreUpdateManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
