@@ -33,6 +33,8 @@
 #import "BITFeedbackListViewController.h"
 #import "BITFeedbackComposeViewController.h"
 
+#import "HockeySDKNullability.h"
+NS_ASSUME_NONNULL_BEGIN
 
 // Notification message which tells that loading messages finished
 #define BITHockeyFeedbackMessagesLoadingStarted @"BITHockeyFeedbackMessagesLoadingStarted"
@@ -338,6 +340,10 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
 /**
  Create a feedback compose view
 
+ This method also adds items from `feedbackComposerPreparedItems` and
+ the `preparedItemsForFeedbackManager:` delegate methods to the instance of
+ `BITFeedbackComposeViewController` that will be returned.
+ 
  Example to show a modal feedback compose UI with prefilled text
      
      BITFeedbackComposeViewController *feedbackCompose = [[BITHockeyManager sharedHockeyManager].feedbackManager feedbackComposeViewController];
@@ -355,5 +361,6 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
  */
 - (BITFeedbackComposeViewController *)feedbackComposeViewController;
 
-
 @end
+
+NS_ASSUME_NONNULL_END

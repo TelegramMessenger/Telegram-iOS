@@ -28,6 +28,9 @@
 
 #import <Foundation/Foundation.h>
 
+#import "HockeySDKNullability.h"
+NS_ASSUME_NONNULL_BEGIN
+
 /**
  *  The users action when composing a message
  */
@@ -69,3 +72,5 @@ typedef NS_ENUM(NSUInteger, BITFeedbackComposeResult) {
 - (void)feedbackComposeViewController:(BITFeedbackComposeViewController *)composeViewController
                   didFinishWithResult:(BITFeedbackComposeResult) composeResult;
 @end
+
+NS_ASSUME_NONNULL_END
