@@ -143,7 +143,6 @@
 		1EACC97B162F041E007578C5 /* BITAttributedLabel.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EACC979162F041E007578C5 /* BITAttributedLabel.h */; };
 		1EACC97C162F041E007578C5 /* BITAttributedLabel.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EACC97A162F041E007578C5 /* BITAttributedLabel.m */; };
 		1EB52FD5167B766100C801D5 /* HockeySDK.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1E59555F15B6F80E00A03429 /* HockeySDK.strings */; };
-		1EB6174A1B0A30480035A986 /* HockeySDK.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EB6173F1B0A30480035A986 /* HockeySDK.framework */; };
 		1EB6175C1B0A30920035A986 /* HockeySDKPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4D4161222D400463151 /* HockeySDKPrivate.h */; };
 		1EB6175D1B0A30950035A986 /* HockeySDKPrivate.m in Sources */ = {isa = PBXBuildFile; fileRef = 1E49A4D5161222D400463151 /* HockeySDKPrivate.m */; };
 		1EB6175E1B0A30990035A986 /* BITHockeyBaseManager.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E49A4A0161222B900463151 /* BITHockeyBaseManager.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -369,19 +368,15 @@
 		8034E6E51BA3567B00D83A30 /* BITUserTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 8034E6C31BA3567B00D83A30 /* BITUserTests.m */; };
 		807756401BC6A44E0037C3DA /* HockeySDKEnums.h in Headers */ = {isa = PBXBuildFile; fileRef = 8077563F1BC6A44D0037C3DA /* HockeySDKEnums.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		807756411BC6B6050037C3DA /* HockeySDKEnums.h in Headers */ = {isa = PBXBuildFile; fileRef = 8077563F1BC6A44D0037C3DA /* HockeySDKEnums.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		80807B871C46BF0100F4C44F /* libOCMock.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 80807B7B1C46BF0100F4C44F /* libOCMock.a */; };
-		80807B881C46BF0100F4C44F /* libOCMock.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 80807B7B1C46BF0100F4C44F /* libOCMock.a */; };
 		80807B8C1C46BF2F00F4C44F /* OCHamcrestIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80807B8A1C46BF2F00F4C44F /* OCHamcrestIOS.framework */; };
 		80807B8D1C46BF2F00F4C44F /* OCHamcrestIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80807B8A1C46BF2F00F4C44F /* OCHamcrestIOS.framework */; };
 		80807B8E1C46BF2F00F4C44F /* OCMockitoIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80807B8B1C46BF2F00F4C44F /* OCMockitoIOS.framework */; };
 		80807B8F1C46BF2F00F4C44F /* OCMockitoIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80807B8B1C46BF2F00F4C44F /* OCMockitoIOS.framework */; };
 		80807B901C46C01E00F4C44F /* BITUser.m in Sources */ = {isa = PBXBuildFile; fileRef = 8034E6681BA31D7C00D83A30 /* BITUser.m */; };
-		808441661C20617300644A40 /* OCHamcrestIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 808441621C20617200644A40 /* OCHamcrestIOS.framework */; };
-		808441671C20617300644A40 /* OCHamcrestIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 808441621C20617200644A40 /* OCHamcrestIOS.framework */; };
-		808441681C20617300644A40 /* OCMockitoIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 808441631C20617200644A40 /* OCMockitoIOS.framework */; };
-		808441691C20617300644A40 /* OCMockitoIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 808441631C20617200644A40 /* OCMockitoIOS.framework */; };
 		80A4662E1C58F4DF00199909 /* BITCrashReportTextFormatterPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 80A4662D1C58F4DF00199909 /* BITCrashReportTextFormatterPrivate.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		80A4662F1C58F4DF00199909 /* BITCrashReportTextFormatterPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 80A4662D1C58F4DF00199909 /* BITCrashReportTextFormatterPrivate.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		80B1C4EE1C8A6F950057A5CB /* BITUser.h in Headers */ = {isa = PBXBuildFile; fileRef = 8034E6671BA31D7C00D83A30 /* BITUser.h */; };
+		80B1C4EF1C8A72620057A5CB /* HockeySDK.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EB6173F1B0A30480035A986 /* HockeySDK.framework */; };
 		80CA63891C67BD5400362DBF /* libOCMock.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 80CA63881C67BD5400362DBF /* libOCMock.a */; };
 		80CA638A1C67BD5400362DBF /* libOCMock.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 80CA63881C67BD5400362DBF /* libOCMock.a */; };
 		80CA638F1C67F78000362DBF /* BITUpdateManagerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 80CA638E1C67F78000362DBF /* BITUpdateManagerTests.m */; };
@@ -639,7 +634,6 @@
 		8034E6611BA31D7C00D83A30 /* BITEnvelope.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITEnvelope.h; sourceTree = "<group>"; };
 		8034E6621BA31D7C00D83A30 /* BITEnvelope.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITEnvelope.m; sourceTree = "<group>"; };
 		8034E6631BA31D7C00D83A30 /* BITSender.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITSender.h; sourceTree = "<group>"; };
-		8034E6641BA31D7C00D83A30 /* BITSender.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITSender.m; sourceTree = "<group>"; };
 		8034E6651BA31D7C00D83A30 /* BITSession.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITSession.h; sourceTree = "<group>"; };
 		8034E6661BA31D7C00D83A30 /* BITSession.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITSession.m; sourceTree = "<group>"; };
 		8034E6671BA31D7C00D83A30 /* BITUser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITUser.h; sourceTree = "<group>"; };
@@ -671,7 +665,6 @@
 		8034E6C21BA3567B00D83A30 /* BITTestsDependencyInjection.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITTestsDependencyInjection.m; sourceTree = "<group>"; };
 		8034E6C31BA3567B00D83A30 /* BITUserTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITUserTests.m; sourceTree = "<group>"; };
 		8077563F1BC6A44D0037C3DA /* HockeySDKEnums.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HockeySDKEnums.h; sourceTree = "<group>"; };
-		80807B7B1C46BF0100F4C44F /* libOCMock.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libOCMock.a; path = Vendor/libOCMock.a; sourceTree = "<group>"; };
 		80807B7D1C46BF0100F4C44F /* NSNotificationCenter+OCMAdditions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSNotificationCenter+OCMAdditions.h"; sourceTree = "<group>"; };
 		80807B7E1C46BF0100F4C44F /* OCMArg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMArg.h; sourceTree = "<group>"; };
 		80807B7F1C46BF0100F4C44F /* OCMConstraint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMConstraint.h; sourceTree = "<group>"; };
@@ -684,8 +677,6 @@
 		80807B861C46BF0100F4C44F /* OCMStubRecorder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMStubRecorder.h; sourceTree = "<group>"; };
 		80807B8A1C46BF2F00F4C44F /* OCHamcrestIOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OCHamcrestIOS.framework; path = HockeySDKTests/Vendor/OCHamcrestIOS.framework; sourceTree = SOURCE_ROOT; };
 		80807B8B1C46BF2F00F4C44F /* OCMockitoIOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OCMockitoIOS.framework; path = HockeySDKTests/Vendor/OCMockitoIOS.framework; sourceTree = SOURCE_ROOT; };
-		808441621C20617200644A40 /* OCHamcrestIOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OCHamcrestIOS.framework; path = HockeySDKTests/Vendor/OCHamcrestIOS.framework; sourceTree = SOURCE_ROOT; };
-		808441631C20617200644A40 /* OCMockitoIOS.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OCMockitoIOS.framework; path = HockeySDKTests/Vendor/OCMockitoIOS.framework; sourceTree = SOURCE_ROOT; };
 		8084416B1C20617C00644A40 /* NSNotificationCenter+OCMAdditions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSNotificationCenter+OCMAdditions.h"; sourceTree = "<group>"; };
 		8084416C1C20617C00644A40 /* OCMArg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMArg.h; sourceTree = "<group>"; };
 		8084416D1C20617C00644A40 /* OCMConstraint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMConstraint.h; sourceTree = "<group>"; };
@@ -697,6 +688,7 @@
 		808441731C20617C00644A40 /* OCMRecorder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMRecorder.h; sourceTree = "<group>"; };
 		808441741C20617C00644A40 /* OCMStubRecorder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMStubRecorder.h; sourceTree = "<group>"; };
 		80A4662D1C58F4DF00199909 /* BITCrashReportTextFormatterPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashReportTextFormatterPrivate.h; sourceTree = "<group>"; };
+		80B1C4EB1C8A6F860057A5CB /* BITSender.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITSender.m; sourceTree = "<group>"; };
 		80CA63881C67BD5400362DBF /* libOCMock.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libOCMock.a; sourceTree = "<group>"; };
 		80CA638E1C67F78000362DBF /* BITUpdateManagerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITUpdateManagerTests.m; sourceTree = "<group>"; };
 		846A901D1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashCXXExceptionHandler.h; sourceTree = "<group>"; };
@@ -772,11 +764,7 @@
 				1EA1170016F4D32C001C015C /* libHockeySDK.a in Frameworks */,
 				80807B8C1C46BF2F00F4C44F /* OCHamcrestIOS.framework in Frameworks */,
 				80807B8E1C46BF2F00F4C44F /* OCMockitoIOS.framework in Frameworks */,
-				80807B871C46BF0100F4C44F /* libOCMock.a in Frameworks */,
-				808441681C20617300644A40 /* OCMockitoIOS.framework in Frameworks */,
 				80CA63891C67BD5400362DBF /* libOCMock.a in Frameworks */,
-				1EA1170116F4D354001C015C /* CrashReporter.framework in Frameworks */,
-				1E5A459516F0DFC200B55C04 /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -791,16 +779,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1EB6174A1B0A30480035A986 /* HockeySDK.framework in Frameworks */,
+				80B1C4EF1C8A72620057A5CB /* HockeySDK.framework in Frameworks */,
 				80807B8D1C46BF2F00F4C44F /* OCHamcrestIOS.framework in Frameworks */,
 				80807B8F1C46BF2F00F4C44F /* OCMockitoIOS.framework in Frameworks */,
-				80807B881C46BF0100F4C44F /* libOCMock.a in Frameworks */,
-				1EB617D51B0A36AE0035A986 /* Foundation.framework in Frameworks */,
-				808441671C20617300644A40 /* OCHamcrestIOS.framework in Frameworks */,
-				1EB6174A1B0A30480035A986 /* HockeySDK.framework in Frameworks */,
 				80CA638A1C67BD5400362DBF /* libOCMock.a in Frameworks */,
-				1EB617CC1B0A34040035A986 /* CrashReporter.framework in Frameworks */,
-				808441691C20617300644A40 /* OCMockitoIOS.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -865,15 +847,10 @@
 				8034E6B61BA3567B00D83A30 /* BITDataTests.m */,
 				8034E6B71BA3567B00D83A30 /* BITDeviceTests.m */,
 				8034E6B81BA3567B00D83A30 /* BITDomainTests.m */,
-				1E61CCAE18E0585A00A5E38E /* BITFeedbackManagerTests.m */,
-				E40E0B0817DA19DC005E38C1 /* BITHockeyAppClientTests.m */,
-				1E70A23517F31B82001BB32D /* BITHockeyHelperTests.m */,
 				8034E6B91BA3567B00D83A30 /* BITInternalTests.m */,
-				E4507E4217F0658F00171A0D /* BITKeychainUtilsTests.m */,
 				8034E6BA1BA3567B00D83A30 /* BITPersistenceTests.m */,
 				8034E6BC1BA3567B00D83A30 /* BITSenderTests.m */,
 				8034E6BD1BA3567B00D83A30 /* BITSessionTests.m */,
-				1E5A459D16F0DFC200B55C04 /* BITStoreUpdateManagerTests.m */,
 				8034E6BF1BA3567B00D83A30 /* BITTelemetryContextTests.m */,
 				8034E6C01BA3567B00D83A30 /* BITMetricsManagerTests.m */,
 				8034E6C11BA3567B00D83A30 /* BITTestsDependencyInjection.h */,
@@ -1138,7 +1115,7 @@
 				8034E68D1BA31DE800D83A30 /* BITOrderedDictionary.h */,
 				8034E68E1BA31DE800D83A30 /* BITOrderedDictionary.m */,
 				8034E6631BA31D7C00D83A30 /* BITSender.h */,
-				8034E6641BA31D7C00D83A30 /* BITSender.m */,
+				80B1C4EB1C8A6F860057A5CB /* BITSender.m */,
 				8034E6651BA31D7C00D83A30 /* BITSession.h */,
 				8034E6661BA31D7C00D83A30 /* BITSession.m */,
 				8034E6A01BA3217400D83A30 /* BITSessionState.h */,
@@ -1150,12 +1127,6 @@
 				8034E6681BA31D7C00D83A30 /* BITUser.m */,
 			);
 			name = "Contract Files";
-				808441621C20617200644A40 /* OCHamcrestIOS.framework */,
-				8084416A1C20617C00644A40 /* OCMock */,
-				808441631C20617200644A40 /* OCMockitoIOS.framework */,
-			);
-			name = Frameworks;
-			path = "../HockeySDK FrameworkTests";
 			sourceTree = "<group>";
 		};
 		80807B7C1C46BF0100F4C44F /* OCMock */ = {
@@ -1190,7 +1161,6 @@
 		80807B891C46BF0600F4C44F /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				80807B7B1C46BF0100F4C44F /* libOCMock.a */,
 				80807B7C1C46BF0100F4C44F /* OCMock */,
 				80807B8A1C46BF2F00F4C44F /* OCHamcrestIOS.framework */,
 				80807B8B1C46BF2F00F4C44F /* OCMockitoIOS.framework */,
@@ -1375,6 +1345,7 @@
 				1E49A45D1612223B00463151 /* BITFeedbackUserDataViewController.h in Headers */,
 				1E49A46D1612226D00463151 /* BITAppVersionMetaInfo.h in Headers */,
 				8034E6A31BA3217400D83A30 /* BITSessionState.h in Headers */,
+				80B1C4EE1C8A6F950057A5CB /* BITUser.h in Headers */,
 				1E49A47C1612226D00463151 /* BITUpdateManagerPrivate.h in Headers */,
 				1E49A4851612226D00463151 /* BITUpdateViewControllerPrivate.h in Headers */,
 				1E49A4B5161222B900463151 /* BITHockeyBaseManagerPrivate.h in Headers */,
@@ -1593,7 +1564,7 @@
 			isa = PBXProject;
 			attributes = {
 				LastTestingUpgradeCheck = 0600;
-				LastUpgradeCheck = 0720;
+				LastUpgradeCheck = 0730;
 				TargetAttributes = {
 					1EB6173E1B0A30480035A986 = {
 						CreatedOnToolsVersion = 6.3.1;
