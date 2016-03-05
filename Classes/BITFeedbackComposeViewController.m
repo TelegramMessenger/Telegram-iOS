@@ -549,6 +549,7 @@
                                                          handler:^(UIAlertAction * action) {
                                                            typeof(self) strongSelf = weakSelf;
                                                            [strongSelf cancelAction];
+                                                           _actionSheetVisible = NO;
                                                          }];
     
     [alertController addAction:cancelAction];
@@ -558,6 +559,7 @@
                                                        handler:^(UIAlertAction * action) {
                                                          typeof(self) strongSelf = weakSelf;
                                                          [strongSelf editAction];
+                                                         _actionSheetVisible = NO;
                                                        }];
     
     [alertController addAction:editAction];
@@ -567,6 +569,7 @@
                                                        handler:^(UIAlertAction * action) {
                                                          typeof(self) strongSelf = weakSelf;
                                                          [strongSelf deleteAction];
+                                                         _actionSheetVisible = NO;
                                                        }];
     
     [alertController addAction:deleteAction];
