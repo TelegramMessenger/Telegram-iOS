@@ -95,69 +95,11 @@ FOUNDATION_EXPORT NSString *const kBITApplicationWasLaunched;
 /// @name Getter/Setter
 ///-----------------------------------------------------------------------------
 
-- (NSString *)screenResolution;
-
-- (void)setScreenResolution:(NSString *)screenResolution;
-
-- (NSString *)appVersion;
-
-- (void)setAppVersion:(NSString *)appVersion;
-
-- (NSString *)anonymousUserId;
-
-- (void)setAnonymousUserId:(NSString *)anonymous;
-
-- (NSString *)anonymousUserAquisitionDate;
-
-- (void)setAnonymousUserAquisitionDate:(NSString *)anonymousUserAquisitionDate;
-
-- (NSString *)sdkVersion;
-
-- (void)setSdkVersion:(NSString *)sdkVersion;
-
-- (NSString *)sessionId;
-
 - (void)setSessionId:(NSString *)sessionId;
-
-- (NSString *)isFirstSession;
 
 - (void)setIsFirstSession:(NSString *)isFirstSession;
 
-- (NSString *)isNewSession;
-
 - (void)setIsNewSession:(NSString *)isNewSession;
-
-- (NSString *)osVersion;
-
-- (void)setOsVersion:(NSString *)osVersion;
-
-- (NSString *)osName;
-
-- (void)setOsName:(NSString *)osName;
-
-- (NSString *)deviceModel;
-
-- (void)setDeviceModel:(NSString *)deviceModel;
-
-- (NSString *)deviceOemName;
-
-- (void)setDeviceOemName:(NSString *)oemName;
-
-- (NSString *)osLocale;
-
-- (void)setOsLocale:(NSString *)osLocale;
-
-- (NSString *)osLanguage;
-
-- (void)setOsLanguage:(NSString *)osLanguage;
-
-- (NSString *)deviceId;
-
-- (void)setDeviceId:(NSString *)deviceId;
-
-- (NSString *)deviceType;
-
-- (void)setDeviceType:(NSString *)deviceType;
 
 @end
 NS_ASSUME_NONNULL_END
