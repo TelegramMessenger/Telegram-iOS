@@ -33,7 +33,6 @@
 
 #import "HockeySDKNullability.h"
 
-@class BITOrderedDictionary;
 @class BITConfiguration;
 @class BITTelemetryData;
 @class BITTelemetryContext;
@@ -100,7 +99,7 @@ FOUNDATION_EXPORT char *BITSafeJsonEventsString;
  *
  *  @param dictionary the dictionary object which is to be added to the JSON Stream queue string.
  */
-- (void)appendDictionaryToJsonStream:(BITOrderedDictionary *)dictionary;
+- (void)appendDictionaryToJsonStream:(NSDictionary *)dictionary;
 
 /**
  *  A C function that serializes a given dictionary to JSON and appends it to a char string

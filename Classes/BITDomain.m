@@ -17,8 +17,8 @@
 /// Adds all members of this class to a dictionary
 /// @param dictionary to which the members of this class will be added.
 ///
-- (BITOrderedDictionary *)serializeToDictionary {
-    BITOrderedDictionary *dict = [super serializeToDictionary];
+- (NSDictionary *)serializeToDictionary {
+    NSMutableDictionary *dict = [super serializeToDictionary].mutableCopy;
     return dict;
 }
 

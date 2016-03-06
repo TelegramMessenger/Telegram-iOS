@@ -1,10 +1,9 @@
 #import "BITTelemetryData.h"
-#import "BITOrderedDictionary.h"
 
 @implementation BITTelemetryData
 
-- (BITOrderedDictionary *)serializeToDictionary {
-  BITOrderedDictionary *dict = [super serializeToDictionary];
+- (NSDictionary *)serializeToDictionary {
+  NSMutableDictionary *dict = [super serializeToDictionary].mutableCopy;
   if (self.version != nil) {
     [dict setObject:self.version forKey:@"ver"];
   }

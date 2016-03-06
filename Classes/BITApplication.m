@@ -1,5 +1,4 @@
 #import "BITApplication.h"
-#import "BITOrderedDictionary.h"
 
 /// Data contract class for type Application.
 @implementation BITApplication
@@ -8,8 +7,8 @@
 /// Adds all members of this class to a dictionary
 /// @param dictionary to which the members of this class will be added.
 ///
-- (BITOrderedDictionary *)serializeToDictionary {
-    BITOrderedDictionary *dict = [super serializeToDictionary];
+- (NSDictionary *)serializeToDictionary {
+    NSMutableDictionary *dict = [super serializeToDictionary].mutableCopy;
     if (self.version != nil) {
         [dict setObject:self.version forKey:@"ai.application.ver"];
     }

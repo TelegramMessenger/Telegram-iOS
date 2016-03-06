@@ -1,16 +1,14 @@
 #import "BITTelemetryObject.h"
-#import "BITOrderedDictionary.h"
 
 @implementation BITTelemetryObject
 
 // empty implementation for the base class
-- (BITOrderedDictionary *)serializeToDictionary{
-  BITOrderedDictionary *dict = [BITOrderedDictionary new];
-  return dict;
+- (NSDictionary *)serializeToDictionary{
+  return [NSDictionary dictionary];
 }
 
 - (NSString *)serializeToString {
-  BITOrderedDictionary *dict = [self serializeToDictionary];
+  NSDictionary *dict = [self serializeToDictionary];
   NSMutableString  *jsonString;
   NSError *error = nil;
   NSData *json;

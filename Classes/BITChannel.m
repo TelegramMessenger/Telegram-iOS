@@ -7,7 +7,6 @@
 #import "BITTelemetryContext.h"
 #import "BITTelemetryData.h"
 #import "HockeySDKPrivate.h"
-#import "BITOrderedDictionary.h"
 #import "BITEnvelope.h"
 #import "BITData.h"
 #import "BITDevice.h"
@@ -72,7 +71,7 @@ static NSInteger const BITSchemaVersion  = 2;
 
 - (void)enqueueTelemetryItem:(BITTelemetryData *)item {
   if(item) {
-    BITOrderedDictionary *dict = [self dictionaryForTelemetryData:item];
+    NSDictionary *dict = [self dictionaryForTelemetryData:item];
     __weak typeof(self) weakSelf = self;
     
     dispatch_async(self.dataItemsOperations, ^{
@@ -92,10 +91,10 @@ static NSInteger const BITSchemaVersion  = 2;
 
 #pragma mark - Envelope telemerty items
 
-- (BITOrderedDictionary *)dictionaryForTelemetryData:(BITTelemetryData *) telemetryData {
+- (NSDictionary *)dictionaryForTelemetryData:(BITTelemetryData *) telemetryData {
   
   BITEnvelope *envelope = [self envelopeForTelemetryData:telemetryData];
-  BITOrderedDictionary *dict = [envelope serializeToDictionary];
+  NSDictionary *dict = [envelope serializeToDictionary];
   return dict;
 }
 
@@ -119,7 +118,7 @@ static NSInteger const BITSchemaVersion  = 2;
 
 #pragma mark - Serialization Helper
 
-- (NSString *)serializeDictionaryToJSONString:(BITOrderedDictionary *)dictionary {
+- (NSString *)serializeDictionaryToJSONString:(NSDictionary *)dictionary {
   NSError *error;
   NSData *data = [NSJSONSerialization dataWithJSONObject:dictionary options:(NSJSONWritingOptions)0 error:&error];
   if (!data) {
@@ -132,7 +131,7 @@ static NSInteger const BITSchemaVersion  = 2;
 
 #pragma mark JSON Stream
 
-- (void)appendDictionaryToJsonStream:(BITOrderedDictionary *)dictionary {
+- (void)appendDictionaryToJsonStream:(NSDictionary *)dictionary {
   if(dictionary) {
     NSString *string = [self serializeDictionaryToJSONString:dictionary];
     

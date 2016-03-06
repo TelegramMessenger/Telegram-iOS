@@ -82,14 +82,14 @@ FOUNDATION_EXPORT NSString *const kBITApplicationWasLaunched;
 /**
  *  A dictionary which holds static tag fields for the purpose of caching
  */
-@property (nonatomic, strong)BITOrderedDictionary *tags;
+@property (nonatomic, strong) NSDictionary *tags;
 
 /**
  *  Returns context objects as dictionary.
  *
  *  @return a dictionary containing all context fields
  */
-- (BITOrderedDictionary *)contextDictionary;
+- (NSDictionary *)contextDictionary;
 
 ///-----------------------------------------------------------------------------
 /// @name Getter/Setter
