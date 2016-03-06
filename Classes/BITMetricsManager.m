@@ -156,6 +156,8 @@ NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
 #pragma mark Events
 
 - (void)trackEventWithName:(NSString *)eventName {
+  if (!eventName) { return; }
+  
   __weak typeof(self) weakSelf = self;
   dispatch_async(self.metricsEventQueue, ^{
     typeof(self) strongSelf = weakSelf;
