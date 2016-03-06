@@ -19,9 +19,7 @@
   if(self) {
     _version = [coder decodeObjectForKey:@"self.version"];
     _name = [coder decodeObjectForKey:@"self.name"];
-    _properties = [coder decodeObjectForKey:@"self.properties"];
   }
-
   return self;
 }
 
@@ -29,8 +27,6 @@
   [super encodeWithCoder:coder];
   [coder encodeObject:self.version forKey:@"self.version"];
   [coder encodeObject:self.name forKey:@"self.name"];
-  [coder encodeObject:self.properties forKey:@"self.properties"];
 }
-
 
 @end
