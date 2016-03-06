@@ -26,10 +26,15 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 #import <Foundation/Foundation.h>
+#import "HockeySDKNullability.h"
 #import "BITHockeyBaseManager.h"
+
+NS_ASSUME_NONNULL_BEGIN
 
 @interface BITMetricsManager : BITHockeyBaseManager
 
 - (void)trackEventWithName:(NSString *)eventName;
 
 @end
+
+NS_ASSUME_NONNULL_END

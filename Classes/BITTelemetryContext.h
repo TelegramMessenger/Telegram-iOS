@@ -1,8 +1,9 @@
 #import <Foundation/Foundation.h>
-#import "HockeySDK.h"
+#import "HockeySDKFeatureConfig.h"
 
 #if HOCKEYSDK_FEATURE_METRICS
 
+#import "HockeySDKNullability.h"
 #import "HockeySDKPrivate.h"
 #import "BITApplication.h"
 #import "BITDevice.h"
