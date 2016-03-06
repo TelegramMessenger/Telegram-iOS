@@ -30,4 +30,6 @@
 
 @interface BITMetricsManager : BITHockeyBaseManager
 
+- (void)trackEventWithName:(NSString *)eventName;
+
 @end

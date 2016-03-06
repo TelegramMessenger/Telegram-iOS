@@ -366,6 +366,10 @@
 		8034E6E31BA3567B00D83A30 /* BITTestsDependencyInjection.m in Sources */ = {isa = PBXBuildFile; fileRef = 8034E6C21BA3567B00D83A30 /* BITTestsDependencyInjection.m */; };
 		8034E6E41BA3567B00D83A30 /* BITUserTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 8034E6C31BA3567B00D83A30 /* BITUserTests.m */; };
 		8034E6E51BA3567B00D83A30 /* BITUserTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 8034E6C31BA3567B00D83A30 /* BITUserTests.m */; };
+		80668C741C8CD93B00A133D3 /* BITEventData.h in Headers */ = {isa = PBXBuildFile; fileRef = 80668C721C8CD93B00A133D3 /* BITEventData.h */; };
+		80668C751C8CD93B00A133D3 /* BITEventData.h in Headers */ = {isa = PBXBuildFile; fileRef = 80668C721C8CD93B00A133D3 /* BITEventData.h */; };
+		80668C761C8CD93B00A133D3 /* BITEventData.m in Sources */ = {isa = PBXBuildFile; fileRef = 80668C731C8CD93B00A133D3 /* BITEventData.m */; };
+		80668C771C8CD93B00A133D3 /* BITEventData.m in Sources */ = {isa = PBXBuildFile; fileRef = 80668C731C8CD93B00A133D3 /* BITEventData.m */; };
 		807756401BC6A44E0037C3DA /* HockeySDKEnums.h in Headers */ = {isa = PBXBuildFile; fileRef = 8077563F1BC6A44D0037C3DA /* HockeySDKEnums.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		807756411BC6B6050037C3DA /* HockeySDKEnums.h in Headers */ = {isa = PBXBuildFile; fileRef = 8077563F1BC6A44D0037C3DA /* HockeySDKEnums.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		80807B8C1C46BF2F00F4C44F /* OCHamcrestIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80807B8A1C46BF2F00F4C44F /* OCHamcrestIOS.framework */; };
@@ -664,6 +668,8 @@
 		8034E6C11BA3567B00D83A30 /* BITTestsDependencyInjection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITTestsDependencyInjection.h; sourceTree = "<group>"; };
 		8034E6C21BA3567B00D83A30 /* BITTestsDependencyInjection.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITTestsDependencyInjection.m; sourceTree = "<group>"; };
 		8034E6C31BA3567B00D83A30 /* BITUserTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITUserTests.m; sourceTree = "<group>"; };
+		80668C721C8CD93B00A133D3 /* BITEventData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITEventData.h; sourceTree = "<group>"; };
+		80668C731C8CD93B00A133D3 /* BITEventData.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITEventData.m; sourceTree = "<group>"; };
 		8077563F1BC6A44D0037C3DA /* HockeySDKEnums.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HockeySDKEnums.h; sourceTree = "<group>"; };
 		80807B7D1C46BF0100F4C44F /* NSNotificationCenter+OCMAdditions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSNotificationCenter+OCMAdditions.h"; sourceTree = "<group>"; };
 		80807B7E1C46BF0100F4C44F /* OCMArg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMArg.h; sourceTree = "<group>"; };
@@ -1110,6 +1116,8 @@
 				8034E6601BA31D7C00D83A30 /* BITDomain.m */,
 				8034E6611BA31D7C00D83A30 /* BITEnvelope.h */,
 				8034E6621BA31D7C00D83A30 /* BITEnvelope.m */,
+				80668C721C8CD93B00A133D3 /* BITEventData.h */,
+				80668C731C8CD93B00A133D3 /* BITEventData.m */,
 				8034E6981BA3216000D83A30 /* BITInternal.h */,
 				8034E6991BA3216000D83A30 /* BITInternal.m */,
 				8034E68D1BA31DE800D83A30 /* BITOrderedDictionary.h */,
@@ -1304,6 +1312,7 @@
 				8034E62B1BA31AD600D83A30 /* BITTelemetryData.h in Headers */,
 				1E5955FD15B7877B00A03429 /* BITHockeyManagerDelegate.h in Headers */,
 				E48A3DEC17B3ED1C00924C3D /* BITAuthenticator.h in Headers */,
+				80668C741C8CD93B00A133D3 /* BITEventData.h in Headers */,
 				8034E6551BA31D0C00D83A30 /* BITGZIP.h in Headers */,
 				1E754E5C1621FBB70070AB92 /* BITCrashManager.h in Headers */,
 				1E754E5E1621FBB70070AB92 /* BITCrashManagerDelegate.h in Headers */,
@@ -1389,6 +1398,7 @@
 				8034E62C1BA31AD600D83A30 /* BITTelemetryData.h in Headers */,
 				1EB6176D1B0A30CC0035A986 /* BITWebTableViewCell.h in Headers */,
 				8034E68A1BA31D7C00D83A30 /* BITUser.h in Headers */,
+				80668C751C8CD93B00A133D3 /* BITEventData.h in Headers */,
 				1EB617AF1B0A31CA0035A986 /* HockeySDKFeatureConfig.h in Headers */,
 				8034E6561BA31D0C00D83A30 /* BITGZIP.h in Headers */,
 				1EB6177A1B0A310F0035A986 /* BITCrashDetailsPrivate.h in Headers */,
@@ -1742,6 +1752,7 @@
 				1E5954D315B6F24A00A03429 /* BITHockeyManager.m in Sources */,
 				1E49A43F1612223B00463151 /* BITFeedbackComposeViewController.m in Sources */,
 				8034E6871BA31D7C00D83A30 /* BITSession.m in Sources */,
+				80668C761C8CD93B00A133D3 /* BITEventData.m in Sources */,
 				8034E64A1BA31AFF00D83A30 /* BITPersistence.m in Sources */,
 				E40E0B0D17DA1AFF005E38C1 /* BITHockeyAppClient.m in Sources */,
 				1E49A4451612223B00463151 /* BITFeedbackListViewCell.m in Sources */,
@@ -1845,6 +1856,7 @@
 				1EB6175D1B0A30950035A986 /* HockeySDKPrivate.m in Sources */,
 				8034E68C1BA31D7C00D83A30 /* BITUser.m in Sources */,
 				1EB617861B0A31510035A986 /* BITArrowImageAnnotation.m in Sources */,
+				80668C771C8CD93B00A133D3 /* BITEventData.m in Sources */,
 				8034E69D1BA3216000D83A30 /* BITInternal.m in Sources */,
 				8034E6881BA31D7C00D83A30 /* BITSession.m in Sources */,
 				8034E64B1BA31AFF00D83A30 /* BITPersistence.m in Sources */,
