@@ -49,12 +49,12 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  *  The max number of request that can run at a time.
  */
-@property NSUInteger maxRequestCount;
+@property (nonatomic, assign) NSUInteger maxRequestCount;
 
 /**
  *  The number of requests that are currently running.
  */
-@property NSUInteger runningRequestsCount;
+@property (nonatomic, assign) NSUInteger runningRequestsCount;
 
 /**
  *	BaseURL to which relative paths are appended.
