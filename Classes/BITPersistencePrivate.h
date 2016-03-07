@@ -26,8 +26,14 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import "HockeySDK.h"
+#import "HockeySDKFeatureConfig.h"
+
+#if HOCKEYSDK_FEATURE_METRICS
+
 #import "BITPersistence.h"
+
+#import "HockeySDKNullability.h"
+NS_ASSUME_NONNULL_BEGIN
 
 @interface BITPersistence ()
 
@@ -39,8 +45,6 @@ typedef NS_ENUM(NSInteger, BITPersistenceType) {
     BITPersistenceTypeTelemetry = 0,
     BITPersistenceTypeMetaData = 1
 };
-
-#if HOCKEYSDK_FEATURE_METRICS
 
 /**
  * Notification that will be send on the main thread to notifiy observers of a successfully saved bundle.
@@ -123,7 +127,7 @@ FOUNDATION_EXPORT NSString *const BITPersistenceSuccessNotification;
  *
  *  @return the path of the item, which should be sent next
  */
-- (NSString *)requestNextFilePath;
+- (nullable NSString *)requestNextFilePath;
 
 /**
  *  Release a requested path. This method should be called after sending a file failed.
@@ -139,7 +143,7 @@ FOUNDATION_EXPORT NSString *const BITPersistenceSuccessNotification;
  *
  *  @return a data object which contains telemetry data in json representation
  */
-- (NSData *)dataAtFilePath:(NSString *)filePath;
+- (nullable NSData *)dataAtFilePath:(NSString *)filePath;
 
 /**
  *  Returns the content of the session Ids file.
@@ -175,3 +179,5 @@ FOUNDATION_EXPORT NSString *const BITPersistenceSuccessNotification;
 #endif /* HOCKEYSDK_FEATURE_METRICS */
 
 @end
+
+NS_ASSUME_NONNULL_END

@@ -1,9 +1,8 @@
-#import <Foundation/Foundation.h>
 #import "HockeySDKFeatureConfig.h"
 
 #if HOCKEYSDK_FEATURE_METRICS
 
-#import "HockeySDKNullability.h"
+#import <Foundation/Foundation.h>
 #import "HockeySDKPrivate.h"
 #import "BITApplication.h"
 #import "BITDevice.h"
@@ -13,6 +12,7 @@
 
 @class BITPersistence;
 
+#import "HockeySDKNullability.h"
 NS_ASSUME_NONNULL_BEGIN
 
 FOUNDATION_EXPORT NSString *const kBITApplicationWasLaunched;
@@ -103,6 +103,7 @@ FOUNDATION_EXPORT NSString *const kBITApplicationWasLaunched;
 - (void)setIsNewSession:(NSString *)isNewSession;
 
 @end
+
 NS_ASSUME_NONNULL_END
 
 #endif /* HOCKEYSDK_FEATURE_METRICS */

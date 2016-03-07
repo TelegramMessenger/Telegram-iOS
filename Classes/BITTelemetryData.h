@@ -1,4 +1,11 @@
+#import "HockeySDKFeatureConfig.h"
+
+#if HOCKEYSDK_FEATURE_METRICS
+
 #import "BITTelemetryObject.h"
+
+#import "HockeySDKNullability.h"
+NS_ASSUME_NONNULL_BEGIN
 
 ///Data contract class for type BITTelemetryData.
 @interface BITTelemetryData : BITTelemetryObject <NSCoding>
@@ -10,3 +17,7 @@
 @property (nonatomic, copy) NSString *name;
 
 @end
+
+NS_ASSUME_NONNULL_END
+
+#endif /* HOCKEYSDK_FEATURE_METRICS */

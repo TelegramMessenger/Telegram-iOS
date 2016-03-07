@@ -311,8 +311,6 @@
 		8034E67E1BA31D7C00D83A30 /* BITEnvelope.h in Headers */ = {isa = PBXBuildFile; fileRef = 8034E6611BA31D7C00D83A30 /* BITEnvelope.h */; };
 		8034E67F1BA31D7C00D83A30 /* BITEnvelope.m in Sources */ = {isa = PBXBuildFile; fileRef = 8034E6621BA31D7C00D83A30 /* BITEnvelope.m */; };
 		8034E6801BA31D7C00D83A30 /* BITEnvelope.m in Sources */ = {isa = PBXBuildFile; fileRef = 8034E6621BA31D7C00D83A30 /* BITEnvelope.m */; };
-		8034E6811BA31D7C00D83A30 /* BITSender.h in Headers */ = {isa = PBXBuildFile; fileRef = 8034E6631BA31D7C00D83A30 /* BITSender.h */; };
-		8034E6821BA31D7C00D83A30 /* BITSender.h in Headers */ = {isa = PBXBuildFile; fileRef = 8034E6631BA31D7C00D83A30 /* BITSender.h */; };
 		8034E6851BA31D7C00D83A30 /* BITSession.h in Headers */ = {isa = PBXBuildFile; fileRef = 8034E6651BA31D7C00D83A30 /* BITSession.h */; };
 		8034E6861BA31D7C00D83A30 /* BITSession.h in Headers */ = {isa = PBXBuildFile; fileRef = 8034E6651BA31D7C00D83A30 /* BITSession.h */; };
 		8034E6871BA31D7C00D83A30 /* BITSession.m in Sources */ = {isa = PBXBuildFile; fileRef = 8034E6661BA31D7C00D83A30 /* BITSession.m */; };
@@ -633,7 +631,6 @@
 		8034E6601BA31D7C00D83A30 /* BITDomain.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITDomain.m; sourceTree = "<group>"; };
 		8034E6611BA31D7C00D83A30 /* BITEnvelope.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITEnvelope.h; sourceTree = "<group>"; };
 		8034E6621BA31D7C00D83A30 /* BITEnvelope.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITEnvelope.m; sourceTree = "<group>"; };
-		8034E6631BA31D7C00D83A30 /* BITSender.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITSender.h; sourceTree = "<group>"; };
 		8034E6651BA31D7C00D83A30 /* BITSession.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITSession.h; sourceTree = "<group>"; };
 		8034E6661BA31D7C00D83A30 /* BITSession.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITSession.m; sourceTree = "<group>"; };
 		8034E6671BA31D7C00D83A30 /* BITUser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITUser.h; sourceTree = "<group>"; };
@@ -688,7 +685,6 @@
 		808441731C20617C00644A40 /* OCMRecorder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMRecorder.h; sourceTree = "<group>"; };
 		808441741C20617C00644A40 /* OCMStubRecorder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMStubRecorder.h; sourceTree = "<group>"; };
 		80A4662D1C58F4DF00199909 /* BITCrashReportTextFormatterPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashReportTextFormatterPrivate.h; sourceTree = "<group>"; };
-		80B1C4EB1C8A6F860057A5CB /* BITSender.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITSender.m; sourceTree = "<group>"; };
 		80CA63881C67BD5400362DBF /* libOCMock.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libOCMock.a; sourceTree = "<group>"; };
 		80CA638E1C67F78000362DBF /* BITUpdateManagerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITUpdateManagerTests.m; sourceTree = "<group>"; };
 		846A901D1B20B0EB0076BB80 /* BITCrashCXXExceptionHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashCXXExceptionHandler.h; sourceTree = "<group>"; };
@@ -1114,8 +1110,6 @@
 				80668C731C8CD93B00A133D3 /* BITEventData.m */,
 				8034E6981BA3216000D83A30 /* BITInternal.h */,
 				8034E6991BA3216000D83A30 /* BITInternal.m */,
-				8034E6631BA31D7C00D83A30 /* BITSender.h */,
-				80B1C4EB1C8A6F860057A5CB /* BITSender.m */,
 				8034E6651BA31D7C00D83A30 /* BITSession.h */,
 				8034E6661BA31D7C00D83A30 /* BITSession.m */,
 				8034E6A01BA3217400D83A30 /* BITSessionState.h */,
@@ -1335,7 +1329,6 @@
 				8034E6A51BA3217400D83A30 /* BITSessionStateData.h in Headers */,
 				1EB92E731955C38C0093C8B6 /* BITHockeyAttachment.h in Headers */,
 				8034E66D1BA31D7C00D83A30 /* BITBase.h in Headers */,
-				8034E6811BA31D7C00D83A30 /* BITSender.h in Headers */,
 				1E49A4AF161222B900463151 /* BITHockeyBaseManager.h in Headers */,
 				1E0829001708F69A0073050E /* BITStoreUpdateManagerDelegate.h in Headers */,
 				8034E6751BA31D7C00D83A30 /* BITDevice.h in Headers */,
@@ -1421,7 +1414,6 @@
 				8034E6A61BA3217400D83A30 /* BITSessionStateData.h in Headers */,
 				1EB617CD1B0A34440035A986 /* BITHTTPOperation.h in Headers */,
 				8034E66E1BA31D7C00D83A30 /* BITBase.h in Headers */,
-				8034E6821BA31D7C00D83A30 /* BITSender.h in Headers */,
 				1EB617A11B0A318B0035A986 /* BITFeedbackManagerPrivate.h in Headers */,
 				1EB6177B1B0A31120035A986 /* BITCrashMetaData.h in Headers */,
 				8034E6761BA31D7C00D83A30 /* BITDevice.h in Headers */,
@@ -2034,6 +2026,7 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
+				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				DSTROOT = /tmp/HockeySDK.dst;
@@ -2281,6 +2274,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
+				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				DSTROOT = /tmp/HockeySDK.dst;
@@ -2303,6 +2297,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
+				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				DSTROOT = /tmp/HockeySDK.dst;
@@ -2508,6 +2503,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
+				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				DSTROOT = /tmp/HockeySDK.dst;

@@ -113,7 +113,7 @@ static NSUInteger const BITDefaultFileCount = 50;
     return (NSDictionary *) bundle;
   }
   BITHockeyLog(@"INFO: The context meta data file could not be loaded.");
-  return nil;
+  return [NSDictionary dictionary];
 }
 
 - (NSObject *)bundleAtFilePath:(NSString *)filePath withFileBaseString:(NSString *)filebaseString {
