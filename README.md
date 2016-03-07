@@ -1,5 +1,5 @@
 [![Build Status](https://travis-ci.org/bitstadium/HockeySDK-iOS.svg?branch=master)](https://travis-ci.org/bitstadium/HockeySDK-iOS)
-[![Version](http://cocoapod-badges.herokuapp.com/v/HockeySDK-iOS/badge.png)](http://cocoadocs.org/docsets/HockeySDK)
+[![Version](http://cocoapod-badges.herokuapp.com/v/HockeySDK/badge.png)](http://cocoadocs.org/docsets/HockeySDK)
 
 ## Version 3.8.5
 
