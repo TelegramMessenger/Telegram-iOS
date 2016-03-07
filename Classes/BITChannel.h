@@ -31,12 +31,12 @@
 
 #if HOCKEYSDK_FEATURE_METRICS
 
-#import "HockeySDKNullability.h"
-
 @class BITConfiguration;
 @class BITTelemetryData;
 @class BITTelemetryContext;
 @class BITPersistence;
+
+#import "HockeySDKNullability.h"
 NS_ASSUME_NONNULL_BEGIN
 
 FOUNDATION_EXPORT char *BITSafeJsonEventsString;
@@ -57,10 +57,27 @@ FOUNDATION_EXPORT char *BITSafeJsonEventsString;
  */
 @property (nonatomic, strong) BITPersistence *persistence;
 
-/**
- *  Number of queue items which will trigger a flush (testing).
+/*
+ * Threshold for sending data to the server. Default batch size for debugging is 150, for release
+ * configuration, the batch size is 5.
+ *
+ * Default: 50
+ *
+ * @warning: We advice to not set the batch size below 5 events.
  */
-@property (nonatomic) NSUInteger maxBatchCount;
+@property (nonatomic) NSUInteger maxBatchSize;
+
+/*
+ * Interval for sending data to the server in seconds.
+ *
+ * Default: 15
+ */
+@property (nonatomic, assign) NSInteger batchInterval;
+
+/**
+ *  A timer source which is used to flush the queue after a cretain time.
+ */
+@property (nonatomic, strong, nullable) dispatch_source_t timerSource;
 
 /**
  *  A queue which makes array operations thread safe.
