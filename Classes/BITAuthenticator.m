@@ -799,6 +799,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   unsigned char *buffer, *source;
   source = (unsigned char *)malloc((unsigned long)fs.st_size);
   if (read(fd, source, (unsigned long)fs.st_size) != fs.st_size) {
+    close(fd);
     // Couldn't read file
     free(source);
     return;
