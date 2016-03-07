@@ -38,6 +38,7 @@
 @class BITTelemetryData;
 @class BITTelemetryContext;
 @class BITPersistence;
+
 NS_ASSUME_NONNULL_BEGIN
 
 FOUNDATION_EXPORT char *BITSafeJsonEventsString;
@@ -105,10 +106,10 @@ FOUNDATION_EXPORT char *BITSafeJsonEventsString;
 /**
  *  A C function that serializes a given dictionary to JSON and appends it to a char string
  *
- *  @param dictionary A dictionary which will be serialized to JSON and then appended to the string.
- *  @param string The C string which the dictionary's JSON representation will be appended to.
+ *  @param existing_json_stream A C string containing JSON items in the JSON Stream format.
+ *  @param jsonString A NSString object containing a valid JSON item.
  */
-void bit_appendStringToSafeJsonStream(NSString *string, char *__nonnull*__nonnull jsonStream);
+char * bit_jsonStreamByAppendingJsonString(char *existing_json_stream, NSString *jsonString);
 
 /**
  *  Reset BITSafeJsonEventsString so we can start appending JSON dictionaries.
@@ -127,6 +128,7 @@ void bit_resetSafeJsonStream(char *__nonnull*__nonnull jsonStream);
 - (BOOL)isQueueBusy;
 
 @end
+
 NS_ASSUME_NONNULL_END
 
 #endif /* HOCKEYSDK_FEATURE_METRICS */

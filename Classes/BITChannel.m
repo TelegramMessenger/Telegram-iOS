@@ -19,6 +19,8 @@ char *BITSafeJsonEventsString;
 static NSInteger const BITDefaultMaxBatchCount  = 1;
 static NSInteger const BITSchemaVersion  = 2;
 
+NS_ASSUME_NONNULL_BEGIN
+
 @implementation BITChannel
 
 @synthesize persistence = _persistence;
@@ -46,7 +48,6 @@ static NSInteger const BITSchemaVersion  = 2;
 #pragma mark - Queue management
 
 - (BOOL)isQueueBusy{
-  
   [self.persistence isFreeSpaceAvailable];
   return true;
 }
@@ -71,20 +72,20 @@ static NSInteger const BITSchemaVersion  = 2;
 #pragma mark - Adding to queue
 
 - (void)enqueueTelemetryItem:(BITTelemetryData *)item {
-  if(item) {
+  if (item) {
     BITOrderedDictionary *dict = [self dictionaryForTelemetryData:item];
     __weak typeof(self) weakSelf = self;
     
     dispatch_async(self.dataItemsOperations, ^{
       typeof(self) strongSelf = weakSelf;
-      
-      // Enqueue item
-      [strongSelf appendDictionaryToJsonStream:dict];
-      
-      if(strongSelf->_dataItemCount >= self.maxBatchCount) {
-        // Max batch count has been reached, so write queue to disk and delete all items.
-        [strongSelf persistDataItemQueue];
+      if (strongSelf) {
+        // Enqueue item
+        [strongSelf appendDictionaryToJsonStream:dict];
         
+        if(strongSelf->_dataItemCount >= self.maxBatchCount) {
+          // Max batch count has been reached, so write queue to disk and delete all items.
+          [strongSelf persistDataItemQueue];
+        }
       }
     });
   }
@@ -138,27 +139,23 @@ static NSInteger const BITSchemaVersion  = 2;
     
     // Since we can't persist every event right away, we write it to a simple C string.
     // This can then be written to disk by a signal handler in case of a crash.
-    bit_appendStringToSafeJsonStream(string, &(BITSafeJsonEventsString));
+    BITSafeJsonEventsString = bit_jsonStreamByAppendingJsonString(BITSafeJsonEventsString, string);
     _dataItemCount += 1;
   }
 }
 
-void bit_appendStringToSafeJsonStream(NSString *string, char **jsonString) {
-  if (jsonString == NULL) { return; }
-  
-  if (!string) { return; }
-  
-  if (*jsonString == NULL || strlen(*jsonString) == 0) {
-    bit_resetSafeJsonStream(jsonString);
+char * bit_jsonStreamByAppendingJsonString(char *json_stream, NSString *jsonString) {
+  if ((json_stream == NULL) || !json_stream) {
+    return strdup("");
+  }
+  if (!jsonString || (jsonString.length == 0)) {
+    return json_stream;
   }
   
-  if (string.length == 0) { return; }
-  
-  char *new_string = NULL;
-  // Concatenate old string with new JSON string and add a comma.
-  asprintf(&new_string, "%s%.*s\n", *jsonString, (int)MIN(string.length, (NSUInteger)INT_MAX), string.UTF8String);
-  free(*jsonString);
-  *jsonString = new_string;
+  char *concatenated_string = NULL;
+  // Concatenate old string with new JSON string and add a new line.
+  asprintf(&concatenated_string, "%s%.*s\n", json_stream, (int)MIN(jsonString.length, (NSUInteger)INT_MAX), jsonString.UTF8String);
+  return concatenated_string;
 }
 
 void bit_resetSafeJsonStream(char **string) {
@@ -177,5 +174,7 @@ void bit_resetSafeJsonStream(char **string) {
 }
 
 @end
+
+NS_ASSUME_NONNULL_END
 
 #endif /* HOCKEYSDK_FEATURE_METRICS */
