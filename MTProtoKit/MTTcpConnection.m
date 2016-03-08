@@ -20,6 +20,8 @@
 #import <MTProtoKit/MTContext.h>
 #import <MTProtoKit/MTApiEnvironment.h>
 
+#import "aes.h"
+
 MTInternalIdClass(MTTcpConnection)
 
 typedef enum {
@@ -32,6 +34,27 @@ typedef enum {
 
 static const NSTimeInterval MTMinTcpResponseTimeout = 12.0;
 static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
+static const bool useEncryption = true;
+
+struct ctr_state {
+    unsigned char ivec[16];  /* ivec[0..7] is the IV, ivec[8..15] is the big-endian counter */
+    unsigned int num;
+    unsigned char ecount[16];
+};
+
+static void init_ctr(struct ctr_state *state, const unsigned char *iv)
+{
+    /* aes_ctr128_encrypt requires 'num' and 'ecount' set to zero on the
+     * first call. */
+    state->num = 0;
+    memset(state->ecount, 0, 16);
+    
+    /* Initialise counter in 'ivec' to 0 */
+    //memset(state->ivec + 8, 0, 8);
+    
+    /* Copy IV into 'ivec' */
+    memcpy(state->ivec, iv, 16);
+}
 
 @interface MTTcpConnection () <GCDAsyncSocketDelegate>
 {   
@@ -51,6 +74,12 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
     NSData *_firstPacketControlByte;
     
     bool _addedControlHeader;
+    
+    AES_KEY _outgoingKey;
+    struct ctr_state _outgoingCtrState;
+    
+    AES_KEY _incomingKey;
+    struct ctr_state _incomingCtrState;
 }
 
 @property (nonatomic) int64_t packetHeadDecodeToken;
@@ -221,21 +250,59 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
                         uint8_t controlBytes[64];
                         arc4random_buf(controlBytes, 64);
                         
-                        int32_t *firstByte = (int32_t *)controlBytes;
-                        while (*firstByte == 0x44414548 || *firstByte == 0x54534f50 || *firstByte == 0x20544547 || *firstByte == 0x4954504f || *firstByte == 0xeeeeeeee) {
-                            arc4random_buf(controlBytes, 4);
+                        if (useEncryption) {
+                            int32_t controlVersion = 0xefefefef;
+                            memcpy(controlBytes + 56, &controlVersion, 4);
+                            
+                            uint8_t controlBytesReversed[64];
+                            for (int i = 0; i < 64; i++) {
+                                controlBytesReversed[i] = controlBytes[64 - 1 - i];
+                            }
+                            
+                            if (AES_set_encrypt_key(controlBytes + 8, 256, &_outgoingKey)) {
+                                MTLog(@"AES_set_encrypt_key ctr failed");
+                            }
+                            init_ctr(&_outgoingCtrState, controlBytes + 8 + 32);
+                            
+                            if (AES_set_encrypt_key(controlBytesReversed + 8, 256, &_incomingKey)) {
+                                MTLog(@"AES_set_encrypt_key ctr failed");
+                            }
+                            init_ctr(&_incomingCtrState, controlBytesReversed + 8 + 32);
+                            
+                            uint8_t encryptedControlBytes[64];
+                            
+                            AES_ctr128_encrypt(controlBytes, encryptedControlBytes, 64, &_outgoingKey, _outgoingCtrState.ivec, _outgoingCtrState.ecount, &_outgoingCtrState.num);
+                            
+                            NSMutableData *outData = [[NSMutableData alloc] initWithLength:64 + packetData.length];
+                            memcpy(outData.mutableBytes, controlBytes, 56);
+                            memcpy(outData.mutableBytes + 56, encryptedControlBytes + 56, 8);
+                            
+                            AES_ctr128_encrypt(packetData.bytes, outData.mutableBytes + 64, packetData.length, &_outgoingKey, _outgoingCtrState.ivec, _outgoingCtrState.ecount, &_outgoingCtrState.num);
+                            
+                            [_socket writeData:outData withTimeout:-1 tag:0];
+                        } else {
+                            int32_t *firstByte = (int32_t *)controlBytes;
+                            while (*firstByte == 0x44414548 || *firstByte == 0x54534f50 || *firstByte == 0x20544547 || *firstByte == 0x4954504f || *firstByte == 0xeeeeeeee) {
+                                arc4random_buf(controlBytes, 4);
+                            }
+                            
+                            while (controlBytes[0] == 0xef) {
+                                arc4random_buf(controlBytes, 1);
+                            }
+                            
+                            NSMutableData *controlData = [[NSMutableData alloc] init];
+                            [controlData appendBytes:controlBytes length:64];
+                            [controlData appendData:packetData];
+                            [_socket writeData:controlData withTimeout:-1 tag:0];
                         }
-                        
-                        while (controlBytes[0] == 0xef) {
-                            arc4random_buf(controlBytes, 1);
-                        }
-                        
-                        NSMutableData *controlData = [[NSMutableData alloc] init];
-                        [controlData appendBytes:controlBytes length:64];
-                        [controlData appendData:packetData];
-                        [_socket writeData:controlData withTimeout:-1 tag:0];
                     } else {
-                        [_socket writeData:packetData withTimeout:-1 tag:0];
+                        if (useEncryption) {
+                            NSMutableData *encryptedData = [[NSMutableData alloc] initWithLength:packetData.length];
+                            AES_ctr128_encrypt(packetData.bytes, encryptedData.mutableBytes, packetData.length, &_outgoingKey, _outgoingCtrState.ivec, _outgoingCtrState.ecount, &_outgoingCtrState.num);
+                            [_socket writeData:encryptedData withTimeout:-1 tag:0];
+                        } else {
+                            [_socket writeData:packetData withTimeout:-1 tag:0];
+                        }
                     }
                 }
                 
@@ -299,10 +366,19 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
     }
 }
 
-- (void)socket:(GCDAsyncSocket *)__unused socket didReadData:(NSData *)data withTag:(long)tag
+- (void)socket:(GCDAsyncSocket *)__unused socket didReadData:(NSData *)rawData withTag:(long)tag
 {
     if (_closed)
         return;
+    
+    NSData *data = nil;
+    if (useEncryption) {
+        NSMutableData *decryptedData = [[NSMutableData alloc] initWithLength:rawData.length];
+        AES_ctr128_encrypt(rawData.bytes, decryptedData.mutableBytes, rawData.length, &_incomingKey, _incomingCtrState.ivec, _incomingCtrState.ecount, &_incomingCtrState.num);
+        data = decryptedData;
+    } else {
+        data = rawData;
+    }
     
     if (tag == MTTcpReadTagPacketShortLength)
     {
