@@ -59,27 +59,27 @@
 #define kBITCrashMetaAttachment @"BITCrashMetaAttachment"
 
 // internal keys
-NSString *const KBITAttachmentDictIndex = @"index";
-NSString *const KBITAttachmentDictAttachment = @"attachment";
+static NSString *const KBITAttachmentDictIndex = @"index";
+static NSString *const KBITAttachmentDictAttachment = @"attachment";
 
-NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
+static NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 
-NSString *const kBITAppWentIntoBackgroundSafely = @"BITAppWentIntoBackgroundSafely";
-NSString *const kBITAppDidReceiveLowMemoryNotification = @"BITAppDidReceiveLowMemoryNotification";
-NSString *const kBITAppMarketingVersion = @"BITAppMarketingVersion";
-NSString *const kBITAppVersion = @"BITAppVersion";
-NSString *const kBITAppOSVersion = @"BITAppOSVersion";
-NSString *const kBITAppOSBuild = @"BITAppOSBuild";
-NSString *const kBITAppUUIDs = @"BITAppUUIDs";
+static NSString *const kBITAppWentIntoBackgroundSafely = @"BITAppWentIntoBackgroundSafely";
+static NSString *const kBITAppDidReceiveLowMemoryNotification = @"BITAppDidReceiveLowMemoryNotification";
+static NSString *const kBITAppMarketingVersion = @"BITAppMarketingVersion";
+static NSString *const kBITAppVersion = @"BITAppVersion";
+static NSString *const kBITAppOSVersion = @"BITAppOSVersion";
+static NSString *const kBITAppOSBuild = @"BITAppOSBuild";
+static NSString *const kBITAppUUIDs = @"BITAppUUIDs";
 
-NSString *const kBITFakeCrashUUID = @"BITFakeCrashUUID";
-NSString *const kBITFakeCrashAppMarketingVersion = @"BITFakeCrashAppMarketingVersion";
-NSString *const kBITFakeCrashAppVersion = @"BITFakeCrashAppVersion";
-NSString *const kBITFakeCrashAppBundleIdentifier = @"BITFakeCrashAppBundleIdentifier";
-NSString *const kBITFakeCrashOSVersion = @"BITFakeCrashOSVersion";
-NSString *const kBITFakeCrashDeviceModel = @"BITFakeCrashDeviceModel";
-NSString *const kBITFakeCrashAppBinaryUUID = @"BITFakeCrashAppBinaryUUID";
-NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
+static NSString *const kBITFakeCrashUUID = @"BITFakeCrashUUID";
+static NSString *const kBITFakeCrashAppMarketingVersion = @"BITFakeCrashAppMarketingVersion";
+static NSString *const kBITFakeCrashAppVersion = @"BITFakeCrashAppVersion";
+static NSString *const kBITFakeCrashAppBundleIdentifier = @"BITFakeCrashAppBundleIdentifier";
+static NSString *const kBITFakeCrashOSVersion = @"BITFakeCrashOSVersion";
+static NSString *const kBITFakeCrashDeviceModel = @"BITFakeCrashDeviceModel";
+static NSString *const kBITFakeCrashAppBinaryUUID = @"BITFakeCrashAppBinaryUUID";
+static NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
 
 
 static BITCrashManagerCallbacks bitCrashCallbacks = {
