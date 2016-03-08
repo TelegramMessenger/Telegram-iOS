@@ -1,6 +1,6 @@
-## Version 3.8.5
+## Version 3.8.6
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.8.5/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/3.8.6/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -441,7 +441,7 @@ To check if data is send properly to HockeyApp and also see some additional SDK 
 <a id="documentation"></a>
 ## 4. Documentation
 
-Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/3.8.5/index.html).
+Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/3.8.6/index.html).
 
 <a id="troubleshooting"></a>
 ## 5.Troubleshooting
@@ -455,7 +455,7 @@ Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/
   Make sure none of the following files are copied into your app bundle, check under app target, `Build Phases`, `Copy Bundle Resources` or in the `.app` bundle after building:
 
   - `HockeySDK.framework` (except if you build a dynamic framework version of the SDK yourself!)
-  - `de.bitstadium.HockeySDK-iOS-3.8.5.docset`
+  - `de.bitstadium.HockeySDK-iOS-3.8.6.docset`
 
 ### Feature are not working as expected
 
