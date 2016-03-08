@@ -59,27 +59,27 @@
 #define kBITCrashMetaAttachment @"BITCrashMetaAttachment"
 
 // internal keys
-NSString *const KBITAttachmentDictIndex = @"index";
-NSString *const KBITAttachmentDictAttachment = @"attachment";
+static NSString *const KBITAttachmentDictIndex = @"index";
+static NSString *const KBITAttachmentDictAttachment = @"attachment";
 
-NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
+static NSString *const kBITCrashManagerStatus = @"BITCrashManagerStatus";
 
-NSString *const kBITAppWentIntoBackgroundSafely = @"BITAppWentIntoBackgroundSafely";
-NSString *const kBITAppDidReceiveLowMemoryNotification = @"BITAppDidReceiveLowMemoryNotification";
-NSString *const kBITAppMarketingVersion = @"BITAppMarketingVersion";
-NSString *const kBITAppVersion = @"BITAppVersion";
-NSString *const kBITAppOSVersion = @"BITAppOSVersion";
-NSString *const kBITAppOSBuild = @"BITAppOSBuild";
-NSString *const kBITAppUUIDs = @"BITAppUUIDs";
+static NSString *const kBITAppWentIntoBackgroundSafely = @"BITAppWentIntoBackgroundSafely";
+static NSString *const kBITAppDidReceiveLowMemoryNotification = @"BITAppDidReceiveLowMemoryNotification";
+static NSString *const kBITAppMarketingVersion = @"BITAppMarketingVersion";
+static NSString *const kBITAppVersion = @"BITAppVersion";
+static NSString *const kBITAppOSVersion = @"BITAppOSVersion";
+static NSString *const kBITAppOSBuild = @"BITAppOSBuild";
+static NSString *const kBITAppUUIDs = @"BITAppUUIDs";
 
-NSString *const kBITFakeCrashUUID = @"BITFakeCrashUUID";
-NSString *const kBITFakeCrashAppMarketingVersion = @"BITFakeCrashAppMarketingVersion";
-NSString *const kBITFakeCrashAppVersion = @"BITFakeCrashAppVersion";
-NSString *const kBITFakeCrashAppBundleIdentifier = @"BITFakeCrashAppBundleIdentifier";
-NSString *const kBITFakeCrashOSVersion = @"BITFakeCrashOSVersion";
-NSString *const kBITFakeCrashDeviceModel = @"BITFakeCrashDeviceModel";
-NSString *const kBITFakeCrashAppBinaryUUID = @"BITFakeCrashAppBinaryUUID";
-NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
+static NSString *const kBITFakeCrashUUID = @"BITFakeCrashUUID";
+static NSString *const kBITFakeCrashAppMarketingVersion = @"BITFakeCrashAppMarketingVersion";
+static NSString *const kBITFakeCrashAppVersion = @"BITFakeCrashAppVersion";
+static NSString *const kBITFakeCrashAppBundleIdentifier = @"BITFakeCrashAppBundleIdentifier";
+static NSString *const kBITFakeCrashOSVersion = @"BITFakeCrashOSVersion";
+static NSString *const kBITFakeCrashDeviceModel = @"BITFakeCrashDeviceModel";
+static NSString *const kBITFakeCrashAppBinaryUUID = @"BITFakeCrashAppBinaryUUID";
+static NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
 
 
 static BITCrashManagerCallbacks bitCrashCallbacks = {
@@ -198,9 +198,8 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     
     _crashManagerStatus = BITCrashManagerStatusAlwaysAsk;
     
-    NSString *testValue = [[NSUserDefaults standardUserDefaults] stringForKey:kBITCrashManagerStatus];
-    if (testValue) {
-      _crashManagerStatus = (BITCrashManagerStatus) [[NSUserDefaults standardUserDefaults] integerForKey:kBITCrashManagerStatus];
+    if ([[NSUserDefaults standardUserDefaults] stringForKey:kBITCrashManagerStatus]) {
+      _crashManagerStatus = (BITCrashManagerStatus)[[NSUserDefaults standardUserDefaults] integerForKey:kBITCrashManagerStatus];
     } else {
       // migrate previous setting if available
       if ([[NSUserDefaults standardUserDefaults] boolForKey:@"BITCrashAutomaticallySendReports"]) {
@@ -803,7 +802,6 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     case BITCrashManagerUserInputAlwaysSend:
       _crashManagerStatus = BITCrashManagerStatusAutoSend;
       [[NSUserDefaults standardUserDefaults] setInteger:_crashManagerStatus forKey:kBITCrashManagerStatus];
-      [[NSUserDefaults standardUserDefaults] synchronize];
       if ([self.delegate respondsToSelector:@selector(crashManagerWillSendCrashReportsAlways:)]) {
         [self.delegate crashManagerWillSendCrashReportsAlways:self];
       }
@@ -1377,6 +1375,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   
   // we start sending always with the oldest pending one
   NSString *filename = [_crashFiles objectAtIndex:0];
+  NSString *attachmentFilename = filename;
   NSString *cacheFilename = [filename lastPathComponent];
   NSData *crashData = [NSData dataWithContentsOfFile:filename];
   
@@ -1412,6 +1411,8 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
       osVersion = [fakeReportDict objectForKey:kBITFakeCrashOSVersion];
       
       metaFilename = [cacheFilename stringByReplacingOccurrencesOfString:@".fake" withString:@".meta"];
+      attachmentFilename = [attachmentFilename stringByReplacingOccurrencesOfString:@".fake" withString:@""];
+      
       if ([appBundleVersion compare:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"]] == NSOrderedSame) {
         _crashIdenticalCurrentVersion = YES;
       }
@@ -1465,13 +1466,13 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
                                                 options:NSPropertyListMutableContainersAndLeaves
                                                 format:&format
                                                 error:&error];
-      
-      username = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserName]] ?: @"";
-      useremail = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserEmail]] ?: @"";
-      userid = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", cacheFilename, kBITCrashMetaUserID]] ?: @"";
+
+      username = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", attachmentFilename.lastPathComponent, kBITCrashMetaUserName]] ?: @"";
+      useremail = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", attachmentFilename.lastPathComponent, kBITCrashMetaUserEmail]] ?: @"";
+      userid = [self stringValueFromKeychainForKey:[NSString stringWithFormat:@"%@.%@", attachmentFilename.lastPathComponent, kBITCrashMetaUserID]] ?: @"";
       applicationLog = [metaDict objectForKey:kBITCrashMetaApplicationLog] ?: @"";
       description = [NSString stringWithContentsOfFile:[NSString stringWithFormat:@"%@.desc", [_crashesDir stringByAppendingPathComponent: cacheFilename]] encoding:NSUTF8StringEncoding error:&error];
-      attachment = [self attachmentForCrashReport:filename];
+      attachment = [self attachmentForCrashReport:attachmentFilename];
     } else {
       BITHockeyLog(@"ERROR: Reading crash meta data. %@", error);
     }
@@ -1661,10 +1662,9 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
 - (void)sendCrashReportWithFilename:(NSString *)filename xml:(NSString*)xml attachment:(BITHockeyAttachment *)attachment {
   BOOL sendingWithURLSession = NO;
   
-  id nsurlsessionClass = NSClassFromString(@"NSURLSessionUploadTask");
-  if (nsurlsessionClass && !bit_isRunningInAppExtension()) {
+  if ([BITHockeyHelper isURLSessionSupported]) {
     NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
-    NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+    __block NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
     
     NSURLRequest *request = [self requestWithBoundary:kBITHockeyAppClientBoundary];
     NSData *data = [self postBodyWithXML:xml attachment:attachment boundary:kBITHockeyAppClientBoundary];
@@ -1675,6 +1675,8 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
                                                                  fromData:data
                                                         completionHandler:^(NSData *responseData, NSURLResponse *response, NSError *error) {
                                                           typeof (self) strongSelf = weakSelf;
+                                                          
+                                                          [session finishTasksAndInvalidate];
                                                           
                                                           NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse*) response;
                                                           NSInteger statusCode = [httpResponse statusCode];

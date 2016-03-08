@@ -69,7 +69,7 @@
   
   BOOL dataAvailable = [_sut updateUserIDUsingKeychainAndDelegate];
   
-  assertThatBool(dataAvailable, equalToBool(NO));
+  assertThatBool(dataAvailable, isFalse());
   assertThat(_sut.userID, nilValue());
   
   [verifyCount(delegateMock, times(1)) userIDForHockeyManager:hm componentManager:_sut];
@@ -84,7 +84,7 @@
   
   BOOL dataAvailable = [_sut updateUserIDUsingKeychainAndDelegate];
   
-  assertThatBool(dataAvailable, equalToBool(YES));
+  assertThatBool(dataAvailable, isTrue());
   assertThat(_sut.userID, equalTo(@"test"));
   
   [verifyCount(classMock, times(1)) userIDForHockeyManager:hm componentManager:_sut];
@@ -95,7 +95,7 @@
   
   BOOL dataAvailable = [_sut updateUserIDUsingKeychainAndDelegate];
   
-  assertThatBool(dataAvailable, equalToBool(YES));
+  assertThatBool(dataAvailable, isTrue());
   assertThat(_sut.userID, equalTo(@"test"));
 }
 
@@ -105,7 +105,7 @@
   
   BOOL dataAvailable = [_sut updateUserIDUsingKeychainAndDelegate];
   
-  assertThatBool(dataAvailable, equalToBool(YES));
+  assertThatBool(dataAvailable, isTrue());
   assertThat(_sut.userID, equalTo(@"test"));
 }
 
@@ -118,7 +118,7 @@
   
   BOOL dataAvailable = [_sut updateUserNameUsingKeychainAndDelegate];
   
-  assertThatBool(dataAvailable, equalToBool(NO));
+  assertThatBool(dataAvailable, isFalse());
   assertThat(_sut.userName, nilValue());
   
   [verifyCount(delegateMock, times(1)) userNameForHockeyManager:hm componentManager:_sut];
@@ -133,7 +133,7 @@
   
   BOOL dataAvailable = [_sut updateUserNameUsingKeychainAndDelegate];
   
-  assertThatBool(dataAvailable, equalToBool(YES));
+  assertThatBool(dataAvailable, isTrue());
   assertThat(_sut.userName, equalTo(@"test"));
   
   [verifyCount(classMock, times(1)) userNameForHockeyManager:hm componentManager:_sut];
@@ -144,7 +144,7 @@
   
   BOOL dataAvailable = [_sut updateUserNameUsingKeychainAndDelegate];
   
-  assertThatBool(dataAvailable, equalToBool(YES));
+  assertThatBool(dataAvailable, isTrue());
   assertThat(_sut.userName, equalTo(@"test"));
 }
 
@@ -154,7 +154,7 @@
   
   BOOL dataAvailable = [_sut updateUserNameUsingKeychainAndDelegate];
   
-  assertThatBool(dataAvailable, equalToBool(YES));
+  assertThatBool(dataAvailable, isTrue());
   assertThat(_sut.userName, equalTo(@"test"));
 }
 
@@ -167,7 +167,7 @@
   
   BOOL dataAvailable = [_sut updateUserEmailUsingKeychainAndDelegate];
   
-  assertThatBool(dataAvailable, equalToBool(NO));
+  assertThatBool(dataAvailable, isFalse());
   assertThat(_sut.userEmail, nilValue());
   
   [verifyCount(delegateMock, times(1)) userEmailForHockeyManager:hm componentManager:_sut];
@@ -182,7 +182,7 @@
   
   BOOL dataAvailable = [_sut updateUserEmailUsingKeychainAndDelegate];
   
-  assertThatBool(dataAvailable, equalToBool(YES));
+  assertThatBool(dataAvailable, isTrue());
   assertThat(_sut.userEmail, equalTo(@"test"));
   
   [verifyCount(classMock, times(1)) userEmailForHockeyManager:hm componentManager:_sut];
@@ -193,7 +193,7 @@
   
   BOOL dataAvailable = [_sut updateUserEmailUsingKeychainAndDelegate];
   
-  assertThatBool(dataAvailable, equalToBool(YES));
+  assertThatBool(dataAvailable, isTrue());
   assertThat(_sut.userEmail, equalTo(@"test"));
 }
 
@@ -203,7 +203,7 @@
   
   BOOL dataAvailable = [_sut updateUserEmailUsingKeychainAndDelegate];
   
-  assertThatBool(dataAvailable, equalToBool(YES));
+  assertThatBool(dataAvailable, isTrue());
   assertThat(_sut.userEmail, equalTo(@"test"));
 }
 
@@ -213,7 +213,7 @@
     // check the default
     fetchMessages = [_sut allowFetchingNewMessages];
     
-    assertThatBool(fetchMessages, equalToBool(YES));
+    assertThatBool(fetchMessages, isTrue());
     
     // check the delegate is implemented and returns NO
     BITHockeyManager *hm = [BITHockeyManager sharedHockeyManager];
@@ -224,7 +224,7 @@
     
     fetchMessages = [_sut allowFetchingNewMessages];
     
-    assertThatBool(fetchMessages, equalToBool(NO));
+    assertThatBool(fetchMessages, isFalse());
     
     [verifyCount(classMock, times(1)) allowAutomaticFetchingForNewFeedbackForManager:_sut];
 }

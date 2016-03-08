@@ -37,6 +37,7 @@
 }
 
 - (void)testURLEncodedString {
+  assertThat(bit_URLEncodedString(@"123 {Test, b0c10b1}"), equalTo(@"123%20%7BTest%2C%20b0c10b1%7D"));
   assertThat(bit_URLEncodedString(@"7902c5a8ecee4b17a758880253090569"), equalTo(@"7902c5a8ecee4b17a758880253090569"));
   assertThat(bit_URLEncodedString(@"udid"), equalTo(@"udid"));
   assertThat(bit_URLEncodedString(@"983024C8-A861-4649-89BC-4D92896269A4"), equalTo(@"983024C8-A861-4649-89BC-4D92896269A4"));
@@ -54,24 +55,24 @@
   
   // valid email
   result = bit_validateEmail(@"mail@test.com");
-  assertThatBool(result, equalToBool(YES));
+  assertThatBool(result, isTrue());
   
   // invalid emails
   
   result = bit_validateEmail(@"mail@test");
-  assertThatBool(result, equalToBool(NO));
+  assertThatBool(result, isFalse());
 
   result = bit_validateEmail(@"mail@.com");
-  assertThatBool(result, equalToBool(NO));
+  assertThatBool(result, isFalse());
 
   result = bit_validateEmail(@"mail.com");
-  assertThatBool(result, equalToBool(NO));
+  assertThatBool(result, isFalse());
 
 }
 
 - (void)testAppName {
   NSString *resultString = bit_appName(@"Placeholder");
-  assertThatBool([resultString isEqualToString:@"Placeholder"], equalToBool(YES));
+  assertThatBool([resultString isEqualToString:@"Placeholder"], isTrue());
 }
 
 - (void)testUUIDPreiOS6 {
