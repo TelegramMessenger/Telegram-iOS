@@ -63,6 +63,7 @@
                 } else if ((state.value == nil && next == nil) || [(id<NSObject>)state.value isEqual:next]) {
                     return @false;
                 }
+                state.value = next;
                 return @true;
             }] boolValue];
             
