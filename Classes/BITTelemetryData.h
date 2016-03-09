@@ -1,7 +1,3 @@
-#import "HockeySDKFeatureConfig.h"
-
-#if HOCKEYSDK_FEATURE_METRICS
-
 #import "BITTelemetryObject.h"
 
 #import "HockeySDKNullability.h"
@@ -19,5 +15,3 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 NS_ASSUME_NONNULL_END
-
-#endif /* HOCKEYSDK_FEATURE_METRICS */
