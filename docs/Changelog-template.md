@@ -1,3 +1,7 @@
+## Version 4.0.0-alpha.2
+
+- [UPDATE] Include changes from HockeySDK 3.8.6
+
 ## Version 4.0.0-alpha.1
 
 - [NEW] Added `BITMetricsManager` to track users and sessions
