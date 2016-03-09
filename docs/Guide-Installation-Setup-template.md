@@ -49,19 +49,23 @@ Please see the "[How to create a new app](http://support.hockeyapp.net/kb/about-
 
 From our experience, 3rd-party libraries usually reside inside a subdirectory (let's call our subdirectory `Vendor`), so if you don't have your project organized with a subdirectory for libraries, now would be a great start for it. To continue our example,  create a folder called `Vendor` inside your project directory and move the unzipped `HockeySDK-iOS`-folder into it. 
 
+The SDK comes in three flavours:
+
+  * Full featured `HockeySDK.embeddedframework`
+  * Crash reporting only: `HockeySDK.framework` in the subfolder `HockeySDKCrashOnly`
+  * Crash reporting only for extensions: `HockeySDK.framework` in the subfolder `HockeySDKCrashOnlyExtension` (which is required to be used for extensions).
+  
+Our examples will use the full featured SDK (`HockeySDK.embeddedframework`).
+
 <a id="setupxcode"></a>
-### 2.4 Set up the SDK in Xcode
 
-1. We recommend to use Xcode's group-feature to create a group for 3rd-party-libraries similar to the structure of our files on disk. For example,  similar to the file structure in 2.3 above, our projects have a group called `Vendor`.
-2. Make sure the `Project Navigator` is visible (⌘+1)
-3. The SDK comes in three flavours:
-  1. Full featured `HockeySDK.embeddedframework`
-  2. Crash reporting only `HockeySDK.framework` in the subfolder `HockeySDKCrashOnly`
-  3. Crash reporting only for extensions `HockeySDK.framework` in the subfolder `HockeySDKCrashOnlyExtension` (which is required to be used for extensions when build into native frameworks).
+### 2.4 Add the SDK to the project in Xcode
 
-  Our examples will use the full featured one.
-4. Drag & drop `HockeySDK.embeddedframework` from your window in the `Finder` into your project in Xcode and move it to the desired location in the `Project Navigator` (e.g. into the group called `Vendor`)
-5. A popup will appear. Select `Create groups for any added folders` and set the checkmark for your target. Then click `Finish`.
+> We recommend to use Xcode's group-feature to create a group for 3rd-party-libraries similar to the structure of our files on disk. For example, similar to the file structure in 2.3 above, our projects have a group called `Vendor`.
+  
+1. Make sure the `Project Navigator` is visible (⌘+1).
+2. Drag & drop `HockeySDK.embeddedframework` from your `Finder` to the `Vendor` group in `Xcode` using the `Project Navigator` on the left side.
+3. An overlay will appear. Select `Create groups` and set the checkmark for your target. Then click `Finish`.
 
 <a id="modifycode"></a>
 ### 2.5 Modify Code 
@@ -488,7 +492,7 @@ We're looking forward to your contributions via pull requests.
 * Mac running the latest version of OS X
 * Get the latest Xcode from the Mac App Store
 * [AppleDoc](https://github.com/tomaz/appledoc) 
-* [Cocoapods](https://cocoapods.org/)
+* [CocoaPods](https://cocoapods.org/)
 
 <a id="contributorlicense"></a>
 ## 7. Contributor License
