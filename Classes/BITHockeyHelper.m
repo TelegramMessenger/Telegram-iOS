@@ -346,7 +346,7 @@ NSString *bit_URLEncodedString(NSString *inputString) {
   
   // Requires iOS 7
   if ([inputString respondsToSelector:@selector(stringByAddingPercentEncodingWithAllowedCharacters:)]) {
-    return [inputString stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet characterSetWithCharactersInString:@"!*'();:@&=+$,/?%#[]"].invertedSet];
+    return [inputString stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet characterSetWithCharactersInString:@"!*'();:@&=+$,/?%#[] {}"].invertedSet];
     
   } else {
 #pragma clang diagnostic push
@@ -354,7 +354,7 @@ NSString *bit_URLEncodedString(NSString *inputString) {
     return CFBridgingRelease(CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault,
                                                                      (__bridge CFStringRef)inputString,
                                                                      NULL,
-                                                                     CFSTR("!*'();:@&=+$,/?%#[]"),
+                                                                     CFSTR("!*'();:@&=+$,/?%#[] {}"),
                                                                      kCFStringEncodingUTF8)
                              );
 #pragma clang diagnostic pop
@@ -795,7 +795,7 @@ UIImage *bit_roundedCornerImage(UIImage *inputImage, NSInteger cornerSize, NSInt
 }
 
 UIImage *bit_appIcon() {
-  NSString *iconString = nil;
+  NSString *iconString = [NSString string];
   NSArray *icons = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIconFiles"];
   if (!icons) {
     icons = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIcons"];

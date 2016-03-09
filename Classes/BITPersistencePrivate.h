@@ -61,7 +61,7 @@ FOUNDATION_EXPORT NSString *const BITPersistenceSuccessNotification;
 /**
  *  Determines how many telemetry files can be on disk at a time.
  */
-@property NSUInteger maxFileCount;
+@property (nonatomic, assign) NSUInteger maxFileCount;
 
 /**
  *  An array with all file paths, that have been requested by the sender. If the sender

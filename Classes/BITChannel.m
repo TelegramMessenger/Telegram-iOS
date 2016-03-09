@@ -16,8 +16,8 @@
 static char *const BITDataItemsOperationsQueue = "net.hockeyapp.senderQueue";
 char *BITSafeJsonEventsString;
 
-static NSInteger const defaultMaxBatchCount  = 1;
-static NSInteger const schemaVersion  = 2;
+static NSInteger const BITDefaultMaxBatchCount  = 1;
+static NSInteger const BITSchemaVersion  = 2;
 
 @implementation BITChannel
 
@@ -100,7 +100,7 @@ static NSInteger const schemaVersion  = 2;
 }
 
 - (BITEnvelope *)envelopeForTelemetryData:(BITTelemetryData *)telemetryData {
-  telemetryData.version = @(schemaVersion);
+  telemetryData.version = @(BITSchemaVersion);
   
   BITData *data = [BITData new];
   data.baseData = telemetryData;
@@ -171,7 +171,7 @@ void bit_resetSafeJsonStream(char **string) {
 
 - (NSUInteger)maxBatchCount {
   if(_maxBatchCount <= 0){
-    return defaultMaxBatchCount;
+    return BITDefaultMaxBatchCount;
   }
   return _maxBatchCount;
 }

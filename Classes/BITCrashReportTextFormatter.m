@@ -680,11 +680,14 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
 
 /* Determine if in binary image is the app executable or app specific framework */
 + (BITBinaryImageType)bit_imageTypeForImagePath:(NSString *)imagePath processPath:(NSString *)processPath {
+  if (!imagePath || !processPath) {
+    return BITBinaryImageTypeOther;
+  }
   BITBinaryImageType imageType = BITBinaryImageTypeOther;
   
   NSString *standardizedImagePath = [[imagePath stringByStandardizingPath] lowercaseString];
-  imagePath = [imagePath lowercaseString];
-  processPath = [processPath lowercaseString];
+  NSString *lowercaseImagePath = [imagePath lowercaseString];
+  NSString *lowercaseProcessPath = [processPath lowercaseString];
   
   NSRange appRange = [standardizedImagePath rangeOfString: @".app/"];
   
@@ -695,13 +698,13 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
   if (appRange.location != NSNotFound && !(swiftLibRange.location != NSNotFound && dylibSuffix)) {
     NSString *appBundleContentsPath = [standardizedImagePath substringToIndex:appRange.location + 5];
     
-    if ([standardizedImagePath isEqual: processPath] ||
+    if ([standardizedImagePath isEqual: lowercaseProcessPath] ||
         // Fix issue with iOS 8 `stringByStandardizingPath` removing leading `/private` path (when not running in the debugger or simulator only)
-        [imagePath hasPrefix:processPath]) {
+        [lowercaseImagePath hasPrefix:lowercaseProcessPath]) {
       imageType = BITBinaryImageTypeAppBinary;
     } else if ([standardizedImagePath hasPrefix:appBundleContentsPath] ||
                 // Fix issue with iOS 8 `stringByStandardizingPath` removing leading `/private` path (when not running in the debugger or simulator only)
-               [imagePath hasPrefix:appBundleContentsPath]) {
+               [lowercaseImagePath hasPrefix:appBundleContentsPath]) {
       imageType = BITBinaryImageTypeAppFramework;
     }
   }

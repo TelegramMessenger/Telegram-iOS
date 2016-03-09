@@ -1,3 +1,7 @@
+## Version 4.0.0-alpha.2
+
+- [UPDATE] Include changes from HockeySDK 3.8.6
+
 ## Version 4.0.0-alpha.1
 
 - [NEW] Added `BITMetricsManager` to track users and sessions
@@ -6,6 +10,19 @@
 - [UPDATE] Remove previously deprecated property `appStoreEnvironment`
 - [UPDATE] Remove previously deprecated misspelled `timeintervalCrashInLastSessionOccured` property
 - [UPDATE] Remove previously deprecated misspelled `BITFeedbackListViewCellPresentatationStyle` enum
+
+## Version 3.8.6
+
+- [UPDATE] Some minor refactorings
+- [BUGFIX] Fix crash in `BITCrashReportTextFormatter` in cases where processPath is unexpectedly nil
+- [BUGFIX] Fix bug where feedback image could only be added once
+- [BUGFIX] Fix URL encoding bug in BITUpdateManager
+- [BUGFIX] Include username, email, etc. in `appNotTerminatingCleanly` reports
+- [BUGFIX] Fix NSURLSession memory leak in Swift apps
+- [BUGFIX] Fix issue preventing attachment from being included when sending non-clean termination report
+- [IMPROVEMENT] Anonymize binary path in crash report
+- [IMPROVEMENT] Support escaping of additional characters (URL encoding)
+- [IMPROVEMENT] Support Bundle Identifiers which contain whitespaces
 
 ## Version 3.8.5
 

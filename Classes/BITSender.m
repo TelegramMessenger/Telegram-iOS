@@ -10,7 +10,7 @@
 
 static char const *kBITSenderTasksQueueString = "net.hockeyapp.sender.tasksQueue";
 static char const *kBITSenderRequestsCountQueueString = "net.hockeyapp.sender.requestsCount";
-static NSUInteger const defaultRequestLimit = 10;
+static NSUInteger const BITDefaultRequestLimit = 10;
 
 @implementation BITSender
 
@@ -23,7 +23,7 @@ static NSUInteger const defaultRequestLimit = 10;
   if ((self = [super init])) {
     _requestsCountQueue = dispatch_queue_create(kBITSenderRequestsCountQueueString, DISPATCH_QUEUE_CONCURRENT);
     _senderTasksQueue = dispatch_queue_create(kBITSenderTasksQueueString, DISPATCH_QUEUE_CONCURRENT);
-    _maxRequestCount = defaultRequestLimit;
+    _maxRequestCount = BITDefaultRequestLimit;
     _serverURL = serverURL;
     _persistence = persistence;
     [self registerObservers];
@@ -169,7 +169,7 @@ static NSUInteger const defaultRequestLimit = 10;
 - (NSOperationQueue *)operationQueue {
   if (nil == _operationQueue) {
     _operationQueue = [[NSOperationQueue alloc] init];
-    _operationQueue.maxConcurrentOperationCount = defaultRequestLimit;
+    _operationQueue.maxConcurrentOperationCount = BITDefaultRequestLimit;
   }
   return _operationQueue;
 }
