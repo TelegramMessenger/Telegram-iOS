@@ -31,8 +31,17 @@ script:
       COMMAND+=" -destination '$DESTINATION' XCODEBUILD_GCC_PREPROCESSOR_DEFINITIONS="CI=1" clean test";
     fi
 
+  - COMMAND+=" | tee xcodebuild.log"
+
   # Add xcpretty
   - COMMAND+=" | xcpretty -f `xcpretty-travis-formatter`"
 
   - echo $COMMAND
-  - eval $COMMAND
+  - eval $COMMAND && rm xcodebuild.log
+
+# Use better failure diagnostics, copied from https://github.com/0xced/XCDYouTubeKit
+after_failure:
+  - cat xcodebuild.log
+  - cat -n $TMPDIR/com.apple.dt.XCTest-status/Session*.log
+  - cat -n ~/Library/Logs/DiagnosticReports/xctest*.crash
+  - sleep 5
