@@ -510,8 +510,10 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
 }
 
 - (void)leavingAppSafely {
-  if (self.isAppNotTerminatingCleanlyDetectionEnabled)
+  if (self.isAppNotTerminatingCleanlyDetectionEnabled) {
     [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITAppWentIntoBackgroundSafely];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+  }
 }
 
 - (void)appEnteredForeground {
