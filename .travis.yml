@@ -23,7 +23,7 @@ before_install:
 
 script:
   - set -o pipefail
-  - COMMAND="xcodebuild -project '$PROJECT' -scheme '$SCHEME' -sdk '$SDK' -configuration '$CONFIGURATION'"
+  - COMMAND="env NSUnbufferedIO=YES xcodebuild -project '$PROJECT' -scheme '$SCHEME' -sdk '$SDK' -configuration '$CONFIGURATION'"
   - if [ $RUN_TESTS == "YES" ]; then
       COMMAND+=" -destination '$DESTINATION' XCODEBUILD_GCC_PREPROCESSOR_DEFINITIONS="CI=1" clean test";
     fi
