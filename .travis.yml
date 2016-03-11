@@ -20,13 +20,19 @@ env:
 before_install:
   - xcrun simctl list
   - gem install xcpretty --no-rdoc --no-ri --no-document --quiet
+  - gem install xcpretty-travis-formatter --no-rdoc --no-ri --no-document --quiet
 
 script:
   - set -o pipefail
   - COMMAND="env NSUnbufferedIO=YES xcodebuild -project '$PROJECT' -scheme '$SCHEME' -sdk '$SDK' -configuration '$CONFIGURATION'"
+
+  # Run tests
   - if [ $RUN_TESTS == "YES" ]; then
       COMMAND+=" -destination '$DESTINATION' XCODEBUILD_GCC_PREPROCESSOR_DEFINITIONS="CI=1" clean test";
     fi
-  - COMMAND+=" | xcpretty -c"
+
+  # Add xcpretty
+  - COMMAND+=" | xcpretty -f `xcpretty-travis-formatter`"
+
   - echo $COMMAND
   - eval $COMMAND
