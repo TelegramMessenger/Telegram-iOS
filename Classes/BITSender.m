@@ -110,6 +110,7 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 
   NSURLSessionDataTask *task = [session dataTaskWithRequest:request
                                           completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+                                            [session finishTasksAndInvalidate];
                                             NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *) response;
                                             NSInteger statusCode = httpResponse.statusCode;
                                             [self handleResponseWithStatusCode:statusCode responseData:data filePath:filePath error:error];
