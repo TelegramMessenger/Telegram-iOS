@@ -1,31 +1,3 @@
-/*
- * Author: Benjamin Reimold <bereimol@microsoft.com>
- *
- * Copyright (c) 2012-2015 HockeyApp, Bit Stadium GmbH.
- * All rights reserved.
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- */
-
 #import "HockeySDKFeatureConfig.h"
 
 #if HOCKEYSDK_FEATURE_METRICS
@@ -36,7 +8,6 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @interface BITPersistence ()
-
 
 /**
  * The BITPersistenceType determines if we have a bundle of meta data or telemetry that we want to safe.
@@ -51,7 +22,6 @@ typedef NS_ENUM(NSInteger, BITPersistenceType) {
  * This is typically used to trigger sending to the server.
  */
 FOUNDATION_EXPORT NSString *const BITPersistenceSuccessNotification;
-
 
 ///-----------------------------------------------------------------------------
 /// @name Save/delete bundle of data
@@ -107,17 +77,6 @@ FOUNDATION_EXPORT NSString *const BITPersistenceSuccessNotification;
 ///-----------------------------------------------------------------------------
 /// @name Get a bundle of saved data
 ///-----------------------------------------------------------------------------
-
-/**
- * Get a bundle of previously saved data from disk and deletes it using dispatch_sync.
- *
- * @warning Make sure nextBundle is not called from the main thread.
- *
- * It will return a bundle of Telemtry in arbitrary order.
- * Returns 'nil' if no bundle is available
- *
- * @return a bundle of data that's ready to be sent to the server
- */
 
 /**
  *  Returns the path for the next item to send. The requested path is reserved as long
