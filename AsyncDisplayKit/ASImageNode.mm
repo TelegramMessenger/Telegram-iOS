@@ -194,6 +194,10 @@
     imageModificationBlock = _imageModificationBlock;
   }
   
+  if (_displayWithoutProcessing) {
+    return image;
+  }
+  
   ASDisplayNodeContextModifier preContextBlock = self.willDisplayNodeContentWithRenderingContext;
   ASDisplayNodeContextModifier postContextBlock = self.didDisplayNodeContentWithRenderingContext;
   

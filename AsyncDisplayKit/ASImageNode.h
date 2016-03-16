@@ -56,6 +56,8 @@ typedef UIImage * _Nullable (^asimagenode_modification_block_t)(UIImage *image);
  */
 @property (nonatomic, assign) BOOL forceUpscaling;
 
+@property (nonatomic, assign) BOOL displayWithoutProcessing;
+
 /**
  * @abstract Enables or disables efficient cropping.
  * 
