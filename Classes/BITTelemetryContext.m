@@ -86,7 +86,7 @@ static char *const BITContextOperationsQueue = "net.hockeyapp.telemetryContextQu
   [self.persistence persistMetaData:userMetaData];
 }
 
-- (BITUser *)loadUser{
+- (nullable BITUser *)loadUser{
   NSDictionary *metaData =[self.persistence metaData];
   BITUser *user = [metaData objectForKey:kBITUserMetaData];
   return user;

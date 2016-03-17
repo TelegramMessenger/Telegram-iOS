@@ -109,7 +109,7 @@ static NSUInteger const BITDefaultFileCount = 50;
 - (NSDictionary *)metaData {
   NSString *filePath = [self fileURLForType:BITPersistenceTypeMetaData];
   NSObject *bundle = [self bundleAtFilePath:filePath withFileBaseString:kBITFileBaseStringMeta];
-  if ([bundle isMemberOfClass:NSDictionary.class]) {
+  if ([bundle isKindOfClass:NSDictionary.class]) {
     return (NSDictionary *) bundle;
   }
   BITHockeyLog(@"INFO: The context meta data file could not be loaded.");
