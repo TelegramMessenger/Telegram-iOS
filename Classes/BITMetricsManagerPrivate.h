@@ -38,7 +38,7 @@
 @class BITPersistence;
 @class BITSender;
 
-@interface BITMetricsManager ()
+@interface BITMetricsManager()
 
 /**
  *  Create a new BITMetricsManager instance by passing the channel, the telemetry context, and persistence instance to use 
@@ -72,7 +72,7 @@
 /**
  *  A concurrent queue which creates and processes telemetry items.
  */
-@property (nonatomic, strong, readonly)dispatch_queue_t metricsEventQueue;
+@property (nonatomic, strong, readonly) dispatch_queue_t metricsEventQueue;
 
 /**
  *  Sender instance to send out telemetry data.
@@ -86,7 +86,7 @@
 /**
  *  The Interval an app has to be in the background until the current session gets renewed.
  */
-@property (nonatomic, assign)NSUInteger appBackgroundTimeBeforeSessionExpires;
+@property (nonatomic, assign) NSUInteger appBackgroundTimeBeforeSessionExpires;
 
 /**
  *  Registers manager for several notifications, which influence the session state.
@@ -138,7 +138,7 @@
  *
  *  @param state value that determines whether the session started or ended
  */
-- (void)trackSessionWithState:(BITSessionState) state;
+- (void)trackSessionWithState:(BITSessionState)state;
 
 @end
 

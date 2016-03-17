@@ -85,7 +85,7 @@
 
  */
 
-@interface BITHockeyManager : NSObject
+@interface BITHockeyManager: NSObject
 
 #pragma mark - Public Methods
 

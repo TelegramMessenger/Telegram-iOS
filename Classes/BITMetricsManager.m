@@ -15,8 +15,7 @@
 #import "BITHockeyBaseManagerPrivate.h"
 #import "BITSender.h"
 
-static char *const kBITMetricsEventQueue =
-"net.hockeyapp.telemetryEventQueue";
+static char *const kBITMetricsEventQueue = "net.hockeyapp.telemetryEventQueue";
 
 NSString *const kBITSessionFileType = @"plist";
 NSString *const kBITApplicationDidEnterBackgroundTime = @"BITApplicationDidEnterBackgroundTime";
@@ -24,10 +23,14 @@ NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
 
 NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
 
-@implementation BITMetricsManager {
-  id _appWillEnterForegroundObserver;
-  id _appDidEnterBackgroundObserver;
-}
+@interface BITMetricsManager ()
+
+@property (nonatomic, strong) id<NSObject> appWillEnterForegroundObserver;
+@property (nonatomic, strong) id<NSObject> appDidEnterBackgroundObserver;
+
+@end
+
+@implementation BITMetricsManager
 
 @synthesize channel = _channel;
 @synthesize telemetryContext = _telemetryContext;
@@ -37,7 +40,7 @@ NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
 #pragma mark - Create & start instance
 
 - (instancetype)init {
-  if((self = [super init])) {
+  if ((self = [super init])) {
     _disabled = NO;
     _metricsEventQueue = dispatch_queue_create(kBITMetricsEventQueue, DISPATCH_QUEUE_CONCURRENT);
     _appBackgroundTimeBeforeSessionExpires = 20;
@@ -47,7 +50,7 @@ NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
 }
 
 - (instancetype)initWithChannel:(BITChannel *)channel telemetryContext:(BITTelemetryContext *)telemetryContext persistence:(BITPersistence *)persistence userDefaults:(NSUserDefaults *)userDefaults {
-  if((self = [self init])) {
+  if ((self = [self init])) {
     _channel = channel;
     _telemetryContext = telemetryContext;
     _persistence = persistence;
@@ -57,7 +60,7 @@ NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
 }
 
 - (void)startManager {
-  if(!self.serverURL){
+  if (!self.serverURL) {
     self.serverURL = BITMetricsEndpoint;
   }
   _sender = [[BITSender alloc] initWithPersistence:self.persistence serverURL:[NSURL URLWithString:self.serverURL]];
@@ -69,6 +72,8 @@ NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
 #pragma mark - Configuration
 
 - (void)setDisabled:(BOOL)disabled {
+  if (_disabled == disabled) { return; }
+  
   if (disabled) {
     [self unregisterObservers];
   } else {
@@ -81,11 +86,11 @@ NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
 
 - (void)registerObservers {
   NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
-  
+
   __weak typeof(self) weakSelf = self;
-  
-  if(nil == _appDidEnterBackgroundObserver) {
-    _appDidEnterBackgroundObserver = [nc addObserverForName:UIApplicationDidEnterBackgroundNotification
+
+  if (nil == self.appDidEnterBackgroundObserver) {
+    self.appDidEnterBackgroundObserver = [nc addObserverForName:UIApplicationDidEnterBackgroundNotification
                                                      object:nil
                                                       queue:NSOperationQueue.mainQueue
                                                  usingBlock:^(NSNotification *note) {
@@ -93,8 +98,8 @@ NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
                                                    [strongSelf updateDidEnterBackgroundTime];
                                                  }];
   }
-  if(nil == _appWillEnterForegroundObserver) {
-    _appWillEnterForegroundObserver = [nc addObserverForName:UIApplicationWillEnterForegroundNotification
+  if (nil == self.appWillEnterForegroundObserver) {
+    self.appWillEnterForegroundObserver = [nc addObserverForName:UIApplicationWillEnterForegroundNotification
                                                       object:nil
                                                        queue:NSOperationQueue.mainQueue
                                                   usingBlock:^(NSNotification *note) {
@@ -106,8 +111,8 @@ NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
 
 - (void)unregisterObservers {
   [[NSNotificationCenter defaultCenter] removeObserver:self];
-  _appDidEnterBackgroundObserver = nil;
-  _appWillEnterForegroundObserver = nil;
+  self.appDidEnterBackgroundObserver = nil;
+  self.appWillEnterForegroundObserver = nil;
 }
 
 - (void)updateDidEnterBackgroundTime {
@@ -116,17 +121,17 @@ NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
 }
 
 - (void)startNewSessionIfNeeded {
-  if(self.appBackgroundTimeBeforeSessionExpires == 0) {
+  if (self.appBackgroundTimeBeforeSessionExpires == 0) {
     __weak typeof(self) weakSelf = self;
     dispatch_async(_metricsEventQueue, ^{
       typeof(self) strongSelf = weakSelf;
       [strongSelf startNewSessionWithId:bit_UUID()];
     });
   }
-  
+
   double appDidEnterBackgroundTime = [self.userDefaults doubleForKey:kBITApplicationDidEnterBackgroundTime];
   double timeSinceLastBackground = [[NSDate date] timeIntervalSince1970] - appDidEnterBackgroundTime;
-  if(timeSinceLastBackground > self.appBackgroundTimeBeforeSessionExpires) {
+  if (timeSinceLastBackground > self.appBackgroundTimeBeforeSessionExpires) {
     [self startNewSessionWithId:bit_UUID()];
   }
 }
@@ -144,8 +149,8 @@ NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
   BITSession *session = [BITSession new];
   session.sessionId = sessionId;
   session.isNew = @"true";
-  
-  if([self.userDefaults boolForKey:kBITApplicationWasLaunched] == NO) {
+
+  if (![self.userDefaults boolForKey:kBITApplicationWasLaunched]) {
     session.isFirst = @"true";
     [self.userDefaults setBool:YES forKey:kBITApplicationWasLaunched];
     [self.userDefaults synchronize];
@@ -157,7 +162,7 @@ NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
 
 #pragma mark - Track telemetry
 
-- (void)trackSessionWithState:(BITSessionState) state {
+- (void)trackSessionWithState:(BITSessionState)state {
   if (self.disabled) { return; }
   BITSessionStateData *sessionStateData = [BITSessionStateData new];
   sessionStateData.state = state;
@@ -167,28 +172,28 @@ NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
 #pragma mark - Custom getter
 
 - (BITChannel *)channel {
-  if(!_channel){
+  if (!_channel) {
     _channel = [[BITChannel alloc] initWithTelemetryContext:self.telemetryContext persistence:self.persistence];
   }
   return _channel;
 }
 
 - (BITTelemetryContext *)telemetryContext {
-  if(!_telemetryContext){
+  if (!_telemetryContext) {
     _telemetryContext = [[BITTelemetryContext alloc] initWithAppIdentifier:self.appIdentifier persistence:self.persistence];
   }
   return _telemetryContext;
 }
 
 - (BITPersistence *)persistence {
-  if(!_persistence){
+  if (!_persistence) {
     _persistence = [BITPersistence new];
   }
   return _persistence;
 }
 
 - (NSUserDefaults *)userDefaults {
-  if(!_userDefaults){
+  if (!_userDefaults) {
     _userDefaults = [NSUserDefaults standardUserDefaults];
   }
   return _userDefaults;
