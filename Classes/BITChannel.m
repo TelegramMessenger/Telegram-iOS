@@ -68,24 +68,32 @@ static NSInteger const BITSchemaVersion  = 2;
 
 #pragma mark - Adding to queue
 
-- (void)enqueueTelemetryItem:(BITTelemetryData *)item {
-  if(item) {
-    BITOrderedDictionary *dict = [self dictionaryForTelemetryData:item];
-    __weak typeof(self) weakSelf = self;
-    
-    dispatch_async(self.dataItemsOperations, ^{
-      typeof(self) strongSelf = weakSelf;
-      
-      // Enqueue item
-      [strongSelf appendDictionaryToJsonStream:dict];
-      
-      if(strongSelf->_dataItemCount >= self.maxBatchCount) {
-        // Max batch count has been reached, so write queue to disk and delete all items.
-        [strongSelf persistDataItemQueue];
-        
-      }
-    });
+- (BOOL)enqueueTelemetryItem:(BITTelemetryData *)item {
+  if (!item) {
+    BITHockeyLog(@"WARNING: TelemetryItem was nil.");
+    return NO;
   }
+  
+  if (self.isQueueBusy) {
+    BITHockeyLog(@"The channel is saturated. %@ was dropped.", item.name);
+    return NO;
+  }
+  
+  BITOrderedDictionary *dict = [self dictionaryForTelemetryData:item];
+  __weak typeof(self) weakSelf = self;
+  
+  dispatch_async(self.dataItemsOperations, ^{
+    typeof(self) strongSelf = weakSelf;
+    
+    // Enqueue item
+    [strongSelf appendDictionaryToJsonStream:dict];
+    
+    if(strongSelf->_dataItemCount >= self.maxBatchCount) {
+      // Max batch count has been reached, so write queue to disk and delete all items.
+      [strongSelf persistDataItemQueue];
+    }
+  });
+  return YES;
 }
 
 #pragma mark - Envelope telemerty items

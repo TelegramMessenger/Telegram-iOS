@@ -314,7 +314,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
   
 #if HOCKEYSDK_FEATURE_METRICS
   // start MetricsManager
-  if (!self.disableMetricsManager) {
+  if (!self.isMetricsManagerDisabled) {
     BITHockeyLog(@"INFO: Start MetricsManager");
     [_metricsManager startManager];
     [BITCategoryContainer activateCategory];
@@ -352,6 +352,15 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 }
 #endif /* HOCKEYSDK_FEATURE_FEEDBACK */
 
+#if HOCKEYSDK_FEATURE_METRICS
+- (void)setDisableMetricsManager:(BOOL)disableMetricsManager {
+  if (_metricsManager) {
+    _metricsManager.disabled = disableMetricsManager;
+  }
+  _disableMetricsManager = disableMetricsManager;
+  
+}
+#endif /* HOCKEYSDK_FEATURE_METRICS */
 
 - (void)setServerURL:(NSString *)aServerURL {
   // ensure url ends with a trailing slash

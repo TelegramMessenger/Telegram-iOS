@@ -68,11 +68,6 @@ FOUNDATION_EXPORT char *BITSafeJsonEventsString;
  */
 - (BOOL)enqueueTelemetryItem:(BITTelemetryData *)item;
 
-/**
- *  Deletes all currently queued items and resets the data items queue.
- */
-- (void)resetQueue;
-
 @end
 NS_ASSUME_NONNULL_END
 

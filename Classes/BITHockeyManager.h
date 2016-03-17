@@ -389,9 +389,7 @@
  will be turned off!
  
  Please note that the BITMetricsManager instance will be initialized anyway!
- 
- @warning This property needs to be set before calling `startManager`
- 
+  
  *Default*: _NO_
  @see metricsManager
  */

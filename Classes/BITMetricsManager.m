@@ -38,6 +38,7 @@ NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
 
 - (instancetype)init {
   if((self = [super init])) {
+    _disabled = NO;
     _metricsEventQueue = dispatch_queue_create(kBITMetricsEventQueue, DISPATCH_QUEUE_CONCURRENT);
     _appBackgroundTimeBeforeSessionExpires = 20;
   }
@@ -63,6 +64,17 @@ NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
   [_sender sendSavedDataAsync];
   [self startNewSessionWithId:bit_UUID()];
   [self registerObservers];
+}
+
+#pragma mark - Configuration
+
+- (void)setDisabled:(BOOL)disabled {
+  if (disabled) {
+    [self unregisterObservers];
+  } else {
+    [self registerObservers];
+  }
+  _disabled = disabled;
 }
 
 #pragma mark - Sessions
@@ -146,6 +158,7 @@ NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
 #pragma mark - Track telemetry
 
 - (void)trackSessionWithState:(BITSessionState) state {
+  if (self.disabled) { return; }
   BITSessionStateData *sessionStateData = [BITSessionStateData new];
   sessionStateData.state = state;
   [self.channel enqueueTelemetryItem:sessionStateData];
@@ -155,7 +168,7 @@ NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
 
 - (BITChannel *)channel {
   if(!_channel){
-    _channel = [[BITChannel alloc]initWithTelemetryContext:self.telemetryContext persistence:self.persistence];
+    _channel = [[BITChannel alloc] initWithTelemetryContext:self.telemetryContext persistence:self.persistence];
   }
   return _channel;
 }

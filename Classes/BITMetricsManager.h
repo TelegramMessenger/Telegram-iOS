@@ -30,4 +30,6 @@
 
 @interface BITMetricsManager : BITHockeyBaseManager
 
+@property (nonatomic, assign) BOOL disabled;
+
 @end
