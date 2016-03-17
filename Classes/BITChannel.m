@@ -162,27 +162,26 @@ NS_ASSUME_NONNULL_BEGIN
 
     // Since we can't persist every event right away, we write it to a simple C string.
     // This can then be written to disk by a signal handler in case of a crash.
-    bit_appendStringToSafeJsonStream(string, &(BITSafeJsonEventsString));
+    BITSafeJsonEventsString = bit_jsonStreamByAppendingJsonString(BITSafeJsonEventsString, string);
     _dataItemCount += 1;
   }
 }
 
-void bit_appendStringToSafeJsonStream(NSString *string, char **jsonString) {
-  if (jsonString == NULL) { return; }
+char * bit_jsonStreamByAppendingJsonString(char *json_stream, NSString *jsonString) {
+  if ((json_stream == NULL) || !json_stream) {
 
-  if (!string) { return; }
-
-  if (*jsonString == NULL || strlen(*jsonString) == 0) {
-    bit_resetSafeJsonStream(jsonString);
+    return strdup("");
   }
 
-  if (string.length == 0) { return; }
+  if (!jsonString || (jsonString.length == 0)) {
+    return json_stream;
+  }
 
-  char *new_string = NULL;
-  // Concatenate old string with new JSON string and add a comma.
-  asprintf(&new_string, "%s%.*s\n", *jsonString, (int)MIN(string.length, (NSUInteger)INT_MAX), string.UTF8String);
-  free(*jsonString);
-  *jsonString = new_string;
+  
+  char *concatenated_string = NULL;
+  // Concatenate old string with new JSON string and add a new line.
+  asprintf(&concatenated_string, "%s%.*s\n", json_stream, (int)MIN(jsonString.length, (NSUInteger)INT_MAX), jsonString.UTF8String);
+  return concatenated_string;
 }
 
 void bit_resetSafeJsonStream(char **string) {

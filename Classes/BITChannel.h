@@ -40,6 +40,7 @@ FOUNDATION_EXPORT char *BITSafeJsonEventsString;
 - (BOOL)enqueueTelemetryItem:(BITTelemetryData *)item;
 
 @end
+
 NS_ASSUME_NONNULL_END
 
 #endif /* HOCKEYSDK_FEATURE_METRICS */
