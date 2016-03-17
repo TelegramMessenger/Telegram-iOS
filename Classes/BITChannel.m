@@ -45,10 +45,8 @@ static NSInteger const BITSchemaVersion  = 2;
 
 #pragma mark - Queue management
 
-- (BOOL)isQueueBusy{
-  
-  [self.persistence isFreeSpaceAvailable];
-  return true;
+- (BOOL)isQueueBusy {  
+  return [self.persistence isFreeSpaceAvailable];
 }
 
 - (void)persistDataItemQueue {
