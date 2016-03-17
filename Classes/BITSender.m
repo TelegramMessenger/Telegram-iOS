@@ -12,6 +12,12 @@ static char const *kBITSenderTasksQueueString = "net.hockeyapp.sender.tasksQueue
 static char const *kBITSenderRequestsCountQueueString = "net.hockeyapp.sender.requestsCount";
 static NSUInteger const BITDefaultRequestLimit = 10;
 
+@interface BITSender ()
+
+@property (nonatomic, strong) NSURLSession *session;
+
+@end
+
 @implementation BITSender
 
 @synthesize runningRequestsCount = _runningRequestsCount;
@@ -105,9 +111,7 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 }
 
 - (void)sendUsingURLSessionWithRequest:(nonnull NSURLRequest *)request filePath:(nonnull NSString *)filePath {
-  NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
-  NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
-
+  NSURLSession *session = self.session;
   NSURLSessionDataTask *task = [session dataTaskWithRequest:request
                                           completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
                                             NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *) response;
@@ -165,6 +169,14 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 }
 
 #pragma mark - Getter/Setter
+
+- (NSURLSession *)session {
+  if (!_session) {
+    NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
+    _session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+  }
+  return _session;
+}
 
 - (NSOperationQueue *)operationQueue {
   if (nil == _operationQueue) {

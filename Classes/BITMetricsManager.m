@@ -8,6 +8,7 @@
 #import "BITHockeyHelper.h"
 #import "HockeySDKPrivate.h"
 #import "BITChannel.h"
+#import "BITEventData.h"
 #import "BITSession.h"
 #import "BITSessionState.h"
 #import "BITSessionStateData.h"
@@ -21,7 +22,8 @@ NSString *const kBITSessionFileType = @"plist";
 NSString *const kBITApplicationDidEnterBackgroundTime = @"BITApplicationDidEnterBackgroundTime";
 NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
 
-NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
+NSString *const BITMetricsBaseURL = @"https://gate.hockeyapp.net/";
+NSString *const BITMetricsEndpointPath = @"v2/track";
 
 @interface BITMetricsManager ()
 
@@ -61,8 +63,9 @@ NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
 
 - (void)startManager {
   if (!self.serverURL) {
-    self.serverURL = BITMetricsEndpoint;
+    self.serverURL = BITMetricsBaseURL;
   }
+  self.serverURL = [NSString stringWithFormat:@"%@%@", self.serverURL, BITMetricsEndpointPath];
   _sender = [[BITSender alloc] initWithPersistence:self.persistence serverURL:[NSURL URLWithString:self.serverURL]];
   [_sender sendSavedDataAsync];
   [self startNewSessionWithId:bit_UUID()];
@@ -144,7 +147,6 @@ NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
   [self trackSessionWithState:BITSessionState_start];
 }
 
-// iOS 8 Sim Bug: iOS Simulator -> Reset Content and Settings
 - (BITSession *)createNewSessionWithId:(NSString *)sessionId {
   BITSession *session = [BITSession new];
   session.sessionId = sessionId;
@@ -162,11 +164,33 @@ NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
 
 #pragma mark - Track telemetry
 
+#pragma mark Sessions
+
 - (void)trackSessionWithState:(BITSessionState)state {
   if (self.disabled) { return; }
   BITSessionStateData *sessionStateData = [BITSessionStateData new];
   sessionStateData.state = state;
   [self.channel enqueueTelemetryItem:sessionStateData];
+}
+
+#pragma mark Events
+
+- (void)trackEventWithName:(NSString *)eventName {
+  if (!eventName) { return; }
+  
+  __weak typeof(self) weakSelf = self;
+  dispatch_async(self.metricsEventQueue, ^{
+    typeof(self) strongSelf = weakSelf;
+    BITEventData *eventData = [BITEventData new];
+    [eventData setName:eventName];
+    [strongSelf trackDataItem:eventData];
+  });
+}
+
+#pragma mark Track DataItem
+
+- (void)trackDataItem:(BITTelemetryData *)dataItem {
+  [self.channel enqueueTelemetryItem:dataItem];
 }
 
 #pragma mark - Custom getter

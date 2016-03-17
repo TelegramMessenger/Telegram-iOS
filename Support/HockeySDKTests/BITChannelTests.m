@@ -45,7 +45,7 @@
 
 - (void)testEnqueueEnvelopeWithOneEnvelopeAndJSONStream {
   _sut = OCMPartialMock(_sut);
-  _sut.maxBatchCount = 3;
+  _sut.maxBatchSize = 3;
   BITTelemetryData *testData = [BITTelemetryData new];
   
   [_sut enqueueTelemetryItem:testData];
@@ -58,7 +58,7 @@
 
 - (void)testEnqueueEnvelopeWithMultipleEnvelopesAndJSONStream {
   _sut = OCMPartialMock(_sut);
-  _sut.maxBatchCount = 3;
+  _sut.maxBatchSize = 3;
   
   BITTelemetryData *testData = [BITTelemetryData new];
   

@@ -26,10 +26,27 @@ NS_ASSUME_NONNULL_BEGIN
  */
 @property (nonatomic, strong) BITPersistence *persistence;
 
-/**
- *  Number of queue items which will trigger a flush (testing).
+/*
+ * Threshold for sending data to the server. Default batch size for debugging is 150, for release
+ * configuration, the batch size is 5.
+ *
+ * Default: 50
+ *
+ * @warning: We advice to not set the batch size below 5 events.
  */
-@property (nonatomic) NSUInteger maxBatchCount;
+@property (nonatomic) NSUInteger maxBatchSize;
+
+/*
+ * Interval for sending data to the server in seconds.
+ *
+ * Default: 15
+ */
+@property (nonatomic, assign) NSInteger batchInterval;
+
+/**
+ *  A timer source which is used to flush the queue after a cretain time.
+ */
+@property (nonatomic, strong, nullable) dispatch_source_t timerSource;
 
 /**
  *  A queue which makes array operations thread safe.
@@ -51,7 +68,7 @@ NS_ASSUME_NONNULL_BEGIN
  *
  *  @param dictionary the dictionary object which is to be added to the JSON Stream queue string.
  */
-- (void)appendDictionaryToJsonStream:(BITOrderedDictionary *)dictionary;
+- (void)appendDictionaryToJsonStream:(NSDictionary *)dictionary;
 
 /**
  *  A C function that serializes a given dictionary to JSON and appends it to a char string
@@ -62,10 +79,10 @@ NS_ASSUME_NONNULL_BEGIN
 void bit_appendStringToSafeJsonStream(NSString *string, char *__nonnull*__nonnull jsonStream);
 
 /**
- *  Reset BITSafeJsonEventsString so we can start appending JSON dictionaries.
- *
- *  @param string The string that will be reset.
- */
+*  Reset BITSafeJsonEventsString so we can start appending JSON dictionaries.
+*
+*  @param string The string that will be reset.
+*/
 void bit_resetSafeJsonStream(char *__nonnull*__nonnull jsonStream);
 
 /**

@@ -1,10 +1,9 @@
 #import <Foundation/Foundation.h>
 
-@class BITOrderedDictionary;
 
 @interface BITTelemetryObject : NSObject <NSCoding>
 
-- (BITOrderedDictionary *)serializeToDictionary;
+- (NSDictionary *)serializeToDictionary;
 - (NSString *)serializeToString;
 
 @end
