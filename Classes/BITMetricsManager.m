@@ -23,7 +23,8 @@ NSString *const kBITSessionFileType = @"plist";
 NSString *const kBITApplicationDidEnterBackgroundTime = @"BITApplicationDidEnterBackgroundTime";
 NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
 
-NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
+NSString *const BITMetricsBaseURL = @"https://gate.hockeyapp.net/";
+NSString *const BITMetricsEndpointPath = @"v2/track";
 
 @implementation BITMetricsManager {
   id _appWillEnterForegroundObserver;
@@ -58,8 +59,9 @@ NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
 
 - (void)startManager {
   if(!self.serverURL){
-    self.serverURL = BITMetricsEndpoint;
+    self.serverURL = BITMetricsBaseURL;
   }
+  self.serverURL = [NSString stringWithFormat:@"%@%@", self.serverURL, BITMetricsEndpointPath];
   _sender = [[BITSender alloc] initWithPersistence:self.persistence serverURL:[NSURL URLWithString:self.serverURL]];
   [_sender sendSavedDataAsync];
   [self startNewSessionWithId:bit_UUID()];
