@@ -370,6 +370,8 @@
 		8034E6E51BA3567B00D83A30 /* BITUserTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 8034E6C31BA3567B00D83A30 /* BITUserTests.m */; };
 		807756401BC6A44E0037C3DA /* HockeySDKEnums.h in Headers */ = {isa = PBXBuildFile; fileRef = 8077563F1BC6A44D0037C3DA /* HockeySDKEnums.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		807756411BC6B6050037C3DA /* HockeySDKEnums.h in Headers */ = {isa = PBXBuildFile; fileRef = 8077563F1BC6A44D0037C3DA /* HockeySDKEnums.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		807F75051C9AEDAA009E6DCB /* BITChannelPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 807F75041C9AEDAA009E6DCB /* BITChannelPrivate.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		807F75061C9AEDAA009E6DCB /* BITChannelPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 807F75041C9AEDAA009E6DCB /* BITChannelPrivate.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		80807B8C1C46BF2F00F4C44F /* OCHamcrestIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80807B8A1C46BF2F00F4C44F /* OCHamcrestIOS.framework */; };
 		80807B8D1C46BF2F00F4C44F /* OCHamcrestIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80807B8A1C46BF2F00F4C44F /* OCHamcrestIOS.framework */; };
 		80807B8E1C46BF2F00F4C44F /* OCMockitoIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80807B8B1C46BF2F00F4C44F /* OCMockitoIOS.framework */; };
@@ -667,6 +669,7 @@
 		8034E6C21BA3567B00D83A30 /* BITTestsDependencyInjection.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITTestsDependencyInjection.m; sourceTree = "<group>"; };
 		8034E6C31BA3567B00D83A30 /* BITUserTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITUserTests.m; sourceTree = "<group>"; };
 		8077563F1BC6A44D0037C3DA /* HockeySDKEnums.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HockeySDKEnums.h; sourceTree = "<group>"; };
+		807F75041C9AEDAA009E6DCB /* BITChannelPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITChannelPrivate.h; sourceTree = "<group>"; };
 		80807B7D1C46BF0100F4C44F /* NSNotificationCenter+OCMAdditions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSNotificationCenter+OCMAdditions.h"; sourceTree = "<group>"; };
 		80807B7E1C46BF0100F4C44F /* OCMArg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMArg.h; sourceTree = "<group>"; };
 		80807B7F1C46BF0100F4C44F /* OCMConstraint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMConstraint.h; sourceTree = "<group>"; };
@@ -1082,6 +1085,7 @@
 				8034E6951BA3214300D83A30 /* BITCategoryContainer.m */,
 				8034E64E1BA31BE400D83A30 /* BITChannel.h */,
 				8034E64F1BA31BE400D83A30 /* BITChannel.m */,
+				807F75041C9AEDAA009E6DCB /* BITChannelPrivate.h */,
 				8034E6541BA31D0C00D83A30 /* BITGZIP.h */,
 				8034E6451BA31AFF00D83A30 /* BITPersistence.h */,
 				8034E6461BA31AFF00D83A30 /* BITPersistence.m */,
@@ -1357,6 +1361,7 @@
 				8034E6961BA3214300D83A30 /* BITCategoryContainer.h in Headers */,
 				E4933E8017B66CDA00B11ACC /* BITHTTPOperation.h in Headers */,
 				1E49A4BE161222B900463151 /* BITHockeyHelper.h in Headers */,
+				807F75051C9AEDAA009E6DCB /* BITChannelPrivate.h in Headers */,
 				8034E68F1BA31DE800D83A30 /* BITOrderedDictionary.h in Headers */,
 				973EC8BB18BDE29800DBFFBB /* BITArrowImageAnnotation.h in Headers */,
 				1E49A4C4161222B900463151 /* BITAppStoreHeader.h in Headers */,
@@ -1442,6 +1447,7 @@
 				1EB617711B0A30E10035A986 /* BITAuthenticationViewController.h in Headers */,
 				1EB6179B1B0A31700035A986 /* BITFeedbackUserDataViewController.h in Headers */,
 				1EB617A01B0A31860035A986 /* BITFeedbackManagerDelegate.h in Headers */,
+				807F75061C9AEDAA009E6DCB /* BITChannelPrivate.h in Headers */,
 				8034E6901BA31DE800D83A30 /* BITOrderedDictionary.h in Headers */,
 				1EB6179F1B0A31810035A986 /* BITFeedbackManager.h in Headers */,
 				1EB617691B0A30C00035A986 /* BITAppStoreHeader.h in Headers */,

@@ -9,7 +9,7 @@
 #import <OCMock/OCMock.h>
 
 #import "BITPersistencePrivate.h"
-#import "BITChannel.h"
+#import "BITChannelPrivate.h"
 #import "BITTelemetryContext.h"
 #import "BITPersistence.h"
 #import "BITEnvelope.h"

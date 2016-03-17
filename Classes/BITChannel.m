@@ -1,4 +1,4 @@
-#import "BITChannel.h"
+#import "BITChannelPrivate.h"
 
 #if HOCKEYSDK_FEATURE_METRICS
 
