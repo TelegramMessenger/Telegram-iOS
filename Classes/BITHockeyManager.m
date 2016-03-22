@@ -316,7 +316,6 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
   // start MetricsManager
   if (!self.isMetricsManagerDisabled) {
     BITHockeyLog(@"INFO: Start MetricsManager");
-    [_metricsManager setServerURL:_serverURL];
     [_metricsManager startManager];
     [BITCategoryContainer activateCategory];
   }
