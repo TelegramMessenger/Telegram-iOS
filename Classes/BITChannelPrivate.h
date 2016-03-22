@@ -3,8 +3,6 @@
 
 #if HOCKEYSDK_FEATURE_METRICS
 
-@class BITOrderedDictionary;
-@class BITConfiguration;
 @class BITTelemetryData;
 @class BITTelemetryContext;
 @class BITPersistence;
