@@ -15,8 +15,6 @@
 #import "HockeySDKNullability.h"
 NS_ASSUME_NONNULL_BEGIN
 
-FOUNDATION_EXPORT NSString *const kBITApplicationWasLaunched;
-
 /**
  *  Context object which contains information about the device, user, session etc.
  */

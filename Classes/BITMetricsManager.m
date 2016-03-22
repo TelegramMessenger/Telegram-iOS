@@ -16,14 +16,15 @@
 #import "BITHockeyBaseManagerPrivate.h"
 #import "BITSender.h"
 
-static char *const kBITMetricsEventQueue = "net.hockeyapp.telemetryEventQueue";
-
-NSString *const kBITSessionFileType = @"plist";
-NSString *const kBITApplicationDidEnterBackgroundTime = @"BITApplicationDidEnterBackgroundTime";
 NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
 
-NSString *const BITMetricsBaseURL = @"https://gate.hockeyapp.net/";
-NSString *const BITMetricsEndpointPath = @"v2/track";
+static char *const kBITMetricsEventQueue = "net.hockeyapp.telemetryEventQueue";
+
+static NSString *const kBITSessionFileType = @"plist";
+static NSString *const kBITApplicationDidEnterBackgroundTime = @"BITApplicationDidEnterBackgroundTime";
+
+static NSString *const BITMetricsBaseURLString = @"https://gate.hockeyapp.net/";
+static NSString *const BITMetricsURLPathString = @"v2/track";
 
 @interface BITMetricsManager ()
 
@@ -37,6 +38,7 @@ NSString *const BITMetricsEndpointPath = @"v2/track";
 @synthesize channel = _channel;
 @synthesize telemetryContext = _telemetryContext;
 @synthesize persistence = _persistence;
+@synthesize serverURL = _serverURL;
 @synthesize userDefaults = _userDefaults;
 
 #pragma mark - Create & start instance
@@ -46,6 +48,7 @@ NSString *const BITMetricsEndpointPath = @"v2/track";
     _disabled = NO;
     _metricsEventQueue = dispatch_queue_create(kBITMetricsEventQueue, DISPATCH_QUEUE_CONCURRENT);
     _appBackgroundTimeBeforeSessionExpires = 20;
+    _serverURL = [NSString stringWithFormat:@"%@%@", BITMetricsBaseURLString, BITMetricsURLPathString];
   }
   self.serverURL = nil;
   return self;
@@ -62,12 +65,8 @@ NSString *const BITMetricsEndpointPath = @"v2/track";
 }
 
 - (void)startManager {
-  if (!self.serverURL) {
-    self.serverURL = BITMetricsBaseURL;
-  }
-  self.serverURL = [NSString stringWithFormat:@"%@%@", self.serverURL, BITMetricsEndpointPath];
-  _sender = [[BITSender alloc] initWithPersistence:self.persistence serverURL:[NSURL URLWithString:self.serverURL]];
-  [_sender sendSavedDataAsync];
+  self.sender = [[BITSender alloc] initWithPersistence:self.persistence serverURL:[NSURL URLWithString:self.serverURL]];
+  [self.sender sendSavedDataAsync];
   [self startNewSessionWithId:bit_UUID()];
   [self registerObservers];
 }
