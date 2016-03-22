@@ -14,6 +14,8 @@
 #import "HockeySDKNullability.h"
 NS_ASSUME_NONNULL_BEGIN
 
+FOUNDATION_EXPORT NSString *const kBITApplicationWasLaunched;
+
 @interface BITMetricsManager()
 
 /**
