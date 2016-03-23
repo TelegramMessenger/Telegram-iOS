@@ -59,7 +59,7 @@ NS_ASSUME_NONNULL_BEGIN
 #pragma mark - Queue management
 
 - (BOOL)isQueueBusy {
-  return [self.persistence isFreeSpaceAvailable];
+  return ![self.persistence isFreeSpaceAvailable];
 }
 
 - (void)persistDataItemQueue {
