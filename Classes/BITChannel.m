@@ -92,38 +92,42 @@ NS_ASSUME_NONNULL_BEGIN
 
 #pragma mark - Adding to queue
 
-- (BOOL)enqueueTelemetryItem:(BITTelemetryData *)item {
+- (void)enqueueTelemetryItem:(BITTelemetryData *)item {
+  
   if (!item) {
+    // Case 1: Item is nil: Do not enqueue item and abort operation
     BITHockeyLog(@"WARNING: TelemetryItem was nil.");
-    return NO;
+    return;
   }
-
-  if (self.isQueueBusy) {
-    BITHockeyLog(@"The channel is saturated. %@ was dropped.", item.name);
-    if (![self timerIsRunning]) {
-      [self startTimer];
-    }
-    return NO;
-  }
-
-  NSDictionary *dict = [self dictionaryForTelemetryData:item];
+  
   __weak typeof(self) weakSelf = self;
-
   dispatch_async(self.dataItemsOperations, ^{
     typeof(self) strongSelf = weakSelf;
 
+    if (strongSelf.isQueueBusy) {
+      // Case 2: Channel is in blocked state: Trigger sender, start timer to check after again after a while and abort operation.
+      BITHockeyLog(@"The channel is saturated. %@ was dropped.", item.debugDescription);
+      if (![strongSelf timerIsRunning]) {
+        [strongSelf startTimer];
+      }
+      return;
+    }
+    
     // Enqueue item
+    NSDictionary *dict = [self dictionaryForTelemetryData:item];
     [strongSelf appendDictionaryToJsonStream:dict];
 
     if (strongSelf->_dataItemCount >= self.maxBatchSize) {
-      // Max batch count has been reached, so write queue to disk and delete all items.
+      // Case 3: Max batch count has been reached, so write queue to disk and delete all items.
       [strongSelf persistDataItemQueue];
+    
     } else if (strongSelf->_dataItemCount == 1) {
-        // It is the first item, let's start the timer
+      // Case 4: It is the first item, let's start the timer.
+      if (![strongSelf timerIsRunning]) {
         [strongSelf startTimer];
       }
+    }
   });
-  return YES;
 }
 
 #pragma mark - Envelope telemerty items
