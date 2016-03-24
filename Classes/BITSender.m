@@ -3,6 +3,7 @@
 #if HOCKEYSDK_FEATURE_METRICS
 
 #import "BITPersistencePrivate.h"
+#import "BITChannelPrivate.h"
 #import "BITGZIP.h"
 #import "HockeySDKPrivate.h"
 #import "BITHTTPOperation.h"
@@ -42,7 +43,16 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 - (void)registerObservers {
   NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
   __weak typeof(self) weakSelf = self;
+  
   [center addObserverForName:BITPersistenceSuccessNotification
+                      object:nil
+                       queue:nil
+                  usingBlock:^(NSNotification *notification) {
+                    typeof(self) strongSelf = weakSelf;
+                    [strongSelf sendSavedDataAsync];
+                  }];
+  
+  [center addObserverForName:BITChannelBlockedNotification
                       object:nil
                        queue:nil
                   usingBlock:^(NSNotification *notification) {

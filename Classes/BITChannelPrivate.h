@@ -15,6 +15,12 @@ NS_ASSUME_NONNULL_BEGIN
 @interface BITChannel ()
 
 /**
+ * Notification that will be send on the main thread to notifiy observers that channel can't enqueue new items.
+ * This is typically used to trigger sending to the server.
+ */
+FOUNDATION_EXPORT NSString *const BITChannelBlockedNotification;
+
+/**
  *  Telemetry context used by the channel to create the payload (testing).
  */
 @property (nonatomic, strong) BITTelemetryContext *telemetryContext;
@@ -55,6 +61,11 @@ NS_ASSUME_NONNULL_BEGIN
  *  An integer value that keeps tracks of the number of data items added to the JSON Stream string.
  */
 @property (nonatomic, assign) NSUInteger dataItemCount;
+
+/**
+ *  Indicates that channel is currently in a blocked state.
+ */
+@property BOOL channelBlocked;
 
 /**
  *  Manually trigger the BITChannel to persist all items currently in its data item queue.
