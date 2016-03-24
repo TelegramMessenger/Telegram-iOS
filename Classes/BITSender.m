@@ -63,6 +63,7 @@ static NSUInteger const BITDefaultRequestLimit = 10;
   @synchronized(self){
     if(_runningRequestsCount < _maxRequestCount){
       _runningRequestsCount++;
+      BITHockeyLog(@"Create new sender thread. Current count is %ld", (long) _runningRequestsCount);
     }else{
       return;
     }
@@ -82,7 +83,8 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 
     [self sendRequest:request filePath:filePath];
   } else {
-      self.runningRequestsCount -= 1;
+    self.runningRequestsCount -= 1;
+    BITHockeyLog(@"Close sender thread. Current count is %ld", (long) _runningRequestsCount);
   }
 }
 
@@ -129,6 +131,7 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 
 - (void)handleResponseWithStatusCode:(NSInteger)statusCode responseData:(nonnull NSData *)responseData filePath:(nonnull NSString *)filePath error:(nonnull NSError *)error {
   self.runningRequestsCount -= 1;
+  BITHockeyLog(@"Close sender thread. Current count is %ld", (long) _runningRequestsCount);
 
   if (responseData && (responseData.length > 0) && [self shouldDeleteDataWithStatusCode:statusCode]) {
     //we delete data that was either sent successfully or if we have a non-recoverable error
