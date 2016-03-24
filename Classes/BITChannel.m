@@ -118,7 +118,6 @@ NS_ASSUME_NONNULL_BEGIN
     if (strongSelf->_dataItemCount >= self.maxBatchSize) {
       // Max batch count has been reached, so write queue to disk and delete all items.
       [strongSelf persistDataItemQueue];
-      [strongSelf sendBlockingChannelNotification];
     } else if (strongSelf->_dataItemCount == 1) {
         // It is the first item, let's start the timer
         [strongSelf startTimer];
