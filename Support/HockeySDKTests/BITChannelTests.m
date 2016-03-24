@@ -31,6 +31,7 @@
   BITTelemetryContext *mockContext = mock(BITTelemetryContext.class);
   
   _sut = [[BITChannel alloc]initWithTelemetryContext:mockContext persistence:_mockPersistence];
+  BITSafeJsonEventsString = NULL;
 }
 
 #pragma mark - Setup Tests
@@ -87,46 +88,34 @@
 - (void)testAppendStringToSafeJsonStream {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnonnull"
-  BITSafeJsonEventsString = bit_jsonStreamByAppendingJsonString(0, nil);
+  bit_appendStringToSafeJsonStream(nil, 0);
 #pragma clang diagnostic pop
-  XCTAssertEqual(strcmp(BITSafeJsonEventsString, ""), 0);
+  XCTAssertTrue(BITSafeJsonEventsString == NULL);
   
+  BITSafeJsonEventsString = NULL;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnonnull"
- BITSafeJsonEventsString = bit_jsonStreamByAppendingJsonString(NULL, nil);
+  bit_appendStringToSafeJsonStream(nil, &BITSafeJsonEventsString);
 #pragma clang diagnostic pop
-  XCTAssertEqual(strcmp(BITSafeJsonEventsString, ""), 0);
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wnonnull"
-  BITSafeJsonEventsString = bit_jsonStreamByAppendingJsonString(nil, nil);
-#pragma clang diagnostic pop
-  XCTAssertEqual(strcmp(BITSafeJsonEventsString, ""), 0);
+  XCTAssertTrue(BITSafeJsonEventsString == NULL);
   
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wnonnull"
-  BITSafeJsonEventsString = bit_jsonStreamByAppendingJsonString(NULL, @"");
-#pragma clang diagnostic pop
+  bit_appendStringToSafeJsonStream(@"", &BITSafeJsonEventsString);
   XCTAssertEqual(strcmp(BITSafeJsonEventsString,""), 0);
   
-  BITSafeJsonEventsString = bit_jsonStreamByAppendingJsonString("", @"{\"Key1\":\"Value1\"}");
+  bit_appendStringToSafeJsonStream(@"{\"Key1\":\"Value1\"}", &BITSafeJsonEventsString);
   XCTAssertEqual(strcmp(BITSafeJsonEventsString,"{\"Key1\":\"Value1\"}\n"), 0);
 }
 
 - (void)testResetSafeJsonStream {
-  BITSafeJsonEventsString = NULL;
   bit_resetSafeJsonStream(&BITSafeJsonEventsString);
   XCTAssertEqual(strcmp(BITSafeJsonEventsString,""), 0);
   
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wnonnull"
-  bit_resetSafeJsonStream(NULL);
-#pragma clang diagnostic pop
-  
+  BITSafeJsonEventsString = NULL;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnonnull"
   bit_resetSafeJsonStream(nil);
 #pragma clang diagnostic pop
+  XCTAssertEqual(BITSafeJsonEventsString, NULL);
   
   BITSafeJsonEventsString = strdup("test string");
   bit_resetSafeJsonStream(&BITSafeJsonEventsString);
