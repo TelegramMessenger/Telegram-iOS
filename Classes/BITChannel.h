@@ -34,10 +34,8 @@ FOUNDATION_EXPORT char *BITSafeJsonEventsString;
  *  Reset BITSafeJsonEventsString so we can start appending JSON dictionaries.
  *
  *  @param item The telemetry object, which should be processed
- *
- *  @return YES if the item was successfully enqueued, no if an error occured or the data pipeline was saturated.
  */
-- (BOOL)enqueueTelemetryItem:(BITTelemetryData *)item;
+- (void)enqueueTelemetryItem:(BITTelemetryData *)item;
 
 @end
 

@@ -36,13 +36,6 @@ static NSUInteger const BITDefaultFileCount = 50;
     _directorySetupComplete = NO; //will be set to true in createDirectoryStructureIfNeeded
 
     [self createDirectoryStructureIfNeeded];
-
-    NSString *directoryPath = [self folderPathForType:BITPersistenceTypeTelemetry];
-    NSError *error = nil;
-    NSArray<NSURL *> *fileNames = [[NSFileManager defaultManager] contentsOfDirectoryAtURL:[NSURL fileURLWithPath:directoryPath]
-                                                       includingPropertiesForKeys:@[NSURLNameKey]
-                                                                          options:NSDirectoryEnumerationSkipsHiddenFiles
-                                                                        error:&error];
   }
   return self;
 }
