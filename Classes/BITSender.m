@@ -81,9 +81,8 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 
   NSString *filePath = [self.persistence requestNextFilePath];
   NSData *data = [self.persistence dataAtFilePath:filePath];
-  if (data) {
-    [self sendData:data withFilePath:filePath];
-  }
+  [self sendData:data withFilePath:filePath];
+ 
 }
 
 - (void)sendData:(nonnull NSData *)data withFilePath:(nonnull NSString *)filePath {
