@@ -93,7 +93,8 @@ static NSUInteger const BITDefaultRequestLimit = 10;
     [self sendRequest:request filePath:filePath];
   } else {
     self.runningRequestsCount -= 1;
-    BITHockeyLog(@"Close sender thread. Current count is %ld", (long) _runningRequestsCount);
+    BITHockeyLog(@"Close sender thread due empty package. Current count is %ld", (long) _runningRequestsCount);
+    // TODO: Delete data and send next file
   }
 }
 
@@ -140,7 +141,7 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 
 - (void)handleResponseWithStatusCode:(NSInteger)statusCode responseData:(nonnull NSData *)responseData filePath:(nonnull NSString *)filePath error:(nonnull NSError *)error {
   self.runningRequestsCount -= 1;
-  BITHockeyLog(@"Close sender thread. Current count is %ld", (long) _runningRequestsCount);
+  BITHockeyLog(@"Close sender thread due incoming response. Current count is %ld", (long) _runningRequestsCount);
 
   if (responseData && (responseData.length > 0) && [self shouldDeleteDataWithStatusCode:statusCode]) {
     //we delete data that was either sent successfully or if we have a non-recoverable error
@@ -209,7 +210,7 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 }
 
 - (void)setRunningRequestsCount:(NSUInteger)runningRequestsCount {
-  dispatch_barrier_async(_requestsCountQueue, ^{
+  dispatch_sync(_requestsCountQueue, ^{
     _runningRequestsCount = runningRequestsCount;
   });
 }
