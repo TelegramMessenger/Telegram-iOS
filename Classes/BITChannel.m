@@ -63,7 +63,11 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (BOOL)isQueueBusy {
   if (!self.channelBlocked) {
-   _channelBlocked = ![self.persistence isFreeSpaceAvailable];
+    BOOL persistenceBusy = ![self.persistence isFreeSpaceAvailable];
+    if (persistenceBusy) {
+      self.channelBlocked = true;
+      [self sendBlockingChannelNotification];
+    }
   }
   return self.channelBlocked;
 }
@@ -234,10 +238,9 @@ void bit_resetSafeJsonStream(char **string) {
     if (strongSelf->_dataItemCount > 0) {
       [strongSelf persistDataItemQueue];
     } else {
-      [strongSelf sendBlockingChannelNotification];
-      [strongSelf invalidateTimer];
       strongSelf.channelBlocked = NO;
     }
+    [strongSelf invalidateTimer];
   });
   dispatch_resume(self.timerSource);
 }
