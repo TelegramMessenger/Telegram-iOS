@@ -65,7 +65,7 @@ NS_ASSUME_NONNULL_BEGIN
   if (!self.channelBlocked) {
     BOOL persistenceBusy = ![self.persistence isFreeSpaceAvailable];
     if (persistenceBusy) {
-      self.channelBlocked = true;
+      self.channelBlocked = YES;
       [self sendBlockingChannelNotification];
     }
   }
