@@ -60,11 +60,13 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 }
 
 - (void)sendSavedData {
-    if (self.runningRequestsCount < _maxRequestCount) {
-        self.runningRequestsCount++;
-    } else {
+  @synchronized(self){
+    if(_runningRequestsCount < _maxRequestCount){
+      _runningRequestsCount++;
+    }else{
       return;
     }
+  }
 
   NSString *filePath = [self.persistence requestNextFilePath];
   NSData *data = [self.persistence dataAtFilePath:filePath];
