@@ -50,7 +50,6 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
     _appBackgroundTimeBeforeSessionExpires = 20;
     _serverURL = [NSString stringWithFormat:@"%@%@", BITMetricsBaseURLString, BITMetricsURLPathString];
   }
-  self.serverURL = nil;
   return self;
 }
 
