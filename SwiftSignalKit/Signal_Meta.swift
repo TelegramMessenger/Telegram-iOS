@@ -175,3 +175,121 @@ public func `defer`<T, E>(generator: () -> Signal<T, E>) -> Signal<T, E> {
         })
     }
 }
+
+public class SignalQueue<T, E> {
+    private let lock = Lock()
+    
+    private var queuedSignals = Bag<() -> Disposable>()
+    private var currentIndex: Bag<() -> Disposable>.Index?
+    private var currentDisposable = MetaDisposable()
+    
+    public init() {
+        
+    }
+    
+    deinit {
+        self.currentDisposable.dispose()
+    }
+    
+    public func enqueued(signal: Signal<T, E>) -> Signal<T, E> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            let activate = { () -> Disposable in
+                disposable.set(signal.start(next: { next in
+                    subscriber.putNext(next)
+                }, error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+                return disposable
+            }
+            
+            var dequeue = false
+            var index: Bag<Signal<Void, NoError>>.Index!
+            self.lock.locked {
+                dequeue = self.queuedSignals.isEmpty
+                index = self.queuedSignals.add(activate)
+            }
+            
+            if dequeue {
+                self.dequeue()
+            }
+            
+            return ActionDisposable {
+                var dequeue = false
+                self.lock.locked {
+                    self.queuedSignals.remove(index)
+                    if let currentIndex = self.currentIndex where currentIndex == index {
+                        self.currentDisposable.set(nil)
+                        dequeue = true
+                    }
+                }
+                if dequeue {
+                    self.dequeue()
+                }
+            }
+        }
+    }
+    
+    private func dequeue() {
+        var activate: (() -> Disposable)?
+        self.lock.locked {
+            if let (index, value) = self.queuedSignals.first {
+                activate = value
+                self.currentIndex = index
+            }
+        }
+        
+        if let activate = activate {
+            self.currentDisposable.set(activate())
+        }
+    }
+}
+
+/*@interface SSignalQueue () {
+    SPipe *_pipe;
+    id<SDisposable> _disposable;
+}
+
+@end
+
+@implementation SSignalQueue
+
+- (instancetype)init {
+    self = [super init];
+    if (self != nil) {
+        _pipe = [[SPipe alloc] init];
+        _disposable = [[_pipe.signalProducer() queue] startWithNext:nil];
+    }
+    return self;
+}
+
+- (void)dealloc {
+    [_disposable dispose];
+    }
+    
+    - (SSignal *)enqueue:(SSignal *)signal {
+        return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
+            SPipe *disposePipe = [[SPipe alloc] init];
+            
+            SSignal *proxy = [[[[signal onNext:^(id next) {
+            [subscriber putNext:next];
+            }] onError:^(id error) {
+            [subscriber putError:error];
+            }] onCompletion:^{
+            [subscriber putCompletion];
+            }] catch:^SSignal *(__unused id error) {
+            return [SSignal complete];
+            }];
+            
+            _pipe.sink([proxy takeUntilReplacement:disposePipe.signalProducer()]);
+            
+            return [[SBlockDisposable alloc] initWithBlock:^{
+            disposePipe.sink([SSignal complete]);
+            }];
+        }];
+}
+
+@end*/

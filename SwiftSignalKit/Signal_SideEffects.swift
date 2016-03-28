@@ -26,6 +26,32 @@ public func afterNext<T, E, R>(f: T -> R)(signal: Signal<T, E>) -> Signal<T, E> 
     }
 }
 
+public func beforeCompleted<T, E>(f: () -> Void)(signal: Signal<T, E>) -> Signal<T, E> {
+    return Signal<T, E> { subscriber in
+        return signal.start(next: { next in
+            subscriber.putNext(next)
+        }, error: { error in
+            subscriber.putError(error)
+        }, completed: {
+            f()
+            subscriber.putCompletion()
+        })
+    }
+}
+
+public func afterCompleted<T, E>(f: () -> Void)(signal: Signal<T, E>) -> Signal<T, E> {
+    return Signal<T, E> { subscriber in
+        return signal.start(next: { next in
+            subscriber.putNext(next)
+        }, error: { error in
+            subscriber.putError(error)
+        }, completed: {
+            subscriber.putCompletion()
+            f()
+        })
+    }
+}
+
 public func afterDisposed<T, E, R>(f: Void -> R)(signal: Signal<T, E>) -> Signal<T, E> {
     return Signal<T, E> { subscriber in
         let disposable = DisposableSet()

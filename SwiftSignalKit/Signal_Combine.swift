@@ -105,3 +105,17 @@ public func combineLatest<T1, T2, T3, T4, E>(s1: Signal<T1, E>, _ s2: Signal<T2,
         return (values[0] as! T1, values[1] as! T2, values[2] as! T3, values[3] as! T4)
     }, initialValues: [:])
 }
+
+public func combineLatest<T, E>(signals: [Signal<T, E>]) -> Signal<[T], E> {
+    if signals.count == 0 {
+        return single([T](), E.self)
+    }
+    
+    return combineLatestAny(signals.map({signalOfAny($0)}), combine: { values in
+        var combined: [T] = []
+        for value in values {
+            combined.append(value as! T)
+        }
+        return combined
+    }, initialValues: [:])
+}

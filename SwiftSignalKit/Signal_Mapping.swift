@@ -37,3 +37,31 @@ public func mapError<T, E, R>(f: E -> R)(signal: Signal<T, E>) -> Signal<T, R> {
         })
     }
 }
+
+private class DistinctUntilChangedContext<T> {
+    var value: T?
+}
+
+public func distinctUntilChanged<T: Equatable, E>(signal: Signal<T, E>) -> Signal<T, E> {
+    return Signal { subscriber in
+        let context = Atomic(value: DistinctUntilChangedContext<T>())
+        
+        return signal.start(next: { next in
+            let pass = context.with { context -> Bool in
+                if let value = context.value where value == next {
+                    return false
+                } else {
+                    context.value = next
+                    return true
+                }
+            }
+            if pass {
+                subscriber.putNext(next)
+            }
+        }, error: { error in
+            subscriber.putError(error)
+        }, completed: {
+            subscriber.putCompletion()
+        })
+    }
+}

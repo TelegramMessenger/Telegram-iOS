@@ -82,4 +82,8 @@ public final class Queue {
             dispatch_async(self.nativeQueue, f)
         }
     }
+    
+    public func after(delay: Double, _ f: Void -> Void) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, Int64(delay * Double(NSEC_PER_SEC))), self.queue, f)
+    }
 }

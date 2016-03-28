@@ -1,7 +1,7 @@
 import Foundation
 
-public func `catch`<T, E>(f: E -> Signal<T, E>)(signal: Signal<T, E>) -> Signal<T, E> {
-    return Signal<T, E> { subscriber in
+public func `catch`<T, E, R>(f: E -> Signal<T, R>)(signal: Signal<T, E>) -> Signal<T, R> {
+    return Signal<T, R> { subscriber in
         let disposable = DisposableSet()
         
         disposable.add(signal.start(next: { next in

@@ -42,4 +42,35 @@ public struct Signal<T, E> {
         subscriber.assignDisposable(disposable)
         return SubscriberDisposable(subscriber: subscriber, disposable: disposable)
     }
+    
+    public static func single(value: T) -> Signal<T, E> {
+        return Signal<T, E> { subscriber in
+            subscriber.putNext(value)
+            subscriber.putCompletion()
+            
+            return EmptyDisposable
+        }
+    }
+    
+    public static func complete() -> Signal<T, E> {
+        return Signal<T, E> { subscriber in
+            subscriber.putCompletion()
+            
+            return EmptyDisposable
+        }
+    }
+    
+    public static func fail(error: E) -> Signal<T, E> {
+        return Signal<T, E> { subscriber in
+            subscriber.putError(error)
+            
+            return EmptyDisposable
+        }
+    }
+    
+    public static func never() -> Signal<T, E> {
+        return Signal<T, E> { _ in
+            return EmptyDisposable
+        }
+    }
 }

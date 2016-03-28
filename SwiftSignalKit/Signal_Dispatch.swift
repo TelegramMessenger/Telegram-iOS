@@ -47,6 +47,33 @@ public func deliverOn<T, E>(threadPool: ThreadPool)(signal: Signal<T, E>) -> Sig
     }
 }
 
+public func runOn<T, E>(queue: Queue)(signal: Signal<T, E>) -> Signal<T, E> {
+    return Signal { subscriber in
+        var cancelled = false
+        let disposable = MetaDisposable()
+        
+        disposable.set(ActionDisposable {
+            cancelled = true
+        })
+        
+        queue.dispatch {
+            if cancelled {
+                return
+            }
+            
+            disposable.set(signal.start(next: { next in
+                subscriber.putNext(next)
+            }, error: { error in
+                subscriber.putError(error)
+            }, completed: {
+                subscriber.putCompletion()
+            }))
+        }
+        
+        return disposable
+    }
+}
+
 public func runOn<T, E>(threadPool: ThreadPool)(signal: Signal<T, E>) -> Signal<T, E> {
     return Signal { subscriber in
         let cancelled = false
