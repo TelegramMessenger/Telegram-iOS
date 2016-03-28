@@ -207,7 +207,7 @@ internal class NavigationItemWrapper {
             rightBarButtonItemWrapper.buttonNode.frame = self.rightButtonFrame!
         }
         
-        self.titleNode.measure(CGSize(width: self.parentNode.bounds.size.width - 140.0, height: CGFloat.max))
+        self.titleNode.measure(CGSize(width: max(0.0, self.parentNode.bounds.size.width - 140.0), height: CGFloat.max))
         self.titleNode.frame = self.titleFrame
     }
     

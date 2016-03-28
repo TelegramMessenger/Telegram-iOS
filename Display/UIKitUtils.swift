@@ -59,7 +59,7 @@ public extension CGSize {
     }
 }
 
-public func assertNotOnMainThread(file: String = __FILE__, line: Int = __LINE__) {
+public func assertNotOnMainThread(file: String = #file, line: Int = #line) {
     assert(!NSThread.isMainThread(), "\(file):\(line) running on main thread")
 }
 

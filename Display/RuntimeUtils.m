@@ -18,6 +18,16 @@
     }
 }
 
++ (void)swizzleInstanceMethodOfClass:(Class)targetClass currentSelector:(SEL)currentSelector withAnotherClass:(Class)anotherClass newSelector:(SEL)newSelector {
+    Method origMethod = nil, newMethod = nil;
+    
+    origMethod = class_getInstanceMethod(targetClass, currentSelector);
+    newMethod = class_getInstanceMethod(anotherClass, newSelector);
+    if ((origMethod != nil) && (newMethod != nil)) {
+        method_exchangeImplementations(origMethod, newMethod);
+    }
+}
+
 + (void)swizzleClassMethodOfClass:(Class)targetClass currentSelector:(SEL)currentSelector newSelector:(SEL)newSelector {
     Method origMethod = nil, newMethod = nil;
     

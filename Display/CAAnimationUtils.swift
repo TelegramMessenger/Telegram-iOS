@@ -61,8 +61,35 @@ public extension CALayer {
         //self.setValue(to, forKey: keyPath)
     }
     
+    public func animateAdditive(from from: NSValue, to: NSValue, keyPath: String, key: String, timingFunction: String, duration: NSTimeInterval, removeOnCompletion: Bool = true, completion: (Bool -> Void)? = nil) {
+        let k = Float(UIView.animationDurationFactor())
+        var speed: Float = 1.0
+        if k != 0 && k != 1 {
+            speed = Float(1.0) / k
+        }
+        
+        let animation = CABasicAnimation(keyPath: keyPath)
+        animation.fromValue = from
+        animation.toValue = to
+        animation.duration = duration
+        animation.timingFunction = CAMediaTimingFunction(name: timingFunction)
+        animation.removedOnCompletion = removeOnCompletion
+        animation.fillMode = kCAFillModeForwards
+        animation.speed = speed
+        animation.additive = true
+        if let completion = completion {
+            animation.delegate = CALayerAnimationDelegate(completion: completion)
+        }
+        
+        self.addAnimation(animation, forKey: key)
+    }
+    
     public func animateAlpha(from from: CGFloat, to: CGFloat, duration: NSTimeInterval, removeOnCompletion: Bool = true, completion: ((Bool) -> ())? = nil) {
         self.animate(from: NSNumber(float: Float(from)), to: NSNumber(float: Float(to)), keyPath: "opacity", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: duration, removeOnCompletion: removeOnCompletion, completion: completion)
+    }
+    
+    public func animateScale(from from: CGFloat, to: CGFloat, duration: NSTimeInterval) {
+        self.animate(from: NSNumber(float: Float(from)), to: NSNumber(float: Float(to)), keyPath: "transform.scale", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: duration, removeOnCompletion: true, completion: nil)
     }
     
     internal func animatePosition(from from: CGPoint, to: CGPoint, duration: NSTimeInterval) {
@@ -70,6 +97,6 @@ public extension CALayer {
     }
     
     public func animateBoundsOriginYAdditive(from from: CGFloat, to: CGFloat, duration: NSTimeInterval) {
-        self.animate(from: from as NSNumber, to: to as NSNumber, keyPath: "bounds.origin.y", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: duration, removeOnCompletion: true)
+        self.animateAdditive(from: from as NSNumber, to: to as NSNumber, keyPath: "bounds.origin.y", key: "boundsOriginYAdditive", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: duration, removeOnCompletion: true)
     }
 }

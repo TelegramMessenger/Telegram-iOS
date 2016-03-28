@@ -1,22 +1,40 @@
 import UIKit
 import AsyncDisplayKit
 
-private enum ItemAnimation {
-    case None
-    case Push
-    case Pop
-}
-
 public class NavigationBar: ASDisplayNode {
-    private var topItem: UINavigationItem?
-    private var topItemWrapper: NavigationItemWrapper?
+    var item: UINavigationItem? {
+        didSet {
+            if let item = self.item {
+                self.itemWrapper = NavigationItemWrapper(parentNode: self, navigationItem: item, previousNavigationItem: self.previousItem)
+                self.itemWrapper?.backPressed = { [weak self] in
+                    if let backPressed = self?.backPressed {
+                        backPressed()
+                    }
+                }
+            } else {
+                self.itemWrapper = nil
+            }
+        }
+    }
     
-    private var tempItem: UINavigationItem?
-    private var tempItemWrapper: NavigationItemWrapper?
+    var previousItem: UINavigationItem? {
+        didSet {
+            if let item = self.item {
+                self.itemWrapper = NavigationItemWrapper(parentNode: self, navigationItem: item, previousNavigationItem: self.previousItem)
+                self.itemWrapper?.backPressed = { [weak self] in
+                    if let backPressed = self?.backPressed {
+                        backPressed()
+                    }
+                }
+            } else {
+                self.itemWrapper = nil
+            }
+        }
+    }
+    
+    private var itemWrapper: NavigationItemWrapper?
     
     private let stripeHeight: CGFloat = 1.0 / UIScreen.mainScreen().scale
-    
-    //private let effectView: UIVisualEffectView
     
     var backPressed: () -> () = { }
     
@@ -26,34 +44,6 @@ public class NavigationBar: ASDisplayNode {
         }
     }
     
-    var _proxy: NavigationBarProxy?
-    var proxy: NavigationBarProxy? {
-        get {
-            return self._proxy
-        }
-        set(value) {
-            self._proxy = value
-            self._proxy?.setItemsProxy = {[weak self] previousItems, items, animated in
-                if let strongSelf = self {
-                    var animation = ItemAnimation.None
-                    if animated && previousItems.count != 0 && items.count != 0 {
-                        if previousItems.filter({element in element === items[items.count - 1]}).count != 0 {
-                            animation = .Pop
-                        }
-                        else {
-                            animation = .Push
-                        }
-                    }
-                    
-                    let count = items.count
-                    if count != 0 {
-                        strongSelf.updateTopItem(items[count - 1] as! UINavigationItem, previousItem: count >= 2 ? (items[count - 2] as! UINavigationItem) : nil, animation: animation)
-                    }
-                }
-                return
-            }
-        }
-    }
     let stripeView: UIView
     
     public override init() {
@@ -70,7 +60,7 @@ public class NavigationBar: ASDisplayNode {
         self.view.addSubview(stripeView)
     }
     
-    private func updateTopItem(item: UINavigationItem, previousItem: UINavigationItem?, animation: ItemAnimation) {
+    /*private func updateTopItem(item: UINavigationItem, previousItem: UINavigationItem?, animation: ItemAnimation) {
         if self.topItem !== item {
             let previousTopItemWrapper = self.topItemWrapper
             self.topItemWrapper = nil
@@ -116,14 +106,12 @@ public class NavigationBar: ASDisplayNode {
         if let topItemWrapper = self.topItemWrapper {
             self.tempItemWrapper?.setInteractivePopProgress(progress, previousItemWrapper: topItemWrapper)
         }
-    }
+    }*/
     
     public override func layout() {
-        
         self.stripeView.frame = CGRect(x: 0.0, y: self.frame.size.height, width: self.frame.size.width, height: stripeHeight)
         
-        self.topItemWrapper?.layoutItems()
-        self.tempItemWrapper?.layoutItems()
+        self.itemWrapper?.layoutItems()
         
         //self.effectView.frame = self.bounds
     }

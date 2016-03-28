@@ -17,7 +17,7 @@ public class NavigationTitleNode: ASDisplayNode {
     
     public init(text: NSString) {
         self.label = ASTextNode()
-        self.label.maximumLineCount = 1
+        self.label.maximumNumberOfLines = 1
         self.label.truncationMode = .ByTruncatingTail
         self.label.displaysAsynchronously = false
         

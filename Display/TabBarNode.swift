@@ -97,7 +97,7 @@ class TabBarNode: ASDisplayNode {
             node.displayWithoutProcessing = true
             node.layerBacked = true
             if let selectedIndex = self.selectedIndex where selectedIndex == i {
-                node.image = tabBarItemImage(item.selectedImage, title: item.title ?? "", tintColor: UIColor.blueColor())
+                node.image = tabBarItemImage(item.selectedImage, title: item.title ?? "", tintColor: UIColor(0x1195f2))
             } else {
                 node.image = tabBarItemImage(item.image, title: item.title ?? "", tintColor: UIColor(0x929292))
             }
@@ -116,7 +116,7 @@ class TabBarNode: ASDisplayNode {
             let item = self.tabBarItems[index]
             
             if let selectedIndex = self.selectedIndex where selectedIndex == index {
-                node.image = tabBarItemImage(item.selectedImage, title: item.title ?? "", tintColor: UIColor.blueColor())
+                node.image = tabBarItemImage(item.selectedImage, title: item.title ?? "", tintColor: UIColor(0x1195f2))
             } else {
                 node.image = tabBarItemImage(item.image, title: item.title ?? "", tintColor: UIColor(0x929292))
             }
@@ -145,10 +145,10 @@ class TabBarNode: ASDisplayNode {
         }
     }
     
-    override func touchesBegan(touches: Set<NSObject>!, withEvent event: UIEvent!) {
+    override func touchesBegan(touches: Set<UITouch>, withEvent event: UIEvent?) {
         super.touchesBegan(touches, withEvent: event)
         
-        if let touch = touches.first as? UITouch {
+        if let touch = touches.first {
             let location = touch.locationInView(self.view)
             var closestNode: (Int, CGFloat)?
             

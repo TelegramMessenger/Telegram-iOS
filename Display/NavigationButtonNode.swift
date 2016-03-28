@@ -62,34 +62,34 @@ public class NavigationButtonNode: ASTextNode {
         return CGRectContainsPoint(apparentBounds, touch.locationInView(self.view))
     }
     
-    public override func touchesBegan(touches: Set<NSObject>!, withEvent event: UIEvent!) {
+    public override func touchesBegan(touches: Set<UITouch>, withEvent event: UIEvent?) {
         super.touchesBegan(touches, withEvent: event)
         self.touchCount += touches.count
         self.updateHighlightedState(true, animated: false)
     }
     
-    public override func touchesMoved(touches: Set<NSObject>!, withEvent event: UIEvent!) {
+    public override func touchesMoved(touches: Set<UITouch>, withEvent event: UIEvent?) {
         super.touchesMoved(touches, withEvent: event)
         
-        self.updateHighlightedState(self.touchInsideApparentBounds(touches.first as! UITouch), animated: true)
+        self.updateHighlightedState(self.touchInsideApparentBounds(touches.first!), animated: true)
     }
     
-    public override func touchesEnded(touches: Set<NSObject>!, withEvent event: UIEvent!) {
+    public override func touchesEnded(touches: Set<UITouch>, withEvent event: UIEvent?) {
         super.touchesEnded(touches, withEvent: event)
         self.updateHighlightedState(false, animated: false)
         
         let previousTouchCount = self.touchCount
         self.touchCount = max(0, self.touchCount - touches.count)
         
-        if previousTouchCount != 0 && self.touchCount == 0 && self.enabled && self.touchInsideApparentBounds(touches.first as! UITouch) {
+        if previousTouchCount != 0 && self.touchCount == 0 && self.enabled && self.touchInsideApparentBounds(touches.first!) {
             self.pressed()
         }
     }
     
-    public override func touchesCancelled(touches: Set<NSObject>!, withEvent event: UIEvent!) {
+    public override func touchesCancelled(touches: Set<UITouch>?, withEvent event: UIEvent?) {
         super.touchesCancelled(touches, withEvent: event)
         
-        self.touchCount = max(0, self.touchCount - touches.count)
+        self.touchCount = max(0, self.touchCount - (touches?.count ?? 0))
         self.updateHighlightedState(false, animated: false)
     }
     

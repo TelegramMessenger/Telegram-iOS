@@ -98,7 +98,7 @@ public class TabBarController: ViewController {
     private func childControllerLayoutForLayout(layout: ViewControllerLayout) -> ViewControllerLayout {
         var insets = layout.insets
         insets.bottom += 49.0
-        return ViewControllerLayout(size: layout.size, insets: insets, inputViewHeight: layout.inputViewHeight)
+        return ViewControllerLayout(size: layout.size, insets: insets, inputViewHeight: layout.inputViewHeight, statusBarHeight: layout.statusBarHeight)
     }
     
     override public func updateLayout(layout: ViewControllerLayout, previousLayout: ViewControllerLayout?, duration: Double, curve: UInt) {

@@ -15,6 +15,7 @@ public struct ViewControllerLayout: Equatable {
     public let size: CGSize
     public let insets: UIEdgeInsets
     public let inputViewHeight: CGFloat
+    public let statusBarHeight: CGFloat
 }
 
 public protocol WindowContentController {
@@ -74,7 +75,7 @@ public func animateRotation(view: ASDisplayNode?, toFrame: CGRect, duration: NST
 }
 
 public class Window: UIWindow {
-    //public let textField: UITextField
+    private let statusBarManager: StatusBarManager
     
     private var updateViewSizeOnLayout: (Bool, NSTimeInterval) = (false, 0.0)
     public var isUpdatingOrientationLayout = false
@@ -88,11 +89,9 @@ public class Window: UIWindow {
     }
     
     public override init(frame: CGRect) {
-        //self.textField = UITextField(frame: CGRect(x: -110.0, y: 0.0, width: 100.0, height: 50.0))
+        self.statusBarManager = StatusBarManager()
         
         super.init(frame: frame)
-        
-        //self.addSubview(self.textField)
         
         super.rootViewController = WindowRootViewController()
     }
@@ -144,11 +143,13 @@ public class Window: UIWindow {
             self._rootViewController?.view.removeFromSuperview()
             self._rootViewController = value
             self._rootViewController?.view.frame = self.bounds
-            self._rootViewController?.setParentLayout(ViewControllerLayout(size: self.bounds.size, insets: UIEdgeInsets(), inputViewHeight: 0.0), duration: 0.0, curve: 0)
+            self._rootViewController?.setParentLayout(ViewControllerLayout(size: self.bounds.size, insets: UIEdgeInsets(), inputViewHeight: 0.0, statusBarHeight: 0.0), duration: 0.0, curve: 0)
             
             if let view = self._rootViewController?.view {
                 self.addSubview(view)
             }
+            
+            self.updateStatusBars()
         }
     }
     
@@ -158,7 +159,7 @@ public class Window: UIWindow {
         if self.updateViewSizeOnLayout.0 {
             self.updateViewSizeOnLayout.0 = false
             
-            self._rootViewController?.setParentLayout(ViewControllerLayout(size: self.bounds.size, insets: UIEdgeInsets(), inputViewHeight: 0.0), duration: updateViewSizeOnLayout.1, curve: 0)
+            self._rootViewController?.setParentLayout(ViewControllerLayout(size: self.bounds.size, insets: UIEdgeInsets(), inputViewHeight: 0.0, statusBarHeight: 0.0), duration: updateViewSizeOnLayout.1, curve: 0)
         }
     }
     
@@ -178,5 +179,9 @@ public class Window: UIWindow {
     
     public func addPostUpdateToInterfaceOrientationBlock(f: Void -> Void) {
         postUpdateToInterfaceOrientationBlocks.append(f)
+    }
+    
+    func updateStatusBars() {
+        self.statusBarManager.surfaces = (self._rootViewController as? StatusBarSurfaceProvider)?.statusBarSurfaces() ?? []
     }
 }

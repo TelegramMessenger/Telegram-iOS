@@ -4,7 +4,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 
 public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
-    return lhs.size == rhs.size && lhs.insets == rhs.insets && lhs.inputViewHeight == rhs.inputViewHeight
+    return lhs.size == rhs.size && lhs.insets == rhs.insets && lhs.inputViewHeight == rhs.inputViewHeight && lhs.statusBarHeight == rhs.statusBarHeight
 }
 
 @objc public class ViewController: UIViewController, WindowContentController {
@@ -31,6 +31,9 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
         return self._displayNode != nil
     }
     
+    public let statusBar: StatusBar
+    public let navigationBar: NavigationBar
+    
     private let _ready = Promise<Bool>(true)
     public var ready: Promise<Bool> {
         return self._ready
@@ -42,8 +45,12 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
     var keyboardFrameObserver: AnyObject?
     
     public init() {
+        self.statusBar = StatusBar()
+        self.navigationBar = NavigationBar()
+        
         super.init(nibName: nil, bundle: nil)
         
+        self.navigationBar.item = self.navigationItem
         self.automaticallyAdjustsScrollViewInsets = false
         
         self.keyboardFrameObserver = NSNotificationCenter.defaultCenter().addObserverForName(UIKeyboardWillChangeFrameNotification, object: nil, queue: nil, usingBlock: { [weak self] notification in
@@ -61,7 +68,7 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
                 } else{
                     previousLayout = strongSelf.layout
                 }
-                let layout = ViewControllerLayout(size: previousLayout?.size ?? CGSize(), insets: previousLayout?.insets ?? UIEdgeInsets(), inputViewHeight: keyboardHeight)
+                let layout = ViewControllerLayout(size: previousLayout?.size ?? CGSize(), insets: previousLayout?.insets ?? UIEdgeInsets(), inputViewHeight: keyboardHeight, statusBarHeight: previousLayout?.statusBarHeight ?? 20.0)
                 let updated: Bool
                 if let previousLayout = previousLayout {
                     updated = previousLayout != layout
@@ -69,7 +76,7 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
                     updated = true
                 }
                 if updated {
-                    print("keyboard layout change: \(layout) rotating: \(strongSelf.view.window?.isRotating())")
+                    //print("keyboard layout change: \(layout) rotating: \(strongSelf.view.window?.isRotating())")
                     
                     let durationAndCurve: (NSTimeInterval, UInt) = previousDurationAndCurve ?? (duration > DBL_EPSILON ? 0.5 : 0.0, curve)
                     strongSelf.updateLayoutOnLayout = (layout, durationAndCurve.0, durationAndCurve.1)
@@ -91,10 +98,11 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
     
     public override func loadView() {
         self.view = self.displayNode.view
+        self.displayNode.addSubnode(self.navigationBar)
+        self.view.addSubview(self.statusBar.view)
     }
     
     public func loadDisplayNode() {
-        
         self.displayNode = ASDisplayNode()
     }
     
@@ -102,6 +110,7 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
         if self._displayNode == nil {
             self.loadDisplayNode()
         }
+        
         let previousLayout: ViewControllerLayout?
         if let updateLayoutOnLayout = self.updateLayoutOnLayout {
             previousLayout = updateLayoutOnLayout.0
@@ -109,7 +118,10 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
             previousLayout = self.layout
         }
         
-        let layout = ViewControllerLayout(size: layout.size, insets: layout.insets, inputViewHeight: previousLayout?.inputViewHeight ?? 0.0)
+        var insets = layout.insets
+        insets.top += 22.0
+        
+        let layout = ViewControllerLayout(size: layout.size, insets: insets, inputViewHeight: previousLayout?.inputViewHeight ?? 0.0, statusBarHeight: layout.statusBarHeight)
         let updated: Bool
         if let previousLayout = previousLayout {
             updated = previousLayout != layout
@@ -128,6 +140,8 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
     }
     
     public func updateLayout(layout: ViewControllerLayout, previousLayout: ViewControllerLayout?, duration: Double, curve: UInt) {
+        self.statusBar.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: 40.0))
+        self.navigationBar.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: 44.0 + 20.0))
     }
     
     override public func viewDidLayoutSubviews() {
@@ -138,6 +152,7 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
                     let previousLayout = self.layout
                     self.layout = updateLayoutOnLayout.0
                     self.updateLayout(updateLayoutOnLayout.0, previousLayout: previousLayout, duration: updateLayoutOnLayout.1, curve: updateLayoutOnLayout.2)
+                    self.view.frame = CGRect(origin: self.view.frame.origin, size: updateLayoutOnLayout.0.size)
                     
                     self.updateLayoutOnLayout = nil
                 } else {
@@ -154,6 +169,14 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
                     }
                 })
             }
+        }
+    }
+    
+    override public func presentViewController(viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)?) {
+        if let navigationController = self.navigationController as? NavigationController {
+            navigationController.presentViewController(viewControllerToPresent, animated: flag, completion: completion)
+        } else {
+            super.presentViewController(viewControllerToPresent, animated: flag, completion: completion)
         }
     }
 }

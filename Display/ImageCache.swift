@@ -110,7 +110,7 @@ public final class ImageCache {
         pthread_mutex_lock(&self.mutex);
         if let residentImage = self.residentImages[key] {
             image = residentImage.image
-            self.nextAccessIndex++
+            self.nextAccessIndex += 1
             residentImage.accessIndex = self.nextAccessIndex
         } else {
             if let imageData = self.imageDatas[key] {
@@ -141,14 +141,14 @@ public final class ImageCache {
                 let currentImageSize = Int(currentImage.image.size.width * currentImage.image.size.height * currentImage.image.scale) * 4
                 removedSize += currentImageSize
                 self.residentImages.removeValueForKey(currentImage.key)
-                i--
+                i -= 1
             }
             
             self.residentImagesSize = max(0, self.residentImagesSize - removedSize)
         }
         
         self.residentImagesSize += imageSize
-        self.nextAccessIndex++
+        self.nextAccessIndex += 1
         self.residentImages[key] = ImageCacheResidentImage(key: key, image: image, accessIndex: self.nextAccessIndex)
     }
 }
