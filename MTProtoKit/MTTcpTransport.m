@@ -239,7 +239,9 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
                 {
                     if (ABS(currentTime - strongSelf->_sleepWatchdogTimerLastTime) > MTTcpTransportSleepWatchdogTimeout * 2.0)
                     {
-                        MTLog(@"[MTTcpTransport#%p system sleep detected, resetting connection]", strongSelf);
+                        if (MTLogEnabled()) {
+                            MTLog(@"[MTTcpTransport#%p system sleep detected, resetting connection]", strongSelf);
+                        }
                         [strongSelf reset];
                     }
                     strongSelf->_sleepWatchdogTimerLastTime = currentTime;
@@ -508,19 +510,25 @@ static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
     {
         if (!_didSendActualizationPingAfterConnection)
         {
-            MTLog(@"[MTTcpTransport#%x unlocking transaction processing due to connection context update task]", (int)self);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTTcpTransport#%x unlocking transaction processing due to connection context update task]", (int)self);
+            }
             _isWaitingForTransactionToBecomeReady = false;
             _transactionLockTime = 0.0;
         }
         else if (CFAbsoluteTimeGetCurrent() > _transactionLockTime + 1.0)
         {
-            MTLog(@"[MTTcpTransport#%x unlocking transaction processing due to timeout]", (int)self);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTTcpTransport#%x unlocking transaction processing due to timeout]", (int)self);
+            }
             _isWaitingForTransactionToBecomeReady = false;
             _transactionLockTime = 0.0;
         }
         else
         {
-            MTLog(@"[MTTcpTransport#%x skipping transaction request]", (int)self);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTTcpTransport#%x skipping transaction request]", (int)self);
+            }
             _requestAnotherTransactionWhenReady = true;
             
             return;

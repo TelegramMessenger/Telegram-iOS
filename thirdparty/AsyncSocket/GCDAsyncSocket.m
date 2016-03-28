@@ -2413,7 +2413,9 @@ enum GCDAsyncSocketConfig
 		int result = connect(socketFD, (const struct sockaddr *)[address bytes], (socklen_t)[address length]);
 		if (result == 0)
 		{
-            MTLog(@"Connection time: %f ms", (CFAbsoluteTimeGetCurrent() - startTime) * 1000.0f);
+            if (MTLogEnabled()) {
+                MTLog(@"Connection time: %f ms", (CFAbsoluteTimeGetCurrent() - startTime) * 1000.0f);
+            }
 			dispatch_async(socketQueue, ^{ @autoreleasepool {
 				
 				[self didConnect:aConnectIndex];

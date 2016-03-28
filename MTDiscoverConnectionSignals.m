@@ -84,22 +84,31 @@ typedef struct {
             received = true;
             if ([self isResponseValid:data payloadData:payloadData])
             {
-                MTLog(@"success tcp://%@:%d", address.ip, (int)address.port);
+                if (MTLogEnabled()) {
+                    MTLog(@"success tcp://%@:%d", address.ip, (int)address.port);
+                }
                 [subscriber putCompletion];
             }
             else
             {
-                MTLog(@"failed tcp://%@:%d", address.ip, (int)address.port);
+                if (MTLogEnabled()) {
+                    MTLog(@"failed tcp://%@:%d", address.ip, (int)address.port);
+                }
                 [subscriber putError:nil];
             }
         };
         connection.connectionClosed = ^
         {
-            if (!received)
-                MTLog(@"failed tcp://%@:%d", address.ip, (int)address.port);
+            if (!received) {
+                if (MTLogEnabled()) {
+                    MTLog(@"failed tcp://%@:%d", address.ip, (int)address.port);
+                }
+            }
             [subscriber putError:nil];
         };
-        MTLog(@"trying tcp://%@:%d", address.ip, (int)address.port);
+        if (MTLogEnabled()) {
+            MTLog(@"trying tcp://%@:%d", address.ip, (int)address.port);
+        }
         [connection start];
         
         return [[SBlockDisposable alloc] initWithBlock:^
@@ -130,7 +139,9 @@ typedef struct {
             [subscriber putError:nil];
         };
         
-        MTLog(@"trying http://%@:%d", address.ip, (int)address.port);
+        if (MTLogEnabled()) {
+            MTLog(@"trying http://%@:%d", address.ip, (int)address.port);
+        }
         MTHttpWorker *httpWorker = [[MTHttpWorker alloc] initWithDelegate:delegate address:address payloadData:data performsLongPolling:false];
         
         return [[SBlockDisposable alloc] initWithBlock:^

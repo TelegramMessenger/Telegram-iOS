@@ -113,7 +113,9 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
         {
             _socket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:[[MTTcpConnection tcpQueue] nativeQueue]];
             
-            MTLog(@"[MTTcpConnection#%x connecting to %@:%d]", (int)self, _address.ip, (int)_address.port);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTTcpConnection#%x connecting to %@:%d]", (int)self, _address.ip, (int)_address.port);
+            }
             
             NSString *ip = _address.ip;
             
@@ -225,7 +227,9 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
             }
             else
             {
-                MTLog(@"***** %s: can't send data: connection is not opened", __PRETTY_FUNCTION__);
+                if (MTLogEnabled()) {
+                    MTLog(@"***** %s: can't send data: connection is not opened", __PRETTY_FUNCTION__);
+                }
                 
                 if (completion)
                     completion(false);
@@ -244,7 +248,9 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
     [_responseTimeoutTimer invalidate];
     _responseTimeoutTimer = nil;
     
-    MTLog(@"[MTTcpConnection#%x response timeout]", (int)self);
+    if (MTLogEnabled()) {
+        MTLog(@"[MTTcpConnection#%x response timeout]", (int)self);
+    }
     [self stop];
 }
 
@@ -306,7 +312,9 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
                 [_socket readDataToLength:3 withTimeout:-1 tag:MTTcpReadTagPacketLongLength];
             else
             {
-                MTLog(@"***** %s: invalid quarter length marker (%" PRIu8 ")", __PRETTY_FUNCTION__, quarterLengthMarker);
+                if (MTLogEnabled()) {
+                    MTLog(@"***** %s: invalid quarter length marker (%" PRIu8 ")", __PRETTY_FUNCTION__, quarterLengthMarker);
+                }
                 [self closeAndNotify];
             }
         }
@@ -322,7 +330,9 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
         
         if (quarterLength <= 0 || quarterLength > (4 * 1024 * 1024) / 4)
         {
-            MTLog(@"***** %s: invalid quarter length (%" PRIu32 ")", __PRETTY_FUNCTION__, quarterLength);
+            if (MTLogEnabled()) {
+                MTLog(@"***** %s: invalid quarter length (%" PRIu32 ")", __PRETTY_FUNCTION__, quarterLength);
+            }
             [self closeAndNotify];
         }
         else
@@ -417,10 +427,16 @@ static const NSUInteger MTTcpProgressCalculationThreshold = 4096;
 
 - (void)socketDidDisconnect:(GCDAsyncSocket *)__unused socket withError:(NSError *)error
 {
-    if (error != nil)
-        MTLog(@"[MTTcpConnection#%x disconnected from %@ (%@)]", (int)self, _address.ip, error);
-    else
-        MTLog(@"[MTTcpConnection#%x disconnected from %@]", (int)self, _address.ip);
+    if (error != nil) {
+        if (MTLogEnabled()) {
+            MTLog(@"[MTTcpConnection#%x disconnected from %@ (%@)]", (int)self, _address.ip, error);
+        }
+    }
+    else {
+        if (MTLogEnabled()) {
+            MTLog(@"[MTTcpConnection#%x disconnected from %@]", (int)self, _address.ip);
+        }
+    }
     
     [self closeAndNotify];
 }

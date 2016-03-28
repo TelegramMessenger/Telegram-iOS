@@ -15,6 +15,7 @@
 extern "C" {
 #endif
 
+bool MTLogEnabled();
 void MTLog(NSString *format, ...);
 void MTLogSetLoggingFunction(void (*function)(NSString *, va_list args));
 

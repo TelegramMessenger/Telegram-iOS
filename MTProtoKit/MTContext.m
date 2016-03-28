@@ -282,7 +282,9 @@
     {
         _globalTimeDifference = globalTimeDifference;
         
-        MTLog(@"[MTContext#%x: global time difference changed: %.1fs]", (int)self, globalTimeDifference);
+        if (MTLogEnabled()) {
+            MTLog(@"[MTContext#%x: global time difference changed: %.1fs]", (int)self, globalTimeDifference);
+        }
         
         [_keychain setObject:@(_globalTimeDifference) forKey:@"globalTimeDifference" group:@"temp"];
     }];
@@ -302,7 +304,9 @@
     {
         if (addressSet != nil && datacenterId != 0)
         {
-            MTLog(@"[MTContext#%x: address set updated for %d]", (int)self, datacenterId);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTContext#%x: address set updated for %d]", (int)self, datacenterId);
+            }
             
             bool previousAddressSetWasEmpty = ((MTDatacenterAddressSet *)_datacenterAddressSetById[@(datacenterId)]).addressList.count == 0;
             
@@ -353,7 +357,9 @@
         
         if (updated)
         {
-            MTLog(@"[MTContext#%x: added address %@ for datacenter %d]", (int)self, address, datacenterId);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTContext#%x: added address %@ for datacenter %d]", (int)self, address, datacenterId);
+            }
             
             _datacenterAddressSetById[@(datacenterId)] = addressSet;
             [_keychain setObject:_datacenterAddressSetById forKey:@"datacenterAddressSetById" group:@"persistent"];
@@ -375,7 +381,9 @@
     {
         if (authInfo != nil && datacenterId != 0)
         {
-            MTLog(@"[MTContext#%x: auth info updated for %d]", (int)self, datacenterId);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTContext#%x: auth info updated for %d]", (int)self, datacenterId);
+            }
             
             _datacenterAuthInfoById[@(datacenterId)] = authInfo;
             [_keychain setObject:_datacenterAuthInfoById forKey:@"datacenterAuthInfoById" group:@"persistent"];
@@ -455,7 +463,9 @@
             
             if (currentScheme != nil && (previousScheme == nil || ![previousScheme isEqualToScheme:currentScheme]))
             {
-                MTLog(@"[MTContext#%x: %@ transport scheme updated for %d: %@]", (int)self, media ? @"media" : @"generic", datacenterId, transportScheme);
+                if (MTLogEnabled()) {
+                    MTLog(@"[MTContext#%x: %@ transport scheme updated for %d: %@]", (int)self, media ? @"media" : @"generic", datacenterId, transportScheme);
+                }
                 
                 for (id<MTContextChangeListener> listener in currentListeners)
                 {
@@ -754,7 +764,9 @@
                 }
             }] startWithNext:^(id next)
             {
-                MTLog(@"scheme: %@", next);
+                if (MTLogEnabled()) {
+                    MTLog(@"scheme: %@", next);
+                }
                 __strong MTContext *strongSelf = weakSelf;
                 if (strongSelf != nil)
                 {
