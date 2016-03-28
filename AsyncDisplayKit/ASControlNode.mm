@@ -9,6 +9,8 @@
 #import "ASControlNode.h"
 #import "ASControlNode+Subclasses.h"
 #import "ASThread.h"
+#import "ASDisplayNodeExtras.h"
+#import "ASImageNode.h"
 
 // UIControl allows dragging some distance outside of the control itself during
 // tracking. This value depends on the device idiom (25 or 70 points), so
@@ -73,10 +75,11 @@ static BOOL _enableHitTestDebug = NO;
 
 @implementation ASControlNode
 {
-  ASDisplayNode *_debugHighlightOverlay;
+  ASImageNode *_debugHighlightOverlay;
 }
 
 #pragma mark - Lifecycle
+
 - (id)init
 {
   if (!(self = [super init]))
@@ -88,6 +91,13 @@ static BOOL _enableHitTestDebug = NO;
   self.userInteractionEnabled = NO;
   return self;
 }
+
+- (void)setUserInteractionEnabled:(BOOL)userInteractionEnabled
+{
+  [super setUserInteractionEnabled:userInteractionEnabled];
+  self.isAccessibilityElement = userInteractionEnabled;
+}
+
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wobjc-missing-super-calls"
@@ -243,10 +253,10 @@ static BOOL _enableHitTestDebug = NO;
       
       // add a highlight overlay node with area of ASControlNode + UIEdgeInsets
       self.clipsToBounds = NO;
-      _debugHighlightOverlay = [[ASDisplayNode alloc] init];
+      _debugHighlightOverlay = [[ASImageNode alloc] init];
+      _debugHighlightOverlay.zPosition = 1000;  // CALayer doesn't have -moveSublayerToFront, but this will ensure we're over the top of any siblings.
       _debugHighlightOverlay.layerBacked = YES;
-      _debugHighlightOverlay.backgroundColor = [[UIColor greenColor] colorWithAlphaComponent:0.5];
-      
+      _debugHighlightOverlay.backgroundColor = [[UIColor greenColor] colorWithAlphaComponent:0.4];
       [self addSubnode:_debugHighlightOverlay];
     }
   }
@@ -257,13 +267,13 @@ static BOOL _enableHitTestDebug = NO;
     {
       // Do we already have an event table for this control event?
       id<NSCopying> eventKey = _ASControlNodeEventKeyForControlEvent(controlEvent);
-      NSMapTable *eventDispatchTable = [_controlEventDispatchTable objectForKey:eventKey];
+      NSMapTable *eventDispatchTable = _controlEventDispatchTable[eventKey];
       // Create it if necessary.
       if (!eventDispatchTable)
       {
         // Create the dispatch table for this event.
         eventDispatchTable = [NSMapTable weakToStrongObjectsMapTable];
-        [_controlEventDispatchTable setObject:eventDispatchTable forKey:eventKey];
+        _controlEventDispatchTable[eventKey] = eventDispatchTable;
       }
 
       // Have we seen this target before for this event?
@@ -291,7 +301,7 @@ static BOOL _enableHitTestDebug = NO;
   ASDN::MutexLocker l(_controlLock);
   
   // Grab the event dispatch table for this event.
-  NSMapTable *eventDispatchTable = [_controlEventDispatchTable objectForKey:_ASControlNodeEventKeyForControlEvent(controlEvent)];
+  NSMapTable *eventDispatchTable = _controlEventDispatchTable[_ASControlNodeEventKeyForControlEvent(controlEvent)];
   if (!eventDispatchTable)
     return nil;
 
@@ -328,7 +338,7 @@ static BOOL _enableHitTestDebug = NO;
     {
       // Grab the dispatch table for this event (if we have it).
       id<NSCopying> eventKey = _ASControlNodeEventKeyForControlEvent(controlEvent);
-      NSMapTable *eventDispatchTable = [_controlEventDispatchTable objectForKey:eventKey];
+      NSMapTable *eventDispatchTable = _controlEventDispatchTable[eventKey];
       if (!eventDispatchTable)
         return;
 
@@ -381,7 +391,7 @@ static BOOL _enableHitTestDebug = NO;
     (ASControlNodeEvent controlEvent)
     {
       // Use a copy to itereate, the action perform could call remove causing a mutation crash.
-      NSMapTable *eventDispatchTable = [[_controlEventDispatchTable objectForKey:_ASControlNodeEventKeyForControlEvent(controlEvent)] copy];
+      NSMapTable *eventDispatchTable = [_controlEventDispatchTable[_ASControlNodeEventKeyForControlEvent(controlEvent)] copy];
 
       // For each target interested in this event...
       for (id target in eventDispatchTable)
@@ -413,7 +423,7 @@ static BOOL _enableHitTestDebug = NO;
 
 id<NSCopying> _ASControlNodeEventKeyForControlEvent(ASControlNodeEvent controlEvent)
 {
-  return [NSNumber numberWithInteger:controlEvent];
+  return @(controlEvent);
 }
 
 void _ASEnumerateControlEventsIncludedInMaskWithBlock(ASControlNodeEvent mask, void (^block)(ASControlNodeEvent anEvent))
@@ -453,12 +463,35 @@ void _ASEnumerateControlEventsIncludedInMaskWithBlock(ASControlNodeEvent mask, v
   [super layout];
   
   if (_debugHighlightOverlay) {
-    UIEdgeInsets insets = [self hitTestSlop];
-    CGRect controlNodeRect = self.bounds;
-    _debugHighlightOverlay.frame = CGRectMake(controlNodeRect.origin.x + insets.left,
-                                              controlNodeRect.origin.y + insets.top,
-                                              controlNodeRect.size.width - insets.left - insets.right,
-                                              controlNodeRect.size.height - insets.top - insets.bottom);
+    
+    // Even if our parents don't have clipsToBounds set and would allow us to display the debug overlay, UIKit event delivery (hitTest:)
+    // will not search sub-hierarchies if one of our parents does not return YES for pointInside:.  In such a scenario, hitTestSlop
+    // may not be able to expand the tap target as much as desired without also setting some hitTestSlop on the limiting parents.
+    CGRect intersectRect = UIEdgeInsetsInsetRect(self.bounds, [self hitTestSlop]);
+    CALayer *layer = self.layer;
+    CALayer *intersectLayer = layer;
+    CALayer *intersectSuperlayer = layer.superlayer;
+    
+    // Stop climbing if we encounter a UIScrollView, as its offset bounds origin may make it seem like our events will be clipped when
+    // scrolling will actually reveal them (because this process will not re-run due to scrolling)
+    while (intersectSuperlayer && ![intersectSuperlayer.delegate respondsToSelector:@selector(contentOffset)]) {
+      // Get our parent's tappable bounds.  If the parent has an associated node, consider hitTestSlop, as it will extend its pointInside:.
+      CGRect parentHitRect = intersectSuperlayer.bounds;
+      ASDisplayNode *parentNode = ASLayerToDisplayNode(intersectSuperlayer);
+      if (parentNode) {
+        parentHitRect = UIEdgeInsetsInsetRect(parentHitRect, [parentNode hitTestSlop]);
+      }
+      
+      // Convert our current rectangle to parent coordinates, and intersect with the parent's hit rect.
+      CGRect intersectRectInParentCoordinates = [intersectSuperlayer convertRect:intersectRect fromLayer:intersectLayer];
+      intersectRect = CGRectIntersection(parentHitRect, intersectRectInParentCoordinates);
+
+      // Advance up the tree.
+      intersectLayer = intersectSuperlayer;
+      intersectSuperlayer = intersectLayer.superlayer;
+    }
+    
+    _debugHighlightOverlay.frame = [intersectLayer convertRect:intersectRect toLayer:layer];
   }
 }
 
