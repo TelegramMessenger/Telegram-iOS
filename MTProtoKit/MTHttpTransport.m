@@ -418,7 +418,7 @@
                 
                 MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:pingBuffer.data metadata:@"ping"];
                 outgoingMessage.requiresConfirmation = false;
-                transportSpecificTransaction = [[MTMessageTransaction alloc] initWithMessagePayload:@[outgoingMessage] completion:nil];
+                transportSpecificTransaction = [[MTMessageTransaction alloc] initWithMessagePayload:@[outgoingMessage] prepared:nil failed:nil completion:nil];
                 transportSpecificTransaction.requiresEncryption = true;
             }
             else if (!activeWorkersWithLongPollingFound)
@@ -431,7 +431,7 @@
                 
                 MTOutgoingMessage *actualizationPingMessage = [[MTOutgoingMessage alloc] initWithData:httpWaitBuffer.data metadata:@"httpWait"];
                 actualizationPingMessage.requiresConfirmation = false;
-                transportSpecificTransaction = [[MTMessageTransaction alloc] initWithMessagePayload:@[actualizationPingMessage] completion:^(__unused NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
+                transportSpecificTransaction = [[MTMessageTransaction alloc] initWithMessagePayload:@[actualizationPingMessage] prepared:nil failed:nil completion:^(__unused NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
                 {
                     [[MTHttpTransport httpTransportQueue] dispatchOnQueue:^
                     {

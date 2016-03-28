@@ -787,7 +787,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                     MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:msgsAckBuffer.data metadata:@"msgsAck"];
                     outgoingMessage.requiresConfirmation = false;
                     
-                    [messageTransactions addObject:[[MTMessageTransaction alloc] initWithMessagePayload:@[outgoingMessage] completion:^(__unused NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
+                    [messageTransactions addObject:[[MTMessageTransaction alloc] initWithMessagePayload:@[outgoingMessage] prepared:nil failed:nil completion:^(__unused NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
                     {
                         if (messageInternalIdToTransactionId[outgoingMessage.internalId] != nil && messageInternalIdToPreparedMessage[outgoingMessage.internalId] != nil)
                         {
@@ -867,6 +867,13 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 
                 if ([transport needsParityCorrection] && !transactionExpectsDataInResponse)
                     transactionNeedsQuickAck = true;
+            }
+            
+            for (MTMessageTransaction *messageTransaction in messageTransactions)
+            {
+                if (messageTransaction.prepared) {
+                    messageTransaction.prepared(messageInternalIdToPreparedMessage);
+                }
             }
             
             if (monotonityViolated || saltSetEmpty)
@@ -1062,6 +1069,13 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                                             }
                                         }
                                         
+                                        for (MTMessageTransaction *messageTransaction in messageTransactions)
+                                        {
+                                            if (messageTransaction.completion) {
+                                                messageTransaction.completion(nil, nil, nil);
+                                            }
+                                        }
+                                        
                                         if (MTLogEnabled()) {
                                             MTLog(@"[MTProto#%p transport did not accept transactions with messages (%@)]", self, idsString);
                                         }
@@ -1083,8 +1097,23 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                         transactionReady(nil);
                     }
                 }
-                else
+                else {
+                    for (MTMessageTransaction *messageTransaction in messageTransactions)
+                    {
+                        if (messageTransaction.completion) {
+                            messageTransaction.completion(nil, nil, nil);
+                        }
+                    }
+                    
                     transactionReady(nil);
+                }
+            } else {
+                for (MTMessageTransaction *messageTransaction in messageTransactions)
+                {
+                    if (messageTransaction.completion) {
+                        messageTransaction.completion(nil, nil, nil);
+                    }
+                }
             }
         }
         else if ([self timeFixOrSaltsMissing] && [self canAskForServiceTransactions] && (_timeFixContext == nil || _timeFixContext.transactionId == nil))
@@ -1608,7 +1637,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 
                 [self transportTransactionsMayHaveFailed:transport transactionIds:@[transactionId]];
                 
-                [self requestSecureTransportReset];
+                [self resetSessionInfo];
             }
             else
             {
@@ -1987,9 +2016,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             
             for (id<MTMessageService> messageService in _messageServices)
             {
-                if ([messageService respondsToSelector:@selector(mtProto:shouldRequestMessageInResponseToMessageId:currentTransactionId:)])
+                if ([messageService respondsToSelector:@selector(mtProto:shouldRequestMessageWithId:inResponseToMessageId:currentTransactionId:)])
                 {
-                    if ([messageService mtProto:self shouldRequestMessageInResponseToMessageId:requestMessageId currentTransactionId:transactionId])
+                    if ([messageService mtProto:self shouldRequestMessageWithId:detailedInfoMessage.responseMessageId inResponseToMessageId:requestMessageId currentTransactionId:transactionId])
                     {
                         shouldRequest = true;
                         break;
@@ -2132,6 +2161,20 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     
     if ([self canAskForTransactions] || [self canAskForServiceTransactions])
         [self requestTransportTransaction];
+}
+
+- (void)_messageResendRequestFailed:(int64_t)messageId
+{
+    [[MTProto managerQueue] dispatchOnQueue:^
+    {
+        for (id<MTMessageService> service in _messageServices)
+        {
+            if ([service respondsToSelector:@selector(mtProto:messageResendRequestFailed:)])
+            {
+                [service mtProto:self messageResendRequestFailed:messageId];
+            }
+        }
+    }];
 }
 
 @end

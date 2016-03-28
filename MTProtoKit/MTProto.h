@@ -52,4 +52,6 @@
 - (void)resetSessionInfo;
 - (void)requestTimeResync;
 
+- (void)_messageResendRequestFailed:(int64_t)messageId;
+
 @end

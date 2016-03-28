@@ -350,6 +350,8 @@
     
     MTAbsoluteTime currentTime = MTAbsoluteSystemTime();
     
+    static bool catchPrepare = false;
+    
     for (MTRequest *request in _requests)
     {
         if (request.dependsOnPasswordEntry && [_context isPasswordInputRequiredForDatacenterWithId:mtProto.datacenterId])
@@ -363,8 +365,8 @@
                 continue;
         }
         
-        if (request.requestContext == nil || (!request.requestContext.delivered && request.requestContext.transactionId == nil))
-        {
+        if (request.requestContext == nil || (!request.requestContext.waitingForMessageId && !request.requestContext.delivered && request.requestContext.transactionId == nil))
+        {   
             if (messages == nil)
                 messages = [[NSMutableArray alloc] init];
             if (requestInternalIdToMessageInternalId == nil)
@@ -432,13 +434,34 @@
     
     if (messages.count != 0)
     {
-        return [[MTMessageTransaction alloc] initWithMessagePayload:messages completion:^(NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, NSDictionary *messageInternalIdToQuickAckId)
+        return [[MTMessageTransaction alloc] initWithMessagePayload:messages prepared:^(NSDictionary *messageInternalIdToPreparedMessage) {
+            for (MTRequest *request in _requests) {
+                id messageInternalId = requestInternalIdToMessageInternalId[request.internalId];
+                if (messageInternalId != nil) {
+                    MTPreparedMessage *preparedMessage = messageInternalIdToPreparedMessage[messageInternalId];
+                    if (preparedMessage != nil) {
+                        MTRequestContext *requestContext = [[MTRequestContext alloc] initWithMessageId:preparedMessage.messageId messageSeqNo:preparedMessage.seqNo transactionId:nil quickAckId:0];
+                        requestContext.willInitializeApi = requestsWillInitializeApi;
+                        requestContext.waitingForMessageId = true;
+                        request.requestContext = requestContext;
+                    }
+                }
+            }
+        } failed:^{
+            for (MTRequest *request in _requests) {
+                id messageInternalId = requestInternalIdToMessageInternalId[request.internalId];
+                if (messageInternalId != nil) {
+                    request.requestContext.waitingForMessageId = false;
+                }
+            }
+        } completion:^(NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, NSDictionary *messageInternalIdToQuickAckId)
         {
             for (MTRequest *request in _requests)
             {
                 id messageInternalId = requestInternalIdToMessageInternalId[request.internalId];
                 if (messageInternalId != nil)
                 {
+                    request.requestContext.waitingForMessageId = false;
                     MTPreparedMessage *preparedMessage = messageInternalIdToPreparedMessage[messageInternalId];
                     if (preparedMessage != nil && messageInternalIdToTransactionId[messageInternalId] != nil)
                     {
@@ -672,7 +695,7 @@
 {
     for (MTRequest *request in _requests)
     {
-        if (request.requestContext != 0 && request.requestContext.quickAckId == quickAckId)
+        if (request.requestContext != nil && request.requestContext.quickAckId == quickAckId)
         {
             if (request.acknowledgementReceived != nil)
                 request.acknowledgementReceived();
@@ -707,6 +730,7 @@
         if (request.requestContext != nil && request.requestContext.messageId == messageId)
         {
             request.requestContext = nil;
+            requestTransaction = true;
             
             break;
         }
@@ -718,6 +742,7 @@
         {
             dropContext.messageId = 0;
             dropContext.messageSeqNo = 0;
+            requestTransaction = true;
             
             break;
         }
@@ -761,17 +786,41 @@
         [mtProto requestTransportTransaction];
 }
 
-- (bool)mtProto:(MTProto *)__unused mtProto shouldRequestMessageInResponseToMessageId:(int64_t)messageId currentTransactionId:(id)currentTransactionId
+- (bool)mtProto:(MTProto *)__unused mtProto shouldRequestMessageWithId:(int64_t)responseMessageId inResponseToMessageId:(int64_t)messageId currentTransactionId:(id)currentTransactionId
 {
     for (MTRequest *request in _requests)
     {
-        if (request.requestContext != nil && request.requestContext.messageId == messageId && (request.requestContext.transactionId == nil || [request.requestContext.transactionId isEqual:currentTransactionId]))
+        if (request.requestContext != nil && request.requestContext.messageId == messageId)
         {
-            return true;
+            if (request.requestContext.transactionId == nil || [request.requestContext.transactionId isEqual:currentTransactionId]) {
+                request.requestContext.responseMessageId = responseMessageId;
+                return true;
+            } else {
+                MTLog(@"[MTRequestMessageService#%x will not request message %" PRId64 " (transaction was not completed)]", (int)self, messageId);
+                MTLog(@"[MTRequestMessageService#%x but today it will]", (int)self);
+                return true;
+            }
         }
     }
     
     return false;
+}
+
+- (void)mtProto:(MTProto *)mtProto messageResendRequestFailed:(int64_t)messageId
+{
+    bool requestTransaction = false;
+    
+    for (MTRequest *request in _requests)
+    {
+        if (request.requestContext != nil && request.requestContext.responseMessageId == messageId)
+        {
+            request.requestContext = nil;
+            requestTransaction = true;
+        }
+    }
+    
+    if (requestTransaction)
+        [mtProto requestTransportTransaction];
 }
 
 - (void)mtProto:(MTProto *)mtProto updateReceiveProgressForToken:(id)progressToken progress:(float)progress packetLength:(NSInteger)packetLength

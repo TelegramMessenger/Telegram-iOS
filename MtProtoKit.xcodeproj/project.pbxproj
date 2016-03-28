@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D00354681C173BF0006610DA /* MtProtoKitStabilityTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D00354671C173BF0006610DA /* MtProtoKitStabilityTests.m */; };
+		D003546A1C173BF0006610DA /* MtProtoKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CB05F71ADC4483005E298F /* MtProtoKit.framework */; };
+		D00354701C173CB9006610DA /* SSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0580ABE1B0F3E7100E8235B /* SSignalKit.framework */; };
+		D00354721C173CD0006610DA /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D00354711C173CD0006610DA /* libz.tbd */; };
+		D00354741C173CD9006610DA /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D00354731C173CD9006610DA /* SystemConfiguration.framework */; };
 		D0580ABF1B0F3E7100E8235B /* SSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0580ABE1B0F3E7100E8235B /* SSignalKit.framework */; };
 		D0580AC21B0F3E9C00E8235B /* MTDiscoverConnectionSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = D0580AC01B0F3E9C00E8235B /* MTDiscoverConnectionSignals.h */; };
 		D0580AC31B0F3E9C00E8235B /* MTDiscoverConnectionSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = D0580AC11B0F3E9C00E8235B /* MTDiscoverConnectionSignals.m */; };
@@ -169,6 +174,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		D003546B1C173BF0006610DA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D05A830A18AFB3F9007F1076 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D0CB05F61ADC4483005E298F;
+			remoteInfo = MtProtoKit;
+		};
 		D0D225171B4D817B0085E26D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = D05A830A18AFB3F9007F1076 /* Project object */;
@@ -183,6 +195,11 @@
 		93DBD23018B2D72800631ADC /* MTRequestErrorContext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTRequestErrorContext.m; path = MtProtoKit/MTRequestErrorContext.m; sourceTree = "<group>"; };
 		93DBD23318B2D9AA00631ADC /* MTTime.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = MTTime.h; path = MtProtoKit/MTTime.h; sourceTree = "<group>"; };
 		93DBD23418B2DA1E00631ADC /* MTTime.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTTime.m; path = MtProtoKit/MTTime.m; sourceTree = "<group>"; };
+		D00354651C173BF0006610DA /* MtProtoKitStabilityTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MtProtoKitStabilityTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D00354671C173BF0006610DA /* MtProtoKitStabilityTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MtProtoKitStabilityTests.m; sourceTree = "<group>"; };
+		D00354691C173BF0006610DA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D00354711C173CD0006610DA /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
+		D00354731C173CD9006610DA /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 		D0254C2C18B103D4009452AA /* aes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = aes.h; sourceTree = "<group>"; };
 		D0254C2D18B103D4009452AA /* asn1.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = asn1.h; sourceTree = "<group>"; };
 		D0254C2E18B103D4009452AA /* asn1_mac.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = asn1_mac.h; sourceTree = "<group>"; };
@@ -381,8 +398,8 @@
 		D079AB9B1AF39B8000076F59 /* MtProtoKitMac.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MtProtoKitMac.h; sourceTree = "<group>"; };
 		D079ABA71AF39B8000076F59 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D079ABA81AF39B8000076F59 /* MtProtoKitMacTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MtProtoKitMacTests.m; sourceTree = "<group>"; };
-		D09A59561B582EFF00FC3724 /* MTFileBasedKeychain.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MTFileBasedKeychain.h; sourceTree = "<group>"; };
-		D09A59571B582EFF00FC3724 /* MTFileBasedKeychain.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MTFileBasedKeychain.m; sourceTree = "<group>"; };
+		D09A59561B582EFF00FC3724 /* MTFileBasedKeychain.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTFileBasedKeychain.h; path = MTProtoKit/MTFileBasedKeychain.h; sourceTree = "<group>"; };
+		D09A59571B582EFF00FC3724 /* MTFileBasedKeychain.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTFileBasedKeychain.m; path = MTProtoKit/MTFileBasedKeychain.m; sourceTree = "<group>"; };
 		D0A44E4D18B24A6000B64FC6 /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libcrypto.a; sourceTree = "<group>"; };
 		D0CB05F71ADC4483005E298F /* MtProtoKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MtProtoKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0CB05FA1ADC4483005E298F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -451,6 +468,17 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		D00354621C173BF0006610DA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D00354741C173CD9006610DA /* SystemConfiguration.framework in Frameworks */,
+				D00354721C173CD0006610DA /* libz.tbd in Frameworks */,
+				D00354701C173CB9006610DA /* SSignalKit.framework in Frameworks */,
+				D003546A1C173BF0006610DA /* MtProtoKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D079AB931AF39B8000076F59 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -494,6 +522,15 @@
 				D0580AC11B0F3E9C00E8235B /* MTDiscoverConnectionSignals.m */,
 			);
 			name = "Transport Scheme";
+			sourceTree = "<group>";
+		};
+		D00354661C173BF0006610DA /* MtProtoKitStabilityTests */ = {
+			isa = PBXGroup;
+			children = (
+				D00354671C173BF0006610DA /* MtProtoKitStabilityTests.m */,
+				D00354691C173BF0006610DA /* Info.plist */,
+			);
+			path = MtProtoKitStabilityTests;
 			sourceTree = "<group>";
 		};
 		D0254C2918B103D4009452AA /* openssl */ = {
@@ -602,6 +639,7 @@
 				D079ABA51AF39B8000076F59 /* MtProtoKitMacTests */,
 				D0D2250C1B4D817B0085E26D /* MtProtoKitDynamic */,
 				D0D225191B4D817B0085E26D /* MtProtoKitDynamicTests */,
+				D00354661C173BF0006610DA /* MtProtoKitStabilityTests */,
 				D05A831618AFB3F9007F1076 /* Frameworks */,
 				D05A831518AFB3F9007F1076 /* Products */,
 			);
@@ -614,6 +652,7 @@
 				D079AB971AF39B8000076F59 /* MtProtoKitMac.framework */,
 				D0D2250B1B4D817B0085E26D /* MtProtoKitDynamic.framework */,
 				D0D225151B4D817B0085E26D /* MtProtoKitDynamicTests.xctest */,
+				D00354651C173BF0006610DA /* MtProtoKitStabilityTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -621,6 +660,8 @@
 		D05A831618AFB3F9007F1076 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D00354731C173CD9006610DA /* SystemConfiguration.framework */,
+				D00354711C173CD0006610DA /* libz.tbd */,
 				D0580ABE1B0F3E7100E8235B /* SSignalKit.framework */,
 				D0D1A0711ADDE2FC007D9ED6 /* libz.dylib */,
 				D063A2F918B14AB500C65116 /* libcrypto.dylib */,
@@ -1247,6 +1288,24 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
+		D00354641C173BF0006610DA /* MtProtoKitStabilityTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D003546F1C173BF0006610DA /* Build configuration list for PBXNativeTarget "MtProtoKitStabilityTests" */;
+			buildPhases = (
+				D00354611C173BF0006610DA /* Sources */,
+				D00354621C173BF0006610DA /* Frameworks */,
+				D00354631C173BF0006610DA /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D003546C1C173BF0006610DA /* PBXTargetDependency */,
+			);
+			name = MtProtoKitStabilityTests;
+			productName = MtProtoKitStabilityTests;
+			productReference = D00354651C173BF0006610DA /* MtProtoKitStabilityTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		D079AB961AF39B8000076F59 /* MtProtoKitMac */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D079ABAE1AF39B8000076F59 /* Build configuration list for PBXNativeTarget "MtProtoKitMac" */;
@@ -1328,6 +1387,9 @@
 				LastUpgradeCheck = 0510;
 				ORGANIZATIONNAME = Telegram;
 				TargetAttributes = {
+					D00354641C173BF0006610DA = {
+						CreatedOnToolsVersion = 7.2;
+					};
 					D079AB961AF39B8000076F59 = {
 						CreatedOnToolsVersion = 6.3.1;
 					};
@@ -1358,11 +1420,19 @@
 				D079AB961AF39B8000076F59 /* MtProtoKitMac */,
 				D0D2250A1B4D817B0085E26D /* MtProtoKitDynamic */,
 				D0D225141B4D817B0085E26D /* MtProtoKitDynamicTests */,
+				D00354641C173BF0006610DA /* MtProtoKitStabilityTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		D00354631C173BF0006610DA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D079AB951AF39B8000076F59 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1394,6 +1464,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		D00354611C173BF0006610DA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D00354681C173BF0006610DA /* MtProtoKitStabilityTests.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D079AB921AF39B8000076F59 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1502,6 +1580,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		D003546C1C173BF0006610DA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D0CB05F61ADC4483005E298F /* MtProtoKit */;
+			targetProxy = D003546B1C173BF0006610DA /* PBXContainerItemProxy */;
+		};
 		D0D225181B4D817B0085E26D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = D0D2250A1B4D817B0085E26D /* MtProtoKitDynamic */;
@@ -1537,6 +1620,43 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		D003546D1C173BF0006610DA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				INFOPLIST_FILE = MtProtoKitStabilityTests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.2;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.MtProtoKitStabilityTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		D003546E1C173BF0006610DA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				INFOPLIST_FILE = MtProtoKitStabilityTests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.2;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.MtProtoKitStabilityTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 		D05A833A18AFB3F9007F1076 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1679,7 +1799,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_BITCODE = NO;
+				ENABLE_BITCODE = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1729,7 +1849,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_BITCODE = NO;
+				ENABLE_BITCODE = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1869,6 +1989,14 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		D003546F1C173BF0006610DA /* Build configuration list for PBXNativeTarget "MtProtoKitStabilityTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D003546D1C173BF0006610DA /* Debug */,
+				D003546E1C173BF0006610DA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
 		D05A830D18AFB3F9007F1076 /* Build configuration list for PBXProject "MtProtoKit" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

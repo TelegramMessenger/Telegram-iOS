@@ -66,7 +66,7 @@
         MTOutgoingMessage *outgoingMessage = [[MTOutgoingMessage alloc] initWithData:resentMessagesRequestData metadata:@"resendMessages"];
         outgoingMessage.requiresConfirmation = false;
         
-        return [[MTMessageTransaction alloc] initWithMessagePayload:@[outgoingMessage] completion:^(NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
+        return [[MTMessageTransaction alloc] initWithMessagePayload:@[outgoingMessage] prepared:nil failed:nil completion:^(NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, __unused NSDictionary *messageInternalIdToQuickAckId)
         {
             if ( messageInternalIdToTransactionId[outgoingMessage.internalId] != nil && messageInternalIdToPreparedMessage[outgoingMessage.internalId] != nil)
             {
@@ -139,6 +139,8 @@
     }
     else if ([message.body isKindOfClass:[MTMsgsStateInfoMessage class]] && ((MTMsgsStateInfoMessage *)message.body).requestMessageId == _currentRequestMessageId)
     {
+        [mtProto _messageResendRequestFailed:_messageId];
+        
         id<MTResendMessageServiceDelegate> delegate = _delegate;
         if ([delegate respondsToSelector:@selector(resendMessageServiceCompleted:)])
             [delegate resendMessageServiceCompleted:self];

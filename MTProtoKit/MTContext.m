@@ -27,6 +27,8 @@
 #import <MTProtoKit/MTTransportScheme.h>
 #import <MTProtoKit/MTTcpTransport.h>
 
+#import <MTProtoKit/MTApiEnvironment.h>
+
 #import <libkern/OSAtomic.h>
 
 #import "MTDiscoverConnectionSignals.h"
@@ -209,6 +211,10 @@
             NSDictionary *datacenterAddressSetById = [keychain objectForKey:@"datacenterAddressSetById" group:@"persistent"];
             if (datacenterAddressSetById != nil)
                 _datacenterAddressSetById = [[NSMutableDictionary alloc] initWithDictionary:datacenterAddressSetById];
+            
+            [_apiEnvironment.datacenterAddressOverrides enumerateKeysAndObjectsUsingBlock:^(NSNumber *nDatacenterId, MTDatacenterAddress *address, __unused BOOL *stop) {
+                _datacenterAddressSetById[nDatacenterId] = [[MTDatacenterAddressSet alloc] initWithAddressList:@[address]];
+            }];
             
             NSDictionary *datacenterGenericTransportSchemeById = [keychain objectForKey:@"datacenterGenericTransportSchemeById" group:@"persistent"];
             if (datacenterGenericTransportSchemeById != nil)
@@ -624,20 +630,25 @@
     __block MTTransportScheme *result = nil;
     [[MTContext contextQueue] dispatchOnQueue:^
     {
-        MTTransportScheme *candidate = nil;
-        if (media)
-            candidate = _datacenterMediaTransportSchemeById[@(datacenterId)];
-        else
-            candidate = _datacenterGenericTransportSchemeById[@(datacenterId)];
-        
-        if (candidate != nil)
-            result = candidate;
-        else
-            result = [self defaultTransportSchemeForDatacenterWithId:datacenterId media:media];
-        
-        if (result != nil && ![result isOptimal])
-        {
-            [self transportSchemeForDatacenterWithIdRequired:datacenterId moreOptimalThan:result beginWithHttp:false media:media];
+        MTDatacenterAddress *overrideAddress = _apiEnvironment.datacenterAddressOverrides[@(datacenterId)];
+        if (overrideAddress != nil) {
+            result = [[MTTransportScheme alloc] initWithTransportClass:[MTTcpTransport class] address:overrideAddress media:false];
+        } else {
+            MTTransportScheme *candidate = nil;
+            if (media)
+                candidate = _datacenterMediaTransportSchemeById[@(datacenterId)];
+            else
+                candidate = _datacenterGenericTransportSchemeById[@(datacenterId)];
+            
+            if (candidate != nil)
+                result = candidate;
+            else
+                result = [self defaultTransportSchemeForDatacenterWithId:datacenterId media:media];
+            
+            if (result != nil && ![result isOptimal])
+            {
+                [self transportSchemeForDatacenterWithIdRequired:datacenterId moreOptimalThan:result beginWithHttp:false media:media];
+            }
         }
     } synchronous:true];
     
