@@ -1,12 +1,8 @@
 import Foundation
 
-final class KeychainTable {
-    let valueBox: ValueBox
-    let tableId: Int32
-    
-    init(valueBox: ValueBox, tableId: Int32) {
-        self.valueBox = valueBox
-        self.tableId = tableId
+final class KeychainTable: Table {
+    override init(valueBox: ValueBox, tableId: Int32) {
+        super.init(valueBox: valueBox, tableId: tableId)
     }
     
     private func key(string: String) -> ValueBoxKey {

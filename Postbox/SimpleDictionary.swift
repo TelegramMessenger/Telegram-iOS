@@ -22,7 +22,7 @@ public struct SimpleDictionary<K: Equatable, V>: SequenceType {
                     }
                     return
                 }
-                index++
+                index += 1
             }
             if let value = value {
                 self.items.append((key, value))
@@ -32,9 +32,11 @@ public struct SimpleDictionary<K: Equatable, V>: SequenceType {
     
     public func generate() -> AnyGenerator<(K, V)> {
         var index = 0
-        return anyGenerator { () -> (K, V)? in
+        return AnyGenerator { () -> (K, V)? in
             if index < self.items.count {
-                return self.items[index++]
+                let currentIndex = index
+                index += 1
+                return self.items[currentIndex]
             }
             return nil
         }

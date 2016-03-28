@@ -2,12 +2,15 @@ import Foundation
 
 public enum ChatListEntry: Comparable {
     case MessageEntry(Message)
+    case HoleEntry(ChatListHole)
     case Nothing(MessageIndex)
     
     public var index: MessageIndex {
         switch self {
             case let .MessageEntry(message):
                 return MessageIndex(message)
+            case let .HoleEntry(hole):
+                return hole.index
             case let .Nothing(index):
                 return index
         }
@@ -22,9 +25,10 @@ public func <(lhs: ChatListEntry, rhs: ChatListEntry) -> Bool {
     return lhs.index < rhs.index
 }
 
-enum MutableChatListEntry {
+enum MutableChatListEntry: Equatable {
     case IntermediateMessageEntry(IntermediateMessage)
     case MessageEntry(Message)
+    case HoleEntry(ChatListHole)
     case Nothing(MessageIndex)
     
     var index: MessageIndex {
@@ -33,9 +37,48 @@ enum MutableChatListEntry {
                 return MessageIndex(id: message.id, timestamp: message.timestamp)
             case let .MessageEntry(message):
                 return MessageIndex(message)
+            case let .HoleEntry(hole):
+                return hole.index
             case let .Nothing(index):
                 return index
         }
+    }
+}
+
+func ==(lhs: MutableChatListEntry, rhs: MutableChatListEntry) -> Bool {
+    if lhs.index != rhs.index {
+        return false
+    }
+    
+    switch lhs {
+        case .IntermediateMessageEntry:
+            switch rhs {
+                case .IntermediateMessageEntry:
+                    return true
+                default:
+                    return false
+            }
+        case .MessageEntry:
+            switch rhs {
+                case .MessageEntry:
+                    return true
+                default:
+                    return false
+            }
+        case .HoleEntry:
+            switch rhs {
+                case .HoleEntry:
+                    return true
+                default:
+                    return false
+            }
+        case .Nothing:
+            switch rhs {
+                case .Nothing:
+                    return true
+                default:
+                    return false
+            }
     }
 }
 
@@ -74,8 +117,16 @@ final class MutableChatListView {
                     if self.add(.Nothing(index)) {
                         hasChanges = true
                     }
-                case let .Remove(indices):
-                    if self.remove(Set(indices), context: context) {
+                case let .InsertHole(index):
+                    if self.add(.HoleEntry(index)) {
+                        hasChanges = true
+                    }
+                case let .RemoveMessage(indices):
+                    if self.remove(Set(indices), holes: false, context: context) {
+                        hasChanges = true
+                    }
+                case let .RemoveHoles(indices):
+                    if self.remove(Set(indices), holes: true, context: context) {
                         hasChanges = true
                     }
             }
@@ -88,18 +139,13 @@ final class MutableChatListView {
             self.entries.append(entry)
             return true
         } else {
-            let first = self.entries[self.entries.count - 1].index
-            let last = self.entries[0].index
+            let first = self.entries[self.entries.count - 1]
+            let last = self.entries[0]
             
-            var next: MessageIndex?
-            if let later = self.later {
-                next = later.index
-            }
+            let next = self.later
             
-            let index = entry.index
-            
-            if index < last {
-                if self.earlier == nil || self.earlier!.index < index {
+            if entry.index < last.index {
+                if self.earlier == nil || self.earlier!.index < entry.index {
                     if self.entries.count < self.count {
                         self.entries.insert(entry, atIndex: 0)
                     } else {
@@ -109,9 +155,9 @@ final class MutableChatListView {
                 } else {
                     return false
                 }
-            } else if index > first {
-                if next != nil && index > next! {
-                    if self.later == nil || self.later!.index > index {
+            } else if entry.index > first.index {
+                if next != nil && entry.index > next!.index {
+                    if self.later == nil || self.later!.index > entry.index {
                         if self.entries.count < self.count {
                             self.entries.append(entry)
                         } else {
@@ -129,13 +175,13 @@ final class MutableChatListView {
                     }
                     return true
                 }
-            } else if index != last && index != first {
+            } else if entry != last && entry != first {
                 var i = self.entries.count
                 while i >= 1 {
-                    if self.entries[i - 1].index < index {
+                    if self.entries[i - 1].index < entry.index {
                         break
                     }
-                    i--
+                    i -= 1
                 }
                 self.entries.insert(entry, atIndex: i)
                 if self.entries.count > self.count {
@@ -149,27 +195,54 @@ final class MutableChatListView {
         }
     }
     
-    func remove(indices: Set<MessageIndex>, context: MutableChatListViewReplayContext) -> Bool {
+    func remove(indices: Set<MessageIndex>, holes: Bool, context: MutableChatListViewReplayContext) -> Bool {
         var hasChanges = false
         if let earlier = self.earlier where indices.contains(earlier.index) {
-            context.invalidEarlier = true
-            hasChanges = true
+            var match = false
+            switch earlier {
+                case .HoleEntry:
+                    match = holes
+                case .IntermediateMessageEntry, .MessageEntry, .Nothing:
+                    match = !holes
+            }
+            if match {
+                context.invalidEarlier = true
+                hasChanges = true
+            }
         }
         
         if let later = self.later where indices.contains(later.index) {
-            context.invalidLater = true
-            hasChanges = true
+            var match = false
+            switch later {
+                case .HoleEntry:
+                    match = holes
+                case .IntermediateMessageEntry, .MessageEntry, .Nothing:
+                    match = !holes
+            }
+            if match {
+                context.invalidLater = true
+                hasChanges = true
+            }
         }
         
         if self.entries.count != 0 {
             var i = self.entries.count - 1
             while i >= 0 {
                 if indices.contains(self.entries[i].index) {
-                    self.entries.removeAtIndex(i)
-                    context.removedEntries = true
-                    hasChanges = true
+                    var match = false
+                    switch self.entries[i] {
+                        case .HoleEntry:
+                            match = holes
+                        case .IntermediateMessageEntry, .MessageEntry, .Nothing:
+                            match = !holes
+                    }
+                    if match {
+                        self.entries.removeAtIndex(i)
+                        context.removedEntries = true
+                        hasChanges = true
+                    }
                 }
-                i--
+                i -= 1
             }
         }
         
@@ -205,7 +278,7 @@ final class MutableChatListView {
                 if addedEntries[i].index.id == addedEntries[i - 1].index.id {
                     addedEntries.removeAtIndex(i)
                 }
-                i--
+                i -= 1
             }
             self.entries = []
             
@@ -217,7 +290,7 @@ final class MutableChatListView {
                         anchorIndex = i
                         break
                     }
-                    i--
+                    i -= 1
                 }
             }
             
@@ -229,7 +302,7 @@ final class MutableChatListView {
             i = anchorIndex
             while i >= 0 && i > anchorIndex - self.count {
                 self.entries.insert(addedEntries[i], atIndex: 0)
-                i--
+                i -= 1
             }
             
             self.earlier = nil
@@ -259,6 +332,16 @@ final class MutableChatListView {
                 self.later = laterEntries.first
             }
         }
+    }
+    
+    func firstHole() -> ChatListHole? {
+        for entry in self.entries {
+            if case let .HoleEntry(hole) = entry {
+                return hole
+            }
+        }
+        
+        return nil
     }
     
     func updatePeers(peers: [PeerId: Peer]) -> Bool {
@@ -294,6 +377,8 @@ final class MutableChatListView {
 
 public final class ChatListView {
     public let entries: [ChatListEntry]
+    public let earlierIndex: MessageIndex?
+    public let laterIndex: MessageIndex?
     
     init(_ mutableView: MutableChatListView) {
         var entries: [ChatListEntry] = []
@@ -303,10 +388,14 @@ public final class ChatListView {
                     entries.append(.MessageEntry(message))
                 case let .Nothing(index):
                     entries.append(.Nothing(index))
+                case let .HoleEntry(hole):
+                    entries.append(.HoleEntry(hole))
                 case .IntermediateMessageEntry:
                     assertionFailure()
             }
         }
         self.entries = entries
+        self.earlierIndex = mutableView.earlier?.index
+        self.laterIndex = mutableView.later?.index
     }
 }

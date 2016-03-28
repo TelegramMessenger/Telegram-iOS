@@ -59,6 +59,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
     
     var indexTable: MessageHistoryIndexTable?
     var globalMessageIdsTable: GlobalMessageIdsTable?
+    var historyMetadataTable: MessageHistoryMetadataTable?
     
     override func setUp() {
         super.setUp()
@@ -68,8 +69,11 @@ class MessageHistoryIndexTableTests: XCTestCase {
         path = NSTemporaryDirectory().stringByAppendingString("\(randomId)")
         self.valueBox = SqliteValueBox(basePath: path!)
         
+        let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [], initializeMessageNamespacesWithHoles: [], existingMessageTags: [])
+        
         self.globalMessageIdsTable = GlobalMessageIdsTable(valueBox: self.valueBox!, tableId: 2, namespace: namespace)
-        self.indexTable = MessageHistoryIndexTable(valueBox: self.valueBox!, tableId: 1, globalMessageIdsTable: self.globalMessageIdsTable!)
+        self.historyMetadataTable = MessageHistoryMetadataTable(valueBox: self.valueBox!, tableId: 8)
+        self.indexTable = MessageHistoryIndexTable(valueBox: self.valueBox!, tableId: 1, globalMessageIdsTable: self.globalMessageIdsTable!, metadataTable: self.historyMetadataTable!, seedConfiguration: seedConfiguration)
     }
     
     override func tearDown() {
@@ -89,24 +93,24 @@ class MessageHistoryIndexTableTests: XCTestCase {
     
     func addMessage(id: Int32, _ timestamp: Int32) {
         var operations: [MessageHistoryIndexOperation] = []
-        self.indexTable!.addMessages([StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, authorId: peerId, text: "", attributes: [], media: [])], location: .Random, operations: &operations)
+        self.indexTable!.addMessages([InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, flags: [], tags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])], location: .Random, operations: &operations)
     }
     
     func addMessagesUpperBlock(messages: [(Int32, Int32)]) {
         var operations: [MessageHistoryIndexOperation] = []
         self.indexTable!.addMessages(messages.map { (id, timestamp) in
-            return StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, authorId: peerId, text: "", attributes: [], media: [])
+            return InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, flags: [], tags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])
         }, location: .UpperHistoryBlock, operations: &operations)
     }
     
-    func fillHole(id: Int32, _ fillType: HoleFillType, _ messages: [(Int32, Int32)]) {
+    func fillHole(id: Int32, _ fillType: HoleFillType, _ messages: [(Int32, Int32)], _ tagMask: MessageTags? = nil) {
         var operations: [MessageHistoryIndexOperation] = []
         let zeroData = WriteBuffer()
         var zero: Int32 = 0
         zeroData.write(&zero, offset: 0, length: 4)
         
-        self.indexTable!.fillHole(MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, messages: messages.map({
-            return StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), timestamp: $0.1, authorId: peerId, text: "", attributes: [], media: [])
+        self.indexTable!.fillHole(MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({
+            return InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), timestamp: $0.1, flags: [], tags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])
         }), operations: &operations)
     }
     

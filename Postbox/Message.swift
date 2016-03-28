@@ -71,7 +71,7 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible {
         var array: [MessageId] = []
         while i < Int(length) {
             array[i] = MessageId(buffer)
-            i++
+            i += 1
         }
         return array
     }
@@ -98,7 +98,12 @@ public struct MessageIndex: Equatable, Comparable, Hashable {
         self.timestamp = message.timestamp
     }
     
-    init(_ message: StoreMessage) {
+    init(_ message: InternalStoreMessage) {
+        self.id = message.id
+        self.timestamp = message.timestamp
+    }
+    
+    init (_ message: IntermediateMessage) {
         self.id = message.id
         self.timestamp = message.timestamp
     }
@@ -118,6 +123,14 @@ public struct MessageIndex: Equatable, Comparable, Hashable {
     
     public var hashValue: Int {
         return self.id.hashValue
+    }
+    
+    static func absoluteUpperBound() -> MessageIndex {
+        return MessageIndex(id: MessageId(peerId: PeerId(namespace: Int32.max, id: Int32.max), namespace: Int32.max, id: Int32.max), timestamp: Int32.max)
+    }
+    
+    static func absoluteLowerBound() -> MessageIndex {
+        return MessageIndex(id: MessageId(peerId: PeerId(namespace: 0, id: 0), namespace: 0, id: 0), timestamp: 0)
     }
     
     static func upperBound(peerId: PeerId) -> MessageIndex {
@@ -141,56 +154,251 @@ public func <(lhs: MessageIndex, rhs: MessageIndex) -> Bool {
     return lhs.id.id < rhs.id.id
 }
 
+public struct MessageTags: OptionSetType {
+    public var rawValue: UInt32
+    
+    public init(rawValue: UInt32) {
+        self.rawValue = rawValue
+    }
+    
+    public init() {
+        self.rawValue = 0
+    }
+    
+    public static let All = MessageTags(rawValue: 0xffffffff)
+}
+
+public struct MessageFlags: OptionSetType {
+    public var rawValue: UInt32
+    
+    public init(rawValue: UInt32) {
+        self.rawValue = rawValue
+    }
+    
+    public init() {
+        self.rawValue = 0
+    }
+    
+    init(_ flags: StoreMessageFlags) {
+        var rawValue: UInt32 = 0
+        
+        if flags.contains(StoreMessageFlags.Unsent) {
+            rawValue |= MessageFlags.Unsent.rawValue
+        }
+        
+        if flags.contains(StoreMessageFlags.Failed) {
+            rawValue |= MessageFlags.Failed.rawValue
+        }
+        
+        if flags.contains(StoreMessageFlags.Incoming) {
+            rawValue |= MessageFlags.Incoming.rawValue
+        }
+        
+        self.rawValue = rawValue
+    }
+    
+    public static let Unsent = MessageFlags(rawValue: 1)
+    public static let Failed = MessageFlags(rawValue: 2)
+    public static let Incoming = MessageFlags(rawValue: 4)
+}
+
+public struct StoreMessageForwardInfo {
+    public let authorId: PeerId
+    public let sourceId: PeerId?
+    public let sourceMessageId: MessageId?
+    public let date: Int32
+    
+    public init(authorId: PeerId, sourceId: PeerId?, sourceMessageId: MessageId?, date: Int32) {
+        self.authorId = authorId
+        self.sourceId = sourceId
+        self.sourceMessageId = sourceMessageId
+        self.date = date
+    }
+}
+
+public struct MessageForwardInfo {
+    public let author: Peer
+    public let source: Peer?
+    public let sourceMessageId: MessageId?
+    public let date: Int32
+}
+
+public protocol MessageAttribute: Coding {
+    var associatedPeerIds: [PeerId] { get }
+    var associatedMessageIds: [MessageId] { get }
+}
+
+public extension MessageAttribute {
+    var associatedPeerIds: [PeerId] {
+        return []
+    }
+    
+    var associatedMessageIds: [MessageId] {
+        return []
+    }
+}
+
 public class Message {
+    public let stableId: UInt32
     public let id: MessageId
     public let timestamp: Int32
+    public let flags: MessageFlags
+    public let tags: MessageTags
+    public let forwardInfo: MessageForwardInfo?
     public let author: Peer?
     public let text: String
-    public let attributes: [Coding]
+    public let attributes: [MessageAttribute]
     public let media: [Media]
     public let peers: SimpleDictionary<PeerId, Peer>
+    public let associatedMessages: SimpleDictionary<MessageId, Message>
     
-    init(id: MessageId, timestamp: Int32, author: Peer?, text: String, attributes: [Coding], media: [Media], peers: SimpleDictionary<PeerId, Peer>) {
+    init(stableId: UInt32, id: MessageId, timestamp: Int32, flags: MessageFlags, tags: MessageTags, forwardInfo: MessageForwardInfo?, author: Peer?, text: String, attributes: [MessageAttribute], media: [Media], peers: SimpleDictionary<PeerId, Peer>, associatedMessages: SimpleDictionary<MessageId, Message>) {
+        self.stableId = stableId
         self.id = id
         self.timestamp = timestamp
+        self.flags = flags
+        self.tags = tags
+        self.forwardInfo = forwardInfo
         self.author = author
         self.text = text
         self.attributes = attributes
         self.media = media
         self.peers = peers
+        self.associatedMessages = associatedMessages
+    }
+}
+
+public struct StoreMessageFlags: OptionSetType {
+    public var rawValue: UInt32
+    
+    public init(rawValue: UInt32) {
+        self.rawValue = rawValue
+    }
+    
+    public init() {
+        self.rawValue = 0
+    }
+    
+    public static let Unsent = StoreMessageFlags(rawValue: 1)
+    public static let Failed = StoreMessageFlags(rawValue: 2)
+    public static let Incoming = StoreMessageFlags(rawValue: 4)
+}
+
+public enum StoreMessageId {
+    case Id(MessageId)
+    case Partial(PeerId, MessageId.Namespace)
+    
+    public var peerId: PeerId {
+        switch self {
+            case let .Id(id):
+                return id.peerId
+            case let .Partial(peerId, _):
+                return peerId
+        }
     }
 }
 
 public final class StoreMessage {
-    public let id: MessageId
+    public let id: StoreMessageId
     public let timestamp: Int32
+    public let flags: StoreMessageFlags
+    public let tags: MessageTags
+    public let forwardInfo: StoreMessageForwardInfo?
     public let authorId: PeerId?
     public let text: String
-    public let attributes: [Coding]
+    public let attributes: [MessageAttribute]
     public let media: [Media]
     
-    public init(id: MessageId, timestamp: Int32, authorId: PeerId?, text: String, attributes: [Coding], media: [Media]) {
-        self.id = id
-        self.authorId = authorId
+    public init(id: MessageId, timestamp: Int32, flags: StoreMessageFlags, tags: MessageTags, forwardInfo: StoreMessageForwardInfo?, authorId: PeerId?, text: String, attributes: [MessageAttribute], media: [Media]) {
+        self.id = .Id(id)
         self.timestamp = timestamp
+        self.flags = flags
+        self.tags = tags
+        self.forwardInfo = forwardInfo
+        self.authorId = authorId
+        self.text = text
+        self.attributes = attributes
+        self.media = media
+    }
+    
+    public init(peerId: PeerId, namespace: MessageId.Namespace, timestamp: Int32, flags: StoreMessageFlags, tags: MessageTags, forwardInfo: StoreMessageForwardInfo?, authorId: PeerId?, text: String, attributes: [MessageAttribute], media: [Media]) {
+        self.id = .Partial(peerId, namespace)
+        self.timestamp = timestamp
+        self.flags = flags
+        self.tags = tags
+        self.forwardInfo = forwardInfo
+        self.authorId = authorId
         self.text = text
         self.attributes = attributes
         self.media = media
     }
 }
 
-class IntermediateMessage {
+final class InternalStoreMessage {
     let id: MessageId
     let timestamp: Int32
+    let flags: StoreMessageFlags
+    let tags: MessageTags
+    let forwardInfo: StoreMessageForwardInfo?
+    let authorId: PeerId?
+    let text: String
+    let attributes: [MessageAttribute]
+    let media: [Media]
+    
+    init(id: MessageId, timestamp: Int32, flags: StoreMessageFlags, tags: MessageTags, forwardInfo: StoreMessageForwardInfo?, authorId: PeerId?, text: String, attributes: [MessageAttribute], media: [Media]) {
+        self.id = id
+        self.timestamp = timestamp
+        self.flags = flags
+        self.tags = tags
+        self.forwardInfo = forwardInfo
+        self.authorId = authorId
+        self.text = text
+        self.attributes = attributes
+        self.media = media
+    }
+}
+
+struct IntermediateMessageForwardInfo {
+    let authorId: PeerId
+    let sourceId: PeerId?
+    let sourceMessageId: MessageId?
+    let date: Int32
+    
+    init(authorId: PeerId, sourceId: PeerId?, sourceMessageId: MessageId?, date: Int32) {
+        self.authorId = authorId
+        self.sourceId = sourceId
+        self.sourceMessageId = sourceMessageId
+        self.date = date
+    }
+    
+    init(_ storeInfo: StoreMessageForwardInfo) {
+        self.authorId = storeInfo.authorId
+        self.sourceId = storeInfo.sourceId
+        self.sourceMessageId = storeInfo.sourceMessageId
+        self.date = storeInfo.date
+    }
+}
+
+class IntermediateMessage {
+    let stableId: UInt32
+    let id: MessageId
+    let timestamp: Int32
+    let flags: MessageFlags
+    let tags: MessageTags
+    let forwardInfo: IntermediateMessageForwardInfo?
     let authorId: PeerId?
     let text: String
     let attributesData: ReadBuffer
     let embeddedMediaData: ReadBuffer
     let referencedMedia: [MediaId]
     
-    init(id: MessageId, timestamp: Int32, authorId: PeerId?, text: String, attributesData: ReadBuffer, embeddedMediaData: ReadBuffer, referencedMedia: [MediaId]) {
+    init(stableId: UInt32, id: MessageId, timestamp: Int32, flags: MessageFlags, tags: MessageTags, forwardInfo: IntermediateMessageForwardInfo?, authorId: PeerId?, text: String, attributesData: ReadBuffer, embeddedMediaData: ReadBuffer, referencedMedia: [MediaId]) {
+        self.stableId = stableId
         self.id = id
         self.timestamp = timestamp
+        self.flags = flags
+        self.tags = tags
+        self.forwardInfo = forwardInfo
         self.authorId = authorId
         self.text = text
         self.attributesData = attributesData

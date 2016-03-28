@@ -15,16 +15,13 @@ enum DebugMediaEntry {
     case MessageReference(MessageIndex)
 }
 
-final class MessageMediaTable {
-    let valueBox: ValueBox
-    let tableId: Int32
-    
+final class MessageMediaTable: Table {
     let mediaCleanupTable: MediaCleanupTable
     
     init(valueBox: ValueBox, tableId: Int32, mediaCleanupTable: MediaCleanupTable) {
-        self.valueBox = valueBox
-        self.tableId = tableId
         self.mediaCleanupTable = mediaCleanupTable
+        
+        super.init(valueBox: valueBox, tableId: tableId)
     }
 
     func key(id: MediaId, key: ValueBoxKey = ValueBoxKey(length: 4 + 8)) -> ValueBoxKey {
@@ -63,7 +60,7 @@ final class MessageMediaTable {
                     
                     var messageReferenceCount: Int32 = 0
                     value.read(&messageReferenceCount, offset: 0, length: 4)
-                    messageReferenceCount++
+                    messageReferenceCount += 1
                     sharedWriteBuffer.write(&messageReferenceCount, offset: 0, length: 4)
                     
                     self.valueBox.set(self.tableId, key: self.key(id), value: sharedWriteBuffer.readBufferNoCopy())

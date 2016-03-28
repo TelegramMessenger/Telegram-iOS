@@ -1,8 +1,17 @@
 import Foundation
 
 public struct MessageHistoryHole: Equatable, CustomStringConvertible {
+    public let stableId: UInt32
     public let maxIndex: MessageIndex
     public let min: MessageId.Id
+    let tags: UInt32
+    
+    init(stableId: UInt32, maxIndex: MessageIndex, min: MessageId.Id, tags: UInt32) {
+        self.stableId = stableId
+        self.maxIndex = maxIndex
+        self.min = min
+        self.tags = tags
+    }
     
     var id: MessageId {
         return maxIndex.id
@@ -14,5 +23,5 @@ public struct MessageHistoryHole: Equatable, CustomStringConvertible {
 }
 
 public func ==(lhs: MessageHistoryHole, rhs: MessageHistoryHole) -> Bool {
-    return lhs.maxIndex == rhs.maxIndex && lhs.min == rhs.min
+    return lhs.maxIndex == rhs.maxIndex && lhs.min == rhs.min && lhs.tags == rhs.tags
 }

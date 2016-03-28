@@ -144,6 +144,10 @@ public final class ReadBuffer: MemoryBuffer {
     func reset() {
         self.offset = 0
     }
+    
+    func sharedBufferNoCopy() -> ReadBuffer {
+        return ReadBuffer(memory: memory, length: length, freeWhenDone: false)
+    }
 }
 
 private enum ValueType: Int8 {
@@ -420,7 +424,7 @@ public final class Decoder {
                     var objectLength: Int32 = 0
                     memcpy(&objectLength, bytes + (offset + 4), 4)
                     offset += 8 + Int(objectLength)
-                    i++
+                    i += 1
                 }
             case .ObjectDictionary:
                 var length: Int32 = 0
@@ -435,7 +439,7 @@ public final class Decoder {
                     var valueLength: Int32 = 0
                     memcpy(&valueLength, bytes + (offset + 4), 4)
                     offset += 8 + Int(valueLength)
-                    i++
+                    i += 1
                 }
             case .Bytes:
                 var length: Int32 = 0
@@ -672,7 +676,7 @@ public final class Decoder {
                 var element: Int32 = 0
                 memcpy(&element, self.buffer.memory + (self.offset + 4 + 4 * Int(i)), 4)
                 array.append(element)
-                i++
+                i += 1
             }
             self.offset += 4 + Int(length) * 4
             return array
@@ -692,7 +696,7 @@ public final class Decoder {
                 var element: Int64 = 0
                 memcpy(&element, self.buffer.memory + (self.offset + 4 + 8 * Int(i)), 8)
                 array.append(element)
-                i++
+                i += 1
             }
             self.offset += 4 + Int(length) * 8
             return array
@@ -731,7 +735,7 @@ public final class Decoder {
                     }
                 }
                 
-                i++
+                i += 1
             }
             
             if failed {
@@ -774,7 +778,7 @@ public final class Decoder {
                     }
                 }
                 
-                i++
+                i += 1
             }
             
             if failed {
@@ -828,7 +832,7 @@ public final class Decoder {
                     failed = true
                 }
                 
-                i++
+                i += 1
             }
             
             if failed {

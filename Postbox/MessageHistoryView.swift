@@ -32,7 +32,25 @@ public enum MessageHistoryEntry: Comparable {
 }
 
 public func ==(lhs: MessageHistoryEntry, rhs: MessageHistoryEntry) -> Bool {
-    return lhs.index == rhs.index
+    switch lhs {
+        case let .MessageEntry(lhsMessage):
+            switch rhs {
+                case .HoleEntry:
+                    return false
+                case let .MessageEntry(rhsMessage):
+                    if MessageIndex(lhsMessage) == MessageIndex(rhsMessage) && lhsMessage.flags == rhsMessage.flags {
+                        return true
+                    }
+                    return false
+            }
+        case let .HoleEntry(lhsHole):
+            switch rhs {
+                case let .HoleEntry(rhsHole):
+                    return lhsHole == rhsHole
+                case .MessageEntry:
+                    return false
+            }
+    }
 }
 
 public func <(lhs: MessageHistoryEntry, rhs: MessageHistoryEntry) -> Bool {
@@ -50,29 +68,38 @@ final class MutableMessageHistoryViewReplayContext {
 }
 
 final class MutableMessageHistoryView {
+    let tagMask: MessageTags?
     private let count: Int
     private var earlier: MutableMessageHistoryEntry?
     private var later: MutableMessageHistoryEntry?
     private var entries: [MutableMessageHistoryEntry]
     
-    init(earlier: MutableMessageHistoryEntry?, entries: [MutableMessageHistoryEntry], later: MutableMessageHistoryEntry?, count: Int) {
+    init(earlier: MutableMessageHistoryEntry?, entries: [MutableMessageHistoryEntry], later: MutableMessageHistoryEntry?, tagMask: MessageTags?, count: Int) {
         self.earlier = earlier
         self.entries = entries
         self.later = later
+        self.tagMask = tagMask
         self.count = count
     }
     
     func replay(operations: [MessageHistoryOperation], context: MutableMessageHistoryViewReplayContext) -> Bool {
+        let tagMask = self.tagMask
+        let unwrappedTagMask: UInt32 = tagMask?.rawValue ?? 0
+        
         var hasChanges = false
         for operation in operations {
             switch operation {
                 case let .InsertHole(hole):
-                    if self.add(.HoleEntry(hole)) {
-                        hasChanges = true
+                    if tagMask == nil || (hole.tags & unwrappedTagMask) != 0 {
+                        if self.add(.HoleEntry(hole)) {
+                            hasChanges = true
+                        }
                     }
                 case let .InsertMessage(intermediateMessage):
-                    if self.add(.IntermediateMessageEntry(intermediateMessage)) {
-                        hasChanges = true
+                    if tagMask == nil || (intermediateMessage.tags.rawValue & unwrappedTagMask) != 0 {
+                        if self.add(.IntermediateMessageEntry(intermediateMessage)) {
+                            hasChanges = true
+                        }
                     }
                 case let .Remove(indices):
                     if self.remove(Set(indices), context: context) {
@@ -135,7 +162,7 @@ final class MutableMessageHistoryView {
                     if self.entries[i - 1].index < index {
                         break
                     }
-                    i--
+                    i -= 1
                 }
                 self.entries.insert(entry, atIndex: i)
                 if self.entries.count > self.count {
@@ -169,7 +196,7 @@ final class MutableMessageHistoryView {
                     context.removedEntries = true
                     hasChanges = true
                 }
-                i--
+                i -= 1
             }
         }
         
@@ -209,7 +236,7 @@ final class MutableMessageHistoryView {
                 if addedEntries[i].index.id == addedEntries[i - 1].index.id {
                     addedEntries.removeAtIndex(i)
                 }
-                i--
+                i -= 1
             }
             self.entries = []
             
@@ -221,7 +248,7 @@ final class MutableMessageHistoryView {
                         anchorIndex = i
                         break
                     }
-                    i--
+                    i -= 1
                 }
             }
             
@@ -233,7 +260,7 @@ final class MutableMessageHistoryView {
             i = anchorIndex
             while i >= 0 && i > anchorIndex - self.count {
                 self.entries.insert(addedEntries[i], atIndex: 0)
-                i--
+                i -= 1
             }
             
             self.earlier = nil
@@ -281,7 +308,7 @@ final class MutableMessageHistoryView {
     }
     
     func firstHole() -> MessageHistoryHole? {
-        for entry in self.entries {
+        for entry in self.entries.reverse() as ReverseCollection {
             if case let .HoleEntry(hole) = entry {
                 return hole
             }

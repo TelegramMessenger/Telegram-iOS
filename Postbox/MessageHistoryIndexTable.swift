@@ -26,9 +26,10 @@ public enum AddMessagesLocation {
 }
 
 enum MessageHistoryIndexOperation {
-    case InsertMessage(StoreMessage)
+    case InsertMessage(InternalStoreMessage)
     case InsertHole(MessageHistoryHole)
     case Remove(MessageIndex)
+    case Update(MessageIndex, InternalStoreMessage)
 }
 
 private func readHistoryIndexEntry(peerId: PeerId, namespace: MessageId.Namespace, key: ValueBoxKey, value: ReadBuffer) -> HistoryIndexEntry {
@@ -41,23 +42,34 @@ private func readHistoryIndexEntry(peerId: PeerId, namespace: MessageId.Namespac
     if type == 0 {
         return .Message(index)
     } else {
+        var stableId: UInt32 = 0
+        value.read(&stableId, offset: 0, length: 4)
+        
         var min: Int32 = 0
         value.read(&min, offset: 0, length: 4)
-        return .Hole(MessageHistoryHole(maxIndex: index, min: min))
+        
+        var tags: UInt32 = 0
+        value.read(&tags, offset: 0, length: 4)
+        
+        return .Hole(MessageHistoryHole(stableId: stableId, maxIndex: index, min: min, tags: tags))
     }
 }
 
-final class MessageHistoryIndexTable {
-    let valueBox: ValueBox
-    let tableId: Int32
+final class MessageHistoryIndexTable: Table {
     let globalMessageIdsNamespace: Int32
     let globalMessageIdsTable: GlobalMessageIdsTable
+    let metadataTable: MessageHistoryMetadataTable
+    let seedConfiguration: SeedConfiguration
     
-    init(valueBox: ValueBox, tableId: Int32, globalMessageIdsTable: GlobalMessageIdsTable) {
-        self.valueBox = valueBox
-        self.tableId = tableId
+    var cachedMaxEntryByPeerId: [PeerId: [MessageId.Namespace: ValueBoxKey]] = [:]
+    
+    init(valueBox: ValueBox, tableId: Int32, globalMessageIdsTable: GlobalMessageIdsTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
         self.globalMessageIdsTable = globalMessageIdsTable
         self.globalMessageIdsNamespace = globalMessageIdsTable.namespace
+        self.seedConfiguration = seedConfiguration
+        self.metadataTable = metadataTable
+        
+        super.init(valueBox: valueBox, tableId: tableId)
     }
     
     private func key(id: MessageId) -> ValueBoxKey {
@@ -82,48 +94,68 @@ final class MessageHistoryIndexTable {
         return key.successor
     }
     
+    private func ensureInitialized(peerId: PeerId, inout operations: [MessageHistoryIndexOperation]) {
+        if !self.metadataTable.isInitialized(peerId) {
+            for namespace in self.seedConfiguration.initializeMessageNamespacesWithHoles {
+                self.justInsertHole(MessageHistoryHole(stableId: self.metadataTable.getNextStableMessageIndexId(), maxIndex: MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: Int32.max), timestamp: Int32.max), min: 1, tags: MessageTags.All.rawValue), operations: &operations)
+            }
+            
+            self.metadataTable.setInitialized(peerId)
+        }
+    }
+    
     func addHole(id: MessageId, inout operations: [MessageHistoryIndexOperation]) {
+        self.ensureInitialized(id.peerId, operations: &operations)
+        
         let adjacent = self.adjacentItems(id)
         
-        if let lowerItem = adjacent.lower, upperItem = adjacent.upper {
+        if let lowerItem = adjacent.lower {
             switch lowerItem {
-                case .Hole:
-                    break
-                case let .Message(lowerMessage):
-                    switch upperItem {
-                        case .Hole:
-                            break
-                        case let .Message(upperMessage):
-                            if lowerMessage.id.id < upperMessage.id.id - 1 {
-                                self.justInsertHole(MessageHistoryHole(maxIndex: MessageIndex(id: MessageId(peerId: id.peerId, namespace: id.namespace, id: upperMessage.id.id - 1), timestamp: upperMessage.timestamp), min: lowerMessage.id.id + 1), operations: &operations)
-                            }
-                            break
+                case let .Hole(lowerHole):
+                    if lowerHole.tags != MessageTags.All.rawValue {
+                        self.justRemove(lowerHole.maxIndex, operations: &operations)
+                        self.justInsertHole(MessageHistoryHole(stableId: lowerHole.stableId, maxIndex: lowerHole.maxIndex, min: lowerHole.min, tags: MessageTags.All.rawValue), operations: &operations)
                     }
-            }
-        } else if let lowerItem = adjacent.lower {
-            switch lowerItem {
                 case let .Message(lowerMessage):
-                    self.justInsertHole(MessageHistoryHole(maxIndex: MessageIndex(id: MessageId(peerId: id.peerId, namespace: id.namespace, id: Int32.max), timestamp: Int32.max), min: lowerMessage.id.id + 1), operations: &operations)
-                case .Hole:
-                    break
+                    if let upperItem = adjacent.upper {
+                        switch upperItem {
+                            case .Hole:
+                                break
+                            case let .Message(upperMessage):
+                                if lowerMessage.id.id < upperMessage.id.id - 1 {
+                                    self.justInsertHole(MessageHistoryHole(stableId: self.metadataTable.getNextStableMessageIndexId(), maxIndex: MessageIndex(id: MessageId(peerId: id.peerId, namespace: id.namespace, id: upperMessage.id.id - 1), timestamp: upperMessage.timestamp), min: lowerMessage.id.id + 1, tags: MessageTags.All.rawValue), operations: &operations)
+                                }
+                                break
+                        }
+                    } else {
+                        self.justInsertHole(MessageHistoryHole(stableId: self.metadataTable.getNextStableMessageIndexId(), maxIndex: MessageIndex(id: MessageId(peerId: id.peerId, namespace: id.namespace, id: Int32.max), timestamp: Int32.max), min: lowerMessage.id.id + 1, tags: MessageTags.All.rawValue), operations: &operations)
+                    }
             }
         } else if let upperItem = adjacent.upper {
             switch upperItem {
                 case let .Message(upperMessage):
                     if upperMessage.id.id > 1 {
-                        self.justInsertHole(MessageHistoryHole(maxIndex: MessageIndex(id: MessageId(peerId: id.peerId, namespace: id.namespace, id: upperMessage.id.id - 1), timestamp: upperMessage.timestamp), min: 1), operations: &operations)
+                        self.justInsertHole(MessageHistoryHole(stableId: self.metadataTable.getNextStableMessageIndexId(), maxIndex: MessageIndex(id: MessageId(peerId: id.peerId, namespace: id.namespace, id: upperMessage.id.id - 1), timestamp: upperMessage.timestamp), min: 1, tags: MessageTags.All.rawValue), operations: &operations)
                     }
                 case .Hole:
                     break
             }
         } else {
-            self.justInsertHole(MessageHistoryHole(maxIndex: MessageIndex(id: MessageId(peerId: id.peerId, namespace: id.namespace, id: Int32.max), timestamp: Int32.max), min: 1), operations: &operations)
+            self.justInsertHole(MessageHistoryHole(stableId: self.metadataTable.getNextStableMessageIndexId(), maxIndex: MessageIndex(id: MessageId(peerId: id.peerId, namespace: id.namespace, id: Int32.max), timestamp: Int32.max), min: 1, tags: MessageTags.All.rawValue), operations: &operations)
         }
     }
     
-    func addMessages(messages: [StoreMessage], location: AddMessagesLocation, inout operations: [MessageHistoryIndexOperation]) {
+    func addMessages(messages: [InternalStoreMessage], location: AddMessagesLocation, inout operations: [MessageHistoryIndexOperation]) {
         if messages.count == 0 {
             return
+        }
+        
+        var seenPeerIds = Set<PeerId>()
+        for message in messages {
+            if !seenPeerIds.contains(message.id.peerId) {
+                seenPeerIds.insert(message.id.peerId)
+                self.ensureInitialized(message.id.peerId, operations: &operations)
+            }
         }
         
         switch location {
@@ -146,13 +178,15 @@ final class MessageHistoryIndexTable {
                     for (namespace, lowerIndex) in lowerIdsByNamespace {
                         var removeHoles: [MessageIndex] = []
                         var modifyHole: (MessageIndex, MessageHistoryHole)?
-                        self.valueBox.range(self.tableId, start: self.key(MessageId(peerId: peerId, namespace: namespace, id: lowerIndex.id.id)), end: self.upperBound(peerId, namespace: namespace), values: { key, value in
+                        let startKey = self.key(MessageId(peerId: peerId, namespace: namespace, id: lowerIndex.id.id))
+                        
+                        self.valueBox.range(self.tableId, start: startKey, end: self.upperBound(peerId, namespace: namespace), values: { key, value in
                             let entry = readHistoryIndexEntry(peerId, namespace: namespace, key: key, value: value)
                             if case let .Hole(hole) = entry {
                                 if lowerIndex.id.id <= hole.min {
                                     removeHoles.append(hole.maxIndex)
                                 } else {
-                                    modifyHole = (hole.maxIndex, MessageHistoryHole(maxIndex: MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: lowerIndex.id.id - 1), timestamp: lowerIndex.timestamp), min: hole.min))
+                                    modifyHole = (hole.maxIndex, MessageHistoryHole(stableId: hole.stableId, maxIndex: MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: lowerIndex.id.id - 1), timestamp: lowerIndex.timestamp), min: hole.min, tags: hole.tags))
                                 }
                             }
                             return true
@@ -188,10 +222,10 @@ final class MessageHistoryIndexTable {
                     case let .Hole(upperHole):
                         self.justRemove(upperHole.maxIndex, operations: &operations)
                         if upperHole.maxIndex.id.id > index.id.id + 1 {
-                            self.justInsertHole(MessageHistoryHole(maxIndex: upperHole.maxIndex, min: index.id.id + 1), operations: &operations)
+                            self.justInsertHole(MessageHistoryHole(stableId: self.metadataTable.getNextStableMessageIndexId(), maxIndex: upperHole.maxIndex, min: index.id.id + 1, tags: upperHole.tags), operations: &operations)
                         }
                         if upperHole.min <= index.id.id - 1 {
-                            self.justInsertHole(MessageHistoryHole(maxIndex: MessageIndex(id: MessageId(peerId: index.id.peerId, namespace: index.id.namespace, id: index.id.id - 1), timestamp: index.timestamp), min: upperHole.min), operations: &operations)
+                            self.justInsertHole(MessageHistoryHole(stableId: self.metadataTable.getNextStableMessageIndexId(), maxIndex: MessageIndex(id: MessageId(peerId: index.id.peerId, namespace: index.id.namespace, id: index.id.id - 1), timestamp: index.timestamp), min: upperHole.min, tags: upperHole.tags), operations: &operations)
                         }
                     case let .Message(messageIndex):
                         if messageIndex.id == index.id {
@@ -207,6 +241,8 @@ final class MessageHistoryIndexTable {
     }
     
     func removeMessage(id: MessageId, inout operations: [MessageHistoryIndexOperation]) {
+        self.ensureInitialized(id.peerId, operations: &operations)
+        
         if let existingEntry = self.get(id) {
             self.justRemove(existingEntry.index, operations: &operations)
             
@@ -218,7 +254,7 @@ final class MessageHistoryIndexTable {
                         switch upperItem {
                             case let .Hole(upperHole):
                                 self.justRemove(upperHole.maxIndex, operations: &operations)
-                                self.justInsertHole(MessageHistoryHole(maxIndex: upperHole.maxIndex, min: lowerMessage.id.id + 1), operations: &operations)
+                                self.justInsertHole(MessageHistoryHole(stableId: upperHole.stableId, maxIndex: upperHole.maxIndex, min: lowerMessage.id.id + 1, tags: upperHole.tags), operations: &operations)
                             case .Message:
                                 break
                         }
@@ -227,17 +263,17 @@ final class MessageHistoryIndexTable {
                             case let .Hole(upperHole):
                                 self.justRemove(lowerHole.maxIndex, operations: &operations)
                                 self.justRemove(upperHole.maxIndex, operations: &operations)
-                                self.justInsertHole(MessageHistoryHole(maxIndex: upperHole.maxIndex, min: lowerHole.min), operations: &operations)
+                                self.justInsertHole(MessageHistoryHole(stableId: upperHole.stableId, maxIndex: upperHole.maxIndex, min: lowerHole.min, tags: upperHole.tags | lowerHole.tags), operations: &operations)
                             case let .Message(upperMessage):
                                 self.justRemove(lowerHole.maxIndex, operations: &operations)
-                                self.justInsertHole(MessageHistoryHole(maxIndex: MessageIndex(id: MessageId(peerId: id.peerId, namespace: id.namespace, id: upperMessage.id.id - 1), timestamp: upperMessage.timestamp), min: lowerHole.min), operations: &operations)
+                                self.justInsertHole(MessageHistoryHole(stableId: lowerHole.stableId, maxIndex: MessageIndex(id: MessageId(peerId: id.peerId, namespace: id.namespace, id: upperMessage.id.id - 1), timestamp: upperMessage.timestamp), min: lowerHole.min, tags: lowerHole.tags), operations: &operations)
                         }
                 }
             } else if let lowerItem = adjacent.lower {
                 switch lowerItem {
                     case let .Hole(lowerHole):
                         self.justRemove(lowerHole.maxIndex, operations: &operations)
-                        self.justInsertHole(MessageHistoryHole(maxIndex: MessageIndex(id: MessageId(peerId: id.peerId, namespace: id.namespace, id: Int32.max), timestamp: Int32.max), min: lowerHole.min), operations: &operations)
+                        self.justInsertHole(MessageHistoryHole(stableId: lowerHole.stableId, maxIndex: MessageIndex(id: MessageId(peerId: id.peerId, namespace: id.namespace, id: Int32.max), timestamp: Int32.max), min: lowerHole.min, tags: lowerHole.tags), operations: &operations)
                         break
                     case .Message:
                         break
@@ -246,7 +282,7 @@ final class MessageHistoryIndexTable {
                 switch upperItem {
                     case let .Hole(upperHole):
                         self.justRemove(upperHole.maxIndex, operations: &operations)
-                        self.justInsertHole(MessageHistoryHole(maxIndex: upperHole.maxIndex, min: 1), operations: &operations)
+                        self.justInsertHole(MessageHistoryHole(stableId: upperHole.stableId, maxIndex: upperHole.maxIndex, min: 1, tags: upperHole.tags), operations: &operations)
                         break
                     case .Message:
                         break
@@ -255,7 +291,32 @@ final class MessageHistoryIndexTable {
         }
     }
     
-    func fillHole(id: MessageId, fillType: HoleFillType, messages: [StoreMessage], inout operations: [MessageHistoryIndexOperation]) {
+    func updateMessage(id: MessageId, message: InternalStoreMessage, inout operations: [MessageHistoryIndexOperation]) {
+        if let previousEntry = self.get(id), case let .Message(previousIndex) = previousEntry {
+            if previousIndex != MessageIndex(message) {
+                var intermediateOperations: [MessageHistoryIndexOperation] = []
+                self.removeMessage(id, operations: &intermediateOperations)
+                self.addMessages([message], location: .Random, operations: &intermediateOperations)
+                
+                for operation in intermediateOperations {
+                    switch operation {
+                        case let .Remove(index) where index == previousIndex:
+                            operations.append(.Update(previousIndex, message))
+                        case let .InsertMessage(insertMessage) where MessageIndex(insertMessage) == MessageIndex(message):
+                            break
+                        default:
+                            operations.append(operation)
+                    }
+                }
+            } else {
+                operations.append(.Update(previousIndex, message))
+            }
+        }
+    }
+    
+    func fillHole(id: MessageId, fillType: HoleFillType, tagMask: MessageTags?, messages: [InternalStoreMessage], inout operations: [MessageHistoryIndexOperation]) {
+        self.ensureInitialized(id.peerId, operations: &operations)
+        
         var upperItem: HistoryIndexEntry?
         self.valueBox.range(self.tableId, start: self.key(id).predecessor, end: self.upperBound(id.peerId, namespace: id.namespace), values: { key, value in
             upperItem = readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value)
@@ -263,53 +324,132 @@ final class MessageHistoryIndexTable {
         }, limit: 1)
         
         let sortedByIdMessages = messages.sort({$0.id < $1.id})
+        
         var remainingMessages = sortedByIdMessages
         
         if let upperItem = upperItem {
             switch upperItem {
                 case let .Hole(upperHole):
-                    var i = 0
-                    var minMessageInRange: StoreMessage?
-                    var maxMessageInRange: StoreMessage?
-                    var removedHole = false
-                    while i < remainingMessages.count {
-                        let message = remainingMessages[i]
-                        if message.id.id >= upperHole.min && message.id.id <= upperHole.maxIndex.id.id {
-                            if (fillType == .UpperToLower || fillType == .Complete) && (minMessageInRange == nil || minMessageInRange!.id > message.id) {
-                                minMessageInRange = message
-                                if !removedHole {
-                                    removedHole = true
-                                    self.justRemove(upperHole.maxIndex, operations: &operations)
-                                }
+                    if let tagMask = tagMask {
+                        var messagesInRange: [InternalStoreMessage] = []
+                        var i = 0
+                        while i < remainingMessages.count {
+                            let message = remainingMessages[i]
+                            if message.id.id >= upperHole.min && message.id.id <= upperHole.maxIndex.id.id {
+                                messagesInRange.append(message)
+                                remainingMessages.removeAtIndex(i)
+                            } else {
+                                i += 1
                             }
-                            if (fillType == .LowerToUpper || fillType == .Complete) && (maxMessageInRange == nil || maxMessageInRange!.id < message.id) {
-                                maxMessageInRange = message
-                                if !removedHole {
-                                    removedHole = true
-                                    self.justRemove(upperHole.maxIndex, operations: &operations)
-                                }
-                            }
-                            self.justInsertMessage(message, operations: &operations)
-                            remainingMessages.removeAtIndex(i)
-                        } else {
-                            i++
                         }
-                    }
-                    switch fillType {
-                        case .Complete:
-                            if !removedHole {
-                                self.justRemove(upperHole.maxIndex, operations: &operations)
+                        
+                        if messagesInRange.isEmpty {
+                            self.justRemove(upperHole.maxIndex, operations: &operations)
+                            self.justInsertHole(MessageHistoryHole(stableId: upperHole.stableId, maxIndex: upperHole.maxIndex, min: upperHole.min, tags: upperHole.tags & ~tagMask.rawValue), operations: &operations)
+                        } else {
+                            self.justRemove(upperHole.maxIndex, operations: &operations)
+                            
+                            let clearedTags = upperHole.tags & ~tagMask.rawValue
+                            
+                            for i in 0 ..< messagesInRange.count {
+                                let message = messagesInRange[i]
+                                
+                                if i == 0 {
+                                    if upperHole.min < message.id.id {
+                                        let holeTags: UInt32
+                                        switch fillType {
+                                            case .LowerToUpper, .Complete:
+                                                holeTags = clearedTags
+                                            case .UpperToLower:
+                                                holeTags = upperHole.tags
+                                        }
+                                        self.justInsertHole(MessageHistoryHole(stableId: self.metadataTable.getNextStableMessageIndexId(), maxIndex: MessageIndex(id: MessageId(peerId: id.peerId, namespace: id.namespace, id: message.id.id - 1), timestamp: message.timestamp), min: upperHole.min, tags: holeTags), operations: &operations)
+                                    }
+                                } else {
+                                    let previousMessageId = messagesInRange[i - 1].id.id
+                                    if previousMessageId + 1 < message.id.id {
+                                        self.justInsertHole(MessageHistoryHole(stableId: self.metadataTable.getNextStableMessageIndexId(), maxIndex: MessageIndex(id: MessageId(peerId: id.peerId, namespace: id.namespace, id: message.id.id - 1), timestamp: message.timestamp), min: previousMessageId + 1, tags: clearedTags), operations: &operations)
+                                    }
+                                }
+                                
+                                if i == messagesInRange.count - 1 {
+                                    if upperHole.maxIndex.id.id > message.id.id {
+                                        let holeTags: UInt32
+                                        switch fillType {
+                                            case .LowerToUpper:
+                                                holeTags = upperHole.tags
+                                            case .UpperToLower, .Complete:
+                                                holeTags = clearedTags
+                                        }
+                                        self.justInsertHole(MessageHistoryHole(stableId: self.metadataTable.getNextStableMessageIndexId(), maxIndex: upperHole.maxIndex, min: message.id.id + 1, tags: holeTags), operations: &operations)
+                                    }
+                                }
+                                
+                                self.justInsertMessage(message, operations: &operations)
                             }
-                        case .LowerToUpper:
-                            if let maxMessageInRange = maxMessageInRange where maxMessageInRange.id.id != Int32.max && maxMessageInRange.id.id + 1 <= upperHole.maxIndex.id.id {
-                                self.justInsertHole(MessageHistoryHole(maxIndex: upperHole.maxIndex, min: maxMessageInRange.id.id + 1), operations: &operations)
+                        }
+                    } else {
+                        var i = 0
+                        var minMessageInRange: InternalStoreMessage?
+                        var maxMessageInRange: InternalStoreMessage?
+                        var removedHole = false
+                        while i < remainingMessages.count {
+                            let message = remainingMessages[i]
+                            if message.id.id >= upperHole.min && message.id.id <= upperHole.maxIndex.id.id {
+                                if (fillType == .UpperToLower || fillType == .Complete) && (minMessageInRange == nil || minMessageInRange!.id > message.id) {
+                                    minMessageInRange = message
+                                    if !removedHole {
+                                        removedHole = true
+                                        self.justRemove(upperHole.maxIndex, operations: &operations)
+                                    }
+                                }
+                                if (fillType == .LowerToUpper || fillType == .Complete) && (maxMessageInRange == nil || maxMessageInRange!.id < message.id) {
+                                    maxMessageInRange = message
+                                    if !removedHole {
+                                        removedHole = true
+                                        self.justRemove(upperHole.maxIndex, operations: &operations)
+                                    }
+                                }
+                                self.justInsertMessage(message, operations: &operations)
+                                remainingMessages.removeAtIndex(i)
+                            } else {
+                                i += 1
                             }
-                        case .UpperToLower:
-                            if let minMessageInRange = minMessageInRange where minMessageInRange.id.id - 1 >= upperHole.min {
-                                self.justInsertHole(MessageHistoryHole(maxIndex: MessageIndex(id: MessageId(peerId: id.peerId, namespace: id.namespace, id: minMessageInRange.id.id - 1), timestamp: minMessageInRange.timestamp), min: upperHole.min), operations: &operations)
-                            }
-                    }
-                    break
+                        }
+                        switch fillType {
+                            case .Complete:
+                                if !removedHole {
+                                    removedHole = true
+                                    self.justRemove(upperHole.maxIndex, operations: &operations)
+                                }
+                            case .LowerToUpper:
+                                if let maxMessageInRange = maxMessageInRange where maxMessageInRange.id.id != Int32.max && maxMessageInRange.id.id + 1 <= upperHole.maxIndex.id.id {
+                                    let stableId: UInt32
+                                    let tags: UInt32
+                                    if removedHole {
+                                        stableId = upperHole.stableId
+                                        tags = upperHole.tags
+                                    } else {
+                                        stableId = self.metadataTable.getNextStableMessageIndexId()
+                                        tags = MessageTags.All.rawValue
+                                    }
+                                    self.justInsertHole(MessageHistoryHole(stableId: stableId, maxIndex: upperHole.maxIndex, min: maxMessageInRange.id.id + 1, tags: tags), operations: &operations)
+                                }
+                            case .UpperToLower:
+                                if let minMessageInRange = minMessageInRange where minMessageInRange.id.id - 1 >= upperHole.min {
+                                    let stableId: UInt32
+                                    let tags: UInt32
+                                    if removedHole {
+                                        stableId = upperHole.stableId
+                                        tags = upperHole.tags
+                                    } else {
+                                        stableId = self.metadataTable.getNextStableMessageIndexId()
+                                        tags = MessageTags.All.rawValue
+                                    }
+                                    self.justInsertHole(MessageHistoryHole(stableId: stableId, maxIndex: MessageIndex(id: MessageId(peerId: id.peerId, namespace: id.namespace, id: minMessageInRange.id.id - 1), timestamp: minMessageInRange.timestamp), min: upperHole.min, tags: tags), operations: &operations)
+                                }
+                        }
+                }
                 case .Message:
                     break
             }
@@ -320,20 +460,24 @@ final class MessageHistoryIndexTable {
         }
     }
     
-    func justInsertHole(hole: MessageHistoryHole, inout operations: [MessageHistoryIndexOperation]) {
+    private func justInsertHole(hole: MessageHistoryHole, inout operations: [MessageHistoryIndexOperation]) {
         let value = WriteBuffer()
         var type: Int8 = 1
         var timestamp: Int32 = hole.maxIndex.timestamp
         var min: Int32 = hole.min
+        var tags: UInt32 = hole.tags
         value.write(&type, offset: 0, length: 1)
         value.write(&timestamp, offset: 0, length: 4)
+        var stableId: UInt32 = hole.stableId
+        value.write(&stableId, offset: 0, length: 4)
         value.write(&min, offset: 0, length: 4)
+        value.write(&tags, offset: 0, length: 4)
         self.valueBox.set(self.tableId, key: self.key(hole.id), value: value)
         
         operations.append(.InsertHole(hole))
     }
     
-    func justInsertMessage(message: StoreMessage, inout operations: [MessageHistoryIndexOperation]) {
+    private func justInsertMessage(message: InternalStoreMessage, inout operations: [MessageHistoryIndexOperation]) {
         let index = MessageIndex(id: message.id, timestamp: message.timestamp)
         
         let value = WriteBuffer()
@@ -349,7 +493,7 @@ final class MessageHistoryIndexTable {
         }
     }
     
-    func justRemove(index: MessageIndex, inout operations: [MessageHistoryIndexOperation]) {
+    private func justRemove(index: MessageIndex, inout operations: [MessageHistoryIndexOperation]) {
         self.valueBox.remove(self.tableId, key: self.key(index.id))
         
         operations.append(.Remove(index))
@@ -358,7 +502,7 @@ final class MessageHistoryIndexTable {
         }
     }
     
-    func adjacentItems(id: MessageId) -> (lower: HistoryIndexEntry?, upper: HistoryIndexEntry?) {
+    private func adjacentItems(id: MessageId) -> (lower: HistoryIndexEntry?, upper: HistoryIndexEntry?) {
         let key = self.key(id)
         
         var lowerItem: HistoryIndexEntry?
@@ -377,11 +521,18 @@ final class MessageHistoryIndexTable {
     }
     
     func get(id: MessageId) -> HistoryIndexEntry? {
+        var operations: [MessageHistoryIndexOperation] = []
+        self.ensureInitialized(id.peerId, operations: &operations)
+        
         let key = self.key(id)
         if let value = self.valueBox.get(self.tableId, key: key) {
             return readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value)
         }
         return nil
+    }
+    
+    func exists(id: MessageId) -> Bool {
+        return self.valueBox.exists(self.tableId, key: self.key(id))
     }
     
     func debugList(peerId: PeerId, namespace: MessageId.Namespace) -> [HistoryIndexEntry] {

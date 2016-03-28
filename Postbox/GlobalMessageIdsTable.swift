@@ -1,17 +1,15 @@
 import Foundation
 
-final class GlobalMessageIdsTable {
-    let valueBox: ValueBox
-    let tableId: Int32
+final class GlobalMessageIdsTable: Table {
     let namespace: Int32
     
     let sharedKey = ValueBoxKey(length: 4)
     let sharedBuffer = WriteBuffer()
     
     init(valueBox: ValueBox, tableId: Int32, namespace: Int32) {
-        self.valueBox = valueBox
-        self.tableId = tableId
         self.namespace = namespace
+        
+        super.init(valueBox: valueBox, tableId: tableId)
     }
     
     private func key(id: Int32) -> ValueBoxKey {

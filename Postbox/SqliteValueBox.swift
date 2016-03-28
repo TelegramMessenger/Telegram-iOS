@@ -1,5 +1,6 @@
 import Foundation
 import sqlcipher
+import SwiftSignalKit
 
 private struct SqlitePreparedStatement {
     let statement: COpaquePointer
@@ -53,7 +54,10 @@ private struct SqlitePreparedStatement {
 }
 
 public final class SqliteValueBox: ValueBox {
-    private let database: Database
+    private let lock = NSRecursiveLock()
+    
+    private let basePath: String
+    private var database: Database!
     private var tables = Set<Int32>()
     private var getStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var rangeKeyAscStatementsLimit: [Int32 : SqlitePreparedStatement] = [:]
@@ -73,34 +77,58 @@ public final class SqliteValueBox: ValueBox {
     private var writeQueryTime: CFAbsoluteTime = 0.0
     private var commitTime: CFAbsoluteTime = 0.0
     
+    private let checkpoints = MetaDisposable()
+    
     public init(basePath: String) {
-        do {
-            try NSFileManager.defaultManager().createDirectoryAtPath(basePath, withIntermediateDirectories: true, attributes: nil)
-        } catch _ { }
-        let path = basePath + "/db_sqlite"
-        self.database = Database(path)
-        
-        self.database.adjustChunkSize()
-        self.database.execute("PRAGMA page_size=1024")
-        self.database.execute("PRAGMA cache_size=-2097152")
-        self.database.execute("PRAGMA synchronous=NORMAL")
-        self.database.execute("PRAGMA journal_mode=truncate")
-        self.database.execute("PRAGMA temp_store=MEMORY")
-        //self.database.execute("PRAGMA wal_autocheckpoint=32")
-        //self.database.execute("PRAGMA journal_size_limit=1536")
-        
-        let result = self.database.scalar("PRAGMA user_version") as! Int64
-        if result != 1 {
-            self.database.execute("PRAGMA user_version=1")
-            self.database.execute("CREATE TABLE __meta_tables (name INTEGER)")
-        }
-        for row in self.database.prepare("SELECT name FROM __meta_tables").run() {
-            self.tables.insert(Int32(row[0] as! Int64))
-        }
+        self.basePath = basePath
+        self.database = self.openDatabase()
     }
     
     deinit {
         self.clearStatements()
+        checkpoints.dispose()
+    }
+    
+    private func openDatabase() -> Database {
+        checkpoints.set(nil)
+        lock.lock()
+        
+        do {
+            try NSFileManager.defaultManager().createDirectoryAtPath(basePath, withIntermediateDirectories: true, attributes: nil)
+        } catch _ { }
+        let path = basePath + "/db_sqlite"
+        let database = Database(path)
+        
+        database.adjustChunkSize()
+        database.execute("PRAGMA page_size=1024")
+        database.execute("PRAGMA cache_size=-2097152")
+        database.execute("PRAGMA synchronous=NORMAL")
+        database.execute("PRAGMA journal_mode=WAL")
+        database.execute("PRAGMA temp_store=MEMORY")
+        database.execute("PRAGMA wal_autocheckpoint=200")
+        database.execute("PRAGMA journal_size_limit=1536")
+        
+        let result = database.scalar("PRAGMA user_version") as! Int64
+        if result != 1 {
+            database.execute("PRAGMA user_version=1")
+            database.execute("CREATE TABLE __meta_tables (name INTEGER)")
+        }
+        for row in database.prepare("SELECT name FROM __meta_tables").run() {
+            self.tables.insert(Int32(row[0] as! Int64))
+        }
+        lock.unlock()
+        
+        checkpoints.set((Signal<Void, NoError>.single(Void()) |> delay(10.0, queue: Queue.concurrentDefaultQueue()) |> restart).start(next: { [weak self] _ in
+            if let strongSelf = self where strongSelf.database != nil {
+                strongSelf.lock.lock()
+                var nLog: Int32 = 0
+                var nFrames: Int32 = 0
+                sqlite3_wal_checkpoint_v2(strongSelf.database.handle, nil, SQLITE_CHECKPOINT_PASSIVE, &nLog, &nFrames)
+                strongSelf.lock.unlock()
+                //print("(SQLite WAL size \(nLog) removed \(nFrames))")
+            }
+        }))
+        return database
     }
     
     public func beginStats() {
@@ -633,9 +661,13 @@ public final class SqliteValueBox: ValueBox {
     public func drop() {
         self.clearStatements()
 
-        for table in self.tables {
-            self.database.execute("DROP TABLE IF EXISTS t\(table)")
-        }
-        self.database.execute("DELETE FROM __meta_tables")
+        self.lock.lock()
+        self.database = nil
+        self.lock.unlock()
+        
+        let _ = try? NSFileManager.defaultManager().removeItemAtPath(self.basePath)
+        self.database = self.openDatabase()
+        
+        tables.removeAll()
     }
 }

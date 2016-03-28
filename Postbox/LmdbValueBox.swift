@@ -246,7 +246,7 @@ public final class LmdbValueBox: ValueBox {
                     
                     var count = 0
                     if value != nil && value!.0 < end {
-                        count++
+                        count += 1
                         values(value!.0, value!.1)
                     }
                     
@@ -260,7 +260,7 @@ public final class LmdbValueBox: ValueBox {
                         startTime = currentTime
                         
                         if value != nil && value!.0 < end {
-                            count++
+                            count += 1
                             values(value!.0, value!.1)
                         }
                     }
@@ -279,7 +279,7 @@ public final class LmdbValueBox: ValueBox {
                     
                     var count = 0
                     if value != nil && value!.0 > end {
-                        count++
+                        count += 1
                         values(value!.0, value!.1)
                     }
                     
@@ -293,7 +293,7 @@ public final class LmdbValueBox: ValueBox {
                         startTime = currentTime
                         
                         if value != nil && value!.0 > end {
-                            count++
+                            count += 1
                             values(value!.0, value!.1)
                         }
                     }

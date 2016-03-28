@@ -43,9 +43,19 @@ public struct ValueBoxKey: Comparable, CustomStringConvertible {
         memcpy(self.memory + offset, &bigEndianValue, 4)
     }
     
+    public func setUInt32(offset: Int, value: UInt32) {
+        var bigEndianValue = UInt32(bigEndian: value)
+        memcpy(self.memory + offset, &bigEndianValue, 4)
+    }
+    
     public func setInt64(offset: Int, value: Int64) {
         var bigEndianValue = Int64(bigEndian: value)
         memcpy(self.memory + offset, &bigEndianValue, 8)
+    }
+    
+    public func setInt8(offset: Int, value: Int8) {
+        var varValue = value
+        memcpy(self.memory + offset, &varValue, 1)
     }
     
     public func getInt32(offset: Int) -> Int32 {
@@ -54,10 +64,22 @@ public struct ValueBoxKey: Comparable, CustomStringConvertible {
         return Int32(bigEndian: value)
     }
     
+    public func getUInt32(offset: Int) -> UInt32 {
+        var value: UInt32 = 0
+        memcpy(&value, self.memory + offset, 4)
+        return UInt32(bigEndian: value)
+    }
+    
     public func getInt64(offset: Int) -> Int64 {
         var value: Int64 = 0
         memcpy(&value, self.memory + offset, 8)
         return Int64(bigEndian: value)
+    }
+    
+    public func getInt8(offset: Int) -> Int8 {
+        var value: Int8 = 0
+        memcpy(&value, self.memory + offset, 1)
+        return value
     }
     
     public func prefix(length: Int) -> ValueBoxKey {
@@ -82,7 +104,7 @@ public struct ValueBoxKey: Comparable, CustomStringConvertible {
                 byte = 0
                 memory[i] = byte
             }
-            i--
+            i -= 1
         }
         return key
     }
@@ -102,7 +124,7 @@ public struct ValueBoxKey: Comparable, CustomStringConvertible {
                 byte = 0xff
                 memory[i] = byte
             }
-            i--
+            i -= 1
         }
         return key
     }

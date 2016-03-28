@@ -58,7 +58,7 @@ public struct MediaId: Hashable, CustomStringConvertible {
         var array: [MediaId] = []
         while i < Int(length) {
             array.append(MediaId(buffer))
-            i++
+            i += 1
         }
         return array
     }

@@ -1,16 +1,14 @@
 import Foundation
 
-final class PeerTable {
-    let valueBox: ValueBox
-    let tableId: Int32
-    
+final class PeerTable: Table {
     private let sharedEncoder = Encoder()
     private let sharedKey = ValueBoxKey(length: 8)
     private var cachedPeers: [PeerId: Peer] = [:]
     
-    init(valueBox: ValueBox, tableId: Int32) {
-        self.valueBox = valueBox
-        self.tableId = tableId
+    private var updatedPeerIds = Set<PeerId>()
+    
+    override init(valueBox: ValueBox, tableId: Int32) {
+        super.init(valueBox: valueBox, tableId: tableId)
     }
     
     private func key(id: PeerId) -> ValueBoxKey {
@@ -19,10 +17,8 @@ final class PeerTable {
     }
     
     func set(peer: Peer) {
-        self.sharedEncoder.reset()
-        self.sharedEncoder.encodeRootObject(peer)
-        
-        self.valueBox.set(self.tableId, key: self.key(peer.id), value: self.sharedEncoder.readBufferNoCopy())
+        self.cachedPeers[peer.id] = peer
+        self.updatedPeerIds.insert(peer.id)
     }
     
     func get(id: PeerId) -> Peer? {
@@ -36,5 +32,18 @@ final class PeerTable {
             }
         }
         return nil
+    }
+    
+    override func beforeCommit() {
+        for peerId in self.updatedPeerIds {
+            if let peer = self.cachedPeers[peerId] {
+                self.sharedEncoder.reset()
+                self.sharedEncoder.encodeRootObject(peer)
+                
+                self.valueBox.set(self.tableId, key: self.key(peerId), value: self.sharedEncoder.readBufferNoCopy())
+            }
+        }
+        
+        self.updatedPeerIds.removeAll()
     }
 }

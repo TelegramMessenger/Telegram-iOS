@@ -5,13 +5,9 @@ private enum MetadataKey: Int32 {
     case State = 2
 }
 
-final class MetadataTable {
-    let valueBox: ValueBox
-    let tableId: Int32
-    
-    init(valueBox: ValueBox, tableId: Int32) {
-        self.valueBox = valueBox
-        self.tableId = tableId
+final class MetadataTable: Table {
+    override init(valueBox: ValueBox, tableId: Int32) {
+        super.init(valueBox: valueBox, tableId: tableId)
     }
     
     private func key(key: MetadataKey) -> ValueBoxKey {

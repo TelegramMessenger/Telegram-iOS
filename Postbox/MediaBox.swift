@@ -2,37 +2,49 @@ import Foundation
 import SwiftSignalKit
 import Display
 
-public struct MediaKeyStatus {
-    let size: Int
+private final class ResourceStatusContext {
+    var status: MediaResourceStatus?
+    let subscribers = Bag<MediaResourceStatus -> Void>()
 }
 
-private final class MediaBoxMutexEntry {
-    var mutex = pthread_mutex_t()
+private final class ResourceDataContext {
+    var data: MediaResourceData
+    let dataSubscribers = Bag<MediaResourceData -> Void>()
     
-    init() {
-        var attr = pthread_mutexattr_t()
-        pthread_mutexattr_init(&attr)
-        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE)
-        pthread_mutex_init(&mutex, &attr)
-    }
+    var fetchDisposable: Disposable?
+    let fetchSubscribers = Bag<Void>()
     
-    deinit {
-        pthread_mutex_destroy(&mutex)
+    init(data: MediaResourceData) {
+        self.data = data
     }
-    
-    func with(@noescape f: Void -> Void) {
-        pthread_mutex_lock(&self.mutex)
-        f()
-        pthread_mutex_unlock(&self.mutex)
-    }
+}
+
+private func fileSize(path: String) -> Int {
+    var value = stat()
+    stat(path, &value)
+    return Int(value.st_size)
 }
 
 public final class MediaBox {
     let basePath: String
     let buffer = WriteBuffer()
     
-    private var mutexEntriesLock = OSSpinLock()
-    private var mutexEntries: [String : MediaBoxMutexEntry] = [:]
+    private let statusQueue = Queue()
+    private let dataQueue = Queue()
+    
+    private var statusContexts: [String: ResourceStatusContext] = [:]
+    private var dataContexts: [String: ResourceDataContext] = [:]
+    
+    private var wrappedFetchResource = Promise<(MediaResource, Int) -> Signal<NSData, NoError>>()
+    public var fetchResource: ((MediaResource, Int) -> Signal<NSData, NoError>)? {
+        didSet {
+            if let fetchResource = self.fetchResource {
+                wrappedFetchResource.set(.single(fetchResource))
+            } else {
+                wrappedFetchResource.set(.never())
+            }
+        }
+    }
     
     lazy var ensureDirectoryCreated: Void = {
         try! NSFileManager.defaultManager().createDirectoryAtPath(self.basePath, withIntermediateDirectories: true, attributes: nil)
@@ -42,104 +54,269 @@ public final class MediaBox {
         self.basePath = basePath
     }
     
-    private func keyForId(id: MediaId, key: MemoryBuffer) -> String {
-        let string = NSMutableString()
-        string.appendFormat("%d", Int(id.namespace))
-        string.appendFormat("_%lld", Int64(id.id))
-        string.appendString("_\(key)")
-        return string as String
+    private func pathForId(id: String) -> String {
+        return "\(self.basePath)/\(id)"
     }
     
-    private func pathForId(id: MediaId, key: MemoryBuffer) -> String {
-        return "\(self.basePath)/\(self.keyForId(id, key: key))"
-    }
-    
-    private func mutexForKey(key: String) -> MediaBoxMutexEntry {
-        let entry: MediaBoxMutexEntry
-        
-        OSSpinLockLock(&mutexEntriesLock)
-        if let existingEntry = self.mutexEntries[key] {
-            entry = existingEntry
-        } else {
-            entry = MediaBoxMutexEntry()
-            self.mutexEntries[key] = entry
-        }
-        OSSpinLockUnlock(&mutexEntriesLock)
-        
-        return entry
-    }
-    
-    func writeId(id: MediaId, key: ReadBuffer, value: NSData) {
-        assertNotOnMainThread()
-        self.mutexForKey(self.keyForId(id, key: key)).with {
-            let _ = self.ensureDirectoryCreated
-            value.writeToFile(self.pathForId(id, key: key), atomically: false)
-        }
-    }
-    
-    private func status(id: MediaId, key: ReadBuffer) -> MediaKeyStatus? {
-        assertNotOnMainThread()
-        var value = stat()
-        stat(self.pathForId(id, key: key), &value)
-        return MediaKeyStatus(size: Int(value.st_size))
-    }
-    
-    private func read(id: MediaId, key: ReadBuffer) -> NSData? {
-        assertNotOnMainThread()
-        var data: NSData?
-        do {
-            data = try NSData(contentsOfFile: self.pathForId(id, key: key), options: NSDataReadingOptions.DataReadingMappedIfSafe)
-        } catch _ {
-        }
-        return data
-    }
-    
-    public func data(id: MediaId, key: ReadBuffer, size: Int, fetch: ((NSData, Int) -> Signal<NSData, NoError>)?) -> Signal<NSData, NoError> {
+    public func resourceStatus(resource: MediaResource) -> Signal<MediaResourceStatus, NoError> {
         return Signal { subscriber in
-            var cancelled = false
             let disposable = MetaDisposable()
-            disposable.set(ActionDisposable {
-                cancelled = true
-            })
             
-            self.mutexForKey(self.keyForId(id, key: key)).with {
-                if cancelled {
-                    return
+            self.statusQueue.dispatch {
+                let statusContext: ResourceStatusContext
+                if let current = self.statusContexts[resource.id] {
+                    statusContext = current
+                } else {
+                    statusContext = ResourceStatusContext()
+                    self.statusContexts[resource.id] = statusContext
                 }
                 
-                let status = self.status(id, key: key) ?? MediaKeyStatus(size: 0)
+                let index = statusContext.subscribers.add({ status in
+                    subscriber.putNext(status)
+                })
                 
-                var currentData: NSData?
-                if status.size > 0 {
-                    if let data = self.read(id, key: key) {
-                        currentData = data
-                        subscriber.putNext(data)
-                    }
-                }
-                
-                if status.size < size {
-                    if let fetch = fetch {
-                        disposable.set(fetch(currentData ?? NSData(), status.size).start(next: { [weak self] next in
-                            if let strongSelf = self {
-                                strongSelf.mutexForKey(strongSelf.keyForId(id, key: key)).with {
-                                    strongSelf.writeId(id, key: key, value: next)
+                if let status = statusContext.status {
+                    subscriber.putNext(status)
+                } else {
+                    self.dataQueue.dispatch {
+                        let status: MediaResourceStatus
+                        
+                        let path = self.pathForId(resource.id)
+                        let currentSize = fileSize(path)
+                        if currentSize >= resource.size {
+                            status = .Local
+                        } else {
+                            var fetchingData = false
+                            if let dataContext = self.dataContexts[resource.id] {
+                                fetchingData = dataContext.fetchDisposable != nil
+                            }
+                            
+                            if fetchingData {
+                                status = .Fetching(progress: Float(currentSize) / Float(resource.size))
+                            } else {
+                                status = .Remote
+                            }
+                        }
+                        
+                        self.statusQueue.dispatch {
+                            if let statusContext = self.statusContexts[resource.id] where statusContext.status == nil {
+                                statusContext.status = status
+                                
+                                for subscriber in statusContext.subscribers.copyItems() {
+                                    subscriber(status)
                                 }
                             }
-                            subscriber.putNext(next)
-                        }, error: { error in
-                            subscriber.putError(error)
-                        }, completed: {
-                            subscriber.putCompletion()
-                        }))
-                    } else {
-                        subscriber.putError(NoError())
+                        }
                     }
-                } else {
+                }
+            
+                disposable.set(ActionDisposable {
+                    self.statusQueue.dispatch {
+                        if let current = self.statusContexts[resource.id] {
+                            current.subscribers.remove(index)
+                            if current.subscribers.isEmpty {
+                                self.statusContexts.removeValueForKey(resource.id)
+                            }
+                        }
+                    }
+                })
+            }
+            
+            return disposable
+        }
+    }
+    
+    public func resourceData(resource: MediaResource) -> Signal<MediaResourceData, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.dataQueue.dispatch {
+                let path = self.pathForId(resource.id)
+                let currentSize = fileSize(path)
+                
+                if currentSize >= resource.size {
+                    subscriber.putNext(MediaResourceData(path: path, size: currentSize))
                     subscriber.putCompletion()
+                } else {
+                    let dataContext: ResourceDataContext
+                    if let current = self.dataContexts[resource.id] {
+                        dataContext = current
+                    } else {
+                        dataContext = ResourceDataContext(data: MediaResourceData(path: path, size: currentSize))
+                        self.dataContexts[resource.id] = dataContext
+                    }
+                    
+                    let index = dataContext.dataSubscribers.add { data in
+                        subscriber.putNext(data)
+                        if data.size >= resource.size {
+                            subscriber.putCompletion()
+                        }
+                    }
+                    
+                    subscriber.putNext(dataContext.data)
+                    
+                    disposable.set(ActionDisposable {
+                        self.dataQueue.dispatch {
+                            if let dataContext = self.dataContexts[resource.id] {
+                                dataContext.dataSubscribers.remove(index)
+                                
+                                if dataContext.dataSubscribers.isEmpty && dataContext.fetchSubscribers.isEmpty {
+                                    self.dataContexts.removeValueForKey(resource.id)
+                                }
+                            }
+                        }
+                    })
                 }
             }
             
             return disposable
+        }
+    }
+    
+    public func fetchedResource(resource: MediaResource, interactive: Bool) -> Signal<Void, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.dataQueue.dispatch {
+                let path = self.pathForId(resource.id)
+                let currentSize = fileSize(path)
+                
+                if currentSize >= resource.size {
+                    subscriber.putCompletion()
+                } else {
+                    let dataContext: ResourceDataContext
+                    if let current = self.dataContexts[resource.id] {
+                        dataContext = current
+                    } else {
+                        dataContext = ResourceDataContext(data: MediaResourceData(path: path, size: currentSize))
+                        self.dataContexts[resource.id] = dataContext
+                    }
+                    
+                    let index: Bag<Void>.Index = dataContext.fetchSubscribers.add(Void())
+                    
+                    if dataContext.fetchDisposable == nil {
+                        let status: MediaResourceStatus = .Fetching(progress: Float(currentSize) / Float(resource.size))
+                        self.statusQueue.dispatch {
+                            if let statusContext = self.statusContexts[resource.id] {
+                                statusContext.status = status
+                                for subscriber in statusContext.subscribers.copyItems() {
+                                    subscriber(status)
+                                }
+                            }
+                        }
+                        
+                        var offset = currentSize
+                        var fd: Int32?
+                        dataContext.fetchDisposable = (self.wrappedFetchResource.get() |> mapToSignal { fetch -> Signal<NSData, NoError> in
+                            return fetch(resource, offset)
+                        } |> afterDisposed {
+                            if let fd = fd {
+                                close(fd)
+                            }
+                        }).start(next: { data in
+                            self.dataQueue.dispatch {
+                                let _ = self.ensureDirectoryCreated
+                                
+                                if fd == nil {
+                                    let handle = open(path, O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR)
+                                    if handle >= 0 {
+                                        fd = handle
+                                    }
+                                }
+                                
+                                if let fd = fd {
+                                    write(fd, data.bytes, data.length)
+                                    
+                                    offset += data.length
+                                    let updatedSize = offset
+                                    
+                                    for subscriber in dataContext.dataSubscribers.copyItems() {
+                                        subscriber(MediaResourceData(path: path, size: updatedSize))
+                                    }
+                                    
+                                    let status: MediaResourceStatus
+                                    if updatedSize >= resource.size {
+                                        status = .Local
+                                    } else {
+                                        status = .Fetching(progress: Float(updatedSize) / Float(resource.size))
+                                    }
+                                    
+                                    self.statusQueue.dispatch {
+                                        if let statusContext = self.statusContexts[resource.id] {
+                                            statusContext.status = status
+                                            for subscriber in statusContext.subscribers.copyItems() {
+                                                subscriber(status)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        })
+                    }
+                    
+                    disposable.set(ActionDisposable {
+                        self.dataQueue.dispatch {
+                            if let dataContext = self.dataContexts[resource.id] {
+                                dataContext.fetchSubscribers.remove(index)
+                                
+                                if dataContext.fetchSubscribers.isEmpty {
+                                    dataContext.fetchDisposable?.dispose()
+                                    dataContext.fetchDisposable = nil
+                                    
+                                    let currentSize = fileSize(path)
+                                    let status: MediaResourceStatus
+                                    if currentSize >= resource.size {
+                                        status = .Local
+                                    } else {
+                                        status = .Remote
+                                    }
+                                    
+                                    self.statusQueue.dispatch {
+                                        if let statusContext = self.statusContexts[resource.id] where statusContext.status != status {
+                                            statusContext.status = status
+                                            for subscriber in statusContext.subscribers.copyItems() {
+                                                subscriber(status)
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                if dataContext.dataSubscribers.isEmpty && dataContext.fetchSubscribers.isEmpty {
+                                    self.dataContexts.removeValueForKey(resource.id)
+                                }
+                            }
+                        }
+                    })
+                }
+            }
+            
+            return disposable
+        }
+    }
+    
+    public func cancelInteractiveResourceFetch(resource: MediaResource) {
+        self.dataQueue.dispatch {
+            if let dataContext = self.dataContexts[resource.id] where dataContext.fetchDisposable != nil {
+                dataContext.fetchDisposable?.dispose()
+                dataContext.fetchDisposable = nil
+                    
+                let currentSize = fileSize(self.pathForId(resource.id))
+                let status: MediaResourceStatus
+                if currentSize >= resource.size {
+                    status = .Local
+                } else {
+                    status = .Remote
+                }
+                
+                self.statusQueue.dispatch {
+                    if let statusContext = self.statusContexts[resource.id] where statusContext.status != status {
+                        statusContext.status = status
+                        for subscriber in statusContext.subscribers.copyItems() {
+                            subscriber(status)
+                        }
+                    }
+                }
+            }
         }
     }
 }

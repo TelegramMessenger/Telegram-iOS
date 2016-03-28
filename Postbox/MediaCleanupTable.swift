@@ -1,14 +1,10 @@
 import Foundation
 
-final class MediaCleanupTable {
-    let valueBox: ValueBox
-    let tableId: Int32
-    
+final class MediaCleanupTable: Table {
     var debugMedia: [Media] = []
     
-    init(valueBox: ValueBox, tableId: Int32) {
-        self.valueBox = valueBox
-        self.tableId = tableId
+    override init(valueBox: ValueBox, tableId: Int32) {
+        super.init(valueBox: valueBox, tableId: tableId)
     }
     
     func add(media: Media, sharedEncoder: Encoder = Encoder()) {

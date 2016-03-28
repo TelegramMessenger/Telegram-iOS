@@ -41,7 +41,7 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable {
             var value: Int64 = 0
             buffer.read(&value, offset: 0, length: 8)
             array.append(PeerId(value))
-            i++
+            i += 1
         }
         return array
     }
