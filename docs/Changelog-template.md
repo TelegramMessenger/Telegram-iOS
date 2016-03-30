@@ -1,3 +1,22 @@
+## Version 4.1.0-alpha.2
+
+- [BUGFIX] Fix different bugs in the events sending pipeline
+
+## Version 4.1.0-alpha.1
+
+- [NEW] Add ability to track custom events
+- [IMPROVEMENT] Events are always persisted, even if the app crashes
+- [IMPROVEMENT] Allow disabling `BITMetricsManager` at any time
+- [BUGFIX] Server URL is now properly customizable
+- [BUGFIX] Fix memory leak in networking code
+- [IMPROVEMENT] Optimize tests and always build test target
+- [IMPROVEMENT] Reuse `NSURLSession` object
+- [IMPROVEMENT] Under the hood improvements and cleanup
+
+## Version 4.0.0-beta.1
+
+- [NEW] User Metrics including users and sessions data is now in public beta
+
 ## Version 4.0.0-alpha.2
 
 - [UPDATE] Include changes from HockeySDK 3.8.6
