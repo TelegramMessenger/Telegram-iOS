@@ -68,13 +68,4 @@ typedef NS_ENUM(NSUInteger, BITFeedbackComposeResult) {
  */
 - (void)feedbackComposeViewController:(BITFeedbackComposeViewController *)composeViewController
                   didFinishWithResult:(BITFeedbackComposeResult) composeResult;
-
-#pragma mark - Deprecated methods
-
-/** 
- * This method is deprecated. If feedbackComposeViewController:didFinishWithResult: is implemented, this will not be called
- *
- * @param composeViewController The `BITFeedbackComposeViewController` instance invoking this delegate
- */
-- (void)feedbackComposeViewControllerDidFinish:(BITFeedbackComposeViewController *)composeViewController __attribute__((deprecated("Use feedbackComposeViewController:didFinishWithResult: instead")));
 @end

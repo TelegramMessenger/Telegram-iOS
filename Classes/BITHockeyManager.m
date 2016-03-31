@@ -30,7 +30,7 @@
 #import "HockeySDK.h"
 #import "HockeySDKPrivate.h"
 
-#if HOCKEYSDK_FEATURE_CRASH_REPORTER || HOCKEYSDK_FEATURE_FEEDBACK || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_STORE_UPDATES
+#if HOCKEYSDK_FEATURE_CRASH_REPORTER || HOCKEYSDK_FEATURE_FEEDBACK || HOCKEYSDK_FEATURE_UPDATES || HOCKEYSDK_FEATURE_AUTHENTICATOR || HOCKEYSDK_FEATURE_STORE_UPDATES || HOCKEYSDK_FEATURE_METRICS
 #import "BITHockeyBaseManagerPrivate.h"
 #endif
 
@@ -72,6 +72,11 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
 #import "BITAuthenticator_Private.h"
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
+
+#if HOCKEYSDK_FEATURE_METRICS
+#import "BITMetricsManagerPrivate.h"
+#import "BITCategoryContainer.h"
+#endif /* HOCKEYSDK_FEATURE_METRICS */
 
 @interface BITHockeyManager ()
 
@@ -134,7 +139,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
   return sharedInstance;
 }
 
-- (id)init {
+- (instancetype)init {
   if ((self = [super init])) {
     _serverURL = nil;
     _delegate = nil;
@@ -145,29 +150,26 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
     _disableCrashManager = NO;
 #endif
-#if HOCKEYSDK_FEATURE_UPDATES
-    _disableUpdateManager = NO;
+#if HOCKEYSDK_FEATURE_METRICS
+    _disableMetricsManager = NO;
 #endif
 #if HOCKEYSDK_FEATURE_FEEDBACK
     _disableFeedbackManager = NO;
 #endif
-
+#if HOCKEYSDK_FEATURE_UPDATES
+    _disableUpdateManager = NO;
+#endif
 #if HOCKEYSDK_FEATURE_STORE_UPDATES
     _enableStoreUpdateManager = NO;
 #endif
+    
+    _appEnvironment = bit_currentAppEnvironment();
     _startManagerIsInvoked = NO;
     _startUpdateManagerIsInvoked = NO;
     
     _liveIdentifier = nil;
     _installString = bit_appAnonID(NO);
     _disableInstallTracking = NO;
-    
-    _appStoreEnvironment = NO;
-    // check if we are really in an app store environment
-      _appEnvironment = bit_currentAppEnvironment();
-    if (_appEnvironment == BITEnvironmentAppStore) {
-      _appStoreEnvironment = YES;
-    }
     
     [self performSelector:@selector(validateStartManagerIsInvoked) withObject:nil afterDelay:0.0f];
   }
@@ -239,7 +241,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
   // start CrashManager
   if (![self isCrashManagerDisabled]) {
     BITHockeyLog(@"INFO: Start CrashManager");
-    if (_serverURL) {
+    if (!_crashManager.serverURL && _serverURL) {
       [_crashManager setServerURL:_serverURL];
     }
     
@@ -309,6 +311,15 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     [self invokeStartUpdateManager];
   }
 #endif /* HOCKEYSDK_FEATURE_UPDATES */
+  
+#if HOCKEYSDK_FEATURE_METRICS
+  // start MetricsManager
+  if (!self.disableMetricsManager) {
+    BITHockeyLog(@"INFO: Start MetricsManager");
+    [_metricsManager startManager];
+    [BITCategoryContainer activateCategory];
+  }
+#endif /* HOCKEYSDK_FEATURE_METRICS */
 }
 
 
@@ -679,6 +690,12 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     _authenticator.hockeyAppClient = [self hockeyAppClient];
     _authenticator.delegate = _delegate;
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
+    
+#if HOCKEYSDK_FEATURE_METRICS
+    BITHockeyLog(@"INFO: Setup MetricsManager");
+    NSString *iKey = bit_appIdentifierToGuid(_appIdentifier);
+    _metricsManager = [[BITMetricsManager alloc] initWithAppIdentifier:iKey appEnvironment:_appEnvironment];
+#endif /* HOCKEYSDK_FEATURE_METRICS */
 
     if (self.appEnvironment != BITEnvironmentAppStore) {
       NSString *integrationFlowTime = [self integrationFlowTimeString];
