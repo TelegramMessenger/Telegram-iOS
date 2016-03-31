@@ -30,13 +30,17 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //
 
-
 #import <Foundation/Foundation.h>
+
+#import "HockeySDKNullability.h"
+NS_ASSUME_NONNULL_BEGIN
 
 @interface NSData (GZIP)
 
-- (NSData *)gzippedDataWithCompressionLevel:(float)level;
-- (NSData *)gzippedData;
-- (NSData *)gunzippedData;
+- (nullable NSData *)gzippedDataWithCompressionLevel:(float)level;
+- (nullable NSData *)gzippedData;
+- (nullable NSData *)gunzippedData;
 
 @end
+
+NS_ASSUME_NONNULL_END

@@ -48,7 +48,9 @@
 
 - (void)testRequestContainsDataItem {
   BITEnvelope *testItem = [BITEnvelope new];
-  NSData *expectedBodyData = [[testItem serializeToString] dataUsingEncoding:NSUTF8StringEncoding];
+  NSData *expectedBodyData = [NSJSONSerialization dataWithJSONObject:[testItem serializeToDictionary]
+                                                              options:0
+                                                                error:nil];
   NSURLRequest *testRequest = [_sut requestForData:expectedBodyData];
   
   XCTAssertNotNil(testRequest);

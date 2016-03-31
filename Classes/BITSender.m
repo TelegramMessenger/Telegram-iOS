@@ -3,6 +3,7 @@
 #if HOCKEYSDK_FEATURE_METRICS
 
 #import "BITPersistencePrivate.h"
+#import "BITChannelPrivate.h"
 #import "BITGZIP.h"
 #import "HockeySDKPrivate.h"
 #import "BITHTTPOperation.h"
@@ -11,6 +12,12 @@
 static char const *kBITSenderTasksQueueString = "net.hockeyapp.sender.tasksQueue";
 static char const *kBITSenderRequestsCountQueueString = "net.hockeyapp.sender.requestsCount";
 static NSUInteger const BITDefaultRequestLimit = 10;
+
+@interface BITSender ()
+
+@property (nonatomic, strong) NSURLSession *session;
+
+@end
 
 @implementation BITSender
 
@@ -36,7 +43,16 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 - (void)registerObservers {
   NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
   __weak typeof(self) weakSelf = self;
+  
   [center addObserverForName:BITPersistenceSuccessNotification
+                      object:nil
+                       queue:nil
+                  usingBlock:^(NSNotification *notification) {
+                    typeof(self) strongSelf = weakSelf;
+                    [strongSelf sendSavedDataAsync];
+                  }];
+  
+  [center addObserverForName:BITChannelBlockedNotification
                       object:nil
                        queue:nil
                   usingBlock:^(NSNotification *notification) {
@@ -54,17 +70,19 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 }
 
 - (void)sendSavedData {
-    if (self.runningRequestsCount < _maxRequestCount) {
-        self.runningRequestsCount++;
-    } else {
+  @synchronized(self){
+    if(_runningRequestsCount < _maxRequestCount){
+      _runningRequestsCount++;
+      BITHockeyLog(@"Create new sender thread. Current count is %ld", (long) _runningRequestsCount);
+    }else{
       return;
     }
+  }
 
   NSString *filePath = [self.persistence requestNextFilePath];
   NSData *data = [self.persistence dataAtFilePath:filePath];
-  if (data) {
-    [self sendData:data withFilePath:filePath];
-  }
+  [self sendData:data withFilePath:filePath];
+ 
 }
 
 - (void)sendData:(nonnull NSData *)data withFilePath:(nonnull NSString *)filePath {
@@ -74,7 +92,9 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 
     [self sendRequest:request filePath:filePath];
   } else {
-      self.runningRequestsCount -= 1;
+    self.runningRequestsCount -= 1;
+    BITHockeyLog(@"Close sender thread due empty package. Current count is %ld", (long) _runningRequestsCount);
+    // TODO: Delete data and send next file
   }
 }
 
@@ -105,9 +125,7 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 }
 
 - (void)sendUsingURLSessionWithRequest:(nonnull NSURLRequest *)request filePath:(nonnull NSString *)filePath {
-  NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
-  NSURLSession *session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
-
+  NSURLSession *session = self.session;
   NSURLSessionDataTask *task = [session dataTaskWithRequest:request
                                           completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
                                             NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *) response;
@@ -123,6 +141,7 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 
 - (void)handleResponseWithStatusCode:(NSInteger)statusCode responseData:(nonnull NSData *)responseData filePath:(nonnull NSString *)filePath error:(nonnull NSError *)error {
   self.runningRequestsCount -= 1;
+  BITHockeyLog(@"Close sender thread due incoming response. Current count is %ld", (long) _runningRequestsCount);
 
   if (responseData && (responseData.length > 0) && [self shouldDeleteDataWithStatusCode:statusCode]) {
     //we delete data that was either sent successfully or if we have a non-recoverable error
@@ -166,6 +185,14 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 
 #pragma mark - Getter/Setter
 
+- (NSURLSession *)session {
+  if (!_session) {
+    NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
+    _session = [NSURLSession sessionWithConfiguration:sessionConfiguration];
+  }
+  return _session;
+}
+
 - (NSOperationQueue *)operationQueue {
   if (nil == _operationQueue) {
     _operationQueue = [[NSOperationQueue alloc] init];
@@ -183,7 +210,7 @@ static NSUInteger const BITDefaultRequestLimit = 10;
 }
 
 - (void)setRunningRequestsCount:(NSUInteger)runningRequestsCount {
-  dispatch_barrier_async(_requestsCountQueue, ^{
+  dispatch_sync(_requestsCountQueue, ^{
     _runningRequestsCount = runningRequestsCount;
   });
 }

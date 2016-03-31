@@ -28,7 +28,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#import "HockeySDK.h"
+#import "HockeySDKFeatureConfig.h"
 
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
 
@@ -39,12 +39,19 @@
 #import "BITHockeyHelper.h"
 #import "BITHockeyAppClient.h"
 
+#import "BITCrashManager.h"
+#import "BITCrashManagerPrivate.h"
 #import "BITCrashAttachment.h"
 #import "BITHockeyBaseManagerPrivate.h"
-#import "BITCrashManagerPrivate.h"
 #import "BITCrashReportTextFormatter.h"
 #import "BITCrashDetailsPrivate.h"
 #import "BITCrashCXXExceptionHandler.h"
+
+#if HOCKEYSDK_FEATURE_METRICS
+#import "BITMetricsManagerPrivate.h"
+#import "BITChannel.h"
+#import "BITPersistencePrivate.h"
+#endif
 
 #include <sys/sysctl.h>
 
@@ -81,16 +88,40 @@ static NSString *const kBITFakeCrashDeviceModel = @"BITFakeCrashDeviceModel";
 static NSString *const kBITFakeCrashAppBinaryUUID = @"BITFakeCrashAppBinaryUUID";
 static NSString *const kBITFakeCrashReport = @"BITFakeCrashAppString";
 
+#if HOCKEYSDK_FEATURE_METRICS
+static char const *BITSaveEventsFilePath;
+#endif
 
 static BITCrashManagerCallbacks bitCrashCallbacks = {
   .context = NULL,
   .handleSignal = NULL
 };
 
-// proxy implementation for PLCrashReporter to keep our interface stable while this can change
+#if HOCKEYSDK_FEATURE_METRICS
+static void bit_save_events_callback(siginfo_t *info, ucontext_t *uap, void *context) {
+  // Try to get a file descriptor with our pre-filled path
+  int fd = open(BITSaveEventsFilePath, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+  if (fd < 0) {
+    return;
+  }
+  
+  size_t len = strlen(BITSafeJsonEventsString);
+  if (len > 0) {
+    // Simply write the whole string to disk
+    write(fd, BITSafeJsonEventsString, len);
+  }
+  close(fd);
+}
+#endif
+
+// Proxy implementation for PLCrashReporter to keep our interface stable while this can change
 static void plcr_post_crash_callback (siginfo_t *info, ucontext_t *uap, void *context) {
-  if (bitCrashCallbacks.handleSignal != NULL)
+#if HOCKEYSDK_FEATURE_METRICS
+  bit_save_events_callback(info, uap, context);
+#endif
+  if (bitCrashCallbacks.handleSignal != NULL) {
     bitCrashCallbacks.handleSignal(context);
+  }
 }
 
 static PLCrashReporterCallbacks plCrashCallbacks = {
@@ -98,7 +129,6 @@ static PLCrashReporterCallbacks plCrashCallbacks = {
   .context = NULL,
   .handleSignal = plcr_post_crash_callback
 };
-
 
 // Temporary class until PLCR catches up
 // We trick PLCR with an Objective-C exception.
@@ -154,8 +184,6 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   NSString       *_settingsFile;
   NSString       *_analyzerInProgressFile;
   NSFileManager  *_fileManager;
-    
-  PLCrashReporterCallbacks *_crashCallBacks;
   
   BOOL _crashIdenticalCurrentVersion;
   
@@ -183,7 +211,6 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     
     _plCrashReporter = nil;
     _exceptionHandler = nil;
-    _crashCallBacks = nil;
     
     _crashIdenticalCurrentVersion = YES;
     
@@ -657,17 +684,18 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   return useremail;
 }
 
-
-#pragma mark - Public
-
+#pragma mark - CrashCallbacks
 
 /**
  *  Set the callback for PLCrashReporter
  *
  *  @param callbacks BITCrashManagerCallbacks instance
  */
-- (void)setCrashCallbacks: (BITCrashManagerCallbacks *) callbacks {
+- (void)setCrashCallbacks:(BITCrashManagerCallbacks *)callbacks {
   if (!callbacks) return;
+  if (_isSetup) {
+    BITHockeyLog(@"CrashCallbacks need to be configured before calling startManager!");
+  }
   
   // set our proxy callback struct
   bitCrashCallbacks.context = callbacks->context;
@@ -675,46 +703,25 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   
   // set the PLCrashReporterCallbacks struct
   plCrashCallbacks.context = callbacks->context;
-  
-  _crashCallBacks = &plCrashCallbacks;
 }
 
+#if HOCKEYSDK_FEATURE_METRICS
+- (void)configDefaultCrashCallback {
+  BITMetricsManager *metricsManager = [BITHockeyManager sharedHockeyManager].metricsManager;
+  BITPersistence *persistence = metricsManager.persistence;
+  BITSaveEventsFilePath = strdup([persistence fileURLForType:BITPersistenceTypeTelemetry].UTF8String);
+}
+#endif
+
+#pragma mark - Public
 
 - (void)setAlertViewHandler:(BITCustomAlertViewHandler)alertViewHandler{
   _alertViewHandler = alertViewHandler;
 }
 
-/**
- * Check if the debugger is attached
- *
- * Taken from https://github.com/plausiblelabs/plcrashreporter/blob/2dd862ce049e6f43feb355308dfc710f3af54c4d/Source/Crash%20Demo/main.m#L96
- *
- * @return `YES` if the debugger is attached to the current process, `NO` otherwise
- */
+
 - (BOOL)isDebuggerAttached {
-  static BOOL debuggerIsAttached = NO;
-  
-  static dispatch_once_t debuggerPredicate;
-  dispatch_once(&debuggerPredicate, ^{
-    struct kinfo_proc info;
-    size_t info_size = sizeof(info);
-    int name[4];
-    
-    name[0] = CTL_KERN;
-    name[1] = KERN_PROC;
-    name[2] = KERN_PROC_PID;
-    name[3] = getpid();
-    
-    if (sysctl(name, 4, &info, &info_size, NULL, 0) == -1) {
-      NSLog(@"[HockeySDK] ERROR: Checking for a running debugger via sysctl() failed.");
-      debuggerIsAttached = false;
-    }
-    
-    if (!debuggerIsAttached && (info.kp_proc.p_flag & P_TRACED) != 0)
-      debuggerIsAttached = true;
-  });
-  
-  return debuggerIsAttached;
+  return bit_isDebuggerAttached();
 }
 
 
@@ -1174,10 +1181,11 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
         // can't break this
         NSError *error = NULL;
         
-        // set any user defined callbacks, hopefully the users knows what they do
-        if (_crashCallBacks) {
-          [self.plCrashReporter setCrashCallbacks:_crashCallBacks];
-        }
+#if HOCKEYSDK_FEATURE_METRICS
+        [self configDefaultCrashCallback];
+#endif
+        // Set plCrashReporter callback which contains our default callback and potentially user defined callbacks
+        [self.plCrashReporter setCrashCallbacks:&plCrashCallbacks];
         
         // Enable the Crash Reporter
         if (![self.plCrashReporter enableCrashReporterAndReturnError: &error])
