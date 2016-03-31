@@ -438,10 +438,4 @@ typedef NS_ENUM(NSUInteger, BITCrashManagerUserInput) {
  */
 - (void)generateTestCrash;
 
-///-----------------------------------------------------------------------------
-/// @name Deprecated
-///-----------------------------------------------------------------------------
-
-@property (nonatomic, readonly) NSTimeInterval timeintervalCrashInLastSessionOccured DEPRECATED_MSG_ATTRIBUTE("Use the properly spelled property `timeIntervalCrashInLastSessionOccurred` instead.");
-
 @end

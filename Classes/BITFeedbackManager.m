@@ -32,6 +32,7 @@
 #if HOCKEYSDK_FEATURE_FEEDBACK
 
 #import <AssetsLibrary/AssetsLibrary.h>
+#import <Photos/Photos.h>
 
 #import "HockeySDKPrivate.h"
 
@@ -55,6 +56,8 @@
 #define kBITFeedbackAppID           @"HockeyFeedbackAppID"
 
 NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttachmentThumbnail";
+
+typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage);
 
 @interface BITFeedbackManager()<UIGestureRecognizerDelegate>
 
@@ -242,7 +245,7 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
 
 - (void)showFeedbackComposeViewWithPreparedItems:(NSArray *)items{
   if (_currentFeedbackComposeViewController) {
-    BITHockeyLog(@"INFO: update view already visible, aborting");
+    BITHockeyLog(@"INFO: Feedback view already visible, aborting");
     return;
   }
   BITFeedbackComposeViewController *composeView = [self feedbackComposeViewController];
@@ -1189,28 +1192,92 @@ NSString *const kBITFeedbackUpdateAttachmentThumbnail = @"BITFeedbackUpdateAttac
 }
 
 -(void)extractLastPictureFromLibraryAndLaunchFeedback {
+  [self requestLatestImageWithCompletionHandler:^(UIImage *latestImage) {
+    [self showFeedbackComposeViewWithPreparedItems:@[latestImage]];
+  }];
+}
+
+- (void)requestLatestImageWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler {
+  if (!completionHandler) { return; }
+  
+// Only available from iOS 8 up
+  id phimagemanagerClass = NSClassFromString(@"PHImageManager");
+  if (phimagemanagerClass) {
+    [self fetchLatestImageUsingPhotoLibraryWithCompletionHandler:completionHandler];
+  } else {
+    [self fetchLatestImageUsingAssetsLibraryWithCompletionHandler:completionHandler];
+  }
+}
+
+- (void)fetchLatestImageUsingAssetsLibraryWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
   ALAssetsLibrary *library = [[ALAssetsLibrary alloc] init];
-  
   [library enumerateGroupsWithTypes:ALAssetsGroupSavedPhotos usingBlock:^(ALAssetsGroup *group, BOOL *stop) {
-    
-    [group setAssetsFilter:[ALAssetsFilter allPhotos]];
-    
-    [group enumerateAssetsWithOptions:NSEnumerationReverse usingBlock:^(ALAsset *alAsset, NSUInteger index, BOOL *innerStop) {
-      
-      if (alAsset) {
-        ALAssetRepresentation *representation = [alAsset defaultRepresentation];
-        UIImage *latestPhoto = [UIImage imageWithCGImage:[representation fullScreenImage]];
-        
-        *stop = YES;
-        *innerStop = YES;
-        
-        [self showFeedbackComposeViewWithPreparedItems:@[latestPhoto]];
-      }
-    }];
-  } failureBlock: nil];
+
+      [group setAssetsFilter:[ALAssetsFilter allPhotos]];
+
+      [group enumerateAssetsWithOptions:NSEnumerationReverse usingBlock:^(ALAsset *alAsset, NSUInteger index, BOOL *innerStop) {
+
+        if (alAsset) {
+          ALAssetRepresentation *representation = [alAsset defaultRepresentation];
+          UIImage *latestPhoto = [UIImage imageWithCGImage:[representation fullScreenImage]];
+          
+          completionHandler(latestPhoto);
+          
+          *stop = YES;
+          *innerStop = YES;
+        }
+      }];
+    } failureBlock: nil];
 #pragma clang diagnostic pop
+}
+
+- (void)fetchLatestImageUsingPhotoLibraryWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler NS_AVAILABLE_IOS(8_0){
+  [PHPhotoLibrary requestAuthorization:^(PHAuthorizationStatus status) {
+    switch (status) {
+      case PHAuthorizationStatusDenied:
+      case PHAuthorizationStatusRestricted:
+        BITHockeyLog(@"INFO: The latest image could not be fetched, no permissions.");
+        break;
+        
+      case PHAuthorizationStatusAuthorized:
+        [self loadLatestImageAssetWithCompletionHandler:completionHandler];
+        break;
+      case PHAuthorizationStatusNotDetermined:
+        BITHockeyLog(@"INFO: The Photo Library authorization status is undetermined. This should not happen.");
+        break;
+    }
+  }];
+}
+
+- (void)loadLatestImageAssetWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler NS_AVAILABLE_IOS(8_0){
+  PHImageManager *imageManager = PHImageManager.defaultManager;
+  
+  PHFetchOptions *fetchOptions = [PHFetchOptions new];
+  fetchOptions.sortDescriptors = @[[NSSortDescriptor sortDescriptorWithKey:@"creationDate" ascending:YES]];
+  
+  PHFetchResult *fetchResult = [PHAsset fetchAssetsWithMediaType:PHAssetMediaTypeImage options:fetchOptions];
+  
+  if (fetchResult.count > 0) {
+    PHAsset *latestImageAsset = (PHAsset *)fetchResult.lastObject;
+    if (latestImageAsset) {
+      PHImageRequestOptions *options = [PHImageRequestOptions new];
+      options.version = PHImageRequestOptionsVersionOriginal;
+      options.deliveryMode = PHImageRequestOptionsDeliveryModeHighQualityFormat;
+      options.resizeMode = PHImageRequestOptionsResizeModeNone;
+      
+      [imageManager requestImageDataForAsset:latestImageAsset options:options resultHandler:^(NSData * _Nullable imageData, NSString * _Nullable dataUTI, UIImageOrientation orientation, NSDictionary * _Nullable info) {
+        if (imageData) {
+          completionHandler([UIImage imageWithData:imageData]);
+        } else {
+          BITHockeyLog(@"INFO: The latest image could not be fetched, requested image data was empty.");
+        }
+      }];
+    }
+  } else {
+    BITHockeyLog(@"INFO: The latest image could not be fetched, the fetch result was empty.");
+  }
 }
 
 - (void)screenshotTripleTap:(UITapGestureRecognizer *)tapRecognizer {

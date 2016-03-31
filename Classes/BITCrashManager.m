@@ -620,12 +620,6 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   // first check the global keychain storage
   NSString *username = [self stringValueFromKeychainForKey:kBITHockeyMetaUserName] ?: @"";
   
-  if ([self.delegate respondsToSelector:@selector(userNameForCrashManager:)]) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    username = [self.delegate userNameForCrashManager:self] ?: @"";
-#pragma clang diagnostic pop
-  }
   if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userNameForHockeyManager:componentManager:)]) {
     username = [[BITHockeyManager sharedHockeyManager].delegate
                 userNameForHockeyManager:[BITHockeyManager sharedHockeyManager]
@@ -655,13 +649,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     useremail = self.installationIdentification;
   }
 #endif
-  
-  if ([self.delegate respondsToSelector:@selector(userEmailForCrashManager:)]) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    useremail = [self.delegate userEmailForCrashManager:self] ?: @"";
-#pragma clang diagnostic pop
-  }
+
   if ([[BITHockeyManager sharedHockeyManager].delegate respondsToSelector:@selector(userEmailForHockeyManager:componentManager:)]) {
     useremail = [[BITHockeyManager sharedHockeyManager].delegate
                  userEmailForHockeyManager:[BITHockeyManager sharedHockeyManager]

@@ -1,3 +1,20 @@
+## Version 4.0.0-beta.1
+
+- [NEW] User Metrics including users and sessions data is now in public beta! 
+
+## Version 4.0.0-alpha.2
+
+- [UPDATE] Include changes from HockeySDK 3.8.6
+
+## Version 4.0.0-alpha.1
+
+- [NEW] Added `BITMetricsManager` to track users and sessions
+- [UPDATE] Remove previously deprecated UpdateManagerDelegate method `-viewControllerForUpdateManager:`
+- [UPDATE] Remove previously deprecated CrashManagerDelegate methods `-userNameForCrashManager:` and `-userEmailForCrashManager:`
+- [UPDATE] Remove previously deprecated property `appStoreEnvironment`
+- [UPDATE] Remove previously deprecated misspelled `timeintervalCrashInLastSessionOccured` property
+- [UPDATE] Remove previously deprecated misspelled `BITFeedbackListViewCellPresentatationStyle` enum
+
 ## Version 3.8.6
 
 - [UPDATE] Some minor refactorings
