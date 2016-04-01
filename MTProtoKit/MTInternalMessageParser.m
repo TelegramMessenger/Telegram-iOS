@@ -415,19 +415,25 @@
                 int32_t vectorSignature = 0;
                 if (![reader readInt32:&vectorSignature])
                 {
-                    MTLog(@"[MTInternalMessageParser: msgs_ack can't read vectorSignature]");
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTInternalMessageParser: msgs_ack can't read vectorSignature]");
+                    }
                     return nil;
                 }
                 else if (vectorSignature != (int32_t)0x1cb5c415)
                 {
-                    MTLog(@"[MTInternalMessageParser: msgs_ack invalid vectorSignature]");
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTInternalMessageParser: msgs_ack invalid vectorSignature]");
+                    }
                     return nil;
                 }
                 
                 int32_t count = 0;
                 if (![reader readInt32:&count])
                 {
-                    MTLog(@"[MTInternalMessageParser: msgs_ack can't read count]");
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTInternalMessageParser: msgs_ack can't read count]");
+                    }
                     return nil;
                 }
                 
@@ -437,7 +443,9 @@
                     int64_t messageId = 0;
                     if (![reader readInt64:&messageId])
                     {
-                        MTLog(@"[MTInternalMessageParser: msgs_ack can't read messageId]");
+                        if (MTLogEnabled()) {
+                            MTLog(@"[MTInternalMessageParser: msgs_ack can't read messageId]");
+                        }
                         return nil;
                     }
                     [messageIds addObject:@(messageId)];
@@ -450,7 +458,9 @@
                 int64_t pingId = 0;
                 if (![reader readInt64:&pingId])
                 {
-                    MTLog(@"[MTInternalMessageParser: ping can't read pingId]");
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTInternalMessageParser: ping can't read pingId]");
+                    }
                     return nil;
                 }
                 
@@ -461,14 +471,18 @@
                 int64_t messageId = 0;
                 if (![reader readInt64:&messageId])
                 {
-                    MTLog(@"[MTInternalMessageParser: pong can't read messageId]");
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTInternalMessageParser: pong can't read messageId]");
+                    }
                     return nil;
                 }
                 
                 int64_t pingId = 0;
                 if (![reader readInt64:&pingId])
                 {
-                    MTLog(@"[MTInternalMessageParser: pong can't read pingId]");
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTInternalMessageParser: pong can't read pingId]");
+                    }
                     return nil;
                 }
                 
@@ -479,21 +493,27 @@
                 int64_t firstMessageId = 0;
                 if (![reader readInt64:&firstMessageId])
                 {
-                    MTLog(@"[MTInternalMessageParser: new_session_created can't read firstMessageId]");
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTInternalMessageParser: new_session_created can't read firstMessageId]");
+                    }
                     return nil;
                 }
                 
                 int64_t uniqueId = 0;
                 if (![reader readInt64:&uniqueId])
                 {
-                    MTLog(@"[MTInternalMessageParser: new_session_created can't read uniqueId]");
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTInternalMessageParser: new_session_created can't read uniqueId]");
+                    }
                     return nil;
                 }
                 
                 int64_t serverSalt = 0;
                 if (![reader readInt64:&serverSalt])
                 {
-                    MTLog(@"[MTInternalMessageParser: new_session_created can't read serverSalt]");
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTInternalMessageParser: new_session_created can't read serverSalt]");
+                    }
                     return nil;
                 }
                 
@@ -504,7 +524,9 @@
                 int64_t sessionId = 0;
                 if (![reader readInt64:&sessionId])
                 {
-                    MTLog(@"[MTInternalMessageParser: destroy_session_ok can't read sessionId]");
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTInternalMessageParser: destroy_session_ok can't read sessionId]");
+                    }
                     return nil;
                 }
                 
@@ -515,7 +537,9 @@
                 int64_t sessionId = 0;
                 if (![reader readInt64:&sessionId])
                 {
-                    MTLog(@"[MTInternalMessageParser: destroy_session_none can't read sessionId]");
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTInternalMessageParser: destroy_session_none can't read sessionId]");
+                    }
                     return nil;
                 }
                 
@@ -532,7 +556,9 @@
                 int32_t count = 0;
                 if (![reader readInt32:&count])
                 {
-                    MTLog(@"[MTInternalMessageParser: msg_container can't read count]");
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTInternalMessageParser: msg_container can't read count]");
+                    }
                     return nil;
                 }
                 
@@ -543,27 +569,35 @@
                     int64_t messageId = 0;
                     if (![reader readInt64:&messageId])
                     {
-                        MTLog(@"[MTInternalMessageParser: msg_container can't read messageId]");
+                        if (MTLogEnabled()) {
+                            MTLog(@"[MTInternalMessageParser: msg_container can't read messageId]");
+                        }
                         return nil;
                     }
                     
                     int32_t seqNo = 0;
                     if (![reader readInt32:&seqNo])
                     {
-                        MTLog(@"[MTInternalMessageParser: msg_container can't read seqNo]");
+                        if (MTLogEnabled()) {
+                            MTLog(@"[MTInternalMessageParser: msg_container can't read seqNo]");
+                        }
                         return nil;
                     }
                     
                     int32_t length = 0;
                     if (![reader readInt32:&length])
                     {
-                        MTLog(@"[MTInternalMessageParser: msg_container can't read length]");
+                        if (MTLogEnabled()) {
+                            MTLog(@"[MTInternalMessageParser: msg_container can't read length]");
+                        }
                         return nil;
                     }
                     
                     if (length < 0 || length > 16 * 1024 * 1024)
                     {
-                        MTLog(@"[MTInternalMessageParser: msg_container invalid length %d]", length);
+                        if (MTLogEnabled()) {
+                            MTLog(@"[MTInternalMessageParser: msg_container invalid length %d]", length);
+                        }
                         return nil;
                     }
                     
@@ -571,7 +605,9 @@
                     [messageData setLength:(NSUInteger)length];
                     if (![reader readBytes:messageData.mutableBytes length:(NSUInteger)length])
                     {
-                        MTLog(@"[MTInternalMessageParser: msg_container can't read bytes]");
+                        if (MTLogEnabled()) {
+                            MTLog(@"[MTInternalMessageParser: msg_container can't read bytes]");
+                        }
                         return nil;
                     }
                     

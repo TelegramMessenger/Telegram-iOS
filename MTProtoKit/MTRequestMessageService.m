@@ -125,8 +125,11 @@
                     anyNewDropRequests = true;
                 }
                 
-                if (request.requestContext.messageId != 0)
-                    MTLog(@"[MTRequestMessageService#%x drop %" PRId64 "]", (int)self, request.requestContext.messageId);
+                if (request.requestContext.messageId != 0) {
+                    if (MTLogEnabled()) {
+                        MTLog(@"[MTRequestMessageService#%x drop %" PRId64 "]", (int)self, request.requestContext.messageId);
+                    }
+                }
                 
                 request.requestContext = nil;
                 [_requests removeObjectAtIndex:(NSUInteger)index];
@@ -536,11 +539,15 @@
                     
                     if (rpcResult != nil)
                     {
-                        MTLog(@"[MTRequestMessageService#%p response for %" PRId64 " is %@]", self, request.requestContext.messageId, rpcResult);
+                        if (MTLogEnabled()) {
+                            MTLog(@"[MTRequestMessageService#%p response for %" PRId64 " is %@]", self, request.requestContext.messageId, rpcResult);
+                        }
                     }
                     else
                     {
-                        MTLog(@"[MTRequestMessageService#%p response for %" PRId64 " is error: %d: %@]", self, request.requestContext.messageId, (int)rpcError.errorCode, rpcError.errorDescription);
+                        if (MTLogEnabled()) {
+                            MTLog(@"[MTRequestMessageService#%p response for %" PRId64 " is error: %d: %@]", self, request.requestContext.messageId, (int)rpcError.errorCode, rpcError.errorDescription);
+                        }
                     }
                     
                     if (rpcResult != nil && request.requestContext.willInitializeApi)
@@ -667,8 +674,11 @@
                 }
             }
             
-            if (!requestFound)
-                MTLog(@"[MTRequestMessageService#%p response %" PRId64 " didn't match any request]", self, message.messageId);
+            if (!requestFound) {
+                if (MTLogEnabled()) {
+                    MTLog(@"[MTRequestMessageService#%p response %" PRId64 " didn't match any request]", self, message.messageId);
+                }
+            }
             else if (_requests.count == 0)
             {
                 id<MTRequestMessageServiceDelegate> delegate = _delegate;

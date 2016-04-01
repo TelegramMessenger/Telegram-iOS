@@ -155,7 +155,9 @@ static void MTNetworkAvailabilityContextRelease(const void *info)
         if (![currentReachabilityState isEqualToString:_lastReachabilityState])
         {
             _lastReachabilityState = currentReachabilityState;
-            MTLog(@"[MTNetworkAvailability#%p state: %@]", self, _lastReachabilityState);
+            if (MTLogEnabled()) {
+                MTLog(@"[MTNetworkAvailability#%p state: %@]", self, _lastReachabilityState);
+            }
             
             if (notify)
             {

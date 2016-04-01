@@ -204,7 +204,9 @@ NSData *MTAesEncrypt(NSData *data, NSData *key, NSData *iv)
 {
     if (key == nil || iv == nil)
     {
-        MTLog(@"***** MTAesEncrypt: empty key or iv");
+        if (MTLogEnabled()) {
+            MTLog(@"***** MTAesEncrypt: empty key or iv");
+        }
         return nil;
     }
     AES_KEY aesKey;
@@ -222,7 +224,9 @@ NSData *MTAesDecrypt(NSData *data, NSData *key, NSData *iv)
 {
     if (key == nil || iv == nil)
     {
-        MTLog(@"***** MTAesEncrypt: empty key or iv");
+        if (MTLogEnabled()) {
+            MTLog(@"***** MTAesEncrypt: empty key or iv");
+        }
         return nil;
     }
     AES_KEY aesKey;
@@ -380,7 +384,9 @@ bool MTFactorize(uint64_t what, uint64_t *resA, uint64_t *resB)
     }
     else
     {
-        MTLog(@"Factorization failed for %lld", (long long int)what);
+        if (MTLogEnabled()) {
+            MTLog(@"Factorization failed for %lld", (long long int)what);
+        }
         
         return false;
     }
