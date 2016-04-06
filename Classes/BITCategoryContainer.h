@@ -1,6 +1,11 @@
-#import "HockeySDKPrivate.h"
+#import <Foundation/Foundation.h>
+#import "HockeySDKFeatureConfig.h"
 
+#if HOCKEYSDK_FEATURE_METRICS
+
+#import "HockeySDKNullability.h"
 NS_ASSUME_NONNULL_BEGIN
+
 @interface BITCategoryContainer : NSObject
 
 + (void)activateCategory;
@@ -8,3 +13,5 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 NS_ASSUME_NONNULL_END
+
+#endif /* HOCKEYSDK_FEATURE_METRICS */
