@@ -1,5 +1,8 @@
 #import "BITCategoryContainer.h"
+#import "HockeySDKFeatureConfig.h"
 #import <objc/runtime.h>
+
+#if HOCKEYSDK_FEATURE_METRICS
 
 @implementation BITCategoryContainer
 
@@ -131,3 +134,5 @@ static const NSUInteger ChunkSize = 16384;
 }
 
 @end
+
+#endif /* HOCKEYSDK_FEATURE_METRICS */
