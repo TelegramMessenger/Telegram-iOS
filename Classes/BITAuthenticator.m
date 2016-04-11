@@ -55,17 +55,19 @@ typedef unsigned int bit_uint32;
 static unsigned char kBITPNGHeader[8] = {137, 80, 78, 71, 13, 10, 26, 10};
 static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 
-@implementation BITAuthenticator {
-  id _appDidBecomeActiveObserver;
-  id _appDidEnterBackgroundObserver;
-  UIViewController *_authenticationController;
-  
-  BOOL _isSetup;
-}
 
-- (void)dealloc {
-  [self unregisterObservers];
-}
+@interface BITAuthenticator ()
+
+@property (nonatomic, assign) BOOL isSetup;
+
+@property (nonatomic, strong) id appDidBecomeActiveObserver;
+@property (nonatomic, strong) id appDidEnterBackgroundObserver;
+@property (nonatomic, strong) UIViewController *authenticationController;
+
+@end
+
+
+@implementation BITAuthenticator
 
 - (instancetype)initWithAppIdentifier:(NSString *)appIdentifier appEnvironment:(BITEnvironment)environment {
   self = [super initWithAppIdentifier:appIdentifier appEnvironment:environment];
@@ -80,12 +82,16 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   return self;
 }
 
+- (void)dealloc {
+  [self unregisterObservers];
+}
+
 #pragma mark - BITHockeyBaseManager overrides
 - (void)startManager {
   //disabled in TestFlight and the AppStore
   if(self.appEnvironment != BITEnvironmentOther) return;
   
-  _isSetup = YES;
+  self.isSetup = YES;
 }
 
 #pragma mark -
@@ -105,7 +111,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
       completion();
     }
   }
-  _authenticationController = nil;
+  self.authenticationController = nil;
 }
 
 - (void)authenticateInstallation {
@@ -244,8 +250,8 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   NSAssert(viewController, @"ViewController should've been created");
   
   viewController.email = [self stringValueFromKeychainForKey:kBITAuthenticatorUserEmailKey];
-  _authenticationController = viewController;
-  _identificationCompletion = completion;
+  self.authenticationController = viewController;
+  self.identificationCompletion = completion;
   dispatch_async(dispatch_get_main_queue(), ^{
     [self showView:viewController];
   });
@@ -503,7 +509,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     identified = YES;
     [self storeInstallationIdentifier:authToken withType:self.identificationType];
     [self dismissAuthenticationControllerAnimated:YES completion:nil];
-    self->_authenticationController = nil;
+    self.authenticationController = nil;
     BOOL success = [self addStringValueToKeychain:email forKey:kBITAuthenticatorUserEmailKey];
     if (!success) {
       [self alertOnFailureStoringTokenInKeychain];
@@ -674,7 +680,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   //check if this URL was meant for us, if not return NO so the user can
   //handle it
   NSString *const kAuthorizationHost = @"authorize";
-  NSString *urlScheme = _urlScheme ? : [NSString stringWithFormat:@"ha%@", self.appIdentifier];
+  NSString *urlScheme = self.urlScheme ? : [NSString stringWithFormat:@"ha%@", self.appIdentifier];
   if(!([[url scheme] isEqualToString:urlScheme] && [[url host] isEqualToString:kAuthorizationHost])) {
     BITHockeyLog(@"URL scheme for authentication doesn't match!");
     return NO;
@@ -869,8 +875,8 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 #pragma mark - KVO
 - (void) registerObservers {
   __weak typeof(self) weakSelf = self;
-  if(nil == _appDidBecomeActiveObserver) {
-    _appDidBecomeActiveObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
+  if(nil == self.appDidBecomeActiveObserver) {
+    self.appDidBecomeActiveObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidBecomeActiveNotification
                                                                                     object:nil
                                                                                      queue:NSOperationQueue.mainQueue
                                                                                 usingBlock:^(NSNotification *note) {
@@ -878,8 +884,8 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
                                                                                   [strongSelf applicationDidBecomeActive:note];
                                                                                 }];
   }
-  if(nil == _appDidEnterBackgroundObserver) {
-    _appDidEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification
+  if(nil == self.appDidEnterBackgroundObserver) {
+    self.appDidEnterBackgroundObserver = [[NSNotificationCenter defaultCenter] addObserverForName:UIApplicationDidEnterBackgroundNotification
                                                                                        object:nil
                                                                                         queue:NSOperationQueue.mainQueue
                                                                                    usingBlock:^(NSNotification *note) {
@@ -890,13 +896,13 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
 }
 
 - (void) unregisterObservers {
-  if(_appDidBecomeActiveObserver) {
-    [[NSNotificationCenter defaultCenter] removeObserver:_appDidBecomeActiveObserver];
-    _appDidBecomeActiveObserver = nil;
+  if(self.appDidBecomeActiveObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:self.appDidBecomeActiveObserver];
+    self.appDidBecomeActiveObserver = nil;
   }
-  if(_appDidEnterBackgroundObserver) {
-    [[NSNotificationCenter defaultCenter] removeObserver:_appDidEnterBackgroundObserver];
-    _appDidEnterBackgroundObserver = nil;
+  if(self.appDidEnterBackgroundObserver) {
+    [[NSNotificationCenter defaultCenter] removeObserver:self.appDidEnterBackgroundObserver];
+    self.appDidEnterBackgroundObserver = nil;
   }
 }
 
