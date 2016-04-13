@@ -27,12 +27,12 @@ static NSString *const kBITCrashMetaAttachment = @"BITCrashMetaAttachment";
 
 @interface BITCrashManagerTests : XCTestCase
 
+@property BITCrashManager *sut;
+
 @end
 
 
 @implementation BITCrashManagerTests {
-  BITCrashManager *_sut;
-  BITHockeyAppClient *_hockeyAppClient;
   BOOL _startManagerInitialized;
 }
 
@@ -84,6 +84,22 @@ static NSString *const kBITCrashMetaAttachment = @"BITCrashMetaAttachment";
   XCTAssertNotNil(_sut, @"Should be there");
 }
 
+#pragma mark - Getter/Setter tests
+
+- (void)testSetServerURL {
+  BITHockeyAppClient *client = self.sut.hockeyAppClient;
+  NSURL *hockeyDefaultURL = [NSURL URLWithString:BITHOCKEYSDK_URL];
+  XCTAssertEqualObjects(self.sut.hockeyAppClient.baseURL, hockeyDefaultURL);
+  
+  [self.sut setServerURL:BITHOCKEYSDK_URL];
+  XCTAssertEqual(self.sut.hockeyAppClient, client, @"HockeyAppClient should stay the same when setting same URL again");
+  XCTAssertEqualObjects(self.sut.hockeyAppClient.baseURL, hockeyDefaultURL);
+  
+  NSString *testURLString = @"http://example.com";
+  [self.sut setServerURL:testURLString];
+  XCTAssertNotEqual(self.sut.hockeyAppClient, client, @"Should have created a new instance of BITHockeyAppClient");
+  XCTAssertEqualObjects(self.sut.hockeyAppClient.baseURL, [NSURL URLWithString:testURLString]);
+}
 
 #pragma mark - Persistence tests
 
