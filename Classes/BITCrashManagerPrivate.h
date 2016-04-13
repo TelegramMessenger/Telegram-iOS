@@ -83,6 +83,8 @@
 
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
 
+- (instancetype)initWithAppIdentifier:(NSString *)appIdentifier appEnvironment:(BITEnvironment)environment hockeyAppClient:(BITHockeyAppClient *)hockeyAppClient NS_DESIGNATED_INITIALIZER;
+
 - (void)cleanCrashReports;
 
 - (NSString *)userIDForCrashReport;

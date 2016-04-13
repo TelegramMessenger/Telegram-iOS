@@ -40,12 +40,7 @@ static NSString *const kBITCrashMetaAttachment = @"BITCrashMetaAttachment";
   [super setUp];
   
   _startManagerInitialized = NO;
-  _sut = [[BITCrashManager alloc] initWithAppIdentifier:nil appEnvironment:BITEnvironmentOther];
-
-  _hockeyAppClient = [[BITHockeyAppClient alloc] initWithBaseURL:[NSURL URLWithString: BITHOCKEYSDK_URL]];
-  _hockeyAppClient.baseURL = [NSURL URLWithString:BITHOCKEYSDK_URL];
-  
-  [_sut setHockeyAppClient:_hockeyAppClient];
+  _sut = [[BITCrashManager alloc] initWithAppIdentifier:nil appEnvironment:BITEnvironmentOther hockeyAppClient:[[BITHockeyAppClient alloc] initWithBaseURL:[NSURL URLWithString: BITHOCKEYSDK_URL]]];
 }
 
 - (void)tearDown {
