@@ -55,8 +55,10 @@
 - (void)testNewSessionIsCreatedCorrectly {
   NSUserDefaults *testUserDefaults = [NSUserDefaults new];
   [testUserDefaults setBool:NO forKey:kBITApplicationWasLaunched];
-  
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnonnull"
   self.sut = [[BITMetricsManager alloc] initWithChannel:nil telemetryContext:nil persistence:nil userDefaults:testUserDefaults];
+#pragma clang diagnostic pop
   NSString *testSessionId1 = @"12345";
   NSString *testSessionId2 = @"67890";
   
@@ -85,7 +87,11 @@
 - (void)testTrackSessionEnqueuesObject {
   BITChannel *channel = [BITChannel new];
   id mockChannel = OCMPartialMock(channel);
+  
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnonnull"
   self.sut = [[BITMetricsManager alloc] initWithChannel:mockChannel telemetryContext:nil persistence:nil userDefaults:nil];
+#pragma clang diagnostic pop
   
   OCMExpect([mockChannel enqueueTelemetryItem:[OCMArg checkWithBlock:^BOOL(NSObject *value)
                                              {
@@ -100,8 +106,12 @@
   id mockContext = OCMPartialMock(context);
   NSUserDefaults *testUserDefaults = [NSUserDefaults new];
   [testUserDefaults setBool:NO forKey:kBITApplicationWasLaunched];
-
+  
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnonnull"
   self.sut = [[BITMetricsManager alloc] initWithChannel:nil telemetryContext:mockContext persistence:nil userDefaults:testUserDefaults];
+#pragma clang diagnostic pop
+
   NSString *testSessionId = @"sessionId";
   
   OCMExpect([mockContext setSessionId:testSessionId]);
