@@ -200,8 +200,6 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   id _networkDidBecomeReachableObserver;
 }
 
-@synthesize serverURL = _serverURL;
-
 - (instancetype)initWithAppIdentifier:(NSString *)appIdentifier appEnvironment:(BITEnvironment)environment hockeyAppClient:(BITHockeyAppClient *)hockeyAppClient {
   if ((self = [super initWithAppIdentifier:appIdentifier appEnvironment:environment])) {
     _delegate = nil;
@@ -268,9 +266,9 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
 }
 
 - (void)setServerURL:(NSString *)serverURL {
-  if ([serverURL isEqualToString:_serverURL]) { return; }
+  if ([serverURL isEqualToString:super.serverURL]) { return; }
 
-  _serverURL = serverURL;
+  super.serverURL = serverURL;
   self.hockeyAppClient = [[BITHockeyAppClient alloc] initWithBaseURL:[NSURL URLWithString:serverURL]];
 }
 
