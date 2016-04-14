@@ -229,4 +229,35 @@
     [verifyCount(classMock, times(1)) allowAutomaticFetchingForNewFeedbackForManager:self.sut];
 }
 
+#pragma mark - FeedbackManagerDelegate Tests
+
+- (void)testFeedbackComposeViewController {
+  UIImage *sampleImage1 = [UIImage new];
+  UIImage *sampleImage2 = [UIImage new];
+  NSData *sampleData1 = [NSData data];
+  NSData *sampleData2 = [NSData data];
+  
+  self.sut.feedbackComposeHideImageAttachmentButton = YES;
+  XCTAssertTrue(self.sut.feedbackComposeHideImageAttachmentButton);
+  
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated"
+  self.sut.feedbackComposerPreparedItems = @[sampleImage1, sampleData1];
+#pragma clang diagnostic pop
+
+  id<BITFeedbackManagerDelegate> mockDelegate = mockProtocol(@protocol(BITFeedbackManagerDelegate));
+  [given([mockDelegate preparedItemsForFeedbackManager:self.sut]) willReturn:@[sampleImage2, sampleData2]];
+  self.sut.delegate = mockDelegate;
+  
+  BITFeedbackComposeViewController *composeViewController = [self.sut feedbackComposeViewController];
+  
+  NSArray *attachments = [composeViewController performSelector:@selector(attachments)];
+  
+  XCTAssertEqual(attachments.count, 4);
+  
+  XCTAssertTrue(composeViewController.hideImageAttachmentButton);
+  
+  XCTAssertEqual(composeViewController.delegate, mockDelegate);
+}
+
 @end
