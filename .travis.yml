@@ -20,13 +20,28 @@ env:
 before_install:
   - xcrun simctl list
   - gem install xcpretty --no-rdoc --no-ri --no-document --quiet
+  - gem install xcpretty-travis-formatter --no-rdoc --no-ri --no-document --quiet
 
 script:
   - set -o pipefail
-  - COMMAND="xcodebuild -project '$PROJECT' -scheme '$SCHEME' -sdk '$SDK' -configuration '$CONFIGURATION'"
+  - COMMAND="env NSUnbufferedIO=YES xcodebuild -project '$PROJECT' -scheme '$SCHEME' -sdk '$SDK' -configuration '$CONFIGURATION'"
+
+  # Run tests
   - if [ $RUN_TESTS == "YES" ]; then
       COMMAND+=" -destination '$DESTINATION' XCODEBUILD_GCC_PREPROCESSOR_DEFINITIONS="CI=1" clean test";
     fi
-  - COMMAND+=" | xcpretty -c"
+
+  - COMMAND+=" | tee xcodebuild.log"
+
+  # Add xcpretty
+  - COMMAND+=" | xcpretty -f `xcpretty-travis-formatter`"
+
   - echo $COMMAND
-  - eval $COMMAND
+  - eval $COMMAND && rm xcodebuild.log
+
+# Use better failure diagnostics, copied from https://github.com/0xced/XCDYouTubeKit
+after_failure:
+  - cat xcodebuild.log
+  - cat -n $TMPDIR/com.apple.dt.XCTest-status/Session*.log
+  - cat -n ~/Library/Logs/DiagnosticReports/xctest*.crash
+  - sleep 5
