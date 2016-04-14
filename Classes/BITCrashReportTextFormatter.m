@@ -52,6 +52,8 @@
 
 #import "BITCrashReportTextFormatter.h"
 
+#define XAMARIN_STACK_TRACE_DELIMITER @"Xamarin Exception Stack:"
+
 /*
  * XXX: The ARM64 CPU type, and ARM_V7S and ARM_V8 Mach-O CPU subtypes are not
  * defined in the Mac OS X 10.8 headers.
@@ -67,7 +69,6 @@
 #ifndef CPU_SUBTYPE_ARM_V8
 # define CPU_SUBTYPE_ARM_V8 13
 #endif
-
 
 /**
  * Sort PLCrashReportBinaryImageInfo instances by their starting address.
@@ -425,10 +426,25 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
   /* Uncaught Exception */
   if (report.hasExceptionInfo) {
     [text appendFormat: @"Application Specific Information:\n"];
-    [text appendFormat: @"*** Terminating app due to uncaught exception '%@', reason: '%@'\n",
-     report.exceptionInfo.exceptionName, report.exceptionInfo.exceptionReason];
     
+    NSString *xamarinStackTrace;
+    NSString *reason = report.exceptionInfo.exceptionReason;
+    NSInteger xamarinStackPosition = [reason rangeOfString:XAMARIN_STACK_TRACE_DELIMITER].location;
+    if (xamarinStackPosition != NSNotFound) {
+      xamarinStackTrace = [reason substringFromIndex:xamarinStackPosition];
+      reason = [reason substringToIndex:xamarinStackPosition];
+    }
+    
+    [text appendFormat: @"*** Terminating app due to uncaught exception '%@', reason: '%@'\n",
+    report.exceptionInfo.exceptionName, reason];
     [text appendString: @"\n"];
+    
+    /* Xamarin Exception */
+    if (xamarinStackTrace) {
+      [text appendFormat:@"%@\n", xamarinStackTrace];
+      [text appendString: @"\n"];
+    }
+    
   } else if (crashed_thread != nil) {
     // try to find the selector in case this was a crash in obj_msgSend
     // we search this whether the crash happened in obj_msgSend or not since we don't have the symbol!
