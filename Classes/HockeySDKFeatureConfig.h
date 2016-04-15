@@ -79,6 +79,7 @@
 #    define HOCKEYSDK_FEATURE_UPDATES 1
 #endif /* HOCKEYSDK_FEATURE_UPDATES */
 
+
 /**
  * If true, include support for auto collecting metrics data such as sessions and user
  *
