@@ -13,14 +13,24 @@ static BITLogLevel _currentLogLevel = BITLogLevelWarning;
   _currentLogLevel = currentLogLevel;
 }
 
-+ (void)logLevel:(BITLogLevel)logLevel function:(const char *)function line:(int)line message:(NSString *)message, ... {
-  va_list args;
+static BITLogHandler currentLogHandler = ^(BITLogLevel logLevel, const char *file, const char *function, uint line, NSString *message) {
   if (message) {
-    va_start(args, message);
-    if (self.currentLogLevel < logLevel) {
+    if (_currentLogLevel < logLevel) {
       return;
     }
-    NSLog((@"[HockeySDK] %s/%d %@"), function, line, [[NSString alloc] initWithFormat:message arguments:args]);
+    NSLog((@"[HockeySDK] %s/%d %@"), function, line, message);
+  }
+};
+
++ (void)setLogHandler:(BITLogHandler)logHandler {
+  currentLogHandler = logHandler;
+}
+
++ (void)logLevel:(BITLogLevel)loglevel file:(const char *)file function:(const char *)function line:(uint)line message:(NSString *)message, ... {
+  if (currentLogHandler) {
+    va_list args;
+    va_start(args, message);
+    currentLogHandler(loglevel, file, function, line, [[NSString alloc] initWithFormat:message arguments:args]);
     va_end(args);
   }
 }
