@@ -52,8 +52,6 @@
 
 #import "BITCrashReportTextFormatter.h"
 
-#define XAMARIN_STACK_TRACE_DELIMITER @"Xamarin Exception Stack:"
-
 /*
  * XXX: The ARM64 CPU type, and ARM_V7S and ARM_V8 Mach-O CPU subtypes are not
  * defined in the Mac OS X 10.8 headers.
@@ -197,6 +195,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
  */
 @implementation BITCrashReportTextFormatter
 
+NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
 
 /**
  * Formats the provided @a report as human-readable text in the given @a textFormat, and return
@@ -429,7 +428,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
     
     NSString *xamarinStackTrace;
     NSString *reason = report.exceptionInfo.exceptionReason;
-    NSInteger xamarinStackPosition = [reason rangeOfString:XAMARIN_STACK_TRACE_DELIMITER].location;
+    NSInteger xamarinStackPosition = [reason rangeOfString:BITXamarinStackTraceDelimiter].location;
     if (xamarinStackPosition != NSNotFound) {
       xamarinStackTrace = [reason substringFromIndex:xamarinStackPosition];
       reason = [reason substringToIndex:xamarinStackPosition];
