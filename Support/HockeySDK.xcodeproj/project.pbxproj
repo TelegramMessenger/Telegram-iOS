@@ -254,6 +254,10 @@
 		1EF95CA7162CB037000AE3AD /* BITFeedbackActivity.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EF95CA5162CB036000AE3AD /* BITFeedbackActivity.m */; };
 		1EF95CAA162CB314000AE3AD /* BITFeedbackComposeViewControllerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = 1EF95CA9162CB313000AE3AD /* BITFeedbackComposeViewControllerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		1EFF03E517F2485500A5F13C /* BITCrashManagerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1EFF03E417F2485500A5F13C /* BITCrashManagerTests.m */; };
+		6EA5DEA51CC05E7600D44206 /* live_report_xamarin.plcrash in Resources */ = {isa = PBXBuildFile; fileRef = 6EA5DEA41CC05E7600D44206 /* live_report_xamarin.plcrash */; };
+		6EA5DEA61CC05E7600D44206 /* live_report_xamarin.plcrash in Resources */ = {isa = PBXBuildFile; fileRef = 6EA5DEA41CC05E7600D44206 /* live_report_xamarin.plcrash */; };
+		6EA5DEAE1CC0670000D44206 /* log_report_xamarin in Resources */ = {isa = PBXBuildFile; fileRef = 6EA5DEAD1CC0670000D44206 /* log_report_xamarin */; };
+		6EA5DEAF1CC0670000D44206 /* log_report_xamarin in Resources */ = {isa = PBXBuildFile; fileRef = 6EA5DEAD1CC0670000D44206 /* log_report_xamarin */; };
 		802C45B31BD9629B000D043C /* HockeySDKNullability.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E3A260E1B2B207900D59683 /* HockeySDKNullability.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		802C45B41BD9629C000D043C /* HockeySDKNullability.h in Headers */ = {isa = PBXBuildFile; fileRef = 1E3A260E1B2B207900D59683 /* HockeySDKNullability.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		8034E6271BA31AD600D83A30 /* BITTelemetryContext.h in Headers */ = {isa = PBXBuildFile; fileRef = 8034E61E1BA31AD500D83A30 /* BITTelemetryContext.h */; };
@@ -604,6 +608,8 @@
 		1EF95CA9162CB313000AE3AD /* BITFeedbackComposeViewControllerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITFeedbackComposeViewControllerDelegate.h; sourceTree = "<group>"; };
 		1EFF03D717F20F8300A5F13C /* BITCrashManagerPrivate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BITCrashManagerPrivate.h; sourceTree = "<group>"; };
 		1EFF03E417F2485500A5F13C /* BITCrashManagerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITCrashManagerTests.m; sourceTree = "<group>"; };
+		6EA5DEA41CC05E7600D44206 /* live_report_xamarin.plcrash */ = {isa = PBXFileReference; lastKnownFileType = file; path = live_report_xamarin.plcrash; sourceTree = "<group>"; };
+		6EA5DEAD1CC0670000D44206 /* log_report_xamarin */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = log_report_xamarin; sourceTree = "<group>"; };
 		8034E61E1BA31AD500D83A30 /* BITTelemetryContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITTelemetryContext.h; sourceTree = "<group>"; };
 		8034E61F1BA31AD500D83A30 /* BITTelemetryContext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITTelemetryContext.m; sourceTree = "<group>"; };
 		8034E6201BA31AD500D83A30 /* BITTelemetryData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITTelemetryData.h; sourceTree = "<group>"; };
@@ -1015,6 +1021,8 @@
 				1E70A23117F2F982001BB32D /* live_report_signal.plcrash */,
 				1E85C5601B3438E000CE2C0D /* live_report_exception_marketing.plcrash */,
 				1E85C5611B3438E000CE2C0D /* live_report_signal_marketing.plcrash */,
+				6EA5DEAD1CC0670000D44206 /* log_report_xamarin */,
+				6EA5DEA41CC05E7600D44206 /* live_report_xamarin.plcrash */,
 			);
 			path = Fixtures;
 			sourceTree = "<group>";
@@ -1668,6 +1676,8 @@
 				1E70A23417F2F982001BB32D /* live_report_signal.plcrash in Resources */,
 				1EA1170416F53B49001C015C /* StoreBundleIdentifierUnknown.json in Resources */,
 				1E70A23317F2F982001BB32D /* live_report_exception.plcrash in Resources */,
+				6EA5DEA51CC05E7600D44206 /* live_report_xamarin.plcrash in Resources */,
+				6EA5DEAE1CC0670000D44206 /* log_report_xamarin in Resources */,
 				1E70A23217F2F982001BB32D /* live_report_empty.plcrash in Resources */,
 				1E494AED19491943001EFF74 /* AppIcon@2x.png in Resources */,
 				1EA1170916F53E3A001C015C /* StoreBundleIdentifierKnown.json in Resources */,
@@ -1694,6 +1704,8 @@
 				1E15088B1B0C946700D7B9D9 /* live_report_empty.plcrash in Resources */,
 				1E15087E1B0C922600D7B9D9 /* HockeySDKResources.bundle in Resources */,
 				1E15088D1B0C946700D7B9D9 /* live_report_signal.plcrash in Resources */,
+				6EA5DEA61CC05E7600D44206 /* live_report_xamarin.plcrash in Resources */,
+				6EA5DEAF1CC0670000D44206 /* log_report_xamarin in Resources */,
 				1E15088A1B0C946700D7B9D9 /* StoreBundleIdentifierKnown.json in Resources */,
 				1E15088E1B0C946D00D7B9D9 /* InfoPlist.strings in Resources */,
 				1E15088C1B0C946700D7B9D9 /* live_report_exception.plcrash in Resources */,

@@ -351,6 +351,23 @@
   assertThat([_sut firstNotApprovedCrashReport], notNilValue());
   
   [_sut cleanCrashReports];
+  
+  // handle a new xamarin crash report
+  assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_xamarin"], isTrue());
+  
+  [_sut handleCrashReport];
+  
+  // this old report doesn't have a marketing version present
+  assertThat(_sut.lastSessionCrashDetails.appVersion, notNilValue());
+  
+  [verifyCount(delegateMock, times(1)) applicationLogForCrashManager:_sut];
+  [verifyCount(delegateMock, times(1)) attachmentForCrashManager:_sut];
+  
+  // we should have now 1 pending crash report
+  assertThatBool([_sut hasPendingCrashReport], isTrue());
+  assertThat([_sut firstNotApprovedCrashReport], notNilValue());
+  
+  [_sut cleanCrashReports];
 }
 
 @end
