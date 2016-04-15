@@ -420,6 +420,15 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
 }
 
+- (void)setDebugLogEnabled:(BOOL)debugLogEnabled {
+  _debugLogEnabled = debugLogEnabled;
+  if (debugLogEnabled) {
+    self.logLevel = BITLogLevelDebug;
+  } else {
+    self.logLevel = BITLogLevelWarning;
+  }
+}
+
 - (BITLogLevel)logLevel {
   return BITHockeyLogger.currentLogLevel;
 }

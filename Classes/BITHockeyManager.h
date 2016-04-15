@@ -473,7 +473,7 @@ NS_ASSUME_NONNULL_BEGIN
  
  *Default*: _NO_
  */
-@property (nonatomic, assign, getter=isDebugLogEnabled) BOOL debugLogEnabled;
+@property (nonatomic, assign, getter=isDebugLogEnabled) BOOL debugLogEnabled DEPRECATED_MSG_ATTRIBUTE("Use logLevel instead!");
 
 /**
  Set a custom block that handles all the log messages that are emitted from the SDK.
