@@ -176,7 +176,10 @@
   NSString *testFilePath = @"path/to/file";
   
   // test
-  [_sut handleResponseWithStatusCode:testStatusCode responseData:testData filePath:testFilePath error:[NSError new]];
+  [_sut handleResponseWithStatusCode:testStatusCode
+                        responseData:testData
+                            filePath:testFilePath
+                               error:[NSError errorWithDomain:@"Network error" code:503 userInfo:nil]];
   
   //verify
   [verify(_mockPersistence) giveBackRequestedFilePath:testFilePath];
