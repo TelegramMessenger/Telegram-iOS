@@ -35,6 +35,9 @@ typedef NS_ENUM(NSUInteger, BITLogLevel) {
   BITLogLevelVerbose = 4
 };
 
+typedef NSString *(^BITLogMessageProvider)(void);
+typedef void (^BITLogHandler)(BITLogMessageProvider messageProvider, BITLogLevel logLevel, const char *file, const char *function, uint line);
+
 /**
  *  HockeySDK App environment
  */
