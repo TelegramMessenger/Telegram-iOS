@@ -93,6 +93,7 @@
 		D07A5CFD1BBDE6E400451791 /* Promise.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07A5CFC1BBDE6E400451791 /* Promise.swift */; };
 		D09FD73E1BA9BAB900FF0A4F /* SVariable.h in Headers */ = {isa = PBXBuildFile; fileRef = D09FD73C1BA9BAB900FF0A4F /* SVariable.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D09FD73F1BA9BAB900FF0A4F /* SVariable.m in Sources */ = {isa = PBXBuildFile; fileRef = D09FD73D1BA9BAB900FF0A4F /* SVariable.m */; };
+		D0CD17B21CC17C83007C5650 /* Signal_Materialize.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CD17B11CC17C83007C5650 /* Signal_Materialize.swift */; };
 		D0FC1A3A1CA3284F0056AE9A /* Signal_Merge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FC1A391CA3284F0056AE9A /* Signal_Merge.swift */; };
 /* End PBXBuildFile section */
 
@@ -208,6 +209,7 @@
 		D07A5CFC1BBDE6E400451791 /* Promise.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Promise.swift; sourceTree = "<group>"; };
 		D09FD73C1BA9BAB900FF0A4F /* SVariable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SVariable.h; sourceTree = "<group>"; };
 		D09FD73D1BA9BAB900FF0A4F /* SVariable.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SVariable.m; sourceTree = "<group>"; };
+		D0CD17B11CC17C83007C5650 /* Signal_Materialize.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Signal_Materialize.swift; sourceTree = "<group>"; };
 		D0FC1A391CA3284F0056AE9A /* Signal_Merge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Signal_Merge.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -265,6 +267,7 @@
 				D0FC1A391CA3284F0056AE9A /* Signal_Merge.swift */,
 				D0085B491B282BEE00EAF753 /* Atomic.swift */,
 				D0085B4A1B282BEE00EAF753 /* Signal_Reduce.swift */,
+				D0CD17B11CC17C83007C5650 /* Signal_Materialize.swift */,
 				D0085B4B1B282BEE00EAF753 /* Signal.swift */,
 				D0085B4C1B282BEE00EAF753 /* Disposable.swift */,
 				D0085B4D1B282BEE00EAF753 /* Signal_Mapping.swift */,
@@ -627,6 +630,7 @@
 				D0085B601B282BEE00EAF753 /* Disposable.swift in Sources */,
 				D0FC1A3A1CA3284F0056AE9A /* Signal_Merge.swift in Sources */,
 				D0085B531B282BEE00EAF753 /* ThreadPool.swift in Sources */,
+				D0CD17B21CC17C83007C5650 /* Signal_Materialize.swift in Sources */,
 				D0085B5F1B282BEE00EAF753 /* Signal.swift in Sources */,
 				D07A5CFD1BBDE6E400451791 /* Promise.swift in Sources */,
 				D0085B5E1B282BEE00EAF753 /* Signal_Reduce.swift in Sources */,
@@ -724,6 +728,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_BITCODE = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
@@ -749,6 +754,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_BITCODE = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
 				INFOPLIST_FILE = SwiftSignalKit/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -970,6 +976,125 @@
 			};
 			name = Release;
 		};
+		D086A5741CC0117500F08284 /* Hockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_BITCODE = NO;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.1;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Hockeyapp;
+		};
+		D086A5751CC0117500F08284 /* Hockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_BITCODE = YES;
+				INFOPLIST_FILE = SSignalKit/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Hockeyapp;
+		};
+		D086A5761CC0117500F08284 /* Hockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)/Developer/Library/Frameworks",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = SSignalKitTests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					XCTest,
+					"-ObjC",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Hockeyapp;
+		};
+		D086A5771CC0117500F08284 /* Hockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_BITCODE = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				INFOPLIST_FILE = SwiftSignalKit/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+			};
+			name = Hockeyapp;
+		};
+		D086A5781CC0117500F08284 /* Hockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)/Developer/Library/Frameworks",
+					"$(inherited)",
+				);
+				GCC_NO_COMMON_BLOCKS = YES;
+				INFOPLIST_FILE = SwiftSignalKitTests/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.3;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Hockeyapp;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -978,6 +1103,7 @@
 			buildConfigurations = (
 				D0085B361B282B9800EAF753 /* Debug */,
 				D0085B371B282B9800EAF753 /* Release */,
+				D086A5771CC0117500F08284 /* Hockeyapp */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -987,6 +1113,7 @@
 			buildConfigurations = (
 				D0085B391B282B9800EAF753 /* Debug */,
 				D0085B3A1B282B9800EAF753 /* Release */,
+				D086A5781CC0117500F08284 /* Hockeyapp */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -996,6 +1123,7 @@
 			buildConfigurations = (
 				D0445DEC1A7C2CA500267924 /* Debug */,
 				D0445DED1A7C2CA500267924 /* Release */,
+				D086A5741CC0117500F08284 /* Hockeyapp */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -1005,6 +1133,7 @@
 			buildConfigurations = (
 				D0445DEF1A7C2CA500267924 /* Debug */,
 				D0445DF01A7C2CA500267924 /* Release */,
+				D086A5751CC0117500F08284 /* Hockeyapp */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -1014,6 +1143,7 @@
 			buildConfigurations = (
 				D0445DF21A7C2CA500267924 /* Debug */,
 				D0445DF31A7C2CA500267924 /* Release */,
+				D086A5761CC0117500F08284 /* Hockeyapp */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

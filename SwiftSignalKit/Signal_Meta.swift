@@ -11,10 +11,12 @@ private final class SignalQueueState<T, E> : Disposable {
     
     var queuedSignals: [Signal<T, E>] = []
     let queueMode: Bool
+    let throttleMode: Bool
     
-    init(subscriber: Subscriber<T, E>, queueMode: Bool) {
+    init(subscriber: Subscriber<T, E>, queueMode: Bool, throttleMode: Bool) {
         self.subscriber = subscriber
         self.queueMode = queueMode
+        self.throttleMode = throttleMode
     }
     
     func beginWithDisposable(disposable: Disposable) {
@@ -25,6 +27,9 @@ private final class SignalQueueState<T, E> : Disposable {
         var startSignal = false
         OSSpinLockLock(&self.lock)
         if self.queueMode && self.executingSignal {
+            if self.throttleMode {
+                self.queuedSignals.removeAll()
+            }
             self.queuedSignals.append(signal)
         } else {
             self.executingSignal = true
@@ -108,7 +113,7 @@ private final class SignalQueueState<T, E> : Disposable {
 
 public func switchToLatest<T, E>(signal: Signal<Signal<T, E>, E>) -> Signal<T, E> {
     return Signal { subscriber in
-        let state = SignalQueueState(subscriber: subscriber, queueMode: false)
+        let state = SignalQueueState(subscriber: subscriber, queueMode: false, throttleMode: false)
         state.beginWithDisposable(signal.start(next: { next in
             state.enqueueSignal(next)
         }, error: { error in
@@ -122,7 +127,7 @@ public func switchToLatest<T, E>(signal: Signal<Signal<T, E>, E>) -> Signal<T, E
 
 public func queue<T, E>(signal: Signal<Signal<T, E>, E>) -> Signal<T, E> {
     return Signal { subscriber in
-        let state = SignalQueueState(subscriber: subscriber, queueMode: true)
+        let state = SignalQueueState(subscriber: subscriber, queueMode: true, throttleMode: false)
         state.beginWithDisposable(signal.start(next: { next in
             state.enqueueSignal(next)
         }, error: { error in
@@ -134,33 +139,79 @@ public func queue<T, E>(signal: Signal<Signal<T, E>, E>) -> Signal<T, E> {
     }
 }
 
-public func mapToSignal<T, R, E>(f: T -> Signal<R, E>)(signal: Signal<T, E>) -> Signal<R, E> {
-    return signal |> map { f($0) } |> switchToLatest
-}
-
-public func mapToQueue<T, R, E>(f: T -> Signal<R, E>)(signal: Signal<T, E>) -> Signal<R, E> {
-    return signal |> map { f($0) } |> queue
-}
-
-public func then<T, E>(nextSignal: Signal<T, E>)(signal: Signal<T, E>) -> Signal<T, E> {
-    return Signal<T, E> { subscriber in
-        let disposable = DisposableSet()
-        
-        disposable.add(signal.start(next: { next in
-            subscriber.putNext(next)
+public func throttled<T, E>(signal: Signal<Signal<T, E>, E>) -> Signal<T, E> {
+    return Signal { subscriber in
+        let state = SignalQueueState(subscriber: subscriber, queueMode: true, throttleMode: true)
+        state.beginWithDisposable(signal.start(next: { next in
+            state.enqueueSignal(next)
         }, error: { error in
             subscriber.putError(error)
         }, completed: {
-            disposable.add(nextSignal.start(next: { next in
-                subscriber.putNext(next)
+            state.beginCompletion()
+        }))
+        return state
+    }
+}
+
+public func mapToSignal<T, R, E>(f: T -> Signal<R, E>) -> (signal: Signal<T, E>) -> Signal<R, E> {
+    return { signal -> Signal<R, E> in
+        return Signal<Signal<R, E>, E> { subscriber in
+            return signal.start(next: { next in
+                subscriber.putNext(f(next))
             }, error: { error in
                 subscriber.putError(error)
             }, completed: {
                 subscriber.putCompletion()
+            })
+        } |> switchToLatest
+    }
+}
+
+public func mapToSignalPromotingError<T, R, E>(f: T -> Signal<R, E>) -> (signal: Signal<T, NoError>) -> Signal<R, E> {
+    return { signal -> Signal<R, E> in
+        return Signal<Signal<R, E>, E> { subscriber in
+            return signal.start(next: { next in
+                subscriber.putNext(f(next))
+            }, completed: { 
+                subscriber.putCompletion()
+            })
+        } |> switchToLatest
+    }
+}
+
+public func mapToQueue<T, R, E>(f: T -> Signal<R, E>) -> (signal: Signal<T, E>) -> Signal<R, E> {
+    return { signal -> Signal<R, E> in
+        return signal |> map { f($0) } |> queue
+    }
+}
+
+public func mapToThrottled<T, R, E>(f: T -> Signal<R, E>) -> (signal: Signal<T, E>) -> Signal<R, E> {
+    return { signal -> Signal<R, E> in
+        return signal |> map { f($0) } |> throttled
+    }
+}
+
+public func then<T, E>(nextSignal: Signal<T, E>) -> (signal: Signal<T, E>) -> Signal<T, E> {
+    return { signal -> Signal<T, E> in
+        return Signal<T, E> { subscriber in
+            let disposable = DisposableSet()
+            
+            disposable.add(signal.start(next: { next in
+                subscriber.putNext(next)
+            }, error: { error in
+                subscriber.putError(error)
+            }, completed: {
+                disposable.add(nextSignal.start(next: { next in
+                    subscriber.putNext(next)
+                }, error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
             }))
-        }))
-        
-        return disposable
+            
+            return disposable
+        }
     }
 }
 
@@ -175,121 +226,3 @@ public func `defer`<T, E>(generator: () -> Signal<T, E>) -> Signal<T, E> {
         })
     }
 }
-
-public class SignalQueue<T, E> {
-    private let lock = Lock()
-    
-    private var queuedSignals = Bag<() -> Disposable>()
-    private var currentIndex: Bag<() -> Disposable>.Index?
-    private var currentDisposable = MetaDisposable()
-    
-    public init() {
-        
-    }
-    
-    deinit {
-        self.currentDisposable.dispose()
-    }
-    
-    public func enqueued(signal: Signal<T, E>) -> Signal<T, E> {
-        return Signal { subscriber in
-            let disposable = MetaDisposable()
-            
-            let activate = { () -> Disposable in
-                disposable.set(signal.start(next: { next in
-                    subscriber.putNext(next)
-                }, error: { error in
-                    subscriber.putError(error)
-                }, completed: {
-                    subscriber.putCompletion()
-                }))
-                return disposable
-            }
-            
-            var dequeue = false
-            var index: Bag<Signal<Void, NoError>>.Index!
-            self.lock.locked {
-                dequeue = self.queuedSignals.isEmpty
-                index = self.queuedSignals.add(activate)
-            }
-            
-            if dequeue {
-                self.dequeue()
-            }
-            
-            return ActionDisposable {
-                var dequeue = false
-                self.lock.locked {
-                    self.queuedSignals.remove(index)
-                    if let currentIndex = self.currentIndex where currentIndex == index {
-                        self.currentDisposable.set(nil)
-                        dequeue = true
-                    }
-                }
-                if dequeue {
-                    self.dequeue()
-                }
-            }
-        }
-    }
-    
-    private func dequeue() {
-        var activate: (() -> Disposable)?
-        self.lock.locked {
-            if let (index, value) = self.queuedSignals.first {
-                activate = value
-                self.currentIndex = index
-            }
-        }
-        
-        if let activate = activate {
-            self.currentDisposable.set(activate())
-        }
-    }
-}
-
-/*@interface SSignalQueue () {
-    SPipe *_pipe;
-    id<SDisposable> _disposable;
-}
-
-@end
-
-@implementation SSignalQueue
-
-- (instancetype)init {
-    self = [super init];
-    if (self != nil) {
-        _pipe = [[SPipe alloc] init];
-        _disposable = [[_pipe.signalProducer() queue] startWithNext:nil];
-    }
-    return self;
-}
-
-- (void)dealloc {
-    [_disposable dispose];
-    }
-    
-    - (SSignal *)enqueue:(SSignal *)signal {
-        return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
-            SPipe *disposePipe = [[SPipe alloc] init];
-            
-            SSignal *proxy = [[[[signal onNext:^(id next) {
-            [subscriber putNext:next];
-            }] onError:^(id error) {
-            [subscriber putError:error];
-            }] onCompletion:^{
-            [subscriber putCompletion];
-            }] catch:^SSignal *(__unused id error) {
-            return [SSignal complete];
-            }];
-            
-            _pipe.sink([proxy takeUntilReplacement:disposePipe.signalProducer()]);
-            
-            return [[SBlockDisposable alloc] initWithBlock:^{
-            disposePipe.sink([SSignal complete]);
-            }];
-        }];
-}
-
-@end*/
