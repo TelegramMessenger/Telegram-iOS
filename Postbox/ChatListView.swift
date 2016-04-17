@@ -1,13 +1,13 @@
 import Foundation
 
 public enum ChatListEntry: Comparable {
-    case MessageEntry(Message)
+    case MessageEntry(Message, Int)
     case HoleEntry(ChatListHole)
     case Nothing(MessageIndex)
     
     public var index: MessageIndex {
         switch self {
-            case let .MessageEntry(message):
+            case let .MessageEntry(message, _):
                 return MessageIndex(message)
             case let .HoleEntry(hole):
                 return hole.index
@@ -18,7 +18,15 @@ public enum ChatListEntry: Comparable {
 }
 
 public func ==(lhs: ChatListEntry, rhs: ChatListEntry) -> Bool {
-    return lhs.index == rhs.index
+    if lhs.index == rhs.index {
+        if case let .MessageEntry(_, lhsCount) = lhs, case let .MessageEntry(_, rhsCount) = rhs {
+            if lhsCount != rhsCount {
+                return false
+            }
+        }
+        return true
+    }
+    return false
 }
 
 public func <(lhs: ChatListEntry, rhs: ChatListEntry) -> Bool {
@@ -26,16 +34,16 @@ public func <(lhs: ChatListEntry, rhs: ChatListEntry) -> Bool {
 }
 
 enum MutableChatListEntry: Equatable {
-    case IntermediateMessageEntry(IntermediateMessage)
-    case MessageEntry(Message)
+    case IntermediateMessageEntry(IntermediateMessage, CombinedPeerReadState?)
+    case MessageEntry(Message, CombinedPeerReadState?)
     case HoleEntry(ChatListHole)
     case Nothing(MessageIndex)
     
     var index: MessageIndex {
         switch self {
-            case let .IntermediateMessageEntry(message):
+            case let .IntermediateMessageEntry(message, _):
                 return MessageIndex(id: message.id, timestamp: message.timestamp)
-            case let .MessageEntry(message):
+            case let .MessageEntry(message, _):
                 return MessageIndex(message)
             case let .HoleEntry(hole):
                 return hole.index
@@ -109,8 +117,8 @@ final class MutableChatListView {
         var hasChanges = false
         for operation in operations {
             switch operation {
-                case let .InsertMessage(message):
-                    if self.add(.IntermediateMessageEntry(message)) {
+                case let .InsertMessage(message, combinedReadState):
+                    if self.add(.IntermediateMessageEntry(message, combinedReadState)) {
                         hasChanges = true
                     }
                 case let .InsertNothing(index):
@@ -368,8 +376,8 @@ final class MutableChatListView {
     
     func render(renderMessage: IntermediateMessage -> Message) {
         for i in 0 ..< self.entries.count {
-            if case let .IntermediateMessageEntry(message) = self.entries[i] {
-                self.entries[i] = .MessageEntry(renderMessage(message))
+            if case let .IntermediateMessageEntry(message, combinedReadState) = self.entries[i] {
+                self.entries[i] = .MessageEntry(renderMessage(message), combinedReadState)
             }
         }
     }
@@ -384,8 +392,14 @@ public final class ChatListView {
         var entries: [ChatListEntry] = []
         for entry in mutableView.entries {
             switch entry {
-                case let .MessageEntry(message):
-                    entries.append(.MessageEntry(message))
+                case let .MessageEntry(message, combinedReadState):
+                    var unreadCount: Int32 = 0
+                    if let combinedReadState = combinedReadState {
+                        for (_, state) in combinedReadState.states {
+                            unreadCount += state.count
+                        }
+                    }
+                    entries.append(.MessageEntry(message, Int(unreadCount)))
                 case let .Nothing(index):
                     entries.append(.Nothing(index))
                 case let .HoleEntry(hole):

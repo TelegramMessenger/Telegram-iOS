@@ -73,6 +73,8 @@ class ChatListTableTests: XCTestCase {
     var historyMetadataTable: MessageHistoryMetadataTable?
     var unsentTable: MessageHistoryUnsentTable?
     var tagsTable: MessageHistoryTagsTable?
+    var readStateTable: MessageHistoryReadStateTable?
+    var invalidatedReadStateTable: MessageHistoryInvalidatedReadStateTable?
     
     override class func setUp() {
         super.setUp()
@@ -95,7 +97,9 @@ class ChatListTableTests: XCTestCase {
         self.indexTable = MessageHistoryIndexTable(valueBox: self.valueBox!, tableId: 1, globalMessageIdsTable: self.globalMessageIdsTable!, metadataTable: self.historyMetadataTable!, seedConfiguration: seedConfiguration)
         self.mediaCleanupTable = MediaCleanupTable(valueBox: self.valueBox!, tableId: 3)
         self.mediaTable = MessageMediaTable(valueBox: self.valueBox!, tableId: 2, mediaCleanupTable: self.mediaCleanupTable!)
-        self.historyTable = MessageHistoryTable(valueBox: self.valueBox!, tableId: 4, messageHistoryIndexTable: self.indexTable!, messageMediaTable: self.mediaTable!, historyMetadataTable: self.historyMetadataTable!, unsentTable: self.unsentTable!, tagsTable: self.tagsTable!)
+        self.readStateTable = MessageHistoryReadStateTable(valueBox: self.valueBox!, tableId: 11)
+        self.invalidatedReadStateTable = MessageHistoryInvalidatedReadStateTable(valueBox: self.valueBox!, tableId: 12)
+        self.historyTable = MessageHistoryTable(valueBox: self.valueBox!, tableId: 4, messageHistoryIndexTable: self.indexTable!, messageMediaTable: self.mediaTable!, historyMetadataTable: self.historyMetadataTable!, unsentTable: self.unsentTable!, tagsTable: self.tagsTable!, readStateTable: self.readStateTable!, invalidatedReadStateTable: invalidatedReadStateTable)
         self.chatListIndexTable = ChatListIndexTable(valueBox: self.valueBox!, tableId: 5)
         self.chatListTable = ChatListTable(valueBox: self.valueBox!, tableId: 6, indexTable: self.chatListIndexTable!, metadataTable: self.historyMetadataTable!, seedConfiguration: seedConfiguration)
     }

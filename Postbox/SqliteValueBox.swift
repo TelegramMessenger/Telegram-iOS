@@ -17,6 +17,10 @@ private struct SqlitePreparedStatement {
         sqlite3_bind_int(statement, Int32(index), number)
     }
     
+    func bind(index: Int, number: Int64) {
+        sqlite3_bind_int64(statement, Int32(index), number)
+    }
+    
     func reset() {
         sqlite3_reset(statement)
         sqlite3_clear_bindings(statement)
@@ -28,6 +32,10 @@ private struct SqlitePreparedStatement {
             assertionFailure("Sqlite error \(result)")
         }
         return result == SQLITE_ROW
+    }
+    
+    func int64At(index: Int) -> Int64 {
+        return sqlite3_column_int64(statement, Int32(index))
     }
     
     func valueAt(index: Int) -> ReadBuffer {
@@ -108,13 +116,14 @@ public final class SqliteValueBox: ValueBox {
         database.execute("PRAGMA wal_autocheckpoint=200")
         database.execute("PRAGMA journal_size_limit=1536")
         
-        let result = database.scalar("PRAGMA user_version") as! Int64
+        let result = self.getUserVersion(database)
         if result != 1 {
             database.execute("PRAGMA user_version=1")
             database.execute("CREATE TABLE __meta_tables (name INTEGER)")
         }
-        for row in database.prepare("SELECT name FROM __meta_tables").run() {
-            self.tables.insert(Int32(row[0] as! Int64))
+        
+        for table in self.listTables(database).map({Int32($0)}) {
+            self.tables.insert(table)
         }
         lock.unlock()
         
@@ -142,13 +151,36 @@ public final class SqliteValueBox: ValueBox {
     }
     
     public func begin() {
-        self.database.transaction()
+        self.database.execute("BEGIN")
     }
     
     public func commit() {
         let startTime = CFAbsoluteTimeGetCurrent()
-        self.database.commit()
+        self.database.execute("COMMIT")
         self.commitTime += CFAbsoluteTimeGetCurrent() - startTime
+    }
+    
+    private func getUserVersion(database: Database) -> Int64 {
+        var statement: COpaquePointer = nil
+        sqlite3_prepare_v2(database.handle, "PRAGMA user_version", -1, &statement, nil)
+        let preparedStatement = SqlitePreparedStatement(statement: statement)
+        preparedStatement.step()
+        let value = preparedStatement.int64At(0)
+        preparedStatement.destroy()
+        return value
+    }
+    
+    private func listTables(database: Database) -> [Int64] {
+        var statement: COpaquePointer = nil
+        sqlite3_prepare_v2(database.handle, "SELECT name FROM __meta_tables", -1, &statement, nil)
+        let preparedStatement = SqlitePreparedStatement(statement: statement)
+        var tables: [Int64] = []
+        while preparedStatement.step() {
+            let value = preparedStatement.int64At(0)
+            tables.append(value)
+        }
+        preparedStatement.destroy()
+        return tables
     }
     
     private func getStatement(table: Int32, key: ValueBoxKey) -> SqlitePreparedStatement {
@@ -503,7 +535,7 @@ public final class SqliteValueBox: ValueBox {
         }
     }
     
-    public func range(table: Int32, start: ValueBoxKey, end: ValueBoxKey, keys: ValueBoxKey -> Bool, limit: Int) {
+    public func range(table: Int32, start: ValueBoxKey, end: ValueBoxKey, @noescape keys: ValueBoxKey -> Bool, limit: Int) {
         if self.tables.contains(table) {
             let statement: SqlitePreparedStatement
             

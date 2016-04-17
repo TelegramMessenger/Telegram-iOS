@@ -69,12 +69,14 @@ final class MutableMessageHistoryViewReplayContext {
 
 final class MutableMessageHistoryView {
     let tagMask: MessageTags?
+    private var combinedReadState: CombinedPeerReadState?
     private let count: Int
     private var earlier: MutableMessageHistoryEntry?
     private var later: MutableMessageHistoryEntry?
     private var entries: [MutableMessageHistoryEntry]
     
-    init(earlier: MutableMessageHistoryEntry?, entries: [MutableMessageHistoryEntry], later: MutableMessageHistoryEntry?, tagMask: MessageTags?, count: Int) {
+    init(combinedReadState: CombinedPeerReadState?, earlier: MutableMessageHistoryEntry?, entries: [MutableMessageHistoryEntry], later: MutableMessageHistoryEntry?, tagMask: MessageTags?, count: Int) {
+        self.combinedReadState = combinedReadState
         self.earlier = earlier
         self.entries = entries
         self.later = later
@@ -105,8 +107,12 @@ final class MutableMessageHistoryView {
                     if self.remove(Set(indices), context: context) {
                         hasChanges = true
                     }
+                case let .UpdateReadState(combinedReadState):
+                    hasChanges = true
+                    self.combinedReadState = combinedReadState
             }
         }
+        
         return hasChanges
     }
     
@@ -322,6 +328,7 @@ public final class MessageHistoryView {
     public let earlierId: MessageIndex?
     public let laterId: MessageIndex?
     public let entries: [MessageHistoryEntry]
+    public let maxReadIndex: MessageIndex?
     
     init(_ mutableView: MutableMessageHistoryView) {
         var entries: [MessageHistoryEntry] = []
@@ -339,5 +346,21 @@ public final class MessageHistoryView {
         
         self.earlierId = mutableView.earlier?.index
         self.laterId = mutableView.later?.index
+        
+        if let combinedReadState = mutableView.combinedReadState {
+            var maxIndex: MessageIndex?
+            for (namespace, state) in combinedReadState.states {
+                for entry in entries {
+                    if entry.index.id.namespace == namespace {
+                        if maxIndex == nil || maxIndex! < entry.index {
+                            maxIndex = entry.index
+                        }
+                    }
+                }
+            }
+            self.maxReadIndex = maxIndex
+        } else {
+            self.maxReadIndex = nil
+        }
     }
 }

@@ -1,6 +1,5 @@
 import Foundation
 import SwiftSignalKit
-import Display
 
 private final class ResourceStatusContext {
     var status: MediaResourceStatus?
@@ -9,7 +8,8 @@ private final class ResourceStatusContext {
 
 private final class ResourceDataContext {
     var data: MediaResourceData
-    let dataSubscribers = Bag<MediaResourceData -> Void>()
+    let progresiveDataSubscribers = Bag<MediaResourceData -> Void>()
+    let completeDataSubscribers = Bag<MediaResourceData -> Void>()
     
     var fetchDisposable: Disposable?
     let fetchSubscribers = Bag<Void>()
@@ -126,7 +126,7 @@ public final class MediaBox {
         }
     }
     
-    public func resourceData(resource: MediaResource) -> Signal<MediaResourceData, NoError> {
+    public func resourceData(resource: MediaResource, complete: Bool = true) -> Signal<MediaResourceData, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
@@ -146,21 +146,39 @@ public final class MediaBox {
                         self.dataContexts[resource.id] = dataContext
                     }
                     
-                    let index = dataContext.dataSubscribers.add { data in
-                        subscriber.putNext(data)
-                        if data.size >= resource.size {
-                            subscriber.putCompletion()
+                    let index: Bag<MediaResourceData -> Void>.Index
+                    if complete {
+                        index = dataContext.completeDataSubscribers.add { data in
+                            subscriber.putNext(data)
+                            if data.size >= resource.size {
+                                subscriber.putCompletion()
+                            }
                         }
+                        if dataContext.data.size >= resource.size {
+                            subscriber.putNext(dataContext.data)
+                        } else {
+                            subscriber.putNext(MediaResourceData(path: dataContext.data.path, size: 0))
+                        }
+                    } else {
+                        index = dataContext.progresiveDataSubscribers.add { data in
+                            subscriber.putNext(data)
+                            if data.size >= resource.size {
+                                subscriber.putCompletion()
+                            }
+                        }
+                        subscriber.putNext(dataContext.data)
                     }
-                    
-                    subscriber.putNext(dataContext.data)
                     
                     disposable.set(ActionDisposable {
                         self.dataQueue.dispatch {
                             if let dataContext = self.dataContexts[resource.id] {
-                                dataContext.dataSubscribers.remove(index)
+                                if complete {
+                                    dataContext.completeDataSubscribers.remove(index)
+                                } else {
+                                    dataContext.progresiveDataSubscribers.remove(index)
+                                }
                                 
-                                if dataContext.dataSubscribers.isEmpty && dataContext.fetchSubscribers.isEmpty {
+                                if dataContext.progresiveDataSubscribers.isEmpty && dataContext.completeDataSubscribers.isEmpty && dataContext.fetchSubscribers.isEmpty {
                                     self.dataContexts.removeValueForKey(resource.id)
                                 }
                             }
@@ -230,8 +248,14 @@ public final class MediaBox {
                                     offset += data.length
                                     let updatedSize = offset
                                     
-                                    for subscriber in dataContext.dataSubscribers.copyItems() {
+                                    for subscriber in dataContext.progresiveDataSubscribers.copyItems() {
                                         subscriber(MediaResourceData(path: path, size: updatedSize))
+                                    }
+                                    
+                                    if updatedSize >= resource.size {
+                                        for subscriber in dataContext.completeDataSubscribers.copyItems() {
+                                            subscriber(MediaResourceData(path: path, size: updatedSize))
+                                        }
                                     }
                                     
                                     let status: MediaResourceStatus
@@ -281,7 +305,7 @@ public final class MediaBox {
                                     }
                                 }
                                 
-                                if dataContext.dataSubscribers.isEmpty && dataContext.fetchSubscribers.isEmpty {
+                                if dataContext.completeDataSubscribers.isEmpty && dataContext.progresiveDataSubscribers.isEmpty && dataContext.fetchSubscribers.isEmpty {
                                     self.dataContexts.removeValueForKey(resource.id)
                                 }
                             }

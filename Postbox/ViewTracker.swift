@@ -16,16 +16,19 @@ final class ViewTracker {
     private let fetchChatListHole: ChatListHole -> Disposable
     private let fetchMessageHistoryHole: (MessageHistoryHole, MessageTags?) -> Disposable
     private let sendUnsentMessage: MessageIndex -> Disposable
+    private let validateReadState: PeerId -> Disposable
     
     private var chatListViews = Bag<(MutableChatListView, Pipe<(ChatListView, ViewUpdateType)>)>()
     private var messageHistoryViews: [PeerId: Bag<(MutableMessageHistoryView, Pipe<(MessageHistoryView, ViewUpdateType)>)>] = [:]
     private var unsentMessageView: UnsentMessageHistoryView
+    private var invalidatedReadStatesView: InvalidatedPeerReadStatesView
     
     private var chatListHoleDisposables: [(ChatListHole, Disposable)] = []
     private var holeDisposablesByPeerId: [PeerId: [(MessageHistoryHole, Disposable)]] = [:]
     private var unsentMessageDisposables: [MessageIndex: Disposable] = [:]
+    private var validateReadStatesDisposables: [PeerId: Disposable] = [:]
     
-    init(queue: Queue, fetchEarlierHistoryEntries: (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchLaterHistoryEntries: (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchEarlierChatEntries: (MessageIndex?, Int) -> [MutableChatListEntry], fetchLaterChatEntries: (MessageIndex?, Int) -> [MutableChatListEntry], renderMessage: IntermediateMessage -> Message, fetchChatListHole: ChatListHole -> Disposable, fetchMessageHistoryHole: (MessageHistoryHole, MessageTags?) -> Disposable, sendUnsentMessage: MessageIndex -> Disposable, unsentMessageIndices: [MessageIndex]) {
+    init(queue: Queue, fetchEarlierHistoryEntries: (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchLaterHistoryEntries: (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchEarlierChatEntries: (MessageIndex?, Int) -> [MutableChatListEntry], fetchLaterChatEntries: (MessageIndex?, Int) -> [MutableChatListEntry], renderMessage: IntermediateMessage -> Message, fetchChatListHole: ChatListHole -> Disposable, fetchMessageHistoryHole: (MessageHistoryHole, MessageTags?) -> Disposable, sendUnsentMessage: MessageIndex -> Disposable, unsentMessageIndices: [MessageIndex], validateReadState: PeerId -> Disposable, invalidatedReadStatePeerIds: [PeerId]) {
         self.queue = queue
         self.fetchEarlierHistoryEntries = fetchEarlierHistoryEntries
         self.fetchLaterHistoryEntries = fetchLaterHistoryEntries
@@ -35,9 +38,12 @@ final class ViewTracker {
         self.fetchChatListHole = fetchChatListHole
         self.fetchMessageHistoryHole = fetchMessageHistoryHole
         self.sendUnsentMessage = sendUnsentMessage
+        self.validateReadState = validateReadState
         
         self.unsentMessageView = UnsentMessageHistoryView(indices: unsentMessageIndices)
+        self.invalidatedReadStatesView = InvalidatedPeerReadStatesView(peerIds: invalidatedReadStatePeerIds)
         self.unsentViewUpdated()
+        self.invalidatedReadStateViewUpdated()
     }
     
     deinit {
@@ -91,7 +97,7 @@ final class ViewTracker {
         self.updateTrackedChatListHoles()
     }
     
-    func updateViews(currentOperationsByPeerId currentOperationsByPeerId: [PeerId: [MessageHistoryOperation]], peerIdsWithFilledHoles: Set<PeerId>, chatListOperations: [ChatListOperation], currentUpdatedPeers: [PeerId: Peer], unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation]) {
+    func updateViews(currentOperationsByPeerId currentOperationsByPeerId: [PeerId: [MessageHistoryOperation]], peerIdsWithFilledHoles: Set<PeerId>, chatListOperations: [ChatListOperation], currentUpdatedPeers: [PeerId: Peer], unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], invalidatedReadStateOperations: [IntermediateMessageHistoryInvalidatedReadStateOperation]) {
         var updateTrackedHolesPeerIds: [PeerId] = []
         
         for (peerId, bag) in self.messageHistoryViews {
@@ -146,6 +152,10 @@ final class ViewTracker {
         
         if self.unsentMessageView.replay(unsentMessageOperations) {
             self.unsentViewUpdated()
+        }
+        
+        if self.invalidatedReadStatesView.replay(invalidatedReadStateOperations) {
+            self.invalidatedReadStateViewUpdated()
         }
     }
     
@@ -270,7 +280,7 @@ final class ViewTracker {
     
     private func unsentViewUpdated() {
         var removeIndices: [MessageIndex] = []
-        for (index, _) in unsentMessageDisposables {
+        for (index, _) in self.unsentMessageDisposables {
             var found = false
             for currentIndex in self.unsentMessageView.indices {
                 if currentIndex == index {
@@ -299,6 +309,34 @@ final class ViewTracker {
             
             if !found {
                 self.unsentMessageDisposables[index] = self.sendUnsentMessage(index)
+            }
+        }
+    }
+    
+    private func invalidatedReadStateViewUpdated() {
+        var removePeerIds: [PeerId] = []
+        let currentPeerIds = self.invalidatedReadStatesView.peerIds
+        for (peerId, _) in self.validateReadStatesDisposables {
+            if !currentPeerIds.contains(peerId) {
+                removePeerIds.append(peerId)
+            }
+        }
+        
+        for peerId in removePeerIds {
+            self.validateReadStatesDisposables.removeValueForKey(peerId)?.dispose()
+        }
+        
+        for peerId in currentPeerIds {
+            var found = false
+            for (currentPeerId, _) in validateReadStatesDisposables {
+                if peerId == currentPeerId {
+                    found = true
+                    break
+                }
+            }
+            
+            if !found {
+                self.validateReadStatesDisposables[peerId] = self.validateReadState(peerId)
             }
         }
     }

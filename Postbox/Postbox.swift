@@ -40,6 +40,18 @@ public final class Modifier {
         }
     }
     
+    public func resetIncomingReadStates(states: [PeerId: [MessageId.Namespace: PeerReadState]]) {
+        self.postbox?.resetIncomingReadStates(states)
+    }
+    
+    public func applyIncomingReadMaxId(messageId: MessageId) {
+        self.postbox?.applyIncomingReadMaxId(messageId)
+    }
+    
+    public func validateIncomingReadState(peerId: PeerId) {
+        self.postbox?.validateIncomingReadState(peerId)
+    }
+    
     public func getState() -> Coding? {
         return self.postbox?.getState()
     }
@@ -90,6 +102,7 @@ public final class Postbox {
     
     private var currentOperationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
     private var currentUnsentOperations: [IntermediateMessageHistoryUnsentOperation] = []
+    private var currentInvalidatedReadStateOperations: [IntermediateMessageHistoryInvalidatedReadStateOperation] = []
     
     private var currentFilledHolesByPeerId = Set<PeerId>()
     private var currentUpdatedPeers: [PeerId: Peer] = [:]
@@ -112,6 +125,11 @@ public final class Postbox {
         self.sendUnsentMessageImpl.set(single(sendUnsentMessage, NoError.self))
     }
     
+    private let validatePeerReadStateImpl = Promise<PeerId -> Signal<Void, NoError>>()
+    public func setValidatePeerReadState(validatePeerReadState: PeerId -> Signal<Void, NoError>) {
+        self.validatePeerReadStateImpl.set(.single(validatePeerReadState))
+    }
+    
     public let mediaBox: MediaBox
     
     var tables: [Table] = []
@@ -130,11 +148,16 @@ public final class Postbox {
     var messageHistoryUnsentTable: MessageHistoryUnsentTable!
     var messageHistoryTagsTable: MessageHistoryTagsTable!
     var peerChatStateTable: PeerChatStateTable!
+    var readStateTable: MessageHistoryReadStateTable!
+    var invalidatedReadStateTable: MessageHistoryInvalidatedReadStateTable!
     
     public init(basePath: String, globalMessageIdsNamespace: MessageId.Namespace, seedConfiguration: SeedConfiguration) {
         self.basePath = basePath
         self.globalMessageIdsNamespace = globalMessageIdsNamespace
         self.seedConfiguration = seedConfiguration
+        
+        let _ = try? NSFileManager.defaultManager().removeItemAtPath(self.basePath + "/media")
+        
         self.mediaBox = MediaBox(basePath: self.basePath + "/media")
         self.openDatabase()
     }
@@ -175,12 +198,13 @@ public final class Postbox {
             //let _ = try? NSFileManager.defaultManager().removeItemAtPath(self.basePath + "/media")
             //self.debugSaveState("beforeGetDiff")
             //self.debugRestoreState("beforeGetDiff")
+            //self.debugRestoreState("clean")
             
             self.valueBox = SqliteValueBox(basePath: self.basePath + "/db")
             self.metadataTable = MetadataTable(valueBox: self.valueBox, tableId: 0)
             
             let userVersion: Int32? = self.metadataTable.userVersion()
-            let currentUserVersion: Int32 = 18
+            let currentUserVersion: Int32 = 1
             
             if userVersion != currentUserVersion {
                 self.valueBox.drop()
@@ -196,7 +220,9 @@ public final class Postbox {
             self.messageHistoryIndexTable = MessageHistoryIndexTable(valueBox: self.valueBox, tableId: 4, globalMessageIdsTable: self.globalMessageIdsTable, metadataTable: self.messageHistoryMetadataTable, seedConfiguration: self.seedConfiguration)
             self.mediaCleanupTable = MediaCleanupTable(valueBox: self.valueBox, tableId: 5)
             self.mediaTable = MessageMediaTable(valueBox: self.valueBox, tableId: 6, mediaCleanupTable: self.mediaCleanupTable)
-            self.messageHistoryTable = MessageHistoryTable(valueBox: self.valueBox, tableId: 7, messageHistoryIndexTable: self.messageHistoryIndexTable, messageMediaTable: self.mediaTable, historyMetadataTable: self.messageHistoryMetadataTable, unsentTable: self.messageHistoryUnsentTable!, tagsTable: self.messageHistoryTagsTable)
+            self.readStateTable = MessageHistoryReadStateTable(valueBox: self.valueBox, tableId: 14)
+            self.invalidatedReadStateTable = MessageHistoryInvalidatedReadStateTable(valueBox: self.valueBox, tableId: 15)
+            self.messageHistoryTable = MessageHistoryTable(valueBox: self.valueBox, tableId: 7, messageHistoryIndexTable: self.messageHistoryIndexTable, messageMediaTable: self.mediaTable, historyMetadataTable: self.messageHistoryMetadataTable, unsentTable: self.messageHistoryUnsentTable!, tagsTable: self.messageHistoryTagsTable, readStateTable: self.readStateTable, invalidatedReadStateTable: self.invalidatedReadStateTable!)
             self.chatListIndexTable = ChatListIndexTable(valueBox: self.valueBox, tableId: 8)
             self.chatListTable = ChatListTable(valueBox: self.valueBox, tableId: 9, indexTable: self.chatListIndexTable, metadataTable: self.messageHistoryMetadataTable, seedConfiguration: self.seedConfiguration)
             self.peerChatStateTable = PeerChatStateTable(valueBox: self.valueBox, tableId: 13)
@@ -212,8 +238,10 @@ public final class Postbox {
             self.tables.append(self.chatListIndexTable)
             self.tables.append(self.chatListTable)
             self.tables.append(self.peerChatStateTable)
+            self.tables.append(self.readStateTable)
+            self.tables.append(self.invalidatedReadStateTable)
             
-            self.viewTracker = ViewTracker(queue: self.queue, fetchEarlierHistoryEntries: self.fetchEarlierHistoryEntries, fetchLaterHistoryEntries: self.fetchLaterHistoryEntries, fetchEarlierChatEntries: self.fetchEarlierChatEntries, fetchLaterChatEntries: self.fetchLaterChatEntries, renderMessage: self.renderIntermediateMessage, fetchChatListHole: self.fetchChatListHoleWrapper, fetchMessageHistoryHole: self.fetchMessageHistoryHoleWrapper, sendUnsentMessage: self.sendUnsentMessageWrapper, unsentMessageIndices: self.messageHistoryUnsentTable!.get())
+            self.viewTracker = ViewTracker(queue: self.queue, fetchEarlierHistoryEntries: self.fetchEarlierHistoryEntries, fetchLaterHistoryEntries: self.fetchLaterHistoryEntries, fetchEarlierChatEntries: self.fetchEarlierChatEntries, fetchLaterChatEntries: self.fetchLaterChatEntries, renderMessage: self.renderIntermediateMessage, fetchChatListHole: self.fetchChatListHoleWrapper, fetchMessageHistoryHole: self.fetchMessageHistoryHoleWrapper, sendUnsentMessage: self.sendUnsentMessageWrapper, unsentMessageIndices: self.messageHistoryUnsentTable!.get(), validateReadState: self.validatePeerReadStateWrapper, invalidatedReadStatePeerIds: self.invalidatedReadStateTable!.get())
             
             print("(Postbox initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
         }
@@ -271,15 +299,15 @@ public final class Postbox {
     }
     
     private func addMessages(messages: [StoreMessage], location: AddMessagesLocation) {
-        self.messageHistoryTable.addMessages(messages, location: location, operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &currentUnsentOperations)
+        self.messageHistoryTable.addMessages(messages, location: location, operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &currentUnsentOperations, invalidatedReadStateOperations: &self.currentInvalidatedReadStateOperations)
     }
     
     private func addHole(id: MessageId) {
-        self.messageHistoryTable.addHoles([id], operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &currentUnsentOperations)
+        self.messageHistoryTable.addHoles([id], operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &currentUnsentOperations, invalidatedReadStateOperations: &self.currentInvalidatedReadStateOperations)
     }
     
     private func fillHole(hole: MessageHistoryHole, fillType: HoleFillType, tagMask: MessageTags?, messages: [StoreMessage]) {
-        self.messageHistoryTable.fillHole(hole.id, fillType: fillType, tagMask: tagMask, messages: messages, operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &currentUnsentOperations)
+        self.messageHistoryTable.fillHole(hole.id, fillType: fillType, tagMask: tagMask, messages: messages, operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &currentUnsentOperations, invalidatedReadStateOperations: &self.currentInvalidatedReadStateOperations)
         self.currentFilledHolesByPeerId.insert(hole.id.peerId)
     }
     
@@ -288,7 +316,19 @@ public final class Postbox {
     }
     
     private func deleteMessages(messageIds: [MessageId]) {
-        self.messageHistoryTable.removeMessages(messageIds, operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &currentUnsentOperations)
+        self.messageHistoryTable.removeMessages(messageIds, operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &currentUnsentOperations, invalidatedReadStateOperations: &self.currentInvalidatedReadStateOperations)
+    }
+    
+    private func resetIncomingReadStates(states: [PeerId: [MessageId.Namespace: PeerReadState]]) {
+        self.messageHistoryTable.resetIncomingReadStates(states, operationsByPeerId: &self.currentOperationsByPeerId, invalidatedReadStateOperations: &self.currentInvalidatedReadStateOperations)
+    }
+    
+    private func applyIncomingReadMaxId(messageId: MessageId) {
+        self.messageHistoryTable.applyIncomingReadMaxId(messageId, operationsByPeerId: &self.currentOperationsByPeerId, invalidatedReadStateOperations: &self.currentInvalidatedReadStateOperations)
+    }
+    
+    private func validateIncomingReadState(peerId: PeerId) {
+        self.invalidatedReadStateTable.remove(peerId, operations: &self.currentInvalidatedReadStateOperations)
     }
     
     private func fetchEarlierHistoryEntries(peerId: PeerId, index: MessageIndex?, count: Int, tagMask: MessageTags? = nil) -> [MutableMessageHistoryEntry] {
@@ -383,7 +423,7 @@ public final class Postbox {
         for entry in intermediateEntries {
             switch entry {
                 case let .Message(message):
-                    entries.append(.IntermediateMessageEntry(message))
+                    entries.append(.IntermediateMessageEntry(message, self.readStateTable.getCombinedState(message.id.peerId)))
                 case let .Hole(hole):
                     entries.append(.HoleEntry(hole))
                 case let .Nothing(index):
@@ -394,7 +434,7 @@ public final class Postbox {
         if let intermediateLower = intermediateLower {
             switch intermediateLower {
                 case let .Message(message):
-                    lower = .IntermediateMessageEntry(message)
+                    lower = .IntermediateMessageEntry(message, self.readStateTable.getCombinedState(message.id.peerId))
                 case let .Hole(hole):
                     lower = .HoleEntry(hole)
                 case let .Nothing(index):
@@ -405,7 +445,7 @@ public final class Postbox {
         if let intermediateUpper = intermediateUpper {
             switch intermediateUpper {
                 case let .Message(message):
-                    upper = .IntermediateMessageEntry(message)
+                    upper = .IntermediateMessageEntry(message, self.readStateTable.getCombinedState(message.id.peerId))
                 case let .Hole(hole):
                     upper = .HoleEntry(hole)
                 case let .Nothing(index):
@@ -422,7 +462,7 @@ public final class Postbox {
         for entry in intermediateEntries {
             switch entry {
                 case let .Message(message):
-                    entries.append(.IntermediateMessageEntry(message))
+                    entries.append(.IntermediateMessageEntry(message, self.readStateTable.getCombinedState(message.id.peerId)))
                 case let .Hole(hole):
                     entries.append(.HoleEntry(hole))
                 case let .Nothing(index):
@@ -438,7 +478,7 @@ public final class Postbox {
         for entry in intermediateEntries {
             switch entry {
                 case let .Message(message):
-                    entries.append(.IntermediateMessageEntry(message))
+                    entries.append(.IntermediateMessageEntry(message, self.readStateTable.getCombinedState(message.id.peerId)))
                 case let .Nothing(index):
                     entries.append(.Nothing(index))
                 case let .Hole(index):
@@ -475,6 +515,12 @@ public final class Postbox {
         }).start()
     }
     
+    private func validatePeerReadStateWrapper(peerId: PeerId) -> Disposable {
+        return (self.validatePeerReadStateImpl.get() |> mapToSignal { validate -> Signal<Void, NoError> in
+            return validate(peerId)
+        }).start()
+    }
+    
     private func beforeCommit() {
         var chatListOperations: [ChatListOperation] = []
         self.chatListTable.replay(self.currentOperationsByPeerId, messageHistoryTable: self.messageHistoryTable, operations: &chatListOperations)
@@ -482,13 +528,14 @@ public final class Postbox {
             self.chatListTable.replaceHole(index, hole: hole, operations: &chatListOperations)
         }
         
-        self.viewTracker.updateViews(currentOperationsByPeerId: self.currentOperationsByPeerId, peerIdsWithFilledHoles: self.currentFilledHolesByPeerId, chatListOperations: chatListOperations, currentUpdatedPeers: self.currentUpdatedPeers, unsentMessageOperations: self.currentUnsentOperations)
+        self.viewTracker.updateViews(currentOperationsByPeerId: self.currentOperationsByPeerId, peerIdsWithFilledHoles: self.currentFilledHolesByPeerId, chatListOperations: chatListOperations, currentUpdatedPeers: self.currentUpdatedPeers, unsentMessageOperations: self.currentUnsentOperations, invalidatedReadStateOperations: self.currentInvalidatedReadStateOperations)
         
         self.currentOperationsByPeerId.removeAll()
         self.currentFilledHolesByPeerId.removeAll()
         self.currentUpdatedPeers.removeAll()
         self.currentReplaceChatListHoles.removeAll()
         self.currentUnsentOperations.removeAll()
+        self.currentInvalidatedReadStateOperations.removeAll()
         
         for table in self.tables {
             table.beforeCommit()
@@ -521,7 +568,7 @@ public final class Postbox {
     private func updateMessage(index: MessageIndex, update: Message -> StoreMessage) {
         if let intermediateMessage = self.messageHistoryTable.getMessage(index) {
             let message = self.renderIntermediateMessage(intermediateMessage)
-            self.messageHistoryTable.updateMessage(index.id, message: update(message), operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &self.currentUnsentOperations)
+            self.messageHistoryTable.updateMessage(index.id, message: update(message), operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &self.currentUnsentOperations, invalidatedReadStateOperations: &self.currentInvalidatedReadStateOperations)
         }
     }
     
@@ -564,7 +611,7 @@ public final class Postbox {
             self.queue.dispatch {
                 let (entries, earlier, later) = self.fetchAroundHistoryEntries(index, count: count, tagMask: tagMask)
                 
-                let mutableView = MutableMessageHistoryView(earlier: earlier, entries: entries, later: later, tagMask: tagMask, count: count)
+                let mutableView = MutableMessageHistoryView(combinedReadState: self.readStateTable.getCombinedState(peerId), earlier: earlier, entries: entries, later: later, tagMask: tagMask, count: count)
                 mutableView.render(self.renderIntermediateMessage)
                 subscriber.putNext((MessageHistoryView(mutableView), .Generic))
                 

@@ -27,7 +27,6 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible {
     }
     
     public init(_ buffer: ReadBuffer) {
-        
         var peerIdNamespaceValue: Int32 = 0
         memcpy(&peerIdNamespaceValue, buffer.memory + buffer.offset, 4)
         var peerIdIdValue: Int32 = 0

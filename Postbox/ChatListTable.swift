@@ -1,7 +1,7 @@
 import Foundation
 
 enum ChatListOperation {
-    case InsertMessage(IntermediateMessage)
+    case InsertMessage(IntermediateMessage, CombinedPeerReadState?)
     case InsertHole(ChatListHole)
     case InsertNothing(MessageIndex)
     case RemoveMessage([MessageIndex])
@@ -91,7 +91,7 @@ final class ChatListTable: Table {
                 }
                 self.indexTable.set(index)
                 self.justInsertMessage(index)
-                operations.append(.InsertMessage(topMessage))
+                operations.append(.InsertMessage(topMessage, messageHistoryTable.readStateTable.getCombinedState(peerId)))
             } else {
                 if let currentIndex = currentIndex {
                     operations.append(.RemoveMessage([currentIndex]))

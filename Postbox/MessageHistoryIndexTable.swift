@@ -32,14 +32,19 @@ enum MessageHistoryIndexOperation {
     case Update(MessageIndex, InternalStoreMessage)
 }
 
+private let HistoryEntryTypeMask: Int8 = 1
+private let HistoryEntryTypeMessage: Int8 = 0
+private let HistoryEntryTypeHole: Int8 = 1
+private let HistoryEntryMessageFlagIncoming: Int8 = 1 << 1
+
 private func readHistoryIndexEntry(peerId: PeerId, namespace: MessageId.Namespace, key: ValueBoxKey, value: ReadBuffer) -> HistoryIndexEntry {
-    var type: Int8 = 0
-    value.read(&type, offset: 0, length: 1)
+    var flags: Int8 = 0
+    value.read(&flags, offset: 0, length: 1)
     var timestamp: Int32 = 0
     value.read(&timestamp, offset: 0, length: 4)
     let index = MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: key.getInt32(8 + 4)), timestamp: timestamp)
     
-    if type == 0 {
+    if (flags & HistoryEntryTypeMask) == 0 {
         return .Message(index)
     } else {
         var stableId: UInt32 = 0
@@ -462,11 +467,11 @@ final class MessageHistoryIndexTable: Table {
     
     private func justInsertHole(hole: MessageHistoryHole, inout operations: [MessageHistoryIndexOperation]) {
         let value = WriteBuffer()
-        var type: Int8 = 1
+        var flags: Int8 = HistoryEntryTypeHole
         var timestamp: Int32 = hole.maxIndex.timestamp
         var min: Int32 = hole.min
         var tags: UInt32 = hole.tags
-        value.write(&type, offset: 0, length: 1)
+        value.write(&flags, offset: 0, length: 1)
         value.write(&timestamp, offset: 0, length: 4)
         var stableId: UInt32 = hole.stableId
         value.write(&stableId, offset: 0, length: 4)
@@ -481,9 +486,12 @@ final class MessageHistoryIndexTable: Table {
         let index = MessageIndex(id: message.id, timestamp: message.timestamp)
         
         let value = WriteBuffer()
-        var type: Int8 = 0
+        var flags: Int8 = HistoryEntryTypeMessage
+        if message.flags.contains(.Incoming) {
+            flags |= HistoryEntryMessageFlagIncoming
+        }
         var timestamp: Int32 = index.timestamp
-        value.write(&type, offset: 0, length: 1)
+        value.write(&flags, offset: 0, length: 1)
         value.write(&timestamp, offset: 0, length: 4)
         self.valueBox.set(self.tableId, key: self.key(index.id), value: value)
         
@@ -533,6 +541,55 @@ final class MessageHistoryIndexTable: Table {
     
     func exists(id: MessageId) -> Bool {
         return self.valueBox.exists(self.tableId, key: self.key(id))
+    }
+    
+    func incomingMessageCountInRange(peerId: PeerId, namespace: MessageId.Namespace, minId: MessageId.Id, maxId: MessageId.Id) -> (Int, Bool) {
+        var count = 0
+        var holes = false
+        
+        self.valueBox.range(self.tableId, start: self.key(MessageId(peerId: peerId, namespace: namespace, id: minId)).predecessor, end: self.key(MessageId(peerId: peerId, namespace: namespace, id: maxId)).successor, values: { _, value in
+            var flags: Int8 = 0
+            value.read(&flags, offset: 0, length: 1)
+            if (flags & HistoryEntryTypeMask) == HistoryEntryTypeMessage {
+                if (flags & HistoryEntryMessageFlagIncoming) != 0 {
+                    count += 1
+                }
+            } else {
+                holes = true
+            }
+            return true
+        }, limit: 0)
+        
+        return (count, holes)
+    }
+    
+    func incomingMessageCountInIds(peerId: PeerId, namespace: MessageId.Namespace, ids: [MessageId.Id]) -> (Int, Bool) {
+        var count = 0
+        var holes = false
+        
+        for id in ids {
+            self.valueBox.range(self.tableId, start: self.key(MessageId(peerId: peerId, namespace: namespace, id: id)).predecessor, end: self.upperBound(peerId, namespace: namespace), values: { key, value in
+                let entryId = key.getInt32(8 + 4)
+                var flags: Int8 = 0
+                value.read(&flags, offset: 0, length: 1)
+                
+                if entryId == id {
+                    if (flags & HistoryEntryTypeMask) == HistoryEntryTypeMessage {
+                        if (flags & HistoryEntryMessageFlagIncoming) != 0 {
+                            count += 1
+                        }
+                    } else {
+                        holes = true
+                    }
+                } else if (flags & HistoryEntryTypeMask) == HistoryEntryTypeHole {
+                    holes = true
+                }
+                
+                return true
+            }, limit: 1)
+        }
+        
+        return (count, holes)
     }
     
     func debugList(peerId: PeerId, namespace: MessageId.Namespace) -> [HistoryIndexEntry] {

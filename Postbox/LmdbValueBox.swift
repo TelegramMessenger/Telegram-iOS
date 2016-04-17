@@ -312,7 +312,7 @@ public final class LmdbValueBox: ValueBox {
         }
     }
     
-    public func range(table: Int32, start: ValueBoxKey, end: ValueBoxKey, keys: ValueBoxKey -> Bool, limit: Int) {
+    public func range(table: Int32, start: ValueBoxKey, end: ValueBoxKey, @noescape keys: ValueBoxKey -> Bool, limit: Int) {
         self.range(table, start: start, end: end, values: { key, _ in
             return keys(key)
         }, limit: limit)
