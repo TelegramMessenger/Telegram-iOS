@@ -13,7 +13,7 @@
 @property (nonatomic, strong, readonly) id internalId;
 
 /*
- * Can be invoked multiple times in case when message transaction maps to multiple different transport transactions
+ * Can be invoked multiple times in case message transaction maps to multiple different transport transactions
  */
 @property (nonatomic, copy) void (^completion)(NSDictionary *messageInternalIdToTransactionId, NSDictionary *messageInternalIdToPreparedMessage, NSDictionary *messageInternalIdToQuickAckId);
 @property (nonatomic, copy) void (^prepared)(NSDictionary *messageInternalIdToPreparedMessage);

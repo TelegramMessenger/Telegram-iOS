@@ -350,8 +350,6 @@
     
     MTAbsoluteTime currentTime = MTAbsoluteSystemTime();
     
-    static bool catchPrepare = false;
-    
     for (MTRequest *request in _requests)
     {
         if (request.dependsOnPasswordEntry && [_context isPasswordInputRequiredForDatacenterWithId:mtProto.datacenterId])
@@ -652,7 +650,7 @@
                             }];
                         }
                         
-#warning TODO other service errors
+//#warning TODO other service errors
                     }
                     
                     request.requestContext = nil;
