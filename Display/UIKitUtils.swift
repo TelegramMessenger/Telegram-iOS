@@ -31,6 +31,8 @@ public func floorToScreenPixels(value: CGFloat) -> CGFloat {
     return floor(value * UIScreenScale) / UIScreenScale
 }
 
+public let UIScreenPixel = 1.0 / UIScreenScale
+
 public extension UIColor {
     convenience init(_ rgb: Int) {
         self.init(red: CGFloat((rgb >> 16) & 0xff) / 255.0, green: CGFloat((rgb >> 8) & 0xff) / 255.0, blue: CGFloat(rgb & 0xff) / 255.0, alpha: 1.0)
@@ -53,8 +55,23 @@ public extension CGSize {
         return fittedSize
     }
     
+    public func fittedToArea(area: CGFloat) -> CGSize {
+        if self.height < 1.0 || self.width < 1.0 {
+            return CGSize()
+        }
+        let aspect = self.width / self.height
+        let height = sqrt(area / aspect)
+        let width = aspect * height
+        return CGSize(width: floor(width), height: floor(height))
+    }
+    
     public func aspectFilled(size: CGSize) -> CGSize {
         let scale = max(size.width / max(1.0, self.width), size.height / max(1.0, self.height))
+        return CGSize(width: floor(self.width * scale), height: floor(self.height * scale))
+    }
+    
+    public func aspectFitted(size: CGSize) -> CGSize {
+        let scale = min(size.width / max(1.0, self.width), size.height / max(1.0, self.height))
         return CGSize(width: floor(self.width * scale), height: floor(self.height * scale))
     }
 }

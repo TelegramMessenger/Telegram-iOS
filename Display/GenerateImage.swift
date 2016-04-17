@@ -102,9 +102,9 @@ public class DrawingContext {
         }
     }
     
-    public init(size: CGSize, clear: Bool = false) {
+    public init(size: CGSize, scale: CGFloat = deviceScale, clear: Bool = false) {
         self.size = size
-        self.scale = deviceScale
+        self.scale = scale
         self.scaledSize = CGSize(width: size.width * scale, height: size.height * scale)
         
         self.bytesPerRow = (4 * Int(scaledSize.width) + 15) & (~15)
@@ -126,6 +126,18 @@ public class DrawingContext {
             return UIImage(CGImage: image, scale: scale, orientation: .Up)
         } else {
             return nil
+        }
+    }
+    
+    public func colorAt(point: CGPoint) -> UIColor {
+        let x = Int(point.x * self.scale)
+        let y = Int(point.y * self.scale)
+        if x >= 0 && x < Int(self.scaledSize.width) && y >= 0 && y < Int(self.scaledSize.height) {
+            let srcLine = UnsafeMutablePointer<UInt32>(self.bytes + y * self.bytesPerRow)
+            let pixel = srcLine + x
+            return UIColor(Int(pixel.memory))
+        } else {
+            return UIColor.clearColor()
         }
     }
     
