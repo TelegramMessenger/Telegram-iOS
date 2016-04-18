@@ -1,3 +1,7 @@
+## Version 4.1.0-beta.1
+
+- [IMPROVEMENT] Prevent User Metrics from being sent if `BITMetricsManager` has been disabled.
+
 ## Version 4.1.0-alpha.2
 
 - [BUGFIX] Fix different bugs in the events sending pipeline
