@@ -34,7 +34,7 @@ Xamarin Exception Stack:
   at (wrapper managed-to-native) UIKit.UIApplication:UIApplicationMain (int,string[],intptr,intptr)
   at UIKit.UIApplication.Main (System.String[] args, IntPtr principal, IntPtr delegate) [0x00005] in /Users/builder/data/lanes/3051/5f11db87/source/maccore/src/UIKit/UIApplication.cs:77 
   at UIKit.UIApplication.Main (System.String[] args, System.String principalClassName, System.String delegateClassName) [0x0001c] in /Users/builder/data/lanes/3051/5f11db87/source/maccore/src/UIKit/UIApplication.cs:60 
-  at XamarinTest.iOS.Application.Main (System.String[] args) [0x00008] in /Users/chwend/Documents/Workspace/ApplicationInsights-Xamarin/ApplicationInsightsXamarinSDK/DemoApp/iOS/Main.cs:17 
+  at XamarinTest.iOS.Application.Main (System.String[] args) [0x00008] in /Users/chwend/Documents/Workspace/ApplicationInsights-Xamarin/ApplicationInsightsXamarinSDK/DemoApp/iOS/Main.cs:17
 
 Last Exception Backtrace:
 0   CoreFoundation                       0x000000018136ee38 0x181244000 + 1224248
