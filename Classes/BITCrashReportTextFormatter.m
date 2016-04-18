@@ -432,6 +432,7 @@ NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
     if (xamarinStackPosition != NSNotFound) {
       xamarinStackTrace = [reason substringFromIndex:xamarinStackPosition];
       reason = [reason substringToIndex:xamarinStackPosition];
+      reason = [reason stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
     }
     
     [text appendFormat: @"*** Terminating app due to uncaught exception '%@', reason: '%@'\n",
@@ -440,6 +441,7 @@ NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
     
     /* Xamarin Exception */
     if (xamarinStackTrace) {
+      xamarinStackTrace = [xamarinStackTrace stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
       [text appendFormat:@"%@\n", xamarinStackTrace];
       [text appendString: @"\n"];
     }
