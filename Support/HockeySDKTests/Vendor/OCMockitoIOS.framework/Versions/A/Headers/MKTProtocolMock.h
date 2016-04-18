@@ -11,10 +11,7 @@
 
 @property (nonatomic, strong, readonly) Protocol *mockedProtocol;
 
-+ (instancetype)mockForProtocol:(Protocol *)aProtocol;
-+ (instancetype)mockForProtocol:(Protocol *)aProtocol includeOptionalMethods:(BOOL)includeOptionalMethods;
-
-- (instancetype)initWithProtocol:(Protocol *)aProtocol;
-- (instancetype)initWithProtocol:(Protocol *)aProtocol includeOptionalMethods:(BOOL)includeOptionalMethods;
+- (instancetype)initWithProtocol:(Protocol *)aProtocol
+          includeOptionalMethods:(BOOL)includeOptionalMethods;
 
 @end
