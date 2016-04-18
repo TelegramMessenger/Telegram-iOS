@@ -4,12 +4,7 @@
 #import "BITPersistence.h"
 #import "BITPersistencePrivate.h"
 
-#define HC_SHORTHAND
-
 #import <OCHamcrestIOS/OCHamcrestIOS.h>
-
-#define MOCKITO_SHORTHAND
-
 #import <OCMockitoIOS/OCMockitoIOS.h>
 
 @interface BITPersistenceTests : BITTestsDependencyInjection

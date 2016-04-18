@@ -8,10 +8,7 @@
 #import "BITTelemetryContext.h"
 #import "BITSessionStateData.h"
 
-#define HC_SHORTHAND
 #import <OCHamcrestIOS/OCHamcrestIOS.h>
-
-#define MOCKITO_SHORTHAND
 #import <OCMockitoIOS/OCMockitoIOS.h>
 
 @interface BITMetricsManagerTests : BITTestsDependencyInjection
