@@ -4,6 +4,21 @@
 @implementation BITHockeyLogger
 
 static BITLogLevel _currentLogLevel = BITLogLevelWarning;
+static BITLogHandler currentLogHandler;
+
+BITLogHandler defaultLogHandler = ^(BITLogMessageProvider messageProvider, BITLogLevel logLevel, const char *file, const char *function, uint line) {
+  if (messageProvider) {
+    if (_currentLogLevel < logLevel) {
+      return;
+    }
+    NSLog((@"[HockeySDK] %s/%d %@"), function, line, messageProvider());
+  }
+};
+
+
++ (void)initialize {
+  currentLogHandler = defaultLogHandler;
+}
 
 + (BITLogLevel)currentLogLevel {
   return _currentLogLevel;
@@ -12,15 +27,6 @@ static BITLogLevel _currentLogLevel = BITLogLevelWarning;
 + (void)setCurrentLogLevel:(BITLogLevel)currentLogLevel {
   _currentLogLevel = currentLogLevel;
 }
-
-static BITLogHandler currentLogHandler = ^(BITLogMessageProvider messageProvider, BITLogLevel logLevel, const char *file, const char *function, uint line) {
-  if (messageProvider) {
-    if (_currentLogLevel < logLevel) {
-      return;
-    }
-    NSLog((@"[HockeySDK] %s/%d %@"), function, line, messageProvider());
-  }
-};
 
 + (void)setLogHandler:(BITLogHandler)logHandler {
   currentLogHandler = logHandler;

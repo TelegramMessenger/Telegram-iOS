@@ -1,6 +1,6 @@
 #import <XCTest/XCTest.h>
 #import "OCMock.h"
-#import "BITHockeyLogger.h"
+#import "BITHockeyLoggerPrivate.h"
 
 static char *const testFile = "Filename";
 static char *const testFunction = "Function name";
@@ -12,14 +12,10 @@ static uint const testLine = 42;
 
 @implementation BITHockeyLoggerTests
 
-- (void)setUp {
-    [super setUp];
-    // Put setup code here. This method is called before the invocation of each test method in the class.
-}
-
+// Set default log handler after every test to avoid interferences
 - (void)tearDown {
-    // Put teardown code here. This method is called after the invocation of each test method in the class.
-    [super tearDown];
+  [BITHockeyLogger setLogHandler:defaultLogHandler];
+  [super tearDown];
 }
 
 - (void)testInitialLogLevel {
