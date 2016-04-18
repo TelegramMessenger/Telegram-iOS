@@ -30,15 +30,16 @@ This document contains the following sections:
 2. [Setup](#setup)
 3. [Advanced Setup](#advancedsetup) 
   1. [Linking System Frameworks manually](#linkmanually)   
-  2. [Setup with CocoaPods](#cocoapods)
-  3. [iOS Extensions](#extensions)
-  4. [WatchKit 1 Extensions](#watchkit)
-  5. [Crash Reporting](#crashreporting)
-  6. [User Metrics](#user-metrics)
-  7. [Feedback](#feedback)
-  8. [Store Updates](#storeupdates)
-  9. [In-App-Updates (Beta & Enterprise only)](#betaupdates)
-  10. [Debug information](#debug)
+  2. [CocoaPods](#cocoapods)
+  3. [Carthage](#carthage)
+  4. [iOS Extensions](#extensions)
+  5. [WatchKit 1 Extensions](#watchkit)
+  6. [Crash Reporting](#crashreporting)
+  7. [User Metrics](#user-metrics)
+  8. [Feedback](#feedback)
+  9. [Store Updates](#storeupdates)
+  10. [In-App-Updates (Beta & Enterprise only)](#betaupdates)
+  11. [Debug information](#debug)
 4. [Documentation](#documentation)
 5. [Troubleshooting](#troubleshooting)
 6. [Contributing](#contributing)
@@ -178,7 +179,7 @@ If you are working with an older project which doesn't support clang modules yet
 Note that this also means that you can't use the `@import` syntax mentioned in the [Modify Code](#modify) section but have to stick to the old `#import <HockeySDK/HockeySDK.h>`.
 
 <a id="cocoapods"></a>
-### 3.2 Setup with CocoaPods
+### 3.2 CocoaPods
 
 [CocoaPods](http://cocoapods.org) is a dependency manager for Objective-C, which automates and simplifies the process of using 3rd-party libraries like HockeySDK in your projects. To learn how to setup CocoaPods for your project, visit the [official CocoaPods website](http://cocoapods.org/).
 
@@ -470,7 +471,7 @@ This feature can be disabled manually as follows:
 ```objectivec
 [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
-[[BITHockeyManager sharedHockeyManager] setDisableUpdateManager: YES]; //disable crash reporting
+[[BITHockeyManager sharedHockeyManager] setDisableUpdateManager: YES]; //disable auto updating
 
 [[BITHockeyManager sharedHockeyManager] startManager];
 ```

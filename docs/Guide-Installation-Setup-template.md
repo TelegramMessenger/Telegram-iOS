@@ -10,15 +10,16 @@ This document contains the following sections:
 2. [Setup](#setup)
 3. [Advanced Setup](#advancedsetup) 
   1. [Linking System Frameworks manually](#linkmanually)   
-  2. [Setup with CocoaPods](#cocoapods)
-  3. [iOS Extensions](#extensions)
-  4. [WatchKit 1 Extensions](#watchkit)
-  5. [Crash Reporting](#crashreporting)
-  6. [User Metrics](#user-metrics)
-  7. [Feedback](#feedback)
-  8. [Store Updates](#storeupdates)
-  9. [In-App-Updates (Beta & Enterprise only)](#betaupdates)
-  10. [Debug information](#debug)
+  2. [CocoaPods](#cocoapods)
+  3. [Carthage](#carthage)
+  4. [iOS Extensions](#extensions)
+  5. [WatchKit 1 Extensions](#watchkit)
+  6. [Crash Reporting](#crashreporting)
+  7. [User Metrics](#user-metrics)
+  8. [Feedback](#feedback)
+  9. [Store Updates](#storeupdates)
+  10. [In-App-Updates (Beta & Enterprise only)](#betaupdates)
+  11. [Debug information](#debug)
 4. [Documentation](#documentation)
 5. [Troubleshooting](#troubleshooting)
 6. [Contributing](#contributing)
@@ -158,7 +159,7 @@ If you are working with an older project which doesn't support clang modules yet
 Note that this also means that you can't use the `@import` syntax mentioned in the [Modify Code](#modify) section but have to stick to the old `#import <HockeySDK/HockeySDK.h>`.
 
 <a id="cocoapods"></a>
-### 3.2 Setup with CocoaPods
+### 3.2 CocoaPods
 
 [CocoaPods](http://cocoapods.org) is a dependency manager for Objective-C, which automates and simplifies the process of using 3rd-party libraries like HockeySDK in your projects. To learn how to setup CocoaPods for your project, visit the [official CocoaPods website](http://cocoapods.org/).
 
@@ -389,14 +390,14 @@ and set the delegate:
 
 HockeyApp automatically provides you with nice, intelligible, and informative metrics about how your app is used and by whom. 
 - **Sessions**: A new session is tracked by the SDK whenever the containing app is restarted (this refers to a 'cold start', i.e. when the app has not already been in memory prior to being launched) or whenever it becomes active again after having been in the background for 20 seconds or more.
- - **Users**: The SDK anonymously tracks the users of your app by creating a random UUID that is then securely stored in the iOS keychain. Because this anonymous ID is stored in the keychain it persists across reinstallations.
- 
+- **Users**: The SDK anonymously tracks the users of your app by creating a random UUID that is then securely stored in the iOS keychain. Because this anonymous ID is stored in the keychain it persists across reinstallations.
+
 Just in case you want to opt-out of this feature, there is a way to turn this functionality off:
 
 ```objectivec
 [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
-[BITHockeyManager sharedHockeyManager].disableTelemetryManager = YES;
+[BITHockeyManager sharedHockeyManager].disableMetricsManager = YES;
 
 [[BITHockeyManager sharedHockeyManager] startManager];
 
