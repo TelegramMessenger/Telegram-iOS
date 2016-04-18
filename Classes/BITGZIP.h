@@ -33,10 +33,10 @@
 
 #import <Foundation/Foundation.h>
 
-@interface NSData (GZIP)
+@interface NSData (BITGZIP)
 
-- (NSData *)gzippedDataWithCompressionLevel:(float)level;
-- (NSData *)gzippedData;
-- (NSData *)gunzippedData;
+- (NSData *)bit_gzippedDataWithCompressionLevel:(float)level;
+- (NSData *)bit_gzippedData;
+- (NSData *)bit_gunzippedData;
 
 @end
