@@ -377,6 +377,9 @@ NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
   
   [text appendString: @"\n"];
   
+  NSString *xamarinTrace;
+  NSString *exceptionReason;
+  
   /* System info */
   {
     NSString *osBuild = @"???";
@@ -396,7 +399,20 @@ NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
       }
     }
     [text appendFormat: @"OS Version:      %@ %@ (%@)\n", osName, report.systemInfo.operatingSystemVersion, osBuild];
-    [text appendFormat: @"Report Version:  104\n"];
+    
+    // Check if exception data contains xamarin stacktrace in order to determine report version
+    if (report.hasExceptionInfo) {
+      exceptionReason = report.exceptionInfo.exceptionReason;
+      NSInteger xamarinTracePosition = [exceptionReason rangeOfString:BITXamarinStackTraceDelimiter].location;
+      if (xamarinTracePosition != NSNotFound) {
+        xamarinTrace = [exceptionReason substringFromIndex:xamarinTracePosition];
+        xamarinTrace = [xamarinTrace stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        exceptionReason = [exceptionReason substringToIndex:xamarinTracePosition];
+        exceptionReason = [exceptionReason stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+      }
+    }
+    NSString *reportVersion = (xamarinTrace) ? @"104-Xamarin" : @"104";
+    [text appendFormat: @"Report Version:  %@\n", reportVersion];
   }
   
   [text appendString: @"\n"];
@@ -425,24 +441,13 @@ NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
   /* Uncaught Exception */
   if (report.hasExceptionInfo) {
     [text appendFormat: @"Application Specific Information:\n"];
-    
-    NSString *xamarinStackTrace;
-    NSString *reason = report.exceptionInfo.exceptionReason;
-    NSInteger xamarinStackPosition = [reason rangeOfString:BITXamarinStackTraceDelimiter].location;
-    if (xamarinStackPosition != NSNotFound) {
-      xamarinStackTrace = [reason substringFromIndex:xamarinStackPosition];
-      reason = [reason substringToIndex:xamarinStackPosition];
-      reason = [reason stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-    }
-    
     [text appendFormat: @"*** Terminating app due to uncaught exception '%@', reason: '%@'\n",
-    report.exceptionInfo.exceptionName, reason];
+    report.exceptionInfo.exceptionName, exceptionReason];
     [text appendString: @"\n"];
     
     /* Xamarin Exception */
-    if (xamarinStackTrace) {
-      xamarinStackTrace = [xamarinStackTrace stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-      [text appendFormat:@"%@\n", xamarinStackTrace];
+    if (xamarinTrace) {
+      [text appendFormat:@"%@\n", xamarinTrace];
       [text appendString: @"\n"];
     }
     
