@@ -24,7 +24,7 @@
 
 - (void)setUp {
   [super setUp];
-  _mockPersistence = mock(BITPersistence.class);
+  _mockPersistence = OCMPartialMock([[BITPersistence alloc] init]);
   BITTelemetryContext *mockContext = mock(BITTelemetryContext.class);
   
   _sut = [[BITChannel alloc]initWithTelemetryContext:mockContext persistence:_mockPersistence];
