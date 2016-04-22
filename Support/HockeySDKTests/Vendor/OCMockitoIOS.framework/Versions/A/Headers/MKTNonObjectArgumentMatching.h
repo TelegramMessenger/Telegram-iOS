@@ -19,13 +19,10 @@
  * The argument index is 0-based, so the first argument of a method has index 0.
  *
  * Examples:
- * <ul>
- *   <li><code>[[given([mockFetchedResultsController performFetch:NULL]) withMatcher:anything()] willReturn:@YES];</code></li>
- * </ul>
+ * <pre>[[given([mockFetchedResultsController performFetch:NULL]) withMatcher:anything()] willReturn:\@YES];</pre>
  * This stubs <code>performFetch:</code> to return <code>YES</code> for any NSError ** argument.
- * <ul>
- *   <li><code>[[verify(mockArray) withMatcher:greaterThan(@5]) forArgument:0] removeObjectAtIndex:0];</code></li>
- * </ul>
+ *
+ * <pre>[[verify(mockArray) withMatcher:greaterThan(@5]) forArgument:0] removeObjectAtIndex:0];</pre>
  * This verifies that <code>removeObjectAtIndex:</code> was called with an index greater than 5.
  */
 - (id)withMatcher:(id <HCMatcher>)matcher forArgument:(NSUInteger)index;
@@ -35,9 +32,7 @@
  * @discussion Equivalent to <code>withMatcher:matcher forArgument:0</code>.
  *
  * Example:
- * <ul>
- *   <li><code>[[verify(mockArray) withMatcher:greaterThan(@5)] removeObjectAtIndex:0];</code></li>
- * </ul>
+ * <pre>[[verify(mockArray) withMatcher:greaterThan(\@5)] removeObjectAtIndex:0];</pre>
  * This verifies that <code>removeObjectAtIndex:</code> was called with an index greater than 5.
 */
 - (id)withMatcher:(id <HCMatcher>)matcher;
