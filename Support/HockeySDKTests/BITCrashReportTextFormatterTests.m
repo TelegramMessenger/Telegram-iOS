@@ -250,6 +250,21 @@
   assertThat(crashLogString, notNilValue());
 }
 
+- (void)testXamarinReport {
+  NSData *crashData = [BITTestHelper dataOfFixtureCrashReportWithFileName:@"live_report_xamarin"];
+  assertThat(crashData, notNilValue());
+  
+  NSError *error = nil;
+  BITPLCrashReport *report = [[BITPLCrashReport alloc] initWithData:crashData error:&error];
+  
+  NSString *filePath = [[NSBundle bundleForClass:self.class] pathForResource:@"log_report_xamarin" ofType:@""];
+  NSString *expected = [NSString stringWithContentsOfFile:filePath encoding:NSUTF8StringEncoding error:nil];
+  
+  NSString *actual = [BITCrashReportTextFormatter stringValueForCrashReport:report crashReporterKey:@""];
+  
+  assertThat(expected, equalTo(actual));
+}
+
 - (void)testAnonymizedProcessPathFromProcessPath {
   NSString *testProcessPath = @"/Users/sampleuser/Library/Developer/CoreSimulator/Devices/CDF13B63-8B8A-4191-A528-1A2FAFC9A915/data/Containers/Bundle/Application/FF127199-5B93-4E84-87AF-5C11F1E639DB/Test.app/Test";
 
