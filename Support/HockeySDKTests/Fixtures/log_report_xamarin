@@ -2,7 +2,7 @@ Incident Identifier: DA408E79-F7FA-41A0-9749-2DEDBFF6B834
 CrashReporter Key:   ???
 Hardware Model:      x86_64
 Process:         HockeySDKXamarin [4438]
-Path:            
+Path:            /Users/USER/Library/Developer/CoreSimulator/Devices/4E8A1839-B2A5-4C6E-9262-C603E709A19A/data/Containers/Bundle/Application/B06486E3-9435-4242-A6E8-A274E829B046/HockeySDKXamarinDemo.iOS.app/HockeySDKXamarinDemo.iOS
 Identifier:      com.microsoft.ios.XamarinBugbashDemo
 Version:         1.0 (1)
 Code Type:       X86
