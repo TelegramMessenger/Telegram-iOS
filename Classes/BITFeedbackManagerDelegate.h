@@ -29,6 +29,9 @@
 #import <Foundation/Foundation.h>
 #import "BITFeedbackComposeViewControllerDelegate.h"
 
+#import "HockeySDKNullability.h"
+NS_ASSUME_NONNULL_BEGIN
+
 @class BITFeedbackManager;
 
 /**
@@ -39,14 +42,6 @@
 @protocol BITFeedbackManagerDelegate <NSObject, BITFeedbackComposeViewControllerDelegate>
 
 @optional
-
-/**
- *	can be implemented to know when new feedback from the server arrived
- *
- *	@param	feedbackManager	The feedbackManager which did detect the new messages
- */
-- (void) feedbackManagerDidReceiveNewFeedback:(BITFeedbackManager*) feedbackManager;
-
 
 /**
  *  Can be implemented to control wether the feedback manager should automatically
@@ -60,6 +55,33 @@
  *
  *	@param	feedbackManager	The feedbackManager which did detect the new messages
  */
-- (BOOL) allowAutomaticFetchingForNewFeedbackForManager:(BITFeedbackManager *)feedbackManager;
+- (BOOL)allowAutomaticFetchingForNewFeedbackForManager:(BITFeedbackManager *)feedbackManager;
+
+
+/**
+ *	can be implemented to know when new feedback from the server arrived
+ *
+ *	@param	feedbackManager	The feedbackManager which did detect the new messages
+ */
+- (void)feedbackManagerDidReceiveNewFeedback:(BITFeedbackManager *)feedbackManager;
+
+
+/**
+ *  This optional method can be implemented to provide items to prefill
+ *  the FeedbackComposeMessage user interface with the given items.
+ *
+ *  If the user sends the feedback message, these items will be attached to that message.
+ *
+ *  All NSString-Content in the array will be concatenated and result in the message,
+ *  while all UIImage and NSData-instances will be turned into attachments.
+ *
+ *  @param feedbackManager The BITFeedbackManager instance that will handle sending the feedback.
+ *
+ *  @return An array containing the items to be attached to the feedback message
+ *  @see `[BITFeedbackComposeViewController prepareWithItems:]
+ */
+- (nullable NSArray *)preparedItemsForFeedbackManager:(BITFeedbackManager *)feedbackManager;
 
 @end
+
+NS_ASSUME_NONNULL_END

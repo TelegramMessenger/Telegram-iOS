@@ -1,5 +1,5 @@
 //  OCHamcrest by Jon Reid, http://qualitycoding.org/about/
-//  Copyright 2015 hamcrest.org. See LICENSE.txt
+//  Copyright 2016 hamcrest.org. See LICENSE.txt
 
 #import <Foundation/Foundation.h>
 
@@ -41,8 +41,7 @@ FOUNDATION_EXPORT void HC_assertThatWithLocation(id testCase, id actual, id <HCM
 typedef id (^HCFutureValue)();
 
 FOUNDATION_EXPORT void HC_assertWithTimeoutAndLocation(id testCase, NSTimeInterval timeout,
-        HCFutureValue actualBlock,
-        id <HCMatcher> matcher,
+        HCFutureValue actualBlock, id <HCMatcher> matcher,
         const char *fileName, int lineNumber);
 
 #define HC_assertWithTimeout(timeout, actualBlock, matcher)  \

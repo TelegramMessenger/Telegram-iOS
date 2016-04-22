@@ -17,6 +17,15 @@
 - [IMPROVEMENT] Reuse `NSURLSession` object
 - [IMPROVEMENT] Under the hood improvements and cleanup
 
+## Version 4.0.0
+
+- [NEW] Added official Carthage support
+- [NEW] Added `preparedItemsForFeedbackManager:` method in `BITFeedbackManagerDelegate` to allow to provide items with every possible method of showing the feedback compose dialog.
+- [UPDATE] Our CrashOnly binary now includes User Metrics which enables crash free users statistics
+- [UPDATE] Deprecate `feedbackComposerPreparedItems` property in favor of the new delegate method.
+- [IMPROVEMENT] Prefix GZIP category on NSData to prevent symbol collisions
+- [BUGFIX] Add minor UI bug when adding arrow annotation to feedback image
+
 ## Version 4.0.0-beta.1
 
 - [NEW] User Metrics including users and sessions data is now in public beta

@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2004-2015 Erik Doernenburg and contributors
+ *  Copyright (c) 2004-2016 Erik Doernenburg and contributors
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
  *  not use these files except in compliance with the License. You may obtain
@@ -42,8 +42,13 @@
 ({ \
     _OCMSilenceWarnings( \
         [OCMMacroState beginStubMacro]; \
-        invocation; \
-        [OCMMacroState endStubMacro]; \
+        OCMStubRecorder *recorder = nil; \
+        @try{ \
+            invocation; \
+        }@finally{ \
+            recorder = [OCMMacroState endStubMacro]; \
+        } \
+        recorder; \
     ); \
 })
 
@@ -51,8 +56,27 @@
 ({ \
     _OCMSilenceWarnings( \
         [OCMMacroState beginExpectMacro]; \
-        invocation; \
-        [OCMMacroState endExpectMacro]; \
+        OCMStubRecorder *recorder = nil; \
+        @try{ \
+            invocation; \
+        }@finally{ \
+            recorder = [OCMMacroState endExpectMacro]; \
+        } \
+        recorder; \
+    ); \
+})
+
+#define OCMReject(invocation) \
+({ \
+    _OCMSilenceWarnings( \
+        [OCMMacroState beginRejectMacro]; \
+        OCMStubRecorder *recorder = nil; \
+        @try{ \
+            invocation; \
+        }@finally{ \
+            recorder = [OCMMacroState endRejectMacro]; \
+        } \
+        recorder; \
     ); \
 })
 
@@ -71,8 +95,11 @@
 ({ \
     _OCMSilenceWarnings( \
         [OCMMacroState beginVerifyMacroAtLocation:OCMMakeLocation(self, __FILE__, __LINE__)]; \
-        invocation; \
-        [OCMMacroState endVerifyMacro]; \
+        @try{ \
+            invocation; \
+        }@finally{ \
+            [OCMMacroState endVerifyMacro]; \
+        } \
     ); \
 })
 
