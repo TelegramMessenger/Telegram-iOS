@@ -407,7 +407,7 @@ NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
       if (xamarinTracePosition != NSNotFound) {
         xamarinTrace = [exceptionReason substringFromIndex:xamarinTracePosition];
         xamarinTrace = [xamarinTrace stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-        xamarinTrace = [xamarinTrace stringByReplacingOccurrencesOfString:@"<---\n\n--->" withString:@"\n"];
+        xamarinTrace = [xamarinTrace stringByReplacingOccurrencesOfString:@"<---\n\n--->" withString:@"<---\n--->"];
         exceptionReason = [exceptionReason substringToIndex:xamarinTracePosition];
         exceptionReason = [exceptionReason stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
       }
