@@ -1,4 +1,4 @@
-# Develop branch
+## Version 4.0.0
 
 - [NEW] Added official Carthage support
 - [NEW] Added `preparedItemsForFeedbackManager:` method in `BITFeedbackManagerDelegate` to allow to provide items with every possible method of showing the feedback compose dialog.
