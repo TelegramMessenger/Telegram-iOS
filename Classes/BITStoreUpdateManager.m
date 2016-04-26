@@ -260,8 +260,15 @@
 #pragma mark - Private
 
 - (BOOL)shouldCancelProcessing {
-  if (self.appEnvironment != BITEnvironmentAppStore) return YES;
-  if (![self isStoreUpdateManagerEnabled]) return YES;
+  if (self.appEnvironment != BITEnvironmentAppStore) {
+    BITHockeyLog(@"WARNING: StoreUpdateManager is cancelled because it's not running in an AppStore environment");
+    return YES;
+  }
+  
+  if (![self isStoreUpdateManagerEnabled]) {
+    return YES;
+  }
+  
   return NO;
 }
 
