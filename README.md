@@ -1,9 +1,10 @@
 [![Build Status](https://travis-ci.org/bitstadium/HockeySDK-iOS.svg?branch=master)](https://travis-ci.org/bitstadium/HockeySDK-iOS)
+[![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
 [![Version](http://cocoapod-badges.herokuapp.com/v/HockeySDK/badge.png)](http://cocoadocs.org/docsets/HockeySDK)
 
-## Version 4.0.0-beta.1
+## Version 4.0.0
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/4.0.0-beta.1/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/4.0.0/docs/docs/Changelog.html)
 
 ## Introduction
 
@@ -29,15 +30,16 @@ This document contains the following sections:
 2. [Setup](#setup)
 3. [Advanced Setup](#advancedsetup) 
   1. [Linking System Frameworks manually](#linkmanually)   
-  2. [Setup with CocoaPods](#cocoapods)
-  3. [iOS Extensions](#extensions)
-  4. [WatchKit 1 Extensions](#watchkit)
-  5. [Crash Reporting](#crashreporting)
-  6. [User Metrics](#user-metrics)
-  7. [Feedback](#feedback)
-  8. [Store Updates](#storeupdates)
-  9. [In-App-Updates (Beta & Enterprise only)](#betaupdates)
-  10. [Debug information](#debug)
+  2. [CocoaPods](#cocoapods)
+  3. [Carthage](#carthage)
+  4. [iOS Extensions](#extensions)
+  5. [WatchKit 1 Extensions](#watchkit)
+  6. [Crash Reporting](#crashreporting)
+  7. [User Metrics](#user-metrics)
+  8. [Feedback](#feedback)
+  9. [Store Updates](#storeupdates)
+  10. [In-App-Updates (Beta & Enterprise only)](#betaupdates)
+  11. [Debug information](#debug)
 4. [Documentation](#documentation)
 5. [Troubleshooting](#troubleshooting)
 6. [Contributing](#contributing)
@@ -177,7 +179,7 @@ If you are working with an older project which doesn't support clang modules yet
 Note that this also means that you can't use the `@import` syntax mentioned in the [Modify Code](#modify) section but have to stick to the old `#import <HockeySDK/HockeySDK.h>`.
 
 <a id="cocoapods"></a>
-### 3.2 Setup with CocoaPods
+### 3.2 CocoaPods
 
 [CocoaPods](http://cocoapods.org) is a dependency manager for Objective-C, which automates and simplifies the process of using 3rd-party libraries like HockeySDK in your projects. To learn how to setup CocoaPods for your project, visit the [official CocoaPods website](http://cocoapods.org/).
 
@@ -212,8 +214,19 @@ Alternatively you can integrate the SDK by source if you want to do any modifica
 pod "HockeySDK-Source"
 ```
 
+<a id="carthage"></a>
+### 3.3 Carthage
+
+[Carthage](https://github.com/Carthage/Carthage) is an alternative way to add frameworks to your app. For general information about how to use Carthage, please follow their [documentation](https://github.com/Carthage/Carthage#adding-frameworks-to-an-application).
+
+To add HockeySDK to your project, simply put this line into your `Cartfile`:
+
+`github "bitstadium/HockeySDK-iOS"`
+
+and then follow the steps described in the [Carthage documentation](https://github.com/Carthage/Carthage#if-youre-building-for-ios-tvos-or-watchos).
+
 <a id="extensions"></a>
-### 3.3 iOS Extensions
+### 3.4 iOS Extensions
 
 The following points need to be considered to use the HockeySDK SDK with iOS Extensions:
 
@@ -242,7 +255,7 @@ The following points need to be considered to use the HockeySDK SDK with iOS Ext
 3. The binary distribution provides a special framework build in the `HockeySDKCrashOnly` or `HockeySDKCrashOnlyExtension` folder of the distribution zip file, which only contains crash reporting functionality (also automatic sending crash reports only).
 
 <a id="watchkit"></a>
-### 3.4 WatchKit 1 Extensions
+### 3.5 WatchKit 1 Extensions
 
 The following points need to be considered to use HockeySDK with WatchKit 1 Extensions:
 
@@ -307,11 +320,11 @@ The following points need to be considered to use HockeySDK with WatchKit 1 Exte
 2. The binary distribution provides a special framework build in the `HockeySDKCrashOnly` or `HockeySDKCrashOnlyExtension` folder of the distribution zip file, which only contains crash reporting functionality (also automatic sending crash reports only).
 
 <a name="crashreporting"></a>
-### 3.5 Crash Reporting
+### 3.6 Crash Reporting
 
 The following options only show some of possibilities to interact and fine-tune the crash reporting feature. For more please check the full documentation of the `BITCrashManager` class in our [documentation](#documentation).
 
-#### 3.5.1 Disable Crash Reporting
+#### 3.6.1 Disable Crash Reporting
 The HockeySDK enables crash reporting **per default**. Crashes will be immediately sent to the server the next time the app is launched.
 
 To provide you with the best crash reporting, we are using [PLCrashReporter]("https://github.com/plausiblelabs/plcrashreporter") in [Version 1.2 / Commit 356901d7f3ca3d46fbc8640f469304e2b755e461]("https://github.com/plausiblelabs/plcrashreporter/commit/356901d7f3ca3d46fbc8640f469304e2b755e461").
@@ -326,7 +339,7 @@ This feature can be disabled as follows:
 [[BITHockeyManager sharedHockeyManager] startManager];
 ```
 
-#### 3.5.2 Autosend crash reports
+#### 3.6.2 Autosend crash reports
 
 Crashes are send the next time the app starts. If `crashManagerStatus` is set to `BITCrashManagerStatusAutoSend`, crashes will be send without any user interaction, otherwise an alert will appear allowing the users to decide whether they want to send the report or not.
 
@@ -342,7 +355,7 @@ The SDK is not sending the reports right when the crash happens deliberately, be
 
 Sending the reports on startup is done asynchronously (non-blocking). This is the only safe way to ensure that the app won't be possibly killed by the iOS watchdog process, because startup could take too long and the app could not react to any user input when network conditions are bad or connectivity might be very slow.
 
-#### 3.5.3 Mach Exception Handling
+#### 3.6.3 Mach Exception Handling
 
 By default the SDK is using the safe and proven in-process BSD Signals for catching crashes. This option provides an option to enable catching fatal signals via a Mach exception server instead.
 
@@ -358,7 +371,7 @@ We strongly advice _NOT_ to enable Mach exception handler in release versions of
 [[BITHockeyManager sharedHockeyManager] startManager];
 ```
 
-#### 3.5.4 Attach additional data
+#### 3.6.4 Attach additional data
 
 The `BITHockeyManagerDelegate` protocol provides methods to add additional data to a crash report:
 
@@ -395,7 +408,9 @@ and set the delegate:
 <a name="user-metrics"></a>
 ### 3.6 User Metrics
 
-HockeyApp automatically provides you with nice intelligible and informative metrics about how your app is used and by whom.
+HockeyApp automatically provides you with nice, intelligible, and informative metrics about how your app is used and by whom. 
+- **Sessions**: A new session is tracked by the SDK whenever the containing app is restarted (this refers to a 'cold start', i.e. when the app has not already been in memory prior to being launched) or whenever it becomes active again after having been in the background for 20 seconds or more.
+- **Users**: The SDK anonymously tracks the users of your app by creating a random UUID that is then securely stored in the iOS keychain. Because this anonymous ID is stored in the keychain it persists across reinstallations.
 
 Just in case you want to opt-out of this feature, there is a way to turn this functionality off:
 
@@ -479,7 +494,7 @@ To check if data is send properly to HockeyApp and also see some additional SDK 
 <a id="documentation"></a>
 ## 4. Documentation
 
-Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/4.0.0-beta.1/index.html).
+Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/4.0.0/index.html).
 
 <a id="troubleshooting"></a>
 ## 5.Troubleshooting
@@ -493,7 +508,7 @@ Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/
   Make sure none of the following files are copied into your app bundle, check under app target, `Build Phases`, `Copy Bundle Resources` or in the `.app` bundle after building:
 
   - `HockeySDK.framework` (except if you build a dynamic framework version of the SDK yourself!)
-  - `de.bitstadium.HockeySDK-iOS-4.0.0-beta.1.docset`
+  - `de.bitstadium.HockeySDK-iOS-4.0.0.docset`
 
 ### Feature are not working as expected
 
@@ -512,6 +527,7 @@ We're looking forward to your contributions via pull requests.
 * Get the latest Xcode from the Mac App Store
 * [AppleDoc](https://github.com/tomaz/appledoc) 
 * [CocoaPods](https://cocoapods.org/)
+* [Carthage](https://github.com/Carthage/Carthage)
 
 <a id="contributorlicense"></a>
 ## 7. Contributor License
@@ -521,4 +537,4 @@ You must sign a [Contributor License Agreement](https://cla.microsoft.com/) befo
 <a id="contact"></a>
 ## 8. Contact
 
-If you have further questions or are running into trouble that cannot be resolved by any of the steps here, feel free to open a Github issue here or contact us at [support@hockeyapp.net](mailto:support@hockeyapp.net)
+If you have further questions or are running into trouble that cannot be resolved by any of the steps here, feel free to open a Github issue here, contact us at [support@hockeyapp.net](mailto:support@hockeyapp.net) or join our [Slack](https://slack.hockeyapp.net) [![Slack Status](https://slack.hockeyapp.net/badge.svg)](https://slack.hockeyapp.net)

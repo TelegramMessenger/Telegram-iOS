@@ -15,18 +15,40 @@ env:
     - SCHEME="HockeySDK"             DESTINATION="OS=9.1,name=iPad Pro"                 RUN_TESTS="YES"
     - SCHEME="HockeySDK"             DESTINATION="OS=9.2,name=iPhone 6s"                RUN_TESTS="YES"
     - SCHEME="HockeySDK Framework"   DESTINATION="platform=iOS Simulator,name=iPhone 6" RUN_TESTS="YES"
-    - SCHEME="HockeySDK Distribution"                                                   RUN_TESTS="NO"
+    - SCHEME="HockeySDK Distribution"                                                   RUN_TESTS="NO" LINT="YES"
 
 before_install:
   - xcrun simctl list
   - gem install xcpretty --no-rdoc --no-ri --no-document --quiet
+  - gem install xcpretty-travis-formatter --no-rdoc --no-ri --no-document --quiet
+  - gem install cocoapods --no-rdoc --no-ri --no-document --quiet
+  - brew install carthage
 
 script:
   - set -o pipefail
-  - COMMAND="xcodebuild -project '$PROJECT' -scheme '$SCHEME' -sdk '$SDK' -configuration '$CONFIGURATION'"
+  - COMMAND="env NSUnbufferedIO=YES xcodebuild -project '$PROJECT' -scheme '$SCHEME' -sdk '$SDK' -configuration '$CONFIGURATION'"
+
+  # Run tests
   - if [ $RUN_TESTS == "YES" ]; then
       COMMAND+=" -destination '$DESTINATION' XCODEBUILD_GCC_PREPROCESSOR_DEFINITIONS="CI=1" clean test";
     fi
-  - COMMAND+=" | xcpretty -c"
+
+  - COMMAND+=" | tee xcodebuild.log"
+
+  # Add xcpretty
+  - COMMAND+=" | xcpretty -f `xcpretty-travis-formatter`"
+
   - echo $COMMAND
-  - eval $COMMAND
+  - eval $COMMAND && rm xcodebuild.log
+  - if [ $LINT == "YES" ]; then
+      cp -R Products/HockeySDK-iOS/ HockeySDK-iOS;
+      pod lib lint;
+      carthage build --no-skip-current;
+    fi
+
+# Use better failure diagnostics, copied from https://github.com/0xced/XCDYouTubeKit
+after_failure:
+  - cat xcodebuild.log
+  - cat -n $TMPDIR/com.apple.dt.XCTest-status/Session*.log
+  - cat -n ~/Library/Logs/DiagnosticReports/xctest*.crash
+  - sleep 5

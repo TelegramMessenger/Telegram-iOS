@@ -75,8 +75,8 @@
   
   CGRect boundRect = CGRectInset(self.bounds, 0, 0);
   CGFloat arrowLength= sqrt(pow(CGRectGetWidth(boundRect), 2) + pow(CGRectGetHeight(boundRect), 2));
-  if (arrowLength < 30){
-    
+  if (0 < arrowLength && arrowLength < 30){
+
     CGFloat factor = 30.f/arrowLength;
     
     boundRect = CGRectApplyAffineTransform(boundRect, CGAffineTransformMakeScale(factor,factor));
@@ -176,6 +176,10 @@
 - (CGAffineTransform)transformForStartPoint:(CGPoint)startPoint
                                        endPoint:(CGPoint)endPoint
                                          length:(CGFloat)length {
+  if (CGPointEqualToPoint(startPoint, CGPointZero) && (length == 0.0f)) {
+    return CGAffineTransformIdentity;
+  }
+  
   CGFloat cosine = (endPoint.x - startPoint.x) / length;
   CGFloat sine = (endPoint.y - startPoint.y) / length;
   return (CGAffineTransform){ cosine, sine, -sine, cosine, startPoint.x, startPoint.y };
