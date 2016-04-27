@@ -6,7 +6,7 @@
 #import <OCMock/OCMock.h>
 
 #import "BITPersistencePrivate.h"
-#import "BITChannel.h"
+#import "BITChannelPrivate.h"
 #import "BITTelemetryContext.h"
 #import "BITPersistence.h"
 #import "BITEnvelope.h"
@@ -24,7 +24,7 @@
 
 - (void)setUp {
   [super setUp];
-  _mockPersistence = mock(BITPersistence.class);
+  _mockPersistence = OCMPartialMock([[BITPersistence alloc] init]);
   BITTelemetryContext *mockContext = mock(BITTelemetryContext.class);
   
   _sut = [[BITChannel alloc]initWithTelemetryContext:mockContext persistence:_mockPersistence];
@@ -42,7 +42,7 @@
 
 - (void)testEnqueueEnvelopeWithOneEnvelopeAndJSONStream {
   _sut = OCMPartialMock(_sut);
-  _sut.maxBatchCount = 3;
+  _sut.maxBatchSize = 3;
   BITTelemetryData *testData = [BITTelemetryData new];
   
   [_sut enqueueTelemetryItem:testData];
@@ -55,7 +55,7 @@
 
 - (void)testEnqueueEnvelopeWithMultipleEnvelopesAndJSONStream {
   _sut = OCMPartialMock(_sut);
-  _sut.maxBatchCount = 3;
+  _sut.maxBatchSize = 3;
   
   BITTelemetryData *testData = [BITTelemetryData new];
   

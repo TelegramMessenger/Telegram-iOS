@@ -37,9 +37,9 @@
     BITInternal *item = [BITInternal new];
     item.sdkVersion = @"Test string";
     item.agentVersion = @"Test string";
-    NSString *actual = [item serializeToString];
-    NSString *expected = @"{\"ai.internal.sdkVersion\":\"Test string\",\"ai.internal.agentVersion\":\"Test string\"}";
-    XCTAssertTrue([actual isEqualToString:expected]);
+    NSDictionary *actual = [item serializeToDictionary];
+    NSDictionary *expected = @{@"ai.internal.sdkVersion":@"Test string", @"ai.internal.agentVersion":@"Test string"};
+    XCTAssertTrue([actual isEqualToDictionary:expected]);
 }
 
 @end

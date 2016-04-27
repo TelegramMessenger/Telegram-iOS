@@ -56,6 +56,15 @@ BOOL bit_hasEmbeddedMobileProvision(void);
 BITEnvironment bit_currentAppEnvironment(void);
 BOOL bit_isRunningInAppExtension(void);
 
+/**
+ * Check if the debugger is attached
+ *
+ * Taken from https://github.com/plausiblelabs/plcrashreporter/blob/2dd862ce049e6f43feb355308dfc710f3af54c4d/Source/Crash%20Demo/main.m#L96
+ *
+ * @return `YES` if the debugger is attached to the current process, `NO` otherwise
+ */
+BOOL bit_isDebuggerAttached(void);
+
 /* NSString helpers */
 NSString *bit_URLEncodedString(NSString *inputString);
 NSString *bit_base64String(NSData * data, unsigned long length);

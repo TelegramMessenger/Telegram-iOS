@@ -23,9 +23,9 @@
 - (void)testSerialize {
     BITBase *item = [BITBase new];
     item.baseType = @"Test string";
-    NSString *actual = [item serializeToString];
-    NSString *expected = @"{\"baseType\":\"Test string\"}";
-    XCTAssertTrue([actual isEqualToString:expected]);
+    NSDictionary *actual = [item serializeToDictionary];
+    NSDictionary *expected = @{@"baseType":@"Test string"};
+    XCTAssertTrue([actual isEqualToDictionary:expected]);
 }
 
 @end

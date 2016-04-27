@@ -88,7 +88,7 @@
 #import "HockeySDKNullability.h"
 NS_ASSUME_NONNULL_BEGIN
 
-@interface BITHockeyManager : NSObject
+@interface BITHockeyManager: NSObject
 
 #pragma mark - Public Methods
 
@@ -222,6 +222,8 @@ NS_ASSUME_NONNULL_BEGIN
  
  By default this is set to the HockeyApp servers and there rarely should be a
  need to modify that.
+ Please be aware that the URL for `BITMetricsManager` needs to be set separately
+ as this class uses a different endpoint!
  
  @warning This property needs to be set before calling `startManager`
  */
@@ -392,9 +394,7 @@ NS_ASSUME_NONNULL_BEGIN
  will be turned off!
  
  Please note that the BITMetricsManager instance will be initialized anyway!
- 
- @warning This property needs to be set before calling `startManager`
- 
+  
  *Default*: _NO_
  @see metricsManager
  */

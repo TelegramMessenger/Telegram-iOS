@@ -1,5 +1,8 @@
 #import "BITTelemetryObject.h"
 
+#import "HockeySDKNullability.h"
+NS_ASSUME_NONNULL_BEGIN
+
 ///Data contract class for type BITTelemetryData.
 @interface BITTelemetryData : BITTelemetryObject <NSCoding>
 
@@ -8,6 +11,7 @@
 
 @property (nonatomic, copy) NSNumber *version;
 @property (nonatomic, copy) NSString *name;
-@property (nonatomic, strong) NSDictionary *properties;
 
 @end
+
+NS_ASSUME_NONNULL_END

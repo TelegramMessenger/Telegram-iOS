@@ -16,7 +16,7 @@
 @property (nonatomic, copy) NSString *appId;
 @property (nonatomic, copy) NSString *appVer;
 @property (nonatomic, copy) NSString *userId;
-@property (nonatomic, strong) BITOrderedDictionary *tags;
+@property (nonatomic, strong) NSDictionary *tags;
 @property (nonatomic, strong) BITBase *data;
 
 

@@ -4,7 +4,7 @@
 #import "BITMetricsManagerPrivate.h"
 #import "BITHockeyBaseManagerPrivate.h"
 #import "BITSession.h"
-#import "BITChannel.h"
+#import "BITChannelPrivate.h"
 #import "BITTelemetryContext.h"
 #import "BITSessionStateData.h"
 
