@@ -17,11 +17,13 @@
 #import "BITCrashManagerPrivate.h"
 #import "BITHockeyBaseManagerPrivate.h"
 
+#import "BITPersistence.h"
+
 #import "BITTestHelper.h"
 #import "BITHockeyAppClient.h"
 
 
-#define kBITCrashMetaAttachment @"BITCrashMetaAttachment"
+static NSString *const kBITCrashMetaAttachment = @"BITCrashMetaAttachment";
 
 @interface BITCrashManagerTests : XCTestCase
 
@@ -66,6 +68,11 @@
 }
 
 - (void)startManagerAutoSend {
+  // Set mocks to prevent errors in `-configDefaultCrashCallback`
+  id metricsManagerMock = mock([BITMetricsManager class]);
+  [given([metricsManagerMock persistence]) willReturn:[[BITPersistence alloc] init]];
+  [[BITHockeyManager sharedHockeyManager] setValue:metricsManagerMock forKey:@"metricsManager"];
+  
   _sut.crashManagerStatus = BITCrashManagerStatusAutoSend;
   if (_startManagerInitialized) return;
   [self startManager];
