@@ -1,3 +1,10 @@
+## Develop
+
+- [NEW] Add more fine-grained log levels
+- [NEW] Add ability to connect existing logging framework
+- [BUGFIX] Make CrashManager property `serverURL` individual setable
+- [BUGFIX] Properly dispatch `dismissViewController` call to main queue
+
 ## Version 4.1.0-beta.1
 
 - [IMPROVEMENT] Prevent User Metrics from being sent if `BITMetricsManager` has been disabled.
