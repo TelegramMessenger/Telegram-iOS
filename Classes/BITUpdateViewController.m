@@ -494,7 +494,7 @@
   if ([_cells count] > (NSUInteger)indexPath.row) {
     return [_cells objectAtIndex:indexPath.row];
   } else {
-    BITHockeyLog(@"Warning: cells_ and indexPath do not match? forgot calling redrawTableView?");
+    BITHockeyLogWarning(@"Warning: cells_ and indexPath do not match? forgot calling redrawTableView?");
   }
   return nil;
 }

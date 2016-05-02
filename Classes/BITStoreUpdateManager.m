@@ -55,7 +55,7 @@
 #pragma mark - private
 
 - (void)reportError:(NSError *)error {
-  BITHockeyLog(@"ERROR: %@", [error localizedDescription]);
+  BITHockeyLogError(@"ERROR: %@", [error localizedDescription]);
   _lastCheckFailed = YES;
 }
 
@@ -188,7 +188,7 @@
     NSString *ignoredVersion = nil;
     if ([self.userDefaults objectForKey:kBITStoreUpdateIgnoreVersion]) {
       ignoredVersion = [self.userDefaults objectForKey:kBITStoreUpdateIgnoreVersion];
-      BITHockeyLog(@"INFO: Ignored version: %@", ignoredVersion);
+      BITHockeyLogDebug(@"INFO: Ignored version: %@", ignoredVersion);
     }
     
     if (!_newStoreVersion || !_appStoreURLString) {
@@ -207,7 +207,7 @@
       [self.userDefaults setObject:_newStoreVersion forKey:kBITStoreUpdateLastStoreVersion];
       return NO;
     } else {
-      BITHockeyLog(@"INFO: Compare new version string %@ with %@", _newStoreVersion, lastStoreVersion);
+      BITHockeyLogDebug(@"INFO: Compare new version string %@ with %@", _newStoreVersion, lastStoreVersion);
       
       NSComparisonResult comparisonResult = bit_versionCompare(_newStoreVersion, lastStoreVersion);
       
@@ -261,7 +261,7 @@
 
 - (BOOL)shouldCancelProcessing {
   if (self.appEnvironment != BITEnvironmentAppStore) {
-    BITHockeyLog(@"WARNING: StoreUpdateManager is cancelled because it's not running in an AppStore environment");
+    BITHockeyLogWarning(@"WARNING: StoreUpdateManager is cancelled because it's not running in an AppStore environment");
     return YES;
   }
   
@@ -282,7 +282,7 @@
   NSDictionary *json = (NSDictionary *)[NSJSONSerialization JSONObjectWithData:data options:0 error:&error];
   
   if (error) {
-    BITHockeyLog(@"ERROR: Invalid JSON string. %@", [error localizedDescription]);
+    BITHockeyLogError(@"ERROR: Invalid JSON string. %@", [error localizedDescription]);
     return NO;
   }
   
@@ -291,10 +291,10 @@
   
   self.updateAvailable = [self hasNewVersion:json];
   
-  BITHockeyLog(@"INFO: Update available: %i", self.updateAvailable);
+  BITHockeyLogDebug(@"INFO: Update available: %i", self.updateAvailable);
   
   if (_lastCheckFailed) {
-    BITHockeyLog(@"ERROR: Last check failed");
+    BITHockeyLogError(@"ERROR: Last check failed");
     return NO;
   }
   
@@ -325,7 +325,7 @@
   
   // do we need to update?
   if (!manual && ![self shouldAutoCheckForUpdates]) {
-    BITHockeyLog(@"INFO: Update check not needed right now");
+    BITHockeyLogDebug(@"INFO: Update check not needed right now");
     self.checkInProgress = NO;
     return;
   }
@@ -339,7 +339,7 @@
       country = [NSString stringWithFormat:@"&country=%@", [(NSDictionary *)self.currentLocale objectForKey:NSLocaleCountryCode]];
     } else {
       // don't check, just to be save
-      BITHockeyLog(@"ERROR: Locale returned nil, can't determine the store to use!");
+      BITHockeyLogError(@"ERROR: Locale returned nil, can't determine the store to use!");
       self.checkInProgress = NO;
       return;
     }
@@ -351,7 +351,7 @@
                    bit_URLEncodedString(appBundleIdentifier),
                    country];
   
-  BITHockeyLog(@"INFO: Sending request to %@", url);
+  BITHockeyLogDebug(@"INFO: Sending request to %@", url);
   
   NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url] cachePolicy:1 timeoutInterval:10.0];
   [request setHTTPMethod:@"GET"];
@@ -389,7 +389,7 @@
     [self reportError:error];
   } else if ([responseData length]) {
     NSString *responseString = [[NSString alloc] initWithBytes:[responseData bytes] length:[responseData length] encoding: NSUTF8StringEncoding];
-    BITHockeyLog(@"INFO: Received API response: %@", responseString);
+    BITHockeyLogWarning(@"INFO: Received API response: %@", responseString);
     
     if (!responseString || ![responseString dataUsingEncoding:NSUTF8StringEncoding]) {
       return;
@@ -412,7 +412,7 @@
 - (void)startManager {
   if ([self shouldCancelProcessing]) return;
   
-  BITHockeyLog(@"INFO: Start UpdateManager");
+  BITHockeyLogDebug(@"INFO: Start UpdateManager");
 
   if ([self.userDefaults objectForKey:kBITStoreUpdateDateOfLastCheck]) {
     self.lastCheck = [self.userDefaults objectForKey:kBITStoreUpdateDateOfLastCheck];
@@ -528,7 +528,7 @@
   if (_appStoreURLString) {
     [[UIApplication sharedApplication] openURL:[NSURL URLWithString:_appStoreURLString]];
   } else {
-    BITHockeyLog(@"WARNING: The app store page couldn't be opened, since we did not get a valid URL from the store API.");
+    BITHockeyLogWarning(@"WARNING: The app store page couldn't be opened, since we did not get a valid URL from the store API.");
   }
 }
 
