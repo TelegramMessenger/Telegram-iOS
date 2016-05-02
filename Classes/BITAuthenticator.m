@@ -523,8 +523,9 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   if (authToken) {
     identified = YES;
     [self storeInstallationIdentifier:authToken withType:self.identificationType];
-    [self dismissAuthenticationControllerAnimated:YES completion:nil];
-    self.authenticationController = nil;
+    dispatch_async(dispatch_get_main_queue(), ^{
+      [self dismissAuthenticationControllerAnimated:YES completion:nil];
+    });
     BOOL success = [self addStringValueToKeychain:email forKey:kBITAuthenticatorUserEmailKey];
     if (!success) {
       [self alertOnFailureStoringTokenInKeychain];
