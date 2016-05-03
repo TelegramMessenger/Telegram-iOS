@@ -128,9 +128,9 @@ Our examples will use the full featured SDK (`HockeySDK.embeddedframework`).
 4. Add the following lines to setup and start the Application Insights SDK:
 
   ```swift
-  BITHockeyManager.sharedHockeyManager().configureWithIdentifier("APP_IDENTIFIER");
-  BITHockeyManager.sharedHockeyManager().startManager();
-  BITHockeyManager.sharedHockeyManager().authenticator.authenticateInstallation(); // This line is obsolete in the crash only builds
+  BITHockeyManager.sharedHockeyManager().configureWithIdentifier("APP_IDENTIFIER")
+  BITHockeyManager.sharedHockeyManager().startManager()
+  BITHockeyManager.sharedHockeyManager().authenticator.authenticateInstallation() // This line is obsolete in the crash only builds
   ```
 
 *Note:* The SDK is optimized to defer everything possible to a later time while making sure e.g. crashes on startup can also be caught and each module executes other code with a delay some seconds. This ensures that `applicationDidFinishLaunching` will process as fast as possible and the SDK will not block the startup sequence resulting in a possible kill by the watchdog process.
