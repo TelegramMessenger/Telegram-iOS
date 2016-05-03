@@ -234,7 +234,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated"
-  NSArray *preparedItems = self.feedbackComposerPreparedItems;
+  NSArray *preparedItems = self.feedbackComposerPreparedItems ?: [NSArray array];
 #pragma clang diagnostic pop
   if ([self.delegate respondsToSelector:@selector(preparedItemsForFeedbackManager:)]) {
     preparedItems = [preparedItems arrayByAddingObjectsFromArray:[self.delegate preparedItemsForFeedbackManager:self]];
