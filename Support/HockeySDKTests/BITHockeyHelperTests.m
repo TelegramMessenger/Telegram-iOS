@@ -233,20 +233,35 @@
 - (void)testBackupFixRemovesExcludeAttribute {
   
   // Setup: Attribute is set and NSUSerDefaults DON'T contain kBITExcludeApplicationSupportFromBackup == YES
-  NSURL *testAppSupportURL = [self createBackupExcludedTastDirectoryForURL];
-  assertThat(testAppSupportURL, notNilValue());
-  assertThatBool([self excludeAttributeIsSetForURL:testAppSupportURL], isTrue());
+  NSURL *testAppSupportURL = [self createBackupExcludedTestDirectoryForURL];
+  XCTAssertNotNil(testAppSupportURL);
+  XCTAssertTrue([self excludeAttributeIsSetForURL:testAppSupportURL]);
   
   // Test
   bit_fixBackupAttributeForURL(testAppSupportURL);
   
   // Verify
-  assertThatBool([self excludeAttributeIsSetForURL:testAppSupportURL], isFalse());
+  XCTAssertFalse([self excludeAttributeIsSetForURL:testAppSupportURL]);
+}
+
+- (void)testBackupFixIgnoresRemovalOfExcludeAttributeUserDefaultsContainKey {
+  
+  // Setup: Attribute is set and NSUSerDefaults DO contain kBITExcludeApplicationSupportFromBackup == YES
+  [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITExcludeApplicationSupportFromBackup];
+  NSURL *testAppSupportURL = [self createBackupExcludedTestDirectoryForURL];
+  XCTAssertNotNil(testAppSupportURL);
+  XCTAssertTrue([self excludeAttributeIsSetForURL:testAppSupportURL]);
+  
+  // Test
+  bit_fixBackupAttributeForURL(testAppSupportURL);
+  
+  // Verify
+  XCTAssertTrue([self excludeAttributeIsSetForURL:testAppSupportURL]);
 }
 
 #pragma mark - Test Helper
 
-- (NSURL *)createBackupExcludedTastDirectoryForURL{
+- (NSURL *)createBackupExcludedTestDirectoryForURL{
   NSString *testDirectory = @"HockeyTest";
   NSFileManager *fileManager = [NSFileManager defaultManager];
   
