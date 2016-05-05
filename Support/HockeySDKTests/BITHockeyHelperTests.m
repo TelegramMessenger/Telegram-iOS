@@ -31,6 +31,7 @@
 - (void)tearDown {
   // Tear-down code here.
   [super tearDown];
+   [[NSUserDefaults standardUserDefaults] removeObjectForKey:kBITExcludeApplicationSupportFromBackup];
 }
 
 - (void)testURLEncodedString {
@@ -227,6 +228,49 @@
 	
 	// Verify
   assertThat(result, nilValue());
+}
+
+- (void)testBackupFixRemovesExcludeAttribute {
+  
+  // Setup: Attribute is set and NSUSerDefaults DON'T contain kBITExcludeApplicationSupportFromBackup == YES
+  NSURL *testAppSupportURL = [self createBackupExcludedTastDirectoryForURL];
+  assertThat(testAppSupportURL, notNilValue());
+  assertThatBool([self excludeAttributeIsSetForURL:testAppSupportURL], isTrue());
+  
+  // Test
+  bit_fixBackupAttributeForURL(testAppSupportURL);
+  
+  // Verify
+  assertThatBool([self excludeAttributeIsSetForURL:testAppSupportURL], isFalse());
+}
+
+#pragma mark - Test Helper
+
+- (NSURL *)createBackupExcludedTastDirectoryForURL{
+  NSString *testDirectory = @"HockeyTest";
+  NSFileManager *fileManager = [NSFileManager defaultManager];
+  
+  NSURL *testAppSupportURL = [[[fileManager URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask] lastObject] URLByAppendingPathComponent:testDirectory];
+  if ([fileManager createDirectoryAtURL:testAppSupportURL withIntermediateDirectories:YES attributes:nil error:nil]) {
+    if ([testAppSupportURL setResourceValue:@YES
+                           forKey:NSURLIsExcludedFromBackupKey
+                            error:nil]) {
+      return testAppSupportURL;
+    }
+  }
+  return nil;
+}
+
+- (BOOL)excludeAttributeIsSetForURL:(NSURL *)directoryURL {
+  
+  NSError *getResourceError = nil;
+  NSNumber *appSupportDirExcludedValue;
+  if ([directoryURL getResourceValue:&appSupportDirExcludedValue forKey:NSURLIsExcludedFromBackupKey error:&getResourceError] && appSupportDirExcludedValue) {
+    if ([appSupportDirExcludedValue isEqualToValue:@YES]) {
+      return YES;
+    }
+  }
+  return NO;
 }
 
 @end
