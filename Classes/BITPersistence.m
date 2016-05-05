@@ -210,15 +210,6 @@ static NSUInteger const BITDefaultFileCount = 50;
       return;
     }
     
-    //Exclude HockeySDK folder from backup
-    if (![appURL setResourceValue:@YES
-                           forKey:NSURLIsExcludedFromBackupKey
-                            error:&error]) {
-      BITHockeyLog(@"Error excluding %@ from backup %@", appURL.lastPathComponent, error.localizedDescription);
-    } else {
-      BITHockeyLog(@"Exclude %@ from backup", appURL);
-    }
-    
     // Create metadata subfolder
     NSURL *metaDataURL = [appURL URLByAppendingPathComponent:kBITMetaDataDirectory];
     if (![fileManager createDirectoryAtURL:metaDataURL withIntermediateDirectories:YES attributes:nil error:&error]) {
@@ -235,6 +226,15 @@ static NSUInteger const BITDefaultFileCount = 50;
     if (![fileManager createDirectoryAtURL:telemetryURL withIntermediateDirectories:YES attributes:nil error:&error]) {
       BITHockeyLog(@"%@", error.localizedDescription);
       return;
+    }
+    
+    //Exclude HockeySDK folder from backup
+    if (![appURL setResourceValue:@YES
+                           forKey:NSURLIsExcludedFromBackupKey
+                            error:&error]) {
+      BITHockeyLog(@"Error excluding %@ from backup %@", appURL.lastPathComponent, error.localizedDescription);
+    } else {
+      BITHockeyLog(@"Exclude %@ from backup", appURL);
     }
     
     _directorySetupComplete = YES;
