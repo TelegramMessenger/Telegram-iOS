@@ -15,14 +15,15 @@
 #import "BITHockeyBaseManagerPrivate.h"
 #import "BITSender.h"
 
+NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
+
 static char *const kBITMetricsEventQueue =
 "net.hockeyapp.telemetryEventQueue";
 
-NSString *const kBITSessionFileType = @"plist";
-NSString *const kBITApplicationDidEnterBackgroundTime = @"BITApplicationDidEnterBackgroundTime";
-NSString *const kBITApplicationWasLaunched = @"BITApplicationWasLaunched";
+static NSString *const kBITSessionFileType = @"plist";
+static NSString *const kBITApplicationDidEnterBackgroundTime = @"BITApplicationDidEnterBackgroundTime";
 
-NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
+static NSString *const BITMetricsEndpoint = @"https://gate.hockeyapp.net/v2/track";
 
 @implementation BITMetricsManager {
   id _appWillEnterForegroundObserver;

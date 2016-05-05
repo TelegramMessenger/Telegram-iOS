@@ -228,6 +228,11 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     return;
   }
   
+  // Fix bug where Application Support directory was encluded from backup
+  NSFileManager *fileManager = [NSFileManager defaultManager];
+  NSURL *appSupportURL = [[fileManager URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask] lastObject];
+  bit_fixBackupAttributeForURL(appSupportURL);
+  
   if (![self isSetUpOnMainThread]) return;
   
   if ((self.appEnvironment == BITEnvironmentAppStore) && [self isInstallTrackingDisabled]) {
