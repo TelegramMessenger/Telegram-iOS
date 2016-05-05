@@ -1,3 +1,20 @@
+## Version 4.0.1
+
+- [BUGFIX] Fixes an issue where the whole app's Application Support directory was accidentally excluded from backups.
+This SDK release explicitly includes the Application Support directory into backups. If you want to opt-out of this fix and keep the Application Directory's backup flag untouched, add the following line above the SDK setup code:
+
+  - Objective-C:
+        ```objectivec
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"BITExcludeApplicationSupportFromBackup"];
+        ```
+
+  - Swift:
+        ```swift
+        NSUserDefaults.standardUserDefaults().setBool(true, forKey: "BITExcludeApplicationSupportFromBackup")
+        ```
+
+- [BUGFIX] Fixes an issue that prevented preparedItemsForFeedbackManager: delegate method from working
+
 ## Version 4.0.0
 
 - [NEW] Added official Carthage support
