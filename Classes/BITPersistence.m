@@ -21,14 +21,6 @@ static NSString *const kBITMetaDataDirectory = @"MetaData";
 static char const *kBITPersistenceQueueString = "com.microsoft.HockeyApp.persistenceQueue";
 static NSUInteger const BITDefaultFileCount = 50;
 
-
-@interface BITPersistence ()
-
-@property (nonatomic, strong) NSString *appHockeySDKDirectoryPath;
-
-@end
-
-
 @implementation BITPersistence {
   BOOL _maxFileCountReached;
   BOOL _directorySetupComplete;
