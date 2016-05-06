@@ -31,12 +31,12 @@ This SDK release explicitly includes the Application Support directory into back
 
   - Objective-C:
         ```objectivec
-        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"BITExcludeApplicationSupportFromBackup"];
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"kBITExcludeApplicationSupportFromBackup"];
         ```
 
   - Swift:
         ```swift
-        NSUserDefaults.standardUserDefaults().setBool(true, forKey: "BITExcludeApplicationSupportFromBackup")
+        NSUserDefaults.standardUserDefaults().setBool(true, forKey: "kBITExcludeApplicationSupportFromBackup")
         ```
 
 - [BUGFIX] Fixes an issue that prevented preparedItemsForFeedbackManager: delegate method from working
