@@ -1,9 +1,23 @@
-## Develop
+## 4.1.0-beta.2
+
+- [BUGFIX] Fixes an issue where the whole app's Application Support directory was accidentally excluded from backups.
+This SDK release explicitly includes the Application Support directory into backups. If you want to opt-out of this fix and keep the Application Directory's backup flag untouched, add the following line above the SDK setup code:
+
+  - Objective-C:
+        ```objectivec
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"BITExcludeApplicationSupportFromBackup"];
+        ```
+
+  - Swift:
+        ```swift
+        NSUserDefaults.standardUserDefaults().setBool(true, forKey: "BITExcludeApplicationSupportFromBackup")
+        ```
 
 - [NEW] Add more fine-grained log levels
 - [NEW] Add ability to connect existing logging framework
 - [BUGFIX] Make CrashManager property `serverURL` individual setable
 - [BUGFIX] Properly dispatch `dismissViewController` call to main queue
+- [BUGFIX] Fixes an issue that prevented preparedItemsForFeedbackManager: delegate method from working
 
 ## Version 4.1.0-beta.1
 
