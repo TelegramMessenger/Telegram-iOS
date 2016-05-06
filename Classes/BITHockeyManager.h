@@ -141,7 +141,7 @@ NS_ASSUME_NONNULL_BEGIN
  @param appIdentifier The app identifier that should be used.
  @param delegate `nil` or the class implementing the option protocols
  */
-- (void)configureWithIdentifier:(NSString *)appIdentifier delegate:(id<BITHockeyManagerDelegate>)delegate;
+- (void)configureWithIdentifier:(NSString *)appIdentifier delegate:(nullable id<BITHockeyManagerDelegate>)delegate;
 
 
 /**
@@ -178,7 +178,7 @@ NS_ASSUME_NONNULL_BEGIN
  @param liveIdentifier The app identifier for the app store configurations.
  @param delegate `nil` or the class implementing the optional protocols
  */
-- (void)configureWithBetaIdentifier:(NSString *)betaIdentifier liveIdentifier:(NSString *)liveIdentifier delegate:(id<BITHockeyManagerDelegate>)delegate;
+- (void)configureWithBetaIdentifier:(NSString *)betaIdentifier liveIdentifier:(NSString *)liveIdentifier delegate:(nullable id<BITHockeyManagerDelegate>)delegate;
 
 
 /**
@@ -214,7 +214,7 @@ NS_ASSUME_NONNULL_BEGIN
  @see BITUpdateManagerDelegate
  @see BITFeedbackManagerDelegate
  */
-@property (nonatomic, weak) id<BITHockeyManagerDelegate> delegate;
+@property (nonatomic, weak, nullable) id<BITHockeyManagerDelegate> delegate;
 
 
 /**
@@ -547,7 +547,7 @@ NS_ASSUME_NONNULL_BEGIN
  @see userEmail
  @see `[BITHockeyManagerDelegate userIDForHockeyManager:componentManager:]`
  */
-@property (nonatomic, copy) NSString *userID;
+@property (nonatomic, copy, nullable) NSString *userID;
 
 
 /** Set the user name that should used in the SDK components
@@ -572,7 +572,7 @@ NS_ASSUME_NONNULL_BEGIN
  @see userEmail
  @see `[BITHockeyManagerDelegate userNameForHockeyManager:componentManager:]`
  */
-@property (nonatomic, copy) NSString *userName;
+@property (nonatomic, copy, nullable) NSString *userName;
 
 
 /** Set the users email address that should used in the SDK components
@@ -597,7 +597,7 @@ NS_ASSUME_NONNULL_BEGIN
  @see userName
  @see [BITHockeyManagerDelegate userEmailForHockeyManager:componentManager:]
  */
-@property (nonatomic, copy) NSString *userEmail;
+@property (nonatomic, copy, nullable) NSString *userEmail;
 
 
 ///-----------------------------------------------------------------------------
