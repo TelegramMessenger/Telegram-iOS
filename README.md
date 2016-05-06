@@ -6,6 +6,10 @@
 
 - [Changelog](http://www.hockeyapp.net/help/sdk/ios/4.0.1/docs/docs/Changelog.html)
 
+NOTE: With the release of HockeySDK 4.0.0-alpha.1 a bug was introduced which lead to the exclusion of the Application Support folder from iCloud and iTunes backups.
+
+If you have been using one of the affected versions (4.0.0-alpha.2, Version 4.0.0-beta.1, 4.0.0, 4.1.0-alpha.1, 4.1.0-alpha.2, or Version 4.1.0-beta.1), please make sure to update to at least version 4.0.1 or 4.1.0-beta.2 of our SDK as soon as you can.
+
 ## Introduction
 
 HockeySDK-iOS implements support for using HockeyApp in your iOS applications.
