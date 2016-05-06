@@ -32,6 +32,8 @@
 
 @interface BITHockeyHelper : NSObject
 
+FOUNDATION_EXPORT NSString *const kBITExcludeApplicationSupportFromBackup;
+
 + (BOOL)isURLSessionSupported;
 
 @end
@@ -88,4 +90,8 @@ UIImage *bit_imageWithContentsOfResolutionIndependentFile(NSString * path);
 UIImage *bit_imageNamed(NSString *imageName, NSString *bundleName);
 UIImage *bit_screenshot(void);
 UIImage *bit_appIcon(void);
+
+/* Fix bug where Application Support was excluded from backup. */
+void bit_fixBackupAttributeForURL(NSURL *directoryURL);
+
 #endif

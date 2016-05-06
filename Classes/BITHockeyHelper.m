@@ -38,6 +38,7 @@
 #import <sys/sysctl.h>
 
 static NSString *const kBITUtcDateFormatter = @"utcDateFormatter";
+NSString *const kBITExcludeApplicationSupportFromBackup = @"kBITExcludeApplicationSupportFromBackup";
 
 @implementation BITHockeyHelper
 
@@ -140,6 +141,28 @@ NSComparisonResult bit_versionCompare(NSString *stringA, NSString *stringB) {
   // Done
   return result;
 }
+
+#pragma mark Exclude from backup fix
+
+void bit_fixBackupAttributeForURL(NSURL *directoryURL) {
+
+  BOOL shouldExcludeAppSupportDirFromBackup = [[NSUserDefaults standardUserDefaults] boolForKey:kBITExcludeApplicationSupportFromBackup];
+  if (shouldExcludeAppSupportDirFromBackup) {
+    return;
+  }
+  
+  if (directoryURL) {
+    NSError *getResourceError = nil;
+    NSNumber *appSupportDirExcludedValue;
+    
+    if ([directoryURL getResourceValue:&appSupportDirExcludedValue forKey:NSURLIsExcludedFromBackupKey error:&getResourceError] && appSupportDirExcludedValue) {
+      NSError *setResourceError = nil;
+      [directoryURL setResourceValue:@NO forKey:NSURLIsExcludedFromBackupKey error:&setResourceError];
+    }
+  }
+}
+
+#pragma mark Identifiers
 
 NSString *bit_mainBundleIdentifier(void) {
   return [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIdentifier"];
@@ -245,6 +268,8 @@ NSString *bit_appAnonID(BOOL forceNewAnonID) {
   
   return appAnonID;
 }
+
+#pragma mark Environment detection
 
 BOOL bit_isPreiOS7Environment(void) {
   static BOOL isPreiOS7Environment = YES;
