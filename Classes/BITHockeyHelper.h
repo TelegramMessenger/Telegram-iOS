@@ -43,6 +43,9 @@ NSString *bit_settingsDir(void);
 BOOL bit_validateEmail(NSString *email);
 NSString *bit_keychainHockeySDKServiceName(void);
 
+/* Fix bug where Application Support was excluded from backup. */
+void bit_fixBackupAttributeForURL(NSURL *directoryURL);
+
 NSComparisonResult bit_versionCompare(NSString *stringA, NSString *stringB);
 NSString *bit_mainBundleIdentifier(void);
 NSString *bit_encodeAppIdentifier(NSString *inputString);
@@ -90,8 +93,5 @@ UIImage *bit_imageWithContentsOfResolutionIndependentFile(NSString * path);
 UIImage *bit_imageNamed(NSString *imageName, NSString *bundleName);
 UIImage *bit_screenshot(void);
 UIImage *bit_appIcon(void);
-
-/* Fix bug where Application Support was excluded from backup. */
-void bit_fixBackupAttributeForURL(NSURL *directoryURL);
 
 #endif
