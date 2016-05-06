@@ -45,6 +45,55 @@
   [self.mockNotificationCenter removeObserver:observerMock];
 }
 
+- (void)testCreateDirectoryStructureIfNeeded {
+  // Setup
+  NSFileManager *fileManager = [NSFileManager defaultManager];
+  NSString *appSupportPath = [NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES) lastObject];
+  NSString *path = self.sut.appHockeySDKDirectoryPath;
+  
+  NSError *fileRemovalError = nil;
+  [fileManager removeItemAtPath:path error:&fileRemovalError];
+
+  NSError *getResourceError = nil;
+  NSNumber *resourveValue = nil;
+  XCTAssertTrue([[NSURL fileURLWithPath:appSupportPath] setResourceValue:@NO
+                                                    forKey:NSURLIsExcludedFromBackupKey
+                                                     error:&getResourceError]);
+  
+  // Assert
+  XCTAssertNil(fileRemovalError);
+  XCTAssertFalse([fileManager fileExistsAtPath:path]);
+  
+  // Act
+  [self.sut createDirectoryStructureIfNeeded];
+  
+  // Verify
+  BOOL isDirectory = NO;
+  [fileManager fileExistsAtPath:path isDirectory:&isDirectory];
+  
+  XCTAssertTrue(isDirectory);
+  
+  // Flag stays @NO on Application Support directory
+  getResourceError = nil;
+  resourveValue = nil;
+  [[NSURL fileURLWithPath:appSupportPath] getResourceValue:&resourveValue
+                                          forKey:NSURLIsExcludedFromBackupKey
+                                           error:&getResourceError];
+  XCTAssertNil(getResourceError);
+  XCTAssertEqual(resourveValue, @NO);
+  
+  // Flag is set to @YES on our custom subdirectory
+  getResourceError = nil;
+  resourveValue = nil;
+  [[NSURL fileURLWithPath:path] getResourceValue:&resourveValue
+                                          forKey:NSURLIsExcludedFromBackupKey
+                                           error:&getResourceError];
+  XCTAssertNil(getResourceError);
+  XCTAssertEqual(resourveValue, @YES);
+  
+  // TODO: Check subdirectories have been created
+}
+
 - (void)testFolderPathForType {
   NSString *path = [self.sut folderPathForType:BITPersistenceTypeTelemetry];
   XCTAssertFalse([path rangeOfString:@"com.microsoft.HockeyApp/Telemetry"].location == NSNotFound);
