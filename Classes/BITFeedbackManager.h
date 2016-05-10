@@ -74,7 +74,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
    */
   BITFeedbackObservationModeOnScreenshot = 1,
   /**
-   *  Triggers when the user taps with three fingers on the screen.
+   *  Triggers when the user taps with three fingers on the screen. Captures a screenshot and attaches it to the composer.
    */
   BITFeedbackObservationModeThreeFingerTap = 2
 };
@@ -217,7 +217,7 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
    that should trigger this.
  - `BITFeedbackObservationModeOnScreenshot`: Triggers when the user takes a screenshot.
     This will grab the latest image from the camera roll. Requires iOS 7 or later!
- - `BITFeedbackObservationModeThreeFingerTap`: Triggers when the user taps on the screen for three seconds with three fingers.
+ - `BITFeedbackObservationModeThreeFingerTap`: Triggers when the user taps on the screen with three fingers. Takes a screenshot and attaches it to the composer.
  
  Default is `BITFeedbackObservationNone`
  
