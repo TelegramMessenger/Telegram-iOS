@@ -3,7 +3,6 @@
 
 #if HOCKEYSDK_FEATURE_METRICS
 
-#import "HockeySDKPrivate.h"
 #import "BITApplication.h"
 #import "BITDevice.h"
 #import "BITInternal.h"
