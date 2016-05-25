@@ -661,7 +661,7 @@
                     }
                     else
                     {
-                        void (^completed)(id result, NSTimeInterval completionTimestamp, id error) = request.completed;
+                        void (^completed)(id result, NSTimeInterval completionTimestamp, id error) = [request.completed copy];
                         [_requests removeObjectAtIndex:(NSUInteger)index];
                         
                         if (completed)
