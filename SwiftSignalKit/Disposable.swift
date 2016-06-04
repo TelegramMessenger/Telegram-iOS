@@ -1,38 +1,33 @@
 import Foundation
 
-public protocol Disposable
-{
+public protocol Disposable: class {
     func dispose()
 }
 
-internal struct _EmptyDisposable : Disposable {
-    internal func dispose() {
+final class _EmptyDisposable: Disposable {
+    func dispose() {
     }
 }
 
 public let EmptyDisposable: Disposable = _EmptyDisposable()
 
-public final class ActionDisposable : Disposable
-{
+public final class ActionDisposable : Disposable {
     private var action: () -> Void
-    private var lock: OSSpinLock = 0
+    private var lock: Int32 = 0
     
     public init(action: () -> Void) {
         self.action = action
     }
     
     public func dispose() {
-        var action = doNothing
-        OSSpinLockLock(&self.lock)
-        action = self.action
-        self.action = doNothing
-        OSSpinLockUnlock(&self.lock)
-        action()
+        if OSAtomicCompareAndSwap32(0, 1, &self.lock) {
+            self.action()
+            self.action = doNothing
+        }
     }
 }
 
-public final class MetaDisposable : Disposable
-{
+public final class MetaDisposable : Disposable {
     private var lock: OSSpinLock = 0
     private var disposed = false
     private var disposable: Disposable! = nil

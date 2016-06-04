@@ -51,7 +51,7 @@ public final class Subscriber<T, E> {
         var shouldDispose = false
         var action: (E -> Void)! = nil
         
-        OSSpinLockLock(&self.lock);
+        OSSpinLockLock(&self.lock)
         if !self.terminated {
             action = self.error
             shouldDispose = true;
@@ -60,7 +60,7 @@ public final class Subscriber<T, E> {
             self.completed = nil;
             self.terminated = true
         }
-        OSSpinLockUnlock(&self.lock);
+        OSSpinLockUnlock(&self.lock)
         
         if action != nil {
             action(error)
@@ -77,7 +77,7 @@ public final class Subscriber<T, E> {
         var shouldDispose = false
         var action: (() -> Void)! = nil
         
-        OSSpinLockLock(&self.lock);
+        OSSpinLockLock(&self.lock)
         if !self.terminated {
             action = self.completed
             shouldDispose = true;
@@ -86,7 +86,7 @@ public final class Subscriber<T, E> {
             self.completed = nil;
             self.terminated = true
         }
-        OSSpinLockUnlock(&self.lock);
+        OSSpinLockUnlock(&self.lock)
         
         if action != nil {
             action()

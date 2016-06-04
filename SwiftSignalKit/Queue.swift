@@ -51,6 +51,17 @@ public final class Queue {
         
         self.specific = UnsafeMutablePointer<Void>(Unmanaged<Queue>.passUnretained(self).toOpaque())
         dispatch_queue_set_specific(self.nativeQueue, QueueSpecificKey, self.specific, nil)
+        dispatch_set_target_queue(self.nativeQueue, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0))
+    }
+    
+    func isCurrent() -> Bool {
+        if self.specific != nil && dispatch_get_specific(QueueSpecificKey) == self.specific {
+            return true
+        } else if self.specialIsMainQueue && NSThread.isMainThread() {
+            return true
+        } else {
+            return false
+        }
     }
     
     public func async(f: Void -> Void) {
@@ -80,6 +91,28 @@ public final class Queue {
             f()
         } else {
             dispatch_async(self.nativeQueue, f)
+        }
+    }
+    
+    public func justDispatch(f: Void -> Void) {
+        dispatch_async(self.nativeQueue, f)
+    }
+    
+    public func dispatchWithHighQoS(f: () -> Void) {
+        let block = dispatch_block_create_with_qos_class(DISPATCH_BLOCK_ENFORCE_QOS_CLASS, QOS_CLASS_USER_INTERACTIVE, 0, {
+            f()
+        })
+        dispatch_async(self.nativeQueue, block)
+    }
+    
+    public func dispatchTiming(f: Void -> Void, _ file: String = #file, _ line: Int = #line) {
+        self.justDispatch {
+            let startTime = CFAbsoluteTimeGetCurrent()
+            f()
+            let delta = CFAbsoluteTimeGetCurrent() - startTime
+            if delta > 0.002 {
+                print("dispatchTiming \(delta * 1000.0) ms \(file):\(line)")
+            }
         }
     }
     

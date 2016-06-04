@@ -83,6 +83,7 @@
 		D0085B661B282C2800EAF753 /* SwiftSignalKitFunctionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0085B631B282C2800EAF753 /* SwiftSignalKitFunctionsTests.swift */; };
 		D0085B671B282C2800EAF753 /* DeallocatingObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0085B641B282C2800EAF753 /* DeallocatingObject.swift */; };
 		D0085B681B282C2800EAF753 /* SwiftSignalKitBasicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0085B651B282C2800EAF753 /* SwiftSignalKitBasicTests.swift */; };
+		D02720B11CD0E005006F1506 /* PerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02720B01CD0E005006F1506 /* PerformanceTests.swift */; };
 		D0445DE41A7C2CA500267924 /* SSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0445DD81A7C2CA500267924 /* SSignalKit.framework */; };
 		D0445E571A7C3FB400267924 /* SDisposableTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D0445E561A7C3FB400267924 /* SDisposableTests.m */; };
 		D05F09A81C9EF77100BB6F96 /* Multicast.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05F09A71C9EF77100BB6F96 /* Multicast.swift */; };
@@ -195,6 +196,7 @@
 		D0085B631B282C2800EAF753 /* SwiftSignalKitFunctionsTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SwiftSignalKitFunctionsTests.swift; sourceTree = "<group>"; };
 		D0085B641B282C2800EAF753 /* DeallocatingObject.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeallocatingObject.swift; sourceTree = "<group>"; };
 		D0085B651B282C2800EAF753 /* SwiftSignalKitBasicTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SwiftSignalKitBasicTests.swift; sourceTree = "<group>"; };
+		D02720B01CD0E005006F1506 /* PerformanceTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PerformanceTests.swift; sourceTree = "<group>"; };
 		D0445DD81A7C2CA500267924 /* SSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = SSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0445DDC1A7C2CA500267924 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0445DE31A7C2CA500267924 /* SSignalKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SSignalKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -295,6 +297,7 @@
 				D0085B631B282C2800EAF753 /* SwiftSignalKitFunctionsTests.swift */,
 				D0085B641B282C2800EAF753 /* DeallocatingObject.swift */,
 				D0085B651B282C2800EAF753 /* SwiftSignalKitBasicTests.swift */,
+				D02720B01CD0E005006F1506 /* PerformanceTests.swift */,
 				D0085B311B282B9800EAF753 /* Supporting Files */,
 			);
 			path = SwiftSignalKitTests;
@@ -656,6 +659,7 @@
 			files = (
 				D0085B671B282C2800EAF753 /* DeallocatingObject.swift in Sources */,
 				D0085B681B282C2800EAF753 /* SwiftSignalKitBasicTests.swift in Sources */,
+				D02720B11CD0E005006F1506 /* PerformanceTests.swift in Sources */,
 				D0085B661B282C2800EAF753 /* SwiftSignalKitFunctionsTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
