@@ -102,6 +102,22 @@ static NSMutableArray *currentLayerAnimations()
     [self _ca836a62_setPosition:position];
 }
 
+- (void)_ca836a62_addAnimation:(CAAnimation *)animation forKey:(NSString *)key {
+    if (speedOverride != 1.0f) {
+        animation.speed *= speedOverride;
+    }
+    [self _ca836a62_addAnimation:animation forKey:key];
+}
+
+static CGFloat speedOverride = 1.0f;
+
++ (void)overrideAnimationSpeed:(CGFloat)speed block:(void (^)())block {
+    CGFloat previousOverride = speedOverride;
+    speedOverride = speed;
+    block();
+    speedOverride = previousOverride;
+}
+
 @end
 
 @interface LayerAnimationExtensions : NSObject
@@ -117,6 +133,7 @@ static NSMutableArray *currentLayerAnimations()
     {
         //[RuntimeUtils swizzleInstanceMethodOfClass:[CALayer class] currentSelector:@selector(setBounds:) newSelector:@selector(_ca836a62_setBounds:)];
         //[RuntimeUtils swizzleInstanceMethodOfClass:[CALayer class] currentSelector:@selector(setPosition:) newSelector:@selector(_ca836a62_setPosition:)];
+        //[RuntimeUtils swizzleInstanceMethodOfClass:[CALayer class] currentSelector:@selector(addAnimation:forKey:) newSelector:@selector(_ca836a62_addAnimation:forKey:)];
     });
 }
 
@@ -137,6 +154,10 @@ static NSMutableArray *currentLayerAnimations()
     [currentLayerAnimations() removeAllObjects];
     
     return array;
+}
+
++ (void)overrideAnimationSpeed:(CGFloat)speed block:(void (^)())block {
+    
 }
 
 @end

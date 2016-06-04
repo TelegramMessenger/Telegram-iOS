@@ -40,9 +40,36 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
     }
     
     private var updateLayoutOnLayout: (ViewControllerLayout, NSTimeInterval, UInt)?
-    private var layout: ViewControllerLayout?
+    public private(set) var layout: ViewControllerLayout?
     
     var keyboardFrameObserver: AnyObject?
+    
+    private var scrollToTopView: ScrollToTopView?
+    public var scrollToTop: (() -> Void)? {
+        didSet {
+            if self.isViewLoaded() {
+                self.updateScrollToTopView()
+            }
+        }
+    }
+    
+    private func updateScrollToTopView() {
+        if let scrollToTop = self.scrollToTop {
+            if let displayNode = self._displayNode where self.scrollToTopView == nil {
+                let scrollToTopView = ScrollToTopView(frame: CGRect(x: 0.0, y: -1.0, width: displayNode.frame.size.width, height: 1.0))
+                scrollToTopView.action = { [weak self] in
+                    if let scrollToTop = self?.scrollToTop {
+                        scrollToTop()
+                    }
+                }
+                self.scrollToTopView = scrollToTopView
+                self.view.addSubview(scrollToTopView)
+            }
+        } else if let scrollToTopView = self.scrollToTopView {
+            scrollToTopView.removeFromSuperview()
+            self.scrollToTopView = nil
+        }
+    }
     
     public init() {
         self.statusBar = StatusBar()
@@ -57,8 +84,11 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
             if let strongSelf = self, _ = strongSelf._displayNode {
                 let keyboardFrame: CGRect = (notification.userInfo?[UIKeyboardFrameEndUserInfoKey] as? NSValue)?.CGRectValue() ?? CGRect()
                 let keyboardHeight = max(0.0, UIScreen.mainScreen().bounds.size.height - keyboardFrame.minY)
-                let duration: Double = (notification.userInfo?[UIKeyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
-                let curve: UInt = (notification.userInfo?[UIKeyboardAnimationCurveUserInfoKey] as? NSNumber)?.unsignedIntegerValue ?? UInt(7 << 16)
+                var duration: Double = (notification.userInfo?[UIKeyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
+                if duration > DBL_EPSILON {
+                    duration = 0.5
+                }
+                var curve: UInt = (notification.userInfo?[UIKeyboardAnimationCurveUserInfoKey] as? NSNumber)?.unsignedIntegerValue ?? UInt(7 << 16)
                 
                 let previousLayout: ViewControllerLayout?
                 var previousDurationAndCurve: (NSTimeInterval, UInt)?
@@ -72,13 +102,17 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
                 let updated: Bool
                 if let previousLayout = previousLayout {
                     updated = previousLayout != layout
+                    if duration < DBL_EPSILON && abs(min(previousLayout.inputViewHeight, layout.inputViewHeight) - 225.0) < CGFloat(FLT_EPSILON) && abs(max(previousLayout.inputViewHeight, layout.inputViewHeight) - 225.0 - 33.0) < CGFloat(FLT_EPSILON) {
+                        duration = 0.1
+                        curve = 0
+                    }
                 } else {
                     updated = true
                 }
                 if updated {
                     //print("keyboard layout change: \(layout) rotating: \(strongSelf.view.window?.isRotating())")
                     
-                    let durationAndCurve: (NSTimeInterval, UInt) = previousDurationAndCurve ?? (duration > DBL_EPSILON ? 0.5 : 0.0, curve)
+                    let durationAndCurve: (NSTimeInterval, UInt) = previousDurationAndCurve ?? (duration, curve)
                     strongSelf.updateLayoutOnLayout = (layout, durationAndCurve.0, durationAndCurve.1)
                     strongSelf.view.setNeedsLayout()
                 }
@@ -104,6 +138,11 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
     
     public func loadDisplayNode() {
         self.displayNode = ASDisplayNode()
+        self.displayNodeDidLoad()
+    }
+    
+    public func displayNodeDidLoad() {
+        self.updateScrollToTopView()
     }
     
     public func setParentLayout(layout: ViewControllerLayout, duration: NSTimeInterval, curve: UInt) {
@@ -142,6 +181,25 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
     public func updateLayout(layout: ViewControllerLayout, previousLayout: ViewControllerLayout?, duration: Double, curve: UInt) {
         self.statusBar.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: 40.0))
         self.navigationBar.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: 44.0 + 20.0))
+        if let scrollToTopView = self.scrollToTopView {
+            scrollToTopView.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 10.0)
+        }
+    }
+    
+    public func setNeedsLayoutWithDuration(duration: Double, curve: UInt) {
+        let previousLayout: ViewControllerLayout?
+        var previousDurationAndCurve: (NSTimeInterval, UInt)?
+        if let updateLayoutOnLayout = self.updateLayoutOnLayout {
+            previousLayout = updateLayoutOnLayout.0
+            previousDurationAndCurve = (updateLayoutOnLayout.1, updateLayoutOnLayout.2)
+        } else{
+            previousLayout = self.layout
+        }
+        if let previousLayout = previousLayout {
+            let durationAndCurve: (NSTimeInterval, UInt) = previousDurationAndCurve ?? (duration, curve)
+            self.updateLayoutOnLayout = (previousLayout, durationAndCurve.0, durationAndCurve.1)
+            self.view.setNeedsLayout()
+        }
     }
     
     override public func viewDidLayoutSubviews() {

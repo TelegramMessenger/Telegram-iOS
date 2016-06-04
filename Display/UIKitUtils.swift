@@ -34,11 +34,11 @@ public func floorToScreenPixels(value: CGFloat) -> CGFloat {
 public let UIScreenPixel = 1.0 / UIScreenScale
 
 public extension UIColor {
-    convenience init(_ rgb: Int) {
+    convenience init(_ rgb: UInt32) {
         self.init(red: CGFloat((rgb >> 16) & 0xff) / 255.0, green: CGFloat((rgb >> 8) & 0xff) / 255.0, blue: CGFloat(rgb & 0xff) / 255.0, alpha: 1.0)
     }
     
-    convenience init(_ rgb: Int, _ alpha: CGFloat) {
+    convenience init(_ rgb: UInt32, _ alpha: CGFloat) {
         self.init(red: CGFloat((rgb >> 16) & 0xff) / 255.0, green: CGFloat((rgb >> 8) & 0xff) / 255.0, blue: CGFloat(rgb & 0xff) / 255.0, alpha: alpha)
     }
 }

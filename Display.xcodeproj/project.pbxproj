@@ -80,6 +80,8 @@
 		D0C2DFCE1CC4431D0044FF83 /* ListViewAccessoryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFC31CC4431D0044FF83 /* ListViewAccessoryItem.swift */; };
 		D0C2DFCF1CC4431D0044FF83 /* ListViewScroller.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFC41CC4431D0044FF83 /* ListViewScroller.swift */; };
 		D0C2DFD01CC4431D0044FF83 /* ListViewAccessoryItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFC51CC4431D0044FF83 /* ListViewAccessoryItemNode.swift */; };
+		D0C2DFFC1CC528B70044FF83 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C2DFFB1CC528B70044FF83 /* SwiftSignalKit.framework */; };
+		D0CD12161CCFEB4E000DE7BC /* ScrollToTopProxyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CD12151CCFEB4E000DE7BC /* ScrollToTopProxyView.swift */; };
 		D0DC48541BF93D8B00F672FD /* TabBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DC48531BF93D8A00F672FD /* TabBarController.swift */; };
 		D0DC48561BF945DD00F672FD /* TabBarNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DC48551BF945DD00F672FD /* TabBarNode.swift */; };
 		D0DC485F1BF949FB00F672FD /* TabBarContollerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DC485E1BF949FB00F672FD /* TabBarContollerNode.swift */; };
@@ -174,11 +176,13 @@
 		D0C2DFC31CC4431D0044FF83 /* ListViewAccessoryItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListViewAccessoryItem.swift; sourceTree = "<group>"; };
 		D0C2DFC41CC4431D0044FF83 /* ListViewScroller.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListViewScroller.swift; sourceTree = "<group>"; };
 		D0C2DFC51CC4431D0044FF83 /* ListViewAccessoryItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListViewAccessoryItemNode.swift; sourceTree = "<group>"; };
+		D0C2DFFB1CC528B70044FF83 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0CD12151CCFEB4E000DE7BC /* ScrollToTopProxyView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ScrollToTopProxyView.swift; sourceTree = "<group>"; };
 		D0DC48531BF93D8A00F672FD /* TabBarController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TabBarController.swift; sourceTree = "<group>"; };
 		D0DC48551BF945DD00F672FD /* TabBarNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TabBarNode.swift; sourceTree = "<group>"; };
 		D0DC485E1BF949FB00F672FD /* TabBarContollerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TabBarContollerNode.swift; sourceTree = "<group>"; };
 		D0E1D6351CBC159C00B04029 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
-		D0E1D6711CBC201E00B04029 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AsyncDisplayKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug-iphonesimulator/AsyncDisplayKit.framework"; sourceTree = "<group>"; };
+		D0E1D6711CBC201E00B04029 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E49C871B83A3580099E553 /* ImageCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageCache.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -187,6 +191,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0C2DFFC1CC528B70044FF83 /* SwiftSignalKit.framework in Frameworks */,
 				D0E1D6721CBC201E00B04029 /* AsyncDisplayKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -214,6 +219,7 @@
 		D02BDAEC1B6A7053008AFAD2 /* Nodes */ = {
 			isa = PBXGroup;
 			children = (
+				D0CD12151CCFEB4E000DE7BC /* ScrollToTopProxyView.swift */,
 			);
 			name = Nodes;
 			sourceTree = "<group>";
@@ -278,6 +284,7 @@
 		D05CC2A31B6932D500E235A3 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0C2DFFB1CC528B70044FF83 /* SwiftSignalKit.framework */,
 				D0E1D6711CBC201E00B04029 /* AsyncDisplayKit.framework */,
 				D0E1D6351CBC159C00B04029 /* AVFoundation.framework */,
 			);
@@ -582,6 +589,7 @@
 				D0C2DFCC1CC4431D0044FF83 /* AsyncLayoutable.swift in Sources */,
 				D0AE2CA61C94548900F2FD3C /* GenerateImage.swift in Sources */,
 				D05CC2EC1B69558A00E235A3 /* RuntimeUtils.m in Sources */,
+				D0CD12161CCFEB4E000DE7BC /* ScrollToTopProxyView.swift in Sources */,
 				D0C2DFCD1CC4431D0044FF83 /* ListViewTransactionQueue.swift in Sources */,
 				D05CC2FC1B6955D000E235A3 /* UIKitUtils.m in Sources */,
 				D0C2DFC61CC4431D0044FF83 /* ASTransformLayerNode.swift in Sources */,

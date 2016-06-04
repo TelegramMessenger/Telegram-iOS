@@ -92,8 +92,8 @@ public extension CALayer {
         self.animate(from: NSNumber(float: Float(from)), to: NSNumber(float: Float(to)), keyPath: "transform.scale", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: duration, removeOnCompletion: true, completion: nil)
     }
     
-    internal func animatePosition(from from: CGPoint, to: CGPoint, duration: NSTimeInterval) {
-        self.animate(from: NSValue(CGPoint: from), to: NSValue(CGPoint: to), keyPath: "position", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: duration, removeOnCompletion: true)
+    internal func animatePosition(from from: CGPoint, to: CGPoint, duration: NSTimeInterval, completion: (Bool -> Void)? = nil) {
+        self.animate(from: NSValue(CGPoint: from), to: NSValue(CGPoint: to), keyPath: "position", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: duration, removeOnCompletion: true, completion: completion)
     }
     
     public func animateBoundsOriginYAdditive(from from: CGFloat, to: CGFloat, duration: NSTimeInterval) {

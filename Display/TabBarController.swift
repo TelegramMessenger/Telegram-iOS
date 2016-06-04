@@ -33,7 +33,6 @@ public class TabBarController: ViewController {
         }
     }
     
-    private var layout: ViewControllerLayout?
     private var currentController: ViewController?
     
     override public init() {
@@ -52,6 +51,7 @@ public class TabBarController: ViewController {
         })
         
         self.updateSelectedIndex()
+        self.displayNodeDidLoad()
     }
     
     private func updateSelectedIndex() {
@@ -106,7 +106,6 @@ public class TabBarController: ViewController {
         
         self.tabBarControllerNode.updateLayout(layout, previousLayout: previousLayout, duration: duration, curve: curve)
         
-        self.layout = layout
         if let currentController = self.currentController {
             currentController.view.frame = CGRect(origin: CGPoint(), size: layout.size)
             currentController.setParentLayout(self.childControllerLayoutForLayout(layout), duration: duration, curve: curve)

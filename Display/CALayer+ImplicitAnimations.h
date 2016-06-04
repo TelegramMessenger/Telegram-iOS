@@ -5,6 +5,8 @@
 + (void)beginRecordingChanges;
 + (NSArray *)endRecordingChanges;
 
++ (void)overrideAnimationSpeed:(CGFloat)speed block:(void (^)())block;
+
 @end
 
 @interface CALayerAnimation : NSObject

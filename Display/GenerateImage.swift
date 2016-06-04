@@ -25,7 +25,7 @@ public func generateImage(size: CGSize, generator: (CGSize, UnsafeMutablePointer
     return UIImage(CGImage: image, scale: scale, orientation: .Up)
 }
 
-public func generateImage(size: CGSize, generator: (CGSize, CGContextRef) -> Void) -> UIImage? {
+public func generateImage(size: CGSize, opaque: Bool = false, generator: (CGSize, CGContextRef) -> Void) -> UIImage? {
     let scale = deviceScale
     let scaledSize = CGSize(width: size.width * scale, height: size.height * scale)
     let bytesPerRow = (4 * Int(scaledSize.width) + 15) & (~15)
@@ -35,7 +35,7 @@ public func generateImage(size: CGSize, generator: (CGSize, CGContextRef) -> Voi
         free(bytes)
     })
     
-    let bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.ByteOrder32Little.rawValue | CGImageAlphaInfo.PremultipliedFirst.rawValue)
+    let bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.ByteOrder32Little.rawValue | (opaque ? CGImageAlphaInfo.NoneSkipFirst.rawValue : CGImageAlphaInfo.PremultipliedFirst.rawValue))
     
     guard let context = CGBitmapContextCreate(bytes, Int(scaledSize.width), Int(scaledSize.height), 8, bytesPerRow, deviceColorSpace, bitmapInfo.rawValue)
         else {
@@ -135,7 +135,8 @@ public class DrawingContext {
         if x >= 0 && x < Int(self.scaledSize.width) && y >= 0 && y < Int(self.scaledSize.height) {
             let srcLine = UnsafeMutablePointer<UInt32>(self.bytes + y * self.bytesPerRow)
             let pixel = srcLine + x
-            return UIColor(Int(pixel.memory))
+            let colorValue = pixel.memory
+            return UIColor(UInt32(colorValue))
         } else {
             return UIColor.clearColor()
         }

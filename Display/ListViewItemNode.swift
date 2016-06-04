@@ -69,6 +69,8 @@ public class ListViewItemNode: ASDisplayNode {
     
     final let wantsScrollDynamics: Bool
     
+    public final var scrollPositioningInsets: UIEdgeInsets = UIEdgeInsets()
+    
     public final var insets: UIEdgeInsets = UIEdgeInsets() {
         didSet {
             let effectiveInsets = self.insets
@@ -380,6 +382,9 @@ public class ListViewItemNode: ASDisplayNode {
     }
     
     public func animateInsertion(currentTimestamp: Double, duration: Double) {
+    }
+    
+    public func animateAdded(currentTimestamp: Double, duration: Double) {
     }
     
     public func setHighlighted(highlighted: Bool, animated: Bool) {
