@@ -42,3 +42,4 @@ public struct SimpleDictionary<K: Equatable, V>: SequenceType {
         }
     }
 }
+

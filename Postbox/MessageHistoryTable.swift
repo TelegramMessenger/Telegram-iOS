@@ -7,6 +7,11 @@ enum MessageHistoryOperation {
     case UpdateReadState(CombinedPeerReadState)
 }
 
+struct MessageHistoryAnchorIndex {
+    let index: MessageIndex
+    let exact: Bool
+}
+
 enum IntermediateMessageHistoryEntry {
     case Message(IntermediateMessage)
     case Hole(MessageHistoryHole)
@@ -42,16 +47,16 @@ final class MessageHistoryTable: Table {
     let unsentTable: MessageHistoryUnsentTable
     let tagsTable: MessageHistoryTagsTable
     let readStateTable: MessageHistoryReadStateTable
-    let invalidatedReadStateTable: MessageHistoryInvalidatedReadStateTable
+    let synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable
     
-    init(valueBox: ValueBox, tableId: Int32, messageHistoryIndexTable: MessageHistoryIndexTable, messageMediaTable: MessageMediaTable, historyMetadataTable: MessageHistoryMetadataTable, unsentTable: MessageHistoryUnsentTable, tagsTable: MessageHistoryTagsTable, readStateTable: MessageHistoryReadStateTable, invalidatedReadStateTable: MessageHistoryInvalidatedReadStateTable) {
+    init(valueBox: ValueBox, tableId: Int32, messageHistoryIndexTable: MessageHistoryIndexTable, messageMediaTable: MessageMediaTable, historyMetadataTable: MessageHistoryMetadataTable, unsentTable: MessageHistoryUnsentTable, tagsTable: MessageHistoryTagsTable, readStateTable: MessageHistoryReadStateTable, synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable) {
         self.messageHistoryIndexTable = messageHistoryIndexTable
         self.messageMediaTable = messageMediaTable
         self.historyMetadataTable = historyMetadataTable
         self.unsentTable = unsentTable
         self.tagsTable = tagsTable
         self.readStateTable = readStateTable
-        self.invalidatedReadStateTable = invalidatedReadStateTable
+        self.synchronizeReadStateTable = synchronizeReadStateTable
         
         super.init(valueBox: valueBox, tableId: tableId)
     }
@@ -106,7 +111,7 @@ final class MessageHistoryTable: Table {
         return dict
     }
     
-    private func processIndexOperations(peerId: PeerId, operations: [MessageHistoryIndexOperation], inout processedOperationsByPeerId: [PeerId: [MessageHistoryOperation]], inout unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], inout invalidatedReadStateOperations: [IntermediateMessageHistoryInvalidatedReadStateOperation]) {
+    private func processIndexOperations(peerId: PeerId, operations: [MessageHistoryIndexOperation], inout processedOperationsByPeerId: [PeerId: [MessageHistoryOperation]], inout unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], inout updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]) {
         let sharedKey = self.key(MessageIndex(id: MessageId(peerId: PeerId(namespace: 0, id: 0), namespace: 0, id: 0), timestamp: 0))
         let sharedBuffer = WriteBuffer()
         let sharedEncoder = Encoder()
@@ -188,7 +193,7 @@ final class MessageHistoryTable: Table {
                 outputOperations.append(.UpdateReadState(combinedState))
             }
             if invalidate {
-                self.invalidatedReadStateTable.add(peerId, operations: &invalidatedReadStateOperations)
+                self.synchronizeReadStateTable.set(peerId, operation: .Validate, operations: &updatedPeerReadStateOperations)
             }
         }
         
@@ -213,26 +218,26 @@ final class MessageHistoryTable: Table {
         return internalStoreMessages
     }
     
-    func addMessages(messages: [StoreMessage], location: AddMessagesLocation, inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], inout invalidatedReadStateOperations: [IntermediateMessageHistoryInvalidatedReadStateOperation]) {
+    func addMessages(messages: [StoreMessage], location: AddMessagesLocation, inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], inout updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]) {
         let messagesByPeerId = self.messagesGroupedByPeerId(messages)
         for (peerId, peerMessages) in messagesByPeerId {
             var operations: [MessageHistoryIndexOperation] = []
             self.messageHistoryIndexTable.addMessages(self.internalStoreMessages(peerMessages), location: location, operations: &operations)
-            self.processIndexOperations(peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, invalidatedReadStateOperations: &invalidatedReadStateOperations)
+            self.processIndexOperations(peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         }
     }
     
-    func addHoles(messageIds: [MessageId], inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], inout invalidatedReadStateOperations: [IntermediateMessageHistoryInvalidatedReadStateOperation]) {
+    func addHoles(messageIds: [MessageId], inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], inout updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]) {
         for (peerId, messageIds) in self.messageIdsByPeerId(messageIds) {
             var operations: [MessageHistoryIndexOperation] = []
             for id in messageIds {
                 self.messageHistoryIndexTable.addHole(id, operations: &operations)
             }
-            self.processIndexOperations(peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, invalidatedReadStateOperations: &invalidatedReadStateOperations)
+            self.processIndexOperations(peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         }
     }
     
-    func removeMessages(messageIds: [MessageId], inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], inout invalidatedReadStateOperations: [IntermediateMessageHistoryInvalidatedReadStateOperation]) {
+    func removeMessages(messageIds: [MessageId], inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], inout updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]) {
         for (peerId, messageIds) in self.messageIdsByPeerId(messageIds) {
             var operations: [MessageHistoryIndexOperation] = []
             
@@ -243,7 +248,7 @@ final class MessageHistoryTable: Table {
             for id in messageIds {
                 self.messageHistoryIndexTable.removeMessage(id, operations: &operations)
             }
-            self.processIndexOperations(peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, invalidatedReadStateOperations: &invalidatedReadStateOperations)
+            self.processIndexOperations(peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
             
             if let combinedState = combinedState {
                 var outputOperations: [MessageHistoryOperation] = []
@@ -257,24 +262,24 @@ final class MessageHistoryTable: Table {
             }
             
             if invalidate {
-                self.invalidatedReadStateTable.add(peerId, operations: &invalidatedReadStateOperations)
+                self.synchronizeReadStateTable.set(peerId, operation: .Validate, operations: &updatedPeerReadStateOperations)
             }
         }
     }
     
-    func fillHole(id: MessageId, fillType: HoleFillType, tagMask: MessageTags?, messages: [StoreMessage], inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], inout invalidatedReadStateOperations: [IntermediateMessageHistoryInvalidatedReadStateOperation]) {
+    func fillHole(id: MessageId, fillType: HoleFill, tagMask: MessageTags?, messages: [StoreMessage], inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], inout updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]) {
         var operations: [MessageHistoryIndexOperation] = []
         self.messageHistoryIndexTable.fillHole(id, fillType: fillType, tagMask: tagMask, messages: self.internalStoreMessages(messages), operations: &operations)
-        self.processIndexOperations(id.peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, invalidatedReadStateOperations: &invalidatedReadStateOperations)
+        self.processIndexOperations(id.peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
     }
     
-    func updateMessage(id: MessageId, message: StoreMessage, inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], inout invalidatedReadStateOperations: [IntermediateMessageHistoryInvalidatedReadStateOperation]) {
+    func updateMessage(id: MessageId, message: StoreMessage, inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], inout updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]) {
         var operations: [MessageHistoryIndexOperation] = []
         self.messageHistoryIndexTable.updateMessage(id, message: self.internalStoreMessages([message]).first!, operations: &operations)
-        self.processIndexOperations(id.peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, invalidatedReadStateOperations: &invalidatedReadStateOperations)
+        self.processIndexOperations(id.peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
     }
     
-    func resetIncomingReadStates(states: [PeerId: [MessageId.Namespace: PeerReadState]], inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout invalidatedReadStateOperations: [IntermediateMessageHistoryInvalidatedReadStateOperation]) {
+    func resetIncomingReadStates(states: [PeerId: [MessageId.Namespace: PeerReadState]], inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]) {
         for (peerId, namespaces) in states {
             if let combinedState = self.readStateTable.resetStates(peerId, namespaces: namespaces) {
                 if operationsByPeerId[peerId] == nil {
@@ -283,14 +288,19 @@ final class MessageHistoryTable: Table {
                     operationsByPeerId[peerId]!.append(.UpdateReadState(combinedState))
                 }
             }
-            self.invalidatedReadStateTable.remove(peerId, operations: &invalidatedReadStateOperations)
+            self.synchronizeReadStateTable.set(peerId, operation: nil, operations: &updatedPeerReadStateOperations)
         }
     }
     
-    func applyIncomingReadMaxId(messageId: MessageId, inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout invalidatedReadStateOperations: [IntermediateMessageHistoryInvalidatedReadStateOperation]) {
-        let (combinedState, invalidated) = self.readStateTable.applyMaxReadId(messageId.peerId, namespace: messageId.namespace, maxReadId: messageId.id, maxKnownId: messageId.id, incomingStatsInRange: { fromId, toId in
+    func applyIncomingReadMaxId(messageId: MessageId, inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]) {
+        var topMessageId: MessageId.Id?
+        if let topEntry = self.messageHistoryIndexTable.top(messageId.peerId, namespace: messageId.namespace), case let .Message(index) = topEntry {
+            topMessageId = index.id.id
+        }
+        
+        let (combinedState, invalidated) = self.readStateTable.applyMaxReadId(messageId, incomingStatsInRange: { fromId, toId in
             return self.messageHistoryIndexTable.incomingMessageCountInRange(messageId.peerId, namespace: messageId.namespace, minId: fromId, maxId: toId)
-        })
+        }, topMessageId: topMessageId)
         
         if let combinedState = combinedState {
             if operationsByPeerId[messageId.peerId] == nil {
@@ -301,7 +311,33 @@ final class MessageHistoryTable: Table {
         }
         
         if invalidated {
-            self.invalidatedReadStateTable.add(messageId.peerId, operations: &invalidatedReadStateOperations)
+            self.synchronizeReadStateTable.set(messageId.peerId, operation: .Validate, operations: &updatedPeerReadStateOperations)
+        }
+    }
+    
+    func applyInteractiveMaxReadId(messageId: MessageId, inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]) {
+        var topMessageId: MessageId.Id?
+        if let topEntry = self.messageHistoryIndexTable.top(messageId.peerId, namespace: messageId.namespace), case let .Message(index) = topEntry {
+            topMessageId = index.id.id
+        }
+        
+        let (combinedState, result) = self.readStateTable.applyInteractiveMaxReadId(messageId, incomingStatsInRange: { fromId, toId in
+            return self.messageHistoryIndexTable.incomingMessageCountInRange(messageId.peerId, namespace: messageId.namespace, minId: fromId, maxId: toId)
+        }, topMessageId: topMessageId)
+        
+        if let combinedState = combinedState {
+            if operationsByPeerId[messageId.peerId] == nil {
+                operationsByPeerId[messageId.peerId] = [.UpdateReadState(combinedState)]
+            } else {
+                operationsByPeerId[messageId.peerId]!.append(.UpdateReadState(combinedState))
+            }
+        }
+        
+        switch result {
+            case let .Push(thenSync):
+                self.synchronizeReadStateTable.set(messageId.peerId, operation: .Push(thenSync: thenSync), operations: &updatedPeerReadStateOperations)
+            case .None:
+                break
         }
     }
     
@@ -1222,6 +1258,30 @@ final class MessageHistoryTable: Table {
         return entries
     }
     
+    func maxReadIndex(peerId: PeerId) -> MessageHistoryAnchorIndex? {
+        if let combinedState = self.readStateTable.getCombinedState(peerId), state = combinedState.states.first where state.1.count != 0 {
+            return self.anchorIndex(MessageId(peerId: peerId, namespace: state.0, id: state.1.maxReadId))
+        }
+        return nil
+    }
+    
+    func anchorIndex(messageId: MessageId) -> MessageHistoryAnchorIndex? {
+        let (lower, upper) = self.messageHistoryIndexTable.adjacentItems(messageId, bindUpper: false)
+        if let lower = lower, case let .Hole(hole) = lower where messageId.id >= hole.min && messageId.id <= hole.maxIndex.id.id {
+            return MessageHistoryAnchorIndex(index: MessageIndex(id: messageId, timestamp: lower.index.timestamp), exact: false)
+        }
+        if let upper = upper, case let .Hole(hole) = upper where messageId.id >= hole.min && messageId.id <= hole.maxIndex.id.id {
+            return MessageHistoryAnchorIndex(index: MessageIndex(id: messageId, timestamp: upper.index.timestamp), exact: false)
+        }
+        
+        if let lower = lower {
+            return MessageHistoryAnchorIndex(index: MessageIndex(id: messageId, timestamp: lower.index.timestamp), exact: true)
+        } else if let upper = upper {
+            return MessageHistoryAnchorIndex(index: MessageIndex(id: messageId, timestamp: upper.index.timestamp), exact: true)
+        }
+        return nil
+    }
+
     func debugList(peerId: PeerId, peerTable: PeerTable) -> [RenderedMessageHistoryEntry] {
         return self.laterEntries(peerId, index: nil, count: 1000).map({ entry -> RenderedMessageHistoryEntry in
             switch entry {

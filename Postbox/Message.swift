@@ -124,15 +124,19 @@ public struct MessageIndex: Equatable, Comparable, Hashable {
         return self.id.hashValue
     }
     
-    static func absoluteUpperBound() -> MessageIndex {
+    public static func absoluteUpperBound() -> MessageIndex {
         return MessageIndex(id: MessageId(peerId: PeerId(namespace: Int32.max, id: Int32.max), namespace: Int32.max, id: Int32.max), timestamp: Int32.max)
     }
     
-    static func absoluteLowerBound() -> MessageIndex {
+    public static func absoluteLowerBound() -> MessageIndex {
         return MessageIndex(id: MessageId(peerId: PeerId(namespace: 0, id: 0), namespace: 0, id: 0), timestamp: 0)
     }
     
-    static func upperBound(peerId: PeerId) -> MessageIndex {
+    public static func lowerBound(peerId: PeerId) -> MessageIndex {
+        return MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: 0)
+    }
+    
+    public static func upperBound(peerId: PeerId) -> MessageIndex {
         return MessageIndex(id: MessageId(peerId: peerId, namespace: Int32.max, id: Int32.max), timestamp: Int32.max)
     }
 }
@@ -215,11 +219,32 @@ public struct StoreMessageForwardInfo {
     }
 }
 
-public struct MessageForwardInfo {
+public struct MessageForwardInfo: Equatable {
     public let author: Peer
     public let source: Peer?
     public let sourceMessageId: MessageId?
     public let date: Int32
+}
+
+public func ==(lhs: MessageForwardInfo, rhs: MessageForwardInfo) -> Bool {
+    if !lhs.author.isEqual(rhs.author) {
+        return false
+    }
+    if let lhsSource = lhs.source, rhsSource = rhs.source {
+        if !lhsSource.isEqual(rhsSource) {
+            return false
+        }
+    } else if (lhs.source == nil) != (rhs.source == nil) {
+        return false
+    }
+    if lhs.sourceMessageId != rhs.sourceMessageId {
+        return false
+    }
+    if lhs.date != rhs.date {
+        return false
+    }
+    
+    return true
 }
 
 public protocol MessageAttribute: Coding {
@@ -237,7 +262,7 @@ public extension MessageAttribute {
     }
 }
 
-public class Message {
+public final class Message {
     public let stableId: UInt32
     public let id: MessageId
     public let timestamp: Int32

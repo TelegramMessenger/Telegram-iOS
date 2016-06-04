@@ -9,6 +9,12 @@ import Postbox
 private let peerId = PeerId(namespace: 1, id: 1)
 private let namespace: Int32 = 1
 
+private extension MessageIndex {
+    init(id: Int32, timestamp: Int32) {
+        self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp)
+    }
+}
+
 private enum Item: Equatable, CustomStringConvertible {
     case Message(Int32, Int32)
     case Hole(Int32, Int32, Int32)
@@ -103,11 +109,8 @@ class MessageHistoryIndexTableTests: XCTestCase {
         }, location: .UpperHistoryBlock, operations: &operations)
     }
     
-    func fillHole(id: Int32, _ fillType: HoleFillType, _ messages: [(Int32, Int32)], _ tagMask: MessageTags? = nil) {
+    func fillHole(id: Int32, _ fillType: HoleFill, _ messages: [(Int32, Int32)], _ tagMask: MessageTags? = nil) {
         var operations: [MessageHistoryIndexOperation] = []
-        let zeroData = WriteBuffer()
-        var zero: Int32 = 0
-        zeroData.write(&zero, offset: 0, length: 4)
         
         self.indexTable!.fillHole(MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({
             return InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), timestamp: $0.1, flags: [], tags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])
@@ -265,42 +268,42 @@ class MessageHistoryIndexTableTests: XCTestCase {
     }
     
     func testFillHoleEmpty() {
-        fillHole(1, .Complete, [])
+        fillHole(1, HoleFill(complete: true, direction: .UpperToLower), [])
         expect([])
     }
 
     func testFillHoleComplete() {
         addHole(100)
         
-        fillHole(1, .Complete, [(100, 100), (200, 200)])
+        fillHole(1, HoleFill(complete: true, direction: .UpperToLower), [(100, 100), (200, 200)])
         expect([.Message(100, 100), .Message(200, 200)])
     }
     
     func testFillHoleUpperToLowerPartial() {
         addHole(100)
         
-        fillHole(1, .UpperToLower, [(100, 100), (200, 200)])
+        fillHole(1, HoleFill(complete: false, direction: .UpperToLower), [(100, 100), (200, 200)])
         expect([.Hole(1, 99, 100), .Message(100, 100), .Message(200, 200)])
     }
     
     func testFillHoleUpperToLowerToBounds() {
         addHole(100)
         
-        fillHole(1, .UpperToLower, [(1, 1), (200, 200)])
+        fillHole(1, HoleFill(complete: false, direction: .UpperToLower), [(1, 1), (200, 200)])
         expect([.Message(1, 1), .Message(200, 200)])
     }
     
     func testFillHoleLowerToUpperToBounds() {
         addHole(100)
         
-        fillHole(1, .LowerToUpper, [(100, 100), (Int32.max, 200)])
+        fillHole(1, HoleFill(complete: false, direction: .LowerToUpper), [(100, 100), (Int32.max, 200)])
         expect([.Message(100, 100), .Message(Int32.max, 200)])
     }
     
     func testFillHoleLowerToUpperPartial() {
         addHole(100)
         
-        fillHole(1, .LowerToUpper, [(100, 100), (200, 200)])
+        fillHole(1, HoleFill(complete: false, direction: .LowerToUpper), [(100, 100), (200, 200)])
         expect([.Message(100, 100), .Message(200, 200), .Hole(201, Int32.max, Int32.max)])
     }
     
@@ -310,7 +313,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(100, 100)
         addMessage(200, 200)
         
-        fillHole(199, .UpperToLower, [(150, 150)])
+        fillHole(199, HoleFill(complete: false, direction: .UpperToLower), [(150, 150)])
         
         expect([.Hole(1, 99, 100), .Message(100, 100), .Hole(101, 149, 150), .Message(150, 150), .Message(200, 200), .Hole(201, Int32.max, Int32.max)])
     }
@@ -321,7 +324,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(100, 100)
         addMessage(200, 200)
         
-        fillHole(199, .LowerToUpper, [(150, 150)])
+        fillHole(199, HoleFill(complete: false, direction: .LowerToUpper), [(150, 150)])
         
         expect([.Hole(1, 99, 100), .Message(100, 100), .Message(150, 150), .Hole(151, 199, 200), .Message(200, 200), .Hole(201, Int32.max, Int32.max)])
     }
@@ -332,7 +335,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(100, 100)
         addMessage(200, 200)
         
-        fillHole(199, .Complete, [(150, 150)])
+        fillHole(199, HoleFill(complete: true, direction: .UpperToLower), [(150, 150)])
         
         expect([.Hole(1, 99, 100), .Message(100, 100), .Message(150, 150), .Message(200, 200), .Hole(201, Int32.max, Int32.max)])
     }
@@ -350,7 +353,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(100, 100)
         addHole(1)
         
-        fillHole(99, .Complete, [])
+        fillHole(99, HoleFill(complete: true, direction: .UpperToLower), [])
         
         expect([.Message(100, 100)])
     }
@@ -359,7 +362,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(100, 100)
         addMessage(101, 101)
         
-        fillHole(100, .Complete, [(90, 90)])
+        fillHole(100, HoleFill(complete: true, direction: .UpperToLower), [(90, 90)])
         
         expect([.Message(90, 90), .Message(100, 100), .Message(101, 101)])
     }
@@ -369,7 +372,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         addMessage(200, 200)
         addHole(150)
         
-        fillHole(199, .UpperToLower, [(150, 150), (300, 300)])
+        fillHole(199, HoleFill(complete: false, direction: .UpperToLower), [(150, 150), (300, 300)])
         
         expect([.Message(100, 100), .Hole(101, 149, 150), .Message(150, 150), .Message(200, 200), .Message(300, 300)])
     }
@@ -501,5 +504,19 @@ class MessageHistoryIndexTableTests: XCTestCase {
         expect([.Message(10, 10), .Hole(11, Int32.max, Int32.max)])
         addMessagesUpperBlock([(10, 11)])
         expect([.Message(10, 10)])
+    }
+    
+    func testFillHoleAtIndex() {
+        addHole(1)
+        expect([.Hole(1, Int32.max, Int32.max)])
+        fillHole(1, HoleFill(complete: false, direction: .AroundIndex(MessageIndex(id: 10, timestamp: 10))), [(5, 5), (10, 10)])
+        expect([.Hole(1, 4, 5), .Message(5, 5), .Message(10, 10), .Hole(11, Int32.max, Int32.max)])
+    }
+    
+    func testFillHoleAtIndexComplete() {
+        addHole(1)
+        expect([.Hole(1, Int32.max, Int32.max)])
+        fillHole(1, HoleFill(complete: true, direction: .AroundIndex(MessageIndex(id: 10, timestamp: 10))), [(5, 5), (10, 10)])
+        expect([.Message(5, 5), .Message(10, 10)])
     }
 }

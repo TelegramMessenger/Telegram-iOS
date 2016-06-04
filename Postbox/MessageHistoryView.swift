@@ -1,5 +1,25 @@
 import Foundation
 
+public struct MessageHistoryViewId: Equatable {
+    let peerId: PeerId
+    let id: Int
+    let version: Int
+    
+    init(peerId: PeerId, id: Int, version: Int = 0) {
+        self.peerId = peerId
+        self.id = id
+        self.version = version
+    }
+    
+    var nextVersion: MessageHistoryViewId {
+        return MessageHistoryViewId(peerId: self.peerId, id: self.id, version: self.version + 1)
+    }
+}
+
+public func ==(lhs: MessageHistoryViewId, rhs: MessageHistoryViewId) -> Bool {
+    return lhs.peerId == rhs.peerId && lhs.id == rhs.id && lhs.version == rhs.version
+}
+
 enum MutableMessageHistoryEntry {
     case IntermediateMessageEntry(IntermediateMessage)
     case MessageEntry(Message)
@@ -68,23 +88,109 @@ final class MutableMessageHistoryViewReplayContext {
 }
 
 final class MutableMessageHistoryView {
+    private(set) var id: MessageHistoryViewId
     let tagMask: MessageTags?
-    private var combinedReadState: CombinedPeerReadState?
-    private let count: Int
+    private var anchorIndex: MessageHistoryAnchorIndex
+    private let combinedReadState: CombinedPeerReadState?
     private var earlier: MutableMessageHistoryEntry?
     private var later: MutableMessageHistoryEntry?
     private var entries: [MutableMessageHistoryEntry]
+    private let fillCount: Int
     
-    init(combinedReadState: CombinedPeerReadState?, earlier: MutableMessageHistoryEntry?, entries: [MutableMessageHistoryEntry], later: MutableMessageHistoryEntry?, tagMask: MessageTags?, count: Int) {
+    init(id: MessageHistoryViewId, anchorIndex: MessageHistoryAnchorIndex, combinedReadState: CombinedPeerReadState?, earlier: MutableMessageHistoryEntry?, entries: [MutableMessageHistoryEntry], later: MutableMessageHistoryEntry?, tagMask: MessageTags?, count: Int) {
+        self.id = id
+        self.anchorIndex = anchorIndex
         self.combinedReadState = combinedReadState
         self.earlier = earlier
         self.entries = entries
         self.later = later
         self.tagMask = tagMask
-        self.count = count
+        self.fillCount = count
     }
     
-    func replay(operations: [MessageHistoryOperation], context: MutableMessageHistoryViewReplayContext) -> Bool {
+    func incrementVersion() {
+        self.id = self.id.nextVersion
+    }
+    
+    func updateVisibleRange(earliestVisibleIndex earliestVisibleIndex: MessageIndex, latestVisibleIndex: MessageIndex, context: MutableMessageHistoryViewReplayContext) -> Bool {
+        if (true) {
+            //return false
+        }
+        
+        var minIndex: Int?
+        var maxIndex: Int?
+        
+        for i in 0 ..< self.entries.count {
+            if self.entries[i].index >= earliestVisibleIndex {
+                minIndex = i
+                break
+            }
+        }
+        
+        for i in (0 ..< self.entries.count).reverse() {
+            if self.entries[i].index <= latestVisibleIndex {
+                maxIndex = i
+                break
+            }
+        }
+        
+        if let minIndex = minIndex, maxIndex = maxIndex {
+            var minClipIndex = minIndex
+            var maxClipIndex = maxIndex
+            
+            while maxClipIndex - minClipIndex <= self.fillCount {
+                if maxClipIndex != self.entries.count - 1 {
+                    maxClipIndex += 1
+                }
+                
+                if minClipIndex != 0 {
+                    minClipIndex -= 1
+                } else if maxClipIndex == self.entries.count - 1 {
+                    break
+                }
+            }
+            
+            if minClipIndex != 0 || maxClipIndex != self.entries.count - 1 {
+                if minClipIndex != 0 {
+                    self.earlier = self.entries[minClipIndex - 1]
+                }
+                
+                if maxClipIndex != self.entries.count - 1 {
+                    self.later = self.entries[maxClipIndex + 1]
+                }
+                
+                for _ in 0 ..< self.entries.count - 1 - maxClipIndex {
+                    /*if case let .MessageEntry(message) = self.entries.last! {
+                        print("remove last \(message.text)")
+                    }*/
+                    self.entries.removeLast()
+                }
+                
+                for _ in 0 ..< minClipIndex {
+                    /*if case let .MessageEntry(message) = self.entries.first! {
+                        print("remove first \(message.text)")
+                    }*/
+                    self.entries.removeFirst()
+                }
+                
+                return true
+            }
+        }
+        
+        return false
+    }
+    
+    func updateAnchorIndex(getIndex: (MessageId) -> MessageHistoryAnchorIndex?) -> Bool {
+        if !self.anchorIndex.exact {
+            if let index = getIndex(self.anchorIndex.index.id) {
+                self.anchorIndex = index
+                return true
+            }
+        }
+        return false
+    }
+    
+    func replay(operations: [MessageHistoryOperation], holeFillDirections: [MessageIndex: HoleFillDirection], context: MutableMessageHistoryViewReplayContext) -> Bool {
         let tagMask = self.tagMask
         let unwrappedTagMask: UInt32 = tagMask?.rawValue ?? 0
         
@@ -93,13 +199,13 @@ final class MutableMessageHistoryView {
             switch operation {
                 case let .InsertHole(hole):
                     if tagMask == nil || (hole.tags & unwrappedTagMask) != 0 {
-                        if self.add(.HoleEntry(hole)) {
+                        if self.add(.HoleEntry(hole), holeFillDirections: holeFillDirections) {
                             hasChanges = true
                         }
                     }
                 case let .InsertMessage(intermediateMessage):
                     if tagMask == nil || (intermediateMessage.tags.rawValue & unwrappedTagMask) != 0 {
-                        if self.add(.IntermediateMessageEntry(intermediateMessage)) {
+                        if self.add(.IntermediateMessageEntry(intermediateMessage), holeFillDirections: holeFillDirections) {
                             hasChanges = true
                         }
                     }
@@ -109,20 +215,20 @@ final class MutableMessageHistoryView {
                     }
                 case let .UpdateReadState(combinedReadState):
                     hasChanges = true
-                    self.combinedReadState = combinedReadState
+                    //self.combinedReadState = combinedReadState
             }
         }
         
         return hasChanges
     }
     
-    private func add(entry: MutableMessageHistoryEntry) -> Bool {
+    private func add(entry: MutableMessageHistoryEntry, holeFillDirections: [MessageIndex: HoleFillDirection]) -> Bool {
         if self.entries.count == 0 {
             self.entries.append(entry)
             return true
         } else {
-            let first = self.entries[self.entries.count - 1].index
-            let last = self.entries[0].index
+            let latestIndex = self.entries[self.entries.count - 1].index
+            let earliestIndex = self.entries[0].index
             
             var next: MessageIndex?
             if let later = self.later {
@@ -131,38 +237,26 @@ final class MutableMessageHistoryView {
             
             let index = entry.index
             
-            if index < last {
+            if index < earliestIndex {
                 if self.earlier == nil || self.earlier!.index < index {
-                    if self.entries.count < self.count {
-                        self.entries.insert(entry, atIndex: 0)
-                    } else {
-                        self.earlier = entry
-                    }
+                    self.entries.insert(entry, atIndex: 0)
                     return true
                 } else {
                     return false
                 }
-            } else if index > first {
-                if next != nil && index > next! {
-                    if self.later == nil || self.later!.index > index {
-                        if self.entries.count < self.count {
-                            self.entries.append(entry)
-                        } else {
-                            self.later = entry
-                        }
+            } else if index > latestIndex {
+                if let later = self.later {
+                    if index < later.index {
+                        self.entries.append(entry)
                         return true
                     } else {
                         return false
                     }
                 } else {
                     self.entries.append(entry)
-                    if self.entries.count > self.count {
-                        self.earlier = self.entries[0]
-                        self.entries.removeAtIndex(0)
-                    }
                     return true
                 }
-            } else if index != last && index != first {
+            } else if index != earliestIndex && index != latestIndex {
                 var i = self.entries.count
                 while i >= 1 {
                     if self.entries[i - 1].index < index {
@@ -171,10 +265,6 @@ final class MutableMessageHistoryView {
                     i -= 1
                 }
                 self.entries.insert(entry, atIndex: i)
-                if self.entries.count > self.count {
-                    self.earlier = self.entries[0]
-                    self.entries.removeAtIndex(0)
-                }
                 return true
             } else {
                 return false
@@ -214,64 +304,45 @@ final class MutableMessageHistoryView {
     }
     
     func complete(context: MutableMessageHistoryViewReplayContext, fetchEarlier: (MessageIndex?, Int) -> [MutableMessageHistoryEntry], fetchLater: (MessageIndex?, Int) -> [MutableMessageHistoryEntry]) {
-        if context.removedEntries {
-            var addedEntries: [MutableMessageHistoryEntry] = []
-            
-            var latestAnchor: MessageIndex?
-            if let last = self.entries.last {
-                latestAnchor = last.index
-            }
-            
-            if latestAnchor == nil {
-                if let later = self.later {
-                    latestAnchor = later.index
-                }
-            }
-            
-            if let later = self.later {
-                addedEntries += fetchLater(later.index.predecessor(), self.count)
-            }
-            if let earlier = self.earlier {
-                addedEntries += fetchEarlier(earlier.index.successor(), self.count)
-            }
-            
-            addedEntries += self.entries
-            addedEntries.sortInPlace({ $0.index < $1.index })
-            var i = addedEntries.count - 1
-            while i >= 1 {
-                if addedEntries[i].index.id == addedEntries[i - 1].index.id {
-                    addedEntries.removeAtIndex(i)
-                }
-                i -= 1
-            }
-            self.entries = []
-            
-            var anchorIndex = addedEntries.count - 1
-            if let latestAnchor = latestAnchor {
-                var i = addedEntries.count - 1
-                while i >= 0 {
-                    if addedEntries[i].index <= latestAnchor {
-                        anchorIndex = i
-                        break
+        if context.removedEntries && self.entries.count < self.fillCount {
+            if self.entries.count == 0 {
+                let anchorIndex = (self.later ?? self.earlier)?.index
+                
+                let fetchedEntries = fetchEarlier(anchorIndex, self.fillCount + 2)
+                if fetchedEntries.count >= self.fillCount + 2 {
+                    self.earlier = fetchedEntries.last
+                    for i in (1 ..< fetchedEntries.count - 1).reverse() {
+                        self.entries.append(fetchedEntries[i])
                     }
-                    i -= 1
+                    self.later = fetchedEntries.first
                 }
-            }
-            
-            self.later = nil
-            if anchorIndex + 1 < addedEntries.count {
-                self.later = addedEntries[anchorIndex + 1]
-            }
-            
-            i = anchorIndex
-            while i >= 0 && i > anchorIndex - self.count {
-                self.entries.insert(addedEntries[i], atIndex: 0)
-                i -= 1
-            }
-            
-            self.earlier = nil
-            if anchorIndex - self.count >= 0 {
-                self.earlier = addedEntries[anchorIndex - self.count]
+            } else {
+                let fetchedEntries = fetchEarlier(self.entries[0].index, self.fillCount - self.entries.count)
+                for entry in fetchedEntries {
+                    self.entries.insert(entry, atIndex: 0)
+                }
+                
+                if context.invalidEarlier {
+                    var earlyId: MessageIndex?
+                    let i = 0
+                    if i < self.entries.count {
+                        earlyId = self.entries[i].index
+                    }
+                    
+                    let earlierEntries = fetchEarlier(earlyId, 1)
+                    self.earlier = earlierEntries.first
+                }
+                
+                if context.invalidLater {
+                    var laterId: MessageIndex?
+                    let i = self.entries.count - 1
+                    if i >= 0 {
+                        laterId = self.entries[i].index
+                    }
+                    
+                    let laterEntries = fetchLater(laterId, 1)
+                    self.later = laterEntries.first
+                }
             }
         } else {
             if context.invalidEarlier {
@@ -313,11 +384,49 @@ final class MutableMessageHistoryView {
         }
     }
     
-    func firstHole() -> MessageHistoryHole? {
-        for entry in self.entries.reverse() as ReverseCollection {
-            if case let .HoleEntry(hole) = entry {
-                return hole
+    func firstHole() -> (MessageHistoryHole, HoleFillDirection)? {
+        if self.entries.isEmpty {
+            return nil
+        }
+        
+        var referenceIndex = self.entries.count - 1
+        for i in 0 ..< self.entries.count {
+            if self.entries[i].index >= self.anchorIndex.index {
+                referenceIndex = i
+                break
             }
+        }
+        
+        var i = referenceIndex
+        var j = referenceIndex + 1
+        
+        while i >= 0 || j < self.entries.count {
+            if j < self.entries.count {
+                if case let .HoleEntry(hole) = self.entries[j] {
+                    if self.anchorIndex.index.id.namespace == hole.id.namespace {
+                        if self.anchorIndex.index.id.id >= hole.min && self.anchorIndex.index.id.id <= hole.maxIndex.id.id {
+                            return (hole, .AroundIndex(self.anchorIndex.index))
+                        }
+                    }
+                    
+                    return (hole, hole.maxIndex <= self.anchorIndex.index ? .UpperToLower : .LowerToUpper)
+                }
+            }
+            
+            if i >= 0 {
+                if case let .HoleEntry(hole) = self.entries[i] {
+                    if self.anchorIndex.index.id.namespace == hole.id.namespace {
+                        if self.anchorIndex.index.id.id >= hole.min && self.anchorIndex.index.id.id <= hole.maxIndex.id.id {
+                            return (hole, .AroundIndex(self.anchorIndex.index))
+                        }
+                    }
+                    
+                    return (hole, hole.maxIndex <= self.anchorIndex.index ? .UpperToLower : .LowerToUpper)
+                }
+            }
+            
+            i -= 1
+            j += 1
         }
         
         return nil
@@ -325,12 +434,18 @@ final class MutableMessageHistoryView {
 }
 
 public final class MessageHistoryView {
+    public let id: MessageHistoryViewId
+    public let anchorIndex: MessageIndex
     public let earlierId: MessageIndex?
     public let laterId: MessageIndex?
     public let entries: [MessageHistoryEntry]
     public let maxReadIndex: MessageIndex?
+    public let combinedReadState: CombinedPeerReadState?
     
     init(_ mutableView: MutableMessageHistoryView) {
+        self.id = mutableView.id
+        self.anchorIndex = mutableView.anchorIndex.index
+        
         var entries: [MessageHistoryEntry] = []
         for entry in mutableView.entries {
             switch entry {
@@ -347,15 +462,41 @@ public final class MessageHistoryView {
         self.earlierId = mutableView.earlier?.index
         self.laterId = mutableView.later?.index
         
-        if let combinedReadState = mutableView.combinedReadState {
+        self.combinedReadState = mutableView.combinedReadState
+        
+        if let combinedReadState = mutableView.combinedReadState where combinedReadState.count != 0 {
             var maxIndex: MessageIndex?
             for (namespace, state) in combinedReadState.states {
-                for entry in entries {
-                    if entry.index.id.namespace == namespace {
-                        if maxIndex == nil || maxIndex! < entry.index {
-                            maxIndex = entry.index
+                var maxNamespaceIndex: MessageIndex?
+                var index = entries.count - 1
+                for entry in entries.reverse() {
+                    if entry.index.id.namespace == namespace && entry.index.id.id <= state.maxReadId {
+                        maxNamespaceIndex = entry.index
+                        break
+                    }
+                    index -= 1
+                }
+                if maxNamespaceIndex == nil && index == -1 && entries.count != 0 {
+                    index = 0
+                    for entry in entries {
+                        if entry.index.id.namespace == namespace {
+                            maxNamespaceIndex = entry.index
+                            break
+                        }
+                        index += 1
+                    }
+                }
+                if let _ = maxNamespaceIndex where index + 1 < entries.count {
+                    for i in index + 1 ..< entries.count {
+                        if case let .MessageEntry(message) = entries[i] where !message.flags.contains(.Incoming) {
+                            maxNamespaceIndex = MessageIndex(message)
+                        } else {
+                            break
                         }
                     }
+                }
+                if let maxNamespaceIndex = maxNamespaceIndex where maxIndex == nil || maxIndex! < maxNamespaceIndex {
+                    maxIndex = maxNamespaceIndex
                 }
             }
             self.maxReadIndex = maxIndex

@@ -380,7 +380,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: COpaquePointer = nil
-            sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table) WHERE key=?", -1, &statement, nil)
+            sqlite3_prepare_v2(self.database.handle, "SELECT rowid FROM t\(table) WHERE key=?", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.existsStatements[table] = preparedStatement
             resultStatement = preparedStatement
