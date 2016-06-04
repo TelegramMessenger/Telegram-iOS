@@ -4,5 +4,6 @@
 
 - (SSignal *)catch:(SSignal *(^)(id error))f;
 - (SSignal *)restart;
+- (SSignal *)retryIf:(bool (^)(id error))predicate;
 
 @end

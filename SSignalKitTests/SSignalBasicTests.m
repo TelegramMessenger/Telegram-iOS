@@ -702,4 +702,63 @@
     }
 }
 
+- (void)testRetryIfNoError {
+    SSignal *s = [[SSignal single:@1] retryIf:^bool(__unused id error) {
+        return true;
+    }];
+    [s startWithNext:^(id next) {
+        XCTAssertEqual(next, @1);
+    }];
+}
+
+- (void)testRetryErrorNoMatch {
+    SSignal *s = [[SSignal fail:@false] retryIf:^bool(id error) {
+        return false;
+    }];
+}
+
+- (void)testRetryErrorMatch {
+    __block counter = 1;
+    SSignal *s = [[[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber) {
+        if (counter == 1) {
+            counter++;
+            [subscriber putError:@true];
+        } else {
+            [subscriber putNext:@(counter)];
+        }
+        return nil;
+    }] retryIf:^bool(id error) {
+        return [error boolValue];
+    }];
+    
+    __block int value = 0;
+    [s startWithNext:^(id next) {
+        value = [next intValue];
+    }];
+    
+    XCTAssertEqual(value, 2);
+}
+
+- (void)testRetryErrorFailNoMatch {
+    __block counter = 1;
+    SSignal *s = [[[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber) {
+        if (counter == 1) {
+            counter++;
+            [subscriber putError:@true];
+        } else {
+            [subscriber putError:@false];
+        }
+        return nil;
+    }] retryIf:^bool(id error) {
+        return [error boolValue];
+    }];
+    
+    __block bool errorMatches = false;
+    [s startWithNext:nil error:^(id error) {
+        errorMatches = ![error boolValue];
+    } completed:nil];
+    
+    XCTAssert(errorMatches);
+}
+
 @end
