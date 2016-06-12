@@ -99,6 +99,12 @@ static BITCrashManagerCallbacks bitCrashCallbacks = {
 
 #if HOCKEYSDK_FEATURE_METRICS
 static void bit_save_events_callback(siginfo_t *info, ucontext_t *uap, void *context) {
+  
+  // Do not flush metrics queue if queue is empty (metrics module disabled) to not freeze the app
+  if (!BITSafeJsonEventsString) {
+    return;
+  }
+  
   // Try to get a file descriptor with our pre-filled path
   int fd = open(BITSaveEventsFilePath, O_WRONLY | O_CREAT | O_TRUNC, 0644);
   if (fd < 0) {
