@@ -26,6 +26,19 @@ public func afterNext<T, E, R>(f: T -> R)(signal: Signal<T, E>) -> Signal<T, E> 
     }
 }
 
+public func beforeStarted<T, E>(f: () -> Void)(signal: Signal<T, E>) -> Signal<T, E> {
+    return Signal<T, E> { subscriber in
+        f()
+        return signal.start(next: { next in
+            subscriber.putNext(next)
+        }, error: { error in
+            subscriber.putError(error)
+        }, completed: {
+            subscriber.putCompletion()
+        })
+    }
+}
+
 public func beforeCompleted<T, E>(f: () -> Void)(signal: Signal<T, E>) -> Signal<T, E> {
     return Signal<T, E> { subscriber in
         return signal.start(next: { next in
