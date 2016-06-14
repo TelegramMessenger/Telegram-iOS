@@ -470,7 +470,7 @@ public final class MessageHistoryView {
                 var maxNamespaceIndex: MessageIndex?
                 var index = entries.count - 1
                 for entry in entries.reverse() {
-                    if entry.index.id.namespace == namespace && entry.index.id.id <= state.maxReadId {
+                    if entry.index.id.namespace == namespace && entry.index.id.id <= state.maxIncomingReadId {
                         maxNamespaceIndex = entry.index
                         break
                     }

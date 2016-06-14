@@ -642,6 +642,18 @@ final class MessageHistoryIndexTable: Table {
             return true
         }, limit: 0)
         
+        self.valueBox.range(self.tableId, start: self.key(MessageId(peerId: peerId, namespace: namespace, id: maxId)), end: self.upperBound(peerId, namespace: namespace), values: { key, value in
+            var flags: Int8 = 0
+            value.read(&flags, offset: 0, length: 1)
+            if (flags & HistoryEntryTypeMask) == HistoryEntryTypeHole {
+                value.reset()
+                if case let .Hole(hole) = readHistoryIndexEntry(peerId, namespace: namespace, key: key, value: value) where hole.min <= maxId && hole.maxIndex.id.id >= maxId {
+                    holes = true
+                }
+            }
+            return false
+        }, limit: 1)
+        
         return (count, holes)
     }
     

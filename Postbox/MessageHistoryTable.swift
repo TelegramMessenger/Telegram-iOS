@@ -118,7 +118,7 @@ final class MessageHistoryTable: Table {
         
         var outputOperations: [MessageHistoryOperation] = []
         var accumulatedRemoveIndices: [MessageIndex] = []
-        var addedIncomingMessageIds: [MessageId] = []
+        var addedIncomingMessageIds = Set<MessageId>()
         var removedMessageIds: [MessageId] = []
         for operation in operations {
             switch operation {
@@ -167,9 +167,10 @@ final class MessageHistoryTable: Table {
                         }
                     }
                     if message.flags.contains(.Incoming) {
-                        addedIncomingMessageIds.append(message.id)
+                        addedIncomingMessageIds.insert(message.id)
                     }
                 case let .Remove(index):
+                    addedIncomingMessageIds.remove(index.id)
                     self.justRemove(index, unsentMessageOperations: &unsentMessageOperations)
                     accumulatedRemoveIndices.append(index)
                 case let .Update(index, storeMessage):
@@ -298,9 +299,25 @@ final class MessageHistoryTable: Table {
             topMessageId = index.id.id
         }
         
-        let (combinedState, invalidated) = self.readStateTable.applyMaxReadId(messageId, incomingStatsInRange: { fromId, toId in
+        let (combinedState, invalidated) = self.readStateTable.applyIncomingMaxReadId(messageId, incomingStatsInRange: { fromId, toId in
             return self.messageHistoryIndexTable.incomingMessageCountInRange(messageId.peerId, namespace: messageId.namespace, minId: fromId, maxId: toId)
         }, topMessageId: topMessageId)
+        
+        if let combinedState = combinedState {
+            if operationsByPeerId[messageId.peerId] == nil {
+                operationsByPeerId[messageId.peerId] = [.UpdateReadState(combinedState)]
+            } else {
+                operationsByPeerId[messageId.peerId]!.append(.UpdateReadState(combinedState))
+            }
+        }
+        
+        if invalidated {
+            self.synchronizeReadStateTable.set(messageId.peerId, operation: .Validate, operations: &updatedPeerReadStateOperations)
+        }
+    }
+    
+    func applyOutgoingReadMaxId(messageId: MessageId, inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]) {
+        let (combinedState, invalidated) = self.readStateTable.applyOutgoingMaxReadId(messageId)
         
         if let combinedState = combinedState {
             if operationsByPeerId[messageId.peerId] == nil {
@@ -574,6 +591,18 @@ final class MessageHistoryTable: Table {
         }
     }
     
+    private func updateMedia(from from: [Media], to: [Media]) {
+        if from.count != 0 {
+            assertionFailure()
+        }
+        
+        for media in from {
+            if let id = media.id {
+                
+            }
+        }
+    }
+    
     private func justUpdate(index: MessageIndex, message: InternalStoreMessage, sharedKey: ValueBoxKey, sharedBuffer: WriteBuffer, sharedEncoder: Encoder, inout unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation]) -> IntermediateMessage? {
         if let previousMessage = self.getMessage(index) {
             self.valueBox.remove(self.tableId, key: self.key(index))
@@ -596,11 +625,10 @@ final class MessageHistoryTable: Table {
                 assertionFailure()
             }
             
-            let previousEmbeddedMediaData = previousMessage.embeddedMediaData
-            
             var previousMedia: [Media] = []
-            if previousEmbeddedMediaData.length > 4 {
+            if previousMessage.embeddedMediaData.length > 4 {
                 var embeddedMediaCount: Int32 = 0
+                let previousEmbeddedMediaData = previousMessage.embeddedMediaData
                 previousEmbeddedMediaData.read(&embeddedMediaCount, offset: 0, length: 4)
                 for _ in 0 ..< embeddedMediaCount {
                     var mediaLength: Int32 = 0
@@ -612,65 +640,16 @@ final class MessageHistoryTable: Table {
                 }
             }
             
+            var previousReferencedMedia: [Media] = []
             for mediaId in previousMessage.referencedMedia {
                 if let media = self.messageMediaTable.get(mediaId) {
                     previousMedia.append(media)
                 }
             }
             
-            let updatedMedia = message.media
-            
             var removedMediaIds: [MediaId] = []
             
-            var updatedEmbeddedMedia: [Media] = []
-            var updatedReferencedMediaIds: [MediaId] = []
-            
-            for media in updatedMedia {
-                assertionFailure()
-                if let mediaId = media.id {
-                    var found = false
-                    for previous in previousMedia {
-                        if let previousId = previous.id {
-                            if previousId == mediaId {
-                                found = true
-                                break
-                            }
-                        }
-                    }
-                    if !found {
-                        let result = self.messageMediaTable.set(media, index: MessageIndex(message), messageHistoryTable: self)
-                        switch result {
-                            case let .Embed(embedded):
-                                updatedEmbeddedMedia.append(embedded)
-                            case .Reference:
-                                updatedReferencedMediaIds.append(mediaId)
-                        }
-                    } else {
-                        
-                    }
-                } else {
-                    updatedEmbeddedMedia.append(media)
-                }
-            }
-            for media in previousMedia {
-                assertionFailure()
-                if let mediaId = media.id {
-                    var found = false
-                    for updated in updatedMedia {
-                        if let updatedId = updated.id {
-                            if updatedId == mediaId {
-                                found = true
-                                break
-                            }
-                        }
-                    }
-                    if !found {
-                        assertionFailure()
-                    }
-                } else {
-                    self.messageMediaTable.removeEmbeddedMedia(media)
-                }
-            }
+            self.updateMedia(from: previousMedia, to: message.media)
             
             sharedBuffer.reset()
             
@@ -1070,6 +1049,7 @@ final class MessageHistoryTable: Table {
         var forwardInfo: MessageForwardInfo?
         if let internalForwardInfo = message.forwardInfo, forwardAuthor = peerTable.get(internalForwardInfo.authorId) {
             var source: Peer?
+            
             if let sourceId = internalForwardInfo.sourceId {
                 source = peerTable.get(sourceId)
             }
@@ -1260,7 +1240,7 @@ final class MessageHistoryTable: Table {
     
     func maxReadIndex(peerId: PeerId) -> MessageHistoryAnchorIndex? {
         if let combinedState = self.readStateTable.getCombinedState(peerId), state = combinedState.states.first where state.1.count != 0 {
-            return self.anchorIndex(MessageId(peerId: peerId, namespace: state.0, id: state.1.maxReadId))
+            return self.anchorIndex(MessageId(peerId: peerId, namespace: state.0, id: state.1.maxIncomingReadId))
         }
         return nil
     }

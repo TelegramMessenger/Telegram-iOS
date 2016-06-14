@@ -705,6 +705,49 @@ public final class Decoder {
         }
     }
     
+    public func decodeObjectArrayWithDecoderForKey<T where T: Coding>(key: StaticString) -> [T] {
+        if Decoder.positionOnKey(UnsafePointer<Int8>(self.buffer.memory), offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .ObjectArray) {
+            var length: Int32 = 0
+            memcpy(&length, self.buffer.memory + self.offset, 4)
+            self.offset += 4
+            
+            var array: [T] = []
+            array.reserveCapacity(Int(length))
+            
+            var failed = false
+            var i: Int32 = 0
+            while i < length {
+                var typeHash: Int32 = 0
+                memcpy(&typeHash, self.buffer.memory + self.offset, 4)
+                self.offset += 4
+                
+                var objectLength: Int32 = 0
+                memcpy(&objectLength, self.buffer.memory + self.offset, 4)
+                
+                let innerDecoder = Decoder(buffer: ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(objectLength), freeWhenDone: false))
+                self.offset += 4 + Int(objectLength)
+                
+                if !failed {
+                    if let object = T(decoder: innerDecoder) as? T {
+                        array.append(object)
+                    } else {
+                        failed = true
+                    }
+                }
+                
+                i += 1
+            }
+            
+            if failed {
+                return []
+            } else {
+                return array
+            }
+        } else {
+            return []
+        }
+    }
+    
     public func decodeObjectArrayForKey<T where T: Coding>(key: StaticString) -> [T] {
         if Decoder.positionOnKey(UnsafePointer<Int8>(self.buffer.memory), offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .ObjectArray) {
             var length: Int32 = 0

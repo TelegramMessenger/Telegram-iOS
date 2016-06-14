@@ -57,6 +57,10 @@ public final class Modifier {
         self.postbox?.applyIncomingReadMaxId(messageId)
     }
     
+    public func applyOutgoingReadMaxId(messageId: MessageId) {
+        self.postbox?.applyOutgoingReadMaxId(messageId)
+    }
+    
     public func applyInteractiveReadMaxId(messageId: MessageId) {
         self.postbox?.applyInteractiveReadMaxId(messageId)
     }
@@ -221,8 +225,10 @@ public final class Postbox {
             //self.debugRestoreState("beforeHoles")
             
             // debugging unread counters
-            //self.debugSaveState("afterLogin")
             //self.debugRestoreState("afterLogin")
+            
+            //self.debugSaveState("previous")
+            //self.debugRestoreState("previous")
             
             //#endif
             
@@ -230,7 +236,7 @@ public final class Postbox {
             self.metadataTable = MetadataTable(valueBox: self.valueBox, tableId: 0)
             
             let userVersion: Int32? = self.metadataTable.userVersion()
-            let currentUserVersion: Int32 = 3
+            let currentUserVersion: Int32 = 5
             
             if userVersion != currentUserVersion {
                 self.valueBox.drop()
@@ -396,6 +402,10 @@ public final class Postbox {
     
     private func applyIncomingReadMaxId(messageId: MessageId) {
         self.messageHistoryTable.applyIncomingReadMaxId(messageId, operationsByPeerId: &self.currentOperationsByPeerId, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
+    }
+    
+    private func applyOutgoingReadMaxId(messageId: MessageId) {
+        self.messageHistoryTable.applyOutgoingReadMaxId(messageId, operationsByPeerId: &self.currentOperationsByPeerId, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
     }
     
     private func applyInteractiveReadMaxId(messageId: MessageId) {
