@@ -1269,7 +1269,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         })
     }
     
-    private func nodeForItem(synchronous: Bool, item: ListViewItem, previousNode: ListViewItemNode?, index: Int, previousItem: ListViewItem?, nextItem: ListViewItem?, width: CGFloat, completion: (ListViewItemNode, ListViewItemNodeLayout, () -> Void) -> Void) {
+    private func nodeForItem(synchronous: Bool, item: ListViewItem, previousNode: ListViewItemNode?, index: Int, previousItem: ListViewItem?, nextItem: ListViewItem?, width: CGFloat, updateAnimation: ListViewItemUpdateAnimation, completion: (ListViewItemNode, ListViewItemNodeLayout, () -> Void) -> Void) {
         if let previousNode = previousNode {
             item.updateNode({ f in
                 if synchronous {
@@ -1277,7 +1277,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
                 } else {
                     self.async(f)
                 }
-            }, node: previousNode, width: width, previousItem: previousItem, nextItem: nextItem, completion: { (layout, apply) in
+            }, node: previousNode, width: width, previousItem: previousItem, nextItem: nextItem, animation: updateAnimation, completion: { (layout, apply) in
                 if NSThread.isMainThread() {
                     if synchronous {
                         completion(previousNode, layout, {
@@ -1637,7 +1637,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
                             } else {
                                 self.async(f)
                             }
-                        }, node: referenceNode, width: state.visibleSize.width, previousItem: index == 0 ? nil : self.items[index - 1], nextItem: index == self.items.count - 1 ? nil : self.items[index + 1], completion: { layout, apply in
+                        }, node: referenceNode, width: state.visibleSize.width, previousItem: index == 0 ? nil : self.items[index - 1], nextItem: index == self.items.count - 1 ? nil : self.items[index + 1], animation: .None, completion: { layout, apply in
                             var updatedState = state
                             var updatedOperations = operations
                             
@@ -1670,6 +1670,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         var previousNodes = inputPreviousNodes
         var operations = inputOperations
         let completion = inputCompletion
+        let updateAnimation: ListViewItemUpdateAnimation = animated ? .System(duration: insertionAnimationDuration) : .None
         
         while true {
             if self.items.count == 0 {
@@ -1694,7 +1695,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
                     let index = insertionItemIndexAndDirection.0
                     let threadId = pthread_self()
                     var tailRecurse = false
-                    self.nodeForItem(synchronous, item: self.items[index], previousNode: previousNodes[index], index: index, previousItem: index == 0 ? nil : self.items[index - 1], nextItem: self.items.count == index + 1 ? nil : self.items[index + 1], width: state.visibleSize.width, completion: { (node, layout, apply) in
+                    self.nodeForItem(synchronous, item: self.items[index], previousNode: previousNodes[index], index: index, previousItem: index == 0 ? nil : self.items[index - 1], nextItem: self.items.count == index + 1 ? nil : self.items[index + 1], width: state.visibleSize.width, updateAnimation: updateAnimation, completion: { (node, layout, apply) in
                         
                         if pthread_equal(pthread_self(), threadId) != 0 && !tailRecurse {
                             tailRecurse = true
@@ -1749,6 +1750,10 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         let previousApparentHeight = node.apparentHeight
         let previousInsets = node.insets
         
+        if node.wantsScrollDynamics && previousFrame != nil {
+            assert(true)
+        }
+        
         node.contentSize = layout.contentSize
         node.insets = layout.insets
         node.apparentHeight = animated ? 0.0 : layout.size.height
@@ -1787,6 +1792,16 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
                         nextNode.removeApparentHeightAnimation()
                         
                         takenAnimation = true
+                        
+                        if abs(layout.size.height - previousApparentHeight) > CGFloat(FLT_EPSILON) {
+                            node.addApparentHeightAnimation(layout.size.height, duration: insertionAnimationDuration, beginAt: timestamp, update: { [weak node] progress in
+                                if let node = node {
+                                    node.animateFrameTransition(progress)
+                                }
+                            })
+                            node.transitionOffset = previousApparentHeight - layout.size.height
+                            node.addTransitionOffsetAnimation(0.0, duration: insertionAnimationDuration, beginAt: timestamp)
+                        }
                     }
                 }
             }
@@ -2285,7 +2300,9 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
                                                 updatedAccessoryItemNodeOrigin.y += updatedParentOrigin.y
                                                 updatedAccessoryItemNodeOrigin.y -= itemNode.bounds.origin.y
                                                 
-                                                nextAccessoryItemNode.animateTransitionOffset(CGPoint(x: 0.0, y: updatedAccessoryItemNodeOrigin.y - previousAccessoryItemNodeOrigin.y), beginAt: currentTimestamp, duration: insertionAnimationDuration * UIView.animationDurationFactor(), curve: listViewAnimationCurveSystem)
+                                                let deltaHeight = itemNode.frame.size.height - nextItemNode.frame.size.height
+                                                
+                                                nextAccessoryItemNode.animateTransitionOffset(CGPoint(x: 0.0, y: updatedAccessoryItemNodeOrigin.y - previousAccessoryItemNodeOrigin.y - deltaHeight), beginAt: currentTimestamp, duration: insertionAnimationDuration * UIView.animationDurationFactor(), curve: listViewAnimationCurveSystem)
                                             }
                                         } else {
                                             break

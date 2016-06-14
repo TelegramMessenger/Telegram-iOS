@@ -43,6 +43,16 @@ extension UIEdgeInsets: Interpolatable {
     }
 }
 
+extension CGRect: Interpolatable {
+    public static func interpolator() -> (Interpolatable, Interpolatable, CGFloat) -> Interpolatable {
+        return { from, to, t -> Interpolatable in
+            let fromValue = from as! CGRect
+            let toValue = to as! CGRect
+            return floorToPixels(CGRect(x: toValue.origin.x * t + fromValue.origin.x * (1.0 - t), y: toValue.origin.y * t + fromValue.origin.y * (1.0 - t), width: toValue.size.width * t + fromValue.size.width * (1.0 - t), height: toValue.size.height * t + fromValue.size.height * (1.0 - t)))
+        }
+    }
+}
+
 extension CGPoint: Interpolatable {
     public static func interpolator() -> (Interpolatable, Interpolatable, CGFloat) -> Interpolatable {
         return { from, to, t -> Interpolatable in
@@ -55,11 +65,10 @@ extension CGPoint: Interpolatable {
 
 private let springAnimationIn: CASpringAnimation = {
     let animation = CASpringAnimation()
-    animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
-    animation.duration = 0.6
     animation.damping = 500.0
     animation.stiffness = 1000.0
     animation.mass = 3.0
+    animation.duration = animation.settlingDuration
     return animation
 }()
 
@@ -87,18 +96,18 @@ public final class ListViewAnimation {
     let startTime: Double
     private let curve: CGFloat -> CGFloat
     private let interpolator: (Interpolatable, Interpolatable, CGFloat) -> Interpolatable
-    private let update: Interpolatable -> Void
+    private let update: (CGFloat, Interpolatable) -> Void
     private let completed: Bool -> Void
     
-    public init<T: Interpolatable>(from: T, to: T, duration: Double, curve: CGFloat -> CGFloat, beginAt: Double, update: T -> Void, completed: Bool -> Void = { _ in }) {
+    public init<T: Interpolatable>(from: T, to: T, duration: Double, curve: CGFloat -> CGFloat, beginAt: Double, update: (CGFloat, T) -> Void, completed: Bool -> Void = { _ in }) {
         self.from = from
         self.to = to
         self.duration = duration
         self.curve = curve
         self.startTime = beginAt
         self.interpolator = T.interpolator()
-        self.update = { value in
-            update(value as! T)
+        self.update = { progress, value in
+            update(progress, value as! T)
         }
         self.completed = completed
     }
@@ -116,21 +125,28 @@ public final class ListViewAnimation {
         self.completed(false)
     }
     
-    private func valueAt(timestamp: Double) -> Interpolatable {
-        if timestamp < self.startTime {
+    private func valueAt(t: CGFloat) -> Interpolatable {
+        if t <= 0.0 {
             return self.from
-        }
-        
-        let t = CGFloat((timestamp - self.startTime) / self.duration)
-        
-        if t >= 1.0 {
+        } else if t >= 1.0 {
             return self.to
         } else {
-            return self.interpolator(self.from, self.to, self.curve(t))
+            return self.interpolator(self.from, self.to, t)
         }
     }
     
     public func applyAt(timestamp: Double) {
-        self.update(self.valueAt(timestamp))
+        var t = CGFloat((timestamp - self.startTime) / self.duration)
+        let ct: CGFloat
+        if t <= 0.0 + CGFloat(FLT_EPSILON) {
+            t = 0.0
+            ct = 0.0
+        } else if t >= 1.0 - CGFloat(FLT_EPSILON) {
+            t = 1.0
+            ct = 1.0
+        } else {
+            ct = self.curve(t)
+        }
+        self.update(ct, self.valueAt(ct))
     }
 }

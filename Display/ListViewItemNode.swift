@@ -334,7 +334,7 @@ public class ListViewItemNode: ASDisplayNode {
     }
     
     public func addInsetsAnimationToValue(value: UIEdgeInsets, duration: Double, beginAt: Double) {
-        let animation = ListViewAnimation(from: self.insets, to: value, duration: duration, curve: listViewAnimationCurveSystem, beginAt: beginAt, update: { [weak self] currentValue in
+        let animation = ListViewAnimation(from: self.insets, to: value, duration: duration, curve: listViewAnimationCurveSystem, beginAt: beginAt, update: { [weak self] _, currentValue in
             if let strongSelf = self {
                 strongSelf.insets = currentValue
             }
@@ -342,10 +342,13 @@ public class ListViewItemNode: ASDisplayNode {
         self.setAnimationForKey("insets", animation: animation)
     }
     
-    public func addApparentHeightAnimation(value: CGFloat, duration: Double, beginAt: Double) {
-        let animation = ListViewAnimation(from: self.apparentHeight, to: value, duration: duration, curve: listViewAnimationCurveSystem, beginAt: beginAt, update: { [weak self] currentValue in
+    public func addApparentHeightAnimation(value: CGFloat, duration: Double, beginAt: Double, update: ((CGFloat) -> Void)? = nil) {
+        let animation = ListViewAnimation(from: self.apparentHeight, to: value, duration: duration, curve: listViewAnimationCurveSystem, beginAt: beginAt, update: { [weak self] progress, currentValue in
             if let strongSelf = self {
                 strongSelf.apparentHeight = currentValue
+                if let update = update {
+                    update(progress)
+                }
             }
         })
         self.setAnimationForKey("apparentHeight", animation: animation)
@@ -358,7 +361,7 @@ public class ListViewItemNode: ASDisplayNode {
                 duration = 0.0
             }
             
-            let animation = ListViewAnimation(from: self.apparentHeight, to: value, duration: duration, curve: listViewAnimationCurveSystem, beginAt: beginAt, update: { [weak self] currentValue in
+            let animation = ListViewAnimation(from: self.apparentHeight, to: value, duration: duration, curve: listViewAnimationCurveSystem, beginAt: beginAt, update: { [weak self] _, currentValue in
                 if let strongSelf = self {
                     strongSelf.apparentHeight = currentValue
                 }
@@ -373,7 +376,7 @@ public class ListViewItemNode: ASDisplayNode {
     }
     
     public func addTransitionOffsetAnimation(value: CGFloat, duration: Double, beginAt: Double) {
-        let animation = ListViewAnimation(from: self.transitionOffset, to: value, duration: duration, curve: listViewAnimationCurveSystem, beginAt: beginAt, update: { [weak self] currentValue in
+        let animation = ListViewAnimation(from: self.transitionOffset, to: value, duration: duration, curve: listViewAnimationCurveSystem, beginAt: beginAt, update: { [weak self] _, currentValue in
             if let strongSelf = self {
                 strongSelf.transitionOffset = currentValue
             }
@@ -391,5 +394,9 @@ public class ListViewItemNode: ASDisplayNode {
     }
     
     public func setupGestures() {
+    }
+    
+    public func animateFrameTransition(progress: CGFloat) {
+        
     }
 }
