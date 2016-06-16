@@ -82,3 +82,23 @@ public func afterDisposed<T, E, R>(f: Void -> R)(signal: Signal<T, E>) -> Signal
         return disposable
     }
 }
+
+public func withState<T, E, S>(signal: Signal<T, E>, _ initialState: () -> S, next: (T, S) -> Void = { _ in }, error: (E, S) -> Void = { _ in }, completed: (S) -> Void = { _ in }, disposed: (S) -> Void = { _ in }) -> Signal<T, E> {
+    return Signal { subscriber in
+        let state = initialState()
+        let disposable = signal.start(next: { vNext in
+            next(vNext, state)
+            subscriber.putNext(vNext)
+        }, error: { vError in
+            error(vError, state)
+            subscriber.putError(vError)
+        }, completed: {
+            completed(state)
+            subscriber.putCompletion()
+        })
+        return ActionDisposable {
+            disposable.dispose()
+            disposed(state)
+        }
+    }
+}
