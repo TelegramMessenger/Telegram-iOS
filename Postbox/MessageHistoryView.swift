@@ -190,7 +190,7 @@ final class MutableMessageHistoryView {
         return false
     }
     
-    func replay(operations: [MessageHistoryOperation], holeFillDirections: [MessageIndex: HoleFillDirection], context: MutableMessageHistoryViewReplayContext) -> Bool {
+    func replay(operations: [MessageHistoryOperation], holeFillDirections: [MessageIndex: HoleFillDirection], updatedMedia: [MediaId: Media?], context: MutableMessageHistoryViewReplayContext) -> Bool {
         let tagMask = self.tagMask
         let unwrappedTagMask: UInt32 = tagMask?.rawValue ?? 0
         
@@ -216,6 +216,68 @@ final class MutableMessageHistoryView {
                 case let .UpdateReadState(combinedReadState):
                     hasChanges = true
                     //self.combinedReadState = combinedReadState
+                case let .UpdateEmbeddedMedia(index, embeddedMediaData):
+                    for i in 0 ..< self.entries.count {
+                        if case let .IntermediateMessageEntry(message) = self.entries[i] where MessageIndex(message) == index {
+                            self.entries[i] = .IntermediateMessageEntry(IntermediateMessage(stableId: message.stableId, id: message.id, timestamp: message.timestamp, flags: message.flags, tags: message.tags, forwardInfo: message.forwardInfo, authorId: message.authorId, text: message.text, attributesData: message.attributesData, embeddedMediaData: embeddedMediaData, referencedMedia: message.referencedMedia))
+                            hasChanges = true
+                            break
+                        }
+                    }
+            }
+        }
+        
+        if !updatedMedia.isEmpty {
+            for i in 0 ..< self.entries.count {
+                switch self.entries[i] {
+                    case let .MessageEntry(message):
+                        var rebuild = false
+                        for media in message.media {
+                            if let mediaId = media.id, updated = updatedMedia[mediaId] {
+                                rebuild = true
+                                break
+                            }
+                        }
+                        
+                        if rebuild {
+                            var messageMedia: [Media] = []
+                            for media in message.media {
+                                if let mediaId = media.id, updated = updatedMedia[mediaId] {
+                                    if let updated = updated {
+                                        messageMedia.append(updated)
+                                    }
+                                } else {
+                                    messageMedia.append(media)
+                                }
+                            }
+                            var updatedMessage = Message(stableId: message.stableId, id: message.id, timestamp: message.timestamp, flags: message.flags, tags: message.tags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: messageMedia, peers: message.peers, associatedMessages: message.associatedMessages)
+                            self.entries[i] = .MessageEntry(updatedMessage)
+                            hasChanges = true
+                        }
+                    case let .IntermediateMessageEntry(message):
+                        var rebuild = false
+                        for mediaId in message.referencedMedia {
+                            if let media = updatedMedia[mediaId] where media?.id != mediaId {
+                                rebuild = true
+                                break
+                            }
+                        }
+                        if rebuild {
+                            var referencedMedia: [MediaId] = []
+                            for mediaId in message.referencedMedia {
+                                if let media = updatedMedia[mediaId] where media?.id != mediaId {
+                                    if let id = media?.id {
+                                        referencedMedia.append(id)
+                                    }
+                                } else {
+                                    referencedMedia.append(mediaId)
+                                }
+                            }
+                            hasChanges = true
+                        }
+                    default:
+                        break
+                }
             }
         }
         

@@ -138,12 +138,13 @@ final class ViewTracker {
         }
     }
     
-    func updateViews(currentOperationsByPeerId currentOperationsByPeerId: [PeerId: [MessageHistoryOperation]], peerIdsWithFilledHoles: [PeerId: [MessageIndex: HoleFillDirection]], removedHolesByPeerId: [PeerId: [MessageIndex: HoleFillDirection]], chatListOperations: [ChatListOperation], currentUpdatedPeers: [PeerId: Peer], unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], updatedSynchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]) {
+    func updateViews(currentOperationsByPeerId currentOperationsByPeerId: [PeerId: [MessageHistoryOperation]], peerIdsWithFilledHoles: [PeerId: [MessageIndex: HoleFillDirection]], removedHolesByPeerId: [PeerId: [MessageIndex: HoleFillDirection]], chatListOperations: [ChatListOperation], currentUpdatedPeers: [PeerId: Peer], unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], updatedSynchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?], updatedMedia: [MediaId: Media?]) {
         var updateTrackedHolesPeerIds: [PeerId] = []
         
         for (peerId, bag) in self.messageHistoryViews {
             var updateHoles = false
-            if let operations = currentOperationsByPeerId[peerId] {
+            let operations = currentOperationsByPeerId[peerId]
+            if operations != nil || !updatedMedia.isEmpty {
                 updateHoles = true
                 for (mutableView, pipe) in bag.copyItems() {
                     let context = MutableMessageHistoryViewReplayContext()
@@ -156,7 +157,7 @@ final class ViewTracker {
                         updateType = .Generic
                     }
                     
-                    if mutableView.replay(operations, holeFillDirections: peerIdsWithFilledHoles[peerId] ?? [:], context: context) {
+                    if mutableView.replay(operations ?? [], holeFillDirections: peerIdsWithFilledHoles[peerId] ?? [:], updatedMedia: updatedMedia, context: context) {
                         mutableView.complete(context, fetchEarlier: { index, count in
                             return self.fetchEarlierHistoryEntries(peerId, index, count, mutableView.tagMask)
                         }, fetchLater: { index, count in

@@ -10,6 +10,11 @@ enum InsertMediaResult {
     case Embed(Media)
 }
 
+enum RemoveMediaResult {
+    case Reference
+    case Embedded(MessageIndex)
+}
+
 enum DebugMediaEntry {
     case Direct(Media, Int)
     case MessageReference(MessageIndex)
@@ -30,7 +35,7 @@ final class MessageMediaTable: Table {
         return key
     }
     
-    func get(id: MediaId) -> Media? {
+    func get(id: MediaId, @noescape embedded: (MessageIndex, MediaId) -> Media?) -> Media? {
         if let value = self.valueBox.get(self.tableId, key: self.key(id)) {
             var type: Int8 = 0
             value.read(&type, offset: 0, length: 1)
@@ -40,6 +45,19 @@ final class MessageMediaTable: Table {
                 if let media = Decoder(buffer: MemoryBuffer(memory: value.memory + value.offset, capacity: Int(dataLength), length: Int(dataLength), freeWhenDone: false)).decodeRootObject() as? Media {
                     return media
                 }
+            } else if type == MediaEntryType.MessageReference.rawValue {
+                var idPeerId: Int64 = 0
+                var idNamespace: Int32 = 0
+                var idId: Int32 = 0
+                var idTimestamp: Int32 = 0
+                value.read(&idPeerId, offset: 0, length: 8)
+                value.read(&idNamespace, offset: 0, length: 4)
+                value.read(&idId, offset: 0, length: 4)
+                value.read(&idTimestamp, offset: 0, length: 4)
+                
+                let referencedMessageIndex = MessageIndex(id: MessageId(peerId: PeerId(idPeerId), namespace: idNamespace, id: idId), timestamp: idTimestamp)
+                
+                return embedded(referencedMessageIndex, id)
             }
         }
         return nil
@@ -125,7 +143,7 @@ final class MessageMediaTable: Table {
         }
     }
     
-    func removeReference(id: MediaId, sharedWriteBuffer: WriteBuffer = WriteBuffer()) {
+    func removeReference(id: MediaId, sharedWriteBuffer: WriteBuffer = WriteBuffer()) -> RemoveMediaResult {
         if let value = self.valueBox.get(self.tableId, key: self.key(id)) {
             var type: Int8 = 0
             value.read(&type, offset: 0, length: 1)
@@ -151,10 +169,28 @@ final class MessageMediaTable: Table {
                 } else {
                     self.valueBox.set(self.tableId, key: self.key(id), value: sharedWriteBuffer.readBufferNoCopy())
                 }
+                
+                return .Reference
             } else if type == MediaEntryType.MessageReference.rawValue {
+                var idPeerId: Int64 = 0
+                var idNamespace: Int32 = 0
+                var idId: Int32 = 0
+                var idTimestamp: Int32 = 0
+                value.read(&idPeerId, offset: 0, length: 8)
+                value.read(&idNamespace, offset: 0, length: 4)
+                value.read(&idId, offset: 0, length: 4)
+                value.read(&idTimestamp, offset: 0, length: 4)
+                
+                let referencedMessageIndex = MessageIndex(id: MessageId(peerId: PeerId(idPeerId), namespace: idNamespace, id: idId), timestamp: idTimestamp)
+                
                 self.valueBox.remove(self.tableId, key: self.key(id))
+                
+                return .Embedded(referencedMessageIndex)
+            } else {
+                assertionFailure()
             }
         }
+        return .Reference
     }
     
     func removeEmbeddedMedia(media: Media) {
@@ -162,6 +198,54 @@ final class MessageMediaTable: Table {
             self.valueBox.remove(self.tableId, key: self.key(id))
         }
         self.mediaCleanupTable.add(media)
+    }
+    
+    func update(id: MediaId, media: Media, messageHistoryTable: MessageHistoryTable, inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], sharedWriteBuffer: WriteBuffer = WriteBuffer(), sharedEncoder: Encoder = Encoder())  {
+        if let updatedId = media.id {
+            if let value = self.valueBox.get(self.tableId, key: self.key(id)) {
+                var type: Int8 = 0
+                value.read(&type, offset: 0, length: 1)
+                if type == MediaEntryType.Direct.rawValue {
+                    var dataLength: Int32 = 0
+                    value.read(&dataLength, offset: 0, length: 4)
+                    let mediaOffset = value.offset
+                    value.skip(Int(dataLength))
+                    
+                    var messageReferenceCount: Int32 = 0
+                    value.read(&messageReferenceCount, offset: 0, length: 4)
+                    
+                    sharedWriteBuffer.reset()
+                    var directType: Int8 = MediaEntryType.Direct.rawValue
+                    sharedWriteBuffer.write(&directType, offset: 0, length: 1)
+                    
+                    sharedEncoder.reset()
+                    sharedEncoder.encodeRootObject(media)
+                    let mediaBuffer = sharedEncoder.memoryBuffer()
+                    var mediaBufferLength = Int32(mediaBuffer.length)
+                    sharedWriteBuffer.write(&mediaBufferLength, offset: 0, length: 4)
+                    sharedWriteBuffer.write(mediaBuffer.memory, offset: 0, length: mediaBuffer.length)
+                    
+                    sharedWriteBuffer.write(&messageReferenceCount, offset: 0, length: 4)
+                    
+                    if id != updatedId {
+                        self.valueBox.remove(self.tableId, key: self.key(id))
+                    }
+                    self.valueBox.set(self.tableId, key: self.key(updatedId), value: sharedWriteBuffer.readBufferNoCopy())
+                } else if type == MediaEntryType.MessageReference.rawValue {
+                    var idPeerId: Int64 = 0
+                    var idNamespace: Int32 = 0
+                    var idId: Int32 = 0
+                    var idTimestamp: Int32 = 0
+                    value.read(&idPeerId, offset: 0, length: 8)
+                    value.read(&idNamespace, offset: 0, length: 4)
+                    value.read(&idId, offset: 0, length: 4)
+                    value.read(&idTimestamp, offset: 0, length: 4)
+                    
+                    let referencedMessageIndex = MessageIndex(id: MessageId(peerId: PeerId(idPeerId), namespace: idNamespace, id: idId), timestamp: idTimestamp)
+                    messageHistoryTable.updateEmbeddedMedia(referencedMessageIndex, mediaId: id, media: media, operationsByPeerId: &operationsByPeerId)
+                }
+            }
+        }
     }
     
     func debugList() -> [DebugMediaEntry] {

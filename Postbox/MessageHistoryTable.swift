@@ -5,6 +5,7 @@ enum MessageHistoryOperation {
     case InsertHole(MessageHistoryHole)
     case Remove([MessageIndex])
     case UpdateReadState(CombinedPeerReadState)
+    case UpdateEmbeddedMedia(MessageIndex, ReadBuffer)
 }
 
 struct MessageHistoryAnchorIndex {
@@ -278,6 +279,32 @@ final class MessageHistoryTable: Table {
         var operations: [MessageHistoryIndexOperation] = []
         self.messageHistoryIndexTable.updateMessage(id, message: self.internalStoreMessages([message]).first!, operations: &operations)
         self.processIndexOperations(id.peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+    }
+    
+    func updateMedia(id: MediaId, media: Media?, inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout updatedMedia: [MediaId: Media?]) {
+        if let previousMedia = self.messageMediaTable.get(id, embedded: { index, id in
+            return self.embeddedMediaForIndex(index, id: id)
+        }) {
+            if let media = media {
+                if !previousMedia.isEqual(media) {
+                    self.messageMediaTable.update(id, media: media, messageHistoryTable: self, operationsByPeerId: &operationsByPeerId)
+                    updatedMedia[id] = media
+                }
+            } else {
+                updatedMedia[id] = nil
+                if case let .Embedded(index) = self.messageMediaTable.removeReference(id) {
+                    self.updateEmbeddedMedia(index, operationsByPeerId: &operationsByPeerId, update: { previousMedia in
+                        var updated: [Media] = []
+                        for previous in previousMedia {
+                            if previous.id != id {
+                                updated.append(previous)
+                            }
+                        }
+                        return updated
+                    })
+                }
+            }
+        }
     }
     
     func resetIncomingReadStates(states: [PeerId: [MessageId.Namespace: PeerReadState]], inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]) {
@@ -591,16 +618,102 @@ final class MessageHistoryTable: Table {
         }
     }
     
-    private func updateMedia(from from: [Media], to: [Media]) {
-        if from.count != 0 {
-            assertionFailure()
-        }
-        
-        for media in from {
-            if let id = media.id {
-                
+    func embeddedMediaForIndex(index: MessageIndex, id: MediaId) -> Media? {
+        if let message = self.getMessage(index) where message.embeddedMediaData.length > 4 {
+            var embeddedMediaCount: Int32 = 0
+            message.embeddedMediaData.read(&embeddedMediaCount, offset: 0, length: 4)
+            
+            for _ in 0 ..< embeddedMediaCount {
+                let mediaOffset = message.embeddedMediaData.offset
+                var mediaLength: Int32 = 0
+                var copyMedia = true
+                message.embeddedMediaData.read(&mediaLength, offset: 0, length: 4)
+                if let readMedia = Decoder(buffer: MemoryBuffer(memory: message.embeddedMediaData.memory + message.embeddedMediaData.offset, capacity: Int(mediaLength), length: Int(mediaLength), freeWhenDone: false)).decodeRootObject() as? Media {
+                    
+                    if let readMediaId = readMedia.id where readMediaId == id {
+                        return readMedia
+                    }
+                }
+                message.embeddedMediaData.skip(Int(mediaLength))
             }
         }
+        
+        return nil
+    }
+    
+    func updateEmbeddedMedia(index: MessageIndex, inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], @noescape update: ([Media]) -> [Media]) {
+        if let message = self.getMessage(index) {
+            var embeddedMediaCount: Int32 = 0
+            message.embeddedMediaData.read(&embeddedMediaCount, offset: 0, length: 4)
+            
+            var previousMedia: [Media] = []
+            for _ in 0 ..< embeddedMediaCount {
+                let mediaOffset = message.embeddedMediaData.offset
+                var mediaLength: Int32 = 0
+                var copyMedia = true
+                message.embeddedMediaData.read(&mediaLength, offset: 0, length: 4)
+                if let readMedia = Decoder(buffer: MemoryBuffer(memory: message.embeddedMediaData.memory + message.embeddedMediaData.offset, capacity: Int(mediaLength), length: Int(mediaLength), freeWhenDone: false)).decodeRootObject() as? Media {
+                    previousMedia.append(readMedia)
+                }
+                message.embeddedMediaData.skip(Int(mediaLength))
+            }
+            
+            let updatedMedia = update(previousMedia)
+            var updated = false
+            if updatedMedia.count != previousMedia.count {
+                updated = true
+            } else {
+                outer: for i in 0 ..< previousMedia.count {
+                    if !previousMedia[i].isEqual(updatedMedia[i]) {
+                        updated = true
+                        break outer
+                    }
+                }
+            }
+            
+            if updated {
+                var updatedEmbeddedMediaCount: Int32 = Int32(updatedMedia.count)
+                
+                let updatedEmbeddedMediaBuffer = WriteBuffer()
+                updatedEmbeddedMediaBuffer.write(&updatedEmbeddedMediaCount, offset: 0, length: 4)
+                
+                let encoder = Encoder()
+                
+                for media in updatedMedia {
+                    encoder.reset()
+                    encoder.encodeRootObject(media)
+                    let encodedBuffer = encoder.readBufferNoCopy()
+                    var encodedLength: Int32 = Int32(encodedBuffer.length)
+                    updatedEmbeddedMediaBuffer.write(&encodedLength, offset: 0, length: 4)
+                    updatedEmbeddedMediaBuffer.write(encodedBuffer.memory, offset: 0, length: encodedBuffer.length)
+                }
+                
+                self.storeIntermediateMessage(IntermediateMessage(stableId: message.stableId, id: message.id, timestamp: message.timestamp, flags: message.flags, tags: message.tags, forwardInfo: message.forwardInfo, authorId: message.authorId, text: message.text, attributesData: message.attributesData, embeddedMediaData: updatedEmbeddedMediaBuffer.readBufferNoCopy(), referencedMedia: message.referencedMedia), sharedKey: self.key(index))
+                
+                let operation: MessageHistoryOperation = .UpdateEmbeddedMedia(index, updatedEmbeddedMediaBuffer.makeReadBufferAndReset())
+                if operationsByPeerId[index.id.peerId] == nil {
+                    operationsByPeerId[index.id.peerId] = [operation]
+                } else {
+                    operationsByPeerId[index.id.peerId]!.append(operation)
+                }
+            }
+        }
+    }
+    
+    func updateEmbeddedMedia(index: MessageIndex, mediaId: MediaId, media: Media?, inout operationsByPeerId: [PeerId: [MessageHistoryOperation]]) {
+        self.updateEmbeddedMedia(index, operationsByPeerId: &operationsByPeerId, update: { previousMedia in
+            var updatedMedia: [Media] = []
+            for previous in previousMedia {
+                if previous.id == mediaId {
+                    if let media = media {
+                        updatedMedia.append(media)
+                    }
+                } else {
+                    updatedMedia.append(previous)
+                }
+            }
+            return updatedMedia
+        })
     }
     
     private func justUpdate(index: MessageIndex, message: InternalStoreMessage, sharedKey: ValueBoxKey, sharedBuffer: WriteBuffer, sharedEncoder: Encoder, inout unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation]) -> IntermediateMessage? {
@@ -642,14 +755,16 @@ final class MessageHistoryTable: Table {
             
             var previousReferencedMedia: [Media] = []
             for mediaId in previousMessage.referencedMedia {
-                if let media = self.messageMediaTable.get(mediaId) {
+                if let media = self.messageMediaTable.get(mediaId, embedded: { _ in
+                    return nil
+                }) {
                     previousMedia.append(media)
                 }
             }
             
             var removedMediaIds: [MediaId] = []
             
-            self.updateMedia(from: previousMedia, to: message.media)
+            //self.updateMedia(from: previousMedia, to: message.media)
             
             sharedBuffer.reset()
             
@@ -1041,7 +1156,9 @@ final class MessageHistoryTable: Table {
         }
         
         for mediaId in message.referencedMedia {
-            if let media = self.messageMediaTable.get(mediaId) {
+            if let media = self.messageMediaTable.get(mediaId, embedded: { _ in
+                return nil
+            }) {
                 parsedMedia.append(media)
             }
         }

@@ -97,6 +97,23 @@ public final class Modifier {
         self.postbox?.updateMessage(index, update: update)
     }
     
+    public func updateMedia(id: MediaId, update: Media?) {
+        self.postbox?.updateMedia(id, update: update)
+    }
+    
+    public func getMessage(id: MessageId) -> Message? {
+        if let postbox = self.postbox {
+            if let entry = postbox.messageHistoryIndexTable.get(id) {
+                if case let .Message(index) = entry {
+                    if let message = postbox.messageHistoryTable.getMessage(index) {
+                        return postbox.renderIntermediateMessage(message)
+                    }
+                }
+            }
+        }
+        return nil
+    }
+    
     public func filterStoredMessageIds(messageIds: Set<MessageId>) -> Set<MessageId> {
         if let postbox = self.postbox {
             return postbox.filterStoredMessageIds(messageIds)
@@ -121,6 +138,7 @@ public final class Postbox {
     private var currentOperationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
     private var currentUnsentOperations: [IntermediateMessageHistoryUnsentOperation] = []
     private var currentUpdatedSynchronizeReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
+    private var currentUpdatedMedia: [MediaId: Media?] = [:]
     
     private var currentRemovedHolesByPeerId: [PeerId: [MessageIndex: HoleFillDirection]] = [:]
     private var currentFilledHolesByPeerId: [PeerId: [MessageIndex: HoleFillDirection]] = [:]
@@ -613,7 +631,7 @@ public final class Postbox {
             self.chatListTable.replaceHole(index, hole: hole, operations: &chatListOperations)
         }
         
-        self.viewTracker.updateViews(currentOperationsByPeerId: self.currentOperationsByPeerId, peerIdsWithFilledHoles: self.currentFilledHolesByPeerId, removedHolesByPeerId: self.currentRemovedHolesByPeerId, chatListOperations: chatListOperations, currentUpdatedPeers: self.currentUpdatedPeers, unsentMessageOperations: self.currentUnsentOperations, updatedSynchronizePeerReadStateOperations: self.currentUpdatedSynchronizeReadStateOperations)
+        self.viewTracker.updateViews(currentOperationsByPeerId: self.currentOperationsByPeerId, peerIdsWithFilledHoles: self.currentFilledHolesByPeerId, removedHolesByPeerId: self.currentRemovedHolesByPeerId, chatListOperations: chatListOperations, currentUpdatedPeers: self.currentUpdatedPeers, unsentMessageOperations: self.currentUnsentOperations, updatedSynchronizePeerReadStateOperations: self.currentUpdatedSynchronizeReadStateOperations, updatedMedia: self.currentUpdatedMedia)
         
         self.currentOperationsByPeerId.removeAll()
         self.currentFilledHolesByPeerId.removeAll()
@@ -622,6 +640,7 @@ public final class Postbox {
         self.currentReplaceChatListHoles.removeAll()
         self.currentUnsentOperations.removeAll()
         self.currentUpdatedSynchronizeReadStateOperations.removeAll()
+        self.currentUpdatedMedia.removeAll()
         
         for table in self.tables {
             table.beforeCommit()
@@ -658,6 +677,10 @@ public final class Postbox {
         }
     }
     
+    private func updateMedia(id: MediaId, update: Media?) {
+        self.messageHistoryTable.updateMedia(id, media: update, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia)
+    }
+    
     private func filterStoredMessageIds(messageIds: Set<MessageId>) -> Set<MessageId> {
         var filteredIds = Set<MessageId>()
         
@@ -685,45 +708,6 @@ public final class Postbox {
                 subscriber.putCompletion()
             })
             return EmptyDisposable
-        }
-    }
-
-    public func preloadedAroundUnreadMessageHistoryViewForPeerId(peerId: PeerId, count: Int, tagMask: MessageTags? = nil) -> Signal<(MessageHistoryView, ViewUpdateType), NoError> {
-        return self.aroundUnreadMessageHistoryViewForPeerId(peerId, count: count, tagMask: tagMask) |> filter { view, _ in
-            if let maxReadIndex = view.maxReadIndex {
-                var targetIndex = 0
-                for i in 0 ..< view.entries.count {
-                    if view.entries[i].index >= maxReadIndex {
-                        targetIndex = i
-                        break
-                    }
-                }
-                
-                /*print("entries:")
-                for i in 0 ..< view.entries.count {
-                    switch view.entries[i] {
-                        case let .MessageEntry(message):
-                            print("   \(i == targetIndex ? "*" : " ")\(message.id.id): \(message.text)")
-                        case let .HoleEntry(hole):
-                            print("   \(i == targetIndex ? "*" : " ")\(hole.min) — \(hole.maxIndex.id.id): hole")
-                    }
-                }*/
-                
-                let maxIndex = min(view.entries.count, targetIndex + count / 2)
-                if maxIndex >= targetIndex {
-                    for i in targetIndex ..< maxIndex {
-                        if case .HoleEntry = view.entries[i] {
-                            return false
-                        }
-                    }
-                }
-                
-                return true
-            } else {
-                return true
-            }
-        } |> take(1) |> mapToSignal { _ in
-            return self.aroundUnreadMessageHistoryViewForPeerId(peerId, count: count, tagMask: tagMask)
         }
     }
     
