@@ -1794,13 +1794,13 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
                         takenAnimation = true
                         
                         if abs(layout.size.height - previousApparentHeight) > CGFloat(FLT_EPSILON) {
-                            node.addApparentHeightAnimation(layout.size.height, duration: insertionAnimationDuration, beginAt: timestamp, update: { [weak node] progress in
+                            node.addApparentHeightAnimation(layout.size.height, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp, update: { [weak node] progress in
                                 if let node = node {
                                     node.animateFrameTransition(progress)
                                 }
                             })
-                            node.transitionOffset = previousApparentHeight - layout.size.height
-                            node.addTransitionOffsetAnimation(0.0, duration: insertionAnimationDuration, beginAt: timestamp)
+                            node.transitionOffset += previousApparentHeight - layout.size.height
+                            node.addTransitionOffsetAnimation(0.0, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp)
                         }
                     }
                 }
@@ -1811,10 +1811,18 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
             node.addApparentHeightAnimation(0.0, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp)
         } else if animated {
             if !takenAnimation {
-                node.addApparentHeightAnimation(nodeFrame.size.height, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp)
+                node.addApparentHeightAnimation(nodeFrame.size.height, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp, update: { [weak node] progress in
+                    if let node = node {
+                        node.animateFrameTransition(progress)
+                    }
+                })
             
                 if let previousFrame = previousFrame {
-                    node.transitionOffset += nodeFrame.origin.y - previousFrame.origin.y
+                    if self.debugInfo {
+                        assert(true)
+                    }
+                    
+                    node.transitionOffset += nodeFrame.origin.y - previousFrame.origin.y - previousApparentHeight + layout.size.height
                     node.addTransitionOffsetAnimation(0.0, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp)
                     if previousInsets != layout.insets {
                         node.insets = previousInsets
