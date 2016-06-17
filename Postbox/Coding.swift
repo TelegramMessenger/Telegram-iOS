@@ -36,6 +36,14 @@ public class MemoryBuffer: Equatable, CustomStringConvertible {
     var capacity: Int
     var length: Int
     var freeWhenDone: Bool
+
+    public init(copyOf buffer: MemoryBuffer) {
+        self.memory = malloc(buffer.length)
+        memcpy(self.memory, buffer.memory, buffer.length)
+        self.capacity = buffer.length
+        self.length = buffer.length
+        self.freeWhenDone = true
+    }
     
     public init(memory: UnsafeMutablePointer<Void>, capacity: Int, length: Int, freeWhenDone: Bool) {
         self.memory = memory
@@ -376,6 +384,15 @@ public final class Encoder {
         var bytesLength: Int32 = Int32(bytes.offset)
         self.buffer.write(&bytesLength, offset: 0, length: 4)
         self.buffer.write(bytes.memory, offset: 0, length: bytes.offset)
+    }
+    
+    public func encodeBytes(bytes: MemoryBuffer, forKey key: StaticString) {
+        self.encodeKey(key)
+        var type: Int8 = ValueType.Bytes.rawValue
+        self.buffer.write(&type, offset: 0, length: 1)
+        var bytesLength: Int32 = Int32(bytes.length)
+        self.buffer.write(&bytesLength, offset: 0, length: 4)
+        self.buffer.write(bytes.memory, offset: 0, length: bytes.length)
     }
 
     public let sharedWriteBuffer = WriteBuffer()
