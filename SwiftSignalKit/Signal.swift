@@ -10,7 +10,7 @@ public func identity<A>(a: A) -> A {
 
 infix operator |> { associativity left precedence 95 }
 
-public func |> <T, U>(value: T, function: (T -> U)) -> U {
+public func |> <T, U>(value: T, function: ((T) -> U)) -> U {
     return function(value)
 }
 
@@ -30,20 +30,20 @@ private final class SubscriberDisposable<T, E> : Disposable {
 }
 
 public struct Signal<T, E> {
-    private let generator: Subscriber<T, E> -> Disposable
+    private let generator: (Subscriber<T, E>) -> Disposable
     
-    public init(_ generator: Subscriber<T, E> -> Disposable) {
+    public init(_ generator: (Subscriber<T, E>) -> Disposable) {
         self.generator = generator
     }
     
-    public func start(next next: (T -> Void)! = nil, error: (E -> Void)! = nil, completed: (() -> Void)! = nil) -> Disposable {
+    public func start(next: ((T) -> Void)! = nil, error: ((E) -> Void)! = nil, completed: (() -> Void)! = nil) -> Disposable {
         let subscriber = Subscriber<T, E>(next: next, error: error, completed: completed)
         let disposable = self.generator(subscriber)
         subscriber.assignDisposable(disposable)
         return SubscriberDisposable(subscriber: subscriber, disposable: disposable)
     }
     
-    public static func single(value: T) -> Signal<T, E> {
+    public static func single(_ value: T) -> Signal<T, E> {
         return Signal<T, E> { subscriber in
             subscriber.putNext(value)
             subscriber.putCompletion()
@@ -60,7 +60,7 @@ public struct Signal<T, E> {
         }
     }
     
-    public static func fail(error: E) -> Signal<T, E> {
+    public static func fail(_ error: E) -> Signal<T, E> {
         return Signal<T, E> { subscriber in
             subscriber.putError(error)
             

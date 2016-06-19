@@ -6,13 +6,13 @@ public final class ThreadPoolTaskState {
 
 public final class ThreadPoolTask {
     private let state = ThreadPoolTaskState()
-    private let action: ThreadPoolTaskState -> ()
+    private let action: (ThreadPoolTaskState) -> ()
     
-    public init(_ action: ThreadPoolTaskState -> ()) {
+    public init(_ action: (ThreadPoolTaskState) -> ()) {
         self.action = action
     }
     
-    internal func execute() {
+    func execute() {
         if !state.cancelled {
             self.action(self.state)
         }
@@ -31,7 +31,7 @@ public final class ThreadPoolQueue : Equatable {
         self.threadPool = threadPool
     }
     
-    public func addTask(task: ThreadPoolTask) {
+    public func addTask(_ task: ThreadPoolTask) {
         if let threadPool = self.threadPool {
             threadPool.workOnQueue(self, action: {
                 self.tasks.append(task)
@@ -42,7 +42,7 @@ public final class ThreadPoolQueue : Equatable {
     private func popFirstTask() -> ThreadPoolTask? {
         if self.tasks.count != 0 {
             let task = self.tasks[0];
-            self.tasks.removeAtIndex(0)
+            self.tasks.remove(at: 0)
             return task
         } else {
             return nil
@@ -59,13 +59,13 @@ public func ==(lhs: ThreadPoolQueue, rhs: ThreadPoolQueue) -> Bool {
 }
 
 @objc public final class ThreadPool: NSObject {
-    private var threads: [NSThread] = []
+    private var threads: [Thread] = []
     private var queues: [ThreadPoolQueue] = []
     private var takenQueues: [ThreadPoolQueue] = []
     private var mutex: pthread_mutex_t
     private var condition: pthread_cond_t
     
-    @objc class func threadEntryPoint(threadPool: ThreadPool) {
+    @objc class func threadEntryPoint(_ threadPool: ThreadPool) {
         var queue: ThreadPoolQueue!
         
         while (true) {
@@ -74,8 +74,8 @@ public func ==(lhs: ThreadPoolQueue, rhs: ThreadPoolQueue) -> Bool {
             pthread_mutex_lock(&threadPool.mutex);
             
             if queue != nil {
-                if let index = threadPool.takenQueues.indexOf(queue) {
-                    threadPool.takenQueues.removeAtIndex(index)
+                if let index = threadPool.takenQueues.index(of: queue) {
+                    threadPool.takenQueues.remove(at: index)
                 }
                 
                 if queue.hasTasks() {
@@ -97,8 +97,8 @@ public func ==(lhs: ThreadPoolQueue, rhs: ThreadPoolQueue) -> Bool {
                     task = queue.popFirstTask()
                     threadPool.takenQueues.append(queue)
                     
-                    if let index = threadPool.queues.indexOf(queue) {
-                        threadPool.queues.removeAtIndex(index)
+                    if let index = threadPool.queues.index(of: queue) {
+                        threadPool.queues.remove(at: index)
                     }
                     
                     break
@@ -125,7 +125,7 @@ public func ==(lhs: ThreadPoolQueue, rhs: ThreadPoolQueue) -> Bool {
         super.init()
         
         for _ in 0 ..< threadCount {
-            let thread = NSThread(target: ThreadPool.self, selector: Selector("threadEntryPoint:"), object: self)
+            let thread = Thread(target: ThreadPool.self, selector: #selector(ThreadPool.threadEntryPoint(_:)), object: self)
             thread.threadPriority = threadPriority
             self.threads.append(thread)
             thread.start()
@@ -137,12 +137,12 @@ public func ==(lhs: ThreadPoolQueue, rhs: ThreadPoolQueue) -> Bool {
         pthread_cond_destroy(&self.condition)
     }
     
-    public func addTask(task: ThreadPoolTask) {
+    public func addTask(_ task: ThreadPoolTask) {
         let tempQueue = self.nextQueue()
         tempQueue.addTask(task)
     }
     
-    private func workOnQueue(queue: ThreadPoolQueue, action: () -> ()) {
+    private func workOnQueue(_ queue: ThreadPoolQueue, action: () -> ()) {
         pthread_mutex_lock(&self.mutex)
         action()
         if !self.queues.contains(queue) && !self.takenQueues.contains(queue) {
@@ -157,7 +157,7 @@ public func ==(lhs: ThreadPoolQueue, rhs: ThreadPoolQueue) -> Bool {
     }
     
     public func isCurrentThreadInPool() -> Bool {
-        let currentThread = NSThread.currentThread()
+        let currentThread = Thread.current()
         for thread in self.threads {
             if currentThread.isEqual(thread) {
                 return true

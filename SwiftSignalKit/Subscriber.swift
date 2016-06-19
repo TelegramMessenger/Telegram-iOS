@@ -1,21 +1,21 @@
 import Foundation
 
 public final class Subscriber<T, E> {
-    private var next: (T -> Void)!
-    private var error: (E -> Void)!
+    private var next: ((T) -> Void)!
+    private var error: ((E) -> Void)!
     private var completed: (() -> Void)!
     
     private var lock: OSSpinLock = 0
     private var terminated = false
     internal var disposable: Disposable!
     
-    public init(next: (T -> Void)! = nil, error: (E -> Void)! = nil, completed: (() -> Void)! = nil) {
+    public init(next: ((T) -> Void)! = nil, error: ((E) -> Void)! = nil, completed: (() -> Void)! = nil) {
         self.next = next
         self.error = error
         self.completed = completed
     }
     
-    internal func assignDisposable(disposable: Disposable) {
+    internal func assignDisposable(_ disposable: Disposable) {
         if self.terminated {
             disposable.dispose()
         } else {
@@ -34,8 +34,8 @@ public final class Subscriber<T, E> {
         OSSpinLockUnlock(&self.lock)
     }
     
-    public func putNext(next: T) {
-        var action: (T -> Void)! = nil
+    public func putNext(_ next: T) {
+        var action: ((T) -> Void)! = nil
         OSSpinLockLock(&self.lock)
         if !self.terminated {
             action = self.next
@@ -47,9 +47,9 @@ public final class Subscriber<T, E> {
         }
     }
     
-    public func putError(error: E) {
+    public func putError(_ error: E) {
         var shouldDispose = false
-        var action: (E -> Void)! = nil
+        var action: ((E) -> Void)! = nil
         
         OSSpinLockLock(&self.lock)
         if !self.terminated {
@@ -67,7 +67,7 @@ public final class Subscriber<T, E> {
         }
         
         if shouldDispose && self.disposable != nil {
-            let disposable = self.disposable
+            let disposable = self.disposable!
             disposable.dispose()
             self.disposable = nil
         }
@@ -93,7 +93,7 @@ public final class Subscriber<T, E> {
         }
         
         if shouldDispose && self.disposable != nil {
-            let disposable = self.disposable
+            let disposable = self.disposable!
             disposable.dispose()
             self.disposable = nil
         }

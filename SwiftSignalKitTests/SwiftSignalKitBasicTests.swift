@@ -17,7 +17,7 @@ class SwiftSignalKitTests: XCTestCase {
         if true {
             var object: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated)
             let disposable = ActionDisposable(action: { [object] () -> Void in
-                object.debugDescription
+                let _ = object.debugDescription
                 disposed = true
             })
             object = nil
@@ -33,9 +33,9 @@ class SwiftSignalKitTests: XCTestCase {
         var deallocated = false
         var disposed = false
         if true {
-            var object: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated)
-            let disposable = ActionDisposable(action: { [object] () -> Void in
-                object.debugDescription
+            let object: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated)
+            let _ = ActionDisposable(action: { [object] () -> Void in
+                let _ = object.debugDescription
                 disposed = true
             })
         }
@@ -47,9 +47,9 @@ class SwiftSignalKitTests: XCTestCase {
         var deallocated = false
         var disposed = false
         if true {
-            var object: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated)
+            let object: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated)
             let disposable = ActionDisposable(action: { [object] () -> Void in
-                object.debugDescription
+                let _ = object.debugDescription
                 disposed = true
             })
             
@@ -67,15 +67,15 @@ class SwiftSignalKitTests: XCTestCase {
         var deallocated2 = false
         var disposed2 = false
         if true {
-            var object1: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated1)
+            let object1: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated1)
             let actionDisposable1 = ActionDisposable(action: { [object1] () -> Void in
-                object1.debugDescription
+                let _ = object1.debugDescription
                 disposed1 = true
             })
             
-            var object2: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated2)
+            let object2: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated2)
             let actionDisposable2 = ActionDisposable(action: { [object2] () -> Void in
-                object2.debugDescription
+                let _ = object2.debugDescription
                 disposed2 = true
             })
             
@@ -94,9 +94,9 @@ class SwiftSignalKitTests: XCTestCase {
         var deallocated = false
         var disposed = false
         if true {
-            var object: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated)
+            let object: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated)
             let disposable = ActionDisposable(action: { [object] () -> Void in
-                object.debugDescription
+                let _ = object.debugDescription
                 disposed = true
             })
             
@@ -111,9 +111,9 @@ class SwiftSignalKitTests: XCTestCase {
         var deallocated = false
         var disposed = false
         if true {
-            var object: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated)
+            let object: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated)
             let disposable = ActionDisposable(action: { [object] () -> Void in
-                object.debugDescription
+                let _ = object.debugDescription
                 disposed = true
             })
             
@@ -131,15 +131,15 @@ class SwiftSignalKitTests: XCTestCase {
         var deallocated2 = false
         var disposed2 = false
         if true {
-            var object1: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated1)
+            let object1: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated1)
             let actionDisposable1 = ActionDisposable(action: { [object1] () -> Void in
-                object1.debugDescription
+                let _ = object1.debugDescription
                 disposed1 = true
             })
             
-            var object2: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated2)
+            let object2: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated2)
             let actionDisposable2 = ActionDisposable(action: { [object2] () -> Void in
-                object2.debugDescription
+                let _ = object2.debugDescription
                 disposed2 = true
             })
             
@@ -158,9 +158,9 @@ class SwiftSignalKitTests: XCTestCase {
         var deallocated = false
         var disposed = false
         if true {
-            var object: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated)
+            let object: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated)
             let disposable = ActionDisposable(action: { [object] () -> Void in
-                object.debugDescription
+                let _ = object.debugDescription
                 disposed = true
             })
             
@@ -177,15 +177,15 @@ class SwiftSignalKitTests: XCTestCase {
         var deallocated2 = false
         var disposed2 = false
         if true {
-            var object1: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated1)
+            let object1: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated1)
             let actionDisposable1 = ActionDisposable(action: { [object1] () -> Void in
-                object1.debugDescription
+                let _ = object1.debugDescription
                 disposed1 = true
             })
             
-            var object2: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated2)
+            let object2: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated2)
             let actionDisposable2 = ActionDisposable(action: { [object2] () -> Void in
-                object2.debugDescription
+                let _ = object2.debugDescription
                 disposed2 = true
             })
             
@@ -205,15 +205,15 @@ class SwiftSignalKitTests: XCTestCase {
         var deallocated2 = false
         var disposed2 = false
         if true {
-            var object1: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated1)
+            let object1: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated1)
             let actionDisposable1 = ActionDisposable(action: { [object1] () -> Void in
-                object1.debugDescription
+                let _ = object1.debugDescription
                 disposed1 = true
             })
             
-            var object2: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated2)
+            let object2: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated2)
             let actionDisposable2 = ActionDisposable(action: { [object2] () -> Void in
-                object2.debugDescription
+                let _ = object2.debugDescription
                 disposed2 = true
             })
             
@@ -234,15 +234,15 @@ class SwiftSignalKitTests: XCTestCase {
         var deallocated2 = false
         var disposed2 = false
         if true {
-            var object1: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated1)
+            let object1: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated1)
             let actionDisposable1 = ActionDisposable(action: { [object1] () -> Void in
-                object1.debugDescription
+                let _ = object1.debugDescription
                 disposed1 = true
             })
             
-            var object2: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated2)
+            let object2: DeallocatingObject? = DeallocatingObject(deallocated: &deallocated2)
             let actionDisposable2 = ActionDisposable(action: { [object2] () -> Void in
-                object2.debugDescription
+                let _ = object2.debugDescription
                 disposed2 = true
             })
             

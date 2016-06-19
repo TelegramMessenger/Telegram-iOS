@@ -11,7 +11,7 @@ public final class Lock {
         pthread_mutex_destroy(&self.mutex)
     }
     
-    public func locked(@noescape f: () -> ()) {
+    public func locked(_ f: @noescape() -> ()) {
         pthread_mutex_lock(&self.mutex)
         f()
         pthread_mutex_unlock(&self.mutex)

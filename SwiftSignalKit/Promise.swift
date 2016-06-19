@@ -4,7 +4,7 @@ public class Promise<T> {
     private var value: T?
     private var lock: OSSpinLock = 0
     private let disposable = MetaDisposable()
-    private let subscribers = Bag<T -> Void>()
+    private let subscribers = Bag<(T) -> Void>()
     
     public init(_ value: T) {
         self.value = value
@@ -17,7 +17,7 @@ public class Promise<T> {
         self.disposable.dispose()
     }
     
-    public func set(signal: Signal<T, NoError>) {
+    public func set(_ signal: Signal<T, NoError>) {
         OSSpinLockLock(&self.lock)
         self.value = nil
         OSSpinLockUnlock(&self.lock)

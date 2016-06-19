@@ -67,7 +67,7 @@
 		D0085B531B282BEE00EAF753 /* ThreadPool.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0085B3F1B282BEE00EAF753 /* ThreadPool.swift */; };
 		D0085B541B282BEE00EAF753 /* Timer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0085B401B282BEE00EAF753 /* Timer.swift */; };
 		D0085B551B282BEE00EAF753 /* Queue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0085B411B282BEE00EAF753 /* Queue.swift */; };
-		D0085B561B282BEE00EAF753 /* Pipe.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0085B421B282BEE00EAF753 /* Pipe.swift */; };
+		D0085B561B282BEE00EAF753 /* ValuePipe.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0085B421B282BEE00EAF753 /* ValuePipe.swift */; };
 		D0085B571B282BEE00EAF753 /* Bag.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0085B431B282BEE00EAF753 /* Bag.swift */; };
 		D0085B581B282BEE00EAF753 /* Signal_Take.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0085B441B282BEE00EAF753 /* Signal_Take.swift */; };
 		D0085B591B282BEE00EAF753 /* Signal_Catch.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0085B451B282BEE00EAF753 /* Signal_Catch.swift */; };
@@ -180,7 +180,7 @@
 		D0085B3F1B282BEE00EAF753 /* ThreadPool.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThreadPool.swift; sourceTree = "<group>"; };
 		D0085B401B282BEE00EAF753 /* Timer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Timer.swift; sourceTree = "<group>"; };
 		D0085B411B282BEE00EAF753 /* Queue.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Queue.swift; sourceTree = "<group>"; };
-		D0085B421B282BEE00EAF753 /* Pipe.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Pipe.swift; sourceTree = "<group>"; };
+		D0085B421B282BEE00EAF753 /* ValuePipe.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ValuePipe.swift; sourceTree = "<group>"; };
 		D0085B431B282BEE00EAF753 /* Bag.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Bag.swift; sourceTree = "<group>"; };
 		D0085B441B282BEE00EAF753 /* Signal_Take.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Signal_Take.swift; sourceTree = "<group>"; };
 		D0085B451B282BEE00EAF753 /* Signal_Catch.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Signal_Catch.swift; sourceTree = "<group>"; };
@@ -259,7 +259,7 @@
 				D0085B3F1B282BEE00EAF753 /* ThreadPool.swift */,
 				D0085B401B282BEE00EAF753 /* Timer.swift */,
 				D0085B411B282BEE00EAF753 /* Queue.swift */,
-				D0085B421B282BEE00EAF753 /* Pipe.swift */,
+				D0085B421B282BEE00EAF753 /* ValuePipe.swift */,
 				D0085B431B282BEE00EAF753 /* Bag.swift */,
 				D0085B441B282BEE00EAF753 /* Signal_Take.swift */,
 				D0085B451B282BEE00EAF753 /* Signal_Catch.swift */,
@@ -553,7 +553,7 @@
 			attributes = {
 				LastSwiftMigration = 0700;
 				LastSwiftUpdateCheck = 0700;
-				LastUpgradeCheck = 0710;
+				LastUpgradeCheck = 0800;
 				ORGANIZATIONNAME = Telegram;
 				TargetAttributes = {
 					D0085B211B282B9800EAF753 = {
@@ -627,7 +627,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0085B521B282BEE00EAF753 /* Signal_Dispatch.swift in Sources */,
-				D0085B561B282BEE00EAF753 /* Pipe.swift in Sources */,
+				D0085B561B282BEE00EAF753 /* ValuePipe.swift in Sources */,
 				D0085B551B282BEE00EAF753 /* Queue.swift in Sources */,
 				D0085B591B282BEE00EAF753 /* Signal_Catch.swift in Sources */,
 				D0085B601B282BEE00EAF753 /* Disposable.swift in Sources */,
@@ -807,6 +807,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 			};
 			name = Release;
 		};
@@ -835,6 +836,7 @@
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
@@ -881,6 +883,7 @@
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -1004,6 +1007,7 @@
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;

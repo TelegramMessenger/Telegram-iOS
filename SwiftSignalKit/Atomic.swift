@@ -8,7 +8,7 @@ public final class Atomic<T> {
         self.value = value
     }
     
-    public func with<R>(f: T -> R) -> R {
+    public func with<R>(_ f: (T) -> R) -> R {
         OSSpinLockLock(&self.lock)
         let result = f(self.value)
         OSSpinLockUnlock(&self.lock)
@@ -16,7 +16,7 @@ public final class Atomic<T> {
         return result
     }
     
-    public func modify(f: T -> T) -> T {
+    public func modify(_ f: (T) -> T) -> T {
         OSSpinLockLock(&self.lock)
         let result = f(self.value)
         self.value = result
@@ -25,7 +25,7 @@ public final class Atomic<T> {
         return result
     }
     
-    public func swap(value: T) -> T {
+    public func swap(_ value: T) -> T {
         OSSpinLockLock(&self.lock)
         let previous = self.value
         self.value = value

@@ -1,36 +1,38 @@
 import Foundation
 
-public func `catch`<T, E, R>(f: E -> Signal<T, R>)(signal: Signal<T, E>) -> Signal<T, R> {
-    return Signal<T, R> { subscriber in
-        let disposable = DisposableSet()
-        
-        disposable.add(signal.start(next: { next in
-            subscriber.putNext(next)
-        }, error: { error in
-            let anotherSignal = f(error)
+public func `catch`<T, E, R>(_ f: (E) -> Signal<T, R>) -> (Signal<T, E>) -> Signal<T, R> {
+    return { signal in
+        return Signal<T, R> { subscriber in
+            let disposable = DisposableSet()
             
-            disposable.add(anotherSignal.start(next: { next in
+            disposable.add(signal.start(next: { next in
                 subscriber.putNext(next)
             }, error: { error in
-               subscriber.putError(error)
+                let anotherSignal = f(error)
+                
+                disposable.add(anotherSignal.start(next: { next in
+                    subscriber.putNext(next)
+                }, error: { error in
+                   subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
             }, completed: {
                 subscriber.putCompletion()
             }))
-        }, completed: {
-            subscriber.putCompletion()
-        }))
-        
-        return disposable
+            
+            return disposable
+        }
     }
 }
 
-private func recursiveFunction(f: (Void -> Void) -> Void) -> (Void -> Void) {
+private func recursiveFunction(_ f: ((Void) -> Void) -> Void) -> ((Void) -> Void) {
     return {
         f(recursiveFunction(f))
     }
 }
 
-public func restart<T, E>(signal: Signal<T, E>) -> Signal<T, E> {
+public func restart<T, E>(_ signal: Signal<T, E>) -> Signal<T, E> {
     return Signal { subscriber in
         let shouldRestart = Atomic(value: true)
         let currentDisposable = MetaDisposable()
@@ -55,76 +57,80 @@ public func restart<T, E>(signal: Signal<T, E>) -> Signal<T, E> {
         
         return ActionDisposable {
             currentDisposable.dispose()
-            shouldRestart.swap(false)
+            let _ = shouldRestart.swap(false)
         }
     }
 }
 
-public func recurse<T, E>(latestValue: T?)(signal: Signal<T, E>) -> Signal<T, E> {
-    return Signal { subscriber in
-        let shouldRestart = Atomic(value: true)
-        let currentDisposable = MetaDisposable()
-        
-        let start = recursiveFunction { recurse in
-            let currentShouldRestart = shouldRestart.with { value in
-                return value
+public func recurse<T, E>(_ latestValue: T?) -> (Signal<T, E>) -> Signal<T, E> {
+    return { signal in
+        return Signal { subscriber in
+            let shouldRestart = Atomic(value: true)
+            let currentDisposable = MetaDisposable()
+            
+            let start = recursiveFunction { recurse in
+                let currentShouldRestart = shouldRestart.with { value in
+                    return value
+                }
+                if currentShouldRestart {
+                    let disposable = signal.start(next: { next in
+                        subscriber.putNext(next)
+                        }, error: { error in
+                            subscriber.putError(error)
+                        }, completed: {
+                            recurse()
+                    })
+                    currentDisposable.set(disposable)
+                }
             }
-            if currentShouldRestart {
-                let disposable = signal.start(next: { next in
-                    subscriber.putNext(next)
+            
+            start()
+            
+            return ActionDisposable {
+                currentDisposable.dispose()
+                let _ = shouldRestart.swap(false)
+            }
+        }
+    }
+}
+
+public func retry<T, E>(_ delayIncrement: Double, maxDelay: Double, onQueue queue: Queue) -> (signal: Signal<T, E>) -> Signal<T, NoError> {
+    return { signal in
+        return Signal { subscriber in
+            let shouldRetry = Atomic(value: true)
+            let currentDelay = Atomic(value: 0.0)
+            let currentDisposable = MetaDisposable()
+            
+            let start = recursiveFunction { recurse in
+                let currentShouldRetry = shouldRetry.with { value in
+                    return value
+                }
+                if currentShouldRetry {
+                    let disposable = signal.start(next: { next in
+                        subscriber.putNext(next)
                     }, error: { error in
-                        subscriber.putError(error)
+                        let delay = currentDelay.modify { value in
+                            return min(maxDelay, value + delayIncrement)
+                        }
+                        
+                        let time: DispatchTime = DispatchTime.now() + Double(Int64(delay * Double(NSEC_PER_SEC)))
+                        queue.queue.after(when: time, execute: {
+                            recurse()
+                        })
                     }, completed: {
-                        recurse()
-                })
-                currentDisposable.set(disposable)
+                        let _ = shouldRetry.swap(false)
+                        subscriber.putCompletion()
+                    })
+                    currentDisposable.set(disposable)
+                }
             }
-        }
-        
-        start()
-        
-        return ActionDisposable {
-            currentDisposable.dispose()
-            shouldRestart.swap(false)
-        }
-    }
-}
-
-public func retry<T, E>(delayIncrement: Double, maxDelay: Double, onQueue queue: Queue)(signal: Signal<T, E>) -> Signal<T, NoError> {
-    return Signal { subscriber in
-        let shouldRetry = Atomic(value: true)
-        let currentDelay = Atomic(value: 0.0)
-        let currentDisposable = MetaDisposable()
-        
-        let start = recursiveFunction { recurse in
-            let currentShouldRetry = shouldRetry.with { value in
-                return value
+            
+            start()
+            
+            return ActionDisposable {
+                currentDisposable.dispose()
+                let _ = shouldRetry.swap(false)
             }
-            if currentShouldRetry {
-                let disposable = signal.start(next: { next in
-                    subscriber.putNext(next)
-                }, error: { error in
-                    let delay = currentDelay.modify { value in
-                        return min(maxDelay, value + delayIncrement)
-                    }
-                    
-                    let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(delay * Double(NSEC_PER_SEC)))
-                    dispatch_after(delayTime, queue.queue) {
-                        recurse()
-                    }
-                }, completed: {
-                    shouldRetry.swap(false)
-                    subscriber.putCompletion()
-                })
-                currentDisposable.set(disposable)
-            }
-        }
-        
-        start()
-        
-        return ActionDisposable {
-            currentDisposable.dispose()
-            shouldRetry.swap(false)
         }
     }
 }

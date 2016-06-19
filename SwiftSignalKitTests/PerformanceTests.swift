@@ -86,7 +86,7 @@ class PerformanceTests: XCTestCase {
     }
     
     func testMeasureLock() {
-        measureBlock { 
+        measure {
             for _ in 0 ..< 1000000 {
                 let disposable = DisposableLock(action: {})
                 disposable.dispose()
@@ -95,7 +95,7 @@ class PerformanceTests: XCTestCase {
     }
     
     func testMeasureSpinlock() {
-        measureBlock {
+        measure {
             for _ in 0 ..< 1000000 {
                 let disposable = DisposableSpinLock(action: {})
                 disposable.dispose()
@@ -104,7 +104,7 @@ class PerformanceTests: XCTestCase {
     }
     
     func testMeasureAtomic() {
-        measureBlock {
+        measure {
             for _ in 0 ..< 1000000 {
                 let disposable = DisposableAtomic(action: {})
                 disposable.dispose()

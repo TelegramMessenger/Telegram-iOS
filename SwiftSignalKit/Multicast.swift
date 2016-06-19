@@ -2,7 +2,7 @@ import Foundation
 
 private final class MulticastInstance<T> {
     let disposable: Disposable
-    var subscribers = Bag<T -> Void>()
+    var subscribers = Bag<(T) -> Void>()
     var lock = Lock()
     
     init(disposable: Disposable) {
@@ -31,7 +31,7 @@ public final class Multicast<T> {
                 }
             }
             
-            var index: Bag<T -> Void>.Index!
+            var index: Bag<(T) -> Void>.Index!
             instance.lock.locked {
                 index = instance.subscribers.add({ next in
                     subscriber.putNext(next)
@@ -40,7 +40,7 @@ public final class Multicast<T> {
             
             if let beginDisposable = beginDisposable {
                 beginDisposable.set(signal.start(next: { next in
-                    var subscribers: [T -> Void]!
+                    var subscribers: [(T) -> Void]!
                     instance.lock.locked {
                         subscribers = instance.subscribers.copyItems()
                     }
@@ -49,11 +49,11 @@ public final class Multicast<T> {
                     }
                 }, error: { _ in
                     self.lock.locked {
-                        self.instances.removeValueForKey(key)
+                        let _ = self.instances.removeValue(forKey: key)
                     }
                 }, completed: {
                     self.lock.locked {
-                        self.instances.removeValueForKey(key)
+                        self.instances.removeValue(forKey: key)
                     }
                 }))
             }
@@ -69,7 +69,7 @@ public final class Multicast<T> {
                 
                 if remove {
                     self.lock.locked {
-                        self.instances.removeValueForKey(key)
+                        let _ = self.instances.removeValue(forKey: key)
                     }
                 }
             }
@@ -78,7 +78,7 @@ public final class Multicast<T> {
 }
 
 public final class MulticastPromise<T> {
-    public let subscribers = Bag<T -> Void>()
+    public let subscribers = Bag<(T) -> Void>()
     public let lock = Lock()
     public var value: T?
     

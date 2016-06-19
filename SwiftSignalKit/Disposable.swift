@@ -35,7 +35,7 @@ public final class MetaDisposable : Disposable {
     public init() {
     }
     
-    public func set(disposable: Disposable?) {
+    public func set(_ disposable: Disposable?) {
         var previousDisposable: Disposable! = nil
         var disposeImmediately = false
         
@@ -89,7 +89,7 @@ public final class DisposableSet : Disposable {
         
     }
     
-    public func add(disposable: Disposable) {
+    public func add(_ disposable: Disposable) {
         var disposeImmediately = false
         
         OSSpinLockLock(&self.lock)

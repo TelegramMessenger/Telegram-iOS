@@ -9,7 +9,7 @@ public final class Bag<T> {
     public init() {
     }
     
-    public func add(item: T) -> Index {
+    public func add(_ item: T) -> Index {
         let key = self.nextIndex
         self.nextIndex += 1
         self.items.append(item)
@@ -18,7 +18,7 @@ public final class Bag<T> {
         return key
     }
     
-    public func get(index: Index) -> T? {
+    public func get(_ index: Index) -> T? {
         var i = 0
         for key in self.itemKeys {
             if key == index {
@@ -29,12 +29,12 @@ public final class Bag<T> {
         return nil
     }
     
-    public func remove(index: Index) {
+    public func remove(_ index: Index) {
         var i = 0
         for key in self.itemKeys {
             if key == index {
-                self.items.removeAtIndex(i)
-                self.itemKeys.removeAtIndex(i)
+                self.items.remove(at: i)
+                self.itemKeys.remove(at: i)
                 break
             }
             i += 1
