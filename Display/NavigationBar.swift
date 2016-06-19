@@ -34,7 +34,7 @@ public class NavigationBar: ASDisplayNode {
     
     private var itemWrapper: NavigationItemWrapper?
     
-    private let stripeHeight: CGFloat = 1.0 / UIScreen.mainScreen().scale
+    private let stripeHeight: CGFloat = 1.0 / UIScreen.main().scale
     
     var backPressed: () -> () = { }
     

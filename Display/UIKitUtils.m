@@ -30,3 +30,17 @@ UIKIT_EXTERN float UIAnimationDragCoefficient(); // UIKit private drag coeffient
 }
 
 @end
+
+CABasicAnimation * _Nonnull makeSpringAnimation(NSString * _Nonnull keyPath) {
+    CASpringAnimation *springAnimation = [CASpringAnimation animationWithKeyPath:keyPath];
+    springAnimation.mass = 3.0f;
+    springAnimation.stiffness = 1000.0f;
+    springAnimation.damping = 500.0f;
+    springAnimation.initialVelocity = 0.0f;
+    springAnimation.duration = springAnimation.settlingDuration;
+    return springAnimation;
+}
+
+CGFloat springAnimationValueAt(CABasicAnimation * _Nonnull animation, CGFloat t) {
+    return [(CASpringAnimation *)animation _solveForInput:t];
+}

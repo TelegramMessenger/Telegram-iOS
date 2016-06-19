@@ -2,56 +2,64 @@ import Foundation
 import UIKit
 
 let deviceColorSpace = CGColorSpaceCreateDeviceRGB()
-let deviceScale = UIScreen.mainScreen().scale
+let deviceScale = UIScreen.main().scale
 
-public func generateImage(size: CGSize, generator: (CGSize, UnsafeMutablePointer<Int8>) -> Void) -> UIImage? {
+public func generateImage(_ size: CGSize, pixelGenerator: (CGSize, UnsafeMutablePointer<Int8>) -> Void) -> UIImage? {
     let scale = deviceScale
     let scaledSize = CGSize(width: size.width * scale, height: size.height * scale)
     let bytesPerRow = (4 * Int(scaledSize.width) + 15) & (~15)
     let length = bytesPerRow * Int(scaledSize.height)
-    let bytes = UnsafeMutablePointer<Int8>(malloc(length))
-    let provider: CGDataProvider? = CGDataProviderCreateWithData(bytes, bytes, length, { bytes, _, _ in
+    let bytes = UnsafeMutablePointer<Int8>(malloc(length)!)
+    guard let provider = CGDataProvider(dataInfo: bytes, data: bytes, size: length, releaseData: { bytes, _, _ in
         free(bytes)
     })
-    
-    generator(scaledSize, bytes)
-    
-    let bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.ByteOrder32Little.rawValue | CGImageAlphaInfo.PremultipliedFirst.rawValue)
-    guard let image = CGImageCreate(Int(scaledSize.width), Int(scaledSize.height), 8, 32, bytesPerRow, deviceColorSpace, bitmapInfo, provider, nil, false, .RenderingIntentDefault)
-        else {
-            return nil
+    else {
+        return nil
     }
     
-    return UIImage(CGImage: image, scale: scale, orientation: .Up)
+    pixelGenerator(scaledSize, bytes)
+    
+    let bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue)
+    
+    guard let image = CGImage(width: Int(scaledSize.width), height: Int(scaledSize.height), bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: bytesPerRow, space: deviceColorSpace, bitmapInfo: bitmapInfo, provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)
+    else {
+        return nil
+    }
+    
+    return UIImage(cgImage: image, scale: scale, orientation: .up)
 }
 
-public func generateImage(size: CGSize, opaque: Bool = false, generator: (CGSize, CGContextRef) -> Void) -> UIImage? {
+public func generateImage(_ size: CGSize, contextGenerator: (CGSize, CGContext) -> Void, opaque: Bool = false) -> UIImage? {
     let scale = deviceScale
     let scaledSize = CGSize(width: size.width * scale, height: size.height * scale)
     let bytesPerRow = (4 * Int(scaledSize.width) + 15) & (~15)
     let length = bytesPerRow * Int(scaledSize.height)
-    let bytes = UnsafeMutablePointer<Int8>(malloc(length))
-    let provider: CGDataProvider? = CGDataProviderCreateWithData(bytes, bytes, length, { bytes, _, _ in
+    let bytes = UnsafeMutablePointer<Int8>(malloc(length)!)
+    
+    guard let provider = CGDataProvider(dataInfo: bytes, data: bytes, size: length, releaseData: { bytes, _, _ in
         free(bytes)
     })
+    else {
+        return nil
+    }
     
-    let bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.ByteOrder32Little.rawValue | (opaque ? CGImageAlphaInfo.NoneSkipFirst.rawValue : CGImageAlphaInfo.PremultipliedFirst.rawValue))
+    let bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | (opaque ? CGImageAlphaInfo.noneSkipFirst.rawValue : CGImageAlphaInfo.premultipliedFirst.rawValue))
     
-    guard let context = CGBitmapContextCreate(bytes, Int(scaledSize.width), Int(scaledSize.height), 8, bytesPerRow, deviceColorSpace, bitmapInfo.rawValue)
+    guard let context = CGContext(data: bytes, width: Int(scaledSize.width), height: Int(scaledSize.height), bitsPerComponent: 8, bytesPerRow: bytesPerRow, space: deviceColorSpace, bitmapInfo: bitmapInfo.rawValue)
         else {
             return nil
     }
     
-    CGContextScaleCTM(context, scale, scale)
+    context.scale(x: scale, y: scale)
     
-    generator(size, context)
+    contextGenerator(size, context)
     
-    guard let image = CGImageCreate(Int(scaledSize.width), Int(scaledSize.height), 8, 32, bytesPerRow, deviceColorSpace, bitmapInfo, provider, nil, false, .RenderingIntentDefault)
-        else {
-            return nil
+    guard let image = CGImage(width: Int(scaledSize.width), height: Int(scaledSize.height), bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: bytesPerRow, space: deviceColorSpace, bitmapInfo: bitmapInfo, provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)
+    else {
+        return nil
     }
     
-    return UIImage(CGImage: image, scale: scale, orientation: .Up)
+    return UIImage(cgImage: image, scale: scale, orientation: .up)
 }
 
 public enum DrawingContextBltMode {
@@ -70,31 +78,33 @@ public class DrawingContext {
     
     private var _context: CGContext?
     
-    public func withContext(@noescape f: (CGContext) -> ()) {
+    public func withContext(_ f: @noescape(CGContext) -> ()) {
         if self._context == nil {
-            let c = CGBitmapContextCreate(bytes, Int(scaledSize.width), Int(scaledSize.height), 8, bytesPerRow, deviceColorSpace, self.bitmapInfo.rawValue)
-            CGContextScaleCTM(c, scale, scale)
-            self._context = c
+            if let c = CGContext(data: bytes, width: Int(scaledSize.width), height: Int(scaledSize.height), bitsPerComponent: 8, bytesPerRow: bytesPerRow, space: deviceColorSpace, bitmapInfo: self.bitmapInfo.rawValue) {
+                c.scale(x: scale, y: scale)
+                self._context = c
+            }
         }
         
         if let _context = self._context {
-            CGContextTranslateCTM(_context, self.size.width / 2.0, self.size.height / 2.0)
-            CGContextScaleCTM(_context, 1.0, -1.0)
-            CGContextTranslateCTM(_context, -self.size.width / 2.0, -self.size.height / 2.0)
+            _context.translate(x: self.size.width / 2.0, y: self.size.height / 2.0)
+            _context.scale(x: 1.0, y: -1.0)
+            _context.translate(x: -self.size.width / 2.0, y: -self.size.height / 2.0)
             
             f(_context)
             
-            CGContextTranslateCTM(_context, self.size.width / 2.0, self.size.height / 2.0)
-            CGContextScaleCTM(_context, 1.0, -1.0)
-            CGContextTranslateCTM(_context, -self.size.width / 2.0, -self.size.height / 2.0)
+            _context.translate(x: self.size.width / 2.0, y: self.size.height / 2.0)
+            _context.scale(x: 1.0, y: -1.0)
+            _context.translate(x: -self.size.width / 2.0, y: -self.size.height / 2.0)
         }
     }
     
-    public func withFlippedContext(@noescape f: (CGContext) -> ()) {
+    public func withFlippedContext(_ f: @noescape(CGContext) -> ()) {
         if self._context == nil {
-            let c = CGBitmapContextCreate(bytes, Int(scaledSize.width), Int(scaledSize.height), 8, bytesPerRow, deviceColorSpace, self.bitmapInfo.rawValue)
-            CGContextScaleCTM(c, scale, scale)
-            self._context = c
+            if let c = CGContext(data: bytes, width: Int(scaledSize.width), height: Int(scaledSize.height), bitsPerComponent: 8, bytesPerRow: bytesPerRow, space: deviceColorSpace, bitmapInfo: self.bitmapInfo.rawValue) {
+                c.scale(x: scale, y: scale)
+                self._context = c
+            }
         }
         
         if let _context = self._context {
@@ -110,39 +120,39 @@ public class DrawingContext {
         self.bytesPerRow = (4 * Int(scaledSize.width) + 15) & (~15)
         self.length = bytesPerRow * Int(scaledSize.height)
         
-        self.bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.ByteOrder32Little.rawValue | CGImageAlphaInfo.PremultipliedFirst.rawValue)
+        self.bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue)
         
         self.bytes = UnsafeMutablePointer<Int8>(malloc(length))
         if clear {
             memset(self.bytes, 0, self.length)
         }
-        self.provider = CGDataProviderCreateWithData(bytes, bytes, length, { bytes, _, _ in
+        self.provider = CGDataProvider(dataInfo: bytes, data: bytes, size: length, releaseData: { bytes, _, _ in
             free(bytes)
         })
     }
     
     public func generateImage() -> UIImage? {
-        if let image = CGImageCreate(Int(scaledSize.width), Int(scaledSize.height), 8, 32, bytesPerRow, deviceColorSpace, bitmapInfo, provider, nil, false, .RenderingIntentDefault) {
-            return UIImage(CGImage: image, scale: scale, orientation: .Up)
+        if let image = CGImage(width: Int(scaledSize.width), height: Int(scaledSize.height), bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: bytesPerRow, space: deviceColorSpace, bitmapInfo: bitmapInfo, provider: provider!, decode: nil, shouldInterpolate: false, intent: .defaultIntent) {
+            return UIImage(cgImage: image, scale: scale, orientation: .up)
         } else {
             return nil
         }
     }
     
-    public func colorAt(point: CGPoint) -> UIColor {
+    public func colorAt(_ point: CGPoint) -> UIColor {
         let x = Int(point.x * self.scale)
         let y = Int(point.y * self.scale)
         if x >= 0 && x < Int(self.scaledSize.width) && y >= 0 && y < Int(self.scaledSize.height) {
             let srcLine = UnsafeMutablePointer<UInt32>(self.bytes + y * self.bytesPerRow)
             let pixel = srcLine + x
-            let colorValue = pixel.memory
+            let colorValue = pixel.pointee
             return UIColor(UInt32(colorValue))
         } else {
-            return UIColor.clearColor()
+            return UIColor.clear()
         }
     }
     
-    public func blt(other: DrawingContext, at: CGPoint, mode: DrawingContextBltMode = .Alpha) {
+    public func blt(_ other: DrawingContext, at: CGPoint, mode: DrawingContextBltMode = .Alpha) {
         if abs(other.scale - self.scale) < CGFloat(FLT_EPSILON) {
             let srcX = 0
             var srcY = 0
@@ -167,18 +177,18 @@ public class DrawingContext {
                             let srcPixel = srcLine + sx
                             let dstPixel = dstLine + dx
                             
-                            let baseColor = dstPixel.memory
+                            let baseColor = dstPixel.pointee
                             let baseR = (baseColor >> 16) & 0xff
                             let baseG = (baseColor >> 8) & 0xff
                             let baseB = baseColor & 0xff
                             
-                            let alpha = srcPixel.memory >> 24
+                            let alpha = srcPixel.pointee >> 24
                             
                             let r = (baseR * alpha) / 255
                             let g = (baseG * alpha) / 255
                             let b = (baseB * alpha) / 255
                             
-                            dstPixel.memory = (alpha << 24) | (r << 16) | (g << 8) | b
+                            dstPixel.pointee = (alpha << 24) | (r << 16) | (g << 8) | b
                             
                             dx += 1
                             sx += 1
@@ -192,15 +202,15 @@ public class DrawingContext {
     }
 }
 
-public enum ParsingError: ErrorType {
+public enum ParsingError: ErrorProtocol {
     case Generic
 }
 
-public func readCGFloat(inout index: UnsafePointer<UInt8>, end: UnsafePointer<UInt8>, separator: UInt8) throws -> CGFloat {
+public func readCGFloat(_ index: inout UnsafePointer<UInt8>, end: UnsafePointer<UInt8>, separator: UInt8) throws -> CGFloat {
     let begin = index
     var seenPoint = false
     while index <= end {
-        let c = index.memory
+        let c = index.pointee
         index = index.successor()
         
         if c == 46 { // .
@@ -220,18 +230,18 @@ public func readCGFloat(inout index: UnsafePointer<UInt8>, end: UnsafePointer<UI
         throw ParsingError.Generic
     }
     
-    if let value = NSString(bytes: UnsafePointer<Void>(begin), length: index - begin, encoding: NSUTF8StringEncoding)?.floatValue {
+    if let value = NSString(bytes: UnsafePointer<Void>(begin), length: index - begin, encoding: String.Encoding.utf8.rawValue)?.floatValue {
         return CGFloat(value)
     } else {
         throw ParsingError.Generic
     }
 }
 
-public func drawSvgPath(context: CGContextRef, path: StaticString) throws {
+public func drawSvgPath(_ context: CGContext, path: StaticString) throws {
     var index: UnsafePointer<UInt8> = path.utf8Start
-    let end = path.utf8Start.advancedBy(path.byteSize)
+    let end = path.utf8Start.advanced(by: path.utf8CodeUnitCount)
     while index < end {
-        let c = index.memory
+        let c = index.pointee
         index = index.successor()
         
         if c == 77 { // M
@@ -239,13 +249,13 @@ public func drawSvgPath(context: CGContextRef, path: StaticString) throws {
             let y = try readCGFloat(&index, end: end, separator: 32)
             
             //print("Move to \(x), \(y)")
-            CGContextMoveToPoint(context, x, y)
+            context.moveTo(x: x, y: y)
         } else if c == 76 { // L
             let x = try readCGFloat(&index, end: end, separator: 44)
             let y = try readCGFloat(&index, end: end, separator: 32)
             
             //print("Line to \(x), \(y)")
-            CGContextAddLineToPoint(context, x, y)
+            context.addLineTo(x: x, y: y)
         } else if c == 67 { // C
             let x1 = try readCGFloat(&index, end: end, separator: 44)
             let y1 = try readCGFloat(&index, end: end, separator: 32)
@@ -253,17 +263,17 @@ public func drawSvgPath(context: CGContextRef, path: StaticString) throws {
             let y2 = try readCGFloat(&index, end: end, separator: 32)
             let x = try readCGFloat(&index, end: end, separator: 44)
             let y = try readCGFloat(&index, end: end, separator: 32)
-            CGContextAddCurveToPoint(context, x1, y1, x2, y2, x, y)
+            context.addCurveTo(cp1x: x1, cp1y: y1, cp2x: x2, cp2y: y2, endingAtX: x, y: y)
             
             //print("Line to \(x), \(y)")
             
         } else if c == 90 { // Z
-            if index != end && index.memory != 32 {
+            if index != end && index.pointee != 32 {
                 throw ParsingError.Generic
             }
             
             //CGContextClosePath(context)
-            CGContextFillPath(context)
+            context.fillPath()
             //CGContextBeginPath(context)
             //print("Close")
         }

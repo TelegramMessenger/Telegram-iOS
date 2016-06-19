@@ -35,7 +35,7 @@ public class ASTransformLayerNode: ASDisplayNode {
     public override init() {
         super.init(layerBlock: {
             return ASTransformLayer()
-        }, didLoadBlock: nil)
+        }, didLoad: nil)
     }
 }
 
@@ -43,7 +43,7 @@ public class ASTransformViewNode: ASDisplayNode {
     public override init() {
         super.init(viewBlock: {
             return ASTransformView()
-        }, didLoadBlock: nil)
+        }, didLoad: nil)
     }
 }
 
@@ -52,11 +52,11 @@ public class ASTransformNode: ASDisplayNode {
         if layerBacked {
             super.init(layerBlock: {
                 return ASTransformLayer()
-            }, didLoadBlock: nil)
+            }, didLoad: nil)
         } else {
             super.init(viewBlock: {
                 return ASTransformView()
-            }, didLoadBlock: nil)
+            }, didLoad: nil)
         }
     }
 }

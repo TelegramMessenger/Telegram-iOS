@@ -141,11 +141,11 @@ public class ListViewItemNode: ASDisplayNode {
         if layerBacked {
             super.init(layerBlock: {
                 return ASTransformLayer()
-            }, didLoadBlock: nil)
+            }, didLoad: nil)
         } else {
             super.init(viewBlock: {
                 return ListViewItemView()
-            }, didLoadBlock: nil)
+            }, didLoad: nil)
         }
     }
     
@@ -213,26 +213,26 @@ public class ListViewItemNode: ASDisplayNode {
         return bounds
     }
     
-    public func layoutAccessoryItemNode(accessoryItemNode: ListViewAccessoryItemNode) {
+    public func layoutAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
     }
     
     public func reuse() {
     }
     
-    final func addScrollingOffset(scrollingOffset: CGFloat) {
+    final func addScrollingOffset(_ scrollingOffset: CGFloat) {
         if self.spring != nil {
             self.contentOffset += scrollingOffset
         }
     }
     
-    func initializeDynamicsFromSibling(itemView: ListViewItemNode, additionalOffset: CGFloat) {
+    func initializeDynamicsFromSibling(_ itemView: ListViewItemNode, additionalOffset: CGFloat) {
         if let itemViewSpring = itemView.spring {
             self.contentOffset = itemView.contentOffset + additionalOffset
             self.spring?.velocity = itemViewSpring.velocity
         }
     }
     
-    public func animate(timestamp: Double) -> Bool {
+    public func animate(_ timestamp: Double) -> Bool {
         var continueAnimations = false
         
         if let _ = self.spring {
@@ -254,7 +254,7 @@ public class ListViewItemNode: ASDisplayNode {
             // position = current position + velocity * time
             offset = self.contentOffset + self.spring!.velocity * time
             
-            offset = isnan(offset) ? 0.0 : offset
+            offset = offset.isNaN ? 0.0 : offset
             
             let epsilon: CGFloat = 0.1
             if abs(offset) < epsilon && abs(self.spring!.velocity) < epsilon {
@@ -277,7 +277,7 @@ public class ListViewItemNode: ASDisplayNode {
             animation.applyAt(timestamp)
             
             if animation.completeAt(timestamp) {
-                animations.removeAtIndex(i)
+                animations.remove(at: i)
                 animationCount -= 1
                 i -= 1
             } else {
@@ -296,10 +296,10 @@ public class ListViewItemNode: ASDisplayNode {
         return continueAnimations
     }
     
-    public func layoutForWidth(width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    public func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
     }
     
-    public func animationForKey(key: String) -> ListViewAnimation? {
+    public func animationForKey(_ key: String) -> ListViewAnimation? {
         for (animationKey, animation) in self.animations {
             if animationKey == key {
                 return animation
@@ -308,11 +308,11 @@ public class ListViewItemNode: ASDisplayNode {
         return nil
     }
     
-    public final func setAnimationForKey(key: String, animation: ListViewAnimation?) {
+    public final func setAnimationForKey(_ key: String, animation: ListViewAnimation?) {
         for i in 0 ..< self.animations.count {
             let (currentKey, currentAnimation) = self.animations[i]
             if currentKey == key {
-                self.animations.removeAtIndex(i)
+                self.animations.remove(at: i)
                 currentAnimation.cancel()
                 break
             }
@@ -333,7 +333,7 @@ public class ListViewItemNode: ASDisplayNode {
         self.accessoryItemNode?.removeAllAnimations()
     }
     
-    public func addInsetsAnimationToValue(value: UIEdgeInsets, duration: Double, beginAt: Double) {
+    public func addInsetsAnimationToValue(_ value: UIEdgeInsets, duration: Double, beginAt: Double) {
         let animation = ListViewAnimation(from: self.insets, to: value, duration: duration, curve: listViewAnimationCurveSystem, beginAt: beginAt, update: { [weak self] _, currentValue in
             if let strongSelf = self {
                 strongSelf.insets = currentValue
@@ -342,7 +342,7 @@ public class ListViewItemNode: ASDisplayNode {
         self.setAnimationForKey("insets", animation: animation)
     }
     
-    public func addApparentHeightAnimation(value: CGFloat, duration: Double, beginAt: Double, update: ((CGFloat) -> Void)? = nil) {
+    public func addApparentHeightAnimation(_ value: CGFloat, duration: Double, beginAt: Double, update: ((CGFloat) -> Void)? = nil) {
         let animation = ListViewAnimation(from: self.apparentHeight, to: value, duration: duration, curve: listViewAnimationCurveSystem, beginAt: beginAt, update: { [weak self] progress, currentValue in
             if let strongSelf = self {
                 strongSelf.apparentHeight = currentValue
@@ -354,7 +354,7 @@ public class ListViewItemNode: ASDisplayNode {
         self.setAnimationForKey("apparentHeight", animation: animation)
     }
     
-    public func modifyApparentHeightAnimation(value: CGFloat, beginAt: Double) {
+    public func modifyApparentHeightAnimation(_ value: CGFloat, beginAt: Double) {
         if let previousAnimation = self.animationForKey("apparentHeight") {
             var duration = previousAnimation.startTime + previousAnimation.duration - beginAt
             if abs(self.apparentHeight - value) < CGFloat(FLT_EPSILON) {
@@ -375,7 +375,7 @@ public class ListViewItemNode: ASDisplayNode {
         self.setAnimationForKey("apparentHeight", animation: nil)
     }
     
-    public func addTransitionOffsetAnimation(value: CGFloat, duration: Double, beginAt: Double) {
+    public func addTransitionOffsetAnimation(_ value: CGFloat, duration: Double, beginAt: Double) {
         let animation = ListViewAnimation(from: self.transitionOffset, to: value, duration: duration, curve: listViewAnimationCurveSystem, beginAt: beginAt, update: { [weak self] _, currentValue in
             if let strongSelf = self {
                 strongSelf.transitionOffset = currentValue
@@ -384,19 +384,19 @@ public class ListViewItemNode: ASDisplayNode {
         self.setAnimationForKey("transitionOffset", animation: animation)
     }
     
-    public func animateInsertion(currentTimestamp: Double, duration: Double) {
+    public func animateInsertion(_ currentTimestamp: Double, duration: Double) {
     }
     
-    public func animateAdded(currentTimestamp: Double, duration: Double) {
+    public func animateAdded(_ currentTimestamp: Double, duration: Double) {
     }
     
-    public func setHighlighted(highlighted: Bool, animated: Bool) {
+    public func setHighlighted(_ highlighted: Bool, animated: Bool) {
     }
     
     public func setupGestures() {
     }
     
-    public func animateFrameTransition(progress: CGFloat) {
+    public func animateFrameTransition(_ progress: CGFloat) {
         
     }
 }

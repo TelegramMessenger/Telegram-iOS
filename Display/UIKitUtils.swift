@@ -1,10 +1,10 @@
 import UIKit
 
-public func dumpViews(view: UIView) {
+public func dumpViews(_ view: UIView) {
     dumpViews(view, indent: "")
 }
 
-private func dumpViews(view: UIView, indent: String = "") {
+private func dumpViews(_ view: UIView, indent: String = "") {
     print("\(indent)\(view)")
     let nextIndent = indent + "-"
     for subview in view.subviews {
@@ -12,11 +12,11 @@ private func dumpViews(view: UIView, indent: String = "") {
     }
 }
 
-public func dumpLayers(layer: CALayer) {
+public func dumpLayers(_ layer: CALayer) {
     dumpLayers(layer, indent: "")
 }
 
-private func dumpLayers(layer: CALayer, indent: String = "") {
+private func dumpLayers(_ layer: CALayer, indent: String = "") {
     print("\(indent)\(layer)(\(layer.frame))")
     if layer.sublayers != nil {
         let nextIndent = indent + ".."
@@ -26,8 +26,8 @@ private func dumpLayers(layer: CALayer, indent: String = "") {
     }
 }
 
-public let UIScreenScale = UIScreen.mainScreen().scale
-public func floorToScreenPixels(value: CGFloat) -> CGFloat {
+public let UIScreenScale = UIScreen.main().scale
+public func floorToScreenPixels(_ value: CGFloat) -> CGFloat {
     return floor(value * UIScreenScale) / UIScreenScale
 }
 
@@ -44,7 +44,7 @@ public extension UIColor {
 }
 
 public extension CGSize {
-    public func fitted(size: CGSize) -> CGSize {
+    public func fitted(_ size: CGSize) -> CGSize {
         var fittedSize = self
         if fittedSize.width > size.width {
             fittedSize = CGSize(width: size.width, height: floor((fittedSize.height * size.width / max(fittedSize.width, 1.0))))
@@ -55,7 +55,7 @@ public extension CGSize {
         return fittedSize
     }
     
-    public func fittedToArea(area: CGFloat) -> CGSize {
+    public func fittedToArea(_ area: CGFloat) -> CGSize {
         if self.height < 1.0 || self.width < 1.0 {
             return CGSize()
         }
@@ -65,29 +65,29 @@ public extension CGSize {
         return CGSize(width: floor(width), height: floor(height))
     }
     
-    public func aspectFilled(size: CGSize) -> CGSize {
+    public func aspectFilled(_ size: CGSize) -> CGSize {
         let scale = max(size.width / max(1.0, self.width), size.height / max(1.0, self.height))
         return CGSize(width: floor(self.width * scale), height: floor(self.height * scale))
     }
     
-    public func aspectFitted(size: CGSize) -> CGSize {
+    public func aspectFitted(_ size: CGSize) -> CGSize {
         let scale = min(size.width / max(1.0, self.width), size.height / max(1.0, self.height))
         return CGSize(width: floor(self.width * scale), height: floor(self.height * scale))
     }
 }
 
-public func assertNotOnMainThread(file: String = #file, line: Int = #line) {
-    assert(!NSThread.isMainThread(), "\(file):\(line) running on main thread")
+public func assertNotOnMainThread(_ file: String = #file, line: Int = #line) {
+    assert(!Thread.isMainThread(), "\(file):\(line) running on main thread")
 }
 
 public extension UIImage {
     public func precomposed() -> UIImage {
         UIGraphicsBeginImageContextWithOptions(self.size, false, self.scale)
-        self.drawAtPoint(CGPoint())
-        let result = UIGraphicsGetImageFromCurrentImageContext();
+        self.draw(at: CGPoint())
+        let result = UIGraphicsGetImageFromCurrentImageContext()!
         UIGraphicsEndImageContext()
         if !UIEdgeInsetsEqualToEdgeInsets(self.capInsets, UIEdgeInsetsZero) {
-            return result.resizableImageWithCapInsets(self.capInsets, resizingMode: self.resizingMode)
+            return result.resizableImage(withCapInsets: self.capInsets, resizingMode: self.resizingMode)
         }
         return result
     }

@@ -62,10 +62,10 @@ public class TabBarController: ViewController {
         self.tabBarControllerNode.tabBarNode.selectedIndex = self.selectedIndex
         
         if let currentController = self.currentController {
-            currentController.willMoveToParentViewController(nil)
+            currentController.willMove(toParentViewController: nil)
             self.tabBarControllerNode.currentControllerView = nil
             currentController.removeFromParentViewController()
-            currentController.didMoveToParentViewController(nil)
+            currentController.didMove(toParentViewController: nil)
             
             self.currentController = nil
         }
@@ -75,7 +75,7 @@ public class TabBarController: ViewController {
         }
         
         if let currentController = self.currentController {
-            currentController.willMoveToParentViewController(self)
+            currentController.willMove(toParentViewController: self)
             if let layout = self.layout {
                 currentController.view.frame = CGRect(origin: CGPoint(), size: layout.size)
                 
@@ -83,7 +83,7 @@ public class TabBarController: ViewController {
             }
             self.tabBarControllerNode.currentControllerView = currentController.view
             self.addChildViewController(currentController)
-            currentController.didMoveToParentViewController(self)
+            currentController.didMove(toParentViewController: self)
             
             self.navigationItem.title = currentController.navigationItem.title
             self.navigationItem.leftBarButtonItem = currentController.navigationItem.leftBarButtonItem
@@ -95,13 +95,13 @@ public class TabBarController: ViewController {
         }
     }
     
-    private func childControllerLayoutForLayout(layout: ViewControllerLayout) -> ViewControllerLayout {
+    private func childControllerLayoutForLayout(_ layout: ViewControllerLayout) -> ViewControllerLayout {
         var insets = layout.insets
         insets.bottom += 49.0
         return ViewControllerLayout(size: layout.size, insets: insets, inputViewHeight: layout.inputViewHeight, statusBarHeight: layout.statusBarHeight)
     }
     
-    override public func updateLayout(layout: ViewControllerLayout, previousLayout: ViewControllerLayout?, duration: Double, curve: UInt) {
+    override public func updateLayout(_ layout: ViewControllerLayout, previousLayout: ViewControllerLayout?, duration: Double, curve: UInt) {
         super.updateLayout(layout, previousLayout: previousLayout, duration: duration, curve: curve)
         
         self.tabBarControllerNode.updateLayout(layout, previousLayout: previousLayout, duration: duration, curve: curve)

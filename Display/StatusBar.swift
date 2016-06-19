@@ -4,20 +4,20 @@ import AsyncDisplayKit
 public class StatusBarSurface {
     var statusBars: [StatusBar] = []
     
-    func addStatusBar(statusBar: StatusBar) {
+    func addStatusBar(_ statusBar: StatusBar) {
         self.removeStatusBar(statusBar)
         self.statusBars.append(statusBar)
     }
     
-    func insertStatusBar(statusBar: StatusBar, atIndex index: Int) {
+    func insertStatusBar(_ statusBar: StatusBar, atIndex index: Int) {
         self.removeStatusBar(statusBar)
-        self.statusBars.insert(statusBar, atIndex: index)
+        self.statusBars.insert(statusBar, at: index)
     }
     
-    func removeStatusBar(statusBar: StatusBar) {
+    func removeStatusBar(_ statusBar: StatusBar) {
         for i in 0 ..< self.statusBars.count {
             if self.statusBars[i] === statusBar {
-                self.statusBars.removeAtIndex(i)
+                self.statusBars.remove(at: i)
                 break
             }
         }
@@ -32,28 +32,26 @@ public class StatusBar: ASDisplayNode {
         super.init()
         
         self.clipsToBounds = true
-        self.userInteractionEnabled = false
+        self.isUserInteractionEnabled = false
     }
     
     func removeProxyNode() {
-        self.proxyNode?.hidden = true
+        self.proxyNode?.isHidden = true
         self.proxyNode?.removeFromSupernode()
         self.proxyNode = nil
     }
     
     func updateProxyNode() {
-        let origin = self.view.convertPoint(CGPoint(), toView: nil)
+        let origin = self.view.convert(CGPoint(), to: nil)
         if let proxyNode = proxyNode {
             proxyNode.style = self.style
         } else {
             self.proxyNode = StatusBarProxyNode(style: self.style)
-            self.proxyNode!.hidden = false
+            self.proxyNode!.isHidden = false
             self.addSubnode(self.proxyNode!)
         }
         
         let frame = CGRect(origin: CGPoint(x: -origin.x, y: -origin.y), size: self.proxyNode!.frame.size)
         self.proxyNode?.frame = frame
     }
-    
-    
 }

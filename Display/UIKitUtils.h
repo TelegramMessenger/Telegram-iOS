@@ -7,9 +7,6 @@
 
 @end
 
-@interface CASpringAnimation (AnimationUtils)
-
-- (CGFloat)valueAt:(CGFloat)t;
-
-@end
+CABasicAnimation * _Nonnull makeSpringAnimation(NSString * _Nonnull keyPath);
+CGFloat springAnimationValueAt(CABasicAnimation * _Nonnull animation, CGFloat t);
 

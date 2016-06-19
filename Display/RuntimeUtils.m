@@ -77,4 +77,8 @@
     return objc_getAssociatedObject(self, key);
 }
 
+- (bool)checkObjectIsKindOfClass:(Class)targetClass {
+    return [self isKindOfClass:targetClass];
+}
+
 @end

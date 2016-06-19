@@ -3,13 +3,13 @@ import AsyncDisplayKit
 
 public class NavigationButtonNode: ASTextNode {
     private func fontForCurrentState() -> UIFont {
-        return self.bold ? UIFont.boldSystemFontOfSize(17.0) : UIFont.systemFontOfSize(17.0)
+        return self.bold ? UIFont.boldSystemFont(ofSize: 17.0) : UIFont.systemFont(ofSize: 17.0)
     }
     
     private func attributesForCurrentState() -> [String : AnyObject] {
         return [
             NSFontAttributeName: self.fontForCurrentState(),
-            NSForegroundColorAttributeName: self.enabled ? UIColor.blueColor() : UIColor.grayColor()
+            NSForegroundColorAttributeName: self.isEnabled ? UIColor.blue() : UIColor.gray()
         ]
     }
     
@@ -21,7 +21,7 @@ public class NavigationButtonNode: ASTextNode {
         set(value) {
             _text = value
             
-            self.attributedString = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
+            self.attributedString = AttributedString(string: text, attributes: self.attributesForCurrentState())
         }
     }
     
@@ -34,7 +34,7 @@ public class NavigationButtonNode: ASTextNode {
             if _bold != value {
                 _bold = value
                 
-                self.attributedString = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
+                self.attributedString = AttributedString(string: text, attributes: self.attributesForCurrentState())
             }
         }
     }
@@ -45,13 +45,13 @@ public class NavigationButtonNode: ASTextNode {
     public override init() {
         super.init()
         
-        self.userInteractionEnabled = true
-        self.exclusiveTouch = true
+        self.isUserInteractionEnabled = true
+        self.isExclusiveTouch = true
         self.hitTestSlop = UIEdgeInsets(top: -16.0, left: -10.0, bottom: -16.0, right: -10.0)
         self.displaysAsynchronously = false
     }
     
-    private func touchInsideApparentBounds(touch: UITouch) -> Bool {
+    private func touchInsideApparentBounds(_ touch: UITouch) -> Bool {
         var apparentBounds = self.bounds
         let hitTestSlop = self.hitTestSlop
         apparentBounds.origin.x += hitTestSlop.left
@@ -59,49 +59,49 @@ public class NavigationButtonNode: ASTextNode {
         apparentBounds.origin.y += hitTestSlop.top
         apparentBounds.size.height -= hitTestSlop.top + hitTestSlop.bottom
         
-        return CGRectContainsPoint(apparentBounds, touch.locationInView(self.view))
+        return apparentBounds.contains(touch.location(in: self.view))
     }
     
-    public override func touchesBegan(touches: Set<UITouch>, withEvent event: UIEvent?) {
-        super.touchesBegan(touches, withEvent: event)
+    public override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesBegan(touches, with: event)
         self.touchCount += touches.count
         self.updateHighlightedState(true, animated: false)
     }
     
-    public override func touchesMoved(touches: Set<UITouch>, withEvent event: UIEvent?) {
-        super.touchesMoved(touches, withEvent: event)
+    public override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesMoved(touches, with: event)
         
         self.updateHighlightedState(self.touchInsideApparentBounds(touches.first!), animated: true)
     }
     
-    public override func touchesEnded(touches: Set<UITouch>, withEvent event: UIEvent?) {
-        super.touchesEnded(touches, withEvent: event)
+    public override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesEnded(touches, with: event)
         self.updateHighlightedState(false, animated: false)
         
         let previousTouchCount = self.touchCount
         self.touchCount = max(0, self.touchCount - touches.count)
         
-        if previousTouchCount != 0 && self.touchCount == 0 && self.enabled && self.touchInsideApparentBounds(touches.first!) {
+        if previousTouchCount != 0 && self.touchCount == 0 && self.isEnabled && self.touchInsideApparentBounds(touches.first!) {
             self.pressed()
         }
     }
     
-    public override func touchesCancelled(touches: Set<UITouch>?, withEvent event: UIEvent?) {
-        super.touchesCancelled(touches, withEvent: event)
+    public override func touchesCancelled(_ touches: Set<UITouch>?, with event: UIEvent?) {
+        super.touchesCancelled(touches, with: event)
         
         self.touchCount = max(0, self.touchCount - (touches?.count ?? 0))
         self.updateHighlightedState(false, animated: false)
     }
     
     private var _highlighted = false
-    private func updateHighlightedState(highlighted: Bool, animated: Bool) {
+    private func updateHighlightedState(_ highlighted: Bool, animated: Bool) {
         if _highlighted != highlighted {
             _highlighted = highlighted
             
-            let alpha: CGFloat = !enabled ? 1.0 : (highlighted ? 0.4 : 1.0)
+            let alpha: CGFloat = !self.isEnabled ? 1.0 : (highlighted ? 0.4 : 1.0)
             
             if animated {
-                UIView.animateWithDuration(0.3, delay: 0.0, options: UIViewAnimationOptions.BeginFromCurrentState, animations: { () -> Void in
+                UIView.animate(withDuration: 0.3, delay: 0.0, options: UIViewAnimationOptions.beginFromCurrentState, animations: { () -> Void in
                     self.alpha = alpha
                 }, completion: nil)
             }
@@ -111,15 +111,15 @@ public class NavigationButtonNode: ASTextNode {
         }
     }
     
-    public override var enabled: Bool {
+    public override var isEnabled: Bool {
         get {
-            return super.enabled
+            return super.isEnabled
         }
         set(value) {
-            if self.enabled != value {
-                super.enabled = value
+            if self.isEnabled != value {
+                super.isEnabled = value
 
-                self.attributedString = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
+                self.attributedString = AttributedString(string: text, attributes: self.attributesForCurrentState())
             }
         }
     }

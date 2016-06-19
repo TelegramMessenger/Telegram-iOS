@@ -11,7 +11,7 @@ private enum StatusBarItemType {
     case Battery
 }
 
-func makeStatusBarProxy(style: StatusBarStyle) -> StatusBarProxyNode {
+func makeStatusBarProxy(_ style: StatusBarStyle) -> StatusBarProxyNode {
     return StatusBarProxyNode(style: style)
 }
 
@@ -29,30 +29,30 @@ private class StatusBarItemNode: ASDisplayNode {
     func update() {
         let context = DrawingContext(size: self.targetView.frame.size, clear: true)
         
-        if let contents = self.targetView.layer.contents where (self.targetView.layer.sublayers?.count ?? 0) == 0 && CFGetTypeID(contents) == CGImageGetTypeID() && false {
-            let image = contents as! CGImageRef
+        if let contents = self.targetView.layer.contents where (self.targetView.layer.sublayers?.count ?? 0) == 0 && CFGetTypeID(contents) == CGImage.typeID && false {
+            let image = contents as! CGImage
             context.withFlippedContext { c in
-                CGContextSetAlpha(c, CGFloat(self.targetView.layer.opacity))
-                CGContextDrawImage(c, CGRect(origin: CGPoint(), size: context.size), image)
-                CGContextSetAlpha(c, 1.0)
+                c.setAlpha(CGFloat(self.targetView.layer.opacity))
+                c.draw(in: CGRect(origin: CGPoint(), size: context.size), image: image)
+                c.setAlpha(1.0)
             }
             
             if let sublayers = self.targetView.layer.sublayers {
                 for sublayer in sublayers {
                     let origin = sublayer.frame.origin
-                    if let contents = sublayer.contents where CFGetTypeID(contents) == CGImageGetTypeID() {
-                        let image = contents as! CGImageRef
+                    if let contents = sublayer.contents where CFGetTypeID(contents) == CGImage.typeID {
+                        let image = contents as! CGImage
                         context.withFlippedContext { c in
-                            CGContextTranslateCTM(c, origin.x, origin.y)
-                            CGContextDrawImage(c, CGRect(origin: CGPoint(), size: context.size), image)
-                            CGContextTranslateCTM(c, -origin.x, -origin.y)
+                            c.translate(x: origin.x, y: origin.y)
+                            c.draw(in: CGRect(origin: CGPoint(), size: context.size), image: image)
+                            c.translate(x: -origin.x, y: -origin.y)
                         }
                     } else {
                         context.withContext { c in
                             UIGraphicsPushContext(c)
-                            CGContextTranslateCTM(c, origin.x, origin.y)
-                            sublayer.renderInContext(c)
-                            CGContextTranslateCTM(c, -origin.x, -origin.y)
+                            c.translate(x: origin.x, y: origin.y)
+                            sublayer.render(in: c)
+                            c.translate(x: -origin.x, y: -origin.y)
                             UIGraphicsPopContext()
                         }
                     }
@@ -61,20 +61,20 @@ private class StatusBarItemNode: ASDisplayNode {
         } else {
             context.withContext { c in
                 UIGraphicsPushContext(c)
-                self.targetView.layer.renderInContext(c)
+                self.targetView.layer.render(in: c)
                 UIGraphicsPopContext()
             }
         }
         
-        let type: StatusBarItemType = self.targetView.isKindOfClass(batteryItemClass!) ? .Battery : .Generic
+        let type: StatusBarItemType = self.targetView.checkIsKind(of: batteryItemClass!) ? .Battery : .Generic
         tintStatusBarItem(context, type: type, style: style)
-        self.contents = context.generateImage()?.CGImage
+        self.contents = context.generateImage()?.cgImage
         
         self.frame = self.targetView.frame
     }
 }
 
-private func tintStatusBarItem(context: DrawingContext, type: StatusBarItemType, style: StatusBarStyle) {
+private func tintStatusBarItem(_ context: DrawingContext, type: StatusBarItemType, style: StatusBarStyle) {
     switch type {
         case .Battery:
             let minY = 0
@@ -91,7 +91,7 @@ private func tintStatusBarItem(context: DrawingContext, type: StatusBarItemType,
                 var baseX = minX
                 while baseX < maxX {
                     let pixel = baseMidRow + baseX
-                    let alpha = pixel.memory & 0xff000000
+                    let alpha = pixel.pointee & 0xff000000
                     if alpha != 0 {
                         break
                     }
@@ -103,7 +103,7 @@ private func tintStatusBarItem(context: DrawingContext, type: StatusBarItemType,
                 var targetX = baseX
                 while targetX < maxX {
                     let pixel = baseMidRow + targetX
-                    let alpha = pixel.memory & 0xff000000
+                    let alpha = pixel.pointee & 0xff000000
                     if alpha == 0 {
                         break
                     }
@@ -111,7 +111,7 @@ private func tintStatusBarItem(context: DrawingContext, type: StatusBarItemType,
                     targetX += 1
                 }
                 
-                let batteryColor = (baseMidRow + baseX).memory
+                let batteryColor = (baseMidRow + baseX).pointee
                 let batteryR = (batteryColor >> 16) & 0xff
                 let batteryG = (batteryColor >> 8) & 0xff
                 let batteryB = batteryColor & 0xff
@@ -120,7 +120,7 @@ private func tintStatusBarItem(context: DrawingContext, type: StatusBarItemType,
                 while baseY < maxY {
                     let baseRow = basePixel + pixelsPerRow * baseY
                     let pixel = baseRow + midX
-                    let alpha = pixel.memory & 0xff000000
+                    let alpha = pixel.pointee & 0xff000000
                     if alpha != 0 {
                         break
                     }
@@ -131,7 +131,7 @@ private func tintStatusBarItem(context: DrawingContext, type: StatusBarItemType,
                 while targetY >= baseY {
                     let baseRow = basePixel + pixelsPerRow * targetY
                     let pixel = baseRow + midX
-                    let alpha = pixel.memory & 0xff000000
+                    let alpha = pixel.pointee & 0xff000000
                     if alpha != 0 {
                         break
                     }
@@ -155,13 +155,13 @@ private func tintStatusBarItem(context: DrawingContext, type: StatusBarItemType,
                 var pixel = UnsafeMutablePointer<UInt32>(context.bytes)
                 let end = UnsafeMutablePointer<UInt32>(context.bytes + context.length)
                 while pixel != end {
-                    let alpha = (pixel.memory & 0xff000000) >> 24
+                    let alpha = (pixel.pointee & 0xff000000) >> 24
                     
                     let r = (baseR * alpha) / 255
                     let g = (baseG * alpha) / 255
                     let b = (baseB * alpha) / 255
                     
-                    pixel.memory = (alpha << 24) | (r << 16) | (g << 8) | b
+                    pixel.pointee = (alpha << 24) | (r << 16) | (g << 8) | b
                     
                     pixel += 1
                 }
@@ -173,13 +173,13 @@ private func tintStatusBarItem(context: DrawingContext, type: StatusBarItemType,
                         var x = baseX
                         while x < targetX {
                             let pixel = baseRow + x
-                            let alpha = (pixel.memory >> 24) & 0xff
+                            let alpha = (pixel.pointee >> 24) & 0xff
                             
                             let r = (batteryR * alpha) / 255
                             let g = (batteryG * alpha) / 255
                             let b = (batteryB * alpha) / 255
                             
-                            pixel.memory = (alpha << 24) | (r << 16) | (g << 8) | b
+                            pixel.pointee = (alpha << 24) | (r << 16) | (g << 8) | b
                             
                             x += 1
                         }
@@ -204,13 +204,13 @@ private func tintStatusBarItem(context: DrawingContext, type: StatusBarItemType,
         let baseB = baseColor & 0xff
         
         while pixel != end {
-            let alpha = (pixel.memory & 0xff000000) >> 24
+            let alpha = (pixel.pointee & 0xff000000) >> 24
             
             let r = (baseR * alpha) / 255
             let g = (baseG * alpha) / 255
             let b = (baseB * alpha) / 255
             
-            pixel.memory = (alpha << 24) | (r << 16) | (g << 8) | b
+            pixel.pointee = (alpha << 24) | (r << 16) | (g << 8) | b
             
             pixel += 1
         }
@@ -232,11 +232,11 @@ private class StatusBarProxyNodeTimerTarget: NSObject {
 }
 
 class StatusBarProxyNode: ASDisplayNode {
-    var timer: NSTimer?
+    var timer: Timer?
     var style: StatusBarStyle {
         didSet {
             if oldValue != self.style {
-                if !self.hidden {
+                if !self.isHidden {
                     self.updateItems()
                 }
             }
@@ -245,19 +245,19 @@ class StatusBarProxyNode: ASDisplayNode {
     
     private var itemNodes: [StatusBarItemNode] = []
     
-    override var hidden: Bool {
+    override var isHidden: Bool {
         get {
-            return super.hidden
+            return super.isHidden
         } set(value) {
-            if super.hidden != value {
-                super.hidden = value
+            if super.isHidden != value {
+                super.isHidden = value
                 
                 if !value {
                     self.updateItems()
-                    self.timer = NSTimer(timeInterval: 5.0, target: StatusBarProxyNodeTimerTarget { [weak self] in
+                    self.timer = Timer(timeInterval: 5.0, target: StatusBarProxyNodeTimerTarget { [weak self] in
                         self?.updateItems()
                         }, selector: #selector(StatusBarProxyNodeTimerTarget.tick), userInfo: nil, repeats: true)
-                    NSRunLoop.mainRunLoop().addTimer(self.timer!, forMode: NSRunLoopCommonModes)
+                    RunLoop.main().add(self.timer!, forMode: .commonModes)
                 } else {
                     self.timer?.invalidate()
                     self.timer = nil
@@ -271,7 +271,7 @@ class StatusBarProxyNode: ASDisplayNode {
         
         super.init()
         
-        self.hidden = true
+        self.isHidden = true
         
         self.clipsToBounds = true
         //self.backgroundColor = UIColor.blueColor().colorWithAlphaComponent(0.2)
@@ -305,7 +305,7 @@ class StatusBarProxyNode: ASDisplayNode {
             }
             if !found {
                 self.itemNodes[i].removeFromSupernode()
-                self.itemNodes.removeAtIndex(i)
+                self.itemNodes.remove(at: i)
             } else {
                 self.itemNodes[i].style = self.style
                 self.itemNodes[i].update()

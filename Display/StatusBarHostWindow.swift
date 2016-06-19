@@ -3,7 +3,7 @@ import UIKit
 
 private class StatusBarHostWindowController: UIViewController {
     override func preferredStatusBarStyle() -> UIStatusBarStyle {
-        return UIStatusBarStyle.Default
+        return UIStatusBarStyle.default
     }
     
     override func prefersStatusBarHidden() -> Bool {

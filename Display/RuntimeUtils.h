@@ -18,5 +18,6 @@ typedef enum {
 - (void)setAssociatedObject:(id)object forKey:(void const *)key;
 - (void)setAssociatedObject:(id)object forKey:(void const *)key associationPolicy:(NSObjectAssociationPolicy)associationPolicy;
 - (id)associatedObjectForKey:(void const *)key;
+- (bool)checkObjectIsKindOfClass:(Class)targetClass;
 
 @end

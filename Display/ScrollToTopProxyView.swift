@@ -22,7 +22,7 @@ class ScrollToTopView: UIScrollView, UIScrollViewDelegate {
         }
     }
     
-    @objc func scrollViewShouldScrollToTop(scrollView: UIScrollView) -> Bool {
+    @objc func scrollViewShouldScrollToTop(_ scrollView: UIScrollView) -> Bool {
         if let action = self.action {
             action()
         }

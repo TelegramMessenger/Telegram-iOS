@@ -10,7 +10,7 @@ public class ListViewAccessoryItemNode: ASDisplayNode {
     
     private var transitionOffsetAnimation: ListViewAnimation?
     
-    final func animateTransitionOffset(from: CGPoint, beginAt: Double, duration: Double, curve: CGFloat -> CGFloat) {
+    final func animateTransitionOffset(_ from: CGPoint, beginAt: Double, duration: Double, curve: (CGFloat) -> CGFloat) {
         self.transitionOffset = from
         self.transitionOffsetAnimation = ListViewAnimation(from: from, to: CGPoint(), duration: duration, curve: curve, beginAt: beginAt, update: { [weak self] _, currentValue in
             if let strongSelf = self {
@@ -24,7 +24,7 @@ public class ListViewAccessoryItemNode: ASDisplayNode {
         self.transitionOffset = CGPoint()
     }
     
-    final func animate(timestamp: Double) -> Bool {
+    final func animate(_ timestamp: Double) -> Bool {
         if let animation = self.transitionOffsetAnimation {
             animation.applyAt(timestamp)
                 

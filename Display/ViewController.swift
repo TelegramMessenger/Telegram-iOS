@@ -39,7 +39,7 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
         return self._ready
     }
     
-    private var updateLayoutOnLayout: (ViewControllerLayout, NSTimeInterval, UInt)?
+    private var updateLayoutOnLayout: (ViewControllerLayout, Double, UInt)?
     public private(set) var layout: ViewControllerLayout?
     
     var keyboardFrameObserver: AnyObject?
@@ -54,7 +54,7 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
     }
     
     private func updateScrollToTopView() {
-        if let scrollToTop = self.scrollToTop {
+        if self.scrollToTop != nil {
             if let displayNode = self._displayNode where self.scrollToTopView == nil {
                 let scrollToTopView = ScrollToTopView(frame: CGRect(x: 0.0, y: -1.0, width: displayNode.frame.size.width, height: 1.0))
                 scrollToTopView.action = { [weak self] in
@@ -80,18 +80,18 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
         self.navigationBar.item = self.navigationItem
         self.automaticallyAdjustsScrollViewInsets = false
         
-        self.keyboardFrameObserver = NSNotificationCenter.defaultCenter().addObserverForName(UIKeyboardWillChangeFrameNotification, object: nil, queue: nil, usingBlock: { [weak self] notification in
+        self.keyboardFrameObserver = NotificationCenter.default().addObserver(forName: NSNotification.Name.UIKeyboardWillChangeFrame, object: nil, queue: nil, using: { [weak self] notification in
             if let strongSelf = self, _ = strongSelf._displayNode {
-                let keyboardFrame: CGRect = (notification.userInfo?[UIKeyboardFrameEndUserInfoKey] as? NSValue)?.CGRectValue() ?? CGRect()
-                let keyboardHeight = max(0.0, UIScreen.mainScreen().bounds.size.height - keyboardFrame.minY)
+                let keyboardFrame: CGRect = (notification.userInfo?[UIKeyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue() ?? CGRect()
+                let keyboardHeight = max(0.0, UIScreen.main().bounds.size.height - keyboardFrame.minY)
                 var duration: Double = (notification.userInfo?[UIKeyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
                 if duration > DBL_EPSILON {
                     duration = 0.5
                 }
-                var curve: UInt = (notification.userInfo?[UIKeyboardAnimationCurveUserInfoKey] as? NSNumber)?.unsignedIntegerValue ?? UInt(7 << 16)
+                var curve: UInt = (notification.userInfo?[UIKeyboardAnimationCurveUserInfoKey] as? NSNumber)?.uintValue ?? UInt(7 << 16)
                 
                 let previousLayout: ViewControllerLayout?
-                var previousDurationAndCurve: (NSTimeInterval, UInt)?
+                var previousDurationAndCurve: (Double, UInt)?
                 if let updateLayoutOnLayout = strongSelf.updateLayoutOnLayout {
                     previousLayout = updateLayoutOnLayout.0
                     previousDurationAndCurve = (updateLayoutOnLayout.1, updateLayoutOnLayout.2)
@@ -112,7 +112,7 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
                 if updated {
                     //print("keyboard layout change: \(layout) rotating: \(strongSelf.view.window?.isRotating())")
                     
-                    let durationAndCurve: (NSTimeInterval, UInt) = previousDurationAndCurve ?? (duration, curve)
+                    let durationAndCurve: (Double, UInt) = previousDurationAndCurve ?? (duration, curve)
                     strongSelf.updateLayoutOnLayout = (layout, durationAndCurve.0, durationAndCurve.1)
                     strongSelf.view.setNeedsLayout()
                 }
@@ -126,7 +126,7 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
     
     deinit {
         if let keyboardFrameObserver = keyboardFrameObserver {
-            NSNotificationCenter.defaultCenter().removeObserver(keyboardFrameObserver)
+            NotificationCenter.default().removeObserver(keyboardFrameObserver)
         }
     }
     
@@ -145,7 +145,7 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
         self.updateScrollToTopView()
     }
     
-    public func setParentLayout(layout: ViewControllerLayout, duration: NSTimeInterval, curve: UInt) {
+    public func setParentLayout(_ layout: ViewControllerLayout, duration: Double, curve: UInt) {
         if self._displayNode == nil {
             self.loadDisplayNode()
         }
@@ -178,7 +178,7 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
         }
     }
     
-    public func updateLayout(layout: ViewControllerLayout, previousLayout: ViewControllerLayout?, duration: Double, curve: UInt) {
+    public func updateLayout(_ layout: ViewControllerLayout, previousLayout: ViewControllerLayout?, duration: Double, curve: UInt) {
         self.statusBar.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: 40.0))
         self.navigationBar.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: 44.0 + 20.0))
         if let scrollToTopView = self.scrollToTopView {
@@ -186,9 +186,9 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
         }
     }
     
-    public func setNeedsLayoutWithDuration(duration: Double, curve: UInt) {
+    public func setNeedsLayoutWithDuration(_ duration: Double, curve: UInt) {
         let previousLayout: ViewControllerLayout?
-        var previousDurationAndCurve: (NSTimeInterval, UInt)?
+        var previousDurationAndCurve: (Double, UInt)?
         if let updateLayoutOnLayout = self.updateLayoutOnLayout {
             previousLayout = updateLayoutOnLayout.0
             previousDurationAndCurve = (updateLayoutOnLayout.1, updateLayoutOnLayout.2)
@@ -196,7 +196,7 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
             previousLayout = self.layout
         }
         if let previousLayout = previousLayout {
-            let durationAndCurve: (NSTimeInterval, UInt) = previousDurationAndCurve ?? (duration, curve)
+            let durationAndCurve: (Double, UInt) = previousDurationAndCurve ?? (duration, curve)
             self.updateLayoutOnLayout = (previousLayout, durationAndCurve.0, durationAndCurve.1)
             self.view.setNeedsLayout()
         }
@@ -214,14 +214,14 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
                     
                     self.updateLayoutOnLayout = nil
                 } else {
-                    (self.view.window as? Window)?.addPostUpdateToInterfaceOrientationBlock({ [weak self] in
+                    (self.view.window as? Window)?.addPostUpdateToInterfaceOrientationBlock(f: { [weak self] in
                         if let strongSelf = self {
                             strongSelf.view.setNeedsLayout()
                         }
                     })
                 }
             } else {
-                Window.addPostDeviceOrientationDidChangeBlock({ [weak self] in
+                Window.addPostDeviceOrientationDidChange({ [weak self] in
                     if let strongSelf = self {
                         strongSelf.view.setNeedsLayout()
                     }
@@ -230,11 +230,11 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
         }
     }
     
-    override public func presentViewController(viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)?) {
+    override public func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
         if let navigationController = self.navigationController as? NavigationController {
-            navigationController.presentViewController(viewControllerToPresent, animated: flag, completion: completion)
+            navigationController.present(viewControllerToPresent, animated: flag, completion: completion)
         } else {
-            super.presentViewController(viewControllerToPresent, animated: flag, completion: completion)
+            super.present(viewControllerToPresent, animated: flag, completion: completion)
         }
     }
 }

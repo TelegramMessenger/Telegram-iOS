@@ -40,12 +40,12 @@ internal class NavigationItemWrapper {
         self.parentNode.addSubnode(self.backButtonNode)
         
         self.previousItemSetTitleListenerKey = previousNavigationItem?.addSetTitleListener({ [weak self] title in
-            self?.setBackButtonTitle(title)
+            self?.setBackButtonTitle(title ?? "")
             return
         })
         
         self.setTitleListenerKey = navigationItem.addSetTitleListener({ [weak self] title in
-            self?.setTitle(title)
+            self?.setTitle(title ?? "")
             return
         })
         
@@ -78,17 +78,17 @@ internal class NavigationItemWrapper {
         self.backButtonNode.removeFromSupernode()
     }
     
-    func setBackButtonTitle(backButtonTitle: String) {
+    func setBackButtonTitle(_ backButtonTitle: String) {
         self.backButtonNode.text = backButtonTitle
         self.layoutItems()
     }
     
-    func setTitle(title: String) {
+    func setTitle(_ title: String) {
         self.titleNode.text = title
         self.layoutItems()
     }
     
-    func setLeftBarButtonItem(leftBarButtonItem: UIBarButtonItem?, animated: Bool) {
+    func setLeftBarButtonItem(_ leftBarButtonItem: UIBarButtonItem?, animated: Bool) {
         if self.leftBarButtonItem !== leftBarButtonItem {
             self.leftBarButtonItem = leftBarButtonItem
             
@@ -102,10 +102,10 @@ internal class NavigationItemWrapper {
             }
         }
         
-        self.backButtonNode.hidden = self.previousNavigationItem == nil || self.leftBarButtonItemWrapper != nil
+        self.backButtonNode.isHidden = self.previousNavigationItem == nil || self.leftBarButtonItemWrapper != nil
     }
     
-    func setRightBarButtonItem(rightBarButtonItem: UIBarButtonItem?, animated: Bool) {
+    func setRightBarButtonItem(_ rightBarButtonItem: UIBarButtonItem?, animated: Bool) {
         if self.rightBarButtonItem !== rightBarButtonItem {
             self.rightBarButtonItem = rightBarButtonItem
             
@@ -135,7 +135,7 @@ internal class NavigationItemWrapper {
     var titlePosition: CGPoint {
         get {
             let titleFrame = self.titleFrame
-            return CGPoint(x: CGRectGetMidX(titleFrame), y: CGRectGetMidY(titleFrame))
+            return CGPoint(x: titleFrame.midX, y: titleFrame.midY)
         }
     }
     
@@ -156,7 +156,7 @@ internal class NavigationItemWrapper {
     var backButtonLabelPosition: CGPoint {
         get {
             let backButtonLabelFrame = self.backButtonLabelFrame
-            return CGPoint(x: CGRectGetMidX(backButtonLabelFrame), y: CGRectGetMidY(backButtonLabelFrame))
+            return CGPoint(x: backButtonLabelFrame.midX, y: backButtonLabelFrame.midY)
         }
     }
     
@@ -184,7 +184,7 @@ internal class NavigationItemWrapper {
     
     var transitionState: NavigationItemTransitionState {
         get {
-            return NavigationItemTransitionState(backButtonPosition: self.backButtonNode.hidden ? nil : self.backButtonLabelPosition, titlePosition: self.titlePosition)
+            return NavigationItemTransitionState(backButtonPosition: self.backButtonNode.isHidden ? nil : self.backButtonLabelPosition, titlePosition: self.titlePosition)
         }
     }
     
@@ -207,19 +207,19 @@ internal class NavigationItemWrapper {
             rightBarButtonItemWrapper.buttonNode.frame = self.rightButtonFrame!
         }
         
-        self.titleNode.measure(CGSize(width: max(0.0, self.parentNode.bounds.size.width - 140.0), height: CGFloat.max))
+        self.titleNode.measure(CGSize(width: max(0.0, self.parentNode.bounds.size.width - 140.0), height: CGFloat.greatestFiniteMagnitude))
         self.titleNode.frame = self.titleFrame
     }
     
-    func interpolatePosition(from: CGPoint, _ to: CGPoint, value: CGFloat) -> CGPoint {
+    func interpolatePosition(_ from: CGPoint, _ to: CGPoint, value: CGFloat) -> CGPoint {
         return CGPoint(x: from.x * (CGFloat(1.0) - value) + to.x * value, y: from.y * (CGFloat(1.0) - value) + to.y * value)
     }
     
-    func interpolateValue(from: CGFloat, _ to: CGFloat, value: CGFloat) -> CGFloat {
+    func interpolateValue(_ from: CGFloat, _ to: CGFloat, value: CGFloat) -> CGFloat {
         return (from * (CGFloat(1.0) - value)) + (to * value)
     }
     
-    func applyPushAnimationProgress(previousItemState previousItemState: NavigationItemTransitionState, value: CGFloat) {
+    func applyPushAnimationProgress(previousItemState: NavigationItemTransitionState, value: CGFloat) {
         let titleStartPosition = CGPoint(x: self.parentNode.frame.size.width + self.titleNode.frame.size.width / 2.0, y: self.titlePosition.y)
         let titleStartAlpha: CGFloat = 0.0
         let titleEndPosition = self.titlePosition
@@ -234,7 +234,7 @@ internal class NavigationItemWrapper {
         self.backButtonNode.alpha = self.interpolateValue(0.0, 1.0, value: value)
     }
     
-    func applyPushAnimationProgress(nextItemState nextItemState: NavigationItemTransitionState, value: CGFloat) {
+    func applyPushAnimationProgress(nextItemState: NavigationItemTransitionState, value: CGFloat) {
         let titleStartPosition = self.titlePosition
         let titleStartAlpha: CGFloat = 1.0
         var titleEndPosition = CGPoint(x: -self.titleNode.frame.size.width / 2.0, y: self.titlePosition.y)
@@ -254,7 +254,7 @@ internal class NavigationItemWrapper {
         self.backButtonNode.arrow.alpha = self.interpolateValue(1.0, nextItemState.backButtonPosition == nil ? 0.0 : 1.0, value: value)
     }
     
-    func applyPopAnimationProgress(previousItemState previousItemState: NavigationItemTransitionState, value: CGFloat) {
+    func applyPopAnimationProgress(previousItemState: NavigationItemTransitionState, value: CGFloat) {
         var titleStartPosition = CGPoint(x: -self.titleNode.frame.size.width / 2.0, y: self.titlePosition.y)
         if let previousItemBackButtonPosition = previousItemState.backButtonPosition {
             titleStartPosition = previousItemBackButtonPosition
@@ -273,7 +273,7 @@ internal class NavigationItemWrapper {
         self.backButtonNode.arrow.alpha = self.interpolateValue(previousItemState.backButtonPosition == nil ? 0.0 : 1.0, 1.0, value: value)
     }
     
-    func applyPopAnimationProgress(nextItemState nextItemState: NavigationItemTransitionState, value: CGFloat) {
+    func applyPopAnimationProgress(nextItemState: NavigationItemTransitionState, value: CGFloat) {
         let titleStartPosition = self.titlePosition
         let titleStartAlpha: CGFloat = 1.0
         let titleEndPosition = CGPoint(x: self.parentNode.frame.size.width + self.titleNode.frame.size.width / 2.0, y: self.titlePosition.y)
@@ -289,7 +289,7 @@ internal class NavigationItemWrapper {
         self.backButtonNode.arrow.alpha = self.interpolateValue(1.0, 0.0, value: value)
     }
     
-    func animatePush(previousItemWrapper: NavigationItemWrapper?, duration: NSTimeInterval) {
+    func animatePush(previousItemWrapper: NavigationItemWrapper?, duration: Double) {
         if let previousItemWrapper = previousItemWrapper {
             self.suspendLayout = true
             self.backButtonNode.suspendLayout = true
@@ -300,7 +300,7 @@ internal class NavigationItemWrapper {
             self.applyPushAnimationProgress(previousItemState: previousItemState, value: 0.0)
             previousItemWrapper.applyPushAnimationProgress(nextItemState: transitionState, value: 0.0)
             
-            UIView.animateWithDuration(duration, delay: 0.0, options: UIViewAnimationOptions(rawValue: 7 << 16), animations: { () -> Void in
+            UIView.animate(withDuration: duration, delay: 0.0, options: UIViewAnimationOptions(rawValue: 7 << 16), animations: { () -> Void in
                 self.applyPushAnimationProgress(previousItemState: previousItemState, value: 1.0)
                 previousItemWrapper.applyPushAnimationProgress(nextItemState: transitionState, value: 1.0)
             }, completion: { completed in
@@ -312,12 +312,12 @@ internal class NavigationItemWrapper {
         }
     }
     
-    func animatePop(previousItemWrapper: NavigationItemWrapper?, duration: NSTimeInterval) {
+    func animatePop(previousItemWrapper: NavigationItemWrapper?, duration: Double) {
         if let previousItemWrapper = previousItemWrapper {
             self.applyPopAnimationProgress(previousItemState: previousItemWrapper.transitionState, value: 0.0)
             previousItemWrapper.applyPopAnimationProgress(nextItemState: self.transitionState, value: 0.0)
             
-            UIView.animateWithDuration(duration, delay: 0.0, options: UIViewAnimationOptions(rawValue: 7 << 16), animations: { () -> Void in
+            UIView.animate(withDuration: duration, delay: 0.0, options: UIViewAnimationOptions(rawValue: 7 << 16), animations: { () -> Void in
                 self.applyPopAnimationProgress(previousItemState: previousItemWrapper.transitionState, value: 1.0)
                 previousItemWrapper.applyPopAnimationProgress(nextItemState: self.transitionState, value: 1.0)
             }, completion: { completed in

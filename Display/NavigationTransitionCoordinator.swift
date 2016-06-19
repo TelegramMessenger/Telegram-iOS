@@ -8,7 +8,7 @@ enum NavigationTransition {
 private let shadowWidth: CGFloat = 16.0
 
 private func generateShadow() -> UIImage? {
-    return UIImage(named: "NavigationShadow", inBundle: NSBundle(forClass: NavigationBackButtonNode.self), compatibleWithTraitCollection: nil)?.precomposed().resizableImageWithCapInsets(UIEdgeInsetsZero, resizingMode: .Tile)
+    return UIImage(named: "NavigationShadow", in: Bundle(for: NavigationBackButtonNode.self), compatibleWith: nil)?.precomposed().resizableImage(withCapInsets: UIEdgeInsetsZero, resizingMode: .tile)
 }
 
 private let shadowImage = generateShadow()
@@ -49,7 +49,7 @@ class NavigationTransitionCoordinator {
         self.topNavigationBar = topNavigationBar
         self.bottomNavigationBar = bottomNavigationBar
         self.dimView = UIView()
-        self.dimView.backgroundColor = UIColor.blackColor()
+        self.dimView.backgroundColor = UIColor.black()
         self.shadowView = UIImageView(image: shadowImage)
         
         switch transition {
@@ -87,8 +87,8 @@ class NavigationTransitionCoordinator {
         (self.container.window as? Window)?.updateStatusBars()
     }
     
-    func animateCancel(completion: () -> ()) {
-        UIView.animateWithDuration(0.1, delay: 0.0, options: UIViewAnimationOptions(), animations: { () -> Void in
+    func animateCancel(_ completion: () -> ()) {
+        UIView.animate(withDuration: 0.1, delay: 0.0, options: UIViewAnimationOptions(), animations: { () -> Void in
             self.progress = 0.0
         }) { (completed) -> Void in
             switch self.transition {
@@ -115,7 +115,7 @@ class NavigationTransitionCoordinator {
         }
     }
     
-    func animateCompletion(velocity: CGFloat, completion: () -> ()) {
+    func animateCompletion(_ velocity: CGFloat, completion: () -> ()) {
         let distance = (1.0 - self.progress) * self.container.bounds.size.width
         let f = {
             switch self.transition {
@@ -142,13 +142,13 @@ class NavigationTransitionCoordinator {
         }
         
         if abs(velocity) < CGFloat(FLT_EPSILON) && abs(self.progress) < CGFloat(FLT_EPSILON) {
-            UIView.animateWithDuration(0.5, delay: 0.0, options: UIViewAnimationOptions(rawValue: 7 << 16), animations: {
+            UIView.animate(withDuration: 0.5, delay: 0.0, options: UIViewAnimationOptions(rawValue: 7 << 16), animations: {
                 self.progress = 1.0
             }, completion: { _ in
                 f()
             })
         } else {
-            UIView.animateWithDuration(NSTimeInterval(max(0.05, min(0.2, abs(distance / velocity)))), delay: 0.0, options: UIViewAnimationOptions(), animations: { () -> Void in
+            UIView.animate(withDuration: Double(max(0.05, min(0.2, abs(distance / velocity)))), delay: 0.0, options: UIViewAnimationOptions(), animations: { () -> Void in
                 self.progress = 1.0
             }) { (completed) -> Void in
                 f()

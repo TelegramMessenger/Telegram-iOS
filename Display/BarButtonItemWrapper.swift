@@ -24,12 +24,12 @@ internal class BarButtonItemWrapper {
         self.parentNode.addSubnode(self.buttonNode)
         
         self.setEnabledListenerKey = barButtonItem.addSetEnabledListener({ [weak self] enabled in
-            self?.buttonNode.enabled = enabled.boolValue
+            self?.buttonNode.isEnabled = enabled.boolValue
             return
         })
         
         self.setTitleListenerKey = barButtonItem.addSetTitleListener({ [weak self] title in
-            self?.buttonNode.text = title
+            self?.buttonNode.text = title ?? ""
             if let layoutNeeded = self?.layoutNeeded {
                 layoutNeeded()
             }
@@ -37,8 +37,8 @@ internal class BarButtonItemWrapper {
         })
         
         self.buttonNode.text = barButtonItem.title ?? ""
-        self.buttonNode.enabled = barButtonItem.enabled ?? true
-        self.buttonNode.bold = (barButtonItem.style ?? UIBarButtonItemStyle.Plain) == UIBarButtonItemStyle.Done
+        self.buttonNode.isEnabled = barButtonItem.isEnabled ?? true
+        self.buttonNode.bold = (barButtonItem.style ?? UIBarButtonItemStyle.plain) == UIBarButtonItemStyle.done
     }
     
     deinit {

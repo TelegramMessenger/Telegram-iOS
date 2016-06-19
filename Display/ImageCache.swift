@@ -1,6 +1,6 @@
 import Foundation
 
-private final class ImageCacheData {
+/*private final class ImageCacheData {
     let size: CGSize
     let bytesPerRow: Int
     var data: NSPurgeableData
@@ -16,7 +16,7 @@ private final class ImageCacheData {
         return nil
     }
     
-    init(size: CGSize, generator: CGContextRef -> Void, @noescape takenImage: UIImage -> Void) {
+    init(size: CGSize, generator: (CGContext) -> Void, takenImage: @noescape(UIImage) -> Void) {
         self.size = size
         
         self.bytesPerRow = (4 * Int(size.width) + 15) & (~15)
@@ -43,7 +43,7 @@ private final class ImageCacheData {
     
     private func createImage() -> UIImage {
         let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let bitmapInfo = CGImageAlphaInfo.PremultipliedFirst.rawValue | CGBitmapInfo.ByteOrder32Little.rawValue
+        let bitmapInfo = CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
         
         let unmanagedData = withUnsafePointer(&self.data, { pointer in
             return Unmanaged<NSPurgeableData>.fromOpaque(COpaquePointer(pointer))
@@ -151,4 +151,4 @@ public final class ImageCache {
         self.nextAccessIndex += 1
         self.residentImages[key] = ImageCacheResidentImage(key: key, image: image, accessIndex: self.nextAccessIndex)
     }
-}
+}*/

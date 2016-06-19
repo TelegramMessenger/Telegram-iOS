@@ -1,27 +1,26 @@
 import Foundation
-import Display
 
 public protocol Interpolatable {
     static func interpolator() -> (Interpolatable, Interpolatable, CGFloat) -> (Interpolatable)
 }
 
-private func floorToPixels(value: CGFloat) -> CGFloat {
+private func floorToPixels(_ value: CGFloat) -> CGFloat {
     return round(value * 10.0) / 10.0
 }
 
-private func floorToPixels(value: CGPoint) -> CGPoint {
+private func floorToPixels(_ value: CGPoint) -> CGPoint {
     return CGPoint(x: round(value.x * 10.0) / 10.0, y: round(value.y * 10.0) / 10.0)
 }
 
-private func floorToPixels(value: CGSize) -> CGSize {
+private func floorToPixels(_ value: CGSize) -> CGSize {
     return CGSize(width: round(value.width * 10.0) / 10.0, height: round(value.height * 10.0) / 10.0)
 }
 
-private func floorToPixels(value: CGRect) -> CGRect {
+private func floorToPixels(_ value: CGRect) -> CGRect {
     return CGRect(origin: floorToPixels(value.origin), size: floorToPixels(value.size))
 }
 
-private func floorToPixels(value: UIEdgeInsets) -> UIEdgeInsets {
+private func floorToPixels(_ value: UIEdgeInsets) -> UIEdgeInsets {
     return UIEdgeInsets(top: round(value.top * 10.0) / 10.0, left: round(value.left * 10.0) / 10.0, bottom: round(value.bottom * 10.0) / 10.0, right: round(value.right * 10.0) / 10.0)
 }
 
@@ -63,25 +62,21 @@ extension CGPoint: Interpolatable {
     }
 }
 
-private let springAnimationIn: CASpringAnimation = {
-    let animation = CASpringAnimation()
-    animation.damping = 500.0
-    animation.stiffness = 1000.0
-    animation.mass = 3.0
-    animation.duration = animation.settlingDuration
+private let springAnimationIn: CABasicAnimation = {
+    let animation = makeSpringAnimation("")
     return animation
 }()
 
-public let listViewAnimationCurveSystem: CGFloat -> CGFloat = { t in
+public let listViewAnimationCurveSystem: (CGFloat) -> CGFloat = { t in
     //return bezierPoint(0.23, 1.0, 0.32, 1.0, t)
-    return springAnimationIn.valueAt(t)
+    return springAnimationValueAt(springAnimationIn, t)
 }
 
-public let listViewAnimationCurveLinear: CGFloat -> CGFloat = { t in
+public let listViewAnimationCurveLinear: (CGFloat) -> CGFloat = { t in
     return t
 }
 
-public func listViewAnimationCurveFromAnimationOptions(animationOptions: UIViewAnimationOptions) -> CGFloat -> CGFloat {
+public func listViewAnimationCurveFromAnimationOptions(animationOptions: UIViewAnimationOptions) -> (CGFloat) -> CGFloat {
     if animationOptions.rawValue == UInt(7 << 16) {
         return listViewAnimationCurveSystem
     } else {
@@ -94,12 +89,12 @@ public final class ListViewAnimation {
     let to: Interpolatable
     let duration: Double
     let startTime: Double
-    private let curve: CGFloat -> CGFloat
+    private let curve: (CGFloat) -> CGFloat
     private let interpolator: (Interpolatable, Interpolatable, CGFloat) -> Interpolatable
     private let update: (CGFloat, Interpolatable) -> Void
-    private let completed: Bool -> Void
+    private let completed: (Bool) -> Void
     
-    public init<T: Interpolatable>(from: T, to: T, duration: Double, curve: CGFloat -> CGFloat, beginAt: Double, update: (CGFloat, T) -> Void, completed: Bool -> Void = { _ in }) {
+    public init<T: Interpolatable>(from: T, to: T, duration: Double, curve: (CGFloat) -> CGFloat, beginAt: Double, update: (CGFloat, T) -> Void, completed: (Bool) -> Void = { _ in }) {
         self.from = from
         self.to = to
         self.duration = duration
@@ -112,7 +107,7 @@ public final class ListViewAnimation {
         self.completed = completed
     }
     
-    public func completeAt(timestamp: Double) -> Bool {
+    public func completeAt(_ timestamp: Double) -> Bool {
         if timestamp >= self.startTime + self.duration {
             self.completed(true)
             return true
@@ -125,7 +120,7 @@ public final class ListViewAnimation {
         self.completed(false)
     }
     
-    private func valueAt(t: CGFloat) -> Interpolatable {
+    private func valueAt(_ t: CGFloat) -> Interpolatable {
         if t <= 0.0 {
             return self.from
         } else if t >= 1.0 {
@@ -135,7 +130,7 @@ public final class ListViewAnimation {
         }
     }
     
-    public func applyAt(timestamp: Double) {
+    public func applyAt(_ timestamp: Double) {
         var t = CGFloat((timestamp - self.startTime) / self.duration)
         let ct: CGFloat
         if t <= 0.0 + CGFloat(FLT_EPSILON) {

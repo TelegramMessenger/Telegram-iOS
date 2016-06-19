@@ -18,7 +18,7 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
     private var statusBarChangeObserver: AnyObject?
     
     private var layout: NavigationControllerLayout?
-    private var pendingLayout: (NavigationControllerLayout, NSTimeInterval, Bool)?
+    private var pendingLayout: (NavigationControllerLayout, Double, Bool)?
     
     private var _presentedViewController: UIViewController?
     public override var presentedViewController: UIViewController? {
@@ -41,9 +41,9 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
     public override init() {
         super.init()
         
-        self.statusBarChangeObserver = NSNotificationCenter.defaultCenter().addObserverForName(UIApplicationWillChangeStatusBarFrameNotification, object: nil, queue: NSOperationQueue.mainQueue(), usingBlock: { [weak self] notification in
+        self.statusBarChangeObserver = NotificationCenter.default().addObserver(forName: NSNotification.Name.UIApplicationWillChangeStatusBarFrame, object: nil, queue: OperationQueue.main(), using: { [weak self] notification in
             if let strongSelf = self {
-                let statusBarHeight: CGFloat = max(20.0, (notification.userInfo?[UIApplicationStatusBarFrameUserInfoKey] as? NSValue)?.CGRectValue().height ?? 20.0)
+                let statusBarHeight: CGFloat = max(20.0, (notification.userInfo?[UIApplicationStatusBarFrameUserInfoKey] as? NSValue)?.cgRectValue().height ?? 20.0)
                 
                 let previousLayout: NavigationControllerLayout?
                 if let pendingLayout = strongSelf.pendingLayout {
@@ -59,7 +59,7 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
         })
     }
     
-    public override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: NSBundle?) {
+    public override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
         super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
     }
     
@@ -84,17 +84,17 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
         }
     }
     
-    func panGesture(recognizer: UIPanGestureRecognizer) {
+    @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
         switch recognizer.state {
-            case UIGestureRecognizerState.Began:
+            case UIGestureRecognizerState.began:
                 if self.viewControllers.count >= 2 && self.navigationTransitionCoordinator == nil {
                     let topController = self.viewControllers[self.viewControllers.count - 1] as UIViewController
                     let bottomController = self.viewControllers[self.viewControllers.count - 2] as UIViewController
                     
                     topController.viewWillDisappear(true)
-                    let topView = topController.view
+                    let topView = topController.view!
                     bottomController.viewWillAppear(true)
-                    let bottomView = bottomController.view
+                    let bottomView = bottomController.view!
                     
                     var bottomStatusBar: StatusBar?
                     if let bottomController = bottomController as? ViewController {
@@ -110,14 +110,14 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
                     let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, container: self.view, topView: topView, topNavigationBar: (topController as? ViewController)?.navigationBar, bottomView: bottomView, bottomNavigationBar: (bottomController as? ViewController)?.navigationBar)
                     self.navigationTransitionCoordinator = navigationTransitionCoordinator
                 }
-            case UIGestureRecognizerState.Changed:
+            case UIGestureRecognizerState.changed:
                 if let navigationTransitionCoordinator = self.navigationTransitionCoordinator {
-                    let translation = recognizer.translationInView(self.view).x
+                    let translation = recognizer.translation(in: self.view).x
                     navigationTransitionCoordinator.progress = max(0.0, min(1.0, translation / self.view.frame.width))
                 }
-            case UIGestureRecognizerState.Ended:
+            case UIGestureRecognizerState.ended:
                 if let navigationTransitionCoordinator = self.navigationTransitionCoordinator {
-                    let velocity = recognizer.velocityInView(self.view).x
+                    let velocity = recognizer.velocity(in: self.view).x
                     
                     if velocity > 1000 || navigationTransitionCoordinator.progress > 0.2 {
                         navigationTransitionCoordinator.animateCompletion(velocity, completion: {
@@ -131,7 +131,7 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
                                 
                                 topController.setIgnoreAppearanceMethodInvocations(true)
                                 bottomController.setIgnoreAppearanceMethodInvocations(true)
-                                self.popViewControllerAnimated(false)
+                                let _ = self.popViewController(animated: false)
                                 topController.setIgnoreAppearanceMethodInvocations(false)
                                 bottomController.setIgnoreAppearanceMethodInvocations(false)
                                 
@@ -175,7 +175,7 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
                         })
                     }
                 }
-            case .Cancelled:
+            case .cancelled:
                 if let navigationTransitionCoordinator = self.navigationTransitionCoordinator {
                     if self.viewControllers.count >= 2 && self.navigationTransitionCoordinator == nil {
                         let topController = self.viewControllers[self.viewControllers.count - 1] as UIViewController
@@ -207,7 +207,7 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
         }
     }
     
-    public func pushViewController(controller: ViewController) {
+    public func pushViewController(_ controller: ViewController) {
         let layout: NavigationControllerLayout
         if let currentLayout = self.layout {
             layout = currentLayout
@@ -222,7 +222,7 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
         }))
     }
     
-    public override func pushViewController(viewController: UIViewController, animated: Bool) {
+    public override func pushViewController(_ viewController: UIViewController, animated: Bool) {
         self.currentPushDisposable.set(nil)
         
         var controllers = self.viewControllers
@@ -230,18 +230,18 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
         self.setViewControllers(controllers, animated: animated)
     }
     
-    public override func popViewControllerAnimated(animated: Bool) -> UIViewController? {
+    public override func popViewController(animated: Bool) -> UIViewController? {
         var controller: UIViewController?
         var controllers = self.viewControllers
         if controllers.count != 0 {
             controller = controllers[controllers.count - 1] as UIViewController
-            controllers.removeAtIndex(controllers.count - 1)
+            controllers.remove(at: controllers.count - 1)
             self.setViewControllers(controllers, animated: animated)
         }
         return controller
     }
     
-    public override func setViewControllers(viewControllers: [UIViewController], animated: Bool) {
+    public override func setViewControllers(_ viewControllers: [UIViewController], animated: Bool) {
         if viewControllers.count > 0 {
             let topViewController = viewControllers[viewControllers.count - 1] as UIViewController
             
@@ -268,9 +268,9 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
             }
             
             bottomController.viewWillDisappear(true)
-            let bottomView = bottomController.view
+            let bottomView = bottomController.view!
             topController.viewWillAppear(true)
-            let topView = topController.view
+            let topView = topController.view!
             
             let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Push, container: self.view, topView: topView, topNavigationBar: (topController as? ViewController)?.navigationBar, bottomView: bottomView, bottomNavigationBar: (bottomController as? ViewController)?.navigationBar)
             self.navigationTransitionCoordinator = navigationTransitionCoordinator
@@ -334,11 +334,11 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
         }
     }
     
-    private func childControllerLayoutForLayout(layout: NavigationControllerLayout) -> ViewControllerLayout {
+    private func childControllerLayoutForLayout(_ layout: NavigationControllerLayout) -> ViewControllerLayout {
         return ViewControllerLayout(size: layout.layout.size, insets: layout.layout.insets, inputViewHeight: 0.0, statusBarHeight: layout.statusBarHeight)
     }
     
-    public func setParentLayout(layout: ViewControllerLayout, duration: NSTimeInterval, curve: UInt) {
+    public func setParentLayout(_ layout: ViewControllerLayout, duration: Double, curve: UInt) {
         let previousLayout: NavigationControllerLayout?
         if let pendingLayout = self.pendingLayout {
             previousLayout = pendingLayout.0
@@ -387,7 +387,7 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
                         
                         controller.setParentLayout(self.childControllerLayoutForLayout(pendingLayout.0), duration: pendingLayout.1, curve: 0)
                     } else {
-                        bottomController.view.frame = CGRectMake(0.0, 0.0, pendingLayout.0.layout.size.width, pendingLayout.0.layout.size.height)
+                        bottomController.view.frame = CGRect(x: 0.0, y: 0.0, width: pendingLayout.0.layout.size.width, height: pendingLayout.0.layout.size.height)
                     }
                 }
                 
@@ -398,7 +398,7 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
                 if let controller = topViewController as? WindowContentController {
                     controller.setParentLayout(self.childControllerLayoutForLayout(pendingLayout.0), duration: pendingLayout.1, curve: 0)
                 } else {
-                    topViewController.view.frame = CGRectMake(0.0, 0.0, pendingLayout.0.layout.size.width, pendingLayout.0.layout.size.height)
+                    topViewController.view.frame = CGRect(x: 0.0, y: 0.0, width: pendingLayout.0.layout.size.width, height: pendingLayout.0.layout.size.height)
                 }
             }
             
@@ -406,7 +406,7 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
                 if let controller = presentedViewController as? WindowContentController {
                     controller.setParentLayout(self.childControllerLayoutForLayout(pendingLayout.0), duration: pendingLayout.1, curve: 0)
                 } else {
-                    presentedViewController.view.frame = CGRectMake(0.0, 0.0, pendingLayout.0.layout.size.width, pendingLayout.0.layout.size.height)
+                    presentedViewController.view.frame = CGRect(x: 0.0, y: 0.0, width: pendingLayout.0.layout.size.width, height: pendingLayout.0.layout.size.height)
                 }
             }
             
@@ -418,9 +418,9 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
         }
     }
     
-    override public func presentViewController(viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)?) {
+    override public func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
         if let controller = viewControllerToPresent as? NavigationController {
-            controller.navigation_setPresentingViewController(self)
+            controller.navigation_setPresenting(self)
             self._presentedViewController = controller
             
             self.view.endEditing(true)
@@ -438,7 +438,7 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
                 controller.view.frame = self.view.bounds.offsetBy(dx: 0.0, dy: self.view.bounds.height)
                 self.view.addSubview(controller.view)
                 (self.view.window as? Window)?.updateStatusBars()
-                UIView.animateWithDuration(0.3, delay: 0.0, options: UIViewAnimationOptions(rawValue: 7 << 16), animations: {
+                UIView.animate(withDuration: 0.3, delay: 0.0, options: UIViewAnimationOptions(rawValue: 7 << 16), animations: {
                     controller.view.frame = self.view.bounds
                     (self.view.window as? Window)?.updateStatusBars()
                 }, completion: { _ in
@@ -459,11 +459,10 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
         }
     }
     
-    override public func dismissViewControllerAnimated(flag: Bool, completion: (() -> Void)?) {
+    override public func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         if let controller = self.presentedViewController {
-            
             if flag {
-                UIView.animateWithDuration(0.3, delay: 0.0, options: UIViewAnimationOptions(rawValue: 7 << 16), animations: {
+                UIView.animate(withDuration: 0.3, delay: 0.0, options: UIViewAnimationOptions(rawValue: 7 << 16), animations: {
                     controller.view.frame = self.view.bounds.offsetBy(dx: 0.0, dy: self.view.bounds.height)
                     (self.view.window as? Window)?.updateStatusBars()
                 }, completion: { _ in
@@ -484,18 +483,18 @@ public class NavigationController: NavigationControllerProxy, WindowContentContr
         }
     }
     
-    public func gestureRecognizer(gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWithGestureRecognizer otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return false
     }
     
-    public func gestureRecognizer(gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailByGestureRecognizer otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return otherGestureRecognizer is UIPanGestureRecognizer
     }
     
     func statusBarSurfaces() -> [StatusBarSurface] {
         var surfaces: [StatusBarSurface] = [self.statusBarSurface]
         if let controller = self.presentedViewController as? StatusBarSurfaceProvider {
-            surfaces.appendContentsOf(controller.statusBarSurfaces())
+            surfaces.append(contentsOf: controller.statusBarSurfaces())
         }
         return surfaces
     }

@@ -12,23 +12,23 @@ private struct MappedStatusBarSurface {
     let surface: StatusBarSurface
 }
 
-private func mapStatusBar(statusBar: StatusBar) -> MappedStatusBar {
-    let frame = CGRect(origin: statusBar.view.convertPoint(CGPoint(), toView: nil), size: statusBar.frame.size)
+private func mapStatusBar(_ statusBar: StatusBar) -> MappedStatusBar {
+    let frame = CGRect(origin: statusBar.view.convert(CGPoint(), to: nil), size: statusBar.frame.size)
     return MappedStatusBar(style: statusBar.style, frame: frame, statusBar: statusBar)
 }
 
-private func mappedSurface(surface: StatusBarSurface) -> MappedStatusBarSurface {
+private func mappedSurface(_ surface: StatusBarSurface) -> MappedStatusBarSurface {
     return MappedStatusBarSurface(statusBars: surface.statusBars.map(mapStatusBar), surface: surface)
 }
 
-private func optimizeMappedSurface(surface: MappedStatusBarSurface) -> MappedStatusBarSurface {
+private func optimizeMappedSurface(_ surface: MappedStatusBarSurface) -> MappedStatusBarSurface {
     if surface.statusBars.count > 1 {
         for i in 1 ..< surface.statusBars.count {
             if surface.statusBars[i].style != surface.statusBars[i - 1].style || abs(surface.statusBars[i].frame.origin.y - surface.statusBars[i - 1].frame.origin.y) > CGFloat(FLT_EPSILON) {
                 return surface
             }
         }
-        let size = UIApplication.sharedApplication().statusBarFrame.size
+        let size = UIApplication.shared().statusBarFrame.size
         return MappedStatusBarSurface(statusBars: [MappedStatusBar(style: surface.statusBars[0].style, frame: CGRect(origin: CGPoint(x: 0.0, y: surface.statusBars[0].frame.origin.y), size: size), statusBar: nil)], surface: surface.surface)
     } else {
         return surface
@@ -37,12 +37,12 @@ private func optimizeMappedSurface(surface: MappedStatusBarSurface) -> MappedSta
 
 private func displayHiddenAnimation() -> CAAnimation {
     let animation = CABasicAnimation(keyPath: "transform.translation.y")
-    animation.fromValue = NSNumber(float: -40.0)
-    animation.toValue = NSNumber(float: -40.0)
+    animation.fromValue = NSNumber(value: Float(-40.0))
+    animation.toValue = NSNumber(value: Float(-40.0))
     animation.fillMode = kCAFillModeBoth
     animation.duration = 100000000.0
-    animation.additive = true
-    animation.removedOnCompletion = false
+    animation.isAdditive = true
+    animation.isRemovedOnCompletion = false
     
     return animation
 }
@@ -54,7 +54,7 @@ class StatusBarManager {
         }
     }
     
-    private func updateSurfaces(previousSurfaces: [StatusBarSurface]) {
+    private func updateSurfaces(_ previousSurfaces: [StatusBarSurface]) {
         let mappedSurfaces = self.surfaces.map({ optimizeMappedSurface(mappedSurface($0)) })
         
         var visibleStatusBars: [StatusBar] = []
@@ -93,16 +93,16 @@ class StatusBarManager {
         }
         
         if let globalStatusBar = globalStatusBar {
-            StatusBarUtils.statusBarWindow()!.hidden = false
-            let statusBarStyle: UIStatusBarStyle = globalStatusBar.0 == .Black ? .Default : .LightContent
-            if UIApplication.sharedApplication().statusBarStyle != statusBarStyle {
-                UIApplication.sharedApplication().setStatusBarStyle(statusBarStyle, animated: false)
+            StatusBarUtils.statusBarWindow()!.isHidden = false
+            let statusBarStyle: UIStatusBarStyle = globalStatusBar.0 == .Black ? .default : .lightContent
+            if UIApplication.shared().statusBarStyle != statusBarStyle {
+                UIApplication.shared().setStatusBarStyle(statusBarStyle, animated: false)
             }
-            StatusBarUtils.statusBarWindow()!.layer.removeAnimationForKey("displayHidden")
-            StatusBarUtils.statusBarWindow()!.transform = CGAffineTransformMakeTranslation(0.0, globalStatusBar.1)
+            StatusBarUtils.statusBarWindow()!.layer.removeAnimation(forKey: "displayHidden")
+            StatusBarUtils.statusBarWindow()!.transform = CGAffineTransform(translationX: 0.0, y: globalStatusBar.1)
         } else {
-            if StatusBarUtils.statusBarWindow()!.layer.animationForKey("displayHidden") == nil {
-                StatusBarUtils.statusBarWindow()!.layer.addAnimation(displayHiddenAnimation(), forKey: "displayHidden")
+            if StatusBarUtils.statusBarWindow()!.layer.animation(forKey: "displayHidden") == nil {
+                StatusBarUtils.statusBarWindow()!.layer.add(displayHiddenAnimation(), forKey: "displayHidden")
             }
         }
         

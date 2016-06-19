@@ -18,7 +18,7 @@ public class NavigationTitleNode: ASDisplayNode {
     public init(text: NSString) {
         self.label = ASTextNode()
         self.label.maximumNumberOfLines = 1
-        self.label.truncationMode = .ByTruncatingTail
+        self.label.truncationMode = .byTruncatingTail
         self.label.displaysAsynchronously = false
         
         super.init()
@@ -32,16 +32,16 @@ public class NavigationTitleNode: ASDisplayNode {
         fatalError("init(coder:) has not been implemented")
     }
     
-    private func setText(text: NSString) {
+    private func setText(_ text: NSString) {
         var titleAttributes = [String : AnyObject]()
-        titleAttributes[NSFontAttributeName] = UIFont.boldSystemFontOfSize(17.0)
-        titleAttributes[NSForegroundColorAttributeName] = UIColor.blackColor()
-        let titleString = NSAttributedString(string: text as String, attributes: titleAttributes)
+        titleAttributes[NSFontAttributeName] = UIFont.boldSystemFont(ofSize: 17.0)
+        titleAttributes[NSForegroundColorAttributeName] = UIColor.black()
+        let titleString = AttributedString(string: text as String, attributes: titleAttributes)
         self.label.attributedString = titleString
         self.invalidateCalculatedLayout()
     }
     
-    public override func calculateSizeThatFits(constrainedSize: CGSize) -> CGSize {
+    public override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         self.label.measure(constrainedSize)
         return self.label.calculatedSize
     }

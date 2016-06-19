@@ -1,6 +1,6 @@
 import Foundation
 
 public protocol ListViewAccessoryItem {
-    func isEqualToItem(other: ListViewAccessoryItem) -> Bool
+    func isEqualToItem(_ other: ListViewAccessoryItem) -> Bool
     func node() -> ListViewAccessoryItemNode
 }

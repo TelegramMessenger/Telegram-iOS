@@ -2,11 +2,11 @@ import Foundation
 import UIKit
 
 private let systemVersion = { () -> (Int, Int) in
-    let string = UIDevice.currentDevice().systemVersion as NSString
+    let string = UIDevice.current().systemVersion as NSString
     var minor = 0
-    let range = string.rangeOfString(".")
+    let range = string.range(of: ".")
     if range.location != NSNotFound {
-        minor = Int((string.substringFromIndex(range.location + 1) as NSString).intValue)
+        minor = Int((string.substring(from: range.location + 1) as NSString).intValue)
     }
     return (Int(string.intValue), minor)
 }()
