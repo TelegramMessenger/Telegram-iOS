@@ -10,7 +10,7 @@ final class MetadataTable: Table {
         super.init(valueBox: valueBox, tableId: tableId)
     }
     
-    private func key(key: MetadataKey) -> ValueBoxKey {
+    private func key(_ key: MetadataKey) -> ValueBoxKey {
         let valueBoxKey = ValueBoxKey(length: 4)
         valueBoxKey.setInt32(0, value: key.rawValue)
         return valueBoxKey
@@ -25,7 +25,7 @@ final class MetadataTable: Table {
         return nil
     }
     
-    func setUserVersion(version: Int32) {
+    func setUserVersion(_ version: Int32) {
         let buffer = WriteBuffer()
         var varVersion: Int32 = version
         buffer.write(&varVersion, offset: 0, length: 4)
@@ -41,7 +41,7 @@ final class MetadataTable: Table {
         return nil
     }
     
-    func setState(state: Coding) {
+    func setState(_ state: Coding) {
         let encoder = Encoder()
         encoder.encodeRootObject(state)
         self.valueBox.set(self.tableId, key: self.key(.State), value: encoder.readBufferNoCopy())

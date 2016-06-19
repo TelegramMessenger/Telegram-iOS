@@ -12,12 +12,12 @@ final class GlobalMessageIdsTable: Table {
         super.init(valueBox: valueBox, tableId: tableId)
     }
     
-    private func key(id: Int32) -> ValueBoxKey {
+    private func key(_ id: Int32) -> ValueBoxKey {
         self.sharedKey.setInt32(0, value: id)
         return self.sharedKey
     }
     
-    func set(globalId: Int32, id: MessageId) {
+    func set(_ globalId: Int32, id: MessageId) {
         self.sharedBuffer.reset()
         var idPeerId: Int64 = id.peerId.toInt64()
         var idNamespace: Int32 = id.namespace
@@ -26,7 +26,7 @@ final class GlobalMessageIdsTable: Table {
         self.valueBox.set(self.tableId, key: self.key(globalId), value: self.sharedBuffer)
     }
     
-    func get(globalId: Int32) -> MessageId? {
+    func get(_ globalId: Int32) -> MessageId? {
         if let value = self.valueBox.get(self.tableId, key: self.key(globalId)) {
             var idPeerId: Int64 = 0
             var idNamespace: Int32 = 0
@@ -37,7 +37,7 @@ final class GlobalMessageIdsTable: Table {
         return nil
     }
     
-    func remove(globalId: Int32) {
+    func remove(_ globalId: Int32) {
         self.valueBox.remove(self.tableId, key: self.key(globalId))
     }
 }

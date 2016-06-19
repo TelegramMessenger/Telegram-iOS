@@ -43,7 +43,7 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible {
         buffer.offset += 16
     }
     
-    public func encodeToBuffer(buffer: WriteBuffer) {
+    public func encodeToBuffer(_ buffer: WriteBuffer) {
         var peerIdNamespace = self.peerId.namespace
         var peerIdId = self.peerId.id
         var namespace = self.namespace
@@ -54,7 +54,7 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible {
         buffer.write(&id, offset: 0, length: 4);
     }
     
-    public static func encodeArrayToBuffer(array: [MessageId], buffer: WriteBuffer) {
+    public static func encodeArrayToBuffer(_ array: [MessageId], buffer: WriteBuffer) {
         var length: Int32 = Int32(array.count)
         buffer.write(&length, offset: 0, length: 4)
         for id in array {
@@ -62,7 +62,7 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible {
         }
     }
     
-    public static func decodeArrayFromBuffer(buffer: ReadBuffer) -> [MessageId] {
+    public static func decodeArrayFromBuffer(_ buffer: ReadBuffer) -> [MessageId] {
         var length: Int32 = 0
         memcpy(&length, buffer.memory, 4)
         buffer.offset += 4
@@ -157,7 +157,7 @@ public func <(lhs: MessageIndex, rhs: MessageIndex) -> Bool {
     return lhs.id.id < rhs.id.id
 }
 
-public struct MessageTags: OptionSetType {
+public struct MessageTags: OptionSet {
     public var rawValue: UInt32
     
     public init(rawValue: UInt32) {
@@ -171,7 +171,7 @@ public struct MessageTags: OptionSetType {
     public static let All = MessageTags(rawValue: 0xffffffff)
 }
 
-public struct MessageFlags: OptionSetType {
+public struct MessageFlags: OptionSet {
     public var rawValue: UInt32
     
     public init(rawValue: UInt32) {
@@ -292,7 +292,7 @@ public final class Message {
     }
 }
 
-public struct StoreMessageFlags: OptionSetType {
+public struct StoreMessageFlags: OptionSet {
     public var rawValue: UInt32
     
     public init(rawValue: UInt32) {

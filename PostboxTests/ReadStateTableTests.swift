@@ -82,7 +82,7 @@ class ReadStateTableTests: XCTestCase {
         
         var randomId: Int64 = 0
         arc4random_buf(&randomId, 8)
-        path = NSTemporaryDirectory().stringByAppendingString("\(randomId)")
+        path = NSTemporaryDirectory() + "\(randomId)"
         self.valueBox = SqliteValueBox(basePath: path!)
         
         let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [], initializeMessageNamespacesWithHoles: [], existingMessageTags: [.First, .Second])
@@ -110,39 +110,39 @@ class ReadStateTableTests: XCTestCase {
         self.historyMetadataTable = nil
         
         self.valueBox = nil
-        let _ = try? NSFileManager.defaultManager().removeItemAtPath(path!)
+        let _ = try? FileManager.default().removeItem(atPath: path!)
         self.path = nil
     }
     
-    private func addMessage(id: Int32, _ timestamp: Int32, _ text: String = "", _ media: [Media] = [], _ flags: StoreMessageFlags = [], _ tags: MessageTags = []) {
+    private func addMessage(_ id: Int32, _ timestamp: Int32, _ text: String = "", _ media: [Media] = [], _ flags: StoreMessageFlags = [], _ tags: MessageTags = []) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
         self.historyTable!.addMessages([StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, flags: flags, tags: tags, forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media)], location: .Random, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
     }
     
-    private func updateMessage(previousId: Int32, _ id: Int32, _ timestamp: Int32, _ text: String = "", _ media: [Media] = [], _ flags: StoreMessageFlags, _ tags: MessageTags) {
+    private func updateMessage(_ previousId: Int32, _ id: Int32, _ timestamp: Int32, _ text: String = "", _ media: [Media] = [], _ flags: StoreMessageFlags, _ tags: MessageTags) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
         self.historyTable!.updateMessage(MessageId(peerId: peerId, namespace: namespace, id: previousId), message: StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, flags: flags, tags: tags, forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
     }
     
-    private func addHole(id: Int32) {
+    private func addHole(_ id: Int32) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
         self.historyTable!.addHoles([MessageId(peerId: peerId, namespace: namespace, id: id)], operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
     }
     
-    private func removeMessages(ids: [Int32]) {
+    private func removeMessages(_ ids: [Int32]) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
         self.historyTable!.removeMessages(ids.map({ MessageId(peerId: peerId, namespace: namespace, id: $0) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
     }
     
-    private func expectApplyRead(messageId: Int32, _ expectInvalidate: Bool) {
+    private func expectApplyRead(_ messageId: Int32, _ expectInvalidate: Bool) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
         self.historyTable!.applyIncomingReadMaxId(MessageId(peerId: peerId, namespace: namespace, id: messageId), operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
@@ -153,20 +153,20 @@ class ReadStateTableTests: XCTestCase {
         }
     }
     
-    private func expectReadState(maxReadId: Int32, _ maxKnownId: Int32, _ count: Int32) {
+    private func expectReadState(_ maxReadId: Int32, _ maxKnownId: Int32, _ count: Int32) {
         if let state = self.readStateTable!.getCombinedState(peerId)?.states.first?.1 {
-            if state.maxReadId != maxReadId || state.maxKnownId != maxKnownId || state.count != count {
-                XCTFail("Expected\nmaxReadId: \(maxReadId), maxKnownId: \(maxKnownId), count: \(count)\nActual\nmaxReadId: \(state.maxReadId), maxKnownId: \(state.maxKnownId), count: \(state.count)")
+            if state.maxIncomingReadId != maxReadId || state.maxKnownId != maxKnownId || state.count != count {
+                XCTFail("Expected\nmaxIncomingReadId: \(maxReadId), maxKnownId: \(maxKnownId), count: \(count)\nActual\nmaxIncomingReadId: \(state.maxIncomingReadId), maxKnownId: \(state.maxKnownId), count: \(state.count)")
             }
         } else {
-            XCTFail("Expected\nmaxReadId: (maxReadId), maxKnownId: \(maxKnownId), count: \(count)\nActual\nnil")
+            XCTFail("Expected\nmaxReadId: \(maxReadId), maxKnownId: \(maxKnownId), count: \(count)\nActual\nnil")
         }
     }
     
     func testResetState() {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.resetIncomingReadStates([peerId: [namespace: PeerReadState(maxReadId: 100, maxKnownId: 120, count: 130)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.resetIncomingReadStates([peerId: [namespace: PeerReadState(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 120, count: 130)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         
         expectReadState(100, 120, 130)
     }
@@ -174,7 +174,7 @@ class ReadStateTableTests: XCTestCase {
     func testAddIncomingBeforeKnown() {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.resetIncomingReadStates([peerId: [namespace: PeerReadState(maxReadId: 100, maxKnownId: 120, count: 130)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.resetIncomingReadStates([peerId: [namespace: PeerReadState(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 120, count: 130)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         
         self.addMessage(99, 99, "", [], [.Incoming])
         
@@ -184,7 +184,7 @@ class ReadStateTableTests: XCTestCase {
     func testAddIncomingAfterKnown() {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.resetIncomingReadStates([peerId: [namespace: PeerReadState(maxReadId: 100, maxKnownId: 120, count: 130)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.resetIncomingReadStates([peerId: [namespace: PeerReadState(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 120, count: 130)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         
         self.addMessage(130, 130, "", [], [.Incoming])
         
@@ -194,19 +194,19 @@ class ReadStateTableTests: XCTestCase {
     func testApplyReadThenAddIncoming() {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.resetIncomingReadStates([peerId: [namespace: PeerReadState(maxReadId: 100, maxKnownId: 100, count: 0)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.resetIncomingReadStates([peerId: [namespace: PeerReadState(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 100, count: 0)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         
         self.expectApplyRead(200, false)
         
         self.addMessage(130, 130, "", [], [.Incoming])
         
-        expectReadState(200, 200, 0)
+        expectReadState(200, 100, 0)
     }
     
     func testApplyAddIncomingThenRead() {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.resetIncomingReadStates([peerId: [namespace: PeerReadState(maxReadId: 100, maxKnownId: 100, count: 0)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.resetIncomingReadStates([peerId: [namespace: PeerReadState(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 100, count: 0)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         
         self.addMessage(130, 130, "", [], [.Incoming])
         
@@ -214,13 +214,13 @@ class ReadStateTableTests: XCTestCase {
         
         self.expectApplyRead(200, false)
         
-        expectReadState(200, 200, 0)
+        expectReadState(200, 100, 0)
     }
     
     func testIgnoreOldRead() {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.resetIncomingReadStates([peerId: [namespace: PeerReadState(maxReadId: 100, maxKnownId: 100, count: 0)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.resetIncomingReadStates([peerId: [namespace: PeerReadState(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 100, count: 0)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         
         self.expectApplyRead(90, false)
         
@@ -230,14 +230,14 @@ class ReadStateTableTests: XCTestCase {
     func testInvalidateReadHole() {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
-        self.historyTable!.resetIncomingReadStates([peerId: [namespace: PeerReadState(maxReadId: 100, maxKnownId: 100, count: 0)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        self.historyTable!.resetIncomingReadStates([peerId: [namespace: PeerReadState(maxIncomingReadId: 100, maxOutgoingReadId: 0, maxKnownId: 100, count: 0)]], operationsByPeerId: &operationsByPeerId, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         
         self.addMessage(200, 200)
         self.addHole(1)
         
         self.expectApplyRead(200, true)
         
-        expectReadState(200, 200, 0)
+        expectReadState(200, 100, 0)
     }
     
     

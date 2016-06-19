@@ -72,7 +72,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         
         var randomId: Int64 = 0
         arc4random_buf(&randomId, 8)
-        path = NSTemporaryDirectory().stringByAppendingString("\(randomId)")
+        path = NSTemporaryDirectory() + "\(randomId)"
         self.valueBox = SqliteValueBox(basePath: path!)
         
         let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [], initializeMessageNamespacesWithHoles: [], existingMessageTags: [])
@@ -88,28 +88,28 @@ class MessageHistoryIndexTableTests: XCTestCase {
         self.indexTable = nil
         
         self.valueBox = nil
-        let _ = try? NSFileManager.defaultManager().removeItemAtPath(path!)
+        let _ = try? FileManager.default().removeItem(atPath: path!)
         self.path = nil
     }
     
-    func addHole(id: Int32) {
+    func addHole(_ id: Int32) {
         var operations: [MessageHistoryIndexOperation] = []
         self.indexTable!.addHole(MessageId(peerId: peerId, namespace: namespace, id: id), operations: &operations)
     }
     
-    func addMessage(id: Int32, _ timestamp: Int32) {
+    func addMessage(_ id: Int32, _ timestamp: Int32) {
         var operations: [MessageHistoryIndexOperation] = []
         self.indexTable!.addMessages([InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, flags: [], tags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])], location: .Random, operations: &operations)
     }
     
-    func addMessagesUpperBlock(messages: [(Int32, Int32)]) {
+    func addMessagesUpperBlock(_ messages: [(Int32, Int32)]) {
         var operations: [MessageHistoryIndexOperation] = []
         self.indexTable!.addMessages(messages.map { (id, timestamp) in
             return InternalStoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, flags: [], tags: [], forwardInfo: nil, authorId: peerId, text: "", attributes: [], media: [])
         }, location: .UpperHistoryBlock, operations: &operations)
     }
     
-    func fillHole(id: Int32, _ fillType: HoleFill, _ messages: [(Int32, Int32)], _ tagMask: MessageTags? = nil) {
+    func fillHole(_ id: Int32, _ fillType: HoleFill, _ messages: [(Int32, Int32)], _ tagMask: MessageTags? = nil) {
         var operations: [MessageHistoryIndexOperation] = []
         
         self.indexTable!.fillHole(MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({
@@ -117,12 +117,12 @@ class MessageHistoryIndexTableTests: XCTestCase {
         }), operations: &operations)
     }
     
-    func removeMessage(id: Int32) {
+    func removeMessage(_ id: Int32) {
         var operations: [MessageHistoryIndexOperation] = []
         self.indexTable!.removeMessage(MessageId(peerId: peerId, namespace: namespace, id: id), operations: &operations)
     }
     
-    private func expect(items: [Item]) {
+    private func expect(_ items: [Item]) {
         let actualList = self.indexTable!.debugList(peerId, namespace: namespace)
         let actualItems = actualList.map { return Item($0) }
         if items != actualItems {

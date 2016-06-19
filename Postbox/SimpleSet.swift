@@ -6,13 +6,13 @@ public struct SimpleSet<T: Equatable> {
     public init() {
     }
     
-    public mutating func insert(item: T) {
+    public mutating func insert(_ item: T) {
         if !self.contains(item) {
             self.items.append(item)
         }
     }
     
-    public func contains(item: T) -> Bool {
+    public func contains(_ item: T) -> Bool {
         for currentItem in self.items {
             if currentItem == item {
                 return true

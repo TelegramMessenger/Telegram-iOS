@@ -73,7 +73,7 @@ private let HistoryEntryTypeMessage: Int8 = 0
 private let HistoryEntryTypeHole: Int8 = 1
 private let HistoryEntryMessageFlagIncoming: Int8 = 1 << 1
 
-private func readHistoryIndexEntry(peerId: PeerId, namespace: MessageId.Namespace, key: ValueBoxKey, value: ReadBuffer) -> HistoryIndexEntry {
+private func readHistoryIndexEntry(_ peerId: PeerId, namespace: MessageId.Namespace, key: ValueBoxKey, value: ReadBuffer) -> HistoryIndexEntry {
     var flags: Int8 = 0
     value.read(&flags, offset: 0, length: 1)
     var timestamp: Int32 = 0
@@ -113,7 +113,7 @@ final class MessageHistoryIndexTable: Table {
         super.init(valueBox: valueBox, tableId: tableId)
     }
     
-    private func key(id: MessageId) -> ValueBoxKey {
+    private func key(_ id: MessageId) -> ValueBoxKey {
         let key = ValueBoxKey(length: 8 + 4 + 4)
         key.setInt64(0, value: id.peerId.toInt64())
         key.setInt32(8, value: id.namespace)
@@ -121,21 +121,21 @@ final class MessageHistoryIndexTable: Table {
         return key
     }
     
-    private func lowerBound(peerId: PeerId, namespace: MessageId.Namespace) -> ValueBoxKey {
+    private func lowerBound(_ peerId: PeerId, namespace: MessageId.Namespace) -> ValueBoxKey {
         let key = ValueBoxKey(length: 8 + 4)
         key.setInt64(0, value: peerId.toInt64())
         key.setInt32(8, value: namespace)
         return key
     }
     
-    private func upperBound(peerId: PeerId, namespace: MessageId.Namespace) -> ValueBoxKey {
+    private func upperBound(_ peerId: PeerId, namespace: MessageId.Namespace) -> ValueBoxKey {
         let key = ValueBoxKey(length: 8 + 4)
         key.setInt64(0, value: peerId.toInt64())
         key.setInt32(8, value: namespace)
         return key.successor
     }
     
-    private func ensureInitialized(peerId: PeerId, inout operations: [MessageHistoryIndexOperation]) {
+    private func ensureInitialized(_ peerId: PeerId, operations: inout [MessageHistoryIndexOperation]) {
         if !self.metadataTable.isInitialized(peerId) {
             for namespace in self.seedConfiguration.initializeMessageNamespacesWithHoles {
                 self.justInsertHole(MessageHistoryHole(stableId: self.metadataTable.getNextStableMessageIndexId(), maxIndex: MessageIndex(id: MessageId(peerId: peerId, namespace: namespace, id: Int32.max), timestamp: Int32.max), min: 1, tags: MessageTags.All.rawValue), operations: &operations)
@@ -145,7 +145,7 @@ final class MessageHistoryIndexTable: Table {
         }
     }
     
-    func addHole(id: MessageId, inout operations: [MessageHistoryIndexOperation]) {
+    func addHole(_ id: MessageId, operations: inout [MessageHistoryIndexOperation]) {
         self.ensureInitialized(id.peerId, operations: &operations)
         
         let adjacent = self.adjacentItems(id)
@@ -186,7 +186,7 @@ final class MessageHistoryIndexTable: Table {
         }
     }
     
-    func addMessages(messages: [InternalStoreMessage], location: AddMessagesLocation, inout operations: [MessageHistoryIndexOperation]) {
+    func addMessages(_ messages: [InternalStoreMessage], location: AddMessagesLocation, operations: inout [MessageHistoryIndexOperation]) {
         if messages.count == 0 {
             return
         }
@@ -281,7 +281,7 @@ final class MessageHistoryIndexTable: Table {
         }
     }
     
-    func removeMessage(id: MessageId, inout operations: [MessageHistoryIndexOperation]) {
+    func removeMessage(_ id: MessageId, operations: inout [MessageHistoryIndexOperation]) {
         self.ensureInitialized(id.peerId, operations: &operations)
         
         if let existingEntry = self.get(id) {
@@ -332,7 +332,7 @@ final class MessageHistoryIndexTable: Table {
         }
     }
     
-    func updateMessage(id: MessageId, message: InternalStoreMessage, inout operations: [MessageHistoryIndexOperation]) {
+    func updateMessage(_ id: MessageId, message: InternalStoreMessage, operations: inout [MessageHistoryIndexOperation]) {
         if let previousEntry = self.get(id), case let .Message(previousIndex) = previousEntry {
             if previousIndex != MessageIndex(message) {
                 var intermediateOperations: [MessageHistoryIndexOperation] = []
@@ -355,7 +355,7 @@ final class MessageHistoryIndexTable: Table {
         }
     }
     
-    func fillHole(id: MessageId, fillType: HoleFill, tagMask: MessageTags?, messages: [InternalStoreMessage], inout operations: [MessageHistoryIndexOperation]) {
+    func fillHole(_ id: MessageId, fillType: HoleFill, tagMask: MessageTags?, messages: [InternalStoreMessage], operations: inout [MessageHistoryIndexOperation]) {
         self.ensureInitialized(id.peerId, operations: &operations)
         
         var upperItem: HistoryIndexEntry?
@@ -364,7 +364,7 @@ final class MessageHistoryIndexTable: Table {
             return true
         }, limit: 1)
         
-        let sortedByIdMessages = messages.sort({$0.id < $1.id})
+        let sortedByIdMessages = messages.sorted(isOrderedBefore: {$0.id < $1.id})
         
         var remainingMessages = sortedByIdMessages
         
@@ -382,7 +382,7 @@ final class MessageHistoryIndexTable: Table {
                             let message = remainingMessages[i]
                             if message.id.id >= upperHole.min && message.id.id <= upperHole.maxIndex.id.id {
                                 messagesInRange.append(message)
-                                remainingMessages.removeAtIndex(i)
+                                remainingMessages.remove(at: i)
                             } else {
                                 i += 1
                             }
@@ -460,7 +460,7 @@ final class MessageHistoryIndexTable: Table {
                                 }
                                 
                                 self.justInsertMessage(message, operations: &operations)
-                                remainingMessages.removeAtIndex(i)
+                                remainingMessages.remove(at: i)
                             } else {
                                 i += 1
                             }
@@ -522,7 +522,7 @@ final class MessageHistoryIndexTable: Table {
         }
     }
     
-    private func justInsertHole(hole: MessageHistoryHole, inout operations: [MessageHistoryIndexOperation]) {
+    private func justInsertHole(_ hole: MessageHistoryHole, operations: inout [MessageHistoryIndexOperation]) {
         let value = WriteBuffer()
         var flags: Int8 = HistoryEntryTypeHole
         var timestamp: Int32 = hole.maxIndex.timestamp
@@ -539,7 +539,7 @@ final class MessageHistoryIndexTable: Table {
         operations.append(.InsertHole(hole))
     }
     
-    private func justInsertMessage(message: InternalStoreMessage, inout operations: [MessageHistoryIndexOperation]) {
+    private func justInsertMessage(_ message: InternalStoreMessage, operations: inout [MessageHistoryIndexOperation]) {
         let index = MessageIndex(id: message.id, timestamp: message.timestamp)
         
         let value = WriteBuffer()
@@ -558,7 +558,7 @@ final class MessageHistoryIndexTable: Table {
         }
     }
     
-    private func justRemove(index: MessageIndex, inout operations: [MessageHistoryIndexOperation]) {
+    private func justRemove(_ index: MessageIndex, operations: inout [MessageHistoryIndexOperation]) {
         self.valueBox.remove(self.tableId, key: self.key(index.id))
         
         operations.append(.Remove(index))
@@ -567,7 +567,7 @@ final class MessageHistoryIndexTable: Table {
         }
     }
     
-    func adjacentItems(id: MessageId, bindUpper: Bool = true) -> (lower: HistoryIndexEntry?, upper: HistoryIndexEntry?) {
+    func adjacentItems(_ id: MessageId, bindUpper: Bool = true) -> (lower: HistoryIndexEntry?, upper: HistoryIndexEntry?) {
         let key = self.key(id)
         
         var lowerItem: HistoryIndexEntry?
@@ -585,7 +585,7 @@ final class MessageHistoryIndexTable: Table {
         return (lower: lowerItem, upper: upperItem)
     }
     
-    func get(id: MessageId) -> HistoryIndexEntry? {
+    func get(_ id: MessageId) -> HistoryIndexEntry? {
         var operations: [MessageHistoryIndexOperation] = []
         self.ensureInitialized(id.peerId, operations: &operations)
         
@@ -596,7 +596,7 @@ final class MessageHistoryIndexTable: Table {
         return nil
     }
     
-    func top(peerId: PeerId, namespace: MessageId.Namespace) -> HistoryIndexEntry? {
+    func top(_ peerId: PeerId, namespace: MessageId.Namespace) -> HistoryIndexEntry? {
         var operations: [MessageHistoryIndexOperation] = []
         self.ensureInitialized(peerId, operations: &operations)
         
@@ -609,11 +609,11 @@ final class MessageHistoryIndexTable: Table {
         return entry
     }
     
-    func exists(id: MessageId) -> Bool {
+    func exists(_ id: MessageId) -> Bool {
         return self.valueBox.exists(self.tableId, key: self.key(id))
     }
     
-    func holeContainingId(id: MessageId) -> MessageHistoryHole? {
+    func holeContainingId(_ id: MessageId) -> MessageHistoryHole? {
         var result: MessageHistoryHole?
         self.valueBox.range(self.tableId, start: self.key(MessageId(peerId: id.peerId, namespace: id.namespace, id: id.id)).predecessor, end: self.upperBound(id.peerId, namespace: id.namespace), values: { key, value in
             if case let .Hole(hole) = readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value) {
@@ -625,7 +625,7 @@ final class MessageHistoryIndexTable: Table {
         return result
     }
     
-    func incomingMessageCountInRange(peerId: PeerId, namespace: MessageId.Namespace, minId: MessageId.Id, maxId: MessageId.Id) -> (Int, Bool) {
+    func incomingMessageCountInRange(_ peerId: PeerId, namespace: MessageId.Namespace, minId: MessageId.Id, maxId: MessageId.Id) -> (Int, Bool) {
         var count = 0
         var holes = false
         
@@ -657,7 +657,7 @@ final class MessageHistoryIndexTable: Table {
         return (count, holes)
     }
     
-    func incomingMessageCountInIds(peerId: PeerId, namespace: MessageId.Namespace, ids: [MessageId.Id]) -> (Int, Bool) {
+    func incomingMessageCountInIds(_ peerId: PeerId, namespace: MessageId.Namespace, ids: [MessageId.Id]) -> (Int, Bool) {
         var count = 0
         var holes = false
         
@@ -686,7 +686,7 @@ final class MessageHistoryIndexTable: Table {
         return (count, holes)
     }
     
-    func debugList(peerId: PeerId, namespace: MessageId.Namespace) -> [HistoryIndexEntry] {
+    func debugList(_ peerId: PeerId, namespace: MessageId.Namespace) -> [HistoryIndexEntry] {
         var list: [HistoryIndexEntry] = []
         self.valueBox.range(self.tableId, start: self.lowerBound(peerId, namespace: namespace), end: self.upperBound(peerId, namespace: namespace), values: { key, value in
             list.append(readHistoryIndexEntry(peerId, namespace: namespace, key: key, value: value))

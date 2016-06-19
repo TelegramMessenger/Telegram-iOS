@@ -25,13 +25,13 @@ final class MessageHistoryMetadataTable: Table {
         super.init(valueBox: valueBox, tableId: tableId)
     }
     
-    private func peerHistoryInitializedKey(id: PeerId) -> ValueBoxKey {
+    private func peerHistoryInitializedKey(_ id: PeerId) -> ValueBoxKey {
         self.sharedPeerHistoryInitializedKey.setInt64(0, value: id.toInt64())
         self.sharedPeerHistoryInitializedKey.setInt8(8, value: MetadataPrefix.PeerHistoryInitialized.rawValue)
         return self.sharedPeerHistoryInitializedKey
     }
     
-    private func peerNextMessageIdByNamespaceKey(id: PeerId, namespace: MessageId.Namespace) -> ValueBoxKey {
+    private func peerNextMessageIdByNamespaceKey(_ id: PeerId, namespace: MessageId.Namespace) -> ValueBoxKey {
         self.sharedPeerNextMessageIdByNamespaceKey.setInt64(0, value: id.toInt64())
         self.sharedPeerNextMessageIdByNamespaceKey.setInt8(8, value: MetadataPrefix.PeerNextMessageIdByNamespace.rawValue)
         self.sharedPeerNextMessageIdByNamespaceKey.setInt32(8 + 1, value: namespace)
@@ -39,7 +39,7 @@ final class MessageHistoryMetadataTable: Table {
         return self.sharedPeerNextMessageIdByNamespaceKey
     }
     
-    private func key(prefix: MetadataPrefix) -> ValueBoxKey {
+    private func key(_ prefix: MetadataPrefix) -> ValueBoxKey {
         let key = ValueBoxKey(length: 1)
         key.setInt8(0, value: prefix.rawValue)
         return key
@@ -47,7 +47,7 @@ final class MessageHistoryMetadataTable: Table {
     
     func setInitializedChatList() {
         self.initializedChatList = true
-        self.valueBox.set(self.tableId, key: self.key(MetadataPrefix.ChatListInitialized), value: MemoryBuffer(memory: nil, capacity: 0, length: 0, freeWhenDone: false))
+        self.valueBox.set(self.tableId, key: self.key(MetadataPrefix.ChatListInitialized), value: MemoryBuffer())
     }
     
     func isInitializedChatList() -> Bool {
@@ -63,13 +63,13 @@ final class MessageHistoryMetadataTable: Table {
         return false
     }
     
-    func setInitialized(peerId: PeerId) {
+    func setInitialized(_ peerId: PeerId) {
         self.initializedHistoryPeerIds.insert(peerId)
         self.sharedBuffer.reset()
         self.valueBox.set(self.tableId, key: self.peerHistoryInitializedKey(peerId), value: self.sharedBuffer)
     }
     
-    func isInitialized(peerId: PeerId) -> Bool {
+    func isInitialized(_ peerId: PeerId) -> Bool {
         if self.initializedHistoryPeerIds.contains(peerId) {
             return true
         } else {
@@ -82,7 +82,7 @@ final class MessageHistoryMetadataTable: Table {
         }
     }
     
-    func getNextMessageIdAndIncrement(peerId: PeerId, namespace: MessageId.Namespace) -> MessageId {
+    func getNextMessageIdAndIncrement(_ peerId: PeerId, namespace: MessageId.Namespace) -> MessageId {
         if let messageIdByNamespace = self.peerNextMessageIdByNamespace[peerId] {
             if let nextId = messageIdByNamespace[namespace] {
                 self.peerNextMessageIdByNamespace[peerId]![namespace] = nextId + 1

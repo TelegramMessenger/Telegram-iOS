@@ -6,12 +6,12 @@ final class PeerChatStateTable: Table {
     
     private let sharedKey = ValueBoxKey(length: 8)
     
-    private func key(id: PeerId) -> ValueBoxKey {
+    private func key(_ id: PeerId) -> ValueBoxKey {
         self.sharedKey.setInt64(0, value: id.toInt64())
         return self.sharedKey
     }
     
-    func get(id: PeerId) -> Coding? {
+    func get(_ id: PeerId) -> Coding? {
         if let state = self.cachedPeerChatStates[id] {
             return state
         } else {
@@ -25,7 +25,7 @@ final class PeerChatStateTable: Table {
         }
     }
     
-    func set(id: PeerId, state: Coding?) {
+    func set(_ id: PeerId, state: Coding?) {
         self.cachedPeerChatStates[id] = state
         self.updatedPeerIds.insert(id)
     }

@@ -21,7 +21,7 @@ final class MessageHistoryReadStateTable: Table {
     
     private let sharedKey = ValueBoxKey(length: 8)
     
-    private func key(id: PeerId) -> ValueBoxKey {
+    private func key(_ id: PeerId) -> ValueBoxKey {
         self.sharedKey.setInt64(0, value: id.toInt64())
         return self.sharedKey
     }
@@ -30,7 +30,7 @@ final class MessageHistoryReadStateTable: Table {
         super.init(valueBox: valueBox, tableId: tableId)
     }
 
-    private func get(id: PeerId) -> InternalPeerReadStates? {
+    private func get(_ id: PeerId) -> InternalPeerReadStates? {
         if let states = self.cachedPeerReadStates[id] {
             return states
         } else {
@@ -63,14 +63,14 @@ final class MessageHistoryReadStateTable: Table {
         }
     }
     
-    func getCombinedState(peerId: PeerId) -> CombinedPeerReadState? {
+    func getCombinedState(_ peerId: PeerId) -> CombinedPeerReadState? {
         if let states = self.get(peerId) {
             return CombinedPeerReadState(states: states.namespaces.map({$0}))
         }
         return nil
     }
     
-    func resetStates(peerId: PeerId, namespaces: [MessageId.Namespace: PeerReadState]) -> CombinedPeerReadState? {
+    func resetStates(_ peerId: PeerId, namespaces: [MessageId.Namespace: PeerReadState]) -> CombinedPeerReadState? {
         if traceReadStates {
             print("[ReadStateTable] resetStates peerId: \(peerId), namespaces: \(namespaces)")
         }
@@ -99,7 +99,7 @@ final class MessageHistoryReadStateTable: Table {
         }
     }
     
-    func addIncomingMessages(peerId: PeerId, ids: Set<MessageId>) -> (CombinedPeerReadState?, Bool) {
+    func addIncomingMessages(_ peerId: PeerId, ids: Set<MessageId>) -> (CombinedPeerReadState?, Bool) {
         var idsByNamespace: [MessageId.Namespace: [MessageId.Id]] = [:]
         for id in ids {
             if idsByNamespace[id.namespace] != nil {
@@ -115,7 +115,7 @@ final class MessageHistoryReadStateTable: Table {
             }
             
             var updated = false
-            var invalidated = false
+            let invalidated = false
             for (namespace, ids) in idsByNamespace {
                 if let currentState = states.namespaces[namespace] {
                     var addedUnreadCount: Int32 = 0
@@ -149,11 +149,9 @@ final class MessageHistoryReadStateTable: Table {
             }
             return (nil, true)
         }
-        
-        return (nil, false)
     }
     
-    func deleteMessages(peerId: PeerId, ids: [MessageId], incomingStatsInIds: (PeerId, MessageId.Namespace, [MessageId.Id]) -> (Int, Bool)) -> (CombinedPeerReadState?, Bool) {
+    func deleteMessages(_ peerId: PeerId, ids: [MessageId], incomingStatsInIds: (PeerId, MessageId.Namespace, [MessageId.Id]) -> (Int, Bool)) -> (CombinedPeerReadState?, Bool) {
         var idsByNamespace: [MessageId.Namespace: [MessageId.Id]] = [:]
         for id in ids {
             if idsByNamespace[id.namespace] != nil {
@@ -199,11 +197,9 @@ final class MessageHistoryReadStateTable: Table {
         } else {
             return (nil, true)
         }
-        
-        return (nil, false)
     }
     
-    func applyIncomingMaxReadId(messageId: MessageId, incomingStatsInRange: (MessageId.Id, MessageId.Id) -> (count: Int, holes: Bool), topMessageId: MessageId.Id?) -> (CombinedPeerReadState?, Bool) {
+    func applyIncomingMaxReadId(_ messageId: MessageId, incomingStatsInRange: (MessageId.Id, MessageId.Id) -> (count: Int, holes: Bool), topMessageId: MessageId.Id?) -> (CombinedPeerReadState?, Bool) {
         if let states = self.get(messageId.peerId), state = states.namespaces[messageId.namespace] {
             if traceReadStates {
                 print("[ReadStateTable] applyMaxReadId peerId: \(messageId.peerId), maxReadId: \(messageId.id) (before: \(states.namespaces))")
@@ -234,7 +230,7 @@ final class MessageHistoryReadStateTable: Table {
         return (nil, false)
     }
     
-    func applyOutgoingMaxReadId(messageId: MessageId) -> (CombinedPeerReadState?, Bool) {
+    func applyOutgoingMaxReadId(_ messageId: MessageId) -> (CombinedPeerReadState?, Bool) {
         if let states = self.get(messageId.peerId), state = states.namespaces[messageId.namespace] {
             if state.maxOutgoingReadId < messageId.id {
                 states.namespaces[messageId.namespace] = PeerReadState(maxIncomingReadId: state.maxIncomingReadId, maxOutgoingReadId: state.maxOutgoingReadId, maxKnownId: state.maxKnownId, count: state.count)
@@ -248,7 +244,7 @@ final class MessageHistoryReadStateTable: Table {
         return (nil, false)
     }
     
-    func applyInteractiveMaxReadId(messageId: MessageId, incomingStatsInRange: (MessageId.Id, MessageId.Id) -> (count: Int, holes: Bool), topMessageId: MessageId.Id?) -> (combinedState: CombinedPeerReadState?, ApplyInteractiveMaxReadIdResult) {
+    func applyInteractiveMaxReadId(_ messageId: MessageId, incomingStatsInRange: (MessageId.Id, MessageId.Id) -> (count: Int, holes: Bool), topMessageId: MessageId.Id?) -> (combinedState: CombinedPeerReadState?, ApplyInteractiveMaxReadIdResult) {
         let (combinedState, holes) = self.applyIncomingMaxReadId(messageId, incomingStatsInRange: incomingStatsInRange, topMessageId: topMessageId)
         
         if let combinedState = combinedState {

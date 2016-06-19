@@ -35,14 +35,14 @@ public struct MediaId: Hashable, CustomStringConvertible {
         buffer.offset += 12
     }
     
-    public func encodeToBuffer(buffer: WriteBuffer) {
+    public func encodeToBuffer(_ buffer: WriteBuffer) {
         var namespace = self.namespace
         var id = self.id
         buffer.write(&namespace, offset: 0, length: 4);
         buffer.write(&id, offset: 0, length: 8);
     }
     
-    public static func encodeArrayToBuffer(array: [MediaId], buffer: WriteBuffer) {
+    public static func encodeArrayToBuffer(_ array: [MediaId], buffer: WriteBuffer) {
         var length: Int32 = Int32(array.count)
         buffer.write(&length, offset: 0, length: 4)
         for id in array {
@@ -50,7 +50,7 @@ public struct MediaId: Hashable, CustomStringConvertible {
         }
     }
     
-    public static func decodeArrayFromBuffer(buffer: ReadBuffer) -> [MediaId] {
+    public static func decodeArrayFromBuffer(_ buffer: ReadBuffer) -> [MediaId] {
         var length: Int32 = 0
         memcpy(&length, buffer.memory, 4)
         buffer.offset += 4
@@ -72,5 +72,5 @@ public protocol Media: Coding {
     var id: MediaId? { get }
     var peerIds: [PeerId] { get }
     
-    func isEqual(other: Media) -> Bool
+    func isEqual(_ other: Media) -> Bool
 }

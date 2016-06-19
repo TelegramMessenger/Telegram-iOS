@@ -3,21 +3,21 @@ import sqlcipher
 import SwiftSignalKit
 
 private struct SqlitePreparedStatement {
-    let statement: COpaquePointer
+    let statement: OpaquePointer?
     
-    func bind(index: Int, data: UnsafePointer<Void>, length: Int) {
+    func bind(_ index: Int, data: UnsafePointer<Void>, length: Int) {
         sqlite3_bind_blob(statement, Int32(index), data, Int32(length), nil)
     }
     
-    func bindNull(index: Int) {
+    func bindNull(_ index: Int) {
         sqlite3_bind_null(statement, Int32(index))
     }
     
-    func bind(index: Int, number: Int32) {
+    func bind(_ index: Int, number: Int32) {
         sqlite3_bind_int(statement, Int32(index), number)
     }
     
-    func bind(index: Int, number: Int64) {
+    func bind(_ index: Int, number: Int64) {
         sqlite3_bind_int64(statement, Int32(index), number)
     }
     
@@ -34,20 +34,20 @@ private struct SqlitePreparedStatement {
         return result == SQLITE_ROW
     }
     
-    func int64At(index: Int) -> Int64 {
+    func int64At(_ index: Int) -> Int64 {
         return sqlite3_column_int64(statement, Int32(index))
     }
     
-    func valueAt(index: Int) -> ReadBuffer {
+    func valueAt(_ index: Int) -> ReadBuffer {
         let valueLength = sqlite3_column_bytes(statement, Int32(index))
         let valueData = sqlite3_column_blob(statement, Int32(index))
         
-        let valueMemory = malloc(Int(valueLength))
+        let valueMemory = malloc(Int(valueLength))!
         memcpy(valueMemory, valueData, Int(valueLength))
         return ReadBuffer(memory: valueMemory, length: Int(valueLength), freeWhenDone: true)
     }
     
-    func keyAt(index: Int) -> ValueBoxKey {
+    func keyAt(_ index: Int) -> ValueBoxKey {
         let valueLength = sqlite3_column_bytes(statement, Int32(index))
         let valueData = sqlite3_column_blob(statement, Int32(index))
         
@@ -62,7 +62,7 @@ private struct SqlitePreparedStatement {
 }
 
 public final class SqliteValueBox: ValueBox {
-    private let lock = NSRecursiveLock()
+    private let lock = RecursiveLock()
     
     private let basePath: String
     private var database: Database!
@@ -102,7 +102,7 @@ public final class SqliteValueBox: ValueBox {
         lock.lock()
         
         do {
-            try NSFileManager.defaultManager().createDirectoryAtPath(basePath, withIntermediateDirectories: true, attributes: nil)
+            try FileManager.default().createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
         } catch _ { }
         let path = basePath + "/db_sqlite"
         let database = Database(path)
@@ -160,18 +160,18 @@ public final class SqliteValueBox: ValueBox {
         self.commitTime += CFAbsoluteTimeGetCurrent() - startTime
     }
     
-    private func getUserVersion(database: Database) -> Int64 {
-        var statement: COpaquePointer = nil
+    private func getUserVersion(_ database: Database) -> Int64 {
+        var statement: OpaquePointer? = nil
         sqlite3_prepare_v2(database.handle, "PRAGMA user_version", -1, &statement, nil)
         let preparedStatement = SqlitePreparedStatement(statement: statement)
-        preparedStatement.step()
+        let _ = preparedStatement.step()
         let value = preparedStatement.int64At(0)
         preparedStatement.destroy()
         return value
     }
     
-    private func listTables(database: Database) -> [Int64] {
-        var statement: COpaquePointer = nil
+    private func listTables(_ database: Database) -> [Int64] {
+        var statement: OpaquePointer? = nil
         sqlite3_prepare_v2(database.handle, "SELECT name FROM __meta_tables", -1, &statement, nil)
         let preparedStatement = SqlitePreparedStatement(statement: statement)
         var tables: [Int64] = []
@@ -183,13 +183,13 @@ public final class SqliteValueBox: ValueBox {
         return tables
     }
     
-    private func getStatement(table: Int32, key: ValueBoxKey) -> SqlitePreparedStatement {
+    private func getStatement(_ table: Int32, key: ValueBoxKey) -> SqlitePreparedStatement {
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.getStatements[table] {
             resultStatement = statement
         } else {
-            var statement: COpaquePointer = nil
+            var statement: OpaquePointer? = nil
             sqlite3_prepare_v2(self.database.handle, "SELECT value FROM t\(table) WHERE key=?", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.getStatements[table] = preparedStatement
@@ -203,13 +203,13 @@ public final class SqliteValueBox: ValueBox {
         return resultStatement
     }
     
-    private func rangeKeyAscStatementLimit(table: Int32, start: ValueBoxKey, end: ValueBoxKey, limit: Int) -> SqlitePreparedStatement {
+    private func rangeKeyAscStatementLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey, limit: Int) -> SqlitePreparedStatement {
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.rangeKeyAscStatementsLimit[table] {
             resultStatement = statement
         } else {
-            var statement: COpaquePointer = nil
+            var statement: OpaquePointer? = nil
             sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table) WHERE key > ? AND key < ? ORDER BY key ASC LIMIT ?", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeKeyAscStatementsLimit[table] = preparedStatement
@@ -224,13 +224,13 @@ public final class SqliteValueBox: ValueBox {
         return resultStatement
     }
     
-    private func rangeKeyAscStatementNoLimit(table: Int32, start: ValueBoxKey, end: ValueBoxKey) -> SqlitePreparedStatement {
+    private func rangeKeyAscStatementNoLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey) -> SqlitePreparedStatement {
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.rangeKeyAscStatementsNoLimit[table] {
             resultStatement = statement
         } else {
-            var statement: COpaquePointer = nil
+            var statement: OpaquePointer? = nil
             sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table) WHERE key > ? AND key < ? ORDER BY key ASC", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeKeyAscStatementsNoLimit[table] = preparedStatement
@@ -245,13 +245,13 @@ public final class SqliteValueBox: ValueBox {
         return resultStatement
     }
     
-    private func rangeKeyDescStatementLimit(table: Int32, start: ValueBoxKey, end: ValueBoxKey, limit: Int) -> SqlitePreparedStatement {
+    private func rangeKeyDescStatementLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey, limit: Int) -> SqlitePreparedStatement {
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.rangeKeyDescStatementsLimit[table] {
             resultStatement = statement
         } else {
-            var statement: COpaquePointer = nil
+            var statement: OpaquePointer? = nil
             sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table) WHERE key > ? AND key < ? ORDER BY key DESC LIMIT ?", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeKeyDescStatementsLimit[table] = preparedStatement
@@ -267,13 +267,13 @@ public final class SqliteValueBox: ValueBox {
         return resultStatement
     }
     
-    private func rangeKeyDescStatementNoLimit(table: Int32, start: ValueBoxKey, end: ValueBoxKey) -> SqlitePreparedStatement {
+    private func rangeKeyDescStatementNoLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey) -> SqlitePreparedStatement {
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.rangeKeyDescStatementsNoLimit[table] {
             resultStatement = statement
         } else {
-            var statement: COpaquePointer = nil
+            var statement: OpaquePointer? = nil
             sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table) WHERE key > ? AND key < ? ORDER BY key DESC", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeKeyDescStatementsNoLimit[table] = preparedStatement
@@ -288,13 +288,13 @@ public final class SqliteValueBox: ValueBox {
         return resultStatement
     }
     
-    private func rangeValueAscStatementLimit(table: Int32, start: ValueBoxKey, end: ValueBoxKey, limit: Int) -> SqlitePreparedStatement {
+    private func rangeValueAscStatementLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey, limit: Int) -> SqlitePreparedStatement {
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.rangeValueAscStatementsLimit[table] {
             resultStatement = statement
         } else {
-            var statement: COpaquePointer = nil
+            var statement: OpaquePointer? = nil
             sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table) WHERE key > ? AND key < ? ORDER BY key ASC LIMIT ?", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeValueAscStatementsLimit[table] = preparedStatement
@@ -309,13 +309,13 @@ public final class SqliteValueBox: ValueBox {
         return resultStatement
     }
     
-    private func rangeValueAscStatementNoLimit(table: Int32, start: ValueBoxKey, end: ValueBoxKey) -> SqlitePreparedStatement {
+    private func rangeValueAscStatementNoLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey) -> SqlitePreparedStatement {
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.rangeValueAscStatementsNoLimit[table] {
             resultStatement = statement
         } else {
-            var statement: COpaquePointer = nil
+            var statement: OpaquePointer? = nil
             sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table) WHERE key > ? AND key < ? ORDER BY key ASC", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeValueAscStatementsNoLimit[table] = preparedStatement
@@ -330,13 +330,13 @@ public final class SqliteValueBox: ValueBox {
         return resultStatement
     }
     
-    private func rangeValueDescStatementLimit(table: Int32, start: ValueBoxKey, end: ValueBoxKey, limit: Int) -> SqlitePreparedStatement {
+    private func rangeValueDescStatementLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey, limit: Int) -> SqlitePreparedStatement {
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.rangeValueDescStatementsLimit[table] {
             resultStatement = statement
         } else {
-            var statement: COpaquePointer = nil
+            var statement: OpaquePointer? = nil
             sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table) WHERE key > ? AND key < ? ORDER BY key DESC LIMIT ?", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeValueDescStatementsLimit[table] = preparedStatement
@@ -352,13 +352,13 @@ public final class SqliteValueBox: ValueBox {
         return resultStatement
     }
     
-    private func rangeValueDescStatementNoLimit(table: Int32, start: ValueBoxKey, end: ValueBoxKey) -> SqlitePreparedStatement {
+    private func rangeValueDescStatementNoLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey) -> SqlitePreparedStatement {
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.rangeKeyDescStatementsNoLimit[table] {
             resultStatement = statement
         } else {
-            var statement: COpaquePointer = nil
+            var statement: OpaquePointer? = nil
             sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table) WHERE key > ? AND key < ? ORDER BY key DESC", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeValueDescStatementsNoLimit[table] = preparedStatement
@@ -373,13 +373,13 @@ public final class SqliteValueBox: ValueBox {
         return resultStatement
     }
     
-    private func existsStatement(table: Int32, key: ValueBoxKey) -> SqlitePreparedStatement {
+    private func existsStatement(_ table: Int32, key: ValueBoxKey) -> SqlitePreparedStatement {
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.existsStatements[table] {
             resultStatement = statement
         } else {
-            var statement: COpaquePointer = nil
+            var statement: OpaquePointer? = nil
             sqlite3_prepare_v2(self.database.handle, "SELECT rowid FROM t\(table) WHERE key=?", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.existsStatements[table] = preparedStatement
@@ -393,13 +393,13 @@ public final class SqliteValueBox: ValueBox {
         return resultStatement
     }
     
-    private func updateStatement(table: Int32, key: ValueBoxKey, value: MemoryBuffer) -> SqlitePreparedStatement {
+    private func updateStatement(_ table: Int32, key: ValueBoxKey, value: MemoryBuffer) -> SqlitePreparedStatement {
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.updateStatements[table] {
             resultStatement = statement
         } else {
-            var statement: COpaquePointer = nil
+            var statement: OpaquePointer? = nil
             sqlite3_prepare_v2(self.database.handle, "UPDATE t\(table) SET value=? WHERE key=?", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.updateStatements[table] = preparedStatement
@@ -414,13 +414,13 @@ public final class SqliteValueBox: ValueBox {
         return resultStatement
     }
     
-    private func insertStatement(table: Int32, key: ValueBoxKey, value: MemoryBuffer) -> SqlitePreparedStatement {
+    private func insertStatement(_ table: Int32, key: ValueBoxKey, value: MemoryBuffer) -> SqlitePreparedStatement {
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.insertStatements[table] {
             resultStatement = statement
         } else {
-            var statement: COpaquePointer = nil
+            var statement: OpaquePointer? = nil
             sqlite3_prepare_v2(self.database.handle, "INSERT INTO t\(table) (key, value) VALUES(?, ?)", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.insertStatements[table] = preparedStatement
@@ -430,7 +430,7 @@ public final class SqliteValueBox: ValueBox {
         resultStatement.reset()
         
         resultStatement.bind(1, data: key.memory, length: key.length)
-        if value.memory == nil {
+        if value.length == 0 {
             resultStatement.bindNull(2)
         } else {
             resultStatement.bind(2, data: value.memory, length: value.length)
@@ -439,13 +439,13 @@ public final class SqliteValueBox: ValueBox {
         return resultStatement
     }
     
-    private func deleteStatement(table: Int32, key: ValueBoxKey) -> SqlitePreparedStatement {
+    private func deleteStatement(_ table: Int32, key: ValueBoxKey) -> SqlitePreparedStatement {
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.deleteStatements[table] {
             resultStatement = statement
         } else {
-            var statement: COpaquePointer = nil
+            var statement: OpaquePointer? = nil
             sqlite3_prepare_v2(self.database.handle, "DELETE FROM t\(table) WHERE key=?", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.deleteStatements[table] = preparedStatement
@@ -459,7 +459,7 @@ public final class SqliteValueBox: ValueBox {
         return resultStatement
     }
     
-    public func get(table: Int32, key: ValueBoxKey) -> ReadBuffer? {
+    public func get(_ table: Int32, key: ValueBoxKey) -> ReadBuffer? {
         let startTime = CFAbsoluteTimeGetCurrent()
         if self.tables.contains(table) {
             let statement = self.getStatement(table, key: key)
@@ -481,14 +481,14 @@ public final class SqliteValueBox: ValueBox {
         return nil
     }
     
-    public func exists(table: Int32, key: ValueBoxKey) -> Bool {
+    public func exists(_ table: Int32, key: ValueBoxKey) -> Bool {
         if let _ = self.get(table, key: key) {
             return true
         }
         return false
     }
     
-    public func range(table: Int32, start: ValueBoxKey, end: ValueBoxKey, @noescape values: (ValueBoxKey, ReadBuffer) -> Bool, limit: Int) {
+    public func range(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey, values: @noescape(ValueBoxKey, ReadBuffer) -> Bool, limit: Int) {
         if start == end {
             return
         }
@@ -535,7 +535,7 @@ public final class SqliteValueBox: ValueBox {
         }
     }
     
-    public func range(table: Int32, start: ValueBoxKey, end: ValueBoxKey, @noescape keys: ValueBoxKey -> Bool, limit: Int) {
+    public func range(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey, keys: @noescape(ValueBoxKey) -> Bool, limit: Int) {
         if self.tables.contains(table) {
             let statement: SqlitePreparedStatement
             
@@ -577,7 +577,7 @@ public final class SqliteValueBox: ValueBox {
         }
     }
     
-    public func set(table: Int32, key: ValueBoxKey, value: MemoryBuffer) {
+    public func set(_ table: Int32, key: ValueBoxKey, value: MemoryBuffer) {
         if !self.tables.contains(table) {
             self.database.execute("CREATE TABLE t\(table) (key BLOB, value BLOB)")
             self.database.execute("CREATE INDEX t\(table)_key ON t\(table) (key)")
@@ -609,7 +609,7 @@ public final class SqliteValueBox: ValueBox {
         self.writeQueryTime += CFAbsoluteTimeGetCurrent() - startTime
     }
     
-    public func remove(table: Int32, key: ValueBoxKey) {
+    public func remove(_ table: Int32, key: ValueBoxKey) {
         if self.tables.contains(table) {
             
             let startTime = CFAbsoluteTimeGetCurrent()
@@ -697,7 +697,7 @@ public final class SqliteValueBox: ValueBox {
         self.database = nil
         self.lock.unlock()
         
-        let _ = try? NSFileManager.defaultManager().removeItemAtPath(self.basePath)
+        let _ = try? FileManager.default().removeItem(atPath: self.basePath)
         self.database = self.openDatabase()
         
         tables.removeAll()

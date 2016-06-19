@@ -42,7 +42,6 @@
 		D0977F9E1B8234DF009994B2 /* ValueBoxKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977F9D1B8234DF009994B2 /* ValueBoxKey.swift */; };
 		D0977FA01B8244D7009994B2 /* SqliteValueBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977F9F1B8244D7009994B2 /* SqliteValueBox.swift */; };
 		D0A7D9451C556CFE0016A115 /* MessageHistoryIndexTableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A7D9441C556CFE0016A115 /* MessageHistoryIndexTableTests.swift */; };
-		D0B76BE71B66639F0095CF45 /* DeferredString.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B76BE61B66639F0095CF45 /* DeferredString.swift */; };
 		D0C07F6A1B67DB4800966E43 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C07F691B67DB4800966E43 /* SwiftSignalKit.framework */; };
 		D0C674C81CBB11C600183765 /* MessageHistoryReadStateTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C674C71CBB11C600183765 /* MessageHistoryReadStateTable.swift */; };
 		D0C674CC1CBB14A700183765 /* PeerReadState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C674CB1CBB14A700183765 /* PeerReadState.swift */; };
@@ -120,7 +119,6 @@
 		D0977F9D1B8234DF009994B2 /* ValueBoxKey.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ValueBoxKey.swift; sourceTree = "<group>"; };
 		D0977F9F1B8244D7009994B2 /* SqliteValueBox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SqliteValueBox.swift; sourceTree = "<group>"; };
 		D0A7D9441C556CFE0016A115 /* MessageHistoryIndexTableTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryIndexTableTests.swift; sourceTree = "<group>"; };
-		D0B76BE61B66639F0095CF45 /* DeferredString.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeferredString.swift; sourceTree = "<group>"; };
 		D0C07F691B67DB4800966E43 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C674C71CBB11C600183765 /* MessageHistoryReadStateTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryReadStateTable.swift; sourceTree = "<group>"; };
 		D0C674CB1CBB14A700183765 /* PeerReadState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerReadState.swift; sourceTree = "<group>"; };
@@ -275,7 +273,6 @@
 			isa = PBXGroup;
 			children = (
 				D0E3A7871B28AE9C00A402D9 /* Coding.swift */,
-				D0B76BE61B66639F0095CF45 /* DeferredString.swift */,
 				D0F9E8741C5A334100037222 /* SimpleDictionary.swift */,
 				D0C9DA381C65782500855278 /* SimpleSet.swift */,
 			);
@@ -441,7 +438,7 @@
 			attributes = {
 				LastSwiftMigration = 0700;
 				LastSwiftUpdateCheck = 0700;
-				LastUpgradeCheck = 0710;
+				LastUpgradeCheck = 0800;
 				ORGANIZATIONNAME = Telegram;
 				TargetAttributes = {
 					D0E3A7491B28A7E300A402D9 = {
@@ -537,7 +534,6 @@
 				D055BD331B7D3D2D00F06C0A /* MediaBox.swift in Sources */,
 				D0C674CC1CBB14A700183765 /* PeerReadState.swift in Sources */,
 				D0977F9C1B822DB4009994B2 /* ValueBox.swift in Sources */,
-				D0B76BE71B66639F0095CF45 /* DeferredString.swift in Sources */,
 				D075166A1B2EC7FE00AE42E0 /* Database.swift in Sources */,
 				D07516441B2D9CEF00AE42E0 /* sqlite3.c in Sources */,
 			);
@@ -830,6 +826,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 			};
 			name = Release;
 		};

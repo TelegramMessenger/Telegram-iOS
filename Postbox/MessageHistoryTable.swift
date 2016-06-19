@@ -62,7 +62,7 @@ final class MessageHistoryTable: Table {
         super.init(valueBox: valueBox, tableId: tableId)
     }
     
-    private func key(index: MessageIndex, key: ValueBoxKey = ValueBoxKey(length: 8 + 4 + 4 + 4)) -> ValueBoxKey {
+    private func key(_ index: MessageIndex, key: ValueBoxKey = ValueBoxKey(length: 8 + 4 + 4 + 4)) -> ValueBoxKey {
         key.setInt64(0, value: index.id.peerId.toInt64())
         key.setInt32(8, value: index.timestamp)
         key.setInt32(8 + 4, value: index.id.namespace)
@@ -70,19 +70,19 @@ final class MessageHistoryTable: Table {
         return key
     }
     
-    private func lowerBound(peerId: PeerId) -> ValueBoxKey {
+    private func lowerBound(_ peerId: PeerId) -> ValueBoxKey {
         let key = ValueBoxKey(length: 8)
         key.setInt64(0, value: peerId.toInt64())
         return key
     }
     
-    private func upperBound(peerId: PeerId) -> ValueBoxKey {
+    private func upperBound(_ peerId: PeerId) -> ValueBoxKey {
         let key = ValueBoxKey(length: 8)
         key.setInt64(0, value: peerId.toInt64())
         return key.successor
     }
     
-    private func messagesGroupedByPeerId(messages: [StoreMessage]) -> [PeerId: [StoreMessage]] {
+    private func messagesGroupedByPeerId(_ messages: [StoreMessage]) -> [PeerId: [StoreMessage]] {
         var dict: [PeerId: [StoreMessage]] = [:]
         
         for message in messages {
@@ -97,7 +97,7 @@ final class MessageHistoryTable: Table {
         return dict
     }
     
-    private func messageIdsByPeerId(ids: [MessageId]) -> [PeerId: [MessageId]] {
+    private func messageIdsByPeerId(_ ids: [MessageId]) -> [PeerId: [MessageId]] {
         var dict: [PeerId: [MessageId]] = [:]
         
         for id in ids {
@@ -112,7 +112,7 @@ final class MessageHistoryTable: Table {
         return dict
     }
     
-    private func processIndexOperations(peerId: PeerId, operations: [MessageHistoryIndexOperation], inout processedOperationsByPeerId: [PeerId: [MessageHistoryOperation]], inout unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], inout updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]) {
+    private func processIndexOperations(_ peerId: PeerId, operations: [MessageHistoryIndexOperation], processedOperationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
         let sharedKey = self.key(MessageIndex(id: MessageId(peerId: PeerId(namespace: 0, id: 0), namespace: 0, id: 0), timestamp: 0))
         let sharedBuffer = WriteBuffer()
         let sharedEncoder = Encoder()
@@ -120,7 +120,6 @@ final class MessageHistoryTable: Table {
         var outputOperations: [MessageHistoryOperation] = []
         var accumulatedRemoveIndices: [MessageIndex] = []
         var addedIncomingMessageIds = Set<MessageId>()
-        var removedMessageIds: [MessageId] = []
         for operation in operations {
             switch operation {
                 case let .InsertHole(hole):
@@ -202,11 +201,11 @@ final class MessageHistoryTable: Table {
         if processedOperationsByPeerId[peerId] == nil {
             processedOperationsByPeerId[peerId] = outputOperations
         } else {
-            processedOperationsByPeerId[peerId]!.appendContentsOf(outputOperations)
+            processedOperationsByPeerId[peerId]!.append(contentsOf: outputOperations)
         }
     }
     
-    private func internalStoreMessages(messages: [StoreMessage]) -> [InternalStoreMessage] {
+    private func internalStoreMessages(_ messages: [StoreMessage]) -> [InternalStoreMessage] {
         var internalStoreMessages: [InternalStoreMessage] = []
         for message in messages {
             switch message.id {
@@ -220,7 +219,7 @@ final class MessageHistoryTable: Table {
         return internalStoreMessages
     }
     
-    func addMessages(messages: [StoreMessage], location: AddMessagesLocation, inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], inout updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]) {
+    func addMessages(_ messages: [StoreMessage], location: AddMessagesLocation, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
         let messagesByPeerId = self.messagesGroupedByPeerId(messages)
         for (peerId, peerMessages) in messagesByPeerId {
             var operations: [MessageHistoryIndexOperation] = []
@@ -229,7 +228,7 @@ final class MessageHistoryTable: Table {
         }
     }
     
-    func addHoles(messageIds: [MessageId], inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], inout updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]) {
+    func addHoles(_ messageIds: [MessageId], operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
         for (peerId, messageIds) in self.messageIdsByPeerId(messageIds) {
             var operations: [MessageHistoryIndexOperation] = []
             for id in messageIds {
@@ -239,7 +238,7 @@ final class MessageHistoryTable: Table {
         }
     }
     
-    func removeMessages(messageIds: [MessageId], inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], inout updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]) {
+    func removeMessages(_ messageIds: [MessageId], operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
         for (peerId, messageIds) in self.messageIdsByPeerId(messageIds) {
             var operations: [MessageHistoryIndexOperation] = []
             
@@ -259,7 +258,7 @@ final class MessageHistoryTable: Table {
                 if operationsByPeerId[peerId] == nil {
                     operationsByPeerId[peerId] = outputOperations
                 } else {
-                    operationsByPeerId[peerId]!.appendContentsOf(outputOperations)
+                    operationsByPeerId[peerId]!.append(contentsOf: outputOperations)
                 }
             }
             
@@ -269,19 +268,19 @@ final class MessageHistoryTable: Table {
         }
     }
     
-    func fillHole(id: MessageId, fillType: HoleFill, tagMask: MessageTags?, messages: [StoreMessage], inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], inout updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]) {
+    func fillHole(_ id: MessageId, fillType: HoleFill, tagMask: MessageTags?, messages: [StoreMessage], operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
         var operations: [MessageHistoryIndexOperation] = []
         self.messageHistoryIndexTable.fillHole(id, fillType: fillType, tagMask: tagMask, messages: self.internalStoreMessages(messages), operations: &operations)
         self.processIndexOperations(id.peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
     }
     
-    func updateMessage(id: MessageId, message: StoreMessage, inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], inout updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]) {
+    func updateMessage(_ id: MessageId, message: StoreMessage, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
         var operations: [MessageHistoryIndexOperation] = []
         self.messageHistoryIndexTable.updateMessage(id, message: self.internalStoreMessages([message]).first!, operations: &operations)
         self.processIndexOperations(id.peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
     }
     
-    func updateMedia(id: MediaId, media: Media?, inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout updatedMedia: [MediaId: Media?]) {
+    func updateMedia(_ id: MediaId, media: Media?, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedMedia: inout [MediaId: Media?]) {
         if let previousMedia = self.messageMediaTable.get(id, embedded: { index, id in
             return self.embeddedMediaForIndex(index, id: id)
         }) {
@@ -307,7 +306,7 @@ final class MessageHistoryTable: Table {
         }
     }
     
-    func resetIncomingReadStates(states: [PeerId: [MessageId.Namespace: PeerReadState]], inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]) {
+    func resetIncomingReadStates(_ states: [PeerId: [MessageId.Namespace: PeerReadState]], operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
         for (peerId, namespaces) in states {
             if let combinedState = self.readStateTable.resetStates(peerId, namespaces: namespaces) {
                 if operationsByPeerId[peerId] == nil {
@@ -320,7 +319,7 @@ final class MessageHistoryTable: Table {
         }
     }
     
-    func applyIncomingReadMaxId(messageId: MessageId, inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]) {
+    func applyIncomingReadMaxId(_ messageId: MessageId, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
         var topMessageId: MessageId.Id?
         if let topEntry = self.messageHistoryIndexTable.top(messageId.peerId, namespace: messageId.namespace), case let .Message(index) = topEntry {
             topMessageId = index.id.id
@@ -343,7 +342,7 @@ final class MessageHistoryTable: Table {
         }
     }
     
-    func applyOutgoingReadMaxId(messageId: MessageId, inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]) {
+    func applyOutgoingReadMaxId(_ messageId: MessageId, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
         let (combinedState, invalidated) = self.readStateTable.applyOutgoingMaxReadId(messageId)
         
         if let combinedState = combinedState {
@@ -359,7 +358,7 @@ final class MessageHistoryTable: Table {
         }
     }
     
-    func applyInteractiveMaxReadId(messageId: MessageId, inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], inout updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]) {
+    func applyInteractiveMaxReadId(_ messageId: MessageId, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
         var topMessageId: MessageId.Id?
         if let topEntry = self.messageHistoryIndexTable.top(messageId.peerId, namespace: messageId.namespace), case let .Message(index) = topEntry {
             topMessageId = index.id.id
@@ -385,7 +384,7 @@ final class MessageHistoryTable: Table {
         }
     }
     
-    func topMessage(peerId: PeerId) -> IntermediateMessage? {
+    func topMessage(_ peerId: PeerId) -> IntermediateMessage? {
         var currentKey = self.upperBound(peerId)
         while true {
             var entry: IntermediateMessageHistoryEntry?
@@ -408,7 +407,7 @@ final class MessageHistoryTable: Table {
         return nil
     }
     
-    func getMessage(index: MessageIndex) -> IntermediateMessage? {
+    func getMessage(_ index: MessageIndex) -> IntermediateMessage? {
         let key = self.key(index)
         if let value = self.valueBox.get(self.tableId, key: key) {
             let entry = self.readIntermediateEntry(key, value: value)
@@ -419,7 +418,7 @@ final class MessageHistoryTable: Table {
         return nil
     }
     
-    private func justInsertMessage(message: InternalStoreMessage, sharedKey: ValueBoxKey, sharedBuffer: WriteBuffer, sharedEncoder: Encoder) -> IntermediateMessage {
+    private func justInsertMessage(_ message: InternalStoreMessage, sharedKey: ValueBoxKey, sharedBuffer: WriteBuffer, sharedEncoder: Encoder) -> IntermediateMessage {
         sharedBuffer.reset()
         
         var type: Int8 = 0
@@ -479,10 +478,10 @@ final class MessageHistoryTable: Table {
             sharedBuffer.write(&hasAuthor, offset: 0, length: 1)
         }
 
-        let data = message.text.dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: true)!
-        var length: Int32 = Int32(data.length)
+        let data = message.text.data(using: .utf8, allowLossyConversion: true)!
+        var length: Int32 = Int32(data.count)
         sharedBuffer.write(&length, offset: 0, length: 4)
-        sharedBuffer.write(data.bytes, offset: 0, length: Int(length))
+        sharedBuffer.write(data)
 
         let attributesBuffer = WriteBuffer()
         
@@ -543,7 +542,7 @@ final class MessageHistoryTable: Table {
         return IntermediateMessage(stableId: stableId, id: message.id, timestamp: message.timestamp, flags: flags, tags: message.tags, forwardInfo: intermediateForwardInfo, authorId: message.authorId, text: message.text, attributesData: attributesBuffer.makeReadBufferAndReset(), embeddedMediaData: embeddedMediaBuffer.makeReadBufferAndReset(), referencedMedia: referencedMedia)
     }
     
-    private func justInsertHole(hole: MessageHistoryHole, sharedBuffer: WriteBuffer = WriteBuffer()) {
+    private func justInsertHole(_ hole: MessageHistoryHole, sharedBuffer: WriteBuffer = WriteBuffer()) {
         sharedBuffer.reset()
         var type: Int8 = 1
         sharedBuffer.write(&type, offset: 0, length: 1)
@@ -556,7 +555,7 @@ final class MessageHistoryTable: Table {
         self.valueBox.set(self.tableId, key: self.key(hole.maxIndex), value: sharedBuffer.readBufferNoCopy())
     }
     
-    private func justRemove(index: MessageIndex, inout unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation]) {
+    private func justRemove(_ index: MessageIndex, unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation]) {
         let key = self.key(index)
         if let value = self.valueBox.get(self.tableId, key: key) {
             switch self.readIntermediateEntry(key, value: value) {
@@ -595,7 +594,7 @@ final class MessageHistoryTable: Table {
                     }
                     
                     for mediaId in message.referencedMedia {
-                        self.messageMediaTable.removeReference(mediaId)
+                        let _ = self.messageMediaTable.removeReference(mediaId)
                     }
                 case let .Hole(hole):
                     let tags = self.messageHistoryIndexTable.seedConfiguration.existingMessageTags.rawValue & hole.tags
@@ -618,15 +617,13 @@ final class MessageHistoryTable: Table {
         }
     }
     
-    func embeddedMediaForIndex(index: MessageIndex, id: MediaId) -> Media? {
+    func embeddedMediaForIndex(_ index: MessageIndex, id: MediaId) -> Media? {
         if let message = self.getMessage(index) where message.embeddedMediaData.length > 4 {
             var embeddedMediaCount: Int32 = 0
             message.embeddedMediaData.read(&embeddedMediaCount, offset: 0, length: 4)
             
             for _ in 0 ..< embeddedMediaCount {
-                let mediaOffset = message.embeddedMediaData.offset
                 var mediaLength: Int32 = 0
-                var copyMedia = true
                 message.embeddedMediaData.read(&mediaLength, offset: 0, length: 4)
                 if let readMedia = Decoder(buffer: MemoryBuffer(memory: message.embeddedMediaData.memory + message.embeddedMediaData.offset, capacity: Int(mediaLength), length: Int(mediaLength), freeWhenDone: false)).decodeRootObject() as? Media {
                     
@@ -641,16 +638,14 @@ final class MessageHistoryTable: Table {
         return nil
     }
     
-    func updateEmbeddedMedia(index: MessageIndex, inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], @noescape update: ([Media]) -> [Media]) {
+    func updateEmbeddedMedia(_ index: MessageIndex, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], update: @noescape([Media]) -> [Media]) {
         if let message = self.getMessage(index) {
             var embeddedMediaCount: Int32 = 0
             message.embeddedMediaData.read(&embeddedMediaCount, offset: 0, length: 4)
             
             var previousMedia: [Media] = []
             for _ in 0 ..< embeddedMediaCount {
-                let mediaOffset = message.embeddedMediaData.offset
                 var mediaLength: Int32 = 0
-                var copyMedia = true
                 message.embeddedMediaData.read(&mediaLength, offset: 0, length: 4)
                 if let readMedia = Decoder(buffer: MemoryBuffer(memory: message.embeddedMediaData.memory + message.embeddedMediaData.offset, capacity: Int(mediaLength), length: Int(mediaLength), freeWhenDone: false)).decodeRootObject() as? Media {
                     previousMedia.append(readMedia)
@@ -700,7 +695,7 @@ final class MessageHistoryTable: Table {
         }
     }
     
-    func updateEmbeddedMedia(index: MessageIndex, mediaId: MediaId, media: Media?, inout operationsByPeerId: [PeerId: [MessageHistoryOperation]]) {
+    func updateEmbeddedMedia(_ index: MessageIndex, mediaId: MediaId, media: Media?, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]]) {
         self.updateEmbeddedMedia(index, operationsByPeerId: &operationsByPeerId, update: { previousMedia in
             var updatedMedia: [Media] = []
             for previous in previousMedia {
@@ -716,7 +711,7 @@ final class MessageHistoryTable: Table {
         })
     }
     
-    private func justUpdate(index: MessageIndex, message: InternalStoreMessage, sharedKey: ValueBoxKey, sharedBuffer: WriteBuffer, sharedEncoder: Encoder, inout unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation]) -> IntermediateMessage? {
+    private func justUpdate(_ index: MessageIndex, message: InternalStoreMessage, sharedKey: ValueBoxKey, sharedBuffer: WriteBuffer, sharedEncoder: Encoder, unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation]) -> IntermediateMessage? {
         if let previousMessage = self.getMessage(index) {
             self.valueBox.remove(self.tableId, key: self.key(index))
             
@@ -825,10 +820,10 @@ final class MessageHistoryTable: Table {
                 sharedBuffer.write(&hasAuthor, offset: 0, length: 1)
             }
             
-            let data = message.text.dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: true)!
-            var length: Int32 = Int32(data.length)
+            let data = message.text.data(using: .utf8, allowLossyConversion: true)!
+            var length: Int32 = Int32(data.count)
             sharedBuffer.write(&length, offset: 0, length: 4)
-            sharedBuffer.write(data.bytes, offset: 0, length: Int(length))
+            sharedBuffer.write(data)
             
             let attributesBuffer = WriteBuffer()
             
@@ -892,7 +887,7 @@ final class MessageHistoryTable: Table {
         }
     }
     
-    func unembedMedia(index: MessageIndex, id: MediaId) -> Media? {
+    func unembedMedia(_ index: MessageIndex, id: MediaId) -> Media? {
         if let message = self.getMessage(index) where message.embeddedMediaData.length > 4 {
             var embeddedMediaCount: Int32 = 0
             message.embeddedMediaData.read(&embeddedMediaCount, offset: 0, length: 4)
@@ -932,7 +927,7 @@ final class MessageHistoryTable: Table {
         return nil
     }
     
-    func storeIntermediateMessage(message: IntermediateMessage, sharedKey: ValueBoxKey, sharedBuffer: WriteBuffer = WriteBuffer()) {
+    func storeIntermediateMessage(_ message: IntermediateMessage, sharedKey: ValueBoxKey, sharedBuffer: WriteBuffer = WriteBuffer()) {
         sharedBuffer.reset()
         
         var type: Int8 = 0
@@ -989,10 +984,10 @@ final class MessageHistoryTable: Table {
             sharedBuffer.write(&hasAuthor, offset: 0, length: 1)
         }
         
-        let data = message.text.dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: true)!
-        var length: Int32 = Int32(data.length)
+        let data = message.text.data(using: .utf8, allowLossyConversion: true)!
+        var length: Int32 = Int32(data.count)
         sharedBuffer.write(&length, offset: 0, length: 4)
-        sharedBuffer.write(data.bytes, offset: 0, length: Int(length))
+        sharedBuffer.write(data)
         
         sharedBuffer.write(message.attributesData.memory, offset: 0, length: message.attributesData.length)
         sharedBuffer.write(message.embeddedMediaData.memory, offset: 0, length: message.embeddedMediaData.length)
@@ -1009,7 +1004,7 @@ final class MessageHistoryTable: Table {
         self.valueBox.set(self.tableId, key: self.key(MessageIndex(id: message.id, timestamp: message.timestamp), key: sharedKey), value: sharedBuffer)
     }
     
-    private func readIntermediateEntry(key: ValueBoxKey, value: ReadBuffer) -> IntermediateMessageHistoryEntry {
+    private func readIntermediateEntry(_ key: ValueBoxKey, value: ReadBuffer) -> IntermediateMessageHistoryEntry {
         let index = MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(0)), namespace: key.getInt32(8 + 4), id: key.getInt32(8 + 4 + 4)), timestamp: key.getInt32(8))
         
         var type: Int8 = 0
@@ -1068,7 +1063,7 @@ final class MessageHistoryTable: Table {
             
             var textLength: Int32 = 0
             value.read(&textLength, offset: 0, length: 4)
-            let text = String(data: NSData(bytes: value.memory + value.offset, length: Int(textLength)), encoding: NSUTF8StringEncoding) ?? ""
+            let text = String(data: Data(bytes: UnsafeMutablePointer<UInt8>(value.memory).advanced(by: value.offset), count: Int(textLength)), encoding: .utf8) ?? ""
             //let text = NSString(bytes: value.memory + value.offset, length: Int(textLength), encoding: NSUTF8StringEncoding) ?? ""
             value.skip(Int(textLength))
             
@@ -1081,7 +1076,7 @@ final class MessageHistoryTable: Table {
                 value.skip(Int(attributeLength))
             }
             let attributesLength = value.offset - attributesOffset
-            let attributesBytes = malloc(attributesLength)
+            let attributesBytes = malloc(attributesLength)!
             memcpy(attributesBytes, value.memory + attributesOffset, attributesLength)
             let attributesData = ReadBuffer(memory: attributesBytes, length: attributesLength, freeWhenDone: true)
             
@@ -1094,7 +1089,7 @@ final class MessageHistoryTable: Table {
                 value.skip(Int(mediaLength))
             }
             let embeddedMediaLength = value.offset - embeddedMediaOffset
-            let embeddedMediaBytes = malloc(embeddedMediaLength)
+            let embeddedMediaBytes = malloc(embeddedMediaLength)!
             memcpy(embeddedMediaBytes, value.memory + embeddedMediaOffset, embeddedMediaLength)
             let embeddedMediaData = ReadBuffer(memory: embeddedMediaBytes, length: embeddedMediaLength, freeWhenDone: true)
             
@@ -1123,7 +1118,7 @@ final class MessageHistoryTable: Table {
         }
     }
     
-    func renderMessage(message: IntermediateMessage, peerTable: PeerTable, addAssociatedMessages: Bool = true) -> Message {
+    func renderMessage(_ message: IntermediateMessage, peerTable: PeerTable, addAssociatedMessages: Bool = true) -> Message {
         var parsedAttributes: [MessageAttribute] = []
         var parsedMedia: [Media] = []
         
@@ -1212,7 +1207,7 @@ final class MessageHistoryTable: Table {
         return Message(stableId: message.stableId, id: message.id, timestamp: message.timestamp, flags: message.flags, tags: message.tags, forwardInfo: forwardInfo, author: author, text: message.text, attributes: parsedAttributes, media: parsedMedia, peers: peers, associatedMessages: associatedMessages)
     }
     
-    func entriesAround(index: MessageIndex, count: Int) -> (entries: [IntermediateMessageHistoryEntry], lower: IntermediateMessageHistoryEntry?, upper: IntermediateMessageHistoryEntry?) {
+    func entriesAround(_ index: MessageIndex, count: Int) -> (entries: [IntermediateMessageHistoryEntry], lower: IntermediateMessageHistoryEntry?, upper: IntermediateMessageHistoryEntry?) {
         var lowerEntries: [IntermediateMessageHistoryEntry] = []
         var upperEntries: [IntermediateMessageHistoryEntry] = []
         var lower: IntermediateMessageHistoryEntry?
@@ -1247,16 +1242,16 @@ final class MessageHistoryTable: Table {
                 lower = additionalLowerEntries.last
                 additionalLowerEntries.removeLast()
             }
-            lowerEntries.appendContentsOf(additionalLowerEntries)
+            lowerEntries.append(contentsOf: additionalLowerEntries)
         }
         
         var entries: [IntermediateMessageHistoryEntry] = []
-        entries.appendContentsOf(lowerEntries.reverse())
-        entries.appendContentsOf(upperEntries)
+        entries.append(contentsOf: lowerEntries.reversed())
+        entries.append(contentsOf: upperEntries)
         return (entries: entries, lower: lower, upper: upper)
     }
     
-    func entriesAround(tagMask: MessageTags, index: MessageIndex, count: Int) -> (entries: [IntermediateMessageHistoryEntry], lower: IntermediateMessageHistoryEntry?, upper: IntermediateMessageHistoryEntry?) {
+    func entriesAround(_ tagMask: MessageTags, index: MessageIndex, count: Int) -> (entries: [IntermediateMessageHistoryEntry], lower: IntermediateMessageHistoryEntry?, upper: IntermediateMessageHistoryEntry?) {
         let (indices, lower, upper) = self.tagsTable.indicesAround(tagMask, index: index, count: count)
         
         var entries: [IntermediateMessageHistoryEntry] = []
@@ -1293,7 +1288,7 @@ final class MessageHistoryTable: Table {
         return (entries, lowerEntry, upperEntry)
     }
     
-    func earlierEntries(peerId: PeerId, index: MessageIndex?, count: Int) -> [IntermediateMessageHistoryEntry] {
+    func earlierEntries(_ peerId: PeerId, index: MessageIndex?, count: Int) -> [IntermediateMessageHistoryEntry] {
         var entries: [IntermediateMessageHistoryEntry] = []
         let key: ValueBoxKey
         if let index = index {
@@ -1308,7 +1303,7 @@ final class MessageHistoryTable: Table {
         return entries
     }
     
-    func earlierEntries(tagMask: MessageTags, peerId: PeerId, index: MessageIndex?, count: Int) -> [IntermediateMessageHistoryEntry] {
+    func earlierEntries(_ tagMask: MessageTags, peerId: PeerId, index: MessageIndex?, count: Int) -> [IntermediateMessageHistoryEntry] {
         let indices = self.tagsTable.earlierIndices(tagMask, peerId: peerId, index: index, count: count)
         
         var entries: [IntermediateMessageHistoryEntry] = []
@@ -1324,7 +1319,7 @@ final class MessageHistoryTable: Table {
         return entries
     }
 
-    func laterEntries(peerId: PeerId, index: MessageIndex?, count: Int) -> [IntermediateMessageHistoryEntry] {
+    func laterEntries(_ peerId: PeerId, index: MessageIndex?, count: Int) -> [IntermediateMessageHistoryEntry] {
         var entries: [IntermediateMessageHistoryEntry] = []
         let key: ValueBoxKey
         if let index = index {
@@ -1339,7 +1334,7 @@ final class MessageHistoryTable: Table {
         return entries
     }
     
-    func laterEntries(tagMask: MessageTags, peerId: PeerId, index: MessageIndex?, count: Int) -> [IntermediateMessageHistoryEntry] {
+    func laterEntries(_ tagMask: MessageTags, peerId: PeerId, index: MessageIndex?, count: Int) -> [IntermediateMessageHistoryEntry] {
         let indices = self.tagsTable.laterIndices(tagMask, peerId: peerId, index: index, count: count)
         
         var entries: [IntermediateMessageHistoryEntry] = []
@@ -1355,14 +1350,14 @@ final class MessageHistoryTable: Table {
         return entries
     }
     
-    func maxReadIndex(peerId: PeerId) -> MessageHistoryAnchorIndex? {
+    func maxReadIndex(_ peerId: PeerId) -> MessageHistoryAnchorIndex? {
         if let combinedState = self.readStateTable.getCombinedState(peerId), state = combinedState.states.first where state.1.count != 0 {
             return self.anchorIndex(MessageId(peerId: peerId, namespace: state.0, id: state.1.maxIncomingReadId))
         }
         return nil
     }
     
-    func anchorIndex(messageId: MessageId) -> MessageHistoryAnchorIndex? {
+    func anchorIndex(_ messageId: MessageId) -> MessageHistoryAnchorIndex? {
         let (lower, upper) = self.messageHistoryIndexTable.adjacentItems(messageId, bindUpper: false)
         if let lower = lower, case let .Hole(hole) = lower where messageId.id >= hole.min && messageId.id <= hole.maxIndex.id.id {
             return MessageHistoryAnchorIndex(index: MessageIndex(id: messageId, timestamp: lower.index.timestamp), exact: false)
@@ -1379,7 +1374,7 @@ final class MessageHistoryTable: Table {
         return nil
     }
 
-    func debugList(peerId: PeerId, peerTable: PeerTable) -> [RenderedMessageHistoryEntry] {
+    func debugList(_ peerId: PeerId, peerTable: PeerTable) -> [RenderedMessageHistoryEntry] {
         return self.laterEntries(peerId, index: nil, count: 1000).map({ entry -> RenderedMessageHistoryEntry in
             switch entry {
                 case let .Hole(hole):
@@ -1390,7 +1385,7 @@ final class MessageHistoryTable: Table {
         })
     }
     
-    func debugList(tagMask: MessageTags, peerId: PeerId, peerTable: PeerTable) -> [RenderedMessageHistoryEntry] {
+    func debugList(_ tagMask: MessageTags, peerId: PeerId, peerTable: PeerTable) -> [RenderedMessageHistoryEntry] {
         return self.laterEntries(tagMask, peerId: peerId, index: nil, count: 1000).map({ entry -> RenderedMessageHistoryEntry in
             switch entry {
             case let .Hole(hole):

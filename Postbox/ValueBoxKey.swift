@@ -24,11 +24,11 @@ public struct ValueBoxKey: Comparable, CustomStringConvertible {
     }
     
     public init(_ value: String) {
-        let data = value.dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: true)!
-        self.memory = malloc(data.length)
-        self.length = data.length
+        let data = value.data(using: .utf8, allowLossyConversion: true)!
+        self.memory = malloc(data.count)
+        self.length = data.count
         self.impl = ValueBoxKeyImpl(memory: self.memory)
-        memcpy(self.memory, data.bytes, data.length)
+        data.copyBytes(to: UnsafeMutablePointer<UInt8>(self.memory), count: data.count)
     }
     
     public init(_ buffer: MemoryBuffer) {
@@ -38,51 +38,51 @@ public struct ValueBoxKey: Comparable, CustomStringConvertible {
         memcpy(self.memory, buffer.memory, buffer.length)
     }
     
-    public func setInt32(offset: Int, value: Int32) {
+    public func setInt32(_ offset: Int, value: Int32) {
         var bigEndianValue = Int32(bigEndian: value)
         memcpy(self.memory + offset, &bigEndianValue, 4)
     }
     
-    public func setUInt32(offset: Int, value: UInt32) {
+    public func setUInt32(_ offset: Int, value: UInt32) {
         var bigEndianValue = UInt32(bigEndian: value)
         memcpy(self.memory + offset, &bigEndianValue, 4)
     }
     
-    public func setInt64(offset: Int, value: Int64) {
+    public func setInt64(_ offset: Int, value: Int64) {
         var bigEndianValue = Int64(bigEndian: value)
         memcpy(self.memory + offset, &bigEndianValue, 8)
     }
     
-    public func setInt8(offset: Int, value: Int8) {
+    public func setInt8(_ offset: Int, value: Int8) {
         var varValue = value
         memcpy(self.memory + offset, &varValue, 1)
     }
     
-    public func getInt32(offset: Int) -> Int32 {
+    public func getInt32(_ offset: Int) -> Int32 {
         var value: Int32 = 0
         memcpy(&value, self.memory + offset, 4)
         return Int32(bigEndian: value)
     }
     
-    public func getUInt32(offset: Int) -> UInt32 {
+    public func getUInt32(_ offset: Int) -> UInt32 {
         var value: UInt32 = 0
         memcpy(&value, self.memory + offset, 4)
         return UInt32(bigEndian: value)
     }
     
-    public func getInt64(offset: Int) -> Int64 {
+    public func getInt64(_ offset: Int) -> Int64 {
         var value: Int64 = 0
         memcpy(&value, self.memory + offset, 8)
         return Int64(bigEndian: value)
     }
     
-    public func getInt8(offset: Int) -> Int8 {
+    public func getInt8(_ offset: Int) -> Int8 {
         var value: Int8 = 0
         memcpy(&value, self.memory + offset, 1)
         return value
     }
     
-    public func prefix(length: Int) -> ValueBoxKey {
+    public func prefix(_ length: Int) -> ValueBoxKey {
         assert(length <= self.length, "length <= self.length")
         let key = ValueBoxKey(length: length)
         memcpy(key.memory, self.memory, length)
@@ -144,7 +144,7 @@ public func ==(lhs: ValueBoxKey, rhs: ValueBoxKey) -> Bool {
     return lhs.length == rhs.length && memcmp(lhs.memory, rhs.memory, lhs.length) == 0
 }
 
-private func mdb_cmp_memn(a_memory: UnsafeMutablePointer<Void>, _ a_length: Int, _ b_memory: UnsafeMutablePointer<Void>, _ b_length: Int) -> Int
+private func mdb_cmp_memn(_ a_memory: UnsafeMutablePointer<Void>, _ a_length: Int, _ b_memory: UnsafeMutablePointer<Void>, _ b_length: Int) -> Int
 {
     var diff: Int = 0
     var len_diff: Int = 0

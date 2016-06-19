@@ -11,17 +11,17 @@ final class PeerTable: Table {
         super.init(valueBox: valueBox, tableId: tableId)
     }
     
-    private func key(id: PeerId) -> ValueBoxKey {
+    private func key(_ id: PeerId) -> ValueBoxKey {
         self.sharedKey.setInt64(0, value: id.toInt64())
         return self.sharedKey
     }
     
-    func set(peer: Peer) {
+    func set(_ peer: Peer) {
         self.cachedPeers[peer.id] = peer
         self.updatedPeerIds.insert(peer.id)
     }
     
-    func get(id: PeerId) -> Peer? {
+    func get(_ id: PeerId) -> Peer? {
         if let peer = self.cachedPeers[id] {
             return peer
         }

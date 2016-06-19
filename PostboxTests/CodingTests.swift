@@ -14,7 +14,7 @@ class TestParent: Coding, Equatable {
         self.parentInt32 = parentInt32
     }
     
-    func encode(encoder: Encoder) {
+    func encode(_ encoder: Encoder) {
         encoder.encodeInt32(self.parentInt32, forKey: "parentInt32")
     }
 }
@@ -47,7 +47,7 @@ class TestObject: TestParent {
         super.init(parentInt32: parentInt32)
     }
     
-    override func encode(encoder: Encoder) {
+    override func encode(_ encoder: Encoder) {
         encoder.encodeInt32(self.int32, forKey: "int32")
         encoder.encodeInt64(self.int64, forKey: "int64")
         encoder.encodeDouble(self.double, forKey: "double")
@@ -68,7 +68,7 @@ class TestKey: Coding, Hashable {
         self.value = value
     }
     
-    func encode(encoder: Encoder) {
+    func encode(_ encoder: Encoder) {
         encoder.encodeInt32(Int32(self.value), forKey: "value")
     }
     
@@ -101,7 +101,7 @@ class EmptyState: Coding {
     required init(decoder: Decoder) {
     }
     
-    func encode(encoder: Encoder) {
+    func encode(_ encoder: Encoder) {
     }
 }
 

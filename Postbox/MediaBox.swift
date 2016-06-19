@@ -3,13 +3,13 @@ import SwiftSignalKit
 
 private final class ResourceStatusContext {
     var status: MediaResourceStatus?
-    let subscribers = Bag<MediaResourceStatus -> Void>()
+    let subscribers = Bag<(MediaResourceStatus) -> Void>()
 }
 
 private final class ResourceDataContext {
     var data: MediaResourceData
-    let progresiveDataSubscribers = Bag<MediaResourceData -> Void>()
-    let completeDataSubscribers = Bag<MediaResourceData -> Void>()
+    let progresiveDataSubscribers = Bag<(MediaResourceData) -> Void>()
+    let completeDataSubscribers = Bag<(MediaResourceData) -> Void>()
     
     var fetchDisposable: Disposable?
     let fetchSubscribers = Bag<Void>()
@@ -19,7 +19,7 @@ private final class ResourceDataContext {
     }
 }
 
-private func fileSize(path: String) -> Int {
+private func fileSize(_ path: String) -> Int {
     var value = stat()
     stat(path, &value)
     return Int(value.st_size)
@@ -35,8 +35,8 @@ public final class MediaBox {
     private var statusContexts: [String: ResourceStatusContext] = [:]
     private var dataContexts: [String: ResourceDataContext] = [:]
     
-    private var wrappedFetchResource = Promise<(MediaResource, Int) -> Signal<NSData, NoError>>()
-    public var fetchResource: ((MediaResource, Int) -> Signal<NSData, NoError>)? {
+    private var wrappedFetchResource = Promise<(MediaResource, Int) -> Signal<Data, NoError>>()
+    public var fetchResource: ((MediaResource, Int) -> Signal<Data, NoError>)? {
         didSet {
             if let fetchResource = self.fetchResource {
                 wrappedFetchResource.set(.single(fetchResource))
@@ -47,22 +47,22 @@ public final class MediaBox {
     }
     
     lazy var ensureDirectoryCreated: Void = {
-        try! NSFileManager.defaultManager().createDirectoryAtPath(self.basePath, withIntermediateDirectories: true, attributes: nil)
+        try! FileManager.default().createDirectory(atPath: self.basePath, withIntermediateDirectories: true, attributes: nil)
     }()
     
     public init(basePath: String) {
         self.basePath = basePath
     }
     
-    private func pathForId(id: String) -> String {
+    private func pathForId(_ id: String) -> String {
         return "\(self.basePath)/\(id)"
     }
     
-    public func resourceStatus(resource: MediaResource) -> Signal<MediaResourceStatus, NoError> {
+    public func resourceStatus(_ resource: MediaResource) -> Signal<MediaResourceStatus, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
-            self.statusQueue.dispatch {
+            self.statusQueue.async {
                 let statusContext: ResourceStatusContext
                 if let current = self.statusContexts[resource.id] {
                     statusContext = current
@@ -78,7 +78,7 @@ public final class MediaBox {
                 if let status = statusContext.status {
                     subscriber.putNext(status)
                 } else {
-                    self.dataQueue.dispatch {
+                    self.dataQueue.async {
                         let status: MediaResourceStatus
                         
                         let path = self.pathForId(resource.id)
@@ -98,7 +98,7 @@ public final class MediaBox {
                             }
                         }
                         
-                        self.statusQueue.dispatch {
+                        self.statusQueue.async {
                             if let statusContext = self.statusContexts[resource.id] where statusContext.status == nil {
                                 statusContext.status = status
                                 
@@ -111,11 +111,11 @@ public final class MediaBox {
                 }
             
                 disposable.set(ActionDisposable {
-                    self.statusQueue.dispatch {
+                    self.statusQueue.async {
                         if let current = self.statusContexts[resource.id] {
                             current.subscribers.remove(index)
                             if current.subscribers.isEmpty {
-                                self.statusContexts.removeValueForKey(resource.id)
+                                self.statusContexts.removeValue(forKey: resource.id)
                             }
                         }
                     }
@@ -126,11 +126,11 @@ public final class MediaBox {
         }
     }
     
-    public func resourceData(resource: MediaResource, complete: Bool = true) -> Signal<MediaResourceData, NoError> {
+    public func resourceData(_ resource: MediaResource, complete: Bool = true) -> Signal<MediaResourceData, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
-            self.dataQueue.dispatch {
+            self.dataQueue.async {
                 let path = self.pathForId(resource.id)
                 let currentSize = fileSize(path)
                 
@@ -146,7 +146,7 @@ public final class MediaBox {
                         self.dataContexts[resource.id] = dataContext
                     }
                     
-                    let index: Bag<MediaResourceData -> Void>.Index
+                    let index: Bag<(MediaResourceData) -> Void>.Index
                     if complete {
                         index = dataContext.completeDataSubscribers.add { data in
                             subscriber.putNext(data)
@@ -170,7 +170,7 @@ public final class MediaBox {
                     }
                     
                     disposable.set(ActionDisposable {
-                        self.dataQueue.dispatch {
+                        self.dataQueue.async {
                             if let dataContext = self.dataContexts[resource.id] {
                                 if complete {
                                     dataContext.completeDataSubscribers.remove(index)
@@ -179,7 +179,7 @@ public final class MediaBox {
                                 }
                                 
                                 if dataContext.progresiveDataSubscribers.isEmpty && dataContext.completeDataSubscribers.isEmpty && dataContext.fetchSubscribers.isEmpty {
-                                    self.dataContexts.removeValueForKey(resource.id)
+                                    self.dataContexts.removeValue(forKey: resource.id)
                                 }
                             }
                         }
@@ -191,11 +191,11 @@ public final class MediaBox {
         }
     }
     
-    public func fetchedResource(resource: MediaResource, interactive: Bool) -> Signal<Void, NoError> {
+    public func fetchedResource(_ resource: MediaResource, interactive: Bool) -> Signal<Void, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
-            self.dataQueue.dispatch {
+            self.dataQueue.async {
                 let path = self.pathForId(resource.id)
                 let currentSize = fileSize(path)
                 
@@ -214,7 +214,7 @@ public final class MediaBox {
                     
                     if dataContext.fetchDisposable == nil {
                         let status: MediaResourceStatus = .Fetching(progress: Float(currentSize) / Float(resource.size))
-                        self.statusQueue.dispatch {
+                        self.statusQueue.async {
                             if let statusContext = self.statusContexts[resource.id] {
                                 statusContext.status = status
                                 for subscriber in statusContext.subscribers.copyItems() {
@@ -225,14 +225,14 @@ public final class MediaBox {
                         
                         var offset = currentSize
                         var fd: Int32?
-                        dataContext.fetchDisposable = (self.wrappedFetchResource.get() |> mapToSignal { fetch -> Signal<NSData, NoError> in
+                        dataContext.fetchDisposable = (self.wrappedFetchResource.get() |> mapToSignal { fetch -> Signal<Data, NoError> in
                             return fetch(resource, offset)
                         } |> afterDisposed {
                             if let fd = fd {
                                 close(fd)
                             }
                         }).start(next: { data in
-                            self.dataQueue.dispatch {
+                            self.dataQueue.async {
                                 let _ = self.ensureDirectoryCreated
                                 
                                 if fd == nil {
@@ -243,9 +243,11 @@ public final class MediaBox {
                                 }
                                 
                                 if let fd = fd {
-                                    write(fd, data.bytes, data.length)
+                                    data.withUnsafeBytes { bytes in
+                                        write(fd, bytes, data.count)
+                                    }
                                     
-                                    offset += data.length
+                                    offset += data.count
                                     let updatedSize = offset
                                     
                                     for subscriber in dataContext.progresiveDataSubscribers.copyItems() {
@@ -265,7 +267,7 @@ public final class MediaBox {
                                         status = .Fetching(progress: Float(updatedSize) / Float(resource.size))
                                     }
                                     
-                                    self.statusQueue.dispatch {
+                                    self.statusQueue.async {
                                         if let statusContext = self.statusContexts[resource.id] {
                                             statusContext.status = status
                                             for subscriber in statusContext.subscribers.copyItems() {
@@ -279,7 +281,7 @@ public final class MediaBox {
                     }
                     
                     disposable.set(ActionDisposable {
-                        self.dataQueue.dispatch {
+                        self.dataQueue.async {
                             if let dataContext = self.dataContexts[resource.id] {
                                 dataContext.fetchSubscribers.remove(index)
                                 
@@ -295,7 +297,7 @@ public final class MediaBox {
                                         status = .Remote
                                     }
                                     
-                                    self.statusQueue.dispatch {
+                                    self.statusQueue.async {
                                         if let statusContext = self.statusContexts[resource.id] where statusContext.status != status {
                                             statusContext.status = status
                                             for subscriber in statusContext.subscribers.copyItems() {
@@ -306,7 +308,7 @@ public final class MediaBox {
                                 }
                                 
                                 if dataContext.completeDataSubscribers.isEmpty && dataContext.progresiveDataSubscribers.isEmpty && dataContext.fetchSubscribers.isEmpty {
-                                    self.dataContexts.removeValueForKey(resource.id)
+                                    self.dataContexts.removeValue(forKey: resource.id)
                                 }
                             }
                         }
@@ -318,8 +320,8 @@ public final class MediaBox {
         }
     }
     
-    public func cancelInteractiveResourceFetch(resource: MediaResource) {
-        self.dataQueue.dispatch {
+    public func cancelInteractiveResourceFetch(_ resource: MediaResource) {
+        self.dataQueue.async {
             if let dataContext = self.dataContexts[resource.id] where dataContext.fetchDisposable != nil {
                 dataContext.fetchDisposable?.dispose()
                 dataContext.fetchDisposable = nil
@@ -332,7 +334,7 @@ public final class MediaBox {
                     status = .Remote
                 }
                 
-                self.statusQueue.dispatch {
+                self.statusQueue.async {
                     if let statusContext = self.statusContexts[resource.id] where statusContext.status != status {
                         statusContext.status = status
                         for subscriber in statusContext.subscribers.copyItems() {

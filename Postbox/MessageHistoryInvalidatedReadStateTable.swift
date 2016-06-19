@@ -46,7 +46,7 @@ final class MessageHistorySynchronizeReadStateTable: Table {
         return key
     }
     
-    func set(peerId: PeerId, operation: PeerReadStateSynchronizationOperation?, inout operations: [PeerId: PeerReadStateSynchronizationOperation?]) {
+    func set(_ peerId: PeerId, operation: PeerReadStateSynchronizationOperation?, operations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
         self.updatedPeerIds[peerId] = operation
         operations[peerId] = operation
     }

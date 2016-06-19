@@ -70,11 +70,11 @@ private class TestEmbeddedMedia: Media, CustomStringConvertible {
         self.data = decoder.decodeStringForKey("s")
     }
     
-    func encode(encoder: Encoder) {
+    func encode(_ encoder: Encoder) {
         encoder.encodeString(self.data, forKey: "s")
     }
     
-    func isEqual(other: Media) -> Bool {
+    func isEqual(_ other: Media) -> Bool {
         if let other = other as? TestEmbeddedMedia {
             return self.data == other.data
         }
@@ -101,13 +101,13 @@ private class TestExternalMedia: Media {
         self.data = decoder.decodeStringForKey("s")
     }
     
-    func encode(encoder: Encoder) {
+    func encode(_ encoder: Encoder) {
         encoder.encodeInt32(self.id!.namespace, forKey: "i.n")
         encoder.encodeInt64(self.id!.id, forKey: "i.i")
         encoder.encodeString(self.data, forKey: "s")
     }
     
-    func isEqual(other: Media) -> Bool {
+    func isEqual(_ other: Media) -> Bool {
         if let other = other as? TestExternalMedia {
             return self.id == other.id && self.data == other.data
         }
@@ -133,13 +133,13 @@ private class TestPeer: Peer {
         self.data = decoder.decodeStringForKey("s")
     }
     
-    func encode(encoder: Encoder) {
+    func encode(_ encoder: Encoder) {
         encoder.encodeInt32(self.id.namespace, forKey: "i.n")
         encoder.encodeInt32(self.id.id, forKey: "i.i")
         encoder.encodeString(self.data, forKey: "s")
     }
     
-    func isEqual(other: Peer) -> Bool {
+    func isEqual(_ other: Peer) -> Bool {
         if let other = other as? TestPeer {
             return self.id == other.id && self.data == other.data
         }
@@ -218,7 +218,7 @@ class MessageHistoryTableTests: XCTestCase {
         
         var randomId: Int64 = 0
         arc4random_buf(&randomId, 8)
-        path = NSTemporaryDirectory().stringByAppendingString("\(randomId)")
+        path = NSTemporaryDirectory() + "\(randomId)"
         self.valueBox = SqliteValueBox(basePath: path!)
         
         let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [], initializeMessageNamespacesWithHoles: [], existingMessageTags: [.First, .Second])
@@ -248,46 +248,46 @@ class MessageHistoryTableTests: XCTestCase {
         self.historyMetadataTable = nil
         
         self.valueBox = nil
-        let _ = try? NSFileManager.defaultManager().removeItemAtPath(path!)
+        let _ = try? FileManager.default().removeItem(atPath: path!)
         self.path = nil
     }
     
-    private func addMessage(id: Int32, _ timestamp: Int32, _ text: String = "", _ media: [Media] = [], _ flags: StoreMessageFlags = [], _ tags: MessageTags = []) {
+    private func addMessage(_ id: Int32, _ timestamp: Int32, _ text: String = "", _ media: [Media] = [], _ flags: StoreMessageFlags = [], _ tags: MessageTags = []) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
         self.historyTable!.addMessages([StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, flags: flags, tags: tags, forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media)], location: .Random, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
     }
 
-    private func updateMessage(previousId: Int32, _ id: Int32, _ timestamp: Int32, _ text: String = "", _ media: [Media] = [], _ flags: StoreMessageFlags, _ tags: MessageTags) {
+    private func updateMessage(_ previousId: Int32, _ id: Int32, _ timestamp: Int32, _ text: String = "", _ media: [Media] = [], _ flags: StoreMessageFlags, _ tags: MessageTags) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
         self.historyTable!.updateMessage(MessageId(peerId: peerId, namespace: namespace, id: previousId), message: StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: id), timestamp: timestamp, flags: flags, tags: tags, forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
     }
     
-    private func addHole(id: Int32) {
+    private func addHole(_ id: Int32) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
         self.historyTable!.addHoles([MessageId(peerId: peerId, namespace: namespace, id: id)], operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
     }
     
-    private func removeMessages(ids: [Int32]) {
+    private func removeMessages(_ ids: [Int32]) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
         self.historyTable!.removeMessages(ids.map({ MessageId(peerId: peerId, namespace: namespace, id: $0) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
     }
     
-    private func fillHole(id: Int32, _ fillType: HoleFill, _ messages: [(Int32, Int32, String, [Media])], _ tagMask: MessageTags? = nil) {
+    private func fillHole(_ id: Int32, _ fillType: HoleFill, _ messages: [(Int32, Int32, String, [Media])], _ tagMask: MessageTags? = nil) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
         self.historyTable!.fillHole(MessageId(peerId: peerId, namespace: namespace, id: id), fillType: fillType, tagMask: tagMask, messages: messages.map({ StoreMessage(id: MessageId(peerId: peerId, namespace: namespace, id: $0.0), timestamp: $0.1, flags: [], tags: [], forwardInfo: nil, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
     }
     
-    private func expectEntries(entries: [Entry], tagMask: MessageTags? = nil) {
+    private func expectEntries(_ entries: [Entry], tagMask: MessageTags? = nil) {
         var stableIds = Set<UInt32>()
         
         let list: [RenderedMessageHistoryEntry]
@@ -330,7 +330,7 @@ class MessageHistoryTableTests: XCTestCase {
         }
     }
     
-    private func expectUnsent(indices: [(Int32, Int32)]) {
+    private func expectUnsent(_ indices: [(Int32, Int32)]) {
         let actualUnsent = self.unsentTable!.get().map({ ($0.id.id, $0.timestamp) })
         var match = true
         if actualUnsent.count == indices.count {
@@ -348,14 +348,14 @@ class MessageHistoryTableTests: XCTestCase {
         }
     }
     
-    private func expectMedia(media: [MediaEntry]) {
+    private func expectMedia(_ media: [MediaEntry]) {
         let actualMedia = self.mediaTable!.debugList().map({MediaEntry($0)})
         if media != actualMedia {
             XCTFail("Expected\n\(media)\nActual\n\(actualMedia)")
         }
     }
     
-    private func expectCleanupMedia(media: [Media]) {
+    private func expectCleanupMedia(_ media: [Media]) {
         let actualMedia = self.mediaCleanupTable!.debugList()
         var equal = true
         if media.count != actualMedia.count {

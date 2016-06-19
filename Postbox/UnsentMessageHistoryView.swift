@@ -7,7 +7,7 @@ final class UnsentMessageHistoryView {
         self.indices = indices
     }
     
-    func replay(operations: [IntermediateMessageHistoryUnsentOperation]) -> Bool {
+    func replay(_ operations: [IntermediateMessageHistoryUnsentOperation]) -> Bool {
         var updated = false
         for operation in operations {
             switch operation {
@@ -15,7 +15,7 @@ final class UnsentMessageHistoryView {
                     var inserted = false
                     for i in 0 ..< self.indices.count {
                         if self.indices[i] > index {
-                            self.indices.insert(index, atIndex: i)
+                            self.indices.insert(index, at: i)
                             inserted = true
                             break
                         }
@@ -27,7 +27,7 @@ final class UnsentMessageHistoryView {
                 case let .Remove(index):
                     for i in 0 ..< self.indices.count {
                         if self.indices[i] == index {
-                            self.indices.removeAtIndex(i)
+                            self.indices.remove(at: i)
                             updated = true
                             break
                         }

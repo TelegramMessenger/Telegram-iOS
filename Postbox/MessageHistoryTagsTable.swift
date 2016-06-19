@@ -7,7 +7,7 @@ class MessageHistoryTagsTable: Table {
         super.init(valueBox: valueBox, tableId: tableId)
     }
     
-    private func key(tagMask: MessageTags, index: MessageIndex, key: ValueBoxKey = ValueBoxKey(length: 8 + 4 + 4 + 4 + 4)) -> ValueBoxKey {
+    private func key(_ tagMask: MessageTags, index: MessageIndex, key: ValueBoxKey = ValueBoxKey(length: 8 + 4 + 4 + 4 + 4)) -> ValueBoxKey {
         key.setInt64(0, value: index.id.peerId.toInt64())
         key.setUInt32(8, value: tagMask.rawValue)
         key.setInt32(8 + 4, value: index.timestamp)
@@ -16,29 +16,29 @@ class MessageHistoryTagsTable: Table {
         return key
     }
     
-    private func lowerBound(tagMask: MessageTags, peerId: PeerId) -> ValueBoxKey {
+    private func lowerBound(_ tagMask: MessageTags, peerId: PeerId) -> ValueBoxKey {
         let key = ValueBoxKey(length: 8 + 4)
         key.setInt64(0, value: peerId.toInt64())
         key.setUInt32(8, value: tagMask.rawValue)
         return key
     }
     
-    private func upperBound(tagMask: MessageTags, peerId: PeerId) -> ValueBoxKey {
+    private func upperBound(_ tagMask: MessageTags, peerId: PeerId) -> ValueBoxKey {
         let key = ValueBoxKey(length: 8 + 4)
         key.setInt64(0, value: peerId.toInt64())
         key.setUInt32(8, value: tagMask.rawValue)
         return key.successor
     }
     
-    func add(tagMask: MessageTags, index: MessageIndex) {
+    func add(_ tagMask: MessageTags, index: MessageIndex) {
         self.valueBox.set(self.tableId, key: self.key(tagMask, index: index, key: self.sharedKey), value: MemoryBuffer())
     }
     
-    func remove(tagMask: MessageTags, index: MessageIndex) {
+    func remove(_ tagMask: MessageTags, index: MessageIndex) {
         self.valueBox.remove(self.tableId, key: self.key(tagMask, index: index, key: self.sharedKey))
     }
     
-    func indicesAround(tagMask: MessageTags, index: MessageIndex, count: Int) -> (indices: [MessageIndex], lower: MessageIndex?, upper: MessageIndex?) {
+    func indicesAround(_ tagMask: MessageTags, index: MessageIndex, count: Int) -> (indices: [MessageIndex], lower: MessageIndex?, upper: MessageIndex?) {
         var lowerEntries: [MessageIndex] = []
         var upperEntries: [MessageIndex] = []
         var lower: MessageIndex?
@@ -76,16 +76,16 @@ class MessageHistoryTagsTable: Table {
                 lower = additionalLowerEntries.last
                 additionalLowerEntries.removeLast()
             }
-            lowerEntries.appendContentsOf(additionalLowerEntries)
+            lowerEntries.append(contentsOf: additionalLowerEntries)
         }
         
         var entries: [MessageIndex] = []
-        entries.appendContentsOf(lowerEntries.reverse())
-        entries.appendContentsOf(upperEntries)
+        entries.append(contentsOf: lowerEntries.reversed())
+        entries.append(contentsOf: upperEntries)
         return (indices: entries, lower: lower, upper: upper)
     }
     
-    func earlierIndices(tagMask: MessageTags, peerId: PeerId, index: MessageIndex?, count: Int) -> [MessageIndex] {
+    func earlierIndices(_ tagMask: MessageTags, peerId: PeerId, index: MessageIndex?, count: Int) -> [MessageIndex] {
         var indices: [MessageIndex] = []
         let key: ValueBoxKey
         if let index = index {
@@ -101,7 +101,7 @@ class MessageHistoryTagsTable: Table {
         return indices
     }
     
-    func laterIndices(tagMask: MessageTags, peerId: PeerId, index: MessageIndex?, count: Int) -> [MessageIndex] {
+    func laterIndices(_ tagMask: MessageTags, peerId: PeerId, index: MessageIndex?, count: Int) -> [MessageIndex] {
         var indices: [MessageIndex] = []
         let key: ValueBoxKey
         if let index = index {

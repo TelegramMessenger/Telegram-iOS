@@ -21,7 +21,7 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable {
         return (Int64(self.namespace) << 32) | Int64(self.id)
     }
     
-    public static func encodeArrayToBuffer(array: [PeerId], buffer: WriteBuffer) {
+    public static func encodeArrayToBuffer(_ array: [PeerId], buffer: WriteBuffer) {
         var length: Int32 = Int32(array.count)
         buffer.write(&length, offset: 0, length: 4)
         for id in array {
@@ -30,7 +30,7 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable {
         }
     }
     
-    public static func decodeArrayFromBuffer(buffer: ReadBuffer) -> [PeerId] {
+    public static func decodeArrayFromBuffer(_ buffer: ReadBuffer) -> [PeerId] {
         var length: Int32 = 0
         memcpy(&length, buffer.memory, 4)
         buffer.offset += 4
@@ -68,7 +68,7 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable {
         self.id = id
     }
     
-    public func encodeToBuffer(buffer: WriteBuffer) {
+    public func encodeToBuffer(_ buffer: WriteBuffer) {
         var namespace = self.namespace
         var id = self.id
         buffer.write(&namespace, offset: 0, length: 4);
@@ -95,5 +95,5 @@ public func <(lhs: PeerId, rhs: PeerId) -> Bool {
 public protocol Peer: Coding {
     var id: PeerId { get }
     
-    func isEqual(other: Peer) -> Bool
+    func isEqual(_ other: Peer) -> Bool
 }

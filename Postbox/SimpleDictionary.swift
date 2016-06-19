@@ -1,6 +1,6 @@
 import Foundation
 
-public struct SimpleDictionary<K: Equatable, V>: SequenceType {
+public struct SimpleDictionary<K: Equatable, V>: Sequence {
     private var items: [(K, V)] = []
     
     public subscript(key: K) -> V? {
@@ -18,7 +18,7 @@ public struct SimpleDictionary<K: Equatable, V>: SequenceType {
                     if let value = value {
                         self.items[index] = (k, value)
                     } else {
-                        self.items.removeAtIndex(index)
+                        self.items.remove(at: index)
                     }
                     return
                 }
@@ -30,9 +30,11 @@ public struct SimpleDictionary<K: Equatable, V>: SequenceType {
         }
     }
     
-    public func generate() -> AnyGenerator<(K, V)> {
+    
+    
+    public func makeIterator() -> AnyIterator<(K, V)> {
         var index = 0
-        return AnyGenerator { () -> (K, V)? in
+        return AnyIterator { () -> (K, V)? in
             if index < self.items.count {
                 let currentIndex = index
                 index += 1

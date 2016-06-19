@@ -7,7 +7,7 @@ final class SynchronizePeerReadStatesView {
         self.operations = operations
     }
     
-    func replay(updatedOperations: [PeerId: PeerReadStateSynchronizationOperation?]) -> [PeerId: PeerReadStateSynchronizationOperation?] {
+    func replay(_ updatedOperations: [PeerId: PeerReadStateSynchronizationOperation?]) -> [PeerId: PeerReadStateSynchronizationOperation?] {
         var updates: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
         
         for (peerId, operation) in updatedOperations {
@@ -18,7 +18,7 @@ final class SynchronizePeerReadStatesView {
                 }
             } else {
                 if let _ = self.operations[peerId] {
-                    self.operations.removeValueForKey(peerId)
+                    let _ = self.operations.removeValue(forKey: peerId)
                     updates[peerId] = nil
                 }
             }

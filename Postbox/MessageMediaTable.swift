@@ -29,13 +29,13 @@ final class MessageMediaTable: Table {
         super.init(valueBox: valueBox, tableId: tableId)
     }
 
-    func key(id: MediaId, key: ValueBoxKey = ValueBoxKey(length: 4 + 8)) -> ValueBoxKey {
+    func key(_ id: MediaId, key: ValueBoxKey = ValueBoxKey(length: 4 + 8)) -> ValueBoxKey {
         key.setInt32(0, value: id.namespace)
         key.setInt64(4, value: id.id)
         return key
     }
     
-    func get(id: MediaId, @noescape embedded: (MessageIndex, MediaId) -> Media?) -> Media? {
+    func get(_ id: MediaId, embedded: @noescape(MessageIndex, MediaId) -> Media?) -> Media? {
         if let value = self.valueBox.get(self.tableId, key: self.key(id)) {
             var type: Int8 = 0
             value.read(&type, offset: 0, length: 1)
@@ -63,7 +63,7 @@ final class MessageMediaTable: Table {
         return nil
     }
     
-    func set(media: Media, index: MessageIndex, messageHistoryTable: MessageHistoryTable, sharedWriteBuffer: WriteBuffer = WriteBuffer(), sharedEncoder: Encoder = Encoder()) -> InsertMediaResult {
+    func set(_ media: Media, index: MessageIndex, messageHistoryTable: MessageHistoryTable, sharedWriteBuffer: WriteBuffer = WriteBuffer(), sharedEncoder: Encoder = Encoder()) -> InsertMediaResult {
         if let id = media.id {
             if let value = self.valueBox.get(self.tableId, key: self.key(id)) {
                 var type: Int8 = 0
@@ -143,7 +143,7 @@ final class MessageMediaTable: Table {
         }
     }
     
-    func removeReference(id: MediaId, sharedWriteBuffer: WriteBuffer = WriteBuffer()) -> RemoveMediaResult {
+    func removeReference(_ id: MediaId, sharedWriteBuffer: WriteBuffer = WriteBuffer()) -> RemoveMediaResult {
         if let value = self.valueBox.get(self.tableId, key: self.key(id)) {
             var type: Int8 = 0
             value.read(&type, offset: 0, length: 1)
@@ -193,14 +193,14 @@ final class MessageMediaTable: Table {
         return .Reference
     }
     
-    func removeEmbeddedMedia(media: Media) {
+    func removeEmbeddedMedia(_ media: Media) {
         if let id = media.id {
             self.valueBox.remove(self.tableId, key: self.key(id))
         }
         self.mediaCleanupTable.add(media)
     }
     
-    func update(id: MediaId, media: Media, messageHistoryTable: MessageHistoryTable, inout operationsByPeerId: [PeerId: [MessageHistoryOperation]], sharedWriteBuffer: WriteBuffer = WriteBuffer(), sharedEncoder: Encoder = Encoder())  {
+    func update(_ id: MediaId, media: Media, messageHistoryTable: MessageHistoryTable, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], sharedWriteBuffer: WriteBuffer = WriteBuffer(), sharedEncoder: Encoder = Encoder())  {
         if let updatedId = media.id {
             if let value = self.valueBox.get(self.tableId, key: self.key(id)) {
                 var type: Int8 = 0
@@ -208,7 +208,6 @@ final class MessageMediaTable: Table {
                 if type == MediaEntryType.Direct.rawValue {
                     var dataLength: Int32 = 0
                     value.read(&dataLength, offset: 0, length: 4)
-                    let mediaOffset = value.offset
                     value.skip(Int(dataLength))
                     
                     var messageReferenceCount: Int32 = 0

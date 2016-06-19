@@ -32,7 +32,7 @@ private enum ChatListEntryType: Int8 {
 
 final class ChatListTable: Table {
     let indexTable: ChatListIndexTable
-    let emptyMemoryBuffer = MemoryBuffer(memory: nil, capacity: 0, length: 0, freeWhenDone: false)
+    let emptyMemoryBuffer = MemoryBuffer()
     let metadataTable: MessageHistoryMetadataTable
     let seedConfiguration: SeedConfiguration
     
@@ -44,7 +44,7 @@ final class ChatListTable: Table {
         super.init(valueBox: valueBox, tableId: tableId)
     }
     
-    private func key(index: MessageIndex, type: ChatListEntryType) -> ValueBoxKey {
+    private func key(_ index: MessageIndex, type: ChatListEntryType) -> ValueBoxKey {
         let key = ValueBoxKey(length: 4 + 4 + 4 + 8 + 1)
         key.setInt32(0, value: index.timestamp)
         key.setInt32(4, value: index.id.namespace)
@@ -75,7 +75,7 @@ final class ChatListTable: Table {
         }
     }
     
-    func replay(historyOperationsByPeerId: [PeerId : [MessageHistoryOperation]], messageHistoryTable: MessageHistoryTable, inout operations: [ChatListOperation]) {
+    func replay(_ historyOperationsByPeerId: [PeerId : [MessageHistoryOperation]], messageHistoryTable: MessageHistoryTable, operations: inout [ChatListOperation]) {
         self.ensureInitialized()
         
         for (peerId, _) in historyOperationsByPeerId {
@@ -101,7 +101,7 @@ final class ChatListTable: Table {
         }
     }
     
-    func addHole(hole: ChatListHole, inout operations: [ChatListOperation]) {
+    func addHole(_ hole: ChatListHole, operations: inout [ChatListOperation]) {
         self.ensureInitialized()
         
         if self.valueBox.get(self.tableId, key: self.key(hole.index, type: .Hole)) == nil {
@@ -110,7 +110,7 @@ final class ChatListTable: Table {
         }
     }
     
-    func replaceHole(index: MessageIndex, hole: ChatListHole?, inout operations: [ChatListOperation]) {
+    func replaceHole(_ index: MessageIndex, hole: ChatListHole?, operations: inout [ChatListOperation]) {
         self.ensureInitialized()
         
         if self.valueBox.get(self.tableId, key: self.key(index, type: .Hole)) != nil {
@@ -128,23 +128,23 @@ final class ChatListTable: Table {
         }
     }
     
-    private func justInsertMessage(index: MessageIndex) {
+    private func justInsertMessage(_ index: MessageIndex) {
         self.valueBox.set(self.tableId, key: self.key(index, type: .Message), value: self.emptyMemoryBuffer)
     }
     
-    private func justRemoveMessage(index: MessageIndex) {
+    private func justRemoveMessage(_ index: MessageIndex) {
         self.valueBox.remove(self.tableId, key: self.key(index, type: .Message))
     }
     
-    private func justInsertHole(hole: ChatListHole) {
+    private func justInsertHole(_ hole: ChatListHole) {
         self.valueBox.set(self.tableId, key: self.key(hole.index, type: .Hole), value: self.emptyMemoryBuffer)
     }
     
-    private func justRemoveHole(index: MessageIndex) {
+    private func justRemoveHole(_ index: MessageIndex) {
         self.valueBox.remove(self.tableId, key: self.key(index, type: .Hole))
     }
     
-    func entriesAround(index: MessageIndex, messageHistoryTable: MessageHistoryTable, count: Int) -> (entries: [ChatListIntermediateEntry], lower: ChatListIntermediateEntry?, upper: ChatListIntermediateEntry?) {
+    func entriesAround(_ index: MessageIndex, messageHistoryTable: MessageHistoryTable, count: Int) -> (entries: [ChatListIntermediateEntry], lower: ChatListIntermediateEntry?, upper: ChatListIntermediateEntry?) {
         self.ensureInitialized()
         
         var lowerEntries: [ChatListIntermediateEntry] = []
@@ -217,16 +217,16 @@ final class ChatListTable: Table {
                 lower = additionalLowerEntries.last
                 additionalLowerEntries.removeLast()
             }
-            lowerEntries.appendContentsOf(additionalLowerEntries)
+            lowerEntries.append(contentsOf: additionalLowerEntries)
         }
         
         var entries: [ChatListIntermediateEntry] = []
-        entries.appendContentsOf(lowerEntries.reverse())
-        entries.appendContentsOf(upperEntries)
+        entries.append(contentsOf: lowerEntries.reversed())
+        entries.append(contentsOf: upperEntries)
         return (entries: entries, lower: lower, upper: upper)
     }
     
-    func earlierEntries(index: MessageIndex?, messageHistoryTable: MessageHistoryTable, count: Int) -> [ChatListIntermediateEntry] {
+    func earlierEntries(_ index: MessageIndex?, messageHistoryTable: MessageHistoryTable, count: Int) -> [ChatListIntermediateEntry] {
         self.ensureInitialized()
         
         var entries: [ChatListIntermediateEntry] = []
@@ -254,7 +254,7 @@ final class ChatListTable: Table {
         return entries
     }
     
-    func laterEntries(index: MessageIndex?, messageHistoryTable: MessageHistoryTable, count: Int) -> [ChatListIntermediateEntry] {
+    func laterEntries(_ index: MessageIndex?, messageHistoryTable: MessageHistoryTable, count: Int) -> [ChatListIntermediateEntry] {
         self.ensureInitialized()
         
         var entries: [ChatListIntermediateEntry] = []
@@ -282,7 +282,7 @@ final class ChatListTable: Table {
         return entries
     }
     
-    func debugList(messageHistoryTable: MessageHistoryTable) -> [ChatListIntermediateEntry] {
+    func debugList(_ messageHistoryTable: MessageHistoryTable) -> [ChatListIntermediateEntry] {
         return self.laterEntries(MessageIndex.absoluteLowerBound(), messageHistoryTable: messageHistoryTable, count: 1000)
     }
 }

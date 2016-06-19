@@ -113,7 +113,7 @@ final class MutableChatListView {
         self.count = count
     }
     
-    func replay(operations: [ChatListOperation], context: MutableChatListViewReplayContext) -> Bool {
+    func replay(_ operations: [ChatListOperation], context: MutableChatListViewReplayContext) -> Bool {
         var hasChanges = false
         for operation in operations {
             switch operation {
@@ -142,7 +142,7 @@ final class MutableChatListView {
         return hasChanges
     }
     
-    func add(entry: MutableChatListEntry) -> Bool {
+    func add(_ entry: MutableChatListEntry) -> Bool {
         if self.entries.count == 0 {
             self.entries.append(entry)
             return true
@@ -155,7 +155,7 @@ final class MutableChatListView {
             if entry.index < last.index {
                 if self.earlier == nil || self.earlier!.index < entry.index {
                     if self.entries.count < self.count {
-                        self.entries.insert(entry, atIndex: 0)
+                        self.entries.insert(entry, at: 0)
                     } else {
                         self.earlier = entry
                     }
@@ -179,7 +179,7 @@ final class MutableChatListView {
                     self.entries.append(entry)
                     if self.entries.count > self.count {
                         self.earlier = self.entries[0]
-                        self.entries.removeAtIndex(0)
+                        self.entries.remove(at: 0)
                     }
                     return true
                 }
@@ -191,10 +191,10 @@ final class MutableChatListView {
                     }
                     i -= 1
                 }
-                self.entries.insert(entry, atIndex: i)
+                self.entries.insert(entry, at: i)
                 if self.entries.count > self.count {
                     self.earlier = self.entries[0]
-                    self.entries.removeAtIndex(0)
+                    self.entries.remove(at: 0)
                 }
                 return true
             } else {
@@ -203,7 +203,7 @@ final class MutableChatListView {
         }
     }
     
-    func remove(indices: Set<MessageIndex>, holes: Bool, context: MutableChatListViewReplayContext) -> Bool {
+    func remove(_ indices: Set<MessageIndex>, holes: Bool, context: MutableChatListViewReplayContext) -> Bool {
         var hasChanges = false
         if let earlier = self.earlier where indices.contains(earlier.index) {
             var match = false
@@ -245,7 +245,7 @@ final class MutableChatListView {
                             match = !holes
                     }
                     if match {
-                        self.entries.removeAtIndex(i)
+                        self.entries.remove(at: i)
                         context.removedEntries = true
                         hasChanges = true
                     }
@@ -280,11 +280,11 @@ final class MutableChatListView {
             }
             
             addedEntries += self.entries
-            addedEntries.sortInPlace({ $0.index < $1.index })
+            addedEntries.sort(isOrderedBefore: { $0.index < $1.index })
             var i = addedEntries.count - 1
             while i >= 1 {
                 if addedEntries[i].index.id == addedEntries[i - 1].index.id {
-                    addedEntries.removeAtIndex(i)
+                    addedEntries.remove(at: i)
                 }
                 i -= 1
             }
@@ -309,7 +309,7 @@ final class MutableChatListView {
             
             i = anchorIndex
             while i >= 0 && i > anchorIndex - self.count {
-                self.entries.insert(addedEntries[i], atIndex: 0)
+                self.entries.insert(addedEntries[i], at: 0)
                 i -= 1
             }
             
@@ -352,8 +352,8 @@ final class MutableChatListView {
         return nil
     }
     
-    func updatePeers(peers: [PeerId: Peer]) -> Bool {
-        var hasChanges = false
+    func updatePeers(_ peers: [PeerId: Peer]) -> Bool {
+        let hasChanges = false
         /*for i in 0 ..< self.entries.count {
             switch self.entries[i] {
                 case let .MessageEntry(message):
@@ -374,7 +374,7 @@ final class MutableChatListView {
         return hasChanges
     }
     
-    func render(renderMessage: IntermediateMessage -> Message) {
+    func render(_ renderMessage: (IntermediateMessage) -> Message) {
         for i in 0 ..< self.entries.count {
             if case let .IntermediateMessageEntry(message, combinedReadState) = self.entries[i] {
                 self.entries[i] = .MessageEntry(renderMessage(message), combinedReadState)

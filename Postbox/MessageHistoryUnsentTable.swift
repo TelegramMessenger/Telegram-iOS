@@ -8,7 +8,7 @@ enum IntermediateMessageHistoryUnsentOperation {
 final class MessageHistoryUnsentTable: Table {
     private let sharedKey = ValueBoxKey(length: 4 + 4 + 4 + 8)
     
-    private func key(index: MessageIndex) -> ValueBoxKey {
+    private func key(_ index: MessageIndex) -> ValueBoxKey {
         self.sharedKey.setInt32(0, value: index.timestamp)
         self.sharedKey.setInt32(4, value: index.id.namespace)
         self.sharedKey.setInt32(4 + 4, value: index.id.id)
@@ -33,12 +33,12 @@ final class MessageHistoryUnsentTable: Table {
         super.init(valueBox: valueBox, tableId: tableId)
     }
     
-    func add(index: MessageIndex, inout operations: [IntermediateMessageHistoryUnsentOperation]) {
+    func add(_ index: MessageIndex, operations: inout [IntermediateMessageHistoryUnsentOperation]) {
         self.valueBox.set(self.tableId, key: self.key(index), value: MemoryBuffer())
         operations.append(.Insert(index))
     }
     
-    func remove(index: MessageIndex, inout operations: [IntermediateMessageHistoryUnsentOperation]) {
+    func remove(_ index: MessageIndex, operations: inout [IntermediateMessageHistoryUnsentOperation]) {
         self.valueBox.remove(self.tableId, key: self.key(index))
         operations.append(.Remove(index))
     }

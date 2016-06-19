@@ -6,9 +6,9 @@ private struct LmdbTable {
 }
 
 private struct LmdbCursor {
-    var cursor: COpaquePointer
+    var cursor: OpaquePointer!
     
-    func seekTo(key: ValueBoxKey, forward: Bool) -> (ValueBoxKey, ReadBuffer)? {
+    func seekTo(_ key: ValueBoxKey, forward: Bool) -> (ValueBoxKey, ReadBuffer)? {
         var mdbKey = MDB_val()
         var mdbData = MDB_val()
         
@@ -23,7 +23,7 @@ private struct LmdbCursor {
             let actualKey = ValueBoxKey(length: mdbKey.mv_size)
             memcpy(actualKey.memory, mdbKey.mv_data, mdbKey.mv_size)
             
-            let value = malloc(mdbData.mv_size)
+            let value = malloc(mdbData.mv_size)!
             memcpy(value, mdbData.mv_data, mdbData.mv_size)
             
             return (actualKey, ReadBuffer(memory: value, length: mdbData.mv_size, freeWhenDone: true))
@@ -53,7 +53,7 @@ private struct LmdbCursor {
             let actualKey = ValueBoxKey(length: mdbKey.mv_size)
             memcpy(actualKey.memory, mdbKey.mv_data, mdbKey.mv_size)
             
-            let value = malloc(mdbData.mv_size)
+            let value = malloc(mdbData.mv_size)!
             memcpy(value, mdbData.mv_data, mdbData.mv_size)
             
             return (actualKey, ReadBuffer(memory: value, length: mdbData.mv_size, freeWhenDone: true))
@@ -79,7 +79,7 @@ private struct LmdbCursor {
             let actualKey = ValueBoxKey(length: mdbKey.mv_size)
             memcpy(actualKey.memory, mdbKey.mv_data, mdbKey.mv_size)
             
-            let value = malloc(mdbData.mv_size)
+            let value = malloc(mdbData.mv_size)!
             memcpy(value, mdbData.mv_data, mdbData.mv_size)
             
             return (actualKey, ReadBuffer(memory: value, length: mdbData.mv_size, freeWhenDone: true))
@@ -93,10 +93,10 @@ private struct LmdbCursor {
 }
 
 public final class LmdbValueBox: ValueBox {
-    private var env: COpaquePointer = nil
+    private var env: OpaquePointer? = nil
     private var tables: [Int32 : LmdbTable] = [:]
     
-    private var sharedTxn: COpaquePointer = nil
+    private var sharedTxn: OpaquePointer? = nil
     
     private var readQueryTime: CFAbsoluteTime = 0.0
     private var writeQueryTime: CFAbsoluteTime = 0.0
@@ -113,10 +113,10 @@ public final class LmdbValueBox: ValueBox {
         
         var createDirectory = false
         var isDirectory: ObjCBool = false as ObjCBool
-        if NSFileManager.defaultManager().fileExistsAtPath(path, isDirectory: &isDirectory) {
+        if FileManager.default().fileExists(atPath: path, isDirectory: &isDirectory) {
             if !isDirectory {
                 do {
-                    try NSFileManager.defaultManager().removeItemAtPath(path)
+                    try FileManager.default().removeItem(atPath: path)
                 } catch _ { }
                 createDirectory = true
             }
@@ -127,7 +127,7 @@ public final class LmdbValueBox: ValueBox {
         
         if createDirectory {
             do {
-                try NSFileManager.defaultManager().createDirectoryAtPath(path, withIntermediateDirectories: true, attributes: nil)
+                try FileManager.default().createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
             } catch _ { }
         }
         
@@ -154,7 +154,7 @@ public final class LmdbValueBox: ValueBox {
         mdb_env_close(self.env)
     }
     
-    private func createTableWithName(name: Int32) -> LmdbTable? {
+    private func createTableWithName(_ name: Int32) -> LmdbTable? {
         var dbi = MDB_dbi()
         let result = mdb_dbi_open(self.sharedTxn, "\(name)", UInt32(MDB_CREATE), &dbi)
     
@@ -204,7 +204,7 @@ public final class LmdbValueBox: ValueBox {
         }
     }
     
-    public func range(table: Int32, start: ValueBoxKey, end: ValueBoxKey, @noescape values: (ValueBoxKey, ReadBuffer) -> Bool, limit: Int) {
+    public func range(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey, values: @noescape(ValueBoxKey, ReadBuffer) -> Bool, limit: Int) {
         if start == end || limit == 0 {
             return
         }
@@ -225,7 +225,7 @@ public final class LmdbValueBox: ValueBox {
         
         if let nativeTable = nativeTable {
             var startTime = CFAbsoluteTimeGetCurrent()
-            var cursorPtr: COpaquePointer = nil
+            var cursorPtr: OpaquePointer? = nil
             let result = mdb_cursor_open(self.sharedTxn, nativeTable.dbi, &cursorPtr)
             if result != MDB_SUCCESS {
                 print("(LmdbValueBox mdb_cursor_open failed with \(result))")
@@ -247,7 +247,7 @@ public final class LmdbValueBox: ValueBox {
                     var count = 0
                     if value != nil && value!.0 < end {
                         count += 1
-                        values(value!.0, value!.1)
+                        let _ = values(value!.0, value!.1)
                     }
                     
                     while value != nil && value!.0 < end && count < limit {
@@ -261,7 +261,7 @@ public final class LmdbValueBox: ValueBox {
                         
                         if value != nil && value!.0 < end {
                             count += 1
-                            values(value!.0, value!.1)
+                            let _ = values(value!.0, value!.1)
                         }
                     }
                 } else {
@@ -280,7 +280,7 @@ public final class LmdbValueBox: ValueBox {
                     var count = 0
                     if value != nil && value!.0 > end {
                         count += 1
-                        values(value!.0, value!.1)
+                        let _ = values(value!.0, value!.1)
                     }
                     
                     while value != nil && value!.0 > end && count < limit {
@@ -294,7 +294,7 @@ public final class LmdbValueBox: ValueBox {
                         
                         if value != nil && value!.0 > end {
                             count += 1
-                            values(value!.0, value!.1)
+                            let _ = values(value!.0, value!.1)
                         }
                     }
                 }
@@ -312,13 +312,13 @@ public final class LmdbValueBox: ValueBox {
         }
     }
     
-    public func range(table: Int32, start: ValueBoxKey, end: ValueBoxKey, @noescape keys: ValueBoxKey -> Bool, limit: Int) {
+    public func range(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey, keys: @noescape(ValueBoxKey) -> Bool, limit: Int) {
         self.range(table, start: start, end: end, values: { key, _ in
             return keys(key)
         }, limit: limit)
     }
     
-    public func get(table: Int32, key: ValueBoxKey) -> ReadBuffer? {
+    public func get(_ table: Int32, key: ValueBoxKey) -> ReadBuffer? {
         let startTime = CFAbsoluteTimeGetCurrent()
         
         var commit = false
@@ -347,7 +347,7 @@ public final class LmdbValueBox: ValueBox {
             let result = mdb_get(self.sharedTxn, nativeTable.dbi, &mdbKey, &mdbData)
             
             if result == MDB_SUCCESS {
-                let value = malloc(mdbData.mv_size)
+                let value = malloc(mdbData.mv_size)!
                 memcpy(value, mdbData.mv_data, mdbData.mv_size)
                 resultValue = ReadBuffer(memory: value, length: mdbData.mv_size, freeWhenDone: true)
             } else {
@@ -366,11 +366,11 @@ public final class LmdbValueBox: ValueBox {
         return resultValue
     }
     
-    public func exists(table: Int32, key: ValueBoxKey) -> Bool {
+    public func exists(_ table: Int32, key: ValueBoxKey) -> Bool {
         return self.get(table, key: key) != nil
     }
     
-    public func set(table: Int32, key: ValueBoxKey, value: MemoryBuffer) {
+    public func set(_ table: Int32, key: ValueBoxKey, value: MemoryBuffer) {
         let startTime = CFAbsoluteTimeGetCurrent()
         
         var commit = false
@@ -409,7 +409,7 @@ public final class LmdbValueBox: ValueBox {
         writeQueryTime += CFAbsoluteTimeGetCurrent() - startTime
     }
     
-    public func remove(table: Int32, key: ValueBoxKey) {
+    public func remove(_ table: Int32, key: ValueBoxKey) {
         let startTime = CFAbsoluteTimeGetCurrent()
         
         var commit = false

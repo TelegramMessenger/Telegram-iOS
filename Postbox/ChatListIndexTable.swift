@@ -5,13 +5,13 @@ final class ChatListIndexTable: Table {
         super.init(valueBox: valueBox, tableId: tableId)
     }
     
-    private func key(peerId: PeerId) -> ValueBoxKey {
+    private func key(_ peerId: PeerId) -> ValueBoxKey {
         let key = ValueBoxKey(length: 8)
         key.setInt64(0, value: peerId.toInt64())
         return key
     }
     
-    func set(index: MessageIndex) {
+    func set(_ index: MessageIndex) {
         let writeBuffer = WriteBuffer()
         var idNamespace: Int32 = index.id.namespace
         var idId: Int32 = index.id.id
@@ -22,11 +22,11 @@ final class ChatListIndexTable: Table {
         self.valueBox.set(self.tableId, key: self.key(index.id.peerId), value: writeBuffer.readBufferNoCopy())
     }
     
-    func remove(peerId: PeerId) {
+    func remove(_ peerId: PeerId) {
         self.valueBox.remove(self.tableId, key: self.key(peerId))
     }
     
-    func get(peerId: PeerId) -> MessageIndex? {
+    func get(_ peerId: PeerId) -> MessageIndex? {
         if let value = self.valueBox.get(self.tableId, key: self.key(peerId)) {
             var idNamespace: Int32 = 0
             var idId: Int32 = 0
