@@ -47,7 +47,7 @@ This document contains the following sections:
 4. [Documentation](#documentation)
 5. [Troubleshooting](#troubleshooting)
 6. [Contributing](#contributing)
-  1. [Code Of Conduct](#codeofconduct)
+  1. [Code of Conduct](#codeofconduct)
   2. [Contributor License](#contributorlicense)
 7. [Contact](#contact)
 
@@ -560,7 +560,7 @@ We're looking forward to your contributions via pull requests.
 * [Carthage](https://github.com/Carthage/Carthage)
 
 <a id="codeofconduct"></a>
-### 6.1 Code Of Conduct
+### 6.1 Code of Conduct
 
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
 
