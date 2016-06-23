@@ -3,7 +3,11 @@
 //  AsyncDisplayKit
 //
 //  Created by Levi McCallum on 1/29/16.
-//  Copyright © 2016 Facebook. All rights reserved.
+//
+//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the root directory of this source tree. An additional grant
+//  of patent rights can be found in the PATENTS file in the same directory.
 //
 
 #import "NSArray+Diffing.h"
@@ -50,30 +54,36 @@
 - (NSIndexSet *)_asdk_commonIndexesWithArray:(NSArray *)array compareBlock:(BOOL (^)(id lhs, id rhs))comparison
 {
   NSAssert(comparison != nil, @"Comparison block is required");
-  NSInteger lengths[self.count+1][array.count+1];
-  for (NSInteger i = self.count; i >= 0; i--) {
-    for (NSInteger j = array.count; j >= 0; j--) {
-      if (i == self.count || j == array.count) {
+  
+  NSInteger selfCount = self.count;
+  NSInteger arrayCount = array.count;
+  
+  NSInteger lengths[selfCount+1][arrayCount+1];
+  for (NSInteger i = 0; i <= selfCount; i++) {
+    for (NSInteger j = 0; j <= arrayCount; j++) {
+      if (i == 0 || j == 0) {
         lengths[i][j] = 0;
-      } else if (comparison(self[i], array[j])) {
-        lengths[i][j] = 1 + lengths[i+1][j+1];
+      } else if (comparison(self[i-1], array[j-1])) {
+        lengths[i][j] = 1 + lengths[i-1][j-1];
       } else {
-        lengths[i][j] = MAX(lengths[i+1][j], lengths[i][j+1]);
+        lengths[i][j] = MAX(lengths[i-1][j], lengths[i][j-1]);
       }
     }
   }
   
   NSMutableIndexSet *common = [NSMutableIndexSet indexSet];
-  for (NSInteger i = 0, j = 0; i < self.count && j < array.count;) {
-    if (comparison(self[i], array[j])) {
-      [common addIndex:i];
-      i++; j++;
-    } else if (lengths[i+1][j] >= lengths[i][j+1]) {
-      i++;
+  NSInteger i = selfCount, j = arrayCount;
+  while(i > 0 && j > 0) {
+    if (comparison(self[i-1], array[j-1])) {
+      [common addIndex:(i-1)];
+      i--; j--;
+    } else if (lengths[i-1][j] > lengths[i][j-1]) {
+      i--;
     } else {
-      j++;
+      j--;
     }
   }
+  
   return common;
 }
 

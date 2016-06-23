@@ -1,12 +1,12 @@
-/*
- *  Copyright (c) 2014-present, Facebook, Inc.
- *  All rights reserved.
- *
- *  This source code is licensed under the BSD-style license found in the
- *  LICENSE file in the root directory of this source tree. An additional grant
- *  of patent rights can be found in the PATENTS file in the same directory.
- *
- */
+//
+//  ASLayoutSpec.mm
+//  AsyncDisplayKit
+//
+//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the root directory of this source tree. An additional grant
+//  of patent rights can be found in the PATENTS file in the same directory.
+//
 
 #import "ASLayoutSpec.h"
 
@@ -17,25 +17,26 @@
 #import "ASInternalHelpers.h"
 #import "ASLayout.h"
 #import "ASThread.h"
-
+#import "ASTraitCollection.h"
 
 #import <objc/runtime.h>
+#import <map>
+#import <vector>
 
-static NSString * const kDefaultChildKey = @"kDefaultChildKey";
-static NSString * const kDefaultChildrenKey = @"kDefaultChildrenKey";
+typedef std::map<unsigned long, id<ASLayoutable>, std::less<unsigned long>> ASChildMap;
 
 @interface ASLayoutSpec() {
   ASEnvironmentState _environmentState;
   ASDN::RecursiveMutex _propertyLock;
+  ASChildMap _children;
 }
-@property (nonatomic, strong) NSMutableDictionary *layoutChildren;
 @end
 
 @implementation ASLayoutSpec
 
 // these dynamic properties all defined in ASLayoutOptionsPrivate.m
-@dynamic spacingAfter, spacingBefore, flexGrow, flexShrink, flexBasis, alignSelf, ascender, descender, sizeRange, layoutPosition;
-@synthesize layoutChildren = _layoutChildren;
+@dynamic spacingAfter, spacingBefore, flexGrow, flexShrink, flexBasis,
+         alignSelf, ascender, descender, sizeRange, layoutPosition, layoutableType;
 @synthesize isFinalLayoutable = _isFinalLayoutable;
 
 - (instancetype)init
@@ -45,15 +46,21 @@ static NSString * const kDefaultChildrenKey = @"kDefaultChildrenKey";
   }
   _isMutable = YES;
   _environmentState = ASEnvironmentStateMakeDefault();
-  
   return self;
+}
+
+- (ASLayoutableType)layoutableType
+{
+  return ASLayoutableTypeLayoutSpec;
 }
 
 #pragma mark - Layout
 
 - (ASLayout *)measureWithSizeRange:(ASSizeRange)constrainedSize
 {
-  return [ASLayout layoutWithLayoutableObject:self size:constrainedSize.min];
+  return [ASLayout layoutWithLayoutableObject:self
+                         constrainedSizeRange:constrainedSize
+                                         size:constrainedSize.min];
 }
 
 - (id<ASLayoutable>)finalLayoutable
@@ -95,14 +102,6 @@ static NSString * const kDefaultChildrenKey = @"kDefaultChildrenKey";
   return child;
 }
 
-- (NSMutableDictionary *)layoutChildren
-{
-  if (!_layoutChildren) {
-    _layoutChildren = [NSMutableDictionary dictionary];
-  }
-  return _layoutChildren;
-}
-
 - (void)setParent:(id<ASLayoutable>)parent
 {
   // FIXME: Locking should be evaluated here.  _parent is not widely used yet, though.
@@ -113,50 +112,66 @@ static NSString * const kDefaultChildrenKey = @"kDefaultChildrenKey";
   }
 }
 
-- (void)setChild:(id<ASLayoutable>)child;
-{
-  [self setChild:child forIdentifier:kDefaultChildKey];
-}
-
-- (void)setChild:(id<ASLayoutable>)child forIdentifier:(NSString *)identifier
+- (void)setChild:(id<ASLayoutable>)child
 {
   ASDisplayNodeAssert(self.isMutable, @"Cannot set properties when layout spec is not mutable");
-  id<ASLayoutable> finalLayoutable = [self layoutableToAddFromLayoutable:child];
-  self.layoutChildren[identifier] = finalLayoutable;
-  if ([finalLayoutable isKindOfClass:[ASLayoutSpec class]]) {
-    [(ASLayoutSpec *)finalLayoutable setParent:self]; // This will trigger upward propogation if needed.
-  } else if ([self supportsUpwardPropagation]) {
-    ASEnvironmentStatePropagateUp(self, finalLayoutable.environmentState.layoutOptionsState); // Probably an ASDisplayNode
+  if (child) {
+    id<ASLayoutable> finalLayoutable = [self layoutableToAddFromLayoutable:child];
+    if (finalLayoutable) {
+      _children[0] = finalLayoutable;
+      [self propagateUpLayoutable:finalLayoutable];
+    }
+  } else {
+    _children.erase(0);
   }
 }
 
-- (void)setChildren:(NSArray *)children
+- (void)setChild:(id<ASLayoutable>)child forIndex:(NSUInteger)index
+{
+  ASDisplayNodeAssert(self.isMutable, @"Cannot set properties when layout spec is not mutable");
+  if (child) {
+    id<ASLayoutable> finalLayoutable = [self layoutableToAddFromLayoutable:child];
+    _children[index] = finalLayoutable;
+  } else {
+    _children.erase(index);
+  }
+  // TODO: Should we propagate up the layoutable at it could happen that multiple children will propagated up their
+  //       layout options and one child will overwrite values from another child
+  // [self propagateUpLayoutable:finalLayoutable];
+}
+
+- (void)setChildren:(NSArray<id<ASLayoutable>> *)children
 {
   ASDisplayNodeAssert(self.isMutable, @"Cannot set properties when layout spec is not mutable");
   
-  NSMutableArray *finalChildren = [NSMutableArray arrayWithCapacity:children.count];
-  for (id<ASLayoutable> child in children) {
-    [finalChildren addObject:[self layoutableToAddFromLayoutable:child]];
-  }
-  
-  self.layoutChildren[kDefaultChildrenKey] = [NSArray arrayWithArray:finalChildren];
+  _children.clear();
+  [children enumerateObjectsUsingBlock:^(id<ASLayoutable>  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+    _children[idx] = obj;
+  }];
 }
 
-- (id<ASLayoutable>)childForIdentifier:(NSString *)identifier
+- (id<ASLayoutable>)childForIndex:(NSUInteger)index
 {
-  return self.layoutChildren[identifier];
+  if (index < _children.size()) {
+    return _children[index];
+  }
+  return nil;
 }
 
 - (id<ASLayoutable>)child
 {
-  return self.layoutChildren[kDefaultChildKey];
+  return _children[0];
 }
 
 - (NSArray *)children
 {
-  return self.layoutChildren[kDefaultChildrenKey];
+  std::vector<ASLayout *> children;
+  for (ASChildMap::iterator it = _children.begin(); it != _children.end(); ++it ) {
+    children.push_back(it->second);
+  }
+  
+  return [NSArray arrayWithObjects:&children[0] count:children.size()];
 }
-
 
 #pragma mark - ASEnvironment
 
@@ -178,8 +193,38 @@ static NSString * const kDefaultChildrenKey = @"kDefaultChildrenKey";
   return ASEnvironmentStatePropagationEnabled();
 }
 
+- (BOOL)supportsTraitsCollectionPropagation
+{
+  return ASEnvironmentStateTraitCollectionPropagationEnabled();
+}
+
+- (void)propagateUpLayoutable:(id<ASLayoutable>)layoutable
+{
+  if ([layoutable isKindOfClass:[ASLayoutSpec class]]) {
+    [(ASLayoutSpec *)layoutable setParent:self]; // This will trigger upward propogation if needed.
+  } else if ([self supportsUpwardPropagation]) {
+    ASEnvironmentStatePropagateUp(self, layoutable.environmentState.layoutOptionsState); // Probably an ASDisplayNode
+  }
+}
+
+- (ASEnvironmentTraitCollection)environmentTraitCollection
+{
+  return _environmentState.environmentTraitCollection;
+}
+
+- (void)setEnvironmentTraitCollection:(ASEnvironmentTraitCollection)environmentTraitCollection
+{
+  _environmentState.environmentTraitCollection = environmentTraitCollection;
+}
+
 ASEnvironmentLayoutOptionsForwarding
 ASEnvironmentLayoutExtensibilityForwarding
+
+- (ASTraitCollection *)asyncTraitCollection
+{
+  ASDN::MutexLocker l(_propertyLock);
+  return [ASTraitCollection traitCollectionWithASEnvironmentTraitCollection:self.environmentTraitCollection];
+}
 
 @end
 

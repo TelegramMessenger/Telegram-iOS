@@ -3,12 +3,20 @@
 //  AsyncDisplayKit
 //
 //  Created by Levi McCallum on 1/29/16.
-//  Copyright © 2016 Facebook. All rights reserved.
+//
+//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the root directory of this source tree. An additional grant
+//  of patent rights can be found in the PATENTS file in the same directory.
 //
 
 #import <XCTest/XCTest.h>
 
 #import "NSArray+Diffing.h"
+
+@interface NSArray (ArrayDiffingTests)
+- (NSIndexSet *)_asdk_commonIndexesWithArray:(NSArray *)array compareBlock:(BOOL (^)(id lhs, id rhs))comparison;
+@end
 
 @interface ArrayDiffingTests : XCTestCase
 
@@ -16,7 +24,48 @@
 
 @implementation ArrayDiffingTests
 
-- (void)testDiffing {
+- (void)testDiffingCommonIndexes
+{
+  NSArray<NSArray *> *tests = @[
+    @[
+      @[@"bob", @"alice", @"dave"],
+      @[@"bob", @"alice", @"dave", @"gary"],
+      @[@0, @1, @2]
+    ],
+    @[
+      @[@"bob", @"alice", @"dave"],
+      @[@"bob", @"gary", @"dave"],
+      @[@0, @2]
+    ],
+    @[
+      @[@"bob", @"alice"],
+      @[@"gary", @"dave"],
+      @[],
+    ],
+    @[
+      @[@"bob", @"alice", @"dave"],
+      @[],
+      @[],
+    ],
+    @[
+      @[],
+      @[@"bob", @"alice", @"dave"],
+      @[],
+    ],
+  ];
+
+  for (NSArray *test in tests) {
+    NSIndexSet *indexSet = [test[0] _asdk_commonIndexesWithArray:test[1] compareBlock:^BOOL(id lhs, id rhs) {
+      return [lhs isEqual:rhs];
+    }];
+    
+    for (NSNumber *index in (NSArray *)test[2]) {
+      XCTAssert([indexSet containsIndex:[index integerValue]]);
+    }
+  }
+}
+
+- (void)testDiffingInsertionsAndDeletions {
   NSArray<NSArray *> *tests = @[
       @[
         @[@"bob", @"alice", @"dave"],

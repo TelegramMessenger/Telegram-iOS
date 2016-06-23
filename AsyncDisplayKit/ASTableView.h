@@ -1,10 +1,12 @@
-/* Copyright (c) 2014-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- */
+//
+//  ASTableView.h
+//  AsyncDisplayKit
+//
+//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the root directory of this source tree. An additional grant
+//  of patent rights can be found in the PATENTS file in the same directory.
+//
 
 #import <UIKit/UIKit.h>
 #import <AsyncDisplayKit/ASRangeController.h>
@@ -133,6 +135,12 @@ NS_ASSUME_NONNULL_BEGIN
  * all the cells load.
  */
 - (void)reloadDataImmediately;
+
+/**
+ * Triggers a relayout of all nodes.
+ *
+ */
+- (void)relayoutItems;
 
 /**
  *  begins a batch of insert, delete reload and move operations. This method must be called from the main thread.
@@ -285,9 +293,9 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * Similar to -visibleCells.
  *
- * @returns an array containing the nodes being displayed on screen.
+ * @returns an array containing the cell nodes being displayed on screen.
  */
-- (NSArray<ASDisplayNode *> *)visibleNodes;
+- (NSArray<ASCellNode *> *)visibleNodes;
 
 /**
  * YES to automatically adjust the contentOffset when cells are inserted or deleted "before"
@@ -382,6 +390,17 @@ NS_ASSUME_NONNULL_BEGIN
 
 @optional
 
+/**
+ * Informs the delegate that the table view will add the node
+ * at the given index path to the view hierarchy.
+ *
+ * @param tableView The sender.
+ * @param indexPath The index path of the row that will be displayed.
+ *
+ * @warning AsyncDisplayKit processes table view edits asynchronously. The index path
+ *   passed into this method may not correspond to the same item in your data source
+ *   if your data source has been updated since the last edit was processed.
+ */
 - (void)tableView:(ASTableView *)tableView willDisplayNodeForRowAtIndexPath:(NSIndexPath *)indexPath;
 
 /**
@@ -425,6 +444,10 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * Informs the delegate that the table view did remove the node which was previously
  * at the given index path from the view hierarchy.
+ *
+ * @warning AsyncDisplayKit processes table view edits asynchronously. The index path
+ *   passed into this method may not correspond to the same item in your data source
+ *   if your data source has been updated since the last edit was processed.
  *
  * This method is deprecated. Use @c tableView:didEndDisplayingNode:forRowAtIndexPath: instead.
  */

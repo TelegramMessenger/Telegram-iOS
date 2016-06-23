@@ -1,12 +1,12 @@
-/*
- *  Copyright (c) 2014-present, Facebook, Inc.
- *  All rights reserved.
- *
- *  This source code is licensed under the BSD-style license found in the
- *  LICENSE file in the root directory of this source tree. An additional grant
- *  of patent rights can be found in the PATENTS file in the same directory.
- *
- */
+//
+//  ASRatioLayoutSpec.mm
+//  AsyncDisplayKit
+//
+//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the root directory of this source tree. An additional grant
+//  of patent rights can be found in the PATENTS file in the same directory.
+//
 
 #import "ASRatioLayoutSpec.h"
 
@@ -72,18 +72,10 @@
   const ASSizeRange childRange = (bestSize == sizeOptions.end()) ? constrainedSize : ASSizeRangeMake(*bestSize, *bestSize);
   ASLayout *sublayout = [self.child measureWithSizeRange:childRange];
   sublayout.position = CGPointZero;
-  return [ASLayout layoutWithLayoutableObject:self size:sublayout.size sublayouts:@[sublayout]];
-}
-
-- (void)setChildren:(NSArray *)children
-{
-  ASDisplayNodeAssert(NO, @"not supported by this layout spec");
-}
-
-- (NSArray *)children
-{
-  ASDisplayNodeAssert(NO, @"not supported by this layout spec");
-  return nil;
+  return [ASLayout layoutWithLayoutableObject:self
+                         constrainedSizeRange:constrainedSize
+                                         size:sublayout.size
+                                   sublayouts:@[sublayout]];
 }
 
 @end

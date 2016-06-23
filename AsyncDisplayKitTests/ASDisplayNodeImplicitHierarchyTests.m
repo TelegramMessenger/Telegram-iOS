@@ -3,7 +3,11 @@
 //  AsyncDisplayKit
 //
 //  Created by Levi McCallum on 2/1/16.
-//  Copyright © 2016 Facebook. All rights reserved.
+//
+//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the root directory of this source tree. An additional grant
+//  of patent rights can be found in the PATENTS file in the same directory.
 //
 
 #import <XCTest/XCTest.h>
@@ -16,8 +20,6 @@
 #import "ASStackLayoutSpec.h"
 
 @interface ASSpecTestDisplayNode : ASDisplayNode
-
-@property (copy, nonatomic) ASLayoutSpec * (^layoutSpecBlock)(ASSizeRange constrainedSize, NSNumber *layoutState);
 
 /**
  Simple state identifier to allow control of current spec inside of the layoutSpecBlock
@@ -35,11 +37,6 @@
     _layoutState = @1;
   }
   return self;
-}
-
-- (ASLayoutSpec *)layoutSpecThatFits:(ASSizeRange)constrainedSize
-{
-  return self.layoutSpecBlock(constrainedSize, _layoutState);
 }
 
 @end
@@ -83,7 +80,7 @@
   ASDisplayNode *node5 = [[ASDisplayNode alloc] init];
 
   ASSpecTestDisplayNode *node = [[ASSpecTestDisplayNode alloc] init];
-  node.layoutSpecBlock = ^(ASSizeRange constrainedSize, NSNumber *layoutState) {
+  node.layoutSpecBlock = ^(ASDisplayNode *weakNode, ASSizeRange constrainedSize) {
     ASStaticLayoutSpec *staticLayout = [ASStaticLayoutSpec staticLayoutSpecWithChildren:@[node4]];
     
     ASStackLayoutSpec *stack1 = [[ASStackLayoutSpec alloc] init];
@@ -109,8 +106,9 @@
   ASDisplayNode *node3 = [[ASDisplayNode alloc] init];
   
   ASSpecTestDisplayNode *node = [[ASSpecTestDisplayNode alloc] init];
-  node.layoutSpecBlock = ^(ASSizeRange constrainedSize, NSNumber *layoutState){
-    if ([layoutState isEqualToNumber:@1]) {
+  node.layoutSpecBlock = ^(ASDisplayNode *weakNode, ASSizeRange constrainedSize){
+    ASSpecTestDisplayNode *strongNode = (ASSpecTestDisplayNode *)weakNode;
+    if ([strongNode.layoutState isEqualToNumber:@1]) {
       return [ASStaticLayoutSpec staticLayoutSpecWithChildren:@[node1, node2]];
     } else {
       ASStackLayoutSpec *stackLayout = [[ASStackLayoutSpec alloc] init];

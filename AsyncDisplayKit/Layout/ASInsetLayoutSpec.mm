@@ -1,12 +1,12 @@
-/*
- *  Copyright (c) 2014-present, Facebook, Inc.
- *  All rights reserved.
- *
- *  This source code is licensed under the BSD-style license found in the
- *  LICENSE file in the root directory of this source tree. An additional grant
- *  of patent rights can be found in the PATENTS file in the same directory.
- *
- */
+//
+//  ASInsetLayoutSpec.mm
+//  AsyncDisplayKit
+//
+//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the root directory of this source tree. An additional grant
+//  of patent rights can be found in the PATENTS file in the same directory.
+//
 
 #import "ASInsetLayoutSpec.h"
 
@@ -91,7 +91,9 @@ static CGFloat centerInset(CGFloat outer, CGFloat inner)
   
   if (self.child == nil) {
     ASDisplayNodeAssert(NO, @"Inset spec measured without a child. The spec will do nothing.");
-    return [ASLayout layoutWithLayoutableObject:self size:CGSizeZero];
+    return [ASLayout layoutWithLayoutableObject:self
+                           constrainedSizeRange:constrainedSize
+                                           size:CGSizeZero];
   }
   
   ASLayout *sublayout = [self.child measureWithSizeRange:insetConstrainedSize];
@@ -112,18 +114,10 @@ static CGFloat centerInset(CGFloat outer, CGFloat inner)
   
   sublayout.position = CGPointMake(x, y);
   
-  return [ASLayout layoutWithLayoutableObject:self size:computedSize sublayouts:@[sublayout]];
-}
-
-- (void)setChildren:(NSArray *)children
-{
-  ASDisplayNodeAssert(NO, @"not supported by this layout spec");
-}
-
-- (NSArray *)children
-{
-  ASDisplayNodeAssert(NO, @"not supported by this layout spec");
-  return nil;
+  return [ASLayout layoutWithLayoutableObject:self
+                         constrainedSizeRange:constrainedSize
+                                         size:computedSize
+                                   sublayouts:@[sublayout]];
 }
 
 @end

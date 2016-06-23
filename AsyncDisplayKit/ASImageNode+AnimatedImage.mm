@@ -1,12 +1,16 @@
 //
-//  ASImageNode+AnimatedImage.m
+//  ASImageNode+AnimatedImage.mm
 //  AsyncDisplayKit
 //
 //  Created by Garrett Moon on 3/22/16.
-//  Copyright © 2016 Facebook. All rights reserved.
+//
+//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the root directory of this source tree. An additional grant
+//  of patent rights can be found in the PATENTS file in the same directory.
 //
 
-#import "ASImageNode+AnimatedImage.h"
+#import "ASImageNode.h"
 
 #import "ASAssert.h"
 #import "ASImageProtocols.h"
@@ -18,6 +22,8 @@
 #import "ASInternalHelpers.h"
 #import "ASWeakProxy.h"
 
+NSString *const ASAnimatedImageDefaultRunLoopMode = NSRunLoopCommonModes;
+
 @implementation ASImageNode (AnimatedImage)
 
 #pragma mark - GIF support
@@ -25,9 +31,12 @@
 - (void)setAnimatedImage:(id <ASAnimatedImageProtocol>)animatedImage
 {
   ASDN::MutexLocker l(_animatedImageLock);
-  if (!ASObjectIsEqual(_animatedImage, animatedImage)) {
-    _animatedImage = animatedImage;
+  if (ASObjectIsEqual(_animatedImage, animatedImage)) {
+    return;
   }
+  
+  _animatedImage = animatedImage;
+  
   if (animatedImage != nil) {
     __weak ASImageNode *weakSelf = self;
     if ([animatedImage respondsToSelector:@selector(setCoverImageReadyCallback:)]) {
@@ -36,6 +45,10 @@
       };
     }
     
+    if (animatedImage.playbackReady) {
+      [self animatedImageFileReady];
+    }
+
     animatedImage.playbackReadyCallback = ^{
       [weakSelf animatedImageFileReady];
     };
@@ -50,7 +63,7 @@
 
 - (void)setAnimatedImagePaused:(BOOL)animatedImagePaused
 {
-  ASDN::MutexLocker l(_animatedImagePausedLock);
+  ASDN::MutexLocker l(_animatedImageLock);
   _animatedImagePaused = animatedImagePaused;
   ASPerformBlockOnMainThread(^{
     if (animatedImagePaused) {
@@ -63,7 +76,7 @@
 
 - (BOOL)animatedImagePaused
 {
-  ASDN::MutexLocker l(_animatedImagePausedLock);
+  ASDN::MutexLocker l(_animatedImageLock);
   return _animatedImagePaused;
 }
 
@@ -82,9 +95,30 @@
   }
 }
 
+- (NSString *)animatedImageRunLoopMode
+{
+  ASDN::MutexLocker l(_displayLinkLock);
+  return _animatedImageRunLoopMode;
+}
+
+- (void)setAnimatedImageRunLoopMode:(NSString *)runLoopMode
+{
+  ASDN::MutexLocker l(_displayLinkLock);
+
+  if (runLoopMode == nil) {
+    runLoopMode = ASAnimatedImageDefaultRunLoopMode;
+  }
+
+  if (_displayLink != nil) {
+    [_displayLink removeFromRunLoop:[NSRunLoop mainRunLoop] forMode:_animatedImageRunLoopMode];
+    [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:runLoopMode];
+  }
+  _animatedImageRunLoopMode = runLoopMode;
+}
+
 - (void)animatedImageFileReady
 {
-  dispatch_async(dispatch_get_main_queue(), ^{
+  ASPerformBlockOnMainThread(^{
     [self startAnimating];
   });
 }
@@ -113,7 +147,7 @@
     _displayLink = [CADisplayLink displayLinkWithTarget:[ASWeakProxy weakProxyWithTarget:self] selector:@selector(displayLinkFired:)];
     _displayLink.frameInterval = self.animatedImage.frameInterval;
     
-    [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSDefaultRunLoopMode];
+    [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:_animatedImageRunLoopMode];
   } else {
     _displayLink.paused = NO;
   }
@@ -132,9 +166,9 @@
   [self.animatedImage clearAnimatedImageCache];
 }
 
-- (void)visibilityDidChange:(BOOL)isVisible
+- (void)visibleStateDidChange:(BOOL)isVisible
 {
-  [super visibilityDidChange:isVisible];
+  [super visibleStateDidChange:isVisible];
   
   ASDisplayNodeAssertMainThread();
   if (isVisible) {
@@ -145,18 +179,6 @@
   } else {
     [self stopAnimating];
   }
-}
-
-- (void)__enterHierarchy
-{
-  [super __enterHierarchy];
-  [self startAnimating];
-}
-
-- (void)__exitHierarchy
-{
-  [super __exitHierarchy];
-  [self stopAnimating];
 }
 
 - (void)displayLinkFired:(CADisplayLink *)displayLink

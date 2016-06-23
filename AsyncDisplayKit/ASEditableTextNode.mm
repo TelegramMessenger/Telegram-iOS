@@ -1,10 +1,12 @@
-/* Copyright (c) 2014-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- */
+//
+//  ASEditableTextNode.mm
+//  AsyncDisplayKit
+//
+//  Copyright (c) 2014-present, Facebook, Inc.  All rights reserved.
+//  This source code is licensed under the BSD-style license found in the
+//  LICENSE file in the root directory of this source tree. An additional grant
+//  of patent rights can be found in the PATENTS file in the same directory.
+//
 
 #import "ASEditableTextNode.h"
 
@@ -36,6 +38,8 @@
 
 @implementation ASPanningOverriddenUITextView
 
+#if TARGET_OS_IOS
+ // tvOS doesn't support self.scrollsToTop
 - (BOOL)scrollEnabled
 {
   return _shouldBlockPanGesture;
@@ -48,6 +52,7 @@
 
   [super setScrollEnabled:YES];
 }
+#endif
 
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer
 {
@@ -187,8 +192,9 @@
 {
   ASTextKitComponents *displayedComponents = [self isDisplayingPlaceholder] ? _placeholderTextKitComponents : _textKitComponents;
   CGSize textSize = [displayedComponents sizeForConstrainedWidth:constrainedSize.width];
-  textSize = ceilSizeValue(textSize);
-  return CGSizeMake(constrainedSize.width, fminf(textSize.height, constrainedSize.height));
+  CGFloat width = ceilf(textSize.width + _textContainerInset.left + _textContainerInset.right);
+  CGFloat height = ceilf(textSize.height + _textContainerInset.top + _textContainerInset.bottom);
+  return CGSizeMake(fminf(width, constrainedSize.width), fminf(height, constrainedSize.height));
 }
 
 - (void)layout
