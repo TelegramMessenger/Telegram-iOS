@@ -111,4 +111,56 @@ class PerformanceTests: XCTestCase {
             }
         }
     }
+    
+    func read(_ idxin: Int, _ size: Int, _ tree: inout [Int: Int], _ reads: inout Set<Int>) -> Int {
+        var idx = idxin
+        var sum = 0
+        while idx <= size {
+            print("read at \(idx)")
+            if let value = tree[idx] {
+                sum += value
+            }
+            reads.insert(idx)
+            idx += (idx & -idx)
+        }
+        return sum
+    }
+    
+    func update(_ idxin: Int, _ val: Int, _ tree: inout [Int: Int], _ updates: inout Set<Int>) {
+        var idx = idxin
+        while (idx > 0) {
+            if let value = tree[idx] {
+                tree[idx] = value + val
+            } else {
+                tree[idx] = val
+            }
+            //print("write at \(idx)")
+            updates.insert(idx)
+            idx -= (idx & -idx)
+        }
+    }
+    
+    func testTree() {
+        let size = 2_000_000
+        var dict: [Int: Int] = [:]
+        
+        var updates = Set<Int>()
+        var index = 0
+        for _ in 1 ..< 100_000 {
+            //update(Int(1 + arc4random_uniform(UInt32(size))), 1, &dict, &updates)
+            update(index, 1, &dict, &updates)
+            index += Int(1 + arc4random_uniform(100))
+        }
+        update(size - 1, 1, &dict, &updates)
+        print("update ops = \(updates.count), tree = \(dict.count) items")
+        
+        var reads = Set<Int>()
+        let sum = read(1, size, &dict, &reads)
+        print("read = \(sum) ops = \(reads.count)")
+        
+        update(99, -2, &dict, &updates)
+        reads.removeAll()
+        let sum2 = read(1, size, &dict, &reads)
+        print("read2 = \(sum2) ops = \(reads.count)")
+    }
 }
