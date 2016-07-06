@@ -13,6 +13,6 @@ public struct Font {
 
 public extension AttributedString {
     convenience init(string: String, font: UIFont, textColor: UIColor = UIColor.black()) {
-        self.init(string: string, attributes: [kCTFontAttributeName as String: font, kCTForegroundColorAttributeName as String: textColor])
+        self.init(string: string, attributes: [NSFontAttributeName: font, NSForegroundColorAttributeName  as String: textColor])
     }
 }

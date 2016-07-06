@@ -3,6 +3,8 @@ import UIKit
 import AsyncDisplayKit
 
 public class TabBarController: ViewController {
+    private var containerLayout = ContainerViewLayout()
+    
     private var tabBarControllerNode: TabBarControllerNode {
         get {
             return super.displayNode as! TabBarControllerNode
@@ -76,12 +78,9 @@ public class TabBarController: ViewController {
         
         if let currentController = self.currentController {
             currentController.willMove(toParentViewController: self)
-            if let layout = self.layout {
-                currentController.view.frame = CGRect(origin: CGPoint(), size: layout.size)
-                
-                currentController.setParentLayout(self.childControllerLayoutForLayout(layout), duration: 0.0, curve: 0)
-            }
+            currentController.containerLayoutUpdated(self.containerLayout.addedInsets(insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 49.0, right: 0.0)), transition: .immediate)
             self.tabBarControllerNode.currentControllerView = currentController.view
+            currentController.navigationBar.isHidden = true
             self.addChildViewController(currentController)
             currentController.didMove(toParentViewController: self)
             
@@ -95,20 +94,17 @@ public class TabBarController: ViewController {
         }
     }
     
-    private func childControllerLayoutForLayout(_ layout: ViewControllerLayout) -> ViewControllerLayout {
-        var insets = layout.insets
-        insets.bottom += 49.0
-        return ViewControllerLayout(size: layout.size, insets: insets, inputViewHeight: layout.inputViewHeight, statusBarHeight: layout.statusBarHeight)
-    }
-    
-    override public func updateLayout(_ layout: ViewControllerLayout, previousLayout: ViewControllerLayout?, duration: Double, curve: UInt) {
-        super.updateLayout(layout, previousLayout: previousLayout, duration: duration, curve: curve)
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        super.containerLayoutUpdated(layout, transition: transition)
         
-        self.tabBarControllerNode.updateLayout(layout, previousLayout: previousLayout, duration: duration, curve: curve)
+        self.containerLayout = layout
+        
+        self.tabBarControllerNode.containerLayoutUpdated(layout, transition: transition)
         
         if let currentController = self.currentController {
             currentController.view.frame = CGRect(origin: CGPoint(), size: layout.size)
-            currentController.setParentLayout(self.childControllerLayoutForLayout(layout), duration: duration, curve: curve)
+            
+            currentController.containerLayoutUpdated(layout.addedInsets(insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 49.0, right: 0.0)), transition: transition)
         }
     }
 }

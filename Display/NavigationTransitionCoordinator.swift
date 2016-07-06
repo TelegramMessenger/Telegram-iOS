@@ -35,6 +35,8 @@ class NavigationTransitionCoordinator {
     private let dimView: UIView
     private let shadowView: UIImageView
     
+    private let inlineNavigationBarTransition: Bool
+    
     init(transition: NavigationTransition, container: UIView, topView: UIView, topNavigationBar: NavigationBar?, bottomView: UIView, bottomNavigationBar: NavigationBar?) {
         self.transition = transition
         self.container = container
@@ -52,6 +54,16 @@ class NavigationTransitionCoordinator {
         self.dimView.backgroundColor = UIColor.black()
         self.shadowView = UIImageView(image: shadowImage)
         
+        if let topNavigationBar = topNavigationBar, bottomNavigationBar = bottomNavigationBar {
+            var topFrame = topNavigationBar.view.convert(topNavigationBar.bounds, to: container)
+            var bottomFrame = bottomNavigationBar.view.convert(bottomNavigationBar.bounds, to: container)
+            topFrame.origin.x = 0.0
+            bottomFrame.origin.x = 0.0
+            self.inlineNavigationBarTransition = topFrame.equalTo(bottomFrame)
+        } else {
+            self.inlineNavigationBarTransition = false
+        }
+        
         switch transition {
             case .Push:
                 self.viewSuperview?.insertSubview(topView, belowSubview: topView)
@@ -62,6 +74,7 @@ class NavigationTransitionCoordinator {
         self.viewSuperview?.insertSubview(self.dimView, belowSubview: topView)
         self.viewSuperview?.insertSubview(self.shadowView, belowSubview: dimView)
         
+        self.maybeCreateNavigationBarTransition()
         self.updateProgress()
     }
 
@@ -77,14 +90,59 @@ class NavigationTransitionCoordinator {
             case .Pop:
                 position = progress
         }
-        self.topView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(position * self.container.bounds.size.width), y: 0.0), size: self.container.bounds.size)
-        self.dimView.frame = CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, self.topView.frame.minX), height: self.container.bounds.size.height))
-        self.shadowView.frame = CGRect(origin: CGPoint(x: self.dimView.frame.maxX - shadowWidth, y: 0.0), size: CGSize(width: shadowWidth, height: self.container.bounds.size.height))
+        
+        var dimInset: CGFloat = 0.0
+        if let topNavigationBar = self.topNavigationBar where self.inlineNavigationBarTransition {
+            dimInset = topNavigationBar.frame.size.height
+        }
+        
+        let containerSize = self.container.bounds.size
+        
+        self.topView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(position * containerSize.width), y: 0.0), size: containerSize)
+        self.dimView.frame = CGRect(origin: CGPoint(x: 0.0, y: dimInset), size: CGSize(width: max(0.0, self.topView.frame.minX), height: self.container.bounds.size.height - dimInset))
+        self.shadowView.frame = CGRect(origin: CGPoint(x: self.dimView.frame.maxX - shadowWidth, y: dimInset), size: CGSize(width: shadowWidth, height: containerSize.height - dimInset))
         self.dimView.alpha = (1.0 - position) * 0.15
         self.shadowView.alpha = (1.0 - position) * 0.9
-        self.bottomView.frame = CGRect(origin: CGPoint(x: ((position - 1.0) * self.container.bounds.size.width * 0.3), y: 0.0), size: self.container.bounds.size)
+        self.bottomView.frame = CGRect(origin: CGPoint(x: ((position - 1.0) * containerSize.width * 0.3), y: 0.0), size: containerSize)
         
-        (self.container.window as? Window)?.updateStatusBars()
+        self.updateNavigationBarTransition()
+    }
+    
+    func updateNavigationBarTransition() {
+        if let topNavigationBar = self.topNavigationBar, bottomNavigationBar = self.bottomNavigationBar {
+            let position: CGFloat
+            switch self.transition {
+                case .Push:
+                    position = 1.0 - progress
+                case .Pop:
+                    position = progress
+            }
+            
+            topNavigationBar.transitionState = NavigationBarTransitionState(navigationBar: bottomNavigationBar, transition: self.transition, role: .top, progress: position)
+            bottomNavigationBar.transitionState = NavigationBarTransitionState(navigationBar: topNavigationBar, transition: self.transition, role: .bottom, progress: position)
+        }
+    }
+    
+    func maybeCreateNavigationBarTransition() {
+        if let topNavigationBar = self.topNavigationBar, bottomNavigationBar = self.bottomNavigationBar {
+            let position: CGFloat
+            switch self.transition {
+                case .Push:
+                    position = 1.0 - progress
+                case .Pop:
+                    position = progress
+            }
+            
+            topNavigationBar.transitionState = NavigationBarTransitionState(navigationBar: bottomNavigationBar, transition: self.transition, role: .top, progress: position)
+            bottomNavigationBar.transitionState = NavigationBarTransitionState(navigationBar: topNavigationBar, transition: self.transition, role: .bottom, progress: position)
+        }
+    }
+    
+    func endNavigationBarTransition() {
+        if let topNavigationBar = self.topNavigationBar, bottomNavigationBar = self.bottomNavigationBar {
+            topNavigationBar.transitionState = nil
+            bottomNavigationBar.transitionState = nil
+        }
     }
     
     func animateCancel(_ completion: () -> ()) {
@@ -111,6 +169,8 @@ class NavigationTransitionCoordinator {
             self.dimView.removeFromSuperview()
             self.shadowView.removeFromSuperview()
             
+            self.endNavigationBarTransition()
+            
             completion()
         }
     }
@@ -119,24 +179,24 @@ class NavigationTransitionCoordinator {
         let distance = (1.0 - self.progress) * self.container.bounds.size.width
         let f = {
             switch self.transition {
-            case .Push:
-                if let viewSuperview = self.viewSuperview {
-                    viewSuperview.addSubview(self.bottomView)
-                } else {
-                    self.bottomView.removeFromSuperview()
-                }
-                //self.topView.removeFromSuperview()
-            case .Pop:
-                if let viewSuperview = self.viewSuperview {
-                    viewSuperview.addSubview(self.topView)
-                } else {
-                    self.topView.removeFromSuperview()
-                }
-                //self.bottomView.removeFromSuperview()
+                case .Push:
+                    if let viewSuperview = self.viewSuperview {
+                        viewSuperview.addSubview(self.bottomView)
+                    } else {
+                        self.bottomView.removeFromSuperview()
+                    }
+                case .Pop:
+                    if let viewSuperview = self.viewSuperview {
+                        viewSuperview.addSubview(self.topView)
+                    } else {
+                        self.topView.removeFromSuperview()
+                    }
             }
             
             self.dimView.removeFromSuperview()
             self.shadowView.removeFromSuperview()
+            
+            self.endNavigationBarTransition()
             
             completion()
         }

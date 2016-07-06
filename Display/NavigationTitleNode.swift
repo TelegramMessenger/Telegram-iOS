@@ -15,6 +15,12 @@ public class NavigationTitleNode: ASDisplayNode {
         }
     }
     
+    public var color: UIColor = UIColor.black() {
+        didSet {
+            self.setText(self._text)
+        }
+    }
+    
     public init(text: NSString) {
         self.label = ASTextNode()
         self.label.maximumNumberOfLines = 1
@@ -35,7 +41,7 @@ public class NavigationTitleNode: ASDisplayNode {
     private func setText(_ text: NSString) {
         var titleAttributes = [String : AnyObject]()
         titleAttributes[NSFontAttributeName] = UIFont.boldSystemFont(ofSize: 17.0)
-        titleAttributes[NSForegroundColorAttributeName] = UIColor.black()
+        titleAttributes[NSForegroundColorAttributeName] = self.color
         let titleString = AttributedString(string: text as String, attributes: titleAttributes)
         self.label.attributedString = titleString
         self.invalidateCalculatedLayout()

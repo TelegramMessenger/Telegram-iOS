@@ -17,7 +17,8 @@ import UIKit
 }
 
 private let completionKey = "CAAnimationUtils_completion"
-private let springKey = "CAAnimationUtilsSpringCurve"
+
+public let kCAMediaTimingFunctionSpring = "CAAnimationUtilsSpringCurve"
 
 public extension CAAnimation {
     public var completion: ((Bool) -> Void)? {
@@ -39,7 +40,7 @@ public extension CAAnimation {
 
 public extension CALayer {
     public func animate(from: NSValue, to: NSValue, keyPath: String, timingFunction: String, duration: Double, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
-        if timingFunction == springKey {
+        if timingFunction == kCAMediaTimingFunctionSpring {
             let animation = makeSpringAnimation(keyPath)
             animation.fromValue = from
             animation.toValue = to
@@ -112,29 +113,29 @@ public extension CALayer {
         self.animate(from: NSNumber(value: Float(from)), to: NSNumber(value: Float(to)), keyPath: "transform.scale", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: duration, removeOnCompletion: true, completion: nil)
     }
     
-    internal func animatePosition(from: CGPoint, to: CGPoint, duration: Double, completion: ((Bool) -> Void)? = nil) {
+    func animatePosition(from: CGPoint, to: CGPoint, duration: Double, timingFunction: String, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
         if from == to {
             return
         }
-        self.animate(from: NSValue(cgPoint: from), to: NSValue(cgPoint: to), keyPath: "position", timingFunction: springKey, duration: duration, removeOnCompletion: true, completion: completion)
+        self.animate(from: NSValue(cgPoint: from), to: NSValue(cgPoint: to), keyPath: "position", timingFunction: timingFunction, duration: duration, removeOnCompletion: removeOnCompletion, completion: completion)
     }
     
-    internal func animateBounds(from: CGRect, to: CGRect, duration: Double, completion: ((Bool) -> Void)? = nil) {
+    func animateBounds(from: CGRect, to: CGRect, duration: Double, timingFunction: String, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
         if from == to {
             return
         }
-        self.animate(from: NSValue(cgRect: from), to: NSValue(cgRect: to), keyPath: "bounds", timingFunction: springKey, duration: duration, removeOnCompletion: true, completion: completion)
+        self.animate(from: NSValue(cgRect: from), to: NSValue(cgRect: to), keyPath: "bounds", timingFunction: timingFunction, duration: duration, removeOnCompletion: removeOnCompletion, completion: completion)
     }
     
     public func animateBoundsOriginYAdditive(from: CGFloat, to: CGFloat, duration: Double) {
         self.animateAdditive(from: from as NSNumber, to: to as NSNumber, keyPath: "bounds.origin.y", key: "boundsOriginYAdditive", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: duration, removeOnCompletion: true)
     }
     
-    public func animateFrame(from: CGRect, to: CGRect, duration: Double, spring: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    public func animateFrame(from: CGRect, to: CGRect, duration: Double, timingFunction: String, completion: ((Bool) -> Void)? = nil) {
         if from == to {
             return
         }
-        self.animatePosition(from: CGPoint(x: from.midX, y: from.midY), to: CGPoint(x: to.midX, y: to.midY), duration: duration, completion: nil)
-        self.animateBounds(from: CGRect(origin: self.bounds.origin, size: from.size), to: CGRect(origin: self.bounds.origin, size: to.size), duration: duration, completion: completion)
+        self.animatePosition(from: CGPoint(x: from.midX, y: from.midY), to: CGPoint(x: to.midX, y: to.midY), duration: duration, timingFunction: timingFunction, completion: nil)
+        self.animateBounds(from: CGRect(origin: self.bounds.origin, size: from.size), to: CGRect(origin: self.bounds.origin, size: to.size), duration: duration, timingFunction: timingFunction, completion: completion)
     }
 }

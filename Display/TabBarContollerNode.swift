@@ -1,7 +1,7 @@
 import Foundation
 import AsyncDisplayKit
 
-class TabBarControllerNode: ASDisplayNode {
+final class TabBarControllerNode: ASDisplayNode {
     let tabBarNode: TabBarNode
     
     var currentControllerView: UIView? {
@@ -17,21 +17,24 @@ class TabBarControllerNode: ASDisplayNode {
     init(itemSelected: (Int) -> Void) {
         self.tabBarNode = TabBarNode(itemSelected: itemSelected)
         
-        super.init()
+        super.init(viewBlock: {
+            return UITracingLayerView()
+        }, didLoad: nil)
         
         self.addSubnode(self.tabBarNode)
     }
     
-    func updateLayout(_ layout: ViewControllerLayout, previousLayout: ViewControllerLayout?, duration: Double, curve: UInt) {
+    func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         let update = {
-            self.tabBarNode.frame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - layout.insets.bottom - 49.0), size: CGSize(width: layout.size.width, height: 49.0))
+            self.tabBarNode.frame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - layout.insets(options: []).bottom - 49.0), size: CGSize(width: layout.size.width, height: 49.0))
             self.tabBarNode.layout()
         }
         
-        if duration > DBL_EPSILON {
-            UIView.animate(withDuration: duration, delay: 0.0, options: UIViewAnimationOptions(rawValue: curve << 7), animations: update, completion: nil)
-        } else {
-            update()
+        switch transition {
+            case .immediate:
+                update()
+            case let .animated(duration, curve):
+                update()
         }
     }
 }

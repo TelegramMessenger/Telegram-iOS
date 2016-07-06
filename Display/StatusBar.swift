@@ -25,24 +25,44 @@ public class StatusBarSurface {
 }
 
 public class StatusBar: ASDisplayNode {
-    public var style: StatusBarStyle = .Black
-    var proxyNode: StatusBarProxyNode?
+    public var style: StatusBarStyle = .Black {
+        didSet {
+            if self.style != oldValue {
+                self.layer.invalidateUpTheTree()
+            }
+        }
+    }
+    private var proxyNode: StatusBarProxyNode?
+    private var removeProxyNodeScheduled = false
     
     override init() {
-        super.init()
+        super.init(viewBlock: {
+            return UITracingLayerView()
+        }, didLoad: nil)
+        
+        self.layer.setTraceableInfo(NSWeakReference(value: self))
         
         self.clipsToBounds = true
         self.isUserInteractionEnabled = false
     }
     
     func removeProxyNode() {
-        self.proxyNode?.isHidden = true
-        self.proxyNode?.removeFromSupernode()
-        self.proxyNode = nil
+        self.removeProxyNodeScheduled = true
+        
+        DispatchQueue.main.async(execute: { [weak self] in
+            if let strongSelf = self {
+                if strongSelf.removeProxyNodeScheduled {
+                    strongSelf.removeProxyNodeScheduled = false
+                    strongSelf.proxyNode?.isHidden = true
+                    strongSelf.proxyNode?.removeFromSupernode()
+                    strongSelf.proxyNode = nil
+                }
+            }
+        })
     }
     
     func updateProxyNode() {
-        let origin = self.view.convert(CGPoint(), to: nil)
+        self.removeProxyNodeScheduled = false
         if let proxyNode = proxyNode {
             proxyNode.style = self.style
         } else {
@@ -50,8 +70,5 @@ public class StatusBar: ASDisplayNode {
             self.proxyNode!.isHidden = false
             self.addSubnode(self.proxyNode!)
         }
-        
-        let frame = CGRect(origin: CGPoint(x: -origin.x, y: -origin.y), size: self.proxyNode!.frame.size)
-        self.proxyNode?.frame = frame
     }
 }

@@ -3,11 +3,12 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 
-public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
-    return lhs.size == rhs.size && lhs.insets == rhs.insets && lhs.inputViewHeight == rhs.inputViewHeight && lhs.statusBarHeight == rhs.statusBarHeight
-}
-
-@objc public class ViewController: UIViewController, WindowContentController {
+@objc public class ViewController: UIViewController, ContainableController {
+    private var containerLayout = ContainerViewLayout()
+    private let presentationContext: PresentationContext
+    
+    public private(set) var presentationArguments: Any?
+    
     private var _displayNode: ASDisplayNode?
     public final var displayNode: ASDisplayNode {
         get {
@@ -39,11 +40,6 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
         return self._ready
     }
     
-    private var updateLayoutOnLayout: (ViewControllerLayout, Double, UInt)?
-    public private(set) var layout: ViewControllerLayout?
-    
-    var keyboardFrameObserver: AnyObject?
-    
     private var scrollToTopView: ScrollToTopView?
     public var scrollToTop: (() -> Void)? {
         didSet {
@@ -74,50 +70,15 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
     public init() {
         self.statusBar = StatusBar()
         self.navigationBar = NavigationBar()
+        self.presentationContext = PresentationContext()
         
         super.init(nibName: nil, bundle: nil)
         
+        self.navigationBar.backPressed = { [weak self] in
+            self?.navigationController?.popViewController(animated: true)
+        }
         self.navigationBar.item = self.navigationItem
         self.automaticallyAdjustsScrollViewInsets = false
-        
-        self.keyboardFrameObserver = NotificationCenter.default().addObserver(forName: NSNotification.Name.UIKeyboardWillChangeFrame, object: nil, queue: nil, using: { [weak self] notification in
-            if let strongSelf = self, _ = strongSelf._displayNode {
-                let keyboardFrame: CGRect = (notification.userInfo?[UIKeyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue() ?? CGRect()
-                let keyboardHeight = max(0.0, UIScreen.main().bounds.size.height - keyboardFrame.minY)
-                var duration: Double = (notification.userInfo?[UIKeyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
-                if duration > DBL_EPSILON {
-                    duration = 0.5
-                }
-                var curve: UInt = (notification.userInfo?[UIKeyboardAnimationCurveUserInfoKey] as? NSNumber)?.uintValue ?? UInt(7 << 16)
-                
-                let previousLayout: ViewControllerLayout?
-                var previousDurationAndCurve: (Double, UInt)?
-                if let updateLayoutOnLayout = strongSelf.updateLayoutOnLayout {
-                    previousLayout = updateLayoutOnLayout.0
-                    previousDurationAndCurve = (updateLayoutOnLayout.1, updateLayoutOnLayout.2)
-                } else{
-                    previousLayout = strongSelf.layout
-                }
-                let layout = ViewControllerLayout(size: previousLayout?.size ?? CGSize(), insets: previousLayout?.insets ?? UIEdgeInsets(), inputViewHeight: keyboardHeight, statusBarHeight: previousLayout?.statusBarHeight ?? 20.0)
-                let updated: Bool
-                if let previousLayout = previousLayout {
-                    updated = previousLayout != layout
-                    if duration < DBL_EPSILON && abs(min(previousLayout.inputViewHeight, layout.inputViewHeight) - 225.0) < CGFloat(FLT_EPSILON) && abs(max(previousLayout.inputViewHeight, layout.inputViewHeight) - 225.0 - 33.0) < CGFloat(FLT_EPSILON) {
-                        duration = 0.1
-                        curve = 0
-                    }
-                } else {
-                    updated = true
-                }
-                if updated {
-                    //print("keyboard layout change: \(layout) rotating: \(strongSelf.view.window?.isRotating())")
-                    
-                    let durationAndCurve: (Double, UInt) = previousDurationAndCurve ?? (duration, curve)
-                    strongSelf.updateLayoutOnLayout = (layout, durationAndCurve.0, durationAndCurve.1)
-                    strongSelf.view.setNeedsLayout()
-                }
-            }
-        })
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -125,8 +86,33 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
     }
     
     deinit {
-        if let keyboardFrameObserver = keyboardFrameObserver {
-            NotificationCenter.default().removeObserver(keyboardFrameObserver)
+        
+    }
+    
+    public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.containerLayout = layout
+        
+        if !self.isViewLoaded() {
+            self.loadView()
+        }
+        self.view.frame = CGRect(origin: self.view.frame.origin, size: layout.size)
+        if let _ = layout.statusBarHeight {
+            self.statusBar.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: 40.0))
+        }
+        
+        let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
+        var navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: max(0.0, statusBarHeight - 20.0)), size: CGSize(width: layout.size.width, height: 64.0))
+        if statusBarHeight.isLessThanOrEqualTo(0.0) {
+            navigationBarFrame.origin.y -= 20.0
+            navigationBarFrame.size.height = 20.0 + 32.0
+        }
+        
+        transition.updateFrame(node: self.navigationBar, frame: navigationBarFrame)
+        
+        self.presentationContext.containerLayoutUpdated(layout, transition: transition)
+        
+        if let scrollToTopView = self.scrollToTopView {
+            scrollToTopView.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 10.0)
         }
     }
     
@@ -134,6 +120,7 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
         self.view = self.displayNode.view
         self.displayNode.addSubnode(self.navigationBar)
         self.view.addSubview(self.statusBar.view)
+        self.presentationContext.view = self.view
     }
     
     public func loadDisplayNode() {
@@ -145,96 +132,31 @@ public func ==(lhs: ViewControllerLayout, rhs: ViewControllerLayout) -> Bool {
         self.updateScrollToTopView()
     }
     
-    public func setParentLayout(_ layout: ViewControllerLayout, duration: Double, curve: UInt) {
-        if self._displayNode == nil {
-            self.loadDisplayNode()
-        }
-        
-        let previousLayout: ViewControllerLayout?
-        if let updateLayoutOnLayout = self.updateLayoutOnLayout {
-            previousLayout = updateLayoutOnLayout.0
-        } else {
-            previousLayout = self.layout
-        }
-        
-        var insets = layout.insets
-        insets.top += 22.0
-        
-        let layout = ViewControllerLayout(size: layout.size, insets: insets, inputViewHeight: previousLayout?.inputViewHeight ?? 0.0, statusBarHeight: layout.statusBarHeight)
-        let updated: Bool
-        if let previousLayout = previousLayout {
-            updated = previousLayout != layout
-        } else {
-            updated = true
-        }
-        if updated {
-            if previousLayout == nil {
-                self.layout = layout
-                self.updateLayout(layout, previousLayout: previousLayout, duration: duration, curve: 0)
-            } else {
-                self.updateLayoutOnLayout = (layout, duration, 0)
-                self.view.setNeedsLayout()
-            }
-        }
-    }
-    
-    public func updateLayout(_ layout: ViewControllerLayout, previousLayout: ViewControllerLayout?, duration: Double, curve: UInt) {
-        self.statusBar.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: 40.0))
-        self.navigationBar.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: 44.0 + 20.0))
-        if let scrollToTopView = self.scrollToTopView {
-            scrollToTopView.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 10.0)
-        }
-    }
-    
-    public func setNeedsLayoutWithDuration(_ duration: Double, curve: UInt) {
-        let previousLayout: ViewControllerLayout?
-        var previousDurationAndCurve: (Double, UInt)?
-        if let updateLayoutOnLayout = self.updateLayoutOnLayout {
-            previousLayout = updateLayoutOnLayout.0
-            previousDurationAndCurve = (updateLayoutOnLayout.1, updateLayoutOnLayout.2)
-        } else{
-            previousLayout = self.layout
-        }
-        if let previousLayout = previousLayout {
-            let durationAndCurve: (Double, UInt) = previousDurationAndCurve ?? (duration, curve)
-            self.updateLayoutOnLayout = (previousLayout, durationAndCurve.0, durationAndCurve.1)
-            self.view.setNeedsLayout()
-        }
-    }
-    
-    override public func viewDidLayoutSubviews() {
-        if let updateLayoutOnLayout = self.updateLayoutOnLayout {
-            if !Window.isDeviceRotating() {
-                if !((self.view.window as? Window)?.isUpdatingOrientationLayout ?? false) {
-                    //print("\(self) apply inputHeight: \(updateLayoutOnLayout.0.inputViewHeight)")
-                    let previousLayout = self.layout
-                    self.layout = updateLayoutOnLayout.0
-                    self.updateLayout(updateLayoutOnLayout.0, previousLayout: previousLayout, duration: updateLayoutOnLayout.1, curve: updateLayoutOnLayout.2)
-                    self.view.frame = CGRect(origin: self.view.frame.origin, size: updateLayoutOnLayout.0.size)
-                    
-                    self.updateLayoutOnLayout = nil
-                } else {
-                    (self.view.window as? Window)?.addPostUpdateToInterfaceOrientationBlock(f: { [weak self] in
-                        if let strongSelf = self {
-                            strongSelf.view.setNeedsLayout()
-                        }
-                    })
-                }
-            } else {
-                Window.addPostDeviceOrientationDidChange({ [weak self] in
-                    if let strongSelf = self {
-                        strongSelf.view.setNeedsLayout()
-                    }
-                })
-            }
+    public func requestLayout(transition: ContainedViewLayoutTransition) {
+        if self.isViewLoaded() {
+            self.containerLayoutUpdated(self.containerLayout, transition: transition)
         }
     }
     
     override public func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
+        preconditionFailure("use present(_:in)")
+    }
+    
+    override public func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         if let navigationController = self.navigationController as? NavigationController {
-            navigationController.present(viewControllerToPresent, animated: flag, completion: completion)
+            navigationController.dismiss(animated: flag, completion: completion)
         } else {
-            super.present(viewControllerToPresent, animated: flag, completion: completion)
+            super.dismiss(animated: flag, completion: completion)
+        }
+    }
+    
+    public func present(_ controller: ViewController, in context: PresentationContextType, with arguments: Any? = nil) {
+        controller.presentationArguments = arguments
+        switch context {
+            case .current:
+                self.presentationContext.present(controller)
+            case .window:
+                (self.view.window as? Window)?.present(controller)
         }
     }
 }

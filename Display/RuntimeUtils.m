@@ -81,4 +81,31 @@
     return [self isKindOfClass:targetClass];
 }
 
+- (void)setClass:(Class)newClass {
+    object_setClass(self, newClass);
+}
+
+static Class freedomMakeClass(Class superclass, Class subclass, SEL *copySelectors, int copySelectorsCount)
+{
+    if (superclass == Nil || subclass == Nil)
+        return nil;
+    
+    Class decoratedClass = objc_allocateClassPair(superclass, [[NSString alloc] initWithFormat:@"%@_%@", NSStringFromClass(superclass), NSStringFromClass(subclass)].UTF8String, 0);
+    
+    unsigned int count = 0;
+    Method *methodList = class_copyMethodList(subclass, &count);
+    if (methodList != NULL) {
+        for (unsigned int i = 0; i < count; i++) {
+            SEL methodName = method_getName(methodList[i]);
+            class_addMethod(decoratedClass, methodName, method_getImplementation(methodList[i]), method_getTypeEncoding(methodList[i]));
+        }
+        
+        free(methodList);
+    }
+    
+    objc_registerClassPair(decoratedClass);
+    
+    return decoratedClass;
+}
+
 @end

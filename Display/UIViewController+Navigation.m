@@ -5,9 +5,33 @@
 
 #import "NSWeakReference.h"
 
+@interface UIViewControllerPresentingProxy : UIViewController
+
+@property (nonatomic, copy) void (^dismiss)();
+
+@end
+
+@implementation UIViewControllerPresentingProxy
+
+- (instancetype)init {
+    return self;
+}
+
+- (void)dismissViewControllerAnimated:(BOOL)__unused flag completion:(void (^)(void))completion {
+    if (_dismiss) {
+        _dismiss();
+    }
+    if (completion) {
+        completion();
+    }
+}
+
+@end
+
 static const void *UIViewControllerIgnoreAppearanceMethodInvocationsKey = &UIViewControllerIgnoreAppearanceMethodInvocationsKey;
 static const void *UIViewControllerNavigationControllerKey = &UIViewControllerNavigationControllerKey;
-static const void *UIViewControllerPresentingViewControllerKey = &UIViewControllerPresentingViewControllerKey;
+static const void *UIViewControllerPresentingControllerKey = &UIViewControllerPresentingControllerKey;
+static const void *UIViewControllerPresentingProxyControllerKey = &UIViewControllerPresentingProxyControllerKey;
 
 static bool notyfyingShiftState = false;
 
@@ -112,22 +136,30 @@ static bool notyfyingShiftState = false;
     [self setAssociatedObject:[[NSWeakReference alloc] initWithValue:navigationControlller] forKey:UIViewControllerNavigationControllerKey];
 }
 
-- (void)navigation_setPresentingViewController:(UIViewController * _Nullable)presentingViewController {
-    [self setAssociatedObject:[[NSWeakReference alloc] initWithValue:presentingViewController] forKey:UIViewControllerPresentingViewControllerKey];
-}
-
 - (UINavigationController *)_65087dc8_navigationController {
     UINavigationController *navigationController = self._65087dc8_navigationController;
     if (navigationController != nil) {
         return navigationController;
     }
     
-    navigationController = self.parentViewController.navigationController;
+    UIViewController *parentController = self.parentViewController;
+    
+    navigationController = parentController.navigationController;
     if (navigationController != nil) {
         return navigationController;
     }
     
     return ((NSWeakReference *)[self associatedObjectForKey:UIViewControllerNavigationControllerKey]).value;
+}
+
+- (void)navigation_setPresentingViewController:(UIViewController *)presentingViewController {
+    [self setAssociatedObject:[[NSWeakReference alloc] initWithValue:presentingViewController] forKey:UIViewControllerPresentingControllerKey];
+}
+
+- (void)navigation_setDismiss:(void (^_Nullable)())dismiss {
+    UIViewControllerPresentingProxy *proxy = [[UIViewControllerPresentingProxy alloc] init];
+    proxy.dismiss = dismiss;
+    [self setAssociatedObject:proxy forKey:UIViewControllerPresentingProxyControllerKey];
 }
 
 - (UIViewController *)_65087dc8_presentingViewController {
@@ -136,7 +168,12 @@ static bool notyfyingShiftState = false;
         return navigationController.presentingViewController;
     }
     
-    return ((NSWeakReference *)[self associatedObjectForKey:UIViewControllerPresentingViewControllerKey]).value;
+    UIViewController *controller = ((NSWeakReference *)[self associatedObjectForKey:UIViewControllerPresentingControllerKey]).value;
+    if (controller != nil) {
+        return controller;
+    }
+    
+    return [self associatedObjectForKey:UIViewControllerPresentingProxyControllerKey];
 }
 
 @end

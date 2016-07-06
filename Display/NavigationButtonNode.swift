@@ -9,7 +9,7 @@ public class NavigationButtonNode: ASTextNode {
     private func attributesForCurrentState() -> [String : AnyObject] {
         return [
             NSFontAttributeName: self.fontForCurrentState(),
-            NSForegroundColorAttributeName: self.isEnabled ? UIColor.blue() : UIColor.gray()
+            NSForegroundColorAttributeName: self.isEnabled ? self.color : UIColor.gray()
         ]
     }
     
@@ -22,6 +22,14 @@ public class NavigationButtonNode: ASTextNode {
             _text = value
             
             self.attributedString = AttributedString(string: text, attributes: self.attributesForCurrentState())
+        }
+    }
+    
+    public var color: UIColor = UIColor(0x1195f2) {
+        didSet {
+            if let text = self._text {
+                self.attributedString = AttributedString(string: text, attributes: self.attributesForCurrentState())
+            }
         }
     }
     
@@ -40,7 +48,8 @@ public class NavigationButtonNode: ASTextNode {
     }
     
     private var touchCount = 0
-    public var pressed: () -> () = {}
+    public var pressed: () -> () = { }
+    public var highlightChanged: (Bool) -> () = { _ in }
     
     public override init() {
         super.init()
@@ -100,14 +109,15 @@ public class NavigationButtonNode: ASTextNode {
             
             let alpha: CGFloat = !self.isEnabled ? 1.0 : (highlighted ? 0.4 : 1.0)
             
-            if animated {
+            /*if animated {
                 UIView.animate(withDuration: 0.3, delay: 0.0, options: UIViewAnimationOptions.beginFromCurrentState, animations: { () -> Void in
                     self.alpha = alpha
                 }, completion: nil)
             }
-            else {
+            else {*/
                 self.alpha = alpha
-            }
+                self.highlightChanged(highlighted)
+            //}
         }
     }
     

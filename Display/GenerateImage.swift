@@ -62,6 +62,35 @@ public func generateImage(_ size: CGSize, contextGenerator: (CGSize, CGContext) 
     return UIImage(cgImage: image, scale: scale, orientation: .up)
 }
 
+public func generateFilledCircleImage(radius: CGFloat, color: UIColor?, backgroundColor: UIColor? = nil) -> UIImage? {
+    return generateImage(CGSize(width: radius * 2.0, height: radius * 2.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        if let backgroundColor = backgroundColor {
+            context.setFillColor(backgroundColor.cgColor)
+            context.fill(CGRect(origin: CGPoint(), size: size))
+        }
+        
+        if let color = color {
+            context.setFillColor(color.cgColor)
+        } else {
+            context.setFillColor(UIColor.clear().cgColor)
+            context.setBlendMode(.copy)
+        }
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+    })
+}
+
+public func generateStretchableFilledCircleImage(radius: CGFloat, color: UIColor?, backgroundColor: UIColor? = nil) -> UIImage? {
+    return generateFilledCircleImage(radius: radius, color: color, backgroundColor: backgroundColor)?.stretchableImage(withLeftCapWidth: Int(radius), topCapHeight: Int(radius))
+}
+
+private func generateSingleColorImage(size: CGSize, color: UIColor) -> UIImage? {
+    return generateImage(size, contextGenerator: { size, context in
+        context.setFillColor(color.cgColor)
+        context.fill(CGRect(origin: CGPoint(), size: size))
+    })
+}
+
 public enum DrawingContextBltMode {
     case Alpha
 }

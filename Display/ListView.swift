@@ -97,6 +97,18 @@ public struct ListViewInsertItem {
     }
 }
 
+public struct ListViewUpdateItem {
+    public let index: Int
+    public let item: ListViewItem
+    public let directionHint: ListViewItemOperationDirectionHint?
+    
+    public init(index: Int, item: ListViewItem, directionHint: ListViewItemOperationDirectionHint?) {
+        self.index = index
+        self.item = item
+        self.directionHint = directionHint
+    }
+}
+
 public struct ListViewDeleteAndInsertOptions: OptionSet {
     public let rawValue: Int
     
@@ -953,6 +965,9 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         
         self.displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
         self.displayLink.add(to: RunLoop.main(), forMode: RunLoopMode.commonModes.rawValue)
+        if #available(iOS 10.0, *) {
+            self.displayLink.preferredFramesPerSecond = 60
+        }
         self.displayLink.isPaused = true
         
         if useDynamicTuning {
@@ -1324,7 +1339,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         return ListViewState(insets: self.insets, visibleSize: self.visibleSize, invisibleInset: self.invisibleInset, nodes: nodes, scrollPosition: nil, stationaryOffset: nil)
     }
     
-    public func deleteAndInsertItems(deleteIndices: [ListViewDeleteItem], insertIndicesAndItems: [ListViewInsertItem], options: ListViewDeleteAndInsertOptions, scrollToItem: ListViewScrollToItem? = nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets? = nil, stationaryItemRange: (Int, Int)? = nil, completion: (ListViewDisplayedItemRange) -> Void = { _ in }) {
+    public func deleteAndInsertItems(deleteIndices: [ListViewDeleteItem], insertIndicesAndItems: [ListViewInsertItem], updateIndicesAndItems: [ListViewUpdateItem], options: ListViewDeleteAndInsertOptions, scrollToItem: ListViewScrollToItem? = nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets? = nil, stationaryItemRange: (Int, Int)? = nil, completion: (ListViewDisplayedItemRange) -> Void = { _ in }) {
         if deleteIndices.count == 0 && insertIndicesAndItems.count == 0 && scrollToItem == nil && updateSizeAndInsets == nil {
             completion(self.immediateDisplayedItemRange())
             return
@@ -1333,7 +1348,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         self.transactionQueue.addTransaction({ [weak self] transactionCompletion in
             if let strongSelf = self {
                 strongSelf.transactionOffset = 0.0
-                strongSelf.deleteAndInsertItemsTransaction(deleteIndices: deleteIndices, insertIndicesAndItems: insertIndicesAndItems, options: options, scrollToItem: scrollToItem, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: stationaryItemRange, completion: { [weak strongSelf] in
+                strongSelf.deleteAndInsertItemsTransaction(deleteIndices: deleteIndices, insertIndicesAndItems: insertIndicesAndItems, updateIndicesAndItems: updateIndicesAndItems, options: options, scrollToItem: scrollToItem, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: stationaryItemRange, completion: { [weak strongSelf] in
                     completion(strongSelf?.immediateDisplayedItemRange() ?? ListViewDisplayedItemRange(loadedRange: nil, visibleRange: nil))
                     
                     transactionCompletion()
@@ -1342,7 +1357,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         })
     }
 
-    private func deleteAndInsertItemsTransaction(deleteIndices: [ListViewDeleteItem], insertIndicesAndItems: [ListViewInsertItem], options: ListViewDeleteAndInsertOptions, scrollToItem: ListViewScrollToItem?, updateSizeAndInsets: ListViewUpdateSizeAndInsets?, stationaryItemRange: (Int, Int)?, completion: (Void) -> Void) {
+    private func deleteAndInsertItemsTransaction(deleteIndices: [ListViewDeleteItem], insertIndicesAndItems: [ListViewInsertItem], updateIndicesAndItems: [ListViewUpdateItem], options: ListViewDeleteAndInsertOptions, scrollToItem: ListViewScrollToItem?, updateSizeAndInsets: ListViewUpdateSizeAndInsets?, stationaryItemRange: (Int, Int)?, completion: (Void) -> Void) {
         if deleteIndices.isEmpty && insertIndicesAndItems.isEmpty && scrollToItem == nil {
             if let updateSizeAndInsets = updateSizeAndInsets where self.items.count == 0 || (updateSizeAndInsets.size == self.visibleSize && updateSizeAndInsets.insets == self.insets) {
                 self.visibleSize = updateSizeAndInsets.size
@@ -1410,6 +1425,15 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
                     if itemNode.index == previousIndex {
                         previousNodes[insertedItem.index] = itemNode
                     }
+                }
+            }
+        }
+        
+        for updatedItem in updateIndicesAndItems {
+            self.items[updatedItem.index] = updatedItem.item
+            for itemNode in self.itemNodes {
+                if itemNode.index == updatedItem.index {
+                    previousNodes[updatedItem.index] = itemNode
                 }
             }
         }
@@ -1575,33 +1599,35 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
                     }
                 }
                 
-                self.updateAdjacent(synchronous: options.contains(.Synchronous), animated: animated, state: updatedState, updateAdjacentItemsIndices: updateIndices, operations: operations, completion: { state, operations in
-                    var updatedState = state
-                    var updatedOperations = operations
-                    updatedState.removeInvisibleNodes(&updatedOperations)
-                    
-                    if self.debugInfo {
-                        print("updateAdjacent completion \((CACurrentMediaTime() - startTime) * 1000.0) ms")
-                    }
-                    
-                    let stationaryItemIndex = updatedState.stationaryOffset?.0
-                    
-                    let next = {
-                        self.replayOperations(animated: animated, animateAlpha: options.contains(.AnimateAlpha), operations: updatedOperations, scrollToItem: scrollToItem, updateSizeAndInsets: updateSizeAndInsets, stationaryItemIndex: stationaryItemIndex, completion: completion)
-                    }
-                    
-                    if options.contains(.LowLatency) || options.contains(.Synchronous) {
-                        Queue.mainQueue().async {
-                            if self.debugInfo {
-                                print("updateAdjacent LowLatency enqueue \((CACurrentMediaTime() - startTime) * 1000.0) ms")
+                self.updateNodes(synchronous: options.contains(.Synchronous), animated: animated, updateIndicesAndItems: updateIndicesAndItems, inputState: updatedState, inputPreviousNodes: previousNodes, inputOperations: operations, inputCompletion: { updatedState, operations in
+                    self.updateAdjacent(synchronous: options.contains(.Synchronous), animated: animated, state: updatedState, updateAdjacentItemsIndices: updateIndices, operations: operations, completion: { state, operations in
+                        var updatedState = state
+                        var updatedOperations = operations
+                        updatedState.removeInvisibleNodes(&updatedOperations)
+                        
+                        if self.debugInfo {
+                            print("updateAdjacent completion \((CACurrentMediaTime() - startTime) * 1000.0) ms")
+                        }
+                        
+                        let stationaryItemIndex = updatedState.stationaryOffset?.0
+                        
+                        let next = {
+                            self.replayOperations(animated: animated, animateAlpha: options.contains(.AnimateAlpha), operations: updatedOperations, scrollToItem: scrollToItem, updateSizeAndInsets: updateSizeAndInsets, stationaryItemIndex: stationaryItemIndex, completion: completion)
+                        }
+                        
+                        if options.contains(.LowLatency) || options.contains(.Synchronous) {
+                            Queue.mainQueue().async {
+                                if self.debugInfo {
+                                    print("updateAdjacent LowLatency enqueue \((CACurrentMediaTime() - startTime) * 1000.0) ms")
+                                }
+                                next()
                             }
-                            next()
+                        } else {
+                            self.dispatchOnVSync {
+                                next()
+                            }
                         }
-                    } else {
-                        self.dispatchOnVSync {
-                            next()
-                        }
-                    }
+                    })
                 })
             })
         }
@@ -1715,6 +1741,27 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
                 }
             }
         }
+    }
+    
+    private func updateNodes(synchronous: Bool, animated: Bool, updateIndicesAndItems: [ListViewUpdateItem], inputState: ListViewState, inputPreviousNodes: [Int: ListViewItemNode], inputOperations: [ListViewStateOperation], completion: (ListViewState, [ListViewStateOperation]) -> Void) {
+        var state = inputState
+        var operations = inputOperations
+        var updateIndicesAndItems = updateIndicesAndItems
+        
+        if updateIndicesAndItems.isEmpty {
+            completion(state, operations)
+        } else {
+            var updateItem = updateIndicesAndItems[0]
+            for node in state.nodes {
+                if node.index == updateItem.index {
+                    
+                    
+                    break
+                }
+            }
+        }
+        
+        assertionFailure()
     }
     
     private func referencePointForInsertionAtIndex(_ nodeIndex: Int) -> CGPoint {

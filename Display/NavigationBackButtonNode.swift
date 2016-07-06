@@ -9,11 +9,9 @@ public class NavigationBackButtonNode: ASControlNode {
     private func attributesForCurrentState() -> [String : AnyObject] {
         return [
             NSFontAttributeName: self.fontForCurrentState(),
-            NSForegroundColorAttributeName: self.isEnabled ? UIColor.blue() : UIColor.gray()
+            NSForegroundColorAttributeName: self.isEnabled ? self.color : UIColor.gray()
         ]
     }
-    
-    var suspendLayout = false
     
     let arrow: ASDisplayNode
     let label: ASTextNode
@@ -29,6 +27,12 @@ public class NavigationBackButtonNode: ASControlNode {
             self._text = value
             self.label.attributedString = AttributedString(string: text, attributes: self.attributesForCurrentState())
             self.invalidateCalculatedLayout()
+        }
+    }
+    
+    var color: UIColor = UIColor(0x1195f2) {
+        didSet {
+            self.label.attributedString = AttributedString(string: self._text, attributes: self.attributesForCurrentState())
         }
     }
     
@@ -71,10 +75,6 @@ public class NavigationBackButtonNode: ASControlNode {
     
     public override func layout() {
         super.layout()
-        
-        if self.suspendLayout {
-            return
-        }
         
         self.arrow.frame = CGRect(x: 0.0, y: floor((self.frame.size.height - arrow.frame.size.height) / 2.0), width: self.arrow.frame.size.width, height: self.arrow.frame.size.height)
         

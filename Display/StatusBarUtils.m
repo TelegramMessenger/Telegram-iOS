@@ -4,8 +4,9 @@
 
 + (UIView *)statusBarWindow {
     UIWindow *window = [[UIApplication sharedApplication] valueForKey:@"statusBarWindow"];
-    UIView *view = window.subviews.firstObject;
-    return view;
+    return window;
+    //UIView *view = window.subviews.firstObject;
+    //return view;
 }
 
 + (UIView *)statusBar {
