@@ -16,6 +16,7 @@
 		D00EED1E1C81F28D00341DFF /* MessageHistoryTagsTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00EED1D1C81F28D00341DFF /* MessageHistoryTagsTable.swift */; };
 		D01F7D9B1CBEC390008765C9 /* MessageHistoryInvalidatedReadStateTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01F7D9A1CBEC390008765C9 /* MessageHistoryInvalidatedReadStateTable.swift */; };
 		D01F7D9D1CBF8586008765C9 /* SynchronizePeerReadStatesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01F7D9C1CBF8586008765C9 /* SynchronizePeerReadStatesView.swift */; };
+		D02EB8071D2B07F300D07ED3 /* OrderStatisticTreeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02EB8061D2B07F300D07ED3 /* OrderStatisticTreeTests.swift */; };
 		D033A6F71C73D512006A2EAB /* MessageHistoryUnsentTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033A6F61C73D512006A2EAB /* MessageHistoryUnsentTable.swift */; };
 		D033A6F91C73E440006A2EAB /* UnsentMessageHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033A6F81C73E440006A2EAB /* UnsentMessageHistoryView.swift */; };
 		D03BCCF81C73561C0097A291 /* Table.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03BCCF71C73561C0097A291 /* Table.swift */; };
@@ -38,6 +39,7 @@
 		D08C713A1C501F0700779C0F /* MessageHistoryHole.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08C71391C501F0700779C0F /* MessageHistoryHole.swift */; };
 		D08C713C1C51283C00779C0F /* MessageHistoryIndexTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08C713B1C51283C00779C0F /* MessageHistoryIndexTable.swift */; };
 		D08C713E1C512EA500779C0F /* MessageHistoryTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08C713D1C512EA500779C0F /* MessageHistoryTable.swift */; };
+		D08CEFB41D2AD8BE0015D3BC /* RedBlackTree.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CEFB31D2AD8BE0015D3BC /* RedBlackTree.swift */; };
 		D0977F9C1B822DB4009994B2 /* ValueBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977F9B1B822DB4009994B2 /* ValueBox.swift */; };
 		D0977F9E1B8234DF009994B2 /* ValueBoxKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977F9D1B8234DF009994B2 /* ValueBoxKey.swift */; };
 		D0977FA01B8244D7009994B2 /* SqliteValueBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977F9F1B8244D7009994B2 /* SqliteValueBox.swift */; };
@@ -92,6 +94,7 @@
 		D00EED1D1C81F28D00341DFF /* MessageHistoryTagsTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryTagsTable.swift; sourceTree = "<group>"; };
 		D01F7D9A1CBEC390008765C9 /* MessageHistoryInvalidatedReadStateTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryInvalidatedReadStateTable.swift; sourceTree = "<group>"; };
 		D01F7D9C1CBF8586008765C9 /* SynchronizePeerReadStatesView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SynchronizePeerReadStatesView.swift; sourceTree = "<group>"; };
+		D02EB8061D2B07F300D07ED3 /* OrderStatisticTreeTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OrderStatisticTreeTests.swift; sourceTree = "<group>"; };
 		D033A6F61C73D512006A2EAB /* MessageHistoryUnsentTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryUnsentTable.swift; sourceTree = "<group>"; };
 		D033A6F81C73E440006A2EAB /* UnsentMessageHistoryView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UnsentMessageHistoryView.swift; sourceTree = "<group>"; };
 		D03BCCF71C73561C0097A291 /* Table.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Table.swift; sourceTree = "<group>"; };
@@ -115,6 +118,7 @@
 		D08C71391C501F0700779C0F /* MessageHistoryHole.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryHole.swift; sourceTree = "<group>"; };
 		D08C713B1C51283C00779C0F /* MessageHistoryIndexTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryIndexTable.swift; sourceTree = "<group>"; };
 		D08C713D1C512EA500779C0F /* MessageHistoryTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryTable.swift; sourceTree = "<group>"; };
+		D08CEFB31D2AD8BE0015D3BC /* RedBlackTree.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RedBlackTree.swift; sourceTree = "<group>"; };
 		D0977F9B1B822DB4009994B2 /* ValueBox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ValueBox.swift; sourceTree = "<group>"; };
 		D0977F9D1B8234DF009994B2 /* ValueBoxKey.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ValueBoxKey.swift; sourceTree = "<group>"; };
 		D0977F9F1B8244D7009994B2 /* SqliteValueBox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SqliteValueBox.swift; sourceTree = "<group>"; };
@@ -275,6 +279,7 @@
 				D0E3A7871B28AE9C00A402D9 /* Coding.swift */,
 				D0F9E8741C5A334100037222 /* SimpleDictionary.swift */,
 				D0C9DA381C65782500855278 /* SimpleSet.swift */,
+				D08CEFB31D2AD8BE0015D3BC /* RedBlackTree.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -361,6 +366,7 @@
 				D0F9E8681C58FA9300037222 /* ChatListTableTests.swift */,
 				D0C8FCB61C5C2D200028C27F /* MessageHistoryViewTests.swift */,
 				D060B77A1CF4845A0050BE9B /* ReadStateTableTests.swift */,
+				D02EB8061D2B07F300D07ED3 /* OrderStatisticTreeTests.swift */,
 			);
 			path = PostboxTests;
 			sourceTree = "<group>";
@@ -443,6 +449,7 @@
 				TargetAttributes = {
 					D0E3A7491B28A7E300A402D9 = {
 						CreatedOnToolsVersion = 6.3.1;
+						ProvisioningStyle = Manual;
 					};
 					D0E3A7541B28A7E300A402D9 = {
 						CreatedOnToolsVersion = 6.3.1;
@@ -494,6 +501,7 @@
 				D0E3A7821B28ADD000A402D9 /* Postbox.swift in Sources */,
 				D0E3A79E1B28B50400A402D9 /* Message.swift in Sources */,
 				D0C674C81CBB11C600183765 /* MessageHistoryReadStateTable.swift in Sources */,
+				D08CEFB41D2AD8BE0015D3BC /* RedBlackTree.swift in Sources */,
 				D044CA2E1C618373002160FF /* ChatListHole.swift in Sources */,
 				D044E1631B2AD677001EE087 /* MurMurHash32.m in Sources */,
 				D00E0FBE1B85D1B5002E4EB5 /* LmdbValueBox.swift in Sources */,
@@ -548,6 +556,7 @@
 				D0C8FCB71C5C2D200028C27F /* MessageHistoryViewTests.swift in Sources */,
 				D0F9E8691C58FA9300037222 /* ChatListTableTests.swift in Sources */,
 				D060B77B1CF4845A0050BE9B /* ReadStateTableTests.swift in Sources */,
+				D02EB8071D2B07F300D07ED3 /* OrderStatisticTreeTests.swift in Sources */,
 				D0A7D9451C556CFE0016A115 /* MessageHistoryIndexTableTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -609,6 +618,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -627,6 +637,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 			};
@@ -744,6 +755,7 @@
 			baseConfigurationReference = D07516491B2D9E2500AE42E0 /* Postbox.xcconfig */;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -762,6 +774,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -771,6 +784,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
@@ -789,6 +803,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 			};

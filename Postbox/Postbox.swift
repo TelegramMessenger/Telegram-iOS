@@ -799,6 +799,32 @@ public final class Postbox {
         }
     }
     
+    public func messageAtId(_ id: MessageId) -> Signal<Message?, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.queue.justDispatch {
+                if let entry = self.messageHistoryIndexTable.get(id), case let .Message(index) = entry {
+                    if let message = self.messageHistoryTable.getMessage(index) {
+                        subscriber.putNext(self.renderIntermediateMessage(message))
+                        subscriber.putCompletion()
+                    } else {
+                        subscriber.putNext(nil)
+                        subscriber.putCompletion()
+                    }
+                } else if let _ = self.messageHistoryIndexTable.holeContainingId(id) {
+                    subscriber.putNext(nil)
+                    subscriber.putCompletion()
+                } else {
+                    subscriber.putNext(nil)
+                    subscriber.putCompletion()
+                }
+            }
+            
+            return disposable
+        }
+    }
+    
     public func tailChatListView(_ count: Int) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         return self.aroundChatListView(MessageIndex.absoluteUpperBound(), count: count)
     }
