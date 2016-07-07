@@ -213,10 +213,6 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     _settingsFile = [_crashesDir stringByAppendingPathComponent:BITHOCKEY_CRASH_SETTINGS];
     _analyzerInProgressFile = [_crashesDir stringByAppendingPathComponent:BITHOCKEY_CRASH_ANALYZER];
 
-    if ([_fileManager fileExistsAtPath:_analyzerInProgressFile]) {
-      NSError *error = nil;
-      [_fileManager removeItemAtPath:_analyzerInProgressFile error:&error];
-    }
     
     if (!BITHockeyBundle() && !bit_isRunningInAppExtension()) {
       NSLog(@"[HockeySDK] WARNING: %@ is missing, will send reports automatically!", BITHOCKEYSDK_BUNDLE);
