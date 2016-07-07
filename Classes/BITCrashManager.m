@@ -327,7 +327,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   }
 }
 
-- (void)persistAttachment:(BITHockeyAttachment *)attachment withFilename:(NSString *)filename {
+- (BOOL)persistAttachment:(BITHockeyAttachment *)attachment withFilename:(NSString *)filename {
   NSString *attachmentFilename = [filename stringByAppendingString:@".data"];
   NSMutableData *data = [[NSMutableData alloc] init];
   NSKeyedArchiver *archiver = [[NSKeyedArchiver alloc] initForWritingWithMutableData:data];
@@ -336,7 +336,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   
   [archiver finishEncoding];
   
-  [data writeToFile:attachmentFilename atomically:YES];
+  return [data writeToFile:attachmentFilename atomically:YES];
 }
 
 - (void)persistUserProvidedMetaData:(BITCrashMetaData *)userProvidedMetaData {
@@ -756,7 +756,14 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     BITHockeyAttachment *attachment = [self.delegate attachmentForCrashManager:self];
     
     if (attachment && attachment.hockeyAttachmentData) {
-      [self persistAttachment:attachment withFilename:[_crashesDir stringByAppendingPathComponent: filename]];
+      BOOL success = [self persistAttachment:attachment withFilename:[_crashesDir stringByAppendingPathComponent: filename]];
+      if (!success) {
+        BITHockeyLog(@"ERROR: Persisting the crash attachment failed");
+      } else {
+        BITHockeyLog(@"VERBOSE: Crash attachment successfully persisted.");
+      }
+    } else {
+      BITHockeyLog(@"INFO: Crash attachment was nil");
     }
   }
   
@@ -765,7 +772,10 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
                                                             options:0
                                                               error:&error];
   if (plist) {
-    [plist writeToFile:[_crashesDir stringByAppendingPathComponent: [filename stringByAppendingPathExtension:@"meta"]] atomically:YES];
+    BOOL success = [plist writeToFile:[_crashesDir stringByAppendingPathComponent: [filename stringByAppendingPathExtension:@"meta"]] atomically:YES];
+    if (!success) {
+      BITHockeyLog(@"ERROR: Writing crash meta data failed.");
+    }
   } else {
     BITHockeyLog(@"ERROR: Serializing metaDict failed. %@", error);
   }
