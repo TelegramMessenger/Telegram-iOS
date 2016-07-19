@@ -1,3 +1,7 @@
+## Version 4.0.2
+
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/4.0.2/docs/docs/Changelog.html)
+
 ## Version 4.0.1
 
 - [Changelog](http://www.hockeyapp.net/help/sdk/ios/4.0.1/docs/docs/Changelog.html)

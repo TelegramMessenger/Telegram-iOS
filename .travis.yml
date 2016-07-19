@@ -12,7 +12,7 @@ env:
     - SCHEME="HockeySDK"             DESTINATION="OS=8.4,name=iPhone 6"                 RUN_TESTS="YES"
     - SCHEME="HockeySDK"             DESTINATION="OS=9.0,name=iPad Air"                 RUN_TESTS="YES"
     - SCHEME="HockeySDK"             DESTINATION="OS=9.0,name=iPhone 6 Plus"            RUN_TESTS="YES"
-    - SCHEME="HockeySDK"             DESTINATION="OS=9.1,name=iPad Pro"                 RUN_TESTS="YES"
+    - SCHEME="HockeySDK"             DESTINATION="OS=9.2,name=iPad  Pro"                 RUN_TESTS="YES"
     - SCHEME="HockeySDK"             DESTINATION="OS=9.2,name=iPhone 6s"                RUN_TESTS="YES"
     - SCHEME="HockeySDK Framework"   DESTINATION="platform=iOS Simulator,name=iPhone 6" RUN_TESTS="YES"
     - SCHEME="HockeySDK Distribution"                                                   RUN_TESTS="NO" LINT="YES"
