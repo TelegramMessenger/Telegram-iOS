@@ -218,6 +218,12 @@ Alternatively you can integrate the SDK by source if you want to do any modifica
 pod "HockeySDK-Source"
 ```
 
+The import for this integration will look slightly different:
+
+```objectivec
+@import HockeySDK_Source;
+```
+
 <a id="carthage"></a>
 ### 3.3 Carthage
 
