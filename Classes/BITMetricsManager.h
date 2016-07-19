@@ -42,6 +42,17 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (void)trackEventWithName:(NSString *)eventName;
 
+/**
+ *  This method allows to track an event that happened in your app.
+ *  Remember to choose meaningful event names to have the best experience when diagnosing your app
+ *  in the web portal.
+ *
+ *  @param eventName the name of the event, which should be tracked.
+ *  @param properties key value pairs with additional info about the event.
+ *  @param measurements key value pairs, which contain custom metrics.
+ */
+- (void)trackEventWithName:(NSString *)eventName properties:(nullable NSDictionary *)properties measurements:(nullable NSDictionary *)measurements;
+
 @end
 
 NS_ASSUME_NONNULL_END

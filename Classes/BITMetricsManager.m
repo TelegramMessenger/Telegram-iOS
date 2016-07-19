@@ -192,6 +192,24 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
   });
 }
 
+- (void)trackEventWithName:(NSString *)eventName properties:(nullable NSDictionary *)properties measurements:(nullable NSDictionary *)measurements {
+  if (!eventName) { return; }
+  if (self.disabled) {
+    BITHockeyLogDebug(@"INFO: BITMetricsManager is disabled, therefore this tracking call was ignored.");
+    return;
+  }
+
+  __weak typeof(self) weakSelf = self;
+  dispatch_async(self.metricsEventQueue, ^{
+    typeof(self) strongSelf = weakSelf;
+    BITEventData *eventData = [BITEventData new];
+    [eventData setName:eventName];
+    [eventData setProperties:properties];
+    [eventData setMeasurements:measurements];
+    [strongSelf trackDataItem:eventData];
+  });
+}
+
 #pragma mark Track DataItem
 
 - (void)trackDataItem:(BITTelemetryData *)dataItem {
