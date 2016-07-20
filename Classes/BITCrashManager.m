@@ -753,7 +753,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
  *  @param filename the crash reports temp filename
  */
 - (void)storeMetaDataForCrashReportFilename:(NSString *)filename {
-  BITHockeyLog(@"VERBOSE: Storing meta data for crash report with filename %@", filename);
+  BITHockeyLogVerbose(@"VERBOSE: Storing meta data for crash report with filename %@", filename);
   NSError *error = NULL;
   NSMutableDictionary *metaDict = [NSMutableDictionary dictionaryWithCapacity:4];
   NSString *applicationLog = @"";
@@ -768,18 +768,18 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   [metaDict setObject:applicationLog forKey:kBITCrashMetaApplicationLog];
   
   if ([self.delegate respondsToSelector:@selector(attachmentForCrashManager:)]) {
-    BITHockeyLog(@"VERBOSE: Processing attachment for crash report with filename %@", filename);
+    BITHockeyLogVerbose(@"VERBOSE: Processing attachment for crash report with filename %@", filename);
     BITHockeyAttachment *attachment = [self.delegate attachmentForCrashManager:self];
     
     if (attachment && attachment.hockeyAttachmentData) {
       BOOL success = [self persistAttachment:attachment withFilename:[_crashesDir stringByAppendingPathComponent: filename]];
       if (!success) {
-        BITHockeyLog(@"ERROR: Persisting the crash attachment failed");
+        BITHockeyLogError(@"ERROR: Persisting the crash attachment failed");
       } else {
-        BITHockeyLog(@"VERBOSE: Crash attachment successfully persisted.");
+        BITHockeyLogVerbose(@"VERBOSE: Crash attachment successfully persisted.");
       }
     } else {
-      BITHockeyLog(@"INFO: Crash attachment was nil");
+      BITHockeyLogDebug(@"INFO: Crash attachment was nil");
     }
   }
   
@@ -790,12 +790,12 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   if (plist) {
     BOOL success = [plist writeToFile:[_crashesDir stringByAppendingPathComponent: [filename stringByAppendingPathExtension:@"meta"]] atomically:YES];
     if (!success) {
-      BITHockeyLog(@"ERROR: Writing crash meta data failed.");
+      BITHockeyLogError(@"ERROR: Writing crash meta data failed.");
     }
   } else {
     BITHockeyLogError(@"ERROR: Writing crash meta data failed. %@", error);
   }
-  BITHockeyLog(@"VERBOSE: Storing crash meta data finished.");
+  BITHockeyLogVerbose(@"VERBOSE: Storing crash meta data finished.");
 }
 
 - (BOOL)handleUserInput:(BITCrashManagerUserInput)userInput withUserProvidedMetaData:(BITCrashMetaData *)userProvidedMetaData {
@@ -846,7 +846,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
  * Parse the new crash report and gather additional meta data from the app which will be stored along the crash report
  */
 - (void) handleCrashReport {
-  BITHockeyLog(@"VERBOSE: Handling crash report");
+  BITHockeyLogVerbose(@"VERBOSE: Handling crash report");
   NSError *error = NULL;
 	
   if (!self.plCrashReporter) return;
@@ -855,7 +855,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   if (![_fileManager fileExistsAtPath:_analyzerInProgressFile]) {
     // mark the start of the routine
     [_fileManager createFileAtPath:_analyzerInProgressFile contents:nil attributes:nil];
-    BITHockeyLog(@"VERBOSE: AnalyzerInProgress file created");
+    BITHockeyLogVerbose(@"VERBOSE: AnalyzerInProgress file created");
     
     [self saveSettings];
     
@@ -912,7 +912,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
       }
     }
   } else {
-    BITHockeyLog(@"WARNING: AnalyzerInProgress file found, handling crash report skipped");
+    BITHockeyLogWarning(@"WARNING: AnalyzerInProgress file found, handling crash report skipped");
   }
 	
   // Purge the report
@@ -1001,7 +1001,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
 }
 
 - (void)triggerDelayedProcessing {
-  BITHockeyLog(@"VERBOE: Triggering delayed crash processing.");
+  BITHockeyLogVerbose(@"VERBOSE: Triggering delayed crash processing.");
   [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(invokeDelayedProcessing) object:nil];
   [self performSelector:@selector(invokeDelayedProcessing) withObject:nil afterDelay:0.5];
 }
@@ -1257,7 +1257,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
       }
       
       if (considerReport) {
-        BITHockeyLog(@"INFO: App kill detected, creating crash report.");
+        BITHockeyLogVerbose(@"INFO: App kill detected, creating crash report.");
         [self createCrashReportForAppKill];
       
         _didCrashInLastSession = YES;
@@ -1277,7 +1277,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
   [[NSUserDefaults standardUserDefaults] synchronize];
   
   [self triggerDelayedProcessing];
-  BITHockeyLog(@"VERBOSE: CrashManager startManager has finished.");
+  BITHockeyLogVerbose(@"VERBOSE: CrashManager startManager has finished.");
 }
 
 /**
