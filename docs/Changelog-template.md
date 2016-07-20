@@ -1,3 +1,8 @@
+## 4.1.0-beta.3
+
+- Includes improvements from 4.0.2 release of the SDK.
+- [NEW] Additional API to track an event with properties and measurements.
+
 ## 4.1.0-beta.2
 
 - [BUGFIX] Fixes an issue where the whole app's Application Support directory was accidentally excluded from backups.
