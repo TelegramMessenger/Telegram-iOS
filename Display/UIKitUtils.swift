@@ -74,10 +74,20 @@ public extension CGSize {
         let scale = min(size.width / max(1.0, self.width), size.height / max(1.0, self.height))
         return CGSize(width: floor(self.width * scale), height: floor(self.height * scale))
     }
+    
+    public func multipliedByScreenScale() -> CGSize {
+        let scale = UIScreenScale
+        return CGSize(width: self.width * scale, height: self.height * scale)
+    }
+    
+    public func dividedByScreenScale() -> CGSize {
+        let scale = UIScreenScale
+        return CGSize(width: self.width / scale, height: self.height / scale)
+    }
 }
 
 public func assertNotOnMainThread(_ file: String = #file, line: Int = #line) {
-    assert(!Thread.isMainThread(), "\(file):\(line) running on main thread")
+    assert(!Thread.isMainThread, "\(file):\(line) running on main thread")
 }
 
 public extension UIImage {
@@ -90,5 +100,33 @@ public extension UIImage {
             return result.resizableImage(withCapInsets: self.capInsets, resizingMode: self.resizingMode)
         }
         return result
+    }
+}
+
+private func makeSubtreeSnapshot(layer: CALayer) -> UIView? {
+    let view = UIView()
+    view.layer.contents = layer.contents
+    if let sublayers = layer.sublayers {
+        for sublayer in sublayers {
+            let subtree = makeSubtreeSnapshot(layer: sublayer)
+            if let subtree = subtree {
+                subtree.frame = sublayer.frame
+                view.addSubview(subtree)
+            } else {
+                return nil
+            }
+        }
+    }
+    return view
+}
+
+public extension UIView {
+    public func snapshotContentTree() -> UIView? {
+        if let snapshot = makeSubtreeSnapshot(layer: self.layer) {
+            snapshot.frame = self.frame
+            return snapshot
+        } else {
+            return nil
+        }
     }
 }

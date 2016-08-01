@@ -15,7 +15,7 @@ public class DisplayLinkDispatcher: NSObject {
             self.displayLink.preferredFramesPerSecond = 60
         }
         self.displayLink.isPaused = true
-        self.displayLink.add(to: RunLoop.main(), forMode: RunLoopMode.commonModes.rawValue)
+        self.displayLink.add(to: RunLoop.main, forMode: RunLoopMode.commonModes)
     }
     
     public func dispatch(f: (Void) -> Void) {

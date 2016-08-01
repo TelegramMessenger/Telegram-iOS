@@ -737,6 +737,21 @@ private struct ListViewState {
             }
         }
         
+        var previousIndex: Int?
+        for node in self.nodes {
+            if let index = node.index {
+                if let currentPreviousIndex = previousIndex {
+                    if index <= currentPreviousIndex {
+                        print("index <= previousIndex + 1")
+                        break
+                    }
+                    previousIndex = index
+                } else {
+                    previousIndex = index
+                }
+            }
+        }
+        
         if let _ = self.scrollPosition {
             self.fixScrollPostition(itemCount)
         }
@@ -787,6 +802,60 @@ private struct ListViewState {
             }
         } else {
             assertionFailure()
+        }
+    }
+    
+    mutating func updateNodeAtItemIndex(_ itemIndex: Int, layout: ListViewItemNodeLayout, direction: ListViewItemOperationDirectionHint?, animation: ListViewItemUpdateAnimation, apply: () -> Void, operations: inout [ListViewStateOperation]) {
+        var i = -1
+        for node in self.nodes {
+            i += 1
+            if node.index == itemIndex {
+                switch animation {
+                    case .None:
+                        let offsetDirection: ListViewInsertionOffsetDirection
+                        if let direction = direction {
+                            offsetDirection = ListViewInsertionOffsetDirection(direction)
+                        } else {
+                            if node.frame.maxY < self.insets.top + CGFloat(FLT_EPSILON) {
+                                offsetDirection = .Down
+                            } else {
+                                offsetDirection = .Up
+                            }
+                        }
+                        
+                        switch offsetDirection {
+                            case .Up:
+                                let offsetDelta = -(layout.size.height - node.frame.size.height)
+                                var updatedFrame = node.frame
+                                updatedFrame.origin.y += offsetDelta
+                                updatedFrame.size.height = layout.size.height
+                                self.nodes[i].frame = updatedFrame
+                            
+                                for j in 0 ..< i {
+                                    var frame = self.nodes[j].frame
+                                    frame.origin.y += offsetDelta
+                                    self.nodes[j].frame = frame
+                                }
+                            case .Down:
+                                let offsetDelta = layout.size.height - node.frame.size.height
+                                var updatedFrame = node.frame
+                                updatedFrame.size.height = layout.size.height
+                                self.nodes[i].frame = updatedFrame
+                            
+                                for j in i + 1 ..< self.nodes.count {
+                                    var frame = self.nodes[j].frame
+                                    frame.origin.y += offsetDelta
+                                    self.nodes[j].frame = frame
+                                }
+                        }
+                        
+                        operations.append(.UpdateLayout(index: itemIndex, layout: layout, apply: apply))
+                    case .System:
+                        operations.append(.UpdateLayout(index: itemIndex, layout: layout, apply: apply))
+                }
+                
+                break
+            }
         }
     }
 }
@@ -964,7 +1033,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         self.view.addGestureRecognizer(self.scroller.panGestureRecognizer)
         
         self.displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
-        self.displayLink.add(to: RunLoop.main(), forMode: RunLoopMode.commonModes.rawValue)
+        self.displayLink.add(to: RunLoop.main, forMode: RunLoopMode.commonModes)
         if #available(iOS 10.0, *) {
             self.displayLink.preferredFramesPerSecond = 60
         }
@@ -1001,6 +1070,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
     
     deinit {
         self.pauseAnimations()
+        self.displayLink.invalidate()
     }
     
     @objc func frictionSliderChanged(_ slider: UISlider) {
@@ -1291,7 +1361,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
                     self.async(f)
                 }
             }, node: previousNode, width: width, previousItem: previousItem, nextItem: nextItem, animation: updateAnimation, completion: { (layout, apply) in
-                if Thread.isMainThread() {
+                if Thread.isMainThread {
                     if synchronous {
                         completion(previousNode, layout, {
                             previousNode.index = index
@@ -1340,7 +1410,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
     }
     
     public func deleteAndInsertItems(deleteIndices: [ListViewDeleteItem], insertIndicesAndItems: [ListViewInsertItem], updateIndicesAndItems: [ListViewUpdateItem], options: ListViewDeleteAndInsertOptions, scrollToItem: ListViewScrollToItem? = nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets? = nil, stationaryItemRange: (Int, Int)? = nil, completion: (ListViewDisplayedItemRange) -> Void = { _ in }) {
-        if deleteIndices.count == 0 && insertIndicesAndItems.count == 0 && scrollToItem == nil && updateSizeAndInsets == nil {
+        if deleteIndices.isEmpty && insertIndicesAndItems.isEmpty && updateIndicesAndItems.isEmpty && scrollToItem == nil && updateSizeAndInsets == nil {
             completion(self.immediateDisplayedItemRange())
             return
         }
@@ -1599,7 +1669,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
                     }
                 }
                 
-                self.updateNodes(synchronous: options.contains(.Synchronous), animated: animated, updateIndicesAndItems: updateIndicesAndItems, inputState: updatedState, inputPreviousNodes: previousNodes, inputOperations: operations, inputCompletion: { updatedState, operations in
+                self.updateNodes(synchronous: options.contains(.Synchronous), animated: animated, updateIndicesAndItems: updateIndicesAndItems, inputState: updatedState, previousNodes: previousNodes, inputOperations: operations, completion: { updatedState, operations in
                     self.updateAdjacent(synchronous: options.contains(.Synchronous), animated: animated, state: updatedState, updateAdjacentItemsIndices: updateIndices, operations: operations, completion: { state, operations in
                         var updatedState = state
                         var updatedOperations = operations
@@ -1696,6 +1766,10 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         let completion = inputCompletion
         let updateAnimation: ListViewItemUpdateAnimation = animated ? .System(duration: insertionAnimationDuration) : .None
         
+        if state.nodes.count > 1000 {
+            print("state.nodes.count > 1000")
+        }
+        
         while true {
             if self.items.count == 0 {
                 completion(state, operations)
@@ -1743,7 +1817,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    private func updateNodes(synchronous: Bool, animated: Bool, updateIndicesAndItems: [ListViewUpdateItem], inputState: ListViewState, inputPreviousNodes: [Int: ListViewItemNode], inputOperations: [ListViewStateOperation], completion: (ListViewState, [ListViewStateOperation]) -> Void) {
+    private func updateNodes(synchronous: Bool, animated: Bool, updateIndicesAndItems: [ListViewUpdateItem], inputState: ListViewState, previousNodes: [Int: ListViewItemNode], inputOperations: [ListViewStateOperation], completion: (ListViewState, [ListViewStateOperation]) -> Void) {
         var state = inputState
         var operations = inputOperations
         var updateIndicesAndItems = updateIndicesAndItems
@@ -1752,16 +1826,18 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
             completion(state, operations)
         } else {
             var updateItem = updateIndicesAndItems[0]
-            for node in state.nodes {
-                if node.index == updateItem.index {
+            if let previousNode = previousNodes[updateItem.index] {
+                self.nodeForItem(synchronous: synchronous, item: updateItem.item, previousNode: previousNode, index: updateItem.index, previousItem: updateItem.index == 0 ? nil : self.items[updateItem.index - 1], nextItem: updateItem.index == (self.items.count - 1) ? nil : self.items[updateItem.index + 1], width: state.visibleSize.width, updateAnimation: animated ? .System(duration: insertionAnimationDuration) : .None, completion: { _, layout, apply in
+                    state.updateNodeAtItemIndex(updateItem.index, layout: layout, direction: updateItem.directionHint, animation: animated ? .System(duration: insertionAnimationDuration) : .None, apply: apply, operations: &operations)
                     
-                    
-                    break
-                }
+                    updateIndicesAndItems.remove(at: 0)
+                    self.updateNodes(synchronous: synchronous, animated: animated, updateIndicesAndItems: updateIndicesAndItems, inputState: state, previousNodes: previousNodes, inputOperations: operations, completion: completion)
+                })
+            } else {
+                updateIndicesAndItems.remove(at: 0)
+                self.updateNodes(synchronous: synchronous, animated: animated, updateIndicesAndItems: updateIndicesAndItems, inputState: state, previousNodes: previousNodes, inputOperations: operations, completion: completion)
             }
         }
-        
-        assertionFailure()
     }
     
     private func referencePointForInsertionAtIndex(_ nodeIndex: Int) -> CGPoint {
@@ -1996,7 +2072,13 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
                         
                         if abs(updatedApparentHeight - previousApparentHeight) > CGFloat(FLT_EPSILON) {
                             node.apparentHeight = previousApparentHeight
-                            node.addApparentHeightAnimation(updatedApparentHeight, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp)
+                            node.addApparentHeightAnimation(updatedApparentHeight, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp, update: { [weak node] progress in
+                                if let node = node {
+                                    node.animateFrameTransition(progress)
+                                }
+                            })
+                            node.transitionOffset += previousApparentHeight - layout.size.height
+                            node.addTransitionOffsetAnimation(0.0, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp)
                         }
                     } else {
                         node.apparentHeight = updatedApparentHeight
@@ -2393,7 +2475,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    private func updateVisibleItemsTransaction(completion: Void -> Void) {
+    private func updateVisibleItemsTransaction(completion: (Void) -> Void) {
         if self.items.count == 0 && self.itemNodes.count == 0 {
             completion()
             return
@@ -2742,7 +2824,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
             }
         }, selector: #selector(ListViewTimerProxy.timerEvent), userInfo: nil, repeats: false)
         self.selectionTouchDelayTimer = timer
-        RunLoop.main().add(timer, forMode: RunLoopMode.commonModes)
+        RunLoop.main.add(timer, forMode: RunLoopMode.commonModes)
         
         super.touchesBegan(touches, with: event)
         
@@ -2768,6 +2850,14 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         return nil
+    }
+    
+    public func forEachItemNode(_ f: (ListViewItemNode) -> Void) {
+        for itemNode in self.itemNodes {
+            if itemNode.index != nil {
+                f(itemNode)
+            }
+        }
     }
     
     override public func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {

@@ -93,6 +93,7 @@
 		D0C85DD41D1C1E6A00124894 /* ActionSheetItemGroupNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C85DD31D1C1E6A00124894 /* ActionSheetItemGroupNode.swift */; };
 		D0C85DD61D1C600D00124894 /* ActionSheetButtonNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C85DD51D1C600D00124894 /* ActionSheetButtonNode.swift */; };
 		D0CD12161CCFEB4E000DE7BC /* ScrollToTopProxyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CD12151CCFEB4E000DE7BC /* ScrollToTopProxyView.swift */; };
+		D0D94A171D3814F900740E02 /* UniversalTapRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D94A161D3814F900740E02 /* UniversalTapRecognizer.swift */; };
 		D0DC48541BF93D8B00F672FD /* TabBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DC48531BF93D8A00F672FD /* TabBarController.swift */; };
 		D0DC48561BF945DD00F672FD /* TabBarNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DC48551BF945DD00F672FD /* TabBarNode.swift */; };
 		D0DC485F1BF949FB00F672FD /* TabBarContollerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DC485E1BF949FB00F672FD /* TabBarContollerNode.swift */; };
@@ -200,6 +201,7 @@
 		D0C85DD31D1C1E6A00124894 /* ActionSheetItemGroupNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetItemGroupNode.swift; sourceTree = "<group>"; };
 		D0C85DD51D1C600D00124894 /* ActionSheetButtonNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetButtonNode.swift; sourceTree = "<group>"; };
 		D0CD12151CCFEB4E000DE7BC /* ScrollToTopProxyView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ScrollToTopProxyView.swift; sourceTree = "<group>"; };
+		D0D94A161D3814F900740E02 /* UniversalTapRecognizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UniversalTapRecognizer.swift; sourceTree = "<group>"; };
 		D0DC48531BF93D8A00F672FD /* TabBarController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TabBarController.swift; sourceTree = "<group>"; };
 		D0DC48551BF945DD00F672FD /* TabBarNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TabBarNode.swift; sourceTree = "<group>"; };
 		D0DC485E1BF949FB00F672FD /* TabBarContollerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TabBarContollerNode.swift; sourceTree = "<group>"; };
@@ -401,6 +403,7 @@
 				D03E7E001C974AB300C07816 /* DisplayLinkDispatcher.swift */,
 				D0C0D28D1C997110001D2851 /* FBAnimationPerformanceTracker.h */,
 				D0C0D28E1C997110001D2851 /* FBAnimationPerformanceTracker.mm */,
+				D0D94A161D3814F900740E02 /* UniversalTapRecognizer.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -655,6 +658,7 @@
 				D05CC31D1B695A9600E235A3 /* UIBarButtonItem+Proxy.m in Sources */,
 				D0C85DD61D1C600D00124894 /* ActionSheetButtonNode.swift in Sources */,
 				D0C2DFD01CC4431D0044FF83 /* ListViewAccessoryItemNode.swift in Sources */,
+				D0D94A171D3814F900740E02 /* UniversalTapRecognizer.swift in Sources */,
 				D015F7581D1B467200E269B5 /* ActionSheetController.swift in Sources */,
 				D0C2DFC91CC4431D0044FF83 /* ListView.swift in Sources */,
 				D03E7DF91C96C5F200C07816 /* NSWeakReference.m in Sources */,
@@ -832,6 +836,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 3.0;
 			};
 			name = Debug;
 		};
@@ -855,6 +860,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+				SWIFT_VERSION = 3.0;
 			};
 			name = Release;
 		};
@@ -865,6 +871,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.DisplayTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 3.0;
 			};
 			name = Debug;
 		};
@@ -876,6 +883,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.DisplayTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+				SWIFT_VERSION = 3.0;
 			};
 			name = Release;
 		};
@@ -939,6 +947,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 3.0;
 			};
 			name = Hockeyapp;
 		};
@@ -949,6 +958,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.DisplayTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 3.0;
 			};
 			name = Hockeyapp;
 		};

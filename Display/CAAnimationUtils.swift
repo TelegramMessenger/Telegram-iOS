@@ -1,6 +1,6 @@
 import UIKit
 
-@objc private class CALayerAnimationDelegate: NSObject {
+@objc private class CALayerAnimationDelegate: NSObject, CAAnimationDelegate {
     var completion: ((Bool) -> Void)?
     
     init(completion: ((Bool) -> Void)?) {
@@ -9,7 +9,7 @@ import UIKit
         super.init()
     }
     
-    @objc override func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
+    @objc func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
         if let completion = self.completion {
             completion(flag)
         }
@@ -39,7 +39,7 @@ public extension CAAnimation {
 }
 
 public extension CALayer {
-    public func animate(from: NSValue, to: NSValue, keyPath: String, timingFunction: String, duration: Double, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
+    public func animate(from: AnyObject, to: AnyObject, keyPath: String, timingFunction: String, duration: Double, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         if timingFunction == kCAMediaTimingFunctionSpring {
             let animation = makeSpringAnimation(keyPath)
             animation.fromValue = from
@@ -57,6 +57,7 @@ public extension CALayer {
             }
             
             animation.speed = speed * Float(animation.duration / duration)
+            animation.isAdditive = additive
             
             self.add(animation, forKey: keyPath)
         } else {
@@ -74,6 +75,7 @@ public extension CALayer {
             animation.isRemovedOnCompletion = removeOnCompletion
             animation.fillMode = kCAFillModeForwards
             animation.speed = speed
+            animation.isAdditive = additive
             if let completion = completion {
                 animation.delegate = CALayerAnimationDelegate(completion: completion)
             }
@@ -109,33 +111,42 @@ public extension CALayer {
         self.animate(from: NSNumber(value: Float(from)), to: NSNumber(value: Float(to)), keyPath: "opacity", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: duration, removeOnCompletion: removeOnCompletion, completion: completion)
     }
     
-    public func animateScale(from: CGFloat, to: CGFloat, duration: Double) {
-        self.animate(from: NSNumber(value: Float(from)), to: NSNumber(value: Float(to)), keyPath: "transform.scale", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: duration, removeOnCompletion: true, completion: nil)
+    public func animateScale(from: CGFloat, to: CGFloat, duration: Double, timingFunction: String = kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
+        self.animate(from: NSNumber(value: Float(from)), to: NSNumber(value: Float(to)), keyPath: "transform.scale", timingFunction: timingFunction, duration: duration, removeOnCompletion: removeOnCompletion, completion: completion)
     }
     
-    func animatePosition(from: CGPoint, to: CGPoint, duration: Double, timingFunction: String, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
+    func animatePosition(from: CGPoint, to: CGPoint, duration: Double, timingFunction: String, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         if from == to {
+            if let completion = completion {
+                completion(true)
+            }
             return
         }
-        self.animate(from: NSValue(cgPoint: from), to: NSValue(cgPoint: to), keyPath: "position", timingFunction: timingFunction, duration: duration, removeOnCompletion: removeOnCompletion, completion: completion)
+        self.animate(from: NSValue(cgPoint: from), to: NSValue(cgPoint: to), keyPath: "position", timingFunction: timingFunction, duration: duration, removeOnCompletion: removeOnCompletion, additive: additive, completion: completion)
     }
     
-    func animateBounds(from: CGRect, to: CGRect, duration: Double, timingFunction: String, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {
+    func animateBounds(from: CGRect, to: CGRect, duration: Double, timingFunction: String, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         if from == to {
+            if let completion = completion {
+                completion(true)
+            }
             return
         }
-        self.animate(from: NSValue(cgRect: from), to: NSValue(cgRect: to), keyPath: "bounds", timingFunction: timingFunction, duration: duration, removeOnCompletion: removeOnCompletion, completion: completion)
+        self.animate(from: NSValue(cgRect: from), to: NSValue(cgRect: to), keyPath: "bounds", timingFunction: timingFunction, duration: duration, removeOnCompletion: removeOnCompletion, additive: additive, completion: completion)
     }
     
     public func animateBoundsOriginYAdditive(from: CGFloat, to: CGFloat, duration: Double) {
         self.animateAdditive(from: from as NSNumber, to: to as NSNumber, keyPath: "bounds.origin.y", key: "boundsOriginYAdditive", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: duration, removeOnCompletion: true)
     }
     
-    public func animateFrame(from: CGRect, to: CGRect, duration: Double, timingFunction: String, completion: ((Bool) -> Void)? = nil) {
+    public func animateFrame(from: CGRect, to: CGRect, duration: Double, timingFunction: String, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         if from == to {
+            if let completion = completion {
+                completion(true)
+            }
             return
         }
-        self.animatePosition(from: CGPoint(x: from.midX, y: from.midY), to: CGPoint(x: to.midX, y: to.midY), duration: duration, timingFunction: timingFunction, completion: nil)
-        self.animateBounds(from: CGRect(origin: self.bounds.origin, size: from.size), to: CGRect(origin: self.bounds.origin, size: to.size), duration: duration, timingFunction: timingFunction, completion: completion)
+        self.animatePosition(from: CGPoint(x: from.midX, y: from.midY), to: CGPoint(x: to.midX, y: to.midY), duration: duration, timingFunction: timingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: nil)
+        self.animateBounds(from: CGRect(origin: self.bounds.origin, size: from.size), to: CGRect(origin: self.bounds.origin, size: to.size), duration: duration, timingFunction: timingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: completion)
     }
 }

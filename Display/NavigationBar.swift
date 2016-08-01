@@ -120,6 +120,7 @@ public class NavigationBar: ASDisplayNode {
             }
             
             self.invalidateCalculatedLayout()
+            self.setNeedsLayout()
         }
     }
     private let titleNode: ASTextNode

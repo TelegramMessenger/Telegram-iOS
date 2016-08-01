@@ -127,7 +127,7 @@ public class Window: UIWindow {
         
         super.rootViewController = WindowRootViewController()
         
-        self.statusBarChangeObserver = NotificationCenter.default().addObserver(forName: NSNotification.Name.UIApplicationWillChangeStatusBarFrame, object: nil, queue: OperationQueue.main(), using: { [weak self] notification in
+        self.statusBarChangeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.UIApplicationWillChangeStatusBarFrame, object: nil, queue: OperationQueue.main, using: { [weak self] notification in
             if let strongSelf = self {
                 let statusBarHeight: CGFloat = max(20.0, (notification.userInfo?[UIApplicationStatusBarFrameUserInfoKey] as? NSValue)?.cgRectValue().height ?? 20.0)
                 
@@ -136,7 +136,7 @@ public class Window: UIWindow {
             }
         })
         
-        self.keyboardFrameChangeObserver = NotificationCenter.default().addObserver(forName: NSNotification.Name.UIKeyboardWillChangeFrame, object: nil, queue: nil, using: { [weak self] notification in
+        self.keyboardFrameChangeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.UIKeyboardWillChangeFrame, object: nil, queue: nil, using: { [weak self] notification in
             if let strongSelf = self {
                 let keyboardFrame: CGRect = (notification.userInfo?[UIKeyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue() ?? CGRect()
                 let keyboardHeight = max(0.0, UIScreen.main().bounds.size.height - keyboardFrame.minY)
@@ -163,10 +163,10 @@ public class Window: UIWindow {
     
     deinit {
         if let statusBarChangeObserver = self.statusBarChangeObserver {
-            NotificationCenter.default().removeObserver(statusBarChangeObserver)
+            NotificationCenter.default.removeObserver(statusBarChangeObserver)
         }
         if let keyboardFrameChangeObserver = self.keyboardFrameChangeObserver {
-            NotificationCenter.default().removeObserver(keyboardFrameChangeObserver)
+            NotificationCenter.default.removeObserver(keyboardFrameChangeObserver)
         }
     }
     

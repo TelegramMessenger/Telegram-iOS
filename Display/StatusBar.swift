@@ -35,7 +35,7 @@ public class StatusBar: ASDisplayNode {
     private var proxyNode: StatusBarProxyNode?
     private var removeProxyNodeScheduled = false
     
-    override init() {
+    public override init() {
         super.init(viewBlock: {
             return UITracingLayerView()
         }, didLoad: nil)

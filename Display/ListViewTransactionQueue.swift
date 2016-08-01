@@ -16,7 +16,7 @@ public final class ListViewTransactionQueue {
         
         if beginTransaction {
             transaction({ [weak self] in
-                if Thread.isMainThread() {
+                if Thread.isMainThread {
                     if let strongSelf = self {
                         strongSelf.endTransaction()
                     }
@@ -38,7 +38,7 @@ public final class ListViewTransactionQueue {
             
             if let nextTransaction = self.transactions.first {
                 nextTransaction({ [weak self] in
-                    if Thread.isMainThread() {
+                    if Thread.isMainThread {
                         if let strongSelf = self {
                             strongSelf.endTransaction()
                         }
