@@ -478,7 +478,6 @@ NSDictionary *myMeasurements = @{@"Measurement 1" : @1,
 **Swift**
 
 ```swift
-
 let myProperties = ["Property 1": "Something", "Property 2": "Other thing", "Property 3" : "Totally different thing."]
 let myMeasurements = ["Measurement 1": 1, "Measurement 2": 2.3, "Measurement 3" : 30000]
       
