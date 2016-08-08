@@ -493,7 +493,7 @@ static ASDisplayNodeMethodOverrides GetASDisplayNodeMethodOverrides(Class c)
   if (isLayerBacked) {
     TIME_SCOPED(_debugTimeToCreateView);
     _layer = [self _layerToLoad];
-    _layer.delegate = self;
+    _layer.delegate = (id)self;
   } else {
     TIME_SCOPED(_debugTimeToCreateView);
     _view = [self _viewToLoad];
