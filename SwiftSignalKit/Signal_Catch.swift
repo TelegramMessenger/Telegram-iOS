@@ -114,7 +114,7 @@ public func retry<T, E>(_ delayIncrement: Double, maxDelay: Double, onQueue queu
                         }
                         
                         let time: DispatchTime = DispatchTime.now() + Double(Int64(delay * Double(NSEC_PER_SEC)))
-                        queue.queue.after(when: time, execute: {
+                        queue.queue.asyncAfter(deadline: time, execute: {
                             recurse()
                         })
                     }, completed: {

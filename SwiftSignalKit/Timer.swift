@@ -19,7 +19,7 @@ public final class Timer {
     }
     
     public func start() {
-        let timer = DispatchSource.timer(queue: self.queue.queue)
+        let timer = DispatchSource.makeTimerSource(queue: self.queue.queue)
         timer.setEventHandler(handler: { [weak self] in
             if let strongSelf = self {
                 strongSelf.completion()

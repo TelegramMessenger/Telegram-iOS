@@ -157,7 +157,7 @@ public func ==(lhs: ThreadPoolQueue, rhs: ThreadPoolQueue) -> Bool {
     }
     
     public func isCurrentThreadInPool() -> Bool {
-        let currentThread = Thread.current()
+        let currentThread = Thread.current
         for thread in self.threads {
             if currentThread.isEqual(thread) {
                 return true
