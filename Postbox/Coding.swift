@@ -98,7 +98,7 @@ public func ==(lhs: MemoryBuffer, rhs: MemoryBuffer) -> Bool {
 }
 
 public final class WriteBuffer: MemoryBuffer {
-    var offset = 0
+    public var offset = 0
     
     public override init() {
         super.init(memory: malloc(32), capacity: 32, length: 0, freeWhenDone: true)
@@ -155,7 +155,7 @@ public final class WriteBuffer: MemoryBuffer {
 }
 
 public final class ReadBuffer: MemoryBuffer {
-    var offset = 0
+    public var offset = 0
     
     public init(memory: UnsafeMutablePointer<Void>, length: Int, freeWhenDone: Bool) {
         super.init(memory: memory, capacity: length, length: length, freeWhenDone: freeWhenDone)
@@ -165,24 +165,24 @@ public final class ReadBuffer: MemoryBuffer {
         super.init(memory: memoryBufferNoCopy.memory, capacity: memoryBufferNoCopy.length, length: memoryBufferNoCopy.length, freeWhenDone: false)
     }
     
-    func dataNoCopy() -> Data {
+    public func dataNoCopy() -> Data {
         return Data(bytesNoCopy: UnsafeMutablePointer<UInt8>(self.memory), count: self.length, deallocator: .none)
     }
     
-    func read(_ data: UnsafeMutablePointer<Void>, offset: Int, length: Int) {
+    public func read(_ data: UnsafeMutablePointer<Void>, offset: Int, length: Int) {
         memcpy(data + offset, self.memory + self.offset, length)
         self.offset += length
     }
     
-    func skip(_ length: Int) {
+    public func skip(_ length: Int) {
         self.offset += length
     }
     
-    func reset() {
+    public func reset() {
         self.offset = 0
     }
     
-    func sharedBufferNoCopy() -> ReadBuffer {
+    public func sharedBufferNoCopy() -> ReadBuffer {
         return ReadBuffer(memory: memory, length: length, freeWhenDone: false)
     }
 }

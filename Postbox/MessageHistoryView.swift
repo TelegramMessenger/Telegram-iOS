@@ -21,31 +21,67 @@ public func ==(lhs: MessageHistoryViewId, rhs: MessageHistoryViewId) -> Bool {
 }
 
 enum MutableMessageHistoryEntry {
-    case IntermediateMessageEntry(IntermediateMessage)
-    case MessageEntry(Message)
-    case HoleEntry(MessageHistoryHole)
+    case IntermediateMessageEntry(IntermediateMessage, MessageHistoryEntryLocation?)
+    case MessageEntry(Message, MessageHistoryEntryLocation?)
+    case HoleEntry(MessageHistoryHole, MessageHistoryEntryLocation?)
     
     var index: MessageIndex {
         switch self {
-            case let .IntermediateMessageEntry(message):
+            case let .IntermediateMessageEntry(message, _):
                 return MessageIndex(id: message.id, timestamp: message.timestamp)
-            case let .MessageEntry(message):
+            case let .MessageEntry(message, _):
                 return MessageIndex(id: message.id, timestamp: message.timestamp)
-            case let .HoleEntry(hole):
+            case let .HoleEntry(hole, _):
                 return hole.maxIndex
+        }
+    }
+    
+    func updatedLocation(_ location: MessageHistoryEntryLocation?) -> MutableMessageHistoryEntry {
+        switch self {
+            case let .IntermediateMessageEntry(message, _):
+                return .IntermediateMessageEntry(message, location)
+            case let .MessageEntry(message, _):
+                return .MessageEntry(message, location)
+            case let .HoleEntry(hole, _):
+                return .HoleEntry(hole, location)
         }
     }
 }
 
+public struct MessageHistoryEntryLocation: Equatable {
+    public let index: Int
+    public let count: Int
+    
+    var predecessor: MessageHistoryEntryLocation? {
+        if index == 0 {
+            return nil
+        } else {
+            return MessageHistoryEntryLocation(index: index - 1, count: count)
+        }
+    }
+    
+    var successor: MessageHistoryEntryLocation? {
+        if index == count - 1 {
+            return nil
+        } else {
+            return MessageHistoryEntryLocation(index: index + 1, count: count)
+        }
+    }
+}
+
+public func ==(lhs: MessageHistoryEntryLocation, rhs: MessageHistoryEntryLocation) -> Bool {
+    return lhs.index == rhs.index && lhs.count == rhs.count
+}
+
 public enum MessageHistoryEntry: Comparable {
-    case MessageEntry(Message)
-    case HoleEntry(MessageHistoryHole)
+    case MessageEntry(Message, MessageHistoryEntryLocation?)
+    case HoleEntry(MessageHistoryHole, MessageHistoryEntryLocation?)
     
     public var index: MessageIndex {
         switch self {
-            case let .MessageEntry(message):
+            case let .MessageEntry(message, _):
                 return MessageIndex(id: message.id, timestamp: message.timestamp)
-            case let .HoleEntry(hole):
+            case let .HoleEntry(hole, _):
                 return hole.maxIndex
         }
     }
@@ -53,20 +89,20 @@ public enum MessageHistoryEntry: Comparable {
 
 public func ==(lhs: MessageHistoryEntry, rhs: MessageHistoryEntry) -> Bool {
     switch lhs {
-        case let .MessageEntry(lhsMessage):
+        case let .MessageEntry(lhsMessage, lhsLocation):
             switch rhs {
                 case .HoleEntry:
                     return false
-                case let .MessageEntry(rhsMessage):
-                    if MessageIndex(lhsMessage) == MessageIndex(rhsMessage) && lhsMessage.flags == rhsMessage.flags {
+                case let .MessageEntry(rhsMessage, rhsLocation):
+                    if MessageIndex(lhsMessage) == MessageIndex(rhsMessage) && lhsMessage.flags == rhsMessage.flags && lhsLocation == rhsLocation {
                         return true
                     }
                     return false
             }
-        case let .HoleEntry(lhsHole):
+        case let .HoleEntry(lhsHole, lhsLocation):
             switch rhs {
-                case let .HoleEntry(rhsHole):
-                    return lhsHole == rhsHole
+                case let .HoleEntry(rhsHole, rhsLocation):
+                    return lhsHole == rhsHole && lhsLocation == rhsLocation
                 case .MessageEntry:
                     return false
             }
@@ -199,13 +235,13 @@ final class MutableMessageHistoryView {
             switch operation {
                 case let .InsertHole(hole):
                     if tagMask == nil || (hole.tags & unwrappedTagMask) != 0 {
-                        if self.add(.HoleEntry(hole), holeFillDirections: holeFillDirections) {
+                        if self.add(.HoleEntry(hole, nil), holeFillDirections: holeFillDirections) {
                             hasChanges = true
                         }
                     }
                 case let .InsertMessage(intermediateMessage):
                     if tagMask == nil || (intermediateMessage.tags.rawValue & unwrappedTagMask) != 0 {
-                        if self.add(.IntermediateMessageEntry(intermediateMessage), holeFillDirections: holeFillDirections) {
+                        if self.add(.IntermediateMessageEntry(intermediateMessage, nil), holeFillDirections: holeFillDirections) {
                             hasChanges = true
                         }
                     }
@@ -218,8 +254,8 @@ final class MutableMessageHistoryView {
                     //self.combinedReadState = combinedReadState
                 case let .UpdateEmbeddedMedia(index, embeddedMediaData):
                     for i in 0 ..< self.entries.count {
-                        if case let .IntermediateMessageEntry(message) = self.entries[i] where MessageIndex(message) == index {
-                            self.entries[i] = .IntermediateMessageEntry(IntermediateMessage(stableId: message.stableId, id: message.id, timestamp: message.timestamp, flags: message.flags, tags: message.tags, forwardInfo: message.forwardInfo, authorId: message.authorId, text: message.text, attributesData: message.attributesData, embeddedMediaData: embeddedMediaData, referencedMedia: message.referencedMedia))
+                        if case let .IntermediateMessageEntry(message, _) = self.entries[i] where MessageIndex(message) == index {
+                            self.entries[i] = .IntermediateMessageEntry(IntermediateMessage(stableId: message.stableId, id: message.id, timestamp: message.timestamp, flags: message.flags, tags: message.tags, forwardInfo: message.forwardInfo, authorId: message.authorId, text: message.text, attributesData: message.attributesData, embeddedMediaData: embeddedMediaData, referencedMedia: message.referencedMedia), nil)
                             hasChanges = true
                             break
                         }
@@ -230,7 +266,7 @@ final class MutableMessageHistoryView {
         if !updatedMedia.isEmpty {
             for i in 0 ..< self.entries.count {
                 switch self.entries[i] {
-                    case let .MessageEntry(message):
+                    case let .MessageEntry(message, _):
                         var rebuild = false
                         for media in message.media {
                             if let mediaId = media.id, _ = updatedMedia[mediaId] {
@@ -251,10 +287,10 @@ final class MutableMessageHistoryView {
                                 }
                             }
                             let updatedMessage = Message(stableId: message.stableId, id: message.id, timestamp: message.timestamp, flags: message.flags, tags: message.tags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: messageMedia, peers: message.peers, associatedMessages: message.associatedMessages)
-                            self.entries[i] = .MessageEntry(updatedMessage)
+                            self.entries[i] = .MessageEntry(updatedMessage, nil)
                             hasChanges = true
                         }
-                    case let .IntermediateMessageEntry(message):
+                    case let .IntermediateMessageEntry(message, _):
                         var rebuild = false
                         for mediaId in message.referencedMedia {
                             if let media = updatedMedia[mediaId] where media?.id != mediaId {
@@ -427,16 +463,16 @@ final class MutableMessageHistoryView {
     }
     
     func render(_ renderIntermediateMessage: (IntermediateMessage) -> Message) {
-        if let earlier = self.earlier, case let .IntermediateMessageEntry(intermediateMessage) = earlier {
-            self.earlier = .MessageEntry(renderIntermediateMessage(intermediateMessage))
+        if let earlier = self.earlier, case let .IntermediateMessageEntry(intermediateMessage, location) = earlier {
+            self.earlier = .MessageEntry(renderIntermediateMessage(intermediateMessage), location)
         }
-        if let later = self.later, case let .IntermediateMessageEntry(intermediateMessage) = later {
-            self.later = .MessageEntry(renderIntermediateMessage(intermediateMessage))
+        if let later = self.later, case let .IntermediateMessageEntry(intermediateMessage, location) = later {
+            self.later = .MessageEntry(renderIntermediateMessage(intermediateMessage), location)
         }
         
         for i in  0 ..< self.entries.count {
-            if case let .IntermediateMessageEntry(intermediateMessage) = self.entries[i] {
-                self.entries[i] = .MessageEntry(renderIntermediateMessage(intermediateMessage))
+            if case let .IntermediateMessageEntry(intermediateMessage, location) = self.entries[i] {
+                self.entries[i] = .MessageEntry(renderIntermediateMessage(intermediateMessage), location)
             }
         }
     }
@@ -459,7 +495,7 @@ final class MutableMessageHistoryView {
         
         while i >= 0 || j < self.entries.count {
             if j < self.entries.count {
-                if case let .HoleEntry(hole) = self.entries[j] {
+                if case let .HoleEntry(hole, _) = self.entries[j] {
                     if self.anchorIndex.index.id.namespace == hole.id.namespace {
                         if self.anchorIndex.index.id.id >= hole.min && self.anchorIndex.index.id.id <= hole.maxIndex.id.id {
                             return (hole, .AroundIndex(self.anchorIndex.index))
@@ -471,7 +507,7 @@ final class MutableMessageHistoryView {
             }
             
             if i >= 0 {
-                if case let .HoleEntry(hole) = self.entries[i] {
+                if case let .HoleEntry(hole, _) = self.entries[i] {
                     if self.anchorIndex.index.id.namespace == hole.id.namespace {
                         if self.anchorIndex.index.id.id >= hole.min && self.anchorIndex.index.id.id <= hole.maxIndex.id.id {
                             return (hole, .AroundIndex(self.anchorIndex.index))
@@ -506,12 +542,12 @@ public final class MessageHistoryView {
         var entries: [MessageHistoryEntry] = []
         for entry in mutableView.entries {
             switch entry {
-                case let .HoleEntry(hole):
-                    entries.append(.HoleEntry(hole))
-                case let .MessageEntry(message):
-                    entries.append(.MessageEntry(message))
+                case let .HoleEntry(hole, location):
+                    entries.append(.HoleEntry(hole, location))
+                case let .MessageEntry(message, location):
+                    entries.append(.MessageEntry(message, location))
                 case .IntermediateMessageEntry:
-                    assertionFailure("got IntermediateMessageEntry")
+                    assertionFailure("unexpected IntermediateMessageEntry in MessageHistoryView.init()")
             }
         }
         self.entries = entries
@@ -545,7 +581,7 @@ public final class MessageHistoryView {
                 }
                 if let _ = maxNamespaceIndex where index + 1 < entries.count {
                     for i in index + 1 ..< entries.count {
-                        if case let .MessageEntry(message) = entries[i] where !message.flags.contains(.Incoming) {
+                        if case let .MessageEntry(message, _) = entries[i] where !message.flags.contains(.Incoming) {
                             maxNamespaceIndex = MessageIndex(message)
                         } else {
                             break

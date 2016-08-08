@@ -193,7 +193,9 @@ public final class Postbox {
         self.globalMessageIdsNamespace = globalMessageIdsNamespace
         self.seedConfiguration = seedConfiguration
         
-        let _ = try? FileManager.default().removeItem(atPath: self.basePath + "/media")
+        print("MediaBox path: \(self.basePath + "/media")")
+        
+        //let _ = try? FileManager.default.removeItem(atPath: self.basePath + "/media")
         
         self.mediaBox = MediaBox(basePath: self.basePath + "/media")
         self.openDatabase()
@@ -202,9 +204,9 @@ public final class Postbox {
     private func debugSaveState(name: String) {
         self.queue.justDispatch({
             let path = self.basePath + name
-            let _ = try? FileManager.default().removeItem(atPath: path)
+            let _ = try? FileManager.default.removeItem(atPath: path)
             do {
-                try FileManager.default().copyItem(atPath: self.basePath, toPath: path)
+                try FileManager.default.copyItem(atPath: self.basePath, toPath: path)
             } catch (let e) {
                 print("(Postbox debugSaveState: error \(e))")
             }
@@ -214,9 +216,9 @@ public final class Postbox {
     private func debugRestoreState(name: String) {
         self.queue.justDispatch({
             let path = self.basePath + name
-            let _ = try? FileManager.default().removeItem(atPath: self.basePath)
+            let _ = try? FileManager.default.removeItem(atPath: self.basePath)
             do {
-                try FileManager.default().copyItem(atPath: path, toPath: self.basePath)
+                try FileManager.default.copyItem(atPath: path, toPath: self.basePath)
             } catch (let e) {
                 print("(Postbox debugRestoreState: error \(e))")
             }
@@ -228,7 +230,7 @@ public final class Postbox {
             let startTime = CFAbsoluteTimeGetCurrent()
             
             do {
-                try FileManager.default().createDirectory(atPath: self.basePath, withIntermediateDirectories: true, attributes: nil)
+                try FileManager.default.createDirectory(atPath: self.basePath, withIntermediateDirectories: true, attributes: nil)
             } catch _ {
             }
             
@@ -441,9 +443,9 @@ public final class Postbox {
         for entry in intermediateEntries {
             switch entry {
                 case let .Message(message):
-                    entries.append(.IntermediateMessageEntry(message))
+                    entries.append(.IntermediateMessageEntry(message, nil))
                 case let .Hole(index):
-                    entries.append(.HoleEntry(index))
+                    entries.append(.HoleEntry(index, nil))
             }
         }
         return entries
@@ -465,9 +467,9 @@ public final class Postbox {
         for entry in intermediateEntries {
             switch entry {
                 case let .Message(message):
-                    entries.append(.IntermediateMessageEntry(message))
+                    entries.append(.IntermediateMessageEntry(message, nil))
                 case let .Hole(index):
-                    entries.append(.HoleEntry(index))
+                    entries.append(.HoleEntry(index, nil))
             }
         }
         
@@ -475,9 +477,9 @@ public final class Postbox {
         if let intermediateLower = intermediateLower {
             switch intermediateLower {
                 case let .Message(message):
-                    lower = .IntermediateMessageEntry(message)
+                    lower = .IntermediateMessageEntry(message, nil)
                 case let .Hole(index):
-                    lower = .HoleEntry(index)
+                    lower = .HoleEntry(index, nil)
             }
         }
         
@@ -485,13 +487,17 @@ public final class Postbox {
         if let intermediateUpper = intermediateUpper {
             switch intermediateUpper {
                 case let .Message(message):
-                    upper = .IntermediateMessageEntry(message)
+                    upper = .IntermediateMessageEntry(message, nil)
                 case let .Hole(index):
-                    upper = .HoleEntry(index)
+                    upper = .HoleEntry(index, nil)
             }
         }
         
-        return (entries: entries, lower: lower, upper: upper)
+        if let tagMask = tagMask {
+            return addLocationsToMessageHistoryViewEntries(tagMask: tagMask, earlier: lower, later: upper, entries: entries)
+        } else {
+            return (entries: entries, lower: lower, upper: upper)
+        }
     }
     
     private func fetchLaterHistoryEntries(_ peerId: PeerId, index: MessageIndex?, count: Int, tagMask: MessageTags? = nil) -> [MutableMessageHistoryEntry] {
@@ -505,9 +511,9 @@ public final class Postbox {
         for entry in intermediateEntries {
             switch entry {
             case let .Message(message):
-                entries.append(.IntermediateMessageEntry(message))
+                entries.append(.IntermediateMessageEntry(message, nil))
             case let .Hole(index):
-                entries.append(.HoleEntry(index))
+                entries.append(.HoleEntry(index, nil))
             }
         }
         return entries
@@ -735,6 +741,32 @@ public final class Postbox {
         return self.aroundMessageHistoryViewForPeerId(peerId, index: index, count: count, anchorIndex: MessageHistoryAnchorIndex(index: anchorIndex, exact: true), unreadIndex: nil, fixedCombinedReadState: fixedCombinedReadState, tagMask: tagMask)
     }
     
+    private func addLocationsToMessageHistoryViewEntries(tagMask: MessageTags, earlier: MutableMessageHistoryEntry?, later: MutableMessageHistoryEntry?, entries: [MutableMessageHistoryEntry]) -> ([MutableMessageHistoryEntry], MutableMessageHistoryEntry?, MutableMessageHistoryEntry?) {
+        if let firstEntry = entries.first {
+            if let location = self.messageHistoryTagsTable.entryLocation(at: firstEntry.index, tagMask: tagMask) {
+                var mappedEarlier = earlier?.updatedLocation(location.predecessor)
+                var mappedEntries: [MutableMessageHistoryEntry] = []
+                var previousLocation: MessageHistoryEntryLocation?
+                for i in 0 ..< entries.count {
+                    if i == 0 {
+                        mappedEntries.append(entries[i].updatedLocation(location))
+                        previousLocation = location
+                    } else {
+                        previousLocation = previousLocation?.successor
+                        mappedEntries.append(entries[i].updatedLocation(previousLocation))
+                    }
+                }
+                previousLocation = previousLocation?.successor
+                var mappedLater = later?.updatedLocation(previousLocation)
+                return (mappedEntries, mappedEarlier, mappedLater)
+            } else {
+                return (entries, earlier, later)
+            }
+        } else {
+            return (entries, earlier, later)
+        }
+    }
+    
     private func aroundMessageHistoryViewForPeerId(_ peerId: PeerId, index: MessageIndex, count: Int, anchorIndex: MessageHistoryAnchorIndex, unreadIndex: MessageIndex?, fixedCombinedReadState: CombinedPeerReadState?, tagMask: MessageTags? = nil) -> Signal<(MessageHistoryView, ViewUpdateType), NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
@@ -742,6 +774,7 @@ public final class Postbox {
             self.queue.justDispatch({
                 //print("+ queue \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
                 let (entries, earlier, later) = self.fetchAroundHistoryEntries(index, count: count, tagMask: tagMask)
+                
                 print("aroundMessageHistoryViewForPeerId fetchAroundHistoryEntries \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
                 
                 let mutableView = MutableMessageHistoryView(id: MessageHistoryViewId(peerId: peerId, id: self.takeNextViewId()), anchorIndex: anchorIndex, combinedReadState: fixedCombinedReadState ?? self.readStateTable.getCombinedState(peerId), earlier: earlier, entries: entries, later: later, tagMask: tagMask, count: count)

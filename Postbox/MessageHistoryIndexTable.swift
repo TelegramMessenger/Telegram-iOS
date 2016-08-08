@@ -364,7 +364,7 @@ final class MessageHistoryIndexTable: Table {
             return true
         }, limit: 1)
         
-        let sortedByIdMessages = messages.sorted(isOrderedBefore: {$0.id < $1.id})
+        let sortedByIdMessages = messages.sorted(by: {$0.id < $1.id})
         
         var remainingMessages = sortedByIdMessages
         

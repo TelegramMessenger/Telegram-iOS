@@ -88,7 +88,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
         self.indexTable = nil
         
         self.valueBox = nil
-        let _ = try? FileManager.default().removeItem(atPath: path!)
+        let _ = try? FileManager.default.removeItem(atPath: path!)
         self.path = nil
     }
     

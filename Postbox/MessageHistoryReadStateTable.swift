@@ -205,7 +205,7 @@ final class MessageHistoryReadStateTable: Table {
                 print("[ReadStateTable] applyMaxReadId peerId: \(messageId.peerId), maxReadId: \(messageId.id) (before: \(states.namespaces))")
             }
             
-            if state.maxIncomingReadId < messageId.id || messageId.id == topMessageId {
+            if state.maxIncomingReadId < messageId.id || (messageId.id == topMessageId && state.count != 0) {
                 var (deltaCount, holes) = incomingStatsInRange(state.maxIncomingReadId + 1, messageId.id)
                 
                 if traceReadStates {

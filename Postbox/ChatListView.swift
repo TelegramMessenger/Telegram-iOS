@@ -280,7 +280,7 @@ final class MutableChatListView {
             }
             
             addedEntries += self.entries
-            addedEntries.sort(isOrderedBefore: { $0.index < $1.index })
+            addedEntries.sort(by: { $0.index < $1.index })
             var i = addedEntries.count - 1
             while i >= 1 {
                 if addedEntries[i].index.id == addedEntries[i - 1].index.id {

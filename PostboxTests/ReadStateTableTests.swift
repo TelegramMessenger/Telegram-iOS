@@ -110,7 +110,7 @@ class ReadStateTableTests: XCTestCase {
         self.historyMetadataTable = nil
         
         self.valueBox = nil
-        let _ = try? FileManager.default().removeItem(atPath: path!)
+        let _ = try? FileManager.default.removeItem(atPath: path!)
         self.path = nil
     }
     

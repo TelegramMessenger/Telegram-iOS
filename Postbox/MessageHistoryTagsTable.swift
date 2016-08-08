@@ -38,6 +38,25 @@ class MessageHistoryTagsTable: Table {
         self.valueBox.remove(self.tableId, key: self.key(tagMask, index: index, key: self.sharedKey))
     }
     
+    func entryLocation(at index: MessageIndex, tagMask: MessageTags) -> MessageHistoryEntryLocation? {
+        if let _ = self.valueBox.get(self.tableId, key: self.key(tagMask, index: index)) {
+            var greaterCount = 0
+            self.valueBox.range(self.tableId, start: self.key(tagMask, index: index), end: self.upperBound(tagMask, peerId: index.id.peerId), keys: { _ in
+                greaterCount += 1
+                return true
+            }, limit: 0)
+            
+            var lowerCount = 0
+            self.valueBox.range(self.tableId, start: self.key(tagMask, index: index), end: self.lowerBound(tagMask, peerId: index.id.peerId), keys: { _ in
+                lowerCount += 1
+                return true
+            }, limit: 0)
+            
+            return MessageHistoryEntryLocation(index: lowerCount, count: greaterCount + lowerCount + 1)
+        }
+        return nil
+    }
+    
     func indicesAround(_ tagMask: MessageTags, index: MessageIndex, count: Int) -> (indices: [MessageIndex], lower: MessageIndex?, upper: MessageIndex?) {
         var lowerEntries: [MessageIndex] = []
         var upperEntries: [MessageIndex] = []

@@ -62,7 +62,7 @@ private struct SqlitePreparedStatement {
 }
 
 public final class SqliteValueBox: ValueBox {
-    private let lock = RecursiveLock()
+    private let lock = NSRecursiveLock()
     
     private let basePath: String
     private var database: Database!
@@ -102,7 +102,7 @@ public final class SqliteValueBox: ValueBox {
         lock.lock()
         
         do {
-            try FileManager.default().createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
+            try FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
         } catch _ { }
         let path = basePath + "/db_sqlite"
         let database = Database(path)
@@ -697,7 +697,7 @@ public final class SqliteValueBox: ValueBox {
         self.database = nil
         self.lock.unlock()
         
-        let _ = try? FileManager.default().removeItem(atPath: self.basePath)
+        let _ = try? FileManager.default.removeItem(atPath: self.basePath)
         self.database = self.openDatabase()
         
         tables.removeAll()

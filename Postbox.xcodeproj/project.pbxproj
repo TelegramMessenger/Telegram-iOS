@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		D003E4E61B38DBDB00C22CBC /* MessageHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D003E4E51B38DBDB00C22CBC /* MessageHistoryView.swift */; };
+		D0079F5A1D592E8B00A27A2C /* ContactTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0079F591D592E8B00A27A2C /* ContactTable.swift */; };
 		D00E0FB81B85D192002E4EB5 /* lmdb.h in Headers */ = {isa = PBXBuildFile; fileRef = D00E0FB41B85D192002E4EB5 /* lmdb.h */; };
 		D00E0FB91B85D192002E4EB5 /* mdb.c in Sources */ = {isa = PBXBuildFile; fileRef = D00E0FB51B85D192002E4EB5 /* mdb.c */; settings = {COMPILER_FLAGS = "-Wno-conversion -Wno-unreachable-code -Wno-conditional-uninitialized -Wno-format-extra-args -Wno-macro-redefined"; }; };
 		D00E0FBA1B85D192002E4EB5 /* midl.c in Sources */ = {isa = PBXBuildFile; fileRef = D00E0FB61B85D192002E4EB5 /* midl.c */; settings = {COMPILER_FLAGS = "-Wno-conversion"; }; };
@@ -43,6 +44,8 @@
 		D0977F9C1B822DB4009994B2 /* ValueBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977F9B1B822DB4009994B2 /* ValueBox.swift */; };
 		D0977F9E1B8234DF009994B2 /* ValueBoxKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977F9D1B8234DF009994B2 /* ValueBoxKey.swift */; };
 		D0977FA01B8244D7009994B2 /* SqliteValueBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977F9F1B8244D7009994B2 /* SqliteValueBox.swift */; };
+		D09ADF0A1D2E89F300C8208D /* RandomAccessMediaResourceContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09ADF091D2E89F300C8208D /* RandomAccessMediaResourceContext.swift */; };
+		D09ADF0C1D2EB83500C8208D /* OrderStatisticTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09ADF0B1D2EB83500C8208D /* OrderStatisticTable.swift */; };
 		D0A7D9451C556CFE0016A115 /* MessageHistoryIndexTableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A7D9441C556CFE0016A115 /* MessageHistoryIndexTableTests.swift */; };
 		D0C07F6A1B67DB4800966E43 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C07F691B67DB4800966E43 /* SwiftSignalKit.framework */; };
 		D0C674C81CBB11C600183765 /* MessageHistoryReadStateTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C674C71CBB11C600183765 /* MessageHistoryReadStateTable.swift */; };
@@ -51,6 +54,8 @@
 		D0C8FCB71C5C2D200028C27F /* MessageHistoryViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C8FCB61C5C2D200028C27F /* MessageHistoryViewTests.swift */; };
 		D0C9DA391C65782500855278 /* SimpleSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9DA381C65782500855278 /* SimpleSet.swift */; };
 		D0CE63F61CA1CCB2002BC462 /* MediaResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CE63F51CA1CCB2002BC462 /* MediaResource.swift */; };
+		D0D949F31D35302600740E02 /* RandomAccessResourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D949F21D35302600740E02 /* RandomAccessResourceTests.swift */; };
+		D0D949F51D35353900740E02 /* MappedFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D949F41D35353900740E02 /* MappedFile.swift */; };
 		D0E1DE151C5E1C6900C7826E /* ViewTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E1DE141C5E1C6900C7826E /* ViewTracker.swift */; };
 		D0E3A7501B28A7E300A402D9 /* Postbox.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E3A74F1B28A7E300A402D9 /* Postbox.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0E3A7561B28A7E300A402D9 /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0E3A74A1B28A7E300A402D9 /* Postbox.framework */; };
@@ -86,6 +91,7 @@
 
 /* Begin PBXFileReference section */
 		D003E4E51B38DBDB00C22CBC /* MessageHistoryView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryView.swift; sourceTree = "<group>"; };
+		D0079F591D592E8B00A27A2C /* ContactTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContactTable.swift; sourceTree = "<group>"; };
 		D00E0FB41B85D192002E4EB5 /* lmdb.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = lmdb.h; path = submodules/lmdb/libraries/liblmdb/lmdb.h; sourceTree = SOURCE_ROOT; };
 		D00E0FB51B85D192002E4EB5 /* mdb.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = mdb.c; path = submodules/lmdb/libraries/liblmdb/mdb.c; sourceTree = SOURCE_ROOT; };
 		D00E0FB61B85D192002E4EB5 /* midl.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = midl.c; path = submodules/lmdb/libraries/liblmdb/midl.c; sourceTree = SOURCE_ROOT; };
@@ -122,6 +128,8 @@
 		D0977F9B1B822DB4009994B2 /* ValueBox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ValueBox.swift; sourceTree = "<group>"; };
 		D0977F9D1B8234DF009994B2 /* ValueBoxKey.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ValueBoxKey.swift; sourceTree = "<group>"; };
 		D0977F9F1B8244D7009994B2 /* SqliteValueBox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SqliteValueBox.swift; sourceTree = "<group>"; };
+		D09ADF091D2E89F300C8208D /* RandomAccessMediaResourceContext.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RandomAccessMediaResourceContext.swift; sourceTree = "<group>"; };
+		D09ADF0B1D2EB83500C8208D /* OrderStatisticTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OrderStatisticTable.swift; sourceTree = "<group>"; };
 		D0A7D9441C556CFE0016A115 /* MessageHistoryIndexTableTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryIndexTableTests.swift; sourceTree = "<group>"; };
 		D0C07F691B67DB4800966E43 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C674C71CBB11C600183765 /* MessageHistoryReadStateTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryReadStateTable.swift; sourceTree = "<group>"; };
@@ -130,6 +138,8 @@
 		D0C8FCB61C5C2D200028C27F /* MessageHistoryViewTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryViewTests.swift; sourceTree = "<group>"; };
 		D0C9DA381C65782500855278 /* SimpleSet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SimpleSet.swift; sourceTree = "<group>"; };
 		D0CE63F51CA1CCB2002BC462 /* MediaResource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaResource.swift; sourceTree = "<group>"; };
+		D0D949F21D35302600740E02 /* RandomAccessResourceTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RandomAccessResourceTests.swift; sourceTree = "<group>"; };
+		D0D949F41D35353900740E02 /* MappedFile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MappedFile.swift; sourceTree = "<group>"; };
 		D0E1DE141C5E1C6900C7826E /* ViewTracker.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ViewTracker.swift; sourceTree = "<group>"; };
 		D0E3A74A1B28A7E300A402D9 /* Postbox.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Postbox.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E3A74E1B28A7E300A402D9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -194,6 +204,7 @@
 				D05F09A51C9E9F9300BB6F96 /* MediaResourceStatus.swift */,
 				D0CE63F51CA1CCB2002BC462 /* MediaResource.swift */,
 				D0FC1A3B1CA3FB310056AE9A /* MediaResourceData.swift */,
+				D09ADF091D2E89F300C8208D /* RandomAccessMediaResourceContext.swift */,
 			);
 			name = "Media Box";
 			sourceTree = "<group>";
@@ -254,8 +265,10 @@
 				D0F9E86E1C5A0E7600037222 /* KeychainTable.swift */,
 				D0F9E8701C5A0E9B00037222 /* PeerTable.swift */,
 				D0C735271C864DF300BB3149 /* PeerChatStateTable.swift */,
+				D0079F591D592E8B00A27A2C /* ContactTable.swift */,
 				D0C674C71CBB11C600183765 /* MessageHistoryReadStateTable.swift */,
 				D01F7D9A1CBEC390008765C9 /* MessageHistoryInvalidatedReadStateTable.swift */,
+				D09ADF0B1D2EB83500C8208D /* OrderStatisticTable.swift */,
 			);
 			name = Tables;
 			sourceTree = "<group>";
@@ -280,6 +293,7 @@
 				D0F9E8741C5A334100037222 /* SimpleDictionary.swift */,
 				D0C9DA381C65782500855278 /* SimpleSet.swift */,
 				D08CEFB31D2AD8BE0015D3BC /* RedBlackTree.swift */,
+				D0D949F41D35353900740E02 /* MappedFile.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -367,6 +381,7 @@
 				D0C8FCB61C5C2D200028C27F /* MessageHistoryViewTests.swift */,
 				D060B77A1CF4845A0050BE9B /* ReadStateTableTests.swift */,
 				D02EB8061D2B07F300D07ED3 /* OrderStatisticTreeTests.swift */,
+				D0D949F21D35302600740E02 /* RandomAccessResourceTests.swift */,
 			);
 			path = PostboxTests;
 			sourceTree = "<group>";
@@ -501,6 +516,7 @@
 				D0E3A7821B28ADD000A402D9 /* Postbox.swift in Sources */,
 				D0E3A79E1B28B50400A402D9 /* Message.swift in Sources */,
 				D0C674C81CBB11C600183765 /* MessageHistoryReadStateTable.swift in Sources */,
+				D09ADF0A1D2E89F300C8208D /* RandomAccessMediaResourceContext.swift in Sources */,
 				D08CEFB41D2AD8BE0015D3BC /* RedBlackTree.swift in Sources */,
 				D044CA2E1C618373002160FF /* ChatListHole.swift in Sources */,
 				D044E1631B2AD677001EE087 /* MurMurHash32.m in Sources */,
@@ -512,6 +528,7 @@
 				D0E1DE151C5E1C6900C7826E /* ViewTracker.swift in Sources */,
 				D0F9E8751C5A334100037222 /* SimpleDictionary.swift in Sources */,
 				D08C713E1C512EA500779C0F /* MessageHistoryTable.swift in Sources */,
+				D0079F5A1D592E8B00A27A2C /* ContactTable.swift in Sources */,
 				D0F9E8671C58D08900037222 /* ChatListIndexTable.swift in Sources */,
 				D0E3A7A21B28B7DC00A402D9 /* Media.swift in Sources */,
 				D0E3A7881B28AE9C00A402D9 /* Coding.swift in Sources */,
@@ -519,8 +536,10 @@
 				D0977F9E1B8234DF009994B2 /* ValueBoxKey.swift in Sources */,
 				D033A6F91C73E440006A2EAB /* UnsentMessageHistoryView.swift in Sources */,
 				D00E0FB91B85D192002E4EB5 /* mdb.c in Sources */,
+				D09ADF0C1D2EB83500C8208D /* OrderStatisticTable.swift in Sources */,
 				D0CE63F61CA1CCB2002BC462 /* MediaResource.swift in Sources */,
 				D0F9E86B1C59719800037222 /* ChatListView.swift in Sources */,
+				D0D949F51D35353900740E02 /* MappedFile.swift in Sources */,
 				D003E4E61B38DBDB00C22CBC /* MessageHistoryView.swift in Sources */,
 				D07516791B2EC90400AE42E0 /* SQLite-Bridging.m in Sources */,
 				D0977FA01B8244D7009994B2 /* SqliteValueBox.swift in Sources */,
@@ -551,6 +570,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0D949F31D35302600740E02 /* RandomAccessResourceTests.swift in Sources */,
 				D044E15E1B2ACB9C001EE087 /* CodingTests.swift in Sources */,
 				D0F9E8611C57766A00037222 /* MessageHistoryTableTests.swift in Sources */,
 				D0C8FCB71C5C2D200028C27F /* MessageHistoryViewTests.swift in Sources */,
@@ -640,6 +660,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+				SWIFT_VERSION = 3.0;
 			};
 			name = Hockeyapp;
 		};
@@ -655,6 +676,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 3.0;
 			};
 			name = Hockeyapp;
 		};
@@ -777,6 +799,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 3.0;
 			};
 			name = Debug;
 		};
@@ -806,6 +829,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+				SWIFT_VERSION = 3.0;
 			};
 			name = Release;
 		};
@@ -826,6 +850,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 3.0;
 			};
 			name = Debug;
 		};
@@ -842,6 +867,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+				SWIFT_VERSION = 3.0;
 			};
 			name = Release;
 		};

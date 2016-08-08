@@ -113,10 +113,10 @@ public final class LmdbValueBox: ValueBox {
         
         var createDirectory = false
         var isDirectory: ObjCBool = false as ObjCBool
-        if FileManager.default().fileExists(atPath: path, isDirectory: &isDirectory) {
-            if !isDirectory {
+        if FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) {
+            if !isDirectory.boolValue {
                 do {
-                    try FileManager.default().removeItem(atPath: path)
+                    try FileManager.default.removeItem(atPath: path)
                 } catch _ { }
                 createDirectory = true
             }
@@ -127,7 +127,7 @@ public final class LmdbValueBox: ValueBox {
         
         if createDirectory {
             do {
-                try FileManager.default().createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
+                try FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
             } catch _ { }
         }
         

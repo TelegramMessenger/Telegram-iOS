@@ -110,16 +110,16 @@ class OrderStatisticTreeTests: XCTestCase {
         self.historyMetadataTable = nil
         
         self.valueBox = nil
-        let _ = try? FileManager.default().removeItem(atPath: path!)
+        let _ = try? FileManager.default.removeItem(atPath: path!)
         self.path = nil
     }
     
     func testOST() {
-        let tree = RBTree(rootData: 0)
+        /*let tree = RBTree(rootData: 0)
         for _ in 0 ..< 1000 {
             let key = Int(arc4random_uniform(UInt32(Int32.max - 1)))
             tree.insert(key)
         }
-        print("OST height: \(tree.depth())")
+        print("OST height: \(tree.depth())")*/
     }
 }
