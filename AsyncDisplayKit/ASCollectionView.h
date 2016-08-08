@@ -14,13 +14,12 @@
 #import <AsyncDisplayKit/ASCollectionViewProtocols.h>
 #import <AsyncDisplayKit/ASBaseDefines.h>
 #import <AsyncDisplayKit/ASBatchContext.h>
-#import <AsyncDisplayKit/ASCollectionViewFlowLayoutInspector.h>
-#import <AsyncDisplayKit/ASCollectionViewLayoutFacilitatorProtocol.h>
 
 @class ASCellNode;
 @class ASCollectionNode;
 @protocol ASCollectionDataSource;
 @protocol ASCollectionDelegate;
+@protocol ASCollectionViewLayoutInspecting;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -278,9 +277,20 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * @param indexPath The index path of the requested node.
  *
- * @returns a node for display at this indexpath.
+ * @returns a node for display at this indexpath or nil
  */
-- (ASCellNode *)nodeForItemAtIndexPath:(NSIndexPath *)indexPath;
+- (nullable ASCellNode *)nodeForItemAtIndexPath:(NSIndexPath *)indexPath;
+
+
+/**
+ * Similar to -supplementaryViewForElementKind:atIndexPath:
+ *
+ * @param elementKind The kind of supplementary node to locate.
+ * @param indexPath The index path of the requested supplementary node.
+ *
+ * @returns The specified supplementary node or nil
+ */
+- (nullable ASCellNode *)supplementaryNodeForElementKind:(NSString *)elementKind atIndexPath:(NSIndexPath *)indexPath;
 
 /**
  * Similar to -indexPathForCell:.
@@ -407,8 +417,9 @@ NS_ASSUME_NONNULL_BEGIN
  * due to the data access in async mode.
  *
  * @param collectionView The sender.
+ * @deprecated The data source is always accessed on the main thread, and this method will not be called.
  */
-- (void)collectionViewLockDataSource:(ASCollectionView *)collectionView;
+- (void)collectionViewLockDataSource:(ASCollectionView *)collectionView ASDISPLAYNODE_DEPRECATED;
 
 /**
  * Indicator to unlock the data source for data fetching in async mode.
@@ -416,8 +427,9 @@ NS_ASSUME_NONNULL_BEGIN
  * due to the data access in async mode.
  *
  * @param collectionView The sender.
+ * @deprecated The data source is always accessed on the main thread, and this method will not be called.
  */
-- (void)collectionViewUnlockDataSource:(ASCollectionView *)collectionView;
+- (void)collectionViewUnlockDataSource:(ASCollectionView *)collectionView ASDISPLAYNODE_DEPRECATED;
 
 @end
 

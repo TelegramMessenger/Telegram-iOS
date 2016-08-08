@@ -61,7 +61,7 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
   _ASPendingState *_pendingViewState;
 
   // Protects access to _view, _layer, _pendingViewState, _subnodes, _supernode, and other properties which are accessed from multiple threads.
-  ASDN::RecursiveMutex _propertyLock;
+  ASDN::RecursiveMutex __instanceLock__;
   UIView *_view;
   CALayer *_layer;
 
@@ -116,13 +116,14 @@ FOUNDATION_EXPORT NSString * const ASRenderingEngineDidDisplayNodesScheduledBefo
   CGFloat _contentsScaleForDisplay;
 
   ASEnvironmentState _environmentState;
-  ASLayout *_layout;
+  ASLayout *_calculatedLayout;
+
 
   UIEdgeInsets _hitTestSlop;
   NSMutableArray *_subnodes;
   
   // Main thread only
-  _ASTransitionContext *_transitionContext;
+  _ASTransitionContext *_pendingLayoutTransitionContext;
   BOOL _usesImplicitHierarchyManagement;
 
   int32_t _pendingTransitionID;

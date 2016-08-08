@@ -9,6 +9,7 @@
 //
 
 #import "ASContextTransitioning.h"
+#import "ASLayoutRangeType.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -21,6 +22,20 @@ ASDISPLAYNODE_EXTERN_C_END
 
 + (BOOL)usesImplicitHierarchyManagement;
 + (void)setUsesImplicitHierarchyManagement:(BOOL)enabled;
+
+/**
+ * ASTableView and ASCollectionView now throw exceptions on invalid updates
+ * like their UIKit counterparts. If YES, these classes will log messages
+ * on invalid updates rather than throwing exceptions.
+ *
+ * Note that even if AsyncDisplayKit's exception is suppressed, the app may still crash
+ * as it proceeds with an invalid update.
+ *
+ * This currently defaults to YES. In a future release it will default to NO and later
+ * be removed entirely.
+ */
++ (BOOL)suppressesInvalidCollectionUpdateExceptions;
++ (void)setSuppressesInvalidCollectionUpdateExceptions:(BOOL)suppresses;
 
 /** @name Layout */
 
@@ -115,6 +130,15 @@ ASDISPLAYNODE_EXTERN_C_END
  * progressImage block.
  */
 - (void)hierarchyDisplayDidFinish;
+
+/**
+ * Only ASLayoutRangeModeVisibleOnly or ASLayoutRangeModeLowMemory are recommended.  Default is ASLayoutRangeModeVisibleOnly,
+ * because this is the only way to ensure an application will not have blank / flashing views as the user navigates back after
+ * a memory warning.  Apps that wish to use the more effective / aggressive ASLayoutRangeModeLowMemory may need to take steps
+ * to mitigate this behavior, including: restoring a larger range mode to the next controller before the user navigates there,
+ * enabling .neverShowPlaceholders on ASCellNodes so that the navigation operation is blocked on redisplay completing, etc.
+ */
++ (void)setRangeModeForMemoryWarnings:(ASLayoutRangeMode)rangeMode;
 
 @end
 

@@ -28,6 +28,13 @@ extern NSString *const ASAnimatedImageDefaultRunLoopMode;
   NSUInteger _playedLoops;
 }
 
-@property (atomic, assign) CFTimeInterval lastDisplayLinkFire;
+@property (nonatomic, assign) CFTimeInterval lastDisplayLinkFire;
+
+@end
+
+
+@interface ASImageNode (AnimatedImageInvalidation)
+
+- (void)invalidateAnimatedImage;
 
 @end

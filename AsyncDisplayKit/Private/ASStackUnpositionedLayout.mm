@@ -13,7 +13,6 @@
 #import <numeric>
 
 #import "ASLayoutSpecUtilities.h"
-#import "ASStackLayoutSpecUtilities.h"
 
 /**
  Sizes the child given the parameters specified, and returns the computed layout.
@@ -29,7 +28,9 @@ static ASLayout *crossChildLayout(const id<ASLayoutable> child,
   // stretched children will have a cross dimension of at least crossMin
   const CGFloat childCrossMin = alignItems == ASStackLayoutAlignItemsStretch ? crossMin : 0;
   const ASSizeRange childSizeRange = directionSizeRange(style.direction, stackMin, stackMax, childCrossMin, crossMax);
-  return [child measureWithSizeRange:childSizeRange];
+  ASLayout *layout = [child measureWithSizeRange:childSizeRange];
+  ASDisplayNodeCAssertNotNil(layout, @"ASLayout returned from measureWithSizeRange: must not be nil: %@", child);
+  return layout ? : [ASLayout layoutWithLayoutableObject:child constrainedSizeRange:childSizeRange size:CGSizeZero];
 }
 
 /**

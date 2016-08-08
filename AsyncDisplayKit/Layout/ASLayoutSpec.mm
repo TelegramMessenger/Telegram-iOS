@@ -11,10 +11,8 @@
 #import "ASLayoutSpec.h"
 
 #import "ASAssert.h"
-#import "ASBaseDefines.h"
 #import "ASEnvironmentInternal.h"
 
-#import "ASInternalHelpers.h"
 #import "ASLayout.h"
 #import "ASThread.h"
 #import "ASTraitCollection.h"
@@ -27,7 +25,7 @@ typedef std::map<unsigned long, id<ASLayoutable>, std::less<unsigned long>> ASCh
 
 @interface ASLayoutSpec() {
   ASEnvironmentState _environmentState;
-  ASDN::RecursiveMutex _propertyLock;
+  ASDN::RecursiveMutex __instanceLock__;
   ASChildMap _children;
 }
 @end
@@ -52,6 +50,11 @@ typedef std::map<unsigned long, id<ASLayoutable>, std::less<unsigned long>> ASCh
 - (ASLayoutableType)layoutableType
 {
   return ASLayoutableTypeLayoutSpec;
+}
+
+- (BOOL)canLayoutAsynchronous
+{
+  return YES;
 }
 
 #pragma mark - Layout
@@ -145,9 +148,11 @@ typedef std::map<unsigned long, id<ASLayoutable>, std::less<unsigned long>> ASCh
   ASDisplayNodeAssert(self.isMutable, @"Cannot set properties when layout spec is not mutable");
   
   _children.clear();
-  [children enumerateObjectsUsingBlock:^(id<ASLayoutable>  _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
-    _children[idx] = obj;
-  }];
+  NSUInteger i = 0;
+  for (id<ASLayoutable> child in children) {
+    _children[i] = [self layoutableToAddFromLayoutable:child];
+    i += 1;
+  }
 }
 
 - (id<ASLayoutable>)childForIndex:(NSUInteger)index
@@ -222,7 +227,7 @@ ASEnvironmentLayoutExtensibilityForwarding
 
 - (ASTraitCollection *)asyncTraitCollection
 {
-  ASDN::MutexLocker l(_propertyLock);
+  ASDN::MutexLocker l(__instanceLock__);
   return [ASTraitCollection traitCollectionWithASEnvironmentTraitCollection:self.environmentTraitCollection];
 }
 

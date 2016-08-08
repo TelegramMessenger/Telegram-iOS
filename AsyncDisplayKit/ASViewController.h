@@ -28,18 +28,6 @@ typedef ASTraitCollection * _Nonnull (^ASDisplayTraitsForTraitWindowSizeBlock)(C
 @property (nonatomic, strong, readonly) DisplayNodeType node;
 
 /**
- *  An optional context to pass along with an ASTraitCollection.
- *  This can be used to pass any internal state to all subnodes via the ASTraitCollection that is not
- *  included in UITraitCollection. This could range from more fine-tuned size classes to a class of
- *  constants that is based upon the new trait collection.
- *
- *  Be aware that internally this context is held by a C struct which cannot retain the pointer. Therefore
- *  ASVC keeps a strong reference to the context to make sure that it stays alive. If you change this value
- *  it will propagate the change to the subnodes.
- */
-@property (nonatomic, strong) id _Nullable traitCollectionContext;
-
-/**
  * Set this block to customize the ASDisplayTraits returned when the VC transitions to the given traitCollection.
  */
 @property (nonatomic, copy) ASDisplayTraitsForTraitCollectionBlock overrideDisplayTraitsWithTraitCollection;
@@ -71,6 +59,26 @@ typedef ASTraitCollection * _Nonnull (^ASDisplayTraitsForTraitWindowSizeBlock)(C
  * backing node.
  */
 - (ASSizeRange)nodeConstrainedSize;
+
+@end
+
+@interface ASViewController (ASRangeControllerUpdateRangeProtocol)
+
+/**
+ * Automatically adjust range mode based on view events. If you set this to YES, the view controller or its node
+ * must conform to the ASRangeControllerUpdateRangeProtocol. 
+ *
+ * Default value is NO.
+ */
+@property (nonatomic, assign) BOOL automaticallyAdjustRangeModeBasedOnViewEvents;
+
+@end
+
+@interface ASViewController (Unavailable)
+
+- (instancetype)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil AS_UNAVAILABLE("ASViewController requires using -initWithNode:");
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder AS_UNAVAILABLE("ASViewController requires using -initWithNode:");
 
 @end
 

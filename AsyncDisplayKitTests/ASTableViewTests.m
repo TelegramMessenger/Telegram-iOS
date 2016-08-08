@@ -14,13 +14,15 @@
 #import "ASTableViewInternal.h"
 #import "ASDisplayNode+Subclasses.h"
 #import "ASChangeSetDataController.h"
+#import "ASCellNode.h"
+#import "ASTableNode.h"
 
 #define NumberOfSections 10
 #define NumberOfRowsPerSection 20
 #define NumberOfReloadIterations 50
 
 @interface ASTestDataController : ASChangeSetDataController
-@property (atomic) int numberOfAllNodesRelayouts;
+@property (nonatomic) int numberOfAllNodesRelayouts;
 @end
 
 @implementation ASTestDataController
@@ -34,7 +36,7 @@
 @end
 
 @interface ASTestTableView : ASTableView
-@property (atomic, copy) void (^willDeallocBlock)(ASTableView *tableView);
+@property (nonatomic, copy) void (^willDeallocBlock)(ASTableView *tableView);
 @end
 
 @implementation ASTestTableView
@@ -59,7 +61,7 @@
 @end
 
 @interface ASTableViewTestDelegate : NSObject <ASTableViewDataSource, ASTableViewDelegate>
-@property (atomic, copy) void (^willDeallocBlock)(ASTableViewTestDelegate *delegate);
+@property (nonatomic, copy) void (^willDeallocBlock)(ASTableViewTestDelegate *delegate);
 @end
 
 @implementation ASTableViewTestDelegate
@@ -90,7 +92,7 @@
 
 @interface ASTestTextCellNode : ASTextCellNode
 /** Calculated by counting how many times -layoutSpecThatFits: is called on the main thread. */
-@property (atomic) int numberOfLayoutsOnMainThread;
+@property (nonatomic) int numberOfLayoutsOnMainThread;
 @end
 
 @implementation ASTestTextCellNode
@@ -128,7 +130,6 @@
   return textCellNode;
 }
 
-
 - (ASCellNodeBlock)tableView:(ASTableView *)tableView nodeBlockForRowAtIndexPath:(NSIndexPath *)indexPath
 {
   return ^{
@@ -140,11 +141,51 @@
 
 @end
 
+@interface ASTableViewFilledDelegate : NSObject <ASTableViewDelegate>
+@end
+
+@implementation ASTableViewFilledDelegate
+
+- (ASSizeRange)tableView:(ASTableView *)tableView constrainedSizeForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+  return ASSizeRangeMakeExactSize(CGSizeMake(10, 42));
+}
+
+@end
+
 @interface ASTableViewTests : XCTestCase
-@property (atomic, retain) ASTableView *testTableView;
+@property (nonatomic, retain) ASTableView *testTableView;
 @end
 
 @implementation ASTableViewTests
+
+- (void)testConstrainedSizeForRowAtIndexPath
+{
+  // Initial width of the table view is non-zero and all nodes are measured with this size.
+  // Any subsequence size change must trigger a relayout.
+  // Width and height are swapped so that a later size change will simulate a rotation
+  ASTestTableView *tableView = [[ASTestTableView alloc] __initWithFrame:CGRectMake(0, 0, 100, 400)
+                                                                  style:UITableViewStylePlain];
+  
+  ASTableViewFilledDelegate *delegate = [ASTableViewFilledDelegate new];
+  ASTableViewFilledDataSource *dataSource = [ASTableViewFilledDataSource new];
+
+  tableView.asyncDelegate = delegate;
+  tableView.asyncDataSource = dataSource;
+  
+  [tableView reloadDataImmediately];
+  [tableView setNeedsLayout];
+  [tableView layoutIfNeeded];
+  
+  for (int section = 0; section < NumberOfSections; section++) {
+      for (int row = 0; row < NumberOfRowsPerSection; row++) {
+        NSIndexPath *indexPath = [NSIndexPath indexPathForRow:row inSection:section];
+        CGRect rect = [tableView rectForRowAtIndexPath:indexPath];
+        XCTAssertEqual(rect.size.width, 100);  // specified width should be ignored for table
+        XCTAssertEqual(rect.size.height, 42);
+      }
+  }
+}
 
 // TODO: Convert this to ARC.
 - (void)DISABLED_testTableViewDoesNotRetainItselfAndDelegate
@@ -408,8 +449,7 @@
 {
   CGSize tableViewSize = CGSizeMake(100, 500);
   ASTestTableView *tableView = [[ASTestTableView alloc] initWithFrame:CGRectMake(0, 0, tableViewSize.width, tableViewSize.height)
-                                                                style:UITableViewStylePlain
-                                                    asyncDataFetching:YES];
+                                                                style:UITableViewStylePlain];
   ASTableViewFilledDataSource *dataSource = [ASTableViewFilledDataSource new];
 
   tableView.asyncDelegate = dataSource;
@@ -477,6 +517,16 @@
       XCTFail(@"Expectation failed: %@", error);
     }
   }];
+}
+
+/**
+ * This may seem silly, but we had issues where the runtime sometimes wouldn't correctly report
+ * conformances declared on categories.
+ */
+- (void)testThatTableNodeConformsToExpectedProtocols
+{
+  ASTableNode *node = [[ASTableNode alloc] initWithStyle:UITableViewStylePlain];
+  XCTAssert([node conformsToProtocol:@protocol(ASRangeControllerUpdateRangeProtocol)]);
 }
 
 @end

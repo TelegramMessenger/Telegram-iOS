@@ -11,17 +11,23 @@
 //
 
 #import <AsyncDisplayKit/ASTableView.h>
+#import <AsyncDisplayKit/ASDisplayNode.h>
+#import <AsyncDisplayKit/ASRangeControllerUpdateRangeProtocol+Beta.h>
+
+@protocol ASTableDataSource;
+@protocol ASTableDelegate;
+@class ASTableView;
 
 /**
  * ASTableNode is a node based class that wraps an ASTableView. It can be used
  * as a subnode of another node, and provide room for many (great) features and improvements later on.
  */
-@interface ASTableNode : ASDisplayNode
+@interface ASTableNode : ASDisplayNode <ASRangeControllerUpdateRangeProtocol>
 
 - (instancetype)init; // UITableViewStylePlain
 - (instancetype)initWithStyle:(UITableViewStyle)style;
 
-@property (nonatomic, readonly) ASTableView *view;
+@property (strong, nonatomic, readonly) ASTableView *view;
 
 // These properties can be set without triggering the view to be created, so it's fine to set them in -init.
 @property (weak, nonatomic) id <ASTableDelegate>   delegate;

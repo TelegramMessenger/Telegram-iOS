@@ -108,10 +108,10 @@ typedef NS_ENUM(NSUInteger, ASTextNodeHighlightStyle) {
 /**
  @abstract When you set these ASDisplayNode properties, they are composited into the bitmap instead of being applied by CA.
 
- @property (atomic, assign) CGColorRef shadowColor;
- @property (atomic, assign) CGFloat    shadowOpacity;
- @property (atomic, assign) CGSize     shadowOffset;
- @property (atomic, assign) CGFloat    shadowRadius;
+ @property (nonatomic, assign) CGColorRef shadowColor;
+ @property (nonatomic, assign) CGFloat    shadowOpacity;
+ @property (nonatomic, assign) CGSize     shadowOffset;
+ @property (nonatomic, assign) CGFloat    shadowRadius;
  */
 
 /**
@@ -269,6 +269,14 @@ typedef NS_ENUM(NSUInteger, ASTextNodeHighlightStyle) {
  @return YES if the entity attribute should be treated as a long-press target, NO otherwise.
  */
 - (BOOL)textNode:(ASTextNode *)textNode shouldLongPressLinkAttribute:(NSString *)attribute value:(id)value atPoint:(CGPoint)point;
+
+@end
+
+@interface ASTextNode (Unavailable)
+
+- (instancetype)initWithLayerBlock:(ASDisplayNodeLayerBlock)viewBlock didLoadBlock:(nullable ASDisplayNodeDidLoadBlock)didLoadBlock __unavailable;
+
+- (instancetype)initWithViewBlock:(ASDisplayNodeViewBlock)viewBlock didLoadBlock:(nullable ASDisplayNodeDidLoadBlock)didLoadBlock __unavailable;
 
 @end
 
