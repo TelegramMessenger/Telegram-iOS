@@ -37,7 +37,7 @@ public class ActionSheetController: ViewController {
     
     public func setItemGroups(_ groups: [ActionSheetItemGroup]) {
         self.groups = groups
-        if self.isViewLoaded() {
+        if self.isViewLoaded {
             self.actionSheetNode.setGroups(groups)
         }
     }

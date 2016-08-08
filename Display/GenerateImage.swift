@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 
 let deviceColorSpace = CGColorSpaceCreateDeviceRGB()
-let deviceScale = UIScreen.main().scale
+let deviceScale = UIScreen.main.scale
 
 public func generateImage(_ size: CGSize, pixelGenerator: (CGSize, UnsafeMutablePointer<Int8>) -> Void) -> UIImage? {
     let scale = deviceScale
@@ -50,7 +50,7 @@ public func generateImage(_ size: CGSize, contextGenerator: (CGSize, CGContext) 
             return nil
     }
     
-    context.scale(x: scale, y: scale)
+    context.scaleBy(x: scale, y: scale)
     
     contextGenerator(size, context)
     
@@ -73,7 +73,7 @@ public func generateFilledCircleImage(radius: CGFloat, color: UIColor?, backgrou
         if let color = color {
             context.setFillColor(color.cgColor)
         } else {
-            context.setFillColor(UIColor.clear().cgColor)
+            context.setFillColor(UIColor.clear.cgColor)
             context.setBlendMode(.copy)
         }
         context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
@@ -110,28 +110,28 @@ public class DrawingContext {
     public func withContext(_ f: @noescape(CGContext) -> ()) {
         if self._context == nil {
             if let c = CGContext(data: bytes, width: Int(scaledSize.width), height: Int(scaledSize.height), bitsPerComponent: 8, bytesPerRow: bytesPerRow, space: deviceColorSpace, bitmapInfo: self.bitmapInfo.rawValue) {
-                c.scale(x: scale, y: scale)
+                c.scaleBy(x: scale, y: scale)
                 self._context = c
             }
         }
         
         if let _context = self._context {
-            _context.translate(x: self.size.width / 2.0, y: self.size.height / 2.0)
-            _context.scale(x: 1.0, y: -1.0)
-            _context.translate(x: -self.size.width / 2.0, y: -self.size.height / 2.0)
+            _context.translateBy(x: self.size.width / 2.0, y: self.size.height / 2.0)
+            _context.scaleBy(x: 1.0, y: -1.0)
+            _context.translateBy(x: -self.size.width / 2.0, y: -self.size.height / 2.0)
             
             f(_context)
             
-            _context.translate(x: self.size.width / 2.0, y: self.size.height / 2.0)
-            _context.scale(x: 1.0, y: -1.0)
-            _context.translate(x: -self.size.width / 2.0, y: -self.size.height / 2.0)
+            _context.translateBy(x: self.size.width / 2.0, y: self.size.height / 2.0)
+            _context.scaleBy(x: 1.0, y: -1.0)
+            _context.translateBy(x: -self.size.width / 2.0, y: -self.size.height / 2.0)
         }
     }
     
     public func withFlippedContext(_ f: @noescape(CGContext) -> ()) {
         if self._context == nil {
             if let c = CGContext(data: bytes, width: Int(scaledSize.width), height: Int(scaledSize.height), bitsPerComponent: 8, bytesPerRow: bytesPerRow, space: deviceColorSpace, bitmapInfo: self.bitmapInfo.rawValue) {
-                c.scale(x: scale, y: scale)
+                c.scaleBy(x: scale, y: scale)
                 self._context = c
             }
         }
@@ -177,7 +177,7 @@ public class DrawingContext {
             let colorValue = pixel.pointee
             return UIColor(UInt32(colorValue))
         } else {
-            return UIColor.clear()
+            return UIColor.clear
         }
     }
     
@@ -231,7 +231,7 @@ public class DrawingContext {
     }
 }
 
-public enum ParsingError: ErrorProtocol {
+public enum ParsingError: Error {
     case Generic
 }
 

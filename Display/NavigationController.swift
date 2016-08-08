@@ -4,7 +4,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 
 private class NavigationControllerView: UIView {
-    override class func layerClass() -> AnyClass {
+    override class var layerClass: AnyClass {
         return CATracingLayer.self
     }
 }
@@ -60,7 +60,7 @@ public class NavigationController: NavigationControllerProxy, ContainableControl
     }
     
     public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-        if !self.isViewLoaded() {
+        if !self.isViewLoaded {
             self.loadView()
         }
         self.containerLayout = layout
@@ -253,7 +253,7 @@ public class NavigationController: NavigationControllerProxy, ContainableControl
         }
         
         if animated && self.viewControllers.count != 0 && viewControllers.count != 0 && self.viewControllers.last! !== viewControllers.last! {
-            if self.viewControllers.contains({ $0 === viewControllers.last }) {
+            if self.viewControllers.contains(where: { $0 === viewControllers.last }) {
                 let bottomController = viewControllers.last! as UIViewController
                 let topController = self.viewControllers.last! as UIViewController
                 
@@ -323,7 +323,7 @@ public class NavigationController: NavigationControllerProxy, ContainableControl
                 })
             }
         } else {
-            if let topController = self.viewControllers.last where topController.isViewLoaded() {
+            if let topController = self.viewControllers.last where topController.isViewLoaded {
                 topController.navigation_setNavigationController(nil)
                 topController.view.removeFromSuperview()
             }

@@ -26,7 +26,7 @@ private func dumpLayers(_ layer: CALayer, indent: String = "") {
     }
 }
 
-public let UIScreenScale = UIScreen.main().scale
+public let UIScreenScale = UIScreen.main.scale
 public func floorToScreenPixels(_ value: CGFloat) -> CGFloat {
     return floor(value * UIScreenScale) / UIScreenScale
 }
@@ -96,7 +96,7 @@ public extension UIImage {
         self.draw(at: CGPoint())
         let result = UIGraphicsGetImageFromCurrentImageContext()!
         UIGraphicsEndImageContext()
-        if !UIEdgeInsetsEqualToEdgeInsets(self.capInsets, UIEdgeInsetsZero) {
+        if !UIEdgeInsetsEqualToEdgeInsets(self.capInsets, UIEdgeInsets()) {
             return result.resizableImage(withCapInsets: self.capInsets, resizingMode: self.resizingMode)
         }
         return result

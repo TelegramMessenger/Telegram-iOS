@@ -11,8 +11,8 @@ public struct Font {
     }
 }
 
-public extension AttributedString {
-    convenience init(string: String, font: UIFont, textColor: UIColor = UIColor.black()) {
+public extension NSAttributedString {
+    convenience init(string: String, font: UIFont, textColor: UIColor = UIColor.black) {
         self.init(string: string, attributes: [NSFontAttributeName: font, NSForegroundColorAttributeName  as String: textColor])
     }
 }

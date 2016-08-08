@@ -24,7 +24,7 @@ internal class BarButtonItemWrapper {
         self.parentNode.addSubnode(self.buttonNode)
         
         self.setEnabledListenerKey = barButtonItem.addSetEnabledListener({ [weak self] enabled in
-            self?.buttonNode.isEnabled = enabled.boolValue
+            self?.buttonNode.isEnabled = enabled
             return
         })
         

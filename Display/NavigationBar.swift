@@ -32,10 +32,10 @@ private func backArrowImage(color: UIColor) -> UIImage? {
 }
 
 public class NavigationBar: ASDisplayNode {
-    public var foregroundColor: UIColor = UIColor.black() {
+    public var foregroundColor: UIColor = UIColor.black {
         didSet {
             if let title = self.title {
-                self.titleNode.attributedText = AttributedString(string: title, font: Font.medium(17.0), textColor: self.foregroundColor)
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(17.0), textColor: self.foregroundColor)
             }
         }
     }
@@ -66,6 +66,7 @@ public class NavigationBar: ASDisplayNode {
     private let clippingNode: ASDisplayNode
     
     private var itemTitleListenerKey: Int?
+    private var itemTitleViewListenerKey: Int?
     private var itemLeftButtonListenerKey: Int?
     private var _item: UINavigationItem?
     var item: UINavigationItem? {
@@ -94,6 +95,13 @@ public class NavigationBar: ASDisplayNode {
                     }
                 }
                 
+                self.titleView = item.titleView
+                self.itemTitleViewListenerKey = item.addSetTitleViewListener { [weak self] titleView in
+                    if let strongSelf = self {
+                        strongSelf.titleView = titleView
+                    }
+                }
+                
                 self.itemLeftButtonListenerKey = item.addSetLeftBarButtonItemListener { [weak self] _, _ in
                     if let strongSelf = self {
                         strongSelf.updateLeftButton()
@@ -111,7 +119,7 @@ public class NavigationBar: ASDisplayNode {
     private var title: String? {
         didSet {
             if let title = self.title {
-                self.titleNode.attributedText = AttributedString(string: title, font: Font.medium(17.0), textColor: self.foregroundColor)
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(17.0), textColor: self.foregroundColor)
                 if self.titleNode.supernode == nil {
                     self.clippingNode.addSubnode(self.titleNode)
                 }
@@ -123,6 +131,22 @@ public class NavigationBar: ASDisplayNode {
             self.setNeedsLayout()
         }
     }
+    
+    private var titleView: UIView? {
+        didSet {
+            if let oldValue = oldValue {
+                oldValue.removeFromSuperview()
+            }
+            
+            if let titleView = self.titleView {
+                self.clippingNode.view.addSubview(titleView)
+            }
+            
+            self.invalidateCalculatedLayout()
+            self.setNeedsLayout()
+        }
+    }
+    
     private let titleNode: ASTextNode
     
     var previousItemListenerKey: Int?
@@ -414,13 +438,18 @@ public class NavigationBar: ASDisplayNode {
             }
         }
         
+        if let titleView = self.titleView {
+            let titleViewSize = CGSize(width: max(1.0, size.width - leftTitleInset - leftTitleInset), height: nominalHeight)
+            titleView.frame = CGRect(origin: CGPoint(x: leftTitleInset, y: contentVerticalOrigin), size: titleViewSize)
+        }
+        
         //self.effectView.frame = self.bounds
     }
     
     public func makeTransitionTitleNode(foregroundColor: UIColor) -> ASDisplayNode? {
         if let title = self.title {
             let node = ASTextNode()
-            node.attributedText = AttributedString(string: title, font: Font.medium(17.0), textColor: foregroundColor)
+            node.attributedText = NSAttributedString(string: title, font: Font.medium(17.0), textColor: foregroundColor)
             return node
         } else {
             return nil

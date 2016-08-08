@@ -43,16 +43,16 @@ private class StatusBarItemNode: ASDisplayNode {
                     if let contents = sublayer.contents where CFGetTypeID(contents) == CGImage.typeID {
                         let image = contents as! CGImage
                         context.withFlippedContext { c in
-                            c.translate(x: origin.x, y: origin.y)
+                            c.translateBy(x: origin.x, y: origin.y)
                             c.draw(in: CGRect(origin: CGPoint(), size: context.size), image: image)
-                            c.translate(x: -origin.x, y: -origin.y)
+                            c.translateBy(x: -origin.x, y: -origin.y)
                         }
                     } else {
                         context.withContext { c in
                             UIGraphicsPushContext(c)
-                            c.translate(x: origin.x, y: origin.y)
+                            c.translateBy(x: origin.x, y: origin.y)
                             sublayer.render(in: c)
-                            c.translate(x: -origin.x, y: -origin.y)
+                            c.translateBy(x: -origin.x, y: -origin.y)
                             UIGraphicsPopContext()
                         }
                     }

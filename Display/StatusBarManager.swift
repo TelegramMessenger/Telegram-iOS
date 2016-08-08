@@ -31,7 +31,7 @@ private func optimizeMappedSurface(_ surface: MappedStatusBarSurface) -> MappedS
                 return surface
             }
         }
-        let size = UIApplication.shared().statusBarFrame.size
+        let size = UIApplication.shared.statusBarFrame.size
         return MappedStatusBarSurface(statusBars: [MappedStatusBar(style: surface.statusBars[0].style, frame: CGRect(origin: CGPoint(x: 0.0, y: surface.statusBars[0].frame.origin.y), size: size), statusBar: nil)], surface: surface.surface)
     } else {
         return surface
@@ -124,7 +124,7 @@ class StatusBarManager {
         
         for surface in previousSurfaces {
             for statusBar in surface.statusBars {
-                if !visibleStatusBars.contains({$0 === statusBar}) {
+                if !visibleStatusBars.contains(where: {$0 === statusBar}) {
                     statusBar.removeProxyNode()
                 }
             }
@@ -132,7 +132,7 @@ class StatusBarManager {
         
         for surface in self.surfaces {
             for statusBar in surface.statusBars {
-                if !visibleStatusBars.contains({$0 === statusBar}) {
+                if !visibleStatusBars.contains(where: {$0 === statusBar}) {
                     statusBar.removeProxyNode()
                 }
             }
@@ -144,8 +144,8 @@ class StatusBarManager {
         
         if let globalStatusBar = globalStatusBar {
             let statusBarStyle: UIStatusBarStyle = globalStatusBar.0 == .Black ? .default : .lightContent
-            if UIApplication.shared().statusBarStyle != statusBarStyle {
-                UIApplication.shared().setStatusBarStyle(statusBarStyle, animated: false)
+            if UIApplication.shared.statusBarStyle != statusBarStyle {
+                UIApplication.shared.setStatusBarStyle(statusBarStyle, animated: false)
             }
             StatusBarUtils.statusBarWindow()!.alpha = globalStatusBar.1
         } else {

@@ -4,6 +4,7 @@
 #import "RuntimeUtils.h"
 
 static const void *setTitleListenerBagKey = &setTitleListenerBagKey;
+static const void *setTitleViewListenerBagKey = &setTitleViewListenerBagKey;
 static const void *setLeftBarButtonItemListenerBagKey = &setLeftBarButtonItemListenerBagKey;
 static const void *setRightBarButtonItemListenerBagKey = &setRightBarButtonItemListenerBagKey;
 
@@ -15,6 +16,7 @@ static const void *setRightBarButtonItemListenerBagKey = &setRightBarButtonItemL
     dispatch_once(&onceToken, ^
     {
         [RuntimeUtils swizzleInstanceMethodOfClass:[UINavigationItem class] currentSelector:@selector(setTitle:) newSelector:@selector(_ac91f40f_setTitle:)];
+        [RuntimeUtils swizzleInstanceMethodOfClass:[UINavigationItem class] currentSelector:@selector(setTitleView:) newSelector:@selector(_ac91f40f_setTitleView:)];
         [RuntimeUtils swizzleInstanceMethodOfClass:[UINavigationItem class] currentSelector:@selector(setLeftBarButtonItem:) newSelector:@selector(_ac91f40f_setLeftBarButtonItem:animated:)];
         [RuntimeUtils swizzleInstanceMethodOfClass:[UINavigationItem class] currentSelector:@selector(setRightBarButtonItem:) newSelector:@selector(_ac91f40f_setRightBarButtonItem:animated:)];
     });
@@ -24,9 +26,17 @@ static const void *setRightBarButtonItemListenerBagKey = &setRightBarButtonItemL
 {
     [self _ac91f40f_setTitle:title];
     
-    [(NSBag *)[self associatedObjectForKey:setTitleListenerBagKey] enumerateItems:^(UINavigationItemSetTitleListener listener)
-    {
+    [(NSBag *)[self associatedObjectForKey:setTitleListenerBagKey] enumerateItems:^(UINavigationItemSetTitleListener listener) {
         listener(title);
+    }];
+}
+
+- (void)_ac91f40f_setTitleView:(UIView *)titleView
+{
+    [self _ac91f40f_setTitleView:titleView];
+    
+    [(NSBag *)[self associatedObjectForKey:setTitleViewListenerBagKey] enumerateItems:^(UINavigationItemSetTitleViewListener listener) {
+        listener(titleView);
     }];
 }
 
@@ -34,8 +44,7 @@ static const void *setRightBarButtonItemListenerBagKey = &setRightBarButtonItemL
 {
     [self _ac91f40f_setLeftBarButtonItem:leftBarButtonItem animated:animated];
     
-    [(NSBag *)[self associatedObjectForKey:setLeftBarButtonItemListenerBagKey] enumerateItems:^(UINavigationItemSetBarButtonItemListener listener)
-    {
+    [(NSBag *)[self associatedObjectForKey:setLeftBarButtonItemListenerBagKey] enumerateItems:^(UINavigationItemSetBarButtonItemListener listener) {
         listener(leftBarButtonItem, animated);
     }];
 }
@@ -44,8 +53,7 @@ static const void *setRightBarButtonItemListenerBagKey = &setRightBarButtonItemL
 {
     [self _ac91f40f_setRightBarButtonItem:rightBarButtonItem animated:animated];
     
-    [(NSBag *)[self associatedObjectForKey:setRightBarButtonItemListenerBagKey] enumerateItems:^(UINavigationItemSetBarButtonItemListener listener)
-    {
+    [(NSBag *)[self associatedObjectForKey:setRightBarButtonItemListenerBagKey] enumerateItems:^(UINavigationItemSetBarButtonItemListener listener) {
         listener(rightBarButtonItem, animated);
     }];
 }
@@ -64,6 +72,22 @@ static const void *setRightBarButtonItemListenerBagKey = &setRightBarButtonItemL
 - (void)removeSetTitleListener:(NSInteger)key
 {
     [(NSBag *)[self associatedObjectForKey:setTitleListenerBagKey] removeItem:key];
+}
+
+- (NSInteger)addSetTitleViewListener:(UINavigationItemSetTitleViewListener)listener
+{
+    NSBag *bag = [self associatedObjectForKey:setTitleViewListenerBagKey];
+    if (bag == nil)
+    {
+        bag = [[NSBag alloc] init];
+        [self setAssociatedObject:bag forKey:setTitleViewListenerBagKey];
+    }
+    return [bag addItem:[listener copy]];
+}
+
+- (void)removeSetTitleViewListener:(NSInteger)key
+{
+    [(NSBag *)[self associatedObjectForKey:setTitleViewListenerBagKey] removeItem:key];
 }
 
 - (NSInteger)addSetLeftBarButtonItemListener:(UINavigationItemSetBarButtonItemListener)listener

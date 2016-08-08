@@ -66,13 +66,13 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
     
     func updateItemNodes(_ nodes: [ActionSheetItemNode], leadingVisibleNodeCount: CGFloat = 1000.0) {
         for node in self.itemNodes {
-            if !nodes.contains({ $0 === node }) {
+            if !nodes.contains(where: { $0 === node }) {
                 node.removeFromSupernode()
             }
         }
         
         for node in nodes {
-            if !self.itemNodes.contains({ $0 === node }) {
+            if !self.itemNodes.contains(where: { $0 === node }) {
                 self.scrollView.addSubnode(node)
             }
         }

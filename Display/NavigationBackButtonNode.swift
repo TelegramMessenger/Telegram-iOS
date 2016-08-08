@@ -9,7 +9,7 @@ public class NavigationBackButtonNode: ASControlNode {
     private func attributesForCurrentState() -> [String : AnyObject] {
         return [
             NSFontAttributeName: self.fontForCurrentState(),
-            NSForegroundColorAttributeName: self.isEnabled ? self.color : UIColor.gray()
+            NSForegroundColorAttributeName: self.isEnabled ? self.color : UIColor.gray
         ]
     }
     
@@ -25,14 +25,14 @@ public class NavigationBackButtonNode: ASControlNode {
         }
         set(value) {
             self._text = value
-            self.label.attributedString = AttributedString(string: text, attributes: self.attributesForCurrentState())
+            self.label.attributedString = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
             self.invalidateCalculatedLayout()
         }
     }
     
     var color: UIColor = UIColor(0x1195f2) {
         didSet {
-            self.label.attributedString = AttributedString(string: self._text, attributes: self.attributesForCurrentState())
+            self.label.attributedString = NSAttributedString(string: self._text, attributes: self.attributesForCurrentState())
         }
     }
     

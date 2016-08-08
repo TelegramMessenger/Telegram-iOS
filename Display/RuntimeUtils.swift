@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 
 private let systemVersion = { () -> (Int, Int) in
-    let string = UIDevice.current().systemVersion as NSString
+    let string = UIDevice.current.systemVersion as NSString
     var minor = 0
     let range = string.range(of: ".")
     if range.location != NSNotFound {

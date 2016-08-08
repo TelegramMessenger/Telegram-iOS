@@ -323,7 +323,7 @@ private struct ListViewState {
                     var maxY: CGFloat = 0.0
                     for i in 0 ..< self.nodes.count {
                         var frame = self.nodes[i].frame
-                        frame.offsetInPlace(dx: 0.0, dy: offset)
+                        frame = frame.offsetBy(dx: 0.0, dy: offset)
                         self.nodes[i].frame = frame
                         
                         minY = min(minY, frame.minY)
@@ -338,7 +338,7 @@ private struct ListViewState {
                     if abs(additionalOffset) > CGFloat(FLT_EPSILON) {
                         for i in 0 ..< self.nodes.count {
                             var frame = self.nodes[i].frame
-                            frame.offsetInPlace(dx: 0.0, dy: additionalOffset)
+                            frame = frame.offsetBy(dx: 0.0, dy: additionalOffset)
                             self.nodes[i].frame = frame
                         }
                     }
@@ -356,7 +356,7 @@ private struct ListViewState {
                     if abs(offset) > CGFloat(FLT_EPSILON) {
                         for i in 0 ..< self.nodes.count {
                             var frame = self.nodes[i].frame
-                            frame.offsetInPlace(dx: 0.0, dy: offset)
+                            frame = frame.offsetBy(dx: 0.0, dy: offset)
                             self.nodes[i].frame = frame
                         }
                     }
@@ -882,7 +882,7 @@ private final class ListViewBackingLayer: CALayer {
 private final class ListViewBackingView: UIView {
     weak var target: ASDisplayNode?
     
-    override class func layerClass() -> AnyClass {
+    override class var layerClass: AnyClass {
         return ListViewBackingLayer.self
     }
     
@@ -1464,12 +1464,12 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         }
         state.fixScrollPostition(self.items.count)
         
-        let sortedDeleteIndices = deleteIndices.sorted(isOrderedBefore: {$0.index < $1.index})
+        let sortedDeleteIndices = deleteIndices.sorted(by: {$0.index < $1.index})
         for deleteItem in sortedDeleteIndices.reversed() {
             self.items.remove(at: deleteItem.index)
         }
         
-        let sortedIndicesAndItems = insertIndicesAndItems.sorted(isOrderedBefore: { $0.index < $1.index })
+        let sortedIndicesAndItems = insertIndicesAndItems.sorted(by: { $0.index < $1.index })
         if self.items.count == 0 {
             if sortedIndicesAndItems[0].index != 0 {
                 fatalError("deleteAndInsertItems: invalid insert into empty list")

@@ -43,7 +43,7 @@ import SwiftSignalKit
     private var scrollToTopView: ScrollToTopView?
     public var scrollToTop: (() -> Void)? {
         didSet {
-            if self.isViewLoaded() {
+            if self.isViewLoaded {
                 self.updateScrollToTopView()
             }
         }
@@ -92,7 +92,7 @@ import SwiftSignalKit
     public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.containerLayout = layout
         
-        if !self.isViewLoaded() {
+        if !self.isViewLoaded {
             self.loadView()
         }
         self.view.frame = CGRect(origin: self.view.frame.origin, size: layout.size)
@@ -133,7 +133,7 @@ import SwiftSignalKit
     }
     
     public func requestLayout(transition: ContainedViewLayoutTransition) {
-        if self.isViewLoaded() {
+        if self.isViewLoaded {
             self.containerLayoutUpdated(self.containerLayout, transition: transition)
         }
     }

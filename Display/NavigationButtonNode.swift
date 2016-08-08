@@ -9,7 +9,7 @@ public class NavigationButtonNode: ASTextNode {
     private func attributesForCurrentState() -> [String : AnyObject] {
         return [
             NSFontAttributeName: self.fontForCurrentState(),
-            NSForegroundColorAttributeName: self.isEnabled ? self.color : UIColor.gray()
+            NSForegroundColorAttributeName: self.isEnabled ? self.color : UIColor.gray
         ]
     }
     
@@ -21,14 +21,14 @@ public class NavigationButtonNode: ASTextNode {
         set(value) {
             _text = value
             
-            self.attributedString = AttributedString(string: text, attributes: self.attributesForCurrentState())
+            self.attributedString = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
         }
     }
     
     public var color: UIColor = UIColor(0x1195f2) {
         didSet {
             if let text = self._text {
-                self.attributedString = AttributedString(string: text, attributes: self.attributesForCurrentState())
+                self.attributedString = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
             }
         }
     }
@@ -42,7 +42,7 @@ public class NavigationButtonNode: ASTextNode {
             if _bold != value {
                 _bold = value
                 
-                self.attributedString = AttributedString(string: text, attributes: self.attributesForCurrentState())
+                self.attributedString = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
             }
         }
     }
@@ -129,7 +129,7 @@ public class NavigationButtonNode: ASTextNode {
             if self.isEnabled != value {
                 super.isEnabled = value
 
-                self.attributedString = AttributedString(string: text, attributes: self.attributesForCurrentState())
+                self.attributedString = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
             }
         }
     }

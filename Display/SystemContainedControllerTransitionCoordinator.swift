@@ -1,41 +1,41 @@
 import UIKit
 
 final class SystemContainedControllerTransitionCoordinator:NSObject, UIViewControllerTransitionCoordinator {
-    public func isAnimated() -> Bool {
+    public var isAnimated: Bool {
         return false
     }
     
-    public func presentationStyle() -> UIModalPresentationStyle {
+    public var presentationStyle: UIModalPresentationStyle {
         return .fullScreen
     }
     
-    public func initiallyInteractive() -> Bool {
+    public var initiallyInteractive: Bool {
         return false
     }
     
     public let isInterruptible: Bool = false
     
-    public func isInteractive() -> Bool {
+    public var isInteractive: Bool {
         return false
     }
     
-    public func isCancelled() -> Bool {
+    public var isCancelled: Bool {
         return false
     }
     
-    public func transitionDuration() -> TimeInterval {
+    public var transitionDuration: TimeInterval {
         return 0.6
     }
     
-    public func percentComplete() -> CGFloat {
+    public var percentComplete: CGFloat {
         return 0.0
     }
     
-    public func completionVelocity() -> CGFloat {
+    public var completionVelocity: CGFloat {
         return 0.0
     }
     
-    public func completionCurve() -> UIViewAnimationCurve {
+    public var completionCurve: UIViewAnimationCurve {
         return .easeInOut
     }
     
@@ -47,11 +47,11 @@ final class SystemContainedControllerTransitionCoordinator:NSObject, UIViewContr
         return nil
     }
     
-    public func containerView() -> UIView {
+    public var containerView: UIView {
         return UIView()
     }
     
-    public func targetTransform() -> CGAffineTransform {
+    public var targetTransform: CGAffineTransform {
         return CGAffineTransform.identity
     }
     

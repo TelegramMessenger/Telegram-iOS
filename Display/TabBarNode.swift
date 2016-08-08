@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 
-private let separatorHeight: CGFloat = 1.0 / UIScreen.main().scale
+private let separatorHeight: CGFloat = 1.0 / UIScreen.main.scale
 private func tabBarItemImage(_ image: UIImage?, title: String, tintColor: UIColor) -> UIImage {
     let font = Font.regular(10.0)
     let titleSize = (title as NSString).boundingRect(with: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude), options: [.usesLineFragmentOrigin], attributes: [NSFontAttributeName: font], context: nil).size
@@ -24,10 +24,10 @@ private func tabBarItemImage(_ image: UIImage?, title: String, tintColor: UIColo
         if let image = image {
             let imageRect = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - imageSize.width) / 2.0), y: 0.0), size: imageSize)
             context.saveGState()
-            context.translate(x: imageRect.midX, y: imageRect.midY)
-            context.scale(x: 1.0, y: -1.0)
-            context.translate(x: -imageRect.midX, y: -imageRect.midY)
-            context.clipToMask(imageRect, mask: image.cgImage!)
+            context.translateBy(x: imageRect.midX, y: imageRect.midY)
+            context.scaleBy(x: 1.0, y: -1.0)
+            context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
+            context.clip(to: imageRect, mask: image.cgImage!)
             context.setFillColor(tintColor.cgColor)
             context.fill(imageRect)
             context.restoreGState()
@@ -140,7 +140,8 @@ class TabBarNode: ASDisplayNode {
                 let node = self.tabBarNodes[i]
                 node.measure(CGSize(width: internalWidth, height: size.height))
                 
-                node.frame = CGRect(origin: CGPoint(x: floor(leftNodeOriginX + CGFloat(i) * distanceBetweenNodes - node.calculatedSize.width / 2.0), y: 4.0), size: node.calculatedSize)
+                let originX = floor(leftNodeOriginX + CGFloat(i) * distanceBetweenNodes - node.calculatedSize.width / 2.0)
+                node.frame = CGRect(origin: CGPoint(x: originX, y: 4.0), size: node.calculatedSize)
             }
         }
     }

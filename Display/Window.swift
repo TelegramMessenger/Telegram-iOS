@@ -2,11 +2,11 @@ import Foundation
 import AsyncDisplayKit
 
 private class WindowRootViewController: UIViewController {
-    override func preferredStatusBarStyle() -> UIStatusBarStyle {
+    override var preferredStatusBarStyle: UIStatusBarStyle {
         return .default
     }
     
-    override func prefersStatusBarHidden() -> Bool {
+    override var prefersStatusBarHidden: Bool {
         return false
     }
 }
@@ -84,8 +84,8 @@ private struct UpdatingLayout {
     }
 }
 
-private let orientationChangeDuration: Double = UIDevice.current().userInterfaceIdiom == .pad ? 0.4 : 0.3
-private let statusBarHiddenInLandscape: Bool = UIDevice.current().userInterfaceIdiom == .phone
+private let orientationChangeDuration: Double = UIDevice.current.userInterfaceIdiom == .pad ? 0.4 : 0.3
+private let statusBarHiddenInLandscape: Bool = UIDevice.current.userInterfaceIdiom == .phone
 
 private func containedLayoutForWindowLayout(_ layout: WindowLayout) -> ContainerViewLayout {
     return ContainerViewLayout(size: layout.size, intrinsicInsets: UIEdgeInsets(), statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight)
@@ -108,12 +108,12 @@ public class Window: UIWindow {
     private var statusBarHidden = false
     
     public convenience init() {
-        self.init(frame: UIScreen.main().bounds)
+        self.init(frame: UIScreen.main.bounds)
     }
     
     public override init(frame: CGRect) {
         self.statusBarManager = StatusBarManager()
-        self.windowLayout = WindowLayout(size: frame.size, statusBarHeight: UIApplication.shared().statusBarFrame.size.height, inputHeight: 0.0)
+        self.windowLayout = WindowLayout(size: frame.size, statusBarHeight: UIApplication.shared.statusBarFrame.size.height, inputHeight: 0.0)
         self.presentationContext = PresentationContext()
         
         super.init(frame: frame)
@@ -129,7 +129,7 @@ public class Window: UIWindow {
         
         self.statusBarChangeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.UIApplicationWillChangeStatusBarFrame, object: nil, queue: OperationQueue.main, using: { [weak self] notification in
             if let strongSelf = self {
-                let statusBarHeight: CGFloat = max(20.0, (notification.userInfo?[UIApplicationStatusBarFrameUserInfoKey] as? NSValue)?.cgRectValue().height ?? 20.0)
+                let statusBarHeight: CGFloat = max(20.0, (notification.userInfo?[UIApplicationStatusBarFrameUserInfoKey] as? NSValue)?.cgRectValue.height ?? 20.0)
                 
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .easeInOut)
                 strongSelf.updateLayout { $0.update(statusBarHeight: statusBarHeight, transition: transition, overrideTransition: false) }
@@ -138,8 +138,8 @@ public class Window: UIWindow {
         
         self.keyboardFrameChangeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.UIKeyboardWillChangeFrame, object: nil, queue: nil, using: { [weak self] notification in
             if let strongSelf = self {
-                let keyboardFrame: CGRect = (notification.userInfo?[UIKeyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue() ?? CGRect()
-                let keyboardHeight = max(0.0, UIScreen.main().bounds.size.height - keyboardFrame.minY)
+                let keyboardFrame: CGRect = (notification.userInfo?[UIKeyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue ?? CGRect()
+                let keyboardHeight = max(0.0, UIScreen.main.bounds.size.height - keyboardFrame.minY)
                 var duration: Double = (notification.userInfo?[UIKeyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
                 if duration > DBL_EPSILON {
                     duration = 0.5
@@ -316,7 +316,7 @@ public class Window: UIWindow {
         if let updatingLayout = self.updatingLayout {
             self.updatingLayout = nil
             if updatingLayout.layout != self.windowLayout {
-                var statusBarHeight = UIApplication.shared().statusBarFrame.size.height
+                var statusBarHeight = UIApplication.shared.statusBarFrame.size.height
                 var statusBarWasHidden = self.statusBarHidden
                 if statusBarHiddenInLandscape && updatingLayout.layout.size.width > updatingLayout.layout.size.height {
                     statusBarHeight = 0.0

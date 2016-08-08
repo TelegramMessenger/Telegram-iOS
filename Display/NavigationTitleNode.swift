@@ -15,7 +15,7 @@ public class NavigationTitleNode: ASDisplayNode {
         }
     }
     
-    public var color: UIColor = UIColor.black() {
+    public var color: UIColor = UIColor.black {
         didSet {
             self.setText(self._text)
         }
@@ -42,7 +42,7 @@ public class NavigationTitleNode: ASDisplayNode {
         var titleAttributes = [String : AnyObject]()
         titleAttributes[NSFontAttributeName] = UIFont.boldSystemFont(ofSize: 17.0)
         titleAttributes[NSForegroundColorAttributeName] = self.color
-        let titleString = AttributedString(string: text as String, attributes: titleAttributes)
+        let titleString = NSAttributedString(string: text as String, attributes: titleAttributes)
         self.label.attributedString = titleString
         self.invalidateCalculatedLayout()
     }

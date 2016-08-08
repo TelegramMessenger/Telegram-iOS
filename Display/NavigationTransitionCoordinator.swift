@@ -8,7 +8,7 @@ enum NavigationTransition {
 private let shadowWidth: CGFloat = 16.0
 
 private func generateShadow() -> UIImage? {
-    return UIImage(named: "NavigationShadow", in: Bundle(for: NavigationBackButtonNode.self), compatibleWith: nil)?.precomposed().resizableImage(withCapInsets: UIEdgeInsetsZero, resizingMode: .tile)
+    return UIImage(named: "NavigationShadow", in: Bundle(for: NavigationBackButtonNode.self), compatibleWith: nil)?.precomposed().resizableImage(withCapInsets: UIEdgeInsets(), resizingMode: .tile)
 }
 
 private let shadowImage = generateShadow()
@@ -51,7 +51,7 @@ class NavigationTransitionCoordinator {
         self.topNavigationBar = topNavigationBar
         self.bottomNavigationBar = bottomNavigationBar
         self.dimView = UIView()
-        self.dimView.backgroundColor = UIColor.black()
+        self.dimView.backgroundColor = UIColor.black
         self.shadowView = UIImageView(image: shadowImage)
         
         if let topNavigationBar = topNavigationBar, bottomNavigationBar = bottomNavigationBar {

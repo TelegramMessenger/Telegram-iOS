@@ -46,7 +46,7 @@ final class PresentationContext {
         
             self.presentationDisposables.add(controllerReady.start(next: { [weak self] _ in
                 if let strongSelf = self {
-                    if strongSelf.controllers.contains({ $0 === controller }) {
+                    if strongSelf.controllers.contains(where: { $0 === controller }) {
                         return
                     }
                     
@@ -131,7 +131,7 @@ final class PresentationContext {
     
     func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         for controller in self.controllers {
-            if controller.isViewLoaded() {
+            if controller.isViewLoaded {
                 if let result = controller.view.hitTest(point, with: event) {
                     return result
                 }

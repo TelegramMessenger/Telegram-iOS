@@ -26,7 +26,7 @@ class ASTransformLayer: CATransformLayer {
 }
 
 class ASTransformView: UIView {
-    override class func layerClass() -> AnyClass {
+    override class var layerClass: AnyClass {
         return ASTransformLayer.self
     }
 }

@@ -64,7 +64,6 @@
 		D05CC3291B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */; };
 		D06EE8451B7140FF00837186 /* Font.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06EE8441B7140FF00837186 /* Font.swift */; };
 		D07921A91B6FC0C0005C23D9 /* KeyboardHostWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07921A81B6FC0C0005C23D9 /* KeyboardHostWindow.swift */; };
-		D07921AC1B6FC92B005C23D9 /* StatusBarHostWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07921AB1B6FC92B005C23D9 /* StatusBarHostWindow.swift */; };
 		D081229D1D19AA1C005F7395 /* ContainerViewLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = D081229C1D19AA1C005F7395 /* ContainerViewLayout.swift */; };
 		D08E903A1D24159200533158 /* ActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08E90391D24159200533158 /* ActionSheetItem.swift */; };
 		D08E903C1D2417E000533158 /* ActionSheetButtonItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08E903B1D2417E000533158 /* ActionSheetButtonItem.swift */; };
@@ -172,7 +171,6 @@
 		D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InteractiveTransitionGestureRecognizer.swift; sourceTree = "<group>"; };
 		D06EE8441B7140FF00837186 /* Font.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Font.swift; sourceTree = "<group>"; };
 		D07921A81B6FC0C0005C23D9 /* KeyboardHostWindow.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = KeyboardHostWindow.swift; sourceTree = "<group>"; };
-		D07921AB1B6FC92B005C23D9 /* StatusBarHostWindow.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StatusBarHostWindow.swift; sourceTree = "<group>"; };
 		D081229C1D19AA1C005F7395 /* ContainerViewLayout.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContainerViewLayout.swift; sourceTree = "<group>"; };
 		D08E90391D24159200533158 /* ActionSheetItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetItem.swift; sourceTree = "<group>"; };
 		D08E903B1D2417E000533158 /* ActionSheetButtonItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetButtonItem.swift; sourceTree = "<group>"; };
@@ -435,7 +433,6 @@
 		D07921AA1B6FC911005C23D9 /* Status Bar */ = {
 			isa = PBXGroup;
 			children = (
-				D07921AB1B6FC92B005C23D9 /* StatusBarHostWindow.swift */,
 				D0078A671C92B21400DF6D92 /* StatusBar.swift */,
 				D0B3671F1C94A53A00346D2E /* StatusBarProxyNode.swift */,
 				D03E7DFE1C96F7B400C07816 /* StatusBarManager.swift */,
@@ -636,7 +633,6 @@
 			files = (
 				D08E903C1D2417E000533158 /* ActionSheetButtonItem.swift in Sources */,
 				D0E49C881B83A3580099E553 /* ImageCache.swift in Sources */,
-				D07921AC1B6FC92B005C23D9 /* StatusBarHostWindow.swift in Sources */,
 				D0078A681C92B21400DF6D92 /* StatusBar.swift in Sources */,
 				D05CC2F81B6955D000E235A3 /* UIViewController+Navigation.m in Sources */,
 				D02BDB021B6AC703008AFAD2 /* RuntimeUtils.swift in Sources */,
