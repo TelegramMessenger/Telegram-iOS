@@ -3,6 +3,8 @@ import Foundation
 private let QueueSpecificKey = DispatchSpecificKey<NSObject>()
 
 private let globalMainQueue = Queue(queue: DispatchQueue.main, specialIsMainQueue: true)
+private let globalDefaultQueue = Queue(queue: DispatchQueue.global(qos: .default), specialIsMainQueue: false)
+private let globalBackgroundQueue = Queue(queue: DispatchQueue.global(qos: .background), specialIsMainQueue: false)
 
 public final class Queue {
     private let nativeQueue: DispatchQueue
@@ -20,11 +22,11 @@ public final class Queue {
     }
     
     public class func concurrentDefaultQueue() -> Queue {
-        return Queue(queue: DispatchQueue.global(qos: .default), specialIsMainQueue: false)
+        return globalDefaultQueue
     }
     
     public class func concurrentBackgroundQueue() -> Queue {
-        return Queue(queue: DispatchQueue.global(qos: .background), specialIsMainQueue: false)
+        return globalBackgroundQueue
     }
     
     public init(queue: DispatchQueue) {
