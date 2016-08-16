@@ -94,6 +94,7 @@ public func <(lhs: PeerId, rhs: PeerId) -> Bool {
 
 public protocol Peer: Coding {
     var id: PeerId { get }
+    var indexName: PeerIndexNameRepresentation { get }
     
     func isEqual(_ other: Peer) -> Bool
 }

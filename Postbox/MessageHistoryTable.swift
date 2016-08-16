@@ -1289,6 +1289,8 @@ final class MessageHistoryTable: Table {
     }
     
     func earlierEntries(_ peerId: PeerId, index: MessageIndex?, count: Int) -> [IntermediateMessageHistoryEntry] {
+        
+        
         var entries: [IntermediateMessageHistoryEntry] = []
         let key: ValueBoxKey
         if let index = index {

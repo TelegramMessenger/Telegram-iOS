@@ -9,6 +9,9 @@
 /* Begin PBXBuildFile section */
 		D003E4E61B38DBDB00C22CBC /* MessageHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D003E4E51B38DBDB00C22CBC /* MessageHistoryView.swift */; };
 		D0079F5A1D592E8B00A27A2C /* ContactTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0079F591D592E8B00A27A2C /* ContactTable.swift */; };
+		D0079F631D5A242500A27A2C /* ContactPeerIdsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0079F621D5A242500A27A2C /* ContactPeerIdsView.swift */; };
+		D0079F651D5A457A00A27A2C /* ContactPeersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0079F641D5A457A00A27A2C /* ContactPeersView.swift */; };
+		D0079F6B1D5B3AAB00A27A2C /* PeerNameIndexRepresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0079F6A1D5B3AAB00A27A2C /* PeerNameIndexRepresentation.swift */; };
 		D00E0FB81B85D192002E4EB5 /* lmdb.h in Headers */ = {isa = PBXBuildFile; fileRef = D00E0FB41B85D192002E4EB5 /* lmdb.h */; };
 		D00E0FB91B85D192002E4EB5 /* mdb.c in Sources */ = {isa = PBXBuildFile; fileRef = D00E0FB51B85D192002E4EB5 /* mdb.c */; settings = {COMPILER_FLAGS = "-Wno-conversion -Wno-unreachable-code -Wno-conditional-uninitialized -Wno-format-extra-args -Wno-macro-redefined"; }; };
 		D00E0FBA1B85D192002E4EB5 /* midl.c in Sources */ = {isa = PBXBuildFile; fileRef = D00E0FB61B85D192002E4EB5 /* midl.c */; settings = {COMPILER_FLAGS = "-Wno-conversion"; }; };
@@ -41,6 +44,7 @@
 		D08C713C1C51283C00779C0F /* MessageHistoryIndexTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08C713B1C51283C00779C0F /* MessageHistoryIndexTable.swift */; };
 		D08C713E1C512EA500779C0F /* MessageHistoryTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08C713D1C512EA500779C0F /* MessageHistoryTable.swift */; };
 		D08CEFB41D2AD8BE0015D3BC /* RedBlackTree.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08CEFB31D2AD8BE0015D3BC /* RedBlackTree.swift */; };
+		D08D451F1D5D2CA700A7428A /* RatingTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08D451E1D5D2CA700A7428A /* RatingTable.swift */; };
 		D0977F9C1B822DB4009994B2 /* ValueBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977F9B1B822DB4009994B2 /* ValueBox.swift */; };
 		D0977F9E1B8234DF009994B2 /* ValueBoxKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977F9D1B8234DF009994B2 /* ValueBoxKey.swift */; };
 		D0977FA01B8244D7009994B2 /* SqliteValueBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977F9F1B8244D7009994B2 /* SqliteValueBox.swift */; };
@@ -92,6 +96,9 @@
 /* Begin PBXFileReference section */
 		D003E4E51B38DBDB00C22CBC /* MessageHistoryView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryView.swift; sourceTree = "<group>"; };
 		D0079F591D592E8B00A27A2C /* ContactTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContactTable.swift; sourceTree = "<group>"; };
+		D0079F621D5A242500A27A2C /* ContactPeerIdsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContactPeerIdsView.swift; sourceTree = "<group>"; };
+		D0079F641D5A457A00A27A2C /* ContactPeersView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContactPeersView.swift; sourceTree = "<group>"; };
+		D0079F6A1D5B3AAB00A27A2C /* PeerNameIndexRepresentation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerNameIndexRepresentation.swift; sourceTree = "<group>"; };
 		D00E0FB41B85D192002E4EB5 /* lmdb.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = lmdb.h; path = submodules/lmdb/libraries/liblmdb/lmdb.h; sourceTree = SOURCE_ROOT; };
 		D00E0FB51B85D192002E4EB5 /* mdb.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = mdb.c; path = submodules/lmdb/libraries/liblmdb/mdb.c; sourceTree = SOURCE_ROOT; };
 		D00E0FB61B85D192002E4EB5 /* midl.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = midl.c; path = submodules/lmdb/libraries/liblmdb/midl.c; sourceTree = SOURCE_ROOT; };
@@ -125,6 +132,7 @@
 		D08C713B1C51283C00779C0F /* MessageHistoryIndexTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryIndexTable.swift; sourceTree = "<group>"; };
 		D08C713D1C512EA500779C0F /* MessageHistoryTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryTable.swift; sourceTree = "<group>"; };
 		D08CEFB31D2AD8BE0015D3BC /* RedBlackTree.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RedBlackTree.swift; sourceTree = "<group>"; };
+		D08D451E1D5D2CA700A7428A /* RatingTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RatingTable.swift; sourceTree = "<group>"; };
 		D0977F9B1B822DB4009994B2 /* ValueBox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ValueBox.swift; sourceTree = "<group>"; };
 		D0977F9D1B8234DF009994B2 /* ValueBoxKey.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ValueBoxKey.swift; sourceTree = "<group>"; };
 		D0977F9F1B8244D7009994B2 /* SqliteValueBox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SqliteValueBox.swift; sourceTree = "<group>"; };
@@ -269,6 +277,7 @@
 				D0C674C71CBB11C600183765 /* MessageHistoryReadStateTable.swift */,
 				D01F7D9A1CBEC390008765C9 /* MessageHistoryInvalidatedReadStateTable.swift */,
 				D09ADF0B1D2EB83500C8208D /* OrderStatisticTable.swift */,
+				D08D451E1D5D2CA700A7428A /* RatingTable.swift */,
 			);
 			name = Tables;
 			sourceTree = "<group>";
@@ -282,6 +291,7 @@
 				D08C71391C501F0700779C0F /* MessageHistoryHole.swift */,
 				D044CA2D1C618373002160FF /* ChatListHole.swift */,
 				D0C674CB1CBB14A700183765 /* PeerReadState.swift */,
+				D0079F6A1D5B3AAB00A27A2C /* PeerNameIndexRepresentation.swift */,
 			);
 			name = Objects;
 			sourceTree = "<group>";
@@ -316,6 +326,8 @@
 				D0F9E86A1C59719800037222 /* ChatListView.swift */,
 				D033A6F81C73E440006A2EAB /* UnsentMessageHistoryView.swift */,
 				D01F7D9C1CBF8586008765C9 /* SynchronizePeerReadStatesView.swift */,
+				D0079F621D5A242500A27A2C /* ContactPeerIdsView.swift */,
+				D0079F641D5A457A00A27A2C /* ContactPeersView.swift */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -512,19 +524,23 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0F9E8631C579F0200037222 /* MediaCleanupTable.swift in Sources */,
+				D08D451F1D5D2CA700A7428A /* RatingTable.swift in Sources */,
 				D0F9E86F1C5A0E7600037222 /* KeychainTable.swift in Sources */,
 				D0E3A7821B28ADD000A402D9 /* Postbox.swift in Sources */,
 				D0E3A79E1B28B50400A402D9 /* Message.swift in Sources */,
 				D0C674C81CBB11C600183765 /* MessageHistoryReadStateTable.swift in Sources */,
+				D0079F651D5A457A00A27A2C /* ContactPeersView.swift in Sources */,
 				D09ADF0A1D2E89F300C8208D /* RandomAccessMediaResourceContext.swift in Sources */,
 				D08CEFB41D2AD8BE0015D3BC /* RedBlackTree.swift in Sources */,
 				D044CA2E1C618373002160FF /* ChatListHole.swift in Sources */,
 				D044E1631B2AD677001EE087 /* MurMurHash32.m in Sources */,
 				D00E0FBE1B85D1B5002E4EB5 /* LmdbValueBox.swift in Sources */,
+				D0079F6B1D5B3AAB00A27A2C /* PeerNameIndexRepresentation.swift in Sources */,
 				D08C713A1C501F0700779C0F /* MessageHistoryHole.swift in Sources */,
 				D044CA2A1C617D39002160FF /* SeedConfiguration.swift in Sources */,
 				D01F7D9D1CBF8586008765C9 /* SynchronizePeerReadStatesView.swift in Sources */,
 				D0F9E85B1C565EBB00037222 /* MessageMediaTable.swift in Sources */,
+				D0079F631D5A242500A27A2C /* ContactPeerIdsView.swift in Sources */,
 				D0E1DE151C5E1C6900C7826E /* ViewTracker.swift in Sources */,
 				D0F9E8751C5A334100037222 /* SimpleDictionary.swift in Sources */,
 				D08C713E1C512EA500779C0F /* MessageHistoryTable.swift in Sources */,

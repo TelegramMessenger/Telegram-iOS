@@ -3,6 +3,9 @@ import Foundation
 public struct SimpleDictionary<K: Equatable, V>: Sequence {
     private var items: [(K, V)] = []
     
+    public init() {
+    }
+    
     public subscript(key: K) -> V? {
         get {
             for (k, value) in self.items {
@@ -29,8 +32,6 @@ public struct SimpleDictionary<K: Equatable, V>: Sequence {
             }
         }
     }
-    
-    
     
     public func makeIterator() -> AnyIterator<(K, V)> {
         var index = 0

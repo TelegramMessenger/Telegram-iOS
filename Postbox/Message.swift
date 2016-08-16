@@ -182,7 +182,7 @@ public struct MessageFlags: OptionSet {
         self.rawValue = 0
     }
     
-    init(_ flags: StoreMessageFlags) {
+    public init(_ flags: StoreMessageFlags) {
         var rawValue: UInt32 = 0
         
         if flags.contains(StoreMessageFlags.Unsent) {
@@ -276,7 +276,7 @@ public final class Message {
     public let peers: SimpleDictionary<PeerId, Peer>
     public let associatedMessages: SimpleDictionary<MessageId, Message>
     
-    init(stableId: UInt32, id: MessageId, timestamp: Int32, flags: MessageFlags, tags: MessageTags, forwardInfo: MessageForwardInfo?, author: Peer?, text: String, attributes: [MessageAttribute], media: [Media], peers: SimpleDictionary<PeerId, Peer>, associatedMessages: SimpleDictionary<MessageId, Message>) {
+    public init(stableId: UInt32, id: MessageId, timestamp: Int32, flags: MessageFlags, tags: MessageTags, forwardInfo: MessageForwardInfo?, author: Peer?, text: String, attributes: [MessageAttribute], media: [Media], peers: SimpleDictionary<PeerId, Peer>, associatedMessages: SimpleDictionary<MessageId, Message>) {
         self.stableId = stableId
         self.id = id
         self.timestamp = timestamp
