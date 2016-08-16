@@ -107,7 +107,7 @@ public extension CALayer {
         self.add(animation, forKey: key)
     }
     
-    public func animateAlpha(from: CGFloat, to: CGFloat, duration: Double, removeOnCompletion: Bool = true, completion: ((Bool) -> ())? = nil) {
+    public func animateAlpha(from: CGFloat, to: CGFloat, duration: Double, timingFunction: String = kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: Bool = true, completion: ((Bool) -> ())? = nil) {
         self.animate(from: NSNumber(value: Float(from)), to: NSNumber(value: Float(to)), keyPath: "opacity", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: duration, removeOnCompletion: removeOnCompletion, completion: completion)
     }
     

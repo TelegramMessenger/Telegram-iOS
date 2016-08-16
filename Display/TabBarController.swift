@@ -35,7 +35,7 @@ public class TabBarController: ViewController {
         }
     }
     
-    private var currentController: ViewController?
+    var currentController: ViewController?
     
     override public init() {
         super.init()
@@ -76,6 +76,7 @@ public class TabBarController: ViewController {
             self.currentController = self.controllers[self._selectedIndex]
         }
         
+        var displayNavigationBar = false
         if let currentController = self.currentController {
             currentController.willMove(toParentViewController: self)
             currentController.containerLayoutUpdated(self.containerLayout.addedInsets(insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 49.0, right: 0.0)), transition: .immediate)
@@ -87,10 +88,15 @@ public class TabBarController: ViewController {
             self.navigationItem.title = currentController.navigationItem.title
             self.navigationItem.leftBarButtonItem = currentController.navigationItem.leftBarButtonItem
             self.navigationItem.rightBarButtonItem = currentController.navigationItem.rightBarButtonItem
+            displayNavigationBar = currentController.displayNavigationBar
         } else {
             self.navigationItem.title = nil
             self.navigationItem.leftBarButtonItem = nil
             self.navigationItem.rightBarButtonItem = nil
+            displayNavigationBar = false
+        }
+        if self.displayNavigationBar != displayNavigationBar {
+            self.setDisplayNavigationBar(displayNavigationBar)
         }
     }
     

@@ -17,7 +17,7 @@ public func dumpLayers(_ layer: CALayer) {
 }
 
 private func dumpLayers(_ layer: CALayer, indent: String = "") {
-    print("\(indent)\(layer)(\(layer.frame))")
+    print("\(indent)\(layer)(frame: \(layer.frame), bounds: \(layer.bounds))")
     if layer.sublayers != nil {
         let nextIndent = indent + ".."
         for sublayer in layer.sublayers ?? [] {

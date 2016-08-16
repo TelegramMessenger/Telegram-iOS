@@ -62,7 +62,15 @@ public class ListViewItemNode: ASDisplayNode {
         }
     }
     
-    final var accessoryHeaderItemNode: ListViewAccessoryItemNode?
+    final var headerAccessoryItemNode: ListViewAccessoryItemNode? {
+        didSet {
+            if let headerAccessoryItemNode = self.headerAccessoryItemNode {
+                self.layoutHeaderAccessoryItemNode(headerAccessoryItemNode)
+            }
+        }
+    }
+    
+    final var floatingAccessoryItemNode: ListViewAccessoryItemNode?
     
     private final var spring: ListViewItemSpring?
     private final var animations: [(String, ListViewAnimation)] = []
@@ -138,7 +146,7 @@ public class ListViewItemNode: ASDisplayNode {
         
         //self.layerBacked = layerBacked
         
-        if layerBacked {
+        /*if layerBacked {
             super.init(layerBlock: {
                 return ASTransformLayer()
             }, didLoad: nil)
@@ -146,7 +154,10 @@ public class ListViewItemNode: ASDisplayNode {
             super.init(viewBlock: {
                 return ListViewItemView()
             }, didLoad: nil)
-        }
+        }*/
+        
+        super.init()
+        self.isLayerBacked = layerBacked
     }
     
     var apparentHeight: CGFloat = 0.0
@@ -169,6 +180,9 @@ public class ListViewItemNode: ASDisplayNode {
                 if let accessoryItemNode = self.accessoryItemNode {
                     self.layoutAccessoryItemNode(accessoryItemNode)
                 }
+                if let headerAccessoryItemNode = self.headerAccessoryItemNode {
+                    self.layoutHeaderAccessoryItemNode(headerAccessoryItemNode)
+                }
             }
         }
     }
@@ -187,6 +201,9 @@ public class ListViewItemNode: ASDisplayNode {
             if previousSize != value.size {
                 if let accessoryItemNode = self.accessoryItemNode {
                     self.layoutAccessoryItemNode(accessoryItemNode)
+                }
+                if let headerAccessoryItemNode = self.headerAccessoryItemNode {
+                    self.layoutHeaderAccessoryItemNode(headerAccessoryItemNode)
                 }
             }
         }
@@ -214,6 +231,9 @@ public class ListViewItemNode: ASDisplayNode {
     }
     
     public func layoutAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
+    }
+    
+    public func layoutHeaderAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
     }
     
     public func reuse() {

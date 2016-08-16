@@ -35,6 +35,8 @@ import SwiftSignalKit
     public let statusBar: StatusBar
     public let navigationBar: NavigationBar
     
+    public var displayNavigationBar = true
+    
     private let _ready = Promise<Bool>(true)
     public var ready: Promise<Bool> {
         return self._ready
@@ -107,6 +109,10 @@ import SwiftSignalKit
             navigationBarFrame.size.height = 20.0 + 32.0
         }
         
+        if !self.displayNavigationBar {
+            navigationBarFrame.origin.y = -navigationBarFrame.size.height
+        }
+        
         transition.updateFrame(node: self.navigationBar, frame: navigationBarFrame)
         
         self.presentationContext.containerLayoutUpdated(layout, transition: transition)
@@ -135,6 +141,20 @@ import SwiftSignalKit
     public func requestLayout(transition: ContainedViewLayoutTransition) {
         if self.isViewLoaded {
             self.containerLayoutUpdated(self.containerLayout, transition: transition)
+        }
+    }
+    
+    public func setDisplayNavigationBar(_ displayNavigtionBar: Bool, transition: ContainedViewLayoutTransition = .immediate) {
+        if displayNavigtionBar != self.displayNavigationBar {
+            self.displayNavigationBar = displayNavigtionBar
+            if let parent = self.parent as? TabBarController {
+                if parent.currentController === self {
+                    parent.displayNavigationBar = displayNavigationBar
+                    parent.requestLayout(transition: transition)
+                }
+            } else {
+                self.requestLayout(transition: transition)
+            }
         }
     }
     

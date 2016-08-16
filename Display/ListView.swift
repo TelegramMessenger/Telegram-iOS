@@ -1470,7 +1470,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         }
         
         let sortedIndicesAndItems = insertIndicesAndItems.sorted(by: { $0.index < $1.index })
-        if self.items.count == 0 {
+        if self.items.count == 0 && !sortedIndicesAndItems.isEmpty {
             if sortedIndicesAndItems[0].index != 0 {
                 fatalError("deleteAndInsertItems: invalid insert into empty list")
             }
@@ -2234,13 +2234,10 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
             
             self.snapToBounds(scrollToItem != nil)
             
+            self.updateAccessoryNodes(animated: animated, currentTimestamp: timestamp)
+            self.updateFloatingAccessoryNodes(animated: animated, currentTimestamp: timestamp)
+            
             if let scrollToItem = scrollToItem where scrollToItem.animated {
-                /*for itemNode in self.itemNodes {
-                    print("item \(itemNode.index) frame \(itemNode.frame)")
-                }*/
-                
-                self.updateAccessoryNodes(animated: animated, currentTimestamp: timestamp)
-                
                 if self.itemNodes.count != 0 {
                     var offset: CGFloat?
                     
@@ -2327,7 +2324,6 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
                 
                 completion()
             } else {
-                self.updateAccessoryNodes(animated: animated, currentTimestamp: timestamp)
                 if animated {
                     self.setNeedsAnimations()
                 }
@@ -2375,8 +2371,8 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         
         node.accessoryItemNode?.removeFromSupernode()
         node.accessoryItemNode = nil
-        node.accessoryHeaderItemNode?.removeFromSupernode()
-        node.accessoryHeaderItemNode = nil
+        node.headerAccessoryItemNode?.removeFromSupernode()
+        node.headerAccessoryItemNode = nil
     }
     
     private func updateAccessoryNodes(animated: Bool, currentTimestamp: Double) {
@@ -2385,64 +2381,140 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         for itemNode in self.itemNodes {
             index += 1
             
-            if let itemNodeIndex = itemNode.index {
-                if let accessoryItem = self.items[itemNodeIndex].accessoryItem {
-                    let previousItem: ListViewItem? = itemNodeIndex == 0 ? nil : self.items[itemNodeIndex - 1]
-                    let previousAccessoryItem = previousItem?.accessoryItem
-                    
-                    if (previousAccessoryItem == nil || !previousAccessoryItem!.isEqualToItem(accessoryItem)) {
-                        if itemNode.accessoryItemNode == nil {
-                            var didStealAccessoryNode = false
-                            if index != count - 1 {
-                                for i in index + 1 ..< count {
-                                    let nextItemNode = self.itemNodes[i]
-                                    if let nextItemNodeIndex = nextItemNode.index {
-                                        let nextItem = self.items[nextItemNodeIndex]
-                                        if let nextAccessoryItem = nextItem.accessoryItem where nextAccessoryItem.isEqualToItem(accessoryItem) {
-                                            if let nextAccessoryItemNode = nextItemNode.accessoryItemNode {
-                                                didStealAccessoryNode = true
-                                                
-                                                var previousAccessoryItemNodeOrigin = nextAccessoryItemNode.frame.origin
-                                                let previousParentOrigin = nextItemNode.frame.origin
-                                                previousAccessoryItemNodeOrigin.x += previousParentOrigin.x
-                                                previousAccessoryItemNodeOrigin.y += previousParentOrigin.y
-                                                previousAccessoryItemNodeOrigin.y -= nextItemNode.bounds.origin.y
-                                                previousAccessoryItemNodeOrigin.y -= nextAccessoryItemNode.transitionOffset.y
-                                                nextAccessoryItemNode.transitionOffset = CGPoint()
-                                                
-                                                nextAccessoryItemNode.removeFromSupernode()
-                                                itemNode.addSubnode(nextAccessoryItemNode)
-                                                itemNode.accessoryItemNode = nextAccessoryItemNode
-                                                self.itemNodes[i].accessoryItemNode = nil
-                                                
-                                                var updatedAccessoryItemNodeOrigin = nextAccessoryItemNode.frame.origin
-                                                let updatedParentOrigin = itemNode.frame.origin
-                                                updatedAccessoryItemNodeOrigin.x += updatedParentOrigin.x
-                                                updatedAccessoryItemNodeOrigin.y += updatedParentOrigin.y
-                                                updatedAccessoryItemNodeOrigin.y -= itemNode.bounds.origin.y
-                                                
-                                                let deltaHeight = itemNode.frame.size.height - nextItemNode.frame.size.height
-                                                
-                                                nextAccessoryItemNode.animateTransitionOffset(CGPoint(x: 0.0, y: updatedAccessoryItemNodeOrigin.y - previousAccessoryItemNodeOrigin.y - deltaHeight), beginAt: currentTimestamp, duration: insertionAnimationDuration * UIView.animationDurationFactor(), curve: listViewAnimationCurveSystem)
-                                            }
-                                        } else {
-                                            break
+            guard let itemNodeIndex = itemNode.index else {
+                continue
+            }
+            
+            if let accessoryItem = self.items[itemNodeIndex].accessoryItem {
+                let previousItem: ListViewItem? = itemNodeIndex == 0 ? nil : self.items[itemNodeIndex - 1]
+                let previousAccessoryItem = previousItem?.accessoryItem
+                
+                if (previousAccessoryItem == nil || !previousAccessoryItem!.isEqualToItem(accessoryItem)) {
+                    if itemNode.accessoryItemNode == nil {
+                        var didStealAccessoryNode = false
+                        if index != count - 1 {
+                            for i in index + 1 ..< count {
+                                let nextItemNode = self.itemNodes[i]
+                                if let nextItemNodeIndex = nextItemNode.index {
+                                    let nextItem = self.items[nextItemNodeIndex]
+                                    if let nextAccessoryItem = nextItem.accessoryItem where nextAccessoryItem.isEqualToItem(accessoryItem) {
+                                        if let nextAccessoryItemNode = nextItemNode.accessoryItemNode {
+                                            didStealAccessoryNode = true
+                                            
+                                            var previousAccessoryItemNodeOrigin = nextAccessoryItemNode.frame.origin
+                                            let previousParentOrigin = nextItemNode.frame.origin
+                                            previousAccessoryItemNodeOrigin.x += previousParentOrigin.x
+                                            previousAccessoryItemNodeOrigin.y += previousParentOrigin.y
+                                            previousAccessoryItemNodeOrigin.y -= nextItemNode.bounds.origin.y
+                                            previousAccessoryItemNodeOrigin.y -= nextAccessoryItemNode.transitionOffset.y
+                                            nextAccessoryItemNode.transitionOffset = CGPoint()
+                                            
+                                            nextAccessoryItemNode.removeFromSupernode()
+                                            itemNode.addSubnode(nextAccessoryItemNode)
+                                            itemNode.accessoryItemNode = nextAccessoryItemNode
+                                            self.itemNodes[i].accessoryItemNode = nil
+                                            
+                                            var updatedAccessoryItemNodeOrigin = nextAccessoryItemNode.frame.origin
+                                            let updatedParentOrigin = itemNode.frame.origin
+                                            updatedAccessoryItemNodeOrigin.x += updatedParentOrigin.x
+                                            updatedAccessoryItemNodeOrigin.y += updatedParentOrigin.y
+                                            updatedAccessoryItemNodeOrigin.y -= itemNode.bounds.origin.y
+                                            
+                                            let deltaHeight = itemNode.frame.size.height - nextItemNode.frame.size.height
+                                            
+                                            nextAccessoryItemNode.animateTransitionOffset(CGPoint(x: 0.0, y: updatedAccessoryItemNodeOrigin.y - previousAccessoryItemNodeOrigin.y - deltaHeight), beginAt: currentTimestamp, duration: insertionAnimationDuration * UIView.animationDurationFactor(), curve: listViewAnimationCurveSystem)
                                         }
+                                    } else {
+                                        break
                                     }
                                 }
                             }
-                            
-                            if !didStealAccessoryNode {
-                                let accessoryNode = accessoryItem.node()
-                                itemNode.addSubnode(accessoryNode)
-                                itemNode.accessoryItemNode = accessoryNode
+                        }
+                        
+                        if !didStealAccessoryNode {
+                            let accessoryNode = accessoryItem.node()
+                            itemNode.addSubnode(accessoryNode)
+                            itemNode.accessoryItemNode = accessoryNode
+                        }
+                    }
+                } else {
+                    itemNode.accessoryItemNode?.removeFromSupernode()
+                    itemNode.accessoryItemNode = nil
+                }
+            }
+            
+            if let headerAccessoryItem = self.items[itemNodeIndex].headerAccessoryItem {
+                let previousItem: ListViewItem? = itemNodeIndex == 0 ? nil : self.items[itemNodeIndex - 1]
+                let previousHeaderAccessoryItem = previousItem?.headerAccessoryItem
+                
+                if (previousHeaderAccessoryItem == nil || !previousHeaderAccessoryItem!.isEqualToItem(headerAccessoryItem)) {
+                    if itemNode.headerAccessoryItemNode == nil {
+                        var didStealHeaderAccessoryNode = false
+                        if index != count - 1 {
+                            for i in index + 1 ..< count {
+                                let nextItemNode = self.itemNodes[i]
+                                if let nextItemNodeIndex = nextItemNode.index {
+                                    let nextItem = self.items[nextItemNodeIndex]
+                                    if let nextHeaderAccessoryItem = nextItem.headerAccessoryItem where nextHeaderAccessoryItem.isEqualToItem(headerAccessoryItem) {
+                                        if let nextHeaderAccessoryItemNode = nextItemNode.headerAccessoryItemNode {
+                                            didStealHeaderAccessoryNode = true
+                                            
+                                            var previousHeaderAccessoryItemNodeOrigin = nextHeaderAccessoryItemNode.frame.origin
+                                            let previousParentOrigin = nextItemNode.frame.origin
+                                            previousHeaderAccessoryItemNodeOrigin.x += previousParentOrigin.x
+                                            previousHeaderAccessoryItemNodeOrigin.y += previousParentOrigin.y
+                                            previousHeaderAccessoryItemNodeOrigin.y -= nextItemNode.bounds.origin.y
+                                            previousHeaderAccessoryItemNodeOrigin.y -= nextHeaderAccessoryItemNode.transitionOffset.y
+                                            nextHeaderAccessoryItemNode.transitionOffset = CGPoint()
+                                            
+                                            nextHeaderAccessoryItemNode.removeFromSupernode()
+                                            itemNode.addSubnode(nextHeaderAccessoryItemNode)
+                                            itemNode.headerAccessoryItemNode = nextHeaderAccessoryItemNode
+                                            self.itemNodes[i].headerAccessoryItemNode = nil
+                                            
+                                            var updatedHeaderAccessoryItemNodeOrigin = nextHeaderAccessoryItemNode.frame.origin
+                                            let updatedParentOrigin = itemNode.frame.origin
+                                            updatedHeaderAccessoryItemNodeOrigin.x += updatedParentOrigin.x
+                                            updatedHeaderAccessoryItemNodeOrigin.y += updatedParentOrigin.y
+                                            updatedHeaderAccessoryItemNodeOrigin.y -= itemNode.bounds.origin.y
+                                            
+                                            let deltaHeight = itemNode.frame.size.height - nextItemNode.frame.size.height
+                                            
+                                            nextHeaderAccessoryItemNode.animateTransitionOffset(CGPoint(x: 0.0, y: updatedHeaderAccessoryItemNodeOrigin.y - previousHeaderAccessoryItemNodeOrigin.y - deltaHeight), beginAt: currentTimestamp, duration: insertionAnimationDuration * UIView.animationDurationFactor(), curve: listViewAnimationCurveSystem)
+                                        }
+                                    } else {
+                                        break
+                                    }
+                                }
                             }
                         }
-                    } else {
-                        itemNode.accessoryItemNode?.removeFromSupernode()
-                        itemNode.accessoryItemNode = nil
+                        
+                        if !didStealHeaderAccessoryNode {
+                            let headerAccessoryNode = headerAccessoryItem.node()
+                            itemNode.addSubnode(headerAccessoryNode)
+                            itemNode.headerAccessoryItemNode = headerAccessoryNode
+                        }
                     }
+                } else {
+                    itemNode.headerAccessoryItemNode?.removeFromSupernode()
+                    itemNode.headerAccessoryItemNode = nil
                 }
+            }
+        }
+    }
+    
+    private func updateFloatingAccessoryNodes(animated: Bool, currentTimestamp: Double) {
+        var previousFloatingAccessoryItem: ListViewAccessoryItem?
+        for itemNode in self.itemNodes {
+            if let index = itemNode.index, let floatingAccessoryItem = self.items[index].floatingAccessoryItem {
+                if itemNode.floatingAccessoryItemNode == nil {
+                    let floatingAccessoryItemNode = floatingAccessoryItem.node()
+                    itemNode.floatingAccessoryItemNode = floatingAccessoryItemNode
+                    itemNode.addSubnode(floatingAccessoryItemNode)
+                }
+            } else {
+                itemNode.floatingAccessoryItemNode?.removeFromSupernode()
+                itemNode.floatingAccessoryItemNode = nil
             }
         }
     }
@@ -2852,7 +2924,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         return nil
     }
     
-    public func forEachItemNode(_ f: (ListViewItemNode) -> Void) {
+    public func forEachItemNode(_ f: @noescape(ListViewItemNode) -> Void) {
         for itemNode in self.itemNodes {
             if itemNode.index != nil {
                 f(itemNode)
