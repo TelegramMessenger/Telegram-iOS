@@ -1,6 +1,6 @@
 import Foundation
 import CoreMedia
-import TelegramCorePrivate
+import TelegramCorePrivateModule
 
 enum MediaTrackFrameType {
     case video

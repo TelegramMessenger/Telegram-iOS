@@ -3,22 +3,22 @@ import Display
 import Postbox
 import SwiftSignalKit
 
-class SettingsController: ListController {
+public class SettingsController: ListController {
     private let account: Account
     
     private let peer = Promise<Peer>()
     private let connectionStatus = Promise<ConnectionStatus>(.Online)
     private let peerAndConnectionStatusDisposable = MetaDisposable()
     
-    init(account: Account) {
+    public init(account: Account) {
         self.account = account
         
         super.init()
         
         self.title = "Settings"
         self.tabBarItem.title = "Settings"
-        self.tabBarItem.image = UIImage(named: "Chat List/Tabs/IconSettings")?.precomposed()
-        self.tabBarItem.selectedImage = UIImage(named: "Chat List/Tabs/IconSettingsSelected")?.precomposed()
+        self.tabBarItem.image = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")?.precomposed()
+        self.tabBarItem.selectedImage = UIImage(bundleImageName: "Chat List/Tabs/IconSettingsSelected")?.precomposed()
         
         let deselectAction = { [weak self] () -> Void in
             self?.listDisplayNode.listView.clearHighlightAnimated(true)
@@ -58,7 +58,7 @@ class SettingsController: ListController {
         connectionStatus.set(account.network.connectionStatus)
     }
 
-    required init(coder aDecoder: NSCoder) {
+    required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     

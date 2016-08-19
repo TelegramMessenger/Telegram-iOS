@@ -1,5 +1,6 @@
 import Foundation
-import TelegramCorePrivate
+import TelegramCorePrivateModule
+import CoreMedia
 
 final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
     private let codecContext: UnsafeMutablePointer<AVCodecContext>
@@ -11,7 +12,6 @@ final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
     init(codecContext: UnsafeMutablePointer<AVCodecContext>) {
         self.codecContext = codecContext
         self.audioFrame = av_frame_alloc()
-        
         
         self.swrContext = FFMpegSwResample(sourceChannelCount: Int(codecContext.pointee.channels), sourceSampleRate: Int(codecContext.pointee.sample_rate), sourceSampleFormat: codecContext.pointee.sample_fmt, destinationChannelCount: 2, destinationSampleRate: 44100, destinationSampleFormat: AV_SAMPLE_FMT_S16)
     }

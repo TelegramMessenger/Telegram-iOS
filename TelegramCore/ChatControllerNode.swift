@@ -4,7 +4,7 @@ import Postbox
 import SwiftSignalKit
 import Display
 
-private let backgroundImage = UIImage(named: "Chat/Wallpapers/Builtin0")
+private let backgroundImage = UIImage(bundleImageName: "Chat/Wallpapers/Builtin0")
 
 enum ChatMessageViewPosition: Equatable {
     case AroundUnread(count: Int)

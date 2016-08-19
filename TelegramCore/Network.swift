@@ -2,7 +2,7 @@ import Foundation
 import MtProtoKit
 import Postbox
 import SwiftSignalKit
-import TelegramCorePrivate
+import TelegramCorePrivateModule
 
 enum ConnectionStatus {
     case WaitingForNetwork
@@ -76,7 +76,7 @@ private class MTProtoConnectionStatusDelegate: NSObject, MTProtoDelegate {
     }
 }
 
-class Network {
+public class Network {
     let datacenterId: Int
     let context: MTContext
     let mtProto: MTProto
@@ -91,6 +91,7 @@ class Network {
     
     init(datacenterId: Int, keychain: Keychain) {
         NetworkRegisterLoggingFunction()
+        registerLoggingFunctions()
         
         self.datacenterId = datacenterId
         

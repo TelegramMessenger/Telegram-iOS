@@ -1,4 +1,4 @@
-module TelegramCorePrivate {
+module TelegramCorePrivateModule {
     header "../../third-party/FFmpeg-iOS/include/libavcodec/avcodec.h"
     header "../../third-party/FFmpeg-iOS/include/libavformat/avformat.h"
     header "../../third-party/FFmpeg-iOS/include/libavformat/avio.h"
@@ -14,5 +14,4 @@ module TelegramCorePrivate {
     header "../TryCatchCpp.h"
     header "../RingBuffer.h"
     header "../TelegramCoreIncludes.h"
-    export *
 }

@@ -2,7 +2,7 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import CoreMedia
-import TelegramCorePrivate
+import TelegramCorePrivateModule
 
 private struct StreamContext {
     private let index: Int

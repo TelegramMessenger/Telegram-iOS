@@ -42,15 +42,15 @@ private func ==(lhs: ChatMessageBackgroundType, rhs: ChatMessageBackgroundType) 
     }
 }
 
-private let chatMessageBackgroundIncomingImage = UIImage(named: "Chat/Message/Background/BubbleIncoming")?.precomposed()
-private let chatMessageBackgroundOutgoingImage = UIImage(named: "Chat/Message/Background/BubbleOutgoing")?.precomposed()
-private let chatMessageBackgroundIncomingMergedTopImage = UIImage(named: "Chat/Message/Background/BubbleIncomingMergedTop")?.precomposed()
-private let chatMessageBackgroundIncomingMergedBottomImage = UIImage(named: "Chat/Message/Background/BubbleIncomingMergedBottom")?.precomposed()
-private let chatMessageBackgroundIncomingMergedBothImage = UIImage(named: "Chat/Message/Background/BubbleIncomingMergedBoth")?.precomposed()
-private let chatMessageBackgroundOutgoingMergedImage = UIImage(named: "Chat/Message/Background/BubbleOutgoingMerged")?.precomposed()
-private let chatMessageBackgroundOutgoingMergedTopImage = UIImage(named: "Chat/Message/Background/BubbleOutgoingMerged")?.precomposed()
-private let chatMessageBackgroundOutgoingMergedBottomImage = UIImage(named: "Chat/Message/Background/BubbleOutgoingMerged")?.precomposed()
-private let chatMessageBackgroundOutgoingMergedBothImage = UIImage(named: "Chat/Message/Background/BubbleOutgoingMerged")?.precomposed()
+private let chatMessageBackgroundIncomingImage = UIImage(bundleImageName: "Chat/Message/Background/BubbleIncoming")?.precomposed()
+private let chatMessageBackgroundOutgoingImage = UIImage(bundleImageName: "Chat/Message/Background/BubbleOutgoing")?.precomposed()
+private let chatMessageBackgroundIncomingMergedTopImage = UIImage(bundleImageName: "Chat/Message/Background/BubbleIncomingMergedTop")?.precomposed()
+private let chatMessageBackgroundIncomingMergedBottomImage = UIImage(bundleImageName: "Chat/Message/Background/BubbleIncomingMergedBottom")?.precomposed()
+private let chatMessageBackgroundIncomingMergedBothImage = UIImage(bundleImageName: "Chat/Message/Background/BubbleIncomingMergedBoth")?.precomposed()
+private let chatMessageBackgroundOutgoingMergedImage = UIImage(bundleImageName: "Chat/Message/Background/BubbleOutgoingMerged")?.precomposed()
+private let chatMessageBackgroundOutgoingMergedTopImage = UIImage(bundleImageName: "Chat/Message/Background/BubbleOutgoingMerged")?.precomposed()
+private let chatMessageBackgroundOutgoingMergedBottomImage = UIImage(bundleImageName: "Chat/Message/Background/BubbleOutgoingMerged")?.precomposed()
+private let chatMessageBackgroundOutgoingMergedBothImage = UIImage(bundleImageName: "Chat/Message/Background/BubbleOutgoingMerged")?.precomposed()
 
 class ChatMessageBackground: ASImageNode {
     private var type: ChatMessageBackgroundType?
@@ -448,7 +448,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     if let nameNode = nameNodeSizeApply.1() {
                         strongSelf.nameNode = nameNode
                         if nameNode.supernode == nil {
-                            nameNode.isLayerBacked = true
+                            if !nameNode.isNodeLoaded {
+                                nameNode.isLayerBacked = true
+                            }
                             strongSelf.addSubnode(nameNode)
                         }
                         nameNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + nameNodeOriginY), size: nameNodeSizeApply.0)

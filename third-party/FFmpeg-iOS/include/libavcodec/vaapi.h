@@ -31,7 +31,7 @@
  */
 
 #include <stdint.h>
-#include "libavutil/attributes.h"
+#include "../libavutilattributes.h"
 #include "version.h"
 
 /**

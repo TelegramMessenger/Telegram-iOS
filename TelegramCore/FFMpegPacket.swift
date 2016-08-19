@@ -1,5 +1,5 @@
 import Foundation
-import TelegramCorePrivate
+import TelegramCorePrivateModule
 
 final class FFMpegPacket {
     var packet = AVPacket()

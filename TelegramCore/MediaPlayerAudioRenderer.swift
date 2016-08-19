@@ -471,6 +471,7 @@ final class MediaPlayerAudioRenderer {
         didSet {
             let rate = self.rate
             if !oldValue.isEqual(to: rate) {
+                print("setting audio rate to \(rate)")
                 assert(rate.isEqual(to: 1.0) || rate.isEqual(to: 0.0))
                 
                 audioPlayerRendererQueue.async {

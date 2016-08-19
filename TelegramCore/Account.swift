@@ -3,17 +3,17 @@ import SwiftSignalKit
 import Postbox
 import MtProtoKit
 import Display
-import TelegramCorePrivate
+import TelegramCorePrivateModule
 
-struct AccountId {
+public struct AccountId {
     let stringValue: String
 }
 
-class AccountState: Coding, Equatable {
-    required init(decoder: Decoder) {
+public class AccountState: Coding, Equatable {
+    public required init(decoder: Decoder) {
     }
     
-    func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: Encoder) {
     }
     
     private init() {
@@ -24,19 +24,19 @@ class AccountState: Coding, Equatable {
     }
 }
 
-func ==(lhs: AccountState, rhs: AccountState) -> Bool {
+public func ==(lhs: AccountState, rhs: AccountState) -> Bool {
     return lhs.equalsTo(rhs)
 }
 
-final class UnauthorizedAccountState: AccountState {
+public final class UnauthorizedAccountState: AccountState {
     let masterDatacenterId: Int32
     
-    required init(decoder: Decoder) {
+    public required init(decoder: Decoder) {
         self.masterDatacenterId = decoder.decodeInt32ForKey("masterDatacenterId")
         super.init()
     }
     
-    override func encode(_ encoder: Encoder) {
+    override public func encode(_ encoder: Encoder) {
         encoder.encodeInt32(self.masterDatacenterId, forKey: "masterDatacenterId")
     }
     
@@ -54,7 +54,7 @@ final class UnauthorizedAccountState: AccountState {
     }
 }
 
-class AuthorizedAccountState: AccountState {
+public class AuthorizedAccountState: AccountState {
     final class State: Coding, Equatable, CustomStringConvertible {
         let pts: Int32
         let qts: Int32
@@ -92,7 +92,7 @@ class AuthorizedAccountState: AccountState {
     
     let state: State?
     
-    required init(decoder: Decoder) {
+    public required init(decoder: Decoder) {
         self.masterDatacenterId = decoder.decodeInt32ForKey("masterDatacenterId")
         self.peerId = PeerId(decoder.decodeInt64ForKey("peerId"))
         self.state = decoder.decodeObjectForKey("state", decoder: { return State(decoder: $0) }) as? State
@@ -100,7 +100,7 @@ class AuthorizedAccountState: AccountState {
         super.init()
     }
     
-    override func encode(_ encoder: Encoder) {
+    override public func encode(_ encoder: Encoder) {
         encoder.encodeInt32(self.masterDatacenterId, forKey: "masterDatacenterId")
         encoder.encodeInt64(self.peerId.toInt64(), forKey: "peerId")
         if let state = self.state {
@@ -138,22 +138,22 @@ func ==(lhs: AuthorizedAccountState.State, rhs: AuthorizedAccountState.State) ->
         lhs.seq == rhs.seq
 }
 
-func currentAccountId() -> AccountId {
-    let key = "Telegram_currentAccountId"
-    if let id = UserDefaults.standard.object(forKey: key) as? String {
+public func currentAccountId(appGroupPath: String) -> AccountId {
+    let filePath = "\(appGroupPath)/currentAccountId"
+    if let id = try? String(contentsOfFile: filePath) {
         return AccountId(stringValue: id)
     } else {
         let id = generateAccountId()
-        UserDefaults.standard.set(id.stringValue, forKey: key)
+        let _ = try? id.stringValue.write(toFile: filePath, atomically: true, encoding: .utf8)
         return id
     }
 }
 
-func generateAccountId() -> AccountId {
+public func generateAccountId() -> AccountId {
     return AccountId(stringValue: NSUUID().uuidString)
 }
 
-class UnauthorizedAccount {
+public class UnauthorizedAccount {
     let id: AccountId
     let postbox: Postbox
     let network: Network
@@ -186,31 +186,37 @@ class UnauthorizedAccount {
     }
 }
 
-func accountWithId(_ id: AccountId) -> Signal<Either<UnauthorizedAccount, Account>, NoError> {
+private var declaredEncodables: Void = {
+    declareEncodable(UnauthorizedAccountState.self, f: { UnauthorizedAccountState(decoder: $0) })
+    declareEncodable(AuthorizedAccountState.self, f: { AuthorizedAccountState(decoder: $0) })
+    declareEncodable(TelegramUser.self, f: { TelegramUser(decoder: $0) })
+    declareEncodable(TelegramGroup.self, f: { TelegramGroup(decoder: $0) })
+    declareEncodable(TelegramMediaImage.self, f: { TelegramMediaImage(decoder: $0) })
+    declareEncodable(TelegramMediaImageRepresentation.self, f: { TelegramMediaImageRepresentation(decoder: $0) })
+    declareEncodable(TelegramMediaVoiceNote.self, f: { TelegramMediaVoiceNote(decoder: $0) })
+    declareEncodable(TelegramMediaContact.self, f: { TelegramMediaContact(decoder: $0) })
+    declareEncodable(TelegramMediaMap.self, f: { TelegramMediaMap(decoder: $0) })
+    declareEncodable(TelegramMediaFile.self, f: { TelegramMediaFile(decoder: $0) })
+    declareEncodable(TelegramMediaFileAttribute.self, f: { TelegramMediaFileAttribute(decoder: $0) })
+    declareEncodable(TelegramCloudFileLocation.self, f: { TelegramCloudFileLocation(decoder: $0) })
+    declareEncodable(ChannelState.self, f: { ChannelState(decoder: $0) })
+    declareEncodable(InlineBotMessageAttribute.self, f: { InlineBotMessageAttribute(decoder: $0) })
+    declareEncodable(TextEntitiesMessageAttribute.self, f: { TextEntitiesMessageAttribute(decoder: $0) })
+    declareEncodable(ReplyMessageAttribute.self, f: { ReplyMessageAttribute(decoder: $0) })
+    declareEncodable(TelegramCloudDocumentLocation.self, f: { TelegramCloudDocumentLocation(decoder: $0) })
+    declareEncodable(TelegramMediaWebpage.self, f: { TelegramMediaWebpage(decoder: $0) })
+    declareEncodable(ViewCountMessageAttribute.self, f: { ViewCountMessageAttribute(decoder: $0) })
+    declareEncodable(TelegramMediaAction.self, f: { TelegramMediaAction(decoder: $0) })
+    declareEncodable(StreamingResource.self, f: { StreamingResource(decoder: $0) })
+    
+    return
+}()
+
+public func accountWithId(_ id: AccountId, appGroupPath: String) -> Signal<Either<UnauthorizedAccount, Account>, NoError> {
     return Signal<(Postbox, AccountState?), NoError> { subscriber in
-        declareEncodable(UnauthorizedAccountState.self, f: { UnauthorizedAccountState(decoder: $0) })
-        declareEncodable(AuthorizedAccountState.self, f: { AuthorizedAccountState(decoder: $0) })
-        declareEncodable(TelegramUser.self, f: { TelegramUser(decoder: $0) })
-        declareEncodable(TelegramGroup.self, f: { TelegramGroup(decoder: $0) })
-        declareEncodable(TelegramMediaImage.self, f: { TelegramMediaImage(decoder: $0) })
-        declareEncodable(TelegramMediaImageRepresentation.self, f: { TelegramMediaImageRepresentation(decoder: $0) })
-        declareEncodable(TelegramMediaVoiceNote.self, f: { TelegramMediaVoiceNote(decoder: $0) })
-        declareEncodable(TelegramMediaContact.self, f: { TelegramMediaContact(decoder: $0) })
-        declareEncodable(TelegramMediaMap.self, f: { TelegramMediaMap(decoder: $0) })
-        declareEncodable(TelegramMediaFile.self, f: { TelegramMediaFile(decoder: $0) })
-        declareEncodable(TelegramMediaFileAttribute.self, f: { TelegramMediaFileAttribute(decoder: $0) })
-        declareEncodable(TelegramCloudFileLocation.self, f: { TelegramCloudFileLocation(decoder: $0) })
-        declareEncodable(ChannelState.self, f: { ChannelState(decoder: $0) })
-        declareEncodable(InlineBotMessageAttribute.self, f: { InlineBotMessageAttribute(decoder: $0) })
-        declareEncodable(TextEntitiesMessageAttribute.self, f: { TextEntitiesMessageAttribute(decoder: $0) })
-        declareEncodable(ReplyMessageAttribute.self, f: { ReplyMessageAttribute(decoder: $0) })
-        declareEncodable(TelegramCloudDocumentLocation.self, f: { TelegramCloudDocumentLocation(decoder: $0) })
-        declareEncodable(TelegramMediaWebpage.self, f: { TelegramMediaWebpage(decoder: $0) })
-        declareEncodable(ViewCountMessageAttribute.self, f: { ViewCountMessageAttribute(decoder: $0) })
-        declareEncodable(TelegramMediaAction.self, f: { TelegramMediaAction(decoder: $0) })
-        declareEncodable(StreamingResource.self, f: { StreamingResource(decoder: $0) })
+        let _ = declaredEncodables
         
-        let path = (NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] as String) + "/\(id.stringValue)"
+        let path = "\(appGroupPath)/account\(id.stringValue)"
         
         let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))], initializeMessageNamespacesWithHoles: [Namespaces.Message.Cloud], existingMessageTags: [.PhotoOrVideo])
         
@@ -245,7 +251,7 @@ func accountWithId(_ id: AccountId) -> Signal<Either<UnauthorizedAccount, Accoun
     }
 }
 
-struct TwoStepAuthData {
+public struct TwoStepAuthData {
     let nextSalt: Data
     let currentSalt: Data?
     let hasRecovery: Bool
@@ -253,7 +259,7 @@ struct TwoStepAuthData {
     let unconfirmedEmailPattern: String?
 }
 
-func twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MTRpcError> {
+public func twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MTRpcError> {
     return network.request(Api.functions.account.getPassword(), dependsOnPasswordEntry: false)
     |> map { config -> TwoStepAuthData in
         switch config {
@@ -276,7 +282,7 @@ private func sha256(_ data : Data) -> Data {
     return res
 }
 
-func verifyPassword(_ account: UnauthorizedAccount, password: String) -> Signal<Api.auth.Authorization, MTRpcError> {
+public func verifyPassword(_ account: UnauthorizedAccount, password: String) -> Signal<Api.auth.Authorization, MTRpcError> {
     return twoStepAuthData(account.network)
     |> mapToSignal { authData -> Signal<Api.auth.Authorization, MTRpcError> in
         var data = Data()
@@ -289,15 +295,23 @@ func verifyPassword(_ account: UnauthorizedAccount, password: String) -> Signal<
     }
 }
 
-class Account {
+public enum AccountServiceTaskMasterMode {
+    case now
+    case always
+    case never
+}
+
+public class Account {
     let id: AccountId
-    let postbox: Postbox
-    let network: Network
-    let peerId: PeerId
+    public let postbox: Postbox
+    public let network: Network
+    public let peerId: PeerId
     
-    private(set) var stateManager: StateManager!
-    private(set) var viewTracker: AccountViewTracker!
+    public private(set) var stateManager: StateManager!
+    public private(set) var viewTracker: AccountViewTracker!
     private let managedContactsDisposable = MetaDisposable()
+    private let becomeMasterDisposable = MetaDisposable()
+    private let managedServiceViewsDisposable = MetaDisposable()
     
     let graphicsThreadPool = ThreadPool(threadCount: 3, threadPriority: 0.1)
     //let imageCache: ImageCache = ImageCache(maxResidentSize: 5 * 1024 * 1024)
@@ -305,6 +319,11 @@ class Account {
     let settings: AccountSettings = defaultAccountSettings()
     
     var player: AnyObject?
+    
+    public let notificationToken = Promise<Data>()
+    private let notificationTokenDisposable = MetaDisposable()
+    
+    public let shouldBeServiceTaskMaster = Promise<AccountServiceTaskMasterMode>()
     
     init(id: AccountId, postbox: Postbox, network: Network, peerId: PeerId) {
         self.id = id
@@ -314,50 +333,70 @@ class Account {
         
         self.stateManager = StateManager(account: self)
         self.viewTracker = AccountViewTracker(account: self)
+        
+        let appliedNotificationToken = self.notificationToken.get()
+            |> distinctUntilChanged
+            |> mapToSignal { token -> Signal<Void, NoError> in                
+                var tokenString = ""
+                token.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                    for i in 0 ..< token.count {
+                        let byte = bytes.advanced(by: i).pointee
+                        tokenString = tokenString.appendingFormat("%02x", Int32(byte))
+                    }
+                }
+                
+                let appVersionString = "\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] ?? "") (\(Bundle.main.infoDictionary?["CFBundleVersion"] ?? ""))"
+                
+                
+                let langCode = NSLocale.preferredLanguages.first ?? "en"
+                
+                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, deviceModel: "iPhome Simulator", systemVersion: UIDevice.current.systemVersion, appVersion: appVersionString, appSandbox: .boolTrue, langCode: langCode))
+                    |> retryRequest
+                    |> mapToSignal { _ -> Signal<Void, NoError> in
+                        return .complete()
+                    }
+            }
+        self.notificationTokenDisposable.set(appliedNotificationToken.start())
+        
+        let serviceTasksMasterBecomeMaster = shouldBeServiceTaskMaster.get()
+            |> distinctUntilChanged
+            |> deliverOn(Queue.concurrentDefaultQueue())
+        
+        self.becomeMasterDisposable.set(serviceTasksMasterBecomeMaster.start(next: { [weak self] value in
+            if let strongSelf = self, (value == .now || value == .always) {
+                strongSelf.postbox.becomeMasterClient()
+            }
+        }))
+        
+        let serviceTasksMaster = combineLatest(shouldBeServiceTaskMaster.get(), postbox.isMasterClient())
+            |> map { [weak self] shouldBeMaster, isMaster -> Bool in
+                if shouldBeMaster == .always && !isMaster {
+                    self?.postbox.becomeMasterClient()
+                }
+                return ((shouldBeMaster == .now || shouldBeMaster == .always) || true) && isMaster
+            }
+            |> distinctUntilChanged
+            |> deliverOn(Queue.concurrentDefaultQueue())
+            |> mapToSignal { [weak self] value -> Signal<Void, NoError> in
+                if let strongSelf = self, value {
+                    trace("Account", what: "Became master")
+                    return managedServiceViews(network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager)
+                } else {
+                    trace("Account", what: "Resigned master")
+                    return .never()
+                }
+            }
+        self.managedServiceViewsDisposable.set(serviceTasksMaster.start())
     }
     
     deinit {
         self.managedContactsDisposable.dispose()
+        self.notificationTokenDisposable.dispose()
+        self.managedServiceViewsDisposable.dispose()
     }
 }
 
-func setupAccount(_ account: Account) {
-    account.postbox.setFetchMessageHistoryHole { [weak account] hole, direction, tagMask in
-        if let strongAccount = account {
-            return fetchMessageHistoryHole(strongAccount, hole: hole, direction: direction, tagMask: tagMask)
-        } else {
-            return never(Void.self, NoError.self)
-        }
-    }
-    account.postbox.setFetchChatListHole { [weak account] hole in
-        if let strongAccount = account {
-            return fetchChatListHole(strongAccount, hole: hole)
-        } else {
-            return never(Void.self, NoError.self)
-        }
-    }
-    
-    account.postbox.setSendUnsentMessage { [weak account] message in
-        if let strongAccount = account {
-            return sendUnsentMessage(account: strongAccount, message: message)
-        } else {
-            return never(Void.self, NoError.self)
-        }
-    }
-    
-    account.postbox.setSynchronizePeerReadState { [weak account] peerId, operation -> Signal<Void, NoError> in
-        if let strongAccount = account {
-            switch operation {
-                case .Validate:
-                    return synchronizePeerReadState(account: strongAccount, peerId: peerId, push: false, validate: true)
-                case let .Push(thenSync):
-                    return synchronizePeerReadState(account: strongAccount, peerId: peerId, push: true, validate: thenSync)
-            }
-        } else {
-            return .never()
-        }
-    }
-    
+public func setupAccount(_ account: Account) {
     account.postbox.mediaBox.fetchResource = { [weak account] resource, range -> Signal<Data, NoError> in
         if let strongAccount = account {
             return fetchResource(account: strongAccount, resource: resource, range: range)

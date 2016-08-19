@@ -29,7 +29,7 @@
  * Public libavcodec VDA header.
  */
 
-#include "libavcodec/avcodec.h"
+#include "../libavcodecavcodec.h"
 
 #include <stdint.h>
 
@@ -41,7 +41,7 @@
 #include <VideoDecodeAcceleration/VDADecoder.h>
 #undef Picture
 
-#include "libavcodec/version.h"
+#include "../libavcodecversion.h"
 
 // extra flags not defined in VDADecoder.h
 enum {

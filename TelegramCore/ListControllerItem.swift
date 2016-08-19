@@ -1,4 +1,4 @@
 import Display
 
-protocol ListControllerItem: ListViewItem {
+public protocol ListControllerItem: ListViewItem {
 }

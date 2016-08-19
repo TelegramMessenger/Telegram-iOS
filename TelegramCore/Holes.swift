@@ -11,8 +11,8 @@ private func messageFilterForTagMask(_ tagMask: MessageTags) -> Api.MessagesFilt
     }
 }
 
-func fetchMessageHistoryHole(_ account: Account, hole: MessageHistoryHole, direction: HoleFillDirection, tagMask: MessageTags?) -> Signal<Void, NoError> {
-    return account.postbox.peerWithId(hole.maxIndex.id.peerId)
+func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHistoryHole, direction: HoleFillDirection, tagMask: MessageTags?) -> Signal<Void, NoError> {
+    return postbox.peerWithId(hole.maxIndex.id.peerId)
         |> take(1)
         //|> delay(4.0, queue: Queue.concurrentDefaultQueue())
         |> mapToSignal { peer in
@@ -29,7 +29,7 @@ func fetchMessageHistoryHole(_ account: Account, hole: MessageHistoryHole, direc
                         case .AroundIndex:
                             assertionFailure(".AroundIndex not supported")
                     }
-                    request = account.network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", filter: filter, minDate: 0, maxDate: hole.maxIndex.timestamp, offset: 0, maxId: hole.maxIndex.id.id + 1, limit: Int32(limit)))
+                    request = network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", filter: filter, minDate: 0, maxDate: hole.maxIndex.timestamp, offset: 0, maxId: hole.maxIndex.id.id + 1, limit: Int32(limit)))
                 } else {
                     let offsetId: Int32
                     let addOffset: Int32
@@ -46,7 +46,7 @@ func fetchMessageHistoryHole(_ account: Account, hole: MessageHistoryHole, direc
                             addOffset = Int32(-limit / 2)
                     }
                     
-                    request = account.network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: offsetId, offsetDate: hole.maxIndex.timestamp, addOffset: addOffset, limit: Int32(selectedLimit), maxId: hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1), minId: hole.min - 1))
+                    request = network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: offsetId, offsetDate: hole.maxIndex.timestamp, addOffset: addOffset, limit: Int32(selectedLimit), maxId: hole.maxIndex.id.id == Int32.max ? hole.maxIndex.id.id : (hole.maxIndex.id.id + 1), minId: hole.min - 1))
                 }
                 
                 return request
@@ -69,7 +69,7 @@ func fetchMessageHistoryHole(_ account: Account, hole: MessageHistoryHole, direc
                                 chats = apiChats
                                 users = apiUsers
                         }
-                        return account.postbox.modify { modifier in
+                        return postbox.modify { modifier in
                             var storeMessages: [StoreMessage] = []
                             
                             for message in messages {
@@ -105,12 +105,12 @@ func fetchMessageHistoryHole(_ account: Account, hole: MessageHistoryHole, direc
         }
 }
 
-func fetchChatListHole(_ account: Account, hole: ChatListHole) -> Signal<Void, NoError> {
+func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -> Signal<Void, NoError> {
     let offset: Signal<(Int32, Int32, Api.InputPeer), NoError>
     if hole.index.id.peerId.namespace == Namespaces.Peer.Empty {
         offset = single((0, 0, Api.InputPeer.inputPeerEmpty), NoError.self)
     } else {
-        offset = account.postbox.peerWithId(hole.index.id.peerId)
+        offset = postbox.peerWithId(hole.index.id.peerId)
             |> take(1)
             |> map { peer in
                 return (hole.index.timestamp, hole.index.id.id + 1, apiInputPeer(peer) ?? .inputPeerEmpty)
@@ -118,9 +118,9 @@ func fetchChatListHole(_ account: Account, hole: ChatListHole) -> Signal<Void, N
     }
     return offset
         |> mapToSignal { (timestamp, id, peer) in
-        return account.network.request(Api.functions.messages.getDialogs(offsetDate: timestamp, offsetId: id, offsetPeer: peer, limit: 100))
+        return network.request(Api.functions.messages.getDialogs(offsetDate: timestamp, offsetId: id, offsetPeer: peer, limit: 100))
             |> retryRequest
-            |> mapToSignal { result in
+            |> mapToSignal { result -> Signal<Void, NoError> in
                 let dialogsChats: [Api.Chat]
                 let dialogsUsers: [Api.User]
                 
@@ -244,7 +244,7 @@ func fetchChatListHole(_ account: Account, hole: ChatListHole) -> Signal<Void, N
                     peers.append(telegramUser)
                 }
                 
-                return account.postbox.modify { modifier in
+                return postbox.modify { modifier in
                     modifier.updatePeers(peers, update: { _, updated -> Peer in
                         return updated
                     })

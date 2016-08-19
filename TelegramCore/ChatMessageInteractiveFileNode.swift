@@ -17,8 +17,8 @@ private let outgoingTitleColor = UIColor(0x3faa3c)
 private let incomingDescriptionColor = UIColor(0x999999)
 private let outgoingDescriptionColor = UIColor(0x6fb26a)
 
-private let fileIconIncomingImage = UIImage(named: "Chat/Message/RadialProgressIconDocumentIncoming")?.precomposed()
-private let fileIconOutgoingImage = UIImage(named: "Chat/Message/RadialProgressIconDocumentOutgoing")?.precomposed()
+private let fileIconIncomingImage = UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocumentIncoming")?.precomposed()
+private let fileIconOutgoingImage = UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocumentOutgoing")?.precomposed()
 
 final class ChatMessageInteractiveFileNode: ASTransformNode {
     private let titleNode: TextNode

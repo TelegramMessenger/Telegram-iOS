@@ -96,6 +96,7 @@ class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.cancelButton = ASButtonNode()
         self.cancelButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.cancelButton.setAttributedTitle(NSAttributedString(string: "Cancel", font: Font.regular(17.0), textColor: UIColor(0x1195f2)), for: [])
+        self.cancelButton.displaysAsynchronously = false
         
         super.init()
         

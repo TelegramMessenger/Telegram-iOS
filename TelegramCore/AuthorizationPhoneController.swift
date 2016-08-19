@@ -47,20 +47,20 @@ class AuthorizationPhoneController: ViewController {
     @objc func nextPressed() {
         let phone = self.node.phoneNode.attributedText?.string ?? ""
         let account = self.account
-        let sendCode = Api.functions.auth.sendCode(flags: 0, phoneNumber: phone, currentNumber: nil, apiId: 1, apiHash: "b6b154c3707471f5339bd661645ed3d6", langCode: "en")
+        let sendCode = Api.functions.auth.sendCode(flags: 0, phoneNumber: phone, currentNumber: nil, apiId: 10840, apiHash: "33c45224029d59cb3ad0c16134215aeb", langCode: "en")
         
         let signal = account.network.request(sendCode)
             |> map { result in
                 return (result, account)
             } |> `catch` { error -> Signal<(Api.auth.SentCode, UnauthorizedAccount), MTRpcError> in
                 switch error.errorDescription {
-                case Regex("(PHONE_|USER_|NETWORK_)MIGRATE_(\\d+)"):
-                    let range = error.errorDescription.range(of: "MIGRATE_")!
-                    let updatedMasterDatacenterId = Int32(error.errorDescription.substring(from: range.upperBound))!
-                    let updatedAccount = account.changedMasterDatacenterId(updatedMasterDatacenterId)
-                    return updatedAccount.network.request(sendCode) |> map { sentCode in return (sentCode, updatedAccount) }
-                case _:
-                    return .fail(error)
+                    case Regex("(PHONE_|USER_|NETWORK_)MIGRATE_(\\d+)"):
+                        let range = error.errorDescription.range(of: "MIGRATE_")!
+                        let updatedMasterDatacenterId = Int32(error.errorDescription.substring(from: range.upperBound))!
+                        let updatedAccount = account.changedMasterDatacenterId(updatedMasterDatacenterId)
+                        return updatedAccount.network.request(sendCode) |> map { sentCode in return (sentCode, updatedAccount) }
+                    case _:
+                        return .fail(error)
                 }
             }
     

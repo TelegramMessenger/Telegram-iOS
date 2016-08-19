@@ -110,7 +110,7 @@ private func entriesForView(_ view: ContactPeersView) -> [ContactsEntry] {
     return entries
 }
 
-class ContactsController: ViewController {
+public class ContactsController: ViewController {
     private let queue = Queue()
     
     private let account: Account
@@ -124,15 +124,15 @@ class ContactsController: ViewController {
     
     private let index: PeerNameIndex = .lastNameFirst
     
-    init(account: Account) {
+    public init(account: Account) {
         self.account = account
         
         super.init()
         
         self.title = "Contacts"
         self.tabBarItem.title = "Contacts"
-        self.tabBarItem.image = UIImage(named: "Chat List/Tabs/IconContacts")
-        self.tabBarItem.selectedImage = UIImage(named: "Chat List/Tabs/IconContactsSelected")
+        self.tabBarItem.image = UIImage(bundleImageName: "Chat List/Tabs/IconContacts")
+        self.tabBarItem.selectedImage = UIImage(bundleImageName: "Chat List/Tabs/IconContactsSelected")
         
         self.disposable.set((account.postbox.contactPeersView(index: self.index, accountPeerId: account.peerId) |> deliverOn(self.queue)).start(next: { [weak self] view in
             self?.updateView(view)
@@ -145,7 +145,7 @@ class ContactsController: ViewController {
         }
     }
     
-    required init(coder aDecoder: NSCoder) {
+    required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
@@ -153,7 +153,7 @@ class ContactsController: ViewController {
         self.disposable.dispose()
     }
     
-    override func loadDisplayNode() {
+    override public func loadDisplayNode() {
         self.displayNode = ContactsControllerNode(account: self.account)
         
         self.contactsNode.navigationBar = self.navigationBar
@@ -171,7 +171,7 @@ class ContactsController: ViewController {
         self.displayNodeDidLoad()
     }
     
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationBar.frame.maxY, transition: transition)

@@ -25,7 +25,7 @@ public struct Namespaces {
     }
 }
 
-extension MessageTags {
+public extension MessageTags {
     static let PhotoOrVideo = MessageTags(rawValue: 1 << 0)
     static let File = MessageTags(rawValue: 2 << 0)
     static let Voice = MessageTags(rawValue: 3 << 0)

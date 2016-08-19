@@ -27,7 +27,7 @@
  * Libavformat version macros
  */
 
-#include "libavutil/version.h"
+#include "../libavutil/version.h"
 
 // Major bumping may affect Ticket5467, 5421, 5451(compatibility with Chromium)
 // Also please add any ticket numbers that you belive might be affected here

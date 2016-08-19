@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 import Display
-import TelegramCorePrivate
+import TelegramCorePrivateModule
 
 private func chatMessageStickerDatas(account: Account, file: TelegramMediaFile) -> Signal<(Data?, Data?, Int), NoError> {
     let fullSizeResource = fileResource(file)

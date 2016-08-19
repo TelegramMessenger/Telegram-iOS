@@ -1,8 +1,8 @@
 #import <Foundation/Foundation.h>
 
-#import "libavutil/avutil.h"
-#import "libavutil/channel_layout.h"
-#import "libswresample/swresample.h"
+#import "../third-party/FFMpeg-iOS/include/libavutil/avutil.h"
+#import "../third-party/FFMpeg-iOS/include/libavutil/channel_layout.h"
+#import "../third-party/FFMpeg-iOS/include/libswresample/swresample.h"
 
 @interface FFMpegSwResample : NSObject
 

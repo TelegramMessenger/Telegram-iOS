@@ -35,15 +35,15 @@ private func messagesShouldBeMerged(_ lhs: Message, _ rhs: Message) -> Bool {
     return false
 }
 
-class ChatMessageItem: ListViewItem, CustomStringConvertible {
+public class ChatMessageItem: ListViewItem, CustomStringConvertible {
     let account: Account
     let peerId: PeerId
     let controllerInteraction: ChatControllerInteraction
     let message: Message
     
-    let accessoryItem: ListViewAccessoryItem?
+    public let accessoryItem: ListViewAccessoryItem?
     
-    init(account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, message: Message) {
+    public init(account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, message: Message) {
         self.account = account
         self.peerId = peerId
         self.controllerInteraction = controllerInteraction
@@ -70,7 +70,7 @@ class ChatMessageItem: ListViewItem, CustomStringConvertible {
         self.accessoryItem = accessoryItem
     }
     
-    func nodeConfiguredForWidth(async: (() -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: (ListViewItemNode, () -> Void) -> Void) {
+    public func nodeConfiguredForWidth(async: (() -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: (ListViewItemNode, () -> Void) -> Void) {
         var viewClassName: AnyClass = ChatMessageBubbleItemNode.self
         
         for media in message.media {
@@ -119,7 +119,7 @@ class ChatMessageItem: ListViewItem, CustomStringConvertible {
         return (mergedTop, mergedBottom)
     }
     
-    func updateNode(async: (() -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: (ListViewItemNodeLayout, () -> Void) -> Void) {
+    public func updateNode(async: (() -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: (ListViewItemNodeLayout, () -> Void) -> Void) {
         if let node = node as? ChatMessageItemView {
             Queue.mainQueue().async {
                 node.setupItem(self)
@@ -140,7 +140,7 @@ class ChatMessageItem: ListViewItem, CustomStringConvertible {
         }
     }
     
-    var description: String {
+    public var description: String {
         return "(ChatMessageItem id: \(self.message.id), text: \"\(self.message.text)\")"
     }
 }

@@ -176,7 +176,9 @@ private func historyEntriesForView(_ view: MessageHistoryView) -> [ChatHistoryEn
 
 private func preparedHistoryViewTransition(from fromView: ChatHistoryView?, to toView: ChatHistoryView, reason: ChatHistoryViewTransitionReason, account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, scrollPosition: ChatControllerScrollPosition?) -> Signal<ChatHistoryViewTransition, NoError> {
     return Signal { subscriber in
-        let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromView?.filteredEntries ?? [], rightList: toView.filteredEntries)
+        let updateIndices: [(Int, ChatHistoryEntry)] = []
+        //let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromView?.filteredEntries ?? [], rightList: toView.filteredEntries)
+        let (deleteIndices, indicesAndItems) = mergeListsStable(leftList: fromView?.filteredEntries ?? [], rightList: toView.filteredEntries)
         
         var adjustedDeleteIndices: [ListViewDeleteItem] = []
         let previousCount: Int
@@ -360,7 +362,7 @@ private func maxIncomingMessageIdForEntries(_ entries: [ChatHistoryEntry], index
 
 private var useDarkMode = false
 
-class ChatController: ViewController {
+public class ChatController: ViewController {
     private var containerLayout = ContainerViewLayout()
     
     private let account: Account
@@ -381,7 +383,7 @@ class ChatController: ViewController {
     private var layoutActionOnViewTransition: (() -> Void)?
     
     private let _ready = Promise<Bool>()
-    override var ready: Promise<Bool> {
+    override public var ready: Promise<Bool> {
         return self._ready
     }
     private var didSetReady = false
@@ -398,7 +400,7 @@ class ChatController: ViewController {
     
     private var controllerInteraction: ChatControllerInteraction?
     
-    init(account: Account, peerId: PeerId, messageId: MessageId? = nil) {
+    public init(account: Account, peerId: PeerId, messageId: MessageId? = nil) {
         self.account = account
         self.peerId = peerId
         self.messageId = messageId
@@ -605,7 +607,7 @@ class ChatController: ViewController {
         }
     }
     
-    required init(coder aDecoder: NSCoder) {
+    required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
@@ -638,7 +640,7 @@ class ChatController: ViewController {
         }
     }
     
-    override func loadDisplayNode() {
+    override public func loadDisplayNode() {
         self.displayNode = ChatControllerNode(account: self.account, peerId: self.peerId)
         
         self.chatDisplayNode.listView.displayedItemRangeChanged = { [weak self] displayedRange in
@@ -723,11 +725,11 @@ class ChatController: ViewController {
         self.dequeueHistoryViewTransition()
     }
     
-    override func viewWillAppear(_ animated: Bool) {
+    override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
     }
     
-    override func viewDidAppear(_ animated: Bool) {
+    override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         self.chatDisplayNode.listView.preloadPages = true
@@ -831,7 +833,7 @@ class ChatController: ViewController {
         }
     }
     
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.containerLayout = layout

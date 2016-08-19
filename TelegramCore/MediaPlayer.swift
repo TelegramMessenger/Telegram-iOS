@@ -182,40 +182,62 @@ private final class MediaPlayerContext {
                 queue.async { [weak self] in
                     if let strongSelf = self {
                         if let playerNode = strongSelf.playerNode {
+                            let queue = strongSelf.queue
+                            
                             DispatchQueue.main.async {
                                 playerNode.reset()
                                 playerNode.controlTimebase = controlTimebase.timebase
+                                
+                                queue.async { [weak self] in
+                                    if let strongSelf = self {
+                                        switch action {
+                                            case .play:
+                                                strongSelf.state = .playing(loadedState)
+                                                strongSelf.audioRenderer?.start()
+                                            case .pause:
+                                                strongSelf.state = .paused(loadedState)
+                                        }
+                                        
+                                        strongSelf.tick()
+                                    }
+                                }
                             }
+                        } else {
+                            switch action {
+                                case .play:
+                                    strongSelf.state = .playing(loadedState)
+                                    strongSelf.audioRenderer?.start()
+                                case .pause:
+                                    strongSelf.state = .paused(loadedState)
+                            }
+                            
+                            strongSelf.tick()
                         }
-                        
-                        switch action {
-                            case .play:
-                                strongSelf.state = .playing(loadedState)
-                                strongSelf.audioRenderer?.start()
-                            case .pause:
-                                strongSelf.state = .paused(loadedState)
-                        }
-                        
-                        strongSelf.tick()
                     }
                 }
             })
         } else {
             if let playerNode = self.playerNode {
+                let queue = self.queue
+                
                 DispatchQueue.main.async {
                     playerNode.reset()
                     playerNode.controlTimebase = controlTimebase.timebase
+                    
+                    queue.async { [weak self] in
+                        if let strongSelf = self {
+                            switch action {
+                                case .play:
+                                    strongSelf.state = .playing(loadedState)
+                                case .pause:
+                                    strongSelf.state = .paused(loadedState)
+                            }
+                            
+                            strongSelf.tick()
+                        }
+                    }
                 }
             }
-            
-            switch action {
-                case .play:
-                    self.state = .playing(loadedState)
-                case .pause:
-                    self.state = .paused(loadedState)
-            }
-            
-            self.tick()
         }
     }
     

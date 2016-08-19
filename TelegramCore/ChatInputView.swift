@@ -22,7 +22,7 @@ private let textInputViewBackground: UIImage = {
     return image
 }()
 
-private let attachmentIcon = UIImage(named: "Chat/Input/Text/IconAttachment")?.precomposed()
+private let attachmentIcon = UIImage(bundleImageName: "Chat/Input/Text/IconAttachment")?.precomposed()
 
 class ChatInputNode: ASDisplayNode, ASEditableTextNodeDelegate {
     var textPlaceholderNode: TextNode

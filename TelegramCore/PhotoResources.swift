@@ -4,7 +4,7 @@ import SwiftSignalKit
 import Display
 import AVFoundation
 import ImageIO
-import TelegramCorePrivate
+import TelegramCorePrivateModule
 
 func largestRepresentationForPhoto(_ photo: TelegramMediaImage) -> TelegramMediaImageRepresentation? {
     return photo.representationForDisplayAtSize(CGSize(width: 1280.0, height: 1280.0))

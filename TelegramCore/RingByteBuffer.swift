@@ -1,6 +1,6 @@
 import Foundation
 import Darwin
-import TelegramCorePrivate
+import TelegramCorePrivateModule
 
 public final class RingByteBuffer {
     public let size: Int

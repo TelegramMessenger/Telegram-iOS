@@ -1,6 +1,6 @@
 import Foundation
 import CoreMedia
-import TelegramCorePrivate
+import TelegramCorePrivateModule
 
 final class FFMpegMediaFrameSourceContextHelpers {
     static let registerFFMpegGlobals: Void = {

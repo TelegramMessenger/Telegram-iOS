@@ -137,7 +137,7 @@ extension ChatListEntry: Identifiable {
     }
 }
 
-class ChatListController: ViewController {
+public class ChatListController: ViewController {
     let account: Account
     
     private var chatListViewAndEntries: (ChatListView, [ChatListControllerEntry])?
@@ -157,15 +157,15 @@ class ChatListController: ViewController {
         }
     }
     
-    init(account: Account) {
+    public init(account: Account) {
         self.account = account
         
         super.init()
         
         self.title = "Chats"
         self.tabBarItem.title = "Chats"
-        self.tabBarItem.image = UIImage(named: "Chat List/Tabs/IconChats")
-        self.tabBarItem.selectedImage = UIImage(named: "Chat List/Tabs/IconChatsSelected")
+        self.tabBarItem.image = UIImage(bundleImageName: "Chat List/Tabs/IconChats")
+        self.tabBarItem.selectedImage = UIImage(bundleImageName: "Chat List/Tabs/IconChatsSelected")
         
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Edit", style: .plain, target: self, action: #selector(self.editPressed))
         //self.navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .Compose, target: self, action: Selector("composePressed"))
@@ -183,7 +183,7 @@ class ChatListController: ViewController {
         self.setMessageViewPosition(.Tail(count: 50), hint: "initial", force: false)
     }
 
-    required init(coder aDecoder: NSCoder) {
+    required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
@@ -192,7 +192,7 @@ class ChatListController: ViewController {
         self.openMessageFromSearchDisposable.dispose()
     }
     
-    override func loadDisplayNode() {
+    override public func loadDisplayNode() {
         self.displayNode = ChatListControllerNode(account: self.account)
         
         self.chatListDisplayNode.listView.displayedItemRangeChanged = { [weak self] range in
@@ -289,11 +289,11 @@ class ChatListController: ViewController {
         }
     }
     
-    override func viewWillAppear(_ animated: Bool) {
+    override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
     }
     
-    override func viewDidDisappear(_ animated: Bool) {
+    override public func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
     }
     
@@ -468,7 +468,7 @@ class ChatListController: ViewController {
         }
     }
     
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.chatListDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationBar.frame.maxY, transition: transition)

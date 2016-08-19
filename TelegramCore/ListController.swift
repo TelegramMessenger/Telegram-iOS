@@ -3,16 +3,16 @@ import UIKit
 import Display
 import AsyncDisplayKit
 
-class ListController: ViewController {
-    var items: [ListControllerItem] = []
+public class ListController: ViewController {
+    public var items: [ListControllerItem] = []
     
-    var listDisplayNode: ListControllerNode {
+    public var listDisplayNode: ListControllerNode {
         get {
             return super.displayNode as! ListControllerNode
         }
     }
     
-    override func loadDisplayNode() {
+    override public func loadDisplayNode() {
         self.displayNode = ListControllerNode()
         
         self.displayNode.backgroundColor = UIColor(0xefeff4)
@@ -22,7 +22,7 @@ class ListController: ViewController {
         self.displayNodeDidLoad()
     }
     
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.listDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationBar.frame.maxY, transition: transition)

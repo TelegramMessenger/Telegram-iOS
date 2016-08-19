@@ -1055,7 +1055,7 @@ private func pollDifference(_ account: Account) -> Signal<Void, NoError> {
     return signal
 }
 
-class StateManager {
+public class StateManager {
     private let stateQueue = Queue()
     
     private let account: Account
@@ -1079,7 +1079,7 @@ class StateManager {
         timer?.invalidate()
     }
     
-    func reset() {
+    public func reset() {
         if self.updateService == nil {
             self.updateService = UpdateMessageService(peerId: self.account.peerId)
             updatesDisposable.set(self.updateService!.pipe.signal().start(next: { [weak self] groups in

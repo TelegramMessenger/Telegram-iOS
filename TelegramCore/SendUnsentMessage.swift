@@ -2,15 +2,15 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 
-func sendUnsentMessage(account: Account, message: Message) -> Signal<Void, NoError> {
-    return account.postbox.peerWithId(message.id.peerId)
+func sendUnsentMessage(network: Network, postbox: Postbox, stateManager: StateManager, message: Message) -> Signal<Void, NoError> {
+    return postbox.peerWithId(message.id.peerId)
         |> take(1)
         //|> delay(2.0, queue: Queue.concurrentDefaultQueue())
         |> mapToSignal { peer -> Signal<Void, NoError> in
             if let inputPeer = apiInputPeer(peer) {
                 var randomId: Int64 = 0
                 arc4random_buf(&randomId, 8)
-                return account.network.request(Api.functions.messages.sendMessage(flags: 0, peer: inputPeer, replyToMsgId: 0, message: message.text, randomId: randomId, replyMarkup: nil, entities: nil))
+                return network.request(Api.functions.messages.sendMessage(flags: 0, peer: inputPeer, replyToMsgId: 0, message: message.text, randomId: randomId, replyMarkup: nil, entities: nil))
                     |> mapError { _ -> NoError in
                         return NoError()
                     }
@@ -18,7 +18,7 @@ func sendUnsentMessage(account: Account, message: Message) -> Signal<Void, NoErr
                         let messageId = result.messageIds.first
                         let apiMessage = result.messages.first
                         
-                        let modify = account.postbox.modify { modifier -> Void in
+                        let modify = postbox.modify { modifier -> Void in
                             modifier.updateMessage(MessageIndex(message), update: { currentMessage in
                                 let updatedId: MessageId
                                 if let messageId = messageId {
@@ -61,13 +61,13 @@ func sendUnsentMessage(account: Account, message: Message) -> Signal<Void, NoErr
                                 return StoreMessage(id: updatedId, timestamp: currentMessage.timestamp, flags: [], tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media)
                             })
                         } |> afterDisposed {
-                            account.stateManager.addUpdates(result)
+                            stateManager.addUpdates(result)
                         }
                         
                         return modify
                     }
                     |> `catch` { _ -> Signal<Void, NoError> in
-                        let modify = account.postbox.modify { modifier -> Void in
+                        let modify = postbox.modify { modifier -> Void in
                             modifier.updateMessage(MessageIndex(message), update: { currentMessage in
                                 var storeForwardInfo: StoreMessageForwardInfo?
                                 if let forwardInfo = currentMessage.forwardInfo {

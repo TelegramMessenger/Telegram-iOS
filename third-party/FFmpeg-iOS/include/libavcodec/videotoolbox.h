@@ -35,7 +35,7 @@
 #include <VideoToolbox/VideoToolbox.h>
 #undef Picture
 
-#include "libavcodec/avcodec.h"
+#include "../libavcodecavcodec.h"
 
 /**
  * This struct holds all the information that needs to be passed

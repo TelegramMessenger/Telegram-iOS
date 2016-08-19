@@ -2,7 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import Display
 
-class ListControllerNode: ASDisplayNode {
+public class ListControllerNode: ASDisplayNode {
     let listView: ListView
     
     override init() {

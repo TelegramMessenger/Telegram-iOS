@@ -45,14 +45,14 @@ private func ==(lhs: ChatListAvatarNodeState, rhs: ChatListAvatarNodeState) -> B
     }
 }
 
-class ChatListAvatarNode: ASDisplayNode {
+public final class ChatListAvatarNode: ASDisplayNode {
     let font: UIFont
     private var parameters: ChatListAvatarNodeParameters?
     let imageNode: ImageNode
     
     private var state: ChatListAvatarNodeState = .Empty
     
-    init(font: UIFont) {
+    public init(font: UIFont) {
         self.font = font
         self.imageNode = ImageNode()
         
@@ -65,7 +65,7 @@ class ChatListAvatarNode: ASDisplayNode {
         self.addSubnode(self.imageNode)
     }
     
-    override var frame: CGRect {
+    override public var frame: CGRect {
         get {
             return super.frame
         } set(value) {
@@ -74,7 +74,7 @@ class ChatListAvatarNode: ASDisplayNode {
         }
     }
     
-    func setPeer(account: Account, peer: Peer) {
+    public func setPeer(account: Account, peer: Peer) {
         let updatedState = ChatListAvatarNodeState.PeerAvatar(peer)
         if updatedState != self.state {
             self.state = updatedState
@@ -96,11 +96,11 @@ class ChatListAvatarNode: ASDisplayNode {
         }
     }
     
-    override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol {
+    override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol {
         return parameters ?? NSObject()
     }
     
-    @objc override class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol!, isCancelled: asdisplaynode_iscancelled_block_t, isRasterizing: Bool) {
+    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol!, isCancelled: asdisplaynode_iscancelled_block_t, isRasterizing: Bool) {
         assertNotOnMainThread()
         
         let context = UIGraphicsGetCurrentContext()!

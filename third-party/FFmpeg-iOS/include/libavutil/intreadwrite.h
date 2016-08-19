@@ -20,7 +20,7 @@
 #define AVUTIL_INTREADWRITE_H
 
 #include <stdint.h>
-#include "libavutil/avconfig.h"
+#include "../libavutilavconfig.h"
 #include "attributes.h"
 #include "bswap.h"
 

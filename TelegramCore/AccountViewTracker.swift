@@ -99,7 +99,7 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
         }
 }
 
-final class AccountViewTracker {
+public final class AccountViewTracker {
     weak var account: Account?
     let queue = Queue()
     var nextViewId: Int32 = 0
@@ -195,7 +195,7 @@ final class AccountViewTracker {
         })
     }
     
-    func aroundUnreadMessageHistoryViewForPeerId(_ peerId: PeerId, count: Int, tagMask: MessageTags? = nil) -> Signal<(MessageHistoryView, ViewUpdateType), NoError> {
+    public func aroundUnreadMessageHistoryViewForPeerId(_ peerId: PeerId, count: Int, tagMask: MessageTags? = nil) -> Signal<(MessageHistoryView, ViewUpdateType), NoError> {
         if let account = self.account {
             let signal = account.postbox.aroundUnreadMessageHistoryViewForPeerId(peerId, count: count, tagMask: tagMask)
             return wrappedMessageHistorySignal(signal)
@@ -204,7 +204,7 @@ final class AccountViewTracker {
         }
     }
     
-    func aroundIdMessageHistoryViewForPeerId(_ peerId: PeerId, count: Int, messageId: MessageId, tagMask: MessageTags? = nil) -> Signal<(MessageHistoryView, ViewUpdateType), NoError> {
+    public func aroundIdMessageHistoryViewForPeerId(_ peerId: PeerId, count: Int, messageId: MessageId, tagMask: MessageTags? = nil) -> Signal<(MessageHistoryView, ViewUpdateType), NoError> {
         if let account = self.account {
             let signal = account.postbox.aroundIdMessageHistoryViewForPeerId(peerId, count: count, messageId: messageId, tagMask: tagMask)
             return wrappedMessageHistorySignal(signal)
@@ -213,7 +213,7 @@ final class AccountViewTracker {
         }
     }
     
-    func aroundMessageHistoryViewForPeerId(_ peerId: PeerId, index: MessageIndex, count: Int, anchorIndex: MessageIndex, fixedCombinedReadState: CombinedPeerReadState?, tagMask: MessageTags? = nil) -> Signal<(MessageHistoryView, ViewUpdateType), NoError> {
+    public func aroundMessageHistoryViewForPeerId(_ peerId: PeerId, index: MessageIndex, count: Int, anchorIndex: MessageIndex, fixedCombinedReadState: CombinedPeerReadState?, tagMask: MessageTags? = nil) -> Signal<(MessageHistoryView, ViewUpdateType), NoError> {
         if let account = self.account {
             let signal = account.postbox.aroundMessageHistoryViewForPeerId(peerId, index: index, count: count, anchorIndex: anchorIndex, fixedCombinedReadState: fixedCombinedReadState, tagMask: tagMask)
             return wrappedMessageHistorySignal(signal)

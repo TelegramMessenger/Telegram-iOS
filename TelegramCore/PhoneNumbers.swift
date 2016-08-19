@@ -1,5 +1,5 @@
 import Foundation
-import TelegramCorePrivate
+import TelegramCorePrivateModule
 
 private let phoneNumberUtil = NBPhoneNumberUtil()
 

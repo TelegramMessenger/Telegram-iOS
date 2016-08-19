@@ -1,7 +1,7 @@
 import Foundation
 import SwiftSignalKit
 import Postbox
-import TelegramCorePrivate
+import TelegramCorePrivateModule
 
 private func md5(_ data : Data) -> Data {
     var res = Data()
