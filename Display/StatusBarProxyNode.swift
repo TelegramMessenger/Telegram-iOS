@@ -11,8 +11,8 @@ private enum StatusBarItemType {
     case Battery
 }
 
-func makeStatusBarProxy(_ style: StatusBarStyle) -> StatusBarProxyNode {
-    return StatusBarProxyNode(style: style)
+func makeStatusBarProxy(_ style: StatusBarStyle, statusBar: UIView) -> StatusBarProxyNode {
+    return StatusBarProxyNode(style: style, statusBar: statusBar)
 }
 
 private class StatusBarItemNode: ASDisplayNode {
@@ -232,6 +232,8 @@ private class StatusBarProxyNodeTimerTarget: NSObject {
 }
 
 class StatusBarProxyNode: ASDisplayNode {
+    private let statusBar: UIView
+    
     var timer: Timer?
     var style: StatusBarStyle {
         didSet {
@@ -266,8 +268,9 @@ class StatusBarProxyNode: ASDisplayNode {
         }
     }
     
-    init(style: StatusBarStyle) {
+    init(style: StatusBarStyle, statusBar: UIView) {
         self.style = style
+        self.statusBar = statusBar
         
         super.init()
         
@@ -275,8 +278,6 @@ class StatusBarProxyNode: ASDisplayNode {
         
         self.clipsToBounds = true
         //self.backgroundColor = UIColor.blueColor().colorWithAlphaComponent(0.2)
-        
-        let statusBar = StatusBarUtils.statusBar()!
         
         for subview in statusBar.subviews {
             let itemNode = StatusBarItemNode(style: style, targetView: subview)
@@ -292,7 +293,7 @@ class StatusBarProxyNode: ASDisplayNode {
     }
     
     private func updateItems() {
-        let statusBar = StatusBarUtils.statusBar()!
+        let statusBar = self.statusBar
         
         var i = 0
         while i < self.itemNodes.count {

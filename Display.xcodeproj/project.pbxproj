@@ -14,6 +14,7 @@
 		D015F7581D1B467200E269B5 /* ActionSheetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015F7571D1B467200E269B5 /* ActionSheetController.swift */; };
 		D015F75A1D1B46B600E269B5 /* ActionSheetControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015F7591D1B46B600E269B5 /* ActionSheetControllerNode.swift */; };
 		D02BDB021B6AC703008AFAD2 /* RuntimeUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02BDB011B6AC703008AFAD2 /* RuntimeUtils.swift */; };
+		D03B0E701D6331FB00955575 /* StatusBarHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B0E6F1D6331FB00955575 /* StatusBarHost.swift */; };
 		D03BCCEB1C72AE590097A291 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03BCCEA1C72AE590097A291 /* Theme.swift */; };
 		D03E7DE41C96A90100C07816 /* NavigationShadow@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D03E7DE31C96A90100C07816 /* NavigationShadow@2x.png */; };
 		D03E7DE61C96B96E00C07816 /* NavigationBarTransitionContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E7DE51C96B96E00C07816 /* NavigationBarTransitionContainer.swift */; };
@@ -69,8 +70,6 @@
 		D08E903C1D2417E000533158 /* ActionSheetButtonItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08E903B1D2417E000533158 /* ActionSheetButtonItem.swift */; };
 		D08E903E1D24187900533158 /* ActionSheetItemGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08E903D1D24187900533158 /* ActionSheetItemGroup.swift */; };
 		D08E90471D243C2F00533158 /* HighlightTrackingButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08E90461D243C2F00533158 /* HighlightTrackingButton.swift */; };
-		D0AE2C971C94529600F2FD3C /* StatusBarUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = D0AE2C951C94529600F2FD3C /* StatusBarUtils.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		D0AE2C981C94529600F2FD3C /* StatusBarUtils.m in Sources */ = {isa = PBXBuildFile; fileRef = D0AE2C961C94529600F2FD3C /* StatusBarUtils.m */; };
 		D0AE2CA61C94548900F2FD3C /* GenerateImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AE2CA51C94548900F2FD3C /* GenerateImage.swift */; };
 		D0AE3D4D1D25C816001CCE13 /* NavigationBarTransitionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AE3D4C1D25C816001CCE13 /* NavigationBarTransitionState.swift */; };
 		D0B367201C94A53A00346D2E /* StatusBarProxyNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B3671F1C94A53A00346D2E /* StatusBarProxyNode.swift */; };
@@ -118,6 +117,7 @@
 		D015F7571D1B467200E269B5 /* ActionSheetController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetController.swift; sourceTree = "<group>"; };
 		D015F7591D1B46B600E269B5 /* ActionSheetControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetControllerNode.swift; sourceTree = "<group>"; };
 		D02BDB011B6AC703008AFAD2 /* RuntimeUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RuntimeUtils.swift; sourceTree = "<group>"; };
+		D03B0E6F1D6331FB00955575 /* StatusBarHost.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StatusBarHost.swift; sourceTree = "<group>"; };
 		D03BCCEA1C72AE590097A291 /* Theme.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		D03E7DE31C96A90100C07816 /* NavigationShadow@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "NavigationShadow@2x.png"; sourceTree = "<group>"; };
 		D03E7DE51C96B96E00C07816 /* NavigationBarTransitionContainer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationBarTransitionContainer.swift; sourceTree = "<group>"; };
@@ -176,8 +176,6 @@
 		D08E903B1D2417E000533158 /* ActionSheetButtonItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetButtonItem.swift; sourceTree = "<group>"; };
 		D08E903D1D24187900533158 /* ActionSheetItemGroup.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetItemGroup.swift; sourceTree = "<group>"; };
 		D08E90461D243C2F00533158 /* HighlightTrackingButton.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HighlightTrackingButton.swift; sourceTree = "<group>"; };
-		D0AE2C951C94529600F2FD3C /* StatusBarUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StatusBarUtils.h; sourceTree = "<group>"; };
-		D0AE2C961C94529600F2FD3C /* StatusBarUtils.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StatusBarUtils.m; sourceTree = "<group>"; };
 		D0AE2CA51C94548900F2FD3C /* GenerateImage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GenerateImage.swift; sourceTree = "<group>"; };
 		D0AE3D4C1D25C816001CCE13 /* NavigationBarTransitionState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationBarTransitionState.swift; sourceTree = "<group>"; };
 		D0B3671F1C94A53A00346D2E /* StatusBarProxyNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StatusBarProxyNode.swift; sourceTree = "<group>"; };
@@ -390,8 +388,6 @@
 				D05CC3131B695A9600E235A3 /* NavigationControllerProxy.m */,
 				D05CC3221B695B0700E235A3 /* NavigationBarProxy.h */,
 				D05CC3231B695B0700E235A3 /* NavigationBarProxy.m */,
-				D0AE2C951C94529600F2FD3C /* StatusBarUtils.h */,
-				D0AE2C961C94529600F2FD3C /* StatusBarUtils.m */,
 				D05CC2E41B69555800E235A3 /* CAAnimationUtils.swift */,
 				D02BDB011B6AC703008AFAD2 /* RuntimeUtils.swift */,
 				D06EE8441B7140FF00837186 /* Font.swift */,
@@ -436,6 +432,7 @@
 				D0078A671C92B21400DF6D92 /* StatusBar.swift */,
 				D0B3671F1C94A53A00346D2E /* StatusBarProxyNode.swift */,
 				D03E7DFE1C96F7B400C07816 /* StatusBarManager.swift */,
+				D03B0E6F1D6331FB00955575 /* StatusBarHost.swift */,
 			);
 			name = "Status Bar";
 			sourceTree = "<group>";
@@ -517,7 +514,6 @@
 				D05CC2ED1B69558A00E235A3 /* RuntimeUtils.h in Headers */,
 				D05CC3201B695A9600E235A3 /* NavigationControllerProxy.h in Headers */,
 				D03E7DF81C96C5F200C07816 /* NSWeakReference.h in Headers */,
-				D0AE2C971C94529600F2FD3C /* StatusBarUtils.h in Headers */,
 				D05CC2FB1B6955D000E235A3 /* UINavigationItem+Proxy.h in Headers */,
 				D05CC3241B695B0700E235A3 /* NavigationBarProxy.h in Headers */,
 				D05CC31E1B695A9600E235A3 /* UIBarButtonItem+Proxy.h in Headers */,
@@ -696,10 +692,10 @@
 				D0C85DD41D1C1E6A00124894 /* ActionSheetItemGroupNode.swift in Sources */,
 				D08E903E1D24187900533158 /* ActionSheetItemGroup.swift in Sources */,
 				D0B367201C94A53A00346D2E /* StatusBarProxyNode.swift in Sources */,
-				D0AE2C981C94529600F2FD3C /* StatusBarUtils.m in Sources */,
 				D05CC2A21B69326C00E235A3 /* Window.swift in Sources */,
 				D015F7541D1B0F6C00E269B5 /* SystemContainedControllerTransitionCoordinator.swift in Sources */,
 				D05CC3151B695A9600E235A3 /* NavigationTransitionCoordinator.swift in Sources */,
+				D03B0E701D6331FB00955575 /* StatusBarHost.swift in Sources */,
 				D08E90471D243C2F00533158 /* HighlightTrackingButton.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -815,6 +811,7 @@
 		D05CC2781B69316F00E235A3 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_MODULES = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -839,6 +836,7 @@
 		D05CC2791B69316F00E235A3 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_MODULES = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -927,6 +925,7 @@
 		D086A56F1CC0115D00F08284 /* Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_MODULES = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";

@@ -170,13 +170,26 @@ import SwiftSignalKit
         }
     }
     
+    private var window: Window? {
+        if let window = self.view.window as? Window {
+            return window
+        } else if let superwindow = self.view.window {
+            for subview in superwindow.subviews {
+                if let subview = subview as? Window {
+                    return subview
+                }
+            }
+        }
+        return nil
+    }
+    
     public func present(_ controller: ViewController, in context: PresentationContextType, with arguments: Any? = nil) {
         controller.presentationArguments = arguments
         switch context {
             case .current:
                 self.presentationContext.present(controller)
             case .window:
-                (self.view.window as? Window)?.present(controller)
+                self.window?.present(controller)
         }
     }
 }

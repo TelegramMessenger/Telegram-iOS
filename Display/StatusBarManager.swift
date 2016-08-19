@@ -21,7 +21,7 @@ private func mappedSurface(_ surface: StatusBarSurface) -> MappedStatusBarSurfac
     return MappedStatusBarSurface(statusBars: surface.statusBars.map(mapStatusBar), surface: surface)
 }
 
-private func optimizeMappedSurface(_ surface: MappedStatusBarSurface) -> MappedStatusBarSurface {
+private func optimizeMappedSurface(statusBarSize: CGSize, surface: MappedStatusBarSurface) -> MappedStatusBarSurface {
     if surface.statusBars.count > 1 {
         for i in 1 ..< surface.statusBars.count {
             if surface.statusBars[i].style != surface.statusBars[i - 1].style || abs(surface.statusBars[i].frame.origin.y - surface.statusBars[i - 1].frame.origin.y) > CGFloat(FLT_EPSILON) {
@@ -31,7 +31,7 @@ private func optimizeMappedSurface(_ surface: MappedStatusBarSurface) -> MappedS
                 return surface
             }
         }
-        let size = UIApplication.shared.statusBarFrame.size
+        let size = statusBarSize
         return MappedStatusBarSurface(statusBars: [MappedStatusBar(style: surface.statusBars[0].style, frame: CGRect(origin: CGPoint(x: 0.0, y: surface.statusBars[0].frame.origin.y), size: size), statusBar: nil)], surface: surface.surface)
     } else {
         return surface
@@ -52,14 +52,23 @@ private func displayHiddenAnimation() -> CAAnimation {
 }
 
 class StatusBarManager {
+    private var host: StatusBarHost
+    
     var surfaces: [StatusBarSurface] = [] {
         didSet {
             self.updateSurfaces(oldValue)
         }
     }
     
+    init(host: StatusBarHost) {
+        self.host = host
+    }
+    
     private func updateSurfaces(_ previousSurfaces: [StatusBarSurface]) {
-        var mappedSurfaces = self.surfaces.map({ optimizeMappedSurface(mappedSurface($0)) })
+        let statusBarFrame = self.host.statusBarFrame
+        let statusBarView = self.host.statusBarView!
+        
+        var mappedSurfaces = self.surfaces.map({ optimizeMappedSurface(statusBarSize: statusBarFrame.size, surface: mappedSurface($0)) })
         
         var reduceSurfaces = true
         var reduceSurfacesStatusBarStyle: StatusBarStyle?
@@ -139,17 +148,17 @@ class StatusBarManager {
         }
         
         for statusBar in visibleStatusBars {
-            statusBar.updateProxyNode()
+            statusBar.updateProxyNode(statusBar: statusBarView)
         }
         
         if let globalStatusBar = globalStatusBar {
             let statusBarStyle: UIStatusBarStyle = globalStatusBar.0 == .Black ? .default : .lightContent
-            if UIApplication.shared.statusBarStyle != statusBarStyle {
-                UIApplication.shared.setStatusBarStyle(statusBarStyle, animated: false)
+            if self.host.statusBarStyle != statusBarStyle {
+                self.host.statusBarStyle = statusBarStyle
             }
-            StatusBarUtils.statusBarWindow()!.alpha = globalStatusBar.1
+            self.host.statusBarWindow?.alpha = globalStatusBar.1
         } else {
-            StatusBarUtils.statusBarWindow()!.alpha = 0.0
+            self.host.statusBarWindow?.alpha = 0.0
         }
     }
 }

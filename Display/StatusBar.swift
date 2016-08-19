@@ -61,12 +61,12 @@ public class StatusBar: ASDisplayNode {
         })
     }
     
-    func updateProxyNode() {
+    func updateProxyNode(statusBar: UIView) {
         self.removeProxyNodeScheduled = false
         if let proxyNode = proxyNode {
             proxyNode.style = self.style
         } else {
-            self.proxyNode = StatusBarProxyNode(style: self.style)
+            self.proxyNode = StatusBarProxyNode(style: self.style, statusBar: statusBar)
             self.proxyNode!.isHidden = false
             self.addSubnode(self.proxyNode!)
         }

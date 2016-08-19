@@ -20,7 +20,8 @@ class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesBegan(touches, with: event)
         
-        self.firstLocation = touches.first!.location(in: self.view)
+        let touch = touches.first!
+        self.firstLocation = touch.location(in: self.view)
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {

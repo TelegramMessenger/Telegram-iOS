@@ -92,7 +92,8 @@ private func containedLayoutForWindowLayout(_ layout: WindowLayout) -> Container
 }
 
 public class Window: UIWindow {
-    private let statusBarManager: StatusBarManager
+    private let statusBarHost: StatusBarHost?
+    private let statusBarManager: StatusBarManager?
     private var statusBarChangeObserver: AnyObject?
     private var keyboardFrameChangeObserver: AnyObject?
     
@@ -107,13 +108,17 @@ public class Window: UIWindow {
     
     private var statusBarHidden = false
     
-    public convenience init() {
-        self.init(frame: UIScreen.main.bounds)
-    }
-    
-    public override init(frame: CGRect) {
-        self.statusBarManager = StatusBarManager()
-        self.windowLayout = WindowLayout(size: frame.size, statusBarHeight: UIApplication.shared.statusBarFrame.size.height, inputHeight: 0.0)
+    public init(frame: CGRect, statusBarHost: StatusBarHost?) {
+        self.statusBarHost = statusBarHost
+        let statusBarHeight: CGFloat
+        if let statusBarHost = statusBarHost {
+            self.statusBarManager = StatusBarManager(host: statusBarHost)
+            statusBarHeight = statusBarHost.statusBarFrame.size.height
+        } else {
+            self.statusBarManager = nil
+            statusBarHeight = 20.0
+        }
+        self.windowLayout = WindowLayout(size: frame.size, statusBarHeight: statusBarHeight, inputHeight: 0.0)
         self.presentationContext = PresentationContext()
         
         super.init(frame: frame)
@@ -244,11 +249,11 @@ public class Window: UIWindow {
     override public func layoutSubviews() {
         super.layoutSubviews()
         
-        if self.tracingStatusBarsInvalidated {
+        if self.tracingStatusBarsInvalidated, let statusBarManager = statusBarManager {
             self.tracingStatusBarsInvalidated = false
             
             if self.statusBarHidden {
-                self.statusBarManager.surfaces = []
+                statusBarManager.surfaces = []
             } else {
                 var statusBarSurfaces: [StatusBarSurface] = []
                 for layers in self.layer.traceableLayerSurfaces() {
@@ -263,7 +268,7 @@ public class Window: UIWindow {
                     statusBarSurfaces.append(surface)
                 }
                 self.layer.adjustTraceableLayerTransforms(CGSize())
-                self.statusBarManager.surfaces = statusBarSurfaces
+                statusBarManager.surfaces = statusBarSurfaces
             }
         }
         
@@ -316,7 +321,12 @@ public class Window: UIWindow {
         if let updatingLayout = self.updatingLayout {
             self.updatingLayout = nil
             if updatingLayout.layout != self.windowLayout {
-                var statusBarHeight = UIApplication.shared.statusBarFrame.size.height
+                var statusBarHeight: CGFloat
+                if let statusBarHost = self.statusBarHost {
+                    statusBarHeight = statusBarHost.statusBarFrame.size.height
+                } else {
+                    statusBarHeight = 20.0
+                }
                 var statusBarWasHidden = self.statusBarHidden
                 if statusBarHiddenInLandscape && updatingLayout.layout.size.width > updatingLayout.layout.size.height {
                     statusBarHeight = 0.0
