@@ -424,9 +424,9 @@ public final class MediaBox {
                         
                         var offset = currentSize
                         var fd: Int32?
-                        dataContext.fetchDisposable = (self.wrappedFetchResource.get() |> take(1) |> mapToSignal { fetch -> Signal<Data, NoError> in
+                        dataContext.fetchDisposable = ((self.wrappedFetchResource.get() |> take(1) |> mapToSignal { fetch -> Signal<Data, NoError> in
                             return fetch(resource, currentSize ..< resource.size)
-                        } |> afterDisposed {
+                        }) |> afterDisposed {
                             if let fd = fd {
                                 close(fd)
                             }

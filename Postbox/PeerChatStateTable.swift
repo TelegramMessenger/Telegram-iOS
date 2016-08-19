@@ -30,6 +30,11 @@ final class PeerChatStateTable: Table {
         self.updatedPeerIds.insert(id)
     }
     
+    override func clearMemoryCache() {
+        self.cachedPeerChatStates.removeAll()
+        self.updatedPeerIds.removeAll()
+    }
+    
     override func beforeCommit() {
         let sharedEncoder = Encoder()
         for id in self.updatedPeerIds {

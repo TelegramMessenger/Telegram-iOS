@@ -149,10 +149,6 @@ final class MutableMessageHistoryView {
     }
     
     func updateVisibleRange(earliestVisibleIndex: MessageIndex, latestVisibleIndex: MessageIndex, context: MutableMessageHistoryViewReplayContext) -> Bool {
-        if (true) {
-            //return false
-        }
-        
         var minIndex: Int?
         var maxIndex: Int?
         
@@ -224,6 +220,24 @@ final class MutableMessageHistoryView {
             }
         }
         return false
+    }
+    
+    func refreshDueToExternalTransaction(fetchAroundHistoryEntries: (index: MessageIndex, count: Int, tagMask: MessageTags?) -> (entries: [MutableMessageHistoryEntry], lower: MutableMessageHistoryEntry?, upper: MutableMessageHistoryEntry?)) -> Bool {
+        var index = MessageIndex.absoluteUpperBound()
+        if !self.entries.isEmpty {
+            index = self.entries[self.entries.count / 2].index
+        }
+        
+        let (entries, earlier, later) = fetchAroundHistoryEntries(index: index, count: max(self.fillCount, self.entries.count), tagMask: self.tagMask)
+        
+        self.entries = entries
+        self.earlier = earlier
+        self.later = later
+        
+        /*let (entries, earlier, later) = self.fetchAroundHistoryEntries(index, count: count, tagMask: tagMask)
+        
+        let mutableView = MutableMessageHistoryView(id: MessageHistoryViewId(peerId: peerId, id: self.takeNextViewId()), anchorIndex: anchorIndex, combinedReadState: fixedCombinedReadState ?? self.readStateTable.getCombinedState(peerId), earlier: earlier, entries: entries, later: later, tagMask: tagMask, count: count)*/
+        return true
     }
     
     func replay(_ operations: [MessageHistoryOperation], holeFillDirections: [MessageIndex: HoleFillDirection], updatedMedia: [MediaId: Media?], context: MutableMessageHistoryViewReplayContext) -> Bool {

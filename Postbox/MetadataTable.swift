@@ -3,9 +3,13 @@ import Foundation
 private enum MetadataKey: Int32 {
     case UserVersion = 1
     case State = 2
+    case TransactionStateVersion = 3
+    case MasterClientId = 4
 }
 
 final class MetadataTable: Table {
+    private let sharedBuffer = WriteBuffer()
+    
     override init(valueBox: ValueBox, tableId: Int32) {
         super.init(valueBox: valueBox, tableId: tableId)
     }
@@ -26,7 +30,8 @@ final class MetadataTable: Table {
     }
     
     func setUserVersion(_ version: Int32) {
-        let buffer = WriteBuffer()
+        sharedBuffer.reset()
+        let buffer = sharedBuffer
         var varVersion: Int32 = version
         buffer.write(&varVersion, offset: 0, length: 4)
         self.valueBox.set(self.tableId, key: self.key(.UserVersion), value: buffer)
@@ -45,5 +50,42 @@ final class MetadataTable: Table {
         let encoder = Encoder()
         encoder.encodeRootObject(state)
         self.valueBox.set(self.tableId, key: self.key(.State), value: encoder.readBufferNoCopy())
+    }
+    
+    func transactionStateVersion() -> Int64 {
+        if let value = self.valueBox.get(self.tableId, key: self.key(.TransactionStateVersion)) {
+            var version: Int64 = 0
+            value.read(&version, offset: 0, length: 8)
+            return version
+        } else {
+            return 0
+        }
+    }
+    
+    func incrementTransactionStateVersion() -> Int64 {
+        var version = self.transactionStateVersion() + 1
+        sharedBuffer.reset()
+        let buffer = sharedBuffer
+        buffer.write(&version, offset: 0, length: 8)
+        self.valueBox.set(self.tableId, key: self.key(.TransactionStateVersion), value: buffer)
+        return version
+    }
+    
+    func masterClientId() -> Int64 {
+        if let value = self.valueBox.get(self.tableId, key: self.key(.MasterClientId)) {
+            var clientId: Int64 = 0
+            value.read(&clientId, offset: 0, length: 8)
+            return clientId
+        } else {
+            return 0
+        }
+    }
+    
+    func setMasterClientId(_ id: Int64) {
+        sharedBuffer.reset()
+        let buffer = sharedBuffer
+        var clientId = id
+        buffer.write(&clientId, offset: 0, length: 8)
+        self.valueBox.set(self.tableId, key: self.key(.MasterClientId), value: buffer)
     }
 }

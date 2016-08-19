@@ -52,6 +52,13 @@ final class ContactTable: Table {
         self.peerIds = ids
     }
     
+    override func clearMemoryCache() {
+        self.originalPeerIds = nil
+        self.peerIds = nil
+        self.addedPeerIds.removeAll()
+        self.removedPeerIds.removeAll()
+    }
+    
     override func beforeCommit() {
         let sharedKey = self.key(PeerId(namespace: 0, id: 0))
         

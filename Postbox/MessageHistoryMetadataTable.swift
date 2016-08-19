@@ -142,6 +142,15 @@ final class MessageHistoryMetadataTable: Table {
         }
     }
     
+    override func clearMemoryCache() {
+        self.initializedChatList = nil
+        self.initializedHistoryPeerIds.removeAll()
+        self.peerNextMessageIdByNamespace.removeAll()
+        self.updatedPeerNextMessageIdByNamespace.removeAll()
+        self.nextMessageStableId = nil
+        self.nextMessageStableIdUpdated = false
+    }
+    
     override func beforeCommit() {
         let sharedBuffer = WriteBuffer()
         for (peerId, namespaces) in self.updatedPeerNextMessageIdByNamespace {

@@ -70,6 +70,10 @@ final class RatingTable<T: RatingTableItem>: Table {
         self.items = items
     }
     
+    override func clearMemoryCache() {
+        self.items = nil
+    }
+    
     override func beforeCommit() {
         
     }

@@ -115,6 +115,7 @@ public final class SqliteValueBox: ValueBox {
         database.execute("PRAGMA temp_store=MEMORY")
         database.execute("PRAGMA wal_autocheckpoint=200")
         database.execute("PRAGMA journal_size_limit=1536")
+        sqlite3_busy_timeout(database.handle, 10000000)
         
         let result = self.getUserVersion(database)
         if result != 1 {
@@ -151,7 +152,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     public func begin() {
-        self.database.execute("BEGIN")
+        self.database.execute("BEGIN IMMEDIATE")
     }
     
     public func commit() {

@@ -1,6 +1,6 @@
 import Foundation
 
-public struct ChatListHole: Comparable, CustomStringConvertible {
+public struct ChatListHole: Hashable, CustomStringConvertible {
     public let index: MessageIndex
     
     public init(index: MessageIndex) {
@@ -9,6 +9,10 @@ public struct ChatListHole: Comparable, CustomStringConvertible {
     
     public var description: String {
         return "ChatListHole(\(self.index.id), \(self.index.timestamp))"
+    }
+    
+    public var hashValue: Int {
+        return self.index.hashValue
     }
 }
 

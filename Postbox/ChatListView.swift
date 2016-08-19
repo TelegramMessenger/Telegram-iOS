@@ -113,6 +113,24 @@ final class MutableChatListView {
         self.count = count
     }
     
+    func refreshDueToExternalTransaction(fetchAroundChatEntries: (index: MessageIndex, count: Int) -> (entries: [MutableChatListEntry], earlier: MutableChatListEntry?, later: MutableChatListEntry?)) -> Bool {
+        var index = MessageIndex.absoluteUpperBound()
+        if !self.entries.isEmpty {
+            index = self.entries[self.entries.count / 2].index
+        }
+        
+        var (entries, earlier, later) = fetchAroundChatEntries(index: index, count: self.entries.count)
+        
+        if entries != self.entries || earlier != self.earlier || later != self.later {
+            self.entries = entries
+            self.earlier = earlier
+            self.later = later
+            return true
+        } else {
+            return false
+        }
+    }
+    
     func replay(_ operations: [ChatListOperation], context: MutableChatListViewReplayContext) -> Bool {
         var hasChanges = false
         for operation in operations {

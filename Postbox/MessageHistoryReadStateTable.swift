@@ -254,6 +254,11 @@ final class MessageHistoryReadStateTable: Table {
         return (combinedState, holes ? .Push(thenSync: true) : .None)
     }
     
+    override func clearMemoryCache() {
+        self.cachedPeerReadStates.removeAll()
+        self.updatedPeerIds.removeAll()
+    }
+    
     override func beforeCommit() {
         let sharedBuffer = WriteBuffer()
         for id in self.updatedPeerIds {

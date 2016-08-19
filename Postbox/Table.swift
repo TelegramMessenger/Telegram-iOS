@@ -9,6 +9,9 @@ class Table {
         self.tableId = tableId
     }
     
+    func clearMemoryCache() {
+    }
+    
     func beforeCommit() {
     }
 }

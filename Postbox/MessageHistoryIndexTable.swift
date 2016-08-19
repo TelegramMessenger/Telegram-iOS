@@ -553,6 +553,7 @@ final class MessageHistoryIndexTable: Table {
         self.valueBox.set(self.tableId, key: self.key(index.id), value: value)
         
         operations.append(.InsertMessage(message))
+        
         if index.id.namespace == self.globalMessageIdsNamespace {
             self.globalMessageIdsTable.set(index.id.id, id: index.id)
         }

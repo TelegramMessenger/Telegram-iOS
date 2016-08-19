@@ -3,8 +3,8 @@ import Foundation
 final class PeerTable: Table {
     private let sharedEncoder = Encoder()
     private let sharedKey = ValueBoxKey(length: 8)
-    private var cachedPeers: [PeerId: Peer] = [:]
     
+    private var cachedPeers: [PeerId: Peer] = [:]
     private var updatedPeerIds = Set<PeerId>()
     
     override init(valueBox: ValueBox, tableId: Int32) {
@@ -32,6 +32,11 @@ final class PeerTable: Table {
             }
         }
         return nil
+    }
+    
+    override func clearMemoryCache() {
+        self.cachedPeers.removeAll()
+        self.updatedPeerIds.removeAll()
     }
     
     override func beforeCommit() {

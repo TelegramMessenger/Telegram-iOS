@@ -1,10 +1,20 @@
 import Foundation
 
 final class UnsentMessageHistoryView {
-    var indices: [MessageIndex]
+    var indices: Set<MessageIndex>
     
     init(indices: [MessageIndex]) {
-        self.indices = indices
+        self.indices = Set(indices)
+    }
+    
+    func refreshDueToExternalTransaction(fetchUnsendMessageIndices: () -> [MessageIndex]) -> Bool {
+        let indices = Set(fetchUnsendMessageIndices())
+        if indices != self.indices {
+            self.indices = indices
+            return true
+        } else {
+            return false
+        }
     }
     
     func replay(_ operations: [IntermediateMessageHistoryUnsentOperation]) -> Bool {
@@ -12,25 +22,14 @@ final class UnsentMessageHistoryView {
         for operation in operations {
             switch operation {
                 case let .Insert(index):
-                    var inserted = false
-                    for i in 0 ..< self.indices.count {
-                        if self.indices[i] > index {
-                            self.indices.insert(index, at: i)
-                            inserted = true
-                            break
-                        }
+                    if !self.indices.contains(index) {
+                        self.indices.insert(index)
+                        updated = true
                     }
-                    if !inserted {
-                        self.indices.append(index)
-                    }
-                    updated = true
                 case let .Remove(index):
-                    for i in 0 ..< self.indices.count {
-                        if self.indices[i] == index {
-                            self.indices.remove(at: i)
-                            updated = true
-                            break
-                        }
+                    if self.indices.contains(index) {
+                        self.indices.remove(index)
+                        updated = true
                     }
             }
         }
