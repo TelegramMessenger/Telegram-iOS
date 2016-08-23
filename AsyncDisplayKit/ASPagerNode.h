@@ -16,6 +16,8 @@
 @class ASPagerNode;
 @class ASPagerFlowLayout;
 
+NS_ASSUME_NONNULL_BEGIN
+
 #define ASPagerNodeDataSource ASPagerDataSource
 @protocol ASPagerDataSource <NSObject>
 
@@ -52,18 +54,20 @@
  */
 - (ASCellNodeBlock)pagerNode:(ASPagerNode *)pagerNode nodeBlockAtIndex:(NSInteger)index;
 
-/**
- * Provides the constrained size range for measuring the node at the index path.
- *
- * @param pagerNode The sender.
- * @param indexPath The index path of the node.
- * @returns A constrained size range for layout the node at this index path.
- */
-- (ASSizeRange)pagerNode:(ASPagerNode *)pagerNode constrainedSizeForNodeAtIndexPath:(NSIndexPath *)indexPath;
-
 @end
 
 @protocol ASPagerDelegate <ASCollectionDelegate>
+
+@optional
+
+/**
+ * Provides the constrained size range for measuring the node at the index.
+ *
+ * @param pagerNode The sender.
+ * @param index The index of the node.
+ * @returns A constrained size range for layout the node at this index.
+ */
+- (ASSizeRange)pagerNode:(ASPagerNode *)pagerNode constrainedSizeForNodeAtIndex:(NSInteger)index;
 
 @end
 
@@ -82,14 +86,15 @@
 /**
  * Data Source is required, and uses a different protocol from ASCollectionNode.
  */
-- (void)setDataSource:(id <ASPagerDataSource>)dataSource;
-- (id <ASPagerDataSource>)dataSource;
+- (void)setDataSource:(nullable id <ASPagerDataSource>)dataSource;
+- (nullable id <ASPagerDataSource>)dataSource;
 
 /**
- * Delegate is optional, and uses the same protocol as ASCollectionNode.
+ * Delegate is optional.
  * This includes UIScrollViewDelegate as well as most methods from UICollectionViewDelegate, like willDisplay...
  */
-@property (nonatomic, weak) id <ASPagerDelegate> delegate;
+- (void)setDelegate:(nullable id <ASPagerDelegate>)delegate;
+- (nullable id <ASPagerDelegate>)delegate;
 
 /**
  * The underlying ASCollectionView object.
@@ -112,3 +117,5 @@
 - (ASCellNode *)nodeForPageAtIndex:(NSInteger)index;
 
 @end
+
+NS_ASSUME_NONNULL_END

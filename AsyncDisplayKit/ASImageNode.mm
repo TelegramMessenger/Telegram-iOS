@@ -10,6 +10,8 @@
 
 #import "ASImageNode.h"
 
+#import <tgmath.h>
+
 #import "_ASDisplayLayer.h"
 #import "ASAssert.h"
 #import "ASDisplayNode+Subclasses.h"
@@ -52,9 +54,9 @@ struct ASImageNodeDrawParameters {
 @property CGRect imageDrawRect;
 @property BOOL isOpaque;
 @property (nonatomic, strong) UIColor *backgroundColor;
-@property ASDisplayNodeContextModifier preContextBlock;
-@property ASDisplayNodeContextModifier postContextBlock;
-@property asimagenode_modification_block_t imageModificationBlock;
+@property (nonatomic, copy) ASDisplayNodeContextModifier preContextBlock;
+@property (nonatomic, copy) ASDisplayNodeContextModifier postContextBlock;
+@property (nonatomic, copy) asimagenode_modification_block_t imageModificationBlock;
 
 @end
 
@@ -317,7 +319,7 @@ struct ASImageNodeDrawParameters {
   
   CGSize imageSize = image.size;
   CGSize imageSizeInPixels = CGSizeMake(imageSize.width * image.scale, imageSize.height * image.scale);
-  CGSize boundsSizeInPixels = CGSizeMake(floorf(bounds.size.width * contentsScale), floorf(bounds.size.height * contentsScale));
+  CGSize boundsSizeInPixels = CGSizeMake(std::floor(bounds.size.width * contentsScale), std::floor(bounds.size.height * contentsScale));
   
   if (_debugLabelNode) {
     CGFloat pixelCountRatio            = (imageSizeInPixels.width * imageSizeInPixels.height) / (boundsSizeInPixels.width * boundsSizeInPixels.height);
