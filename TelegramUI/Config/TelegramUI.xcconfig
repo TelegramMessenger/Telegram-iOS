@@ -1,0 +1,2 @@
+SWIFT_INCLUDE_PATHS = $(SRCROOT)/TelegramUI
+MODULEMAP_PRIVATE_FILE = $(SRCROOT)/TelegramUI/module.private.modulemap
