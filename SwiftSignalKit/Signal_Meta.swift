@@ -153,7 +153,7 @@ public func throttled<T, E>(_ signal: Signal<Signal<T, E>, E>) -> Signal<T, E> {
     }
 }
 
-public func mapToSignal<T, R, E>(_ f: (T) -> Signal<R, E>) -> (Signal<T, E>) -> Signal<R, E> {
+public func mapToSignal<T, R, E>(_ f: @escaping(T) -> Signal<R, E>) -> (Signal<T, E>) -> Signal<R, E> {
     return { signal -> Signal<R, E> in
         return Signal<Signal<R, E>, E> { subscriber in
             return signal.start(next: { next in
@@ -167,7 +167,7 @@ public func mapToSignal<T, R, E>(_ f: (T) -> Signal<R, E>) -> (Signal<T, E>) -> 
     }
 }
 
-public func mapToSignalPromotingError<T, R, E>(_ f: (T) -> Signal<R, E>) -> (Signal<T, NoError>) -> Signal<R, E> {
+public func mapToSignalPromotingError<T, R, E>(_ f: @escaping(T) -> Signal<R, E>) -> (Signal<T, NoError>) -> Signal<R, E> {
     return { signal -> Signal<R, E> in
         return Signal<Signal<R, E>, E> { subscriber in
             return signal.start(next: { next in
@@ -179,13 +179,13 @@ public func mapToSignalPromotingError<T, R, E>(_ f: (T) -> Signal<R, E>) -> (Sig
     }
 }
 
-public func mapToQueue<T, R, E>(_ f: (T) -> Signal<R, E>) -> (Signal<T, E>) -> Signal<R, E> {
+public func mapToQueue<T, R, E>(_ f: @escaping(T) -> Signal<R, E>) -> (Signal<T, E>) -> Signal<R, E> {
     return { signal -> Signal<R, E> in
         return signal |> map { f($0) } |> queue
     }
 }
 
-public func mapToThrottled<T, R, E>(_ f: (T) -> Signal<R, E>) -> (Signal<T, E>) -> Signal<R, E> {
+public func mapToThrottled<T, R, E>(_ f: @escaping(T) -> Signal<R, E>) -> (Signal<T, E>) -> Signal<R, E> {
     return { signal -> Signal<R, E> in
         return signal |> map { f($0) } |> throttled
     }
@@ -215,7 +215,7 @@ public func then<T, E>(_ nextSignal: Signal<T, E>) -> (Signal<T, E>) -> Signal<T
     }
 }
 
-public func deferred<T, E>(_ generator: () -> Signal<T, E>) -> Signal<T, E> {
+public func deferred<T, E>(_ generator: @escaping() -> Signal<T, E>) -> Signal<T, E> {
     return Signal { subscriber in
         return generator().start(next: { next in
             subscriber.putNext(next)

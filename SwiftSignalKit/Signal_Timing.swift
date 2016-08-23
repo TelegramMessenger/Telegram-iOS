@@ -1,6 +1,6 @@
 import Foundation
 
-public func delay<T, E>(_ timeout: Double, queue: Queue) -> (signal: Signal<T, E>) -> Signal<T, E> {
+public func delay<T, E>(_ timeout: Double, queue: Queue) -> (_ signal: Signal<T, E>) -> Signal<T, E> {
     return { signal in
         return Signal<T, E> { subscriber in
             let disposable = MetaDisposable()

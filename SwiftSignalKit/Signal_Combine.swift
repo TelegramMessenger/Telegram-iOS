@@ -6,7 +6,7 @@ private struct SignalCombineState {
     let error: Bool
 }
 
-private func combineLatestAny<E, R>(_ signals: [Signal<Any, E>], combine: ([Any]) -> R, initialValues: [Int : Any]) -> Signal<R, E> {
+private func combineLatestAny<E, R>(_ signals: [Signal<Any, E>], combine: @escaping([Any]) -> R, initialValues: [Int : Any]) -> Signal<R, E> {
     return Signal { subscriber in
         let state = Atomic(value: SignalCombineState(values: initialValues, completed: Set(), error: false))
         let disposable = DisposableSet()

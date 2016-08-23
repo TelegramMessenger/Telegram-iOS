@@ -1,6 +1,6 @@
 import Foundation
 
-public func `catch`<T, E, R>(_ f: (E) -> Signal<T, R>) -> (Signal<T, E>) -> Signal<T, R> {
+public func `catch`<T, E, R>(_ f: @escaping(E) -> Signal<T, R>) -> (Signal<T, E>) -> Signal<T, R> {
     return { signal in
         return Signal<T, R> { subscriber in
             let disposable = DisposableSet()
@@ -26,7 +26,7 @@ public func `catch`<T, E, R>(_ f: (E) -> Signal<T, R>) -> (Signal<T, E>) -> Sign
     }
 }
 
-private func recursiveFunction(_ f: ((Void) -> Void) -> Void) -> ((Void) -> Void) {
+private func recursiveFunction(_ f: @escaping(@escaping(Void) -> Void) -> Void) -> ((Void) -> Void) {
     return {
         f(recursiveFunction(f))
     }
@@ -94,7 +94,7 @@ public func recurse<T, E>(_ latestValue: T?) -> (Signal<T, E>) -> Signal<T, E> {
     }
 }
 
-public func retry<T, E>(_ delayIncrement: Double, maxDelay: Double, onQueue queue: Queue) -> (signal: Signal<T, E>) -> Signal<T, NoError> {
+public func retry<T, E>(_ delayIncrement: Double, maxDelay: Double, onQueue queue: Queue) -> (_ signal: Signal<T, E>) -> Signal<T, NoError> {
     return { signal in
         return Signal { subscriber in
             let shouldRetry = Atomic(value: true)

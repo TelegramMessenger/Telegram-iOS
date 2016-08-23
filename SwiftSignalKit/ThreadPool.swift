@@ -8,7 +8,7 @@ public final class ThreadPoolTask {
     private let state = ThreadPoolTaskState()
     private let action: (ThreadPoolTaskState) -> ()
     
-    public init(_ action: (ThreadPoolTaskState) -> ()) {
+    public init(_ action: @escaping(ThreadPoolTaskState) -> ()) {
         self.action = action
     }
     
@@ -39,7 +39,7 @@ public final class ThreadPoolQueue : Equatable {
         }
     }
     
-    private func popFirstTask() -> ThreadPoolTask? {
+    fileprivate func popFirstTask() -> ThreadPoolTask? {
         if self.tasks.count != 0 {
             let task = self.tasks[0];
             self.tasks.remove(at: 0)
@@ -49,7 +49,7 @@ public final class ThreadPoolQueue : Equatable {
         }
     }
     
-    private func hasTasks() -> Bool {
+    fileprivate func hasTasks() -> Bool {
         return self.tasks.count != 0
     }
 }
@@ -142,7 +142,7 @@ public func ==(lhs: ThreadPoolQueue, rhs: ThreadPoolQueue) -> Bool {
         tempQueue.addTask(task)
     }
     
-    private func workOnQueue(_ queue: ThreadPoolQueue, action: () -> ()) {
+    fileprivate func workOnQueue(_ queue: ThreadPoolQueue, action: () -> ()) {
         pthread_mutex_lock(&self.mutex)
         action()
         if !self.queues.contains(queue) && !self.takenQueues.contains(queue) {

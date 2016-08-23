@@ -1,6 +1,6 @@
 import Foundation
 
-public func reduceLeft<T, E>(value: T, f: (T, T) -> T) -> (signal: Signal<T, E>) -> Signal<T, E> {
+public func reduceLeft<T, E>(value: T, f: @escaping(T, T) -> T) -> (_ signal: Signal<T, E>) -> Signal<T, E> {
     return { signal in
         return Signal<T, E> { subscriber in
             var currentValue = value
@@ -17,7 +17,7 @@ public func reduceLeft<T, E>(value: T, f: (T, T) -> T) -> (signal: Signal<T, E>)
     }
 }
 
-public func reduceLeft<T, E>(value: T, f: (T, T, (T) -> Void) -> T) -> (signal: Signal<T, E>) -> Signal<T, E> {
+public func reduceLeft<T, E>(value: T, f: @escaping(T, T, (T) -> Void) -> T) -> (_ signal: Signal<T, E>) -> Signal<T, E> {
     return { signal in
         return Signal<T, E> { subscriber in
             var currentValue = value
@@ -55,7 +55,7 @@ private final class ReduceQueueState<T, E> : Disposable {
     var generator: (T, T) -> Signal<(T, Passthrough<T>), E>
     var value: T
     
-    init(subscriber: Subscriber<T, E>, value: T, generator: (T, T) -> Signal<(T, Passthrough<T>), E>) {
+    init(subscriber: Subscriber<T, E>, value: T, generator: @escaping(T, T) -> Signal<(T, Passthrough<T>), E>) {
         self.subscriber = subscriber
         self.generator = generator
         self.value = value
@@ -172,7 +172,7 @@ private final class ReduceQueueState<T, E> : Disposable {
     }
 }
 
-public func reduceLeft<T, E>(_ value: T, generator: (T, T) -> Signal<(T, Passthrough<T>), E>) -> (signal: Signal<T, E>) -> Signal<T, E> {
+public func reduceLeft<T, E>(_ value: T, generator: @escaping(T, T) -> Signal<(T, Passthrough<T>), E>) -> (_ signal: Signal<T, E>) -> Signal<T, E> {
     return { signal in
         return Signal { subscriber in
             let state = ReduceQueueState(subscriber: subscriber, value: value, generator: generator)

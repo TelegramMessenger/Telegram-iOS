@@ -8,7 +8,12 @@ public func identity<A>(a: A) -> A {
     return a;
 }
 
-infix operator |> { associativity left precedence 95 }
+precedencegroup PipeRight {
+    associativity: left
+    higherThan: DefaultPrecedence
+}
+
+infix operator |> : PipeRight
 
 public func |> <T, U>(value: T, function: ((T) -> U)) -> U {
     return function(value)
@@ -32,7 +37,7 @@ private final class SubscriberDisposable<T, E> : Disposable {
 public struct Signal<T, E> {
     private let generator: (Subscriber<T, E>) -> Disposable
     
-    public init(_ generator: (Subscriber<T, E>) -> Disposable) {
+    public init(_ generator: @escaping(Subscriber<T, E>) -> Disposable) {
         self.generator = generator
     }
     

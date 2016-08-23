@@ -7,7 +7,7 @@ public final class Timer {
     private var completion: (Void) -> Void
     private var queue: Queue
     
-    public init(timeout: Double, `repeat`: Bool, completion: (Void) -> Void, queue: Queue) {
+    public init(timeout: Double, `repeat`: Bool, completion: @escaping(Void) -> Void, queue: Queue) {
         self.timeout = timeout
         self.`repeat` = `repeat`
         self.completion = completion

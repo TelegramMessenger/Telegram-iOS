@@ -34,7 +34,7 @@ public final class Queue {
         self.specialIsMainQueue = false
     }
     
-    private init(queue: DispatchQueue, specialIsMainQueue: Bool) {
+    fileprivate init(queue: DispatchQueue, specialIsMainQueue: Bool) {
         self.nativeQueue = queue
         self.specialIsMainQueue = specialIsMainQueue
     }
@@ -57,7 +57,7 @@ public final class Queue {
         }
     }
     
-    public func async(_ f: (Void) -> Void) {
+    public func async(_ f: @escaping(Void) -> Void) {
         if self.isCurrent() {
             f()
         } else {
@@ -65,7 +65,7 @@ public final class Queue {
         }
     }
     
-    public func sync(_ f: @noescape(Void) -> Void) {
+    public func sync(_ f: (Void) -> Void) {
         if self.isCurrent() {
             f()
         } else {
@@ -73,11 +73,11 @@ public final class Queue {
         }
     }
     
-    public func justDispatch(_ f: (Void) -> Void) {
+    public func justDispatch(_ f: @escaping(Void) -> Void) {
         self.nativeQueue.async(execute: f)
     }
     
-    public func after(_ delay: Double, _ f: (Void) -> Void) {
+    public func after(_ delay: Double, _ f: @escaping(Void) -> Void) {
         let time: DispatchTime = DispatchTime.now() + Double(Int64(delay * Double(NSEC_PER_SEC)))
         self.nativeQueue.asyncAfter(deadline: time, execute: f)
     }

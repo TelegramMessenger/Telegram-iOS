@@ -15,7 +15,7 @@ public final class ActionDisposable : Disposable {
     private var action: () -> Void
     private var lock: Int32 = 0
     
-    public init(action: () -> Void) {
+    public init(action: @escaping() -> Void) {
         self.action = action
     }
     
