@@ -58,7 +58,7 @@ class Download {
                 }
             }
             
-            let internalId: AnyObject! = request.internalId
+            let internalId: Any! = request.internalId
             
             self.requestService.add(request)
             
@@ -100,7 +100,7 @@ class Download {
                 }
             }
             
-            let internalId: AnyObject! = request.internalId
+            let internalId: Any! = request.internalId
             
             requestService.add(request)
             

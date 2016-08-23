@@ -1,11 +1,11 @@
 import Foundation
 
-protocol Identifiable {
+public protocol Identifiable {
     associatedtype T: Hashable, Equatable
     var stableId: T { get }
 }
 
-func mergeListsStable<T where T: Comparable, T: Equatable, T: Identifiable>(leftList: [T], rightList: [T]) -> ([Int], [(Int, T, Int?)]) {
+public func mergeListsStable<T>(leftList: [T], rightList: [T]) -> ([Int], [(Int, T, Int?)]) where T: Comparable, T: Equatable, T: Identifiable {
     var removeIndices: [Int] = []
     var insertItems: [(Int, T, Int?)] = []
     
@@ -85,7 +85,7 @@ func mergeListsStable<T where T: Comparable, T: Equatable, T: Identifiable>(left
     return (removeIndices, insertItems)
 }
 
-func mergeListsStableWithUpdates<T where T: Comparable, T: Equatable, T: Identifiable>(leftList: [T], rightList: [T]) -> ([Int], [(Int, T, Int?)], [(Int, T)]) {
+public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T]) -> ([Int], [(Int, T, Int?)], [(Int, T)]) where T: Comparable, T: Equatable, T: Identifiable {
     var removeIndices: [Int] = []
     var insertItems: [(Int, T, Int?)] = []
     var updatedIndices: [(Int, T)] = []

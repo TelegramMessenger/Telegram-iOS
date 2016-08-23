@@ -19,7 +19,7 @@ public class Serialization: NSObject, MTSerialization {
         return 53
     }
     
-    public func parseMessage(_ data: Data!) -> AnyObject! {
+    public func parseMessage(_ data: Data!) -> Any! {
         if let body = Api.parse(Buffer(data: data)) {
             return BoxedMessage(body)
         }
@@ -29,7 +29,7 @@ public class Serialization: NSObject, MTSerialization {
     public func exportAuthorization(_ datacenterId: Int32, data: AutoreleasingUnsafeMutablePointer<NSData?>) -> MTExportAuthorizationResponseParser!
     {
         let functionContext = Api.functions.auth.exportAuthorization(dcId: datacenterId)
-        data.pointee = functionContext.1.makeData()
+        data.pointee = functionContext.1.makeData() as NSData
         return { data -> MTExportedAuthorizationData! in
             if let exported = functionContext.2(Buffer(data: data)) {
                 switch exported {
@@ -48,7 +48,7 @@ public class Serialization: NSObject, MTSerialization {
     
     public func requestDatacenterAddressList(_ datacenterId: Int32, data: AutoreleasingUnsafeMutablePointer<NSData?>) -> MTRequestDatacenterAddressListParser! {
         let (_, buffer, parse) = Api.functions.help.getConfig()
-        data.pointee = buffer.makeData()
+        data.pointee = buffer.makeData() as NSData
         return { response -> MTDatacenterAddressListData! in
             if let config = parse(Buffer(data: response)) {
                 switch config {

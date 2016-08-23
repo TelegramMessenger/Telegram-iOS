@@ -1,7 +1,7 @@
 
-private final class FunctionDescription: CustomStringConvertible {
+fileprivate final class FunctionDescription: CustomStringConvertible {
     let generator: () -> String
-    init(_ generator: () -> String) {
+    init(_ generator: @escaping () -> String) {
         self.generator = generator
     }
 
@@ -10,7 +10,7 @@ private final class FunctionDescription: CustomStringConvertible {
     }
 }
 
-private let parsers: [Int32 : (BufferReader) -> Any?] = {
+fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     var dict: [Int32 : (BufferReader) -> Any?] = [:]
     dict[-1471112230] = { return $0.readInt32() }
     dict[570911930] = { return $0.readInt64() }
@@ -494,7 +494,7 @@ public struct Api {
         return nil
     }
     
-        private static func parse(_ reader: BufferReader, signature: Int32) -> Any? {
+        fileprivate static func parse(_ reader: BufferReader, signature: Int32) -> Any? {
             if let parser = parsers[signature] {
                 return parser(reader)
             }
@@ -504,7 +504,7 @@ public struct Api {
             }
         }
         
-        private static func parseVector<T>(_ reader: BufferReader, elementSignature: Int32, elementType: T.Type) -> [T]? {
+        fileprivate static func parseVector<T>(_ reader: BufferReader, elementSignature: Int32, elementType: T.Type) -> [T]? {
         if let count = reader.readInt32() {
             var array = [T]()
             var i: Int32 = 0
@@ -913,7 +913,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_stickerSet(_ reader: BufferReader) -> StickerSet? {
+            fileprivate static func parse_stickerSet(_ reader: BufferReader) -> StickerSet? {
                 var _1: Api.StickerSet?
                 if let signature = reader.readInt32() {
                     _1 = Api.parse(reader, signature: signature) as? Api.StickerSet
@@ -967,7 +967,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_chat(_ reader: BufferReader) -> Chat? {
+            fileprivate static func parse_chat(_ reader: BufferReader) -> Chat? {
                 var _1: Api.Chat?
                 if let signature = reader.readInt32() {
                     _1 = Api.parse(reader, signature: signature) as? Api.Chat
@@ -1019,7 +1019,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_sentEncryptedMessage(_ reader: BufferReader) -> SentEncryptedMessage? {
+            fileprivate static func parse_sentEncryptedMessage(_ reader: BufferReader) -> SentEncryptedMessage? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 let _c1 = _1 != nil
@@ -1030,7 +1030,7 @@ public struct Api {
                     return nil
                 }
             }
-            private static func parse_sentEncryptedFile(_ reader: BufferReader) -> SentEncryptedMessage? {
+            fileprivate static func parse_sentEncryptedFile(_ reader: BufferReader) -> SentEncryptedMessage? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: Api.EncryptedFile?
@@ -1086,10 +1086,10 @@ public struct Api {
         return true
         }
         
-            private static func parse_stickersNotModified(_ reader: BufferReader) -> Stickers? {
+            fileprivate static func parse_stickersNotModified(_ reader: BufferReader) -> Stickers? {
                 return Api.messages.Stickers.stickersNotModified
             }
-            private static func parse_stickers(_ reader: BufferReader) -> Stickers? {
+            fileprivate static func parse_stickers(_ reader: BufferReader) -> Stickers? {
                 var _1: String?
                 _1 = parseString(reader)
                 var _2: [Api.Document]?
@@ -1138,7 +1138,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_foundGifs(_ reader: BufferReader) -> FoundGifs? {
+            fileprivate static func parse_foundGifs(_ reader: BufferReader) -> FoundGifs? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: [Api.FoundGif]?
@@ -1188,7 +1188,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_botResults(_ reader: BufferReader) -> BotResults? {
+            fileprivate static func parse_botResults(_ reader: BufferReader) -> BotResults? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: Int64?
@@ -1242,7 +1242,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_botCallbackAnswer(_ reader: BufferReader) -> BotCallbackAnswer? {
+            fileprivate static func parse_botCallbackAnswer(_ reader: BufferReader) -> BotCallbackAnswer? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: String?
@@ -1286,7 +1286,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_chats(_ reader: BufferReader) -> Chats? {
+            fileprivate static func parse_chats(_ reader: BufferReader) -> Chats? {
                 var _1: [Api.Chat]?
                 if let _ = reader.readInt32() {
                     _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
@@ -1335,7 +1335,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_dhConfigNotModified(_ reader: BufferReader) -> DhConfig? {
+            fileprivate static func parse_dhConfigNotModified(_ reader: BufferReader) -> DhConfig? {
                 var _1: Buffer?
                 _1 = parseBytes(reader)
                 let _c1 = _1 != nil
@@ -1346,7 +1346,7 @@ public struct Api {
                     return nil
                 }
             }
-            private static func parse_dhConfig(_ reader: BufferReader) -> DhConfig? {
+            fileprivate static func parse_dhConfig(_ reader: BufferReader) -> DhConfig? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: Buffer?
@@ -1396,7 +1396,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_affectedHistory(_ reader: BufferReader) -> AffectedHistory? {
+            fileprivate static func parse_affectedHistory(_ reader: BufferReader) -> AffectedHistory? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: Int32?
@@ -1439,7 +1439,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_messageEditData(_ reader: BufferReader) -> MessageEditData? {
+            fileprivate static func parse_messageEditData(_ reader: BufferReader) -> MessageEditData? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 let _c1 = _1 != nil
@@ -1486,7 +1486,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_chatFull(_ reader: BufferReader) -> ChatFull? {
+            fileprivate static func parse_chatFull(_ reader: BufferReader) -> ChatFull? {
                 var _1: Api.ChatFull?
                 if let signature = reader.readInt32() {
                     _1 = Api.parse(reader, signature: signature) as? Api.ChatFull
@@ -1536,7 +1536,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_affectedMessages(_ reader: BufferReader) -> AffectedMessages? {
+            fileprivate static func parse_affectedMessages(_ reader: BufferReader) -> AffectedMessages? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: Int32?
@@ -1588,10 +1588,10 @@ public struct Api {
         return true
         }
         
-            private static func parse_savedGifsNotModified(_ reader: BufferReader) -> SavedGifs? {
+            fileprivate static func parse_savedGifsNotModified(_ reader: BufferReader) -> SavedGifs? {
                 return Api.messages.SavedGifs.savedGifsNotModified
             }
-            private static func parse_savedGifs(_ reader: BufferReader) -> SavedGifs? {
+            fileprivate static func parse_savedGifs(_ reader: BufferReader) -> SavedGifs? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: [Api.Document]?
@@ -1695,7 +1695,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_messages(_ reader: BufferReader) -> Messages? {
+            fileprivate static func parse_messages(_ reader: BufferReader) -> Messages? {
                 var _1: [Api.Message]?
                 if let _ = reader.readInt32() {
                     _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
@@ -1718,7 +1718,7 @@ public struct Api {
                     return nil
                 }
             }
-            private static func parse_messagesSlice(_ reader: BufferReader) -> Messages? {
+            fileprivate static func parse_messagesSlice(_ reader: BufferReader) -> Messages? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: [Api.Message]?
@@ -1744,7 +1744,7 @@ public struct Api {
                     return nil
                 }
             }
-            private static func parse_channelMessages(_ reader: BufferReader) -> Messages? {
+            fileprivate static func parse_channelMessages(_ reader: BufferReader) -> Messages? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: Int32?
@@ -1826,7 +1826,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_peerDialogs(_ reader: BufferReader) -> PeerDialogs? {
+            fileprivate static func parse_peerDialogs(_ reader: BufferReader) -> PeerDialogs? {
                 var _1: [Api.Dialog]?
                 if let _ = reader.readInt32() {
                     _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Dialog.self)
@@ -1931,7 +1931,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_dialogs(_ reader: BufferReader) -> Dialogs? {
+            fileprivate static func parse_dialogs(_ reader: BufferReader) -> Dialogs? {
                 var _1: [Api.Dialog]?
                 if let _ = reader.readInt32() {
                     _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Dialog.self)
@@ -1959,7 +1959,7 @@ public struct Api {
                     return nil
                 }
             }
-            private static func parse_dialogsSlice(_ reader: BufferReader) -> Dialogs? {
+            fileprivate static func parse_dialogsSlice(_ reader: BufferReader) -> Dialogs? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: [Api.Dialog]?
@@ -2030,10 +2030,10 @@ public struct Api {
         return true
         }
         
-            private static func parse_allStickersNotModified(_ reader: BufferReader) -> AllStickers? {
+            fileprivate static func parse_allStickersNotModified(_ reader: BufferReader) -> AllStickers? {
                 return Api.messages.AllStickers.allStickersNotModified
             }
-            private static func parse_allStickers(_ reader: BufferReader) -> AllStickers? {
+            fileprivate static func parse_allStickers(_ reader: BufferReader) -> AllStickers? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: [Api.StickerSet]?
@@ -2094,10 +2094,10 @@ public struct Api {
         return true
         }
         
-            private static func parse_messageEmpty(_ reader: BufferReader) -> Message? {
+            fileprivate static func parse_messageEmpty(_ reader: BufferReader) -> Message? {
                 return Api.messages.Message.messageEmpty
             }
-            private static func parse_message(_ reader: BufferReader) -> Message? {
+            fileprivate static func parse_message(_ reader: BufferReader) -> Message? {
                 var _1: Api.Message?
                 if let signature = reader.readInt32() {
                     _1 = Api.parse(reader, signature: signature) as? Api.Message
@@ -2153,7 +2153,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputGeoPlaceName(_ reader: BufferReader) -> InputGeoPlaceName? {
+        fileprivate static func parse_inputGeoPlaceName(_ reader: BufferReader) -> InputGeoPlaceName? {
             var _1: String?
             _1 = parseString(reader)
             var _2: String?
@@ -2210,10 +2210,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputGeoPointEmpty(_ reader: BufferReader) -> InputGeoPoint? {
+        fileprivate static func parse_inputGeoPointEmpty(_ reader: BufferReader) -> InputGeoPoint? {
             return Api.InputGeoPoint.inputGeoPointEmpty
         }
-        private static func parse_inputGeoPoint(_ reader: BufferReader) -> InputGeoPoint? {
+        fileprivate static func parse_inputGeoPoint(_ reader: BufferReader) -> InputGeoPoint? {
             var _1: Double?
             _1 = reader.readDouble()
             var _2: Double?
@@ -2290,7 +2290,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_chatFull(_ reader: BufferReader) -> ChatFull? {
+        fileprivate static func parse_chatFull(_ reader: BufferReader) -> ChatFull? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Api.ChatParticipants?
@@ -2326,7 +2326,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_channelFull(_ reader: BufferReader) -> ChatFull? {
+        fileprivate static func parse_channelFull(_ reader: BufferReader) -> ChatFull? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -2436,7 +2436,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_chatParticipant(_ reader: BufferReader) -> ChatParticipant? {
+        fileprivate static func parse_chatParticipant(_ reader: BufferReader) -> ChatParticipant? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -2453,7 +2453,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_chatParticipantCreator(_ reader: BufferReader) -> ChatParticipant? {
+        fileprivate static func parse_chatParticipantCreator(_ reader: BufferReader) -> ChatParticipant? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -2464,7 +2464,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_chatParticipantAdmin(_ reader: BufferReader) -> ChatParticipant? {
+        fileprivate static func parse_chatParticipantAdmin(_ reader: BufferReader) -> ChatParticipant? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -2518,7 +2518,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_schemeMethod(_ reader: BufferReader) -> SchemeMethod? {
+        fileprivate static func parse_schemeMethod(_ reader: BufferReader) -> SchemeMethod? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -2575,10 +2575,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputPhotoCropAuto(_ reader: BufferReader) -> InputPhotoCrop? {
+        fileprivate static func parse_inputPhotoCropAuto(_ reader: BufferReader) -> InputPhotoCrop? {
             return Api.InputPhotoCrop.inputPhotoCropAuto
         }
-        private static func parse_inputPhotoCrop(_ reader: BufferReader) -> InputPhotoCrop? {
+        fileprivate static func parse_inputPhotoCrop(_ reader: BufferReader) -> InputPhotoCrop? {
             var _1: Double?
             _1 = reader.readDouble()
             var _2: Double?
@@ -2655,7 +2655,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_photoEmpty(_ reader: BufferReader) -> Photo? {
+        fileprivate static func parse_photoEmpty(_ reader: BufferReader) -> Photo? {
             var _1: Int64?
             _1 = reader.readInt64()
             let _c1 = _1 != nil
@@ -2666,7 +2666,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_wallPhoto(_ reader: BufferReader) -> Photo? {
+        fileprivate static func parse_wallPhoto(_ reader: BufferReader) -> Photo? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int64?
@@ -2704,7 +2704,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_photo(_ reader: BufferReader) -> Photo? {
+        fileprivate static func parse_photo(_ reader: BufferReader) -> Photo? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int64?
@@ -2803,7 +2803,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_chatEmpty(_ reader: BufferReader) -> Chat? {
+        fileprivate static func parse_chatEmpty(_ reader: BufferReader) -> Chat? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -2814,7 +2814,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_chatForbidden(_ reader: BufferReader) -> Chat? {
+        fileprivate static func parse_chatForbidden(_ reader: BufferReader) -> Chat? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -2828,7 +2828,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_chat(_ reader: BufferReader) -> Chat? {
+        fileprivate static func parse_chat(_ reader: BufferReader) -> Chat? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -2864,7 +2864,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_channel(_ reader: BufferReader) -> Chat? {
+        fileprivate static func parse_channel(_ reader: BufferReader) -> Chat? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -2901,7 +2901,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_channelForbidden(_ reader: BufferReader) -> Chat? {
+        fileprivate static func parse_channelForbidden(_ reader: BufferReader) -> Chat? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -2963,7 +2963,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_chatInviteAlready(_ reader: BufferReader) -> ChatInvite? {
+        fileprivate static func parse_chatInviteAlready(_ reader: BufferReader) -> ChatInvite? {
             var _1: Api.Chat?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.Chat
@@ -2976,7 +2976,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_chatInvite(_ reader: BufferReader) -> ChatInvite? {
+        fileprivate static func parse_chatInvite(_ reader: BufferReader) -> ChatInvite? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -3022,7 +3022,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_geoPlaceName(_ reader: BufferReader) -> GeoPlaceName? {
+        fileprivate static func parse_geoPlaceName(_ reader: BufferReader) -> GeoPlaceName? {
             var _1: String?
             _1 = parseString(reader)
             var _2: String?
@@ -3077,7 +3077,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_userFull(_ reader: BufferReader) -> UserFull? {
+        fileprivate static func parse_userFull(_ reader: BufferReader) -> UserFull? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Api.User?
@@ -3149,10 +3149,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputPeerNotifyEventsEmpty(_ reader: BufferReader) -> InputPeerNotifyEvents? {
+        fileprivate static func parse_inputPeerNotifyEventsEmpty(_ reader: BufferReader) -> InputPeerNotifyEvents? {
             return Api.InputPeerNotifyEvents.inputPeerNotifyEventsEmpty
         }
-        private static func parse_inputPeerNotifyEventsAll(_ reader: BufferReader) -> InputPeerNotifyEvents? {
+        fileprivate static func parse_inputPeerNotifyEventsAll(_ reader: BufferReader) -> InputPeerNotifyEvents? {
             return Api.InputPeerNotifyEvents.inputPeerNotifyEventsAll
         }
     
@@ -3191,10 +3191,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputChannelEmpty(_ reader: BufferReader) -> InputChannel? {
+        fileprivate static func parse_inputChannelEmpty(_ reader: BufferReader) -> InputChannel? {
             return Api.InputChannel.inputChannelEmpty
         }
-        private static func parse_inputChannel(_ reader: BufferReader) -> InputChannel? {
+        fileprivate static func parse_inputChannel(_ reader: BufferReader) -> InputChannel? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int64?
@@ -3239,7 +3239,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_dcOption(_ reader: BufferReader) -> DcOption? {
+        fileprivate static func parse_dcOption(_ reader: BufferReader) -> DcOption? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -3288,7 +3288,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_messageGroup(_ reader: BufferReader) -> MessageGroup? {
+        fileprivate static func parse_messageGroup(_ reader: BufferReader) -> MessageGroup? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -3348,13 +3348,13 @@ public struct Api {
     return true
     }
     
-        private static func parse_channelRoleEmpty(_ reader: BufferReader) -> ChannelParticipantRole? {
+        fileprivate static func parse_channelRoleEmpty(_ reader: BufferReader) -> ChannelParticipantRole? {
             return Api.ChannelParticipantRole.channelRoleEmpty
         }
-        private static func parse_channelRoleModerator(_ reader: BufferReader) -> ChannelParticipantRole? {
+        fileprivate static func parse_channelRoleModerator(_ reader: BufferReader) -> ChannelParticipantRole? {
             return Api.ChannelParticipantRole.channelRoleModerator
         }
-        private static func parse_channelRoleEditor(_ reader: BufferReader) -> ChannelParticipantRole? {
+        fileprivate static func parse_channelRoleEditor(_ reader: BufferReader) -> ChannelParticipantRole? {
             return Api.ChannelParticipantRole.channelRoleEditor
         }
     
@@ -3414,10 +3414,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputEncryptedFileEmpty(_ reader: BufferReader) -> InputEncryptedFile? {
+        fileprivate static func parse_inputEncryptedFileEmpty(_ reader: BufferReader) -> InputEncryptedFile? {
             return Api.InputEncryptedFile.inputEncryptedFileEmpty
         }
-        private static func parse_inputEncryptedFileUploaded(_ reader: BufferReader) -> InputEncryptedFile? {
+        fileprivate static func parse_inputEncryptedFileUploaded(_ reader: BufferReader) -> InputEncryptedFile? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int32?
@@ -3437,7 +3437,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputEncryptedFile(_ reader: BufferReader) -> InputEncryptedFile? {
+        fileprivate static func parse_inputEncryptedFile(_ reader: BufferReader) -> InputEncryptedFile? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int64?
@@ -3451,7 +3451,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputEncryptedFileBigUploaded(_ reader: BufferReader) -> InputEncryptedFile? {
+        fileprivate static func parse_inputEncryptedFileBigUploaded(_ reader: BufferReader) -> InputEncryptedFile? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int32?
@@ -3500,7 +3500,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_exportedMessageLink(_ reader: BufferReader) -> ExportedMessageLink? {
+        fileprivate static func parse_exportedMessageLink(_ reader: BufferReader) -> ExportedMessageLink? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
@@ -3549,7 +3549,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputFile(_ reader: BufferReader) -> InputFile? {
+        fileprivate static func parse_inputFile(_ reader: BufferReader) -> InputFile? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int32?
@@ -3569,7 +3569,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputFileBig(_ reader: BufferReader) -> InputFile? {
+        fileprivate static func parse_inputFileBig(_ reader: BufferReader) -> InputFile? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int32?
@@ -3628,7 +3628,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_peerUser(_ reader: BufferReader) -> Peer? {
+        fileprivate static func parse_peerUser(_ reader: BufferReader) -> Peer? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -3639,7 +3639,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_peerChat(_ reader: BufferReader) -> Peer? {
+        fileprivate static func parse_peerChat(_ reader: BufferReader) -> Peer? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -3650,7 +3650,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_peerChannel(_ reader: BufferReader) -> Peer? {
+        fileprivate static func parse_peerChannel(_ reader: BufferReader) -> Peer? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -3726,10 +3726,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_userStatusEmpty(_ reader: BufferReader) -> UserStatus? {
+        fileprivate static func parse_userStatusEmpty(_ reader: BufferReader) -> UserStatus? {
             return Api.UserStatus.userStatusEmpty
         }
-        private static func parse_userStatusOnline(_ reader: BufferReader) -> UserStatus? {
+        fileprivate static func parse_userStatusOnline(_ reader: BufferReader) -> UserStatus? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -3740,7 +3740,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_userStatusOffline(_ reader: BufferReader) -> UserStatus? {
+        fileprivate static func parse_userStatusOffline(_ reader: BufferReader) -> UserStatus? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -3751,13 +3751,13 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_userStatusRecently(_ reader: BufferReader) -> UserStatus? {
+        fileprivate static func parse_userStatusRecently(_ reader: BufferReader) -> UserStatus? {
             return Api.UserStatus.userStatusRecently
         }
-        private static func parse_userStatusLastWeek(_ reader: BufferReader) -> UserStatus? {
+        fileprivate static func parse_userStatusLastWeek(_ reader: BufferReader) -> UserStatus? {
             return Api.UserStatus.userStatusLastWeek
         }
-        private static func parse_userStatusLastMonth(_ reader: BufferReader) -> UserStatus? {
+        fileprivate static func parse_userStatusLastMonth(_ reader: BufferReader) -> UserStatus? {
             return Api.UserStatus.userStatusLastMonth
         }
     
@@ -3804,7 +3804,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_dialog(_ reader: BufferReader) -> Dialog? {
+        fileprivate static func parse_dialog(_ reader: BufferReader) -> Dialog? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Api.Peer?
@@ -3934,25 +3934,25 @@ public struct Api {
     return true
     }
     
-        private static func parse_sendMessageTypingAction(_ reader: BufferReader) -> SendMessageAction? {
+        fileprivate static func parse_sendMessageTypingAction(_ reader: BufferReader) -> SendMessageAction? {
             return Api.SendMessageAction.sendMessageTypingAction
         }
-        private static func parse_sendMessageCancelAction(_ reader: BufferReader) -> SendMessageAction? {
+        fileprivate static func parse_sendMessageCancelAction(_ reader: BufferReader) -> SendMessageAction? {
             return Api.SendMessageAction.sendMessageCancelAction
         }
-        private static func parse_sendMessageRecordVideoAction(_ reader: BufferReader) -> SendMessageAction? {
+        fileprivate static func parse_sendMessageRecordVideoAction(_ reader: BufferReader) -> SendMessageAction? {
             return Api.SendMessageAction.sendMessageRecordVideoAction
         }
-        private static func parse_sendMessageRecordAudioAction(_ reader: BufferReader) -> SendMessageAction? {
+        fileprivate static func parse_sendMessageRecordAudioAction(_ reader: BufferReader) -> SendMessageAction? {
             return Api.SendMessageAction.sendMessageRecordAudioAction
         }
-        private static func parse_sendMessageGeoLocationAction(_ reader: BufferReader) -> SendMessageAction? {
+        fileprivate static func parse_sendMessageGeoLocationAction(_ reader: BufferReader) -> SendMessageAction? {
             return Api.SendMessageAction.sendMessageGeoLocationAction
         }
-        private static func parse_sendMessageChooseContactAction(_ reader: BufferReader) -> SendMessageAction? {
+        fileprivate static func parse_sendMessageChooseContactAction(_ reader: BufferReader) -> SendMessageAction? {
             return Api.SendMessageAction.sendMessageChooseContactAction
         }
-        private static func parse_sendMessageUploadVideoAction(_ reader: BufferReader) -> SendMessageAction? {
+        fileprivate static func parse_sendMessageUploadVideoAction(_ reader: BufferReader) -> SendMessageAction? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -3963,7 +3963,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_sendMessageUploadAudioAction(_ reader: BufferReader) -> SendMessageAction? {
+        fileprivate static func parse_sendMessageUploadAudioAction(_ reader: BufferReader) -> SendMessageAction? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -3974,7 +3974,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_sendMessageUploadDocumentAction(_ reader: BufferReader) -> SendMessageAction? {
+        fileprivate static func parse_sendMessageUploadDocumentAction(_ reader: BufferReader) -> SendMessageAction? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -3985,7 +3985,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_sendMessageUploadPhotoAction(_ reader: BufferReader) -> SendMessageAction? {
+        fileprivate static func parse_sendMessageUploadPhotoAction(_ reader: BufferReader) -> SendMessageAction? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -4047,10 +4047,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_privacyKeyStatusTimestamp(_ reader: BufferReader) -> PrivacyKey? {
+        fileprivate static func parse_privacyKeyStatusTimestamp(_ reader: BufferReader) -> PrivacyKey? {
             return Api.PrivacyKey.privacyKeyStatusTimestamp
         }
-        private static func parse_privacyKeyChatInvite(_ reader: BufferReader) -> PrivacyKey? {
+        fileprivate static func parse_privacyKeyChatInvite(_ reader: BufferReader) -> PrivacyKey? {
             return Api.PrivacyKey.privacyKeyChatInvite
         }
     
@@ -4602,7 +4602,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_updateMessageID(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateMessageID(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int64?
@@ -4616,7 +4616,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateRestoreMessages(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateRestoreMessages(_ reader: BufferReader) -> Update? {
             var _1: [Int32]?
             if let _ = reader.readInt32() {
                 _1 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
@@ -4632,7 +4632,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateChatParticipants(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateChatParticipants(_ reader: BufferReader) -> Update? {
             var _1: Api.ChatParticipants?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.ChatParticipants
@@ -4645,7 +4645,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateUserStatus(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateUserStatus(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Api.UserStatus?
@@ -4661,7 +4661,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateContactRegistered(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateContactRegistered(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -4675,7 +4675,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateContactLocated(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateContactLocated(_ reader: BufferReader) -> Update? {
             var _1: [Api.ContactLocated]?
             if let _ = reader.readInt32() {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ContactLocated.self)
@@ -4688,7 +4688,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateActivation(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateActivation(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -4699,7 +4699,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateNewAuthorization(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateNewAuthorization(_ reader: BufferReader) -> Update? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int32?
@@ -4719,7 +4719,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updatePhoneCallRequested(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updatePhoneCallRequested(_ reader: BufferReader) -> Update? {
             var _1: Api.PhoneCall?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.PhoneCall
@@ -4732,7 +4732,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updatePhoneCallConfirmed(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updatePhoneCallConfirmed(_ reader: BufferReader) -> Update? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Buffer?
@@ -4751,7 +4751,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updatePhoneCallDeclined(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updatePhoneCallDeclined(_ reader: BufferReader) -> Update? {
             var _1: Int64?
             _1 = reader.readInt64()
             let _c1 = _1 != nil
@@ -4762,7 +4762,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateUserPhoto(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateUserPhoto(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -4786,7 +4786,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateNewEncryptedMessage(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateNewEncryptedMessage(_ reader: BufferReader) -> Update? {
             var _1: Api.EncryptedMessage?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.EncryptedMessage
@@ -4802,7 +4802,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateEncryptedChatTyping(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateEncryptedChatTyping(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -4813,7 +4813,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateEncryption(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateEncryption(_ reader: BufferReader) -> Update? {
             var _1: Api.EncryptedChat?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.EncryptedChat
@@ -4829,7 +4829,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateEncryptedMessagesRead(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateEncryptedMessagesRead(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -4846,7 +4846,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateChatParticipantDelete(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateChatParticipantDelete(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -4863,7 +4863,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateDcOptions(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateDcOptions(_ reader: BufferReader) -> Update? {
             var _1: [Api.DcOption]?
             if let _ = reader.readInt32() {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DcOption.self)
@@ -4876,7 +4876,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateUserBlocked(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateUserBlocked(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Api.Bool?
@@ -4892,7 +4892,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateNotifySettings(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateNotifySettings(_ reader: BufferReader) -> Update? {
             var _1: Api.NotifyPeer?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.NotifyPeer
@@ -4910,7 +4910,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateUserTyping(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateUserTyping(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Api.SendMessageAction?
@@ -4926,7 +4926,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateChatUserTyping(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateChatUserTyping(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -4945,7 +4945,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateUserName(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateUserName(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -4965,7 +4965,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateServiceNotification(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateServiceNotification(_ reader: BufferReader) -> Update? {
             var _1: String?
             _1 = parseString(reader)
             var _2: String?
@@ -4989,7 +4989,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updatePrivacy(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updatePrivacy(_ reader: BufferReader) -> Update? {
             var _1: Api.PrivacyKey?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.PrivacyKey
@@ -5007,7 +5007,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateUserPhone(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateUserPhone(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -5021,7 +5021,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateNewMessage(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateNewMessage(_ reader: BufferReader) -> Update? {
             var _1: Api.Message?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.Message
@@ -5040,7 +5040,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateReadMessages(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateReadMessages(_ reader: BufferReader) -> Update? {
             var _1: [Int32]?
             if let _ = reader.readInt32() {
                 _1 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
@@ -5059,7 +5059,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateDeleteMessages(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateDeleteMessages(_ reader: BufferReader) -> Update? {
             var _1: [Int32]?
             if let _ = reader.readInt32() {
                 _1 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
@@ -5078,7 +5078,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateReadHistoryInbox(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateReadHistoryInbox(_ reader: BufferReader) -> Update? {
             var _1: Api.Peer?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.Peer
@@ -5100,7 +5100,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateReadHistoryOutbox(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateReadHistoryOutbox(_ reader: BufferReader) -> Update? {
             var _1: Api.Peer?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.Peer
@@ -5122,7 +5122,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateContactLink(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateContactLink(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Api.ContactLink?
@@ -5143,7 +5143,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateReadMessagesContents(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateReadMessagesContents(_ reader: BufferReader) -> Update? {
             var _1: [Int32]?
             if let _ = reader.readInt32() {
                 _1 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
@@ -5162,7 +5162,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateChatParticipantAdd(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateChatParticipantAdd(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -5185,7 +5185,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateWebPage(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateWebPage(_ reader: BufferReader) -> Update? {
             var _1: Api.WebPage?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.WebPage
@@ -5204,7 +5204,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateChannel(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateChannel(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -5215,7 +5215,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateChannelGroup(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateChannelGroup(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Api.MessageGroup?
@@ -5231,7 +5231,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateNewChannelMessage(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateNewChannelMessage(_ reader: BufferReader) -> Update? {
             var _1: Api.Message?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.Message
@@ -5250,7 +5250,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateReadChannelInbox(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateReadChannelInbox(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -5264,7 +5264,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateDeleteChannelMessages(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateDeleteChannelMessages(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: [Int32]?
@@ -5286,7 +5286,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateChannelMessageViews(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateChannelMessageViews(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -5303,7 +5303,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateChatAdmins(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateChatAdmins(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Api.Bool?
@@ -5322,7 +5322,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateChatParticipantAdmin(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateChatParticipantAdmin(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -5344,7 +5344,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateNewStickerSet(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateNewStickerSet(_ reader: BufferReader) -> Update? {
             var _1: Api.messages.StickerSet?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.messages.StickerSet
@@ -5357,7 +5357,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateStickerSetsOrder(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateStickerSetsOrder(_ reader: BufferReader) -> Update? {
             var _1: [Int64]?
             if let _ = reader.readInt32() {
                 _1 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
@@ -5370,13 +5370,13 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateStickerSets(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateStickerSets(_ reader: BufferReader) -> Update? {
             return Api.Update.updateStickerSets
         }
-        private static func parse_updateSavedGifs(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateSavedGifs(_ reader: BufferReader) -> Update? {
             return Api.Update.updateSavedGifs
         }
-        private static func parse_updateEditChannelMessage(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateEditChannelMessage(_ reader: BufferReader) -> Update? {
             var _1: Api.Message?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.Message
@@ -5395,7 +5395,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateChannelPinnedMessage(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateChannelPinnedMessage(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -5409,7 +5409,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateChannelTooLong(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateChannelTooLong(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -5426,7 +5426,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateBotCallbackQuery(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateBotCallbackQuery(_ reader: BufferReader) -> Update? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int32?
@@ -5451,7 +5451,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateEditMessage(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateEditMessage(_ reader: BufferReader) -> Update? {
             var _1: Api.Message?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.Message
@@ -5470,7 +5470,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateInlineBotCallbackQuery(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateInlineBotCallbackQuery(_ reader: BufferReader) -> Update? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int32?
@@ -5492,7 +5492,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateBotInlineQuery(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateBotInlineQuery(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int64?
@@ -5520,7 +5520,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateBotInlineSend(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateBotInlineSend(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -5550,7 +5550,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateReadChannelOutbox(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateReadChannelOutbox(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -5564,7 +5564,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateDraftMessage(_ reader: BufferReader) -> Update? {
+        fileprivate static func parse_updateDraftMessage(_ reader: BufferReader) -> Update? {
             var _1: Api.Peer?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.Peer
@@ -5764,7 +5764,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_channelParticipant(_ reader: BufferReader) -> ChannelParticipant? {
+        fileprivate static func parse_channelParticipant(_ reader: BufferReader) -> ChannelParticipant? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -5778,7 +5778,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_channelParticipantSelf(_ reader: BufferReader) -> ChannelParticipant? {
+        fileprivate static func parse_channelParticipantSelf(_ reader: BufferReader) -> ChannelParticipant? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -5795,7 +5795,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_channelParticipantModerator(_ reader: BufferReader) -> ChannelParticipant? {
+        fileprivate static func parse_channelParticipantModerator(_ reader: BufferReader) -> ChannelParticipant? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -5812,7 +5812,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_channelParticipantEditor(_ reader: BufferReader) -> ChannelParticipant? {
+        fileprivate static func parse_channelParticipantEditor(_ reader: BufferReader) -> ChannelParticipant? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -5829,7 +5829,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_channelParticipantKicked(_ reader: BufferReader) -> ChannelParticipant? {
+        fileprivate static func parse_channelParticipantKicked(_ reader: BufferReader) -> ChannelParticipant? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -5846,7 +5846,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_channelParticipantCreator(_ reader: BufferReader) -> ChannelParticipant? {
+        fileprivate static func parse_channelParticipantCreator(_ reader: BufferReader) -> ChannelParticipant? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -5905,7 +5905,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_error(_ reader: BufferReader) -> Error? {
+        fileprivate static func parse_error(_ reader: BufferReader) -> Error? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -5919,7 +5919,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_richError(_ reader: BufferReader) -> Error? {
+        fileprivate static func parse_richError(_ reader: BufferReader) -> Error? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -5983,7 +5983,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_contactLocated(_ reader: BufferReader) -> ContactLocated? {
+        fileprivate static func parse_contactLocated(_ reader: BufferReader) -> ContactLocated? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Api.GeoPoint?
@@ -6005,7 +6005,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_contactLocatedPreview(_ reader: BufferReader) -> ContactLocated? {
+        fileprivate static func parse_contactLocatedPreview(_ reader: BufferReader) -> ContactLocated? {
             var _1: String?
             _1 = parseString(reader)
             var _2: Api.Bool?
@@ -6093,7 +6093,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_keyboardButton(_ reader: BufferReader) -> KeyboardButton? {
+        fileprivate static func parse_keyboardButton(_ reader: BufferReader) -> KeyboardButton? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
@@ -6104,7 +6104,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_keyboardButtonUrl(_ reader: BufferReader) -> KeyboardButton? {
+        fileprivate static func parse_keyboardButtonUrl(_ reader: BufferReader) -> KeyboardButton? {
             var _1: String?
             _1 = parseString(reader)
             var _2: String?
@@ -6118,7 +6118,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_keyboardButtonCallback(_ reader: BufferReader) -> KeyboardButton? {
+        fileprivate static func parse_keyboardButtonCallback(_ reader: BufferReader) -> KeyboardButton? {
             var _1: String?
             _1 = parseString(reader)
             var _2: Buffer?
@@ -6132,7 +6132,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_keyboardButtonRequestPhone(_ reader: BufferReader) -> KeyboardButton? {
+        fileprivate static func parse_keyboardButtonRequestPhone(_ reader: BufferReader) -> KeyboardButton? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
@@ -6143,7 +6143,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_keyboardButtonRequestGeoLocation(_ reader: BufferReader) -> KeyboardButton? {
+        fileprivate static func parse_keyboardButtonRequestGeoLocation(_ reader: BufferReader) -> KeyboardButton? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
@@ -6154,7 +6154,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_keyboardButtonSwitchInline(_ reader: BufferReader) -> KeyboardButton? {
+        fileprivate static func parse_keyboardButtonSwitchInline(_ reader: BufferReader) -> KeyboardButton? {
             var _1: String?
             _1 = parseString(reader)
             var _2: String?
@@ -6205,7 +6205,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_contactStatus(_ reader: BufferReader) -> ContactStatus? {
+        fileprivate static func parse_contactStatus(_ reader: BufferReader) -> ContactStatus? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Api.UserStatus?
@@ -6269,7 +6269,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_photoSizeEmpty(_ reader: BufferReader) -> PhotoSize? {
+        fileprivate static func parse_photoSizeEmpty(_ reader: BufferReader) -> PhotoSize? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
@@ -6280,7 +6280,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_photoSize(_ reader: BufferReader) -> PhotoSize? {
+        fileprivate static func parse_photoSize(_ reader: BufferReader) -> PhotoSize? {
             var _1: String?
             _1 = parseString(reader)
             var _2: Api.FileLocation?
@@ -6305,7 +6305,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_photoCachedSize(_ reader: BufferReader) -> PhotoSize? {
+        fileprivate static func parse_photoCachedSize(_ reader: BufferReader) -> PhotoSize? {
             var _1: String?
             _1 = parseString(reader)
             var _2: Api.FileLocation?
@@ -6363,7 +6363,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_globalPrivacySettings(_ reader: BufferReader) -> GlobalPrivacySettings? {
+        fileprivate static func parse_globalPrivacySettings(_ reader: BufferReader) -> GlobalPrivacySettings? {
             var _1: Api.Bool?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.Bool
@@ -6418,7 +6418,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_inlineBotSwitchPM(_ reader: BufferReader) -> InlineBotSwitchPM? {
+        fileprivate static func parse_inlineBotSwitchPM(_ reader: BufferReader) -> InlineBotSwitchPM? {
             var _1: String?
             _1 = parseString(reader)
             var _2: String?
@@ -6470,7 +6470,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_fileLocationUnavailable(_ reader: BufferReader) -> FileLocation? {
+        fileprivate static func parse_fileLocationUnavailable(_ reader: BufferReader) -> FileLocation? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int32?
@@ -6487,7 +6487,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_fileLocation(_ reader: BufferReader) -> FileLocation? {
+        fileprivate static func parse_fileLocation(_ reader: BufferReader) -> FileLocation? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int64?
@@ -6556,7 +6556,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputNotifyPeer(_ reader: BufferReader) -> InputNotifyPeer? {
+        fileprivate static func parse_inputNotifyPeer(_ reader: BufferReader) -> InputNotifyPeer? {
             var _1: Api.InputPeer?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
@@ -6569,13 +6569,13 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputNotifyUsers(_ reader: BufferReader) -> InputNotifyPeer? {
+        fileprivate static func parse_inputNotifyUsers(_ reader: BufferReader) -> InputNotifyPeer? {
             return Api.InputNotifyPeer.inputNotifyUsers
         }
-        private static func parse_inputNotifyChats(_ reader: BufferReader) -> InputNotifyPeer? {
+        fileprivate static func parse_inputNotifyChats(_ reader: BufferReader) -> InputNotifyPeer? {
             return Api.InputNotifyPeer.inputNotifyChats
         }
-        private static func parse_inputNotifyAll(_ reader: BufferReader) -> InputNotifyPeer? {
+        fileprivate static func parse_inputNotifyAll(_ reader: BufferReader) -> InputNotifyPeer? {
             return Api.InputNotifyPeer.inputNotifyAll
         }
     
@@ -6624,7 +6624,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_encryptedMessage(_ reader: BufferReader) -> EncryptedMessage? {
+        fileprivate static func parse_encryptedMessage(_ reader: BufferReader) -> EncryptedMessage? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int32?
@@ -6649,7 +6649,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_encryptedMessageService(_ reader: BufferReader) -> EncryptedMessage? {
+        fileprivate static func parse_encryptedMessageService(_ reader: BufferReader) -> EncryptedMessage? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int32?
@@ -6718,16 +6718,16 @@ public struct Api {
     return true
     }
     
-        private static func parse_channelParticipantsRecent(_ reader: BufferReader) -> ChannelParticipantsFilter? {
+        fileprivate static func parse_channelParticipantsRecent(_ reader: BufferReader) -> ChannelParticipantsFilter? {
             return Api.ChannelParticipantsFilter.channelParticipantsRecent
         }
-        private static func parse_channelParticipantsAdmins(_ reader: BufferReader) -> ChannelParticipantsFilter? {
+        fileprivate static func parse_channelParticipantsAdmins(_ reader: BufferReader) -> ChannelParticipantsFilter? {
             return Api.ChannelParticipantsFilter.channelParticipantsAdmins
         }
-        private static func parse_channelParticipantsKicked(_ reader: BufferReader) -> ChannelParticipantsFilter? {
+        fileprivate static func parse_channelParticipantsKicked(_ reader: BufferReader) -> ChannelParticipantsFilter? {
             return Api.ChannelParticipantsFilter.channelParticipantsKicked
         }
-        private static func parse_channelParticipantsBots(_ reader: BufferReader) -> ChannelParticipantsFilter? {
+        fileprivate static func parse_channelParticipantsBots(_ reader: BufferReader) -> ChannelParticipantsFilter? {
             return Api.ChannelParticipantsFilter.channelParticipantsBots
         }
     
@@ -6792,7 +6792,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_webPageEmpty(_ reader: BufferReader) -> WebPage? {
+        fileprivate static func parse_webPageEmpty(_ reader: BufferReader) -> WebPage? {
             var _1: Int64?
             _1 = reader.readInt64()
             let _c1 = _1 != nil
@@ -6803,7 +6803,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_webPagePending(_ reader: BufferReader) -> WebPage? {
+        fileprivate static func parse_webPagePending(_ reader: BufferReader) -> WebPage? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int32?
@@ -6817,7 +6817,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_webPage(_ reader: BufferReader) -> WebPage? {
+        fileprivate static func parse_webPage(_ reader: BufferReader) -> WebPage? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int64?
@@ -6956,7 +6956,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputBotInlineMessageMediaAuto(_ reader: BufferReader) -> InputBotInlineMessage? {
+        fileprivate static func parse_inputBotInlineMessageMediaAuto(_ reader: BufferReader) -> InputBotInlineMessage? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -6975,7 +6975,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputBotInlineMessageText(_ reader: BufferReader) -> InputBotInlineMessage? {
+        fileprivate static func parse_inputBotInlineMessageText(_ reader: BufferReader) -> InputBotInlineMessage? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -6999,7 +6999,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputBotInlineMessageMediaGeo(_ reader: BufferReader) -> InputBotInlineMessage? {
+        fileprivate static func parse_inputBotInlineMessageMediaGeo(_ reader: BufferReader) -> InputBotInlineMessage? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Api.InputGeoPoint?
@@ -7020,7 +7020,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputBotInlineMessageMediaVenue(_ reader: BufferReader) -> InputBotInlineMessage? {
+        fileprivate static func parse_inputBotInlineMessageMediaVenue(_ reader: BufferReader) -> InputBotInlineMessage? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Api.InputGeoPoint?
@@ -7053,7 +7053,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputBotInlineMessageMediaContact(_ reader: BufferReader) -> InputBotInlineMessage? {
+        fileprivate static func parse_inputBotInlineMessageMediaContact(_ reader: BufferReader) -> InputBotInlineMessage? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -7116,7 +7116,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_keyboardButtonRow(_ reader: BufferReader) -> KeyboardButtonRow? {
+        fileprivate static func parse_keyboardButtonRow(_ reader: BufferReader) -> KeyboardButtonRow? {
             var _1: [Api.KeyboardButton]?
             if let _ = reader.readInt32() {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.KeyboardButton.self)
@@ -7161,7 +7161,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_stickerSet(_ reader: BufferReader) -> StickerSet? {
+        fileprivate static func parse_stickerSet(_ reader: BufferReader) -> StickerSet? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int64?
@@ -7219,7 +7219,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputPhoneContact(_ reader: BufferReader) -> InputContact? {
+        fileprivate static func parse_inputPhoneContact(_ reader: BufferReader) -> InputContact? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: String?
@@ -7293,19 +7293,19 @@ public struct Api {
     return true
     }
     
-        private static func parse_topPeerCategoryBotsPM(_ reader: BufferReader) -> TopPeerCategory? {
+        fileprivate static func parse_topPeerCategoryBotsPM(_ reader: BufferReader) -> TopPeerCategory? {
             return Api.TopPeerCategory.topPeerCategoryBotsPM
         }
-        private static func parse_topPeerCategoryBotsInline(_ reader: BufferReader) -> TopPeerCategory? {
+        fileprivate static func parse_topPeerCategoryBotsInline(_ reader: BufferReader) -> TopPeerCategory? {
             return Api.TopPeerCategory.topPeerCategoryBotsInline
         }
-        private static func parse_topPeerCategoryCorrespondents(_ reader: BufferReader) -> TopPeerCategory? {
+        fileprivate static func parse_topPeerCategoryCorrespondents(_ reader: BufferReader) -> TopPeerCategory? {
             return Api.TopPeerCategory.topPeerCategoryCorrespondents
         }
-        private static func parse_topPeerCategoryGroups(_ reader: BufferReader) -> TopPeerCategory? {
+        fileprivate static func parse_topPeerCategoryGroups(_ reader: BufferReader) -> TopPeerCategory? {
             return Api.TopPeerCategory.topPeerCategoryGroups
         }
-        private static func parse_topPeerCategoryChannels(_ reader: BufferReader) -> TopPeerCategory? {
+        fileprivate static func parse_topPeerCategoryChannels(_ reader: BufferReader) -> TopPeerCategory? {
             return Api.TopPeerCategory.topPeerCategoryChannels
         }
     
@@ -7361,10 +7361,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_channelMessagesFilterEmpty(_ reader: BufferReader) -> ChannelMessagesFilter? {
+        fileprivate static func parse_channelMessagesFilterEmpty(_ reader: BufferReader) -> ChannelMessagesFilter? {
             return Api.ChannelMessagesFilter.channelMessagesFilterEmpty
         }
-        private static func parse_channelMessagesFilter(_ reader: BufferReader) -> ChannelMessagesFilter? {
+        fileprivate static func parse_channelMessagesFilter(_ reader: BufferReader) -> ChannelMessagesFilter? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: [Api.MessageRange]?
@@ -7380,7 +7380,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_channelMessagesFilterCollapsed(_ reader: BufferReader) -> ChannelMessagesFilter? {
+        fileprivate static func parse_channelMessagesFilterCollapsed(_ reader: BufferReader) -> ChannelMessagesFilter? {
             return Api.ChannelMessagesFilter.channelMessagesFilterCollapsed
         }
     
@@ -7421,10 +7421,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputDocumentEmpty(_ reader: BufferReader) -> InputDocument? {
+        fileprivate static func parse_inputDocumentEmpty(_ reader: BufferReader) -> InputDocument? {
             return Api.InputDocument.inputDocumentEmpty
         }
-        private static func parse_inputDocument(_ reader: BufferReader) -> InputDocument? {
+        fileprivate static func parse_inputDocument(_ reader: BufferReader) -> InputDocument? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int64?
@@ -7554,10 +7554,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputMediaEmpty(_ reader: BufferReader) -> InputMedia? {
+        fileprivate static func parse_inputMediaEmpty(_ reader: BufferReader) -> InputMedia? {
             return Api.InputMedia.inputMediaEmpty
         }
-        private static func parse_inputMediaGeoPoint(_ reader: BufferReader) -> InputMedia? {
+        fileprivate static func parse_inputMediaGeoPoint(_ reader: BufferReader) -> InputMedia? {
             var _1: Api.InputGeoPoint?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.InputGeoPoint
@@ -7570,7 +7570,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputMediaContact(_ reader: BufferReader) -> InputMedia? {
+        fileprivate static func parse_inputMediaContact(_ reader: BufferReader) -> InputMedia? {
             var _1: String?
             _1 = parseString(reader)
             var _2: String?
@@ -7587,7 +7587,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputMediaUploadedPhoto(_ reader: BufferReader) -> InputMedia? {
+        fileprivate static func parse_inputMediaUploadedPhoto(_ reader: BufferReader) -> InputMedia? {
             var _1: Api.InputFile?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.InputFile
@@ -7603,7 +7603,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputMediaPhoto(_ reader: BufferReader) -> InputMedia? {
+        fileprivate static func parse_inputMediaPhoto(_ reader: BufferReader) -> InputMedia? {
             var _1: Api.InputPhoto?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.InputPhoto
@@ -7619,7 +7619,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputMediaVenue(_ reader: BufferReader) -> InputMedia? {
+        fileprivate static func parse_inputMediaVenue(_ reader: BufferReader) -> InputMedia? {
             var _1: Api.InputGeoPoint?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.InputGeoPoint
@@ -7644,7 +7644,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputMediaGifExternal(_ reader: BufferReader) -> InputMedia? {
+        fileprivate static func parse_inputMediaGifExternal(_ reader: BufferReader) -> InputMedia? {
             var _1: String?
             _1 = parseString(reader)
             var _2: String?
@@ -7658,7 +7658,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputMediaUploadedDocument(_ reader: BufferReader) -> InputMedia? {
+        fileprivate static func parse_inputMediaUploadedDocument(_ reader: BufferReader) -> InputMedia? {
             var _1: Api.InputFile?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.InputFile
@@ -7682,7 +7682,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputMediaUploadedThumbDocument(_ reader: BufferReader) -> InputMedia? {
+        fileprivate static func parse_inputMediaUploadedThumbDocument(_ reader: BufferReader) -> InputMedia? {
             var _1: Api.InputFile?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.InputFile
@@ -7711,7 +7711,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputMediaDocument(_ reader: BufferReader) -> InputMedia? {
+        fileprivate static func parse_inputMediaDocument(_ reader: BufferReader) -> InputMedia? {
             var _1: Api.InputDocument?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.InputDocument
@@ -7801,13 +7801,13 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputPeerEmpty(_ reader: BufferReader) -> InputPeer? {
+        fileprivate static func parse_inputPeerEmpty(_ reader: BufferReader) -> InputPeer? {
             return Api.InputPeer.inputPeerEmpty
         }
-        private static func parse_inputPeerSelf(_ reader: BufferReader) -> InputPeer? {
+        fileprivate static func parse_inputPeerSelf(_ reader: BufferReader) -> InputPeer? {
             return Api.InputPeer.inputPeerSelf
         }
-        private static func parse_inputPeerChat(_ reader: BufferReader) -> InputPeer? {
+        fileprivate static func parse_inputPeerChat(_ reader: BufferReader) -> InputPeer? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -7818,7 +7818,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputPeerUser(_ reader: BufferReader) -> InputPeer? {
+        fileprivate static func parse_inputPeerUser(_ reader: BufferReader) -> InputPeer? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int64?
@@ -7832,7 +7832,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputPeerChannel(_ reader: BufferReader) -> InputPeer? {
+        fileprivate static func parse_inputPeerChannel(_ reader: BufferReader) -> InputPeer? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int64?
@@ -7881,7 +7881,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_contact(_ reader: BufferReader) -> Contact? {
+        fileprivate static func parse_contact(_ reader: BufferReader) -> Contact? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Api.Bool?
@@ -7949,7 +7949,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_botInlineResult(_ reader: BufferReader) -> BotInlineResult? {
+        fileprivate static func parse_botInlineResult(_ reader: BufferReader) -> BotInlineResult? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -7998,7 +7998,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_botInlineMediaResult(_ reader: BufferReader) -> BotInlineResult? {
+        fileprivate static func parse_botInlineMediaResult(_ reader: BufferReader) -> BotInlineResult? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -8107,13 +8107,13 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputPrivacyValueAllowContacts(_ reader: BufferReader) -> InputPrivacyRule? {
+        fileprivate static func parse_inputPrivacyValueAllowContacts(_ reader: BufferReader) -> InputPrivacyRule? {
             return Api.InputPrivacyRule.inputPrivacyValueAllowContacts
         }
-        private static func parse_inputPrivacyValueAllowAll(_ reader: BufferReader) -> InputPrivacyRule? {
+        fileprivate static func parse_inputPrivacyValueAllowAll(_ reader: BufferReader) -> InputPrivacyRule? {
             return Api.InputPrivacyRule.inputPrivacyValueAllowAll
         }
-        private static func parse_inputPrivacyValueAllowUsers(_ reader: BufferReader) -> InputPrivacyRule? {
+        fileprivate static func parse_inputPrivacyValueAllowUsers(_ reader: BufferReader) -> InputPrivacyRule? {
             var _1: [Api.InputUser]?
             if let _ = reader.readInt32() {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputUser.self)
@@ -8126,13 +8126,13 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputPrivacyValueDisallowContacts(_ reader: BufferReader) -> InputPrivacyRule? {
+        fileprivate static func parse_inputPrivacyValueDisallowContacts(_ reader: BufferReader) -> InputPrivacyRule? {
             return Api.InputPrivacyRule.inputPrivacyValueDisallowContacts
         }
-        private static func parse_inputPrivacyValueDisallowAll(_ reader: BufferReader) -> InputPrivacyRule? {
+        fileprivate static func parse_inputPrivacyValueDisallowAll(_ reader: BufferReader) -> InputPrivacyRule? {
             return Api.InputPrivacyRule.inputPrivacyValueDisallowAll
         }
-        private static func parse_inputPrivacyValueDisallowUsers(_ reader: BufferReader) -> InputPrivacyRule? {
+        fileprivate static func parse_inputPrivacyValueDisallowUsers(_ reader: BufferReader) -> InputPrivacyRule? {
             var _1: [Api.InputUser]?
             if let _ = reader.readInt32() {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputUser.self)
@@ -8182,7 +8182,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_contactRequest(_ reader: BufferReader) -> ContactRequest? {
+        fileprivate static func parse_contactRequest(_ reader: BufferReader) -> ContactRequest? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -8223,7 +8223,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputEncryptedChat(_ reader: BufferReader) -> InputEncryptedChat? {
+        fileprivate static func parse_inputEncryptedChat(_ reader: BufferReader) -> InputEncryptedChat? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int64?
@@ -8278,10 +8278,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_draftMessageEmpty(_ reader: BufferReader) -> DraftMessage? {
+        fileprivate static func parse_draftMessageEmpty(_ reader: BufferReader) -> DraftMessage? {
             return Api.DraftMessage.draftMessageEmpty
         }
-        private static func parse_draftMessage(_ reader: BufferReader) -> DraftMessage? {
+        fileprivate static func parse_draftMessage(_ reader: BufferReader) -> DraftMessage? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -8335,7 +8335,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_disabledFeature(_ reader: BufferReader) -> DisabledFeature? {
+        fileprivate static func parse_disabledFeature(_ reader: BufferReader) -> DisabledFeature? {
             var _1: String?
             _1 = parseString(reader)
             var _2: String?
@@ -8386,10 +8386,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_encryptedFileEmpty(_ reader: BufferReader) -> EncryptedFile? {
+        fileprivate static func parse_encryptedFileEmpty(_ reader: BufferReader) -> EncryptedFile? {
             return Api.EncryptedFile.encryptedFileEmpty
         }
-        private static func parse_encryptedFile(_ reader: BufferReader) -> EncryptedFile? {
+        fileprivate static func parse_encryptedFile(_ reader: BufferReader) -> EncryptedFile? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int64?
@@ -8461,7 +8461,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_notifyPeer(_ reader: BufferReader) -> NotifyPeer? {
+        fileprivate static func parse_notifyPeer(_ reader: BufferReader) -> NotifyPeer? {
             var _1: Api.Peer?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.Peer
@@ -8474,13 +8474,13 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_notifyUsers(_ reader: BufferReader) -> NotifyPeer? {
+        fileprivate static func parse_notifyUsers(_ reader: BufferReader) -> NotifyPeer? {
             return Api.NotifyPeer.notifyUsers
         }
-        private static func parse_notifyChats(_ reader: BufferReader) -> NotifyPeer? {
+        fileprivate static func parse_notifyChats(_ reader: BufferReader) -> NotifyPeer? {
             return Api.NotifyPeer.notifyChats
         }
-        private static func parse_notifyAll(_ reader: BufferReader) -> NotifyPeer? {
+        fileprivate static func parse_notifyAll(_ reader: BufferReader) -> NotifyPeer? {
             return Api.NotifyPeer.notifyAll
         }
     
@@ -8522,10 +8522,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputPrivacyKeyStatusTimestamp(_ reader: BufferReader) -> InputPrivacyKey? {
+        fileprivate static func parse_inputPrivacyKeyStatusTimestamp(_ reader: BufferReader) -> InputPrivacyKey? {
             return Api.InputPrivacyKey.inputPrivacyKeyStatusTimestamp
         }
-        private static func parse_inputPrivacyKeyChatInvite(_ reader: BufferReader) -> InputPrivacyKey? {
+        fileprivate static func parse_inputPrivacyKeyChatInvite(_ reader: BufferReader) -> InputPrivacyKey? {
             return Api.InputPrivacyKey.inputPrivacyKeyChatInvite
         }
     
@@ -8586,7 +8586,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_replyKeyboardHide(_ reader: BufferReader) -> ReplyMarkup? {
+        fileprivate static func parse_replyKeyboardHide(_ reader: BufferReader) -> ReplyMarkup? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -8597,7 +8597,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_replyKeyboardForceReply(_ reader: BufferReader) -> ReplyMarkup? {
+        fileprivate static func parse_replyKeyboardForceReply(_ reader: BufferReader) -> ReplyMarkup? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -8608,7 +8608,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_replyKeyboardMarkup(_ reader: BufferReader) -> ReplyMarkup? {
+        fileprivate static func parse_replyKeyboardMarkup(_ reader: BufferReader) -> ReplyMarkup? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: [Api.KeyboardButtonRow]?
@@ -8624,7 +8624,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_replyInlineMarkup(_ reader: BufferReader) -> ReplyMarkup? {
+        fileprivate static func parse_replyInlineMarkup(_ reader: BufferReader) -> ReplyMarkup? {
             var _1: [Api.KeyboardButtonRow]?
             if let _ = reader.readInt32() {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.KeyboardButtonRow.self)
@@ -8670,7 +8670,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_topPeer(_ reader: BufferReader) -> TopPeer? {
+        fileprivate static func parse_topPeer(_ reader: BufferReader) -> TopPeer? {
             var _1: Api.Peer?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.Peer
@@ -8713,7 +8713,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_contactBlocked(_ reader: BufferReader) -> ContactBlocked? {
+        fileprivate static func parse_contactBlocked(_ reader: BufferReader) -> ContactBlocked? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -8768,13 +8768,13 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputUserEmpty(_ reader: BufferReader) -> InputUser? {
+        fileprivate static func parse_inputUserEmpty(_ reader: BufferReader) -> InputUser? {
             return Api.InputUser.inputUserEmpty
         }
-        private static func parse_inputUserSelf(_ reader: BufferReader) -> InputUser? {
+        fileprivate static func parse_inputUserSelf(_ reader: BufferReader) -> InputUser? {
             return Api.InputUser.inputUserSelf
         }
-        private static func parse_inputUser(_ reader: BufferReader) -> InputUser? {
+        fileprivate static func parse_inputUser(_ reader: BufferReader) -> InputUser? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int64?
@@ -8825,7 +8825,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_schemeType(_ reader: BufferReader) -> SchemeType? {
+        fileprivate static func parse_schemeType(_ reader: BufferReader) -> SchemeType? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -8874,7 +8874,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_messageRange(_ reader: BufferReader) -> MessageRange? {
+        fileprivate static func parse_messageRange(_ reader: BufferReader) -> MessageRange? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -8942,7 +8942,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_config(_ reader: BufferReader) -> Config? {
+        fileprivate static func parse_config(_ reader: BufferReader) -> Config? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -9051,7 +9051,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_topPeerCategoryPeers(_ reader: BufferReader) -> TopPeerCategoryPeers? {
+        fileprivate static func parse_topPeerCategoryPeers(_ reader: BufferReader) -> TopPeerCategoryPeers? {
             var _1: Api.TopPeerCategory?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.TopPeerCategory
@@ -9099,7 +9099,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_botCommand(_ reader: BufferReader) -> BotCommand? {
+        fileprivate static func parse_botCommand(_ reader: BufferReader) -> BotCommand? {
             var _1: String?
             _1 = parseString(reader)
             var _2: String?
@@ -9139,7 +9139,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_responseIndirect(_ reader: BufferReader) -> ResponseIndirect? {
+        fileprivate static func parse_responseIndirect(_ reader: BufferReader) -> ResponseIndirect? {
             return Api.ResponseIndirect.responseIndirect
         }
     
@@ -9185,7 +9185,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_wallPaper(_ reader: BufferReader) -> WallPaper? {
+        fileprivate static func parse_wallPaper(_ reader: BufferReader) -> WallPaper? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -9207,7 +9207,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_wallPaperSolid(_ reader: BufferReader) -> WallPaper? {
+        fileprivate static func parse_wallPaperSolid(_ reader: BufferReader) -> WallPaper? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -9271,10 +9271,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputChatPhotoEmpty(_ reader: BufferReader) -> InputChatPhoto? {
+        fileprivate static func parse_inputChatPhotoEmpty(_ reader: BufferReader) -> InputChatPhoto? {
             return Api.InputChatPhoto.inputChatPhotoEmpty
         }
-        private static func parse_inputChatUploadedPhoto(_ reader: BufferReader) -> InputChatPhoto? {
+        fileprivate static func parse_inputChatUploadedPhoto(_ reader: BufferReader) -> InputChatPhoto? {
             var _1: Api.InputFile?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.InputFile
@@ -9292,7 +9292,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputChatPhoto(_ reader: BufferReader) -> InputChatPhoto? {
+        fileprivate static func parse_inputChatPhoto(_ reader: BufferReader) -> InputChatPhoto? {
             var _1: Api.InputPhoto?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.InputPhoto
@@ -9455,10 +9455,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_updatesTooLong(_ reader: BufferReader) -> Updates? {
+        fileprivate static func parse_updatesTooLong(_ reader: BufferReader) -> Updates? {
             return Api.Updates.updatesTooLong
         }
-        private static func parse_updateShort(_ reader: BufferReader) -> Updates? {
+        fileprivate static func parse_updateShort(_ reader: BufferReader) -> Updates? {
             var _1: Api.Update?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.Update
@@ -9474,7 +9474,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updatesCombined(_ reader: BufferReader) -> Updates? {
+        fileprivate static func parse_updatesCombined(_ reader: BufferReader) -> Updates? {
             var _1: [Api.Update]?
             if let _ = reader.readInt32() {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Update.self)
@@ -9506,7 +9506,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updates(_ reader: BufferReader) -> Updates? {
+        fileprivate static func parse_updates(_ reader: BufferReader) -> Updates? {
             var _1: [Api.Update]?
             if let _ = reader.readInt32() {
                 _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Update.self)
@@ -9535,7 +9535,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateShortMessage(_ reader: BufferReader) -> Updates? {
+        fileprivate static func parse_updateShortMessage(_ reader: BufferReader) -> Updates? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -9580,7 +9580,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateShortChatMessage(_ reader: BufferReader) -> Updates? {
+        fileprivate static func parse_updateShortChatMessage(_ reader: BufferReader) -> Updates? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -9628,7 +9628,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_updateShortSentMessage(_ reader: BufferReader) -> Updates? {
+        fileprivate static func parse_updateShortSentMessage(_ reader: BufferReader) -> Updates? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -9704,7 +9704,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_initConnection(_ reader: BufferReader) -> InitConnection? {
+        fileprivate static func parse_initConnection(_ reader: BufferReader) -> InitConnection? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -9816,10 +9816,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_messageMediaEmpty(_ reader: BufferReader) -> MessageMedia? {
+        fileprivate static func parse_messageMediaEmpty(_ reader: BufferReader) -> MessageMedia? {
             return Api.MessageMedia.messageMediaEmpty
         }
-        private static func parse_messageMediaGeo(_ reader: BufferReader) -> MessageMedia? {
+        fileprivate static func parse_messageMediaGeo(_ reader: BufferReader) -> MessageMedia? {
             var _1: Api.GeoPoint?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.GeoPoint
@@ -9832,7 +9832,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageMediaContact(_ reader: BufferReader) -> MessageMedia? {
+        fileprivate static func parse_messageMediaContact(_ reader: BufferReader) -> MessageMedia? {
             var _1: String?
             _1 = parseString(reader)
             var _2: String?
@@ -9852,10 +9852,10 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageMediaUnsupported(_ reader: BufferReader) -> MessageMedia? {
+        fileprivate static func parse_messageMediaUnsupported(_ reader: BufferReader) -> MessageMedia? {
             return Api.MessageMedia.messageMediaUnsupported
         }
-        private static func parse_messageMediaWebPage(_ reader: BufferReader) -> MessageMedia? {
+        fileprivate static func parse_messageMediaWebPage(_ reader: BufferReader) -> MessageMedia? {
             var _1: Api.WebPage?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.WebPage
@@ -9868,7 +9868,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageMediaPhoto(_ reader: BufferReader) -> MessageMedia? {
+        fileprivate static func parse_messageMediaPhoto(_ reader: BufferReader) -> MessageMedia? {
             var _1: Api.Photo?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.Photo
@@ -9884,7 +9884,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageMediaVenue(_ reader: BufferReader) -> MessageMedia? {
+        fileprivate static func parse_messageMediaVenue(_ reader: BufferReader) -> MessageMedia? {
             var _1: Api.GeoPoint?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.GeoPoint
@@ -9909,7 +9909,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageMediaDocument(_ reader: BufferReader) -> MessageMedia? {
+        fileprivate static func parse_messageMediaDocument(_ reader: BufferReader) -> MessageMedia? {
             var _1: Api.Document?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.Document
@@ -9965,7 +9965,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_null(_ reader: BufferReader) -> Null? {
+        fileprivate static func parse_null(_ reader: BufferReader) -> Null? {
             return Api.Null.null
         }
     
@@ -10037,7 +10037,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_documentAttributeImageSize(_ reader: BufferReader) -> DocumentAttribute? {
+        fileprivate static func parse_documentAttributeImageSize(_ reader: BufferReader) -> DocumentAttribute? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -10051,10 +10051,10 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_documentAttributeAnimated(_ reader: BufferReader) -> DocumentAttribute? {
+        fileprivate static func parse_documentAttributeAnimated(_ reader: BufferReader) -> DocumentAttribute? {
             return Api.DocumentAttribute.documentAttributeAnimated
         }
-        private static func parse_documentAttributeVideo(_ reader: BufferReader) -> DocumentAttribute? {
+        fileprivate static func parse_documentAttributeVideo(_ reader: BufferReader) -> DocumentAttribute? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -10071,7 +10071,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_documentAttributeFilename(_ reader: BufferReader) -> DocumentAttribute? {
+        fileprivate static func parse_documentAttributeFilename(_ reader: BufferReader) -> DocumentAttribute? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
@@ -10082,7 +10082,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_documentAttributeSticker(_ reader: BufferReader) -> DocumentAttribute? {
+        fileprivate static func parse_documentAttributeSticker(_ reader: BufferReader) -> DocumentAttribute? {
             var _1: String?
             _1 = parseString(reader)
             var _2: Api.InputStickerSet?
@@ -10098,7 +10098,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_documentAttributeAudio(_ reader: BufferReader) -> DocumentAttribute? {
+        fileprivate static func parse_documentAttributeAudio(_ reader: BufferReader) -> DocumentAttribute? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -10165,10 +10165,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_chatPhotoEmpty(_ reader: BufferReader) -> ChatPhoto? {
+        fileprivate static func parse_chatPhotoEmpty(_ reader: BufferReader) -> ChatPhoto? {
             return Api.ChatPhoto.chatPhotoEmpty
         }
-        private static func parse_chatPhoto(_ reader: BufferReader) -> ChatPhoto? {
+        fileprivate static func parse_chatPhoto(_ reader: BufferReader) -> ChatPhoto? {
             var _1: Api.FileLocation?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.FileLocation
@@ -10229,10 +10229,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputStickerSetEmpty(_ reader: BufferReader) -> InputStickerSet? {
+        fileprivate static func parse_inputStickerSetEmpty(_ reader: BufferReader) -> InputStickerSet? {
             return Api.InputStickerSet.inputStickerSetEmpty
         }
-        private static func parse_inputStickerSetID(_ reader: BufferReader) -> InputStickerSet? {
+        fileprivate static func parse_inputStickerSetID(_ reader: BufferReader) -> InputStickerSet? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int64?
@@ -10246,7 +10246,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputStickerSetShortName(_ reader: BufferReader) -> InputStickerSet? {
+        fileprivate static func parse_inputStickerSetShortName(_ reader: BufferReader) -> InputStickerSet? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
@@ -10293,7 +10293,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_botInfo(_ reader: BufferReader) -> BotInfo? {
+        fileprivate static func parse_botInfo(_ reader: BufferReader) -> BotInfo? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -10352,7 +10352,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_foundGif(_ reader: BufferReader) -> FoundGif? {
+        fileprivate static func parse_foundGif(_ reader: BufferReader) -> FoundGif? {
             var _1: String?
             _1 = parseString(reader)
             var _2: String?
@@ -10378,7 +10378,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_foundGifCached(_ reader: BufferReader) -> FoundGif? {
+        fileprivate static func parse_foundGifCached(_ reader: BufferReader) -> FoundGif? {
             var _1: String?
             _1 = parseString(reader)
             var _2: Api.Photo?
@@ -10445,7 +10445,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_userEmpty(_ reader: BufferReader) -> User? {
+        fileprivate static func parse_userEmpty(_ reader: BufferReader) -> User? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -10456,7 +10456,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_user(_ reader: BufferReader) -> User? {
+        fileprivate static func parse_user(_ reader: BufferReader) -> User? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -10569,7 +10569,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_messageEmpty(_ reader: BufferReader) -> Message? {
+        fileprivate static func parse_messageEmpty(_ reader: BufferReader) -> Message? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -10580,7 +10580,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_message(_ reader: BufferReader) -> Message? {
+        fileprivate static func parse_message(_ reader: BufferReader) -> Message? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -10640,7 +10640,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageService(_ reader: BufferReader) -> Message? {
+        fileprivate static func parse_messageService(_ reader: BufferReader) -> Message? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -10721,7 +10721,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputFileLocation(_ reader: BufferReader) -> InputFileLocation? {
+        fileprivate static func parse_inputFileLocation(_ reader: BufferReader) -> InputFileLocation? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int32?
@@ -10738,7 +10738,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputEncryptedFileLocation(_ reader: BufferReader) -> InputFileLocation? {
+        fileprivate static func parse_inputEncryptedFileLocation(_ reader: BufferReader) -> InputFileLocation? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int64?
@@ -10752,7 +10752,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputDocumentFileLocation(_ reader: BufferReader) -> InputFileLocation? {
+        fileprivate static func parse_inputDocumentFileLocation(_ reader: BufferReader) -> InputFileLocation? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int64?
@@ -10813,10 +10813,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_geoPointEmpty(_ reader: BufferReader) -> GeoPoint? {
+        fileprivate static func parse_geoPointEmpty(_ reader: BufferReader) -> GeoPoint? {
             return Api.GeoPoint.geoPointEmpty
         }
-        private static func parse_geoPoint(_ reader: BufferReader) -> GeoPoint? {
+        fileprivate static func parse_geoPoint(_ reader: BufferReader) -> GeoPoint? {
             var _1: Double?
             _1 = reader.readDouble()
             var _2: Double?
@@ -10830,7 +10830,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_geoPlace(_ reader: BufferReader) -> GeoPoint? {
+        fileprivate static func parse_geoPlace(_ reader: BufferReader) -> GeoPoint? {
             var _1: Double?
             _1 = reader.readDouble()
             var _2: Double?
@@ -10880,7 +10880,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputPhoneCall(_ reader: BufferReader) -> InputPhoneCall? {
+        fileprivate static func parse_inputPhoneCall(_ reader: BufferReader) -> InputPhoneCall? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int64?
@@ -10921,7 +10921,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_receivedNotifyMessage(_ reader: BufferReader) -> ReceivedNotifyMessage? {
+        fileprivate static func parse_receivedNotifyMessage(_ reader: BufferReader) -> ReceivedNotifyMessage? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -10976,7 +10976,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_chatParticipantsForbidden(_ reader: BufferReader) -> ChatParticipants? {
+        fileprivate static func parse_chatParticipantsForbidden(_ reader: BufferReader) -> ChatParticipants? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -10995,7 +10995,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_chatParticipants(_ reader: BufferReader) -> ChatParticipants? {
+        fileprivate static func parse_chatParticipants(_ reader: BufferReader) -> ChatParticipants? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: [Api.ChatParticipant]?
@@ -11044,7 +11044,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_nearestDc(_ reader: BufferReader) -> NearestDc? {
+        fileprivate static func parse_nearestDc(_ reader: BufferReader) -> NearestDc? {
             var _1: String?
             _1 = parseString(reader)
             var _2: Int32?
@@ -11094,10 +11094,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_boolFalse(_ reader: BufferReader) -> Bool? {
+        fileprivate static func parse_boolFalse(_ reader: BufferReader) -> Bool? {
             return Api.Bool.boolFalse
         }
-        private static func parse_boolTrue(_ reader: BufferReader) -> Bool? {
+        fileprivate static func parse_boolTrue(_ reader: BufferReader) -> Bool? {
             return Api.Bool.boolTrue
         }
     
@@ -11132,7 +11132,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_messageFwdHeader(_ reader: BufferReader) -> MessageFwdHeader? {
+        fileprivate static func parse_messageFwdHeader(_ reader: BufferReader) -> MessageFwdHeader? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -11182,7 +11182,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_chatLocated(_ reader: BufferReader) -> ChatLocated? {
+        fileprivate static func parse_chatLocated(_ reader: BufferReader) -> ChatLocated? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -11278,31 +11278,31 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputMessagesFilterEmpty(_ reader: BufferReader) -> MessagesFilter? {
+        fileprivate static func parse_inputMessagesFilterEmpty(_ reader: BufferReader) -> MessagesFilter? {
             return Api.MessagesFilter.inputMessagesFilterEmpty
         }
-        private static func parse_inputMessagesFilterPhotos(_ reader: BufferReader) -> MessagesFilter? {
+        fileprivate static func parse_inputMessagesFilterPhotos(_ reader: BufferReader) -> MessagesFilter? {
             return Api.MessagesFilter.inputMessagesFilterPhotos
         }
-        private static func parse_inputMessagesFilterVideo(_ reader: BufferReader) -> MessagesFilter? {
+        fileprivate static func parse_inputMessagesFilterVideo(_ reader: BufferReader) -> MessagesFilter? {
             return Api.MessagesFilter.inputMessagesFilterVideo
         }
-        private static func parse_inputMessagesFilterPhotoVideo(_ reader: BufferReader) -> MessagesFilter? {
+        fileprivate static func parse_inputMessagesFilterPhotoVideo(_ reader: BufferReader) -> MessagesFilter? {
             return Api.MessagesFilter.inputMessagesFilterPhotoVideo
         }
-        private static func parse_inputMessagesFilterDocument(_ reader: BufferReader) -> MessagesFilter? {
+        fileprivate static func parse_inputMessagesFilterDocument(_ reader: BufferReader) -> MessagesFilter? {
             return Api.MessagesFilter.inputMessagesFilterDocument
         }
-        private static func parse_inputMessagesFilterPhotoVideoDocuments(_ reader: BufferReader) -> MessagesFilter? {
+        fileprivate static func parse_inputMessagesFilterPhotoVideoDocuments(_ reader: BufferReader) -> MessagesFilter? {
             return Api.MessagesFilter.inputMessagesFilterPhotoVideoDocuments
         }
-        private static func parse_inputMessagesFilterVoice(_ reader: BufferReader) -> MessagesFilter? {
+        fileprivate static func parse_inputMessagesFilterVoice(_ reader: BufferReader) -> MessagesFilter? {
             return Api.MessagesFilter.inputMessagesFilterVoice
         }
-        private static func parse_inputMessagesFilterMusic(_ reader: BufferReader) -> MessagesFilter? {
+        fileprivate static func parse_inputMessagesFilterMusic(_ reader: BufferReader) -> MessagesFilter? {
             return Api.MessagesFilter.inputMessagesFilterMusic
         }
-        private static func parse_inputMessagesFilterChatPhotos(_ reader: BufferReader) -> MessagesFilter? {
+        fileprivate static func parse_inputMessagesFilterChatPhotos(_ reader: BufferReader) -> MessagesFilter? {
             return Api.MessagesFilter.inputMessagesFilterChatPhotos
         }
     
@@ -11348,7 +11348,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_contactSuggested(_ reader: BufferReader) -> ContactSuggested? {
+        fileprivate static func parse_contactSuggested(_ reader: BufferReader) -> ContactSuggested? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -11437,7 +11437,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_botInlineMessageMediaAuto(_ reader: BufferReader) -> BotInlineMessage? {
+        fileprivate static func parse_botInlineMessageMediaAuto(_ reader: BufferReader) -> BotInlineMessage? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -11456,7 +11456,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_botInlineMessageText(_ reader: BufferReader) -> BotInlineMessage? {
+        fileprivate static func parse_botInlineMessageText(_ reader: BufferReader) -> BotInlineMessage? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -11480,7 +11480,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_botInlineMessageMediaGeo(_ reader: BufferReader) -> BotInlineMessage? {
+        fileprivate static func parse_botInlineMessageMediaGeo(_ reader: BufferReader) -> BotInlineMessage? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Api.GeoPoint?
@@ -11501,7 +11501,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_botInlineMessageMediaVenue(_ reader: BufferReader) -> BotInlineMessage? {
+        fileprivate static func parse_botInlineMessageMediaVenue(_ reader: BufferReader) -> BotInlineMessage? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Api.GeoPoint?
@@ -11534,7 +11534,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_botInlineMessageMediaContact(_ reader: BufferReader) -> BotInlineMessage? {
+        fileprivate static func parse_botInlineMessageMediaContact(_ reader: BufferReader) -> BotInlineMessage? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -11595,7 +11595,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputPeerNotifySettings(_ reader: BufferReader) -> InputPeerNotifySettings? {
+        fileprivate static func parse_inputPeerNotifySettings(_ reader: BufferReader) -> InputPeerNotifySettings? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -11645,10 +11645,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_chatInviteEmpty(_ reader: BufferReader) -> ExportedChatInvite? {
+        fileprivate static func parse_chatInviteEmpty(_ reader: BufferReader) -> ExportedChatInvite? {
             return Api.ExportedChatInvite.chatInviteEmpty
         }
-        private static func parse_chatInviteExported(_ reader: BufferReader) -> ExportedChatInvite? {
+        fileprivate static func parse_chatInviteExported(_ reader: BufferReader) -> ExportedChatInvite? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
@@ -11693,7 +11693,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_dcPingStats(_ reader: BufferReader) -> DcNetworkStats? {
+        fileprivate static func parse_dcPingStats(_ reader: BufferReader) -> DcNetworkStats? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -11750,7 +11750,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_authorization(_ reader: BufferReader) -> Authorization? {
+        fileprivate static func parse_authorization(_ reader: BufferReader) -> Authorization? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int32?
@@ -11832,10 +11832,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_phoneConnectionNotReady(_ reader: BufferReader) -> PhoneConnection? {
+        fileprivate static func parse_phoneConnectionNotReady(_ reader: BufferReader) -> PhoneConnection? {
             return Api.PhoneConnection.phoneConnectionNotReady
         }
-        private static func parse_phoneConnection(_ reader: BufferReader) -> PhoneConnection? {
+        fileprivate static func parse_phoneConnection(_ reader: BufferReader) -> PhoneConnection? {
             var _1: String?
             _1 = parseString(reader)
             var _2: Int32?
@@ -11880,7 +11880,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_accountDaysTTL(_ reader: BufferReader) -> AccountDaysTTL? {
+        fileprivate static func parse_accountDaysTTL(_ reader: BufferReader) -> AccountDaysTTL? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -11935,7 +11935,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_scheme(_ reader: BufferReader) -> Scheme? {
+        fileprivate static func parse_scheme(_ reader: BufferReader) -> Scheme? {
             var _1: String?
             _1 = parseString(reader)
             var _2: [Api.SchemeType]?
@@ -11959,7 +11959,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_schemeNotModified(_ reader: BufferReader) -> Scheme? {
+        fileprivate static func parse_schemeNotModified(_ reader: BufferReader) -> Scheme? {
             return Api.Scheme.schemeNotModified
         }
     
@@ -12025,7 +12025,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputBotInlineResult(_ reader: BufferReader) -> InputBotInlineResult? {
+        fileprivate static func parse_inputBotInlineResult(_ reader: BufferReader) -> InputBotInlineResult? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -12074,7 +12074,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputBotInlineResultPhoto(_ reader: BufferReader) -> InputBotInlineResult? {
+        fileprivate static func parse_inputBotInlineResultPhoto(_ reader: BufferReader) -> InputBotInlineResult? {
             var _1: String?
             _1 = parseString(reader)
             var _2: String?
@@ -12098,7 +12098,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputBotInlineResultDocument(_ reader: BufferReader) -> InputBotInlineResult? {
+        fileprivate static func parse_inputBotInlineResultDocument(_ reader: BufferReader) -> InputBotInlineResult? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -12204,13 +12204,13 @@ public struct Api {
     return true
     }
     
-        private static func parse_privacyValueAllowContacts(_ reader: BufferReader) -> PrivacyRule? {
+        fileprivate static func parse_privacyValueAllowContacts(_ reader: BufferReader) -> PrivacyRule? {
             return Api.PrivacyRule.privacyValueAllowContacts
         }
-        private static func parse_privacyValueAllowAll(_ reader: BufferReader) -> PrivacyRule? {
+        fileprivate static func parse_privacyValueAllowAll(_ reader: BufferReader) -> PrivacyRule? {
             return Api.PrivacyRule.privacyValueAllowAll
         }
-        private static func parse_privacyValueAllowUsers(_ reader: BufferReader) -> PrivacyRule? {
+        fileprivate static func parse_privacyValueAllowUsers(_ reader: BufferReader) -> PrivacyRule? {
             var _1: [Int32]?
             if let _ = reader.readInt32() {
                 _1 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
@@ -12223,13 +12223,13 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_privacyValueDisallowContacts(_ reader: BufferReader) -> PrivacyRule? {
+        fileprivate static func parse_privacyValueDisallowContacts(_ reader: BufferReader) -> PrivacyRule? {
             return Api.PrivacyRule.privacyValueDisallowContacts
         }
-        private static func parse_privacyValueDisallowAll(_ reader: BufferReader) -> PrivacyRule? {
+        fileprivate static func parse_privacyValueDisallowAll(_ reader: BufferReader) -> PrivacyRule? {
             return Api.PrivacyRule.privacyValueDisallowAll
         }
-        private static func parse_privacyValueDisallowUsers(_ reader: BufferReader) -> PrivacyRule? {
+        fileprivate static func parse_privacyValueDisallowUsers(_ reader: BufferReader) -> PrivacyRule? {
             var _1: [Int32]?
             if let _ = reader.readInt32() {
                 _1 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
@@ -12372,10 +12372,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_messageActionEmpty(_ reader: BufferReader) -> MessageAction? {
+        fileprivate static func parse_messageActionEmpty(_ reader: BufferReader) -> MessageAction? {
             return Api.MessageAction.messageActionEmpty
         }
-        private static func parse_messageActionChatCreate(_ reader: BufferReader) -> MessageAction? {
+        fileprivate static func parse_messageActionChatCreate(_ reader: BufferReader) -> MessageAction? {
             var _1: String?
             _1 = parseString(reader)
             var _2: [Int32]?
@@ -12391,7 +12391,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageActionChatEditTitle(_ reader: BufferReader) -> MessageAction? {
+        fileprivate static func parse_messageActionChatEditTitle(_ reader: BufferReader) -> MessageAction? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
@@ -12402,7 +12402,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageActionChatEditPhoto(_ reader: BufferReader) -> MessageAction? {
+        fileprivate static func parse_messageActionChatEditPhoto(_ reader: BufferReader) -> MessageAction? {
             var _1: Api.Photo?
             if let signature = reader.readInt32() {
                 _1 = Api.parse(reader, signature: signature) as? Api.Photo
@@ -12415,10 +12415,10 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageActionChatDeletePhoto(_ reader: BufferReader) -> MessageAction? {
+        fileprivate static func parse_messageActionChatDeletePhoto(_ reader: BufferReader) -> MessageAction? {
             return Api.MessageAction.messageActionChatDeletePhoto
         }
-        private static func parse_messageActionChatDeleteUser(_ reader: BufferReader) -> MessageAction? {
+        fileprivate static func parse_messageActionChatDeleteUser(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -12429,7 +12429,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageActionChatJoinedByLink(_ reader: BufferReader) -> MessageAction? {
+        fileprivate static func parse_messageActionChatJoinedByLink(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -12440,7 +12440,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageActionChannelCreate(_ reader: BufferReader) -> MessageAction? {
+        fileprivate static func parse_messageActionChannelCreate(_ reader: BufferReader) -> MessageAction? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
@@ -12451,7 +12451,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageActionChatMigrateTo(_ reader: BufferReader) -> MessageAction? {
+        fileprivate static func parse_messageActionChatMigrateTo(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -12462,7 +12462,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageActionChannelMigrateFrom(_ reader: BufferReader) -> MessageAction? {
+        fileprivate static func parse_messageActionChannelMigrateFrom(_ reader: BufferReader) -> MessageAction? {
             var _1: String?
             _1 = parseString(reader)
             var _2: Int32?
@@ -12476,7 +12476,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageActionChatAddUser(_ reader: BufferReader) -> MessageAction? {
+        fileprivate static func parse_messageActionChatAddUser(_ reader: BufferReader) -> MessageAction? {
             var _1: [Int32]?
             if let _ = reader.readInt32() {
                 _1 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
@@ -12489,10 +12489,10 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageActionPinMessage(_ reader: BufferReader) -> MessageAction? {
+        fileprivate static func parse_messageActionPinMessage(_ reader: BufferReader) -> MessageAction? {
             return Api.MessageAction.messageActionPinMessage
         }
-        private static func parse_messageActionHistoryClear(_ reader: BufferReader) -> MessageAction? {
+        fileprivate static func parse_messageActionHistoryClear(_ reader: BufferReader) -> MessageAction? {
             return Api.MessageAction.messageActionHistoryClear
         }
     
@@ -12556,7 +12556,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_phoneCallEmpty(_ reader: BufferReader) -> PhoneCall? {
+        fileprivate static func parse_phoneCallEmpty(_ reader: BufferReader) -> PhoneCall? {
             var _1: Int64?
             _1 = reader.readInt64()
             let _c1 = _1 != nil
@@ -12567,7 +12567,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_phoneCall(_ reader: BufferReader) -> PhoneCall? {
+        fileprivate static func parse_phoneCall(_ reader: BufferReader) -> PhoneCall? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int64?
@@ -12625,10 +12625,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_peerNotifyEventsEmpty(_ reader: BufferReader) -> PeerNotifyEvents? {
+        fileprivate static func parse_peerNotifyEventsEmpty(_ reader: BufferReader) -> PeerNotifyEvents? {
             return Api.PeerNotifyEvents.peerNotifyEventsEmpty
         }
-        private static func parse_peerNotifyEventsAll(_ reader: BufferReader) -> PeerNotifyEvents? {
+        fileprivate static func parse_peerNotifyEventsAll(_ reader: BufferReader) -> PeerNotifyEvents? {
             return Api.PeerNotifyEvents.peerNotifyEventsAll
         }
     
@@ -12680,16 +12680,16 @@ public struct Api {
     return true
     }
     
-        private static func parse_contactLinkUnknown(_ reader: BufferReader) -> ContactLink? {
+        fileprivate static func parse_contactLinkUnknown(_ reader: BufferReader) -> ContactLink? {
             return Api.ContactLink.contactLinkUnknown
         }
-        private static func parse_contactLinkNone(_ reader: BufferReader) -> ContactLink? {
+        fileprivate static func parse_contactLinkNone(_ reader: BufferReader) -> ContactLink? {
             return Api.ContactLink.contactLinkNone
         }
-        private static func parse_contactLinkHasPhone(_ reader: BufferReader) -> ContactLink? {
+        fileprivate static func parse_contactLinkHasPhone(_ reader: BufferReader) -> ContactLink? {
             return Api.ContactLink.contactLinkHasPhone
         }
-        private static func parse_contactLinkContact(_ reader: BufferReader) -> ContactLink? {
+        fileprivate static func parse_contactLinkContact(_ reader: BufferReader) -> ContactLink? {
             return Api.ContactLink.contactLinkContact
         }
     
@@ -12733,10 +12733,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_peerNotifySettingsEmpty(_ reader: BufferReader) -> PeerNotifySettings? {
+        fileprivate static func parse_peerNotifySettingsEmpty(_ reader: BufferReader) -> PeerNotifySettings? {
             return Api.PeerNotifySettings.peerNotifySettingsEmpty
         }
-        private static func parse_peerNotifySettings(_ reader: BufferReader) -> PeerNotifySettings? {
+        fileprivate static func parse_peerNotifySettings(_ reader: BufferReader) -> PeerNotifySettings? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -12783,7 +12783,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputBotInlineMessageID(_ reader: BufferReader) -> InputBotInlineMessageID? {
+        fileprivate static func parse_inputBotInlineMessageID(_ reader: BufferReader) -> InputBotInlineMessageID? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int64?
@@ -12827,7 +12827,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_schemeParam(_ reader: BufferReader) -> SchemeParam? {
+        fileprivate static func parse_schemeParam(_ reader: BufferReader) -> SchemeParam? {
             var _1: String?
             _1 = parseString(reader)
             var _2: String?
@@ -12872,7 +12872,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_stickerPack(_ reader: BufferReader) -> StickerPack? {
+        fileprivate static func parse_stickerPack(_ reader: BufferReader) -> StickerPack? {
             var _1: String?
             _1 = parseString(reader)
             var _2: [Int64]?
@@ -12923,10 +12923,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_userProfilePhotoEmpty(_ reader: BufferReader) -> UserProfilePhoto? {
+        fileprivate static func parse_userProfilePhotoEmpty(_ reader: BufferReader) -> UserProfilePhoto? {
             return Api.UserProfilePhoto.userProfilePhotoEmpty
         }
-        private static func parse_userProfilePhoto(_ reader: BufferReader) -> UserProfilePhoto? {
+        fileprivate static func parse_userProfilePhoto(_ reader: BufferReader) -> UserProfilePhoto? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Api.FileLocation?
@@ -13076,7 +13076,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_messageEntityUnknown(_ reader: BufferReader) -> MessageEntity? {
+        fileprivate static func parse_messageEntityUnknown(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -13090,7 +13090,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageEntityMention(_ reader: BufferReader) -> MessageEntity? {
+        fileprivate static func parse_messageEntityMention(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -13104,7 +13104,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageEntityHashtag(_ reader: BufferReader) -> MessageEntity? {
+        fileprivate static func parse_messageEntityHashtag(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -13118,7 +13118,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageEntityBotCommand(_ reader: BufferReader) -> MessageEntity? {
+        fileprivate static func parse_messageEntityBotCommand(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -13132,7 +13132,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageEntityUrl(_ reader: BufferReader) -> MessageEntity? {
+        fileprivate static func parse_messageEntityUrl(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -13146,7 +13146,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageEntityEmail(_ reader: BufferReader) -> MessageEntity? {
+        fileprivate static func parse_messageEntityEmail(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -13160,7 +13160,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageEntityBold(_ reader: BufferReader) -> MessageEntity? {
+        fileprivate static func parse_messageEntityBold(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -13174,7 +13174,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageEntityItalic(_ reader: BufferReader) -> MessageEntity? {
+        fileprivate static func parse_messageEntityItalic(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -13188,7 +13188,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageEntityCode(_ reader: BufferReader) -> MessageEntity? {
+        fileprivate static func parse_messageEntityCode(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -13202,7 +13202,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageEntityPre(_ reader: BufferReader) -> MessageEntity? {
+        fileprivate static func parse_messageEntityPre(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -13219,7 +13219,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageEntityTextUrl(_ reader: BufferReader) -> MessageEntity? {
+        fileprivate static func parse_messageEntityTextUrl(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -13236,7 +13236,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_messageEntityMentionName(_ reader: BufferReader) -> MessageEntity? {
+        fileprivate static func parse_messageEntityMentionName(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -13253,7 +13253,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_inputMessageEntityMentionName(_ reader: BufferReader) -> MessageEntity? {
+        fileprivate static func parse_inputMessageEntityMentionName(_ reader: BufferReader) -> MessageEntity? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -13330,10 +13330,10 @@ public struct Api {
     return true
     }
     
-        private static func parse_inputPhotoEmpty(_ reader: BufferReader) -> InputPhoto? {
+        fileprivate static func parse_inputPhotoEmpty(_ reader: BufferReader) -> InputPhoto? {
             return Api.InputPhoto.inputPhotoEmpty
         }
-        private static func parse_inputPhoto(_ reader: BufferReader) -> InputPhoto? {
+        fileprivate static func parse_inputPhoto(_ reader: BufferReader) -> InputPhoto? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int64?
@@ -13418,7 +13418,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_encryptedChatEmpty(_ reader: BufferReader) -> EncryptedChat? {
+        fileprivate static func parse_encryptedChatEmpty(_ reader: BufferReader) -> EncryptedChat? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -13429,7 +13429,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_encryptedChatWaiting(_ reader: BufferReader) -> EncryptedChat? {
+        fileprivate static func parse_encryptedChatWaiting(_ reader: BufferReader) -> EncryptedChat? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int64?
@@ -13452,7 +13452,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_encryptedChatDiscarded(_ reader: BufferReader) -> EncryptedChat? {
+        fileprivate static func parse_encryptedChatDiscarded(_ reader: BufferReader) -> EncryptedChat? {
             var _1: Int32?
             _1 = reader.readInt32()
             let _c1 = _1 != nil
@@ -13463,7 +13463,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_encryptedChatRequested(_ reader: BufferReader) -> EncryptedChat? {
+        fileprivate static func parse_encryptedChatRequested(_ reader: BufferReader) -> EncryptedChat? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int64?
@@ -13489,7 +13489,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_encryptedChat(_ reader: BufferReader) -> EncryptedChat? {
+        fileprivate static func parse_encryptedChat(_ reader: BufferReader) -> EncryptedChat? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int64?
@@ -13570,7 +13570,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_documentEmpty(_ reader: BufferReader) -> Document? {
+        fileprivate static func parse_documentEmpty(_ reader: BufferReader) -> Document? {
             var _1: Int64?
             _1 = reader.readInt64()
             let _c1 = _1 != nil
@@ -13581,7 +13581,7 @@ public struct Api {
                 return nil
             }
         }
-        private static func parse_document(_ reader: BufferReader) -> Document? {
+        fileprivate static func parse_document(_ reader: BufferReader) -> Document? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int64?
@@ -13646,7 +13646,7 @@ public struct Api {
     return true
     }
     
-        private static func parse_importedContact(_ reader: BufferReader) -> ImportedContact? {
+        fileprivate static func parse_importedContact(_ reader: BufferReader) -> ImportedContact? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int64?
@@ -13697,7 +13697,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_channelParticipants(_ reader: BufferReader) -> ChannelParticipants? {
+            fileprivate static func parse_channelParticipants(_ reader: BufferReader) -> ChannelParticipants? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: [Api.ChannelParticipant]?
@@ -13749,7 +13749,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_channelParticipant(_ reader: BufferReader) -> ChannelParticipant? {
+            fileprivate static func parse_channelParticipant(_ reader: BufferReader) -> ChannelParticipant? {
                 var _1: Api.ChannelParticipant?
                 if let signature = reader.readInt32() {
                     _1 = Api.parse(reader, signature: signature) as? Api.ChannelParticipant
@@ -13795,7 +13795,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_authorization(_ reader: BufferReader) -> Authorization? {
+            fileprivate static func parse_authorization(_ reader: BufferReader) -> Authorization? {
                 var _1: Api.User?
                 if let signature = reader.readInt32() {
                     _1 = Api.parse(reader, signature: signature) as? Api.User
@@ -13834,7 +13834,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_passwordRecovery(_ reader: BufferReader) -> PasswordRecovery? {
+            fileprivate static func parse_passwordRecovery(_ reader: BufferReader) -> PasswordRecovery? {
                 var _1: String?
                 _1 = parseString(reader)
                 let _c1 = _1 != nil
@@ -13872,7 +13872,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_exportedAuthorization(_ reader: BufferReader) -> ExportedAuthorization? {
+            fileprivate static func parse_exportedAuthorization(_ reader: BufferReader) -> ExportedAuthorization? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: Buffer?
@@ -13912,7 +13912,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_checkedPhone(_ reader: BufferReader) -> CheckedPhone? {
+            fileprivate static func parse_checkedPhone(_ reader: BufferReader) -> CheckedPhone? {
                 var _1: Api.Bool?
                 if let signature = reader.readInt32() {
                     _1 = Api.parse(reader, signature: signature) as? Api.Bool
@@ -13971,7 +13971,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_sentCodePreview(_ reader: BufferReader) -> SentCode? {
+            fileprivate static func parse_sentCodePreview(_ reader: BufferReader) -> SentCode? {
                 var _1: Api.Bool?
                 if let signature = reader.readInt32() {
                     _1 = Api.parse(reader, signature: signature) as? Api.Bool
@@ -13990,7 +13990,7 @@ public struct Api {
                     return nil
                 }
             }
-            private static func parse_sentPassPhrase(_ reader: BufferReader) -> SentCode? {
+            fileprivate static func parse_sentPassPhrase(_ reader: BufferReader) -> SentCode? {
                 var _1: Api.Bool?
                 if let signature = reader.readInt32() {
                     _1 = Api.parse(reader, signature: signature) as? Api.Bool
@@ -14003,7 +14003,7 @@ public struct Api {
                     return nil
                 }
             }
-            private static func parse_sentCode(_ reader: BufferReader) -> SentCode? {
+            fileprivate static func parse_sentCode(_ reader: BufferReader) -> SentCode? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: Api.auth.SentCodeType?
@@ -14074,13 +14074,13 @@ public struct Api {
         return true
         }
         
-            private static func parse_codeTypeSms(_ reader: BufferReader) -> CodeType? {
+            fileprivate static func parse_codeTypeSms(_ reader: BufferReader) -> CodeType? {
                 return Api.auth.CodeType.codeTypeSms
             }
-            private static func parse_codeTypeCall(_ reader: BufferReader) -> CodeType? {
+            fileprivate static func parse_codeTypeCall(_ reader: BufferReader) -> CodeType? {
                 return Api.auth.CodeType.codeTypeCall
             }
-            private static func parse_codeTypeFlashCall(_ reader: BufferReader) -> CodeType? {
+            fileprivate static func parse_codeTypeFlashCall(_ reader: BufferReader) -> CodeType? {
                 return Api.auth.CodeType.codeTypeFlashCall
             }
         
@@ -14134,7 +14134,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_sentCodeTypeApp(_ reader: BufferReader) -> SentCodeType? {
+            fileprivate static func parse_sentCodeTypeApp(_ reader: BufferReader) -> SentCodeType? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 let _c1 = _1 != nil
@@ -14145,7 +14145,7 @@ public struct Api {
                     return nil
                 }
             }
-            private static func parse_sentCodeTypeSms(_ reader: BufferReader) -> SentCodeType? {
+            fileprivate static func parse_sentCodeTypeSms(_ reader: BufferReader) -> SentCodeType? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 let _c1 = _1 != nil
@@ -14156,7 +14156,7 @@ public struct Api {
                     return nil
                 }
             }
-            private static func parse_sentCodeTypeCall(_ reader: BufferReader) -> SentCodeType? {
+            fileprivate static func parse_sentCodeTypeCall(_ reader: BufferReader) -> SentCodeType? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 let _c1 = _1 != nil
@@ -14167,7 +14167,7 @@ public struct Api {
                     return nil
                 }
             }
-            private static func parse_sentCodeTypeFlashCall(_ reader: BufferReader) -> SentCodeType? {
+            fileprivate static func parse_sentCodeTypeFlashCall(_ reader: BufferReader) -> SentCodeType? {
                 var _1: String?
                 _1 = parseString(reader)
                 let _c1 = _1 != nil
@@ -14238,7 +14238,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_requests(_ reader: BufferReader) -> Requests? {
+            fileprivate static func parse_requests(_ reader: BufferReader) -> Requests? {
                 var _1: [Api.ContactRequest]?
                 if let _ = reader.readInt32() {
                     _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ContactRequest.self)
@@ -14256,7 +14256,7 @@ public struct Api {
                     return nil
                 }
             }
-            private static func parse_requestsSlice(_ reader: BufferReader) -> Requests? {
+            fileprivate static func parse_requestsSlice(_ reader: BufferReader) -> Requests? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: [Api.ContactRequest]?
@@ -14306,7 +14306,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_sentLink(_ reader: BufferReader) -> SentLink? {
+            fileprivate static func parse_sentLink(_ reader: BufferReader) -> SentLink? {
                 var _1: Api.messages.Message?
                 if let signature = reader.readInt32() {
                     _1 = Api.parse(reader, signature: signature) as? Api.messages.Message
@@ -14376,7 +14376,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_blocked(_ reader: BufferReader) -> Blocked? {
+            fileprivate static func parse_blocked(_ reader: BufferReader) -> Blocked? {
                 var _1: [Api.ContactBlocked]?
                 if let _ = reader.readInt32() {
                     _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ContactBlocked.self)
@@ -14394,7 +14394,7 @@ public struct Api {
                     return nil
                 }
             }
-            private static func parse_blockedSlice(_ reader: BufferReader) -> Blocked? {
+            fileprivate static func parse_blockedSlice(_ reader: BufferReader) -> Blocked? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: [Api.ContactBlocked]?
@@ -14459,7 +14459,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_contacts(_ reader: BufferReader) -> Contacts? {
+            fileprivate static func parse_contacts(_ reader: BufferReader) -> Contacts? {
                 var _1: [Api.Contact]?
                 if let _ = reader.readInt32() {
                     _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Contact.self)
@@ -14477,7 +14477,7 @@ public struct Api {
                     return nil
                 }
             }
-            private static func parse_contactsNotModified(_ reader: BufferReader) -> Contacts? {
+            fileprivate static func parse_contactsNotModified(_ reader: BufferReader) -> Contacts? {
                 return Api.contacts.Contacts.contactsNotModified
             }
         
@@ -14518,7 +14518,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_resolvedPeer(_ reader: BufferReader) -> ResolvedPeer? {
+            fileprivate static func parse_resolvedPeer(_ reader: BufferReader) -> ResolvedPeer? {
                 var _1: Api.Peer?
                 if let signature = reader.readInt32() {
                     _1 = Api.parse(reader, signature: signature) as? Api.Peer
@@ -14581,10 +14581,10 @@ public struct Api {
         return true
         }
         
-            private static func parse_myLinkEmpty(_ reader: BufferReader) -> MyLink? {
+            fileprivate static func parse_myLinkEmpty(_ reader: BufferReader) -> MyLink? {
                 return Api.contacts.MyLink.myLinkEmpty
             }
-            private static func parse_myLinkRequested(_ reader: BufferReader) -> MyLink? {
+            fileprivate static func parse_myLinkRequested(_ reader: BufferReader) -> MyLink? {
                 var _1: Api.Bool?
                 if let signature = reader.readInt32() {
                     _1 = Api.parse(reader, signature: signature) as? Api.Bool
@@ -14597,7 +14597,7 @@ public struct Api {
                     return nil
                 }
             }
-            private static func parse_myLinkContact(_ reader: BufferReader) -> MyLink? {
+            fileprivate static func parse_myLinkContact(_ reader: BufferReader) -> MyLink? {
                 return Api.contacts.MyLink.myLinkContact
             }
         
@@ -14644,10 +14644,10 @@ public struct Api {
         return true
         }
         
-            private static func parse_foreignLinkUnknown(_ reader: BufferReader) -> ForeignLink? {
+            fileprivate static func parse_foreignLinkUnknown(_ reader: BufferReader) -> ForeignLink? {
                 return Api.contacts.ForeignLink.foreignLinkUnknown
             }
-            private static func parse_foreignLinkRequested(_ reader: BufferReader) -> ForeignLink? {
+            fileprivate static func parse_foreignLinkRequested(_ reader: BufferReader) -> ForeignLink? {
                 var _1: Api.Bool?
                 if let signature = reader.readInt32() {
                     _1 = Api.parse(reader, signature: signature) as? Api.Bool
@@ -14660,7 +14660,7 @@ public struct Api {
                     return nil
                 }
             }
-            private static func parse_foreignLinkMutual(_ reader: BufferReader) -> ForeignLink? {
+            fileprivate static func parse_foreignLinkMutual(_ reader: BufferReader) -> ForeignLink? {
                 return Api.contacts.ForeignLink.foreignLinkMutual
             }
         
@@ -14695,7 +14695,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_link(_ reader: BufferReader) -> Link? {
+            fileprivate static func parse_link(_ reader: BufferReader) -> Link? {
                 var _1: Api.ContactLink?
                 if let signature = reader.readInt32() {
                     _1 = Api.parse(reader, signature: signature) as? Api.ContactLink
@@ -14753,7 +14753,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_located(_ reader: BufferReader) -> Located? {
+            fileprivate static func parse_located(_ reader: BufferReader) -> Located? {
                 var _1: [Api.ContactLocated]?
                 if let _ = reader.readInt32() {
                     _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ContactLocated.self)
@@ -14806,7 +14806,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_suggested(_ reader: BufferReader) -> Suggested? {
+            fileprivate static func parse_suggested(_ reader: BufferReader) -> Suggested? {
                 var _1: [Api.ContactSuggested]?
                 if let _ = reader.readInt32() {
                     _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ContactSuggested.self)
@@ -14864,7 +14864,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_importedContacts(_ reader: BufferReader) -> ImportedContacts? {
+            fileprivate static func parse_importedContacts(_ reader: BufferReader) -> ImportedContacts? {
                 var _1: [Api.ImportedContact]?
                 if let _ = reader.readInt32() {
                     _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ImportedContact.self)
@@ -14927,7 +14927,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_found(_ reader: BufferReader) -> Found? {
+            fileprivate static func parse_found(_ reader: BufferReader) -> Found? {
                 var _1: [Api.Peer]?
                 if let _ = reader.readInt32() {
                     _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Peer.self)
@@ -14997,10 +14997,10 @@ public struct Api {
         return true
         }
         
-            private static func parse_topPeersNotModified(_ reader: BufferReader) -> TopPeers? {
+            fileprivate static func parse_topPeersNotModified(_ reader: BufferReader) -> TopPeers? {
                 return Api.contacts.TopPeers.topPeersNotModified
             }
-            private static func parse_topPeers(_ reader: BufferReader) -> TopPeers? {
+            fileprivate static func parse_topPeers(_ reader: BufferReader) -> TopPeers? {
                 var _1: [Api.TopPeerCategoryPeers]?
                 if let _ = reader.readInt32() {
                     _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.TopPeerCategoryPeers.self)
@@ -15063,7 +15063,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_appUpdate(_ reader: BufferReader) -> AppUpdate? {
+            fileprivate static func parse_appUpdate(_ reader: BufferReader) -> AppUpdate? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: Api.Bool?
@@ -15085,7 +15085,7 @@ public struct Api {
                     return nil
                 }
             }
-            private static func parse_noAppUpdate(_ reader: BufferReader) -> AppUpdate? {
+            fileprivate static func parse_noAppUpdate(_ reader: BufferReader) -> AppUpdate? {
                 return Api.help.AppUpdate.noAppUpdate
             }
         
@@ -15123,10 +15123,10 @@ public struct Api {
         return true
         }
         
-            private static func parse_appChangelogEmpty(_ reader: BufferReader) -> AppChangelog? {
+            fileprivate static func parse_appChangelogEmpty(_ reader: BufferReader) -> AppChangelog? {
                 return Api.help.AppChangelog.appChangelogEmpty
             }
-            private static func parse_appChangelog(_ reader: BufferReader) -> AppChangelog? {
+            fileprivate static func parse_appChangelog(_ reader: BufferReader) -> AppChangelog? {
                 var _1: String?
                 _1 = parseString(reader)
                 let _c1 = _1 != nil
@@ -15166,7 +15166,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_support(_ reader: BufferReader) -> Support? {
+            fileprivate static func parse_support(_ reader: BufferReader) -> Support? {
                 var _1: String?
                 _1 = parseString(reader)
                 var _2: Api.User?
@@ -15208,7 +15208,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_inviteText(_ reader: BufferReader) -> InviteText? {
+            fileprivate static func parse_inviteText(_ reader: BufferReader) -> InviteText? {
                 var _1: String?
                 _1 = parseString(reader)
                 let _c1 = _1 != nil
@@ -15245,7 +15245,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_appPrefs(_ reader: BufferReader) -> AppPrefs? {
+            fileprivate static func parse_appPrefs(_ reader: BufferReader) -> AppPrefs? {
                 var _1: Buffer?
                 _1 = parseBytes(reader)
                 let _c1 = _1 != nil
@@ -15349,7 +15349,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_differenceEmpty(_ reader: BufferReader) -> Difference? {
+            fileprivate static func parse_differenceEmpty(_ reader: BufferReader) -> Difference? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: Int32?
@@ -15363,7 +15363,7 @@ public struct Api {
                     return nil
                 }
             }
-            private static func parse_difference(_ reader: BufferReader) -> Difference? {
+            fileprivate static func parse_difference(_ reader: BufferReader) -> Difference? {
                 var _1: [Api.Message]?
                 if let _ = reader.readInt32() {
                     _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
@@ -15401,7 +15401,7 @@ public struct Api {
                     return nil
                 }
             }
-            private static func parse_differenceSlice(_ reader: BufferReader) -> Difference? {
+            fileprivate static func parse_differenceSlice(_ reader: BufferReader) -> Difference? {
                 var _1: [Api.Message]?
                 if let _ = reader.readInt32() {
                     _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
@@ -15473,7 +15473,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_state(_ reader: BufferReader) -> State? {
+            fileprivate static func parse_state(_ reader: BufferReader) -> State? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: Int32?
@@ -15581,7 +15581,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_channelDifferenceEmpty(_ reader: BufferReader) -> ChannelDifference? {
+            fileprivate static func parse_channelDifferenceEmpty(_ reader: BufferReader) -> ChannelDifference? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: Int32?
@@ -15598,7 +15598,7 @@ public struct Api {
                     return nil
                 }
             }
-            private static func parse_channelDifference(_ reader: BufferReader) -> ChannelDifference? {
+            fileprivate static func parse_channelDifference(_ reader: BufferReader) -> ChannelDifference? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: Int32?
@@ -15635,7 +15635,7 @@ public struct Api {
                     return nil
                 }
             }
-            private static func parse_channelDifferenceTooLong(_ reader: BufferReader) -> ChannelDifference? {
+            fileprivate static func parse_channelDifferenceTooLong(_ reader: BufferReader) -> ChannelDifference? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: Int32?
@@ -15713,7 +15713,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_file(_ reader: BufferReader) -> File? {
+            fileprivate static func parse_file(_ reader: BufferReader) -> File? {
                 var _1: Api.storage.FileType?
                 if let signature = reader.readInt32() {
                     _1 = Api.parse(reader, signature: signature) as? Api.storage.FileType
@@ -15823,34 +15823,34 @@ public struct Api {
         return true
         }
         
-            private static func parse_fileUnknown(_ reader: BufferReader) -> FileType? {
+            fileprivate static func parse_fileUnknown(_ reader: BufferReader) -> FileType? {
                 return Api.storage.FileType.fileUnknown
             }
-            private static func parse_fileJpeg(_ reader: BufferReader) -> FileType? {
+            fileprivate static func parse_fileJpeg(_ reader: BufferReader) -> FileType? {
                 return Api.storage.FileType.fileJpeg
             }
-            private static func parse_fileGif(_ reader: BufferReader) -> FileType? {
+            fileprivate static func parse_fileGif(_ reader: BufferReader) -> FileType? {
                 return Api.storage.FileType.fileGif
             }
-            private static func parse_filePng(_ reader: BufferReader) -> FileType? {
+            fileprivate static func parse_filePng(_ reader: BufferReader) -> FileType? {
                 return Api.storage.FileType.filePng
             }
-            private static func parse_filePdf(_ reader: BufferReader) -> FileType? {
+            fileprivate static func parse_filePdf(_ reader: BufferReader) -> FileType? {
                 return Api.storage.FileType.filePdf
             }
-            private static func parse_fileMp3(_ reader: BufferReader) -> FileType? {
+            fileprivate static func parse_fileMp3(_ reader: BufferReader) -> FileType? {
                 return Api.storage.FileType.fileMp3
             }
-            private static func parse_fileMov(_ reader: BufferReader) -> FileType? {
+            fileprivate static func parse_fileMov(_ reader: BufferReader) -> FileType? {
                 return Api.storage.FileType.fileMov
             }
-            private static func parse_filePartial(_ reader: BufferReader) -> FileType? {
+            fileprivate static func parse_filePartial(_ reader: BufferReader) -> FileType? {
                 return Api.storage.FileType.filePartial
             }
-            private static func parse_fileMp4(_ reader: BufferReader) -> FileType? {
+            fileprivate static func parse_fileMp4(_ reader: BufferReader) -> FileType? {
                 return Api.storage.FileType.fileMp4
             }
-            private static func parse_fileWebp(_ reader: BufferReader) -> FileType? {
+            fileprivate static func parse_fileWebp(_ reader: BufferReader) -> FileType? {
                 return Api.storage.FileType.fileWebp
             }
         
@@ -15899,7 +15899,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_passwordSettings(_ reader: BufferReader) -> PasswordSettings? {
+            fileprivate static func parse_passwordSettings(_ reader: BufferReader) -> PasswordSettings? {
                 var _1: String?
                 _1 = parseString(reader)
                 let _c1 = _1 != nil
@@ -15940,7 +15940,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_passwordInputSettings(_ reader: BufferReader) -> PasswordInputSettings? {
+            fileprivate static func parse_passwordInputSettings(_ reader: BufferReader) -> PasswordInputSettings? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: Buffer?
@@ -15993,7 +15993,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_authorizations(_ reader: BufferReader) -> Authorizations? {
+            fileprivate static func parse_authorizations(_ reader: BufferReader) -> Authorizations? {
                 var _1: [Api.Authorization]?
                 if let _ = reader.readInt32() {
                     _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Authorization.self)
@@ -16044,7 +16044,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_noPassword(_ reader: BufferReader) -> Password? {
+            fileprivate static func parse_noPassword(_ reader: BufferReader) -> Password? {
                 var _1: Buffer?
                 _1 = parseBytes(reader)
                 var _2: String?
@@ -16058,7 +16058,7 @@ public struct Api {
                     return nil
                 }
             }
-            private static func parse_password(_ reader: BufferReader) -> Password? {
+            fileprivate static func parse_password(_ reader: BufferReader) -> Password? {
                 var _1: Buffer?
                 _1 = parseBytes(reader)
                 var _2: Buffer?
@@ -16120,7 +16120,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_privacyRules(_ reader: BufferReader) -> PrivacyRules? {
+            fileprivate static func parse_privacyRules(_ reader: BufferReader) -> PrivacyRules? {
                 var _1: [Api.PrivacyRule]?
                 if let _ = reader.readInt32() {
                     _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PrivacyRule.self)
@@ -16171,7 +16171,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_photo(_ reader: BufferReader) -> Photo? {
+            fileprivate static func parse_photo(_ reader: BufferReader) -> Photo? {
                 var _1: Api.Photo?
                 if let signature = reader.readInt32() {
                     _1 = Api.parse(reader, signature: signature) as? Api.Photo
@@ -16241,7 +16241,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_photos(_ reader: BufferReader) -> Photos? {
+            fileprivate static func parse_photos(_ reader: BufferReader) -> Photos? {
                 var _1: [Api.Photo]?
                 if let _ = reader.readInt32() {
                     _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Photo.self)
@@ -16259,7 +16259,7 @@ public struct Api {
                     return nil
                 }
             }
-            private static func parse_photosSlice(_ reader: BufferReader) -> Photos? {
+            fileprivate static func parse_photosSlice(_ reader: BufferReader) -> Photos? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: [Api.Photo]?
@@ -16313,7 +16313,7 @@ public struct Api {
         return true
         }
         
-            private static func parse_dhConfig(_ reader: BufferReader) -> DhConfig? {
+            fileprivate static func parse_dhConfig(_ reader: BufferReader) -> DhConfig? {
                 var _1: Int32?
                 _1 = reader.readInt32()
                 var _2: String?

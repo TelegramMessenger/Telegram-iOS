@@ -16,10 +16,10 @@ public class AccountState: Coding, Equatable {
     public func encode(_ encoder: Encoder) {
     }
     
-    private init() {
+    fileprivate init() {
     }
     
-    private func equalsTo(_ other: AccountState) -> Bool {
+    fileprivate func equalsTo(_ other: AccountState) -> Bool {
         return false
     }
 }
@@ -55,7 +55,7 @@ public final class UnauthorizedAccountState: AccountState {
 }
 
 public class AuthorizedAccountState: AccountState {
-    final class State: Coding, Equatable, CustomStringConvertible {
+    public final class State: Coding, Equatable, CustomStringConvertible {
         let pts: Int32
         let qts: Int32
         let date: Int32
@@ -68,21 +68,21 @@ public class AuthorizedAccountState: AccountState {
             self.seq = seq
         }
         
-        init(decoder: Decoder) {
+        public init(decoder: Decoder) {
             self.pts = decoder.decodeInt32ForKey("pts")
             self.qts = decoder.decodeInt32ForKey("qts")
             self.date = decoder.decodeInt32ForKey("date")
             self.seq = decoder.decodeInt32ForKey("seq")
         }
         
-        func encode(_ encoder: Encoder) {
+        public func encode(_ encoder: Encoder) {
             encoder.encodeInt32(self.pts, forKey: "pts")
             encoder.encodeInt32(self.qts, forKey: "qts")
             encoder.encodeInt32(self.date, forKey: "date")
             encoder.encodeInt32(self.seq, forKey: "seq")
         }
         
-        var description: String {
+        public var description: String {
             return "(pts: \(pts), qts: \(qts), seq: \(seq), date: \(date))"
         }
     }
@@ -108,7 +108,7 @@ public class AuthorizedAccountState: AccountState {
         }
     }
     
-    init(masterDatacenterId: Int32, peerId: PeerId, state: State?) {
+    public init(masterDatacenterId: Int32, peerId: PeerId, state: State?) {
         self.masterDatacenterId = masterDatacenterId
         self.peerId = peerId
         self.state = state
@@ -131,7 +131,7 @@ public class AuthorizedAccountState: AccountState {
     }
 }
 
-func ==(lhs: AuthorizedAccountState.State, rhs: AuthorizedAccountState.State) -> Bool {
+public func ==(lhs: AuthorizedAccountState.State, rhs: AuthorizedAccountState.State) -> Bool {
     return lhs.pts == rhs.pts &&
         lhs.qts == rhs.qts &&
         lhs.date == rhs.date &&
@@ -154,11 +154,11 @@ public func generateAccountId() -> AccountId {
 }
 
 public class UnauthorizedAccount {
-    let id: AccountId
-    let postbox: Postbox
-    let network: Network
+    public let id: AccountId
+    public let postbox: Postbox
+    public let network: Network
     
-    var masterDatacenterId: Int32 {
+    public var masterDatacenterId: Int32 {
         return Int32(self.network.mtProto.datacenterId)
     }
     
@@ -168,7 +168,7 @@ public class UnauthorizedAccount {
         self.network = network
     }
     
-    func changedMasterDatacenterId(_ masterDatacenterId: Int32) -> UnauthorizedAccount {
+    public func changedMasterDatacenterId(_ masterDatacenterId: Int32) -> UnauthorizedAccount {
         if masterDatacenterId == Int32(self.network.mtProto.datacenterId) {
             return self
         } else {
@@ -207,7 +207,6 @@ private var declaredEncodables: Void = {
     declareEncodable(TelegramMediaWebpage.self, f: { TelegramMediaWebpage(decoder: $0) })
     declareEncodable(ViewCountMessageAttribute.self, f: { ViewCountMessageAttribute(decoder: $0) })
     declareEncodable(TelegramMediaAction.self, f: { TelegramMediaAction(decoder: $0) })
-    declareEncodable(StreamingResource.self, f: { StreamingResource(decoder: $0) })
     
     return
 }()
@@ -302,21 +301,21 @@ public enum AccountServiceTaskMasterMode {
 }
 
 public class Account {
-    let id: AccountId
+    public let id: AccountId
     public let postbox: Postbox
     public let network: Network
     public let peerId: PeerId
     
     public private(set) var stateManager: StateManager!
     public private(set) var viewTracker: AccountViewTracker!
-    private let managedContactsDisposable = MetaDisposable()
+    fileprivate let managedContactsDisposable = MetaDisposable()
     private let becomeMasterDisposable = MetaDisposable()
     private let managedServiceViewsDisposable = MetaDisposable()
     
-    let graphicsThreadPool = ThreadPool(threadCount: 3, threadPriority: 0.1)
+    public let graphicsThreadPool = ThreadPool(threadCount: 3, threadPriority: 0.1)
     //let imageCache: ImageCache = ImageCache(maxResidentSize: 5 * 1024 * 1024)
     
-    let settings: AccountSettings = defaultAccountSettings()
+    public let settings: AccountSettings = defaultAccountSettings()
     
     var player: AnyObject?
     
@@ -325,7 +324,7 @@ public class Account {
     
     public let shouldBeServiceTaskMaster = Promise<AccountServiceTaskMasterMode>()
     
-    init(id: AccountId, postbox: Postbox, network: Network, peerId: PeerId) {
+    public init(id: AccountId, postbox: Postbox, network: Network, peerId: PeerId) {
         self.id = id
         self.postbox = postbox
         self.network = network

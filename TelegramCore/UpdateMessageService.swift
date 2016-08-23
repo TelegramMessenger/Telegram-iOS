@@ -25,7 +25,7 @@ class UpdateMessageService: NSObject, MTMessageService {
         self.pipe.putNext([.reset])
     }
     
-    func mtProtoServerDidChangeSession(_ mtProto: MTProto!, firstValidMessageId: Int64, otherValidMessageIds: [AnyObject]!) {
+    func mtProtoServerDidChangeSession(_ mtProto: MTProto!, firstValidMessageId: Int64, otherValidMessageIds: [Any]!) {
         self.pipe.putNext([.reset])
     }
     

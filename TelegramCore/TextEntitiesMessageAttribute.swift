@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 
-enum MessageTextEntityType {
+public enum MessageTextEntityType {
     case Unknown
     case Mention
     case Hashtag
@@ -16,16 +16,16 @@ enum MessageTextEntityType {
     case TextMention(peerId: PeerId)
 }
 
-struct MessageTextEntity: Coding {
-    let range: Range<Int>
-    let type: MessageTextEntityType
+public struct MessageTextEntity: Coding {
+    public let range: Range<Int>
+    public let type: MessageTextEntityType
     
     init(range: Range<Int>, type: MessageTextEntityType) {
         self.range = range
         self.type = type
     }
     
-    init(decoder: Decoder) {
+    public init(decoder: Decoder) {
         self.range = Int(decoder.decodeInt32ForKey("start")) ..< Int(decoder.decodeInt32ForKey("end"))
         let type: Int32 = decoder.decodeInt32ForKey("_rawValue")
         switch type {
@@ -56,7 +56,7 @@ struct MessageTextEntity: Coding {
         }
     }
     
-    func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: Encoder) {
         encoder.encodeInt32(Int32(self.range.lowerBound), forKey: "start")
         encoder.encodeInt32(Int32(self.range.upperBound), forKey: "end")
         switch self.type {
@@ -90,10 +90,10 @@ struct MessageTextEntity: Coding {
     }
 }
 
-class TextEntitiesMessageAttribute: MessageAttribute {
-    let entities: [MessageTextEntity]
+public class TextEntitiesMessageAttribute: MessageAttribute {
+    public let entities: [MessageTextEntity]
     
-    var associatedPeerIds: [PeerId] {
+    public var associatedPeerIds: [PeerId] {
         var result: [PeerId] = []
         for entity in entities {
             switch entity.type {
@@ -110,11 +110,11 @@ class TextEntitiesMessageAttribute: MessageAttribute {
         self.entities = entities
     }
     
-    required init(decoder: Decoder) {
+    required public init(decoder: Decoder) {
         self.entities = decoder.decodeObjectArrayWithDecoderForKey("entities")
     }
     
-    func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: Encoder) {
         encoder.encodeObjectArray(self.entities, forKey: "entities")
     }
 }

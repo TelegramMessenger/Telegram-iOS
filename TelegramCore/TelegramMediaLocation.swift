@@ -7,13 +7,13 @@ public protocol TelegramMediaLocation: Coding {
     func equalsTo(_ other: TelegramMediaLocation) -> Bool
 }
 
-protocol TelegramCloudMediaLocation {
+public protocol TelegramCloudMediaLocation {
     var datacenterId: Int { get }
     var apiInputLocation: Api.InputFileLocation { get }
 }
 
-extension TelegramMediaLocation {
-    var cloudLocation: TelegramCloudMediaLocation! {
+public extension TelegramMediaLocation {
+    public var cloudLocation: TelegramCloudMediaLocation! {
         switch self {
             case let location as TelegramCloudFileLocation:
                 return location

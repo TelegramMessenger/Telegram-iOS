@@ -4,7 +4,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramCorePrivateModule
 
-enum ConnectionStatus {
+public enum ConnectionStatus {
     case WaitingForNetwork
     case Connecting
     case Updating
@@ -85,7 +85,7 @@ public class Network {
     private let connectionStatusDelegate = MTProtoConnectionStatusDelegate()
     
     private let _connectionStatus = Promise<ConnectionStatus>(.WaitingForNetwork)
-    var connectionStatus: Signal<ConnectionStatus, NoError> {
+    public var connectionStatus: Signal<ConnectionStatus, NoError> {
         return self._connectionStatus.get() |> distinctUntilChanged
     }
     
@@ -151,11 +151,11 @@ public class Network {
         }
     }
 
-    func request<T>(_ data: (CustomStringConvertible, Buffer, (Buffer) -> T?)) -> Signal<T, MTRpcError> {
+    public func request<T>(_ data: (CustomStringConvertible, Buffer, (Buffer) -> T?)) -> Signal<T, MTRpcError> {
         return self.request(data, dependsOnPasswordEntry: true)
     }
     
-    func request<T>(_ data: (CustomStringConvertible, Buffer, (Buffer) -> T?), dependsOnPasswordEntry: Bool) -> Signal<T, MTRpcError> {
+    public func request<T>(_ data: (CustomStringConvertible, Buffer, (Buffer) -> T?), dependsOnPasswordEntry: Bool) -> Signal<T, MTRpcError> {
         let requestService = self.requestService
         return Signal { subscriber in
             let request = MTRequest()
@@ -183,7 +183,7 @@ public class Network {
                 }
             }
             
-            let internalId: AnyObject! = request.internalId
+            let internalId: Any! = request.internalId
             
             requestService.add(request)
             
@@ -194,7 +194,7 @@ public class Network {
     }
 }
 
-func retryRequest<T>(signal: Signal<T, MTRpcError>) -> Signal<T, NoError> {
+public func retryRequest<T>(signal: Signal<T, MTRpcError>) -> Signal<T, NoError> {
     return signal |> retry(0.2, maxDelay: 5.0, onQueue: Queue.concurrentDefaultQueue())
 }
 
@@ -203,18 +203,18 @@ class Keychain: NSObject, MTKeychain {
     let set: (String, Data) -> Void
     let remove: (String) -> Void
     
-    init(get: (String) -> Data?, set: (String, Data) -> Void, remove: (String) -> Void) {
+    init(get: @escaping (String) -> Data?, set: @escaping (String, Data) -> Void, remove: @escaping (String) -> Void) {
         self.get = get
         self.set = set
         self.remove = remove
     }
     
-    func setObject(_ object: AnyObject!, forKey aKey: String!, group: String!) {
+    func setObject(_ object: Any!, forKey aKey: String!, group: String!) {
         let data = NSKeyedArchiver.archivedData(withRootObject: object)
         self.set(group + ":" + aKey, data)
     }
     
-    func object(forKey aKey: String!, group: String!) -> AnyObject! {
+    func object(forKey aKey: String!, group: String!) -> Any! {
         if let data = self.get(group + ":" + aKey) {
             return NSKeyedUnarchiver.unarchiveObject(with: data as Data)
         }

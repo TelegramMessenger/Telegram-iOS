@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 
 public class TelegramCloudFileLocation: TelegramMediaLocation, TelegramCloudMediaLocation {
-    let datacenterId: Int
+    public let datacenterId: Int
     let volumeId: Int64
     let localId: Int32
     let secret: Int64
@@ -45,7 +45,7 @@ public class TelegramCloudFileLocation: TelegramMediaLocation, TelegramCloudMedi
 }
 
 public class TelegramCloudDocumentLocation: TelegramMediaLocation, TelegramCloudMediaLocation {
-    let datacenterId: Int
+    public let datacenterId: Int
     let fileId: Int64
     let accessHash: Int64
     

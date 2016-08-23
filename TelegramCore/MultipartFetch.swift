@@ -22,7 +22,7 @@ private final class MultipartFetchManager {
     var receivedSize = 0
     var lastStatReport: (timestamp: Double, receivedSize: Int)?
     
-    init(size: Int, range: Range<Int>, fetchPart: (Int, Int) -> Signal<Data, NoError>, partReady: (Data) -> Void, completed: () -> Void) {
+    init(size: Int, range: Range<Int>, fetchPart: @escaping (Int, Int) -> Signal<Data, NoError>, partReady: @escaping (Data) -> Void, completed: @escaping () -> Void) {
         self.completeSize = size
         self.range = range
         self.committedOffset = range.lowerBound

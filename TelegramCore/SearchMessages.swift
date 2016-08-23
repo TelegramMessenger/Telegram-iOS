@@ -24,7 +24,7 @@ private func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer]
     return Message(stableId: 0, id: id, timestamp: message.timestamp, flags: MessageFlags(message.flags), tags: message.tags, forwardInfo: nil, author: author, text: message.text, attributes: message.attributes, media: message.media, peers: messagePeers, associatedMessages: SimpleDictionary())
 }
 
-func searchMessages(account: Account, query: String) -> Signal<[Message], NoError> {
+public func searchMessages(account: Account, query: String) -> Signal<[Message], NoError> {
     let searchResult = account.network.request(Api.functions.messages.searchGlobal(q: query, offsetDate: 0, offsetPeer: Api.InputPeer.inputPeerEmpty, offsetId: 0, limit: 64))
         |> retryRequest
     

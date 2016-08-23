@@ -3,7 +3,7 @@ import Postbox
 import SwiftSignalKit
 import MtProtoKit
 
-func multipartDownloadFromCloudLocation(account: Account, location: TelegramCloudMediaLocation, size: Int?, data: Data? = nil, offset: Int = 0) -> Signal<Data, NoError> {
+public func multipartDownloadFromCloudLocation(account: Account, location: TelegramCloudMediaLocation, size: Int?, data: Data? = nil, offset: Int = 0) -> Signal<Data, NoError> {
     return account.network.download(datacenterId: location.datacenterId)
         |> mapToSignal { download -> Signal<Data, NoError> in
             if let size = size {

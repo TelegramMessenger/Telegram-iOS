@@ -1,6 +1,6 @@
 import Foundation
 
-struct Regex {
+public struct Regex {
     let pattern: String
     let options: NSRegularExpression.Options!
     
@@ -8,26 +8,26 @@ struct Regex {
         return try! NSRegularExpression(pattern: self.pattern, options: self.options)
     }
     
-    init(_ pattern: String) {
+    public init(_ pattern: String) {
         self.pattern = pattern
         self.options = []
     }
     
-    func match(_ string: String, options: NSRegularExpression.MatchingOptions = []) -> Bool {
+    public func match(_ string: String, options: NSRegularExpression.MatchingOptions = []) -> Bool {
         return self.matcher.numberOfMatches(in: string, options: options, range: NSMakeRange(0, string.utf16.count)) != 0
     }
 }
 
-protocol RegularExpressionMatchable {
+public protocol RegularExpressionMatchable {
     func match(_ regex: Regex) -> Bool
 }
 
 extension String: RegularExpressionMatchable {
-    func match(_ regex: Regex) -> Bool {
+    public func match(_ regex: Regex) -> Bool {
         return regex.match(self)
     }
 }
 
-func ~=<T: RegularExpressionMatchable>(pattern: Regex, matchable: T) -> Bool {
+public func ~=<T: RegularExpressionMatchable>(pattern: Regex, matchable: T) -> Bool {
     return matchable.match(pattern)
 }

@@ -1,8 +1,8 @@
 import Foundation
 import Postbox
 
-extension Peer {
-    var displayTitle: String {
+public extension Peer {
+    public var displayTitle: String {
         if let user = self as? TelegramUser {
             return user.name
         } else if let group = self as? TelegramGroup {
@@ -11,7 +11,7 @@ extension Peer {
         return ""
     }
     
-    var compactDisplayTitle: String {
+    public var compactDisplayTitle: String {
         if let user = self as? TelegramUser {
             if let firstName = user.firstName {
                 return firstName
@@ -26,7 +26,7 @@ extension Peer {
         return ""
     }
     
-    var displayLetters: [String] {
+    public var displayLetters: [String] {
         if let user = self as? TelegramUser {
             if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty && !lastName.isEmpty {
                 return [firstName.substring(to: firstName.index(after: firstName.startIndex)).uppercased(), lastName.substring(to: lastName.index(after: lastName.startIndex)).uppercased()]
@@ -46,18 +46,18 @@ extension Peer {
     }
 }
 
-extension PeerId {
-    var isGroup: Bool {
+public extension PeerId {
+    public var isGroup: Bool {
         switch self.namespace {
-        case Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel:
-            return true
-        default:
-            return false
+            case Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel:
+                return true
+            default:
+                return false
         }
     }
 }
 
-func peerDisplayTitles(_ peerIds: [PeerId], _ dict: SimpleDictionary<PeerId, Peer>) -> String {
+public func peerDisplayTitles(_ peerIds: [PeerId], _ dict: SimpleDictionary<PeerId, Peer>) -> String {
     var peers: [Peer] = []
     for id in peerIds {
         if let peer = dict[id] {
@@ -67,7 +67,7 @@ func peerDisplayTitles(_ peerIds: [PeerId], _ dict: SimpleDictionary<PeerId, Pee
     return peerDisplayTitles(peers)
 }
 
-func peerDisplayTitles(_ peers: [Peer]) -> String {
+public func peerDisplayTitles(_ peers: [Peer]) -> String {
     if peers.count == 0 {
         return ""
     } else {

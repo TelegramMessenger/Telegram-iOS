@@ -73,9 +73,9 @@ public func ==(lhs: TelegramMediaImage, rhs: TelegramMediaImage) -> Bool {
 }
 
 public final class TelegramMediaImageRepresentation: Coding, Equatable, CustomStringConvertible {
-    let dimensions: CGSize
-    let location: TelegramMediaLocation
-    let size: Int?
+    public let dimensions: CGSize
+    public let location: TelegramMediaLocation
+    public let size: Int?
     
     public init(dimensions: CGSize, location: TelegramMediaLocation, size: Int?) {
         self.dimensions = dimensions

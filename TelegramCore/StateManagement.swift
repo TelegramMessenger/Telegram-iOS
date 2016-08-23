@@ -42,14 +42,14 @@ private struct MutableState {
     let initialState: InitialState
     let branchOperationIndex: Int
     
-    private var operations: [MutationOperation] = []
+    fileprivate var operations: [MutationOperation] = []
     
-    private var state: AuthorizedAccountState.State
-    private var peers: [PeerId: Peer]
-    private var channelStates: [PeerId: ChannelState]
-    private var storedMessages: Set<MessageId>
+    fileprivate var state: AuthorizedAccountState.State
+    fileprivate var peers: [PeerId: Peer]
+    fileprivate var channelStates: [PeerId: ChannelState]
+    fileprivate var storedMessages: Set<MessageId>
     
-    private var insertedPeers: [PeerId: Peer] = [:]
+    fileprivate var insertedPeers: [PeerId: Peer] = [:]
     
     init(initialState: InitialState, initialPeers: [PeerId: Peer], initialStoredMessages: Set<MessageId>) {
         self.initialState = initialState

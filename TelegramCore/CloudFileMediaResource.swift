@@ -1,14 +1,14 @@
 import Foundation
 import Postbox
 
-class CloudFileMediaResource: MediaResource {
-    var id: String {
+public class CloudFileMediaResource: MediaResource {
+    public var id: String {
         return self.location.uniqueId
     }
-    var location: TelegramMediaLocation
-    let size: Int
+    public let location: TelegramMediaLocation
+    public let size: Int
     
-    init(location: TelegramMediaLocation, size: Int) {
+    public init(location: TelegramMediaLocation, size: Int) {
         self.location = location
         self.size = size
     }

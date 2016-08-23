@@ -1,10 +1,10 @@
 import Foundation
 import Postbox
 
-class InlineBotMessageAttribute: MessageAttribute {
-    let peerId: PeerId
+public class InlineBotMessageAttribute: MessageAttribute {
+    public let peerId: PeerId
     
-    var associatedPeerIds: [PeerId] {
+    public var associatedPeerIds: [PeerId] {
         return [self.peerId]
     }
     
@@ -12,11 +12,11 @@ class InlineBotMessageAttribute: MessageAttribute {
         self.peerId = peerId
     }
     
-    required init(decoder: Decoder) {
+    required public init(decoder: Decoder) {
         self.peerId = PeerId(decoder.decodeInt64ForKey("i"))
     }
     
-    func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: Encoder) {
         encoder.encodeInt64(self.peerId.toInt64(), forKey: "i")
     }
 }

@@ -163,7 +163,7 @@ func parseString(_ reader: BufferReader) -> String? {
 }
 
 public class Buffer: CustomStringConvertible {
-    var data: UnsafeMutablePointer<Void>?
+    var data: UnsafeMutableRawPointer?
     var _size: UInt = 0
     private var capacity: UInt = 0
     
@@ -191,7 +191,7 @@ public class Buffer: CustomStringConvertible {
     public func makeData() -> Data {
         return self.withUnsafeMutablePointer { pointer, size -> Data in
             if let pointer = pointer {
-                return Data(bytes: UnsafePointer<UInt8>(pointer), count: Int(size))
+                return Data(bytes: pointer.assumingMemoryBound(to: UInt8.self), count: Int(size))
             } else {
                 return Data()
             }
@@ -203,7 +203,7 @@ public class Buffer: CustomStringConvertible {
             var string = ""
             if let data = self.data {
                 var i: UInt = 0
-                let bytes = UnsafePointer<UInt8>(data)
+                let bytes = data.assumingMemoryBound(to: UInt8.self)
                 while i < _size && i < 8 {
                     string += String(format: "%02x", Int(bytes.advanced(by: Int(i)).pointee))
                     i += 1
@@ -218,7 +218,7 @@ public class Buffer: CustomStringConvertible {
         }
     }
     
-    public func appendBytes(_ bytes: UnsafePointer<Void>, length: UInt) {
+    public func appendBytes(_ bytes: UnsafeRawPointer, length: UInt) {
         if self.capacity < self._size + length {
             self.capacity = self._size + length + 128
             if self.data == nil {
@@ -229,7 +229,7 @@ public class Buffer: CustomStringConvertible {
             }
         }
         
-        memcpy(self.data?.advanced(by: Int(self._size)), UnsafePointer<Void>(bytes), Int(length))
+        memcpy(self.data?.advanced(by: Int(self._size)), bytes, Int(length))
         self._size += length
     }
     
@@ -262,7 +262,7 @@ public class Buffer: CustomStringConvertible {
         self.appendBytes(&v, length: 8)
     }
     
-    public func withUnsafeMutablePointer<R>(_ f: (UnsafeMutablePointer<Void>?, UInt) -> R) -> R {
+    public func withUnsafeMutablePointer<R>(_ f: (UnsafeMutableRawPointer?, UInt) -> R) -> R {
         return f(self.data, self._size)
     }
 }
@@ -281,7 +281,7 @@ public class BufferReader {
     
     public func readInt32() -> Int32? {
         if self.offset + 4 <= self.buffer._size {
-            let value: Int32 = UnsafePointer<Int32>(buffer.data!.advanced(by: Int(self.offset))).pointee
+            let value: Int32 = buffer.data!.advanced(by: Int(self.offset)).assumingMemoryBound(to: Int32.self).pointee
             self.offset += 4
             return value
         }
@@ -290,7 +290,7 @@ public class BufferReader {
     
     public func readInt64() -> Int64? {
         if self.offset + 8 <= self.buffer._size {
-            let value: Int64 = UnsafePointer<Int64>(buffer.data!.advanced(by: Int(self.offset))).pointee
+            let value: Int64 = buffer.data!.advanced(by: Int(self.offset)).assumingMemoryBound(to: Int64.self).pointee
             self.offset += 8
             return value
         }
@@ -299,7 +299,7 @@ public class BufferReader {
     
     public func readDouble() -> Double? {
         if self.offset + 8 <= self.buffer._size {
-            let value: Double = UnsafePointer<Double>(buffer.data!.advanced(by: Int(self.offset))).pointee
+            let value: Double = buffer.data!.advanced(by: Int(self.offset)).assumingMemoryBound(to: Double.self).pointee
             self.offset += 8
             return value
         }
