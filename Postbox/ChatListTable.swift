@@ -83,7 +83,7 @@ final class ChatListTable: Table {
             if let topMessage = messageHistoryTable.topMessage(peerId) {
                 let index = MessageIndex(id: topMessage.id, timestamp: topMessage.timestamp)
                 
-                if let currentIndex = currentIndex where currentIndex != index {
+                if let currentIndex = currentIndex , currentIndex != index {
                     self.justRemoveMessage(currentIndex)
                 }
                 if let currentIndex = currentIndex {

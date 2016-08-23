@@ -3,7 +3,7 @@ import Foundation
 public final class MappedFile {
     private var handle: Int32
     private var currentSize: Int
-    private var memory: UnsafeMutablePointer<Void>
+    private var memory: UnsafeMutableRawPointer
     
     public init(path: String) {
         self.handle = open(path, O_RDWR | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR)

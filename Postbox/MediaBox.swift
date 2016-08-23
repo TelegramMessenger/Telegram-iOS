@@ -116,7 +116,7 @@ public final class MediaBox {
                         }
                         
                         self.statusQueue.async {
-                            if let statusContext = self.statusContexts[resource.id] where statusContext.status == nil {
+                            if let statusContext = self.statusContexts[resource.id] , statusContext.status == nil {
                                 statusContext.status = status
                                 
                                 for subscriber in statusContext.subscribers.copyItems() {
@@ -499,7 +499,7 @@ public final class MediaBox {
                                     }
                                     
                                     self.statusQueue.async {
-                                        if let statusContext = self.statusContexts[resource.id] where statusContext.status != status {
+                                        if let statusContext = self.statusContexts[resource.id] , statusContext.status != status {
                                             statusContext.status = status
                                             for subscriber in statusContext.subscribers.copyItems() {
                                                 subscriber(status)
@@ -523,7 +523,7 @@ public final class MediaBox {
     
     public func cancelInteractiveResourceFetch(_ resource: MediaResource) {
         self.dataQueue.async {
-            if let dataContext = self.dataContexts[resource.id] where dataContext.fetchDisposable != nil {
+            if let dataContext = self.dataContexts[resource.id] , dataContext.fetchDisposable != nil {
                 dataContext.fetchDisposable?.dispose()
                 dataContext.fetchDisposable = nil
                     
@@ -536,7 +536,7 @@ public final class MediaBox {
                 }
                 
                 self.statusQueue.async {
-                    if let statusContext = self.statusContexts[resource.id] where statusContext.status != status {
+                    if let statusContext = self.statusContexts[resource.id] , statusContext.status != status {
                         statusContext.status = status
                         for subscriber in statusContext.subscribers.copyItems() {
                             subscriber(status)

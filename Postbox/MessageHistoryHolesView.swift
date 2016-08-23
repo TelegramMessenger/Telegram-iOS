@@ -19,7 +19,7 @@ public func <(lhs: MessageHistoryHolesViewEntry, rhs: MessageHistoryHolesViewEnt
 }
 
 final class MutableMessageHistoryHolesView {
-    private var entries: [PeerId: Set<MessageHistoryHolesViewEntry>] = [:]
+    fileprivate var entries: [PeerId: Set<MessageHistoryHolesViewEntry>] = [:]
     
     init() {
     }

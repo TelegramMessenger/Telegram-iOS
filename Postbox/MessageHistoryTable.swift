@@ -610,7 +610,7 @@ final class MessageHistoryTable: Table {
     }
     
     func embeddedMediaForIndex(_ index: MessageIndex, id: MediaId) -> Media? {
-        if let message = self.getMessage(index) where message.embeddedMediaData.length > 4 {
+        if let message = self.getMessage(index), message.embeddedMediaData.length > 4 {
             var embeddedMediaCount: Int32 = 0
             message.embeddedMediaData.read(&embeddedMediaCount, offset: 0, length: 4)
             
@@ -619,7 +619,7 @@ final class MessageHistoryTable: Table {
                 message.embeddedMediaData.read(&mediaLength, offset: 0, length: 4)
                 if let readMedia = Decoder(buffer: MemoryBuffer(memory: message.embeddedMediaData.memory + message.embeddedMediaData.offset, capacity: Int(mediaLength), length: Int(mediaLength), freeWhenDone: false)).decodeRootObject() as? Media {
                     
-                    if let readMediaId = readMedia.id where readMediaId == id {
+                    if let readMediaId = readMedia.id, readMediaId == id {
                         return readMedia
                     }
                 }
@@ -880,7 +880,7 @@ final class MessageHistoryTable: Table {
     }
     
     func unembedMedia(_ index: MessageIndex, id: MediaId) -> Media? {
-        if let message = self.getMessage(index) where message.embeddedMediaData.length > 4 {
+        if let message = self.getMessage(index), message.embeddedMediaData.length > 4 {
             var embeddedMediaCount: Int32 = 0
             message.embeddedMediaData.read(&embeddedMediaCount, offset: 0, length: 4)
             
@@ -897,14 +897,14 @@ final class MessageHistoryTable: Table {
                 message.embeddedMediaData.read(&mediaLength, offset: 0, length: 4)
                 if let media = Decoder(buffer: MemoryBuffer(memory: message.embeddedMediaData.memory + message.embeddedMediaData.offset, capacity: Int(mediaLength), length: Int(mediaLength), freeWhenDone: false)).decodeRootObject() as? Media {
                     
-                    if let mediaId = media.id where mediaId == id {
+                    if let mediaId = media.id, mediaId == id {
                         copyMedia = false
                         extractedMedia = media
                     }
                 }
                 
                 if copyMedia {
-                    updatedEmbeddedMediaBuffer.write(message.embeddedMediaData.memory + mediaOffset, offset: 0, length: message.embeddedMediaData.offset - mediaOffset)
+                    updatedEmbeddedMediaBuffer.write(message.embeddedMediaData.memory.advanced(by: mediaOffset), offset: 0, length: message.embeddedMediaData.offset - mediaOffset)
                 }
             }
             
@@ -1055,7 +1055,7 @@ final class MessageHistoryTable: Table {
             
             var textLength: Int32 = 0
             value.read(&textLength, offset: 0, length: 4)
-            let text = String(data: Data(bytes: UnsafeMutablePointer<UInt8>(value.memory).advanced(by: value.offset), count: Int(textLength)), encoding: .utf8) ?? ""
+            let text = String(data: Data(bytes: value.memory.assumingMemoryBound(to: UInt8.self).advanced(by: value.offset), count: Int(textLength)), encoding: .utf8) ?? ""
             //let text = NSString(bytes: value.memory + value.offset, length: Int(textLength), encoding: NSUTF8StringEncoding) ?? ""
             value.skip(Int(textLength))
             
@@ -1151,7 +1151,7 @@ final class MessageHistoryTable: Table {
         }
         
         var forwardInfo: MessageForwardInfo?
-        if let internalForwardInfo = message.forwardInfo, forwardAuthor = peerTable.get(internalForwardInfo.authorId) {
+        if let internalForwardInfo = message.forwardInfo, let forwardAuthor = peerTable.get(internalForwardInfo.authorId) {
             var source: Peer?
             
             if let sourceId = internalForwardInfo.sourceId {
@@ -1345,7 +1345,7 @@ final class MessageHistoryTable: Table {
     }
     
     func maxReadIndex(_ peerId: PeerId) -> MessageHistoryAnchorIndex? {
-        if let combinedState = self.readStateTable.getCombinedState(peerId), state = combinedState.states.first where state.1.count != 0 {
+        if let combinedState = self.readStateTable.getCombinedState(peerId), let state = combinedState.states.first , state.1.count != 0 {
             return self.anchorIndex(MessageId(peerId: peerId, namespace: state.0, id: state.1.maxIncomingReadId))
         }
         return nil
@@ -1353,10 +1353,10 @@ final class MessageHistoryTable: Table {
     
     func anchorIndex(_ messageId: MessageId) -> MessageHistoryAnchorIndex? {
         let (lower, upper) = self.messageHistoryIndexTable.adjacentItems(messageId, bindUpper: false)
-        if let lower = lower, case let .Hole(hole) = lower where messageId.id >= hole.min && messageId.id <= hole.maxIndex.id.id {
+        if let lower = lower, case let .Hole(hole) = lower, messageId.id >= hole.min && messageId.id <= hole.maxIndex.id.id {
             return MessageHistoryAnchorIndex(index: MessageIndex(id: messageId, timestamp: lower.index.timestamp), exact: false)
         }
-        if let upper = upper, case let .Hole(hole) = upper where messageId.id >= hole.min && messageId.id <= hole.maxIndex.id.id {
+        if let upper = upper, case let .Hole(hole) = upper, messageId.id >= hole.min && messageId.id <= hole.maxIndex.id.id {
             return MessageHistoryAnchorIndex(index: MessageIndex(id: messageId, timestamp: upper.index.timestamp), exact: false)
         }
         

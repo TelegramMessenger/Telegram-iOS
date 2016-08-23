@@ -230,7 +230,7 @@ public func ==(lhs: MessageForwardInfo, rhs: MessageForwardInfo) -> Bool {
     if !lhs.author.isEqual(rhs.author) {
         return false
     }
-    if let lhsSource = lhs.source, rhsSource = rhs.source {
+    if let lhsSource = lhs.source, let rhsSource = rhs.source {
         if !lhsSource.isEqual(rhsSource) {
             return false
         }

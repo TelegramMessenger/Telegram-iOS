@@ -1,10 +1,10 @@
 import Foundation
 
 final class MutableContactPeersView {
-    private let index: PeerNameIndex
-    private var peers: [PeerId: Peer]
-    private var peerIds: Set<PeerId>
-    private var accountPeer: Peer?
+    fileprivate let index: PeerNameIndex
+    fileprivate var peers: [PeerId: Peer]
+    fileprivate var peerIds: Set<PeerId>
+    fileprivate var accountPeer: Peer?
     
     init(peers: [PeerId: Peer], index: PeerNameIndex, accountPeer: Peer?) {
         self.index = index

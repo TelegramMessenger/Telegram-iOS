@@ -2,8 +2,8 @@ import Foundation
 import SwiftSignalKit
 
 public struct RandomAccessResourceStoreRange {
-    private let offset: Int
-    private let data: Data
+    fileprivate let offset: Int
+    fileprivate let data: Data
     
     public init(offset: Int, data: Data) {
         self.offset = offset
@@ -19,16 +19,16 @@ public enum RandomAccessResourceDataRangeMode {
 }
 
 private final class RandomAccessBlockRangeListener: Hashable {
-    private let id: Int32
+    fileprivate let id: Int32
     private let range: Range<Int>
     private let blockSize: Int
     private let blocks: Range<Int>
     private let mode: RandomAccessResourceDataRangeMode
     private let updated: (Data) -> Void
     
-    private var missingBlocks: Set<Int>
+    fileprivate var missingBlocks: Set<Int>
     
-    init(id: Int32, range: Range<Int>, blockSize: Int, blocks: Range<Int>, missingBlocks: Set<Int>, mode: RandomAccessResourceDataRangeMode, updated: (Data) -> Void) {
+    init(id: Int32, range: Range<Int>, blockSize: Int, blocks: Range<Int>, missingBlocks: Set<Int>, mode: RandomAccessResourceDataRangeMode, updated: @escaping(Data) -> Void) {
         self.id = id
         self.range = range
         self.blockSize = blockSize
@@ -42,7 +42,7 @@ private final class RandomAccessBlockRangeListener: Hashable {
         return Int(self.id)
     }
     
-    func updateMissingBlocks(addedBlocks: Set<Int>, fetchData: @noescape(Range<Int>) -> Data) {
+    func updateMissingBlocks(addedBlocks: Set<Int>, fetchData: (Range<Int>) -> Data) {
         if self.missingBlocks.isEmpty {
             return
         }
@@ -133,7 +133,7 @@ public final class RandomAccessMediaResourceContext {
     
     private var fetchRange: (Range<Int>) -> Disposable
     
-    public init(path: String, size: Int, fetchRange: (Range<Int>) -> Disposable) {
+    public init(path: String, size: Int, fetchRange: @escaping(Range<Int>) -> Disposable) {
         self.path = path
         self.size = size
         self.fetchRange = fetchRange
@@ -308,7 +308,7 @@ public final class RandomAccessMediaResourceContext {
         return result
     }
     
-    public func addListenerForData(in range: Range<Int>, mode: RandomAccessResourceDataRangeMode, updated: (Data) -> Void) -> Int32 {
+    public func addListenerForData(in range: Range<Int>, mode: RandomAccessResourceDataRangeMode, updated: @escaping (Data) -> Void) -> Int32 {
         let firstBlock = range.lowerBound / self.blockSize
         let lastBlock = range.upperBound / self.blockSize + (range.upperBound % self.blockSize == 0 ? 0 : 1)
         

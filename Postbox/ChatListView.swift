@@ -101,9 +101,9 @@ final class MutableChatListViewReplayContext {
 }
 
 final class MutableChatListView {
-    private var earlier: MutableChatListEntry?
-    private var later: MutableChatListEntry?
-    private var entries: [MutableChatListEntry]
+    fileprivate var earlier: MutableChatListEntry?
+    fileprivate var later: MutableChatListEntry?
+    fileprivate var entries: [MutableChatListEntry]
     private var count: Int
     
     init(earlier: MutableChatListEntry?, entries: [MutableChatListEntry], later: MutableChatListEntry?, count: Int) {
@@ -113,13 +113,13 @@ final class MutableChatListView {
         self.count = count
     }
     
-    func refreshDueToExternalTransaction(fetchAroundChatEntries: (index: MessageIndex, count: Int) -> (entries: [MutableChatListEntry], earlier: MutableChatListEntry?, later: MutableChatListEntry?)) -> Bool {
+    func refreshDueToExternalTransaction(fetchAroundChatEntries: (_ index: MessageIndex, _ count: Int) -> (entries: [MutableChatListEntry], earlier: MutableChatListEntry?, later: MutableChatListEntry?)) -> Bool {
         var index = MessageIndex.absoluteUpperBound()
         if !self.entries.isEmpty {
             index = self.entries[self.entries.count / 2].index
         }
         
-        var (entries, earlier, later) = fetchAroundChatEntries(index: index, count: self.entries.count)
+        var (entries, earlier, later) = fetchAroundChatEntries(index, self.entries.count)
         
         if entries != self.entries || earlier != self.earlier || later != self.later {
             self.entries = entries
@@ -223,7 +223,7 @@ final class MutableChatListView {
     
     func remove(_ indices: Set<MessageIndex>, holes: Bool, context: MutableChatListViewReplayContext) -> Bool {
         var hasChanges = false
-        if let earlier = self.earlier where indices.contains(earlier.index) {
+        if let earlier = self.earlier , indices.contains(earlier.index) {
             var match = false
             switch earlier {
                 case .HoleEntry:
@@ -237,7 +237,7 @@ final class MutableChatListView {
             }
         }
         
-        if let later = self.later where indices.contains(later.index) {
+        if let later = self.later , indices.contains(later.index) {
             var match = false
             switch later {
                 case .HoleEntry:

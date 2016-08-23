@@ -5,7 +5,7 @@ import SwiftSignalKit
 private struct SqlitePreparedStatement {
     let statement: OpaquePointer?
     
-    func bind(_ index: Int, data: UnsafePointer<Void>, length: Int) {
+    func bind(_ index: Int, data: UnsafeRawPointer, length: Int) {
         sqlite3_bind_blob(statement, Int32(index), data, Int32(length), nil)
     }
     
@@ -101,9 +101,7 @@ public final class SqliteValueBox: ValueBox {
         checkpoints.set(nil)
         lock.lock()
         
-        do {
-            try FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
-        } catch _ { }
+        let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
         let path = basePath + "/db_sqlite"
         let database = Database(path)
         
@@ -115,6 +113,16 @@ public final class SqliteValueBox: ValueBox {
         database.execute("PRAGMA temp_store=MEMORY")
         database.execute("PRAGMA wal_autocheckpoint=200")
         database.execute("PRAGMA journal_size_limit=1536")
+        
+        /*var statement: OpaquePointer? = nil
+        sqlite3_prepare_v2(database.handle, "PRAGMA integrity_check", -1, &statement, nil)
+        let preparedStatement = SqlitePreparedStatement(statement: statement)
+        if preparedStatement.step() {
+            let value = preparedStatement.stringAt(0)
+            print("integrity_check: \(value)")
+        }
+        preparedStatement.destroy()*/
+        
         sqlite3_busy_timeout(database.handle, 10000000)
         
         let result = self.getUserVersion(database)
@@ -129,7 +137,7 @@ public final class SqliteValueBox: ValueBox {
         lock.unlock()
         
         checkpoints.set((Signal<Void, NoError>.single(Void()) |> delay(10.0, queue: Queue.concurrentDefaultQueue()) |> restart).start(next: { [weak self] _ in
-            if let strongSelf = self where strongSelf.database != nil {
+            if let strongSelf = self , strongSelf.database != nil {
                 strongSelf.lock.lock()
                 var nLog: Int32 = 0
                 var nFrames: Int32 = 0

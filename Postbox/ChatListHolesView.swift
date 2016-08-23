@@ -1,7 +1,7 @@
 import Foundation
 
 final class MutableChatListHolesView {
-    private var entries = Set<ChatListHole>()
+    fileprivate var entries = Set<ChatListHole>()
     
     func update(holes: Set<ChatListHole>) -> Bool {
         if self.entries != holes {

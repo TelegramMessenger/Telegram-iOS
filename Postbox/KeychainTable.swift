@@ -11,7 +11,7 @@ final class KeychainTable: Table {
     
     func get(_ key: String) -> Data? {
         if let value = self.valueBox.get(self.tableId, key: self.key(key)) {
-            return Data(bytes: UnsafePointer<UInt8>(value.memory), count: value.length)
+            return Data(bytes: value.memory.assumingMemoryBound(to: UInt8.self), count: value.length)
         }
         return nil
     }

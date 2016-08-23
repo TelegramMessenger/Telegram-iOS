@@ -289,7 +289,7 @@ final class MessageHistoryIndexTable: Table {
             
             let adjacent = self.adjacentItems(id)
             
-            if let lowerItem = adjacent.lower, upperItem = adjacent.upper {
+            if let lowerItem = adjacent.lower, let upperItem = adjacent.upper {
                 switch lowerItem {
                     case let .Message(lowerMessage):
                         switch upperItem {
@@ -471,7 +471,7 @@ final class MessageHistoryIndexTable: Table {
                                 self.justRemove(upperHole.maxIndex, operations: &operations)
                             }
                         } else if fillType.direction == .LowerToUpper {
-                            if let maxMessageInRange = maxMessageInRange where maxMessageInRange.id.id != Int32.max && maxMessageInRange.id.id + 1 <= upperHole.maxIndex.id.id {
+                            if let maxMessageInRange = maxMessageInRange , maxMessageInRange.id.id != Int32.max && maxMessageInRange.id.id + 1 <= upperHole.maxIndex.id.id {
                                 let stableId: UInt32
                                 let tags: UInt32 = upperHole.tags
                                 if removedHole {
@@ -482,7 +482,7 @@ final class MessageHistoryIndexTable: Table {
                                 self.justInsertHole(MessageHistoryHole(stableId: stableId, maxIndex: upperHole.maxIndex, min: maxMessageInRange.id.id + 1, tags: tags), operations: &operations)
                             }
                         } else if fillType.direction == .UpperToLower {
-                            if let minMessageInRange = minMessageInRange where minMessageInRange.id.id - 1 >= upperHole.min {
+                            if let minMessageInRange = minMessageInRange , minMessageInRange.id.id - 1 >= upperHole.min {
                                 let stableId: UInt32
                                 let tags: UInt32 = upperHole.tags
                                 if removedHole {
@@ -498,14 +498,14 @@ final class MessageHistoryIndexTable: Table {
                                 removedHole = true
                             }
                             
-                            if let minMessageInRange = minMessageInRange where minMessageInRange.id.id - 1 >= upperHole.min {
+                            if let minMessageInRange = minMessageInRange , minMessageInRange.id.id - 1 >= upperHole.min {
                                 let stableId: UInt32 = upperHole.stableId
                                 let tags: UInt32 = upperHole.tags
                                 
                                 self.justInsertHole(MessageHistoryHole(stableId: stableId, maxIndex: MessageIndex(id: MessageId(peerId: id.peerId, namespace: id.namespace, id: minMessageInRange.id.id - 1), timestamp: minMessageInRange.timestamp), min: upperHole.min, tags: tags), operations: &operations)
                             }
                             
-                            if let maxMessageInRange = maxMessageInRange where maxMessageInRange.id.id != Int32.max && maxMessageInRange.id.id + 1 <= upperHole.maxIndex.id.id {
+                            if let maxMessageInRange = maxMessageInRange , maxMessageInRange.id.id != Int32.max && maxMessageInRange.id.id + 1 <= upperHole.maxIndex.id.id {
                                 let stableId: UInt32 = self.metadataTable.getNextStableMessageIndexId()
                                 let tags: UInt32 = upperHole.tags
                                 self.justInsertHole(MessageHistoryHole(stableId: stableId, maxIndex: upperHole.maxIndex, min: maxMessageInRange.id.id + 1, tags: tags), operations: &operations)
@@ -648,7 +648,7 @@ final class MessageHistoryIndexTable: Table {
             value.read(&flags, offset: 0, length: 1)
             if (flags & HistoryEntryTypeMask) == HistoryEntryTypeHole {
                 value.reset()
-                if case let .Hole(hole) = readHistoryIndexEntry(peerId, namespace: namespace, key: key, value: value) where hole.min <= maxId && hole.maxIndex.id.id >= maxId {
+                if case let .Hole(hole) = readHistoryIndexEntry(peerId, namespace: namespace, key: key, value: value) , hole.min <= maxId && hole.maxIndex.id.id >= maxId {
                     holes = true
                 }
             }

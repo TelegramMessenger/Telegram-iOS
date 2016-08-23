@@ -126,12 +126,12 @@ final class MutableMessageHistoryViewReplayContext {
 final class MutableMessageHistoryView {
     private(set) var id: MessageHistoryViewId
     let tagMask: MessageTags?
-    private var anchorIndex: MessageHistoryAnchorIndex
-    private let combinedReadState: CombinedPeerReadState?
-    private var earlier: MutableMessageHistoryEntry?
-    private var later: MutableMessageHistoryEntry?
-    private var entries: [MutableMessageHistoryEntry]
-    private let fillCount: Int
+    fileprivate var anchorIndex: MessageHistoryAnchorIndex
+    fileprivate let combinedReadState: CombinedPeerReadState?
+    fileprivate var earlier: MutableMessageHistoryEntry?
+    fileprivate var later: MutableMessageHistoryEntry?
+    fileprivate var entries: [MutableMessageHistoryEntry]
+    fileprivate let fillCount: Int
     
     init(id: MessageHistoryViewId, anchorIndex: MessageHistoryAnchorIndex, combinedReadState: CombinedPeerReadState?, earlier: MutableMessageHistoryEntry?, entries: [MutableMessageHistoryEntry], later: MutableMessageHistoryEntry?, tagMask: MessageTags?, count: Int) {
         self.id = id
@@ -166,7 +166,7 @@ final class MutableMessageHistoryView {
             }
         }
         
-        if let minIndex = minIndex, maxIndex = maxIndex {
+        if let minIndex = minIndex, let maxIndex = maxIndex {
             var minClipIndex = minIndex
             var maxClipIndex = maxIndex
             
@@ -222,13 +222,15 @@ final class MutableMessageHistoryView {
         return false
     }
     
-    func refreshDueToExternalTransaction(fetchAroundHistoryEntries: (index: MessageIndex, count: Int, tagMask: MessageTags?) -> (entries: [MutableMessageHistoryEntry], lower: MutableMessageHistoryEntry?, upper: MutableMessageHistoryEntry?)) -> Bool {
-        var index = MessageIndex.absoluteUpperBound()
+    func refreshDueToExternalTransaction(fetchAroundHistoryEntries: (_ index: MessageIndex, _ count: Int, _ tagMask: MessageTags?) -> (entries: [MutableMessageHistoryEntry], lower: MutableMessageHistoryEntry?, upper: MutableMessageHistoryEntry?)) -> Bool {
+        var index = MessageIndex.upperBound(peerId: self.anchorIndex.index.id.peerId)
         if !self.entries.isEmpty {
-            index = self.entries[self.entries.count / 2].index
+            if let _ = self.later {
+                index = self.entries[self.entries.count / 2].index
+            }
         }
         
-        let (entries, earlier, later) = fetchAroundHistoryEntries(index: index, count: max(self.fillCount, self.entries.count), tagMask: self.tagMask)
+        let (entries, earlier, later) = fetchAroundHistoryEntries(index, max(self.fillCount, self.entries.count), self.tagMask)
         
         self.entries = entries
         self.earlier = earlier
@@ -268,7 +270,7 @@ final class MutableMessageHistoryView {
                     //self.combinedReadState = combinedReadState
                 case let .UpdateEmbeddedMedia(index, embeddedMediaData):
                     for i in 0 ..< self.entries.count {
-                        if case let .IntermediateMessageEntry(message, _) = self.entries[i] where MessageIndex(message) == index {
+                        if case let .IntermediateMessageEntry(message, _) = self.entries[i] , MessageIndex(message) == index {
                             self.entries[i] = .IntermediateMessageEntry(IntermediateMessage(stableId: message.stableId, id: message.id, timestamp: message.timestamp, flags: message.flags, tags: message.tags, forwardInfo: message.forwardInfo, authorId: message.authorId, text: message.text, attributesData: message.attributesData, embeddedMediaData: embeddedMediaData, referencedMedia: message.referencedMedia), nil)
                             hasChanges = true
                             break
@@ -283,7 +285,7 @@ final class MutableMessageHistoryView {
                     case let .MessageEntry(message, _):
                         var rebuild = false
                         for media in message.media {
-                            if let mediaId = media.id, _ = updatedMedia[mediaId] {
+                            if let mediaId = media.id, let _ = updatedMedia[mediaId] {
                                 rebuild = true
                                 break
                             }
@@ -292,7 +294,7 @@ final class MutableMessageHistoryView {
                         if rebuild {
                             var messageMedia: [Media] = []
                             for media in message.media {
-                                if let mediaId = media.id, updated = updatedMedia[mediaId] {
+                                if let mediaId = media.id, let updated = updatedMedia[mediaId] {
                                     if let updated = updated {
                                         messageMedia.append(updated)
                                     }
@@ -307,7 +309,7 @@ final class MutableMessageHistoryView {
                     case let .IntermediateMessageEntry(message, _):
                         var rebuild = false
                         for mediaId in message.referencedMedia {
-                            if let media = updatedMedia[mediaId] where media?.id != mediaId {
+                            if let media = updatedMedia[mediaId] , media?.id != mediaId {
                                 rebuild = true
                                 break
                             }
@@ -315,7 +317,7 @@ final class MutableMessageHistoryView {
                         if rebuild {
                             var referencedMedia: [MediaId] = []
                             for mediaId in message.referencedMedia {
-                                if let media = updatedMedia[mediaId] where media?.id != mediaId {
+                                if let media = updatedMedia[mediaId] , media?.id != mediaId {
                                     if let id = media?.id {
                                         referencedMedia.append(id)
                                     }
@@ -381,12 +383,12 @@ final class MutableMessageHistoryView {
     
     private func remove(_ indices: Set<MessageIndex>, context: MutableMessageHistoryViewReplayContext) -> Bool {
         var hasChanges = false
-        if let earlier = self.earlier where indices.contains(earlier.index) {
+        if let earlier = self.earlier , indices.contains(earlier.index) {
             context.invalidEarlier = true
             hasChanges = true
         }
         
-        if let later = self.later where indices.contains(later.index) {
+        if let later = self.later , indices.contains(later.index) {
             context.invalidLater = true
             hasChanges = true
         }
@@ -571,7 +573,7 @@ public final class MessageHistoryView {
         
         self.combinedReadState = mutableView.combinedReadState
         
-        if let combinedReadState = mutableView.combinedReadState where combinedReadState.count != 0 {
+        if let combinedReadState = mutableView.combinedReadState , combinedReadState.count != 0 {
             var maxIndex: MessageIndex?
             for (namespace, state) in combinedReadState.states {
                 var maxNamespaceIndex: MessageIndex?
@@ -593,16 +595,16 @@ public final class MessageHistoryView {
                         index += 1
                     }
                 }
-                if let _ = maxNamespaceIndex where index + 1 < entries.count {
+                if let _ = maxNamespaceIndex , index + 1 < entries.count {
                     for i in index + 1 ..< entries.count {
-                        if case let .MessageEntry(message, _) = entries[i] where !message.flags.contains(.Incoming) {
+                        if case let .MessageEntry(message, _) = entries[i] , !message.flags.contains(.Incoming) {
                             maxNamespaceIndex = MessageIndex(message)
                         } else {
                             break
                         }
                     }
                 }
-                if let maxNamespaceIndex = maxNamespaceIndex where maxIndex == nil || maxIndex! < maxNamespaceIndex {
+                if let maxNamespaceIndex = maxNamespaceIndex , maxIndex == nil || maxIndex! < maxNamespaceIndex {
                     maxIndex = maxNamespaceIndex
                 }
             }

@@ -155,7 +155,7 @@ final class MessageHistoryMetadataTable: Table {
         let sharedBuffer = WriteBuffer()
         for (peerId, namespaces) in self.updatedPeerNextMessageIdByNamespace {
             for namespace in namespaces {
-                if let messageIdByNamespace = self.peerNextMessageIdByNamespace[peerId], maxId = messageIdByNamespace[namespace] {
+                if let messageIdByNamespace = self.peerNextMessageIdByNamespace[peerId], let maxId = messageIdByNamespace[namespace] {
                     sharedBuffer.reset()
                     var mutableMaxId = maxId
                     sharedBuffer.write(&mutableMaxId, offset: 0, length: 4)

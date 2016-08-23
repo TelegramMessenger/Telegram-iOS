@@ -5,7 +5,7 @@
 
 @interface RLMNotifier : NSObject
 
-- (instancetype)initWithBasePath:(NSString *)basePath notify:(void (^)())notify;
+- (instancetype _Nonnull)initWithBasePath:(NSString * _Nonnull)basePath notify:(void (^ _Nonnull)())notify;
 - (void)listen;
 - (void)notifyOtherRealms;
 

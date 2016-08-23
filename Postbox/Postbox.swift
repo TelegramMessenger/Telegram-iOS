@@ -14,7 +14,7 @@ public protocol PeerChatState: Coding {
 public final class Modifier {
     private weak var postbox: Postbox?
     
-    private init(postbox: Postbox) {
+    fileprivate init(postbox: Postbox) {
         self.postbox = postbox
     }
     
@@ -130,11 +130,11 @@ public final class Modifier {
     }
 }
 
-private class PipeNotifier: NSObject {
+fileprivate class PipeNotifier: NSObject {
     let notifier: RLMNotifier
     let thread: Thread
     
-    private init(basePath: String, notify: () -> Void) {
+    fileprivate init(basePath: String, notify: @escaping () -> Void) {
         self.notifier = RLMNotifier(basePath: basePath, notify: notify)
         self.thread = Thread(target: PipeNotifier.self, selector: #selector(PipeNotifier.threadEntry(_:)), object: self.notifier)
         self.thread.start()
@@ -304,7 +304,7 @@ public final class Postbox {
             self.metadataTable = MetadataTable(valueBox: self.valueBox, tableId: 0)
             
             let userVersion: Int32? = self.metadataTable.userVersion()
-            let currentUserVersion: Int32 = 6
+            let currentUserVersion: Int32 = 7
             
             if userVersion != currentUserVersion {
                 self.valueBox.drop()
@@ -365,17 +365,15 @@ public final class Postbox {
     
     private var cachedState: Coding?
     
-    private func setState(_ state: Coding) {
-        self.modify({ modifier -> Void in
-            self.cachedState = state
-            
-            self.metadataTable.setState(state)
-            
-            self.statePipe.putNext(state)
-        }).start()
+    fileprivate func setState(_ state: Coding) {
+        self.cachedState = state
+        
+        self.metadataTable.setState(state)
+        
+        self.statePipe.putNext(state)
     }
     
-    private func getState() -> Coding? {
+    fileprivate func getState() -> Coding? {
         if let cachedState = self.cachedState {
             return cachedState
         } else {
@@ -388,6 +386,7 @@ public final class Postbox {
         }
     }
     
+    @available(*, deprecated: 1.0)
     public func state() -> Signal<Coding?, NoError> {
         return self.modify { modifier -> Signal<Coding?, NoError> in
             return Signal<Coding?, NoError>.single(self.getState())
@@ -407,15 +406,15 @@ public final class Postbox {
         self.keychainTable.remove(key)
     }
     
-    private func addMessages(_ messages: [StoreMessage], location: AddMessagesLocation) {
+    fileprivate func addMessages(_ messages: [StoreMessage], location: AddMessagesLocation) {
         self.messageHistoryTable.addMessages(messages, location: location, operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
     }
     
-    private func addHole(_ id: MessageId) {
+    fileprivate func addHole(_ id: MessageId) {
         self.messageHistoryTable.addHoles([id], operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
     }
     
-    private func fillHole(_ hole: MessageHistoryHole, fillType: HoleFill, tagMask: MessageTags?, messages: [StoreMessage]) {
+    fileprivate func fillHole(_ hole: MessageHistoryHole, fillType: HoleFill, tagMask: MessageTags?, messages: [StoreMessage]) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         self.messageHistoryTable.fillHole(hole.id, fillType: fillType, tagMask: tagMask, messages: messages, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
         for (peerId, operations) in operationsByPeerId {
@@ -455,31 +454,31 @@ public final class Postbox {
         }
     }
     
-    private func replaceChatListHole(_ index: MessageIndex, hole: ChatListHole?) {
+    fileprivate func replaceChatListHole(_ index: MessageIndex, hole: ChatListHole?) {
         self.currentReplaceChatListHoles.append((index, hole))
     }
     
-    private func deleteMessages(_ messageIds: [MessageId]) {
+    fileprivate func deleteMessages(_ messageIds: [MessageId]) {
         self.messageHistoryTable.removeMessages(messageIds, operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
     }
     
-    private func resetIncomingReadStates(_ states: [PeerId: [MessageId.Namespace: PeerReadState]]) {
+    fileprivate func resetIncomingReadStates(_ states: [PeerId: [MessageId.Namespace: PeerReadState]]) {
         self.messageHistoryTable.resetIncomingReadStates(states, operationsByPeerId: &self.currentOperationsByPeerId, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
     }
     
-    private func confirmSynchronizedIncomingReadState(_ peerId: PeerId) {
+    fileprivate func confirmSynchronizedIncomingReadState(_ peerId: PeerId) {
         self.synchronizeReadStateTable.set(peerId, operation: nil, operations: &self.currentUpdatedSynchronizeReadStateOperations)
     }
     
-    private func applyIncomingReadMaxId(_ messageId: MessageId) {
+    fileprivate func applyIncomingReadMaxId(_ messageId: MessageId) {
         self.messageHistoryTable.applyIncomingReadMaxId(messageId, operationsByPeerId: &self.currentOperationsByPeerId, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
     }
     
-    private func applyOutgoingReadMaxId(_ messageId: MessageId) {
+    fileprivate func applyOutgoingReadMaxId(_ messageId: MessageId) {
         self.messageHistoryTable.applyOutgoingReadMaxId(messageId, operationsByPeerId: &self.currentOperationsByPeerId, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
     }
     
-    private func applyInteractiveReadMaxId(_ messageId: MessageId) {
+    fileprivate func applyInteractiveReadMaxId(_ messageId: MessageId) {
         self.messageHistoryTable.applyInteractiveMaxReadId(messageId, operationsByPeerId: &self.currentOperationsByPeerId, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
     }
     
@@ -648,7 +647,7 @@ public final class Postbox {
         return self.messageHistoryTable.anchorIndex(id)
     }
     
-    private func renderIntermediateMessage(_ message: IntermediateMessage) -> Message {
+    fileprivate func renderIntermediateMessage(_ message: IntermediateMessage) -> Message {
         return self.messageHistoryTable.renderMessage(message, peerTable: self.peerTable)
     }
     
@@ -708,7 +707,7 @@ public final class Postbox {
         return (updatedTransactionState, updatedMasterClientId)
     }
     
-    private func messageIdsForGlobalIds(_ ids: [Int32]) -> [MessageId] {
+    fileprivate func messageIdsForGlobalIds(_ ids: [Int32]) -> [MessageId] {
         var result: [MessageId] = []
         for globalId in ids {
             if let id = self.globalMessageIdsTable.get(globalId) {
@@ -718,7 +717,7 @@ public final class Postbox {
         return result
     }
     
-    private func updatePeers(_ peers: [Peer], update: (Peer, Peer) -> Peer?) {
+    fileprivate func updatePeers(_ peers: [Peer], update: (Peer, Peer) -> Peer?) {
         for peer in peers {
             if let currentPeer = self.peerTable.get(peer.id) {
                 if let updatedPeer = update(currentPeer, peer) {
@@ -731,28 +730,28 @@ public final class Postbox {
         }
     }
     
-    private func replaceContactPeerIds(_ peerIds: Set<PeerId>) {
+    fileprivate func replaceContactPeerIds(_ peerIds: Set<PeerId>) {
         self.contactsTable.replace(peerIds)
         
         self.currentReplacedContactPeerIds = peerIds
     }
     
-    private func replaceRecentPeerIds(_ peerIds: [PeerId]) {
+    fileprivate func replaceRecentPeerIds(_ peerIds: [PeerId]) {
         self.peerRatingTable.replace(items: peerIds)
     }
     
-    private func updateMessage(_ index: MessageIndex, update: (Message) -> StoreMessage) {
+    fileprivate func updateMessage(_ index: MessageIndex, update: (Message) -> StoreMessage) {
         if let intermediateMessage = self.messageHistoryTable.getMessage(index) {
             let message = self.renderIntermediateMessage(intermediateMessage)
             self.messageHistoryTable.updateMessage(index.id, message: update(message), operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
         }
     }
     
-    private func updateMedia(_ id: MediaId, update: Media?) {
+    fileprivate func updateMedia(_ id: MediaId, update: Media?) {
         self.messageHistoryTable.updateMedia(id, media: update, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia)
     }
     
-    private func filterStoredMessageIds(_ messageIds: Set<MessageId>) -> Set<MessageId> {
+    fileprivate func filterStoredMessageIds(_ messageIds: Set<MessageId>) -> Set<MessageId> {
         var filteredIds = Set<MessageId>()
         
         for id in messageIds {
@@ -764,7 +763,7 @@ public final class Postbox {
         return filteredIds
     }
     
-    public func modify<T>(_ f: (Modifier) -> T) -> Signal<T, NoError> {
+    public func modify<T>(_ f: @escaping(Modifier) -> T) -> Signal<T, NoError> {
         return Signal { subscriber in
             self.queue.justDispatch {
                 self.valueBox.begin()

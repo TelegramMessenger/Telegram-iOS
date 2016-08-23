@@ -200,7 +200,7 @@ final class MessageHistoryReadStateTable: Table {
     }
     
     func applyIncomingMaxReadId(_ messageId: MessageId, incomingStatsInRange: (MessageId.Id, MessageId.Id) -> (count: Int, holes: Bool), topMessageId: MessageId.Id?) -> (CombinedPeerReadState?, Bool) {
-        if let states = self.get(messageId.peerId), state = states.namespaces[messageId.namespace] {
+        if let states = self.get(messageId.peerId), let state = states.namespaces[messageId.namespace] {
             if traceReadStates {
                 print("[ReadStateTable] applyMaxReadId peerId: \(messageId.peerId), maxReadId: \(messageId.id) (before: \(states.namespaces))")
             }
@@ -231,7 +231,7 @@ final class MessageHistoryReadStateTable: Table {
     }
     
     func applyOutgoingMaxReadId(_ messageId: MessageId) -> (CombinedPeerReadState?, Bool) {
-        if let states = self.get(messageId.peerId), state = states.namespaces[messageId.namespace] {
+        if let states = self.get(messageId.peerId), let state = states.namespaces[messageId.namespace] {
             if state.maxOutgoingReadId < messageId.id {
                 states.namespaces[messageId.namespace] = PeerReadState(maxIncomingReadId: state.maxIncomingReadId, maxOutgoingReadId: state.maxOutgoingReadId, maxKnownId: state.maxKnownId, count: state.count)
                 self.updatedPeerIds.insert(messageId.peerId)
@@ -262,7 +262,7 @@ final class MessageHistoryReadStateTable: Table {
     override func beforeCommit() {
         let sharedBuffer = WriteBuffer()
         for id in self.updatedPeerIds {
-            if let wrappedStates = self.cachedPeerReadStates[id], states = wrappedStates {
+            if let wrappedStates = self.cachedPeerReadStates[id], let states = wrappedStates {
                 sharedBuffer.reset()
                 var count: Int32 = Int32(states.namespaces.count)
                 sharedBuffer.write(&count, offset: 0, length: 4)

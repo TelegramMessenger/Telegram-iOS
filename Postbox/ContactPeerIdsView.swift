@@ -1,7 +1,7 @@
 import Foundation
 
 final class MutableContactPeerIdsView {
-    private var peerIds: Set<PeerId>
+    fileprivate var peerIds: Set<PeerId>
     
     init(peerIds: Set<PeerId>) {
         self.peerIds = peerIds

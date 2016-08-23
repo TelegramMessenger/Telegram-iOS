@@ -15,7 +15,7 @@ final class PeerChatStateTable: Table {
         if let state = self.cachedPeerChatStates[id] {
             return state
         } else {
-            if let value = self.valueBox.get(self.tableId, key: self.key(id)), state = Decoder(buffer: value).decodeRootObject() {
+            if let value = self.valueBox.get(self.tableId, key: self.key(id)), let state = Decoder(buffer: value).decodeRootObject() {
                 self.cachedPeerChatStates[id] = state
                 return state
             } else {
@@ -38,7 +38,7 @@ final class PeerChatStateTable: Table {
     override func beforeCommit() {
         let sharedEncoder = Encoder()
         for id in self.updatedPeerIds {
-            if let wrappedState = self.cachedPeerChatStates[id], state = wrappedState {
+            if let wrappedState = self.cachedPeerChatStates[id], let state = wrappedState {
                 sharedEncoder.reset()
                 sharedEncoder.encodeRootObject(state)
                 self.valueBox.set(self.tableId, key: self.key(id), value: sharedEncoder.readBufferNoCopy())

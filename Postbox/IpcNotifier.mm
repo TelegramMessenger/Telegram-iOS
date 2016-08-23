@@ -94,7 +94,7 @@ namespace {
     FdHolder _shutdownWriteFd;
 }
 
-- (instancetype)initWithBasePath:(NSString *)basePath notify:(void (^)())notify {
+- (instancetype)initWithBasePath:(NSString *)basePath notify:( void (^ _Nonnull)())notify {
     self = [super init];
     if (self) {
         _notify = [notify copy];

@@ -1,9 +1,9 @@
 import Foundation
 
 private final class ValueBoxKeyImpl {
-    let memory: UnsafeMutablePointer<Void>
+    let memory: UnsafeMutableRawPointer
     
-    init(memory: UnsafeMutablePointer<Void>) {
+    init(memory: UnsafeMutableRawPointer) {
         self.memory = memory
     }
     
@@ -13,12 +13,12 @@ private final class ValueBoxKeyImpl {
 }
 
 public struct ValueBoxKey: Comparable, CustomStringConvertible {
-    public let memory: UnsafeMutablePointer<Void>
+    public let memory: UnsafeMutableRawPointer
     public let length: Int
     private let impl: ValueBoxKeyImpl
 
     public init(length: Int) {
-        self.memory = malloc(length)
+        self.memory = malloc(length)!
         self.length = length
         self.impl = ValueBoxKeyImpl(memory: self.memory)
     }
@@ -28,7 +28,7 @@ public struct ValueBoxKey: Comparable, CustomStringConvertible {
         self.memory = malloc(data.count)
         self.length = data.count
         self.impl = ValueBoxKeyImpl(memory: self.memory)
-        data.copyBytes(to: UnsafeMutablePointer<UInt8>(self.memory), count: data.count)
+        data.copyBytes(to: self.memory.assumingMemoryBound(to: UInt8.self), count: data.count)
     }
     
     public init(_ buffer: MemoryBuffer) {
@@ -92,7 +92,7 @@ public struct ValueBoxKey: Comparable, CustomStringConvertible {
     public var successor: ValueBoxKey {
         let key = ValueBoxKey(length: self.length)
         memcpy(key.memory, self.memory, self.length)
-        let memory = UnsafeMutablePointer<UInt8>(key.memory)
+        let memory = key.memory.assumingMemoryBound(to: UInt8.self)
         var i = self.length - 1
         while i >= 0 {
             var byte = memory[i]
@@ -112,7 +112,7 @@ public struct ValueBoxKey: Comparable, CustomStringConvertible {
     public var predecessor: ValueBoxKey {
         let key = ValueBoxKey(length: self.length)
         memcpy(key.memory, self.memory, self.length)
-        let memory = UnsafeMutablePointer<UInt8>(key.memory)
+        let memory = key.memory.assumingMemoryBound(to: UInt8.self)
         var i = self.length - 1
         while i >= 0 {
             var byte = memory[i]
@@ -131,7 +131,7 @@ public struct ValueBoxKey: Comparable, CustomStringConvertible {
     
     public var description: String {
         let string = NSMutableString()
-        let memory = UnsafeMutablePointer<UInt8>(self.memory)
+        let memory = self.memory.assumingMemoryBound(to: UInt8.self)
         for i in 0 ..< self.length {
             let byte: Int = Int(memory[i])
             string.appendFormat("%02x", byte)
@@ -144,7 +144,7 @@ public func ==(lhs: ValueBoxKey, rhs: ValueBoxKey) -> Bool {
     return lhs.length == rhs.length && memcmp(lhs.memory, rhs.memory, lhs.length) == 0
 }
 
-private func mdb_cmp_memn(_ a_memory: UnsafeMutablePointer<Void>, _ a_length: Int, _ b_memory: UnsafeMutablePointer<Void>, _ b_length: Int) -> Int
+private func mdb_cmp_memn(_ a_memory: UnsafeMutableRawPointer, _ a_length: Int, _ b_memory: UnsafeMutableRawPointer, _ b_length: Int) -> Int
 {
     var diff: Int = 0
     var len_diff: Int = 0
