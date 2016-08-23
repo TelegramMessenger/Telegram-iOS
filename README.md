@@ -453,7 +453,7 @@ metricsManager.trackEventWithName(eventName)
 - There is currently a limit of 300 unique event names per app per week.
 - There is _no_ limit on the number of times an event can happen.
 
-### 3.7.2 Attaching custom properties and measurements to a custom event
+#### 3.7.2 Attaching custom properties and measurements to a custom event
 
 It's possible to attach porperties and/or measurements to a custom event.
 
