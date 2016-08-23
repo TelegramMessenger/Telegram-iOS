@@ -40,7 +40,7 @@ NS_ASSUME_NONNULL_BEGIN
  *
  *  @param eventName The event's name as a string.
  */
-- (void)trackEventWithName:(NSString *)eventName;
+- (void)trackEventWithName:(nonnull NSString *)eventName;
 
 /**
  *  This method allows to track an event that happened in your app.
@@ -51,7 +51,7 @@ NS_ASSUME_NONNULL_BEGIN
  *  @param properties key value pairs with additional info about the event.
  *  @param measurements key value pairs, which contain custom metrics.
  */
-- (void)trackEventWithName:(NSString *)eventName properties:(nullable NSDictionary *)properties measurements:(nullable NSDictionary *)measurements;
+- (void)trackEventWithName:(nonnull NSString *)eventName properties:(nullable NSDictionary<NSString *, NSString *> *)properties measurements:(nullable NSDictionary<NSString *, NSNumber *> *)measurements;
 
 @end
 

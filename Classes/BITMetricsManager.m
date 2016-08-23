@@ -176,7 +176,7 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
 
 #pragma mark Events
 
-- (void)trackEventWithName:(NSString *)eventName {
+- (void)trackEventWithName:(nonnull NSString *)eventName {
   if (!eventName) { return; }
   if (self.disabled) {
     BITHockeyLogDebug(@"INFO: BITMetricsManager is disabled, therefore this tracking call was ignored.");
@@ -192,7 +192,7 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
   });
 }
 
-- (void)trackEventWithName:(NSString *)eventName properties:(nullable NSDictionary *)properties measurements:(nullable NSDictionary *)measurements {
+- (void)trackEventWithName:(nonnull NSString *)eventName properties:(nullable NSDictionary<NSString *, NSString *> *)properties measurements:(nullable NSDictionary<NSString *, NSNumber *> *)measurements {
   if (!eventName) { return; }
   if (self.disabled) {
     BITHockeyLogDebug(@"INFO: BITMetricsManager is disabled, therefore this tracking call was ignored.");
