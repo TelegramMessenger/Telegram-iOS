@@ -4,7 +4,7 @@ import UIKit.UIGestureRecognizerSubclass
 private class TimerTargetWrapper: NSObject {
     let f: () -> Void
     
-    init(_ f: () -> Void) {
+    init(_ f: @escaping () -> Void) {
         self.f = f
     }
     

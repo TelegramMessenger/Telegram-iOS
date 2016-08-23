@@ -1,7 +1,7 @@
 import Foundation
 import SwiftSignalKit
 
-public typealias ListViewTransaction = ((Void) -> Void) -> Void
+public typealias ListViewTransaction = @escaping (@escaping (Void) -> Void) -> Void
 
 public final class ListViewTransactionQueue {
     private var transactions: [ListViewTransaction] = []

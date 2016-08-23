@@ -155,7 +155,7 @@ public class NavigationBar: ASDisplayNode {
         get {
             return self._previousItem
         } set(value) {
-            if let previousValue = self._previousItem, previousItemListenerKey = self.previousItemListenerKey {
+            if let previousValue = self._previousItem, let previousItemListenerKey = self.previousItemListenerKey {
                 previousValue.removeSetTitleListener(previousItemListenerKey)
                 self.previousItemListenerKey = nil
             }
@@ -312,7 +312,7 @@ public class NavigationBar: ASDisplayNode {
         }
         
         self.leftButtonNode.pressed = { [weak self] in
-            if let item = self?.item, leftBarButtonItem = item.leftBarButtonItem {
+            if let item = self?.item, let leftBarButtonItem = item.leftBarButtonItem {
                 leftBarButtonItem.performActionOnTarget()
             }
         }
@@ -411,7 +411,7 @@ public class NavigationBar: ASDisplayNode {
         if self.titleNode.supernode != nil {
             let titleSize = self.titleNode.measure(CGSize(width: max(1.0, size.width - leftTitleInset - leftTitleInset), height: nominalHeight))
             
-            if let transitionState = self.transitionState, otherNavigationBar = transitionState.navigationBar {
+            if let transitionState = self.transitionState, let otherNavigationBar = transitionState.navigationBar {
                 let progress = transitionState.progress
                 
                 switch transitionState.role {

@@ -18,7 +18,7 @@ public class DisplayLinkDispatcher: NSObject {
         self.displayLink.add(to: RunLoop.main, forMode: RunLoopMode.commonModes)
     }
     
-    public func dispatch(f: (Void) -> Void) {
+    public func dispatch(f: @escaping (Void) -> Void) {
         self.blocksToDispatch.append(f)
         self.displayLink.isPaused = false
     }

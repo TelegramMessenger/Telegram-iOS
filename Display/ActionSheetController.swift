@@ -1,6 +1,6 @@
 import Foundation
 
-public class ActionSheetController: ViewController {
+open class ActionSheetController: ViewController {
     private var actionSheetNode: ActionSheetControllerNode {
         return self.displayNode as! ActionSheetControllerNode
     }
@@ -11,7 +11,7 @@ public class ActionSheetController: ViewController {
         self.actionSheetNode.animateOut()
     }
     
-    public override func loadDisplayNode() {
+    open override func loadDisplayNode() {
         self.displayNode = ActionSheetControllerNode()
         self.displayNodeDidLoad()
         self.navigationBar.isHidden = true
@@ -23,13 +23,13 @@ public class ActionSheetController: ViewController {
         self.actionSheetNode.setGroups(self.groups)
     }
     
-    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.actionSheetNode.containerLayoutUpdated(layout, transition: transition)
     }
     
-    public override func viewWillAppear(_ animated: Bool) {
+    open override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
         self.actionSheetNode.animateIn()

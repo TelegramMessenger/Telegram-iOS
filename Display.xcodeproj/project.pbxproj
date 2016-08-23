@@ -64,7 +64,6 @@
 		D05CC3271B69725400E235A3 /* NavigationBackArrowLight@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D05CC3261B69725400E235A3 /* NavigationBackArrowLight@2x.png */; };
 		D05CC3291B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */; };
 		D06EE8451B7140FF00837186 /* Font.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06EE8441B7140FF00837186 /* Font.swift */; };
-		D07921A91B6FC0C0005C23D9 /* KeyboardHostWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07921A81B6FC0C0005C23D9 /* KeyboardHostWindow.swift */; };
 		D081229D1D19AA1C005F7395 /* ContainerViewLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = D081229C1D19AA1C005F7395 /* ContainerViewLayout.swift */; };
 		D08E903A1D24159200533158 /* ActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08E90391D24159200533158 /* ActionSheetItem.swift */; };
 		D08E903C1D2417E000533158 /* ActionSheetButtonItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08E903B1D2417E000533158 /* ActionSheetButtonItem.swift */; };
@@ -170,7 +169,6 @@
 		D05CC3261B69725400E235A3 /* NavigationBackArrowLight@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "NavigationBackArrowLight@2x.png"; sourceTree = "<group>"; };
 		D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InteractiveTransitionGestureRecognizer.swift; sourceTree = "<group>"; };
 		D06EE8441B7140FF00837186 /* Font.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Font.swift; sourceTree = "<group>"; };
-		D07921A81B6FC0C0005C23D9 /* KeyboardHostWindow.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = KeyboardHostWindow.swift; sourceTree = "<group>"; };
 		D081229C1D19AA1C005F7395 /* ContainerViewLayout.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContainerViewLayout.swift; sourceTree = "<group>"; };
 		D08E90391D24159200533158 /* ActionSheetItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetItem.swift; sourceTree = "<group>"; };
 		D08E903B1D2417E000533158 /* ActionSheetButtonItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetButtonItem.swift; sourceTree = "<group>"; };
@@ -324,7 +322,6 @@
 				D03BCCE91C72AE4B0097A291 /* Theme */,
 				D05CC3001B6955D500E235A3 /* Utils */,
 				D07921AA1B6FC911005C23D9 /* Status Bar */,
-				D07921A71B6FC0AE005C23D9 /* Keyboard */,
 				D05CC3211B695AA600E235A3 /* Navigation */,
 				D0DC48521BF93D7C00F672FD /* Tabs */,
 				D02BDAEC1B6A7053008AFAD2 /* Nodes */,
@@ -416,14 +413,6 @@
 				D0AE3D4C1D25C816001CCE13 /* NavigationBarTransitionState.swift */,
 			);
 			name = Navigation;
-			sourceTree = "<group>";
-		};
-		D07921A71B6FC0AE005C23D9 /* Keyboard */ = {
-			isa = PBXGroup;
-			children = (
-				D07921A81B6FC0C0005C23D9 /* KeyboardHostWindow.swift */,
-			);
-			name = Keyboard;
 			sourceTree = "<group>";
 		};
 		D07921AA1B6FC911005C23D9 /* Status Bar */ = {
@@ -639,7 +628,6 @@
 				D0C2DFCA1CC4431D0044FF83 /* ListViewItem.swift in Sources */,
 				D05CC2A01B69326400E235A3 /* NavigationController.swift in Sources */,
 				D06EE8451B7140FF00837186 /* Font.swift in Sources */,
-				D07921A91B6FC0C0005C23D9 /* KeyboardHostWindow.swift in Sources */,
 				D0C2DFCB1CC4431D0044FF83 /* ListViewAnimation.swift in Sources */,
 				D05CC3251B695B0700E235A3 /* NavigationBarProxy.m in Sources */,
 				D03E7DE61C96B96E00C07816 /* NavigationBarTransitionContainer.swift in Sources */,

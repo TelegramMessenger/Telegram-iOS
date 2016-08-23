@@ -11,7 +11,7 @@ internal class BarButtonItemWrapper {
     private var setEnabledListenerKey: Int!
     private var setTitleListenerKey: Int!
     
-    init(parentNode: ASDisplayNode, barButtonItem: UIBarButtonItem, layoutNeeded: () -> ()) {
+    init(parentNode: ASDisplayNode, barButtonItem: UIBarButtonItem, layoutNeeded: @escaping () -> ()) {
         self.parentNode = parentNode
         self.barButtonItem = barButtonItem
         self.layoutNeeded = layoutNeeded

@@ -9,7 +9,7 @@ private class NavigationControllerView: UIView {
     }
 }
 
-public class NavigationController: NavigationControllerProxy, ContainableController, UIGestureRecognizerDelegate {
+open class NavigationController: NavigationControllerProxy, ContainableController, UIGestureRecognizerDelegate {
     public private(set) weak var overlayPresentingController: ViewController?
     
     private var containerLayout = ContainerViewLayout()
@@ -25,12 +25,12 @@ public class NavigationController: NavigationControllerProxy, ContainableControl
     //private var pendingLayout: (NavigationControllerLayout, Double, Bool)?
     
     private var _presentedViewController: UIViewController?
-    public override var presentedViewController: UIViewController? {
+    open override var presentedViewController: UIViewController? {
         return self._presentedViewController
     }
     
     private var _viewControllers: [UIViewController] = []
-    public override var viewControllers: [UIViewController] {
+    open override var viewControllers: [UIViewController] {
         get {
             return self._viewControllers
         } set(value) {
@@ -38,7 +38,7 @@ public class NavigationController: NavigationControllerProxy, ContainableControl
         }
     }
     
-    public override var topViewController: UIViewController? {
+    open override var topViewController: UIViewController? {
         return self._viewControllers.last
     }
     
@@ -97,7 +97,7 @@ public class NavigationController: NavigationControllerProxy, ContainableControl
         }
     }
     
-    public override func loadView() {
+    open override func loadView() {
         self.view = NavigationControllerView()
         self.view.clipsToBounds = true
         
@@ -218,7 +218,7 @@ public class NavigationController: NavigationControllerProxy, ContainableControl
         }))
     }
     
-    public override func pushViewController(_ viewController: UIViewController, animated: Bool) {
+    open override func pushViewController(_ viewController: UIViewController, animated: Bool) {
         self.currentPushDisposable.set(nil)
         
         var controllers = self.viewControllers
@@ -226,7 +226,7 @@ public class NavigationController: NavigationControllerProxy, ContainableControl
         self.setViewControllers(controllers, animated: animated)
     }
     
-    public override func popViewController(animated: Bool) -> UIViewController? {
+    open override func popViewController(animated: Bool) -> UIViewController? {
         var controller: UIViewController?
         var controllers = self.viewControllers
         if controllers.count != 0 {
@@ -237,7 +237,7 @@ public class NavigationController: NavigationControllerProxy, ContainableControl
         return controller
     }
     
-    public override func setViewControllers(_ viewControllers: [UIViewController], animated: Bool) {
+    open override func setViewControllers(_ viewControllers: [UIViewController], animated: Bool) {
         for controller in viewControllers {
             controller.navigation_setNavigationController(self)
         }
@@ -323,7 +323,7 @@ public class NavigationController: NavigationControllerProxy, ContainableControl
                 })
             }
         } else {
-            if let topController = self.viewControllers.last where topController.isViewLoaded {
+            if let topController = self.viewControllers.last , topController.isViewLoaded {
                 topController.navigation_setNavigationController(nil)
                 topController.view.removeFromSuperview()
             }
@@ -337,7 +337,7 @@ public class NavigationController: NavigationControllerProxy, ContainableControl
         }
     }
     
-    override public func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
+    override open func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
         if let controller = viewControllerToPresent as? NavigationController {
             controller.navigation_setDismiss { [weak self] in
                 if let strongSelf = self {
@@ -382,7 +382,7 @@ public class NavigationController: NavigationControllerProxy, ContainableControl
         }
     }
     
-    override public func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
+    override open func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         if let controller = self.presentedViewController {
             if flag {
                 UIView.animate(withDuration: 0.3, delay: 0.0, options: UIViewAnimationOptions(rawValue: 7 << 16), animations: {

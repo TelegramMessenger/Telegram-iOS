@@ -36,10 +36,10 @@ public struct ContainerViewLayout: Equatable {
     
     public func insets(options: ContainerViewLayoutInsetOptions) -> UIEdgeInsets {
         var insets = self.intrinsicInsets
-        if let statusBarHeight = self.statusBarHeight where options.contains(.statusBar) {
+        if let statusBarHeight = self.statusBarHeight , options.contains(.statusBar) {
             insets.top += statusBarHeight
         }
-        if let inputHeight = self.inputHeight where options.contains(.input) {
+        if let inputHeight = self.inputHeight , options.contains(.input) {
             insets.bottom = max(inputHeight, insets.bottom)
         }
         return insets

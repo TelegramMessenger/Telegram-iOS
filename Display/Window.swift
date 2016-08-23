@@ -305,7 +305,7 @@ public class Window: UIWindow {
         }
     }
     
-    public func addPostUpdateToInterfaceOrientationBlock(f: (Void) -> Void) {
+    public func addPostUpdateToInterfaceOrientationBlock(f: @escaping (Void) -> Void) {
         postUpdateToInterfaceOrientationBlocks.append(f)
     }
     

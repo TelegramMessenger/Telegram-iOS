@@ -54,7 +54,7 @@ class NavigationTransitionCoordinator {
         self.dimView.backgroundColor = UIColor.black
         self.shadowView = UIImageView(image: shadowImage)
         
-        if let topNavigationBar = topNavigationBar, bottomNavigationBar = bottomNavigationBar {
+        if let topNavigationBar = topNavigationBar, let bottomNavigationBar = bottomNavigationBar {
             var topFrame = topNavigationBar.view.convert(topNavigationBar.bounds, to: container)
             var bottomFrame = bottomNavigationBar.view.convert(bottomNavigationBar.bounds, to: container)
             topFrame.origin.x = 0.0
@@ -92,7 +92,7 @@ class NavigationTransitionCoordinator {
         }
         
         var dimInset: CGFloat = 0.0
-        if let topNavigationBar = self.topNavigationBar where self.inlineNavigationBarTransition {
+        if let topNavigationBar = self.topNavigationBar , self.inlineNavigationBarTransition {
             dimInset = topNavigationBar.frame.size.height
         }
         
@@ -109,7 +109,7 @@ class NavigationTransitionCoordinator {
     }
     
     func updateNavigationBarTransition() {
-        if let topNavigationBar = self.topNavigationBar, bottomNavigationBar = self.bottomNavigationBar {
+        if let topNavigationBar = self.topNavigationBar, let bottomNavigationBar = self.bottomNavigationBar {
             let position: CGFloat
             switch self.transition {
                 case .Push:
@@ -124,7 +124,7 @@ class NavigationTransitionCoordinator {
     }
     
     func maybeCreateNavigationBarTransition() {
-        if let topNavigationBar = self.topNavigationBar, bottomNavigationBar = self.bottomNavigationBar {
+        if let topNavigationBar = self.topNavigationBar, let bottomNavigationBar = self.bottomNavigationBar {
             let position: CGFloat
             switch self.transition {
                 case .Push:
@@ -139,13 +139,13 @@ class NavigationTransitionCoordinator {
     }
     
     func endNavigationBarTransition() {
-        if let topNavigationBar = self.topNavigationBar, bottomNavigationBar = self.bottomNavigationBar {
+        if let topNavigationBar = self.topNavigationBar, let bottomNavigationBar = self.bottomNavigationBar {
             topNavigationBar.transitionState = nil
             bottomNavigationBar.transitionState = nil
         }
     }
     
-    func animateCancel(_ completion: () -> ()) {
+    func animateCancel(_ completion: @escaping () -> ()) {
         UIView.animate(withDuration: 0.1, delay: 0.0, options: UIViewAnimationOptions(), animations: { () -> Void in
             self.progress = 0.0
         }) { (completed) -> Void in
@@ -175,7 +175,7 @@ class NavigationTransitionCoordinator {
         }
     }
     
-    func animateCompletion(_ velocity: CGFloat, completion: () -> ()) {
+    func animateCompletion(_ velocity: CGFloat, completion: @escaping () -> ()) {
         let distance = (1.0 - self.progress) * self.container.bounds.size.width
         let f = {
             switch self.transition {

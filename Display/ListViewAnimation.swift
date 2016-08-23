@@ -94,7 +94,7 @@ public final class ListViewAnimation {
     private let update: (CGFloat, Interpolatable) -> Void
     private let completed: (Bool) -> Void
     
-    public init<T: Interpolatable>(from: T, to: T, duration: Double, curve: (CGFloat) -> CGFloat, beginAt: Double, update: (CGFloat, T) -> Void, completed: (Bool) -> Void = { _ in }) {
+    public init<T: Interpolatable>(from: T, to: T, duration: Double, curve: @escaping (CGFloat) -> CGFloat, beginAt: Double, update: @escaping (CGFloat, T) -> Void, completed: @escaping (Bool) -> Void = { _ in }) {
         self.from = from
         self.to = to
         self.duration = duration

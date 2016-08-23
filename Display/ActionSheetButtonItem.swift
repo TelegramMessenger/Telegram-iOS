@@ -10,7 +10,7 @@ public class ActionSheetButtonItem: ActionSheetItem {
     public let color: ActionSheetButtonColor
     public let action: () -> Void
     
-    public init(title: String, color: ActionSheetButtonColor = .accent, action: () -> Void) {
+    public init(title: String, color: ActionSheetButtonColor = .accent, action: @escaping () -> Void) {
         self.title = title
         self.color = color
         self.action = action

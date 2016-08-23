@@ -40,7 +40,7 @@ final class PresentationContext {
             |> deliverOnMainQueue
             |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(true))
         
-        if let view = self.view, initialLayout = self.layout {
+        if let view = self.view, let initialLayout = self.layout {
             controller.view.frame = CGRect(origin: CGPoint(), size: initialLayout.size)
             controller.containerLayoutUpdated(initialLayout, transition: .immediate)
         
@@ -51,9 +51,9 @@ final class PresentationContext {
                     }
                     
                     strongSelf.controllers.append(controller)
-                    if let view = strongSelf.view, layout = strongSelf.layout {
+                    if let view = strongSelf.view, let layout = strongSelf.layout {
                         controller.navigation_setDismiss { [weak strongSelf, weak controller] in
-                            if let strongSelf = strongSelf, controller = controller {
+                            if let strongSelf = strongSelf, let controller = controller {
                                 strongSelf.dismiss(controller)
                             }
                         }
@@ -110,7 +110,7 @@ final class PresentationContext {
     }
     
     private func addViews() {
-        if let view = self.view, layout = self.layout {
+        if let view = self.view, let layout = self.layout {
             for controller in self.controllers {
                 controller.viewWillAppear(false)
                 view.addSubview(controller.view)

@@ -1,7 +1,7 @@
 import Foundation
 import AsyncDisplayKit
 
-public class ListViewAccessoryItemNode: ASDisplayNode {
+open class ListViewAccessoryItemNode: ASDisplayNode {
     var transitionOffset: CGPoint = CGPoint() {
         didSet {
             self.bounds = CGRect(origin: self.transitionOffset, size: self.bounds.size)
@@ -10,7 +10,7 @@ public class ListViewAccessoryItemNode: ASDisplayNode {
     
     private var transitionOffsetAnimation: ListViewAnimation?
     
-    final func animateTransitionOffset(_ from: CGPoint, beginAt: Double, duration: Double, curve: (CGFloat) -> CGFloat) {
+    final func animateTransitionOffset(_ from: CGPoint, beginAt: Double, duration: Double, curve: @escaping (CGFloat) -> CGFloat) {
         self.transitionOffset = from
         self.transitionOffsetAnimation = ListViewAnimation(from: from, to: CGPoint(), duration: duration, curve: curve, beginAt: beginAt, update: { [weak self] _, currentValue in
             if let strongSelf = self {

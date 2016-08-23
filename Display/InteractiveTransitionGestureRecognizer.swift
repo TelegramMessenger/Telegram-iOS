@@ -5,7 +5,7 @@ class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
     var validatedGesture = false
     var firstLocation: CGPoint = CGPoint()
     
-    override init(target: AnyObject?, action: Selector?) {
+    override init(target: Any?, action: Selector?) {
         super.init(target: target, action: action)
         
         self.maximumNumberOfTouches = 1

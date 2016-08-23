@@ -51,7 +51,7 @@ public struct ListViewItemNodeLayout {
     }
 }
 
-public class ListViewItemNode: ASDisplayNode {
+open class ListViewItemNode: ASDisplayNode {
     final var index: Int?
     
     final var accessoryItemNode: ListViewAccessoryItemNode? {
@@ -164,7 +164,7 @@ public class ListViewItemNode: ASDisplayNode {
     private var _bounds: CGRect = CGRect()
     private var _position: CGPoint = CGPoint()
     
-    public override var frame: CGRect {
+    open override var frame: CGRect {
         get {
             return CGRect(origin: CGPoint(x: self._position.x - self._bounds.width / 2.0, y: self._position.y - self._bounds.height / 2.0), size: self._bounds.size)
         } set(value) {
@@ -187,7 +187,7 @@ public class ListViewItemNode: ASDisplayNode {
         }
     }
     
-    public override var bounds: CGRect {
+    open override var bounds: CGRect {
         get {
             return self._bounds
         } set(value) {
@@ -209,7 +209,7 @@ public class ListViewItemNode: ASDisplayNode {
         }
     }
     
-    public override var position: CGPoint {
+    open override var position: CGPoint {
         get {
             return self._position
         } set(value) {
@@ -230,13 +230,13 @@ public class ListViewItemNode: ASDisplayNode {
         return bounds
     }
     
-    public func layoutAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
+    open func layoutAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
     }
     
-    public func layoutHeaderAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
+    open func layoutHeaderAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
     }
     
-    public func reuse() {
+    open func reuse() {
     }
     
     final func addScrollingOffset(_ scrollingOffset: CGFloat) {
@@ -316,7 +316,7 @@ public class ListViewItemNode: ASDisplayNode {
         return continueAnimations
     }
     
-    public func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    open func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
     }
     
     public func animationForKey(_ key: String) -> ListViewAnimation? {
@@ -404,19 +404,19 @@ public class ListViewItemNode: ASDisplayNode {
         self.setAnimationForKey("transitionOffset", animation: animation)
     }
     
-    public func animateInsertion(_ currentTimestamp: Double, duration: Double) {
+    open func animateInsertion(_ currentTimestamp: Double, duration: Double) {
     }
     
-    public func animateAdded(_ currentTimestamp: Double, duration: Double) {
+    open func animateAdded(_ currentTimestamp: Double, duration: Double) {
     }
     
-    public func setHighlighted(_ highlighted: Bool, animated: Bool) {
+    open func setHighlighted(_ highlighted: Bool, animated: Bool) {
     }
     
-    public func setupGestures() {
+    open func setupGestures() {
     }
     
-    public func animateFrameTransition(_ progress: CGFloat) {
+    open func animateFrameTransition(_ progress: CGFloat) {
         
     }
 }

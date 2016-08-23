@@ -27,7 +27,7 @@ private func optimizeMappedSurface(statusBarSize: CGSize, surface: MappedStatusB
             if surface.statusBars[i].style != surface.statusBars[i - 1].style || abs(surface.statusBars[i].frame.origin.y - surface.statusBars[i - 1].frame.origin.y) > CGFloat(FLT_EPSILON) {
                 return surface
             }
-            if let lhsStatusBar = surface.statusBars[i - 1].statusBar, rhsStatusBar = surface.statusBars[i].statusBar where !lhsStatusBar.alpha.isEqual(to: rhsStatusBar.alpha) {
+            if let lhsStatusBar = surface.statusBars[i - 1].statusBar, let rhsStatusBar = surface.statusBars[i].statusBar , !lhsStatusBar.alpha.isEqual(to: rhsStatusBar.alpha) {
                 return surface
             }
         }
@@ -91,7 +91,7 @@ class StatusBarManager {
             outer: for surface in mappedSurfaces {
                 for mappedStatusBar in surface.statusBars {
                     if mappedStatusBar.frame.origin.equalTo(CGPoint()) {
-                        if let statusBar = mappedStatusBar.statusBar where !statusBar.layer.hasPositionOrOpacityAnimations() {
+                        if let statusBar = mappedStatusBar.statusBar , !statusBar.layer.hasPositionOrOpacityAnimations() {
                             mappedSurfaces = [MappedStatusBarSurface(statusBars: [mappedStatusBar], surface: surface.surface)]
                             break outer
                         }

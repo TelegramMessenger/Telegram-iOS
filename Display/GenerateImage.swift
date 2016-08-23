@@ -9,7 +9,7 @@ public func generateImage(_ size: CGSize, pixelGenerator: (CGSize, UnsafeMutable
     let scaledSize = CGSize(width: size.width * scale, height: size.height * scale)
     let bytesPerRow = (4 * Int(scaledSize.width) + 15) & (~15)
     let length = bytesPerRow * Int(scaledSize.height)
-    let bytes = UnsafeMutablePointer<Int8>(malloc(length)!)
+    let bytes = malloc(length)!.assumingMemoryBound(to: Int8.self)
     guard let provider = CGDataProvider(dataInfo: bytes, data: bytes, size: length, releaseData: { bytes, _, _ in
         free(bytes)
     })
@@ -34,7 +34,7 @@ public func generateImage(_ size: CGSize, contextGenerator: (CGSize, CGContext) 
     let scaledSize = CGSize(width: size.width * scale, height: size.height * scale)
     let bytesPerRow = (4 * Int(scaledSize.width) + 15) & (~15)
     let length = bytesPerRow * Int(scaledSize.height)
-    let bytes = UnsafeMutablePointer<Int8>(malloc(length)!)
+    let bytes = malloc(length)!.assumingMemoryBound(to: Int8.self)
     
     guard let provider = CGDataProvider(dataInfo: bytes, data: bytes, size: length, releaseData: { bytes, _, _ in
         free(bytes)
@@ -102,7 +102,7 @@ public class DrawingContext {
     public let bytesPerRow: Int
     private let bitmapInfo: CGBitmapInfo
     public let length: Int
-    public let bytes: UnsafeMutablePointer<Int8>
+    public let bytes: UnsafeMutableRawPointer
     let provider: CGDataProvider?
     
     private var _context: CGContext?
@@ -151,7 +151,7 @@ public class DrawingContext {
         
         self.bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.premultipliedFirst.rawValue)
         
-        self.bytes = UnsafeMutablePointer<Int8>(malloc(length))
+        self.bytes = malloc(length)!
         if clear {
             memset(self.bytes, 0, self.length)
         }
@@ -172,7 +172,7 @@ public class DrawingContext {
         let x = Int(point.x * self.scale)
         let y = Int(point.y * self.scale)
         if x >= 0 && x < Int(self.scaledSize.width) && y >= 0 && y < Int(self.scaledSize.height) {
-            let srcLine = UnsafeMutablePointer<UInt32>(self.bytes + y * self.bytesPerRow)
+            let srcLine = self.bytes.advanced(by: y * self.bytesPerRow).assumingMemoryBound(to: UInt32.self)
             let pixel = srcLine + x
             let colorValue = pixel.pointee
             return UIColor(UInt32(colorValue))
@@ -197,8 +197,8 @@ public class DrawingContext {
             switch mode {
                 case .Alpha:
                     while dstY < maxDstY {
-                        let srcLine = UnsafeMutablePointer<UInt32>(other.bytes + srcY * other.bytesPerRow)
-                        let dstLine = UnsafeMutablePointer<UInt32>(self.bytes + dstY * self.bytesPerRow)
+                        let srcLine = other.bytes.advanced(by: srcY * other.bytesPerRow).assumingMemoryBound(to: UInt32.self)
+                        let dstLine = self.bytes.advanced(by: dstY * self.bytesPerRow).assumingMemoryBound(to: UInt32.self)
                         
                         var dx = dstX
                         var sx = srcX
@@ -278,13 +278,13 @@ public func drawSvgPath(_ context: CGContext, path: StaticString) throws {
             let y = try readCGFloat(&index, end: end, separator: 32)
             
             //print("Move to \(x), \(y)")
-            context.moveTo(x: x, y: y)
+            context.move(to: CGPoint(x: x, y: y))
         } else if c == 76 { // L
             let x = try readCGFloat(&index, end: end, separator: 44)
             let y = try readCGFloat(&index, end: end, separator: 32)
             
             //print("Line to \(x), \(y)")
-            context.addLineTo(x: x, y: y)
+            context.addLine(to: CGPoint(x: x, y: y))
         } else if c == 67 { // C
             let x1 = try readCGFloat(&index, end: end, separator: 44)
             let y1 = try readCGFloat(&index, end: end, separator: 32)
@@ -292,7 +292,7 @@ public func drawSvgPath(_ context: CGContext, path: StaticString) throws {
             let y2 = try readCGFloat(&index, end: end, separator: 32)
             let x = try readCGFloat(&index, end: end, separator: 44)
             let y = try readCGFloat(&index, end: end, separator: 32)
-            context.addCurveTo(cp1x: x1, cp1y: y1, cp2x: x2, cp2y: y2, endingAtX: x, y: y)
+            context.addCurve(to: CGPoint(x: x1, y: y1), control1: CGPoint(x: x2, y: y2), control2: CGPoint(x: x, y: y))
             
             //print("Line to \(x), \(y)")
             

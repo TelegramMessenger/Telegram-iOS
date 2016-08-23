@@ -2,7 +2,7 @@ import Foundation
 import AsyncDisplayKit
 
 class ASTransformLayer: CATransformLayer {
-    override var contents: AnyObject? {
+    override var contents: Any? {
         get {
             return nil
         } set(value) {
@@ -31,7 +31,7 @@ class ASTransformView: UIView {
     }
 }
 
-public class ASTransformLayerNode: ASDisplayNode {
+open class ASTransformLayerNode: ASDisplayNode {
     public override init() {
         super.init(layerBlock: {
             return ASTransformLayer()
@@ -39,7 +39,7 @@ public class ASTransformLayerNode: ASDisplayNode {
     }
 }
 
-public class ASTransformViewNode: ASDisplayNode {
+open class ASTransformViewNode: ASDisplayNode {
     public override init() {
         super.init(viewBlock: {
             return ASTransformView()
@@ -47,7 +47,7 @@ public class ASTransformViewNode: ASDisplayNode {
     }
 }
 
-public class ASTransformNode: ASDisplayNode {
+open class ASTransformNode: ASDisplayNode {
     public init(layerBacked: Bool = true) {
         if layerBacked {
             super.init(layerBlock: {

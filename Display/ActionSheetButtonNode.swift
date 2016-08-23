@@ -10,7 +10,7 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
     private let label: UILabel
     private var calculatedLabelSize: CGSize?
     
-    public init(title: NSAttributedString, action: () -> Void) {
+    public init(title: NSAttributedString, action: @escaping () -> Void) {
         self.action = action
         
         self.button = HighlightTrackingButton()

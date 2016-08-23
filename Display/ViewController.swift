@@ -3,7 +3,20 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 
-@objc public class ViewController: UIViewController, ContainableController {
+private func findCurrentResponder(_ view: UIView) -> UIResponder? {
+    if view.isFirstResponder {
+        return view
+    } else {
+        for subview in view.subviews {
+            if let result = findCurrentResponder(subview) {
+                return result
+            }
+        }
+        return nil
+    }
+}
+
+@objc open class ViewController: UIViewController, ContainableController {
     private var containerLayout = ContainerViewLayout()
     private let presentationContext: PresentationContext
     
@@ -37,8 +50,11 @@ import SwiftSignalKit
     
     public var displayNavigationBar = true
     
+    private weak var activeInputViewCandidate: UIResponder?
+    private weak var activeInputView: UIResponder?
+    
     private let _ready = Promise<Bool>(true)
-    public var ready: Promise<Bool> {
+    open var ready: Promise<Bool> {
         return self._ready
     }
     
@@ -53,7 +69,7 @@ import SwiftSignalKit
     
     private func updateScrollToTopView() {
         if self.scrollToTop != nil {
-            if let displayNode = self._displayNode where self.scrollToTopView == nil {
+            if let displayNode = self._displayNode , self.scrollToTopView == nil {
                 let scrollToTopView = ScrollToTopView(frame: CGRect(x: 0.0, y: -1.0, width: displayNode.frame.size.width, height: 1.0))
                 scrollToTopView.action = { [weak self] in
                     if let scrollToTop = self?.scrollToTop {
@@ -91,7 +107,7 @@ import SwiftSignalKit
         
     }
     
-    public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.containerLayout = layout
         
         if !self.isViewLoaded {
@@ -122,19 +138,19 @@ import SwiftSignalKit
         }
     }
     
-    public override func loadView() {
+    open override func loadView() {
         self.view = self.displayNode.view
         self.displayNode.addSubnode(self.navigationBar)
         self.view.addSubview(self.statusBar.view)
         self.presentationContext.view = self.view
     }
     
-    public func loadDisplayNode() {
+    open func loadDisplayNode() {
         self.displayNode = ASDisplayNode()
         self.displayNodeDidLoad()
     }
     
-    public func displayNodeDidLoad() {
+    open func displayNodeDidLoad() {
         self.updateScrollToTopView()
     }
     
@@ -158,11 +174,11 @@ import SwiftSignalKit
         }
     }
     
-    override public func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
+    override open func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
         preconditionFailure("use present(_:in)")
     }
     
-    override public func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
+    override open func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         if let navigationController = self.navigationController as? NavigationController {
             navigationController.dismiss(animated: flag, completion: completion)
         } else {
@@ -191,5 +207,23 @@ import SwiftSignalKit
             case .window:
                 self.window?.present(controller)
         }
+    }
+    
+    open override func viewWillDisappear(_ animated: Bool) {
+        self.activeInputViewCandidate = findCurrentResponder(self.view)
+        
+        super.viewWillDisappear(animated)
+    }
+    
+    open override func viewDidDisappear(_ animated: Bool) {
+        self.activeInputView = self.activeInputViewCandidate
+        
+        super.viewDidDisappear(animated)
+    }
+    
+    open override func viewDidAppear(_ animated: Bool) {
+        self.activeInputView = nil
+        
+        super.viewDidAppear(animated)
     }
 }

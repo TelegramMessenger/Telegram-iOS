@@ -1,6 +1,6 @@
 import UIKit
 
-final class SystemContainedControllerTransitionCoordinator:NSObject, UIViewControllerTransitionCoordinator {
+final class SystemContainedControllerTransitionCoordinator: NSObject, UIViewControllerTransitionCoordinator {
     public var isAnimated: Bool {
         return false
     }
@@ -39,11 +39,11 @@ final class SystemContainedControllerTransitionCoordinator:NSObject, UIViewContr
         return .easeInOut
     }
     
-    public func viewController(forKey key: String) -> UIViewController? {
+    public func viewController(forKey key: UITransitionContextViewControllerKey) -> UIViewController? {
         return nil
     }
     
-    public func view(forKey key: String) -> UIView? {
+    public func view(forKey key: UITransitionContextViewKey) -> UIView? {
         return nil
     }
     
@@ -55,19 +55,19 @@ final class SystemContainedControllerTransitionCoordinator:NSObject, UIViewContr
         return CGAffineTransform.identity
     }
     
-    public func animate(alongsideTransition animation: ((UIViewControllerTransitionCoordinatorContext) -> Swift.Void)?, completion: ((UIViewControllerTransitionCoordinatorContext) -> Swift.Void)? = nil) -> Bool {
+    public func animate(alongsideTransition animation: ((UIViewControllerTransitionCoordinatorContext) -> Swift.Void)?, completion: (@escaping (UIViewControllerTransitionCoordinatorContext) -> Swift.Void)? = nil) -> Bool {
         return false
     }
     
-    public func animateAlongsideTransition(in view: UIView?, animation: ((UIViewControllerTransitionCoordinatorContext) -> Swift.Void)?, completion: ((UIViewControllerTransitionCoordinatorContext) -> Swift.Void)? = nil) -> Bool {
+    public func animateAlongsideTransition(in view: UIView?, animation: ((UIViewControllerTransitionCoordinatorContext) -> Swift.Void)?, completion: (@escaping (UIViewControllerTransitionCoordinatorContext) -> Swift.Void)? = nil) -> Bool {
         return false
     }
     
-    public func notifyWhenInteractionEnds(_ handler: (UIViewControllerTransitionCoordinatorContext) -> ()) {
+    public func notifyWhenInteractionEnds(_ handler: @escaping (UIViewControllerTransitionCoordinatorContext) -> ()) {
         
     }
     
-    public func notifyWhenInteractionChanges(_ handler: (UIViewControllerTransitionCoordinatorContext) -> ()) {
+    public func notifyWhenInteractionChanges(_ handler: @escaping (UIViewControllerTransitionCoordinatorContext) -> ()) {
         
     }
 }
