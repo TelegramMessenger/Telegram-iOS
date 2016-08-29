@@ -11,6 +11,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic, copy) NSNumber *version;
 @property (nonatomic, copy) NSString *name;
+@property (nonatomic, strong) NSDictionary *properties;
 
 @end
 
