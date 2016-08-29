@@ -17,20 +17,22 @@
 #import "BITCrashManagerPrivate.h"
 #import "BITHockeyBaseManagerPrivate.h"
 
+#import "BITPersistence.h"
+
 #import "BITTestHelper.h"
 #import "BITHockeyAppClient.h"
 
 
-#define kBITCrashMetaAttachment @"BITCrashMetaAttachment"
+static NSString *const kBITCrashMetaAttachment = @"BITCrashMetaAttachment";
 
 @interface BITCrashManagerTests : XCTestCase
+
+@property BITCrashManager *sut;
 
 @end
 
 
 @implementation BITCrashManagerTests {
-  BITCrashManager *_sut;
-  BITHockeyAppClient *_hockeyAppClient;
   BOOL _startManagerInitialized;
 }
 
@@ -38,12 +40,7 @@
   [super setUp];
   
   _startManagerInitialized = NO;
-  _sut = [[BITCrashManager alloc] initWithAppIdentifier:nil appEnvironment:BITEnvironmentOther];
-
-  _hockeyAppClient = [[BITHockeyAppClient alloc] initWithBaseURL:[NSURL URLWithString: BITHOCKEYSDK_URL]];
-  _hockeyAppClient.baseURL = [NSURL URLWithString:BITHOCKEYSDK_URL];
-  
-  [_sut setHockeyAppClient:_hockeyAppClient];
+  _sut = [[BITCrashManager alloc] initWithAppIdentifier:nil appEnvironment:BITEnvironmentOther hockeyAppClient:[[BITHockeyAppClient alloc] initWithBaseURL:[NSURL URLWithString: BITHOCKEYSDK_URL]]];
 }
 
 - (void)tearDown {
@@ -66,6 +63,11 @@
 }
 
 - (void)startManagerAutoSend {
+  // Set mocks to prevent errors in `-configDefaultCrashCallback`
+  id metricsManagerMock = mock([BITMetricsManager class]);
+  [given([metricsManagerMock persistence]) willReturn:[[BITPersistence alloc] init]];
+  [[BITHockeyManager sharedHockeyManager] setValue:metricsManagerMock forKey:@"metricsManager"];
+  
   _sut.crashManagerStatus = BITCrashManagerStatusAutoSend;
   if (_startManagerInitialized) return;
   [self startManager];
@@ -77,6 +79,22 @@
   XCTAssertNotNil(_sut, @"Should be there");
 }
 
+#pragma mark - Getter/Setter tests
+
+- (void)testSetServerURL {
+  BITHockeyAppClient *client = self.sut.hockeyAppClient;
+  NSURL *hockeyDefaultURL = [NSURL URLWithString:BITHOCKEYSDK_URL];
+  XCTAssertEqualObjects(self.sut.hockeyAppClient.baseURL, hockeyDefaultURL);
+  
+  [self.sut setServerURL:BITHOCKEYSDK_URL];
+  XCTAssertEqual(self.sut.hockeyAppClient, client, @"HockeyAppClient should stay the same when setting same URL again");
+  XCTAssertEqualObjects(self.sut.hockeyAppClient.baseURL, hockeyDefaultURL);
+  
+  NSString *testURLString = @"http://example.com";
+  [self.sut setServerURL:testURLString];
+  XCTAssertNotEqual(self.sut.hockeyAppClient, client, @"Should have created a new instance of BITHockeyAppClient");
+  XCTAssertEqualObjects(self.sut.hockeyAppClient.baseURL, [NSURL URLWithString:testURLString]);
+}
 
 #pragma mark - Persistence tests
 
@@ -337,6 +355,23 @@
   
   // handle a new signal crash report
   assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_exception_marketing"], isTrue());
+  
+  [_sut handleCrashReport];
+  
+  // this old report doesn't have a marketing version present
+  assertThat(_sut.lastSessionCrashDetails.appVersion, notNilValue());
+  
+  [verifyCount(delegateMock, times(1)) applicationLogForCrashManager:_sut];
+  [verifyCount(delegateMock, times(1)) attachmentForCrashManager:_sut];
+  
+  // we should have now 1 pending crash report
+  assertThatBool([_sut hasPendingCrashReport], isTrue());
+  assertThat([_sut firstNotApprovedCrashReport], notNilValue());
+  
+  [_sut cleanCrashReports];
+  
+  // handle a new xamarin crash report
+  assertThatBool([BITTestHelper copyFixtureCrashReportWithFileName:@"live_report_xamarin"], isTrue());
   
   [_sut handleCrashReport];
   

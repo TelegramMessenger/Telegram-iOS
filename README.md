@@ -2,13 +2,13 @@
 [![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
 [![Version](http://cocoapod-badges.herokuapp.com/v/HockeySDK/badge.png)](http://cocoadocs.org/docsets/HockeySDK)
 
-## Version 4.0.2
+## Version 4.1.0
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/4.0.2/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/4.1.0/docs/docs/Changelog.html)
 
-NOTE: With the release of HockeySDK 4.0.0-alpha.1 a bug was introduced which lead to the exclusion of the Application Support folder from iCloud and iTunes backups.
+**NOTE:** With the release of HockeySDK 4.0.0-alpha.1 a bug was introduced which lead to the exclusion of the Application Support folder from iCloud and iTunes backups.
 
-If you have been using one of the affected versions (4.0.0-alpha.2, Version 4.0.0-beta.1, 4.0.0, 4.1.0-alpha.1, 4.1.0-alpha.2, or Version 4.1.0-beta.1), please make sure to update to at least version 4.0.1 or 4.1.0-beta.2 of our SDK as soon as you can.
+If you have been using one of the affected versions (4.0.0-alpha.2, Version 4.0.0-beta.1, 4.0.0, 4.1.0-alpha.1, 4.1.0-alpha.2, or Version 4.1.0-beta.1), please make sure to update to at least version 4.0.1 of our SDK as soon as you can.
 
 ## Introduction
 
@@ -16,9 +16,9 @@ HockeySDK-iOS implements support for using HockeyApp in your iOS applications.
 
 The following features are currently supported:
 
-1. **Collect crash reports:** If your app crashes, a crash log with the same format as from the Apple Crash Reporter is written to the device's storage. If the user starts the app again, he is asked to submit the crash report to HockeyApp. This works for both beta and letive apps, i.e. those submitted to the App Store.
+1. **Collect crash reports:** If your app crashes, a crash log with the same format as from the Apple Crash Reporter is written to the device's storage. If the user starts the app again, he is asked to submit the crash report to HockeyApp. This works for both beta and live apps, i.e. those submitted to the App Store.
 
-2. **User Metrics** Understand user behavior to improve your app. Track usage through daily and monthly active users. Monitor crash impacted users. Measure customer engagement through session count.
+2. **User Metrics:** Understand user behavior to improve your app. Track usage through daily and monthly active users, monitor crash impacted users, as well as customer engagement through session count.You can now track **Custom Events** in your app, understand user actions and see the aggregates on the HockeyApp portal.
 
 3. **Update Ad-Hoc / Enterprise apps:** The app will check with HockeyApp if a new version for your Ad-Hoc or Enterprise build is available. If yes, it will show an alert view to the user and let him see the release notes, the version history and start the installation process right away. 
 
@@ -47,8 +47,9 @@ This document contains the following sections:
 4. [Documentation](#documentation)
 5. [Troubleshooting](#troubleshooting)
 6. [Contributing](#contributing)
-7. [Contributor License](#contributorlicense)
-8. [Contact](#contact)
+  1. [Code of Conduct](#codeofconduct)
+  2. [Contributor License](#contributorlicense)
+7. [Contact](#contact)
 
 <a id="requirements"></a> 
 ## 1. Requirements
@@ -132,9 +133,9 @@ Our examples will use the full featured SDK (`HockeySDK.embeddedframework`).
 4. Add the following lines to setup and start the Application Insights SDK:
 
   ```swift
-  BITHockeyManager.sharedHockeyManager().configureWithIdentifier("APP_IDENTIFIER");
-  BITHockeyManager.sharedHockeyManager().startManager();
-  BITHockeyManager.sharedHockeyManager().authenticator.authenticateInstallation(); // This line is obsolete in the crash only builds
+  BITHockeyManager.sharedHockeyManager().configureWithIdentifier("APP_IDENTIFIER")
+  BITHockeyManager.sharedHockeyManager().startManager()
+  BITHockeyManager.sharedHockeyManager().authenticator.authenticateInstallation() // This line is obsolete in the crash only builds
   ```
 
 *Note:* The SDK is optimized to defer everything possible to a later time while making sure e.g. crashes on startup can also be caught and each module executes other code with a delay some seconds. This ensures that `applicationDidFinishLaunching` will process as fast as possible and the SDK will not block the startup sequence resulting in a possible kill by the watchdog process.
@@ -216,12 +217,6 @@ Alternatively you can integrate the SDK by source if you want to do any modifica
 
 ```ruby
 pod "HockeySDK-Source"
-```
-
-The import for this integration will look slightly different:
-
-```objectivec
-@import HockeySDK_Source;
 ```
 
 <a id="carthage"></a>
@@ -416,25 +411,83 @@ and set the delegate:
 
 
 <a name="user-metrics"></a>
-### 3.6 User Metrics
+### 3.7 User Metrics
 
 HockeyApp automatically provides you with nice, intelligible, and informative metrics about how your app is used and by whom. 
 - **Sessions**: A new session is tracked by the SDK whenever the containing app is restarted (this refers to a 'cold start', i.e. when the app has not already been in memory prior to being launched) or whenever it becomes active again after having been in the background for 20 seconds or more.
 - **Users**: The SDK anonymously tracks the users of your app by creating a random UUID that is then securely stored in the iOS keychain. Because this anonymous ID is stored in the keychain it persists across reinstallations.
+- **Custom Events**: If you are part of [Preseason](https://www.hockeyapp.net/preseason/), you can now track Custom Events in your app, understand user actions and see the aggregates on the HockeyApp portal.
 
-Just in case you want to opt-out of this feature, there is a way to turn this functionality off:
+Just in case you want to opt-out of the automatic collection of anonymous users and sessions statistics, there is a way to turn this functionality off at any time:
 
 ```objectivec
-[[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
-
 [BITHockeyManager sharedHockeyManager].disableMetricsManager = YES;
-
-[[BITHockeyManager sharedHockeyManager] startManager];
-
 ```
 
+#### 3.7.1 Custom Events
+
+By tracking custom events, you can now get insight into how your customers use your app, understand their behavior and answer important business or user experience questions while improving your app.
+
+- Before starting to track events, ask yourself the questions that you want to get answers to. For instance, you might be interested in business, performance/quality or user experience aspects.
+- Name your events in a meaningful way and keep in mind that you will use these names when searching for events in the HockeyApp web portal. It is your reponsibility to not collect personal information as part of the events tracking.
+
+**Objective-C**
+
+```objectivec
+BITMetricsManager *metricsManager = [BITHockeyManager sharedHockeyManager].metricsManager;
+
+[metricsManager trackEventWithName:eventName]
+```
+
+**Swift**
+
+```swift
+let metricsManager = BITHockeyManager.sharedHockeyManager().metricsManager
+
+metricsManager.trackEventWithName(eventName)
+```
+
+**Limitations**
+
+- Accepted characters for tracking events are: [a-zA-Z0-9_. -]. If you use other than the accepted characters, your events will not show up in the HockeyApp web portal.
+- There is currently a limit of 300 unique event names per app per week.
+- There is _no_ limit on the number of times an event can happen.
+
+#### 3.7.2 Attaching custom properties and measurements to a custom event
+
+It's possible to attach porperties and/or measurements to a custom event.
+
+- Properties have to be a string.
+- Measurements have to be of a numeric type.
+
+**Objective-C**
+
+```objectivec
+BITMetricsManager *metricsManager = [BITHockeyManager sharedHockeyManager].metricsManager;
+
+NSDictionary *myProperties = @{@"Property 1" : @"Something",
+                               @"Property 2" : @"Other thing",
+                               @"Property 3" : @"Totally different thing"};
+NSDictionary *myMeasurements = @{@"Measurement 1" : @1,
+                                 @"Measurement 2" : @2.34,
+                                 @"Measurement 3" : @2000000};
+
+[metricsManager trackEventWithName:eventName properties:myProperties measurements:myMeasurements]
+```
+
+**Swift**
+
+```swift
+let myProperties = ["Property 1": "Something", "Property 2": "Other thing", "Property 3" : "Totally different thing."]
+let myMeasurements = ["Measurement 1": 1, "Measurement 2": 2.3, "Measurement 3" : 30000]
+      
+let metricsManager = BITHockeyManager.sharedHockeyManager().metricsManager
+metricsManager.trackEventWithName(eventName, properties: myProperties, myMeasurements: measurements)
+```
+
+
 <a name="feedback"></a>
-### 3.7 Feedback
+### 3.8 Feedback
 
 `BITFeedbackManager` lets your users communicate directly with you via the app and an integrated user interface. It provides a single threaded discussion with a user running your app. This feature is only enabled, if you integrate the actual view controllers into your app.
  
@@ -444,10 +497,10 @@ You should never create your own instance of `BITFeedbackManager` but use the on
 [BITHockeyManager sharedHockeyManager].feedbackManager
 ```
 
-Please check the [documentation](#documentation) of the `BITFeedbachManager` class on more information on how to leverage this feature.
+Please check the [documentation](#documentation) of the `BITFeedbackManager` class on more information on how to leverage this feature.
 
 <a name="storeupdates"></a>
-### 3.8 Store Updates
+### 3.9 Store Updates
 
 This is the HockeySDK module for handling app updates when having your app released in the App Store.
 
@@ -468,7 +521,7 @@ When this module is enabled and **NOT** running in an App Store build/environmen
 Please check the [documentation](#documentation) of the `BITStoreUpdateManager` class on more information on how to leverage this feature and know about its limits.
 
 <a name="betaupdates"></a>
-### 3.9 In-App-Updates (Beta & Enterprise only)
+### 3.10 In-App-Updates (Beta & Enterprise only)
 
 The following options only show some of possibilities to interact and fine-tune the update feature when using Ad-Hoc or Enterprise provisioning profiles. For more please check the full documentation of the `BITUpdateManager` class in our [documentation](#documentation).
 
@@ -489,14 +542,14 @@ This feature can be disabled manually as follows:
 If you want to see beta analytics, use the beta distribution feature with in-app updates, restrict versions to specific users, or want to know who is actually testing your app, you need to follow the instructions on our guide [Authenticating Users on iOS](http://support.hockeyapp.net/kb/client-integration-ios-mac-os-x/authenticating-users-on-ios)
 
 <a id="debug"></a>
-### 3.10 Debug information
+### 3.11 Debug information
 
 To check if data is send properly to HockeyApp and also see some additional SDK debug log data in the console, add the following line before `startManager`:
 
 ```objectivec
 [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
 
-[[BITHockeyManager sharedHockeyManager] setDebugLogEnabled:YES];
+[BITHockeyManager sharedHockeyManager].logLevel = BITLogLevelDebug;
 
 [[BITHockeyManager sharedHockeyManager] startManager];
 ```
@@ -504,7 +557,7 @@ To check if data is send properly to HockeyApp and also see some additional SDK 
 <a id="documentation"></a>
 ## 4. Documentation
 
-Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/4.0.1/index.html).
+Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/4.1.0/index.html).
 
 <a id="troubleshooting"></a>
 ## 5.Troubleshooting
@@ -518,13 +571,13 @@ Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/
   Make sure none of the following files are copied into your app bundle, check under app target, `Build Phases`, `Copy Bundle Resources` or in the `.app` bundle after building:
 
   - `HockeySDK.framework` (except if you build a dynamic framework version of the SDK yourself!)
-  - `de.bitstadium.HockeySDK-iOS-4.0.1.docset`
+  - `de.bitstadium.HockeySDK-iOS-4.1.0.docset`
 
 ### Feature are not working as expected
 
   Enable debug output to the console to see additional information from the SDK initializing the modules,  sending and receiving network requests and more by adding the following code before calling `startManager`:
 
-  `[[BITHockeyManager sharedHockeyManager] setDebugLogEnabled: YES];`
+  `[BITHockeyManager sharedHockeyManager].logLevel = BITLogLevelDebug;`
 
 <a id="contributing"></a>
 ## 6. Contributing
@@ -539,12 +592,17 @@ We're looking forward to your contributions via pull requests.
 * [CocoaPods](https://cocoapods.org/)
 * [Carthage](https://github.com/Carthage/Carthage)
 
+<a id="codeofconduct"></a>
+### 6.1 Code of Conduct
+
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+
 <a id="contributorlicense"></a>
-## 7. Contributor License
+### 6.2 Contributor License
 
 You must sign a [Contributor License Agreement](https://cla.microsoft.com/) before submitting your pull request. To complete the Contributor License Agreement (CLA), you will need to submit a request via the [form](https://cla.microsoft.com/) and then electronically sign the CLA when you receive the email containing the link to the document. You need to sign the CLA only once to cover submission to any Microsoft OSS project. 
 
 <a id="contact"></a>
-## 8. Contact
+## 7. Contact
 
 If you have further questions or are running into trouble that cannot be resolved by any of the steps here, feel free to open a Github issue here, contact us at [support@hockeyapp.net](mailto:support@hockeyapp.net) or join our [Slack](https://slack.hockeyapp.net) [![Slack Status](https://slack.hockeyapp.net/badge.svg)](https://slack.hockeyapp.net)

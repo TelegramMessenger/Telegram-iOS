@@ -87,7 +87,7 @@
 #pragma mark - Private
 
 - (void)reportError:(NSError *)error {
-  BITHockeyLog(@"ERROR: %@", [error localizedDescription]);
+  BITHockeyLogError(@"ERROR: %@", [error localizedDescription]);
 }
 
 - (NSString *)encodedAppIdentifier {
@@ -160,7 +160,7 @@
     if ([UIWindow instancesRespondToSelector:@selector(rootViewController)]) {
       if (!(window.hidden) && ([window rootViewController])) {
         visibleWindow = window;
-        BITHockeyLog(@"INFO: UIWindow with rootViewController found: %@", visibleWindow);
+        BITHockeyLogDebug(@"INFO: UIWindow with rootViewController found: %@", visibleWindow);
         break;
       }
     }
@@ -236,7 +236,7 @@
     // as per documentation this only works if called from within viewWillAppear: or viewDidAppear:
     // in tests this also worked fine on iOS 6 and 7 but not on iOS 5 so we are still trying this
     if ([parentViewController isKindOfClass:NSClassFromString(@"UIAlertController")] || [parentViewController isBeingPresented]) {
-      BITHockeyLog(@"WARNING: There is already a view controller being presented onto the parentViewController. Delaying presenting the new view controller by 0.5s.");
+      BITHockeyLogWarning(@"WARNING: There is already a view controller being presented onto the parentViewController. Delaying presenting the new view controller by 0.5s.");
       [self performSelector:@selector(showAlertController:) withObject:alertController afterDelay:0.5];
       return;
     }
@@ -257,7 +257,7 @@
     // as per documentation this only works if called from within viewWillAppear: or viewDidAppear:
     // in tests this also worked fine on iOS 6 and 7 but not on iOS 5 so we are still trying this
     if ([parentViewController isBeingPresented]) {
-      BITHockeyLog(@"WARNING: There is already a view controller being presented onto the parentViewController. Delaying presenting the new view controller by 0.5s.");
+      BITHockeyLogDebug(@"INFO: There is already a view controller being presented onto the parentViewController. Delaying presenting the new view controller by 0.5s.");
       [self performSelector:@selector(showView:) withObject:viewController afterDelay:0.5];
       return;
     }
@@ -283,7 +283,7 @@
       // Also, we don't get a nice animation for free, but hey, this is for beta not production users ;)
       UIWindow *visibleWindow = [self findVisibleWindow];
       
-      BITHockeyLog(@"INFO: No rootViewController found, using UIWindow-approach: %@", visibleWindow);
+      BITHockeyLogDebug(@"INFO: No rootViewController found, using UIWindow-approach: %@", visibleWindow);
       if ([viewController isKindOfClass:[BITHockeyBaseViewController class]])
         [(BITHockeyBaseViewController *)viewController setModalAnimated:NO];
       [visibleWindow addSubview:_navController.view];
@@ -347,7 +347,7 @@
   NSDate *date = nil;
   NSError *error = nil; 
   if (![_rfc3339Formatter getObjectValue:&date forString:dateString range:nil error:&error]) {
-    BITHockeyLog(@"INFO: Invalid date '%@' string: %@", dateString, error);
+    BITHockeyLogWarning(@"WARNING: Invalid date '%@' string: %@", dateString, error);
   }
   
   return date;

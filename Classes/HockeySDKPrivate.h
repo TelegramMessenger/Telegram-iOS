@@ -30,6 +30,7 @@
 
 
 #import <Foundation/Foundation.h>
+#import "BITHockeyLogger.h"
 
 #ifndef HockeySDK_HockeySDKPrivate_h
 #define HockeySDK_HockeySDKPrivate_h
@@ -66,8 +67,6 @@
 
 #define BITHOCKEYSDK_BUNDLE @"HockeySDKResources.bundle"
 #define BITHOCKEYSDK_URL @"https://sdk.hockeyapp.net/"
-
-#define BITHockeyLog(fmt, ...) do { if([BITHockeyManager sharedHockeyManager].isDebugLogEnabled && ([BITHockeyManager sharedHockeyManager].appEnvironment != BITEnvironmentAppStore)) { NSLog((@"[HockeySDK] %s/%d " fmt), __PRETTY_FUNCTION__, __LINE__, ##__VA_ARGS__); }} while(0)
 
 #define BIT_RGBCOLOR(r,g,b) [UIColor colorWithRed:(r)/255.0 green:(g)/255.0 blue:(b)/255.0 alpha:1]
 
