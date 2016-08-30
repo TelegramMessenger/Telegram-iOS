@@ -95,7 +95,7 @@
 
 "UpdateWarning" = "警告";
 
-"UpdateNoReleaseNotesAvailable" = "无发行布说明。";
+"UpdateNoReleaseNotesAvailable" = "无版本说明。";
 
 
 /* Update Authorization  */
@@ -114,7 +114,7 @@
 
 /* Update Simulator Warning */
 
-"UpdateSimulatorMessage" = "Hockey 更新无法在仿真器中进行。\n这个 itms-services:// 网页连接无法正常工作。";
+"UpdateSimulatorMessage" = "Hockey 更新无法在仿真器中进行。\n虽然 item-services:// URL Scheme已实现，但无法正常工作。";
 
 
 /* Feedback */
@@ -123,10 +123,10 @@
 /* New Message Alert */
 
 /* Alert Title */
-"HockeyFeedbackNewMessageTitle" = "新的意见反馈响应回复";
+"HockeyFeedbackNewMessageTitle" = "新的反馈回复";
 
 /* Alert Text */
-"HockeyFeedbackNewMessageText" = "你的意见反馈已有一个新的响应回复，想查看它吗？";
+"HockeyFeedbackNewMessageText" = "你的意见反馈已有一个新的回复，想查看它吗？";
 
 /* Alert Ignore Button */
 "HockeyFeedbackIgnore" = "忽略";
