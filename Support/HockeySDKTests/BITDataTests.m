@@ -23,9 +23,9 @@
 - (void)testSerialize {
     BITData *item = [BITData new];
     item.baseData = [BITTelemetryData new];
-    NSString *actual = [item serializeToString];
-    NSString *expected = @"{\"baseData\":{}}";
-    XCTAssertTrue([actual isEqualToString:expected]);
+    NSDictionary *actual = [item serializeToDictionary];
+    NSDictionary *expected = @{@"baseData":@{}};
+    XCTAssertTrue([actual isEqualToDictionary:expected]);
 }
 
 @end

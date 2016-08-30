@@ -220,7 +220,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 
 - (void)showFeedbackListView {
   if (_currentFeedbackListViewController) {
-    BITHockeyLog(@"INFO: update view already visible, aborting");
+    BITHockeyLogDebug(@"INFO: update view already visible, aborting");
     return;
   }
   dispatch_async(dispatch_get_main_queue(), ^{
@@ -254,7 +254,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 
 - (void)showFeedbackComposeViewWithPreparedItems:(NSArray *)items{
   if (_currentFeedbackComposeViewController) {
-    BITHockeyLog(@"INFO: Feedback view already visible, aborting");
+    BITHockeyLogDebug(@"INFO: Feedback view already visible, aborting");
     return;
   }
   BITFeedbackComposeViewController *composeView = [self feedbackComposeViewController];
@@ -900,7 +900,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   
   // build request & send
   NSString *url = [NSString stringWithFormat:@"%@%@", self.serverURL, parameter];
-  BITHockeyLog(@"INFO: sending api request to %@", url);
+  BITHockeyLogDebug(@"INFO: sending api request to %@", url);
   
   NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:url] cachePolicy:1 timeoutInterval:10.0];
   [request setHTTPMethod:httpMethod];
@@ -1023,7 +1023,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
       [self performSelector:@selector(fetchMessageUpdates) withObject:nil afterDelay:0.2];
     } else if ([responseData length]) {
       NSString *responseString = [[NSString alloc] initWithBytes:[responseData bytes] length:[responseData length] encoding: NSUTF8StringEncoding];
-      BITHockeyLog(@"INFO: Received API response: %@", responseString);
+      BITHockeyLogDebug(@"INFO: Received API response: %@", responseString);
       
       if (responseString && [responseString dataUsingEncoding:NSUTF8StringEncoding]) {
         NSError *error = NULL;
@@ -1038,7 +1038,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
                                                 code:BITFeedbackAPIServerReturnedEmptyResponse
                                             userInfo:[NSDictionary dictionaryWithObjectsAndKeys:@"Server returned empty response.", NSLocalizedDescriptionKey, nil]]];
         } else {
-          BITHockeyLog(@"INFO: Received API response: %@", responseString);
+          BITHockeyLogDebug(@"INFO: Received API response: %@", responseString);
           NSString *status = [feedDict objectForKey:@"status"];
           if ([status compare:@"success"] != NSOrderedSame) {
             [self reportError:[NSError errorWithDomain:kBITFeedbackErrorDomain
@@ -1157,7 +1157,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
       if (NSFoundationVersionNumber > NSFoundationVersionNumber_iOS_6_1){
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenshotNotificationReceived:) name:UIApplicationUserDidTakeScreenshotNotification object:nil];
       } else {
-        BITHockeyLog("WARNING: BITFeedbackObservationModeOnScreenshot requires iOS 7 or later.");
+        BITHockeyLogWarning(@"WARNING: BITFeedbackObservationModeOnScreenshot requires iOS 7 or later.");
       }
       
       self.screenshotNotificationEnabled = YES;
@@ -1247,14 +1247,14 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
     switch (status) {
       case PHAuthorizationStatusDenied:
       case PHAuthorizationStatusRestricted:
-        BITHockeyLog(@"INFO: The latest image could not be fetched, no permissions.");
+        BITHockeyLogDebug(@"INFO: The latest image could not be fetched, no permissions.");
         break;
         
       case PHAuthorizationStatusAuthorized:
         [self loadLatestImageAssetWithCompletionHandler:completionHandler];
         break;
       case PHAuthorizationStatusNotDetermined:
-        BITHockeyLog(@"INFO: The Photo Library authorization status is undetermined. This should not happen.");
+        BITHockeyLogDebug(@"INFO: The Photo Library authorization status is undetermined. This should not happen.");
         break;
     }
   }];
@@ -1280,12 +1280,12 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
         if (imageData) {
           completionHandler([UIImage imageWithData:imageData]);
         } else {
-          BITHockeyLog(@"INFO: The latest image could not be fetched, requested image data was empty.");
+          BITHockeyLogDebug(@"INFO: The latest image could not be fetched, requested image data was empty.");
         }
       }];
     }
   } else {
-    BITHockeyLog(@"INFO: The latest image could not be fetched, the fetch result was empty.");
+    BITHockeyLogDebug(@"INFO: The latest image could not be fetched, the fetch result was empty.");
   }
 }
 

@@ -128,7 +128,7 @@
       BITHockeyAttachment *sourceAttachment = (BITHockeyAttachment *)item;
       
       if (!sourceAttachment.hockeyAttachmentData) {
-        BITHockeyLog(@"BITHockeyAttachment instance doesn't contain any data.");
+        BITHockeyLogDebug(@"BITHockeyAttachment instance doesn't contain any data.");
         continue;
       }
             
@@ -141,7 +141,7 @@
       attachment.originalFilename = filename;
       [self.attachments addObject:attachment];
     } else {
-      BITHockeyLog(@"Unknown item type %@", item);
+      BITHockeyLogWarning(@"WARNING: Unknown item type %@", item);
     }
   }
 }

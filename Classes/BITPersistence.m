@@ -22,7 +22,6 @@ static char const *kBITPersistenceQueueString = "com.microsoft.HockeyApp.persist
 static NSUInteger const BITDefaultFileCount = 50;
 
 @implementation BITPersistence {
-  BOOL _maxFileCountReached;
   BOOL _directorySetupComplete;
 }
 
@@ -36,20 +35,9 @@ static NSUInteger const BITDefaultFileCount = 50;
     _maxFileCount = BITDefaultFileCount;
 
     // Evantually, there will be old files on disk, the flag will be updated before the first event gets created
-
-
-    _maxFileCountReached = YES;
     _directorySetupComplete = NO; //will be set to true in createDirectoryStructureIfNeeded
 
     [self createDirectoryStructureIfNeeded];
-
-    NSString *directoryPath = [self folderPathForType:BITPersistenceTypeTelemetry];
-    NSError *error = nil;
-    NSArray<NSURL *> *fileNames = [[NSFileManager defaultManager] contentsOfDirectoryAtURL:[NSURL fileURLWithPath:directoryPath]
-                                                                includingPropertiesForKeys:@[NSURLNameKey]
-                                                                                   options:NSDirectoryEnumerationSkipsHiddenFiles
-                                                                                     error:&error];
-    _maxFileCountReached = fileNames.count >= _maxFileCount;
   }
   return self;
 }
@@ -68,16 +56,16 @@ static NSUInteger const BITDefaultFileCount = 50;
       typeof(self) strongSelf = weakSelf;
       BOOL success = [bundle writeToFile:fileURL atomically:YES];
       if (success) {
-        BITHockeyLog(@"Wrote bundle to %@", fileURL);
+        BITHockeyLogDebug(@"INFO: Wrote bundle to %@", fileURL);
         [strongSelf sendBundleSavedNotification];
       }
       else {
-        BITHockeyLog(@"Error writing bundle to %@", fileURL);
+        BITHockeyLogError(@"Error writing bundle to %@", fileURL);
       }
     });
   }
   else {
-    BITHockeyLog(@"Unable to write %@ as provided bundle was null", fileURL);
+    BITHockeyLogWarning(@"WARNING: Unable to write %@ as provided bundle was null", fileURL);
   }
 }
 
@@ -90,7 +78,8 @@ static NSUInteger const BITDefaultFileCount = 50;
 }
 
 - (BOOL)isFreeSpaceAvailable {
-  return !_maxFileCountReached;
+  NSArray *files = [self persistedFilesForType:BITPersistenceTypeTelemetry];
+  return files.count < _maxFileCount;
 }
 
 - (NSString *)requestNextFilePath {
@@ -114,8 +103,8 @@ static NSUInteger const BITDefaultFileCount = 50;
   if ([bundle isKindOfClass:NSDictionary.class]) {
     return (NSDictionary *) bundle;
   }
-  BITHockeyLog(@"INFO: The context meta data file could not be loaded.");
-  return nil;
+  BITHockeyLogDebug(@"INFO: The context meta data file could not be loaded.");
+  return [NSDictionary dictionary];
 }
 
 - (NSObject *)bundleAtFilePath:(NSString *)filePath withFileBaseString:(NSString *)filebaseString {
@@ -146,14 +135,14 @@ static NSUInteger const BITDefaultFileCount = 50;
     if ([path rangeOfString:kBITFileBaseString].location != NSNotFound) {
       NSError *error = nil;
       if (![[NSFileManager defaultManager] removeItemAtPath:path error:&error]) {
-        BITHockeyLog(@"Error deleting file at path %@", path);
+        BITHockeyLogError(@"Error deleting file at path %@", path);
       }
       else {
-        BITHockeyLog(@"Successfully deleted file at path %@", path);
+        BITHockeyLogDebug(@"INFO: Successfully deleted file at path %@", path);
         [strongSelf.requestedBundlePaths removeObject:path];
       }
     } else {
-      BITHockeyLog(@"Empty path, nothing to delete");
+      BITHockeyLogDebug(@"INFO: Empty path, nothing to delete");
     }
   });
 
@@ -206,14 +195,14 @@ static NSUInteger const BITDefaultFileCount = 50;
     
     // Create HockeySDK folder if needed
     if (![fileManager createDirectoryAtURL:appURL withIntermediateDirectories:YES attributes:nil error:&error]) {
-      BITHockeyLog(@"%@", error.localizedDescription);
+      BITHockeyLogError(@"ERROR: %@", error.localizedDescription);
       return;
     }
     
     // Create metadata subfolder
     NSURL *metaDataURL = [appURL URLByAppendingPathComponent:kBITMetaDataDirectory];
     if (![fileManager createDirectoryAtURL:metaDataURL withIntermediateDirectories:YES attributes:nil error:&error]) {
-      BITHockeyLog(@"%@", error.localizedDescription);
+      BITHockeyLogError(@"ERROR: %@", error.localizedDescription);
       return;
     }
     
@@ -224,7 +213,7 @@ static NSUInteger const BITDefaultFileCount = 50;
     //No need to check if the directory already exists.
     NSURL *telemetryURL = [appURL URLByAppendingPathComponent:kBITTelemetryDirectory];
     if (![fileManager createDirectoryAtURL:telemetryURL withIntermediateDirectories:YES attributes:nil error:&error]) {
-      BITHockeyLog(@"%@", error.localizedDescription);
+      BITHockeyLogError(@"ERROR: %@", error.localizedDescription);
       return;
     }
     
@@ -232,9 +221,9 @@ static NSUInteger const BITDefaultFileCount = 50;
     if (![appURL setResourceValue:@YES
                            forKey:NSURLIsExcludedFromBackupKey
                             error:&error]) {
-      BITHockeyLog(@"Error excluding %@ from backup %@", appURL.lastPathComponent, error.localizedDescription);
+      BITHockeyLogError(@"ERROR: Error excluding %@ from backup %@", appURL.lastPathComponent, error.localizedDescription);
     } else {
-      BITHockeyLog(@"Exclude %@ from backup", appURL);
+      BITHockeyLogDebug(@"INFO: Exclude %@ from backup", appURL);
     }
     
     _directorySetupComplete = YES;
@@ -245,18 +234,7 @@ static NSUInteger const BITDefaultFileCount = 50;
  * @returns the URL to the next file depending on the specified type. If there's no file, return nil.
  */
 - (NSString *)nextURLOfType:(BITPersistenceType)type {
-  NSString *directoryPath = [self folderPathForType:type];
-  NSError *error = nil;
-  NSArray<NSURL *> *fileNames = [[NSFileManager defaultManager] contentsOfDirectoryAtURL:[NSURL fileURLWithPath:directoryPath]
-                                                              includingPropertiesForKeys:@[NSURLNameKey]
-                                                                                 options:NSDirectoryEnumerationSkipsHiddenFiles
-                                                                                   error:&error];
-  // each track method asks, if space is still available. Getting the file count for each event would be too expensive,
-  // so let's get it here
-  if (type == BITPersistenceTypeTelemetry) {
-    _maxFileCountReached = fileNames.count >= _maxFileCount;
-  }
-
+  NSArray<NSURL *> *fileNames = [self persistedFilesForType:type];
   if (fileNames && fileNames.count > 0) {
     for (NSURL *filename in fileNames) {
       NSString *absolutePath = filename.path;
@@ -266,6 +244,16 @@ static NSUInteger const BITDefaultFileCount = 50;
     }
   }
   return nil;
+}
+
+- (NSArray *)persistedFilesForType: (BITPersistenceType)type {
+  NSString *directoryPath = [self folderPathForType:type];
+  NSError *error = nil;
+  NSArray<NSURL *> *fileNames = [[NSFileManager defaultManager] contentsOfDirectoryAtURL:[NSURL fileURLWithPath:directoryPath]
+                                                              includingPropertiesForKeys:@[NSURLNameKey]
+                                                                                 options:NSDirectoryEnumerationSkipsHiddenFiles
+                                                                                   error:&error];
+  return fileNames;
 }
 
 - (NSString *)folderPathForType:(BITPersistenceType)type {
