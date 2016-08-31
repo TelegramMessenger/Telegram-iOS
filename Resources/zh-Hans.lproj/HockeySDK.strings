@@ -95,14 +95,14 @@
 
 "UpdateWarning" = "警告";
 
-"UpdateNoReleaseNotesAvailable" = "无版本说明。";
+"UpdateNoReleaseNotesAvailable" = "无发行说明。";
 
 
 /* Update Authorization  */
 
 "UpdateAuthorizationProgress" = "授权中...";
 
-"UpdateAuthorizationOffline" = "需要网络连接！";
+"UpdateAuthorizationOffline" = "需要 Internet 连接！";
 
 "UpdateAuthorizationDenied" = "授权被拒绝。请与开发人员联系。";
 
@@ -114,7 +114,7 @@
 
 /* Update Simulator Warning */
 
-"UpdateSimulatorMessage" = "Hockey 更新无法在仿真器中进行。\n虽然 itms-services:// URL Scheme已实现，但无法正常工作。";
+"UpdateSimulatorMessage" = "Hockey 更新无法在仿真器中进行。\n这个 itms-services:// 网页连接架构已开始实施但无法正常工作。";
 
 
 /* Feedback */
@@ -123,10 +123,10 @@
 /* New Message Alert */
 
 /* Alert Title */
-"HockeyFeedbackNewMessageTitle" = "新的反馈回复";
+"HockeyFeedbackNewMessageTitle" = "新的意见反馈响应";
 
 /* Alert Text */
-"HockeyFeedbackNewMessageText" = "你的意见反馈已有一个新的回复，想查看它吗？";
+"HockeyFeedbackNewMessageText" = "你的意见反馈已有一个新的响应，想查看它吗？";
 
 /* Alert Ignore Button */
 "HockeyFeedbackIgnore" = "忽略";
@@ -262,7 +262,7 @@
 "HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "请输入你的 HockeyApp 帐户的电子邮件和密码来授权访问这个 app。";
 "HockeyAuthenticationViewControllerDataEmailDescription" = "请输入你的 HockeyApp 帐户的电子邮件来授权访问这个 app。";
 "HockeyAuthenticationViewControllerEmailPlaceholder" = "email@example.com";
-"HockeyAuthenticationViewControllerPasswordPlaceholder" = "必填";
+"HockeyAuthenticationViewControllerPasswordPlaceholder" = "必需的";
 "HockeyAuthenticationViewControllerEmailDescription" = "邮件";
 "HockeyAuthenticationViewControllerPasswordDescription" = "密码";
 

@@ -88,7 +88,7 @@ body { font: 13px 'Helvetica Neue', Helvetica; color:#626262; word-wrap:break-wo
     
     //HockeySDKLog(@"%@\n%@\%@", PSWebTableViewCellHtmlTemplate, deviceWidth, self.webViewContent);
     NSString *contentHtml = [NSString stringWithFormat:BITWebTableViewCellHtmlTemplate, deviceWidth, self.webViewContent];
-    [_webView loadHTMLString:contentHtml baseURL:[NSURL URLWithString:@"about:blank"]];
+    [_webView loadHTMLString:contentHtml baseURL:nil];
   }
 }
 
