@@ -276,6 +276,8 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   
   [self registerObservers];
   
+  [self isiOS10PhotoPolicySet];
+  
   // we are already delayed, so the notification already came in and this won't invoked twice
   switch ([[UIApplication sharedApplication] applicationState]) {
     case UIApplicationStateActive:
@@ -387,6 +389,17 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
       self.requireUserEmail == BITFeedbackUserDataElementDontShow) {
     self.didAskUserData = NO;
   }
+}
+
+- (BOOL)isiOS10PhotoPolicySet {
+  BOOL isiOS10PhotoPolicySet = [BITHockeyHelper isPhotoAccessSupported];
+  if(bit_isDebuggerAttached()) {
+    if(!isiOS10PhotoPolicySet) {
+      BITHockeyLogWarning(@"You are using HockeyApp's Feedback feature in iOS 10 or later. iOS 10 requires you to add the usage strings to your app's info.plist. "
+                          @"Attaching screenshots to feedback is disabled. Please add the String for NSPhotoLibraryUsageDescription to your info.plist to enable screenshot attachments.");
+    }
+  }
+  return isiOS10PhotoPolicySet;
 }
 
 #pragma mark - Local Storage
@@ -1209,7 +1222,9 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 - (void)requestLatestImageWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler {
   if (!completionHandler) { return; }
   
-// Only available from iOS 8 up
+  if(![self isiOS10PhotoPolicySet]) { return; }
+  
+  // Only available from iOS 8 up
   id phimagemanagerClass = NSClassFromString(@"PHImageManager");
   if (phimagemanagerClass) {
     [self fetchLatestImageUsingPhotoLibraryWithCompletionHandler:completionHandler];
