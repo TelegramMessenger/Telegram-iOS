@@ -6,7 +6,7 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTTransportTransaction.h>
+#import "MTTransportTransaction.h"
 
 @implementation MTTransportTransaction
 

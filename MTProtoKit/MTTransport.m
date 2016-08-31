@@ -6,9 +6,10 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTTransport.h>
+#import "MTTransport.h"
 
-#import <MTProtoKit/MTNetworkAvailability.h>
+#import "MTContext.h"
+#import "MTNetworkAvailability.h"
 
 @interface MTTransport () <MTNetworkAvailabilityDelegate>
 {

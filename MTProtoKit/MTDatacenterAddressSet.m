@@ -6,7 +6,9 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTDatacenterAddressSet.h>
+#import "MTDatacenterAddressSet.h"
+
+#import "MTDatacenterAddress.h"
 
 @implementation MTDatacenterAddressSet
 

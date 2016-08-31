@@ -6,8 +6,9 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTContext.h>
+#import <Foundation/Foundation.h>
 
+@class MTContext;
 @class MTDatacenterAddress;
 @class MTTransport;
 @class MTTransportTransaction;
@@ -15,7 +16,11 @@
 @class MTIncomingMessage;
 @class MTMessageTransaction;
 
-#import <MTProtoKit/MTMessageService.h>
+#ifdef MtProtoKitDynamicFramework
+#   import <MTProtoKitDynamic/MTMessageService.h>
+#else
+#   import <MTProtoKit/MTMessageService.h>
+#endif
 
 @protocol MTTransportDelegate <NSObject>
 

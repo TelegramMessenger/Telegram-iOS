@@ -6,14 +6,14 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTDatacenterTransferAuthAction.h>
+#import "MTDatacenterTransferAuthAction.h"
 
-#import <MTProtoKit/MTContext.h>
-#import <MTProtoKit/MTSerialization.h>
-#import <MTProtoKit/MTProto.h>
-#import <MTProtoKit/MTRequestMessageService.h>
-#import <MTProtoKit/MTRequest.h>
-#import <MTProtoKit/MTBuffer.h>
+#import "MTContext.h"
+#import "MTSerialization.h"
+#import "MTProto.h"
+#import "MTRequestMessageService.h"
+#import "MTRequest.h"
+#import "MTBuffer.h"
 
 @interface MTDatacenterTransferAuthAction () <MTContextChangeListener>
 {

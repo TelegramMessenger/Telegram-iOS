@@ -6,23 +6,19 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTEncryption.h>
+#import "MTEncryption.h"
 
-#import <MTProtoKit/MTLogging.h>
-#import <MTProtoKit/MTKeychain.h>
+#import "MTLogging.h"
+#import "MTKeychain.h"
 
 #import <CommonCrypto/CommonCrypto.h>
 #import <CommonCrypto/CommonDigest.h>
 
 #include <openssl/bn.h>
-#include <openssl/rsa.h>
-#include <openssl/evp.h>
-#include <openssl/bn.h>
-#include <openssl/pem.h>
 #include <openssl/err.h>
-#include <openssl/sha.h>
-#include <openssl/evp.h>
-#include <openssl/aes.h>
+
+#import "MTAes.h"
+#import "MTRsa.h"
 
 NSData *MTSha1(NSData *data)
 {
@@ -166,38 +162,39 @@ int32_t MTMurMurHash32(const void *bytes, int length)
 
 void MTAesEncryptInplace(NSMutableData *data, NSData *key, NSData *iv)
 {
-    AES_KEY aesKey;
-    AES_set_encrypt_key(key.bytes, 256, &aesKey);
-    unsigned char aesIv[AES_BLOCK_SIZE * 2];
+    unsigned char aesIv[16 * 2];
     memcpy(aesIv, iv.bytes, iv.length);
     
-    AES_ige_encrypt(data.bytes, (void *)data.bytes, data.length, &aesKey, aesIv, true);
+    void *outData = malloc(data.length);
+    MyAesIgeEncrypt(data.bytes, (int)data.length, outData, key.bytes, (int)key.length, aesIv);
+    memcpy(data.mutableBytes, outData, data.length);
+    free(outData);
 }
 
 void MTAesEncryptInplaceAndModifyIv(NSMutableData *data, NSData *key, NSMutableData *iv)
 {
-    AES_KEY aesKey;
-    AES_set_encrypt_key(key.bytes, 256, &aesKey);
-    
-    AES_ige_encrypt(data.bytes, (void *)data.bytes, data.length, &aesKey, iv.mutableBytes, true);
-}
-
-void MTAesDecryptInplace(NSMutableData *data, NSData *key, NSData *iv)
-{
-    AES_KEY aesKey;
-    AES_set_decrypt_key(key.bytes, 256, &aesKey);
-    unsigned char aesIv[AES_BLOCK_SIZE * 2];
+    unsigned char aesIv[16 * 2];
     memcpy(aesIv, iv.bytes, iv.length);
     
-    AES_ige_encrypt(data.bytes, (void *)data.bytes, data.length, &aesKey, aesIv, false);
+    void *outData = malloc(data.length);
+    MyAesIgeEncrypt(data.bytes, (int)data.length, outData, key.bytes, (int)key.length, aesIv);
+    memcpy(data.mutableBytes, outData, data.length);
+    free(outData);
+    
+    memcpy(iv.mutableBytes, aesIv, 16 * 2);
 }
 
 void MTAesDecryptInplaceAndModifyIv(NSMutableData *data, NSData *key, NSMutableData *iv)
 {
-    AES_KEY aesKey;
-    AES_set_decrypt_key(key.bytes, 256, &aesKey);
+    unsigned char aesIv[16 * 2];
+    memcpy(aesIv, iv.bytes, iv.length);
     
-    AES_ige_encrypt(data.bytes, (void *)data.bytes, data.length, &aesKey, iv.mutableBytes, false);
+    void *outData = malloc(data.length);
+    MyAesIgeDecrypt(data.bytes, (int)data.length, outData, key.bytes, (int)key.length, aesIv);
+    memcpy(data.mutableBytes, outData, data.length);
+    free(outData);
+    
+    memcpy(iv.mutableBytes, aesIv, 16 * 2);
 }
 
 NSData *MTAesEncrypt(NSData *data, NSData *key, NSData *iv)
@@ -209,15 +206,13 @@ NSData *MTAesEncrypt(NSData *data, NSData *key, NSData *iv)
         }
         return nil;
     }
-    AES_KEY aesKey;
-    AES_set_encrypt_key(key.bytes, 256, &aesKey);
-    unsigned char aesIv[AES_BLOCK_SIZE * 2];
+    
+    unsigned char aesIv[16 * 2];
     memcpy(aesIv, iv.bytes, iv.length);
     
-    uint8_t *resultBytes = malloc(data.length);
-    AES_ige_encrypt(data.bytes, resultBytes, data.length, &aesKey, aesIv, true);
-    
-    return [[NSData alloc] initWithBytesNoCopy:resultBytes length:data.length freeWhenDone:true];
+    void *outData = malloc(data.length);
+    MyAesIgeEncrypt(data.bytes, (int)data.length, outData, key.bytes, (int)key.length, aesIv);
+    return [[NSData alloc] initWithBytesNoCopy:outData length:data.length freeWhenDone:true];
 }
 
 NSData *MTAesDecrypt(NSData *data, NSData *key, NSData *iv)
@@ -229,43 +224,24 @@ NSData *MTAesDecrypt(NSData *data, NSData *key, NSData *iv)
         }
         return nil;
     }
-    AES_KEY aesKey;
-    AES_set_decrypt_key(key.bytes, 256, &aesKey);
-    unsigned char aesIv[AES_BLOCK_SIZE * 2];
+    
+    NSMutableData *resultData = [[NSMutableData alloc] initWithLength:data.length];
+    
+    unsigned char aesIv[16 * 2];
     memcpy(aesIv, iv.bytes, iv.length);
+    MyAesIgeDecrypt(data.bytes, (int)data.length, resultData.mutableBytes, key.bytes, (int)key.length, aesIv);
     
-    uint8_t *resultBytes = malloc(data.length);
-    AES_ige_encrypt(data.bytes, resultBytes, data.length, &aesKey, aesIv, false);
-    
-    return [[NSData alloc] initWithBytesNoCopy:resultBytes length:data.length freeWhenDone:true];
+    return resultData;
 }
 
 NSData *MTRsaEncrypt(NSString *publicKey, NSData *data)
 {
-    BIO *keyBio = BIO_new(BIO_s_mem());
-    const char *keyData = [publicKey UTF8String];
-    BIO_write(keyBio, keyData, (int)publicKey.length);
-    RSA *rsaKey = PEM_read_bio_RSAPublicKey(keyBio, NULL, NULL, NULL);
-    BIO_free(keyBio);
-    
-    BN_CTX *ctx = BN_CTX_new();
-    BIGNUM *a = BN_bin2bn(data.bytes, (int)data.length, NULL);
-    BIGNUM *r = BN_new();
-    
-    BN_mod_exp(r, a, rsaKey->e, rsaKey->n, ctx);
-    
-    unsigned char *res = malloc((size_t)BN_num_bytes(r));
-    int resLen = BN_bn2bin(r, res);
-    
-    BN_CTX_free(ctx);
-    BN_free(a);
-    BN_free(r);
-    
-    RSA_free(rsaKey);
-    
-    NSData *result = [[NSData alloc] initWithBytesNoCopy:res length:(NSUInteger)resLen freeWhenDone:true];
-    
-    return result;
+    NSMutableData *updatedData = [[NSMutableData alloc] initWithData:data];
+    while (updatedData.length < 256) {
+        uint8_t zero = 0;
+        [updatedData replaceBytesInRange:NSMakeRange(0, 0) withBytes:&zero length:1];
+    }
+    return [MTRsa encryptData:updatedData publicKey:publicKey];
 }
 
 NSData *MTExp(NSData *base, NSData *exp, NSData *modulus)

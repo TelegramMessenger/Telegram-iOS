@@ -6,27 +6,27 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTTcpTransport.h>
+#import "MTTcpTransport.h"
 
-#import <MTProtoKit/MTLogging.h>
-#import <MTProtoKit/MTQueue.h>
-#import <MTProtoKit/MTTimer.h>
-#import <MTProtoKit/MTTime.h>
+#import "MTLogging.h"
+#import "MTQueue.h"
+#import "MTTimer.h"
+#import "MTTime.h"
 
-#import <MTProtoKit/MTDatacenterAddressSet.h>
+#import "MTDatacenterAddressSet.h"
 
-#import <MTProtoKit/MTTransportTransaction.h>
-#import <MTProtoKit/MTOutgoingMessage.h>
-#import <MTProtoKit/MTIncomingMessage.h>
-#import <MTProtoKit/MTMessageTransaction.h>
-#import <MTProtoKit/MTPreparedMessage.h>
+#import "MTTransportTransaction.h"
+#import "MTOutgoingMessage.h"
+#import "MTIncomingMessage.h"
+#import "MTMessageTransaction.h"
+#import "MTPreparedMessage.h"
 
-#import <MTProtoKit/MTTcpConnection.h>
-#import <MTProtoKit/MTTcpConnectionBehaviour.h>
+#import "MTTcpConnection.h"
+#import "MTTcpConnectionBehaviour.h"
 
-#import <MTProtoKit/MTSerialization.h>
-#import <MTProtoKit/MTBuffer.h>
-#import <MTProtoKit/MTPongMessage.h>
+#import "MTSerialization.h"
+#import "MTBuffer.h"
+#import "MTPongMessage.h"
 
 static const NSTimeInterval MTTcpTransportSleepWatchdogTimeout = 60.0;
 

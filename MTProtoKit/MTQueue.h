@@ -13,6 +13,7 @@
 - (instancetype)initWithName:(const char *)name;
 
 + (MTQueue *)mainQueue;
++ (MTQueue *)concurrentDefaultQueue;
 
 - (dispatch_queue_t)nativeQueue;
 

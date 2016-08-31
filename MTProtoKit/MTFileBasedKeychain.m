@@ -1,6 +1,6 @@
 #import "MTFileBasedKeychain.h"
 
-#import <MTProtoKit/MTLogging.h>
+#import "MTLogging.h"
 
 #import <pthread.h>
 
@@ -10,7 +10,7 @@
 #define TG_SYNCHRONIZED_END(lock) pthread_mutex_unlock(&_TG_SYNCHRONIZED_##lock);
 
 #import <CommonCrypto/CommonCrypto.h>
-#import <MTProtoKit/MTEncryption.h>
+#import "MTEncryption.h"
 
 static TG_SYNCHRONIZED_DEFINE(_keychains) = PTHREAD_MUTEX_INITIALIZER;
 static NSMutableDictionary *keychains()
@@ -136,10 +136,11 @@ static NSMutableDictionary *keychains()
                 {
                     uint8_t buf[32];
                     
-                    SecRandomCopyBytes(kSecRandomDefault, 32, buf);
+                    int result = 0;
+                    result = SecRandomCopyBytes(kSecRandomDefault, 32, buf);
                     _aesKey = [[NSData alloc] initWithBytes:buf length:32];
                     
-                    SecRandomCopyBytes(kSecRandomDefault, 32, buf);
+                    result = SecRandomCopyBytes(kSecRandomDefault, 32, buf);
                     _aesIv = [[NSData alloc] initWithBytes:buf length:32];
                 }
                 
@@ -222,10 +223,16 @@ static NSMutableDictionary *keychains()
                 
                 if (data.length == 4 + paddedLength || data.length == 4 + paddedLength + 4)
                 {
-                    NSMutableData *decryptedData = [[NSMutableData alloc] init];
-                    [decryptedData appendData:[data subdataWithRange:NSMakeRange(4, paddedLength)]];
-                    if (_encrypted)
-                        MTAesDecryptInplace(decryptedData, _aesKey, _aesIv);
+                    NSMutableData *encryptedData = [[NSMutableData alloc] init];
+                    [encryptedData appendData:[data subdataWithRange:NSMakeRange(4, paddedLength)]];
+                    
+                    NSMutableData *decryptedData = nil;
+                    if (_encrypted) {
+                        decryptedData = [[NSMutableData alloc] initWithData:MTAesDecrypt(encryptedData, _aesKey, _aesIv)];
+                    } else {
+                        decryptedData = encryptedData;
+                    }
+                    
                     [decryptedData setLength:length];
                     
                     bool hashVerified = true;

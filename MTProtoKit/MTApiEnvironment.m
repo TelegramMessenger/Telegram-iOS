@@ -6,7 +6,7 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTApiEnvironment.h>
+#import "MTApiEnvironment.h"
 
 #if TARGET_OS_IPHONE
 #   import <UIKit/UIKit.h>
@@ -256,8 +256,7 @@ typedef enum {
     // Simulator thanks Jordan Breeding
     if ([platform hasSuffix:@"86"] || [platform isEqual:@"x86_64"])
     {
-        BOOL smallerScreen = [[UIScreen mainScreen] bounds].size.width < 768;
-        return smallerScreen ? UIDeviceSimulatoriPhone : UIDeviceSimulatoriPad;
+        return UIDeviceSimulatoriPhone;
     }
 #else
     return UIDeviceOSX;

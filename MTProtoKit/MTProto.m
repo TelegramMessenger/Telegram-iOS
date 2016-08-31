@@ -6,50 +6,54 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTProto.h>
+#import "MTProto.h"
 
 #import <inttypes.h>
 
-#import <MTProtoKit/MTLogging.h>
-#import <MTProtoKit/MTQueue.h>
-#import <MTProtoKit/MTOutputStream.h>
-#import <MTProtoKit/MTInputStream.h>
+#import "MTLogging.h"
+#import "MTQueue.h"
+#import "MTOutputStream.h"
+#import "MTInputStream.h"
 
-#import <MTProtoKit/MTDatacenterAddressSet.h>
-#import <MtProtoKit/MTTransportScheme.h>
-#import <MTProtoKit/MTDatacenterAuthInfo.h>
-#import <MTProtoKit/MTSessionInfo.h>
-#import <MTProtoKit/MTDatacenterSaltInfo.h>
-#import <MTProtoKit/MTTimeFixContext.h>
+#import "MTContext.h"
 
-#import <MTProtoKit/MTMessageService.h>
-#import <MTProtoKit/MTMessageTransaction.h>
-#import <MTProtoKit/MTTimeSyncMessageService.h>
-#import <MTProtoKit/MTResendMessageService.h>
+#import "MTDatacenterAddressSet.h"
+#import "MTTransportScheme.h"
+#import "MTDatacenterAuthInfo.h"
+#import "MTSessionInfo.h"
+#import "MTDatacenterSaltInfo.h"
+#import "MTTimeFixContext.h"
 
-#import <MTProtoKit/MTIncomingMessage.h>
-#import <MTProtoKit/MTOutgoingMessage.h>
-#import <MTProtoKit/MTPreparedMessage.h>
-#import <MTProtoKit/MTMessageEncryptionKey.h>
+#import "MTMessageService.h"
+#import "MTMessageTransaction.h"
+#import "MTTimeSyncMessageService.h"
+#import "MTResendMessageService.h"
 
-#import <MTProtoKit/MTTransport.h>
-#import <MTProtoKit/MTTransportTransaction.h>
+#import "MTIncomingMessage.h"
+#import "MTOutgoingMessage.h"
+#import "MTPreparedMessage.h"
+#import "MTMessageEncryptionKey.h"
 
-#import <MTProtoKit/MTTcpTransport.h>
-#import <MTProtoKit/MTHttpTransport.h>
+#import "MTTransport.h"
+#import "MTTransportTransaction.h"
 
-#import <MTProtoKit/MTSerialization.h>
-#import <MTProtoKit/MTEncryption.h>
+#import "MTTcpTransport.h"
+#import "MTHttpTransport.h"
 
-#import <MTProtoKit/MTBuffer.h>
-#import <MTProtoKit/MTInternalMessageParser.h>
-#import <MTProtoKit/MTMsgContainerMessage.h>
-#import <MTProtoKit/MTMessage.h>
-#import <MTProtoKit/MTBadMsgNotificationMessage.h>
-#import <MTProtoKit/MTMsgsAckMessage.h>
-#import <MTProtoKit/MTMsgDetailedInfoMessage.h>
-#import <MTProtoKit/MTNewSessionCreatedMessage.h>
-#import <MTProtoKit/MTPongMessage.h>
+#import "MTSerialization.h"
+#import "MTEncryption.h"
+
+#import "MTBuffer.h"
+#import "MTInternalMessageParser.h"
+#import "MTMsgContainerMessage.h"
+#import "MTMessage.h"
+#import "MTBadMsgNotificationMessage.h"
+#import "MTMsgsAckMessage.h"
+#import "MTMsgDetailedInfoMessage.h"
+#import "MTNewSessionCreatedMessage.h"
+#import "MTPongMessage.h"
+
+#import "MTTime.h"
 
 typedef enum {
     MTProtoStateAwaitingDatacenterScheme = 1,
@@ -1439,14 +1443,15 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             NSData *messageKey = [is readData:16];
             MTMessageEncryptionKey *encryptionKey = [MTMessageEncryptionKey messageEncryptionKeyForAuthKey:_authInfo.authKey messageKey:messageKey toClient:true];
             
-            NSMutableData *messageData = [is readMutableData:(data.length - 24)];
-            while (messageData.length % 16 != 0)
-                   [messageData setLength:messageData.length - 1];
-            if (messageData.length != 0)
+            NSMutableData *encryptedMessageData = [is readMutableData:(data.length - 24)];
+            while (encryptedMessageData.length % 16 != 0) {
+                   [encryptedMessageData setLength:encryptedMessageData.length - 1];
+            }
+            if (encryptedMessageData.length != 0)
             {
-                MTAesDecryptInplace(messageData, encryptionKey.key, encryptionKey.iv);
+                NSData *decryptedData = MTAesDecrypt(encryptedMessageData, encryptionKey.key, encryptionKey.iv);
                 
-                MTInputStream *messageIs = [[MTInputStream alloc] initWithData:messageData];
+                MTInputStream *messageIs = [[MTInputStream alloc] initWithData:decryptedData];
                 [messageIs readInt64];
                 [messageIs readInt64];
                 

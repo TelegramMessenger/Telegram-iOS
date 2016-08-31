@@ -6,28 +6,29 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTContext.h>
+#import "MTContext.h"
 
 #import <inttypes.h>
 
-#import <MTProtoKit/MTLogging.h>
-#import <MTProtoKit/MTTimer.h>
-#import <MTProtoKit/MTQueue.h>
-#import <MTProtoKit/MTKeychain.h>
+#import "MTLogging.h"
+#import "MTTimer.h"
+#import "MTQueue.h"
+#import "MTKeychain.h"
 
-#import <MTProtoKit/MTDatacenterAddressSet.h>
-#import <MTProtoKit/MTDatacenterAuthInfo.h>
-#import <MTProtoKit/MTDatacenterSaltInfo.h>
-#import <MTProtoKit/MTSessionInfo.h>
+#import "MTDatacenterAddressSet.h"
+#import "MTDatacenterAddress.h"
+#import "MTDatacenterAuthInfo.h"
+#import "MTDatacenterSaltInfo.h"
+#import "MTSessionInfo.h"
 
-#import <MTProtoKit/MTDiscoverDatacenterAddressAction.h>
-#import <MTProtoKit/MTDatacenterAuthAction.h>
-#import <MTProtoKit/MTDatacenterTransferAuthAction.h>
+#import "MTDiscoverDatacenterAddressAction.h"
+#import "MTDatacenterAuthAction.h"
+#import "MTDatacenterTransferAuthAction.h"
 
-#import <MTProtoKit/MTTransportScheme.h>
-#import <MTProtoKit/MTTcpTransport.h>
+#import "MTTransportScheme.h"
+#import "MTTcpTransport.h"
 
-#import <MTProtoKit/MTApiEnvironment.h>
+#import "MTApiEnvironment.h"
 
 #import <libkern/OSAtomic.h>
 
@@ -63,7 +64,6 @@
     NSMutableArray *_changeListeners;
     
     NSMutableDictionary *_discoverDatacenterAddressActions;
-    NSMutableDictionary *_discoverDatacenterTransportSchemeActions;
     NSMutableDictionary *_datacenterAuthActions;
     NSMutableDictionary *_datacenterTransferAuthActions;
     
@@ -121,7 +121,6 @@
         _changeListeners = [[NSMutableArray alloc] init];
         
         _discoverDatacenterAddressActions = [[NSMutableDictionary alloc] init];
-        _discoverDatacenterTransportSchemeActions = [[NSMutableDictionary alloc] init];
         _datacenterAuthActions = [[NSMutableDictionary alloc] init];
         _datacenterTransferAuthActions = [[NSMutableDictionary alloc] init];
         
@@ -158,9 +157,6 @@
     
     NSDictionary *discoverDatacenterAddressActions = _discoverDatacenterAddressActions;
     _discoverDatacenterAddressActions = nil;
-    
-    NSDictionary *discoverDatacenterTransportSchemeActions = _discoverDatacenterTransportSchemeActions;
-    _discoverDatacenterTransportSchemeActions = nil;
     
     NSDictionary *datacenterTransferAuthActions = _datacenterTransferAuthActions;
     _datacenterTransferAuthActions = nil;
@@ -758,7 +754,7 @@
     {
         if (_transportSchemeDisposableByDatacenterId == nil)
             _transportSchemeDisposableByDatacenterId = [[NSMutableDictionary alloc] init];
-        id<SDisposable> disposable = _transportSchemeDisposableByDatacenterId[@(datacenterId)];
+        id<MTDisposable> disposable = _transportSchemeDisposableByDatacenterId[@(datacenterId)];
         if (disposable == nil)
         {
             __weak MTContext *weakSelf = self;
@@ -813,7 +809,7 @@
         {
             if (_transportSchemeDisposableByDatacenterId == nil)
                 _transportSchemeDisposableByDatacenterId = [[NSMutableDictionary alloc] init];
-            id<SDisposable> disposable = _transportSchemeDisposableByDatacenterId[@(datacenterId)];
+            id<MTDisposable> disposable = _transportSchemeDisposableByDatacenterId[@(datacenterId)];
             [disposable dispose];
             [_transportSchemeDisposableByDatacenterId removeObjectForKey:@(datacenterId)];
         }

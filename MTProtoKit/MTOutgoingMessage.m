@@ -6,7 +6,7 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTOutgoingMessage.h>
+#import "MTOutgoingMessage.h"
 
 @interface MTOutgoingMessageInternalId : NSObject <NSCopying>
 {

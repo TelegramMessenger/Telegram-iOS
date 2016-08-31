@@ -6,4 +6,4 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTKeychain.h>
+#import "MTKeychain.h"

@@ -6,10 +6,10 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTSessionInfo.h>
+#import "MTSessionInfo.h"
 
-#import <MTProtoKit/MTLogging.h>
-#import <MTProtoKit/MTContext.h>
+#import "MTLogging.h"
+#import "MTContext.h"
 
 @interface MTScheduledMessageConfirmation : NSObject
 

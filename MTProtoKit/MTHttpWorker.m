@@ -6,14 +6,14 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTHttpWorker.h>
+#import "MTHttpWorker.h"
 
-#import <MTProtoKit/MTTimer.h>
-#import <MTProtoKit/MTQueue.h>
+#import "MTTimer.h"
+#import "MTQueue.h"
 
-#import <MTProtoKit/MTDatacenterAddress.h>
+#import "MTDatacenterAddress.h"
 
-#import <MTProtoKit/MTInternalId.h>
+#import "MTInternalId.h"
 
 MTInternalIdClass(MTHttpWorker)
 

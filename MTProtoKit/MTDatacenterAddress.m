@@ -6,7 +6,7 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTDatacenterAddress.h>
+#import "MTDatacenterAddress.h"
 
 #import <netinet/in.h>
 #import <arpa/inet.h>

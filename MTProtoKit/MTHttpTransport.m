@@ -6,27 +6,29 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTHttpTransport.h>
+#import "MTHttpTransport.h"
 
-#import <MTProtoKit/MTLogging.h>
-#import <MTProtoKit/MTQueue.h>
-#import <MTProtoKit/MTTimer.h>
+#import "MTLogging.h"
+#import "MTQueue.h"
+#import "MTTimer.h"
 
-#import <MTProtoKit/MTDatacenterAddressSet.h>
-#import <MTProtoKit/MTDatacenterAddress.h>
+#import "MTDatacenterAddressSet.h"
+#import "MTDatacenterAddress.h"
 
-#import <MTProtoKit/MTSerialization.h>
-#import <MTProtoKit/MTTransportTransaction.h>
-#import <MTProtoKit/MTMessageTransaction.h>
-#import <MTProtoKit/MTOutgoingMessage.h>
-#import <MtProtoKit/MTIncomingMessage.h>
-#import <MtProtoKit/MTPreparedMessage.h>
+#import "MTSerialization.h"
+#import "MTTransportTransaction.h"
+#import "MTMessageTransaction.h"
+#import "MTOutgoingMessage.h"
+#import "MTIncomingMessage.h"
+#import "MTPreparedMessage.h"
 
-#import <MTProtoKit/MTHttpWorkerBehaviour.h>
-#import <MTProtoKit/MTHttpWorker.h>
+#import "MTHttpWorkerBehaviour.h"
+#import "MTHttpWorker.h"
 
-#import <MTProtoKit/MTBuffer.h>
-#import <MTProtoKit/MTPongMessage.h>
+#import "MTBuffer.h"
+#import "MTPongMessage.h"
+#import "MTContext.h"
+#import "MTDatacenterAuthInfo.h"
 
 @interface MTHttpTransport () <MTHttpWorkerBehaviourDelegate, MTHttpWorkerDelegate, MTContextChangeListener>
 {
