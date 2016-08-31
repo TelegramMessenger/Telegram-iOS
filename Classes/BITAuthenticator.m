@@ -466,6 +466,11 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   NSParameterAssert(email && email.length);
   NSParameterAssert(self.identificationType == BITAuthenticatorIdentificationTypeHockeyAppEmail || (password && password.length));
   
+  // Trim whitespace from email in case the user has added a whitespace at the end of the email address. This shouldn't
+  // happen if devs use our UI but we've had 1-2 support tickets where the email contained whitespace at the end and
+  // verification failed because of that.
+  email = [email stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+  
   NSURLRequest *request = [self requestForAuthenticationEmail:email password:password];
   
   [self authenticationViewController:viewController handleAuthenticationWithEmail:email request:request completion:completion];
