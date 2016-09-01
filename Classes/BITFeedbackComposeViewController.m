@@ -236,7 +236,7 @@
   [self.contentViewContainer addSubview:self.textView];
   
   // Add Photo Button + Container that's displayed above the keyboard.
-  if([BITHockeyHelper isPhotoAccessSupported]) {
+  if([BITHockeyHelper isPhotoAccessPossible]) {
     self.textAccessoryView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, CGRectGetWidth(self.view.frame), 44)];
     self.textAccessoryView.backgroundColor = [UIColor colorWithRed:0.9f green:0.9f blue:0.9f alpha:1.0f];
   

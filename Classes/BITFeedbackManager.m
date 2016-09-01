@@ -392,7 +392,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 }
 
 - (BOOL)isiOS10PhotoPolicySet {
-  BOOL isiOS10PhotoPolicySet = [BITHockeyHelper isPhotoAccessSupported];
+  BOOL isiOS10PhotoPolicySet = [BITHockeyHelper isPhotoAccessPossible];
   if(bit_isDebuggerAttached()) {
     if(!isiOS10PhotoPolicySet) {
       BITHockeyLogWarning(@"You are using HockeyApp's Feedback feature in iOS 10 or later. iOS 10 requires you to add the usage strings to your app's info.plist. "
