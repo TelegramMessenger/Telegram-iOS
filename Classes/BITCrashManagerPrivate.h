@@ -96,7 +96,7 @@
 - (NSString *)firstNotApprovedCrashReport;
 
 - (void)persistUserProvidedMetaData:(BITCrashMetaData *)userProvidedMetaData;
-- (void)persistAttachment:(BITHockeyAttachment *)attachment withFilename:(NSString *)filename;
+- (BOOL)persistAttachment:(BITHockeyAttachment *)attachment withFilename:(NSString *)filename;
 
 - (BITHockeyAttachment *)attachmentForCrashReport:(NSString *)filename;
 

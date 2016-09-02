@@ -440,6 +440,7 @@
 #pragma mark - Alert
 
 - (void)showUpdateAlert {
+  dispatch_async(dispatch_get_main_queue(), ^{
   if (!_updateAlertShowing) {
     NSString *versionString = [NSString stringWithFormat:@"%@ %@", BITHockeyLocalizedString(@"UpdateVersion"), _newStoreVersion];
     /* We won't use this for now until we have a more robust solution for displaying UIAlertController
@@ -497,6 +498,7 @@
     
     _updateAlertShowing = YES;
   }
+  });
 }
 
 

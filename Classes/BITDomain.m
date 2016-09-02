@@ -3,6 +3,7 @@
 @implementation BITDomain
 @synthesize envelopeTypeName = _envelopeTypeName;
 @synthesize dataTypeName = _dataTypeName;
+@synthesize properties = _properties;
 
 /// Initializes a new instance of the class.
 - (instancetype)init {

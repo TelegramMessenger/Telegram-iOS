@@ -1,3 +1,8 @@
+## 4.1.0
+
+- Includes improvements from 4.0.2 release of the SDK.
+- [NEW] Additional API to track an event with properties and measurements.
+
 ## 4.1.0-beta.2
 
 - [BUGFIX] Fixes an issue where the whole app's Application Support directory was accidentally excluded from backups.
@@ -37,6 +42,11 @@ This SDK release explicitly includes the Application Support directory into back
 - [IMPROVEMENT] Optimize tests and always build test target
 - [IMPROVEMENT] Reuse `NSURLSession` object
 - [IMPROVEMENT] Under the hood improvements and cleanup
+
+## Version 4.0.2
+
+- [BUGFIX] Add Bitcode marker back to simulator slices. This is necessary because otherwise `lipo` apparently strips the Bitcode sections from the merged library completely. As a side effect, this unfortunately breaks compatibility with Xcode 6. [#310](https://github.com/bitstadium/HockeySDK-iOS/pull/310)
+- [IMPROVEMENT] Improve error detection and logging during crash processing in case the app is sent to the background while crash processing hasn't finished.[#311](https://github.com/bitstadium/HockeySDK-iOS/pull/311)
 
 ## Version 4.0.1
 
