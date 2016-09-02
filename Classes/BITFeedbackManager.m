@@ -601,6 +601,9 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 - (BITFeedbackMessage *)lastMessageHavingID {
   __block BITFeedbackMessage *message = nil;
   
+  
+  // Note: the logic here is slightly different than in our mac SDK, as _feedbackList is sorted in different order.
+  // Compare the implementation of - (void)sortFeedbackList; in both SDKs.
   [_feedbackList enumerateObjectsUsingBlock:^(BITFeedbackMessage *objMessage, NSUInteger messagesIdx, BOOL *stop) {
     if ([[objMessage identifier] integerValue] != 0) {
       message = objMessage;
