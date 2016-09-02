@@ -510,6 +510,7 @@
 		D0D225101B4D817B0085E26D /* MtProtoKitDynamic.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D2250F1B4D817B0085E26D /* MtProtoKitDynamic.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0D225161B4D817B0085E26D /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D2250B1B4D817B0085E26D /* MtProtoKitDynamic.framework */; };
 		D0D2251D1B4D817B0085E26D /* MtProtoKitDynamicTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D0D2251C1B4D817B0085E26D /* MtProtoKitDynamicTests.m */; };
+		D0D2689E1D7A055400C422DA /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CD990F1D75C16100F41187 /* libcrypto.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -770,6 +771,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0D2689E1D7A055400C422DA /* libcrypto.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2386,8 +2388,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CLANG_ENABLE_MODULES = YES;
 				ARCHS = "$(ARCHS_STANDARD)";
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
 				COPY_PHASE_STRIP = YES;
@@ -2421,6 +2423,7 @@
 				);
 				MACH_O_TYPE = staticlib;
 				MTL_ENABLE_DEBUG_INFO = NO;
+				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = "-lz";
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_MODULE_NAME = MtProtoKit;
@@ -2550,8 +2553,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				CLANG_ENABLE_MODULES = YES;
 				ARCHS = "$(ARCHS_STANDARD)";
+				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
 				COPY_PHASE_STRIP = NO;
@@ -2589,6 +2592,7 @@
 				);
 				MACH_O_TYPE = staticlib;
 				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = "-lz";
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_MODULE_NAME = MtProtoKit;
@@ -2641,6 +2645,7 @@
 				);
 				MACH_O_TYPE = staticlib;
 				MTL_ENABLE_DEBUG_INFO = NO;
+				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = "-lz";
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_MODULE_NAME = MtProtoKit;
