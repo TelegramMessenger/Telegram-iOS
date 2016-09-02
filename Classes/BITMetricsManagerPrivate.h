@@ -1,35 +1,8 @@
-/*
- * Author: Christoph Wendt <chwend@microsoft.com>
- *
- * Copyright (c) 2012-2015 HockeyApp, Bit Stadium GmbH.
- * All rights reserved.
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- */
-
-#import "HockeySDK.h"
+#import "HockeySDKFeatureConfig.h"
 
 #if HOCKEYSDK_FEATURE_METRICS
 
+#import "BITMetricsManager.h"
 #import "BITSessionState.h"
 
 @class BITChannel;
@@ -38,7 +11,12 @@
 @class BITPersistence;
 @class BITSender;
 
-@interface BITMetricsManager ()
+#import "HockeySDKNullability.h"
+NS_ASSUME_NONNULL_BEGIN
+
+FOUNDATION_EXPORT NSString *const kBITApplicationWasLaunched;
+
+@interface BITMetricsManager()
 
 /**
  *  Create a new BITMetricsManager instance by passing the channel, the telemetry context, and persistence instance to use 
@@ -72,7 +50,7 @@
 /**
  *  A concurrent queue which creates and processes telemetry items.
  */
-@property (nonatomic, strong, readonly)dispatch_queue_t metricsEventQueue;
+@property (nonatomic, strong, readonly) dispatch_queue_t metricsEventQueue;
 
 /**
  *  Sender instance to send out telemetry data.
@@ -86,7 +64,7 @@
 /**
  *  The Interval an app has to be in the background until the current session gets renewed.
  */
-@property (nonatomic, assign)NSUInteger appBackgroundTimeBeforeSessionExpires;
+@property (nonatomic, assign) NSUInteger appBackgroundTimeBeforeSessionExpires;
 
 /**
  *  Registers manager for several notifications, which influence the session state.
@@ -138,8 +116,10 @@
  *
  *  @param state value that determines whether the session started or ended
  */
-- (void)trackSessionWithState:(BITSessionState) state;
+- (void)trackSessionWithState:(BITSessionState)state;
 
 @end
+
+NS_ASSUME_NONNULL_END
 
 #endif /* HOCKEYSDK_FEATURE_METRICS */

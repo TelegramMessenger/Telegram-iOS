@@ -8,10 +8,7 @@
 
 #import <XCTest/XCTest.h>
 
-#define HC_SHORTHAND
 #import <OCHamcrestIOS/OCHamcrestIOS.h>
-
-#define MOCKITO_SHORTHAND
 #import <OCMockitoIOS/OCMockitoIOS.h>
 
 #import "HockeySDK.h"
@@ -34,6 +31,7 @@
 - (void)tearDown {
   // Tear-down code here.
   [super tearDown];
+   [[NSUserDefaults standardUserDefaults] removeObjectForKey:kBITExcludeApplicationSupportFromBackup];
 }
 
 - (void)testURLEncodedString {
@@ -230,6 +228,64 @@
 	
 	// Verify
   assertThat(result, nilValue());
+}
+
+- (void)testBackupFixRemovesExcludeAttribute {
+  
+  // Setup: Attribute is set and NSUSerDefaults DON'T contain kBITExcludeApplicationSupportFromBackup == YES
+  NSURL *testAppSupportURL = [self createBackupExcludedTestDirectoryForURL];
+  XCTAssertNotNil(testAppSupportURL);
+  XCTAssertTrue([self excludeAttributeIsSetForURL:testAppSupportURL]);
+  
+  // Test
+  bit_fixBackupAttributeForURL(testAppSupportURL);
+  
+  // Verify
+  XCTAssertFalse([self excludeAttributeIsSetForURL:testAppSupportURL]);
+}
+
+- (void)testBackupFixIgnoresRemovalOfExcludeAttributeUserDefaultsContainKey {
+  
+  // Setup: Attribute is set and NSUSerDefaults DO contain kBITExcludeApplicationSupportFromBackup == YES
+  [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITExcludeApplicationSupportFromBackup];
+  NSURL *testAppSupportURL = [self createBackupExcludedTestDirectoryForURL];
+  XCTAssertNotNil(testAppSupportURL);
+  XCTAssertTrue([self excludeAttributeIsSetForURL:testAppSupportURL]);
+  
+  // Test
+  bit_fixBackupAttributeForURL(testAppSupportURL);
+  
+  // Verify
+  XCTAssertTrue([self excludeAttributeIsSetForURL:testAppSupportURL]);
+}
+
+#pragma mark - Test Helper
+
+- (NSURL *)createBackupExcludedTestDirectoryForURL{
+  NSString *testDirectory = @"HockeyTest";
+  NSFileManager *fileManager = [NSFileManager defaultManager];
+  
+  NSURL *testAppSupportURL = [[[fileManager URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask] lastObject] URLByAppendingPathComponent:testDirectory];
+  if ([fileManager createDirectoryAtURL:testAppSupportURL withIntermediateDirectories:YES attributes:nil error:nil]) {
+    if ([testAppSupportURL setResourceValue:@YES
+                           forKey:NSURLIsExcludedFromBackupKey
+                            error:nil]) {
+      return testAppSupportURL;
+    }
+  }
+  return nil;
+}
+
+- (BOOL)excludeAttributeIsSetForURL:(NSURL *)directoryURL {
+  
+  NSError *getResourceError = nil;
+  NSNumber *appSupportDirExcludedValue;
+  if ([directoryURL getResourceValue:&appSupportDirExcludedValue forKey:NSURLIsExcludedFromBackupKey error:&getResourceError] && appSupportDirExcludedValue) {
+    if ([appSupportDirExcludedValue isEqualToValue:@YES]) {
+      return YES;
+    }
+  }
+  return NO;
 }
 
 @end

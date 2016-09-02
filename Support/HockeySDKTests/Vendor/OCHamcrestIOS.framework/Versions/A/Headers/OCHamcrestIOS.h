@@ -1,10 +1,10 @@
 //  OCHamcrest by Jon Reid, http://qualitycoding.org/about/
-//  Copyright 2015 hamcrest.org. See LICENSE.txt
+//  Copyright 2016 hamcrest.org. See LICENSE.txt
 
 #import <OCHamcrestIOS/HCAllOf.h>
 #import <OCHamcrestIOS/HCAnyOf.h>
+#import <OCHamcrestIOS/HCArgumentCaptor.h>
 #import <OCHamcrestIOS/HCAssertThat.h>
-#import "HCArgumentCaptor.h"
 #import <OCHamcrestIOS/HCConformsToProtocol.h>
 #import <OCHamcrestIOS/HCDescribedAs.h>
 #import <OCHamcrestIOS/HCEvery.h>
@@ -45,3 +45,10 @@
 #import <OCHamcrestIOS/HCTestFailureReporter.h>
 #import <OCHamcrestIOS/HCTestFailureReporterChain.h>
 #import <OCHamcrestIOS/HCThrowsException.h>
+
+// Carthage workaround: Include transitive public headers
+#import <OCHamcrestIOS/HCBaseDescription.h>
+#import <OCHamcrestIOS/HCCollect.h>
+#import <OCHamcrestIOS/HCRequireNonNilObject.h>
+#import <OCHamcrestIOS/HCStringDescription.h>
+#import <OCHamcrestIOS/HCWrapInMatcher.h>

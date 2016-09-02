@@ -1,13 +1,82 @@
-# Develop branch
+## 4.1.0
+
+- Includes improvements from 4.0.2 release of the SDK.
+- [NEW] Additional API to track an event with properties and measurements.
+
+## 4.1.0-beta.2
+
+- [BUGFIX] Fixes an issue where the whole app's Application Support directory was accidentally excluded from backups.
+This SDK release explicitly includes the Application Support directory into backups. If you want to opt-out of this fix and keep the Application Directory's backup flag untouched, add the following line above the SDK setup code:
+
+  - Objective-C:
+        ```objectivec
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"BITExcludeApplicationSupportFromBackup"];
+        ```
+
+  - Swift:
+        ```swift
+        NSUserDefaults.standardUserDefaults().setBool(true, forKey: "BITExcludeApplicationSupportFromBackup")
+        ```
+
+- [NEW] Add more fine-grained log levels
+- [NEW] Add ability to connect existing logging framework
+- [BUGFIX] Make CrashManager property `serverURL` individual setable
+- [BUGFIX] Properly dispatch `dismissViewController` call to main queue
+- [BUGFIX] Fixes an issue that prevented preparedItemsForFeedbackManager: delegate method from working
+
+## Version 4.1.0-beta.1
+
+- [IMPROVEMENT] Prevent User Metrics from being sent if `BITMetricsManager` has been disabled.
+
+## Version 4.1.0-alpha.2
+
+- [BUGFIX] Fix different bugs in the events sending pipeline
+
+## Version 4.1.0-alpha.1
+
+- [NEW] Add ability to track custom events
+- [IMPROVEMENT] Events are always persisted, even if the app crashes
+- [IMPROVEMENT] Allow disabling `BITMetricsManager` at any time
+- [BUGFIX] Server URL is now properly customizable
+- [BUGFIX] Fix memory leak in networking code
+- [IMPROVEMENT] Optimize tests and always build test target
+- [IMPROVEMENT] Reuse `NSURLSession` object
+- [IMPROVEMENT] Under the hood improvements and cleanup
+
+## Version 4.0.2
+
+- [BUGFIX] Add Bitcode marker back to simulator slices. This is necessary because otherwise `lipo` apparently strips the Bitcode sections from the merged library completely. As a side effect, this unfortunately breaks compatibility with Xcode 6. [#310](https://github.com/bitstadium/HockeySDK-iOS/pull/310)
+- [IMPROVEMENT] Improve error detection and logging during crash processing in case the app is sent to the background while crash processing hasn't finished.[#311](https://github.com/bitstadium/HockeySDK-iOS/pull/311)
+
+## Version 4.0.1
+
+- [BUGFIX] Fixes an issue where the whole app's Application Support directory was accidentally excluded from backups.
+This SDK release explicitly includes the Application Support directory into backups. If you want to opt-out of this fix and keep the Application Directory's backup flag untouched, add the following line above the SDK setup code:
+
+  - Objective-C:
+        ```objectivec
+        [[NSUserDefaults standardUserDefaults] setBool:YES forKey:@"kBITExcludeApplicationSupportFromBackup"];
+        ```
+
+  - Swift:
+        ```swift
+        NSUserDefaults.standardUserDefaults().setBool(true, forKey: "kBITExcludeApplicationSupportFromBackup")
+        ```
+
+- [BUGFIX] Fixes an issue that prevented preparedItemsForFeedbackManager: delegate method from working
+
+## Version 4.0.0
 
 - [NEW] Added official Carthage support
 - [NEW] Added `preparedItemsForFeedbackManager:` method in `BITFeedbackManagerDelegate` to allow to provide items with every possible method of showing the feedback compose dialog.
+- [UPDATE] Our CrashOnly binary now includes User Metrics which enables crash free users statistics
 - [UPDATE] Deprecate `feedbackComposerPreparedItems` property in favor of the new delegate method.
+- [IMPROVEMENT] Prefix GZIP category on NSData to prevent symbol collisions
 - [BUGFIX] Add minor UI bug when adding arrow annotation to feedback image
 
 ## Version 4.0.0-beta.1
 
-- [NEW] User Metrics including users and sessions data is now in public beta! 
+- [NEW] User Metrics including users and sessions data is now in public beta
 
 ## Version 4.0.0-alpha.2
 

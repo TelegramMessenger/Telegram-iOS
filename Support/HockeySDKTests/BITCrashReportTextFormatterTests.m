@@ -8,10 +8,7 @@
 
 #import <XCTest/XCTest.h>
 
-#define HC_SHORTHAND
 #import <OCHamcrestIOS/OCHamcrestIOS.h>
-
-#define MOCKITO_SHORTHAND
 #import <OCMockitoIOS/OCMockitoIOS.h>
 
 #import <CrashReporter/CrashReporter.h>
@@ -251,6 +248,21 @@
   crashLogString = [BITCrashReportTextFormatter stringValueForCrashReport:report crashReporterKey:@""];
   
   assertThat(crashLogString, notNilValue());
+}
+
+- (void)testXamarinReport {
+  NSData *crashData = [BITTestHelper dataOfFixtureCrashReportWithFileName:@"live_report_xamarin"];
+  assertThat(crashData, notNilValue());
+  
+  NSError *error = nil;
+  BITPLCrashReport *report = [[BITPLCrashReport alloc] initWithData:crashData error:&error];
+  
+  NSString *filePath = [[NSBundle bundleForClass:self.class] pathForResource:@"log_report_xamarin" ofType:@""];
+  NSString *expected = [NSString stringWithContentsOfFile:filePath encoding:NSUTF8StringEncoding error:nil];
+  
+  NSString *actual = [BITCrashReportTextFormatter stringValueForCrashReport:report crashReporterKey:@""];
+  
+  assertThat(expected, equalTo(actual));
 }
 
 - (void)testAnonymizedProcessPathFromProcessPath {

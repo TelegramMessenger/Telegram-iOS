@@ -3,9 +3,9 @@
 
 #if HOCKEYSDK_FEATURE_METRICS
 
-#import "HockeySDKNullability.h"
 @class BITPersistence;
 
+#import "HockeySDKNullability.h"
 NS_ASSUME_NONNULL_BEGIN
 
 /**

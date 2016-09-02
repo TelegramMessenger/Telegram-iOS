@@ -1,9 +1,6 @@
 #import <XCTest/XCTest.h>
 
-#define HC_SHORTHAND
 #import <OCHamcrestIOS/OCHamcrestIOS.h>
-
-#define MOCKITO_SHORTHAND
 #import <OCMockitoIOS/OCMockitoIOS.h>
 
 #import <OCMock/OCMock.h>
@@ -48,7 +45,9 @@
 
 - (void)testRequestContainsDataItem {
   BITEnvelope *testItem = [BITEnvelope new];
-  NSData *expectedBodyData = [[testItem serializeToString] dataUsingEncoding:NSUTF8StringEncoding];
+  NSData *expectedBodyData = [NSJSONSerialization dataWithJSONObject:[testItem serializeToDictionary]
+                                                              options:0
+                                                                error:nil];
   NSURLRequest *testRequest = [_sut requestForData:expectedBodyData];
   
   XCTAssertNotNil(testRequest);
@@ -177,7 +176,10 @@
   NSString *testFilePath = @"path/to/file";
   
   // test
-  [_sut handleResponseWithStatusCode:testStatusCode responseData:testData filePath:testFilePath error:[NSError new]];
+  [_sut handleResponseWithStatusCode:testStatusCode
+                        responseData:testData
+                            filePath:testFilePath
+                               error:[NSError errorWithDomain:@"Network error" code:503 userInfo:nil]];
   
   //verify
   [verify(_mockPersistence) giveBackRequestedFilePath:testFilePath];

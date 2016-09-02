@@ -8,12 +8,7 @@
 
 #import <XCTest/XCTest.h>
 
-// Uncomment the next two lines to use OCHamcrest for test assertions:
-#define HC_SHORTHAND
 #import <OCHamcrestIOS/OCHamcrestIOS.h>
-
-// Uncomment the next two lines to use OCMockito for mock objects:
-#define MOCKITO_SHORTHAND
 #import <OCMockitoIOS/OCMockitoIOS.h>
 
 #import "HockeySDK.h"

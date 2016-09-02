@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name              = 'HockeySDK'
-  s.version           = '4.0.0-beta.1'
+  s.version           = '4.1.0'
 
   s.summary           = 'Collect live crash reports, get feedback from your users, distribute your betas, and analyze your test coverage with HockeyApp.'
   s.description       = <<-DESC
@@ -17,8 +17,7 @@ Pod::Spec.new do |s|
   s.license           = { :type => 'MIT', :file => 'HockeySDK-iOS/LICENSE' }
   s.author            = { 'Microsoft' => 'support@hockeyapp.net' }
 
-  s.platform          = :ios, '7.0'
-  s.ios.deployment_target = '6.0'
+  s.platform          = :ios, '6.0'
   s.requires_arc      = true
   
   s.preserve_path = 'HockeySDK-iOS/README.md'
@@ -32,6 +31,7 @@ Pod::Spec.new do |s|
   
   s.subspec 'CrashOnlyLib' do |ss|
     ss.frameworks = 'UIKit'
+    ss.libraries = 'z'
     ss.resource_bundle = { 'HockeySDKResources' => ['HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDK.framework/Versions/A/Resources/HockeySDKResources.bundle/*.lproj'] }
     ss.vendored_frameworks = 'HockeySDK-iOS/HockeySDKCrashOnly/HockeySDK.framework'
   end

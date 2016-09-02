@@ -86,13 +86,14 @@
 #    define HOCKEYSDK_FEATURE_UPDATES 0
 #endif /* HOCKEYSDK_FEATURE_UPDATES */
 
+
 /**
- * If true, include support for auto collecting telemetry data such as sessions and user
+ * If true, include support for auto collecting metrics data such as sessions and user
  *
  * _Default_: Enabled
  */
-#ifndef HOCKEYSDK_FEATURE_TELEMETRY
-#    define HOCKEYSDK_FEATURE_TELEMETRY 0
-#endif /* HOCKEYSDK_FEATURE_TELEMETRY */
+#ifndef HOCKEYSDK_FEATURE_METRICS
+#    define HOCKEYSDK_FEATURE_METRICS 1
+#endif /* HOCKEYSDK_FEATURE_METRICS */
 
 #endif /* HockeySDK_HockeySDKFeatureConfig_h */
