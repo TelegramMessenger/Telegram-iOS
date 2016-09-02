@@ -1,3 +1,6 @@
+## 4.1.1
+- [BUGFIX] Fix app icons with unusual filenames not showing in the in-app update prompt
+
 ## 4.1.0
 
 - Includes improvements from 4.0.2 release of the SDK.
@@ -72,7 +75,6 @@ This SDK release explicitly includes the Application Support directory into back
 - [UPDATE] Our CrashOnly binary now includes User Metrics which enables crash free users statistics
 - [UPDATE] Deprecate `feedbackComposerPreparedItems` property in favor of the new delegate method.
 - [IMPROVEMENT] Prefix GZIP category on NSData to prevent symbol collisions
-- [BUGFIX] Fix app icons with unusual filenames not showing in the in-app update prompt
 - [BUGFIX] Add minor UI bug when adding arrow annotation to feedback image
 
 ## Version 4.0.0-beta.1
