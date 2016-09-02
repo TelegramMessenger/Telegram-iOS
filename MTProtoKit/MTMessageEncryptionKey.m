@@ -6,9 +6,9 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTMessageEncryptionKey.h>
+#import "MTMessageEncryptionKey.h"
 
-#import <MTProtoKit/MTEncryption.h>
+#import "MTEncryption.h"
 
 @implementation MTMessageEncryptionKey
 

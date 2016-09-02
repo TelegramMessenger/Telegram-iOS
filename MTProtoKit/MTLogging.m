@@ -6,7 +6,7 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTLogging.h>
+#import "MTLogging.h"
 
 static void (*loggingFunction)(NSString *, va_list args) = NULL;
 

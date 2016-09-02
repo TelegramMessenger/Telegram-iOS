@@ -6,11 +6,11 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTNetworkAvailability.h>
+#import "MTNetworkAvailability.h"
 
-#import <MTProtoKit/MTLogging.h>
-#import <MTProtoKit/MTQueue.h>
-#import <MTProtoKit/MTTimer.h>
+#import "MTLogging.h"
+#import "MTQueue.h"
+#import "MTTimer.h"
 
 #import <sys/socket.h>
 #import <netinet/in.h>

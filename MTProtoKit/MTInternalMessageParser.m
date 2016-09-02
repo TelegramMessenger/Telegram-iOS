@@ -1,28 +1,30 @@
 #import "MTInternalMessageParser.h"
 
-#import <MTProtoKit/MTBufferReader.h>
+#import "MTBufferReader.h"
 
-#import <MTProtoKit/MTResPqMessage.h>
-#import <MTProtoKit/MTRpcResultMessage.h>
-#import <MTProtoKit/MTRpcError.h>
-#import <MTProtoKit/MTDropRpcResultMessage.h>
-#import <MTProtoKit/MTServerDhParamsMessage.h>
-#import <MTProtoKit/MTServerDhInnerDataMessage.h>
-#import <MTProtoKit/MTSetClientDhParamsResponseMessage.h>
-#import <MTProtoKit/MTMsgsAckMessage.h>
-#import <MTProtoKit/MTMsgsStateReqMessage.h>
-#import <MTProtoKit/MtMsgsStateInfoMessage.h>
-#import <MTProtoKit/MTMsgDetailedInfoMessage.h>
-#import <MTProtoKit/MTMsgAllInfoMessage.h>
-#import <MTProtoKit/MTMessage.h>
-#import <MTProtoKit/MTMsgResendReqMessage.h>
-#import <MTProtoKit/MTBadMsgNotificationMessage.h>
-#import <MTProtoKit/MTPingMessage.h>
-#import <MTProtoKit/MTPongMessage.h>
-#import <MTProtoKit/MTNewSessionCreatedMessage.h>
-#import <MTProtoKit/MTDestroySessionResponseMessage.h>
-#import <MTProtoKit/MTMsgContainerMessage.h>
-#import <MTProtoKit/MTFutureSaltsMessage.h>
+#import "MTResPqMessage.h"
+#import "MTRpcResultMessage.h"
+#import "MTRpcError.h"
+#import "MTDropRpcResultMessage.h"
+#import "MTServerDhParamsMessage.h"
+#import "MTServerDhInnerDataMessage.h"
+#import "MTSetClientDhParamsResponseMessage.h"
+#import "MTMsgsAckMessage.h"
+#import "MTMsgsStateReqMessage.h"
+#import "MtMsgsStateInfoMessage.h"
+#import "MTMsgDetailedInfoMessage.h"
+#import "MTMsgAllInfoMessage.h"
+#import "MTMessage.h"
+#import "MTMsgResendReqMessage.h"
+#import "MTBadMsgNotificationMessage.h"
+#import "MTPingMessage.h"
+#import "MTPongMessage.h"
+#import "MTNewSessionCreatedMessage.h"
+#import "MTDestroySessionResponseMessage.h"
+#import "MTMsgContainerMessage.h"
+#import "MTFutureSaltsMessage.h"
+
+#import "MTLogging.h"
 
 #import <zlib.h>
 

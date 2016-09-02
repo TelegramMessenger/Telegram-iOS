@@ -6,7 +6,11 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTTransport.h>
+#ifdef MtProtoKitDynamicFramework
+#   import <MTProtoKitDynamic/MTTransport.h>
+#else
+#   import <MTProtoKit/MTTransport.h>
+#endif
 
 @interface MTHttpTransport : MTTransport
 

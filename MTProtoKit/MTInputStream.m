@@ -7,8 +7,8 @@
  */
 
 #import <Foundation/Foundation.h>
-#import <MTProtoKit/MTLogging.h>
-#import <MTProtoKit/MTInputStream.h>
+#import "MTLogging.h"
+#import "MTInputStream.h"
 
 #if TARGET_OS_IPHONE
 #   import <endian.h>

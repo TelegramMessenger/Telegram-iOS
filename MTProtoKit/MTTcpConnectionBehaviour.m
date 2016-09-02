@@ -8,10 +8,10 @@
 
 #import <Foundation/Foundation.h>
 
-#import <MTProtoKit/MTTcpConnectionBehaviour.h>
+#import "MTTcpConnectionBehaviour.h"
 
-#import <MTProtoKit/MTTimer.h>
-#import <MTProtoKit/MTQueue.h>
+#import "MTTimer.h"
+#import "MTQueue.h"
 
 @interface MTTcpConnectionBehaviour ()
 {

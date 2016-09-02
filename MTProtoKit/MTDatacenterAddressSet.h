@@ -6,7 +6,9 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTDatacenterAddress.h>
+#import <Foundation/Foundation.h>
+
+@class MTDatacenterAddress;
 
 @interface MTDatacenterAddressSet : NSObject <NSCoding>
 

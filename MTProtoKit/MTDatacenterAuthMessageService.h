@@ -6,7 +6,11 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTMessageService.h>
+#ifdef MtProtoKitDynamicFramework
+#   import <MTProtoKitDynamic/MTMessageService.h>
+#else
+#   import <MTProtoKit/MTMessageService.h>
+#endif
 
 @class MTContext;
 @class MTDatacenterAuthMessageService;

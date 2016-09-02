@@ -6,27 +6,27 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTDatacenterAuthMessageService.h>
+#import "MTDatacenterAuthMessageService.h"
 
-#import <MTProtoKit/MTLogging.h>
-#import <MTProtoKit/MTContext.h>
-#import <MTProtoKit/MTProto.h>
-#import <MTProtoKit/MTSerialization.h>
-#import <MTProtoKit/MTSessionInfo.h>
-#import <MTProtoKit/MTIncomingMessage.h>
-#import <MTProtoKit/MTOutgoingMessage.h>
-#import <MTProtoKit/MTMessageTransaction.h>
-#import <MTProtoKit/MTPreparedMessage.h>
-#import <MTProtoKit/MTDatacenterAuthInfo.h>
-#import <MTProtoKit/MTDatacenterSaltInfo.h>
-#import <MTProtoKit/MTBuffer.h>
-#import <MTProtoKit/MTEncryption.h>
+#import "MTLogging.h"
+#import "MTContext.h"
+#import "MTProto.h"
+#import "MTSerialization.h"
+#import "MTSessionInfo.h"
+#import "MTIncomingMessage.h"
+#import "MTOutgoingMessage.h"
+#import "MTMessageTransaction.h"
+#import "MTPreparedMessage.h"
+#import "MTDatacenterAuthInfo.h"
+#import "MTDatacenterSaltInfo.h"
+#import "MTBuffer.h"
+#import "MTEncryption.h"
 
-#import <MTProtoKit/MTInternalMessageParser.h>
-#import <MTProtoKit/MTServerDhInnerDataMessage.h>
-#import <MTProtoKit/MTResPqMessage.h>
-#import <MTProtoKit/MTServerDhParamsMessage.h>
-#import <MTProtoKit/MTSetClientDhParamsResponseMessage.h>
+#import "MTInternalMessageParser.h"
+#import "MTServerDhInnerDataMessage.h"
+#import "MTResPqMessage.h"
+#import "MTServerDhParamsMessage.h"
+#import "MTSetClientDhParamsResponseMessage.h"
 
 static NSDictionary *selectPublicKey(NSArray *fingerprints)
 {
@@ -178,7 +178,7 @@ typedef enum {
                 if (_nonce == nil)
                 {
                     uint8_t nonceBytes[16];
-                    SecRandomCopyBytes(kSecRandomDefault, 16, nonceBytes);
+                    __unused int result = SecRandomCopyBytes(kSecRandomDefault, 16, nonceBytes);
                     _nonce = [[NSData alloc] initWithBytes:nonceBytes length:16];
                 }
                 
@@ -308,7 +308,7 @@ typedef enum {
                 _dhPublicKeyFingerprint = [[publicKey objectForKey:@"fingerprint"] longLongValue];
                 
                 uint8_t nonceBytes[32];
-                SecRandomCopyBytes(kSecRandomDefault, 32, nonceBytes);
+                __unused int result = SecRandomCopyBytes(kSecRandomDefault, 32, nonceBytes);
                 _newNonce = [[NSData alloc] initWithBytes:nonceBytes length:32];
                 
                 MTBuffer *innerDataBuffer = [[MTBuffer alloc] init];
@@ -500,7 +500,7 @@ typedef enum {
                 }
                 
                 uint8_t bBytes[256];
-                SecRandomCopyBytes(kSecRandomDefault, 256, bBytes);
+                __unused int result = SecRandomCopyBytes(kSecRandomDefault, 256, bBytes);
                 NSData *b = [[NSData alloc] initWithBytes:bBytes length:256];
                 
                 int32_t tmpG = innerDataG;

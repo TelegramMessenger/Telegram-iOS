@@ -6,10 +6,11 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
+#import <Foundation/Foundation.h>
+
 @class MTRequestContext;
 @class MTRequestErrorContext;
-
-#import <MTProtoKit/MTRpcError.h>
+@class MTRpcError;
 
 @interface MTRequest : NSObject
 

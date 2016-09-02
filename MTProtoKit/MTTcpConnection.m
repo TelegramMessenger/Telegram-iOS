@@ -6,21 +6,22 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTTcpConnection.h>
+#import "MTTcpConnection.h"
 
-#import <MTProtoKit/MTLogging.h>
-#import <MTProtoKit/MTQueue.h>
-#import <MTProtoKit/MTTimer.h>
+#import "MTLogging.h"
+#import "MTQueue.h"
+#import "MTTimer.h"
 
 #import "GCDAsyncSocket.h"
 #import <sys/socket.h>
 
-#import <MTProtoKit/MTInternalId.h>
+#import "MTInternalId.h"
 
-#import <MTProtoKit/MTContext.h>
-#import <MTProtoKit/MTApiEnvironment.h>
+#import "MTContext.h"
+#import "MTApiEnvironment.h"
+#import "MTDatacenterAddress.h"
 
-#import "aes.h"
+#import "MTAes.h"
 
 MTInternalIdClass(MTTcpConnection)
 
@@ -44,15 +45,8 @@ struct ctr_state {
 
 static void init_ctr(struct ctr_state *state, const unsigned char *iv)
 {
-    /* aes_ctr128_encrypt requires 'num' and 'ecount' set to zero on the
-     * first call. */
     state->num = 0;
     memset(state->ecount, 0, 16);
-    
-    /* Initialise counter in 'ivec' to 0 */
-    //memset(state->ivec + 8, 0, 8);
-    
-    /* Copy IV into 'ivec' */
     memcpy(state->ivec, iv, 16);
 }
 
@@ -75,11 +69,8 @@ static void init_ctr(struct ctr_state *state, const unsigned char *iv)
     
     bool _addedControlHeader;
     
-    AES_KEY _outgoingKey;
-    struct ctr_state _outgoingCtrState;
-    
-    AES_KEY _incomingKey;
-    struct ctr_state _incomingCtrState;
+    MTAesCtr *_outgoingAesCtr;
+    MTAesCtr *_incomingAesCtr;
 }
 
 @property (nonatomic) int64_t packetHeadDecodeToken;
@@ -268,25 +259,17 @@ static void init_ctr(struct ctr_state *state, const unsigned char *iv)
                                 controlBytesReversed[i] = controlBytes[64 - 1 - i];
                             }
                             
-                            if (AES_set_encrypt_key(controlBytes + 8, 256, &_outgoingKey)) {
-                                MTLog(@"AES_set_encrypt_key ctr failed");
-                            }
-                            init_ctr(&_outgoingCtrState, controlBytes + 8 + 32);
-                            
-                            if (AES_set_encrypt_key(controlBytesReversed + 8, 256, &_incomingKey)) {
-                                MTLog(@"AES_set_encrypt_key ctr failed");
-                            }
-                            init_ctr(&_incomingCtrState, controlBytesReversed + 8 + 32);
+                            _outgoingAesCtr = [[MTAesCtr alloc] initWithKey:controlBytes + 8 keyLength:32 iv:controlBytes + 8 + 32];
+                            _incomingAesCtr = [[MTAesCtr alloc] initWithKey:controlBytesReversed + 8 keyLength:32 iv:controlBytesReversed + 8 + 32];
                             
                             uint8_t encryptedControlBytes[64];
-                            
-                            AES_ctr128_encrypt(controlBytes, encryptedControlBytes, 64, &_outgoingKey, _outgoingCtrState.ivec, _outgoingCtrState.ecount, &_outgoingCtrState.num);
+                            [_outgoingAesCtr encryptIn:controlBytes out:encryptedControlBytes len:64];
                             
                             NSMutableData *outData = [[NSMutableData alloc] initWithLength:64 + packetData.length];
                             memcpy(outData.mutableBytes, controlBytes, 56);
                             memcpy(outData.mutableBytes + 56, encryptedControlBytes + 56, 8);
                             
-                            AES_ctr128_encrypt(packetData.bytes, outData.mutableBytes + 64, packetData.length, &_outgoingKey, _outgoingCtrState.ivec, _outgoingCtrState.ecount, &_outgoingCtrState.num);
+                            [_outgoingAesCtr encryptIn:packetData.bytes out:outData.mutableBytes + 64 len:packetData.length];
                             
                             [_socket writeData:outData withTimeout:-1 tag:0];
                         } else {
@@ -307,7 +290,8 @@ static void init_ctr(struct ctr_state *state, const unsigned char *iv)
                     } else {
                         if (useEncryption) {
                             NSMutableData *encryptedData = [[NSMutableData alloc] initWithLength:packetData.length];
-                            AES_ctr128_encrypt(packetData.bytes, encryptedData.mutableBytes, packetData.length, &_outgoingKey, _outgoingCtrState.ivec, _outgoingCtrState.ecount, &_outgoingCtrState.num);
+                            [_outgoingAesCtr encryptIn:packetData.bytes out:encryptedData.mutableBytes len:packetData.length];
+                            
                             [_socket writeData:encryptedData withTimeout:-1 tag:0];
                         } else {
                             [_socket writeData:packetData withTimeout:-1 tag:0];
@@ -387,7 +371,8 @@ static void init_ctr(struct ctr_state *state, const unsigned char *iv)
     NSData *data = nil;
     if (useEncryption) {
         NSMutableData *decryptedData = [[NSMutableData alloc] initWithLength:rawData.length];
-        AES_ctr128_encrypt(rawData.bytes, decryptedData.mutableBytes, rawData.length, &_incomingKey, _incomingCtrState.ivec, _incomingCtrState.ecount, &_incomingCtrState.num);
+        [_incomingAesCtr encryptIn:rawData.bytes out:decryptedData.mutableBytes len:rawData.length];
+        
         data = decryptedData;
     } else {
         data = rawData;

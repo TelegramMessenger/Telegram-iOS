@@ -6,12 +6,12 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTTransportScheme.h>
+#import "MTTransportScheme.h"
 
-#import <MtProtoKit/MTTransport.h>
-#import <MtProtoKit/MTDatacenterAddress.h>
+#import "MTTransport.h"
+#import "MTDatacenterAddress.h"
 
-#import <MTProtoKit/MTTcpTransport.h>
+#import "MTTcpTransport.h"
 
 @interface MTTransportScheme ()
 {

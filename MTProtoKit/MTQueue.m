@@ -6,7 +6,7 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTQueue.h>
+#import "MTQueue.h"
 
 @interface MTQueue ()
 {
@@ -54,6 +54,17 @@
     return queue;
 }
 
++ (MTQueue *)concurrentDefaultQueue {
+    static MTQueue *queue = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^
+    {
+        queue = [[MTQueue alloc] init];
+        queue->_queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+    });
+    return queue;
+}
+
 - (dispatch_queue_t)nativeQueue
 {
     return _queue;
@@ -93,7 +104,7 @@
         }
         else
         {
-            if (dispatch_get_specific(_name) == _name)
+            if (_name != NULL && dispatch_get_specific(_name) == _name)
                 block();
             else if (synchronous)
                 dispatch_sync(_queue, block);

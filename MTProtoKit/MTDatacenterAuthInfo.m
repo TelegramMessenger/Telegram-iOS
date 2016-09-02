@@ -6,9 +6,8 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTDatacenterAuthInfo.h>
-
-#import <MTProtoKit/MTDatacenterSaltInfo.h>
+#import "MTDatacenterAuthInfo.h"
+#import "MTDatacenterSaltInfo.h"
 
 @implementation MTDatacenterAuthInfo
 

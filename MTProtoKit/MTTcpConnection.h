@@ -6,8 +6,9 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTDatacenterAddress.h>
+#import <Foundation/Foundation.h>
 
+@class MTDatacenterAddress;
 @class MTContext;
 @class MTQueue;
 @class MTTcpConnection;

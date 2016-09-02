@@ -6,7 +6,7 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTIncomingMessage.h>
+#import "MTIncomingMessage.h"
 
 @implementation MTIncomingMessage
 

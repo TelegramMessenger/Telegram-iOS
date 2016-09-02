@@ -1,6 +1,10 @@
 #import <Foundation/Foundation.h>
 
-#import <MTProtoKit/MTKeychain.h>
+#ifdef MtProtoKitDynamicFramework
+#   import <MTProtoKitDynamic/MTKeychain.h>
+#else
+#   import <MTProtoKit/MTKeychain.h>
+#endif
 
 @interface MTFileBasedKeychain : NSObject <MTKeychain>
 

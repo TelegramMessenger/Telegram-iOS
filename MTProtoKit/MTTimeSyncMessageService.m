@@ -6,25 +6,25 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTTimeSyncMessageService.h>
+#import "MTTimeSyncMessageService.h"
 
-#import <MTTime.h>
-#import <MTProtoKit/MTContext.h>
-#import <MTProtoKit/MTProto.h>
-#import <MTProtoKit/MTSerialization.h>
-#import <MTProtoKit/MTOutgoingMessage.h>
-#import <MTProtoKit/MTIncomingMessage.h>
-#import <MTProtoKit/MTPreparedMessage.h>
-#import <MTProtoKit/MTMessageTransaction.h>
-#import <MTProtoKit/MTDatacenterSaltInfo.h>
-#import <MTProtoKit/MTBuffer.h>
-#import <MTProtoKit/MTFutureSaltsMessage.h>
+#import "MTTime.h"
+#import "MTContext.h"
+#import "MTProto.h"
+#import "MTSerialization.h"
+#import "MTOutgoingMessage.h"
+#import "MTIncomingMessage.h"
+#import "MTPreparedMessage.h"
+#import "MTMessageTransaction.h"
+#import "MTDatacenterSaltInfo.h"
+#import "MTBuffer.h"
+#import "MTFutureSaltsMessage.h"
 
 @interface MTTimeSyncMessageService ()
 {
     int64_t _currentMessageId;
     id _currentTransactionId;
-    MTAbsoluteTime _currentSampleAbsoluteStartTime;
+    CFAbsoluteTime _currentSampleAbsoluteStartTime;
     
     NSUInteger _takenSampleCount;
     NSUInteger _requiredSampleCount;

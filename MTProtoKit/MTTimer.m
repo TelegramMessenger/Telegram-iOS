@@ -6,7 +6,7 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTTimer.h>
+#import "MTTimer.h"
 
 @interface MTTimer ()
 

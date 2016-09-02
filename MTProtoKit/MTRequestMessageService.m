@@ -6,31 +6,31 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTRequestMessageService.h>
+#import "MTRequestMessageService.h"
 
-#import <MTProtoKit/MTLogging.h>
-#import <MtProtoKit/MTTime.h>
-#import <MtProtoKit/MTTimer.h>
-#import <MTProtoKit/MTContext.h>
-#import <MTProtoKit/MTSerialization.h>
-#import <MTProtoKit/MTProto.h>
-#import <MTProtoKit/MTQueue.h>
-#import <MTProtoKit/MTMessageTransaction.h>
-#import <MTProtoKit/MTIncomingMessage.h>
-#import <MTProtoKit/MTOutgoingMessage.h>
-#import <MTProtoKit/MTPreparedMessage.h>
-#import <MTProtoKit/MTRequest.h>
-#import <MTProtoKit/MTRequestContext.h>
-#import <MtProtoKit/MTRequestErrorContext.h>
-#import <MTProtoKit/MTDropResponseContext.h>
-#import <MTProtoKit/MTApiEnvironment.h>
-#import <MTProtoKit/MTDatacenterAuthInfo.h>
-#import <MTProtoKit/MTBuffer.h>
+#import "MTLogging.h"
+#import "MTTime.h"
+#import "MTTimer.h"
+#import "MTContext.h"
+#import "MTSerialization.h"
+#import "MTProto.h"
+#import "MTQueue.h"
+#import "MTMessageTransaction.h"
+#import "MTIncomingMessage.h"
+#import "MTOutgoingMessage.h"
+#import "MTPreparedMessage.h"
+#import "MTRequest.h"
+#import "MTRequestContext.h"
+#import "MTRequestErrorContext.h"
+#import "MTDropResponseContext.h"
+#import "MTApiEnvironment.h"
+#import "MTDatacenterAuthInfo.h"
+#import "MTBuffer.h"
 
-#import <MTProtoKit/MTInternalMessageParser.h>
-#import <MTProtoKit/MTRpcResultMessage.h>
-#import <MTProtoKit/MTRpcError.h>
-#import <MTProtoKit/MTDropRpcResultMessage.h>
+#import "MTInternalMessageParser.h"
+#import "MTRpcResultMessage.h"
+#import "MTRpcError.h"
+#import "MTDropRpcResultMessage.h"
 
 @interface MTRequestMessageService ()
 {
@@ -196,9 +196,9 @@
 {
     [_queue dispatchOnQueue:^
     {
-        MTAbsoluteTime currentTime = MTAbsoluteSystemTime();
+        CFAbsoluteTime currentTime = MTAbsoluteSystemTime();
         
-        MTAbsoluteTime minWaitTime = DBL_MAX;
+        CFAbsoluteTime minWaitTime = DBL_MAX;
         bool needTimer = false;
         bool needTransaction = false;
         
@@ -348,7 +348,7 @@
     
     bool requestsWillInitializeApi = _apiEnvironment != nil && ![_apiEnvironment.apiInitializationHash isEqualToString:[_context authInfoForDatacenterWithId:mtProto.datacenterId].authKeyAttributes[@"apiInitializationHash"]];
     
-    MTAbsoluteTime currentTime = MTAbsoluteSystemTime();
+    CFAbsoluteTime currentTime = MTAbsoluteSystemTime();
     
     for (MTRequest *request in _requests)
     {
@@ -625,13 +625,13 @@
                                         if (request.shouldContinueExecutionWithErrorContext(request.errorContext))
                                         {
                                             restartRequest = true;
-                                            request.errorContext.minimalExecuteTime = MAX(request.errorContext.minimalExecuteTime, MTAbsoluteSystemTime() + (MTAbsoluteTime)errorWaitTime);
+                                            request.errorContext.minimalExecuteTime = MAX(request.errorContext.minimalExecuteTime, MTAbsoluteSystemTime() + (CFAbsoluteTime)errorWaitTime);
                                         }
                                     }
                                     else
                                     {
                                         restartRequest = true;
-                                        request.errorContext.minimalExecuteTime = MAX(request.errorContext.minimalExecuteTime, MTAbsoluteSystemTime() + (MTAbsoluteTime)errorWaitTime);
+                                        request.errorContext.minimalExecuteTime = MAX(request.errorContext.minimalExecuteTime, MTAbsoluteSystemTime() + (CFAbsoluteTime)errorWaitTime);
                                     }
                                 }
                             }

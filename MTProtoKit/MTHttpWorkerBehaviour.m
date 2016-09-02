@@ -6,10 +6,10 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTHttpWorkerBehaviour.h>
+#import "MTHttpWorkerBehaviour.h"
 
-#import <MTProtoKit/MTQueue.h>
-#import <MTProtoKit/MTTimer.h>
+#import "MTQueue.h"
+#import "MTTimer.h"
 
 @interface MTHttpWorkerBehaviour ()
 {

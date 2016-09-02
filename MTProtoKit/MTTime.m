@@ -6,15 +6,15 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTTime.h>
+#import "MTTime.h"
 
 #import <mach/mach_time.h>
 
-MTAbsoluteTime MTAbsoluteSystemTime()
+CFAbsoluteTime MTAbsoluteSystemTime()
 {
     static mach_timebase_info_data_t s_timebase_info;
     if (s_timebase_info.denom == 0)
         mach_timebase_info(&s_timebase_info);
     
-    return ((MTAbsoluteTime)(mach_absolute_time() * s_timebase_info.numer)) / (s_timebase_info.denom * NSEC_PER_SEC);
+    return ((CFAbsoluteTime)(mach_absolute_time() * s_timebase_info.numer)) / (s_timebase_info.denom * NSEC_PER_SEC);
 }

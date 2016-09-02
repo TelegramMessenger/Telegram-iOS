@@ -8,8 +8,8 @@
 
 #import <Foundation/Foundation.h>
 
-#import <MTProtoKit/MTExportedAuthorizationData.h>
-#import <MTProtoKit/MTDatacenterAddressListData.h>
+#import <MTProtoKitDynamic/MTExportedAuthorizationData.h>
+#import <MTProtoKitDynamic/MTDatacenterAddressListData.h>
 
 typedef MTExportedAuthorizationData *(^MTExportAuthorizationResponseParser)(NSData *);
 typedef MTDatacenterAddressListData *(^MTRequestDatacenterAddressListParser)(NSData *);

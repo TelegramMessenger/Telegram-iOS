@@ -6,9 +6,9 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#import <MTProtoKit/MTMessageTransaction.h>
+#import "MTMessageTransaction.h"
 
-#import <MTProtoKit/MTInternalId.h>
+#import "MTInternalId.h"
 
 MTInternalIdClass(MTMessageTransaction)
 
