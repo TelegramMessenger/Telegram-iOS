@@ -9,9 +9,9 @@
 
 - (void)testSerialize {
     BITDomain *item = [BITDomain new];
-    NSString *actual = [item serializeToString];
-    NSString *expected = @"{}";
-    XCTAssertTrue([actual isEqualToString:expected]);
+    NSDictionary *actual = [item serializeToDictionary];
+    NSDictionary *expected = @{};
+    XCTAssertTrue([actual isEqualToDictionary:expected]);
 }
 
 @end

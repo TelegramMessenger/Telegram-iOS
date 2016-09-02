@@ -83,6 +83,8 @@
 
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
 
+- (instancetype)initWithAppIdentifier:(NSString *)appIdentifier appEnvironment:(BITEnvironment)environment hockeyAppClient:(BITHockeyAppClient *)hockeyAppClient NS_DESIGNATED_INITIALIZER;
+
 - (void)cleanCrashReports;
 
 - (NSString *)userIDForCrashReport;
@@ -94,7 +96,7 @@
 - (NSString *)firstNotApprovedCrashReport;
 
 - (void)persistUserProvidedMetaData:(BITCrashMetaData *)userProvidedMetaData;
-- (void)persistAttachment:(BITHockeyAttachment *)attachment withFilename:(NSString *)filename;
+- (BOOL)persistAttachment:(BITHockeyAttachment *)attachment withFilename:(NSString *)filename;
 
 - (BITHockeyAttachment *)attachmentForCrashReport:(NSString *)filename;
 

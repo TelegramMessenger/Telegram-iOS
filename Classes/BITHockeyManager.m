@@ -228,22 +228,24 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     return;
   }
   
+  // Fix bug where Application Support directory was encluded from backup
+  NSFileManager *fileManager = [NSFileManager defaultManager];
+  NSURL *appSupportURL = [[fileManager URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask] lastObject];
+  bit_fixBackupAttributeForURL(appSupportURL);
+  
   if (![self isSetUpOnMainThread]) return;
   
   if ((self.appEnvironment == BITEnvironmentAppStore) && [self isInstallTrackingDisabled]) {
     _installString = bit_appAnonID(YES);
   }
 
-  BITHockeyLog(@"INFO: Starting HockeyManager");
+  BITHockeyLogDebug(@"INFO: Starting HockeyManager");
   _startManagerIsInvoked = YES;
   
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
   // start CrashManager
   if (![self isCrashManagerDisabled]) {
-    BITHockeyLog(@"INFO: Start CrashManager");
-    if (!_crashManager.serverURL && _serverURL) {
-      [_crashManager setServerURL:_serverURL];
-    }
+    BITHockeyLogDebug(@"INFO: Start CrashManager");
     
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
     if (_authenticator) {
@@ -265,7 +267,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 #if HOCKEYSDK_FEATURE_STORE_UPDATES
   // start StoreUpdateManager
   if ([self isStoreUpdateManagerEnabled]) {
-    BITHockeyLog(@"INFO: Start StoreUpdateManager");
+    BITHockeyLogDebug(@"INFO: Start StoreUpdateManager");
     if (_serverURL) {
       [_storeUpdateManager setServerURL:_serverURL];
     }
@@ -276,7 +278,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 #if HOCKEYSDK_FEATURE_FEEDBACK
   // start FeedbackManager
   if (![self isFeedbackManagerDisabled]) {
-    BITHockeyLog(@"INFO: Start FeedbackManager");
+    BITHockeyLogDebug(@"INFO: Start FeedbackManager");
     if (_serverURL) {
       [_feedbackManager setServerURL:_serverURL];
     }
@@ -290,7 +292,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     // hook into manager with kvo!
     [_authenticator addObserver:self forKeyPath:@"identified" options:0 context:nil];
     
-    BITHockeyLog(@"INFO: Start Authenticator");
+    BITHockeyLogDebug(@"INFO: Start Authenticator");
     if (_serverURL) {
       [_authenticator setServerURL:_serverURL];
     }
@@ -314,8 +316,8 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
   
 #if HOCKEYSDK_FEATURE_METRICS
   // start MetricsManager
-  if (!self.disableMetricsManager) {
-    BITHockeyLog(@"INFO: Start MetricsManager");
+  if (!self.isMetricsManagerDisabled) {
+    BITHockeyLogDebug(@"INFO: Start MetricsManager");
     [_metricsManager startManager];
     [BITCategoryContainer activateCategory];
   }
@@ -352,6 +354,15 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 }
 #endif /* HOCKEYSDK_FEATURE_FEEDBACK */
 
+#if HOCKEYSDK_FEATURE_METRICS
+- (void)setDisableMetricsManager:(BOOL)disableMetricsManager {
+  if (_metricsManager) {
+    _metricsManager.disabled = disableMetricsManager;
+  }
+  _disableMetricsManager = disableMetricsManager;
+  
+}
+#endif /* HOCKEYSDK_FEATURE_METRICS */
 
 - (void)setServerURL:(NSString *)aServerURL {
   // ensure url ends with a trailing slash
@@ -411,6 +422,27 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
 }
 
+- (void)setDebugLogEnabled:(BOOL)debugLogEnabled {
+  _debugLogEnabled = debugLogEnabled;
+  if (debugLogEnabled) {
+    self.logLevel = BITLogLevelDebug;
+  } else {
+    self.logLevel = BITLogLevelWarning;
+  }
+}
+
+- (BITLogLevel)logLevel {
+  return BITHockeyLogger.currentLogLevel;
+}
+
+- (void)setLogLevel:(BITLogLevel)logLevel {
+  BITHockeyLogger.currentLogLevel = logLevel;
+}
+
+- (void)setLogHandler:(BITLogHandler)logHandler {
+  [BITHockeyLogger setLogHandler:logHandler];
+}
+
 - (void)modifyKeychainUserValue:(NSString *)value forKey:(NSString *)key {
   NSError *error = nil;
   BOOL success = YES;
@@ -436,7 +468,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
   
   if (!success) {
     NSString *errorDescription = [error description] ?: @"";
-    BITHockeyLog(@"ERROR: Couldn't %@ key %@ in the keychain. %@", updateType, key, errorDescription);
+    BITHockeyLogError(@"ERROR: Couldn't %@ key %@ in the keychain. %@", updateType, key, errorDescription);
   }
 }
 
@@ -542,7 +574,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
   
   NSString *integrationPath = [NSString stringWithFormat:@"api/3/apps/%@/integration", bit_encodeAppIdentifier(appIdentifier)];
   
-  BITHockeyLog(@"INFO: Sending integration workflow ping to %@", integrationPath);
+  BITHockeyLogDebug(@"INFO: Sending integration workflow ping to %@", integrationPath);
   
   NSDictionary *params = @{@"timestamp": timeString,
                            @"sdk": BITHOCKEY_NAME,
@@ -575,16 +607,16 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 - (void)logPingMessageForStatusCode:(NSInteger)statusCode {
   switch (statusCode) {
     case 400:
-      BITHockeyLog(@"ERROR: App ID not found");
+      BITHockeyLogError(@"ERROR: App ID not found");
       break;
     case 201:
-      BITHockeyLog(@"INFO: Ping accepted.");
+      BITHockeyLogDebug(@"INFO: Ping accepted.");
       break;
     case 200:
-      BITHockeyLog(@"INFO: Ping accepted. Server already knows.");
+      BITHockeyLogDebug(@"INFO: Ping accepted. Server already knows.");
       break;
     default:
-      BITHockeyLog(@"ERROR: Unknown error");
+      BITHockeyLogError(@"ERROR: Unknown error");
       break;
   }
 }
@@ -602,7 +634,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
   if (_startUpdateManagerIsInvoked) return;
   
   _startUpdateManagerIsInvoked = YES;
-  BITHockeyLog(@"INFO: Start UpdateManager");
+  BITHockeyLogDebug(@"INFO: Start UpdateManager");
   if (_serverURL) {
     [_updateManager setServerURL:_serverURL];
   }
@@ -622,7 +654,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
   
   if (!NSThread.isMainThread) {
     if (self.appEnvironment == BITEnvironmentAppStore) {
-      BITHockeyLog(@"%@", errorString);
+      BITHockeyLogError(@"%@", errorString);
     } else {
       NSLog(@"%@", errorString);
       NSAssert(NSThread.isMainThread, errorString);
@@ -657,39 +689,40 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
   
   if (_validAppIdentifier) {
 #if HOCKEYSDK_FEATURE_CRASH_REPORTER
-    BITHockeyLog(@"INFO: Setup CrashManager");
-    _crashManager = [[BITCrashManager alloc] initWithAppIdentifier:_appIdentifier appEnvironment:_appEnvironment];
-    _crashManager.hockeyAppClient = [self hockeyAppClient];
+    BITHockeyLogDebug(@"INFO: Setup CrashManager");
+    _crashManager = [[BITCrashManager alloc] initWithAppIdentifier:_appIdentifier
+                                                    appEnvironment:_appEnvironment
+                                                   hockeyAppClient:[self hockeyAppClient]];
     _crashManager.delegate = _delegate;
 #endif /* HOCKEYSDK_FEATURE_CRASH_REPORTER */
     
 #if HOCKEYSDK_FEATURE_UPDATES
-    BITHockeyLog(@"INFO: Setup UpdateManager");
+    BITHockeyLogDebug(@"INFO: Setup UpdateManager");
     _updateManager = [[BITUpdateManager alloc] initWithAppIdentifier:_appIdentifier appEnvironment:_appEnvironment];
     _updateManager.delegate = _delegate;
 #endif /* HOCKEYSDK_FEATURE_UPDATES */
 
 #if HOCKEYSDK_FEATURE_STORE_UPDATES
-    BITHockeyLog(@"INFO: Setup StoreUpdateManager");
+    BITHockeyLogDebug(@"INFO: Setup StoreUpdateManager");
     _storeUpdateManager = [[BITStoreUpdateManager alloc] initWithAppIdentifier:_appIdentifier appEnvironment:_appEnvironment];
     _storeUpdateManager.delegate = _delegate;
 #endif /* HOCKEYSDK_FEATURE_STORE_UPDATES */
     
 #if HOCKEYSDK_FEATURE_FEEDBACK
-    BITHockeyLog(@"INFO: Setup FeedbackManager");
+    BITHockeyLogDebug(@"INFO: Setup FeedbackManager");
     _feedbackManager = [[BITFeedbackManager alloc] initWithAppIdentifier:_appIdentifier appEnvironment:_appEnvironment];
     _feedbackManager.delegate = _delegate;
 #endif /* HOCKEYSDK_FEATURE_FEEDBACK */
 
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
-    BITHockeyLog(@"INFO: Setup Authenticator");
+    BITHockeyLogDebug(@"INFO: Setup Authenticator");
     _authenticator = [[BITAuthenticator alloc] initWithAppIdentifier:_appIdentifier appEnvironment:_appEnvironment];
     _authenticator.hockeyAppClient = [self hockeyAppClient];
     _authenticator.delegate = _delegate;
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
     
 #if HOCKEYSDK_FEATURE_METRICS
-    BITHockeyLog(@"INFO: Setup MetricsManager");
+    BITHockeyLogDebug(@"INFO: Setup MetricsManager");
     NSString *iKey = bit_appIdentifierToGuid(_appIdentifier);
     _metricsManager = [[BITMetricsManager alloc] initWithAppIdentifier:iKey appEnvironment:_appEnvironment];
 #endif /* HOCKEYSDK_FEATURE_METRICS */

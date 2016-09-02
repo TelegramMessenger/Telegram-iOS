@@ -207,9 +207,9 @@
     item.type = @"Test string";
     item.machineName = @"Test string";
     item.vmName = @"Test vmName";
-    NSString *actual = [item serializeToString];
-    NSString *expected = @"{\"ai.device.id\":\"Test string\",\"ai.device.ip\":\"Test string\",\"ai.device.language\":\"Test string\",\"ai.device.locale\":\"Test string\",\"ai.device.model\":\"Test string\",\"ai.device.network\":\"Test string\",\"ai.device.networkName\":\"Test networkName\",\"ai.device.oemName\":\"Test string\",\"ai.device.os\":\"Test string\",\"ai.device.osVersion\":\"Test string\",\"ai.device.roleInstance\":\"Test string\",\"ai.device.roleName\":\"Test string\",\"ai.device.screenResolution\":\"Test string\",\"ai.device.type\":\"Test string\",\"ai.device.machineName\":\"Test string\",\"ai.device.vmName\":\"Test vmName\"}";
-    XCTAssertTrue([actual isEqualToString:expected]);
+    NSDictionary *actual = [item serializeToDictionary];
+    NSDictionary *expected = @{@"ai.device.id":@"Test string", @"ai.device.ip":@"Test string", @"ai.device.language":@"Test string", @"ai.device.locale":@"Test string", @"ai.device.model":@"Test string", @"ai.device.network":@"Test string", @"ai.device.networkName":@"Test networkName", @"ai.device.oemName":@"Test string", @"ai.device.os":@"Test string", @"ai.device.osVersion":@"Test string", @"ai.device.roleInstance":@"Test string", @"ai.device.roleName":@"Test string", @"ai.device.screenResolution":@"Test string", @"ai.device.type":@"Test string", @"ai.device.machineName":@"Test string", @"ai.device.vmName":@"Test vmName"};
+    XCTAssertTrue([actual isEqualToDictionary:expected]);
 }
 
 @end

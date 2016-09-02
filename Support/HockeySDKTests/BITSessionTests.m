@@ -51,9 +51,9 @@
     item.sessionId = @"Test string";
     item.isFirst = @"Test string";
     item.isNew = @"Test string";
-    NSString *actual = [item serializeToString];
-    NSString *expected = @"{\"ai.session.id\":\"Test string\",\"ai.session.isFirst\":\"Test string\",\"ai.session.isNew\":\"Test string\"}";
-    XCTAssertTrue([actual isEqualToString:expected]);
+    NSDictionary *actual = [item serializeToDictionary];
+    NSDictionary *expected = @{@"ai.session.id":@"Test string", @"ai.session.isFirst":@"Test string", @"ai.session.isNew":@"Test string"};
+    XCTAssertTrue([actual isEqualToDictionary:expected]);
 }
 
 @end

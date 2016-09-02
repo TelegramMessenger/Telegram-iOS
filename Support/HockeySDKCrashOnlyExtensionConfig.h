@@ -26,6 +26,13 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
+/*
+ * This file is only used by the binary framework target when building
+ * and creating the crash reporting only framework
+ *
+ * Attention: Do not include this into your projects yourself!
+ */
+ 
 #ifndef HockeySDK_HockeySDKFeatureConfig_h
 #define HockeySDK_HockeySDKFeatureConfig_h
 
@@ -46,7 +53,7 @@
  * _Default_: Enabled
  */
 #ifndef HOCKEYSDK_FEATURE_FEEDBACK
-#    define HOCKEYSDK_FEATURE_FEEDBACK 1
+#    define HOCKEYSDK_FEATURE_FEEDBACK 0
 #endif /* HOCKEYSDK_FEATURE_FEEDBACK */
 
 
@@ -56,7 +63,7 @@
  * _Default_: Enabled
  */
 #ifndef HOCKEYSDK_FEATURE_STORE_UPDATES
-#    define HOCKEYSDK_FEATURE_STORE_UPDATES 1
+#    define HOCKEYSDK_FEATURE_STORE_UPDATES 0
 #endif /* HOCKEYSDK_FEATURE_STORE_UPDATES */
 
 
@@ -66,7 +73,7 @@
  * _Default_: Enabled
  */
 #ifndef HOCKEYSDK_FEATURE_AUTHENTICATOR
-#    define HOCKEYSDK_FEATURE_AUTHENTICATOR 1
+#    define HOCKEYSDK_FEATURE_AUTHENTICATOR 0
 #endif /* HOCKEYSDK_FEATURE_AUTHENTICATOR */
 
 
@@ -76,7 +83,7 @@
  * _Default_: Enabled
  */
 #ifndef HOCKEYSDK_FEATURE_UPDATES
-#    define HOCKEYSDK_FEATURE_UPDATES 1
+#    define HOCKEYSDK_FEATURE_UPDATES 0
 #endif /* HOCKEYSDK_FEATURE_UPDATES */
 
 
@@ -86,7 +93,7 @@
  * _Default_: Enabled
  */
 #ifndef HOCKEYSDK_FEATURE_METRICS
-#    define HOCKEYSDK_FEATURE_METRICS 1
+#    define HOCKEYSDK_FEATURE_METRICS 0
 #endif /* HOCKEYSDK_FEATURE_METRICS */
 
 #endif /* HockeySDK_HockeySDKFeatureConfig_h */

@@ -68,7 +68,6 @@
 # define CPU_SUBTYPE_ARM_V8 13
 #endif
 
-
 /**
  * Sort PLCrashReportBinaryImageInfo instances by their starting address.
  */
@@ -196,6 +195,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
  */
 @implementation BITCrashReportTextFormatter
 
+NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
 
 /**
  * Formats the provided @a report as human-readable text in the given @a textFormat, and return
@@ -377,6 +377,9 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
   
   [text appendString: @"\n"];
   
+  NSString *xamarinTrace;
+  NSString *exceptionReason;
+  
   /* System info */
   {
     NSString *osBuild = @"???";
@@ -396,7 +399,21 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
       }
     }
     [text appendFormat: @"OS Version:      %@ %@ (%@)\n", osName, report.systemInfo.operatingSystemVersion, osBuild];
-    [text appendFormat: @"Report Version:  104\n"];
+    
+    // Check if exception data contains xamarin stacktrace in order to determine report version
+    if (report.hasExceptionInfo) {
+      exceptionReason = report.exceptionInfo.exceptionReason;
+      NSInteger xamarinTracePosition = [exceptionReason rangeOfString:BITXamarinStackTraceDelimiter].location;
+      if (xamarinTracePosition != NSNotFound) {
+        xamarinTrace = [exceptionReason substringFromIndex:xamarinTracePosition];
+        xamarinTrace = [xamarinTrace stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        xamarinTrace = [xamarinTrace stringByReplacingOccurrencesOfString:@"<---\n\n--->" withString:@"<---\n--->"];
+        exceptionReason = [exceptionReason substringToIndex:xamarinTracePosition];
+        exceptionReason = [exceptionReason stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+      }
+    }
+    NSString *reportVersion = (xamarinTrace) ? @"104-Xamarin" : @"104";
+    [text appendFormat: @"Report Version:  %@\n", reportVersion];
   }
   
   [text appendString: @"\n"];
@@ -426,9 +443,15 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
   if (report.hasExceptionInfo) {
     [text appendFormat: @"Application Specific Information:\n"];
     [text appendFormat: @"*** Terminating app due to uncaught exception '%@', reason: '%@'\n",
-     report.exceptionInfo.exceptionName, report.exceptionInfo.exceptionReason];
-    
+    report.exceptionInfo.exceptionName, exceptionReason];
     [text appendString: @"\n"];
+    
+    /* Xamarin Exception */
+    if (xamarinTrace) {
+      [text appendFormat:@"%@\n", xamarinTrace];
+      [text appendString: @"\n"];
+    }
+    
   } else if (crashed_thread != nil) {
     // try to find the selector in case this was a crash in obj_msgSend
     // we search this whether the crash happened in obj_msgSend or not since we don't have the symbol!
@@ -890,7 +913,7 @@ static const char *findSEL (const char *imageName, NSString *imageUUID, uint64_t
     NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"(/Users/[^/]+/)" options:0 error:&error];
     anonymizedProcessPath = [regex stringByReplacingMatchesInString:processPath options:0 range:NSMakeRange(0, [processPath length]) withTemplate:@"/Users/USER/"];
     if (error) {
-      BITHockeyLog("ERROR: String replacing failed - %@", error.localizedDescription);
+      BITHockeyLogError(@"ERROR: String replacing failed - %@", error.localizedDescription);
     }
   }
   return anonymizedProcessPath;

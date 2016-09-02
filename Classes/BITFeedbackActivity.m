@@ -119,7 +119,7 @@
         [item isKindOfClass:[NSURL class]]) {
       [_items addObject:item];
     } else {
-      BITHockeyLog(@"Unknown item type %@", item);
+      BITHockeyLogWarning(@"WARNING: Unknown item type %@", item);
     }
   }
 }

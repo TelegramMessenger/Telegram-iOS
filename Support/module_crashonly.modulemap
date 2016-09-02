@@ -9,4 +9,5 @@ framework module HockeySDK {
   link framework "SystemConfiguration"
   link framework "UIKit"
   link "c++"
+  link "z"
 }
