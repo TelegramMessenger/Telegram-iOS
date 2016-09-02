@@ -68,6 +68,8 @@ static inline int roundUpInput(int numToRound, int multiple)
     {
         if (MTLogEnabled()) {
             MTLog(@"***** Couldn't read int32");
+            
+            @throw [[NSException alloc] initWithName:@"MTInputStreamException" reason:@"readInt32 end of stream" userInfo:@{}];
         }
     }
     
