@@ -1,5 +1,9 @@
 import Foundation
-import SwiftSignalKit
+#if os(macOS)
+    import SwiftSignalKitMac
+#else
+    import SwiftSignalKit
+#endif
 
 public enum ViewUpdateType {
     case InitialUnread(MessageIndex)

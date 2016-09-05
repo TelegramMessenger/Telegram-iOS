@@ -1,5 +1,9 @@
 import Foundation
-import SwiftSignalKit
+#if os(macOS)
+    import SwiftSignalKitMac
+#else
+    import SwiftSignalKit
+#endif
 
 private final class ResourceStatusContext {
     var status: MediaResourceStatus?
@@ -36,6 +40,7 @@ public final class MediaBox {
     let buffer = WriteBuffer()
     
     private let statusQueue = Queue()
+    private let concurrentQueue = Queue.concurrentDefaultQueue()
     private let dataQueue = Queue()
     
     private var statusContexts: [String: ResourceStatusContext] = [:]
@@ -79,64 +84,73 @@ public final class MediaBox {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
-            self.statusQueue.async {
-                let statusContext: ResourceStatusContext
-                if let current = self.statusContexts[resource.id] {
-                    statusContext = current
+            self.concurrentQueue.async {
+                let path = self.pathForId(resource.id)
+                let currentSize = fileSize(path)
+                if currentSize >= resource.size {
+                    subscriber.putNext(.Local)
+                    subscriber.putCompletion()
                 } else {
-                    statusContext = ResourceStatusContext()
-                    self.statusContexts[resource.id] = statusContext
-                }
-                
-                let index = statusContext.subscribers.add({ status in
-                    subscriber.putNext(status)
-                })
-                
-                if let status = statusContext.status {
-                    subscriber.putNext(status)
-                } else {
-                    self.dataQueue.async {
-                        let status: MediaResourceStatus
-                        
-                        let path = self.pathForId(resource.id)
-                        let currentSize = fileSize(path)
-                        if currentSize >= resource.size {
-                            status = .Local
+                    self.statusQueue.async {
+                        let statusContext: ResourceStatusContext
+                        if let current = self.statusContexts[resource.id] {
+                            statusContext = current
                         } else {
-                            var fetchingData = false
-                            if let dataContext = self.dataContexts[resource.id] {
-                                fetchingData = dataContext.fetchDisposable != nil
-                            }
-                            
-                            if fetchingData {
-                                status = .Fetching(progress: Float(currentSize) / Float(resource.size))
-                            } else {
-                                status = .Remote
-                            }
+                            statusContext = ResourceStatusContext()
+                            self.statusContexts[resource.id] = statusContext
                         }
                         
-                        self.statusQueue.async {
-                            if let statusContext = self.statusContexts[resource.id] , statusContext.status == nil {
-                                statusContext.status = status
+                        let index = statusContext.subscribers.add({ status in
+                            subscriber.putNext(status)
+                        })
+                        
+                        if let status = statusContext.status {
+                            subscriber.putNext(status)
+                        } else {
+                            self.dataQueue.async {
+                                let status: MediaResourceStatus
                                 
-                                for subscriber in statusContext.subscribers.copyItems() {
-                                    subscriber(status)
+                                let path = self.pathForId(resource.id)
+                                let currentSize = fileSize(path)
+                                if currentSize >= resource.size {
+                                    status = .Local
+                                } else {
+                                    var fetchingData = false
+                                    if let dataContext = self.dataContexts[resource.id] {
+                                        fetchingData = dataContext.fetchDisposable != nil
+                                    }
+                                    
+                                    if fetchingData {
+                                        status = .Fetching(progress: Float(currentSize) / Float(resource.size))
+                                    } else {
+                                        status = .Remote
+                                    }
+                                }
+                                
+                                self.statusQueue.async {
+                                    if let statusContext = self.statusContexts[resource.id] , statusContext.status == nil {
+                                        statusContext.status = status
+                                        
+                                        for subscriber in statusContext.subscribers.copyItems() {
+                                            subscriber(status)
+                                        }
+                                    }
                                 }
                             }
                         }
+                        
+                        disposable.set(ActionDisposable {
+                            self.statusQueue.async {
+                                if let current = self.statusContexts[resource.id] {
+                                    current.subscribers.remove(index)
+                                    if current.subscribers.isEmpty {
+                                        self.statusContexts.removeValue(forKey: resource.id)
+                                    }
+                                }
+                            }
+                        })
                     }
                 }
-            
-                disposable.set(ActionDisposable {
-                    self.statusQueue.async {
-                        if let current = self.statusContexts[resource.id] {
-                            current.subscribers.remove(index)
-                            if current.subscribers.isEmpty {
-                                self.statusContexts.removeValue(forKey: resource.id)
-                            }
-                        }
-                    }
-                })
             }
             
             return disposable
@@ -147,7 +161,7 @@ public final class MediaBox {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
-            self.dataQueue.async {
+            self.concurrentQueue.async {
                 let path = self.pathForId(resource.id)
                 let currentSize = fileSize(path)
                 
@@ -163,36 +177,79 @@ public final class MediaBox {
                     }
                     subscriber.putCompletion()
                 } else {
-                    let dataContext: ResourceDataContext
-                    if let current = self.dataContexts[resource.id] {
-                        dataContext = current
-                    } else {
-                        dataContext = ResourceDataContext(data: MediaResourceData(path: path, size: currentSize))
-                        self.dataContexts[resource.id] = dataContext
-                    }
-                    
-                    let index: Bag<(MediaResourceData) -> Void>.Index
-                    if complete {
-                        var checkedForSymlink = false
-                        index = dataContext.completeDataSubscribers.add { data in
-                            if let pathExtension = pathExtension {
-                                let pathWithExtension = path + ".\(pathExtension)"
-                                if !checkedForSymlink && !FileManager.default.fileExists(atPath: pathWithExtension) {
-                                    checkedForSymlink = true
-                                    let _ = try? FileManager.default.createSymbolicLink(atPath: pathWithExtension, withDestinationPath: self.fileNameForId(resource.id))
-                                }
-                                
-                                subscriber.putNext(MediaResourceData(path: pathWithExtension, size: data.size))
-                            } else {
-                                subscriber.putNext(data)
-                            }
-                            
-                            if data.size >= resource.size {
-                                subscriber.putCompletion()
-                            }
+                    self.dataQueue.async {
+                        let dataContext: ResourceDataContext
+                        if let current = self.dataContexts[resource.id] {
+                            dataContext = current
+                        } else {
+                            dataContext = ResourceDataContext(data: MediaResourceData(path: path, size: currentSize))
+                            self.dataContexts[resource.id] = dataContext
                         }
                         
-                        if dataContext.data.size >= resource.size {
+                        let index: Bag<(MediaResourceData) -> Void>.Index
+                        if complete {
+                            var checkedForSymlink = false
+                            index = dataContext.completeDataSubscribers.add { data in
+                                if let pathExtension = pathExtension {
+                                    let pathWithExtension = path + ".\(pathExtension)"
+                                    if !checkedForSymlink && !FileManager.default.fileExists(atPath: pathWithExtension) {
+                                        checkedForSymlink = true
+                                        let _ = try? FileManager.default.createSymbolicLink(atPath: pathWithExtension, withDestinationPath: self.fileNameForId(resource.id))
+                                    }
+                                    
+                                    subscriber.putNext(MediaResourceData(path: pathWithExtension, size: data.size))
+                                } else {
+                                    subscriber.putNext(data)
+                                }
+                                
+                                if data.size >= resource.size {
+                                    subscriber.putCompletion()
+                                }
+                            }
+                            
+                            if dataContext.data.size >= resource.size {
+                                if let pathExtension = pathExtension {
+                                    let pathWithExtension = path + ".\(pathExtension)"
+                                    if !checkedForSymlink && !FileManager.default.fileExists(atPath: pathWithExtension) {
+                                        checkedForSymlink = true
+                                        let _ = try? FileManager.default.createSymbolicLink(atPath: pathWithExtension, withDestinationPath: self.fileNameForId(resource.id))
+                                    }
+                                    
+                                    subscriber.putNext(MediaResourceData(path: pathWithExtension, size: dataContext.data.size))
+                                } else {
+                                    subscriber.putNext(dataContext.data)
+                                }
+                            } else {
+                                if let pathExtension = pathExtension {
+                                    let pathWithExtension = path + ".\(pathExtension)"
+                                    if !checkedForSymlink && !FileManager.default.fileExists(atPath: pathWithExtension) {
+                                        checkedForSymlink = true
+                                        let _ = try? FileManager.default.createSymbolicLink(atPath: pathWithExtension, withDestinationPath: self.fileNameForId(resource.id))
+                                    }
+                                    
+                                    subscriber.putNext(MediaResourceData(path: pathWithExtension, size: 0))
+                                } else {
+                                    subscriber.putNext(MediaResourceData(path: dataContext.data.path, size: 0))
+                                }
+                            }
+                        } else {
+                            var checkedForSymlink = false
+                            index = dataContext.progresiveDataSubscribers.add { data in
+                                if let pathExtension = pathExtension {
+                                    let pathWithExtension = path + ".\(pathExtension)"
+                                    if !checkedForSymlink && !FileManager.default.fileExists(atPath: pathWithExtension) {
+                                        checkedForSymlink = true
+                                        let _ = try? FileManager.default.createSymbolicLink(atPath: pathWithExtension, withDestinationPath: self.fileNameForId(resource.id))
+                                    }
+                                    
+                                    subscriber.putNext(MediaResourceData(path: pathWithExtension, size: data.size))
+                                } else {
+                                    subscriber.putNext(data)
+                                }
+                                if data.size >= resource.size {
+                                    subscriber.putCompletion()
+                                }
+                            }
                             if let pathExtension = pathExtension {
                                 let pathWithExtension = path + ".\(pathExtension)"
                                 if !checkedForSymlink && !FileManager.default.fileExists(atPath: pathWithExtension) {
@@ -204,65 +261,24 @@ public final class MediaBox {
                             } else {
                                 subscriber.putNext(dataContext.data)
                             }
-                        } else {
-                            if let pathExtension = pathExtension {
-                                let pathWithExtension = path + ".\(pathExtension)"
-                                if !checkedForSymlink && !FileManager.default.fileExists(atPath: pathWithExtension) {
-                                    checkedForSymlink = true
-                                    let _ = try? FileManager.default.createSymbolicLink(atPath: pathWithExtension, withDestinationPath: self.fileNameForId(resource.id))
+                        }
+                        
+                        disposable.set(ActionDisposable {
+                            self.dataQueue.async {
+                                if let dataContext = self.dataContexts[resource.id] {
+                                    if complete {
+                                        dataContext.completeDataSubscribers.remove(index)
+                                    } else {
+                                        dataContext.progresiveDataSubscribers.remove(index)
+                                    }
+                                    
+                                    if dataContext.progresiveDataSubscribers.isEmpty && dataContext.completeDataSubscribers.isEmpty && dataContext.fetchSubscribers.isEmpty {
+                                        self.dataContexts.removeValue(forKey: resource.id)
+                                    }
                                 }
-                                
-                                subscriber.putNext(MediaResourceData(path: pathWithExtension, size: 0))
-                            } else {
-                                subscriber.putNext(MediaResourceData(path: dataContext.data.path, size: 0))
                             }
-                        }
-                    } else {
-                        var checkedForSymlink = false
-                        index = dataContext.progresiveDataSubscribers.add { data in
-                            if let pathExtension = pathExtension {
-                                let pathWithExtension = path + ".\(pathExtension)"
-                                if !checkedForSymlink && !FileManager.default.fileExists(atPath: pathWithExtension) {
-                                    checkedForSymlink = true
-                                    let _ = try? FileManager.default.createSymbolicLink(atPath: pathWithExtension, withDestinationPath: self.fileNameForId(resource.id))
-                                }
-                                
-                                subscriber.putNext(MediaResourceData(path: pathWithExtension, size: data.size))
-                            } else {
-                                subscriber.putNext(data)
-                            }
-                            if data.size >= resource.size {
-                                subscriber.putCompletion()
-                            }
-                        }
-                        if let pathExtension = pathExtension {
-                            let pathWithExtension = path + ".\(pathExtension)"
-                            if !checkedForSymlink && !FileManager.default.fileExists(atPath: pathWithExtension) {
-                                checkedForSymlink = true
-                                let _ = try? FileManager.default.createSymbolicLink(atPath: pathWithExtension, withDestinationPath: self.fileNameForId(resource.id))
-                            }
-                            
-                            subscriber.putNext(MediaResourceData(path: pathWithExtension, size: dataContext.data.size))
-                        } else {
-                            subscriber.putNext(dataContext.data)
-                        }
+                        })
                     }
-                    
-                    disposable.set(ActionDisposable {
-                        self.dataQueue.async {
-                            if let dataContext = self.dataContexts[resource.id] {
-                                if complete {
-                                    dataContext.completeDataSubscribers.remove(index)
-                                } else {
-                                    dataContext.progresiveDataSubscribers.remove(index)
-                                }
-                                
-                                if dataContext.progresiveDataSubscribers.isEmpty && dataContext.completeDataSubscribers.isEmpty && dataContext.fetchSubscribers.isEmpty {
-                                    self.dataContexts.removeValue(forKey: resource.id)
-                                }
-                            }
-                        }
-                    })
                 }
             }
             

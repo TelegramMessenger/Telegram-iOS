@@ -1,6 +1,10 @@
 import Foundation
 import sqlcipher
-import SwiftSignalKit
+#if os(macOS)
+    import SwiftSignalKitMac
+#else
+    import SwiftSignalKit
+#endif
 
 private struct SqlitePreparedStatement {
     let statement: OpaquePointer?
@@ -87,8 +91,11 @@ public final class SqliteValueBox: ValueBox {
     
     private let checkpoints = MetaDisposable()
     
-    public init(basePath: String) {
+    private let queue: Queue
+    
+    public init(basePath: String, queue: Queue) {
         self.basePath = basePath
+        self.queue = queue
         self.database = self.openDatabase()
     }
     
@@ -98,6 +105,8 @@ public final class SqliteValueBox: ValueBox {
     }
     
     private func openDatabase() -> Database {
+        assert(self.queue.isCurrent())
+        
         checkpoints.set(nil)
         lock.lock()
         
@@ -105,23 +114,25 @@ public final class SqliteValueBox: ValueBox {
         let path = basePath + "/db_sqlite"
         let database = Database(path)
         
-        database.adjustChunkSize()
-        database.execute("PRAGMA page_size=1024")
         database.execute("PRAGMA cache_size=-2097152")
         database.execute("PRAGMA synchronous=NORMAL")
         database.execute("PRAGMA journal_mode=WAL")
         database.execute("PRAGMA temp_store=MEMORY")
-        database.execute("PRAGMA wal_autocheckpoint=200")
+        //database.execute("PRAGMA wal_autocheckpoint=200")
         database.execute("PRAGMA journal_size_limit=1536")
         
-        /*var statement: OpaquePointer? = nil
+        var statement: OpaquePointer? = nil
         sqlite3_prepare_v2(database.handle, "PRAGMA integrity_check", -1, &statement, nil)
         let preparedStatement = SqlitePreparedStatement(statement: statement)
-        if preparedStatement.step() {
-            let value = preparedStatement.stringAt(0)
-            print("integrity_check: \(value)")
+        while preparedStatement.step() {
+            let value = preparedStatement.valueAt(0)
+            let text = String(data: Data(bytes: value.memory.assumingMemoryBound(to: UInt8.self), count: value.length), encoding: .utf8)
+            print("integrity_check: \(text ?? "")")
+            assert(text == "ok")
+            //let value = preparedStatement.stringAt(0)
+            //print("integrity_check: \(value)")
         }
-        preparedStatement.destroy()*/
+        preparedStatement.destroy()
         
         sqlite3_busy_timeout(database.handle, 10000000)
         
@@ -138,11 +149,13 @@ public final class SqliteValueBox: ValueBox {
         
         checkpoints.set((Signal<Void, NoError>.single(Void()) |> delay(10.0, queue: Queue.concurrentDefaultQueue()) |> restart).start(next: { [weak self] _ in
             if let strongSelf = self , strongSelf.database != nil {
-                strongSelf.lock.lock()
-                var nLog: Int32 = 0
-                var nFrames: Int32 = 0
-                sqlite3_wal_checkpoint_v2(strongSelf.database.handle, nil, SQLITE_CHECKPOINT_PASSIVE, &nLog, &nFrames)
-                strongSelf.lock.unlock()
+                strongSelf.queue.async {
+                    strongSelf.lock.lock()
+                    var nLog: Int32 = 0
+                    var nFrames: Int32 = 0
+                    sqlite3_wal_checkpoint_v2(strongSelf.database.handle, nil, SQLITE_CHECKPOINT_PASSIVE, &nLog, &nFrames)
+                    strongSelf.lock.unlock()
+                }
                 //print("(SQLite WAL size \(nLog) removed \(nFrames))")
             }
         }))
@@ -160,16 +173,19 @@ public final class SqliteValueBox: ValueBox {
     }
     
     public func begin() {
+        assert(self.queue.isCurrent())
         self.database.execute("BEGIN IMMEDIATE")
     }
     
     public func commit() {
+        assert(self.queue.isCurrent())
         let startTime = CFAbsoluteTimeGetCurrent()
         self.database.execute("COMMIT")
         self.commitTime += CFAbsoluteTimeGetCurrent() - startTime
     }
     
     private func getUserVersion(_ database: Database) -> Int64 {
+        assert(self.queue.isCurrent())
         var statement: OpaquePointer? = nil
         sqlite3_prepare_v2(database.handle, "PRAGMA user_version", -1, &statement, nil)
         let preparedStatement = SqlitePreparedStatement(statement: statement)
@@ -180,6 +196,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     private func listTables(_ database: Database) -> [Int64] {
+        assert(self.queue.isCurrent())
         var statement: OpaquePointer? = nil
         sqlite3_prepare_v2(database.handle, "SELECT name FROM __meta_tables", -1, &statement, nil)
         let preparedStatement = SqlitePreparedStatement(statement: statement)
@@ -193,6 +210,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     private func getStatement(_ table: Int32, key: ValueBoxKey) -> SqlitePreparedStatement {
+        assert(self.queue.isCurrent())
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.getStatements[table] {
@@ -213,6 +231,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     private func rangeKeyAscStatementLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey, limit: Int) -> SqlitePreparedStatement {
+        assert(self.queue.isCurrent())
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.rangeKeyAscStatementsLimit[table] {
@@ -233,7 +252,9 @@ public final class SqliteValueBox: ValueBox {
         return resultStatement
     }
     
-    private func rangeKeyAscStatementNoLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey) -> SqlitePreparedStatement {
+    private func rangeKeyAscStatementNoLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey) ->
+        SqlitePreparedStatement {
+            assert(self.queue.isCurrent())
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.rangeKeyAscStatementsNoLimit[table] {
@@ -277,6 +298,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     private func rangeKeyDescStatementNoLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey) -> SqlitePreparedStatement {
+        assert(self.queue.isCurrent())
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.rangeKeyDescStatementsNoLimit[table] {
@@ -298,6 +320,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     private func rangeValueAscStatementLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey, limit: Int) -> SqlitePreparedStatement {
+        assert(self.queue.isCurrent())
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.rangeValueAscStatementsLimit[table] {
@@ -319,6 +342,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     private func rangeValueAscStatementNoLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey) -> SqlitePreparedStatement {
+        assert(self.queue.isCurrent())
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.rangeValueAscStatementsNoLimit[table] {
@@ -340,6 +364,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     private func rangeValueDescStatementLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey, limit: Int) -> SqlitePreparedStatement {
+        assert(self.queue.isCurrent())
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.rangeValueDescStatementsLimit[table] {
@@ -362,6 +387,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     private func rangeValueDescStatementNoLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey) -> SqlitePreparedStatement {
+        assert(self.queue.isCurrent())
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.rangeKeyDescStatementsNoLimit[table] {
@@ -383,6 +409,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     private func existsStatement(_ table: Int32, key: ValueBoxKey) -> SqlitePreparedStatement {
+        assert(self.queue.isCurrent())
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.existsStatements[table] {
@@ -403,6 +430,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     private func updateStatement(_ table: Int32, key: ValueBoxKey, value: MemoryBuffer) -> SqlitePreparedStatement {
+        assert(self.queue.isCurrent())
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.updateStatements[table] {
@@ -424,6 +452,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     private func insertStatement(_ table: Int32, key: ValueBoxKey, value: MemoryBuffer) -> SqlitePreparedStatement {
+        assert(self.queue.isCurrent())
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.insertStatements[table] {
@@ -449,6 +478,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     private func deleteStatement(_ table: Int32, key: ValueBoxKey) -> SqlitePreparedStatement {
+        assert(self.queue.isCurrent())
         let resultStatement: SqlitePreparedStatement
         
         if let statement = self.deleteStatements[table] {
@@ -469,6 +499,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     public func get(_ table: Int32, key: ValueBoxKey) -> ReadBuffer? {
+        assert(self.queue.isCurrent())
         let startTime = CFAbsoluteTimeGetCurrent()
         if self.tables.contains(table) {
             let statement = self.getStatement(table, key: key)
@@ -491,6 +522,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     public func exists(_ table: Int32, key: ValueBoxKey) -> Bool {
+        assert(self.queue.isCurrent())
         if let _ = self.get(table, key: key) {
             return true
         }
@@ -498,6 +530,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     public func range(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey, values: @noescape(ValueBoxKey, ReadBuffer) -> Bool, limit: Int) {
+        assert(self.queue.isCurrent())
         if start == end {
             return
         }
@@ -545,6 +578,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     public func range(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey, keys: @noescape(ValueBoxKey) -> Bool, limit: Int) {
+        assert(self.queue.isCurrent())
         if self.tables.contains(table) {
             let statement: SqlitePreparedStatement
             
@@ -587,6 +621,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     public func set(_ table: Int32, key: ValueBoxKey, value: MemoryBuffer) {
+        assert(self.queue.isCurrent())
         if !self.tables.contains(table) {
             self.database.execute("CREATE TABLE t\(table) (key BLOB, value BLOB)")
             self.database.execute("CREATE INDEX t\(table)_key ON t\(table) (key)")
@@ -619,6 +654,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     public func remove(_ table: Int32, key: ValueBoxKey) {
+        assert(self.queue.isCurrent())
         if self.tables.contains(table) {
             
             let startTime = CFAbsoluteTimeGetCurrent()
@@ -633,6 +669,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     private func clearStatements() {
+        assert(self.queue.isCurrent())
         for (_, statement) in self.getStatements {
             statement.destroy()
         }
@@ -700,6 +737,7 @@ public final class SqliteValueBox: ValueBox {
     }
     
     public func drop() {
+        assert(self.queue.isCurrent())
         self.clearStatements()
 
         self.lock.lock()

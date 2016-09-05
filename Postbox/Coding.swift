@@ -199,6 +199,7 @@ private enum ValueType: Int8 {
     case ObjectArray = 8
     case ObjectDictionary = 9
     case Bytes = 10
+    case Nil = 11
 }
 
 public final class Encoder {
@@ -231,6 +232,12 @@ public final class Encoder {
         var length: Int8 = Int8(key.utf8CodeUnitCount)
         self.buffer.write(&length, offset: 0, length: 1)
         self.buffer.write(key.utf8Start, offset: 0, length: Int(length))
+    }
+    
+    public func encodeNil(forKey key: StaticString) {
+        self.encodeKey(key)
+        var type: Int8 = ValueType.Nil.rawValue
+        self.buffer.write(&type, offset: 0, length: 1)
     }
     
     public func encodeInt32(_ value: Int32, forKey key: StaticString) {
@@ -481,6 +488,8 @@ public final class Decoder {
                 var length: Int32 = 0
                 memcpy(&length, bytes + offset, 4)
                 offset += 4 + Int(length)
+            case .Nil:
+                break
         }
     }
     
@@ -491,24 +500,29 @@ public final class Decoder {
         let startOffset = offset
         
         let keyLength: Int = key.utf8CodeUnitCount
-        while (offset < maxOffset)
-        {
+        while (offset < maxOffset) {
             let readKeyLength = bytes[offset]
+            assert(readKeyLength >= 0)
             offset += 1
             offset += Int(readKeyLength)
             
             let readValueType = bytes[offset]
             offset += 1
             
-            if readValueType != valueType.rawValue || keyLength != Int(readKeyLength) || memcmp(bytes + (offset - Int(readKeyLength) - 1), key.utf8Start, keyLength) != 0 {
-                skipValue(bytes, offset: &offset, length: length, valueType: ValueType(rawValue: readValueType)!)
+            if keyLength == Int(readKeyLength) && memcmp(bytes + (offset - Int(readKeyLength) - 1), key.utf8Start, keyLength) == 0 {
+                if readValueType == valueType.rawValue {
+                    return true
+                } else if readValueType == ValueType.Nil.rawValue {
+                    return false
+                } else {
+                    skipValue(bytes, offset: &offset, length: length, valueType: ValueType(rawValue: readValueType)!)
+                }
             } else {
-                return true
+                skipValue(bytes, offset: &offset, length: length, valueType: ValueType(rawValue: readValueType)!)
             }
         }
         
-        if (startOffset != 0)
-        {
+        if (startOffset != 0) {
             offset = 0
             return positionOnKey(bytes, offset: &offset, maxOffset: startOffset, length: length, key: key, valueType: valueType)
         }

@@ -9,6 +9,11 @@
 			<key>orderHint</key>
 			<integer>1</integer>
 		</dict>
+		<key>PostboxMac.xcscheme</key>
+		<dict>
+			<key>orderHint</key>
+			<integer>25</integer>
+		</dict>
 		<key>PostboxTests.xcscheme</key>
 		<dict>
 			<key>orderHint</key>
@@ -17,6 +22,11 @@
 	</dict>
 	<key>SuppressBuildableAutocreation</key>
 	<dict>
+		<key>D0B418121D7DFAF2004562A4</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
 		<key>D0E3A7491B28A7E300A402D9</key>
 		<dict>
 			<key>primary</key>

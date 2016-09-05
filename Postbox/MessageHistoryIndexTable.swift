@@ -459,6 +459,11 @@ final class MessageHistoryIndexTable: Table {
                                     }
                                 }
                                 
+                                if message.id == upperHole.maxIndex.id {
+                                    removedHole = true
+                                    self.justRemove(upperHole.maxIndex, operations: &operations)
+                                }
+                                
                                 self.justInsertMessage(message, operations: &operations)
                                 remainingMessages.remove(at: i)
                             } else {

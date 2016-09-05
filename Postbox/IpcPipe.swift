@@ -1,5 +1,9 @@
 import Foundation
-import SwiftSignalKit
+#if os(macOS)
+    import SwiftSignalKitMac
+#else
+    import SwiftSignalKit
+#endif
 
 func ipcNotify(basePath: String, data: Int64) {
     DispatchQueue.global(qos: .default).async {

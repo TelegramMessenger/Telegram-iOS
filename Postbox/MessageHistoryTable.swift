@@ -1199,7 +1199,13 @@ final class MessageHistoryTable: Table {
         return Message(stableId: message.stableId, id: message.id, timestamp: message.timestamp, flags: message.flags, tags: message.tags, forwardInfo: forwardInfo, author: author, text: message.text, attributes: parsedAttributes, media: parsedMedia, peers: peers, associatedMessages: associatedMessages)
     }
     
-    func entriesAround(_ index: MessageIndex, count: Int) -> (entries: [IntermediateMessageHistoryEntry], lower: IntermediateMessageHistoryEntry?, upper: IntermediateMessageHistoryEntry?) {
+    func entriesAround(_ index: MessageIndex, count: Int, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> (entries: [IntermediateMessageHistoryEntry], lower: IntermediateMessageHistoryEntry?, upper: IntermediateMessageHistoryEntry?) {
+        var indexOperations: [MessageHistoryIndexOperation] = []
+        self.messageHistoryIndexTable.ensureInitialized(index.id.peerId, operations: &indexOperations)
+        if !indexOperations.isEmpty {
+            self.processIndexOperations(index.id.peerId, operations: indexOperations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        }
+        
         var lowerEntries: [IntermediateMessageHistoryEntry] = []
         var upperEntries: [IntermediateMessageHistoryEntry] = []
         var lower: IntermediateMessageHistoryEntry?
@@ -1243,7 +1249,13 @@ final class MessageHistoryTable: Table {
         return (entries: entries, lower: lower, upper: upper)
     }
     
-    func entriesAround(_ tagMask: MessageTags, index: MessageIndex, count: Int) -> (entries: [IntermediateMessageHistoryEntry], lower: IntermediateMessageHistoryEntry?, upper: IntermediateMessageHistoryEntry?) {
+    func entriesAround(_ tagMask: MessageTags, index: MessageIndex, count: Int, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> (entries: [IntermediateMessageHistoryEntry], lower: IntermediateMessageHistoryEntry?, upper: IntermediateMessageHistoryEntry?) {
+        var indexOperations: [MessageHistoryIndexOperation] = []
+        self.messageHistoryIndexTable.ensureInitialized(index.id.peerId, operations: &indexOperations)
+        if !indexOperations.isEmpty {
+            self.processIndexOperations(index.id.peerId, operations: indexOperations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        }
+        
         let (indices, lower, upper) = self.tagsTable.indicesAround(tagMask, index: index, count: count)
         
         var entries: [IntermediateMessageHistoryEntry] = []
@@ -1280,8 +1292,12 @@ final class MessageHistoryTable: Table {
         return (entries, lowerEntry, upperEntry)
     }
     
-    func earlierEntries(_ peerId: PeerId, index: MessageIndex?, count: Int) -> [IntermediateMessageHistoryEntry] {
-        
+    func earlierEntries(_ peerId: PeerId, index: MessageIndex?, count: Int, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> [IntermediateMessageHistoryEntry] {
+        var indexOperations: [MessageHistoryIndexOperation] = []
+        self.messageHistoryIndexTable.ensureInitialized(peerId, operations: &indexOperations)
+        if !indexOperations.isEmpty {
+            self.processIndexOperations(peerId, operations: indexOperations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        }
         
         var entries: [IntermediateMessageHistoryEntry] = []
         let key: ValueBoxKey
@@ -1297,7 +1313,13 @@ final class MessageHistoryTable: Table {
         return entries
     }
     
-    func earlierEntries(_ tagMask: MessageTags, peerId: PeerId, index: MessageIndex?, count: Int) -> [IntermediateMessageHistoryEntry] {
+    func earlierEntries(_ tagMask: MessageTags, peerId: PeerId, index: MessageIndex?, count: Int, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> [IntermediateMessageHistoryEntry] {
+        var indexOperations: [MessageHistoryIndexOperation] = []
+        self.messageHistoryIndexTable.ensureInitialized(peerId, operations: &indexOperations)
+        if !indexOperations.isEmpty {
+            self.processIndexOperations(peerId, operations: indexOperations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        }
+        
         let indices = self.tagsTable.earlierIndices(tagMask, peerId: peerId, index: index, count: count)
         
         var entries: [IntermediateMessageHistoryEntry] = []
@@ -1313,7 +1335,13 @@ final class MessageHistoryTable: Table {
         return entries
     }
 
-    func laterEntries(_ peerId: PeerId, index: MessageIndex?, count: Int) -> [IntermediateMessageHistoryEntry] {
+    func laterEntries(_ peerId: PeerId, index: MessageIndex?, count: Int, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> [IntermediateMessageHistoryEntry] {
+        var indexOperations: [MessageHistoryIndexOperation] = []
+        self.messageHistoryIndexTable.ensureInitialized(peerId, operations: &indexOperations)
+        if !indexOperations.isEmpty {
+            self.processIndexOperations(peerId, operations: indexOperations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        }
+        
         var entries: [IntermediateMessageHistoryEntry] = []
         let key: ValueBoxKey
         if let index = index {
@@ -1328,7 +1356,13 @@ final class MessageHistoryTable: Table {
         return entries
     }
     
-    func laterEntries(_ tagMask: MessageTags, peerId: PeerId, index: MessageIndex?, count: Int) -> [IntermediateMessageHistoryEntry] {
+    func laterEntries(_ tagMask: MessageTags, peerId: PeerId, index: MessageIndex?, count: Int, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) -> [IntermediateMessageHistoryEntry] {
+        var indexOperations: [MessageHistoryIndexOperation] = []
+        self.messageHistoryIndexTable.ensureInitialized(peerId, operations: &indexOperations)
+        if !indexOperations.isEmpty {
+            self.processIndexOperations(peerId, operations: indexOperations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+        }
+        
         let indices = self.tagsTable.laterIndices(tagMask, peerId: peerId, index: index, count: count)
         
         var entries: [IntermediateMessageHistoryEntry] = []
@@ -1369,7 +1403,11 @@ final class MessageHistoryTable: Table {
     }
 
     func debugList(_ peerId: PeerId, peerTable: PeerTable) -> [RenderedMessageHistoryEntry] {
-        return self.laterEntries(peerId, index: nil, count: 1000).map({ entry -> RenderedMessageHistoryEntry in
+        var operationsByPeerId: [PeerId : [MessageHistoryOperation]] = [:]
+        var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
+        var updatedPeerReadStateOperations: [PeerId : PeerReadStateSynchronizationOperation?] = [:]
+        
+        return self.laterEntries(peerId, index: nil, count: 1000, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations).map({ entry -> RenderedMessageHistoryEntry in
             switch entry {
                 case let .Hole(hole):
                     return .Hole(hole)
@@ -1380,7 +1418,11 @@ final class MessageHistoryTable: Table {
     }
     
     func debugList(_ tagMask: MessageTags, peerId: PeerId, peerTable: PeerTable) -> [RenderedMessageHistoryEntry] {
-        return self.laterEntries(tagMask, peerId: peerId, index: nil, count: 1000).map({ entry -> RenderedMessageHistoryEntry in
+        var operationsByPeerId: [PeerId : [MessageHistoryOperation]] = [:]
+        var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
+        var updatedPeerReadStateOperations: [PeerId : PeerReadStateSynchronizationOperation?] = [:]
+        
+        return self.laterEntries(tagMask, peerId: peerId, index: nil, count: 1000, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations).map({ entry -> RenderedMessageHistoryEntry in
             switch entry {
             case let .Hole(hole):
                 return .Hole(hole)

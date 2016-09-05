@@ -1,6 +1,11 @@
 import Foundation
-import SwiftSignalKit
 import sqlcipher
+
+#if os(macOS)
+    import SwiftSignalKitMac
+#else
+    import SwiftSignalKit
+#endif
 
 public enum PreloadedMessageHistoryView {
     case Loading
@@ -221,25 +226,15 @@ public final class Postbox {
         
         print("MediaBox path: \(self.basePath + "/media")")
         
-        //let _ = try? FileManager.default.removeItem(atPath: self.basePath + "/media")
+        //let _ = try? FileManager.default.removeItem(atPath: self.basePath)
         
         self.mediaBox = MediaBox(basePath: self.basePath + "/media")
-        
-        /*self.ipcNotificationsDisposable.set((ipcNotifications(basePath: basePath)
-            |> deliverOn(self.queue)).start(next: { [weak self] updatedTransactionStateVersion in
-                if let strongSelf = self, strongSelf.valueBox != nil {
-                    if strongSelf.transactionStateVersion < updatedTransactionStateVersion {
-                        strongSelf.modify({ _ -> Void in
-                        }).start()
-                    }
-                }
-            }))*/
         
         self.pipeNotifier = PipeNotifier(basePath: basePath, notify: { [weak self] in
             if let strongSelf = self {
                 strongSelf.queue.async {
                     if strongSelf.valueBox != nil {
-                        strongSelf.modify({ _ -> Void in
+                        let _ = strongSelf.modify({ _ -> Void in
                         }).start()
                     }
                 }
@@ -250,27 +245,23 @@ public final class Postbox {
     }
     
     private func debugSaveState(name: String) {
-        self.queue.justDispatch({
-            let path = self.basePath + name
-            let _ = try? FileManager.default.removeItem(atPath: path)
-            do {
-                try FileManager.default.copyItem(atPath: self.basePath, toPath: path)
-            } catch (let e) {
-                print("(Postbox debugSaveState: error \(e))")
-            }
-        })
+        let path = self.basePath + name
+        let _ = try? FileManager.default.removeItem(atPath: path)
+        do {
+            try FileManager.default.copyItem(atPath: self.basePath, toPath: path)
+        } catch (let e) {
+            print("(Postbox debugSaveState: error \(e))")
+        }
     }
     
     private func debugRestoreState(name: String) {
-        self.queue.justDispatch({
-            let path = self.basePath + name
-            let _ = try? FileManager.default.removeItem(atPath: self.basePath)
-            do {
-                try FileManager.default.copyItem(atPath: path, toPath: self.basePath)
-            } catch (let e) {
-                print("(Postbox debugRestoreState: error \(e))")
-            }
-        })
+        let path = self.basePath + name
+        let _ = try? FileManager.default.removeItem(atPath: self.basePath)
+        do {
+            try FileManager.default.copyItem(atPath: path, toPath: self.basePath)
+        } catch (let e) {
+            print("(Postbox debugRestoreState: error \(e))")
+        }
     }
     
     private func openDatabase() {
@@ -300,11 +291,12 @@ public final class Postbox {
             
             //#endif
             
-            self.valueBox = SqliteValueBox(basePath: self.basePath + "/db")
+            self.valueBox = SqliteValueBox(basePath: self.basePath + "/db", queue: self.queue)
+            
             self.metadataTable = MetadataTable(valueBox: self.valueBox, tableId: 0)
             
             let userVersion: Int32? = self.metadataTable.userVersion()
-            let currentUserVersion: Int32 = 7
+            let currentUserVersion: Int32 = 8
             
             if userVersion != currentUserVersion {
                 self.valueBox.drop()
@@ -395,15 +387,56 @@ public final class Postbox {
     }
     
     public func keychainEntryForKey(_ key: String) -> Data? {
-        return self.keychainTable.get(key)
+        let metaDisposable = MetaDisposable()
+        self.keychainOperationsDisposable.add(metaDisposable)
+        
+        let semaphore = DispatchSemaphore(value: 0)
+        
+        var entry: Data? = nil
+        let disposable = (self.modify({ modifier -> Data? in
+            return self.keychainTable.get(key)
+        }) |> afterDisposed { [weak self, weak metaDisposable] in
+            if let strongSelf = self, let metaDisposable = metaDisposable {
+                strongSelf.keychainOperationsDisposable.remove(metaDisposable)
+            }
+        }).start(next: { data in
+            entry = data
+            semaphore.signal()
+        })
+        metaDisposable.set(disposable)
+        
+        semaphore.wait()
+        return entry
     }
     
+    private var keychainOperationsDisposable = DisposableSet()
+    
     public func setKeychainEntryForKey(_ key: String, value: Data) {
-        self.keychainTable.set(key, value: value)
+        let metaDisposable = MetaDisposable()
+        self.keychainOperationsDisposable.add(metaDisposable)
+        
+        let disposable = (self.modify({ modifier -> Void in
+            self.keychainTable.set(key, value: value)
+        }) |> afterDisposed { [weak self, weak metaDisposable] in
+            if let strongSelf = self, let metaDisposable = metaDisposable {
+                strongSelf.keychainOperationsDisposable.remove(metaDisposable)
+            }
+        }).start()
+        metaDisposable.set(disposable)
     }
     
     public func removeKeychainEntryForKey(_ key: String) {
-        self.keychainTable.remove(key)
+        let metaDisposable = MetaDisposable()
+        self.keychainOperationsDisposable.add(metaDisposable)
+        
+        let disposable = (self.modify({ modifier -> Void in
+            self.keychainTable.remove(key)
+        }) |> afterDisposed { [weak self, weak metaDisposable] in
+            if let strongSelf = self, let metaDisposable = metaDisposable {
+                strongSelf.keychainOperationsDisposable.remove(metaDisposable)
+            }
+        }).start()
+        metaDisposable.set(disposable)
     }
     
     fileprivate func addMessages(_ messages: [StoreMessage], location: AddMessagesLocation) {
@@ -485,9 +518,9 @@ public final class Postbox {
     private func fetchEarlierHistoryEntries(_ peerId: PeerId, index: MessageIndex?, count: Int, tagMask: MessageTags? = nil) -> [MutableMessageHistoryEntry] {
         let intermediateEntries: [IntermediateMessageHistoryEntry]
         if let tagMask = tagMask {
-            intermediateEntries = self.messageHistoryTable.earlierEntries(tagMask, peerId: peerId, index: index, count: count)
+            intermediateEntries = self.messageHistoryTable.earlierEntries(tagMask, peerId: peerId, index: index, count: count, operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
         } else {
-            intermediateEntries = self.messageHistoryTable.earlierEntries(peerId, index: index, count: count)
+            intermediateEntries = self.messageHistoryTable.earlierEntries(peerId, index: index, count: count, operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
         }
         var entries: [MutableMessageHistoryEntry] = []
         for entry in intermediateEntries {
@@ -508,9 +541,9 @@ public final class Postbox {
         let intermediateUpper: IntermediateMessageHistoryEntry?
         
         if let tagMask = tagMask {
-            (intermediateEntries, intermediateLower, intermediateUpper) = self.messageHistoryTable.entriesAround(tagMask, index: index, count: count)
+            (intermediateEntries, intermediateLower, intermediateUpper) = self.messageHistoryTable.entriesAround(tagMask, index: index, count: count, operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
         } else {
-            (intermediateEntries, intermediateLower, intermediateUpper) = self.messageHistoryTable.entriesAround(index, count: count)
+            (intermediateEntries, intermediateLower, intermediateUpper) = self.messageHistoryTable.entriesAround(index, count: count, operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
         }
         
         var entries: [MutableMessageHistoryEntry] = []
@@ -553,9 +586,9 @@ public final class Postbox {
     private func fetchLaterHistoryEntries(_ peerId: PeerId, index: MessageIndex?, count: Int, tagMask: MessageTags? = nil) -> [MutableMessageHistoryEntry] {
         let intermediateEntries: [IntermediateMessageHistoryEntry]
         if let tagMask = tagMask {
-            intermediateEntries = self.messageHistoryTable.laterEntries(tagMask, peerId: peerId, index: index, count: count)
+            intermediateEntries = self.messageHistoryTable.laterEntries(tagMask, peerId: peerId, index: index, count: count, operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
         } else {
-            intermediateEntries = self.messageHistoryTable.laterEntries(peerId, index: index, count: count)
+            intermediateEntries = self.messageHistoryTable.laterEntries(peerId, index: index, count: count, operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
         }
         var entries: [MutableMessageHistoryEntry] = []
         for entry in intermediateEntries {
@@ -921,82 +954,62 @@ public final class Postbox {
     }
     
     public func contactPeerIdsView() -> Signal<ContactPeerIdsView, NoError> {
-        return Signal { subscriber in
-            let disposable = MetaDisposable()
+        return self.modify { modifier -> Signal<ContactPeerIdsView, NoError> in
+            let view = MutableContactPeerIdsView(peerIds: self.contactsTable.get())
+            let (index, signal) = self.viewTracker.addContactPeerIdsView(view)
             
-            self.queue.async {
-                let view = MutableContactPeerIdsView(peerIds: self.contactsTable.get())
-                let (index, signal) = self.viewTracker.addContactPeerIdsView(view)
-                subscriber.putNext(ContactPeerIdsView(view))
-                
-                let updatedViewDisposable = signal.start(next: { view in
-                    subscriber.putNext(view)
-                })
-                
-                disposable.set(ActionDisposable {
-                    updatedViewDisposable.dispose()
-                    self.viewTracker.removeContactPeerIdsView(index)
-                })
+            return (.single(ContactPeerIdsView(view))
+                |> then(signal))
+                |> afterDisposed { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.queue.async {
+                            strongSelf.viewTracker.removeContactPeerIdsView(index)
+                        }
+                    }
             }
-            
-            return disposable
-        }
+        } |> switchToLatest
     }
     
     public func contactPeersView(index: PeerNameIndex, accountPeerId: PeerId) -> Signal<ContactPeersView, NoError> {
-        return Signal { subscriber in
-            let disposable = MetaDisposable()
+        return self.modify { modifier -> Signal<ContactPeersView, NoError> in
+            var peers: [PeerId: Peer] = [:]
             
-            self.queue.async {
-                var peers: [PeerId: Peer] = [:]
-                for peerId in self.contactsTable.get() {
-                    if let peer = self.peerTable.get(peerId) {
-                        peers[peerId] = peer
-                    }
+            for peerId in self.contactsTable.get() {
+                if let peer = self.peerTable.get(peerId) {
+                    peers[peerId] = peer
                 }
-                
-                let view = MutableContactPeersView(peers: peers, index: index, accountPeer: self.peerTable.get(accountPeerId))
-                let (index, signal) = self.viewTracker.addContactPeersView(view)
-                subscriber.putNext(ContactPeersView(view))
-                
-                let updatedViewDisposable = signal.start(next: { view in
-                    subscriber.putNext(view)
-                })
-                
-                disposable.set(ActionDisposable {
-                    updatedViewDisposable.dispose()
-                    self.viewTracker.removeContactPeersView(index)
-                })
             }
             
-            return disposable
-        }
-    }
-    
-    public func searchContacts(query: String) -> Signal<[Peer], NoError> {
-        return Signal { subscriber in
-            let disposable = MetaDisposable()
+            let view = MutableContactPeersView(peers: peers, index: index, accountPeer: self.peerTable.get(accountPeerId))
+            let (index, signal) = self.viewTracker.addContactPeersView(view)
             
-            self.queue.async {
-                var peers: [Peer] = []
-                for peerId in self.contactsTable.get() {
-                    if let peer = self.peerTable.get(peerId) {
-                        if peer.indexName.match(query: query) {
-                            peers.append(peer)
+            return (.single(ContactPeersView(view))
+                |> then(signal))
+                |> afterDisposed {
+                    [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.queue.async {
+                            strongSelf.viewTracker.removeContactPeersView(index)
                         }
                     }
                 }
-                
-                peers.sort(by: { $0.indexName.indexName(.lastNameFirst) < $1.indexName.indexName(.lastNameFirst) })
-                
-                subscriber.putNext(peers)
-                
-                disposable.set(ActionDisposable {
-                })
+        } |> switchToLatest
+    }
+    
+    public func searchContacts(query: String) -> Signal<[Peer], NoError> {
+        return self.modify { modifier -> Signal<[Peer], NoError> in
+            var peers: [Peer] = []
+            for peerId in self.contactsTable.get() {
+                if let peer = self.peerTable.get(peerId) {
+                    if peer.indexName.match(query: query) {
+                        peers.append(peer)
+                    }
+                }
             }
             
-            return disposable
-        }
+            peers.sort(by: { $0.indexName.indexName(.lastNameFirst) < $1.indexName.indexName(.lastNameFirst) })
+            return .single(peers)
+        } |> switchToLatest
     }
     
     public func peerWithId(_ id: PeerId) -> Signal<Peer, NoError> {
