@@ -386,6 +386,12 @@
 		80807B8E1C46BF2F00F4C44F /* OCMockitoIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80807B8B1C46BF2F00F4C44F /* OCMockitoIOS.framework */; };
 		80807B8F1C46BF2F00F4C44F /* OCMockitoIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80807B8B1C46BF2F00F4C44F /* OCMockitoIOS.framework */; };
 		80807B901C46C01E00F4C44F /* BITUser.m in Sources */ = {isa = PBXBuildFile; fileRef = 8034E6681BA31D7C00D83A30 /* BITUser.m */; };
+		8085BB851CBF1FA60023FD9B /* AppIcon.exotic.png in Resources */ = {isa = PBXBuildFile; fileRef = 8085BB831CBF1FA60023FD9B /* AppIcon.exotic.png */; };
+		8085BB861CBF1FA60023FD9B /* AppIcon.exotic.png in Resources */ = {isa = PBXBuildFile; fileRef = 8085BB831CBF1FA60023FD9B /* AppIcon.exotic.png */; };
+		8085BB871CBF1FA60023FD9B /* AppIcon.exotic@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 8085BB841CBF1FA60023FD9B /* AppIcon.exotic@2x.png */; };
+		8085BB881CBF1FA60023FD9B /* AppIcon.exotic@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 8085BB841CBF1FA60023FD9B /* AppIcon.exotic@2x.png */; };
+		8085BB8A1CBF216E0023FD9B /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 8085BB891CBF216E0023FD9B /* Icon.png */; };
+		8085BB8B1CBF216E0023FD9B /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 8085BB891CBF216E0023FD9B /* Icon.png */; };
 		80A4662F1C58F4DF00199909 /* BITCrashReportTextFormatterPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 80A4662D1C58F4DF00199909 /* BITCrashReportTextFormatterPrivate.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		80B1C4EE1C8A6F950057A5CB /* BITUser.h in Headers */ = {isa = PBXBuildFile; fileRef = 8034E6671BA31D7C00D83A30 /* BITUser.h */; };
 		80B1C4EF1C8A72620057A5CB /* HockeySDK.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EB6173F1B0A30480035A986 /* HockeySDK.framework */; };
@@ -705,6 +711,9 @@
 		808441721C20617C00644A40 /* OCMockObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMockObject.h; sourceTree = "<group>"; };
 		808441731C20617C00644A40 /* OCMRecorder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMRecorder.h; sourceTree = "<group>"; };
 		808441741C20617C00644A40 /* OCMStubRecorder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMStubRecorder.h; sourceTree = "<group>"; };
+		8085BB831CBF1FA60023FD9B /* AppIcon.exotic.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = AppIcon.exotic.png; sourceTree = "<group>"; };
+		8085BB841CBF1FA60023FD9B /* AppIcon.exotic@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AppIcon.exotic@2x.png"; sourceTree = "<group>"; };
+		8085BB891CBF216E0023FD9B /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
 		80A4662D1C58F4DF00199909 /* BITCrashReportTextFormatterPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashReportTextFormatterPrivate.h; sourceTree = "<group>"; };
 		80CA63881C67BD5400362DBF /* libOCMock.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libOCMock.a; sourceTree = "<group>"; };
 		80CA638E1C67F78000362DBF /* BITUpdateManagerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITUpdateManagerTests.m; sourceTree = "<group>"; };
@@ -1030,6 +1039,9 @@
 			children = (
 				1E494AEA19491943001EFF74 /* AppIcon.png */,
 				1E494AEB19491943001EFF74 /* AppIcon@2x.png */,
+				8085BB831CBF1FA60023FD9B /* AppIcon.exotic.png */,
+				8085BB841CBF1FA60023FD9B /* AppIcon.exotic@2x.png */,
+				8085BB891CBF216E0023FD9B /* Icon.png */,
 				1EA1170316F53B49001C015C /* StoreBundleIdentifierUnknown.json */,
 				1EA1170816F53E3A001C015C /* StoreBundleIdentifierKnown.json */,
 				1E70A22F17F2F982001BB32D /* live_report_empty.plcrash */,
@@ -1689,6 +1701,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				1E85C5621B3438EB00CE2C0D /* live_report_exception_marketing.plcrash in Resources */,
+				8085BB871CBF1FA60023FD9B /* AppIcon.exotic@2x.png in Resources */,
+				8085BB851CBF1FA60023FD9B /* AppIcon.exotic.png in Resources */,
 				1E494AEC19491943001EFF74 /* AppIcon.png in Resources */,
 				1E85C5631B3438EB00CE2C0D /* live_report_signal_marketing.plcrash in Resources */,
 				1EA1170C16F54A64001C015C /* HockeySDKResources.bundle in Resources */,
@@ -1700,6 +1714,7 @@
 				6EA5DEAE1CC0670000D44206 /* log_report_xamarin in Resources */,
 				1E70A23217F2F982001BB32D /* live_report_empty.plcrash in Resources */,
 				1E494AED19491943001EFF74 /* AppIcon@2x.png in Resources */,
+				8085BB8A1CBF216E0023FD9B /* Icon.png in Resources */,
 				1EA1170916F53E3A001C015C /* StoreBundleIdentifierKnown.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1717,6 +1732,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				1E85C5641B3438EC00CE2C0D /* live_report_exception_marketing.plcrash in Resources */,
+				8085BB881CBF1FA60023FD9B /* AppIcon.exotic@2x.png in Resources */,
+				8085BB861CBF1FA60023FD9B /* AppIcon.exotic.png in Resources */,
 				1E1508871B0C946700D7B9D9 /* AppIcon.png in Resources */,
 				1E85C5651B3438EC00CE2C0D /* live_report_signal_marketing.plcrash in Resources */,
 				1E1508891B0C946700D7B9D9 /* StoreBundleIdentifierUnknown.json in Resources */,
@@ -1728,6 +1745,7 @@
 				6EA5DEAF1CC0670000D44206 /* log_report_xamarin in Resources */,
 				1E15088A1B0C946700D7B9D9 /* StoreBundleIdentifierKnown.json in Resources */,
 				1E15088E1B0C946D00D7B9D9 /* InfoPlist.strings in Resources */,
+				8085BB8B1CBF216E0023FD9B /* Icon.png in Resources */,
 				1E15088C1B0C946700D7B9D9 /* live_report_exception.plcrash in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
