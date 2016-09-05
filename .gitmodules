@@ -1,6 +1,3 @@
-[submodule "submodules/SQLite.swift"]
-	path = submodules/SQLite.swift
-	url = git@github.com:peter-iakovlev/SQLite.swift.git
 [submodule "submodules/lmdb"]
 	path = submodules/lmdb
 	url = https://github.com/LMDB/lmdb.git
