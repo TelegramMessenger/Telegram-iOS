@@ -2,10 +2,10 @@
 
 #import <Foundation/Foundation.h>
 
-#if TARGET_OS_MAC || TARGET_OS_OSX
-#   import <MTProtoKitMac/MTLogging.h>
-#else
+#if TARGET_OS_IOS
 #   import <MTProtoKitDynamic/MTLogging.h>
+#else
+#   import <MTProtoKitMac/MTLogging.h>
 #endif
 
 static void (*bridgingTrace)(NSString *, NSString *);
