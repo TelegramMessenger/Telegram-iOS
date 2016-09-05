@@ -491,7 +491,7 @@ public class ChatController: ViewController {
                     ContextMenuAction(content: .text("Reply"), action: { [weak strongSelf] in
                         if let strongSelf = strongSelf, let historyView = strongSelf.historyView {
                             for case let .MessageEntry(message) in historyView.filteredEntries where message.id == id {
-                                strongSelf.updateChatInterfaceState(strongSelf.chatInterfaceState.withUpdatedReplyMessageId(message.id), animated: true)
+                                strongSelf.updateChatInterfaceState(animated: true, { $0.withUpdatedReplyMessageId(message.id) })
                                 strongSelf.chatDisplayNode.ensureInputViewFocused()
                                 break
                             }
@@ -510,10 +510,10 @@ public class ChatController: ViewController {
                     ContextMenuAction(content: .text("More..."), action: { [weak strongSelf] in
                         if let strongSelf = strongSelf, let historyView = strongSelf.historyView {
                             for case let .MessageEntry(message) in historyView.filteredEntries where message.id == id {
-                                if strongSelf.chatInterfaceState.selectionState != nil {
-                                    strongSelf.updateChatInterfaceState(strongSelf.chatInterfaceState.withoutSelectionState(), animated: true)
+                                if strongSelf.presentationInterfaceState.interfaceState.selectionState != nil {
+                                    strongSelf.updateChatInterfaceState(animated: true, { $0.withoutSelectionState() })
                                 } else {
-                                    strongSelf.updateChatInterfaceState(strongSelf.chatInterfaceState.withUpdatedSelectedMessage(message.id), animated: true)
+                                    strongSelf.updateChatInterfaceState(animated: true, { $0.withUpdatedSelectedMessage(message.id) })
                                 }
                                 
                                 break
@@ -564,8 +564,7 @@ public class ChatController: ViewController {
         }, toggleMessageSelection: { [weak self] messageId in
             if let strongSelf = self, let historyView = strongSelf.historyView {
                 for case let .MessageEntry(message) in historyView.filteredEntries where message.id == messageId {
-                    
-                    strongSelf.updateChatInterfaceState(strongSelf.chatInterfaceState.withToggledSelectedMessage(messageId), animated: false)
+                    strongSelf.updateChatInterfaceState(animated: false, { $0.withToggledSelectedMessage(messageId) })
                     break
                 }
             }
@@ -576,7 +575,8 @@ public class ChatController: ViewController {
         let messageViewQueue = self.messageViewQueue
         
         self.chatInfoNavigationButton = ChatNavigationButton(action: .openChatInfo, buttonItem: UIBarButtonItem(customDisplayNode: ChatAvatarNavigationNode()))
-        self.updateChatInterfaceState(self.chatInterfaceState, animated: false)
+        
+        self.updateChatInterfaceState(animated: false, { return $0 })
         
         peerDisposable.set((account.postbox.peerWithId(peerId)
             |> deliverOnMainQueue).start(next: { [weak self] peer in
@@ -776,7 +776,7 @@ public class ChatController: ViewController {
         }
         
         self.chatDisplayNode.requestUpdateChatInterfaceState = { [weak self] state, animated in
-            self?.updateChatInterfaceState(state, animated: animated)
+            self?.updateChatInterfaceState(animated: animated, { _ in return state })
         }
         
         self.chatDisplayNode.displayAttachmentMenu = { [weak self] in
@@ -806,12 +806,13 @@ public class ChatController: ViewController {
         
         self.chatDisplayNode.interfaceInteraction = ChatPanelInterfaceInteraction(deleteSelectedMessages: { [weak self] in
             if let strongSelf = self {
-                if let messageIds = strongSelf.chatInterfaceState.selectionState?.selectedIds, !messageIds.isEmpty {
+                
+                if let messageIds = strongSelf.presentationInterfaceState.interfaceState.selectionState?.selectedIds, !messageIds.isEmpty {
                     strongSelf.account.postbox.modify({ modifier in
                         modifier.deleteMessages(Array(messageIds))
                     }).start()
                 }
-                strongSelf.updateChatInterfaceState(strongSelf.chatInterfaceState.withoutSelectionState(), animated: true)
+                strongSelf.updateChatInterfaceState(animated: true, { $0.withoutSelectionState() })
             }
         }, forwardSelectedMessages: { [weak self] in
             if let strongSelf = self {
@@ -943,16 +944,16 @@ public class ChatController: ViewController {
         })
     }
     
-    func updateChatInterfaceState(animated: Bool = true, _ f: (ChatInterfaceState) -> Void) {
-        
+    func updateChatInterfaceState(animated: Bool = true, _ f: (ChatInterfaceState) -> ChatInterfaceState) {
+        let updatedChatInterfaceState = f(self.presentationInterfaceState.interfaceState)
         
         if self.isNodeLoaded {
-            self.chatDisplayNode.updateChatInterfaceState(chatInterfaceState, animated: animated)
+            self.chatDisplayNode.updateChatInterfaceState(updatedChatInterfaceState, animated: animated)
         }
-        self.chatInterfaceState = chatInterfaceState
-        self.chatInterfaceStatePromise.set(.single(chatInterfaceState))
+        self.presentationInterfaceState = ChatPresentationInterfaceState(interfaceState: updatedChatInterfaceState, peer: nil)
+        self.chatInterfaceStatePromise.set(.single(updatedChatInterfaceState))
         
-        if let button = leftNavigationButtonForChatInterfaceState(chatInterfaceState, currentButton: self.leftNavigationButton, target: self, selector: #selector(self.leftNavigationButtonAction)) {
+        if let button = leftNavigationButtonForChatInterfaceState(updatedChatInterfaceState, currentButton: self.leftNavigationButton, target: self, selector: #selector(self.leftNavigationButtonAction)) {
             self.navigationItem.setLeftBarButton(button.buttonItem, animated: true)
             self.leftNavigationButton = button
         } else if let _ = self.leftNavigationButton {
@@ -960,7 +961,7 @@ public class ChatController: ViewController {
             self.leftNavigationButton = nil
         }
         
-        if let button = rightNavigationButtonForChatInterfaceState(chatInterfaceState, currentButton: self.rightNavigationButton, target: self, selector: #selector(self.rightNavigationButtonAction), chatInfoNavigationButton: self.chatInfoNavigationButton) {
+        if let button = rightNavigationButtonForChatInterfaceState(updatedChatInterfaceState, currentButton: self.rightNavigationButton, target: self, selector: #selector(self.rightNavigationButtonAction), chatInfoNavigationButton: self.chatInfoNavigationButton) {
             self.navigationItem.setRightBarButton(button.buttonItem, animated: true)
             self.rightNavigationButton = button
         } else if let _ = self.rightNavigationButton {
@@ -969,9 +970,9 @@ public class ChatController: ViewController {
         }
         
         if let controllerInteraction = self.controllerInteraction {
-            if chatInterfaceState.selectionState != controllerInteraction.selectionState {
-                let animated = controllerInteraction.selectionState == nil || chatInterfaceState.selectionState == nil
-                controllerInteraction.selectionState = chatInterfaceState.selectionState
+            if updatedChatInterfaceState.selectionState != controllerInteraction.selectionState {
+                let animated = controllerInteraction.selectionState == nil || updatedChatInterfaceState.selectionState == nil
+                controllerInteraction.selectionState = updatedChatInterfaceState.selectionState
                 self.chatDisplayNode.listView.forEachItemNode { itemNode in
                     if let itemNode = itemNode as? ChatMessageItemView {
                         itemNode.updateSelectionState(animated: animated)
@@ -996,7 +997,7 @@ public class ChatController: ViewController {
     private func navigationButtonAction(_ action: ChatNavigationButtonAction) {
         switch action {
             case .cancelMessageSelection:
-                self.updateChatInterfaceState(self.chatInterfaceState.withoutSelectionState(), animated: true)
+                self.updateChatInterfaceState(animated: true, { $0.withoutSelectionState() })
             case .clearHistory:
                 let actionSheet = ActionSheetController()
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [
