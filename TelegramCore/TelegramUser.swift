@@ -1,7 +1,11 @@
 import Foundation
-import Postbox
+#if os(macOS)
+    import PostboxMac
+#else
+    import Postbox
+#endif
 
-public final class TelegramUser: Peer, Coding {
+public final class TelegramUser: Peer {
     public let id: PeerId
     public let accessHash: Int64?
     public let firstName: String?
@@ -112,10 +116,6 @@ public final class TelegramUser: Peer, Coding {
             return false
         }
     }
-}
-
-func telegramImageMediaRepresentationFromUserProfilePhoto() {
-    
 }
 
 public extension TelegramUser {

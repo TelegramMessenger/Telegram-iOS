@@ -1,5 +1,9 @@
 import Foundation
-import Postbox
+#if os(macOS)
+    import PostboxMac
+#else
+    import Postbox
+#endif
 
 public final class TelegramMediaWebpageLoadedContent: Coding, Equatable {
     public let url: String

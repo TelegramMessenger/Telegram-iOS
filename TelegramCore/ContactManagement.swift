@@ -1,6 +1,11 @@
 import Foundation
-import SwiftSignalKit
-import Postbox
+#if os(macOS)
+    import PostboxMac
+    import SwiftSignalKitMac
+#else
+    import Postbox
+    import SwiftSignalKit
+#endif
 import TelegramCorePrivateModule
 
 private func md5(_ data : Data) -> Data {

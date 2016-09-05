@@ -1,7 +1,13 @@
 import Foundation
-import MtProtoKit
-import Postbox
-import SwiftSignalKit
+#if os(macOS)
+    import PostboxMac
+    import SwiftSignalKitMac
+    import MtProtoKitMac
+#else
+    import Postbox
+    import SwiftSignalKit
+    import MtProtoKitDynamic
+#endif
 
 class UpdateMessageService: NSObject, MTMessageService {
     var peerId: PeerId!

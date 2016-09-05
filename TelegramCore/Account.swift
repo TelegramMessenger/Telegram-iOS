@@ -1,8 +1,13 @@
 import Foundation
-import SwiftSignalKit
-import Postbox
-import MtProtoKit
-import Display
+#if os(macOS)
+    import PostboxMac
+    import SwiftSignalKitMac
+    import MtProtoKitMac
+#else
+    import Postbox
+    import SwiftSignalKit
+    import MtProtoKitDynamic
+#endif
 import TelegramCorePrivateModule
 
 public struct AccountId {
@@ -168,20 +173,23 @@ public class UnauthorizedAccount {
         self.network = network
     }
     
-    public func changedMasterDatacenterId(_ masterDatacenterId: Int32) -> UnauthorizedAccount {
+    public func changedMasterDatacenterId(_ masterDatacenterId: Int32) -> Signal<UnauthorizedAccount, NoError> {
         if masterDatacenterId == Int32(self.network.mtProto.datacenterId) {
-            return self
+            return .single(self)
         } else {
             let postbox = self.postbox
             let keychain = Keychain(get: { key in
                 return postbox.keychainEntryForKey(key)
-                }, set: { (key, data) in
-                    postbox.setKeychainEntryForKey(key, value: data)
-                }, remove: { key in
-                    postbox.removeKeychainEntryForKey(key)
+            }, set: { (key, data) in
+                postbox.setKeychainEntryForKey(key, value: data)
+            }, remove: { key in
+                postbox.removeKeychainEntryForKey(key)
             })
             
-            return UnauthorizedAccount(id: self.id, postbox: self.postbox, network: Network(datacenterId: Int(masterDatacenterId), keychain: keychain))
+            return initializedNetwork(datacenterId: Int(masterDatacenterId), keychain: keychain)
+                |> map { network in
+                    return UnauthorizedAccount(id: self.id, postbox: self.postbox, network: network)
+                }
         }
     }
 }
@@ -191,9 +199,9 @@ private var declaredEncodables: Void = {
     declareEncodable(AuthorizedAccountState.self, f: { AuthorizedAccountState(decoder: $0) })
     declareEncodable(TelegramUser.self, f: { TelegramUser(decoder: $0) })
     declareEncodable(TelegramGroup.self, f: { TelegramGroup(decoder: $0) })
+    declareEncodable(TelegramChannel.self, f: { TelegramChannel(decoder: $0) })
     declareEncodable(TelegramMediaImage.self, f: { TelegramMediaImage(decoder: $0) })
     declareEncodable(TelegramMediaImageRepresentation.self, f: { TelegramMediaImageRepresentation(decoder: $0) })
-    declareEncodable(TelegramMediaVoiceNote.self, f: { TelegramMediaVoiceNote(decoder: $0) })
     declareEncodable(TelegramMediaContact.self, f: { TelegramMediaContact(decoder: $0) })
     declareEncodable(TelegramMediaMap.self, f: { TelegramMediaMap(decoder: $0) })
     declareEncodable(TelegramMediaFile.self, f: { TelegramMediaFile(decoder: $0) })
@@ -226,7 +234,7 @@ public func accountWithId(_ id: AccountId, appGroupPath: String) -> Signal<Eithe
             subscriber.putNext(pair)
             subscriber.putCompletion()
         })
-    } |> map { (postbox, accountState) in
+    } |> mapToSignal { (postbox, accountState) -> Signal<Either<UnauthorizedAccount, Account>, NoError> in
         let keychain = Keychain(get: { key in
             return postbox.keychainEntryForKey(key)
         }, set: { (key, data) in
@@ -238,15 +246,24 @@ public func accountWithId(_ id: AccountId, appGroupPath: String) -> Signal<Eithe
         if let accountState = accountState {
             switch accountState {
                 case let unauthorizedState as UnauthorizedAccountState:
-                    return .left(value: UnauthorizedAccount(id: id, postbox: postbox, network: Network(datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain)))
+                    return initializedNetwork(datacenterId: Int(unauthorizedState.masterDatacenterId), keychain: keychain)
+                        |> map { network -> Either<UnauthorizedAccount, Account> in
+                            .left(value: UnauthorizedAccount(id: id, postbox: postbox, network: network))
+                        }
                 case let authorizedState as AuthorizedAccountState:
-                    return .right(value: Account(id: id, postbox: postbox, network: Network(datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain), peerId: authorizedState.peerId))
+                    return initializedNetwork(datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain)
+                        |> map { network -> Either<UnauthorizedAccount, Account> in
+                            return .right(value: Account(id: id, postbox: postbox, network: network, peerId: authorizedState.peerId))
+                        }
                 case _:
                     assertionFailure("Unexpected accountState \(accountState)")
             }
         }
         
-        return .left(value: UnauthorizedAccount(id: id, postbox: postbox, network: Network(datacenterId: 2, keychain: keychain)))
+        return initializedNetwork(datacenterId: 2, keychain: keychain)
+            |> map { network -> Either<UnauthorizedAccount, Account> in
+                return .left(value: UnauthorizedAccount(id: id, postbox: postbox, network: network))
+        }
     }
 }
 
@@ -346,10 +363,16 @@ public class Account {
                 
                 let appVersionString = "\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] ?? "") (\(Bundle.main.infoDictionary?["CFBundleVersion"] ?? ""))"
                 
-                
                 let langCode = NSLocale.preferredLanguages.first ?? "en"
                 
-                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, deviceModel: "iPhome Simulator", systemVersion: UIDevice.current.systemVersion, appVersion: appVersionString, appSandbox: .boolTrue, langCode: langCode))
+                #if os(macOS)
+                    let pInfo = ProcessInfo.processInfo
+                    let systemVersion = pInfo.operatingSystemVersionString
+                #else
+                    let systemVersion = UIDevice.current.systemVersion
+                #endif
+                
+                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, deviceModel: "iPhome Simulator", systemVersion: systemVersion, appVersion: appVersionString, appSandbox: .boolTrue, langCode: langCode))
                     |> retryRequest
                     |> mapToSignal { _ -> Signal<Void, NoError> in
                         return .complete()

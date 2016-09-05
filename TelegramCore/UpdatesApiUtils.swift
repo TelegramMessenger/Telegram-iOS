@@ -1,5 +1,9 @@
 import Foundation
-import Postbox
+#if os(macOS)
+    import PostboxMac
+#else
+    import Postbox
+#endif
 
 extension Api.Message {
     var id: Int32 {

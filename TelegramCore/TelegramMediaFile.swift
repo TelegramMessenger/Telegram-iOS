@@ -1,5 +1,9 @@
 import Foundation
-import Postbox
+#if os(macOS)
+    import PostboxMac
+#else
+    import Postbox
+#endif
 
 private let typeFileName: Int32 = 0
 private let typeSticker: Int32 = 1

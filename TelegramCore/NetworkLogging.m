@@ -1,7 +1,12 @@
 #import "NetworkLogging.h"
 
 #import <Foundation/Foundation.h>
-#import <MTProtoKit/MTLogging.h>
+
+#if TARGET_OS_MAC || TARGET_OS_OSX
+#   import <MTProtoKitMac/MTLogging.h>
+#else
+#   import <MTProtoKitDynamic/MTLogging.h>
+#endif
 
 static void (*bridgingTrace)(NSString *, NSString *);
 void setBridgingTraceFunction(void (*f)(NSString *, NSString *)) {
@@ -11,7 +16,7 @@ void setBridgingTraceFunction(void (*f)(NSString *, NSString *)) {
 #if TARGET_IPHONE_SIMULATOR
 static bool loggingEnabled = false;
 #else
-static bool loggingEnabled = true;
+static bool loggingEnabled = false;
 #endif
 
 static void TGTelegramLoggingFunction(NSString *format, va_list args) {

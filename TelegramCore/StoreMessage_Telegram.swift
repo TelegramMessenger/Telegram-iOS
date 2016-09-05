@@ -1,5 +1,9 @@
 import Foundation
-import Postbox
+#if os(macOS)
+    import PostboxMac
+#else
+    import Postbox
+#endif
 
 func tagsForStoreMessage(_ medias: [Media]) -> MessageTags {
     var tags = MessageTags()
@@ -299,12 +303,14 @@ extension StoreMessage {
                                 sourceId = peerId
                                 
                                 if let channelPost = channelPost {
-                                    sourceMessageId = MessageId(peerId: peerId, namespace: Namespaces.Peer.CloudChannel, id: channelPost)
+                                    sourceMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: channelPost)
                                 }
                             }
                         
                             if let authorId = authorId {
                                 forwardInfo = StoreMessageForwardInfo(authorId: authorId, sourceId: sourceId, sourceMessageId: sourceMessageId, date: date)
+                            } else if let sourceId = sourceId {
+                                forwardInfo = StoreMessageForwardInfo(authorId: sourceId, sourceId: nil, sourceMessageId: sourceMessageId, date: date)
                             }
                     }
                 }

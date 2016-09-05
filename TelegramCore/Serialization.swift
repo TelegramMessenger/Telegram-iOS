@@ -1,5 +1,9 @@
 import Foundation
-import MtProtoKit
+#if os(macOS)
+    import MtProtoKitMac
+#else
+    import MtProtoKitDynamic
+#endif
 
 public class BoxedMessage: NSObject {
     public let body: Any

@@ -1,7 +1,13 @@
 import Foundation
-import Postbox
-import SwiftSignalKit
-import MtProtoKit
+#if os(macOS)
+    import PostboxMac
+    import SwiftSignalKitMac
+    import MtProtoKitMac
+#else
+    import Postbox
+    import SwiftSignalKit
+    import MtProtoKitDynamic
+#endif
 
 private func pendingWebpages(entries: [MessageHistoryEntry]) -> Set<MessageId> {
     var messageIds = Set<MessageId>()
@@ -54,8 +60,9 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                         return account.postbox.modify { modifier -> Void in
                             var peers: [Peer] = []
                             for chat in chats {
-                                let telegramGroup = TelegramGroup(chat: chat)
-                                peers.append(telegramGroup)
+                                if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                                    peers.append(groupOrChannel)
+                                }
                             }
                             for user in users {
                                 let telegramUser = TelegramUser(user: user)

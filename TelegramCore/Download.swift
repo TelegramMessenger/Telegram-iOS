@@ -1,6 +1,13 @@
 import Foundation
-import SwiftSignalKit
-import MtProtoKit
+#if os(macOS)
+    import PostboxMac
+    import MtProtoKitMac
+    import SwiftSignalKitMac
+#else
+    import Postbox
+    import MtProtoKitDynamic
+    import SwiftSignalKit
+#endif
 
 class Download {
     let datacenterId: Int

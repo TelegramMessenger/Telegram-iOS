@@ -1,6 +1,11 @@
 import Foundation
-import Postbox
-import SwiftSignalKit
+#if os(macOS)
+    import PostboxMac
+    import SwiftSignalKitMac
+#else
+    import Postbox
+    import SwiftSignalKit
+#endif
 
 func managedServiceViews(network: Network, postbox: Postbox, stateManager: StateManager) -> Signal<Void, NoError> {
     return Signal { _ in

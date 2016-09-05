@@ -1,6 +1,13 @@
 import Foundation
-import SwiftSignalKit
-import Postbox
+#if os(macOS)
+    import PostboxMac
+    import SwiftSignalKitMac
+    import MtProtoKitMac
+#else
+    import Postbox
+    import SwiftSignalKit
+    import MtProtoKitDynamic
+#endif
 
 private func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer]) -> Message? {
     guard case let .Id(id) = message.id else {
@@ -58,8 +65,8 @@ public func searchMessages(account: Account, query: String) -> Signal<[Message],
                 }
                 
                 for chat in chats {
-                    if let group = TelegramGroup.merge(modifier.getPeer(chat.peerId) as? TelegramGroup, rhs: chat) {
-                        peers[group.id] = group
+                    if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                        peers[groupOrChannel.id] = groupOrChannel
                     }
                 }
                 
@@ -76,4 +83,61 @@ public func searchMessages(account: Account, query: String) -> Signal<[Message],
         }
     
     return processedSearchResult
+}
+
+public func downloadMessage(account: Account, message: MessageId) -> Signal<Message?, NoError> {
+    let signal: Signal<Api.messages.Messages, MTRpcError>
+    if message.peerId.namespace == Namespaces.Peer.CloudChannel {
+        signal = .complete()
+    } else {
+        signal = account.network.request(Api.functions.messages.getMessages(id: [message.id]))
+    }
+    
+    return signal
+        |> retryRequest
+        |> mapToSignal { result -> Signal<Message?, NoError> in
+            NSLog("TGNT download message3 \(result)")
+            let messages: [Api.Message]
+            let chats: [Api.Chat]
+            let users: [Api.User]
+            switch result {
+                case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
+                    messages = apiMessages
+                    chats = apiChats
+                    users = apiUsers
+                case let .messages(apiMessages, apiChats, apiUsers):
+                    messages = apiMessages
+                    chats = apiChats
+                    users = apiUsers
+                case let.messagesSlice(_, apiMessages, apiChats, apiUsers):
+                    messages = apiMessages
+                    chats = apiChats
+                    users = apiUsers
+            }
+            
+            return account.postbox.modify { modifier -> Message? in
+                var peers: [PeerId: Peer] = [:]
+                
+                for user in users {
+                    if let user = TelegramUser.merge(modifier.getPeer(user.peerId) as? TelegramUser, rhs: user) {
+                        peers[user.id] = user
+                    }
+                }
+                
+                for chat in chats {
+                    if let groupOrChannel = mergeGroupOrChannel(lhs: modifier.getPeer(chat.peerId), rhs: chat) {
+                        peers[groupOrChannel.id] = groupOrChannel
+                    }
+                }
+                
+                var renderedMessages: [Message] = []
+                for message in messages {
+                    if let message = StoreMessage(apiMessage: message), let renderedMessage = locallyRenderedMessage(message: message, peers: peers) {
+                        renderedMessages.append(renderedMessage)
+                    }
+                }
+                
+                return renderedMessages.first
+            }
+        }
 }

@@ -1,6 +1,11 @@
 import Foundation
-import SwiftSignalKit
-import Postbox
+#if os(macOS)
+    import PostboxMac
+    import SwiftSignalKitMac
+#else
+    import Postbox
+    import SwiftSignalKit
+#endif
 
 func sendUnsentMessage(network: Network, postbox: Postbox, stateManager: StateManager, message: Message) -> Signal<Void, NoError> {
     return postbox.peerWithId(message.id.peerId)
@@ -10,7 +15,20 @@ func sendUnsentMessage(network: Network, postbox: Postbox, stateManager: StateMa
             if let inputPeer = apiInputPeer(peer) {
                 var randomId: Int64 = 0
                 arc4random_buf(&randomId, 8)
-                return network.request(Api.functions.messages.sendMessage(flags: 0, peer: inputPeer, replyToMsgId: 0, message: message.text, randomId: randomId, replyMarkup: nil, entities: nil))
+                
+                var replyMessageId: Int32?
+                for attribute in message.attributes {
+                    if let replyAttribute = attribute as? ReplyMessageAttribute {
+                        replyMessageId = replyAttribute.messageId.id
+                        break
+                    }
+                }
+                
+                var flags: Int32 = 0
+                if let replyMessageId = replyMessageId {
+                    flags |= Int32(1 << 0)
+                }
+                return network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: message.text, randomId: randomId, replyMarkup: nil, entities: nil))
                     |> mapError { _ -> NoError in
                         return NoError()
                     }
@@ -42,8 +60,14 @@ func sendUnsentMessage(network: Network, postbox: Postbox, stateManager: StateMa
                                         media = []
                                     }
                                     
-                                    var updatedAttributes: [MessageAttribute] = []
+                                    var updatedAttributes: [MessageAttribute] = currentMessage.attributes
                                     if let entities = entities, !entities.isEmpty {
+                                        for i in 0 ..< updatedAttributes.count {
+                                            if updatedAttributes[i] is TextEntitiesMessageAttribute {
+                                                updatedAttributes.remove(at: i)
+                                                break
+                                            }
+                                        }
                                         updatedAttributes.append(TextEntitiesMessageAttribute(entities: messageTextEntitiesFromApiEntities(entities)))
                                     }
                                     attributes = updatedAttributes

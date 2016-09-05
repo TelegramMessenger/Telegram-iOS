@@ -1,7 +1,13 @@
 import Foundation
-import MtProtoKit
-import Postbox
-import SwiftSignalKit
+#if os(macOS)
+    import PostboxMac
+    import SwiftSignalKitMac
+    import MtProtoKitMac
+#else
+    import Postbox
+    import SwiftSignalKit
+    import MtProtoKitDynamic
+#endif
 import TelegramCorePrivateModule
 
 public enum ConnectionStatus {
@@ -76,66 +82,85 @@ private class MTProtoConnectionStatusDelegate: NSObject, MTProtoDelegate {
     }
 }
 
+private var registeredLoggingFunctions: Void = {
+    NetworkRegisterLoggingFunction()
+    registerLoggingFunctions()
+}()
+
+func initializedNetwork(datacenterId: Int, keychain: Keychain) -> Signal<Network, NoError> {
+    return Signal { subscriber in
+        Queue.concurrentDefaultQueue().async {
+            let _ = registeredLoggingFunctions
+            
+            let serialization = Serialization()
+            
+            let apiEnvironment = MTApiEnvironment()
+            
+            apiEnvironment.apiId = 1
+            apiEnvironment.layer = NSNumber(value: Int(serialization.currentLayer()))
+            
+            let context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment)!
+            
+            let seedAddressList = [
+                1: "149.154.175.50",
+                2: "149.154.167.50",
+                3: "149.154.175.100",
+                4: "149.154.167.91",
+                5: "149.154.171.5"
+            ]
+            
+            for (id, ip) in seedAddressList {
+                context.setSeedAddressSetForDatacenterWithId(id, seedAddressSet: MTDatacenterAddressSet(addressList: [MTDatacenterAddress(ip: ip, port: 443, preferForMedia: false, restrictToTcp: false)]))
+            }
+            
+            context.keychain = keychain
+            let mtProto = MTProto(context: context, datacenterId: datacenterId)!
+            
+            let connectionStatus = Promise<ConnectionStatus>(.WaitingForNetwork)
+            
+            let requestService = MTRequestMessageService(context: context)!
+            let connectionStatusDelegate = MTProtoConnectionStatusDelegate()
+            connectionStatusDelegate.action = { [weak connectionStatus] flags in
+                if !flags.contains(.NetworkAvailable) {
+                    connectionStatus?.set(single(ConnectionStatus.WaitingForNetwork, NoError.self))
+                } else if !flags.contains(.Connected) {
+                    connectionStatus?.set(single(ConnectionStatus.Connecting, NoError.self))
+                } else if !flags.intersection([.UpdatingConnectionContext, .PerformingServiceTasks]).isEmpty {
+                    connectionStatus?.set(single(ConnectionStatus.Updating, NoError.self))
+                } else {
+                    connectionStatus?.set(single(ConnectionStatus.Online, NoError.self))
+                }
+            }
+            mtProto.delegate = connectionStatusDelegate
+            mtProto.add(requestService)
+            
+            subscriber.putNext(Network(datacenterId: datacenterId, context: context, mtProto: mtProto, requestService: requestService, connectionStatusDelegate: connectionStatusDelegate, _connectionStatus: connectionStatus))
+            subscriber.putCompletion()
+        }
+        
+        return EmptyDisposable
+    }
+}
+
 public class Network {
     let datacenterId: Int
     let context: MTContext
     let mtProto: MTProto
     let requestService: MTRequestMessageService
+    private let connectionStatusDelegate: MTProtoConnectionStatusDelegate
     
-    private let connectionStatusDelegate = MTProtoConnectionStatusDelegate()
-    
-    private let _connectionStatus = Promise<ConnectionStatus>(.WaitingForNetwork)
+    private let _connectionStatus: Promise<ConnectionStatus>
     public var connectionStatus: Signal<ConnectionStatus, NoError> {
         return self._connectionStatus.get() |> distinctUntilChanged
     }
     
-    init(datacenterId: Int, keychain: Keychain) {
-        NetworkRegisterLoggingFunction()
-        registerLoggingFunctions()
-        
+    fileprivate init(datacenterId: Int, context: MTContext, mtProto: MTProto, requestService: MTRequestMessageService, connectionStatusDelegate: MTProtoConnectionStatusDelegate, _connectionStatus: Promise<ConnectionStatus>) {
         self.datacenterId = datacenterId
-        
-        let serialization = Serialization()
-        
-        let apiEnvironment = MTApiEnvironment()
-        
-        apiEnvironment.apiId = 1
-        apiEnvironment.layer = NSNumber(value: Int(serialization.currentLayer()))
-        
-        self.context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment)
-        
-        let seedAddressList = [
-            1: "149.154.175.50",
-            2: "149.154.167.50",
-            3: "149.154.175.100",
-            4: "149.154.167.91",
-            5: "149.154.171.5"
-        ]
-        
-        for (id, ip) in seedAddressList {
-            self.context.setSeedAddressSetForDatacenterWithId(id, seedAddressSet: MTDatacenterAddressSet(addressList: [MTDatacenterAddress(ip: ip, port: 443, preferForMedia: false, restrictToTcp: false)]))
-        }
-        
-        self.context.keychain = keychain
-        self.mtProto = MTProto(context: self.context, datacenterId: datacenterId)
-        
-        self.requestService = MTRequestMessageService(context: self.context)
-        self.connectionStatusDelegate.action = { [weak self] flags in
-            if let strongSelf = self {
-                if !flags.contains(.NetworkAvailable) {
-                    strongSelf._connectionStatus.set(single(ConnectionStatus.WaitingForNetwork, NoError.self))
-                } else if !flags.contains(.Connected) {
-                    strongSelf._connectionStatus.set(single(ConnectionStatus.Connecting, NoError.self))
-                } else if !flags.intersection([.UpdatingConnectionContext, .PerformingServiceTasks]).isEmpty {
-                    strongSelf._connectionStatus.set(single(ConnectionStatus.Updating, NoError.self))
-                } else {
-                    strongSelf._connectionStatus.set(single(ConnectionStatus.Online, NoError.self))
-                }
-            }
-        }
-        self.mtProto.delegate = self.connectionStatusDelegate
-        
-        self.mtProto.add(self.requestService)
+        self.context = context
+        self.mtProto = mtProto
+        self.requestService = requestService
+        self.connectionStatusDelegate = connectionStatusDelegate
+        self._connectionStatus = _connectionStatus
     }
     
     func download(datacenterId: Int) -> Signal<Download, NoError> {

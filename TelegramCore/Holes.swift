@@ -1,7 +1,13 @@
 import Foundation
-import SwiftSignalKit
-import Postbox
-import MtProtoKit
+#if os(macOS)
+    import PostboxMac
+    import SwiftSignalKitMac
+    import MtProtoKitMac
+#else
+    import Postbox
+    import SwiftSignalKit
+    import MtProtoKitDynamic
+#endif
 
 private func messageFilterForTagMask(_ tagMask: MessageTags) -> Api.MessagesFilter? {
     if tagMask == .PhotoOrVideo {
@@ -84,8 +90,9 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
                             
                             var peers: [Peer] = []
                             for chat in chats {
-                                let telegramGroup = TelegramGroup(chat: chat)
-                                peers.append(telegramGroup)
+                                if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                                    peers.append(groupOrChannel)
+                                }
                             }
                             for user in users {
                                 let telegramUser = TelegramUser(user: user)
@@ -236,8 +243,9 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                 
                 var peers: [Peer] = []
                 for chat in dialogsChats {
-                    let telegramGroup = TelegramGroup(chat: chat)
-                    peers.append(telegramGroup)
+                    if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
+                        peers.append(groupOrChannel)
+                    }
                 }
                 for user in dialogsUsers {
                     let telegramUser = TelegramUser(user: user)

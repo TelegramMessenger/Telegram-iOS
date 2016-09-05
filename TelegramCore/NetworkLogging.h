@@ -1,8 +1,7 @@
 #ifndef Telegram_NetworkLogging_h
 #define Telegram_NetworkLogging_h
 
-#import <UIKit/UIKit.h>
-#import <AVFoundation/AVFoundation.h>
+#import <Foundation/Foundation.h>
 
 void NetworkRegisterLoggingFunction();
 

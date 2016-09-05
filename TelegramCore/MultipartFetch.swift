@@ -1,6 +1,17 @@
 import Foundation
-import Postbox
-import SwiftSignalKit
+#if os(macOS)
+    import PostboxMac
+    import SwiftSignalKitMac
+#else
+    import Postbox
+    import SwiftSignalKit
+#endif
+
+#if os(macOS)
+    private typealias SignalKitTimer = SwiftSignalKitMac.Timer
+#else
+    private typealias SignalKitTimer = SwiftSignalKit.Timer
+#endif
 
 private final class MultipartFetchManager {
     let parallelParts = 4
@@ -18,7 +29,7 @@ private final class MultipartFetchManager {
     var fetchingParts: [Int: (Int, Disposable)] = [:]
     var fetchedParts: [Int: Data] = [:]
     
-    var statsTimer: SwiftSignalKit.Timer?
+    var statsTimer: SignalKitTimer?
     var receivedSize = 0
     var lastStatReport: (timestamp: Double, receivedSize: Int)?
     
@@ -30,7 +41,7 @@ private final class MultipartFetchManager {
         self.partReady = partReady
         self.completed = completed
         
-        self.statsTimer = SwiftSignalKit.Timer(timeout: 3.0, repeat: true, completion: { [weak self] in
+        self.statsTimer = SignalKitTimer(timeout: 3.0, repeat: true, completion: { [weak self] in
             self?.reportStats()
         }, queue: self.queue)
     }

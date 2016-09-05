@@ -1,7 +1,13 @@
 import Foundation
-import Postbox
-import SwiftSignalKit
-import MtProtoKit
+#if os(macOS)
+    import PostboxMac
+    import SwiftSignalKitMac
+    import MtProtoKitMac
+#else
+    import Postbox
+    import SwiftSignalKit
+    import MtProtoKitDynamic
+#endif
 
 private enum Event<T, E> {
     case Next(T)
@@ -147,9 +153,9 @@ private struct MutableState {
                 self.channelStates[peerId] = channelState
             case let .MergeApiChats(chats):
                 for chat in chats {
-                    if let group = TelegramGroup.merge(peers[chat.peerId] as? TelegramGroup, rhs: chat) {
-                        peers[group.id] = group
-                        insertedPeers[group.id] = group
+                    if let groupOrChannel = mergeGroupOrChannel(lhs: peers[chat.peerId], rhs: chat) {
+                        peers[groupOrChannel.id] = groupOrChannel
+                        insertedPeers[groupOrChannel.id] = groupOrChannel
                     }
                 }
             case let .MergeApiUsers(users):
@@ -558,27 +564,27 @@ private func finalStateWithUpdates(account: Account, state: MutableState, update
             case let .updateChannelTooLong(_, channelId, _):
                 let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
                 if !channelsToPoll.contains(peerId) {
-                    trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramGroup)?.title ?? "nil")) updateChannelTooLong")
+                    trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) updateChannelTooLong")
                     channelsToPoll.insert(peerId)
                 }
             case let .updateDeleteChannelMessages(channelId, messages, pts: pts, ptsCount):
                 let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
                 if let previousState = updatedState.channelStates[peerId] {
                     if previousState.pts >= pts {
-                        trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramGroup)?.title ?? "nil")) skip old delete update")
+                        trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) skip old delete update")
                     } else if previousState.pts + ptsCount == pts {
                         updatedState.deleteMessages(messages.map({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }))
                         updatedState.updateChannelState(peerId, state: previousState.setPts(pts))
                     } else {
                         if !channelsToPoll.contains(peerId) {
-                            trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramGroup)?.title ?? "nil")) delete pts hole")
+                            trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) delete pts hole")
                             channelsToPoll.insert(peerId)
                             //updatedMissingUpdates = true
                         }
                     }
                 } else {
                     if !channelsToPoll.contains(peerId) {
-                        trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramGroup)?.title ?? "nil")) state unknown")
+                        trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) state unknown")
                         channelsToPoll.insert(peerId)
                     }
                 }
@@ -588,13 +594,13 @@ private func finalStateWithUpdates(account: Account, state: MutableState, update
                 if let message = StoreMessage(apiMessage: message) {
                     if let previousState = updatedState.channelStates[message.id.peerId] {
                         if previousState.pts >= pts {
-                            trace("State", what: "channel \(message.id.peerId) (\((updatedState.peers[message.id.peerId] as? TelegramGroup)?.title ?? "nil")) skip old message \(message.id) (\(message.text))")
+                            trace("State", what: "channel \(message.id.peerId) (\((updatedState.peers[message.id.peerId] as? TelegramChannel)?.title ?? "nil")) skip old message \(message.id) (\(message.text))")
                         } else if previousState.pts + ptsCount == pts {
                             updatedState.addMessages([message], location: .UpperHistoryBlock)
                             updatedState.updateChannelState(message.id.peerId, state: previousState.setPts(pts))
                         } else {
                             if !channelsToPoll.contains(message.id.peerId) {
-                                trace("State", what: "channel \(message.id.peerId) (\((updatedState.peers[message.id.peerId] as? TelegramGroup)?.title ?? "nil")) message pts hole")
+                                trace("State", what: "channel \(message.id.peerId) (\((updatedState.peers[message.id.peerId] as? TelegramChannel)?.title ?? "nil")) message pts hole")
                                 ;
                                 channelsToPoll.insert(message.id.peerId)
                                 //updatedMissingUpdates = true
@@ -602,7 +608,7 @@ private func finalStateWithUpdates(account: Account, state: MutableState, update
                         }
                     } else {
                         if !channelsToPoll.contains(message.id.peerId) {
-                            trace("State", what: "channel \(message.id.peerId) (\((updatedState.peers[message.id.peerId] as? TelegramGroup)?.title ?? "nil")) state unknown")
+                            trace("State", what: "channel \(message.id.peerId) (\((updatedState.peers[message.id.peerId] as? TelegramChannel)?.title ?? "nil")) state unknown")
                             channelsToPoll.insert(message.id.peerId)
                         }
                     }
@@ -975,8 +981,8 @@ private func replayFinalState(_ modifier: Modifier, finalState: MutableState) ->
             case let .MergeApiChats(chats):
                 var peers: [Peer] = []
                 for chat in chats {
-                    if let telegramGroup = TelegramGroup.merge(modifier.getPeer(chat.peerId) as? TelegramGroup, rhs: chat) {
-                        peers.append(telegramGroup)
+                    if let groupOrChannel = mergeGroupOrChannel(lhs: modifier.getPeer(chat.peerId), rhs: chat) {
+                        peers.append(groupOrChannel)
                     }
                 }
                 modifier.updatePeers(peers, update: { _, updated in
@@ -1055,6 +1061,12 @@ private func pollDifference(_ account: Account) -> Signal<Void, NoError> {
     return signal
 }
 
+#if os(macOS)
+    private typealias SignalKitTimer = SwiftSignalKitMac.Timer
+#else
+    private typealias SignalKitTimer = SwiftSignalKit.Timer
+#endif
+
 public class StateManager {
     private let stateQueue = Queue()
     
@@ -1064,7 +1076,7 @@ public class StateManager {
     private let disposable = MetaDisposable()
     private let updatesDisposable = MetaDisposable()
     private let actions = ValuePipe<Signal<Void, NoError>>()
-    private var timer: SwiftSignalKit.Timer?
+    private var timer: SignalKitTimer?
     
     private var collectingUpdateGroups = false
     private var collectedUpdateGroups: [UpdateGroup] = []

@@ -1,5 +1,9 @@
 import Foundation
-import Postbox
+#if os(macOS)
+    import PostboxMac
+#else
+    import Postbox
+#endif
 
 public class CloudFileMediaResource: MediaResource {
     public var id: String {

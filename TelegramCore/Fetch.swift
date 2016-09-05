@@ -1,6 +1,12 @@
 import Foundation
+
+#if os(macOS)
+import PostboxMac
+import SwiftSignalKitMac
+#else
 import Postbox
 import SwiftSignalKit
+#endif
 
 private func fetchCloudMediaLocation(account: Account, cloudLocation: TelegramCloudMediaLocation, size: Int, range: Range<Int>) -> Signal<Data, NoError> {
     if size <= 0 {

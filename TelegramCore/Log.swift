@@ -34,9 +34,9 @@ public func trace(_ domain: String, what: @autoclosure() -> String) {
     queue.async {
         let result = String(format: "[%@] %d-%d-%d %02d:%02d:%03d %@", arguments: [domain, Int(timeinfo.tm_year) + 1900, Int(timeinfo.tm_mon + 1), Int(timeinfo.tm_yday), Int(timeinfo.tm_hour), Int(timeinfo.tm_min), Int(milliseconds), string])
         
-        #if (arch(i386) || arch(x86_64))
+        //#if (arch(i386) || arch(x86_64))
         print(result)
-        #endif
+        //#endif
     }
 }
 

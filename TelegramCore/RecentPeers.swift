@@ -1,6 +1,11 @@
 import Foundation
-import Postbox
-import SwiftSignalKit
+#if os(macOS)
+    import PostboxMac
+    import SwiftSignalKitMac
+#else
+    import Postbox
+    import SwiftSignalKit
+#endif
 
 public func recentPeers(account: Account) -> Signal<[Peer], NoError> {
     let cachedPeers = account.postbox.recentPeers()

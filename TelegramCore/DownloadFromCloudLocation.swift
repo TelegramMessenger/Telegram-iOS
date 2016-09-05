@@ -1,7 +1,14 @@
 import Foundation
-import Postbox
-import SwiftSignalKit
-import MtProtoKit
+
+#if os(macOS)
+    import PostboxMac
+    import SwiftSignalKitMac
+    import MtProtoKitMac
+#else
+    import Postbox
+    import SwiftSignalKit
+    import MtProtoKitDynamic
+#endif
 
 public func multipartDownloadFromCloudLocation(account: Account, location: TelegramCloudMediaLocation, size: Int?, data: Data? = nil, offset: Int = 0) -> Signal<Data, NoError> {
     return account.network.download(datacenterId: location.datacenterId)

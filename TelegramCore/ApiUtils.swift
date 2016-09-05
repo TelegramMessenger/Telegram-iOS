@@ -1,15 +1,19 @@
 import Foundation
-import Postbox
+#if os(macOS)
+    import PostboxMac
+#else
+    import Postbox
+#endif
 
 func apiInputPeer(_ peer: Peer) -> Api.InputPeer? {
     switch peer {
         case let user as TelegramUser where user.accessHash != nil:
             return Api.InputPeer.inputPeerUser(userId: user.id.id, accessHash: user.accessHash!)
         case let group as TelegramGroup:
-            if group.id.namespace == Namespaces.Peer.CloudGroup {
-                return Api.InputPeer.inputPeerChat(chatId: group.id.id)
-            } else if group.id.namespace == Namespaces.Peer.CloudChannel {
-                return Api.InputPeer.inputPeerChannel(channelId: group.id.id, accessHash: group.accessHash)
+            return Api.InputPeer.inputPeerChat(chatId: group.id.id)
+        case let channel as TelegramChannel:
+            if let accessHash = channel.accessHash {
+                return Api.InputPeer.inputPeerChannel(channelId: channel.id.id, accessHash: accessHash)
             } else {
                 return nil
             }
@@ -19,8 +23,8 @@ func apiInputPeer(_ peer: Peer) -> Api.InputPeer? {
 }
 
 func apiInputChannel(_ peer: Peer) -> Api.InputChannel? {
-    if let channel = peer as? TelegramGroup, channel.accessHash != 0 {
-        return Api.InputChannel.inputChannel(channelId: channel.id.id, accessHash: channel.accessHash)
+    if let channel = peer as? TelegramChannel, let accessHash = channel.accessHash {
+        return Api.InputChannel.inputChannel(channelId: channel.id.id, accessHash: accessHash)
     } else {
         return nil
     }
