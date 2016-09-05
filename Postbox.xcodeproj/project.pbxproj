@@ -31,7 +31,6 @@
 		D07516441B2D9CEF00AE42E0 /* sqlite3.c in Sources */ = {isa = PBXBuildFile; fileRef = D07516401B2D9CEF00AE42E0 /* sqlite3.c */; settings = {COMPILER_FLAGS = "-Wno-conversion -Wno-ambiguous-macro -Wno-conditional-uninitialized -Wno-unused-const-variable -Wno-unused-function -Wno-unreachable-code"; }; };
 		D07516451B2D9CEF00AE42E0 /* sqlite3.h in Headers */ = {isa = PBXBuildFile; fileRef = D07516411B2D9CEF00AE42E0 /* sqlite3.h */; };
 		D07516461B2D9CEF00AE42E0 /* sqlite3ext.h in Headers */ = {isa = PBXBuildFile; fileRef = D07516421B2D9CEF00AE42E0 /* sqlite3ext.h */; };
-		D075166A1B2EC7FE00AE42E0 /* Database.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07516611B2EC7FE00AE42E0 /* Database.swift */; };
 		D07516771B2EC90400AE42E0 /* fts3_tokenizer.h in Headers */ = {isa = PBXBuildFile; fileRef = D07516741B2EC90400AE42E0 /* fts3_tokenizer.h */; };
 		D07516781B2EC90400AE42E0 /* SQLite-Bridging.h in Headers */ = {isa = PBXBuildFile; fileRef = D07516751B2EC90400AE42E0 /* SQLite-Bridging.h */; };
 		D07516791B2EC90400AE42E0 /* SQLite-Bridging.m in Sources */ = {isa = PBXBuildFile; fileRef = D07516761B2EC90400AE42E0 /* SQLite-Bridging.m */; };
@@ -43,6 +42,8 @@
 		D0977F9C1B822DB4009994B2 /* ValueBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977F9B1B822DB4009994B2 /* ValueBox.swift */; };
 		D0977F9E1B8234DF009994B2 /* ValueBoxKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977F9D1B8234DF009994B2 /* ValueBoxKey.swift */; };
 		D0977FA01B8244D7009994B2 /* SqliteValueBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0977F9F1B8244D7009994B2 /* SqliteValueBox.swift */; };
+		D098C6F11D7E11E9007784E4 /* Database.swift in Sources */ = {isa = PBXBuildFile; fileRef = D098C6F01D7E11E9007784E4 /* Database.swift */; };
+		D098C6F21D7E1201007784E4 /* Database.swift in Sources */ = {isa = PBXBuildFile; fileRef = D098C6F01D7E11E9007784E4 /* Database.swift */; };
 		D09ADF0A1D2E89F300C8208D /* RandomAccessMediaResourceContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09ADF091D2E89F300C8208D /* RandomAccessMediaResourceContext.swift */; };
 		D09ADF0C1D2EB83500C8208D /* OrderStatisticTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09ADF0B1D2EB83500C8208D /* OrderStatisticTable.swift */; };
 		D0A7D9451C556CFE0016A115 /* MessageHistoryIndexTableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A7D9441C556CFE0016A115 /* MessageHistoryIndexTableTests.swift */; };
@@ -55,7 +56,6 @@
 		D0B4181E1D7DFDF8004562A4 /* SQLite-Bridging.h in Headers */ = {isa = PBXBuildFile; fileRef = D07516751B2EC90400AE42E0 /* SQLite-Bridging.h */; };
 		D0B4181F1D7DFDFB004562A4 /* sqlite3.h in Headers */ = {isa = PBXBuildFile; fileRef = D07516411B2D9CEF00AE42E0 /* sqlite3.h */; };
 		D0B418201D7DFDFD004562A4 /* sqlite3ext.h in Headers */ = {isa = PBXBuildFile; fileRef = D07516421B2D9CEF00AE42E0 /* sqlite3ext.h */; };
-		D0B418211D7DFE05004562A4 /* Database.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07516611B2EC7FE00AE42E0 /* Database.swift */; };
 		D0B418221D7DFE0C004562A4 /* Coding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E3A7871B28AE9C00A402D9 /* Coding.swift */; };
 		D0B418231D7DFE0C004562A4 /* SimpleDictionary.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F9E8741C5A334100037222 /* SimpleDictionary.swift */; };
 		D0B418241D7DFE0C004562A4 /* SimpleSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9DA381C65782500855278 /* SimpleSet.swift */; };
@@ -193,7 +193,6 @@
 		D07516411B2D9CEF00AE42E0 /* sqlite3.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqlite3.h; sourceTree = "<group>"; };
 		D07516421B2D9CEF00AE42E0 /* sqlite3ext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqlite3ext.h; sourceTree = "<group>"; };
 		D07516491B2D9E2500AE42E0 /* Postbox.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Postbox.xcconfig; path = Postbox/Config/Postbox.xcconfig; sourceTree = "<group>"; };
-		D07516611B2EC7FE00AE42E0 /* Database.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Database.swift; path = submodules/sqlite.swift/SQLite/Database.swift; sourceTree = SOURCE_ROOT; };
 		D07516741B2EC90400AE42E0 /* fts3_tokenizer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fts3_tokenizer.h; sourceTree = "<group>"; };
 		D07516751B2EC90400AE42E0 /* SQLite-Bridging.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "SQLite-Bridging.h"; sourceTree = "<group>"; };
 		D07516761B2EC90400AE42E0 /* SQLite-Bridging.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "SQLite-Bridging.m"; sourceTree = "<group>"; };
@@ -205,6 +204,7 @@
 		D0977F9B1B822DB4009994B2 /* ValueBox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ValueBox.swift; sourceTree = "<group>"; };
 		D0977F9D1B8234DF009994B2 /* ValueBoxKey.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ValueBoxKey.swift; sourceTree = "<group>"; };
 		D0977F9F1B8244D7009994B2 /* SqliteValueBox.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SqliteValueBox.swift; sourceTree = "<group>"; };
+		D098C6F01D7E11E9007784E4 /* Database.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Database.swift; sourceTree = "<group>"; };
 		D09ADF091D2E89F300C8208D /* RandomAccessMediaResourceContext.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RandomAccessMediaResourceContext.swift; sourceTree = "<group>"; };
 		D09ADF0B1D2EB83500C8208D /* OrderStatisticTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OrderStatisticTable.swift; sourceTree = "<group>"; };
 		D0A7D9441C556CFE0016A115 /* MessageHistoryIndexTableTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryIndexTableTests.swift; sourceTree = "<group>"; };
@@ -300,7 +300,7 @@
 		D07515FC1B2C44A200AE42E0 /* thirdparty */ = {
 			isa = PBXGroup;
 			children = (
-				D07516731B2EC8C700AE42E0 /* sqlite.swift */,
+				D098C6F01D7E11E9007784E4 /* Database.swift */,
 			);
 			name = thirdparty;
 			sourceTree = "<group>";
@@ -324,14 +324,6 @@
 				D07516421B2D9CEF00AE42E0 /* sqlite3ext.h */,
 			);
 			path = sqlcipher;
-			sourceTree = "<group>";
-		};
-		D07516731B2EC8C700AE42E0 /* sqlite.swift */ = {
-			isa = PBXGroup;
-			children = (
-				D07516611B2EC7FE00AE42E0 /* Database.swift */,
-			);
-			name = sqlite.swift;
 			sourceTree = "<group>";
 		};
 		D0B418141D7DFAF3004562A4 /* PostboxMac */ = {
@@ -676,7 +668,6 @@
 				D0B418421D7DFE1B004562A4 /* PeerChatStateTable.swift in Sources */,
 				D0B418481D7DFE20004562A4 /* MessageHistoryView.swift in Sources */,
 				D0B418571D7DFE29004562A4 /* Postbox.swift in Sources */,
-				D0B418211D7DFE05004562A4 /* Database.swift in Sources */,
 				D0B418251D7DFE0C004562A4 /* RedBlackTree.swift in Sources */,
 				D0B4183E1D7DFE1B004562A4 /* MediaCleanupTable.swift in Sources */,
 				D0B418451D7DFE1B004562A4 /* MessageHistoryInvalidatedReadStateTable.swift in Sources */,
@@ -700,6 +691,7 @@
 				D0B4183C1D7DFE1B004562A4 /* ChatListIndexTable.swift in Sources */,
 				D0B418501D7DFE20004562A4 /* UnsentMessageIndicesView.swift in Sources */,
 				D0B418491D7DFE20004562A4 /* ChatListView.swift in Sources */,
+				D098C6F21D7E1201007784E4 /* Database.swift in Sources */,
 				D0B418551D7DFE25004562A4 /* RandomAccessMediaResourceContext.swift in Sources */,
 				D0B4185A1D7DFE29004562A4 /* ViewTracker.swift in Sources */,
 				D0B4182D1D7DFE11004562A4 /* ChatListHole.swift in Sources */,
@@ -768,6 +760,7 @@
 				D0E3A7A21B28B7DC00A402D9 /* Media.swift in Sources */,
 				D0E3A7881B28AE9C00A402D9 /* Coding.swift in Sources */,
 				D0C9DA391C65782500855278 /* SimpleSet.swift in Sources */,
+				D098C6F11D7E11E9007784E4 /* Database.swift in Sources */,
 				D0977F9E1B8234DF009994B2 /* ValueBoxKey.swift in Sources */,
 				D033A6F91C73E440006A2EAB /* UnsentMessageHistoryView.swift in Sources */,
 				D09ADF0C1D2EB83500C8208D /* OrderStatisticTable.swift in Sources */,
@@ -801,7 +794,6 @@
 				D0D510F41D63BA8400A97B8A /* PostboxTransaction.swift in Sources */,
 				D0D510FB1D63C06E00A97B8A /* PostboxClientId.swift in Sources */,
 				D0977F9C1B822DB4009994B2 /* ValueBox.swift in Sources */,
-				D075166A1B2EC7FE00AE42E0 /* Database.swift in Sources */,
 				D07516441B2D9CEF00AE42E0 /* sqlite3.c in Sources */,
 				D0D511001D64A58900A97B8A /* IpcPipe.swift in Sources */,
 			);
@@ -1235,6 +1227,7 @@
 				D0B4181A1D7DFAF3004562A4 /* Hockeyapp */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		D0E3A7441B28A7E300A402D9 /* Build configuration list for PBXProject "Postbox" */ = {
 			isa = XCConfigurationList;
