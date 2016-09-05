@@ -105,6 +105,14 @@ public final class DisposableSet : Disposable {
         }
     }
     
+    public func remove(_ disposable: Disposable) {
+        OSSpinLockLock(&self.lock)
+        if let index = self.disposables.index(where: { $0 === disposable }) {
+            self.disposables.remove(at: index)
+        }
+        OSSpinLockUnlock(&self.lock)
+    }
+    
     public func dispose() {
         var disposables: [Disposable] = []
         OSSpinLockLock(&self.lock)
