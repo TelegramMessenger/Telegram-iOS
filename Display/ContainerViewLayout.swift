@@ -61,7 +61,9 @@ public func ==(lhs: ContainerViewLayout, rhs: ContainerViewLayout) -> Bool {
     
     if let lhsStatusBarHeight = lhs.statusBarHeight {
         if let rhsStatusBarHeight = rhs.statusBarHeight {
-            return lhsStatusBarHeight.isEqual(to: rhsStatusBarHeight)
+            if !lhsStatusBarHeight.isEqual(to: rhsStatusBarHeight) {
+                return false
+            }
         } else {
             return false
         }
@@ -71,7 +73,9 @@ public func ==(lhs: ContainerViewLayout, rhs: ContainerViewLayout) -> Bool {
     
     if let lhsInputHeight = lhs.inputHeight {
         if let rhsInputHeight = rhs.inputHeight {
-            return lhsInputHeight.isEqual(to: rhsInputHeight)
+            if !lhsInputHeight.isEqual(to: rhsInputHeight) {
+                return false
+            }
         } else {
             return false
         }

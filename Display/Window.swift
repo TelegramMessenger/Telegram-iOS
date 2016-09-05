@@ -157,6 +157,7 @@ public class Window: UIWindow {
                 } else {
                     transitionCurve = .easeInOut
                 }
+                
                 strongSelf.updateLayout { $0.update(inputHeight: keyboardHeight.isLessThanOrEqualTo(0.0) ? nil : keyboardHeight, transition: .animated(duration: duration, curve: transitionCurve), overrideTransition: false) }
             }
         })

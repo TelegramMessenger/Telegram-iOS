@@ -4,7 +4,7 @@ import UIKit
 let deviceColorSpace = CGColorSpaceCreateDeviceRGB()
 let deviceScale = UIScreen.main.scale
 
-public func generateImage(_ size: CGSize, pixelGenerator: (CGSize, UnsafeMutablePointer<Int8>) -> Void) -> UIImage? {
+public func generateImagePixel(_ size: CGSize, pixelGenerator: (CGSize, UnsafeMutablePointer<Int8>) -> Void) -> UIImage? {
     let scale = deviceScale
     let scaledSize = CGSize(width: size.width * scale, height: size.height * scale)
     let bytesPerRow = (4 * Int(scaledSize.width) + 15) & (~15)
@@ -82,6 +82,37 @@ public func generateFilledCircleImage(radius: CGFloat, color: UIColor?, backgrou
 
 public func generateStretchableFilledCircleImage(radius: CGFloat, color: UIColor?, backgroundColor: UIColor? = nil) -> UIImage? {
     return generateFilledCircleImage(radius: radius, color: color, backgroundColor: backgroundColor)?.stretchableImage(withLeftCapWidth: Int(radius), topCapHeight: Int(radius))
+}
+
+public func generateTintedImage(image: UIImage?, color: UIColor, backgroundColor: UIColor? = nil) -> UIImage? {
+    guard let image = image else {
+        return nil
+    }
+    
+    let imageSize = image.size
+
+    UIGraphicsBeginImageContextWithOptions(imageSize, backgroundColor != nil, image.scale)
+    if let context = UIGraphicsGetCurrentContext() {
+        if let backgroundColor = backgroundColor {
+            context.setFillColor(backgroundColor.cgColor)
+            context.fill(CGRect(origin: CGPoint(), size: imageSize))
+        }
+        
+        let imageRect = CGRect(origin: CGPoint(), size: imageSize)
+        context.saveGState()
+        context.translateBy(x: imageRect.midX, y: imageRect.midY)
+        context.scaleBy(x: 1.0, y: -1.0)
+        context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
+        context.clip(to: imageRect, mask: image.cgImage!)
+        context.setFillColor(color.cgColor)
+        context.fill(imageRect)
+        context.restoreGState()
+    }
+    
+    let tintedImage = UIGraphicsGetImageFromCurrentImageContext()!
+    UIGraphicsEndImageContext()
+    
+    return tintedImage
 }
 
 private func generateSingleColorImage(size: CGSize, color: UIColor) -> UIImage? {

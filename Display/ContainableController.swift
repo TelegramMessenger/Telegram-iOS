@@ -40,6 +40,42 @@ public extension ContainedViewLayoutTransition {
                 })
         }
     }
+    
+    func updateFrame(layer: CALayer, frame: CGRect, completion: ((Bool) -> Void)? = nil) {
+        switch self {
+            case .immediate:
+                layer.frame = frame
+                if let completion = completion {
+                    completion(true)
+                }
+            case let .animated(duration, curve):
+                let previousFrame = layer.frame
+                layer.frame = frame
+                layer.animateFrame(from: previousFrame, to: frame, duration: duration, timingFunction: curve.timingFunction, completion: { result in
+                    if let completion = completion {
+                        completion(result)
+                    }
+                })
+        }
+    }
+    
+    func updateAlpha(node: ASDisplayNode, alpha: CGFloat, completion: ((Bool) -> Void)? = nil) {
+        switch self {
+            case .immediate:
+                node.alpha = alpha
+                if let completion = completion {
+                    completion(true)
+                }
+            case let .animated(duration, curve):
+                let previousAlpha = node.alpha
+                node.alpha = alpha
+                node.layer.animateAlpha(from: previousAlpha, to: alpha, duration: duration, timingFunction: curve.timingFunction, completion: { result in
+                    if let completion = completion {
+                        completion(result)
+                    }
+                })
+        }
+    }
 }
 
 public protocol ContainableController: class {

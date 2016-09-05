@@ -409,6 +409,9 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
     }
     
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        return otherGestureRecognizer is UIPanGestureRecognizer
+        if let panRecognizer = otherGestureRecognizer as? UIPanGestureRecognizer {
+            return true
+        }
+        return false
     }
 }

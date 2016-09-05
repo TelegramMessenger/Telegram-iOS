@@ -7,7 +7,11 @@ public struct Font {
     }
     
     public static func medium(_ size: CGFloat) -> UIFont {
-        return UIFont.boldSystemFont(ofSize: size)
+        if #available(iOS 8.2, *) {
+            return UIFont.systemFont(ofSize: size, weight: UIFontWeightMedium)
+        } else {
+            return CTFontCreateWithName("HelveticaNeue-Medium" as CFString, size, nil)
+        }
     }
 }
 

@@ -5,6 +5,7 @@
 
 static const void *setEnabledListenerBagKey = &setEnabledListenerBagKey;
 static const void *setTitleListenerBagKey = &setTitleListenerBagKey;
+static const void *customDisplayNodeKey = &customDisplayNodeKey;
 
 @implementation UIBarButtonItem (Proxy)
 
@@ -16,6 +17,18 @@ static const void *setTitleListenerBagKey = &setTitleListenerBagKey;
         [RuntimeUtils swizzleInstanceMethodOfClass:[UIBarButtonItem class] currentSelector:@selector(setEnabled:) newSelector:@selector(_c1e56039_setEnabled:)];
         [RuntimeUtils swizzleInstanceMethodOfClass:[UIBarButtonItem class] currentSelector:@selector(setTitle:) newSelector:@selector(_c1e56039_setTitle:)];
     });
+}
+
+- (instancetype)initWithCustomDisplayNode:(ASDisplayNode *)customDisplayNode {
+    self = [super init];
+    if (self != nil) {
+        [self setAssociatedObject:customDisplayNode forKey:customDisplayNodeKey];
+    }
+    return self;
+}
+
+- (ASDisplayNode *)customDisplayNode {
+    return [self associatedObjectForKey:customDisplayNodeKey];
 }
 
 - (void)_c1e56039_setEnabled:(BOOL)enabled
@@ -40,7 +53,9 @@ static const void *setTitleListenerBagKey = &setTitleListenerBagKey;
 
 - (void)performActionOnTarget
 {
-    NSAssert(self.target != nil, @"self.target != nil");
+    if (self.target == nil) {
+        return;
+    }
     
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Warc-performSelector-leaks"

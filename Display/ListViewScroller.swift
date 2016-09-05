@@ -14,4 +14,8 @@ class ListViewScroller: UIScrollView, UIGestureRecognizerDelegate {
     @objc func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return false
     }
+    
+    override func touchesShouldCancel(in view: UIView) -> Bool {
+        return true
+    }
 }

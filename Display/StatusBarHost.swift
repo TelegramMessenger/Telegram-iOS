@@ -5,4 +5,6 @@ public protocol StatusBarHost {
     var statusBarStyle: UIStatusBarStyle { get set }
     var statusBarWindow: UIView? { get }
     var statusBarView: UIView? { get }
+    
+    var keyboardView: UIView? { get }
 }

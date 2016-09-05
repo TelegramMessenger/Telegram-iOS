@@ -37,7 +37,8 @@ CABasicAnimation * _Nonnull makeSpringAnimation(NSString * _Nonnull keyPath) {
     springAnimation.stiffness = 1000.0f;
     springAnimation.damping = 500.0f;
     springAnimation.initialVelocity = 0.0f;
-    springAnimation.duration = springAnimation.settlingDuration;
+    springAnimation.duration = 0.5;//springAnimation.settlingDuration;
+    springAnimation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionLinear];
     return springAnimation;
 }
 

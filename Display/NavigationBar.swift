@@ -44,6 +44,7 @@ public class NavigationBar: ASDisplayNode {
         didSet {
             self.backButtonNode.color = self.accentColor
             self.leftButtonNode.color = self.accentColor
+            self.rightButtonNode.color = self.accentColor
             self.backButtonArrow.image = backArrowImage(color: self.accentColor)
         }
     }
@@ -68,6 +69,7 @@ public class NavigationBar: ASDisplayNode {
     private var itemTitleListenerKey: Int?
     private var itemTitleViewListenerKey: Int?
     private var itemLeftButtonListenerKey: Int?
+    private var itemRightButtonListenerKey: Int?
     private var _item: UINavigationItem?
     var item: UINavigationItem? {
         get {
@@ -86,6 +88,7 @@ public class NavigationBar: ASDisplayNode {
             self._item = value
             
             self.leftButtonNode.removeFromSupernode()
+            self.rightButtonNode.removeFromSupernode()
             
             if let item = value {
                 self.title = item.title
@@ -105,13 +108,25 @@ public class NavigationBar: ASDisplayNode {
                 self.itemLeftButtonListenerKey = item.addSetLeftBarButtonItemListener { [weak self] _, _ in
                     if let strongSelf = self {
                         strongSelf.updateLeftButton()
+                        strongSelf.invalidateCalculatedLayout()
+                        strongSelf.setNeedsLayout()
+                    }
+                }
+                
+                self.itemRightButtonListenerKey = item.addSetRightBarButtonItemListener { [weak self] _, _ in
+                    if let strongSelf = self {
+                        strongSelf.updateRightButton()
+                        strongSelf.invalidateCalculatedLayout()
+                        strongSelf.setNeedsLayout()
                     }
                 }
                 
                 self.updateLeftButton()
+                self.updateRightButton()
             } else {
                 self.title = nil
                 self.updateLeftButton()
+                self.updateRightButton()
             }
             self.invalidateCalculatedLayout()
         }
@@ -207,9 +222,26 @@ public class NavigationBar: ASDisplayNode {
         }
     }
     
+    private func updateRightButton() {
+        if let item = self.item {
+            if let rightBarButtonItem = item.rightBarButtonItem {
+                self.rightButtonNode.text = rightBarButtonItem.title ?? ""
+                self.rightButtonNode.node = rightBarButtonItem.customDisplayNode
+                if self.rightButtonNode.supernode == nil {
+                    self.clippingNode.addSubnode(self.rightButtonNode)
+                }
+            } else {
+                self.rightButtonNode.removeFromSupernode()
+            }
+        } else {
+            self.rightButtonNode.removeFromSupernode()
+        }
+    }
+    
     private let backButtonNode: NavigationButtonNode
     private let backButtonArrow: ASImageNode
     private let leftButtonNode: NavigationButtonNode
+    private let rightButtonNode: NavigationButtonNode
     
     private var _transitionState: NavigationBarTransitionState?
     var transitionState: NavigationBarTransitionState? {
@@ -280,6 +312,7 @@ public class NavigationBar: ASDisplayNode {
         self.backButtonArrow.displaysAsynchronously = false
         self.backButtonArrow.image = backArrowImage(color: self.accentColor)
         self.leftButtonNode = NavigationButtonNode()
+        self.rightButtonNode = NavigationButtonNode()
         
         self.clippingNode = ASDisplayNode()
         self.clippingNode.clipsToBounds = true
@@ -316,6 +349,12 @@ public class NavigationBar: ASDisplayNode {
                 leftBarButtonItem.performActionOnTarget()
             }
         }
+        
+        self.rightButtonNode.pressed = { [weak self] in
+            if let item = self?.item, let rightBarButtonItem = item.rightBarButtonItem {
+                rightBarButtonItem.performActionOnTarget()
+            }
+        }
     }
     
     public override func layout() {
@@ -332,6 +371,7 @@ public class NavigationBar: ASDisplayNode {
         var contentVerticalOrigin = size.height - nominalHeight
         
         var leftTitleInset: CGFloat = 8.0
+        var rightTitleInset: CGFloat = 8.0
         if self.backButtonNode.supernode != nil {
             let backButtonSize = self.backButtonNode.measure(CGSize(width: size.width, height: nominalHeight))
             leftTitleInset += backButtonSize.width + backButtonInset + 8.0 + 8.0
@@ -382,6 +422,13 @@ public class NavigationBar: ASDisplayNode {
             self.leftButtonNode.frame = CGRect(origin: CGPoint(x: leftButtonInset, y: contentVerticalOrigin + floor((nominalHeight - leftButtonSize.height) / 2.0)), size: leftButtonSize)
         }
         
+        if self.rightButtonNode.supernode != nil {
+            let rightButtonSize = self.rightButtonNode.measure(CGSize(width: size.width, height: nominalHeight))
+            rightTitleInset += rightButtonSize.width + leftButtonInset + 8.0 + 8.0
+            self.rightButtonNode.alpha = 1.0
+            self.rightButtonNode.frame = CGRect(origin: CGPoint(x: size.width - leftButtonInset - rightButtonSize.width, y: contentVerticalOrigin + floor((nominalHeight - rightButtonSize.height) / 2.0)), size: rightButtonSize)
+        }
+        
         if let transitionState = self.transitionState {
             let progress = transitionState.progress
             
@@ -409,7 +456,7 @@ public class NavigationBar: ASDisplayNode {
         }
         
         if self.titleNode.supernode != nil {
-            let titleSize = self.titleNode.measure(CGSize(width: max(1.0, size.width - leftTitleInset - leftTitleInset), height: nominalHeight))
+            let titleSize = self.titleNode.measure(CGSize(width: max(1.0, size.width - max(leftTitleInset, rightTitleInset) * 2.0), height: nominalHeight))
             
             if let transitionState = self.transitionState, let otherNavigationBar = transitionState.navigationBar {
                 let progress = transitionState.progress

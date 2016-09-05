@@ -25,6 +25,19 @@ public class NavigationButtonNode: ASTextNode {
         }
     }
     
+    public var node: ASDisplayNode? {
+        didSet {
+            if self.node !== oldValue {
+                oldValue?.removeFromSupernode()
+                if let node = self.node {
+                    self.addSubnode(node)
+                    self.invalidateCalculatedLayout()
+                    self.setNeedsLayout()
+                }
+            }
+        }
+    }
+    
     public var color: UIColor = UIColor(0x1195f2) {
         didSet {
             if let text = self._text {
@@ -58,6 +71,23 @@ public class NavigationButtonNode: ASTextNode {
         self.isExclusiveTouch = true
         self.hitTestSlop = UIEdgeInsets(top: -16.0, left: -10.0, bottom: -16.0, right: -10.0)
         self.displaysAsynchronously = false
+    }
+    
+    override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+        let superSize = super.calculateSizeThatFits(constrainedSize)
+        if let node = self.node {
+            let nodeSize = node.measure(constrainedSize)
+            return CGSize(width: max(nodeSize.width, superSize.width), height: max(nodeSize.height, superSize.height))
+        }
+        return superSize
+    }
+    
+    override public func layout() {
+        super.layout()
+        
+        if let node = self.node {
+            node.frame = CGRect(origin: CGPoint(), size: node.calculatedSize)
+        }
     }
     
     private func touchInsideApparentBounds(_ touch: UITouch) -> Bool {

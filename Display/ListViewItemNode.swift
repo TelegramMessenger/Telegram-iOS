@@ -413,9 +413,6 @@ open class ListViewItemNode: ASDisplayNode {
     open func setHighlighted(_ highlighted: Bool, animated: Bool) {
     }
     
-    open func setupGestures() {
-    }
-    
     open func animateFrameTransition(_ progress: CGFloat) {
         
     }

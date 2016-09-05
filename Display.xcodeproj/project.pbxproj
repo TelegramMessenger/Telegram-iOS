@@ -13,7 +13,11 @@
 		D015F7541D1B0F6C00E269B5 /* SystemContainedControllerTransitionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015F7531D1B0F6C00E269B5 /* SystemContainedControllerTransitionCoordinator.swift */; };
 		D015F7581D1B467200E269B5 /* ActionSheetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015F7571D1B467200E269B5 /* ActionSheetController.swift */; };
 		D015F75A1D1B46B600E269B5 /* ActionSheetControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015F7591D1B46B600E269B5 /* ActionSheetControllerNode.swift */; };
+		D02958001D6F096000360E5E /* ContextMenuContainerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02957FF1D6F096000360E5E /* ContextMenuContainerNode.swift */; };
 		D02BDB021B6AC703008AFAD2 /* RuntimeUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02BDB011B6AC703008AFAD2 /* RuntimeUtils.swift */; };
+		D03725C11D6DF594007FC290 /* ContextMenuNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03725C01D6DF594007FC290 /* ContextMenuNode.swift */; };
+		D03725C31D6DF7A6007FC290 /* ContextMenuAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03725C21D6DF7A6007FC290 /* ContextMenuAction.swift */; };
+		D03725C51D6DF8B9007FC290 /* ContextMenuController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03725C41D6DF8B9007FC290 /* ContextMenuController.swift */; };
 		D03B0E701D6331FB00955575 /* StatusBarHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B0E6F1D6331FB00955575 /* StatusBarHost.swift */; };
 		D03BCCEB1C72AE590097A291 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03BCCEA1C72AE590097A291 /* Theme.swift */; };
 		D03E7DE41C96A90100C07816 /* NavigationShadow@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D03E7DE31C96A90100C07816 /* NavigationShadow@2x.png */; };
@@ -96,6 +100,7 @@
 		D0DC485F1BF949FB00F672FD /* TabBarContollerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DC485E1BF949FB00F672FD /* TabBarContollerNode.swift */; };
 		D0E1D6721CBC201E00B04029 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0E1D6711CBC201E00B04029 /* AsyncDisplayKit.framework */; };
 		D0E49C881B83A3580099E553 /* ImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E49C871B83A3580099E553 /* ImageCache.swift */; };
+		D0F1132F1D6F3C20008C3597 /* ContextMenuActionNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F1132E1D6F3C20008C3597 /* ContextMenuActionNode.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -115,7 +120,11 @@
 		D015F7531D1B0F6C00E269B5 /* SystemContainedControllerTransitionCoordinator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SystemContainedControllerTransitionCoordinator.swift; sourceTree = "<group>"; };
 		D015F7571D1B467200E269B5 /* ActionSheetController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetController.swift; sourceTree = "<group>"; };
 		D015F7591D1B46B600E269B5 /* ActionSheetControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetControllerNode.swift; sourceTree = "<group>"; };
+		D02957FF1D6F096000360E5E /* ContextMenuContainerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContextMenuContainerNode.swift; sourceTree = "<group>"; };
 		D02BDB011B6AC703008AFAD2 /* RuntimeUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RuntimeUtils.swift; sourceTree = "<group>"; };
+		D03725C01D6DF594007FC290 /* ContextMenuNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContextMenuNode.swift; sourceTree = "<group>"; };
+		D03725C21D6DF7A6007FC290 /* ContextMenuAction.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContextMenuAction.swift; sourceTree = "<group>"; };
+		D03725C41D6DF8B9007FC290 /* ContextMenuController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContextMenuController.swift; sourceTree = "<group>"; };
 		D03B0E6F1D6331FB00955575 /* StatusBarHost.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StatusBarHost.swift; sourceTree = "<group>"; };
 		D03BCCEA1C72AE590097A291 /* Theme.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		D03E7DE31C96A90100C07816 /* NavigationShadow@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "NavigationShadow@2x.png"; sourceTree = "<group>"; };
@@ -202,6 +211,7 @@
 		D0E1D6351CBC159C00B04029 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		D0E1D6711CBC201E00B04029 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E49C871B83A3580099E553 /* ImageCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageCache.swift; sourceTree = "<group>"; };
+		D0F1132E1D6F3C20008C3597 /* ContextMenuActionNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContextMenuActionNode.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -265,6 +275,18 @@
 				D0CD12151CCFEB4E000DE7BC /* ScrollToTopProxyView.swift */,
 			);
 			name = Nodes;
+			sourceTree = "<group>";
+		};
+		D03725BF1D6DF57B007FC290 /* Context Menu */ = {
+			isa = PBXGroup;
+			children = (
+				D03725C21D6DF7A6007FC290 /* ContextMenuAction.swift */,
+				D03725C41D6DF8B9007FC290 /* ContextMenuController.swift */,
+				D03725C01D6DF594007FC290 /* ContextMenuNode.swift */,
+				D02957FF1D6F096000360E5E /* ContextMenuContainerNode.swift */,
+				D0F1132E1D6F3C20008C3597 /* ContextMenuActionNode.swift */,
+			);
+			name = "Context Menu";
 			sourceTree = "<group>";
 		};
 		D03BCCE91C72AE4B0097A291 /* Theme */ = {
@@ -456,6 +478,7 @@
 				D081229A1D19A9EB005F7395 /* Navigation */,
 				D015F7551D1B142300E269B5 /* Tab Bar */,
 				D015F7561D1B465600E269B5 /* Action Sheet */,
+				D03725BF1D6DF57B007FC290 /* Context Menu */,
 			);
 			name = Controllers;
 			sourceTree = "<group>";
@@ -620,9 +643,11 @@
 				D0E49C881B83A3580099E553 /* ImageCache.swift in Sources */,
 				D0078A681C92B21400DF6D92 /* StatusBar.swift in Sources */,
 				D05CC2F81B6955D000E235A3 /* UIViewController+Navigation.m in Sources */,
+				D0F1132F1D6F3C20008C3597 /* ContextMenuActionNode.swift in Sources */,
 				D02BDB021B6AC703008AFAD2 /* RuntimeUtils.swift in Sources */,
 				D05CC31F1B695A9600E235A3 /* NavigationControllerProxy.m in Sources */,
 				D05CC3031B69568600E235A3 /* NotificationCenterUtils.m in Sources */,
+				D02958001D6F096000360E5E /* ContextMenuContainerNode.swift in Sources */,
 				D05CC2E31B69552C00E235A3 /* ViewController.swift in Sources */,
 				D05BE4AB1D1F25E3002BD72C /* PresentationContext.swift in Sources */,
 				D0C2DFCA1CC4431D0044FF83 /* ListViewItem.swift in Sources */,
@@ -660,8 +685,11 @@
 				D0DC485F1BF949FB00F672FD /* TabBarContollerNode.swift in Sources */,
 				D05CC2FA1B6955D000E235A3 /* UINavigationItem+Proxy.m in Sources */,
 				D0C2DFCE1CC4431D0044FF83 /* ListViewAccessoryItem.swift in Sources */,
+				D03725C51D6DF8B9007FC290 /* ContextMenuController.swift in Sources */,
+				D03725C31D6DF7A6007FC290 /* ContextMenuAction.swift in Sources */,
 				D007B9A81D1D3B5400DA746D /* PresentableViewController.swift in Sources */,
 				D015F75A1D1B46B600E269B5 /* ActionSheetControllerNode.swift in Sources */,
+				D03725C11D6DF594007FC290 /* ContextMenuNode.swift in Sources */,
 				D053CB611D22B4F200DD41DF /* CATracingLayer.m in Sources */,
 				D081229D1D19AA1C005F7395 /* ContainerViewLayout.swift in Sources */,
 				D0C2DFC71CC4431D0044FF83 /* ListViewItemNode.swift in Sources */,

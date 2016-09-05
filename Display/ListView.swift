@@ -48,7 +48,7 @@ public enum ListViewScrollToItemDirectionHint {
 }
 
 public enum ListViewAnimationCurve {
-    case Spring(speed: CGFloat)
+    case Spring(duration: Double)
     case Default
 }
 
@@ -922,6 +922,12 @@ private final class ListViewTimerProxy: NSObject {
     }
 }
 
+public enum ListViewVisibleContentOffset {
+    case known(CGFloat)
+    case unknown
+    case none
+}
+
 public final class ListView: ASDisplayNode, UIScrollViewDelegate {
     private final let scroller: ListViewScroller
     private final var visibleSize: CGSize = CGSize()
@@ -965,7 +971,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
     public final var displayedItemRangeChanged: (ListViewDisplayedItemRange) -> Void = { _ in }
     public private(set) final var displayedItemRange: ListViewDisplayedItemRange = ListViewDisplayedItemRange(loadedRange: nil, visibleRange: nil)
     
-    public final var visibleContentOffsetChanged: (CGFloat?) -> Void = { _ in }
+    public final var visibleContentOffsetChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
     
     private final var animations: [ListViewAnimation] = []
     private final var actionsForVSync: [() -> ()] = []
@@ -1029,7 +1035,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         self.scroller.isHidden = true
         self.scroller.delegate = self
         self.view.addSubview(self.scroller)
-        self.scroller.panGestureRecognizer.cancelsTouchesInView = false
+        self.scroller.panGestureRecognizer.cancelsTouchesInView = true
         self.view.addGestureRecognizer(self.scroller.panGestureRecognizer)
         
         self.displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
@@ -1279,9 +1285,18 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
     }
     
     private func updateVisibleContentOffset() {
-        var offset: CGFloat?
-        if let itemNode = self.itemNodes.first, let index = itemNode.index , index == 0 {
-            offset = -(itemNode.apparentFrame.minY - self.insets.top)
+        var offset: ListViewVisibleContentOffset = .unknown
+        var topItemIndexAndFrame: (Int, CGRect) = (-1, CGRect())
+        for itemNode in self.itemNodes {
+            if let index = itemNode.index {
+                topItemIndexAndFrame = (index, itemNode.apparentFrame)
+                break
+            }
+        }
+        if topItemIndexAndFrame.0 == 0 {
+            offset = .known(-(topItemIndexAndFrame.1.minY - self.insets.top))
+        } else if topItemIndexAndFrame.0 == -1 {
+            offset = .none
         }
         
         self.visibleContentOffsetChanged(offset)
@@ -1888,10 +1903,6 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
             //self.addSubnode(node)
         }
         
-        if previousFrame == nil {
-            node.setupGestures()
-        }
-        
         var offsetHeight = node.apparentHeight
         var takenAnimation = false
         
@@ -2202,12 +2213,19 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
                     if updateSizeAndInsets.duration > DBL_EPSILON {
                         let animation: CABasicAnimation
                         switch updateSizeAndInsets.curve {
-                            case let .Spring(speed):
+                            case let .Spring(duration):
                                 let springAnimation = makeSpringAnimation("sublayerTransform")
-                                springAnimation.speed = Float(speed) * Float(1.0 / UIView.animationDurationFactor())
                                 springAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, -completeOffset, 0.0))
                                 springAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
                                 springAnimation.isRemovedOnCompletion = true
+                                
+                                let k = Float(UIView.animationDurationFactor())
+                                var speed: Float = 1.0
+                                if k != 0 && k != 1 {
+                                    speed = Float(1.0) / k
+                                }
+                                springAnimation.speed = speed * Float(springAnimation.duration / duration)
+                                
                                 springAnimation.isAdditive = true
                                 animation = springAnimation
                             case .Default:
@@ -2284,14 +2302,21 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
                         
                         let animation: CABasicAnimation
                         switch scrollToItem.curve {
-                            case let .Spring(speed):
+                            case let .Spring(duration):
                                 let springAnimation = makeSpringAnimation("sublayerTransform")
                                 springAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, -offset, 0.0))
                                 springAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
                                 springAnimation.isRemovedOnCompletion = true
                                 springAnimation.isAdditive = true
                                 springAnimation.fillMode = kCAFillModeForwards
-                                springAnimation.speed = Float(speed) * Float(1.0 / UIView.animationDurationFactor())
+                                
+                                let k = Float(UIView.animationDurationFactor())
+                                var speed: Float = 1.0
+                                if k != 0 && k != 1 {
+                                    speed = Float(1.0) / k
+                                }
+                                springAnimation.speed = speed * Float(springAnimation.duration / duration)
+                                
                                 animation = springAnimation
                             case .Default:
                                 let basicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
@@ -2877,9 +2902,8 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         let timer = Timer(timeInterval: 0.08, target: ListViewTimerProxy { [weak self] in
             if let strongSelf = self , strongSelf.selectionTouchLocation != nil {
                 strongSelf.clearHighlightAnimated(false)
-                let index = strongSelf.itemIndexAtPoint(strongSelf.touchesPosition)
                 
-                if let index = index {
+                if let index = strongSelf.itemIndexAtPoint(strongSelf.touchesPosition) {
                     if strongSelf.items[index].selectable {
                         strongSelf.highlightedItemIndex = index
                         for itemNode in strongSelf.itemNodes {

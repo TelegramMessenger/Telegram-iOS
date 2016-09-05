@@ -17,8 +17,10 @@ static const void *setRightBarButtonItemListenerBagKey = &setRightBarButtonItemL
     {
         [RuntimeUtils swizzleInstanceMethodOfClass:[UINavigationItem class] currentSelector:@selector(setTitle:) newSelector:@selector(_ac91f40f_setTitle:)];
         [RuntimeUtils swizzleInstanceMethodOfClass:[UINavigationItem class] currentSelector:@selector(setTitleView:) newSelector:@selector(_ac91f40f_setTitleView:)];
-        [RuntimeUtils swizzleInstanceMethodOfClass:[UINavigationItem class] currentSelector:@selector(setLeftBarButtonItem:) newSelector:@selector(_ac91f40f_setLeftBarButtonItem:animated:)];
-        [RuntimeUtils swizzleInstanceMethodOfClass:[UINavigationItem class] currentSelector:@selector(setRightBarButtonItem:) newSelector:@selector(_ac91f40f_setRightBarButtonItem:animated:)];
+        [RuntimeUtils swizzleInstanceMethodOfClass:[UINavigationItem class] currentSelector:@selector(setLeftBarButtonItem:) newSelector:@selector(_ac91f40f_setLeftBarButtonItem:)];
+        [RuntimeUtils swizzleInstanceMethodOfClass:[UINavigationItem class] currentSelector:@selector(setLeftBarButtonItem:animated:) newSelector:@selector(_ac91f40f_setLeftBarButtonItem:animated:)];
+        [RuntimeUtils swizzleInstanceMethodOfClass:[UINavigationItem class] currentSelector:@selector(setRightBarButtonItem:) newSelector:@selector(_ac91f40f_setRightBarButtonItem:)];
+        [RuntimeUtils swizzleInstanceMethodOfClass:[UINavigationItem class] currentSelector:@selector(setRightBarButtonItem:animated:) newSelector:@selector(_ac91f40f_setRightBarButtonItem:animated:)];
     });
 }
 
@@ -40,6 +42,10 @@ static const void *setRightBarButtonItemListenerBagKey = &setRightBarButtonItemL
     }];
 }
 
+- (void)_ac91f40f_setLeftBarButtonItem:(UIBarButtonItem *)leftBarButtonItem {
+    [self setLeftBarButtonItem:leftBarButtonItem animated:false];
+}
+
 - (void)_ac91f40f_setLeftBarButtonItem:(UIBarButtonItem *)leftBarButtonItem animated:(BOOL)animated
 {
     [self _ac91f40f_setLeftBarButtonItem:leftBarButtonItem animated:animated];
@@ -47,6 +53,10 @@ static const void *setRightBarButtonItemListenerBagKey = &setRightBarButtonItemL
     [(NSBag *)[self associatedObjectForKey:setLeftBarButtonItemListenerBagKey] enumerateItems:^(UINavigationItemSetBarButtonItemListener listener) {
         listener(leftBarButtonItem, animated);
     }];
+}
+
+- (void)_ac91f40f_setRightBarButtonItem:(UIBarButtonItem *)rightBarButtonItem {
+    [self setRightBarButtonItem:rightBarButtonItem animated:false];
 }
 
 - (void)_ac91f40f_setRightBarButtonItem:(UIBarButtonItem *)rightBarButtonItem animated:(BOOL)animated
