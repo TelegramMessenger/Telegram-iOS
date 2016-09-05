@@ -102,7 +102,14 @@ static void init_ctr(struct ctr_state *state, const unsigned char *iv)
     {
         _internalId = [[MTInternalId(MTTcpConnection) alloc] init];
         
+/*#ifdef DEBUG
+        if (![address isIpv6]) {
+            address = [[MTDatacenterAddress alloc] initWithIp:@"127.0.0.1" port:443 preferForMedia:address.preferForMedia restrictToTcp:address.restrictToTcp];
+        }
+#endif*/
+        
         _address = address;
+        
         _interface = interface;
         
         if (context.apiEnvironment.datacenterAddressOverrides[@(datacenterId)] != nil) {
