@@ -1,7 +1,7 @@
 import Foundation
 import Display
 import SwiftSignalKit
-import MtProtoKit
+import MtProtoKitDynamic
 import TelegramCore
 
 class AuthorizationPhoneController: ViewController {
@@ -59,7 +59,13 @@ class AuthorizationPhoneController: ViewController {
                         let range = error.errorDescription.range(of: "MIGRATE_")!
                         let updatedMasterDatacenterId = Int32(error.errorDescription.substring(from: range.upperBound))!
                         let updatedAccount = account.changedMasterDatacenterId(updatedMasterDatacenterId)
-                        return updatedAccount.network.request(sendCode) |> map { sentCode in return (sentCode, updatedAccount) }
+                        return updatedAccount
+                            |> mapToSignalPromotingError { updatedAccount -> Signal<(Api.auth.SentCode, UnauthorizedAccount), MTRpcError> in
+                                return updatedAccount.network.request(sendCode)
+                                    |> map { sentCode in
+                                        return (sentCode, updatedAccount)
+                                    }
+                            }
                     case _:
                         return .fail(error)
                 }

@@ -64,7 +64,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 }
             }
             
-            let avatarInset: CGFloat = (item.peerId.isGroup && item.message.author != nil) ? layoutConstants.avatarDiameter : 0.0
+            let avatarInset: CGFloat = (item.peerId.isGroupOrChannel && item.message.author != nil) ? layoutConstants.avatarDiameter : 0.0
             
             let layoutInsets = UIEdgeInsets(top: mergedTop ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, left: 0.0, bottom: mergedBottom ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, right: 0.0)
             

@@ -1,7 +1,5 @@
 #import "FastBlur.h"
 
-#import <Accelerate/Accelerate.h>
-
 static inline uint64_t get_colors (const uint8_t *p) {
     return p[0] + (p[1] << 16) + ((uint64_t)p[2] << 32);
 }
@@ -102,63 +100,3 @@ yi += stride;
     
     free(rgb);
 }
-
-void telegramDspBlur(int imageWidth, int imageHeight, int imageStride, void *pixels) {
-    uint8_t *srcData = pixels;
-    int bytesPerRow = imageStride;
-    int width = imageWidth;
-    int height = imageHeight;
-    bool shouldClip = false;
-    static const float matrix[] = { 1/9.0f, 1/9.0f, 1/9.0f, 1/9.0f, 1/9.0f, 1/9.0f, 1/9.0f, 1/9.0f, 1/9.0f };
-
-//void telegramDspBlur(uint8_t *srcData, int bytesPerRow, int width, int height, float *matrix, int matrixRows, int matrixCols, bool shouldClip) {
-    unsigned char *finalData = malloc(bytesPerRow * height * sizeof(unsigned char));
-    if (srcData != NULL && finalData != NULL)
-    {
-        size_t dataSize = bytesPerRow * height;
-        // copy src to destination: technically this is a bit wasteful as we'll overwrite
-        // all but the "alpha" portion of finalData during processing but I'm unaware of
-        // a memcpy with stride function
-        memcpy(finalData, srcData, dataSize);
-        // alloc space for our dsp arrays
-        float *srcAsFloat = malloc(width*height*sizeof(float));
-        float *resultAsFloat = malloc(width*height*sizeof(float));
-        // loop through each colour (color) chanel (skip the first chanel, it's alpha and is left alone)
-        for (int i=1; i<4; i++) {
-            // convert src pixels into float data type
-            vDSP_vfltu8(srcData+i,4,srcAsFloat,1,width * height);
-            // apply matrix using dsp
-            /*switch (matrixSize) {
-                case DSPMatrixSize3x3:*/
-                    vDSP_f3x3(srcAsFloat, height, width, matrix, resultAsFloat);
-                    /*break;
-                case DSPMatrixSize5x5:
-                    vDSP_f5x5(srcAsFloat, height, width, matrix, resultAsFloat);
-                    break;
-                case DSPMatrixSizeCustom:
-                    NSAssert(matrixCols > 0 && matrixRows > 0,
-                             @"invalid usage: please use full method definition and pass rows/cols for matrix");
-                    vDSP_imgfir(srcAsFloat, height, width, matrix, resultAsFloat, matrixRows, matrixCols);
-                    break;
-                default:
-                    break;
-            }*/
-            // certain operations may result in values to large or too small in our output float array
-            // so if necessary we clip the results here. This param is optional so that we don't need to take
-            // the speed hit on blur operations or others which can't result in invalid float values.
-            if (shouldClip) {
-                float min = 0;
-                float max = 255;
-                vDSP_vclip(resultAsFloat, 1, &min, &max, resultAsFloat, 1, width * height);
-            }
-            // convert back into bytes and copy into finalData
-            vDSP_vfixu8(resultAsFloat, 1, finalData+i, 4, width * height);
-        }
-        // clean up dsp space
-        free(srcAsFloat);
-        free(resultAsFloat);
-        memcpy(srcData, finalData, bytesPerRow * height * sizeof(unsigned char));
-        free(finalData);
-    }
-}
-

@@ -166,6 +166,9 @@ class ContactsVCardItemNode: ListViewItemNode {
                 } else if let group = peer as? TelegramGroup {
                     titleAttributedString = NSAttributedString(string: group.title, font: titleFont, textColor: UIColor.black)
                     statusAttributedString = NSAttributedString(string: "group", font: statusFont, textColor: UIColor(0xa6a6a6))
+                } else if let channel = peer as? TelegramChannel {
+                    titleAttributedString = NSAttributedString(string: channel.title, font: titleFont, textColor: UIColor.black)
+                    statusAttributedString = NSAttributedString(string: "channel", font: statusFont, textColor: UIColor(0xa6a6a6))
                 }
             }
             

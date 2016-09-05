@@ -52,7 +52,7 @@ public class ChatMessageItem: ListViewItem, CustomStringConvertible {
         
         var accessoryItem: ListViewAccessoryItem?
         let incoming = account.peerId != message.author?.id
-        let displayAuthorInfo = incoming && message.author != nil && peerId.isGroup
+        let displayAuthorInfo = incoming && message.author != nil && peerId.isGroupOrChannel
         
         if displayAuthorInfo {
             var hasActionMedia = false
@@ -91,6 +91,8 @@ public class ChatMessageItem: ListViewItem, CustomStringConvertible {
             let (top, bottom) = self.mergedWithItems(top: previousItem, bottom: nextItem)
             let (layout, apply) = nodeLayout(self, width, top, bottom)
             
+            node.updateSelectionState(animated: false)
+            
             node.contentSize = layout.contentSize
             node.insets = layout.insets
             
@@ -124,6 +126,8 @@ public class ChatMessageItem: ListViewItem, CustomStringConvertible {
         if let node = node as? ChatMessageItemView {
             Queue.mainQueue().async {
                 node.setupItem(self)
+                
+                node.updateSelectionState(animated: false)
                 
                 let nodeLayout = node.asyncLayout()
                 

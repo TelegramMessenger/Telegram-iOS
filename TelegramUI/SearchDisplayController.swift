@@ -58,13 +58,15 @@ final class SearchDisplayController {
         searchBar.deactivate()
         
         if let placeholder = placeholder {
-            searchBar.animateOut(to: placeholder, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, completion: {
-                self.searchBar.removeFromSupernode()
+            let searchBar = self.searchBar
+            searchBar.animateOut(to: placeholder, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak searchBar] in
+                searchBar?.removeFromSupernode()
             })
         }
         
-        self.contentNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
-            self.contentNode.removeFromSupernode()
+        let contentNode = self.contentNode
+        contentNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak contentNode] _ in
+            contentNode?.removeFromSupernode()
         })
     }
 }

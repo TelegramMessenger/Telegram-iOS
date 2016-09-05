@@ -24,7 +24,7 @@ private let textInputViewBackground: UIImage = {
 
 private let attachmentIcon = UIImage(bundleImageName: "Chat/Input/Text/IconAttachment")?.precomposed()
 
-class ChatInputNode: ASDisplayNode, ASEditableTextNodeDelegate {
+class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     var textPlaceholderNode: TextNode
     var textInputNode: ASEditableTextNode?
     
@@ -58,15 +58,13 @@ class ChatInputNode: ASDisplayNode, ASEditableTextNodeDelegate {
         
         super.init()
         
-        self.backgroundColor = UIColor(0xfafafa)
-        
         self.attachmentButton.setImage(attachmentIcon, for: [])
         self.attachmentButton.addTarget(self, action: #selector(self.attachmentButtonPressed), for: .touchUpInside)
         self.view.addSubview(self.attachmentButton)
         
         self.sendButton.titleLabel?.font = Font.medium(17.0)
         self.sendButton.contentEdgeInsets = UIEdgeInsets(top: 8.0, left: 6.0, bottom: 8.0, right: 6.0)
-        self.sendButton.setTitleColor(UIColor.blue, for: [])
+        self.sendButton.setTitleColor(UIColor(0x1195f2), for: [])
         self.sendButton.setTitleColor(UIColor.gray, for: [.highlighted])
         self.sendButton.setTitle("Send", for: [])
         self.sendButton.sizeToFit()
@@ -124,19 +122,25 @@ class ChatInputNode: ASDisplayNode, ASEditableTextNodeDelegate {
             return super.frame
         } set(value) {
             super.frame = value
-            
-            let sendButtonSize = self.sendButton.bounds.size
-            let minimalHeight: CGFloat = 45.0
-            self.sendButton.frame = CGRect(x: value.size.width - sendButtonSize.width, y: value.height - minimalHeight + floor((minimalHeight - sendButtonSize.height) / 2.0), width: sendButtonSize.width, height: sendButtonSize.height)
-            
-            self.attachmentButton.frame = CGRect(origin: CGPoint(x: 0.0, y: value.height - minimalHeight), size: CGSize(width: 40.0, height: minimalHeight))
-
-            self.textInputNode?.frame = CGRect(x: self.textFieldInsets.left + self.textInputViewInternalInsets.left, y: self.textFieldInsets.top + self.textInputViewInternalInsets.top, width: value.size.width - self.textFieldInsets.left - self.textFieldInsets.right - sendButtonSize.width - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right, height: value.size.height - self.textFieldInsets.top - self.textFieldInsets.bottom - self.textInputViewInternalInsets.top - self.textInputViewInternalInsets.bottom)
-            
-            self.textPlaceholderNode.frame = CGRect(origin: CGPoint(x: self.textFieldInsets.left + self.textInputViewInternalInsets.left, y: self.textFieldInsets.top + self.textInputViewInternalInsets.top + 0.5), size: self.textPlaceholderNode.frame.size)
-            
-            self.textInputBackgroundView.frame = CGRect(x: self.textFieldInsets.left, y: self.textFieldInsets.top, width: value.size.width -  self.textFieldInsets.left - self.textFieldInsets.right - sendButtonSize.width, height: value.size.height - self.textFieldInsets.top - self.textFieldInsets.bottom)
         }
+    }
+    
+    override func updateFrames(transition: ContainedViewLayoutTransition) {
+        let bounds = self.bounds
+        
+        let sendButtonSize = self.sendButton.bounds.size
+        let minimalHeight: CGFloat = 45.0
+        transition.updateFrame(layer: self.sendButton.layer, frame: CGRect(x: bounds.size.width - sendButtonSize.width, y: bounds.height - minimalHeight + floor((minimalHeight - sendButtonSize.height) / 2.0), width: sendButtonSize.width, height: sendButtonSize.height))
+        
+        transition.updateFrame(layer: self.attachmentButton.layer, frame: CGRect(origin: CGPoint(x: 0.0, y: bounds.height - minimalHeight), size: CGSize(width: 40.0, height: minimalHeight)))
+        
+        if let textInputNode = self.textInputNode {
+            transition.updateFrame(node: textInputNode, frame: CGRect(x: self.textFieldInsets.left + self.textInputViewInternalInsets.left, y: self.textFieldInsets.top + self.textInputViewInternalInsets.top, width: bounds.size.width - self.textFieldInsets.left - self.textFieldInsets.right - sendButtonSize.width - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right, height: bounds.size.height - self.textFieldInsets.top - self.textFieldInsets.bottom - self.textInputViewInternalInsets.top - self.textInputViewInternalInsets.bottom))
+        }
+        
+        transition.updateFrame(node: self.textPlaceholderNode, frame: CGRect(origin: CGPoint(x: self.textFieldInsets.left + self.textInputViewInternalInsets.left, y: self.textFieldInsets.top + self.textInputViewInternalInsets.top + 0.5), size: self.textPlaceholderNode.frame.size))
+        
+        transition.updateFrame(layer: self.textInputBackgroundView.layer, frame: CGRect(x: self.textFieldInsets.left, y: self.textFieldInsets.top, width: bounds.size.width -  self.textFieldInsets.left - self.textFieldInsets.right - sendButtonSize.width, height: bounds.size.height - self.textFieldInsets.top - self.textFieldInsets.bottom))
     }
     
     @objc func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
@@ -167,12 +171,20 @@ class ChatInputNode: ASDisplayNode, ASEditableTextNodeDelegate {
     
     @objc func textInputBackgroundViewTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            if self.textInputNode == nil {
-                self.loadTextInputNode()
-            }
-            
-            self.textInputNode?.becomeFirstResponder()
+            self.ensureFocused()
         }
+    }
+    
+    func ensureUnfocused() {
+        self.textInputNode?.resignFirstResponder()
+    }
+    
+    func ensureFocused() {
+        if self.textInputNode == nil {
+            self.loadTextInputNode()
+        }
+        
+        self.textInputNode?.becomeFirstResponder()
     }
     
     func animateTextSend() {

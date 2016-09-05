@@ -29,6 +29,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         super.init()
         
         self.backgroundColor = UIColor.white
+        
         self.addSubnode(self.recentPeersNode)
         self.addSubnode(self.listNode)
         
@@ -112,10 +113,8 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         
         
         let listViewCurve: ListViewAnimationCurve
-        var speedFactor: CGFloat = 1.0
         if curve == 7 {
-            speedFactor = CGFloat(duration) / 0.5
-            listViewCurve = .Spring(speed: CGFloat(speedFactor))
+            listViewCurve = .Spring(duration: duration)
         } else {
             listViewCurve = .Default
         }

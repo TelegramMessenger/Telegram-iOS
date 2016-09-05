@@ -153,6 +153,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     private let backgroundNode: ChatMessageBackground
     private var transitionClippingNode: ASDisplayNode?
     
+    private var selectionNode: ChatMessageSelectionNode?
+    
     private var nameNode: TextNode?
     private var forwardInfoNode: ChatMessageForwardInfoNode?
     private var replyInfoNode: ChatMessageReplyInfoNode?
@@ -202,7 +204,19 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     override func didLoad() {
         super.didLoad()
         
-        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+        let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
+        recognizer.doNotWaitForDoubleTapAtPoint = { [weak self] point in
+            if let strongSelf = self {
+                if let replyInfoNode = strongSelf.replyInfoNode, replyInfoNode.frame.contains(point) {
+                    return true
+                }
+                if let forwardInfoNode = strongSelf.forwardInfoNode, forwardInfoNode.frame.contains(point) {
+                    return true
+                }
+            }
+            return false
+        }
+        self.view.addGestureRecognizer(recognizer)
     }
     
     override func asyncLayout() -> (_ item: ChatMessageItem, _ width: CGFloat, _ mergedTop: Bool, _ mergedBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
@@ -221,9 +235,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             let message = item.message
             
             let incoming = item.account.peerId != message.author?.id
-            let displayAuthorInfo = !mergedTop && incoming && item.peerId.isGroup && item.message.author != nil
+            let displayAuthorInfo = !mergedTop && incoming && item.peerId.isGroupOrChannel && item.message.author != nil
             
-            let avatarInset: CGFloat = (item.peerId.isGroup && item.message.author != nil) ? layoutConstants.avatarDiameter : 0.0
+            let avatarInset: CGFloat = (item.peerId.isGroupOrChannel && item.message.author != nil) ? layoutConstants.avatarDiameter : 0.0
             
             let tmpWidth = width * layoutConstants.bubble.maximumWidthFillFactor
             let maximumContentWidth = floor(tmpWidth - layoutConstants.bubble.edgeInset - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - layoutConstants.bubble.contentInsets.right - avatarInset)
@@ -559,6 +573,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         strongSelf.backgroundNode.frame = backgroundFrame
                         strongSelf.disableTransitionClippingNode()
                     }
+                    let offset: CGFloat = incoming ? 42.0 : 0.0
+                    strongSelf.selectionNode?.frame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: width, height: layout.size.height))
                 }
             })
         }
@@ -619,24 +635,58 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         }
     }
     
-    @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
+    @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
             case .ended:
-                let location = recognizer.location(in: self.view)
-                if let replyInfoNode = self.replyInfoNode, replyInfoNode.frame.contains(location) {
-                    if let item = self.item {
-                        for attribute in item.message.attributes {
-                            if let attribute = attribute as? ReplyMessageAttribute {
-                                self.controllerInteraction?.testNavigateToMessage(item.message.id, attribute.messageId)
-                                break
+                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                    switch gesture {
+                        case .tap:
+                            if let replyInfoNode = self.replyInfoNode, replyInfoNode.frame.contains(location) {
+                                if let item = self.item {
+                                    for attribute in item.message.attributes {
+                                        if let attribute = attribute as? ReplyMessageAttribute {
+                                            self.controllerInteraction?.navigateToMessage(item.message.id, attribute.messageId)
+                                            return
+                                        }
+                                    }
+                                }
                             }
-                        }
+                            if let forwardInfoNode = self.forwardInfoNode, forwardInfoNode.frame.contains(location) {
+                                if let item = self.item, let forwardInfo = item.message.forwardInfo {
+                                    if let sourceMessageId = forwardInfo.sourceMessageId {
+                                        self.controllerInteraction?.navigateToMessage(item.message.id, sourceMessageId)
+                                    } else {
+                                        self.controllerInteraction?.openPeer(forwardInfo.source?.id ?? forwardInfo.author.id, .chat)
+                                    }
+                                    return
+                                }
+                            }
+                            self.controllerInteraction?.clickThroughMessage()
+                        case .longTap, .doubleTap:
+                            if let item = self.item {
+                                self.controllerInteraction?.openMessageContextMenu(item.message.id, self, self.backgroundNode.frame)
+                            }
                     }
-                    //self.controllerInteraction?.testNavigateToMessage(messageId)
                 }
             default:
                 break
         }
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let selectionNode = self.selectionNode {
+            if selectionNode.frame.offsetBy(dx: 42.0, dy: 0.0).contains(point) {
+                return selectionNode.view
+            } else {
+                return nil
+            }
+        }
+        
+        if !self.backgroundNode.frame.contains(point) {
+            return nil
+        }
+        
+        return super.hitTest(point, with: event)
     }
     
     override func transitionNode(id: MessageId, media: Media) -> ASDisplayNode? {
@@ -654,6 +704,68 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         if let item = self.item, let controllerInteraction = self.controllerInteraction {
             for contentNode in self.contentNodes {
                 contentNode.updateHiddenMedia(controllerInteraction.hiddenMedia[item.message.id])
+            }
+        }
+    }
+    
+    override func updateSelectionState(animated: Bool) {
+        guard let controllerInteraction = self.controllerInteraction else {
+            return
+        }
+        
+        if let selectionState = controllerInteraction.selectionState {
+            var selected = false
+            var incoming = true
+            if let item = self.item {
+                selected = selectionState.selectedIds.contains(item.message.id)
+                incoming = item.message.flags.contains(.Incoming)
+            }
+            let offset: CGFloat = incoming ? 42.0 : 0.0
+            
+            if let selectionNode = self.selectionNode {
+                selectionNode.updateSelected(selected, animated: false)
+                selectionNode.frame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.bounds.size.width, height: self.bounds.size.height))
+                self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
+            } else {
+                let selectionNode = ChatMessageSelectionNode(toggle: { [weak self] in
+                    if let strongSelf = self, let item = strongSelf.item {
+                        strongSelf.controllerInteraction?.toggleMessageSelection(item.message.id)
+                    }
+                })
+                
+                selectionNode.frame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.bounds.size.width, height: self.bounds.size.height))
+                self.addSubnode(selectionNode)
+                self.selectionNode = selectionNode
+                selectionNode.updateSelected(selected, animated: false)
+                let previousSubnodeTransform = self.subnodeTransform
+                self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
+                if animated {
+                    selectionNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                    self.layer.animate(from: NSValue(caTransform3D: previousSubnodeTransform), to: NSValue(caTransform3D: self.subnodeTransform), keyPath: "sublayerTransform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.4)
+                    
+                    if !incoming {
+                        let position = selectionNode.layer.position
+                        selectionNode.layer.animatePosition(from: CGPoint(x: position.x - 42.0, y: position.y), to: position, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+                    }
+                }
+            }
+        } else {
+            if let selectionNode = self.selectionNode {
+                self.selectionNode = nil
+                let previousSubnodeTransform = self.subnodeTransform
+                self.subnodeTransform = CATransform3DIdentity
+                if animated {
+                    self.layer.animate(from: NSValue(caTransform3D: previousSubnodeTransform), to: NSValue(caTransform3D: self.subnodeTransform), keyPath: "sublayerTransform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.4, completion: { [weak selectionNode]_ in
+                        selectionNode?.removeFromSupernode()
+                    })
+                    selectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+                    if CGFloat(0.0).isLessThanOrEqualTo(selectionNode.frame.origin.x) {
+                        let position = selectionNode.layer.position
+                        selectionNode.layer.animatePosition(from: position, to: CGPoint(x: position.x - 42.0, y: position.y), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                    }
+                } else {
+                    selectionNode.removeFromSupernode()
+                }
             }
         }
     }

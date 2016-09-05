@@ -117,4 +117,7 @@ public class ChatMessageItemView: ListViewItemNode {
     
     func updateHiddenMedia() {
     }
+    
+    func updateSelectionState(animated: Bool) {
+    }
 }

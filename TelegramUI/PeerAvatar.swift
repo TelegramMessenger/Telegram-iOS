@@ -30,6 +30,10 @@ func peerAvatarImage(account: Account, peer: Peer, displayDimensions: CGSize = C
         if let photo = group.photo.first {
             location = photo.location.cloudLocation
         }
+    } else if let channel = peer as? TelegramChannel {
+        if let photo = channel.photo.first {
+            location = photo.location.cloudLocation
+        }
     }
     
     if let location = location {

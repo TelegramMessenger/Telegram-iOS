@@ -85,8 +85,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
             if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {
                 self.activateLocalContent()
             } else {
-                self.activateLocalContent()
-                //self.progressPressed()
+                self.progressPressed()
             }
         }
     }

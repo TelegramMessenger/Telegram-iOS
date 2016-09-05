@@ -397,6 +397,13 @@ public class ChatController: ViewController {
         return self._chatHistoryLocation.get()
     }
     
+    private var presentationInterfaceState = ChatPresentationInterfaceState(interfaceState: ChatInterfaceState(), peer: nil)
+    private let chatInterfaceStatePromise = Promise<ChatInterfaceState>()
+    
+    private var leftNavigationButton: ChatNavigationButton?
+    private var rightNavigationButton: ChatNavigationButton?
+    private var chatInfoNavigationButton: ChatNavigationButton?
+    
     private let galleryHiddenMesageAndMediaDisposable = MetaDisposable()
     
     private var controllerInteraction: ChatControllerInteraction?
@@ -438,7 +445,7 @@ public class ChatController: ViewController {
                 
                 if let galleryMedia = galleryMedia {
                     if let file = galleryMedia as? TelegramMediaFile, file.mimeType == "audio/mpeg" {
-                        debugPlayMedia(account: strongSelf.account, file: file)
+                        //debugPlayMedia(account: strongSelf.account, file: file)
                     } else {
                         let gallery = GalleryController(account: strongSelf.account, messageId: id)
                         
@@ -474,30 +481,92 @@ public class ChatController: ViewController {
                     }
                 }
             }
-        }, testNavigateToMessage: { [weak self] fromId, id in
+        }, openPeer: { [weak self] id, navigation in
+            if let strongSelf = self {
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: id, messageId: nil))
+            }
+        }, openMessageContextMenu: { [weak self] id, node, frame in
             if let strongSelf = self, let historyView = strongSelf.historyView {
-                var fromIndex: MessageIndex?
-                
-                for case let .MessageEntry(message) in historyView.filteredEntries where message.id == fromId {
-                    fromIndex = MessageIndex(message)
-                    break
-                }
-                
-                if let fromIndex = fromIndex {
-                    var found = false
-                    for case let .MessageEntry(message) in historyView.filteredEntries where message.id == id {
-                        found = true
-                        
-                        strongSelf._chatHistoryLocation.set(.single(ChatHistoryLocation.Scroll(index: MessageIndex(message), anchorIndex: MessageIndex(message), sourceIndex: fromIndex, scrollPosition: .Center(.Bottom), animated: true)))
+                let contextMenuController = ContextMenuController(actions: [
+                    ContextMenuAction(content: .text("Reply"), action: { [weak strongSelf] in
+                        if let strongSelf = strongSelf, let historyView = strongSelf.historyView {
+                            for case let .MessageEntry(message) in historyView.filteredEntries where message.id == id {
+                                strongSelf.updateChatInterfaceState(strongSelf.chatInterfaceState.withUpdatedReplyMessageId(message.id), animated: true)
+                                strongSelf.chatDisplayNode.ensureInputViewFocused()
+                                break
+                            }
+                        }
+                    }),
+                    ContextMenuAction(content: .text("Copy"), action: { [weak strongSelf] in
+                        if let strongSelf = strongSelf, let historyView = strongSelf.historyView {
+                            for case let .MessageEntry(message) in historyView.filteredEntries where message.id == id {
+                                if !message.text.isEmpty {
+                                    UIPasteboard.general.string = message.text
+                                }
+                                break
+                            }
+                        }
+                    }),
+                    ContextMenuAction(content: .text("More..."), action: { [weak strongSelf] in
+                        if let strongSelf = strongSelf, let historyView = strongSelf.historyView {
+                            for case let .MessageEntry(message) in historyView.filteredEntries where message.id == id {
+                                if strongSelf.chatInterfaceState.selectionState != nil {
+                                    strongSelf.updateChatInterfaceState(strongSelf.chatInterfaceState.withoutSelectionState(), animated: true)
+                                } else {
+                                    strongSelf.updateChatInterfaceState(strongSelf.chatInterfaceState.withUpdatedSelectedMessage(message.id), animated: true)
+                                }
+                                
+                                break
+                            }
+                        }
+                    })
+                ])
+                strongSelf.present(contextMenuController, in: .window, with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak strongSelf, weak node] in
+                    if let node = node {
+                        return (node, frame)
+                    } else {
+                        return nil
+                    }
+                }))
+            }
+        }, navigateToMessage: { [weak self] fromId, id in
+            if let strongSelf = self, let historyView = strongSelf.historyView {
+                if id.peerId == strongSelf.peerId {
+                    var fromIndex: MessageIndex?
+                    
+                    for case let .MessageEntry(message) in historyView.filteredEntries where message.id == fromId {
+                        fromIndex = MessageIndex(message)
+                        break
                     }
                     
-                    if !found {
-                        strongSelf.messageIndexDisposable.set((strongSelf.account.postbox.messageIndexAtId(id) |> deliverOnMainQueue).start(next: { [weak strongSelf] index in
-                            if let strongSelf = strongSelf, let index = index {
-                                strongSelf._chatHistoryLocation.set(.single(ChatHistoryLocation.Scroll(index:index, anchorIndex: index, sourceIndex: fromIndex, scrollPosition: .Center(.Bottom), animated: true)))
-                            }
-                        }))
+                    if let fromIndex = fromIndex {
+                        var found = false
+                        for case let .MessageEntry(message) in historyView.filteredEntries where message.id == id {
+                            found = true
+                            
+                            strongSelf._chatHistoryLocation.set(.single(ChatHistoryLocation.Scroll(index: MessageIndex(message), anchorIndex: MessageIndex(message), sourceIndex: fromIndex, scrollPosition: .Center(.Bottom), animated: true)))
+                        }
+                        
+                        if !found {
+                            strongSelf.messageIndexDisposable.set((strongSelf.account.postbox.messageIndexAtId(id) |> deliverOnMainQueue).start(next: { [weak strongSelf] index in
+                                if let strongSelf = strongSelf, let index = index {
+                                    strongSelf._chatHistoryLocation.set(.single(ChatHistoryLocation.Scroll(index:index, anchorIndex: index, sourceIndex: fromIndex, scrollPosition: .Center(.Bottom), animated: true)))
+                                }
+                            }))
+                        }
                     }
+                } else {
+                    (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: id.peerId, messageId: id))
+                }
+            }
+        }, clickThroughMessage: { [weak self] in
+            self?.view.endEditing(true)
+        }, toggleMessageSelection: { [weak self] messageId in
+            if let strongSelf = self, let historyView = strongSelf.historyView {
+                for case let .MessageEntry(message) in historyView.filteredEntries where message.id == messageId {
+                    
+                    strongSelf.updateChatInterfaceState(strongSelf.chatInterfaceState.withToggledSelectedMessage(messageId), animated: false)
+                    break
                 }
             }
         })
@@ -506,10 +575,14 @@ public class ChatController: ViewController {
         
         let messageViewQueue = self.messageViewQueue
         
+        self.chatInfoNavigationButton = ChatNavigationButton(action: .openChatInfo, buttonItem: UIBarButtonItem(customDisplayNode: ChatAvatarNavigationNode()))
+        self.updateChatInterfaceState(self.chatInterfaceState, animated: false)
+        
         peerDisposable.set((account.postbox.peerWithId(peerId)
             |> deliverOnMainQueue).start(next: { [weak self] peer in
                 if let strongSelf = self {
                     strongSelf.title = peer.displayTitle
+                    (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.setPeer(account: strongSelf.account, peer: peer)
                 }
             }))
         
@@ -672,28 +745,38 @@ public class ChatController: ViewController {
         
         self.chatDisplayNode.listView.visibleContentOffsetChanged = { [weak self] offset in
             if let strongSelf = self {
-                if let offset = offset, offset < 40.0 {
-                    if strongSelf.chatDisplayNode.navigateToLatestButton.alpha == 1.0 {
-                        UIView.animate(withDuration: 0.2, delay: 0.0, options: [.beginFromCurrentState], animations: {
-                            strongSelf.chatDisplayNode.navigateToLatestButton.alpha = 0.0
-                        }, completion: nil)
-                    }
-                } else {
-                    if strongSelf.chatDisplayNode.navigateToLatestButton.alpha == 0.0 {
-                        UIView.animate(withDuration: 0.2, delay: 0.0, options: [.beginFromCurrentState], animations: {
-                            strongSelf.chatDisplayNode.navigateToLatestButton.alpha = 1.0
-                        }, completion: nil)
-                    }
+                let offsetAlpha: CGFloat
+                switch offset {
+                    case let .known(offset):
+                        if offset < 40.0 {
+                            offsetAlpha = 0.0
+                        } else {
+                            offsetAlpha = 1.0
+                        }
+                    case .unknown:
+                        offsetAlpha = 1.0
+                    case .none:
+                        offsetAlpha = 0.0
+                }
+                
+                if !strongSelf.chatDisplayNode.navigateToLatestButton.alpha.isEqual(to: offsetAlpha) {
+                    UIView.animate(withDuration: 0.2, delay: 0.0, options: [.beginFromCurrentState], animations: {
+                        strongSelf.chatDisplayNode.navigateToLatestButton.alpha = offsetAlpha
+                    }, completion: nil)
                 }
             }
         }
         
-        self.chatDisplayNode.requestLayout = { [weak self] animated in
-            self?.requestLayout(transition: animated ? .animated(duration: 0.1, curve: .easeInOut) : .immediate)
+        self.chatDisplayNode.requestLayout = { [weak self] transition in
+            self?.requestLayout(transition: transition)
         }
         
         self.chatDisplayNode.setupSendActionOnViewUpdate = { [weak self] f in
             self?.layoutActionOnViewTransition = f
+        }
+        
+        self.chatDisplayNode.requestUpdateChatInterfaceState = { [weak self] state, animated in
+            self?.updateChatInterfaceState(state, animated: animated)
         }
         
         self.chatDisplayNode.displayAttachmentMenu = { [weak self] in
@@ -720,6 +803,22 @@ public class ChatController: ViewController {
                 strongSelf._chatHistoryLocation.set(.single(ChatHistoryLocation.Scroll(index: MessageIndex.upperBound(peerId: strongSelf.peerId), anchorIndex: MessageIndex.upperBound(peerId: strongSelf.peerId), sourceIndex: MessageIndex.lowerBound(peerId: strongSelf.peerId), scrollPosition: .Top, animated: true)))
             }
         }
+        
+        self.chatDisplayNode.interfaceInteraction = ChatPanelInterfaceInteraction(deleteSelectedMessages: { [weak self] in
+            if let strongSelf = self {
+                if let messageIds = strongSelf.chatInterfaceState.selectionState?.selectedIds, !messageIds.isEmpty {
+                    strongSelf.account.postbox.modify({ modifier in
+                        modifier.deleteMessages(Array(messageIds))
+                    }).start()
+                }
+                strongSelf.updateChatInterfaceState(strongSelf.chatInterfaceState.withoutSelectionState(), animated: true)
+            }
+        }, forwardSelectedMessages: { [weak self] in
+            if let strongSelf = self {
+                let controller = ShareRecipientsActionSheetController()
+                strongSelf.present(controller, in: .window)
+            }
+        })
         
         self.displayNodeDidLoad()
         
@@ -799,7 +898,7 @@ public class ChatController: ViewController {
                 self.layoutActionOnViewTransition = nil
                 layoutActionOnViewTransition()
                 
-                self.chatDisplayNode.containerLayoutUpdated(self.containerLayout, navigationBarHeight: self.navigationBar.frame.maxY, transition: .animated(duration: 0.5 * 1.3, curve: .spring), listViewTransaction: { updateSizeAndInsets in
+                self.chatDisplayNode.containerLayoutUpdated(self.containerLayout, navigationBarHeight: self.navigationBar.frame.maxY, transition: .animated(duration: 0.4, curve: .spring), listViewTransaction: { updateSizeAndInsets in
                     var options = transition.options
                     let _ = options.insert(.Synchronous)
                     let _ = options.insert(.LowLatency)
@@ -819,7 +918,7 @@ public class ChatController: ViewController {
                         insertItems.append(ListViewInsertItem(index: item.index, previousIndex: item.previousIndex, item: item.item, directionHint: item.directionHint == .Down ? .Up : nil))
                     }
                     
-                    let scrollToItem = ListViewScrollToItem(index: 0, position: .Top, animated: true, curve: .Spring(speed: 1.3), directionHint: .Up)
+                    let scrollToItem = ListViewScrollToItem(index: 0, position: .Top, animated: true, curve: .Spring(duration: 0.4), directionHint: .Up)
                     
                     var stationaryItemRange: (Int, Int)?
                     if let maxInsertedItem = maxInsertedItem {
@@ -842,5 +941,76 @@ public class ChatController: ViewController {
         self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationBar.frame.maxY, transition: transition,  listViewTransaction: { updateSizeAndInsets in
             self.chatDisplayNode.listView.deleteAndInsertItems(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, completion: { _ in })
         })
+    }
+    
+    func updateChatInterfaceState(animated: Bool = true, _ f: (ChatInterfaceState) -> Void) {
+        
+        
+        if self.isNodeLoaded {
+            self.chatDisplayNode.updateChatInterfaceState(chatInterfaceState, animated: animated)
+        }
+        self.chatInterfaceState = chatInterfaceState
+        self.chatInterfaceStatePromise.set(.single(chatInterfaceState))
+        
+        if let button = leftNavigationButtonForChatInterfaceState(chatInterfaceState, currentButton: self.leftNavigationButton, target: self, selector: #selector(self.leftNavigationButtonAction)) {
+            self.navigationItem.setLeftBarButton(button.buttonItem, animated: true)
+            self.leftNavigationButton = button
+        } else if let _ = self.leftNavigationButton {
+            self.navigationItem.setLeftBarButton(nil, animated: true)
+            self.leftNavigationButton = nil
+        }
+        
+        if let button = rightNavigationButtonForChatInterfaceState(chatInterfaceState, currentButton: self.rightNavigationButton, target: self, selector: #selector(self.rightNavigationButtonAction), chatInfoNavigationButton: self.chatInfoNavigationButton) {
+            self.navigationItem.setRightBarButton(button.buttonItem, animated: true)
+            self.rightNavigationButton = button
+        } else if let _ = self.rightNavigationButton {
+            self.navigationItem.setRightBarButton(nil, animated: true)
+            self.rightNavigationButton = nil
+        }
+        
+        if let controllerInteraction = self.controllerInteraction {
+            if chatInterfaceState.selectionState != controllerInteraction.selectionState {
+                let animated = controllerInteraction.selectionState == nil || chatInterfaceState.selectionState == nil
+                controllerInteraction.selectionState = chatInterfaceState.selectionState
+                self.chatDisplayNode.listView.forEachItemNode { itemNode in
+                    if let itemNode = itemNode as? ChatMessageItemView {
+                        itemNode.updateSelectionState(animated: animated)
+                    }
+                }
+            }
+        }
+    }
+    
+    @objc func leftNavigationButtonAction() {
+        if let button = self.leftNavigationButton {
+            self.navigationButtonAction(button.action)
+        }
+    }
+    
+    @objc func rightNavigationButtonAction() {
+        if let button = self.rightNavigationButton {
+            self.navigationButtonAction(button.action)
+        }
+    }
+    
+    private func navigationButtonAction(_ action: ChatNavigationButtonAction) {
+        switch action {
+            case .cancelMessageSelection:
+                self.updateChatInterfaceState(self.chatInterfaceState.withoutSelectionState(), animated: true)
+            case .clearHistory:
+                let actionSheet = ActionSheetController()
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: "Delete All Messages", color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ]), ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: "Cancel", color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])])
+                self.present(actionSheet, in: .window)
+            case .openChatInfo:
+                break
+        }
     }
 }

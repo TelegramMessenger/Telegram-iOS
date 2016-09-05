@@ -44,6 +44,10 @@ class ContactsPeerItem: ListViewItem {
                 if !group.title.isEmpty {
                     letter = group.title.substring(to: group.title.index(after: group.title.startIndex)).uppercased()
                 }
+            } else if let channel = peer as? TelegramChannel {
+                if !channel.title.isEmpty {
+                    letter = channel.title.substring(to: channel.title.index(after: channel.title.startIndex)).uppercased()
+                }
             }
             self.headerAccessoryItem = ContactsSectionHeaderAccessoryItem(sectionHeader: .letter(letter))
         } else {
@@ -224,6 +228,8 @@ class ContactsPeerItemNode: ListViewItemNode {
                     statusAttributedString = NSAttributedString(string: "last seen recently", font: statusFont, textColor: UIColor(0xa6a6a6))
                 } else if let group = peer as? TelegramGroup {
                     titleAttributedString = NSAttributedString(string: group.title, font: titleBoldFont, textColor: UIColor.black)
+                } else if let channel = peer as? TelegramChannel {
+                    titleAttributedString = NSAttributedString(string: channel.title, font: titleBoldFont, textColor: UIColor.black)
                 }
             }
             

@@ -1,7 +1,7 @@
 import Foundation
 import Display
 import SwiftSignalKit
-import MtProtoKit
+import MtProtoKitDynamic
 import TelegramCore
 
 enum AuthorizationCodeResult {

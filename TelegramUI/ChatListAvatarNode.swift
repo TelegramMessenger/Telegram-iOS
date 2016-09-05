@@ -47,7 +47,19 @@ private func ==(lhs: ChatListAvatarNodeState, rhs: ChatListAvatarNodeState) -> B
 }
 
 public final class ChatListAvatarNode: ASDisplayNode {
-    let font: UIFont
+    var font: UIFont {
+        didSet {
+            if oldValue !== font {
+                if let parameters = self.parameters {
+                    self.parameters = ChatListAvatarNodeParameters(account: parameters.account, peerId: parameters.peerId, letters: parameters.letters, font: self.font)
+                }
+                
+                if !self.displaySuspended {
+                    self.setNeedsDisplay()
+                }
+            }
+        }
+    }
     private var parameters: ChatListAvatarNodeParameters?
     let imageNode: ImageNode
     
@@ -70,8 +82,12 @@ public final class ChatListAvatarNode: ASDisplayNode {
         get {
             return super.frame
         } set(value) {
+            let updateImage = !value.size.equalTo(super.frame.size)
             super.frame = value
             self.imageNode.frame = CGRect(origin: CGPoint(), size: value.size)
+            if updateImage && !self.displaySuspended {
+                self.setNeedsDisplay()
+            }
         }
     }
     
