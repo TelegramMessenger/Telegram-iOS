@@ -25,6 +25,7 @@ before_install:
   - brew install carthage
 
 script:
+  - open -b com.apple.iphonesimulator
   - set -o pipefail
   - COMMAND="env NSUnbufferedIO=YES xcodebuild -project '$PROJECT' -scheme '$SCHEME' -sdk '$SDK' -configuration '$CONFIGURATION'"
 
