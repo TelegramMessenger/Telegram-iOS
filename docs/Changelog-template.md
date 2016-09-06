@@ -1,3 +1,6 @@
+## 4.1.1
+- [BUGFIX] Fix app icons with unusual filenames not showing in the in-app update prompt
+
 ## 4.1.0
 
 - Includes improvements from 4.0.2 release of the SDK.

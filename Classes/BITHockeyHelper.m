@@ -634,15 +634,21 @@ NSString *bit_validAppIconStringFromIcons(NSBundle *resourceBundle, NSArray *ico
     // Don't use imageNamed, otherwise unit tests won't find the fixture icon
     // and using imageWithContentsOfFile doesn't load @2x files with absolut paths (required in tests)
     
-    NSString *iconPathExtension = ([[icon pathExtension] length] > 0) ? [icon pathExtension] : @"png";
+
     NSMutableArray *iconFilenameVariants = [NSMutableArray new];
     
+    [iconFilenameVariants addObject:icon];
+    [iconFilenameVariants addObject:[NSString stringWithFormat:@"%@@2x", icon]];
     [iconFilenameVariants addObject:[icon stringByDeletingPathExtension]];
     [iconFilenameVariants addObject:[NSString stringWithFormat:@"%@@2x", [icon stringByDeletingPathExtension]]];
     
     for (NSString *iconFilename in iconFilenameVariants) {
       // this call already covers "~ipad" files
-      NSString *iconPath = [resourceBundle pathForResource:iconFilename ofType:iconPathExtension];
+      NSString *iconPath = [resourceBundle pathForResource:iconFilename ofType:@"png"];
+      
+      if (!iconPath && (icon.pathExtension.length > 0)) {
+        iconPath = [resourceBundle pathForResource:iconFilename ofType:icon.pathExtension];
+      }
       
       NSData *imgData = [[NSData alloc] initWithContentsOfFile:iconPath];
       
@@ -679,15 +685,13 @@ NSString *bit_validAppIconFilename(NSBundle *bundle, NSBundle *resourceBundle) {
   }
   
   // we test iPad structure anyway and use it if we find a result and don't have another one yet
-  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+  if (!iconFilename && (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad)) {
     icons = [bundle objectForInfoDictionaryKey:@"CFBundleIcons~ipad"];
     if (icons && [icons isKindOfClass:[NSDictionary class]]) {
       icons = [icons valueForKeyPath:@"CFBundlePrimaryIcon.CFBundleIconFiles"];
     }
     NSString *iPadIconFilename = bit_validAppIconStringFromIcons(resourceBundle, icons);
-    if (iPadIconFilename && !iconFilename) {
-      iconFilename = iPadIconFilename;
-    }
+    iconFilename = iPadIconFilename;
   }
   
   if (!iconFilename) {
