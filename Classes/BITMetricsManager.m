@@ -122,15 +122,12 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
 }
 
 - (void)startNewSessionIfNeeded {
-  if (self.appBackgroundTimeBeforeSessionExpires == 0) {
-    __weak typeof(self) weakSelf = self;
-    dispatch_async(_metricsEventQueue, ^{
-      typeof(self) strongSelf = weakSelf;
-      [strongSelf startNewSessionWithId:bit_UUID()];
-    });
-  }
-
   double appDidEnterBackgroundTime = [self.userDefaults doubleForKey:kBITApplicationDidEnterBackgroundTime];
+  // Add safeguard in case this returns a negative value
+  if(appDidEnterBackgroundTime < 0) {
+    appDidEnterBackgroundTime = 0;
+    [self.userDefaults setDouble:0 forKey:kBITApplicationDidEnterBackgroundTime];
+  }
   double timeSinceLastBackground = [[NSDate date] timeIntervalSince1970] - appDidEnterBackgroundTime;
   if (timeSinceLastBackground > self.appBackgroundTimeBeforeSessionExpires) {
     [self startNewSessionWithId:bit_UUID()];
