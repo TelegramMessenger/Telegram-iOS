@@ -107,11 +107,11 @@
     _labelTitle = [[UILabel alloc] init];
     _labelTitle.font = [UIFont systemFontOfSize:TITLE_FONTSIZE];
     
-    _labelText = [[BITAttributedLabel alloc] init];
+    _labelText = [[BITAttributedLabel alloc] initWithFrame:CGRectZero];
     _labelText.font = [UIFont systemFontOfSize:TEXT_FONTSIZE];
     _labelText.numberOfLines = 0;
     _labelText.textAlignment = NSTextAlignmentLeft;
-    _labelText.dataDetectorTypes = UIDataDetectorTypeAll;
+    _labelText.enabledTextCheckingTypes = UIDataDetectorTypeAll;
     
     _attachmentViews = [NSMutableArray new];
     [self registerObservers];
