@@ -165,8 +165,6 @@
         [self.userDefaults removeObjectForKey:kBITStoreUpdateLastStoreVersion];
         versionString = nil;
       }
-
-      [self.userDefaults synchronize];
     }
   }
   

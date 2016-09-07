@@ -118,7 +118,6 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
 
 - (void)updateDidEnterBackgroundTime {
   [self.userDefaults setDouble:[[NSDate date] timeIntervalSince1970] forKey:kBITApplicationDidEnterBackgroundTime];
-  [self.userDefaults synchronize];
 }
 
 - (void)startNewSessionIfNeeded {
@@ -150,7 +149,6 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
   if (![self.userDefaults boolForKey:kBITApplicationWasLaunched]) {
     session.isFirst = @"true";
     [self.userDefaults setBool:YES forKey:kBITApplicationWasLaunched];
-    [self.userDefaults synchronize];
   } else {
     session.isFirst = @"false";
   }
