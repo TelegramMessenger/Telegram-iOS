@@ -960,7 +960,9 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   } else {
     [defaults setObject:lastAuthenticatedVersion
                  forKey:kBITAuthenticatorLastAuthenticatedVersionKey];
-    [defaults synchronize];
+    if(bit_isPreiOS8Environment()) {
+      [defaults synchronize];
+    }
   }
 }
 
