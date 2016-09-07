@@ -118,6 +118,10 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
 
 - (void)updateDidEnterBackgroundTime {
   [self.userDefaults setDouble:[[NSDate date] timeIntervalSince1970] forKey:kBITApplicationDidEnterBackgroundTime];
+  if(bit_isPreiOS8Environment()) {
+    // calling synchronize in pre-iOS 8 takes longer to sync than in iOS 8+, calling synchronize explicitly.
+    [self.userDefaults synchronize];
+  }
 }
 
 - (void)startNewSessionIfNeeded {
@@ -126,6 +130,10 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
   if(appDidEnterBackgroundTime < 0) {
     appDidEnterBackgroundTime = 0;
     [self.userDefaults setDouble:0 forKey:kBITApplicationDidEnterBackgroundTime];
+    if(bit_isPreiOS8Environment()) {
+      // calling synchronize in pre-iOS 8 takes longer to sync than in iOS 8+, calling synchronize explicitly.
+      [self.userDefaults synchronize];
+    }
   }
   double timeSinceLastBackground = [[NSDate date] timeIntervalSince1970] - appDidEnterBackgroundTime;
   if (timeSinceLastBackground > self.appBackgroundTimeBeforeSessionExpires) {
@@ -149,6 +157,10 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
   if (![self.userDefaults boolForKey:kBITApplicationWasLaunched]) {
     session.isFirst = @"true";
     [self.userDefaults setBool:YES forKey:kBITApplicationWasLaunched];
+    if(bit_isPreiOS8Environment()) {
+      // calling synchronize in pre-iOS 8 takes longer to sync than in iOS 8+, calling synchronize explicitly.
+      [self.userDefaults synchronize];
+    }
   } else {
     session.isFirst = @"false";
   }

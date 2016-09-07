@@ -165,6 +165,11 @@
         [self.userDefaults removeObjectForKey:kBITStoreUpdateLastStoreVersion];
         versionString = nil;
       }
+      
+      if(bit_isPreiOS8Environment()) {
+        // calling synchronize in pre-iOS 8 takes longer to sync than in iOS 8+, calling synchronize explicitly.
+        [self.userDefaults synchronize];
+      }
     }
   }
   

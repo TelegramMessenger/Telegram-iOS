@@ -522,6 +522,10 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
                                                                                              if (!_didLogLowMemoryWarning) {
                                                                                                [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITAppDidReceiveLowMemoryNotification];
                                                                                                _didLogLowMemoryWarning = YES;
+                                                                                               if(bit_isPreiOS8Environment()) {
+                                                                                                 // calling synchronize in pre-iOS 8 takes longer to sync than in iOS 8+, calling synchronize explicitly.
+                                                                                                 [[NSUserDefaults standardUserDefaults] synchronize];
+                                                                                               }
                                                                                              }
                                                                                            }];
   }
@@ -547,7 +551,10 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
 - (void)leavingAppSafely {
   if (self.isAppNotTerminatingCleanlyDetectionEnabled) {
     [[NSUserDefaults standardUserDefaults] setBool:YES forKey:kBITAppWentIntoBackgroundSafely];
-    [[NSUserDefaults standardUserDefaults] synchronize];
+    if(bit_isPreiOS8Environment()) {
+      // calling synchronize in pre-iOS 8 takes longer to sync than in iOS 8+, calling synchronize explicitly.
+      [[NSUserDefaults standardUserDefaults] synchronize];
+    }
   }
 }
 
@@ -578,6 +585,10 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
                              ];
 
       [[NSUserDefaults standardUserDefaults] setObject:uuidString forKey:kBITAppUUIDs];
+      if(bit_isPreiOS8Environment()) {
+        // calling synchronize in pre-iOS 8 takes longer to sync than in iOS 8+, calling synchronize explicitly.
+        [[NSUserDefaults standardUserDefaults] synchronize];
+      }
     });
   }
 }
@@ -820,6 +831,7 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
     case BITCrashManagerUserInputAlwaysSend:
       _crashManagerStatus = BITCrashManagerStatusAutoSend;
       [[NSUserDefaults standardUserDefaults] setInteger:_crashManagerStatus forKey:kBITCrashManagerStatus];
+
       if ([self.delegate respondsToSelector:@selector(crashManagerWillSendCrashReportsAlways:)]) {
         [self.delegate crashManagerWillSendCrashReportsAlways:self];
       }
@@ -1273,6 +1285,11 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
 #endif
   
   [[NSUserDefaults standardUserDefaults] setBool:NO forKey:kBITAppDidReceiveLowMemoryNotification];
+  
+  if(bit_isPreiOS8Environment()) {
+    // calling synchronize in pre-iOS 8 takes longer to sync than in iOS 8+, calling synchronize explicitly.
+    [[NSUserDefaults standardUserDefaults] synchronize];
+  }
   
   [self triggerDelayedProcessing];
   BITHockeyLogVerbose(@"VERBOSE: CrashManager startManager has finished.");
