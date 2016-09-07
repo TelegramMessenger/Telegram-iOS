@@ -118,19 +118,23 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
 
 - (void)updateDidEnterBackgroundTime {
   [self.userDefaults setDouble:[[NSDate date] timeIntervalSince1970] forKey:kBITApplicationDidEnterBackgroundTime];
-  [self.userDefaults synchronize];
+  if(bit_isPreiOS8Environment()) {
+    // calling synchronize in pre-iOS 8 takes longer to sync than in iOS 8+, calling synchronize explicitly.
+    [self.userDefaults synchronize];
+  }
 }
 
 - (void)startNewSessionIfNeeded {
-  if (self.appBackgroundTimeBeforeSessionExpires == 0) {
-    __weak typeof(self) weakSelf = self;
-    dispatch_async(_metricsEventQueue, ^{
-      typeof(self) strongSelf = weakSelf;
-      [strongSelf startNewSessionWithId:bit_UUID()];
-    });
-  }
-
   double appDidEnterBackgroundTime = [self.userDefaults doubleForKey:kBITApplicationDidEnterBackgroundTime];
+  // Add safeguard in case this returns a negative value
+  if(appDidEnterBackgroundTime < 0) {
+    appDidEnterBackgroundTime = 0;
+    [self.userDefaults setDouble:0 forKey:kBITApplicationDidEnterBackgroundTime];
+    if(bit_isPreiOS8Environment()) {
+      // calling synchronize in pre-iOS 8 takes longer to sync than in iOS 8+, calling synchronize explicitly.
+      [self.userDefaults synchronize];
+    }
+  }
   double timeSinceLastBackground = [[NSDate date] timeIntervalSince1970] - appDidEnterBackgroundTime;
   if (timeSinceLastBackground > self.appBackgroundTimeBeforeSessionExpires) {
     [self startNewSessionWithId:bit_UUID()];
@@ -153,7 +157,10 @@ static NSString *const BITMetricsURLPathString = @"v2/track";
   if (![self.userDefaults boolForKey:kBITApplicationWasLaunched]) {
     session.isFirst = @"true";
     [self.userDefaults setBool:YES forKey:kBITApplicationWasLaunched];
-    [self.userDefaults synchronize];
+    if(bit_isPreiOS8Environment()) {
+      // calling synchronize in pre-iOS 8 takes longer to sync than in iOS 8+, calling synchronize explicitly.
+      [self.userDefaults synchronize];
+    }
   } else {
     session.isFirst = @"false";
   }
