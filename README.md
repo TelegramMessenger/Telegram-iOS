@@ -2,13 +2,15 @@
 [![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
 [![Version](http://cocoapod-badges.herokuapp.com/v/HockeySDK/badge.png)](http://cocoadocs.org/docsets/HockeySDK)
 
-## Version 4.1.0
+## Version 4.1.1
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/4.1.0/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/4.1.1/docs/docs/Changelog.html)
 
 **NOTE:** With the release of HockeySDK 4.0.0-alpha.1 a bug was introduced which lead to the exclusion of the Application Support folder from iCloud and iTunes backups.
 
 If you have been using one of the affected versions (4.0.0-alpha.2, Version 4.0.0-beta.1, 4.0.0, 4.1.0-alpha.1, 4.1.0-alpha.2, or Version 4.1.0-beta.1), please make sure to update to at least version 4.0.1 of our SDK as soon as you can.
+
+**NOTE:** iOS 10 requires you to set `NSPhotoLibraryUsageDescription` in your app's Info.plist if you want to access the device's photos. In consequence, the HockeySDK's Feedback feature needs this key to be able to attach a photo to feedback. See [Feedback](#feedback) on how to do that.
 
 ## Introduction
 
@@ -139,6 +141,12 @@ Our examples will use the full featured SDK (`HockeySDK.embeddedframework`).
   ```
 
 *Note:* The SDK is optimized to defer everything possible to a later time while making sure e.g. crashes on startup can also be caught and each module executes other code with a delay some seconds. This ensures that `applicationDidFinishLaunching` will process as fast as possible and the SDK will not block the startup sequence resulting in a possible kill by the watchdog process.
+
+<a id="addPrivacyKey"></a>
+### 2.6 Add NSPhotoLibraryUsageDescription to your Info.plist
+
+As of iOS 10, developers have to add UsageDescription-strings before using system frameworks with privacy features (read more on this in [Apple's own documentation](https://developer.apple.com/library/prerelease/content/releasenotes/General/WhatsNewIniOS/Articles/iOS10.html#//apple_ref/doc/uid/TP40017084-SW3)). To make allow users to attach photos to feedback, add the `NSPhotoLibraryUsageDescription` to your `Info.plist` and provide a description. Make sure to localize your description as described in [Apple's documentation about localizing Info.plist strings](https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html).
+
 
 **Congratulation, now you're all set to use HockeySDK!**
 
@@ -499,6 +507,13 @@ You should never create your own instance of `BITFeedbackManager` but use the on
 
 Please check the [documentation](#documentation) of the `BITFeedbackManager` class on more information on how to leverage this feature.
 
+#### 3.8.1 iOS 10 requires NSPhotoLibraryUsageDescription to be set to access photos.
+
+As of iOS 10, developers have to add UsageDescription-strings before using system frameworks with privacy features (read more on this in [Apple's own documentation](https://developer.apple.com/library/prerelease/content/releasenotes/General/WhatsNewIniOS/Articles/iOS10.html#//apple_ref/doc/uid/TP40017084-SW3)). To make allow users to attach photos to feedback, add the `NSPhotoLibraryUsageDescription` to your `Info.plist` and provide a description. Make sure to localize your description as described in [Apple's documentation about localizing Info.plist strings](https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html).
+
+If the value is missing from your `Info.plist`, the SDK will disable attaching potos to feedback and disable the creation of a new feedback item in case of a screenshot. 
+
+
 <a name="storeupdates"></a>
 ### 3.9 Store Updates
 
@@ -557,7 +572,7 @@ To check if data is send properly to HockeyApp and also see some additional SDK 
 <a id="documentation"></a>
 ## 4. Documentation
 
-Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/4.1.0/index.html).
+Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/4.1.1/index.html).
 
 <a id="troubleshooting"></a>
 ## 5.Troubleshooting
@@ -571,7 +586,7 @@ Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/
   Make sure none of the following files are copied into your app bundle, check under app target, `Build Phases`, `Copy Bundle Resources` or in the `.app` bundle after building:
 
   - `HockeySDK.framework` (except if you build a dynamic framework version of the SDK yourself!)
-  - `de.bitstadium.HockeySDK-iOS-4.1.0.docset`
+  - `de.bitstadium.HockeySDK-iOS-4.1.1.docset`
 
 ### Feature are not working as expected
 
