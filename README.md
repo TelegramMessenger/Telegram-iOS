@@ -6,11 +6,14 @@
 
 - [Changelog](http://www.hockeyapp.net/help/sdk/ios/4.1.1/docs/docs/Changelog.html)
 
-**NOTE:** With the release of HockeySDK 4.0.0-alpha.1 a bug was introduced which lead to the exclusion of the Application Support folder from iCloud and iTunes backups.
+**NOTE** With iOS 10, Apple requires developers to specify usage description strings in their `Info.plist` for certain features that impact the users privacy.
+HockeyApp uses one of those features – access to the user's photo library – in order to allow the user to attach pictures to their feedback.
+If you are using the Feedback feature, please add a (localized) usage description string for `NSPhotoLibraryUsageDescription`. Unfortunately, this process is not automizable and you have to add this string manually.
+If you, however, don't specify `NSPhotoLibraryUsageDescription` and attempt to use the Feedback feature, the SDK will log an error and disable attaching of photos to feedback and ignore `BITFeedbackObservationModeOnScreenshot` to make sure your app does not crash on iOS 10 devices.
 
-If you have been using one of the affected versions (4.0.0-alpha.2, Version 4.0.0-beta.1, 4.0.0, 4.1.0-alpha.1, 4.1.0-alpha.2, or Version 4.1.0-beta.1), please make sure to update to at least version 4.0.1 of our SDK as soon as you can.
+To learn more about this requirement, see [this comprehensive writeup](http://useyourloaf.com/blog/privacy-settings-in-ios-10/) of this year's [WWDC Session on Privacy](https://developer.apple.com/videos/play/wwdc2016/709/) and have a look at [how to localize Info.plist values](https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html).
 
-**NOTE:** iOS 10 requires you to set `NSPhotoLibraryUsageDescription` in your app's Info.plist if you want to access the device's photos. In consequence, the HockeySDK's Feedback feature needs this key to be able to attach a photo to feedback. See [Feedback](#feedback) on how to do that.
+We **strongly** suggest upgrading to version 4.1.1 of the SDK. Not specifying the usage description string and using previous versions of the HockeySDK-iOS will cause the app to crash at runtime as soon as the user taps the "attach image"-button or in case you have enabled `BITFeedbackObservationModeOnScreenshot`.  
 
 ## Introduction
 
