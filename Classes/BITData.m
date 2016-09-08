@@ -13,7 +13,7 @@
     if ([NSJSONSerialization isValidJSONObject:baseDataDict]) {
         [dict setObject:baseDataDict forKey:@"baseData"];
     } else {
-        NSLog(@"[HockeyApp] Some of the telemetry data was not NSJSONSerialization compatible and could not be serialized!");
+        BITHockeyLogError(@"[HockeySDK] Some of the telemetry data was not NSJSONSerialization compatible and could not be serialized!");
     }
     return dict;
 }

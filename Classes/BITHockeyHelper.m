@@ -413,7 +413,7 @@ BOOL bit_isDebuggerAttached(void) {
     name[3] = getpid();
     
     if (sysctl(name, 4, &info, &info_size, NULL, 0) == -1) {
-      NSLog(@"[HockeySDK] ERROR: Checking for a running debugger via sysctl() failed.");
+      BITHockeyLogError(@"[HockeySDK] ERROR: Checking for a running debugger via sysctl() failed.");
       debuggerIsAttached = false;
     }
     
