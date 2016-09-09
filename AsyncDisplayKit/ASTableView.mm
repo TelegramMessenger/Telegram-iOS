@@ -278,10 +278,15 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
 
 - (void)dealloc
 {
+  ASDisplayNodeAssertMainThread();
   // Sometimes the UIKit classes can call back to their delegate even during deallocation.
   _isDeallocating = YES;
   [self setAsyncDelegate:nil];
   [self setAsyncDataSource:nil];
+
+  // Data controller & range controller may own a ton of nodes, let's deallocate those off-main
+  ASPerformBackgroundDeallocation(_dataController);
+  ASPerformBackgroundDeallocation(_rangeController);
 }
 
 #pragma mark -
@@ -301,6 +306,9 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
 
 - (void)setAsyncDataSource:(id<ASTableDataSource>)asyncDataSource
 {
+  // Changing super.dataSource will trigger a setNeedsLayout, so this must happen on the main thread.
+  ASDisplayNodeAssertMainThread();
+
   // Note: It's common to check if the value hasn't changed and short-circuit but we aren't doing that here to handle
   // the (common) case of nilling the asyncDataSource in the ViewController's dealloc. In this case our _asyncDataSource
   // will return as nil (ARC magic) even though the _proxyDataSource still exists. It's really important to hold a strong
@@ -340,6 +348,9 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
 
 - (void)setAsyncDelegate:(id<ASTableDelegate>)asyncDelegate
 {
+  // Changing super.delegate will trigger a setNeedsLayout, so this must happen on the main thread.
+  ASDisplayNodeAssertMainThread();
+
   // Note: It's common to check if the value hasn't changed and short-circuit but we aren't doing that here to handle
   // the (common) case of nilling the asyncDelegate in the ViewController's dealloc. In this case our _asyncDelegate
   // will return as nil (ARC magic) even though the _proxyDataSource still exists. It's really important to hold a strong
