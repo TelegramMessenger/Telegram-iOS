@@ -1,4 +1,5 @@
 #import "BITData.h"
+#import "BITHockeyLogger.h"
 
 /// Data contract class for type Data.
 @implementation BITData

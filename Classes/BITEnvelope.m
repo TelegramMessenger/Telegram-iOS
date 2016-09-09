@@ -1,5 +1,6 @@
 #import "BITEnvelope.h"
 #import "BITData.h"
+#import "BITHockeyLogger.h"
 
 /// Data contract class for type Envelope.
 @implementation BITEnvelope
