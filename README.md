@@ -2,6 +2,18 @@
 [![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
 [![Version](http://cocoapod-badges.herokuapp.com/v/HockeySDK/badge.png)](http://cocoadocs.org/docsets/HockeySDK)
 
+### [iOS 10] App Store rejection because of missing `NSPhotoLibraryUsageDescription`
+
+With iOS 10, Apple requires developers to specify usage description strings in their `Info.plist` for certain features that impact the users' privacy. HockeyApp uses one of those features – access to the user's photo library – in order to allow the user to attach pictures to their feedback. With the availability of Xcode 8 GM submitting an app without the `NSPhotoLibraryUsageDescription` will be automatically rejected during submission into the App Store – **even if you don't use our Feedback feature**. We apologize for this inconvenience and are working all hands on a fix.
+
+In the meantime, you have two options:
+
+* Add a (localized) usage description string for `NSPhotoLibraryUsageDescription`. Unfortunately, this process is not automizable and you have to add this string manually. We suggest the following text: `To attach a photo to your feedback, we need access to your Photo Library.` 
+* Instead of using the full-blown HockeySDK-iOS, use our crash-only build of the app. This means, you won't be able to use all other features of HockeyApp, except it's Crash Reporting. To integrate the crash-only binary, have a look at our [readme section](https://github.com/bitstadium/HockeySDK-iOS#23-copy-the-sdk-into-your-projects-directory-in-finder), if you're using cocoapods, replace the entry in your podfile with `pod "HockeySDK", :subspecs => ['CrashOnlyLib']` to go crash-only. 
+
+To learn more about this new requirement, see [this comprehensive writeup](http://useyourloaf.com/blog/privacy-settings-in-ios-10/) of this year's [WWDC Session on Privacy](https://developer.apple.com/videos/play/wwdc2016/709/) and have a look at [how to localize Info.plist values](https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html).
+
+
 ## Version 4.1.0
 
 - [Changelog](http://www.hockeyapp.net/help/sdk/ios/4.1.0/docs/docs/Changelog.html)
@@ -93,8 +105,20 @@ Our examples will use the full featured SDK (`HockeySDK.embeddedframework`).
 2. Drag & drop `HockeySDK.embeddedframework` from your `Finder` to the `Vendor` group in `Xcode` using the `Project Navigator` on the left side.
 3. An overlay will appear. Select `Create groups` and set the checkmark for your target. Then click `Finish`.
 
+### 2.5 Add `NSPhotoLibraryUsageDescription` to your `Info.plist`
+
+With iOS 10, Apple requires developers to specify usage description strings in their `Info.plist` for certain features that impact the users' privacy. HockeyApp uses one of those features – access to the user's photo library – in order to allow the user to attach pictures to their feedback. With the availability of Xcode 8 GM submitting an app without the `NSPhotoLibraryUsageDescription` will be automatically rejected during submission into the App Store – **even if you don't use our Feedback feature**. We apologize for this inconvenience and are working all hands on a fix.
+
+In the meantime, you have two options:
+
+* Add a (localized) usage description string for `NSPhotoLibraryUsageDescription`. Unfortunately, this process is not automizable and you have to add this string manually. We suggest the following text: `To attach a photo to your feedback, we need access to your Photo Library.` 
+* Instead of using the full-blown HockeySDK-iOS, use our crash-only build of the app. This means, you won't be able to use all other features of HockeyApp, except it's Crash Reporting. To integrate the crash-only binary, have a look at our [readme section](https://github.com/bitstadium/HockeySDK-iOS#23-copy-the-sdk-into-your-projects-directory-in-finder), if you're using cocoapods, replace the entry in your podfile with `pod "HockeySDK", :subspecs => ['CrashOnlyLib']` to go crash-only. 
+
+To learn more about this new requirement, see [this comprehensive writeup](http://useyourloaf.com/blog/privacy-settings-in-ios-10/) of this year's [WWDC Session on Privacy](https://developer.apple.com/videos/play/wwdc2016/709/) and have a look at [how to localize Info.plist values](https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html).
+
+
 <a id="modifycode"></a>
-### 2.5 Modify Code 
+### 2.6 Modify Code 
 
 **Objective-C**
 
