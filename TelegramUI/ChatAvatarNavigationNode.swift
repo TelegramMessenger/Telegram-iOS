@@ -6,10 +6,10 @@ private let normalFont = Font.medium(16.0)
 private let smallFont = Font.medium(12.0)
 
 final class ChatAvatarNavigationNode: ASDisplayNode {
-    let avatarNode: ChatListAvatarNode
+    let avatarNode: AvatarNode
     
     override init() {
-        self.avatarNode = ChatListAvatarNode(font: normalFont)
+        self.avatarNode = AvatarNode(font: normalFont)
         
         super.init()
         

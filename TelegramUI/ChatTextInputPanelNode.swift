@@ -2,7 +2,8 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import WebKit
+import Postbox
+import TelegramCore
 
 private let textInputViewBackground: UIImage = {
     let diameter: CGFloat = 10.0
@@ -35,6 +36,48 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     var displayAttachmentMenu: () -> Void = { }
     var sendMessage: () -> Void = { }
     var updateHeight: () -> Void = { }
+    
+    private var updatingInputState = false
+    
+    private var currentPlaceholder: String?
+    override var peer: Peer? {
+        didSet {
+            if let peer = self.peer, oldValue == nil || !peer.isEqual(oldValue!) {
+                let placeholder: String
+                if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                    placeholder = "Broadcast"
+                } else {
+                    placeholder = "Message"
+                }
+                if self.currentPlaceholder != placeholder {
+                    self.currentPlaceholder = placeholder
+                    let placeholderLayout = TextNode.asyncLayout(self.textPlaceholderNode)
+                    let (placeholderSize, placeholderApply) = placeholderLayout(NSAttributedString(string: placeholder, font: Font.regular(16.0), textColor: UIColor(0xbebec0)), nil, 1, .end, CGSize(width: 320.0, height: CGFloat.greatestFiniteMagnitude), nil)
+                    self.textPlaceholderNode.frame = CGRect(origin: self.textPlaceholderNode.frame.origin, size: placeholderSize.size)
+                    let _ = placeholderApply()
+                }
+            }
+        }
+    }
+    
+    var inputTextState: ChatTextInputState {
+        get {
+            if let textInputNode = self.textInputNode {
+                let text = textInputNode.attributedText?.string ?? ""
+                let selectionRange: Range<Int> = textInputNode.selectedRange.location ..< (textInputNode.selectedRange.location + textInputNode.selectedRange.length)
+                return ChatTextInputState(inputText: text, selectionRange: selectionRange)
+            } else {
+                return ChatTextInputState()
+            }
+        } set(value) {
+            if let textInputNode = self.textInputNode {
+                self.updatingInputState = true
+                textInputNode.attributedText = NSAttributedString(string: value.inputText, font: Font.regular(16.0), textColor: UIColor.black)
+                textInputNode.selectedRange = NSMakeRange(value.selectionRange.lowerBound, value.selectionRange.count)
+                self.updatingInputState = false
+            }
+        }
+    }
     
     var text: String {
         get {
@@ -81,7 +124,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.view.addSubview(self.sendButton)
         
         self.textInputBackgroundView.clipsToBounds = true
-        self.textInputBackgroundView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.textInputBackgroundViewTap(_:))))
+        let recognizer = TouchDownGestureRecognizer(target: self, action: #selector(self.textInputBackgroundViewTap(_:)))
+        recognizer.touchDown = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.ensureFocused()
+            }
+        }
+        self.textInputBackgroundView.addGestureRecognizer(recognizer)
         self.textInputBackgroundView.isUserInteractionEnabled = true
     }
 
@@ -94,6 +143,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         textInputNode.typingAttributes = [NSFontAttributeName: Font.regular(16.0)]
         textInputNode.clipsToBounds = true
         textInputNode.delegate = self
+        textInputNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
         self.addSubnode(textInputNode)
         self.textInputNode = textInputNode
         
@@ -103,6 +153,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         self.textInputBackgroundView.isUserInteractionEnabled = false
         self.textInputBackgroundView.removeGestureRecognizer(self.textInputBackgroundView.gestureRecognizers![0])
+        
+        let recognizer = TouchDownGestureRecognizer(target: self, action: #selector(self.textInputBackgroundViewTap(_:)))
+        recognizer.touchDown = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.ensureFocused()
+            }
+        }
+        textInputNode.view.addGestureRecognizer(recognizer)
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
@@ -155,6 +213,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 self.invalidateCalculatedLayout()
                 self.updateHeight()
             }
+            
+            self.interfaceInteraction?.updateTextInputState(self.inputTextState)
+        }
+    }
+    
+    @objc func editableTextNodeDidChangeSelection(_ editableTextNode: ASEditableTextNode, fromSelectedRange: NSRange, toSelectedRange: NSRange, dueToEditing: Bool) {
+        if !dueToEditing && !updatingInputState {
+            self.interfaceInteraction?.updateTextInputState(self.inputTextState)
         }
     }
     

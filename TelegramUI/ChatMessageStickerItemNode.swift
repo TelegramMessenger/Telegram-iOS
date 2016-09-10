@@ -56,7 +56,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         let imageLayout = self.imageNode.asyncLayout()
         
         return { item, width, mergedTop, mergedBottom in
-            let incoming = item.account.peerId != item.message.author?.id
+            let incoming = item.message.effectivelyIncoming
             var imageSize: CGSize = CGSize(width: 100.0, height: 100.0)
             if let telegramFile = telegramFile {
                 if let thumbnailSize = telegramFile.previewRepresentations.first?.dimensions {

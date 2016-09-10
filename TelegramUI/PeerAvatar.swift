@@ -20,23 +20,7 @@ private let roundCorners = { () -> UIImage in
 }()
 
 func peerAvatarImage(account: Account, peer: Peer, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0)) -> Signal<UIImage, NoError>? {
-    var location: TelegramCloudMediaLocation?
-    
-    if let user = peer as? TelegramUser {
-        if let photo = user.photo.first {
-            location = photo.location.cloudLocation
-        }
-    } else if let group = peer as? TelegramGroup {
-        if let photo = group.photo.first {
-            location = photo.location.cloudLocation
-        }
-    } else if let channel = peer as? TelegramChannel {
-        if let photo = channel.photo.first {
-            location = photo.location.cloudLocation
-        }
-    }
-    
-    if let location = location {
+    if let location = peer.smallProfileImage?.location.cloudLocation {
         return deferred { () -> Signal<UIImage, NoError> in
             return cachedCloudFileLocation(location)
                 |> `catch` { _ in

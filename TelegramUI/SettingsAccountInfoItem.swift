@@ -28,13 +28,13 @@ private let nameFont = Font.medium(19.0)
 private let statusFont = Font.regular(15.0)
 
 class SettingsAccountInfoItemNode: ListControllerGroupableItemNode {
-    let avatarNode: ChatListAvatarNode
+    let avatarNode: AvatarNode
     
     let nameNode: TextNode
     let statusNode: TextNode
     
     override init() {
-        self.avatarNode = ChatListAvatarNode(font: Font.regular(20.0))
+        self.avatarNode = AvatarNode(font: Font.regular(20.0))
         
         self.nameNode = TextNode()
         self.nameNode.isLayerBacked = true

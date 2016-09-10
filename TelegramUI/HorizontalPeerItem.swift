@@ -34,13 +34,13 @@ final class HorizontalPeerItem: ListViewItem {
 }
 
 private final class HorizontalPeerItemNode: ListViewItemNode {
-    private let avatarNode: ChatListAvatarNode
+    private let avatarNode: AvatarNode
     private let titleNode: ASTextNode
     private var peer: Peer?
     fileprivate var action: ((PeerId) -> Void)?
     
     init() {
-        self.avatarNode = ChatListAvatarNode(font: Font.regular(14.0))
+        self.avatarNode = AvatarNode(font: Font.regular(14.0))
         //self.avatarNode.transform = CATransform3DMakeRotation(CGFloat(M_PI / 2.0), 0.0, 0.0, 1.0)
         self.avatarNode.frame = CGRect(origin: CGPoint(x: floor((92.0 - 60.0) / 2.0), y: 4.0), size: CGSize(width: 60.0, height: 60.0))
         

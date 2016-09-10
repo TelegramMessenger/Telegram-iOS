@@ -1,14 +1,18 @@
 import Foundation
 import AsyncDisplayKit
 import Display
-import Postbox
-import TelegramCore
 
-class ChatInputPanelNode: ASDisplayNode {
-    var account: Account?
+class ChatInputContextPanelNode: ASDisplayNode {
     var interfaceInteraction: ChatPanelInterfaceInteraction?
-    var peer: Peer?
     
     func updateFrames(transition: ContainedViewLayoutTransition) {
+    }
+    
+    func animateIn() {
+        
+    }
+    
+    func animateOut(completion: @escaping () -> Void) {
+        completion()
     }
 }

@@ -40,7 +40,7 @@ struct ChatMessageItemLayoutConstants {
         
         self.bubble = ChatMessageItemBubbleLayoutConstants(edgeInset: 4.0, defaultSpacing: 2.5, mergedSpacing: 0.0, maximumWidthFillFactor: 0.9, minimumSize: CGSize(width: 40.0, height: 33.0), contentInsets: UIEdgeInsets(top: 1.0, left: 6.0, bottom: 1.0, right: 1.0))
         self.text = ChatMessageItemTextLayoutConstants(bubbleInsets: UIEdgeInsets(top: 5.0, left: 9.0, bottom: 4.0, right: 9.0))
-        self.image = ChatMessageItemImageLayoutConstants(bubbleInsets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0), defaultCornerRadius: 15.0, mergedCornerRadius: 4.0, contentMergedCornerRadius: 2.0)
+        self.image = ChatMessageItemImageLayoutConstants(bubbleInsets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0), defaultCornerRadius: 15.0, mergedCornerRadius: 4.0, contentMergedCornerRadius: 5.0)
         self.file = ChatMessageItemFileLayoutConstants(bubbleInsets: UIEdgeInsets(top: 15.0, left: 9.0, bottom: 15.0, right: 12.0))
     }
 }

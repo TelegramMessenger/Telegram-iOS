@@ -234,7 +234,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         return { item, width, mergedTop, mergedBottom in
             let message = item.message
             
-            let incoming = item.account.peerId != message.author?.id
+            let incoming = item.message.effectivelyIncoming
+            
             let displayAuthorInfo = !mergedTop && incoming && item.peerId.isGroupOrChannel && item.message.author != nil
             
             let avatarInset: CGFloat = (item.peerId.isGroupOrChannel && item.message.author != nil) ? layoutConstants.avatarDiameter : 0.0
@@ -718,7 +719,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             var incoming = true
             if let item = self.item {
                 selected = selectionState.selectedIds.contains(item.message.id)
-                incoming = item.message.flags.contains(.Incoming)
+                incoming = item.message.effectivelyIncoming
             }
             let offset: CGFloat = incoming ? 42.0 : 0.0
             

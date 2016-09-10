@@ -383,11 +383,10 @@ public class ChatController: ViewController {
     private var enqueuedHistoryViewTransition: (ChatHistoryViewTransition, () -> Void)?
     private var layoutActionOnViewTransition: (@escaping () -> Void)?
     
-    private let _ready = Promise<Bool>()
-    override public var ready: Promise<Bool> {
-        return self._ready
-    }
-    private var didSetReady = false
+    private let _historyReady = Promise<Bool>()
+    private var didSetHistoryReady = false
+    private let _peerReady = Promise<Bool>()
+    private var didSetPeerReady = false
     
     private let maxVisibleIncomingMessageId = Promise<MessageId>()
     private let canReadHistory = Promise<Bool>()
@@ -397,7 +396,7 @@ public class ChatController: ViewController {
         return self._chatHistoryLocation.get()
     }
     
-    private var presentationInterfaceState = ChatPresentationInterfaceState(interfaceState: ChatInterfaceState(), peer: nil)
+    private var presentationInterfaceState = ChatPresentationInterfaceState(interfaceState: ChatInterfaceState(), peer: nil, inputContext: nil)
     private let chatInterfaceStatePromise = Promise<ChatInterfaceState>()
     
     private var leftNavigationButton: ChatNavigationButton?
@@ -407,6 +406,7 @@ public class ChatController: ViewController {
     private let galleryHiddenMesageAndMediaDisposable = MetaDisposable()
     
     private var controllerInteraction: ChatControllerInteraction?
+    private var interfaceInteraction: ChatPanelInterfaceInteraction?
     
     public init(account: Account, peerId: PeerId, messageId: MessageId? = nil) {
         self.account = account
@@ -414,6 +414,8 @@ public class ChatController: ViewController {
         self.messageId = messageId
         
         super.init()
+        
+        self.ready.set(combineLatest(self._historyReady.get(), self._peerReady.get()) |> map { $0 && $1 })
         
         self.setupThemeWithDarkMode(useDarkMode)
         
@@ -487,47 +489,21 @@ public class ChatController: ViewController {
             }
         }, openMessageContextMenu: { [weak self] id, node, frame in
             if let strongSelf = self, let historyView = strongSelf.historyView {
-                let contextMenuController = ContextMenuController(actions: [
-                    ContextMenuAction(content: .text("Reply"), action: { [weak strongSelf] in
-                        if let strongSelf = strongSelf, let historyView = strongSelf.historyView {
-                            for case let .MessageEntry(message) in historyView.filteredEntries where message.id == id {
-                                strongSelf.updateChatInterfaceState(animated: true, { $0.withUpdatedReplyMessageId(message.id) })
-                                strongSelf.chatDisplayNode.ensureInputViewFocused()
-                                break
-                            }
-                        }
-                    }),
-                    ContextMenuAction(content: .text("Copy"), action: { [weak strongSelf] in
-                        if let strongSelf = strongSelf, let historyView = strongSelf.historyView {
-                            for case let .MessageEntry(message) in historyView.filteredEntries where message.id == id {
-                                if !message.text.isEmpty {
-                                    UIPasteboard.general.string = message.text
-                                }
-                                break
-                            }
-                        }
-                    }),
-                    ContextMenuAction(content: .text("More..."), action: { [weak strongSelf] in
-                        if let strongSelf = strongSelf, let historyView = strongSelf.historyView {
-                            for case let .MessageEntry(message) in historyView.filteredEntries where message.id == id {
-                                if strongSelf.presentationInterfaceState.interfaceState.selectionState != nil {
-                                    strongSelf.updateChatInterfaceState(animated: true, { $0.withoutSelectionState() })
+                if let strongSelf = self, let historyView = strongSelf.historyView {
+                    for case let .MessageEntry(message) in historyView.filteredEntries where message.id == id {
+                        if let contextMenuController = contextMenuForChatPresentationIntefaceState(strongSelf.presentationInterfaceState, account: strongSelf.account, message: message, interfaceInteraction: strongSelf.interfaceInteraction) {
+                            strongSelf.present(contextMenuController, in: .window, with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak strongSelf, weak node] in
+                                if let node = node {
+                                    return (node, frame)
                                 } else {
-                                    strongSelf.updateChatInterfaceState(animated: true, { $0.withUpdatedSelectedMessage(message.id) })
+                                    return nil
                                 }
-                                
-                                break
-                            }
+                            }))
                         }
-                    })
-                ])
-                strongSelf.present(contextMenuController, in: .window, with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak strongSelf, weak node] in
-                    if let node = node {
-                        return (node, frame)
-                    } else {
-                        return nil
+                        
+                        break
                     }
-                }))
+                }
             }
         }, navigateToMessage: { [weak self] fromId, id in
             if let strongSelf = self, let historyView = strongSelf.historyView {
@@ -564,7 +540,7 @@ public class ChatController: ViewController {
         }, toggleMessageSelection: { [weak self] messageId in
             if let strongSelf = self, let historyView = strongSelf.historyView {
                 for case let .MessageEntry(message) in historyView.filteredEntries where message.id == messageId {
-                    strongSelf.updateChatInterfaceState(animated: false, { $0.withToggledSelectedMessage(messageId) })
+                    strongSelf.updateChatPresentationInterfaceState(animated: false, { $0.updatedInterfaceState { $0.withToggledSelectedMessage(messageId) } })
                     break
                 }
             }
@@ -576,13 +552,20 @@ public class ChatController: ViewController {
         
         self.chatInfoNavigationButton = ChatNavigationButton(action: .openChatInfo, buttonItem: UIBarButtonItem(customDisplayNode: ChatAvatarNavigationNode()))
         
-        self.updateChatInterfaceState(animated: false, { return $0 })
+        self.updateChatPresentationInterfaceState(animated: false, { return $0 })
         
         peerDisposable.set((account.postbox.peerWithId(peerId)
             |> deliverOnMainQueue).start(next: { [weak self] peer in
                 if let strongSelf = self {
-                    strongSelf.title = peer.displayTitle
-                    (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.setPeer(account: strongSelf.account, peer: peer)
+                    if let peer = peer {
+                        strongSelf.title = peer.displayTitle
+                        (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.setPeer(account: strongSelf.account, peer: peer)
+                    }
+                    strongSelf.updateChatPresentationInterfaceState(animated: false, { return $0.updatedPeer { _ in return peer } })
+                    if !strongSelf.didSetPeerReady {
+                        strongSelf.didSetPeerReady = true
+                        strongSelf._peerReady.set(.single(true))
+                    }
                 }
             }))
         
@@ -608,9 +591,9 @@ public class ChatController: ViewController {
                 case .Loading:
                     Queue.mainQueue().async { [weak self] in
                         if let strongSelf = self {
-                            if !strongSelf.didSetReady {
-                                strongSelf.didSetReady = true
-                                strongSelf._ready.set(.single(true))
+                            if !strongSelf.didSetHistoryReady {
+                                strongSelf.didSetHistoryReady = true
+                                strongSelf._historyReady.set(.single(true))
                             }
                         }
                     }
@@ -775,8 +758,8 @@ public class ChatController: ViewController {
             self?.layoutActionOnViewTransition = f
         }
         
-        self.chatDisplayNode.requestUpdateChatInterfaceState = { [weak self] state, animated in
-            self?.updateChatInterfaceState(animated: animated, { _ in return state })
+        self.chatDisplayNode.requestUpdateChatInterfaceState = { [weak self] animated, f in
+            self?.updateChatPresentationInterfaceState(animated: animated, { $0.updatedInterfaceState(f) })
         }
         
         self.chatDisplayNode.displayAttachmentMenu = { [weak self] in
@@ -804,7 +787,22 @@ public class ChatController: ViewController {
             }
         }
         
-        self.chatDisplayNode.interfaceInteraction = ChatPanelInterfaceInteraction(deleteSelectedMessages: { [weak self] in
+        let interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { [weak self] messageId in
+            if let strongSelf = self, let historyView = strongSelf.historyView {
+                for case let .MessageEntry(message) in historyView.filteredEntries where message.id == messageId {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(message.id) } })
+                    strongSelf.chatDisplayNode.ensureInputViewFocused()
+                    break
+                }
+            }
+        }, beginMessageSelection: { [weak self] messageId in
+            if let strongSelf = self, let historyView = strongSelf.historyView {
+                for case let .MessageEntry(message) in historyView.filteredEntries where message.id == messageId {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState { $0.withUpdatedSelectedMessage(message.id) } })
+                    break
+                }
+            }
+        }, deleteSelectedMessages: { [weak self] in
             if let strongSelf = self {
                 
                 if let messageIds = strongSelf.presentationInterfaceState.interfaceState.selectionState?.selectedIds, !messageIds.isEmpty {
@@ -812,14 +810,21 @@ public class ChatController: ViewController {
                         modifier.deleteMessages(Array(messageIds))
                     }).start()
                 }
-                strongSelf.updateChatInterfaceState(animated: true, { $0.withoutSelectionState() })
+                strongSelf.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
             }
         }, forwardSelectedMessages: { [weak self] in
             if let strongSelf = self {
                 let controller = ShareRecipientsActionSheetController()
                 strongSelf.present(controller, in: .window)
             }
+        }, updateTextInputState: { [weak self] textInputState in
+            if let strongSelf = self {
+                strongSelf.updateChatPresentationInterfaceState { $0.updatedInterfaceState { $0.withUpdatedInputState(textInputState) } }
+            }
         })
+        
+        self.interfaceInteraction = interfaceInteraction
+        self.chatDisplayNode.interfaceInteraction = interfaceInteraction
         
         self.displayNodeDidLoad()
         
@@ -851,9 +856,9 @@ public class ChatController: ViewController {
                 if strongSelf.isNodeLoaded {
                     strongSelf.dequeueHistoryViewTransition()
                 } else {
-                    if !strongSelf.didSetReady {
-                        strongSelf.didSetReady = true
-                        strongSelf._ready.set(.single(true))
+                    if !strongSelf.didSetHistoryReady {
+                        strongSelf.didSetHistoryReady = true
+                        strongSelf._historyReady.set(.single(true))
                     }
                 }
             } else {
@@ -886,9 +891,9 @@ public class ChatController: ViewController {
                         }
                     }
                     
-                    if !strongSelf.didSetReady {
-                        strongSelf.didSetReady = true
-                        strongSelf._ready.set(.single(true))
+                    if !strongSelf.didSetHistoryReady {
+                        strongSelf.didSetHistoryReady = true
+                        strongSelf._historyReady.set(.single(true))
                     }
                     
                     completion()
@@ -944,16 +949,18 @@ public class ChatController: ViewController {
         })
     }
     
-    func updateChatInterfaceState(animated: Bool = true, _ f: (ChatInterfaceState) -> ChatInterfaceState) {
-        let updatedChatInterfaceState = f(self.presentationInterfaceState.interfaceState)
+    func updateChatPresentationInterfaceState(animated: Bool = true, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) {
+        let temporaryChatPresentationInterfaceState = f(self.presentationInterfaceState)
+        let inputContext = inputContextForChatPresentationIntefaceState(temporaryChatPresentationInterfaceState, account: self.account)
+        let updatedChatPresentationInterfaceState = temporaryChatPresentationInterfaceState.updatedInputContext { _ in return inputContext }
         
         if self.isNodeLoaded {
-            self.chatDisplayNode.updateChatInterfaceState(updatedChatInterfaceState, animated: animated)
+            self.chatDisplayNode.updateChatPresentationInterfaceState(updatedChatPresentationInterfaceState, animated: animated)
         }
-        self.presentationInterfaceState = ChatPresentationInterfaceState(interfaceState: updatedChatInterfaceState, peer: nil)
-        self.chatInterfaceStatePromise.set(.single(updatedChatInterfaceState))
+        self.presentationInterfaceState = updatedChatPresentationInterfaceState
+        self.chatInterfaceStatePromise.set(.single(updatedChatPresentationInterfaceState.interfaceState))
         
-        if let button = leftNavigationButtonForChatInterfaceState(updatedChatInterfaceState, currentButton: self.leftNavigationButton, target: self, selector: #selector(self.leftNavigationButtonAction)) {
+        if let button = leftNavigationButtonForChatInterfaceState(updatedChatPresentationInterfaceState.interfaceState, currentButton: self.leftNavigationButton, target: self, selector: #selector(self.leftNavigationButtonAction)) {
             self.navigationItem.setLeftBarButton(button.buttonItem, animated: true)
             self.leftNavigationButton = button
         } else if let _ = self.leftNavigationButton {
@@ -961,7 +968,7 @@ public class ChatController: ViewController {
             self.leftNavigationButton = nil
         }
         
-        if let button = rightNavigationButtonForChatInterfaceState(updatedChatInterfaceState, currentButton: self.rightNavigationButton, target: self, selector: #selector(self.rightNavigationButtonAction), chatInfoNavigationButton: self.chatInfoNavigationButton) {
+        if let button = rightNavigationButtonForChatInterfaceState(updatedChatPresentationInterfaceState.interfaceState, currentButton: self.rightNavigationButton, target: self, selector: #selector(self.rightNavigationButtonAction), chatInfoNavigationButton: self.chatInfoNavigationButton) {
             self.navigationItem.setRightBarButton(button.buttonItem, animated: true)
             self.rightNavigationButton = button
         } else if let _ = self.rightNavigationButton {
@@ -970,9 +977,9 @@ public class ChatController: ViewController {
         }
         
         if let controllerInteraction = self.controllerInteraction {
-            if updatedChatInterfaceState.selectionState != controllerInteraction.selectionState {
-                let animated = controllerInteraction.selectionState == nil || updatedChatInterfaceState.selectionState == nil
-                controllerInteraction.selectionState = updatedChatInterfaceState.selectionState
+            if updatedChatPresentationInterfaceState.interfaceState.selectionState != controllerInteraction.selectionState {
+                let animated = controllerInteraction.selectionState == nil || updatedChatPresentationInterfaceState.interfaceState.selectionState == nil
+                controllerInteraction.selectionState = updatedChatPresentationInterfaceState.interfaceState.selectionState
                 self.chatDisplayNode.listView.forEachItemNode { itemNode in
                     if let itemNode = itemNode as? ChatMessageItemView {
                         itemNode.updateSelectionState(animated: animated)
@@ -997,7 +1004,7 @@ public class ChatController: ViewController {
     private func navigationButtonAction(_ action: ChatNavigationButtonAction) {
         switch action {
             case .cancelMessageSelection:
-                self.updateChatInterfaceState(animated: true, { $0.withoutSelectionState() })
+                self.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
             case .clearHistory:
                 let actionSheet = ActionSheetController()
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [

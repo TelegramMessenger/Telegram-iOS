@@ -5,7 +5,7 @@ import UIKit
 import Display
 import TelegramCore
 
-private class ChatListAvatarNodeParameters: NSObject {
+private class AvatarNodeParameters: NSObject {
     let account: Account
     let peerId: PeerId
     let letters: [String]
@@ -30,28 +30,28 @@ let gradientColors: [NSArray] = [
     [UIColor(0xd669ed).cgColor, UIColor(0xe0a2f3).cgColor]
 ]
 
-private enum ChatListAvatarNodeState: Equatable {
+private enum AvatarNodeState: Equatable {
     case Empty
-    case PeerAvatar(Peer)
+    case PeerAvatar(PeerId, [String], TelegramMediaImageRepresentation?)
 }
 
-private func ==(lhs: ChatListAvatarNodeState, rhs: ChatListAvatarNodeState) -> Bool {
+private func ==(lhs: AvatarNodeState, rhs: AvatarNodeState) -> Bool {
     switch (lhs, rhs) {
         case (.Empty, .Empty):
             return true
-        case let (.PeerAvatar(lhsPeer), .PeerAvatar(rhsPeer)) where lhsPeer.isEqual(rhsPeer):
-            return true
+        case let (.PeerAvatar(lhsPeerId, lhsLetters, lhsPhotoRepresentations), .PeerAvatar(rhsPeerId, rhsLetters, rhsPhotoRepresentations)):
+            return lhsPeerId == rhsPeerId && lhsLetters == rhsLetters && lhsPhotoRepresentations == rhsPhotoRepresentations
         default:
             return false
     }
 }
 
-public final class ChatListAvatarNode: ASDisplayNode {
+public final class AvatarNode: ASDisplayNode {
     var font: UIFont {
         didSet {
             if oldValue !== font {
                 if let parameters = self.parameters {
-                    self.parameters = ChatListAvatarNodeParameters(account: parameters.account, peerId: parameters.peerId, letters: parameters.letters, font: self.font)
+                    self.parameters = AvatarNodeParameters(account: parameters.account, peerId: parameters.peerId, letters: parameters.letters, font: self.font)
                 }
                 
                 if !self.displaySuspended {
@@ -60,10 +60,10 @@ public final class ChatListAvatarNode: ASDisplayNode {
             }
         }
     }
-    private var parameters: ChatListAvatarNodeParameters?
+    private var parameters: AvatarNodeParameters?
     let imageNode: ImageNode
     
-    private var state: ChatListAvatarNodeState = .Empty
+    private var state: AvatarNodeState = .Empty
     
     public init(font: UIFont) {
         self.font = font
@@ -92,11 +92,11 @@ public final class ChatListAvatarNode: ASDisplayNode {
     }
     
     public func setPeer(account: Account, peer: Peer) {
-        let updatedState = ChatListAvatarNodeState.PeerAvatar(peer)
+        let updatedState = AvatarNodeState.PeerAvatar(peer.id, peer.displayLetters, peer.smallProfileImage)
         if updatedState != self.state {
             self.state = updatedState
             
-            let parameters = ChatListAvatarNodeParameters(account: account, peerId: peer.id, letters: peer.displayLetters, font: self.font)
+            let parameters = AvatarNodeParameters(account: account, peerId: peer.id, letters: peer.displayLetters, font: self.font)
             
             self.displaySuspended = true
             self.contents = nil
@@ -134,7 +134,7 @@ public final class ChatListAvatarNode: ASDisplayNode {
         context.clip()
         
         let colorIndex: Int
-        if let parameters = parameters as? ChatListAvatarNodeParameters {
+        if let parameters = parameters as? AvatarNodeParameters {
             colorIndex = Int(parameters.account.peerId.id + parameters.peerId.id)
         } else {
             colorIndex = 0
@@ -149,11 +149,9 @@ public final class ChatListAvatarNode: ASDisplayNode {
         
         context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: bounds.size.height), options: CGGradientDrawingOptions())
         
-        //CGContextDrawRadialGradient(context, gradient, CGPoint(x: bounds.size.width * 0.5, y: -bounds.size.width * 0.2), 0.0, CGPoint(x: bounds.midX, y: bounds.midY), bounds.width, CGGradientDrawingOptions())
-        
         context.setBlendMode(.normal)
         
-        if let parameters = parameters as? ChatListAvatarNodeParameters {
+        if let parameters = parameters as? AvatarNodeParameters {
             let letters = parameters.letters
             let string = letters.count == 0 ? "" : (letters[0] + (letters.count == 1 ? "" : letters[1]))
             let attributedString = NSAttributedString(string: string, attributes: [NSFontAttributeName: parameters.font, NSForegroundColorAttributeName: UIColor.white])
@@ -161,18 +159,8 @@ public final class ChatListAvatarNode: ASDisplayNode {
             let line = CTLineCreateWithAttributedString(attributedString)
             let lineBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
             
-            /*var ascent: CGFloat = 0.0
-            var descent: CGFloat = 0.0
-            var leading: CGFloat = 0.0
-            let lineWidth = CGFloat(CTLineGetTypographicBounds(line, &ascent, &descent, &leading))
-            let opticalBounds = CGRect(origin: CGPoint(), size: CGSize(width: lineWidth, height: ascent + descent + leading))*/
-            
-            //let opticalBounds = CTLineGetImageBounds(line, context)
-            
             let lineOffset = CGPoint(x: string == "B" ? 1.0 : 0.0, y: 0.0)
             let lineOrigin = CGPoint(x: floorToScreenPixels(-lineBounds.origin.x + (bounds.size.width - lineBounds.size.width) / 2.0) + lineOffset.x, y: floorToScreenPixels(-lineBounds.origin.y + (bounds.size.height - lineBounds.size.height) / 2.0))
-            
-            //let lineOrigin = CGPoint(x: floorToScreenPixels(-opticalBounds.origin.x + (bounds.size.width - opticalBounds.size.width) / 2.0), y: floorToScreenPixels(-opticalBounds.origin.y + (bounds.size.height - opticalBounds.size.height) / 2.0))
             
             context.translateBy(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
             context.scaleBy(x: 1.0, y: -1.0)
@@ -181,13 +169,6 @@ public final class ChatListAvatarNode: ASDisplayNode {
             context.translateBy(x: lineOrigin.x, y: lineOrigin.y)
             CTLineDraw(line, context)
             context.translateBy(x: -lineOrigin.x, y: -lineOrigin.y)
-            
-            /*var attributes: [String : AnyObject] = [:]
-            attributes[NSFontAttributeName] = parameters.font
-            attributes[NSForegroundColorAttributeName] = UIColor.whiteColor()
-            let lettersSize = string.sizeWithAttributes(attributes)
-            
-            string.drawAtPoint(CGPoint(x: floor((bounds.size.width - lettersSize.width) / 2.0), y: floor((bounds.size.height - lettersSize.height) / 2.0)), withAttributes: attributes)*/
         }
     }
 }

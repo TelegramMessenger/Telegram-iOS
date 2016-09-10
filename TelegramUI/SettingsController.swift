@@ -55,7 +55,7 @@ public class SettingsController: ListController {
         }
         peerAndConnectionStatusDisposable.set(peerAndConnectionStatus.start())
         
-        peer.set(account.postbox.peerWithId(account.peerId))
+        peer.set(account.postbox.loadedPeerWithId(account.peerId))
         connectionStatus.set(account.network.connectionStatus)
     }
 

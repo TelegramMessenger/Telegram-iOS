@@ -51,7 +51,7 @@ public class ChatMessageItem: ListViewItem, CustomStringConvertible {
         self.message = message
         
         var accessoryItem: ListViewAccessoryItem?
-        let incoming = account.peerId != message.author?.id
+        let incoming = message.effectivelyIncoming
         let displayAuthorInfo = incoming && message.author != nil && peerId.isGroupOrChannel
         
         if displayAuthorInfo {

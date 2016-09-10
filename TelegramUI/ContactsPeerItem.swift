@@ -123,7 +123,7 @@ class ContactsPeerItemNode: ListViewItemNode {
     private let separatorNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
     
-    private let avatarNode: ChatListAvatarNode
+    private let avatarNode: AvatarNode
     private let titleNode: TextNode
     private let statusNode: TextNode
     
@@ -140,7 +140,7 @@ class ContactsPeerItemNode: ListViewItemNode {
         self.highlightedBackgroundNode.backgroundColor = UIColor(0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
         
-        self.avatarNode = ChatListAvatarNode(font: Font.regular(15.0))
+        self.avatarNode = AvatarNode(font: Font.regular(15.0))
         self.avatarNode.isLayerBacked = true
         
         self.titleNode = TextNode()

@@ -1,10 +1,39 @@
 import Foundation
 import AsyncDisplayKit
 import Display
+import Postbox
+import TelegramCore
 
 final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     private let deleteButton: UIButton
     private let forwardButton: UIButton
+    
+    override var peer: Peer? {
+        didSet {
+            var canDelete = false
+            if let channel = self.peer as? TelegramChannel {
+                switch channel.info {
+                    case .broadcast:
+                        switch channel.role {
+                            case .creator, .editor, .moderator:
+                                canDelete = true
+                            case .member:
+                                canDelete = false
+                        }
+                    case .group:
+                        switch channel.role {
+                            case .creator, .editor, .moderator:
+                                canDelete = true
+                            case .member:
+                                canDelete = false
+                        }
+                }
+            } else {
+                canDelete = true
+            }
+            self.deleteButton.isHidden = !canDelete
+        }
+    }
     
     var selectedMessageCount: Int = 0 {
         didSet {

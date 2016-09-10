@@ -2,12 +2,12 @@ import Foundation
 import AsyncDisplayKit
 import TelegramCore
 
-func accessoryPanelForChatIntefaceState(_ chatInterfaceState: ChatInterfaceState, account: Account, currentPanel: AccessoryPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> AccessoryPanelNode? {
-    if let _ = chatInterfaceState.selectionState {
+func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentPanel: AccessoryPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> AccessoryPanelNode? {
+    if let _ = chatPresentationInterfaceState.interfaceState.selectionState {
         return nil
     }
     
-    if let replyMessageId = chatInterfaceState.replyMessageId {
+    if let replyMessageId = chatPresentationInterfaceState.interfaceState.replyMessageId {
         if let replyPanelNode = currentPanel as? ReplyAccessoryPanelNode, replyPanelNode.messageId == replyMessageId {
             replyPanelNode.interfaceInteraction = interfaceInteraction
             return replyPanelNode

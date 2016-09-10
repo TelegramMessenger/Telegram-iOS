@@ -35,7 +35,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             return (CGFloat.greatestFiniteMagnitude, { constrainedSize in
                 let message = item.message
                 
-                let incoming = item.account.peerId != message.author?.id
+                let incoming = item.message.effectivelyIncoming
                 
                 let horizontalInset = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                 let textConstrainedSize = CGSize(width: constrainedSize.width - horizontalInset, height: constrainedSize.height)

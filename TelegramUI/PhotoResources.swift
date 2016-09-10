@@ -412,10 +412,10 @@ func chatMessagePhoto(account: Account, photo: TelegramMediaImage) -> Signal<(Tr
                 if let blurredThumbnailImage = blurredThumbnailImage, let cgImage = blurredThumbnailImage.cgImage {
                     c.interpolationQuality = .low
                     c.draw(cgImage, in: fittedRect)
+                    c.setBlendMode(.normal)
                 }
                 
                 if let fullSizeImage = fullSizeImage {
-                    c.setBlendMode(.normal)
                     c.interpolationQuality = .medium
                     c.draw(fullSizeImage, in: fittedRect)
                 }

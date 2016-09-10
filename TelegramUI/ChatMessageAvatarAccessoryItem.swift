@@ -35,10 +35,10 @@ final class ChatMessageAvatarAccessoryItem: ListViewAccessoryItem {
 }
 
 final class ChatMessageAvatarAccessoryItemNode: ListViewAccessoryItemNode {
-    let avatarNode: ChatListAvatarNode
+    let avatarNode: AvatarNode
     
     override init() {
-        self.avatarNode = ChatListAvatarNode(font: Font.regular(14.0))
+        self.avatarNode = AvatarNode(font: Font.regular(14.0))
         self.avatarNode.isLayerBacked = true
         self.avatarNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
         

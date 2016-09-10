@@ -108,7 +108,7 @@ class ChatListItemNode: ListViewItemNode {
     
     private let highlightedBackgroundNode: ASDisplayNode
     
-    let avatarNode: ChatListAvatarNode
+    let avatarNode: AvatarNode
     let contentNode: ASDisplayNode
     let titleNode: TextNode
     let textNode: TextNode
@@ -121,7 +121,7 @@ class ChatListItemNode: ListViewItemNode {
     var relativePosition: (first: Bool, last: Bool) = (false, false)
     
     required init() {
-        self.avatarNode = ChatListAvatarNode(font: Font.regular(24.0))
+        self.avatarNode = AvatarNode(font: Font.regular(24.0))
         self.avatarNode.isLayerBacked = true
         
         self.highlightedBackgroundNode = ASDisplayNode()
