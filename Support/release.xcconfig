@@ -1,4 +1,6 @@
 #include "buildnumber.xcconfig"
 
+OTHER_LDFLAGS=$(inherited) -framework CrashReporter -framework AssetsLibrary -framework CoreTelephony -framework CoreText -framework CoreGraphics -framework Foundation -framework MobileCoreServices -framework QuartzCore -framework QuickLook -framework Security -framework SystemConfiguration -framework UIKit -lc++ -lz
+
 OTHER_CFLAGS[sdk=iphoneos9.*] = $(HOCKEYSDK_WARNING_FLAGS) -fembed-bitcode
 OTHER_CFLAGS[sdk=iphonesimulator9.*] = $(HOCKEYSDK_WARNING_FLAGS) -fembed-bitcode-marker
