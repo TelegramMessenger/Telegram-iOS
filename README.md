@@ -6,14 +6,14 @@
 
 - [Changelog](http://www.hockeyapp.net/help/sdk/ios/4.1.1/docs/docs/Changelog.html)
 
-**NOTE** With iOS 10, Apple requires developers to specify usage description strings in their `Info.plist` for certain features that impact the users privacy.
-HockeyApp uses one of those features – access to the user's photo library – in order to allow the user to attach pictures to their feedback.
-If you are using the Feedback feature, please add a (localized) usage description string for `NSPhotoLibraryUsageDescription`. Unfortunately, this process is not automizable and you have to add this string manually.
-If you, however, don't specify `NSPhotoLibraryUsageDescription` and attempt to use the Feedback feature, the SDK will log an error and disable attaching of photos to feedback and ignore `BITFeedbackObservationModeOnScreenshot` to make sure your app does not crash on iOS 10 devices.
+### Feedback and iOS 10
+**4.1.1 of the HockeySDK removes the Feedback feature from the default version of the SDK.**
+The reason for this is that iOS 10 requires developers to add a usage string to their Info.plist in case they include the photos framework in their app. If this string is missing, the app will be rejected when submitting the app to the app store. As HockeyApp's Feedback feature includes a dependency to the photos framework. This means that if you include HockeyApp into your app, adding the usage string would be a requirement even for developers who don't use the Feedback feature. If you don't use Feedback in your app, simply upgrade HockeySDK to version 4.1.1. If you are using Feedback, please have a look at the [Feedback section](#feedback).
 
-To learn more about this requirement, see [this comprehensive writeup](http://useyourloaf.com/blog/privacy-settings-in-ios-10/) of this year's [WWDC Session on Privacy](https://developer.apple.com/videos/play/wwdc2016/709/) and have a look at [how to localize Info.plist values](https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html).
 
-We **strongly** suggest upgrading to version 4.1.1 of the SDK. Not specifying the usage description string and using previous versions of the HockeySDK-iOS will cause the app to crash at runtime as soon as the user taps the "attach image"-button or in case you have enabled `BITFeedbackObservationModeOnScreenshot`.  
+We **strongly** suggest upgrading to version 4.1.1 of the SDK. Not specifying the usage description string and using previous versions of the HockeySDK-iOS will cause the app to crash at runtime as soon as the user taps the "attach image"-button or in case you have enabled `BITFeedbackObservationModeOnScreenshot`.
+
+If you are using an older version of the SDK, you have to add a `NSPhotoLibraryUsageDescription` to your `Info.plist` to avoid a AppStore rejection during upload of your app (please have a look at the [Feedback section](#feedback)).
 
 ## Introduction
 
@@ -80,13 +80,14 @@ Please see the "[How to create a new app](http://support.hockeyapp.net/kb/about-
 
 From our experience, 3rd-party libraries usually reside inside a subdirectory (let's call our subdirectory `Vendor`), so if you don't have your project organized with a subdirectory for libraries, now would be a great start for it. To continue our example,  create a folder called `Vendor` inside your project directory and move the unzipped `HockeySDK-iOS`-folder into it. 
 
-The SDK comes in three flavours:
+The SDK comes in four flavours:
 
-  * Full featured `HockeySDK.embeddedframework`
-  * Crash reporting only: `HockeySDK.framework` in the subfolder `HockeySDKCrashOnly`
+  * Default SDK without Feedback `HockeySDK.embeddedframework`
+  * Full featured SDK with Feedback: `HockeySDK.embeddedframework` in the subfolder `HockeySDKAllFeatures`. 
+  * Crash reporting only: `HockeySDK.framework` in the subfolder `HockeySDKCrashOnly`.
   * Crash reporting only for extensions: `HockeySDK.framework` in the subfolder `HockeySDKCrashOnlyExtension` (which is required to be used for extensions).
   
-Our examples will use the full featured SDK (`HockeySDK.embeddedframework`).
+Our examples will use the **default** SDK (`HockeySDK.embeddedframework`).
 
 <a id="setupxcode"></a>
 
@@ -145,11 +146,6 @@ Our examples will use the full featured SDK (`HockeySDK.embeddedframework`).
 
 *Note:* The SDK is optimized to defer everything possible to a later time while making sure e.g. crashes on startup can also be caught and each module executes other code with a delay some seconds. This ensures that `applicationDidFinishLaunching` will process as fast as possible and the SDK will not block the startup sequence resulting in a possible kill by the watchdog process.
 
-<a id="addPrivacyKey"></a>
-### 2.6 Add NSPhotoLibraryUsageDescription to your Info.plist
-
-As of iOS 10, developers have to add UsageDescription-strings before using system frameworks with privacy features (read more on this in [Apple's own documentation](https://developer.apple.com/library/prerelease/content/releasenotes/General/WhatsNewIniOS/Articles/iOS10.html#//apple_ref/doc/uid/TP40017084-SW3)). To make allow users to attach photos to feedback, add the `NSPhotoLibraryUsageDescription` to your `Info.plist` and provide a description. Make sure to localize your description as described in [Apple's documentation about localizing Info.plist strings](https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html).
-
 
 **Congratulation, now you're all set to use HockeySDK!**
 
@@ -166,7 +162,20 @@ If you are working with an older project which doesn't support clang modules yet
 3. Select the tab `Build Phases`.
 4. Expand `Link Binary With Libraries`.
 5. Add the following system frameworks, if they are missing:
-  1. Full Featured: 
+  1. Default SDK: 
+    + `AssetsLibrary`
+    + `CoreText`
+    + `CoreGraphics`
+    + `Foundation`
+    + `MobileCoreServices`
+    + `QuartzCore`
+    + `QuickLook`
+    + `Security`
+    + `SystemConfiguration`
+    + `UIKit`
+    + `libc++`
+    + `libz`
+  2. SDK with all features:
     + `AssetsLibrary`
     + `CoreText`
     + `CoreGraphics`
@@ -180,13 +189,13 @@ If you are working with an older project which doesn't support clang modules yet
     + `UIKit`
     + `libc++`
     + `libz`
-  2. Crash reporting only:
+  3. Crash reporting only:
     + `Foundation`
     + `Security`
     + `SystemConfiguration`
     + `UIKit`
     + `libc++`
-  3. Crash reporting only for extensions:
+  4. Crash reporting only for extensions:
     + `Foundation`
     + `Security`
     + `SystemConfiguration`
@@ -211,6 +220,14 @@ pod "HockeySDK"
 The default and recommended distribution is a binary (static library) and a resource bundle with translations and images for all SDK Features: Crash Reporting, User Feedback, Store Updates, Authentication, AdHoc Updates.
 
 You can alternative use a Crash Reporting build only by using the following line in your `Podfile`:
+
+For the SDK with all features, add
+
+```ruby
+pod "HockeySDK", :subspecs => ['AllFeaturesLib']
+```
+to your podfile.
+To add the variant that only includes crash reporting, use
 
 ```ruby
 pod "HockeySDK", :subspecs => ['CrashOnlyLib']
@@ -500,6 +517,18 @@ metricsManager.trackEventWithName(eventName, properties: myProperties, myMeasure
 <a name="feedback"></a>
 ### 3.8 Feedback
 
+As of HockeySDK 4.1.1, Feedback is no longer part of the default SDK. To use feedback in your app, integrate the SDK with all features as follows:
+
+#### 3.8.1 Integrate the full-featured SDK.
+
+If you're integrating the binary yourself, use the `HockeySDK.embeddedframework` in the subfolder `HockeySDKAllFeatures`. If you're using cocoapods, use
+
+```ruby
+pod "HockeySDK", :subspecs => ['AllFeaturesLib']
+```
+
+in your podfile.
+
 `BITFeedbackManager` lets your users communicate directly with you via the app and an integrated user interface. It provides a single threaded discussion with a user running your app. This feature is only enabled, if you integrate the actual view controllers into your app.
  
 You should never create your own instance of `BITFeedbackManager` but use the one provided by the `[BITHockeyManager sharedHockeyManager]`:
@@ -510,7 +539,7 @@ You should never create your own instance of `BITFeedbackManager` but use the on
 
 Please check the [documentation](#documentation) of the `BITFeedbackManager` class on more information on how to leverage this feature.
 
-#### 3.8.1 iOS 10 requires NSPhotoLibraryUsageDescription to be set to access photos.
+#### 3.8.2 Add the NSPhotoLibraryUsageDescription to your Info.plist.
 
 As of iOS 10, developers have to add UsageDescription-strings before using system frameworks with privacy features (read more on this in [Apple's own documentation](https://developer.apple.com/library/prerelease/content/releasenotes/General/WhatsNewIniOS/Articles/iOS10.html#//apple_ref/doc/uid/TP40017084-SW3)). To make allow users to attach photos to feedback, add the `NSPhotoLibraryUsageDescription` to your `Info.plist` and provide a description. Make sure to localize your description as described in [Apple's documentation about localizing Info.plist strings](https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html).
 
