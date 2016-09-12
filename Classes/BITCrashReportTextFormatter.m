@@ -873,7 +873,7 @@ NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
           break;
           
         default:
-          NSLog(@"Symbol prefix rules are unknown for this OS!");
+          BITHockeyLogDebug(@"Symbol prefix rules are unknown for this OS!");
           break;
       }
     }

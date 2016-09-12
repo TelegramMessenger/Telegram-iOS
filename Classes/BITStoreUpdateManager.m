@@ -128,7 +128,7 @@
     self.updateSetting = BITStoreUpdateCheckWeekly;
 
     if (!BITHockeyBundle()) {
-      NSLog(@"[HockeySDK] WARNING: %@ is missing, built in UI is deactivated!", BITHOCKEYSDK_BUNDLE);
+      BITHockeyLogWarning(@"[HockeySDK] WARNING: %@ is missing, built in UI is deactivated!", BITHOCKEYSDK_BUNDLE);
     }
   }
   return self;

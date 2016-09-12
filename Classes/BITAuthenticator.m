@@ -792,7 +792,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     return;
   }
   
-  NSLog(@"[HockeySDK] ERROR: The authentication token could not be stored due to a keychain error. This is most likely a signing or keychain entitlement issue!");
+  BITHockeyLogError(@"[HockeySDK] ERROR: The authentication token could not be stored due to a keychain error. This is most likely a signing or keychain entitlement issue!");
 }
 
 - (void)cleanupInternalStorage {
@@ -938,10 +938,8 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   } else {
     BOOL success1 = [self addStringValueToKeychainForThisDeviceOnly:installationIdentifier
                                                              forKey:kBITAuthenticatorIdentifierKey];
-    NSParameterAssert(success1);
     BOOL success2 = [self addStringValueToKeychainForThisDeviceOnly:[self.class stringForIdentificationType:type]
                                                              forKey:kBITAuthenticatorIdentifierTypeKey];
-    NSParameterAssert(success2);
     if (!success1 || !success2) {
       [self alertOnFailureStoringTokenInKeychain];
     }
