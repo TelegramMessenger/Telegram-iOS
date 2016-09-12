@@ -2,5 +2,7 @@
 
 OTHER_LDFLAGS=$(inherited) -framework CrashReporter -framework AssetsLibrary -framework CoreTelephony -framework CoreText -framework CoreGraphics -framework Foundation -framework MobileCoreServices -framework QuartzCore -framework QuickLook -framework Security -framework SystemConfiguration -framework UIKit -lc++ -lz
 
+GCC_PREPROCESSOR_DEFINITIONS = $(inherited) HOCKEYSDK_CONFIGURATION_$(CONFIGURATION) HOCKEYSDK_FEATURE_CRASH_REPORTER=1 HOCKEYSDK_FEATURE_FEEDBACK=0 HOCKEYSDK_FEATURE_STORE_UPDATES=1 HOCKEYSDK_FEATURE_AUTHENTICATOR=1 HOCKEYSDK_FEATURE_UPDATES=1 HOCKEYSDK_FEATURE_METRICS=1 BITHOCKEY_VERSION="@\""$(VERSION_STRING)"\"" BITHOCKEY_BUILD="@\""$(BUILD_NUMBER)"\"" BITHOCKEY_C_VERSION="\""$(VERSION_STRING)"\"" BITHOCKEY_C_BUILD="\""$(BUILD_NUMBER)"\""
+
 OTHER_CFLAGS[sdk=iphoneos9.*] = $(HOCKEYSDK_WARNING_FLAGS) -fembed-bitcode
 OTHER_CFLAGS[sdk=iphonesimulator9.*] = $(HOCKEYSDK_WARNING_FLAGS) -fembed-bitcode-marker
