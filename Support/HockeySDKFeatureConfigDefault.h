@@ -26,16 +26,14 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/*
- * This file is only used by the binary framework target when building
- * and creating the framework with all features.
- *
- * Attention: Do not include this into your projects yourself!
+/**
+ * This is the template feature config that is used for debug builds and during development. 
+ * For the Distribution target, we are using separate configs that will be copied over in our build script.
  */
- 
+
+
 #ifndef HockeySDK_HockeySDKFeatureConfig_h
 #define HockeySDK_HockeySDKFeatureConfig_h
-
 
 /**
  * If true, include support for handling crash reports
