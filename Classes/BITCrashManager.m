@@ -377,10 +377,10 @@ static void uncaught_cxx_exception_handler(const BITCrashUncaughtCXXExceptionInf
 
 - (void)persistUserProvidedMetaData:(BITCrashMetaData *)userProvidedMetaData {
   if (!userProvidedMetaData) return;
-  
-  if (userProvidedMetaData.userDescription && [userProvidedMetaData.userDescription length] > 0) {
+
+  if (userProvidedMetaData.userProvidedDescription && [userProvidedMetaData.userProvidedDescription length] > 0) {
     NSError *error;
-    [userProvidedMetaData.userDescription writeToFile:[NSString stringWithFormat:@"%@.desc", [_crashesDir stringByAppendingPathComponent: _lastCrashFilename]] atomically:YES encoding:NSUTF8StringEncoding error:&error];
+    [userProvidedMetaData.userProvidedDescription writeToFile:[NSString stringWithFormat:@"%@.desc", [_crashesDir stringByAppendingPathComponent: _lastCrashFilename]] atomically:YES encoding:NSUTF8StringEncoding error:&error];
   }
   
   if (userProvidedMetaData.userName && [userProvidedMetaData.userName length] > 0) {
