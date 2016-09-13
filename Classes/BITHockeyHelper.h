@@ -36,6 +36,12 @@ FOUNDATION_EXPORT NSString *const kBITExcludeApplicationSupportFromBackup;
 
 + (BOOL)isURLSessionSupported;
 
+/*
+ * Checks if the privacy description for iOS 10+ has been set in info plist.
+ * @return YES for < iOS 10. YES/NO in iOS 10+ if NSPhotoLibraryUsageDescription is present in the app's Info.plist.
+ */
++ (BOOL)isPhotoAccessPossible;
+
 @end
 
 NSString *bit_settingsDir(void);
@@ -56,6 +62,7 @@ NSString *bit_UUID(void);
 NSString *bit_appAnonID(BOOL forceNewAnonID);
 BOOL bit_isPreiOS7Environment(void);
 BOOL bit_isPreiOS8Environment(void);
+BOOL bit_isPreiOS10Environment(void);
 BOOL bit_isAppStoreReceiptSandbox(void);
 BOOL bit_hasEmbeddedMobileProvision(void);
 BITEnvironment bit_currentAppEnvironment(void);

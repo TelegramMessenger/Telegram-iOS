@@ -466,6 +466,11 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   NSParameterAssert(email && email.length);
   NSParameterAssert(self.identificationType == BITAuthenticatorIdentificationTypeHockeyAppEmail || (password && password.length));
   
+  // Trim whitespace from email in case the user has added a whitespace at the end of the email address. This shouldn't
+  // happen if devs use our UI but we've had 1-2 support tickets where the email contained whitespace at the end and
+  // verification failed because of that.
+  email = [email stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+  
   NSURLRequest *request = [self requestForAuthenticationEmail:email password:password];
   
   [self authenticationViewController:viewController handleAuthenticationWithEmail:email request:request completion:completion];
@@ -787,7 +792,7 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
     return;
   }
   
-  NSLog(@"[HockeySDK] ERROR: The authentication token could not be stored due to a keychain error. This is most likely a signing or keychain entitlement issue!");
+  BITHockeyLogError(@"[HockeySDK] ERROR: The authentication token could not be stored due to a keychain error. This is most likely a signing or keychain entitlement issue!");
 }
 
 - (void)cleanupInternalStorage {
@@ -933,10 +938,8 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   } else {
     BOOL success1 = [self addStringValueToKeychainForThisDeviceOnly:installationIdentifier
                                                              forKey:kBITAuthenticatorIdentifierKey];
-    NSParameterAssert(success1);
     BOOL success2 = [self addStringValueToKeychainForThisDeviceOnly:[self.class stringForIdentificationType:type]
                                                              forKey:kBITAuthenticatorIdentifierTypeKey];
-    NSParameterAssert(success2);
     if (!success1 || !success2) {
       [self alertOnFailureStoringTokenInKeychain];
     }
@@ -955,7 +958,9 @@ static unsigned char kBITPNGEndChunk[4] = {0x49, 0x45, 0x4e, 0x44};
   } else {
     [defaults setObject:lastAuthenticatedVersion
                  forKey:kBITAuthenticatorLastAuthenticatedVersionKey];
-    [defaults synchronize];
+    if(bit_isPreiOS8Environment()) {
+      [defaults synchronize];
+    }
   }
 }
 

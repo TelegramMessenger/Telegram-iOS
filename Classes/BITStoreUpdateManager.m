@@ -128,7 +128,7 @@
     self.updateSetting = BITStoreUpdateCheckWeekly;
 
     if (!BITHockeyBundle()) {
-      NSLog(@"[HockeySDK] WARNING: %@ is missing, built in UI is deactivated!", BITHOCKEYSDK_BUNDLE);
+      BITHockeyLogWarning(@"[HockeySDK] WARNING: %@ is missing, built in UI is deactivated!", BITHOCKEYSDK_BUNDLE);
     }
   }
   return self;
@@ -165,8 +165,11 @@
         [self.userDefaults removeObjectForKey:kBITStoreUpdateLastStoreVersion];
         versionString = nil;
       }
-
-      [self.userDefaults synchronize];
+      
+      if(bit_isPreiOS8Environment()) {
+        // calling synchronize in pre-iOS 8 takes longer to sync than in iOS 8+, calling synchronize explicitly.
+        [self.userDefaults synchronize];
+      }
     }
   }
   

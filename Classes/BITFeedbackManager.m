@@ -242,7 +242,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   
   [composeViewController prepareWithItems:preparedItems];
   [composeViewController setHideImageAttachmentButton:self.feedbackComposeHideImageAttachmentButton];
-    
+  
   // by default set the delegate to be identical to the one of BITFeedbackManager
   [composeViewController setDelegate:self.delegate];
   return composeViewController;
@@ -275,6 +275,8 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   if ([self isFeedbackManagerDisabled]) return;
   
   [self registerObservers];
+  
+  [self isiOS10PhotoPolicySet];
   
   // we are already delayed, so the notification already came in and this won't invoked twice
   switch ([[UIApplication sharedApplication] applicationState]) {
@@ -387,6 +389,17 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
       self.requireUserEmail == BITFeedbackUserDataElementDontShow) {
     self.didAskUserData = NO;
   }
+}
+
+- (BOOL)isiOS10PhotoPolicySet {
+  BOOL isiOS10PhotoPolicySet = [BITHockeyHelper isPhotoAccessPossible];
+  if(bit_isDebuggerAttached()) {
+    if(!isiOS10PhotoPolicySet) {
+      BITHockeyLogWarning(@"You are using HockeyApp's Feedback feature in iOS 10 or later. iOS 10 requires you to add the usage strings to your app's info.plist. "
+                          @"Attaching screenshots to feedback is disabled. Please add the String for NSPhotoLibraryUsageDescription to your info.plist to enable screenshot attachments.");
+    }
+  }
+  return isiOS10PhotoPolicySet;
 }
 
 #pragma mark - Local Storage
@@ -588,6 +601,9 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 - (BITFeedbackMessage *)lastMessageHavingID {
   __block BITFeedbackMessage *message = nil;
   
+  
+  // Note: the logic here is slightly different than in our mac SDK, as _feedbackList is sorted in different order.
+  // Compare the implementation of - (void)sortFeedbackList; in both SDKs.
   [_feedbackList enumerateObjectsUsingBlock:^(BITFeedbackMessage *objMessage, NSUInteger messagesIdx, BOOL *stop) {
     if ([[objMessage identifier] integerValue] != 0) {
       message = objMessage;
@@ -813,28 +829,28 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
         
         if(self.showAlertOnIncomingMessages && !self.currentFeedbackListViewController && !self.currentFeedbackComposeViewController) {
           dispatch_async(dispatch_get_main_queue(), ^{
-          /*
-          // Requires iOS 8
-          id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
-          if (uialertcontrollerClass) {
-            UIAlertController *alertController = [UIAlertController alertControllerWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageTitle")
-                                                                                     message:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageText")
-                                                                              preferredStyle:UIAlertControllerStyleAlert];
-            
-            UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackIgnore")
-                                                                   style:UIAlertActionStyleCancel
-                                                                 handler:nil];
-            UIAlertAction *showAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackShow")
-                                                                 style:UIAlertActionStyleDefault
-                                                               handler:^(UIAlertAction *__nonnull action) {
-                                                                 [self showFeedbackListView];
-                                                               }];
-            [alertController addAction:cancelAction];
-            [alertController addAction:showAction];
-           
-           [self showAlertController:alertController];
-           } else {
-           */
+            /*
+             // Requires iOS 8
+             id uialertcontrollerClass = NSClassFromString(@"UIAlertController");
+             if (uialertcontrollerClass) {
+             UIAlertController *alertController = [UIAlertController alertControllerWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageTitle")
+             message:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageText")
+             preferredStyle:UIAlertControllerStyleAlert];
+             
+             UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackIgnore")
+             style:UIAlertActionStyleCancel
+             handler:nil];
+             UIAlertAction *showAction = [UIAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackShow")
+             style:UIAlertActionStyleDefault
+             handler:^(UIAlertAction *__nonnull action) {
+             [self showFeedbackListView];
+             }];
+             [alertController addAction:cancelAction];
+             [alertController addAction:showAction];
+             
+             [self showAlertController:alertController];
+             } else {
+             */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
             UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:BITHockeyLocalizedString(@"HockeyFeedbackNewMessageTitle")
@@ -972,7 +988,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
                                               [strongSelf handleFeedbackMessageResponse:response data:data error:error completion:completionHandler];
                                             }];
     [task resume];
-
+    
   } else {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -982,7 +998,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
       [strongSelf handleFeedbackMessageResponse:response data:responseData error:error completion:completionHandler];
     }];
   }
-
+  
 }
 
 - (void)handleFeedbackMessageResponse:(NSURLResponse *)response data:(NSData *)responseData error:(NSError * )error completion:(void (^)(NSError *error))completionHandler{
@@ -1209,7 +1225,10 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 - (void)requestLatestImageWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler {
   if (!completionHandler) { return; }
   
-// Only available from iOS 8 up
+  // Safeguard in case the dev hasn't set the NSPhotoLibraryUsageDescription in their Info.plist
+  if(![self isiOS10PhotoPolicySet]) { return; }
+  
+  // Only available from iOS 8 up
   id phimagemanagerClass = NSClassFromString(@"PHImageManager");
   if (phimagemanagerClass) {
     [self fetchLatestImageUsingPhotoLibraryWithCompletionHandler:completionHandler];
@@ -1223,26 +1242,29 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
   ALAssetsLibrary *library = [[ALAssetsLibrary alloc] init];
   [library enumerateGroupsWithTypes:ALAssetsGroupSavedPhotos usingBlock:^(ALAssetsGroup *group, BOOL *stop) {
-
-      [group setAssetsFilter:[ALAssetsFilter allPhotos]];
-
-      [group enumerateAssetsWithOptions:NSEnumerationReverse usingBlock:^(ALAsset *alAsset, NSUInteger index, BOOL *innerStop) {
-
-        if (alAsset) {
-          ALAssetRepresentation *representation = [alAsset defaultRepresentation];
-          UIImage *latestPhoto = [UIImage imageWithCGImage:[representation fullScreenImage]];
-          
-          completionHandler(latestPhoto);
-          
-          *stop = YES;
-          *innerStop = YES;
-        }
-      }];
-    } failureBlock: nil];
+    
+    [group setAssetsFilter:[ALAssetsFilter allPhotos]];
+    
+    [group enumerateAssetsWithOptions:NSEnumerationReverse usingBlock:^(ALAsset *alAsset, NSUInteger index, BOOL *innerStop) {
+      
+      if (alAsset) {
+        ALAssetRepresentation *representation = [alAsset defaultRepresentation];
+        UIImage *latestPhoto = [UIImage imageWithCGImage:[representation fullScreenImage]];
+        
+        completionHandler(latestPhoto);
+        
+        *stop = YES;
+        *innerStop = YES;
+      }
+    }];
+  } failureBlock: nil];
 #pragma clang diagnostic pop
 }
 
 - (void)fetchLatestImageUsingPhotoLibraryWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler NS_AVAILABLE_IOS(8_0){
+  // Safeguard in case the dev hasn't set the NSPhotoLibraryUsageDescription in their Info.plist
+  if(![self isiOS10PhotoPolicySet]) { return; }
+  
   [PHPhotoLibrary requestAuthorization:^(PHAuthorizationStatus status) {
     switch (status) {
       case PHAuthorizationStatusDenied:
@@ -1261,6 +1283,10 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
 }
 
 - (void)loadLatestImageAssetWithCompletionHandler:(BITLatestImageFetchCompletionBlock)completionHandler NS_AVAILABLE_IOS(8_0){
+  
+  // Safeguard in case the dev hasn't set the NSPhotoLibraryUsageDescription in their Info.plist
+  if(![self isiOS10PhotoPolicySet]) { return; }
+  
   PHImageManager *imageManager = PHImageManager.defaultManager;
   
   PHFetchOptions *fetchOptions = [PHFetchOptions new];

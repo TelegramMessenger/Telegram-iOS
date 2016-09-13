@@ -483,7 +483,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     }
     
     if (!BITHockeyBundle()) {
-      NSLog(@"[HockeySDK] WARNING: %@ is missing, make sure it is added!", BITHOCKEYSDK_BUNDLE);
+      BITHockeyLogWarning(@"[HockeySDK] WARNING: %@ is missing, make sure it is added!", BITHOCKEYSDK_BUNDLE);
     }
     
     _fileManager = [[NSFileManager alloc] init];
@@ -517,7 +517,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 
 - (BITUpdateViewController *)hockeyViewController:(BOOL)modal {
   if (self.appEnvironment != BITEnvironmentOther) {
-    NSLog(@"[HockeySDK] This should not be called from an app store build!");
+    BITHockeyLogWarning(@"[HockeySDK] This should not be called from an app store build!");
     // return an empty view controller instead
     BITHockeyBaseViewController *blankViewController = [[BITHockeyBaseViewController alloc] initWithModalStyle:modal];
     return (BITUpdateViewController *)blankViewController;
@@ -527,7 +527,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 
 - (void)showUpdateView {
   if (self.appEnvironment != BITEnvironmentOther) {
-    NSLog(@"[HockeySDK] This should not be called from an app store build!");
+    BITHockeyLogWarning(@"[HockeySDK] This should not be called from an app store build!");
     return;
   }
   
