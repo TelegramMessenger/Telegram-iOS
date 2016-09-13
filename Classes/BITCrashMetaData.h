@@ -37,7 +37,7 @@
 /**
  *  User provided description that should be attached to the crash report as plain text
  */
-@property (nonatomic, copy) NSString *userDescription;
+@property (nonatomic, copy) NSString *userProvidedDescription;
 
 /**
  *  User name that should be attached to the crash report
