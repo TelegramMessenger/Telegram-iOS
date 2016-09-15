@@ -121,7 +121,7 @@ Our examples will use the **default** SDK (`HockeySDK.embeddedframework`).
   [[BITHockeyManager sharedHockeyManager].authenticator authenticateInstallation]; // This line is obsolete in the crash only builds
   ```
 
-**Swift**
+**Swift 2.3**
 
 1. Open your `AppDelegate.swift` file.
 2. Add the following line at the top of the file below your own import statements:
@@ -143,6 +143,31 @@ Our examples will use the **default** SDK (`HockeySDK.embeddedframework`).
   BITHockeyManager.sharedHockeyManager().startManager()
   BITHockeyManager.sharedHockeyManager().authenticator.authenticateInstallation() // This line is obsolete in the crash only builds
   ```
+
+**Swift 3**
+
+1. Open your `AppDelegate.swift` file.
+2. Add the following line at the top of the file below your own import statements:
+
+  ```swift
+  import HockeySDK
+  ```
+
+3. Search for the method 
+
+  ```swift
+  func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool
+  ```
+
+4. Add the following lines to setup and start the Application Insights SDK:
+
+  ```swift
+  BITHockeyManager.shared().configure(withIdentifier: "cdef2c2b4ddf420b9cdf470a9667eb27")
+  BITHockeyManager.shared().start()
+  BITHockeyManager.shared().authenticator.authenticateInstallation() // This line is obsolete in the crash only builds
+
+  ```
+
 
 *Note:* The SDK is optimized to defer everything possible to a later time while making sure e.g. crashes on startup can also be caught and each module executes other code with a delay some seconds. This ensures that `applicationDidFinishLaunching` will process as fast as possible and the SDK will not block the startup sequence resulting in a possible kill by the watchdog process.
 
