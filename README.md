@@ -112,7 +112,7 @@ Our examples will use the **default** SDK (`HockeySDK.embeddedframework`).
   ```
 
 3. Search for the method `application:didFinishLaunchingWithOptions:`
-4. Add the following lines to setup and start the Application Insights SDK:
+4. Add the following lines to setup and start the HockeyApp SDK:
 
   ```objectivec
   [[BITHockeyManager sharedHockeyManager] configureWithIdentifier:@"APP_IDENTIFIER"];
@@ -136,7 +136,7 @@ Our examples will use the **default** SDK (`HockeySDK.embeddedframework`).
   application(application: UIApplication, didFinishLaunchingWithOptions launchOptions:[NSObject: AnyObject]?) -> Bool
   ```
 
-4. Add the following lines to setup and start the Application Insights SDK:
+4. Add the following lines to setup and start the HockeyApp SDK:
 
   ```swift
   BITHockeyManager.sharedHockeyManager().configureWithIdentifier("APP_IDENTIFIER")
