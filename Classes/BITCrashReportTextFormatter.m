@@ -903,20 +903,20 @@ NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
  *
  *  @return An anonymized string where the real username is replaced by "USER"
  */
-+ (NSString *)anonymizedPathFromPath:(NSString *)processPath {
++ (NSString *)anonymizedPathFromPath:(NSString *)path {
   
   NSString *anonymizedProcessPath = [NSString string];
   
-  if (([processPath length] > 0) && [processPath hasPrefix:@"/Users/"]) {
+  if (([path length] > 0) && [path hasPrefix:@"/Users/"]) {
     NSError *error = nil;
     NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"(/Users/[^/]+/)" options:0 error:&error];
-    anonymizedProcessPath = [regex stringByReplacingMatchesInString:processPath options:0 range:NSMakeRange(0, [processPath length]) withTemplate:@"/Users/USER/"];
+    anonymizedProcessPath = [regex stringByReplacingMatchesInString:path options:0 range:NSMakeRange(0, [path length]) withTemplate:@"/Users/USER/"];
     if (error) {
       BITHockeyLogError(@"ERROR: String replacing failed - %@", error.localizedDescription);
     }
   }
-  else if(([processPath length] > 0) && (![processPath containsString:@"Users"])) {
-    return processPath;
+  else if(([path length] > 0) && (![path containsString:@"Users"])) {
+    return path;
   }
   return anonymizedProcessPath;
 }
