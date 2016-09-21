@@ -350,7 +350,7 @@ NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
         
         /* Remove username from the path */
 #if TARGET_OS_SIMULATOR
-        processPath = [self anonymizedProcessPathFromProcessPath:processPath];
+        processPath = [self anonymizedPathFromPath:processPath];
 #endif
       }
       
@@ -605,8 +605,7 @@ NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
 #endif
     }
 #if TARGET_OS_SIMULATOR
-    if ([imageName length] > 0 && [[imageName substringToIndex:1] isEqualToString:@"~"])
-      imageName = [NSString stringWithFormat:@"/Users/USER%@", [imageName substringFromIndex:1]];
+    imageName = [self anonymizedPathFromPath:imageName];
 #endif
     [text appendFormat: fmt,
      imageInfo.imageBaseAddress,
@@ -904,7 +903,7 @@ NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
  *
  *  @return An anonymized string where the real username is replaced by "USER"
  */
-+ (NSString *)anonymizedProcessPathFromProcessPath:(NSString *)processPath {
++ (NSString *)anonymizedPathFromPath:(NSString *)processPath {
   
   NSString *anonymizedProcessPath = [NSString string];
   
@@ -915,6 +914,9 @@ NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
     if (error) {
       BITHockeyLogError(@"ERROR: String replacing failed - %@", error.localizedDescription);
     }
+  }
+  else if(([processPath length] > 0) && (![processPath containsString:@"Users"])) {
+    return processPath;
   }
   return anonymizedProcessPath;
 }
