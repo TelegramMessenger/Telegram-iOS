@@ -914,16 +914,16 @@
 		1E66CA8F15D40FF600F35BED /* Support */ = {
 			isa = PBXGroup;
 			children = (
-				1E754DC61621BC170070AB92 /* HockeySDK.xcconfig */,
-				1E66CA9115D4100500F35BED /* buildnumber.xcconfig */,
-				1E45A90E1B78DB0C002CA772 /* default.xcconfig */,
-				1E7DE39619D44DC6009AB8E5 /* crashonly.xcconfig */,
-				1E27E60A1B74F01400192AE2 /* crashonlyextensions.xcconfig */,
+				B29855431D85EBAC007FF452 /* module_allfeatures.modulemap */,
 				1E85C5A11B35BD7000CE2C0D /* module_crashonly.modulemap */,
 				1E91D84619B924E600E9616D /* module_default.modulemap */,
 				B29855421D85EB5D007FF452 /* allfeatures.xcconfig */,
+				1E66CA9115D4100500F35BED /* buildnumber.xcconfig */,
+				1E7DE39619D44DC6009AB8E5 /* crashonly.xcconfig */,
+				1E27E60A1B74F01400192AE2 /* crashonlyextensions.xcconfig */,
+				1E45A90E1B78DB0C002CA772 /* default.xcconfig */,
+				1E754DC61621BC170070AB92 /* HockeySDK.xcconfig */,
 				80720BAF1D86FF680038B9C6 /* release.xcconfig */,
-				B29855431D85EBAC007FF452 /* module_allfeatures.modulemap */,
 			);
 			name = Support;
 			sourceTree = "<group>";
@@ -1771,7 +1771,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Sets the target folders and the final framework product.\nFMK_NAME=HockeySDK\nFMK_VERSION=A\nFMK_RESOURCE_BUNDLE=HockeySDKResources\nFMK_iOS8_NAME=\"HockeySDK Framework\"\n\n# Documentation\nHOCKEYSDK_DOCSET_VERSION_NAME=\"de.bitstadium.${HOCKEYSDK_DOCSET_NAME}-${VERSION_STRING}\"\n\n# Install dir will be the final output to the framework.\n# The following line creates it in the root folder of the current project.\nPRODUCTS_DIR=${SRCROOT}/../Products\nZIP_FOLDER=HockeySDK-iOS\nTEMP_DIR=${PRODUCTS_DIR}/${ZIP_FOLDER}\nINSTALL_DIR=${TEMP_DIR}/${FMK_NAME}.framework\nALL_FEATURES_INSTALL_DIR=${TEMP_DIR}/HockeySDKAllFeatures/${FMK_NAME}.framework\n\n# Working dir will be deleted after the framework creation.\nWRK_DIR=build\nDEVICE_DIR=${WRK_DIR}/ReleaseDefault-iphoneos\nSIMULATOR_DIR=${WRK_DIR}/ReleaseDefault-iphonesimulator\nDEVICE_DIR_ALL_FEATURES=${WRK_DIR}/ReleaseAllFeatures-iphoneos\nSIMULATOR_DIR_ALL_FEATURES=${WRK_DIR}/ReleaseAllFeatures-iphonesimulator\nDEVICE_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnly-iphoneos\nSIMULATOR_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnly-iphonesimulator\nDEVICE_EXTENSIONS_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnlyExtensions-iphoneos\nSIMULATOR_EXTENSIONS_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnlyExtensions-iphonesimulator\nDEVICE_WATCH_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnlyWatchOS-iphoneos\nSIMULATOR_WATCH_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnlyWatchOS-iphonesimulator\n\n# //////////////////////////////\n# Building the  SDK with all features except the Feedback Feature\n# //////////////////////////////\n\n# Building both architectures.\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseDefault\" -target \"${FMK_NAME}\" -sdk iphoneos\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseDefault\" -target \"${FMK_NAME}\" -sdk iphonesimulator\n\n# Cleaning the oldest.\nif [ -d \"${TEMP_DIR}\" ]\nthen\nrm -rf \"${TEMP_DIR}\"\nfi\n\n# Creates and renews the final product folder.\nmkdir -p \"${INSTALL_DIR}\"\nmkdir -p \"${INSTALL_DIR}/Modules\"\nmkdir -p \"${INSTALL_DIR}/Versions\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Resources\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers\"\n\n# Creates the internal links.\n# It MUST uses relative path, otherwise will not work when the folder is copied/moved.\nln -s \"${FMK_VERSION}\" \"${INSTALL_DIR}/Versions/Current\"\nln -s \"Versions/Current/Headers\" \"${INSTALL_DIR}/Headers\"\nln -s \"Versions/Current/Resources\" \"${INSTALL_DIR}/Resources\"\nln -s \"Versions/Current/${FMK_NAME}\" \"${INSTALL_DIR}/${FMK_NAME}\"\n\n# Copy the swift import file\ncp -f \"${SRCROOT}/module_default.modulemap\" \"${INSTALL_DIR}/Modules/module.modulemap\"\n\n# Copies the headers and resources files to the final product folder.\n\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITAuthenticator.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITCrashAttachment.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITCrashDetails.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITCrashManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITCrashManagerDelegate.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITCrashMetaData.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITHockeyAttachment.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITHockeyBaseManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITHockeyBaseViewController.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITHockeyManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITHockeyManagerDelegate.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITMetricsManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITStoreUpdateManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITStoreUpdateManagerDelegate.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITUpdateManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITUpdateManagerDelegate.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITUpdateViewController.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/HockeySDK.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/HockeySDKEnums.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/HockeySDKFeatureConfig.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/HockeySDKNullability.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\n\ncp -R \"${DEVICE_DIR}/${FMK_RESOURCE_BUNDLE}.bundle\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Resources/\"\n\n# Copy the patched feature header\ncp -f \"${SRCROOT}/HockeySDKFeatureConfigDefault.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/HockeySDKFeatureConfig.h\"\n\n# Uses the Lipo Tool to merge both binary files (i386 + armv6/armv7) into one Universal final product.\nlipo -create \"${DEVICE_DIR}/lib${FMK_NAME}.a\" \"${SIMULATOR_DIR}/lib${FMK_NAME}.a\" -output \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\"\n\n# Combine the CrashReporter static library into a new Hockey static library file if they are not already present and copy the public headers too\nif [ -z $(otool -L \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" | grep 'libCrashReporter') ]\nthen\nlibtool -static -o \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" \"${SRCROOT}/../Vendor/CrashReporter.framework/Versions/A/CrashReporter\"\nfi\n\nrm -r \"${WRK_DIR}\"\n\n# build embeddedframework folder and move framework into it\nmkdir \"${INSTALL_DIR}/../${FMK_NAME}.embeddedframework\"\nmv \"${INSTALL_DIR}\" \"${INSTALL_DIR}/../${FMK_NAME}.embeddedframework/${FMK_NAME}.framework\"\n\n# link Resources\nNEW_INSTALL_DIR=${TEMP_DIR}/${FMK_NAME}.embeddedframework\nmkdir \"${NEW_INSTALL_DIR}/Resources\"\nln -s \"../${FMK_NAME}.framework/Resources/${FMK_RESOURCE_BUNDLE}.bundle\" \"${NEW_INSTALL_DIR}/Resources/${FMK_RESOURCE_BUNDLE}.bundle\"\n\n# //////////////////////////////\n# Building the full featured SDK\n# //////////////////////////////\n\n# Building both architectures.\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseAllFeatures\" -target \"${FMK_NAME}\" -sdk iphoneos\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseAllFeatures\" -target \"${FMK_NAME}\" -sdk iphonesimulator\n\n# Cleaning the oldest.\n#if [ -d \"${TEMP_DIR}\" ]\n#then\n#rm -rf \"${TEMP_DIR}\"\n#fi\n\n# Creates and renews the final product folder.\nmkdir -p \"${ALL_FEATURES_INSTALL_DIR}\"\nmkdir -p \"${ALL_FEATURES_INSTALL_DIR}/Modules\"\nmkdir -p \"${ALL_FEATURES_INSTALL_DIR}/Versions\"\nmkdir -p \"${ALL_FEATURES_INSTALL_DIR}/Versions/${FMK_VERSION}\"\nmkdir -p \"${ALL_FEATURES_INSTALL_DIR}/Versions/${FMK_VERSION}/Resources\"\nmkdir -p \"${ALL_FEATURES_INSTALL_DIR}/Versions/${FMK_VERSION}/Headers\"\n\n# Creates the internal links.\n# It MUST uses relative path, otherwise will not work when the folder is copied/moved.\nln -s \"${FMK_VERSION}\" \"${ALL_FEATURES_INSTALL_DIR}/Versions/Current\"\nln -s \"Versions/Current/Headers\" \"${ALL_FEATURES_INSTALL_DIR}/Headers\"\nln -s \"Versions/Current/Resources\" \"${ALL_FEATURES_INSTALL_DIR}/Resources\"\nln -s \"Versions/Current/${FMK_NAME}\" \"${ALL_FEATURES_INSTALL_DIR}/${FMK_NAME}\"\n\n# Copy the swift import file\ncp -f \"${SRCROOT}/module_allfeatures.modulemap\" \"${ALL_FEATURES_INSTALL_DIR}/Modules/module.modulemap\"\n\n# Copies the headers and resources files to the final product folder.\ncp -R \"${SRCROOT}/build/ReleaseAllFeatures-iphoneos/include/HockeySDK/\" \"${ALL_FEATURES_INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${DEVICE_DIR_ALL_FEATURES}/${FMK_RESOURCE_BUNDLE}.bundle\" \"${ALL_FEATURES_INSTALL_DIR}/Versions/${FMK_VERSION}/Resources/\"\n\n# Use the Lipo Tool to merge both binary files (i386/x86_64 + armv7/armv7s/arm64) into one Universal final product.\nlipo -create \"${DEVICE_DIR_ALL_FEATURES}/lib${FMK_NAME}.a\" \"${SIMULATOR_DIR_ALL_FEATURES}/lib${FMK_NAME}.a\" -output \"${ALL_FEATURES_INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\"\n\n# Combine the CrashReporter static library into a new Hockey static library file if they are not already present and copy the public headers too\nif [ -z $(otool -L \"${ALL_FEATURES_INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" | grep 'libCrashReporter') ]\nthen\nlibtool -static -o \"${ALL_FEATURES_INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" \"${ALL_FEATURES_INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" \"${SRCROOT}/../Vendor/CrashReporter.framework/Versions/A/CrashReporter\"\nfi\n\nrm -r \"${WRK_DIR}\"\n\n# build embeddedframework folder and move framework into it\nmkdir \"${ALL_FEATURES_INSTALL_DIR}/../${FMK_NAME}.embeddedframework\"\nmv \"${ALL_FEATURES_INSTALL_DIR}/\" \"${ALL_FEATURES_INSTALL_DIR}/../${FMK_NAME}.embeddedframework/${FMK_NAME}.framework\"\n\n# link Resources\nNEW_INSTALL_DIR=${TEMP_DIR}/HockeySDKAllFeatures/${FMK_NAME}.embeddedframework\nmkdir \"${NEW_INSTALL_DIR}/Resources\"\nln -s \"../${FMK_NAME}.framework/Resources/${FMK_RESOURCE_BUNDLE}.bundle\" \"${NEW_INSTALL_DIR}/Resources/${FMK_RESOURCE_BUNDLE}.bundle\"\n\n# /////////////////////////////////////////////\n# Building the crash only SDK without resources\n# /////////////////////////////////////////////\n\n# Building both architectures.\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseCrashOnly\" -target \"${FMK_NAME}\" -sdk iphoneos\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseCrashOnly\" -target \"${FMK_NAME}\" -sdk iphonesimulator\n\n# Creates and renews the final product folder.\nmkdir -p \"${INSTALL_DIR}\"\nmkdir -p \"${INSTALL_DIR}/Modules\"\nmkdir -p \"${INSTALL_DIR}/Versions\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Resources\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers\"\n\n# Creates the internal links.\n# It MUST uses relative path, otherwise will not work when the folder is copied/moved.\nln -s \"${FMK_VERSION}\" \"${INSTALL_DIR}/Versions/Current\"\nln -s \"Versions/Current/Headers\" \"${INSTALL_DIR}/Headers\"\nln -s \"Versions/Current/Resources\" \"${INSTALL_DIR}/Resources\"\nln -s \"Versions/Current/${FMK_NAME}\" \"${INSTALL_DIR}/${FMK_NAME}\"\n\n# Copy the swift import file\ncp -f \"${SRCROOT}/module_crashonly.modulemap\" \"${INSTALL_DIR}/Modules/module.modulemap\"\n\n# Copies the headers without the resources files to the final product folder.\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}\"/include/HockeySDK/BITCrash*.h \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITMetricsManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyAttachment.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyBaseManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyManagerDelegate.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDK.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDKNullability.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDKEnums.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\n\n# Copy the patched feature header\ncp -f \"${SRCROOT}/HockeySDKCrashOnlyConfig.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/HockeySDKFeatureConfig.h\"\n\n# Uses the Lipo Tool to merge both binary files (i386/x86_64 + armv7/armv7s/arm64) into one Universal final product.\nlipo -create \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/lib${FMK_NAME}.a\" \"${SRCROOT}/${SIMULATOR_CRASH_ONLY_DIR}/lib${FMK_NAME}.a\" -output \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\"\n\n# Combine the CrashReporter static library into a new Hockey static library file if they are not already present and copy the public headers too\nif [ -z $(otool -L \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" | grep 'libCrashReporter') ]\nthen\nlibtool -static -o \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" \"${SRCROOT}/../Vendor/CrashReporter.framework/Versions/A/CrashReporter\"\nfi\n\n# Move the crash reporting only framework into a new folder\nmkdir \"${INSTALL_DIR}/../${FMK_NAME}CrashOnly\"\nmv \"${INSTALL_DIR}\" \"${INSTALL_DIR}/../${FMK_NAME}CrashOnly/${FMK_NAME}.framework\"\n\nrm -r \"${WRK_DIR}\"\n\n# ////////////////////////////////////////////////////////\n# Building the extensions crash only SDK without resources\n# ////////////////////////////////////////////////////////\n\n# Building both architectures.\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseCrashOnlyExtensions\" -target \"${FMK_NAME}\" -sdk iphoneos\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseCrashOnlyExtensions\" -target \"${FMK_NAME}\" -sdk iphonesimulator\n\n# Creates and renews the final product folder.\nmkdir -p \"${INSTALL_DIR}\"\nmkdir -p \"${INSTALL_DIR}/Modules\"\nmkdir -p \"${INSTALL_DIR}/Versions\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Resources\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers\"\n\n# Creates the internal links.\n# It MUST uses relative path, otherwise will not work when the folder is copied/moved.\nln -s \"${FMK_VERSION}\" \"${INSTALL_DIR}/Versions/Current\"\nln -s \"Versions/Current/Headers\" \"${INSTALL_DIR}/Headers\"\nln -s \"Versions/Current/Resources\" \"${INSTALL_DIR}/Resources\"\nln -s \"Versions/Current/${FMK_NAME}\" \"${INSTALL_DIR}/${FMK_NAME}\"\n\n# Copy the swift import file\ncp -f \"${SRCROOT}/module_crashonly.modulemap\" \"${INSTALL_DIR}/Modules/module.modulemap\"\n\n# Copies the headers without the resources files to the final product folder.\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}\"/include/HockeySDK/BITCrash*.h \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyAttachment.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyBaseManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyManagerDelegate.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDK.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDKNullability.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDKEnums.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\n\n# Copy the patched feature header\ncp -f \"${SRCROOT}/HockeySDKCrashOnlyExtensionConfig.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/HockeySDKFeatureConfig.h\"\n\n# Uses the Lipo Tool to merge both binary files (i386/x86_64 + armv7/armv7s/arm64) into one Universal final product.\nlipo -create \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/lib${FMK_NAME}.a\" \"${SRCROOT}/${SIMULATOR_EXTENSIONS_CRASH_ONLY_DIR}/lib${FMK_NAME}.a\" -output \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\"\n\n# Combine the CrashReporter static library into a new Hockey static library file if they are not already present and copy the public headers too\nif [ -z $(otool -L \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" | grep 'libCrashReporter') ]\nthen\nlibtool -static -o \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" \"${SRCROOT}/../Vendor/CrashReporter.framework/Versions/A/CrashReporter\"\nfi\n\n# Move the crash reporting only framework into a new folder\nmkdir \"${INSTALL_DIR}/../${FMK_NAME}CrashOnlyExtension\"\nmv \"${INSTALL_DIR}\" \"${INSTALL_DIR}/../${FMK_NAME}CrashOnlyExtension/${FMK_NAME}.framework\"\n\nrm -r \"${WRK_DIR}\"\n\n# Building the iOS 8 and later compatible dynamic framework\n\n# Using the iOS 8 framework binary distribution is not yet recommended, as it contains all architectures (i386, x86_64, armv7, armv7s, arm64)\n# and would be part of the app as is, which currently is about 5.2 MB in size. A proper usage would require the binary to be stripped from non-needed architectures at app build time before\n# This is why the following section is currently commented and not included in any release build\n\n## Building both architectures.\n#xcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"Release\" -target \"${FMK_iOS8_NAME}\" -sdk iphonesimulator clean build\n#xcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"Release\" -target \"${FMK_iOS8_NAME}\" -sdk iphoneos clean build\n#\n## Copy the framework structure to the destination folder\n#cp -R \"${DEVICE_DIR}/${FMK_NAME}.framework\" \"${TEMP_DIR}/\"\n#\n## Use the Lipo Tool to merge both binary files (i386/x86_64 + armv7/armv7s/arm64) into one Universal final product.\n#lipo -create \"${DEVICE_DIR}/${FMK_NAME}.framework/${FMK_NAME}\" \"${SIMULATOR_DIR}/${FMK_NAME}.framework/${FMK_NAME}\" -output \"${TEMP_DIR}/${FMK_NAME}.framework/${FMK_NAME}\"\n#\n## Move the crash reporting only framework into a new folder\n#mkdir \"${INSTALL_DIR}/../${FMK_NAME}-iOS8\"\n#mv \"${INSTALL_DIR}\" \"${INSTALL_DIR}/../${FMK_NAME}-iOS8/${FMK_NAME}.framework\"\n#\n#rm -r \"${WRK_DIR}\"\n\n\n# copy license, changelog, documentation, integration json\ncp -f \"${SRCROOT}/../Docs/Changelog-template.md\" \"${TEMP_DIR}/CHANGELOG\"\ncp -f \"${SRCROOT}/../Docs/Guide-Installation-Setup-template.md\" \"${TEMP_DIR}/README.md\"\ncp -f \"${SRCROOT}/../LICENSE\" \"${TEMP_DIR}\"\nmkdir \"${TEMP_DIR}/${HOCKEYSDK_DOCSET_VERSION_NAME}.docset\"\ncp -R \"${SRCROOT}/../documentation/docset/Contents\" \"${TEMP_DIR}/${HOCKEYSDK_DOCSET_VERSION_NAME}.docset\"\n\n# build zip\ncd \"${PRODUCTS_DIR}\"\nrm -f \"${FMK_NAME}-iOS-${VERSION_STRING}.zip\"\nzip -yr \"${FMK_NAME}-iOS-${VERSION_STRING}.zip\" \"${ZIP_FOLDER}\" -x \\*/.*\n\ncd \"${ZIP_FOLDER}\"\nrm -f \"${FMK_NAME}-iOS-documentation-${VERSION_STRING}.zip\"\nzip -yr \"${FMK_NAME}-iOS-documentation-${VERSION_STRING}.zip\" \"${HOCKEYSDK_DOCSET_VERSION_NAME}.docset\" -x \\*/.*\nmv \"${FMK_NAME}-iOS-documentation-${VERSION_STRING}.zip\" \"../\"\n";
+			shellScript = "# Sets the target folders and the final framework product.\nFMK_NAME=HockeySDK\nFMK_VERSION=A\nFMK_RESOURCE_BUNDLE=HockeySDKResources\nFMK_iOS8_NAME=\"HockeySDK Framework\"\n\n# Documentation\nHOCKEYSDK_DOCSET_VERSION_NAME=\"de.bitstadium.${HOCKEYSDK_DOCSET_NAME}-${VERSION_STRING}\"\n\n# Install dir will be the final output to the framework.\n# The following line creates it in the root folder of the current project.\nPRODUCTS_DIR=${SRCROOT}/../Products\nZIP_FOLDER=HockeySDK-iOS\nTEMP_DIR=${PRODUCTS_DIR}/${ZIP_FOLDER}\nINSTALL_DIR=${TEMP_DIR}/${FMK_NAME}.framework\nALL_FEATURES_INSTALL_DIR=${TEMP_DIR}/HockeySDKAllFeatures/${FMK_NAME}.framework\n\n# Working dir will be deleted after the framework creation.\nWRK_DIR=build\nDEVICE_DIR=${WRK_DIR}/Release-iphoneos\nSIMULATOR_DIR=${WRK_DIR}/Release-iphonesimulator\nDEVICE_DIR_ALL_FEATURES=${WRK_DIR}/ReleaseAllFeatures-iphoneos\nSIMULATOR_DIR_ALL_FEATURES=${WRK_DIR}/ReleaseAllFeatures-iphonesimulator\nDEVICE_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnly-iphoneos\nSIMULATOR_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnly-iphonesimulator\nDEVICE_EXTENSIONS_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnlyExtensions-iphoneos\nSIMULATOR_EXTENSIONS_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnlyExtensions-iphonesimulator\nDEVICE_WATCH_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnlyWatchOS-iphoneos\nSIMULATOR_WATCH_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnlyWatchOS-iphonesimulator\n\n# //////////////////////////////\n# Building the  SDK with all features except the Feedback Feature\n# //////////////////////////////\n\n# Building both architectures.\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"Release\" -target \"${FMK_NAME}\" -sdk iphoneos\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"Release\" -target \"${FMK_NAME}\" -sdk iphonesimulator\n\n# Cleaning the oldest.\nif [ -d \"${TEMP_DIR}\" ]\nthen\nrm -rf \"${TEMP_DIR}\"\nfi\n\n# Creates and renews the final product folder.\nmkdir -p \"${INSTALL_DIR}\"\nmkdir -p \"${INSTALL_DIR}/Modules\"\nmkdir -p \"${INSTALL_DIR}/Versions\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Resources\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers\"\n\n# Creates the internal links.\n# It MUST uses relative path, otherwise will not work when the folder is copied/moved.\nln -s \"${FMK_VERSION}\" \"${INSTALL_DIR}/Versions/Current\"\nln -s \"Versions/Current/Headers\" \"${INSTALL_DIR}/Headers\"\nln -s \"Versions/Current/Resources\" \"${INSTALL_DIR}/Resources\"\nln -s \"Versions/Current/${FMK_NAME}\" \"${INSTALL_DIR}/${FMK_NAME}\"\n\n# Copy the swift import file\ncp -f \"${SRCROOT}/module_default.modulemap\" \"${INSTALL_DIR}/Modules/module.modulemap\"\n\n# Copies the headers and resources files to the final product folder.\n\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITAuthenticator.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITCrashAttachment.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITCrashDetails.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITCrashManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITCrashManagerDelegate.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITCrashMetaData.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITHockeyAttachment.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITHockeyBaseManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITHockeyBaseViewController.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITHockeyManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITHockeyManagerDelegate.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITMetricsManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITStoreUpdateManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITStoreUpdateManagerDelegate.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITUpdateManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITUpdateManagerDelegate.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITUpdateViewController.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/HockeySDK.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/HockeySDKEnums.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/HockeySDKFeatureConfig.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/HockeySDKNullability.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\n\ncp -R \"${DEVICE_DIR}/${FMK_RESOURCE_BUNDLE}.bundle\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Resources/\"\n\n# Copy the patched feature header\ncp -f \"${SRCROOT}/HockeySDKFeatureConfigDefault.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/HockeySDKFeatureConfig.h\"\n\n# Uses the Lipo Tool to merge both binary files (i386 + armv6/armv7) into one Universal final product.\nlipo -create \"${DEVICE_DIR}/lib${FMK_NAME}.a\" \"${SIMULATOR_DIR}/lib${FMK_NAME}.a\" -output \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\"\n\n# Combine the CrashReporter static library into a new Hockey static library file if they are not already present and copy the public headers too\nif [ -z $(otool -L \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" | grep 'libCrashReporter') ]\nthen\nlibtool -static -o \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" \"${SRCROOT}/../Vendor/CrashReporter.framework/Versions/A/CrashReporter\"\nfi\n\nrm -r \"${WRK_DIR}\"\n\n# build embeddedframework folder and move framework into it\nmkdir \"${INSTALL_DIR}/../${FMK_NAME}.embeddedframework\"\nmv \"${INSTALL_DIR}\" \"${INSTALL_DIR}/../${FMK_NAME}.embeddedframework/${FMK_NAME}.framework\"\n\n# link Resources\nNEW_INSTALL_DIR=${TEMP_DIR}/${FMK_NAME}.embeddedframework\nmkdir \"${NEW_INSTALL_DIR}/Resources\"\nln -s \"../${FMK_NAME}.framework/Resources/${FMK_RESOURCE_BUNDLE}.bundle\" \"${NEW_INSTALL_DIR}/Resources/${FMK_RESOURCE_BUNDLE}.bundle\"\n\n# //////////////////////////////\n# Building the full featured SDK\n# //////////////////////////////\n\n# Building both architectures.\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseAllFeatures\" -target \"${FMK_NAME}\" -sdk iphoneos\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseAllFeatures\" -target \"${FMK_NAME}\" -sdk iphonesimulator\n\n# Cleaning the oldest.\n#if [ -d \"${TEMP_DIR}\" ]\n#then\n#rm -rf \"${TEMP_DIR}\"\n#fi\n\n# Creates and renews the final product folder.\nmkdir -p \"${ALL_FEATURES_INSTALL_DIR}\"\nmkdir -p \"${ALL_FEATURES_INSTALL_DIR}/Modules\"\nmkdir -p \"${ALL_FEATURES_INSTALL_DIR}/Versions\"\nmkdir -p \"${ALL_FEATURES_INSTALL_DIR}/Versions/${FMK_VERSION}\"\nmkdir -p \"${ALL_FEATURES_INSTALL_DIR}/Versions/${FMK_VERSION}/Resources\"\nmkdir -p \"${ALL_FEATURES_INSTALL_DIR}/Versions/${FMK_VERSION}/Headers\"\n\n# Creates the internal links.\n# It MUST uses relative path, otherwise will not work when the folder is copied/moved.\nln -s \"${FMK_VERSION}\" \"${ALL_FEATURES_INSTALL_DIR}/Versions/Current\"\nln -s \"Versions/Current/Headers\" \"${ALL_FEATURES_INSTALL_DIR}/Headers\"\nln -s \"Versions/Current/Resources\" \"${ALL_FEATURES_INSTALL_DIR}/Resources\"\nln -s \"Versions/Current/${FMK_NAME}\" \"${ALL_FEATURES_INSTALL_DIR}/${FMK_NAME}\"\n\n# Copy the swift import file\ncp -f \"${SRCROOT}/module_allfeatures.modulemap\" \"${ALL_FEATURES_INSTALL_DIR}/Modules/module.modulemap\"\n\n# Copies the headers and resources files to the final product folder.\ncp -R \"${SRCROOT}/build/ReleaseAllFeatures-iphoneos/include/HockeySDK/\" \"${ALL_FEATURES_INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${DEVICE_DIR_ALL_FEATURES}/${FMK_RESOURCE_BUNDLE}.bundle\" \"${ALL_FEATURES_INSTALL_DIR}/Versions/${FMK_VERSION}/Resources/\"\n\n# Use the Lipo Tool to merge both binary files (i386/x86_64 + armv7/armv7s/arm64) into one Universal final product.\nlipo -create \"${DEVICE_DIR_ALL_FEATURES}/lib${FMK_NAME}.a\" \"${SIMULATOR_DIR_ALL_FEATURES}/lib${FMK_NAME}.a\" -output \"${ALL_FEATURES_INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\"\n\n# Combine the CrashReporter static library into a new Hockey static library file if they are not already present and copy the public headers too\nif [ -z $(otool -L \"${ALL_FEATURES_INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" | grep 'libCrashReporter') ]\nthen\nlibtool -static -o \"${ALL_FEATURES_INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" \"${ALL_FEATURES_INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" \"${SRCROOT}/../Vendor/CrashReporter.framework/Versions/A/CrashReporter\"\nfi\n\nrm -r \"${WRK_DIR}\"\n\n# build embeddedframework folder and move framework into it\nmkdir \"${ALL_FEATURES_INSTALL_DIR}/../${FMK_NAME}.embeddedframework\"\nmv \"${ALL_FEATURES_INSTALL_DIR}/\" \"${ALL_FEATURES_INSTALL_DIR}/../${FMK_NAME}.embeddedframework/${FMK_NAME}.framework\"\n\n# link Resources\nNEW_INSTALL_DIR=${TEMP_DIR}/HockeySDKAllFeatures/${FMK_NAME}.embeddedframework\nmkdir \"${NEW_INSTALL_DIR}/Resources\"\nln -s \"../${FMK_NAME}.framework/Resources/${FMK_RESOURCE_BUNDLE}.bundle\" \"${NEW_INSTALL_DIR}/Resources/${FMK_RESOURCE_BUNDLE}.bundle\"\n\n# /////////////////////////////////////////////\n# Building the crash only SDK without resources\n# /////////////////////////////////////////////\n\n# Building both architectures.\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseCrashOnly\" -target \"${FMK_NAME}\" -sdk iphoneos\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseCrashOnly\" -target \"${FMK_NAME}\" -sdk iphonesimulator\n\n# Creates and renews the final product folder.\nmkdir -p \"${INSTALL_DIR}\"\nmkdir -p \"${INSTALL_DIR}/Modules\"\nmkdir -p \"${INSTALL_DIR}/Versions\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Resources\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers\"\n\n# Creates the internal links.\n# It MUST uses relative path, otherwise will not work when the folder is copied/moved.\nln -s \"${FMK_VERSION}\" \"${INSTALL_DIR}/Versions/Current\"\nln -s \"Versions/Current/Headers\" \"${INSTALL_DIR}/Headers\"\nln -s \"Versions/Current/Resources\" \"${INSTALL_DIR}/Resources\"\nln -s \"Versions/Current/${FMK_NAME}\" \"${INSTALL_DIR}/${FMK_NAME}\"\n\n# Copy the swift import file\ncp -f \"${SRCROOT}/module_crashonly.modulemap\" \"${INSTALL_DIR}/Modules/module.modulemap\"\n\n# Copies the headers without the resources files to the final product folder.\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}\"/include/HockeySDK/BITCrash*.h \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITMetricsManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyAttachment.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyBaseManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyManagerDelegate.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDK.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDKNullability.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDKEnums.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\n\n# Copy the patched feature header\ncp -f \"${SRCROOT}/HockeySDKCrashOnlyConfig.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/HockeySDKFeatureConfig.h\"\n\n# Uses the Lipo Tool to merge both binary files (i386/x86_64 + armv7/armv7s/arm64) into one Universal final product.\nlipo -create \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/lib${FMK_NAME}.a\" \"${SRCROOT}/${SIMULATOR_CRASH_ONLY_DIR}/lib${FMK_NAME}.a\" -output \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\"\n\n# Combine the CrashReporter static library into a new Hockey static library file if they are not already present and copy the public headers too\nif [ -z $(otool -L \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" | grep 'libCrashReporter') ]\nthen\nlibtool -static -o \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" \"${SRCROOT}/../Vendor/CrashReporter.framework/Versions/A/CrashReporter\"\nfi\n\n# Move the crash reporting only framework into a new folder\nmkdir \"${INSTALL_DIR}/../${FMK_NAME}CrashOnly\"\nmv \"${INSTALL_DIR}\" \"${INSTALL_DIR}/../${FMK_NAME}CrashOnly/${FMK_NAME}.framework\"\n\nrm -r \"${WRK_DIR}\"\n\n# ////////////////////////////////////////////////////////\n# Building the extensions crash only SDK without resources\n# ////////////////////////////////////////////////////////\n\n# Building both architectures.\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseCrashOnlyExtensions\" -target \"${FMK_NAME}\" -sdk iphoneos\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseCrashOnlyExtensions\" -target \"${FMK_NAME}\" -sdk iphonesimulator\n\n# Creates and renews the final product folder.\nmkdir -p \"${INSTALL_DIR}\"\nmkdir -p \"${INSTALL_DIR}/Modules\"\nmkdir -p \"${INSTALL_DIR}/Versions\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Resources\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers\"\n\n# Creates the internal links.\n# It MUST uses relative path, otherwise will not work when the folder is copied/moved.\nln -s \"${FMK_VERSION}\" \"${INSTALL_DIR}/Versions/Current\"\nln -s \"Versions/Current/Headers\" \"${INSTALL_DIR}/Headers\"\nln -s \"Versions/Current/Resources\" \"${INSTALL_DIR}/Resources\"\nln -s \"Versions/Current/${FMK_NAME}\" \"${INSTALL_DIR}/${FMK_NAME}\"\n\n# Copy the swift import file\ncp -f \"${SRCROOT}/module_crashonly.modulemap\" \"${INSTALL_DIR}/Modules/module.modulemap\"\n\n# Copies the headers without the resources files to the final product folder.\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}\"/include/HockeySDK/BITCrash*.h \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyAttachment.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyBaseManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyManagerDelegate.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDK.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDKNullability.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDKEnums.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\n\n# Copy the patched feature header\ncp -f \"${SRCROOT}/HockeySDKCrashOnlyExtensionConfig.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/HockeySDKFeatureConfig.h\"\n\n# Uses the Lipo Tool to merge both binary files (i386/x86_64 + armv7/armv7s/arm64) into one Universal final product.\nlipo -create \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/lib${FMK_NAME}.a\" \"${SRCROOT}/${SIMULATOR_EXTENSIONS_CRASH_ONLY_DIR}/lib${FMK_NAME}.a\" -output \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\"\n\n# Combine the CrashReporter static library into a new Hockey static library file if they are not already present and copy the public headers too\nif [ -z $(otool -L \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" | grep 'libCrashReporter') ]\nthen\nlibtool -static -o \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" \"${SRCROOT}/../Vendor/CrashReporter.framework/Versions/A/CrashReporter\"\nfi\n\n# Move the crash reporting only framework into a new folder\nmkdir \"${INSTALL_DIR}/../${FMK_NAME}CrashOnlyExtension\"\nmv \"${INSTALL_DIR}\" \"${INSTALL_DIR}/../${FMK_NAME}CrashOnlyExtension/${FMK_NAME}.framework\"\n\nrm -r \"${WRK_DIR}\"\n\n# Building the iOS 8 and later compatible dynamic framework\n\n# Using the iOS 8 framework binary distribution is not yet recommended, as it contains all architectures (i386, x86_64, armv7, armv7s, arm64)\n# and would be part of the app as is, which currently is about 5.2 MB in size. A proper usage would require the binary to be stripped from non-needed architectures at app build time before\n# This is why the following section is currently commented and not included in any release build\n\n## Building both architectures.\n#xcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"Release\" -target \"${FMK_iOS8_NAME}\" -sdk iphonesimulator clean build\n#xcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"Release\" -target \"${FMK_iOS8_NAME}\" -sdk iphoneos clean build\n#\n## Copy the framework structure to the destination folder\n#cp -R \"${DEVICE_DIR}/${FMK_NAME}.framework\" \"${TEMP_DIR}/\"\n#\n## Use the Lipo Tool to merge both binary files (i386/x86_64 + armv7/armv7s/arm64) into one Universal final product.\n#lipo -create \"${DEVICE_DIR}/${FMK_NAME}.framework/${FMK_NAME}\" \"${SIMULATOR_DIR}/${FMK_NAME}.framework/${FMK_NAME}\" -output \"${TEMP_DIR}/${FMK_NAME}.framework/${FMK_NAME}\"\n#\n## Move the crash reporting only framework into a new folder\n#mkdir \"${INSTALL_DIR}/../${FMK_NAME}-iOS8\"\n#mv \"${INSTALL_DIR}\" \"${INSTALL_DIR}/../${FMK_NAME}-iOS8/${FMK_NAME}.framework\"\n#\n#rm -r \"${WRK_DIR}\"\n\n\n# copy license, changelog, documentation, integration json\ncp -f \"${SRCROOT}/../Docs/Changelog-template.md\" \"${TEMP_DIR}/CHANGELOG\"\ncp -f \"${SRCROOT}/../Docs/Guide-Installation-Setup-template.md\" \"${TEMP_DIR}/README.md\"\ncp -f \"${SRCROOT}/../LICENSE\" \"${TEMP_DIR}\"\nmkdir \"${TEMP_DIR}/${HOCKEYSDK_DOCSET_VERSION_NAME}.docset\"\ncp -R \"${SRCROOT}/../documentation/docset/Contents\" \"${TEMP_DIR}/${HOCKEYSDK_DOCSET_VERSION_NAME}.docset\"\n\n# build zip\ncd \"${PRODUCTS_DIR}\"\nrm -f \"${FMK_NAME}-iOS-${VERSION_STRING}.zip\"\nzip -yr \"${FMK_NAME}-iOS-${VERSION_STRING}.zip\" \"${ZIP_FOLDER}\" -x \\*/.*\n\ncd \"${ZIP_FOLDER}\"\nrm -f \"${FMK_NAME}-iOS-documentation-${VERSION_STRING}.zip\"\nzip -yr \"${FMK_NAME}-iOS-documentation-${VERSION_STRING}.zip\" \"${HOCKEYSDK_DOCSET_VERSION_NAME}.docset\" -x \\*/.*\nmv \"${FMK_NAME}-iOS-documentation-${VERSION_STRING}.zip\" \"../\"\n";
 		};
 		1E8E66B215BC3D8200632A2E /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -2343,13 +2343,13 @@
 			};
 			name = Debug;
 		};
-		1E4F61EC1621AD970033EFC5 /* ReleaseDefault */ = {
+		1E4F61EC1621AD970033EFC5 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
 				PRODUCT_NAME = HockeySDK.framework;
 			};
-			name = ReleaseDefault;
+			name = Release;
 		};
 		1E5954F015B6F24A00A03429 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -2378,7 +2378,7 @@
 			};
 			name = Debug;
 		};
-		1E5954F115B6F24A00A03429 /* ReleaseDefault */ = {
+		1E5954F115B6F24A00A03429 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
@@ -2404,7 +2404,7 @@
 				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
 				WATCHOS_DEPLOYMENT_TARGET = 2.0;
 			};
-			name = ReleaseDefault;
+			name = Release;
 		};
 		1E59551515B6F45800A03429 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -2419,7 +2419,7 @@
 			};
 			name = Debug;
 		};
-		1E59551615B6F45800A03429 /* ReleaseDefault */ = {
+		1E59551615B6F45800A03429 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				GCC_THUMB_SUPPORT = NO;
@@ -2430,7 +2430,7 @@
 				SKIP_INSTALL = YES;
 				WRAPPER_EXTENSION = bundle;
 			};
-			name = ReleaseDefault;
+			name = Release;
 		};
 		1E5A45A016F0DFC200B55C04 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -2495,7 +2495,7 @@
 			};
 			name = Debug;
 		};
-		1E5A45A116F0DFC200B55C04 /* ReleaseDefault */ = {
+		1E5A45A116F0DFC200B55C04 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
@@ -2553,7 +2553,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VALIDATE_PRODUCT = YES;
 			};
-			name = ReleaseDefault;
+			name = Release;
 		};
 		1E7DE39019D44D88009AB8E5 /* ReleaseCrashOnly */ = {
 			isa = XCBuildConfiguration;
@@ -2726,14 +2726,14 @@
 			};
 			name = Debug;
 		};
-		1E8E66AF15BC3D7700632A2E /* ReleaseDefault */ = {
+		1E8E66AF15BC3D7700632A2E /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				GCC_THUMB_SUPPORT = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = ReleaseDefault;
+			name = Release;
 		};
 		1EB617531B0A30480035A986 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -2783,7 +2783,7 @@
 			};
 			name = Debug;
 		};
-		1EB617551B0A30480035A986 /* ReleaseDefault */ = {
+		1EB617551B0A30480035A986 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
@@ -2831,7 +2831,7 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = ReleaseDefault;
+			name = Release;
 		};
 		1EB617561B0A30480035A986 /* ReleaseCrashOnly */ = {
 			isa = XCBuildConfiguration;
@@ -2953,7 +2953,7 @@
 			};
 			name = Debug;
 		};
-		1EB6175A1B0A30480035A986 /* ReleaseDefault */ = {
+		1EB6175A1B0A30480035A986 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
@@ -3018,7 +3018,7 @@
 				VALIDATE_PRODUCT = YES;
 				VALID_ARCHS = "armv7 arm64";
 			};
-			name = ReleaseDefault;
+			name = Release;
 		};
 		1EB6175B1B0A30480035A986 /* ReleaseCrashOnly */ = {
 			isa = XCBuildConfiguration;
@@ -3417,7 +3417,7 @@
 			};
 			name = Debug;
 		};
-		E400563D148D79B500EB22B9 /* ReleaseDefault */ = {
+		E400563D148D79B500EB22B9 /* Release */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 1E45A90E1B78DB0C002CA772 /* default.xcconfig */;
 			buildSettings = {
@@ -3459,7 +3459,7 @@
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = NO;
 			};
-			name = ReleaseDefault;
+			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
@@ -3468,7 +3468,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1E4F61EB1621AD970033EFC5 /* Debug */,
-				1E4F61EC1621AD970033EFC5 /* ReleaseDefault */,
+				1E4F61EC1621AD970033EFC5 /* Release */,
 				B298554B1D85EBC9007FF452 /* ReleaseAllFeatures */,
 				1E7DE39419D44D88009AB8E5 /* ReleaseCrashOnly */,
 				1E27E6131B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
@@ -3480,7 +3480,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1E5954F015B6F24A00A03429 /* Debug */,
-				1E5954F115B6F24A00A03429 /* ReleaseDefault */,
+				1E5954F115B6F24A00A03429 /* Release */,
 				B29855451D85EBC9007FF452 /* ReleaseAllFeatures */,
 				1E7DE39119D44D88009AB8E5 /* ReleaseCrashOnly */,
 				1E27E60D1B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
@@ -3492,7 +3492,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1E59551515B6F45800A03429 /* Debug */,
-				1E59551615B6F45800A03429 /* ReleaseDefault */,
+				1E59551615B6F45800A03429 /* Release */,
 				B29855471D85EBC9007FF452 /* ReleaseAllFeatures */,
 				1E7DE39219D44D88009AB8E5 /* ReleaseCrashOnly */,
 				1E27E60F1B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
@@ -3504,7 +3504,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1E5A45A016F0DFC200B55C04 /* Debug */,
-				1E5A45A116F0DFC200B55C04 /* ReleaseDefault */,
+				1E5A45A116F0DFC200B55C04 /* Release */,
 				B29855461D85EBC9007FF452 /* ReleaseAllFeatures */,
 				1E7DE39519D44D88009AB8E5 /* ReleaseCrashOnly */,
 				1E27E60E1B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
@@ -3516,7 +3516,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1E8E66AE15BC3D7700632A2E /* Debug */,
-				1E8E66AF15BC3D7700632A2E /* ReleaseDefault */,
+				1E8E66AF15BC3D7700632A2E /* Release */,
 				B298554A1D85EBC9007FF452 /* ReleaseAllFeatures */,
 				1E7DE39319D44D88009AB8E5 /* ReleaseCrashOnly */,
 				1E27E6121B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
@@ -3528,7 +3528,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1EB617531B0A30480035A986 /* Debug */,
-				1EB617551B0A30480035A986 /* ReleaseDefault */,
+				1EB617551B0A30480035A986 /* Release */,
 				B29855481D85EBC9007FF452 /* ReleaseAllFeatures */,
 				1EB617561B0A30480035A986 /* ReleaseCrashOnly */,
 				1E27E6101B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
@@ -3540,7 +3540,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1EB617581B0A30480035A986 /* Debug */,
-				1EB6175A1B0A30480035A986 /* ReleaseDefault */,
+				1EB6175A1B0A30480035A986 /* Release */,
 				B29855491D85EBC9007FF452 /* ReleaseAllFeatures */,
 				1EB6175B1B0A30480035A986 /* ReleaseCrashOnly */,
 				1E27E6111B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
@@ -3552,7 +3552,7 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				E400563C148D79B500EB22B9 /* Debug */,
-				E400563D148D79B500EB22B9 /* ReleaseDefault */,
+				E400563D148D79B500EB22B9 /* Release */,
 				B29855441D85EBC9007FF452 /* ReleaseAllFeatures */,
 				1E7DE39019D44D88009AB8E5 /* ReleaseCrashOnly */,
 				1E27E60C1B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,

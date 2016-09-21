@@ -10,3 +10,5 @@ VALID_ARCHS = $(BIT_ARM_ARCHS)
 OTHER_CFLAGS = $(HOCKEYSDK_WARNING_FLAGS)
 OTHER_CFLAGS[sdk=iphoneos9.*] = $(HOCKEYSDK_WARNING_FLAGS) -fembed-bitcode
 OTHER_CFLAGS[sdk=iphonesimulator9.*] = $(HOCKEYSDK_WARNING_FLAGS) -fembed-bitcode-marker
+OTHER_CFLAGS[sdk=iphoneos10.*] = $(HOCKEYSDK_WARNING_FLAGS) -fembed-bitcode
+OTHER_CFLAGS[sdk=iphonesimulator10.*] = $(HOCKEYSDK_WARNING_FLAGS) -fembed-bitcode-marker
