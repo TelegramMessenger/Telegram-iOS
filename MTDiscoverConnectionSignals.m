@@ -9,6 +9,8 @@
 #import "MTQueue.h"
 #import "MTDatacenterAddress.h"
 
+#import "MTSignal.h"
+
 #import <netinet/in.h>
 #import <arpa/inet.h>
 

@@ -34,6 +34,9 @@
 
 #import "MTDiscoverConnectionSignals.h"
 
+#import "MTDisposable.h"
+#import "MTSignal.h"
+
 @implementation MTContextBlockChangeListener
 
 - (void)contextIsPasswordRequiredUpdated:(MTContext *)context datacenterId:(NSInteger)datacenterId

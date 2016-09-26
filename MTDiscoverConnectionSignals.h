@@ -1,7 +1,7 @@
 #import <Foundation/Foundation.h>
 
-#import "MTSignal.h"
-#import "MTContext.h"
+@class MTContext;
+@class MTSignal;
 
 @interface MTDiscoverConnectionSignals : NSObject
 
