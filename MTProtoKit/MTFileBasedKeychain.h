@@ -1,7 +1,9 @@
 #import <Foundation/Foundation.h>
 
-#ifdef MtProtoKitDynamicFramework
+#if defined(MtProtoKitDynamicFramework)
 #   import <MTProtoKitDynamic/MTKeychain.h>
+#elif defined(MtProtoKitMacFramework)
+#   import <MTProtoKitMac/MTKeychain.h>
 #else
 #   import <MTProtoKit/MTKeychain.h>
 #endif

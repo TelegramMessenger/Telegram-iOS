@@ -8,9 +8,12 @@
 
 #import <Foundation/Foundation.h>
 
-#ifdef MtProtoKitDynamicFramework
+#if defined(MtProtoKitDynamicFramework)
 #   import <MTProtoKitDynamic/MTExportedAuthorizationData.h>
 #   import <MTProtoKitDynamic/MTDatacenterAddressListData.h>
+#elif defined(MtProtoKitMacFramework)
+#   import <MTProtoKitMac/MTExportedAuthorizationData.h>
+#   import <MTProtoKitMac/MTDatacenterAddressListData.h>
 #else
 #   import <MTProtoKit/MTExportedAuthorizationData.h>
 #   import <MTProtoKit/MTDatacenterAddressListData.h>

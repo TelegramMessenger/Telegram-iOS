@@ -6,8 +6,10 @@
  * Copyright Peter Iakovlev, 2013.
  */
 
-#ifdef MtProtoKitDynamicFramework
+#if defined(MtProtoKitDynamicFramework)
 #   import <MTProtoKitDynamic/MTMessageService.h>
+#elif defined(MtProtoKitMacFramework)
+#   import <MTProtoKitMac/MTMessageService.h>
 #else
 #   import <MTProtoKit/MTMessageService.h>
 #endif

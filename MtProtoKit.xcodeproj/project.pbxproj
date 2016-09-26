@@ -21,6 +21,11 @@
 		D079AB9C1AF39B8000076F59 /* MtProtoKitMac.h in Headers */ = {isa = PBXBuildFile; fileRef = D079AB9B1AF39B8000076F59 /* MtProtoKitMac.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D09A59581B582EFF00FC3724 /* MTFileBasedKeychain.h in Headers */ = {isa = PBXBuildFile; fileRef = D09A59561B582EFF00FC3724 /* MTFileBasedKeychain.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D09A59591B582EFF00FC3724 /* MTFileBasedKeychain.m in Sources */ = {isa = PBXBuildFile; fileRef = D09A59571B582EFF00FC3724 /* MTFileBasedKeychain.m */; };
+		D0B418751D7E04B7004562A4 /* CFNetwork.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B418741D7E04B7004562A4 /* CFNetwork.framework */; };
+		D0B418771D7E04C3004562A4 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B418761D7E04C3004562A4 /* SystemConfiguration.framework */; };
+		D0B418791D7E04CB004562A4 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B418781D7E04CB004562A4 /* Security.framework */; };
+		D0B4187B1D7E04CF004562A4 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B4187A1D7E04CF004562A4 /* libz.tbd */; };
+		D0B4187D1D7E04EB004562A4 /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B4187C1D7E04EB004562A4 /* libcrypto.a */; };
 		D0CAF2CB1D75E24C0011F558 /* MTSignal.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2C91D75E24C0011F558 /* MTSignal.h */; };
 		D0CAF2CC1D75E24C0011F558 /* MTSignal.m in Sources */ = {isa = PBXBuildFile; fileRef = D0CAF2CA1D75E24C0011F558 /* MTSignal.m */; };
 		D0CAF2CD1D75E2570011F558 /* MTSignal.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2C91D75E24C0011F558 /* MTSignal.h */; };
@@ -406,10 +411,10 @@
 		D0CD98D71D74BAAA00F41187 /* MTHttpWorkerBehaviour.h in Headers */ = {isa = PBXBuildFile; fileRef = D063A3AB18B1650F00C65116 /* MTHttpWorkerBehaviour.h */; };
 		D0CD98D81D74BAAD00F41187 /* MTHttpWorkerBehaviour.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A3AC18B1650F00C65116 /* MTHttpWorkerBehaviour.m */; };
 		D0CD98D91D74BAAD00F41187 /* MTHttpWorkerBehaviour.m in Sources */ = {isa = PBXBuildFile; fileRef = D063A3AC18B1650F00C65116 /* MTHttpWorkerBehaviour.m */; };
-		D0CD98DC1D74BAEA00F41187 /* AFJSONUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A851818AFF2F8007F1076 /* AFJSONUtilities.m */; };
-		D0CD98DD1D74BAEA00F41187 /* AFHTTPClient.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84EA18AFF259007F1076 /* AFHTTPClient.m */; };
-		D0CD98DE1D74BAEA00F41187 /* AFHTTPRequestOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84EC18AFF259007F1076 /* AFHTTPRequestOperation.m */; };
-		D0CD98DF1D74BAEA00F41187 /* AFURLConnectionOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84F518AFF259007F1076 /* AFURLConnectionOperation.m */; };
+		D0CD98DC1D74BAEA00F41187 /* AFJSONUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A851818AFF2F8007F1076 /* AFJSONUtilities.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		D0CD98DD1D74BAEA00F41187 /* AFHTTPClient.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84EA18AFF259007F1076 /* AFHTTPClient.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		D0CD98DE1D74BAEA00F41187 /* AFHTTPRequestOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84EC18AFF259007F1076 /* AFHTTPRequestOperation.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		D0CD98DF1D74BAEA00F41187 /* AFURLConnectionOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84F518AFF259007F1076 /* AFURLConnectionOperation.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		D0CD98E01D74BAEB00F41187 /* AFJSONUtilities.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A851818AFF2F8007F1076 /* AFJSONUtilities.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		D0CD98E11D74BAEB00F41187 /* AFHTTPClient.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84EA18AFF259007F1076 /* AFHTTPClient.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		D0CD98E21D74BAEB00F41187 /* AFHTTPRequestOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D05A84EC18AFF259007F1076 /* AFHTTPRequestOperation.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
@@ -668,6 +673,11 @@
 		D079ABA81AF39B8000076F59 /* MtProtoKitMacTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MtProtoKitMacTests.m; sourceTree = "<group>"; };
 		D09A59561B582EFF00FC3724 /* MTFileBasedKeychain.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTFileBasedKeychain.h; path = MTProtoKit/MTFileBasedKeychain.h; sourceTree = "<group>"; };
 		D09A59571B582EFF00FC3724 /* MTFileBasedKeychain.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTFileBasedKeychain.m; path = MTProtoKit/MTFileBasedKeychain.m; sourceTree = "<group>"; };
+		D0B418741D7E04B7004562A4 /* CFNetwork.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CFNetwork.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk/System/Library/Frameworks/CFNetwork.framework; sourceTree = DEVELOPER_DIR; };
+		D0B418761D7E04C3004562A4 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk/System/Library/Frameworks/SystemConfiguration.framework; sourceTree = DEVELOPER_DIR; };
+		D0B418781D7E04CB004562A4 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk/System/Library/Frameworks/Security.framework; sourceTree = DEVELOPER_DIR; };
+		D0B4187A1D7E04CF004562A4 /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk/usr/lib/libz.tbd; sourceTree = DEVELOPER_DIR; };
+		D0B4187C1D7E04EB004562A4 /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcrypto.a; path = openssl/OSX/libcrypto.a; sourceTree = "<group>"; };
 		D0CAF2C91D75E24C0011F558 /* MTSignal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MTSignal.h; sourceTree = "<group>"; };
 		D0CAF2CA1D75E24C0011F558 /* MTSignal.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MTSignal.m; sourceTree = "<group>"; };
 		D0CAF2D11D75E26D0011F558 /* MTSubscriber.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MTSubscriber.h; sourceTree = "<group>"; };
@@ -764,6 +774,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0B4187D1D7E04EB004562A4 /* libcrypto.a in Frameworks */,
+				D0B4187B1D7E04CF004562A4 /* libz.tbd in Frameworks */,
+				D0B418791D7E04CB004562A4 /* Security.framework in Frameworks */,
+				D0B418771D7E04C3004562A4 /* SystemConfiguration.framework in Frameworks */,
+				D0B418751D7E04B7004562A4 /* CFNetwork.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -854,6 +869,11 @@
 		D05A831618AFB3F9007F1076 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0B4187C1D7E04EB004562A4 /* libcrypto.a */,
+				D0B4187A1D7E04CF004562A4 /* libz.tbd */,
+				D0B418781D7E04CB004562A4 /* Security.framework */,
+				D0B418761D7E04C3004562A4 /* SystemConfiguration.framework */,
+				D0B418741D7E04B7004562A4 /* CFNetwork.framework */,
 				D0CAF2F01D75F4EA0011F558 /* CFNetwork.framework */,
 				D0CAF2EE1D75F4E20011F558 /* UIKit.framework */,
 				D0CAF2EB1D75F4520011F558 /* Security.framework */,
@@ -2300,13 +2320,19 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
+				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitMac/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
-				MACH_O_TYPE = staticlib;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/openssl/OSX",
+				);
+				MACH_O_TYPE = mh_dylib;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = "-DMtProtoKitMacFramework=1";
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -2331,12 +2357,18 @@
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				FRAMEWORK_VERSION = A;
 				GCC_NO_COMMON_BLOCKS = YES;
+				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitMac/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
-				MACH_O_TYPE = staticlib;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/openssl/OSX",
+				);
+				MACH_O_TYPE = mh_dylib;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CFLAGS = "-DMtProtoKitMacFramework=1";
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -2452,12 +2484,18 @@
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				FRAMEWORK_VERSION = A;
 				GCC_NO_COMMON_BLOCKS = YES;
+				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitMac/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/Frameworks";
-				MACH_O_TYPE = staticlib;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/openssl/OSX",
+				);
+				MACH_O_TYPE = mh_dylib;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
 				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CFLAGS = "-DMtProtoKitMacFramework=1";
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
