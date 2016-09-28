@@ -34,8 +34,16 @@
 
 #import "MTDiscoverConnectionSignals.h"
 
-#import "MTDisposable.h"
-#import "MTSignal.h"
+#if defined(MtProtoKitDynamicFramework)
+#   import <MTProtoKitDynamic/MTDisposable.h>
+#   import <MTProtoKitDynamic/MTSignal.h>
+#elif defined(MtProtoKitMacFramework)
+#   import <MTProtoKitMac/MTDisposable.h>
+#   import <MTProtoKitMac/MTSignal.h>
+#else
+#   import <MTProtoKit/MTDisposable.h>
+#   import <MTProtoKit/MTSignal.h>
+#endif
 
 @implementation MTContextBlockChangeListener
 

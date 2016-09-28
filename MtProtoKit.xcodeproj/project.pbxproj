@@ -16,6 +16,12 @@
 		D010DB7E1D70ABEE0012AD96 /* MTRsa.m in Sources */ = {isa = PBXBuildFile; fileRef = D010DB7C1D70ABEE0012AD96 /* MTRsa.m */; };
 		D010DB811D70B3B90012AD96 /* MTAes.h in Headers */ = {isa = PBXBuildFile; fileRef = D010DB7F1D70B3B90012AD96 /* MTAes.h */; };
 		D010DB821D70B3B90012AD96 /* MTAes.m in Sources */ = {isa = PBXBuildFile; fileRef = D010DB801D70B3B90012AD96 /* MTAes.m */; };
+		D020FAFA1D994E3100F279AA /* MTHttpRequestOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = D020FAF81D994E3100F279AA /* MTHttpRequestOperation.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D020FAFB1D994E3100F279AA /* MTHttpRequestOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = D020FAF81D994E3100F279AA /* MTHttpRequestOperation.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D020FAFC1D994E3100F279AA /* MTHttpRequestOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = D020FAF81D994E3100F279AA /* MTHttpRequestOperation.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D020FAFD1D994E3100F279AA /* MTHttpRequestOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D020FAF91D994E3100F279AA /* MTHttpRequestOperation.m */; };
+		D020FAFE1D994E3100F279AA /* MTHttpRequestOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D020FAF91D994E3100F279AA /* MTHttpRequestOperation.m */; };
+		D020FAFF1D994E3100F279AA /* MTHttpRequestOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = D020FAF91D994E3100F279AA /* MTHttpRequestOperation.m */; };
 		D0580AC21B0F3E9C00E8235B /* MTDiscoverConnectionSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = D0580AC01B0F3E9C00E8235B /* MTDiscoverConnectionSignals.h */; };
 		D0580AC31B0F3E9C00E8235B /* MTDiscoverConnectionSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = D0580AC11B0F3E9C00E8235B /* MTDiscoverConnectionSignals.m */; };
 		D079AB9C1AF39B8000076F59 /* MtProtoKitMac.h in Headers */ = {isa = PBXBuildFile; fileRef = D079AB9B1AF39B8000076F59 /* MtProtoKitMac.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -26,28 +32,28 @@
 		D0B418791D7E04CB004562A4 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B418781D7E04CB004562A4 /* Security.framework */; };
 		D0B4187B1D7E04CF004562A4 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B4187A1D7E04CF004562A4 /* libz.tbd */; };
 		D0B4187D1D7E04EB004562A4 /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B4187C1D7E04EB004562A4 /* libcrypto.a */; };
-		D0CAF2CB1D75E24C0011F558 /* MTSignal.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2C91D75E24C0011F558 /* MTSignal.h */; };
+		D0CAF2CB1D75E24C0011F558 /* MTSignal.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2C91D75E24C0011F558 /* MTSignal.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0CAF2CC1D75E24C0011F558 /* MTSignal.m in Sources */ = {isa = PBXBuildFile; fileRef = D0CAF2CA1D75E24C0011F558 /* MTSignal.m */; };
-		D0CAF2CD1D75E2570011F558 /* MTSignal.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2C91D75E24C0011F558 /* MTSignal.h */; };
-		D0CAF2CE1D75E2580011F558 /* MTSignal.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2C91D75E24C0011F558 /* MTSignal.h */; };
+		D0CAF2CD1D75E2570011F558 /* MTSignal.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2C91D75E24C0011F558 /* MTSignal.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0CAF2CE1D75E2580011F558 /* MTSignal.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2C91D75E24C0011F558 /* MTSignal.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0CAF2CF1D75E25B0011F558 /* MTSignal.m in Sources */ = {isa = PBXBuildFile; fileRef = D0CAF2CA1D75E24C0011F558 /* MTSignal.m */; };
 		D0CAF2D01D75E25B0011F558 /* MTSignal.m in Sources */ = {isa = PBXBuildFile; fileRef = D0CAF2CA1D75E24C0011F558 /* MTSignal.m */; };
-		D0CAF2D31D75E26D0011F558 /* MTSubscriber.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2D11D75E26D0011F558 /* MTSubscriber.h */; };
+		D0CAF2D31D75E26D0011F558 /* MTSubscriber.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2D11D75E26D0011F558 /* MTSubscriber.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0CAF2D41D75E26D0011F558 /* MTSubscriber.m in Sources */ = {isa = PBXBuildFile; fileRef = D0CAF2D21D75E26D0011F558 /* MTSubscriber.m */; };
-		D0CAF2D71D75E2840011F558 /* MTDisposable.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2D51D75E2840011F558 /* MTDisposable.h */; };
+		D0CAF2D71D75E2840011F558 /* MTDisposable.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2D51D75E2840011F558 /* MTDisposable.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0CAF2D81D75E2840011F558 /* MTDisposable.m in Sources */ = {isa = PBXBuildFile; fileRef = D0CAF2D61D75E2840011F558 /* MTDisposable.m */; };
-		D0CAF2D91D75E3160011F558 /* MTSubscriber.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2D11D75E26D0011F558 /* MTSubscriber.h */; };
-		D0CAF2DA1D75E3160011F558 /* MTSubscriber.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2D11D75E26D0011F558 /* MTSubscriber.h */; };
-		D0CAF2DB1D75E31A0011F558 /* MTDisposable.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2D51D75E2840011F558 /* MTDisposable.h */; };
-		D0CAF2DC1D75E31B0011F558 /* MTDisposable.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2D51D75E2840011F558 /* MTDisposable.h */; };
+		D0CAF2D91D75E3160011F558 /* MTSubscriber.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2D11D75E26D0011F558 /* MTSubscriber.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0CAF2DA1D75E3160011F558 /* MTSubscriber.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2D11D75E26D0011F558 /* MTSubscriber.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0CAF2DB1D75E31A0011F558 /* MTDisposable.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2D51D75E2840011F558 /* MTDisposable.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0CAF2DC1D75E31B0011F558 /* MTDisposable.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2D51D75E2840011F558 /* MTDisposable.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0CAF2DD1D75E31E0011F558 /* MTDisposable.m in Sources */ = {isa = PBXBuildFile; fileRef = D0CAF2D61D75E2840011F558 /* MTDisposable.m */; };
 		D0CAF2DE1D75E31E0011F558 /* MTSubscriber.m in Sources */ = {isa = PBXBuildFile; fileRef = D0CAF2D21D75E26D0011F558 /* MTSubscriber.m */; };
 		D0CAF2DF1D75E31F0011F558 /* MTDisposable.m in Sources */ = {isa = PBXBuildFile; fileRef = D0CAF2D61D75E2840011F558 /* MTDisposable.m */; };
 		D0CAF2E01D75E31F0011F558 /* MTSubscriber.m in Sources */ = {isa = PBXBuildFile; fileRef = D0CAF2D21D75E26D0011F558 /* MTSubscriber.m */; };
-		D0CAF2E31D75E7F30011F558 /* MTAtomic.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2E11D75E7F30011F558 /* MTAtomic.h */; };
+		D0CAF2E31D75E7F30011F558 /* MTAtomic.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2E11D75E7F30011F558 /* MTAtomic.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0CAF2E41D75E7F30011F558 /* MTAtomic.m in Sources */ = {isa = PBXBuildFile; fileRef = D0CAF2E21D75E7F30011F558 /* MTAtomic.m */; };
-		D0CAF2E51D75EA790011F558 /* MTAtomic.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2E11D75E7F30011F558 /* MTAtomic.h */; };
-		D0CAF2E61D75EA7A0011F558 /* MTAtomic.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2E11D75E7F30011F558 /* MTAtomic.h */; };
+		D0CAF2E51D75EA790011F558 /* MTAtomic.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2E11D75E7F30011F558 /* MTAtomic.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0CAF2E61D75EA7A0011F558 /* MTAtomic.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CAF2E11D75E7F30011F558 /* MTAtomic.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0CAF2E71D75EA7E0011F558 /* MTAtomic.m in Sources */ = {isa = PBXBuildFile; fileRef = D0CAF2E21D75E7F30011F558 /* MTAtomic.m */; };
 		D0CAF2E81D75EA7E0011F558 /* MTAtomic.m in Sources */ = {isa = PBXBuildFile; fileRef = D0CAF2E21D75E7F30011F558 /* MTAtomic.m */; };
 		D0CAF2EC1D75F4520011F558 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CAF2EB1D75F4520011F558 /* Security.framework */; };
@@ -549,6 +555,8 @@
 		D010DB7C1D70ABEE0012AD96 /* MTRsa.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MTRsa.m; sourceTree = "<group>"; };
 		D010DB7F1D70B3B90012AD96 /* MTAes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MTAes.h; sourceTree = "<group>"; };
 		D010DB801D70B3B90012AD96 /* MTAes.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MTAes.m; sourceTree = "<group>"; };
+		D020FAF81D994E3100F279AA /* MTHttpRequestOperation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTHttpRequestOperation.h; path = MTProtoKit/MTHttpRequestOperation.h; sourceTree = "<group>"; };
+		D020FAF91D994E3100F279AA /* MTHttpRequestOperation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTHttpRequestOperation.m; path = MTProtoKit/MTHttpRequestOperation.m; sourceTree = "<group>"; };
 		D0254CC518B10404009452AA /* MTEncryption.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTEncryption.h; path = MTProtoKit/MTEncryption.h; sourceTree = "<group>"; };
 		D0503AD818B027F80074C3FE /* MTOutputStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTOutputStream.h; path = MTProtoKit/MTOutputStream.h; sourceTree = "<group>"; };
 		D0503AD918B027F80074C3FE /* MTOutputStream.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTOutputStream.m; path = MTProtoKit/MTOutputStream.m; sourceTree = "<group>"; };
@@ -983,6 +991,8 @@
 				D010DB7C1D70ABEE0012AD96 /* MTRsa.m */,
 				D010DB7F1D70B3B90012AD96 /* MTAes.h */,
 				D010DB801D70B3B90012AD96 /* MTAes.m */,
+				D020FAF81D994E3100F279AA /* MTHttpRequestOperation.h */,
+				D020FAF91D994E3100F279AA /* MTHttpRequestOperation.m */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -1485,6 +1495,7 @@
 				D0CD981C1D74B99400F41187 /* MTNewSessionCreatedMessage.h in Headers */,
 				D0CD98781D74BA4100F41187 /* MTDatacenterTransferAuthAction.h in Headers */,
 				D0CD990A1D75C0F300F41187 /* MTResendMessageService.h in Headers */,
+				D020FAFB1D994E3100F279AA /* MTHttpRequestOperation.h in Headers */,
 				D0CD98841D74BA5100F41187 /* MTDatacenterAddress.h in Headers */,
 				D0CD97EA1D74B94300F41187 /* MTInternalId.h in Headers */,
 				D0CAF2DB1D75E31A0011F558 /* MTDisposable.h in Headers */,
@@ -1561,6 +1572,7 @@
 				D0D1A03C1ADD983C007D9ED6 /* MTDestroySessionResponseMessage.h in Headers */,
 				D0CB061E1ADC4541005E298F /* MTOutputStream.h in Headers */,
 				D0CB06301ADC4583005E298F /* MTDatacenterAddress.h in Headers */,
+				D020FAFA1D994E3100F279AA /* MTHttpRequestOperation.h in Headers */,
 				D0CB065B1ADC45CE005E298F /* MTTcpTransport.h in Headers */,
 				D0CB061B1ADC4541005E298F /* MTEncryption.h in Headers */,
 				D0D1A0661ADD983C007D9ED6 /* MTSetClientDhParamsResponseMessage.h in Headers */,
@@ -1662,6 +1674,7 @@
 				D0CD982A1D74B99500F41187 /* MTNewSessionCreatedMessage.h in Headers */,
 				D0CD987B1D74BA4100F41187 /* MTDatacenterTransferAuthAction.h in Headers */,
 				D0CD990B1D75C0F400F41187 /* MTResendMessageService.h in Headers */,
+				D020FAFC1D994E3100F279AA /* MTHttpRequestOperation.h in Headers */,
 				D0CD98891D74BA5200F41187 /* MTDatacenterAddress.h in Headers */,
 				D0CD97F01D74B94300F41187 /* MTInternalId.h in Headers */,
 				D0CAF2DC1D75E31B0011F558 /* MTDisposable.h in Headers */,
@@ -1906,6 +1919,7 @@
 				D0CD98081D74B96C00F41187 /* MTBufferReader.m in Sources */,
 				D0CD98341D74B9AA00F41187 /* MTMsgDetailedInfoMessage.m in Sources */,
 				D0CD984F1D74B9B700F41187 /* MTRpcResultMessage.m in Sources */,
+				D020FAFE1D994E3100F279AA /* MTHttpRequestOperation.m in Sources */,
 				D0CD98391D74B9AA00F41187 /* MTNewSessionCreatedMessage.m in Sources */,
 				D0CD98381D74B9AA00F41187 /* MTMsgsStateReqMessage.m in Sources */,
 				D0CD98801D74BA4900F41187 /* MTDatacenterAuthMessageService.m in Sources */,
@@ -1995,6 +2009,7 @@
 				D0D1A0391ADD983C007D9ED6 /* MTBuffer.m in Sources */,
 				D0D1A0591ADD983C007D9ED6 /* MTPingMessage.m in Sources */,
 				D0CB06361ADC4588005E298F /* MTDatacenterAuthInfo.m in Sources */,
+				D020FAFD1D994E3100F279AA /* MTHttpRequestOperation.m in Sources */,
 				D0CB062D1ADC457B005E298F /* MTDatacenterTransferAuthAction.m in Sources */,
 				D0D1A04F1ADD983C007D9ED6 /* MTMsgResendReqMessage.m in Sources */,
 				D0D1A0371ADD983C007D9ED6 /* MTBadMsgNotificationMessage.m in Sources */,
@@ -2084,6 +2099,7 @@
 				D0CD980D1D74B96C00F41187 /* MTBufferReader.m in Sources */,
 				D0CD98431D74B9AA00F41187 /* MTMsgDetailedInfoMessage.m in Sources */,
 				D0CD98541D74B9B700F41187 /* MTRpcResultMessage.m in Sources */,
+				D020FAFF1D994E3100F279AA /* MTHttpRequestOperation.m in Sources */,
 				D0CD98481D74B9AA00F41187 /* MTNewSessionCreatedMessage.m in Sources */,
 				D0CD98471D74B9AA00F41187 /* MTMsgsStateReqMessage.m in Sources */,
 				D0CD98831D74BA4900F41187 /* MTDatacenterAuthMessageService.m in Sources */,
@@ -2420,10 +2436,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
 				COPY_PHASE_STRIP = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -2540,7 +2555,7 @@
 				SEPARATE_STRIP = NO;
 				SKIP_INSTALL = YES;
 				STRIPFLAGS = "";
-				STRIP_STYLE = all;
+				STRIP_STYLE = debugging;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -2591,10 +2606,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -2649,9 +2663,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
-				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_WARN_UNREACHABLE_CODE = YES;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
 				COPY_PHASE_STRIP = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -2737,7 +2750,7 @@
 				SEPARATE_STRIP = NO;
 				SKIP_INSTALL = YES;
 				STRIPFLAGS = "";
-				STRIP_STYLE = all;
+				STRIP_STYLE = debugging;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -2779,7 +2792,7 @@
 				SEPARATE_STRIP = NO;
 				SKIP_INSTALL = YES;
 				STRIPFLAGS = "";
-				STRIP_STYLE = all;
+				STRIP_STYLE = debugging;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";

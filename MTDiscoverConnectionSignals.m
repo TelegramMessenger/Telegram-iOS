@@ -2,14 +2,39 @@
 
 #import "MTTcpConnection.h"
 #import "MTHttpWorker.h"
-#import "MTTransportScheme.h"
-#import "MTTcpTransport.h"
-#import "MTHttpTransport.h"
-#import "MTLogging.h"
-#import "MTQueue.h"
+
+#if defined(MtProtoKitDynamicFramework)
+#   import <MTProtoKitDynamic/MTTransportScheme.h>
+#   import <MTProtoKitDynamic/MTTcpTransport.h>
+#   import <MTProtoKitDynamic/MTHttpTransport.h>
+#   import <MTProtoKitDynamic/MTQueue.h>
+#   import <MTProtoKitDynamic/MTProtoKitDynamic.h>
+#elif defined(MtProtoKitMacFramework)
+#   import <MTProtoKitMac/MTTransportScheme.h>
+#   import <MTProtoKitMac/MTTcpTransport.h>
+#   import <MTProtoKitMac/MTHttpTransport.h>
+#   import <MTProtoKitMac/MTQueue.h>
+#   import <MTProtoKitMac/MTProtoKitMac.h>
+#else
+#   import <MTProtoKit/MTTransportScheme.h>
+#   import <MTProtoKit/MTTcpTransport.h>
+#   import <MTProtoKit/MTHttpTransport.h>
+#   import <MTProtoKit/MTQueue.h>
+#   import <MTProtoKit/MTProtoKit.h>
+#endif
+
 #import "MTDatacenterAddress.h"
 
-#import "MTSignal.h"
+#if defined(MtProtoKitDynamicFramework)
+#   import <MTProtoKitDynamic/MTDisposable.h>
+#   import <MTProtoKitDynamic/MTSignal.h>
+#elif defined(MtProtoKitMacFramework)
+#   import <MTProtoKitMac/MTDisposable.h>
+#   import <MTProtoKitMac/MTSignal.h>
+#else
+#   import <MTProtoKit/MTDisposable.h>
+#   import <MTProtoKit/MTSignal.h>
+#endif
 
 #import <netinet/in.h>
 #import <arpa/inet.h>
