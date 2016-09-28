@@ -2,37 +2,45 @@
 
 #import "../thirdparty/AFNetworking/AFHTTPRequestOperation.h"
 
-//#import "MTSignal.h"
+#if defined(MtProtoKitDynamicFramework)
+#   import <MTProtoKitDynamic/MTDisposable.h>
+#   import <MTProtoKitDynamic/MTSignal.h>
+#elif defined(MtProtoKitMacFramework)
+#   import <MTProtoKitMac/MTDisposable.h>
+#   import <MTProtoKitMac/MTSignal.h>
+#else
+#   import <MTProtoKit/MTDisposable.h>
+#   import <MTProtoKit/MTSignal.h>
+#endif
 
 @implementation MTHttpRequestOperation
 
 + (MTSignal *)dataForHttpUrl:(NSURL *)url {
-    return nil;
-    /*return [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+    return [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
         NSURLRequest *request = [NSURLRequest requestWithURL:url];
-        AFHttpRequestOperation *operation = [[AFHttpRequestOperation alloc] initWithRequest:request];
+        AFHTTPRequestOperation *operation = [[AFHTTPRequestOperation alloc] initWithRequest:request];
         
         [operation setSuccessCallbackQueue:dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)];
         [operation setFailureCallbackQueue:dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)];
         
-        [operation setCompletionBlockWithSuccess:^(__unused MTHttpRequestOperation *operation, __unused id responseObject)
+        [operation setCompletionBlockWithSuccess:^(__unused AFHTTPRequestOperation *operation, __unused id responseObject)
         {
             [subscriber putNext:[operation responseData]];
             [subscriber putCompletion];
-        } failure:^(__unused MTHttpRequestOperation *operation, __unused NSError *error)
+        } failure:^(__unused AFHTTPRequestOperation *operation, __unused NSError *error)
         {
             [subscriber putError:nil];
         }];
         
         [operation start];
         
-        __weak AFHttpRequestOperation *weakOperation = operation;
+        __weak AFHTTPRequestOperation *weakOperation = operation;
         
         return [[MTBlockDisposable alloc] initWithBlock:^
         {
-            __strong AFHttpRequestOperation *strongOperation = weakOperation;
+            __strong AFHTTPRequestOperation *strongOperation = weakOperation;
             [strongOperation cancel];
         }];
-    }];*/
+    }];
 }
 @end
