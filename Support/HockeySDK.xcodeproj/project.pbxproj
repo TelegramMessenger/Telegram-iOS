@@ -562,14 +562,13 @@
 		1E5A459A16F0DFC200B55C04 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		1E5A459D16F0DFC200B55C04 /* BITStoreUpdateManagerTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BITStoreUpdateManagerTests.m; sourceTree = "<group>"; };
 		1E61CCAE18E0585A00A5E38E /* BITFeedbackManagerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITFeedbackManagerTests.m; sourceTree = "<group>"; };
-		1E66CA9115D4100500F35BED /* buildnumber.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = buildnumber.xcconfig; sourceTree = "<group>"; };
 		1E6F0450167B5E5600ED1C86 /* pt-PT */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-PT"; path = "pt-PT.lproj/HockeySDK.strings"; sourceTree = "<group>"; };
 		1E70A22F17F2F982001BB32D /* live_report_empty.plcrash */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = live_report_empty.plcrash; sourceTree = "<group>"; };
 		1E70A23017F2F982001BB32D /* live_report_exception.plcrash */ = {isa = PBXFileReference; lastKnownFileType = file; path = live_report_exception.plcrash; sourceTree = "<group>"; };
 		1E70A23117F2F982001BB32D /* live_report_signal.plcrash */ = {isa = PBXFileReference; lastKnownFileType = file; path = live_report_signal.plcrash; sourceTree = "<group>"; };
 		1E70A23517F31B82001BB32D /* BITHockeyHelperTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITHockeyHelperTests.m; sourceTree = "<group>"; };
 		1E71509A15B5C76F004E88FF /* HockeySDK.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HockeySDK.h; sourceTree = "<group>"; };
-		1E754DC61621BC170070AB92 /* HockeySDK.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = HockeySDK.xcconfig; sourceTree = "<group>"; };
+		1E754DC61621BC170070AB92 /* HockeySDKBase.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = HockeySDKBase.xcconfig; sourceTree = "<group>"; };
 		1E754E561621FBB70070AB92 /* BITCrashManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashManager.h; sourceTree = "<group>"; };
 		1E754E571621FBB70070AB92 /* BITCrashManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITCrashManager.m; sourceTree = "<group>"; };
 		1E754E581621FBB70070AB92 /* BITCrashManagerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashManagerDelegate.h; sourceTree = "<group>"; };
@@ -685,7 +684,6 @@
 		8042A7F41CC507B700B603FE /* BITHockeyLoggerPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITHockeyLoggerPrivate.h; sourceTree = "<group>"; };
 		80668C721C8CD93B00A133D3 /* BITEventData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITEventData.h; sourceTree = "<group>"; };
 		80668C731C8CD93B00A133D3 /* BITEventData.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITEventData.m; sourceTree = "<group>"; };
-		80720BAF1D86FF680038B9C6 /* release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = release.xcconfig; sourceTree = "<group>"; };
 		8077563F1BC6A44D0037C3DA /* HockeySDKEnums.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HockeySDKEnums.h; sourceTree = "<group>"; };
 		807F75041C9AEDAA009E6DCB /* BITChannelPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITChannelPrivate.h; sourceTree = "<group>"; };
 		8080576B1C5818AE00BB319D /* BITHockeyLogger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITHockeyLogger.h; sourceTree = "<group>"; };
@@ -917,13 +915,11 @@
 				B29855431D85EBAC007FF452 /* module_allfeatures.modulemap */,
 				1E85C5A11B35BD7000CE2C0D /* module_crashonly.modulemap */,
 				1E91D84619B924E600E9616D /* module_default.modulemap */,
+				1E754DC61621BC170070AB92 /* HockeySDKBase.xcconfig */,
 				B29855421D85EB5D007FF452 /* allfeatures.xcconfig */,
-				1E66CA9115D4100500F35BED /* buildnumber.xcconfig */,
 				1E7DE39619D44DC6009AB8E5 /* crashonly.xcconfig */,
 				1E27E60A1B74F01400192AE2 /* crashonlyextensions.xcconfig */,
 				1E45A90E1B78DB0C002CA772 /* default.xcconfig */,
-				1E754DC61621BC170070AB92 /* HockeySDK.xcconfig */,
-				80720BAF1D86FF680038B9C6 /* release.xcconfig */,
 			);
 			name = Support;
 			sourceTree = "<group>";
@@ -3368,7 +3364,7 @@
 		};
 		E400563C148D79B500EB22B9 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 1E66CA9115D4100500F35BED /* buildnumber.xcconfig */;
+			baseConfigurationReference = 1E754DC61621BC170070AB92 /* HockeySDKBase.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
