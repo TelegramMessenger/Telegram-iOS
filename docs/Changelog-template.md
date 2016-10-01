@@ -1,3 +1,12 @@
+# 4.1.2
+
+- [NEW] New `shouldDisplayUpdateAlertForUpdateManager`-API [#339](https://github.com/bitstadium/HockeySDK-iOS/pull/339) to make moment of appearance for custom update ui even more customizable. 
+- [IMPROVEMENT] Rename default configuration back to Release to not break certain Carthage integrations [#341](https://github.com/bitstadium/HockeySDK-iOS/pull/341)
+- [IMPROVEMENT] Fix static analyzer warnings. [#351](https://github.com/bitstadium/HockeySDK-iOS/pull/351)
+- [IMPROVEMENT] Internal structure of embedded frameworks changed [#352](https://github.com/bitstadium/HockeySDK-iOS/pull/352)
+- [BUGFIX] Enable bitcode in all configurations [#344](https://github.com/bitstadium/HockeySDK-iOS/pull/344)
+- [BUGFIX] Fixed anonymisation of binary paths when running in the simulator [#347](https://github.com/bitstadium/HockeySDK-iOS/pull/347)
+
 ## 4.1.1
 
 **Attention** Due to changes in iOS 10, it is now necessary to include the `NSPhotoLibraryUsageDescription` in your app's Info.plist file if you want to use HockeySDK's Feedback feature. Since using the feature without the plist key present could lead to an App Store rejection, our default CocoaPods configuration does not include the Feedback feature anymore.

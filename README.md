@@ -2,18 +2,18 @@
 [![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
 [![Version](http://cocoapod-badges.herokuapp.com/v/HockeySDK/badge.png)](http://cocoadocs.org/docsets/HockeySDK)
 
-## Version 4.1.1
+## Version 4.1.2
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/4.1.1/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/4.1.2/docs/docs/Changelog.html)
 
 ### Feedback and iOS 10
 **4.1.1 of the HockeySDK removes the Feedback feature from the default version of the SDK.**
-The reason for this is that iOS 10 requires developers to add a usage string to their Info.plist in case they include the photos framework in their app. If this string is missing, the app will be rejected when submitting the app to the app store. As HockeyApp's Feedback feature includes a dependency to the photos framework. This means that if you include HockeyApp into your app, adding the usage string would be a requirement even for developers who don't use the Feedback feature. If you don't use Feedback in your app, simply upgrade HockeySDK to version 4.1.1. If you are using Feedback, please have a look at the [Feedback section](#feedback).
+The reason for this is that iOS 10 requires developers to add a usage string to their Info.plist in case they include the photos framework in their app. If this string is missing, the app will be rejected when submitting the app to the app store. As HockeyApp's Feedback feature includes a dependency to the photos framework. This means that if you include HockeyApp into your app, adding the usage string would be a requirement even for developers who don't use the Feedback feature. If you don't use Feedback in your app, simply upgrade HockeySDK to version 4.1.1 or newer. If you are using Feedback, please have a look at the [Feedback section](#feedback).
 
 
-We **strongly** suggest upgrading to version 4.1.1 of the SDK. Not specifying the usage description string and using previous versions of the HockeySDK-iOS will cause the app to crash at runtime as soon as the user taps the "attach image"-button or in case you have enabled `BITFeedbackObservationModeOnScreenshot`.
+We **strongly** suggest upgrading to version 4.1.2 of the SDK. Not specifying the usage description string and using previous versions of the HockeySDK-iOS will cause the app to crash at runtime as soon as the user taps the "attach image"-button or in case you have enabled `BITFeedbackObservationModeOnScreenshot`.
 
-If you are using an older version of the SDK, you have to add a `NSPhotoLibraryUsageDescription` to your `Info.plist` to avoid a AppStore rejection during upload of your app (please have a look at the [Feedback section](#feedback)).
+If you are using an older version of the SDK, you must add a `NSPhotoLibraryUsageDescription` to your `Info.plist` to avoid a AppStore rejection during upload of your app (please have a look at the [Feedback section](#feedback)).
 
 ## Introduction
 
@@ -629,7 +629,7 @@ To check if data is send properly to HockeyApp and also see some additional SDK 
 <a id="documentation"></a>
 ## 4. Documentation
 
-Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/4.1.1/index.html).
+Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/4.1.2/index.html).
 
 <a id="troubleshooting"></a>
 ## 5.Troubleshooting
@@ -643,7 +643,7 @@ Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/
   Make sure none of the following files are copied into your app bundle, check under app target, `Build Phases`, `Copy Bundle Resources` or in the `.app` bundle after building:
 
   - `HockeySDK.framework` (except if you build a dynamic framework version of the SDK yourself!)
-  - `de.bitstadium.HockeySDK-iOS-4.1.1.docset`
+  - `de.bitstadium.HockeySDK-iOS-4.1.2.docset`
 
 ### Feature are not working as expected
 
