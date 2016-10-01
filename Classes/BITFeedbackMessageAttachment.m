@@ -259,7 +259,7 @@
     }
   }
   
-  return nil;
+  return [NSURL URLWithString:[[NSBundle mainBundle] pathForResource:@"FeedbackPlaceholder" ofType:@"png"]];
 }
 
 @end
