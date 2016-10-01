@@ -30,6 +30,7 @@
 #import <mach/mach.h>
 
 #import "PLCrashReporterConfig.h"
+#import "PLCrashMacros.h"
 
 @class PLCrashMachExceptionServer;
 @class PLCrashMachExceptionPortSet;
@@ -44,7 +45,7 @@
  * @param uap The crash's threads context.
  * @param context The API client's supplied context value.
  *
- * @sa @ref async_safety
+ * @sa The @ref async_safety documentation.
  * @sa PLCrashReporter::setPostCrashCallbacks:
  */
 typedef void (*PLCrashReporterPostCrashSignalCallback)(siginfo_t *info, ucontext_t *uap, void *context);
@@ -55,7 +56,7 @@ typedef void (*PLCrashReporterPostCrashSignalCallback)(siginfo_t *info, ucontext
  * This structure contains callbacks supported by PLCrashReporter to allow the host application to perform
  * additional tasks prior to program termination after a crash has occured.
  *
- * @sa @ref async_safety
+ * @sa The @ref async_safety documentation.
  */
 typedef struct PLCrashReporterCallbacks {
     /** The version number of this structure. If not one of the defined version numbers for this type, the behavior
@@ -87,7 +88,7 @@ typedef struct PLCrashReporterCallbacks {
 
     /** YES if the crash reporter has been enabled */
     BOOL _enabled;
-    
+
 #if PLCRASH_FEATURE_MACH_EXCEPTIONS
     /** The backing Mach exception server, if any. Nil if the reporter has not been enabled, or if
      * the configured signal handler type is not PLCrashReporterSignalHandlerTypeMach. */
@@ -110,7 +111,7 @@ typedef struct PLCrashReporterCallbacks {
     NSString *_crashReportDirectory;
 }
 
-+ (PLCrashReporter *) sharedReporter;
++ (PLCrashReporter *) sharedReporter PLCR_DEPRECATED;
 
 - (instancetype) initWithConfiguration: (PLCrashReporterConfig *) config;
 
@@ -121,9 +122,11 @@ typedef struct PLCrashReporterCallbacks {
 
 - (NSData *) generateLiveReportWithThread: (thread_t) thread;
 - (NSData *) generateLiveReportWithThread: (thread_t) thread error: (NSError **) outError;
+- (NSData *) generateLiveReportWithThread: (thread_t) thread exception: (NSException *) exception error: (NSError **) outError;
 
 - (NSData *) generateLiveReport;
 - (NSData *) generateLiveReportAndReturnError: (NSError **) outError;
+- (NSData *) generateLiveReportWithException: (NSException *) exception error: (NSError **) outError;
 
 - (BOOL) purgePendingCrashReport;
 - (BOOL) purgePendingCrashReportAndReturnError: (NSError **) outError;
