@@ -4,6 +4,7 @@
 - [IMPROVEMENT] Rename default configuration back to Release to not break certain Carthage integrations [#341](https://github.com/bitstadium/HockeySDK-iOS/pull/341)
 - [IMPROVEMENT] Fix static analyzer warnings. [#351](https://github.com/bitstadium/HockeySDK-iOS/pull/351)
 - [IMPROVEMENT] Internal structure of embedded frameworks changed [#352](https://github.com/bitstadium/HockeySDK-iOS/pull/352)
+- [IMPROVEMENT] Upgrade to PLCrashReporter 1.3
 - [BUGFIX] Enable bitcode in all configurations [#344](https://github.com/bitstadium/HockeySDK-iOS/pull/344)
 - [BUGFIX] Fixed anonymisation of binary paths when running in the simulator [#347](https://github.com/bitstadium/HockeySDK-iOS/pull/347)
 

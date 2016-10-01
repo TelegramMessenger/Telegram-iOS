@@ -385,7 +385,7 @@ The following options only show some of possibilities to interact and fine-tune 
 #### 3.6.1 Disable Crash Reporting
 The HockeySDK enables crash reporting **per default**. Crashes will be immediately sent to the server the next time the app is launched.
 
-To provide you with the best crash reporting, we are using [PLCrashReporter]("https://github.com/plausiblelabs/plcrashreporter") in [Version 1.2 / Commit 356901d7f3ca3d46fbc8640f469304e2b755e461]("https://github.com/plausiblelabs/plcrashreporter/commit/356901d7f3ca3d46fbc8640f469304e2b755e461").
+To provide you with the best crash reporting, we are using [PLCrashReporter]("https://github.com/plausiblelabs/plcrashreporter") in [Version 1.3 / Commit 05d34741d3a90bbed51214983110943831ae5943]("https://github.com/plausiblelabs/plcrashreporter/commit/05d34741d3a90bbed51214983110943831ae5943").
 
 This feature can be disabled as follows:
 
