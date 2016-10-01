@@ -159,7 +159,7 @@ static NSUInteger const BITDefaultFileCount = 50;
 
 #pragma mark - Private
 
-- (NSString *)fileURLForType:(BITPersistenceType)type {
+- (nullable NSString *)fileURLForType:(BITPersistenceType)type {
 
   NSString *fileName = nil;
   NSString *filePath;
@@ -187,8 +187,9 @@ static NSUInteger const BITDefaultFileCount = 50;
  * Create directory structure if necessary and exclude it from iCloud backup
  */
 - (void)createDirectoryStructureIfNeeded {
-  
-  NSURL *appURL = [NSURL fileURLWithPath:self.appHockeySDKDirectoryPath];
+  // Using the local variable looks unnecessary but it actually silences a static analyzer warning.
+  NSString *appHockeySDKDirectoryPath = [self appHockeySDKDirectoryPath];
+  NSURL *appURL = [NSURL fileURLWithPath:appHockeySDKDirectoryPath];
   NSFileManager *fileManager = [NSFileManager defaultManager];
   if (appURL) {
     NSError *error = nil;

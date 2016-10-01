@@ -1011,7 +1011,7 @@
     }
   }
   
-  return nil;
+  return [self placeholder];
 }
 
 - (void)previewController:(QLPreviewController *)controller updateAttachment:(BITFeedbackMessageAttachment *)attachment data:( NSData *)data {
@@ -1024,6 +1024,14 @@
   } else {
     [controller reloadData];
   }
+}
+
+- (BITFeedbackMessageAttachment *)placeholder {
+  UIImage *placeholderImage = bit_imageNamed(@"FeedbackPlaceHolder", BITHOCKEYSDK_BUNDLE);
+
+  BITFeedbackMessageAttachment *placeholder = [BITFeedbackMessageAttachment attachmentWithData:UIImageJPEGRepresentation(placeholderImage, 0.7f) contentType:@"image/jpeg"];
+  
+  return placeholder;
 }
 
 @end
