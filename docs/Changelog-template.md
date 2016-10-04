@@ -1,6 +1,6 @@
 # 4.1.2
 
-- [NEW] New `shouldDisplayUpdateAlertForUpdateManager`-API [#339](https://github.com/bitstadium/HockeySDK-iOS/pull/339) to make moment of appearance for custom update ui even more customizable. 
+- [NEW] New `shouldDisplayUpdateAlertForUpdateManager`-API [#339](https://github.com/bitstadium/HockeySDK-iOS/pull/339) to make the moment of appearance for custom update UI even more customizable. 
 - [IMPROVEMENT] Rename default configuration back to Release to not break certain Carthage integrations [#341](https://github.com/bitstadium/HockeySDK-iOS/pull/341)
 - [IMPROVEMENT] Fix static analyzer warnings. [#351](https://github.com/bitstadium/HockeySDK-iOS/pull/351)
 - [IMPROVEMENT] Internal structure of embedded frameworks changed [#352](https://github.com/bitstadium/HockeySDK-iOS/pull/352)
