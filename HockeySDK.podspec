@@ -32,6 +32,7 @@ Pod::Spec.new do |s|
   s.subspec 'CrashOnlyLib' do |ss|
     ss.frameworks = 'UIKit'
     ss.libraries = 'z'
+    ss.resource_bundle = { 'HockeySDKResources' => ['HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDKResources.bundle/*.lproj'] }
     ss.vendored_frameworks = 'HockeySDK-iOS/HockeySDKCrashOnly/HockeySDK.framework'
   end
 
