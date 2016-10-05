@@ -471,9 +471,11 @@ and set the delegate:
 ### 3.7 User Metrics
 
 HockeyApp automatically provides you with nice, intelligible, and informative metrics about how your app is used and by whom. 
+
 - **Sessions**: A new session is tracked by the SDK whenever the containing app is restarted (this refers to a 'cold start', i.e. when the app has not already been in memory prior to being launched) or whenever it becomes active again after having been in the background for 20 seconds or more.
 - **Users**: The SDK anonymously tracks the users of your app by creating a random UUID that is then securely stored in the iOS keychain. Because this anonymous ID is stored in the keychain it persists across reinstallations.
 - **Custom Events**: With HockeySDK 4.1.0 you can now track Custom Events in your app, understand user actions and see the aggregates on the HockeyApp portal.
+- **Batching & offline behavior**: The SDK batches up to 50 events or waits for 15s and then persist and send the events, whichever comes first. So for sessions, this might actually mean we send 1 single event per batch. If you are sending Custom Events, it can be 1 session event plus X of your Custom Events (up to 50 events per batch total). In case the device is offline, up to 300 events are stored until the SDK starts to drop new events.
 
 Just in case you want to opt-out of the automatic collection of anonymous users and sessions statistics, there is a way to turn this functionality off at any time:
 
@@ -512,7 +514,7 @@ metricsManager.trackEventWithName(eventName)
 
 #### 3.7.2 Attaching custom properties and measurements to a custom event
 
-It's possible to attach porperties and/or measurements to a custom event.
+It's possible to attach properties and/or measurements to a custom event. There is one limitation to attaching properties and measurements. They currently don't show up in the HockeyApp dashboard but you have to link your app to Application Insights to be able to query them. Please have a look at [our blogpost](https://www.hockeyapp.net/blog/2016/08/30/custom-events-public-preview.html) to find out how to do that. 
 
 - Properties have to be a string.
 - Measurements have to be of a numeric type.
@@ -541,7 +543,6 @@ let myMeasurements = ["Measurement 1": 1, "Measurement 2": 2.3, "Measurement 3" 
 let metricsManager = BITHockeyManager.sharedHockeyManager().metricsManager
 metricsManager.trackEventWithName(eventName, properties: myProperties, myMeasurements: measurements)
 ```
-
 
 <a name="feedback"></a>
 ### 3.8 Feedback
