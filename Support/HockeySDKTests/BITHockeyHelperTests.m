@@ -116,6 +116,8 @@
   // Regular icon names
   NSString *validIconPath = @"AppIcon";
   NSString *validIconPath2x = @"AppIcon@2x";
+  NSString *expected = ([UIScreen mainScreen].scale == 2.0f) ? validIconPath2x : validIconPath;
+
   
   // No valid icons defined at all
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFiles"]) willReturn:nil];
@@ -133,7 +135,8 @@
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFile"]) willReturn:nil];
 
   resultString = bit_validAppIconFilename(mockBundle, resourceBundle);
-  assertThat(resultString, equalTo(validIconPath2x));
+  
+  assertThat(resultString, equalTo(expected));
   
   // CFBundleIcons contains valid dictionary filenames
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFiles"]) willReturn:@[@"invalidFilename.png"]];
@@ -148,7 +151,7 @@
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFile"]) willReturn:nil];
 
   resultString = bit_validAppIconFilename(mockBundle, resourceBundle);
-  assertThat(resultString, equalTo(validIconPath2x));
+  assertThat(resultString, equalTo(expected));
 
   // CFBundleIcons contains valid filenames
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFiles"]) willReturn:@[@"invalidFilename.png"]];
@@ -157,7 +160,7 @@
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFile"]) willReturn:nil];
 
   resultString = bit_validAppIconFilename(mockBundle, resourceBundle);
-  assertThat(resultString, equalTo(validIconPath2x));
+  assertThat(resultString, equalTo(expected));
 
   // CFBundleIcon contains valid filename
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFiles"]) willReturn:@[@"invalidFilename.png"]];
@@ -166,7 +169,7 @@
   [given([mockBundle objectForInfoDictionaryKey:@"CFBundleIconFile"]) willReturn:validIconPath];
   
   resultString = bit_validAppIconFilename(mockBundle, resourceBundle);
-  assertThat(resultString, equalTo(validIconPath2x));
+  assertThat(resultString, equalTo(expected));
 }
 
 #ifndef CI
