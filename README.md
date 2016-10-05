@@ -283,6 +283,8 @@ To add HockeySDK to your project, simply put this line into your `Cartfile`:
 
 and then follow the steps described in the [Carthage documentation](https://github.com/Carthage/Carthage#if-youre-building-for-ios-tvos-or-watchos).
 
+For now, this will integrate the **full-featured SDK** so you must include the `NSPhotoLibraryUsageDescription` and read the [feedback section](#feedback).
+
 <a id="extensions"></a>
 ### 3.4 iOS Extensions
 
