@@ -552,7 +552,12 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 - (void)showCheckForUpdateAlert {
   if (self.appEnvironment != BITEnvironmentOther) return;
   if ([self isUpdateManagerDisabled]) return;
-  
+
+  if ([self.delegate respondsToSelector:@selector(shouldDisplayUpdateAlertForUpdateManager:forShortVersion:forVersion:)] &&
+      ![self.delegate shouldDisplayUpdateAlertForUpdateManager:self forShortVersion:[self.newestAppVersion shortVersion] forVersion:[self.newestAppVersion version]]) {
+    return;
+  }
+
   if (!_updateAlertShowing) {
     NSString *title = BITHockeyLocalizedString(@"UpdateAvailable");
     NSString *message = [NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateAlertMandatoryTextWithAppVersion"), [self.newestAppVersion nameAndVersionString]];

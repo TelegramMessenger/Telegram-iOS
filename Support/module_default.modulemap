@@ -4,9 +4,7 @@ framework module HockeySDK {
   export *
   module * { export * }
   
-  link framework "AssetsLibrary"
   link framework "CoreTelephony"
-  link framework "CoreText"
   link framework "CoreGraphics"
   link framework "Foundation"
   link framework "MobileCoreServices"

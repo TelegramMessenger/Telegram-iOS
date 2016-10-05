@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name              = 'HockeySDK'
-  s.version           = '4.1.1'
+  s.version           = '4.1.2'
 
   s.summary           = 'Collect live crash reports, get feedback from your users, distribute your betas, and analyze your test coverage with HockeyApp.'
   s.description       = <<-DESC
@@ -32,7 +32,7 @@ Pod::Spec.new do |s|
   s.subspec 'CrashOnlyLib' do |ss|
     ss.frameworks = 'UIKit'
     ss.libraries = 'z'
-    ss.resource_bundle = { 'HockeySDKResources' => ['HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDK.framework/Versions/A/Resources/HockeySDKResources.bundle/*.lproj'] }
+    ss.resource_bundle = { 'HockeySDKResources' => ['HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDKResources.bundle/*.lproj'] }
     ss.vendored_frameworks = 'HockeySDK-iOS/HockeySDKCrashOnly/HockeySDK.framework'
   end
 
@@ -41,7 +41,7 @@ Pod::Spec.new do |s|
   end
 
   s.subspec 'DefaultLib' do |ss|
-    ss.resource_bundle = { 'HockeySDKResources' => ['HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDK.framework/Versions/A/Resources/HockeySDKResources.bundle/*.png', 'HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDK.framework/Versions/A/Resources/HockeySDKResources.bundle/*.lproj'] }
+    ss.resource_bundle = { 'HockeySDKResources' => ['HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDKResources.bundle/*.png', 'HockeySDK-iOS/HockeySDK.embeddedframework/HockeySDKResources.bundle/*.lproj'] }
 
     ss.frameworks = 'AssetsLibrary', 'CoreGraphics', 'CoreText', 'CoreTelephony', 'MobileCoreServices', 'QuartzCore', 'QuickLook', 'UIKit'
     ss.libraries = 'z'
@@ -49,7 +49,7 @@ Pod::Spec.new do |s|
   end
 
   s.subspec 'AllFeaturesLib' do |ss|
-    ss.resource_bundle = { 'HockeySDKResources' => ['HockeySDK-iOS/HockeySDKAllFeatures/HockeySDK.embeddedframework/HockeySDK.framework/Versions/A/Resources/HockeySDKResources.bundle/*.png', 'HockeySDK-iOS/HockeySDKAllFeatures/HockeySDK.embeddedframework/HockeySDK.framework/Versions/A/Resources/HockeySDKResources.bundle/*.lproj'] }
+    ss.resource_bundle = { 'HockeySDKResources' => ['HockeySDK-iOS/HockeySDKAllFeatures/HockeySDK.embeddedframework/HockeySDKResources.bundle/*.png', 'HockeySDK-iOS/HockeySDKAllFeatures/HockeySDK.embeddedframework/HockeySDKResources.bundle/*.lproj'] }
 
     ss.frameworks = 'AssetsLibrary', 'CoreGraphics', 'CoreText', 'CoreTelephony', 'MobileCoreServices', 'Photos', 'QuartzCore', 'QuickLook', 'UIKit'
     ss.libraries = 'z'

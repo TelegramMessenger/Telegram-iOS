@@ -1,4 +1,0 @@
-OTHER_LDFLAGS=$(inherited) -framework CrashReporter -framework AssetsLibrary -framework CoreTelephony -framework CoreText -framework CoreGraphics -framework Foundation -framework MobileCoreServices -framework Photos -framework QuartzCore -framework QuickLook -framework Security -framework SystemConfiguration -framework UIKit -lc++ -lz
-HOCKEYSDK_DOCSET_NAME=HockeySDK-iOS
-HOCKEYSDK_GCC_PREPROCESSOR_DEFINITIONS=$(inherited) $(XCODEBUILD_GCC_PREPROCESSOR_DEFINITIONS)
-HOCKEYSDK_WARNING_FLAGS = -Wshorten-64-to-32 -Wall

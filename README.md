@@ -2,18 +2,20 @@
 [![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
 [![Version](http://cocoapod-badges.herokuapp.com/v/HockeySDK/badge.png)](http://cocoadocs.org/docsets/HockeySDK)
 
-## Version 4.1.1
+## Version 4.1.2
 
-- [Changelog](http://www.hockeyapp.net/help/sdk/ios/4.1.1/docs/docs/Changelog.html)
+- [Changelog](http://www.hockeyapp.net/help/sdk/ios/4.1.2/docs/docs/Changelog.html)
+
+**NOTE** If your are using the binary integration of our SDK, make sure that the `HockeySDKResources.bundle` inside the `HockeySDK.embeddedframework`-folder has been added to your application.
 
 ### Feedback and iOS 10
 **4.1.1 of the HockeySDK removes the Feedback feature from the default version of the SDK.**
-The reason for this is that iOS 10 requires developers to add a usage string to their Info.plist in case they include the photos framework in their app. If this string is missing, the app will be rejected when submitting the app to the app store. As HockeyApp's Feedback feature includes a dependency to the photos framework. This means that if you include HockeyApp into your app, adding the usage string would be a requirement even for developers who don't use the Feedback feature. If you don't use Feedback in your app, simply upgrade HockeySDK to version 4.1.1. If you are using Feedback, please have a look at the [Feedback section](#feedback).
+The reason for this is that iOS 10 requires developers to add a usage string to their Info.plist in case they include the photos framework in their app. If this string is missing, the app will be rejected when submitting the app to the app store. As HockeyApp's Feedback feature includes a dependency to the photos framework. This means that if you include HockeyApp into your app, adding the usage string would be a requirement even for developers who don't use the Feedback feature. If you don't use Feedback in your app, simply upgrade HockeySDK to version 4.1.1 or newer. If you are using Feedback, please have a look at the [Feedback section](#feedback).
 
 
-We **strongly** suggest upgrading to version 4.1.1 of the SDK. Not specifying the usage description string and using previous versions of the HockeySDK-iOS will cause the app to crash at runtime as soon as the user taps the "attach image"-button or in case you have enabled `BITFeedbackObservationModeOnScreenshot`.
+We **strongly** suggest upgrading to version 4.1.1 or a later version of the SDK. Not specifying the usage description string and using previous versions of the HockeySDK-iOS will cause the app to crash at runtime as soon as the user taps the "attach image"-button or in case you have enabled `BITFeedbackObservationModeOnScreenshot`.
 
-If you are using an older version of the SDK, you have to add a `NSPhotoLibraryUsageDescription` to your `Info.plist` to avoid a AppStore rejection during upload of your app (please have a look at the [Feedback section](#feedback)).
+If you are using an older version of the SDK, you must add a `NSPhotoLibraryUsageDescription` to your `Info.plist` to avoid a AppStore rejection during upload of your app (please have a look at the [Feedback section](#feedback)).
 
 ## Introduction
 
@@ -82,7 +84,7 @@ From our experience, 3rd-party libraries usually reside inside a subdirectory (l
 
 The SDK comes in four flavours:
 
-  * Default SDK without Feedback `HockeySDK.embeddedframework`
+  * Default SDK without Feedback: `HockeySDK.embeddedframework`
   * Full featured SDK with Feedback: `HockeySDK.embeddedframework` in the subfolder `HockeySDKAllFeatures`. 
   * Crash reporting only: `HockeySDK.framework` in the subfolder `HockeySDKCrashOnly`.
   * Crash reporting only for extensions: `HockeySDK.framework` in the subfolder `HockeySDKCrashOnlyExtension` (which is required to be used for extensions).
@@ -121,7 +123,7 @@ Our examples will use the **default** SDK (`HockeySDK.embeddedframework`).
   [[BITHockeyManager sharedHockeyManager].authenticator authenticateInstallation]; // This line is obsolete in the crash only builds
   ```
 
-**Swift**
+**Swift 2.3**
 
 1. Open your `AppDelegate.swift` file.
 2. Add the following line at the top of the file below your own import statements:
@@ -143,6 +145,31 @@ Our examples will use the **default** SDK (`HockeySDK.embeddedframework`).
   BITHockeyManager.sharedHockeyManager().startManager()
   BITHockeyManager.sharedHockeyManager().authenticator.authenticateInstallation() // This line is obsolete in the crash only builds
   ```
+
+**Swift 3**
+
+1. Open your `AppDelegate.swift` file.
+2. Add the following line at the top of the file below your own import statements:
+
+  ```swift
+  import HockeySDK
+  ```
+
+3. Search for the method 
+
+  ```swift
+  func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool
+  ```
+
+4. Add the following lines to setup and start the Application Insights SDK:
+
+  ```swift
+  BITHockeyManager.shared().configure(withIdentifier: "cdef2c2b4ddf420b9cdf470a9667eb27")
+  BITHockeyManager.shared().start()
+  BITHockeyManager.shared().authenticator.authenticateInstallation() // This line is obsolete in the crash only builds
+
+  ```
+
 
 *Note:* The SDK is optimized to defer everything possible to a later time while making sure e.g. crashes on startup can also be caught and each module executes other code with a delay some seconds. This ensures that `applicationDidFinishLaunching` will process as fast as possible and the SDK will not block the startup sequence resulting in a possible kill by the watchdog process.
 
@@ -258,6 +285,8 @@ To add HockeySDK to your project, simply put this line into your `Cartfile`:
 
 and then follow the steps described in the [Carthage documentation](https://github.com/Carthage/Carthage#if-youre-building-for-ios-tvos-or-watchos).
 
+For now, this will integrate the **full-featured SDK** so you must include the `NSPhotoLibraryUsageDescription` and read the [feedback section](#feedback).
+
 <a id="extensions"></a>
 ### 3.4 iOS Extensions
 
@@ -360,7 +389,7 @@ The following options only show some of possibilities to interact and fine-tune 
 #### 3.6.1 Disable Crash Reporting
 The HockeySDK enables crash reporting **per default**. Crashes will be immediately sent to the server the next time the app is launched.
 
-To provide you with the best crash reporting, we are using [PLCrashReporter]("https://github.com/plausiblelabs/plcrashreporter") in [Version 1.2 / Commit 356901d7f3ca3d46fbc8640f469304e2b755e461]("https://github.com/plausiblelabs/plcrashreporter/commit/356901d7f3ca3d46fbc8640f469304e2b755e461").
+To provide you with the best crash reporting, we are using [PLCrashReporter]("https://github.com/plausiblelabs/plcrashreporter") in [Version 1.3 / Commit 05d34741d3a90bbed51214983110943831ae5943]("https://github.com/plausiblelabs/plcrashreporter/commit/05d34741d3a90bbed51214983110943831ae5943").
 
 This feature can be disabled as follows:
 
@@ -605,7 +634,7 @@ To check if data is send properly to HockeyApp and also see some additional SDK 
 <a id="documentation"></a>
 ## 4. Documentation
 
-Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/4.1.1/index.html).
+Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/4.1.2/index.html).
 
 <a id="troubleshooting"></a>
 ## 5.Troubleshooting
@@ -619,7 +648,7 @@ Our documentation can be found on [HockeyApp](http://hockeyapp.net/help/sdk/ios/
   Make sure none of the following files are copied into your app bundle, check under app target, `Build Phases`, `Copy Bundle Resources` or in the `.app` bundle after building:
 
   - `HockeySDK.framework` (except if you build a dynamic framework version of the SDK yourself!)
-  - `de.bitstadium.HockeySDK-iOS-4.1.1.docset`
+  - `de.bitstadium.HockeySDK-iOS-4.1.2.docset`
 
 ### Feature are not working as expected
 

@@ -649,6 +649,10 @@ NSString *bit_validAppIconStringFromIcons(NSBundle *resourceBundle, NSArray *ico
       if (!iconPath && (icon.pathExtension.length > 0)) {
         iconPath = [resourceBundle pathForResource:iconFilename ofType:icon.pathExtension];
       }
+      // We still haven't managed to get a path to the app icon, just using a placeholder now.
+      if(!iconPath) {
+        iconPath = [resourceBundle pathForResource:@"AppIconPlaceHolder" ofType:@"png"];
+      }
       
       NSData *imgData = [[NSData alloc] initWithContentsOfFile:iconPath];
       

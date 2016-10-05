@@ -277,7 +277,8 @@ NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
       if (codeType != nil)
         break;
     }
-    
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     /* If we were unable to determine the code type, fall back on the legacy architecture value. */
     if (codeType == nil) {
       switch (report.systemInfo.architecture) {
@@ -303,7 +304,8 @@ NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
           lp64 = true;
           break;
       }
-    }    
+    }
+#pragma GCC diagnostic pop
   }
   
   {
@@ -350,7 +352,7 @@ NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
         
         /* Remove username from the path */
 #if TARGET_OS_SIMULATOR
-        processPath = [self anonymizedProcessPathFromProcessPath:processPath];
+        processPath = [self anonymizedPathFromPath:processPath];
 #endif
       }
       
@@ -605,8 +607,7 @@ NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
 #endif
     }
 #if TARGET_OS_SIMULATOR
-    if ([imageName length] > 0 && [[imageName substringToIndex:1] isEqualToString:@"~"])
-      imageName = [NSString stringWithFormat:@"/Users/USER%@", [imageName substringFromIndex:1]];
+    imageName = [self anonymizedPathFromPath:imageName];
 #endif
     [text appendFormat: fmt,
      imageInfo.imageBaseAddress,
@@ -904,17 +905,20 @@ NSString *const BITXamarinStackTraceDelimiter = @"Xamarin Exception Stack:";
  *
  *  @return An anonymized string where the real username is replaced by "USER"
  */
-+ (NSString *)anonymizedProcessPathFromProcessPath:(NSString *)processPath {
++ (NSString *)anonymizedPathFromPath:(NSString *)path {
   
   NSString *anonymizedProcessPath = [NSString string];
   
-  if (([processPath length] > 0) && [processPath hasPrefix:@"/Users/"]) {
+  if (([path length] > 0) && [path hasPrefix:@"/Users/"]) {
     NSError *error = nil;
     NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"(/Users/[^/]+/)" options:0 error:&error];
-    anonymizedProcessPath = [regex stringByReplacingMatchesInString:processPath options:0 range:NSMakeRange(0, [processPath length]) withTemplate:@"/Users/USER/"];
+    anonymizedProcessPath = [regex stringByReplacingMatchesInString:path options:0 range:NSMakeRange(0, [path length]) withTemplate:@"/Users/USER/"];
     if (error) {
       BITHockeyLogError(@"ERROR: String replacing failed - %@", error.localizedDescription);
     }
+  }
+  else if(([path length] > 0) && (![path containsString:@"Users"])) {
+    return path;
   }
   return anonymizedProcessPath;
 }
