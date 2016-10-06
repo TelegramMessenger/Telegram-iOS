@@ -22,7 +22,6 @@ before_install:
   - gem install xcpretty --no-rdoc --no-ri --no-document --quiet
   - gem install xcpretty-travis-formatter --no-rdoc --no-ri --no-document --quiet
   - gem install cocoapods --pre --no-rdoc --no-ri --no-document --quiet
-  - brew install carthage
 
 script:
   - open -b com.apple.iphonesimulator
