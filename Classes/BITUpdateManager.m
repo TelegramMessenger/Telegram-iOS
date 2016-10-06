@@ -483,7 +483,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
     }
     
     if (!BITHockeyBundle()) {
-      NSLog(@"[HockeySDK] WARNING: %@ is missing, make sure it is added!", BITHOCKEYSDK_BUNDLE);
+      BITHockeyLogWarning(@"[HockeySDK] WARNING: %@ is missing, make sure it is added!", BITHOCKEYSDK_BUNDLE);
     }
     
     _fileManager = [[NSFileManager alloc] init];
@@ -517,7 +517,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 
 - (BITUpdateViewController *)hockeyViewController:(BOOL)modal {
   if (self.appEnvironment != BITEnvironmentOther) {
-    NSLog(@"[HockeySDK] This should not be called from an app store build!");
+    BITHockeyLogWarning(@"[HockeySDK] This should not be called from an app store build!");
     // return an empty view controller instead
     BITHockeyBaseViewController *blankViewController = [[BITHockeyBaseViewController alloc] initWithModalStyle:modal];
     return (BITUpdateViewController *)blankViewController;
@@ -527,7 +527,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 
 - (void)showUpdateView {
   if (self.appEnvironment != BITEnvironmentOther) {
-    NSLog(@"[HockeySDK] This should not be called from an app store build!");
+    BITHockeyLogWarning(@"[HockeySDK] This should not be called from an app store build!");
     return;
   }
   
@@ -552,7 +552,12 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
 - (void)showCheckForUpdateAlert {
   if (self.appEnvironment != BITEnvironmentOther) return;
   if ([self isUpdateManagerDisabled]) return;
-  
+
+  if ([self.delegate respondsToSelector:@selector(shouldDisplayUpdateAlertForUpdateManager:forShortVersion:forVersion:)] &&
+      ![self.delegate shouldDisplayUpdateAlertForUpdateManager:self forShortVersion:[self.newestAppVersion shortVersion] forVersion:[self.newestAppVersion version]]) {
+    return;
+  }
+
   if (!_updateAlertShowing) {
     NSString *title = BITHockeyLocalizedString(@"UpdateAvailable");
     NSString *message = [NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateAlertMandatoryTextWithAppVersion"), [self.newestAppVersion nameAndVersionString]];

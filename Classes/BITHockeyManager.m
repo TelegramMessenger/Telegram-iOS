@@ -117,9 +117,9 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 - (void)logInvalidIdentifier:(NSString *)environment {
   if (self.appEnvironment != BITEnvironmentAppStore) {
     if ([environment isEqualToString:@"liveIdentifier"]) {
-      NSLog(@"[HockeySDK] WARNING: The liveIdentifier is invalid! The SDK will be disabled when deployed to the App Store without setting a valid app identifier!");
+      BITHockeyLogWarning(@"[HockeySDK] WARNING: The liveIdentifier is invalid! The SDK will be disabled when deployed to the App Store without setting a valid app identifier!");
     } else {
-      NSLog(@"[HockeySDK] ERROR: The %@ is invalid! Please use the HockeyApp app identifier you find on the apps website on HockeyApp! The SDK is disabled!", environment);
+      BITHockeyLogError(@"[HockeySDK] ERROR: The %@ is invalid! Please use the HockeyApp app identifier you find on the apps website on HockeyApp! The SDK is disabled!", environment);
     }
   }
 }
@@ -224,7 +224,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 - (void)startManager {
   if (!_validAppIdentifier) return;
   if (_startManagerIsInvoked) {
-    NSLog(@"[HockeySDK] Warning: startManager should only be invoked once! This call is ignored.");
+    BITHockeyLogWarning(@"[HockeySDK] Warning: startManager should only be invoked once! This call is ignored.");
     return;
   }
   
@@ -383,7 +383,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 - (void)setDelegate:(id<BITHockeyManagerDelegate>)delegate {
   if (self.appEnvironment != BITEnvironmentAppStore) {
     if (_startManagerIsInvoked) {
-      NSLog(@"[HockeySDK] ERROR: The `delegate` property has to be set before calling [[BITHockeyManager sharedHockeyManager] startManager] !");
+      BITHockeyLogError(@"[HockeySDK] ERROR: The `delegate` property has to be set before calling [[BITHockeyManager sharedHockeyManager] startManager] !");
     }
   }
   
@@ -624,7 +624,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 - (void)validateStartManagerIsInvoked {
   if (_validAppIdentifier && (self.appEnvironment != BITEnvironmentAppStore)) {
     if (!_startManagerIsInvoked) {
-      NSLog(@"[HockeySDK] ERROR: You did not call [[BITHockeyManager sharedHockeyManager] startManager] to startup the HockeySDK! Please do so after setting up all properties. The SDK is NOT running.");
+      BITHockeyLogError(@"[HockeySDK] ERROR: You did not call [[BITHockeyManager sharedHockeyManager] startManager] to startup the HockeySDK! Please do so after setting up all properties. The SDK is NOT running.");
     }
   }
 }
@@ -656,7 +656,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
     if (self.appEnvironment == BITEnvironmentAppStore) {
       BITHockeyLogError(@"%@", errorString);
     } else {
-      NSLog(@"%@", errorString);
+      BITHockeyLogError(@"%@", errorString);
       NSAssert(NSThread.isMainThread, errorString);
     }
     
@@ -677,7 +677,7 @@ bitstadium_info_t bitstadium_library_info __attribute__((section("__TEXT,__bit_h
 
 - (void)initializeModules {
   if (_managersInitialized) {
-    NSLog(@"[HockeySDK] Warning: The SDK should only be initialized once! This call is ignored.");
+    BITHockeyLogWarning(@"[HockeySDK] Warning: The SDK should only be initialized once! This call is ignored.");
     return;
   }
   

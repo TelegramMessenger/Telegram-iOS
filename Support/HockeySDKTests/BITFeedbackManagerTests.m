@@ -12,6 +12,9 @@
 #import <OCMockitoIOS/OCMockitoIOS.h>
 
 #import "HockeySDK.h"
+
+#if HOCKEYSDK_FEATURE_FEEDBACK
+
 #import "HockeySDKPrivate.h"
 #import "BITFeedbackManager.h"
 #import "BITFeedbackManagerPrivate.h"
@@ -269,3 +272,6 @@
 }
 
 @end
+
+#endif /* HOCKEYSDK_FEATURE_FEEDBACK */
+

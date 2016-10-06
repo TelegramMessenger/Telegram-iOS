@@ -220,14 +220,17 @@
   // File extension that suits the Content type.
   
   CFStringRef mimeType = (__bridge CFStringRef)self.contentType;
-  CFStringRef uti = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, mimeType, NULL);
-  CFStringRef extension = UTTypeCopyPreferredTagWithClass(uti, kUTTagClassFilenameExtension);
-  if (extension) {
-    _tempFilename = [_tempFilename stringByAppendingPathExtension:(__bridge NSString *)(extension)];
-    CFRelease(extension);
+  if (mimeType) {
+    CFStringRef uti = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, mimeType, NULL);
+    CFStringRef extension = UTTypeCopyPreferredTagWithClass(uti, kUTTagClassFilenameExtension);
+    if (extension) {
+      _tempFilename = [_tempFilename stringByAppendingPathExtension:(__bridge NSString *)(extension)];
+      CFRelease(extension);
+    }
+    if (uti) {
+      CFRelease(uti);
+    }
   }
-  
-  CFRelease(uti);
   
   return _tempFilename;
 }
@@ -256,7 +259,7 @@
     }
   }
   
-  return nil;
+  return [NSURL URLWithString:[[NSBundle mainBundle] pathForResource:@"FeedbackPlaceholder" ofType:@"png"]];
 }
 
 @end

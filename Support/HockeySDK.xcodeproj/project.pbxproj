@@ -386,6 +386,12 @@
 		80807B8E1C46BF2F00F4C44F /* OCMockitoIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80807B8B1C46BF2F00F4C44F /* OCMockitoIOS.framework */; };
 		80807B8F1C46BF2F00F4C44F /* OCMockitoIOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 80807B8B1C46BF2F00F4C44F /* OCMockitoIOS.framework */; };
 		80807B901C46C01E00F4C44F /* BITUser.m in Sources */ = {isa = PBXBuildFile; fileRef = 8034E6681BA31D7C00D83A30 /* BITUser.m */; };
+		8085BB851CBF1FA60023FD9B /* AppIcon.exotic.png in Resources */ = {isa = PBXBuildFile; fileRef = 8085BB831CBF1FA60023FD9B /* AppIcon.exotic.png */; };
+		8085BB861CBF1FA60023FD9B /* AppIcon.exotic.png in Resources */ = {isa = PBXBuildFile; fileRef = 8085BB831CBF1FA60023FD9B /* AppIcon.exotic.png */; };
+		8085BB871CBF1FA60023FD9B /* AppIcon.exotic@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 8085BB841CBF1FA60023FD9B /* AppIcon.exotic@2x.png */; };
+		8085BB881CBF1FA60023FD9B /* AppIcon.exotic@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 8085BB841CBF1FA60023FD9B /* AppIcon.exotic@2x.png */; };
+		8085BB8A1CBF216E0023FD9B /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 8085BB891CBF216E0023FD9B /* Icon.png */; };
+		8085BB8B1CBF216E0023FD9B /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 8085BB891CBF216E0023FD9B /* Icon.png */; };
 		80A4662F1C58F4DF00199909 /* BITCrashReportTextFormatterPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 80A4662D1C58F4DF00199909 /* BITCrashReportTextFormatterPrivate.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		80B1C4EE1C8A6F950057A5CB /* BITUser.h in Headers */ = {isa = PBXBuildFile; fileRef = 8034E6671BA31D7C00D83A30 /* BITUser.h */; };
 		80B1C4EF1C8A72620057A5CB /* HockeySDK.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EB6173F1B0A30480035A986 /* HockeySDK.framework */; };
@@ -421,6 +427,8 @@
 		97F0F9FD18ABAECD00EF50AA /* iconCamera.png in Resources */ = {isa = PBXBuildFile; fileRef = 97F0F9FB18ABAECD00EF50AA /* iconCamera.png */; };
 		97F0F9FE18ABAECD00EF50AA /* iconCamera@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 97F0F9FC18ABAECD00EF50AA /* iconCamera@2x.png */; };
 		97F0FA0518B2294D00EF50AA /* BITFeedbackMessageAttachment.m in Sources */ = {isa = PBXBuildFile; fileRef = 97F0FA0318AE5AED00EF50AA /* BITFeedbackMessageAttachment.m */; };
+		B2156DD51D9DED7F0001DDDC /* AppIconPlaceHolder.png in Resources */ = {isa = PBXBuildFile; fileRef = B2156DD01D9DED7F0001DDDC /* AppIconPlaceHolder.png */; };
+		B2D1CE5E1D9DE55900CA74A8 /* FeedbackPlaceholder.png in Resources */ = {isa = PBXBuildFile; fileRef = B2D1CE5D1D9DE4F700CA74A8 /* FeedbackPlaceholder.png */; };
 		E405266217A2AD300096359C /* BITFeedbackManagerDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = E405266117A2AD300096359C /* BITFeedbackManagerDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		E40E0B0917DA19DC005E38C1 /* BITHockeyAppClientTests.m in Sources */ = {isa = PBXBuildFile; fileRef = E40E0B0817DA19DC005E38C1 /* BITHockeyAppClientTests.m */; };
 		E40E0B0C17DA1AFF005E38C1 /* BITHockeyAppClient.h in Headers */ = {isa = PBXBuildFile; fileRef = E40E0B0A17DA1AFF005E38C1 /* BITHockeyAppClient.h */; };
@@ -489,7 +497,7 @@
 		1E27E60A1B74F01400192AE2 /* crashonlyextensions.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = crashonlyextensions.xcconfig; sourceTree = "<group>"; };
 		1E36D8B816667611000B134C /* hr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = hr; path = hr.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		1E3A260E1B2B207900D59683 /* HockeySDKNullability.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HockeySDKNullability.h; sourceTree = "<group>"; };
-		1E45A90E1B78DB0C002CA772 /* release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = release.xcconfig; sourceTree = "<group>"; };
+		1E45A90E1B78DB0C002CA772 /* default.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = default.xcconfig; sourceTree = "<group>"; };
 		1E494AEA19491943001EFF74 /* AppIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = AppIcon.png; sourceTree = "<group>"; };
 		1E494AEB19491943001EFF74 /* AppIcon@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AppIcon@2x.png"; sourceTree = "<group>"; };
 		1E49A42D1612223B00463151 /* BITFeedbackComposeViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITFeedbackComposeViewController.h; sourceTree = "<group>"; };
@@ -556,14 +564,13 @@
 		1E5A459A16F0DFC200B55C04 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		1E5A459D16F0DFC200B55C04 /* BITStoreUpdateManagerTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BITStoreUpdateManagerTests.m; sourceTree = "<group>"; };
 		1E61CCAE18E0585A00A5E38E /* BITFeedbackManagerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITFeedbackManagerTests.m; sourceTree = "<group>"; };
-		1E66CA9115D4100500F35BED /* buildnumber.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = buildnumber.xcconfig; sourceTree = "<group>"; };
 		1E6F0450167B5E5600ED1C86 /* pt-PT */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-PT"; path = "pt-PT.lproj/HockeySDK.strings"; sourceTree = "<group>"; };
 		1E70A22F17F2F982001BB32D /* live_report_empty.plcrash */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = live_report_empty.plcrash; sourceTree = "<group>"; };
 		1E70A23017F2F982001BB32D /* live_report_exception.plcrash */ = {isa = PBXFileReference; lastKnownFileType = file; path = live_report_exception.plcrash; sourceTree = "<group>"; };
 		1E70A23117F2F982001BB32D /* live_report_signal.plcrash */ = {isa = PBXFileReference; lastKnownFileType = file; path = live_report_signal.plcrash; sourceTree = "<group>"; };
 		1E70A23517F31B82001BB32D /* BITHockeyHelperTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITHockeyHelperTests.m; sourceTree = "<group>"; };
 		1E71509A15B5C76F004E88FF /* HockeySDK.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HockeySDK.h; sourceTree = "<group>"; };
-		1E754DC61621BC170070AB92 /* HockeySDK.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = HockeySDK.xcconfig; sourceTree = "<group>"; };
+		1E754DC61621BC170070AB92 /* HockeySDKBase.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = HockeySDKBase.xcconfig; sourceTree = "<group>"; };
 		1E754E561621FBB70070AB92 /* BITCrashManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashManager.h; sourceTree = "<group>"; };
 		1E754E571621FBB70070AB92 /* BITCrashManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITCrashManager.m; sourceTree = "<group>"; };
 		1E754E581621FBB70070AB92 /* BITCrashManagerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashManagerDelegate.h; sourceTree = "<group>"; };
@@ -581,7 +588,7 @@
 		1E90D97E19DAD8A800188C43 /* feedbackActivity~ipad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "feedbackActivity~ipad.png"; sourceTree = "<group>"; };
 		1E90FD7118EDB86400CF0417 /* BITCrashDetails.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashDetails.h; sourceTree = "<group>"; };
 		1E90FD7218EDB86400CF0417 /* BITCrashDetails.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITCrashDetails.m; sourceTree = "<group>"; };
-		1E91D84619B924E600E9616D /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
+		1E91D84619B924E600E9616D /* module_default.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module_default.modulemap; sourceTree = "<group>"; };
 		1E94F9DF16E91330006570AD /* BITStoreUpdateManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITStoreUpdateManager.h; sourceTree = "<group>"; };
 		1E94F9E016E91330006570AD /* BITStoreUpdateManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITStoreUpdateManager.m; sourceTree = "<group>"; };
 		1E94F9E316E9136B006570AD /* BITStoreUpdateManagerPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITStoreUpdateManagerPrivate.h; sourceTree = "<group>"; };
@@ -705,6 +712,9 @@
 		808441721C20617C00644A40 /* OCMockObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMockObject.h; sourceTree = "<group>"; };
 		808441731C20617C00644A40 /* OCMRecorder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMRecorder.h; sourceTree = "<group>"; };
 		808441741C20617C00644A40 /* OCMStubRecorder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OCMStubRecorder.h; sourceTree = "<group>"; };
+		8085BB831CBF1FA60023FD9B /* AppIcon.exotic.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = AppIcon.exotic.png; sourceTree = "<group>"; };
+		8085BB841CBF1FA60023FD9B /* AppIcon.exotic@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "AppIcon.exotic@2x.png"; sourceTree = "<group>"; };
+		8085BB891CBF216E0023FD9B /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
 		80A4662D1C58F4DF00199909 /* BITCrashReportTextFormatterPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITCrashReportTextFormatterPrivate.h; sourceTree = "<group>"; };
 		80CA63881C67BD5400362DBF /* libOCMock.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libOCMock.a; sourceTree = "<group>"; };
 		80CA638E1C67F78000362DBF /* BITUpdateManagerTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITUpdateManagerTests.m; sourceTree = "<group>"; };
@@ -739,6 +749,10 @@
 		97F0FA0018AE375E00EF50AA /* BITImageAnnotationViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITImageAnnotationViewController.m; sourceTree = "<group>"; };
 		97F0FA0218AE5AED00EF50AA /* BITFeedbackMessageAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITFeedbackMessageAttachment.h; sourceTree = "<group>"; };
 		97F0FA0318AE5AED00EF50AA /* BITFeedbackMessageAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITFeedbackMessageAttachment.m; sourceTree = "<group>"; };
+		B2156DD01D9DED7F0001DDDC /* AppIconPlaceHolder.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = AppIconPlaceHolder.png; sourceTree = "<group>"; };
+		B29855421D85EB5D007FF452 /* allfeatures.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = allfeatures.xcconfig; sourceTree = "<group>"; };
+		B29855431D85EBAC007FF452 /* module_allfeatures.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module_allfeatures.modulemap; sourceTree = "<group>"; };
+		B2D1CE5D1D9DE4F700CA74A8 /* FeedbackPlaceholder.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = FeedbackPlaceholder.png; sourceTree = "<group>"; };
 		BEE0207C16C5107E004426EA /* hu */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = hu; path = hu.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		E400561D148D79B500EB22B9 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		E405266117A2AD300096359C /* BITFeedbackManagerDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITFeedbackManagerDelegate.h; sourceTree = "<group>"; };
@@ -811,6 +825,7 @@
 		1E5955A415B71BDC00A03429 /* Images */ = {
 			isa = PBXGroup;
 			children = (
+				B2156DD01D9DED7F0001DDDC /* AppIconPlaceHolder.png */,
 				9782022818F81BFC00A98D8B /* Arrow.png */,
 				9782022918F81BFC00A98D8B /* Arrow@2x.png */,
 				1E4CD1E319D17E9D00019DD4 /* Arrow@3x.png */,
@@ -823,6 +838,7 @@
 				9782022E18F81BFC00A98D8B /* Ok.png */,
 				9782022F18F81BFC00A98D8B /* Ok@2x.png */,
 				1E4CD1E919D17EB700019DD4 /* Ok@3x.png */,
+				B2D1CE5D1D9DE4F700CA74A8 /* FeedbackPlaceholder.png */,
 				9782023018F81BFC00A98D8B /* Rectangle.png */,
 				9782023118F81BFC00A98D8B /* Rectangle@2x.png */,
 				1E4CD1EB19D17EBE00019DD4 /* Rectangle@3x.png */,
@@ -902,13 +918,14 @@
 		1E66CA8F15D40FF600F35BED /* Support */ = {
 			isa = PBXGroup;
 			children = (
-				1E754DC61621BC170070AB92 /* HockeySDK.xcconfig */,
-				1E66CA9115D4100500F35BED /* buildnumber.xcconfig */,
-				1E45A90E1B78DB0C002CA772 /* release.xcconfig */,
+				B29855431D85EBAC007FF452 /* module_allfeatures.modulemap */,
+				1E85C5A11B35BD7000CE2C0D /* module_crashonly.modulemap */,
+				1E91D84619B924E600E9616D /* module_default.modulemap */,
+				1E754DC61621BC170070AB92 /* HockeySDKBase.xcconfig */,
+				B29855421D85EB5D007FF452 /* allfeatures.xcconfig */,
 				1E7DE39619D44DC6009AB8E5 /* crashonly.xcconfig */,
 				1E27E60A1B74F01400192AE2 /* crashonlyextensions.xcconfig */,
-				1E85C5A11B35BD7000CE2C0D /* module_crashonly.modulemap */,
-				1E91D84619B924E600E9616D /* module.modulemap */,
+				1E45A90E1B78DB0C002CA772 /* default.xcconfig */,
 			);
 			name = Support;
 			sourceTree = "<group>";
@@ -1030,6 +1047,9 @@
 			children = (
 				1E494AEA19491943001EFF74 /* AppIcon.png */,
 				1E494AEB19491943001EFF74 /* AppIcon@2x.png */,
+				8085BB831CBF1FA60023FD9B /* AppIcon.exotic.png */,
+				8085BB841CBF1FA60023FD9B /* AppIcon.exotic@2x.png */,
+				8085BB891CBF216E0023FD9B /* Icon.png */,
 				1EA1170316F53B49001C015C /* StoreBundleIdentifierUnknown.json */,
 				1EA1170816F53E3A001C015C /* StoreBundleIdentifierKnown.json */,
 				1E70A22F17F2F982001BB32D /* live_report_empty.plcrash */,
@@ -1590,7 +1610,7 @@
 			isa = PBXProject;
 			attributes = {
 				LastTestingUpgradeCheck = 0600;
-				LastUpgradeCheck = 0730;
+				LastUpgradeCheck = 0800;
 				TargetAttributes = {
 					1EB6173E1B0A30480035A986 = {
 						CreatedOnToolsVersion = 6.3.1;
@@ -1652,6 +1672,7 @@
 				1E4CD1EA19D17EB700019DD4 /* Ok@3x.png in Resources */,
 				97F0F9FD18ABAECD00EF50AA /* iconCamera.png in Resources */,
 				9782023618F81BFC00A98D8B /* Cancel.png in Resources */,
+				B2156DD51D9DED7F0001DDDC /* AppIconPlaceHolder.png in Resources */,
 				9782023318F81BFC00A98D8B /* Arrow@2x.png in Resources */,
 				1E90D98119DAD8A800188C43 /* feedbackActivity@2x~ipad.png in Resources */,
 				9782023818F81BFC00A98D8B /* Ok.png in Resources */,
@@ -1668,6 +1689,7 @@
 				1E1127C516580C87007067A2 /* buttonRoundedDelete@2x.png in Resources */,
 				1E90D97F19DAD8A800188C43 /* feedbackActivity.png in Resources */,
 				1E1127C616580C87007067A2 /* buttonRoundedDeleteHighlighted.png in Resources */,
+				B2D1CE5E1D9DE55900CA74A8 /* FeedbackPlaceholder.png in Resources */,
 				9782023718F81BFC00A98D8B /* Cancel@2x.png in Resources */,
 				1E1127C716580C87007067A2 /* buttonRoundedDeleteHighlighted@2x.png in Resources */,
 				1E4CD1F019D17EE400019DD4 /* authorize_denied@3x.png in Resources */,
@@ -1689,6 +1711,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				1E85C5621B3438EB00CE2C0D /* live_report_exception_marketing.plcrash in Resources */,
+				8085BB871CBF1FA60023FD9B /* AppIcon.exotic@2x.png in Resources */,
+				8085BB851CBF1FA60023FD9B /* AppIcon.exotic.png in Resources */,
 				1E494AEC19491943001EFF74 /* AppIcon.png in Resources */,
 				1E85C5631B3438EB00CE2C0D /* live_report_signal_marketing.plcrash in Resources */,
 				1EA1170C16F54A64001C015C /* HockeySDKResources.bundle in Resources */,
@@ -1700,6 +1724,7 @@
 				6EA5DEAE1CC0670000D44206 /* log_report_xamarin in Resources */,
 				1E70A23217F2F982001BB32D /* live_report_empty.plcrash in Resources */,
 				1E494AED19491943001EFF74 /* AppIcon@2x.png in Resources */,
+				8085BB8A1CBF216E0023FD9B /* Icon.png in Resources */,
 				1EA1170916F53E3A001C015C /* StoreBundleIdentifierKnown.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1717,6 +1742,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				1E85C5641B3438EC00CE2C0D /* live_report_exception_marketing.plcrash in Resources */,
+				8085BB881CBF1FA60023FD9B /* AppIcon.exotic@2x.png in Resources */,
+				8085BB861CBF1FA60023FD9B /* AppIcon.exotic.png in Resources */,
 				1E1508871B0C946700D7B9D9 /* AppIcon.png in Resources */,
 				1E85C5651B3438EC00CE2C0D /* live_report_signal_marketing.plcrash in Resources */,
 				1E1508891B0C946700D7B9D9 /* StoreBundleIdentifierUnknown.json in Resources */,
@@ -1728,6 +1755,7 @@
 				6EA5DEAF1CC0670000D44206 /* log_report_xamarin in Resources */,
 				1E15088A1B0C946700D7B9D9 /* StoreBundleIdentifierKnown.json in Resources */,
 				1E15088E1B0C946D00D7B9D9 /* InfoPlist.strings in Resources */,
+				8085BB8B1CBF216E0023FD9B /* Icon.png in Resources */,
 				1E15088C1B0C946700D7B9D9 /* live_report_exception.plcrash in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1747,7 +1775,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Sets the target folders and the final framework product.\nFMK_NAME=HockeySDK\nFMK_VERSION=A\nFMK_RESOURCE_BUNDLE=HockeySDKResources\nFMK_iOS8_NAME=\"HockeySDK Framework\"\n\n# Documentation\nHOCKEYSDK_DOCSET_VERSION_NAME=\"de.bitstadium.${HOCKEYSDK_DOCSET_NAME}-${VERSION_STRING}\"\n\n# Install dir will be the final output to the framework.\n# The following line create it in the root folder of the current project.\nPRODUCTS_DIR=${SRCROOT}/../Products\nZIP_FOLDER=HockeySDK-iOS\nTEMP_DIR=${PRODUCTS_DIR}/${ZIP_FOLDER}\nINSTALL_DIR=${TEMP_DIR}/${FMK_NAME}.framework\n\n# Working dir will be deleted after the framework creation.\nWRK_DIR=build\nDEVICE_DIR=${WRK_DIR}/Release-iphoneos\nSIMULATOR_DIR=${WRK_DIR}/Release-iphonesimulator\nDEVICE_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnly-iphoneos\nSIMULATOR_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnly-iphonesimulator\nDEVICE_EXTENSIONS_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnlyExtensions-iphoneos\nSIMULATOR_EXTENSIONS_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnlyExtensions-iphonesimulator\nDEVICE_WATCH_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnlyWatchOS-iphoneos\nSIMULATOR_WATCH_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnlyWatchOS-iphonesimulator\n\n# //////////////////////////////\n# Building the full featured SDK\n# //////////////////////////////\n\n# Building both architectures.\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"Release\" -target \"${FMK_NAME}\" -sdk iphoneos\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"Release\" -target \"${FMK_NAME}\" -sdk iphonesimulator\n\n# Cleaning the oldest.\nif [ -d \"${TEMP_DIR}\" ]\nthen\nrm -rf \"${TEMP_DIR}\"\nfi\n\n# Creates and renews the final product folder.\nmkdir -p \"${INSTALL_DIR}\"\nmkdir -p \"${INSTALL_DIR}/Modules\"\nmkdir -p \"${INSTALL_DIR}/Versions\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Resources\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers\"\n\n# Creates the internal links.\n# It MUST uses relative path, otherwise will not work when the folder is copied/moved.\nln -s \"${FMK_VERSION}\" \"${INSTALL_DIR}/Versions/Current\"\nln -s \"Versions/Current/Headers\" \"${INSTALL_DIR}/Headers\"\nln -s \"Versions/Current/Resources\" \"${INSTALL_DIR}/Resources\"\nln -s \"Versions/Current/${FMK_NAME}\" \"${INSTALL_DIR}/${FMK_NAME}\"\n\n# Copy the swift import file\ncp -f \"${SRCROOT}/module.modulemap\" \"${INSTALL_DIR}/Modules/\"\n\n# Copies the headers and resources files to the final product folder.\ncp -R \"${SRCROOT}/build/Release-iphoneos/include/HockeySDK/\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${DEVICE_DIR}/${FMK_RESOURCE_BUNDLE}.bundle\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Resources/\"\n\n# Uses the Lipo Tool to merge both binary files (i386 + armv6/armv7) into one Universal final product.\nlipo -create \"${DEVICE_DIR}/lib${FMK_NAME}.a\" \"${SIMULATOR_DIR}/lib${FMK_NAME}.a\" -output \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\"\n\n# Combine the CrashReporter static library into a new Hockey static library file if they are not already present and copy the public headers too\nif [ -z $(otool -L \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" | grep 'libCrashReporter') ]\nthen\nlibtool -static -o \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" \"${SRCROOT}/../Vendor/CrashReporter.framework/Versions/A/CrashReporter\"\nfi\n\nrm -r \"${WRK_DIR}\"\n\n# build embeddedframework folder and move framework into it\nmkdir \"${INSTALL_DIR}/../${FMK_NAME}.embeddedframework\"\nmv \"${INSTALL_DIR}\" \"${INSTALL_DIR}/../${FMK_NAME}.embeddedframework/${FMK_NAME}.framework\"\n\n# link Resources\nNEW_INSTALL_DIR=${TEMP_DIR}/${FMK_NAME}.embeddedframework\nmkdir \"${NEW_INSTALL_DIR}/Resources\"\nln -s \"../${FMK_NAME}.framework/Resources/${FMK_RESOURCE_BUNDLE}.bundle\" \"${NEW_INSTALL_DIR}/Resources/${FMK_RESOURCE_BUNDLE}.bundle\"\n\n# /////////////////////////////////////////////\n# Building the crash only SDK without resources\n# /////////////////////////////////////////////\n\n# Building both architectures.\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseCrashOnly\" -target \"${FMK_NAME}\" -sdk iphoneos\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseCrashOnly\" -target \"${FMK_NAME}\" -sdk iphonesimulator\n\n# Creates and renews the final product folder.\nmkdir -p \"${INSTALL_DIR}\"\nmkdir -p \"${INSTALL_DIR}/Modules\"\nmkdir -p \"${INSTALL_DIR}/Versions\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Resources\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers\"\n\n# Creates the internal links.\n# It MUST uses relative path, otherwise will not work when the folder is copied/moved.\nln -s \"${FMK_VERSION}\" \"${INSTALL_DIR}/Versions/Current\"\nln -s \"Versions/Current/Headers\" \"${INSTALL_DIR}/Headers\"\nln -s \"Versions/Current/Resources\" \"${INSTALL_DIR}/Resources\"\nln -s \"Versions/Current/${FMK_NAME}\" \"${INSTALL_DIR}/${FMK_NAME}\"\n\n# Copy the swift import file\ncp -f \"${SRCROOT}/module_crashonly.modulemap\" \"${INSTALL_DIR}/Modules/module.modulemap\"\n\n# Copies the headers and resources files to the final product folder.\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}\"/include/HockeySDK/BITCrash*.h \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITMetricsManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyAttachment.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyBaseManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyManagerDelegate.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDK.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDKNullability.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDKEnums.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\n\n# Copy the patched feature header\ncp -f \"${SRCROOT}/HockeySDKCrashOnlyConfig.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/HockeySDKFeatureConfig.h\"\n\n# Uses the Lipo Tool to merge both binary files (i386/x86_64 + armv7/armv7s/arm64) into one Universal final product.\nlipo -create \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/lib${FMK_NAME}.a\" \"${SRCROOT}/${SIMULATOR_CRASH_ONLY_DIR}/lib${FMK_NAME}.a\" -output \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\"\n\n# Combine the CrashReporter static library into a new Hockey static library file if they are not already present and copy the public headers too\nif [ -z $(otool -L \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" | grep 'libCrashReporter') ]\nthen\nlibtool -static -o \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" \"${SRCROOT}/../Vendor/CrashReporter.framework/Versions/A/CrashReporter\"\nfi\n\n# Move the crash reporting only framework into a new folder\nmkdir \"${INSTALL_DIR}/../${FMK_NAME}CrashOnly\"\nmv \"${INSTALL_DIR}\" \"${INSTALL_DIR}/../${FMK_NAME}CrashOnly/${FMK_NAME}.framework\"\n\nrm -r \"${WRK_DIR}\"\n\n# ////////////////////////////////////////////////////////\n# Building the extensions crash only SDK without resources\n# ////////////////////////////////////////////////////////\n\n# Building both architectures.\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseCrashOnlyExtensions\" -target \"${FMK_NAME}\" -sdk iphoneos\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseCrashOnlyExtensions\" -target \"${FMK_NAME}\" -sdk iphonesimulator\n\n# Creates and renews the final product folder.\nmkdir -p \"${INSTALL_DIR}\"\nmkdir -p \"${INSTALL_DIR}/Modules\"\nmkdir -p \"${INSTALL_DIR}/Versions\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Resources\"\nmkdir -p \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers\"\n\n# Creates the internal links.\n# It MUST uses relative path, otherwise will not work when the folder is copied/moved.\nln -s \"${FMK_VERSION}\" \"${INSTALL_DIR}/Versions/Current\"\nln -s \"Versions/Current/Headers\" \"${INSTALL_DIR}/Headers\"\nln -s \"Versions/Current/Resources\" \"${INSTALL_DIR}/Resources\"\nln -s \"Versions/Current/${FMK_NAME}\" \"${INSTALL_DIR}/${FMK_NAME}\"\n\n# Copy the swift import file\ncp -f \"${SRCROOT}/module_crashonly.modulemap\" \"${INSTALL_DIR}/Modules/module.modulemap\"\n\n# Copies the headers and resources files to the final product folder.\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}\"/include/HockeySDK/BITCrash*.h \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyAttachment.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyBaseManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyManager.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyManagerDelegate.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDK.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDKNullability.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDKEnums.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/\"\n\n# Copy the patched feature header\ncp -f \"${SRCROOT}/HockeySDKCrashOnlyExtensionConfig.h\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/Headers/HockeySDKFeatureConfig.h\"\n\n# Uses the Lipo Tool to merge both binary files (i386/x86_64 + armv7/armv7s/arm64) into one Universal final product.\nlipo -create \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/lib${FMK_NAME}.a\" \"${SRCROOT}/${SIMULATOR_EXTENSIONS_CRASH_ONLY_DIR}/lib${FMK_NAME}.a\" -output \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\"\n\n# Combine the CrashReporter static library into a new Hockey static library file if they are not already present and copy the public headers too\nif [ -z $(otool -L \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" | grep 'libCrashReporter') ]\nthen\nlibtool -static -o \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" \"${INSTALL_DIR}/Versions/${FMK_VERSION}/${FMK_NAME}\" \"${SRCROOT}/../Vendor/CrashReporter.framework/Versions/A/CrashReporter\"\nfi\n\n# Move the crash reporting only framework into a new folder\nmkdir \"${INSTALL_DIR}/../${FMK_NAME}CrashOnlyExtension\"\nmv \"${INSTALL_DIR}\" \"${INSTALL_DIR}/../${FMK_NAME}CrashOnlyExtension/${FMK_NAME}.framework\"\n\nrm -r \"${WRK_DIR}\"\n\n\n# Building the iOS 8 and later compatible dynamic framework\n\n# Using the iOS 8 framework binary distribution is not yet recommended, as it contains all architectures (i386, x86_64, armv7, armv7s, arm64)\n# and would be part of the app as is, which currently is about 5.2 MB in size. A proper usage would require the binary to be stripped from non-needed architectures at app build time before\n# This is why the following section is currently commented and not included in any release build\n\n## Building both architectures.\n#xcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"Release\" -target \"${FMK_iOS8_NAME}\" -sdk iphonesimulator clean build\n#xcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"Release\" -target \"${FMK_iOS8_NAME}\" -sdk iphoneos clean build\n#\n## Copy the framework structure to the destination folder\n#cp -R \"${DEVICE_DIR}/${FMK_NAME}.framework\" \"${TEMP_DIR}/\"\n#\n## Use the Lipo Tool to merge both binary files (i386/x86_64 + armv7/armv7s/arm64) into one Universal final product.\n#lipo -create \"${DEVICE_DIR}/${FMK_NAME}.framework/${FMK_NAME}\" \"${SIMULATOR_DIR}/${FMK_NAME}.framework/${FMK_NAME}\" -output \"${TEMP_DIR}/${FMK_NAME}.framework/${FMK_NAME}\"\n#\n## Move the crash reporting only framework into a new folder\n#mkdir \"${INSTALL_DIR}/../${FMK_NAME}-iOS8\"\n#mv \"${INSTALL_DIR}\" \"${INSTALL_DIR}/../${FMK_NAME}-iOS8/${FMK_NAME}.framework\"\n#\n#rm -r \"${WRK_DIR}\"\n\n\n# copy license, changelog, documentation, integration json\ncp -f \"${SRCROOT}/../Docs/Changelog-template.md\" \"${TEMP_DIR}/CHANGELOG\"\ncp -f \"${SRCROOT}/../Docs/Guide-Installation-Setup-template.md\" \"${TEMP_DIR}/README.md\"\ncp -f \"${SRCROOT}/../LICENSE\" \"${TEMP_DIR}\"\nmkdir \"${TEMP_DIR}/${HOCKEYSDK_DOCSET_VERSION_NAME}.docset\"\ncp -R \"${SRCROOT}/../documentation/docset/Contents\" \"${TEMP_DIR}/${HOCKEYSDK_DOCSET_VERSION_NAME}.docset\"\n\n# build zip\ncd \"${PRODUCTS_DIR}\"\nrm -f \"${FMK_NAME}-iOS-${VERSION_STRING}.zip\"\nzip -yr \"${FMK_NAME}-iOS-${VERSION_STRING}.zip\" \"${ZIP_FOLDER}\" -x \\*/.*\n\ncd \"${ZIP_FOLDER}\"\nrm -f \"${FMK_NAME}-iOS-documentation-${VERSION_STRING}.zip\"\nzip -yr \"${FMK_NAME}-iOS-documentation-${VERSION_STRING}.zip\" \"${HOCKEYSDK_DOCSET_VERSION_NAME}.docset\" -x \\*/.*\nmv \"${FMK_NAME}-iOS-documentation-${VERSION_STRING}.zip\" \"../\"\n";
+			shellScript = "#Original\n\n# Default config\n# Sets the target folders and the final framework product.\nFMK_NAME=HockeySDK\nFMK_RESOURCE_BUNDLE=HockeySDKResources\nFMK_iOS8_NAME=\"HockeySDK Framework\"\n\n# Documentation\nHOCKEYSDK_DOCSET_VERSION_NAME=\"de.bitstadium.${HOCKEYSDK_DOCSET_NAME}-${VERSION_STRING}\"\n\n# Install dir will be the final output to the framework.\n# The following line creates it in the root folder of the current project.\nPRODUCTS_DIR=${SRCROOT}/../Products\nZIP_FOLDER=HockeySDK-iOS\nTEMP_DIR=${PRODUCTS_DIR}/${ZIP_FOLDER}\nINSTALL_DIR=${TEMP_DIR}/${FMK_NAME}.framework\nALL_FEATURES_INSTALL_DIR=${TEMP_DIR}/HockeySDKAllFeatures/${FMK_NAME}.framework\n\n# Working dir will be deleted after the framework creation.\nWRK_DIR=build\nDEVICE_DIR=${WRK_DIR}/ReleaseDefault-iphoneos\nSIMULATOR_DIR=${WRK_DIR}/ReleaseDefault-iphonesimulator\nDEVICE_DIR_ALL_FEATURES=${WRK_DIR}/Release-iphoneos\nSIMULATOR_DIR_ALL_FEATURES=${WRK_DIR}/Release-iphonesimulator\nDEVICE_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnly-iphoneos\nSIMULATOR_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnly-iphonesimulator\nDEVICE_EXTENSIONS_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnlyExtensions-iphoneos\nSIMULATOR_EXTENSIONS_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnlyExtensions-iphonesimulator\nDEVICE_WATCH_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnlyWatchOS-iphoneos\nSIMULATOR_WATCH_CRASH_ONLY_DIR=${WRK_DIR}/ReleaseCrashOnlyWatchOS-iphonesimulator\n\n# //////////////////////////////\n# Building the  SDK with all features except the Feedback Feature\n# //////////////////////////////\n\n# Building both architectures.\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseDefault\" -target \"${FMK_NAME}\" -sdk iphoneos\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseDefault\" -target \"${FMK_NAME}\" -sdk iphonesimulator\n\n# Cleaning the oldest.\nif [ -d \"${TEMP_DIR}\" ]\nthen\nrm -rf \"${TEMP_DIR}\"\nfi\n\n# Creates and renews the final product folder.\nmkdir -p \"${INSTALL_DIR}\"\nmkdir -p \"${INSTALL_DIR}/Headers\"\nmkdir -p \"${INSTALL_DIR}/Modules\"\n\n# Copy the swift import file\ncp -f \"${SRCROOT}/module_default.modulemap\" \"${INSTALL_DIR}/Modules/module.modulemap\"\n\n# Copies the headers and resources files to the final product folder.\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITAuthenticator.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITCrashAttachment.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITCrashDetails.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITCrashManager.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITCrashManagerDelegate.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITCrashMetaData.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITHockeyAttachment.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITHockeyBaseManager.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITHockeyBaseViewController.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITHockeyManager.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITHockeyManagerDelegate.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITMetricsManager.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITStoreUpdateManager.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITStoreUpdateManagerDelegate.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITUpdateManager.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITUpdateManagerDelegate.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/BITUpdateViewController.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/HockeySDK.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/HockeySDKEnums.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/HockeySDKFeatureConfig.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_DIR}/include/HockeySDK/HockeySDKNullability.h\" \"${INSTALL_DIR}/Headers/\"\n\n# Copy the resource bundle\n#cp -R \"${DEVICE_DIR}/${FMK_RESOURCE_BUNDLE}.bundle\" \"${INSTALL_DIR}/Resources/\"\n\n# Copy the patched feature header\ncp -f \"${SRCROOT}/HockeySDKFeatureConfigDefault.h\" \"${INSTALL_DIR}/Headers/HockeySDKFeatureConfig.h\"\n\n# Uses the Lipo Tool to merge both binary files (i386 + armv6/armv7) into one Universal final product.\nlipo -create \"${DEVICE_DIR}/lib${FMK_NAME}.a\" \"${SIMULATOR_DIR}/lib${FMK_NAME}.a\" -output \"${INSTALL_DIR}/${FMK_NAME}\"\n\n# Combine the CrashReporter static library into a new Hockey static library file if they are not already present and copy the public headers too\nif [ -z $(otool -L \"${INSTALL_DIR}/${FMK_NAME}\" | grep 'libCrashReporter') ]\nthen\nlibtool -static -o \"${INSTALL_DIR}/${FMK_NAME}\" \"${INSTALL_DIR}/${FMK_NAME}\" \"${SRCROOT}/../Vendor/CrashReporter.framework/Versions/A/CrashReporter\"\nfi\n\n# build embeddedframework folder and move framework into it\nmkdir \"${INSTALL_DIR}/../${FMK_NAME}.embeddedframework\"\nmv \"${INSTALL_DIR}\" \"${INSTALL_DIR}/../${FMK_NAME}.embeddedframework/${FMK_NAME}.framework\"\nmv \"${DEVICE_DIR}/${FMK_RESOURCE_BUNDLE}.bundle\" \"${TEMP_DIR}/${FMK_NAME}.embeddedframework/\"\n\nrm -r \"${WRK_DIR}\"\n\n# //////////////////////////////\n# Building the full featured SDK\n# //////////////////////////////\n\n# Building both architectures.\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"Release\" -target \"${FMK_NAME}\" -sdk iphoneos\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"Release\" -target \"${FMK_NAME}\" -sdk iphonesimulator\n\n# Creates and renews the final product folder.\nmkdir -p \"${ALL_FEATURES_INSTALL_DIR}\"\nmkdir -p \"${ALL_FEATURES_INSTALL_DIR}/Headers\"\nmkdir -p \"${ALL_FEATURES_INSTALL_DIR}/Modules\"\n\n# Copy the swift import file\ncp -f \"${SRCROOT}/module_allfeatures.modulemap\" \"${ALL_FEATURES_INSTALL_DIR}/Modules/module.modulemap\"\n\n# Copies the headers and resources files to the final product folder.\ncp -R \"${DEVICE_DIR_ALL_FEATURES}/include/HockeySDK/\" \"${ALL_FEATURES_INSTALL_DIR}/Headers/\"\n\n# Use the Lipo Tool to merge both binary files (i386/x86_64 + armv7/armv7s/arm64) into one Universal final product.\nlipo -create \"${DEVICE_DIR_ALL_FEATURES}/lib${FMK_NAME}.a\" \"${SIMULATOR_DIR_ALL_FEATURES}/lib${FMK_NAME}.a\" -output \"${ALL_FEATURES_INSTALL_DIR}/${FMK_NAME}\"\n\n# Combine the CrashReporter static library into a new Hockey static library file if they are not already present and copy the public headers too\nif [ -z $(otool -L \"${ALL_FEATURES_INSTALL_DIR}/${FMK_NAME}\" | grep 'libCrashReporter') ]\nthen\nlibtool -static -o \"${ALL_FEATURES_INSTALL_DIR}/${FMK_NAME}\" \"${ALL_FEATURES_INSTALL_DIR}/${FMK_NAME}\" \"${SRCROOT}/../Vendor/CrashReporter.framework/Versions/A/CrashReporter\"\nfi\n\n# build embeddedframework folder and move framework into it\nmkdir \"${ALL_FEATURES_INSTALL_DIR}/../${FMK_NAME}.embeddedframework\"\nmv \"${ALL_FEATURES_INSTALL_DIR}/\" \"${ALL_FEATURES_INSTALL_DIR}/../${FMK_NAME}.embeddedframework/${FMK_NAME}.framework\"\nmv \"${DEVICE_DIR_ALL_FEATURES}/${FMK_RESOURCE_BUNDLE}.bundle\" \"${TEMP_DIR}/HockeySDKAllFeatures/${FMK_NAME}.embeddedframework/\"\n\n# do some cleanup\nrm -r \"${WRK_DIR}\"\n\n# /////////////////////////////////////////////\n# Building the crash only SDK without resources\n# /////////////////////////////////////////////\n\n# Building both architectures.\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseCrashOnly\" -target \"${FMK_NAME}\" -sdk iphoneos\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseCrashOnly\" -target \"${FMK_NAME}\" -sdk iphonesimulator\n\n# Creates and renews the final product folder.\nmkdir -p \"${INSTALL_DIR}\"\nmkdir -p \"${INSTALL_DIR}/Headers\"\nmkdir -p \"${INSTALL_DIR}/Modules\"\n\n# Copy the swift import file\ncp -f \"${SRCROOT}/module_crashonly.modulemap\" \"${INSTALL_DIR}/Modules/module.modulemap\"\n\n# Copies the headers without the resources files to the final product folder.\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}\"/include/HockeySDK/BITCrash*.h \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITMetricsManager.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyAttachment.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyBaseManager.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyManager.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyManagerDelegate.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDK.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDKNullability.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDKEnums.h\" \"${INSTALL_DIR}/Headers/\"\n\n# Copy the patched feature header\ncp -f \"${SRCROOT}/HockeySDKCrashOnlyConfig.h\" \"${INSTALL_DIR}/Headers/HockeySDKFeatureConfig.h\"\n\n# Uses the Lipo Tool to merge both binary files (i386/x86_64 + armv7/armv7s/arm64) into one Universal final product.\nlipo -create \"${SRCROOT}/${DEVICE_CRASH_ONLY_DIR}/lib${FMK_NAME}.a\" \"${SRCROOT}/${SIMULATOR_CRASH_ONLY_DIR}/lib${FMK_NAME}.a\" -output \"${INSTALL_DIR}/${FMK_NAME}\"\n\n# Combine the CrashReporter static library into a new Hockey static library file if they are not already present and copy the public headers too\nif [ -z $(otool -L \"${INSTALL_DIR}/${FMK_NAME}\" | grep 'libCrashReporter') ]\nthen\nlibtool -static -o \"${INSTALL_DIR}/${FMK_NAME}\" \"${INSTALL_DIR}/${FMK_NAME}\" \"${SRCROOT}/../Vendor/CrashReporter.framework/Versions/A/CrashReporter\"\nfi\n\n# Move the crash reporting only framework into a new folder\nmkdir \"${INSTALL_DIR}/../${FMK_NAME}CrashOnly\"\nmv \"${INSTALL_DIR}\" \"${INSTALL_DIR}/../${FMK_NAME}CrashOnly/${FMK_NAME}.framework\"\n\nrm -r \"${WRK_DIR}\"\n\n# ////////////////////////////////////////////////////////\n# Building the extensions crash only SDK without resources\n# ////////////////////////////////////////////////////////\n\n# Building both architectures.\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseCrashOnlyExtensions\" -target \"${FMK_NAME}\" -sdk iphoneos\nxcodebuild -project \"HockeySDK.xcodeproj\" -configuration \"ReleaseCrashOnlyExtensions\" -target \"${FMK_NAME}\" -sdk iphonesimulator\n\n# Creates and renews the final product folder.\nmkdir -p \"${INSTALL_DIR}\"\nmkdir -p \"${INSTALL_DIR}/Headers\"\nmkdir -p \"${INSTALL_DIR}/Modules\"\n\n# Copy the swift import file\ncp -f \"${SRCROOT}/module_crashonly.modulemap\" \"${INSTALL_DIR}/Modules/module.modulemap\"\n\n# Copies the headers without the resources files to the final product folder.\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}\"/include/HockeySDK/BITCrash*.h \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyAttachment.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyBaseManager.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyManager.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/BITHockeyManagerDelegate.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDK.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDKNullability.h\" \"${INSTALL_DIR}/Headers/\"\ncp -R \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/include/HockeySDK/HockeySDKEnums.h\" \"${INSTALL_DIR}/Headers/\"\n\n# Copy the patched feature header\ncp -f \"${SRCROOT}/HockeySDKCrashOnlyExtensionConfig.h\" \"${INSTALL_DIR}/Headers/HockeySDKFeatureConfig.h\"\n\n# Uses the Lipo Tool to merge both binary files (i386/x86_64 + armv7/armv7s/arm64) into one Universal final product.\nlipo -create \"${SRCROOT}/${DEVICE_EXTENSIONS_CRASH_ONLY_DIR}/lib${FMK_NAME}.a\" \"${SRCROOT}/${SIMULATOR_EXTENSIONS_CRASH_ONLY_DIR}/lib${FMK_NAME}.a\" -output \"${INSTALL_DIR}/${FMK_NAME}\"\n\n# Combine the CrashReporter static library into a new Hockey static library file if they are not already present and copy the public headers too\nif [ -z $(otool -L \"${INSTALL_DIR}/${FMK_NAME}\" | grep 'libCrashReporter') ]\nthen\nlibtool -static -o \"${INSTALL_DIR}/${FMK_NAME}\" \"${INSTALL_DIR}/${FMK_NAME}\" \"${SRCROOT}/../Vendor/CrashReporter.framework/Versions/A/CrashReporter\"\nfi\n\n# Move the crash reporting only framework into a new folder\nmkdir \"${INSTALL_DIR}/../${FMK_NAME}CrashOnlyExtension\"\nmv \"${INSTALL_DIR}\" \"${INSTALL_DIR}/../${FMK_NAME}CrashOnlyExtension/${FMK_NAME}.framework\"\n\nrm -r \"${WRK_DIR}\"\n\n# //////////////////////////////\n# Final steps: move documentation and create zip-file\n# //////////////////////////////\n\n# copy license, changelog, documentation, integration json\ncp -f \"${SRCROOT}/../Docs/Changelog-template.md\" \"${TEMP_DIR}/CHANGELOG\"\ncp -f \"${SRCROOT}/../Docs/Guide-Installation-Setup-template.md\" \"${TEMP_DIR}/README.md\"\ncp -f \"${SRCROOT}/../LICENSE\" \"${TEMP_DIR}\"\nmkdir \"${TEMP_DIR}/${HOCKEYSDK_DOCSET_VERSION_NAME}.docset\"\ncp -R \"${SRCROOT}/../documentation/docset/Contents\" \"${TEMP_DIR}/${HOCKEYSDK_DOCSET_VERSION_NAME}.docset\"\n\n# build zip\ncd \"${PRODUCTS_DIR}\"\nrm -f \"${FMK_NAME}-iOS-${VERSION_STRING}.zip\"\nzip -yr \"${FMK_NAME}-iOS-${VERSION_STRING}.zip\" \"${ZIP_FOLDER}\" -x \\*/.*\n\ncd \"${ZIP_FOLDER}\"\nrm -f \"${FMK_NAME}-iOS-documentation-${VERSION_STRING}.zip\"\nzip -yr \"${FMK_NAME}-iOS-documentation-${VERSION_STRING}.zip\" \"${HOCKEYSDK_DOCSET_VERSION_NAME}.docset\" -x \\*/.*\nmv \"${FMK_NAME}-iOS-documentation-${VERSION_STRING}.zip\" \"../\"\n";
 		};
 		1E8E66B215BC3D8200632A2E /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -2035,20 +2063,34 @@
 			baseConfigurationReference = 1E27E60A1B74F01400192AE2 /* crashonlyextensions.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COMPRESS_PNG_FILES = NO;
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				GCC_THUMB_SUPPORT = NO;
 				GCC_VERSION = "";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_STRICT_SELECTOR_MATCH = YES;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
@@ -2305,13 +2347,13 @@
 			};
 			name = Debug;
 		};
-		1E4F61EC1621AD970033EFC5 /* Release */ = {
+		1E4F61EC1621AD970033EFC5 /* ReleaseDefault */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
 				PRODUCT_NAME = HockeySDK.framework;
 			};
-			name = Release;
+			name = ReleaseDefault;
 		};
 		1E5954F015B6F24A00A03429 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -2340,7 +2382,7 @@
 			};
 			name = Debug;
 		};
-		1E5954F115B6F24A00A03429 /* Release */ = {
+		1E5954F115B6F24A00A03429 /* ReleaseDefault */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
@@ -2366,7 +2408,7 @@
 				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
 				WATCHOS_DEPLOYMENT_TARGET = 2.0;
 			};
-			name = Release;
+			name = ReleaseDefault;
 		};
 		1E59551515B6F45800A03429 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -2381,7 +2423,7 @@
 			};
 			name = Debug;
 		};
-		1E59551615B6F45800A03429 /* Release */ = {
+		1E59551615B6F45800A03429 /* ReleaseDefault */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				GCC_THUMB_SUPPORT = NO;
@@ -2392,7 +2434,7 @@
 				SKIP_INSTALL = YES;
 				WRAPPER_EXTENSION = bundle;
 			};
-			name = Release;
+			name = ReleaseDefault;
 		};
 		1E5A45A016F0DFC200B55C04 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -2457,7 +2499,7 @@
 			};
 			name = Debug;
 		};
-		1E5A45A116F0DFC200B55C04 /* Release */ = {
+		1E5A45A116F0DFC200B55C04 /* ReleaseDefault */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
@@ -2515,27 +2557,41 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VALIDATE_PRODUCT = YES;
 			};
-			name = Release;
+			name = ReleaseDefault;
 		};
 		1E7DE39019D44D88009AB8E5 /* ReleaseCrashOnly */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 1E7DE39619D44DC6009AB8E5 /* crashonly.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COMPRESS_PNG_FILES = NO;
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				GCC_THUMB_SUPPORT = NO;
 				GCC_VERSION = "";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_STRICT_SELECTOR_MATCH = YES;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
@@ -2674,14 +2730,14 @@
 			};
 			name = Debug;
 		};
-		1E8E66AF15BC3D7700632A2E /* Release */ = {
+		1E8E66AF15BC3D7700632A2E /* ReleaseDefault */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				GCC_THUMB_SUPPORT = NO;
 				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
-			name = Release;
+			name = ReleaseDefault;
 		};
 		1EB617531B0A30480035A986 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -2731,7 +2787,7 @@
 			};
 			name = Debug;
 		};
-		1EB617551B0A30480035A986 /* Release */ = {
+		1EB617551B0A30480035A986 /* ReleaseDefault */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
@@ -2779,7 +2835,7 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = Release;
+			name = ReleaseDefault;
 		};
 		1EB617561B0A30480035A986 /* ReleaseCrashOnly */ = {
 			isa = XCBuildConfiguration;
@@ -2901,7 +2957,7 @@
 			};
 			name = Debug;
 		};
-		1EB6175A1B0A30480035A986 /* Release */ = {
+		1EB6175A1B0A30480035A986 /* ReleaseDefault */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
@@ -2966,7 +3022,7 @@
 				VALIDATE_PRODUCT = YES;
 				VALID_ARCHS = "armv7 arm64";
 			};
-			name = Release;
+			name = ReleaseDefault;
 		};
 		1EB6175B1B0A30480035A986 /* ReleaseCrashOnly */ = {
 			isa = XCBuildConfiguration;
@@ -3035,62 +3091,39 @@
 			};
 			name = ReleaseCrashOnly;
 		};
-		E400563C148D79B500EB22B9 /* Debug */ = {
+		B29855441D85EBC9007FF452 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 1E66CA9115D4100500F35BED /* buildnumber.xcconfig */;
+			baseConfigurationReference = B29855421D85EB5D007FF452 /* allfeatures.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COMPRESS_PNG_FILES = NO;
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = NO;
-				ENABLE_TESTABILITY = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
-				GCC_THUMB_SUPPORT = NO;
-				GCC_VERSION = "";
-				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
-				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_STRICT_SELECTOR_MATCH = YES;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
-				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 7.0;
-				MACOSX_DEPLOYMENT_TARGET = 10.5;
-				ONLY_ACTIVE_ARCH = YES;
-				RUN_CLANG_STATIC_ANALYZER = YES;
-				SDKROOT = iphoneos;
-			};
-			name = Debug;
-		};
-		E400563D148D79B500EB22B9 /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 1E45A90E1B78DB0C002CA772 /* release.xcconfig */;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				COMPRESS_PNG_FILES = NO;
-				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = NO;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
 				GCC_THUMB_SUPPORT = NO;
 				GCC_VERSION = "";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_STRICT_SELECTOR_MATCH = YES;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
@@ -3102,6 +3135,336 @@
 			};
 			name = Release;
 		};
+		B29855451D85EBC9007FF452 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				DSTROOT = /tmp/HockeySDK.dst;
+				ENABLE_BITCODE = NO;
+				ENABLE_NS_ASSERTIONS = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)/../Vendor\"",
+				);
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"BITHOCKEY_STATIC_LIBRARY=1",
+					"$(inherited)",
+				);
+				GCC_THUMB_SUPPORT = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
+				PRODUCT_NAME = HockeySDK;
+				PUBLIC_HEADERS_FOLDER_PATH = "include/$(PRODUCT_NAME)";
+				SKIP_INSTALL = YES;
+				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
+				WATCHOS_DEPLOYMENT_TARGET = 2.0;
+			};
+			name = Release;
+		};
+		B29855461D85EBC9007FF452 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/../Vendor",
+					"$(PROJECT_DIR)/HockeySDKTests/Vendor",
+				);
+				GCC_PREFIX_HEADER = "";
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)/HockeySDKTests/Vendor/**",
+				);
+				INFOPLIST_FILE = "HockeySDKTests/HockeySDKTests-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 6.1;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
+				);
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					CoreText,
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					Foundation,
+					"-framework",
+					QuartzCore,
+					"-framework",
+					SystemConfiguration,
+					"-framework",
+					UIKit,
+					"-framework",
+					Security,
+					"-framework",
+					AssetsLibrary,
+					"-framework",
+					MobileCoreServices,
+					"-framework",
+					QuickLook,
+					"-lc++",
+					"-ObjC",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "net.hockeyapp.${PRODUCT_NAME:rfc1034identifier}";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		B29855471D85EBC9007FF452 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_THUMB_SUPPORT = NO;
+				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.resources.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
+		B29855481D85EBC9007FF452 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				"ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Distribution";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/../Vendor",
+					"$(PROJECT_DIR)/HockeySDKTests",
+				);
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				INFOPLIST_FILE = "HockeySDK Framework/Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
+				PRODUCT_NAME = HockeySDK;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+				"VALID_ARCHS[sdk=iphonesimulator*]" = "$(BIT_SIM_ARCHS)";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		B29855491D85EBC9007FF452 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/../Vendor",
+					"$(PROJECT_DIR)/HockeySDKTests/Vendor",
+				);
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/HockeySDKTests/Vendor";
+				INFOPLIST_FILE = "HockeySDK FrameworkTests/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/HockeySDKTests/Vendor/**",
+				);
+				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-framework",
+					CoreText,
+					"-framework",
+					CoreGraphics,
+					"-framework",
+					Foundation,
+					"-framework",
+					QuartzCore,
+					"-framework",
+					SystemConfiguration,
+					"-framework",
+					UIKit,
+					"-framework",
+					Security,
+					"-framework",
+					AssetsLibrary,
+					"-framework",
+					MobileCoreServices,
+					"-framework",
+					QuickLook,
+					"-lc++",
+					"-ObjC",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "net.hockeyapp.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				VALIDATE_PRODUCT = YES;
+				VALID_ARCHS = "armv7 arm64";
+			};
+			name = Release;
+		};
+		B298554A1D85EBC9007FF452 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_THUMB_SUPPORT = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		B298554B1D85EBC9007FF452 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_BUNDLE_IDENTIFIER = net.hockeyapp.sdk.ios;
+				PRODUCT_NAME = HockeySDK.framework;
+			};
+			name = Release;
+		};
+		E400563C148D79B500EB22B9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 1E754DC61621BC170070AB92 /* HockeySDKBase.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COMPRESS_PNG_FILES = NO;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_THUMB_SUPPORT = NO;
+				GCC_VERSION = "";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_STRICT_SELECTOR_MATCH = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 7.0;
+				MACOSX_DEPLOYMENT_TARGET = 10.5;
+				ONLY_ACTIVE_ARCH = YES;
+				RUN_CLANG_STATIC_ANALYZER = YES;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		E400563D148D79B500EB22B9 /* ReleaseDefault */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 1E45A90E1B78DB0C002CA772 /* default.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COMPRESS_PNG_FILES = NO;
+				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = "$(inherited)";
+				GCC_THUMB_SUPPORT = NO;
+				GCC_VERSION = "";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_STRICT_SELECTOR_MATCH = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = "../Resources/HockeySDK-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
+				"IPHONEOS_DEPLOYMENT_TARGET[arch=arm64]" = 7.0;
+				MACOSX_DEPLOYMENT_TARGET = 10.5;
+				RUN_CLANG_STATIC_ANALYZER = YES;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = NO;
+			};
+			name = ReleaseDefault;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -3109,7 +3472,8 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1E4F61EB1621AD970033EFC5 /* Debug */,
-				1E4F61EC1621AD970033EFC5 /* Release */,
+				1E4F61EC1621AD970033EFC5 /* ReleaseDefault */,
+				B298554B1D85EBC9007FF452 /* Release */,
 				1E7DE39419D44D88009AB8E5 /* ReleaseCrashOnly */,
 				1E27E6131B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
 			);
@@ -3120,7 +3484,8 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1E5954F015B6F24A00A03429 /* Debug */,
-				1E5954F115B6F24A00A03429 /* Release */,
+				1E5954F115B6F24A00A03429 /* ReleaseDefault */,
+				B29855451D85EBC9007FF452 /* Release */,
 				1E7DE39119D44D88009AB8E5 /* ReleaseCrashOnly */,
 				1E27E60D1B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
 			);
@@ -3131,7 +3496,8 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1E59551515B6F45800A03429 /* Debug */,
-				1E59551615B6F45800A03429 /* Release */,
+				1E59551615B6F45800A03429 /* ReleaseDefault */,
+				B29855471D85EBC9007FF452 /* Release */,
 				1E7DE39219D44D88009AB8E5 /* ReleaseCrashOnly */,
 				1E27E60F1B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
 			);
@@ -3142,7 +3508,8 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1E5A45A016F0DFC200B55C04 /* Debug */,
-				1E5A45A116F0DFC200B55C04 /* Release */,
+				1E5A45A116F0DFC200B55C04 /* ReleaseDefault */,
+				B29855461D85EBC9007FF452 /* Release */,
 				1E7DE39519D44D88009AB8E5 /* ReleaseCrashOnly */,
 				1E27E60E1B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
 			);
@@ -3153,7 +3520,8 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1E8E66AE15BC3D7700632A2E /* Debug */,
-				1E8E66AF15BC3D7700632A2E /* Release */,
+				1E8E66AF15BC3D7700632A2E /* ReleaseDefault */,
+				B298554A1D85EBC9007FF452 /* Release */,
 				1E7DE39319D44D88009AB8E5 /* ReleaseCrashOnly */,
 				1E27E6121B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
 			);
@@ -3164,7 +3532,8 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1EB617531B0A30480035A986 /* Debug */,
-				1EB617551B0A30480035A986 /* Release */,
+				1EB617551B0A30480035A986 /* ReleaseDefault */,
+				B29855481D85EBC9007FF452 /* Release */,
 				1EB617561B0A30480035A986 /* ReleaseCrashOnly */,
 				1E27E6101B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
 			);
@@ -3175,7 +3544,8 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1EB617581B0A30480035A986 /* Debug */,
-				1EB6175A1B0A30480035A986 /* Release */,
+				1EB6175A1B0A30480035A986 /* ReleaseDefault */,
+				B29855491D85EBC9007FF452 /* Release */,
 				1EB6175B1B0A30480035A986 /* ReleaseCrashOnly */,
 				1E27E6111B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
 			);
@@ -3186,7 +3556,8 @@
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				E400563C148D79B500EB22B9 /* Debug */,
-				E400563D148D79B500EB22B9 /* Release */,
+				E400563D148D79B500EB22B9 /* ReleaseDefault */,
+				B29855441D85EBC9007FF452 /* Release */,
 				1E7DE39019D44D88009AB8E5 /* ReleaseCrashOnly */,
 				1E27E60C1B74F03000192AE2 /* ReleaseCrashOnlyExtensions */,
 			);

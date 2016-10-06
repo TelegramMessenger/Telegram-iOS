@@ -13,7 +13,7 @@
 
 @interface BITCrashReportTextFormatter ()
 
-+ (NSString *)anonymizedProcessPathFromProcessPath:(NSString *)processPath;
++ (NSString *)anonymizedPathFromPath:(NSString *)path;
 
 @end
 

@@ -134,7 +134,7 @@ FOUNDATION_EXPORT NSString *const BITPersistenceSuccessNotification;
  *
  * @param the type that you want the fileURL for
 */
-- (NSString *)fileURLForType:(BITPersistenceType)type;
+- (nullable NSString *)fileURLForType:(BITPersistenceType)type;
 
 - (void)createDirectoryStructureIfNeeded;
 

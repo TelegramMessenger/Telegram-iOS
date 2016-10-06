@@ -52,6 +52,12 @@
 #   define PLCR_CPP_BEGIN_NS namespace plcrash {
 #   define PLCR_CPP_END_NS }
 #  endif
+#
+    /** @internal Define the plcrash::async namespace, automatically inserting an inline namespace containing the configured PLCRASHREPORTER_PREFIX, if any. */
+#  define PLCR_CPP_BEGIN_ASYNC_NS PLCR_CPP_BEGIN_NS namespace async {
+
+    /** @internal Close the definition of the `plcrash::async` namespace (and the PLCRASHREPORTER_PREFIX inline namespace, if any). */
+#  define PLCR_CPP_END_ASYNC_NS PLCR_CPP_END_NS }
 #endif
 
 #ifdef __clang__
@@ -60,10 +66,54 @@
 #  define PLCR_PRAGMA_CLANG(_p)
 #endif
 
+#ifdef __clang__
+#  define PLCR_DEPRECATED __attribute__((deprecated))
+#else
+#  define PLCR_DEPRECATED
+#endif
+
 #if defined(__clang__) || defined(__GNUC__)
 #  define PLCR_UNUSED __attribute__((unused))
 #else
 #  define PLCR_UNUSED
+#endif
+
+#ifdef PLCR_PRIVATE
+/**
+ * Marks a definition as deprecated only for for external clients, allowing
+ * uses of it internal fo the framework.
+ */
+#define PLCR_EXTERNAL_DEPRECATED
+
+/**
+ * @internal
+ * A macro to put above a definition marked PLCR_EXTERNAL_DEPRECATED that will
+ * silence warnings about there being a deprecation documentation marker but the
+ * definition not being marked deprecated.
+ */
+#  define PLCR_EXTERNAL_DEPRECATED_NOWARN_PUSH() \
+      PLCR_PRAGMA_CLANG("clang diagnostic push"); \
+      PLCR_PRAGMA_CLANG("clang diagnostic ignored \"-Wdocumentation-deprecated-sync\"")
+
+/**
+ * @internal
+ * A macro to put below a definition marked PLCR_EXTERNAL_DEPRECATED that will
+ * silence warnings about there being a deprecation documentation marker but the
+ * definition not being marked deprecated.
+ */
+#  define PLCR_EXTERNAL_DEPRECATED_NOWARN_POP() PLCR_PRAGMA_CLANG("clang diagnostic pop")
+#else
+#  define PLCR_EXTERNAL_DEPRECATED PLCR_DEPRECATED
+#  define PLCR_EXTERNAL_DEPRECATED_NOWARN_PUSH()
+#  define PLCR_EXTERNAL_DEPRECATED_NOWARN_PUSH()
+#endif /* PLCR_PRIVATE */
+
+#ifdef PLCR_PRIVATE
+#  if defined(__clang__) && __has_feature(cxx_attributes) && __has_warning("-Wimplicit-fallthrough")
+#    define PLCR_FALLTHROUGH [[clang::fallthrough]]
+#  else
+#    define PLCR_FALLTHROUGH do {} while (0)
+#  endif
 #endif
 
 #ifdef PLCR_PRIVATE

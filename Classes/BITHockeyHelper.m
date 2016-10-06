@@ -48,6 +48,18 @@ NSString *const kBITExcludeApplicationSupportFromBackup = @"kBITExcludeApplicati
   return isUrlSessionSupported;
 }
 
++ (BOOL)isPhotoAccessPossible {
+  if(bit_isPreiOS10Environment()) {
+    return YES;
+  }
+  else {
+    NSString *privacyDescription = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"NSPhotoLibraryUsageDescription"];
+    BOOL privacyStringSet = (privacyDescription != nil) && (privacyDescription.length > 0);
+    
+    return privacyStringSet;
+  }
+}
+
 @end
 
 #if __IPHONE_OS_VERSION_MAX_ALLOWED < 70000
@@ -124,20 +136,20 @@ NSComparisonResult bit_versionCompare(NSString *stringA, NSString *stringB) {
   NSRange letterRange = [plainSelf rangeOfCharacterFromSet: [NSCharacterSet letterCharacterSet]];
   if (letterRange.length)
     plainSelf = [plainSelf substringToIndex: letterRange.location];
-	
+  
   // Extract plain version number from other
   NSString *plainOther = stringB;
   letterRange = [plainOther rangeOfCharacterFromSet: [NSCharacterSet letterCharacterSet]];
   if (letterRange.length)
     plainOther = [plainOther substringToIndex: letterRange.location];
-	
+  
   // Compare plain versions
   NSComparisonResult result = [plainSelf compare:plainOther options:NSNumericSearch];
-	
+  
   // If plain versions are equal, compare full versions
   if (result == NSOrderedSame)
     result = [stringA compare:stringB options:NSNumericSearch];
-	
+  
   // Done
   return result;
 }
@@ -145,7 +157,7 @@ NSComparisonResult bit_versionCompare(NSString *stringA, NSString *stringB) {
 #pragma mark Exclude from backup fix
 
 void bit_fixBackupAttributeForURL(NSURL *directoryURL) {
-
+  
   BOOL shouldExcludeAppSupportDirFromBackup = [[NSUserDefaults standardUserDefaults] boolForKey:kBITExcludeApplicationSupportFromBackup];
   if (shouldExcludeAppSupportDirFromBackup) {
     return;
@@ -298,7 +310,7 @@ BOOL bit_isPreiOS8Environment(void) {
   dispatch_once(&checkOS8, ^{
     // NSFoundationVersionNumber_iOS_7_1 = 1047.25
     // We hardcode this, so compiling with iOS 7 is possible while still being able to detect the correct environment
-
+    
     // runtime check according to
     // https://developer.apple.com/library/prerelease/ios/documentation/UserExperience/Conceptual/TransitionGuide/SupportingEarlieriOS.html
     if (floor(NSFoundationVersionNumber) <= 1047.25) {
@@ -310,6 +322,27 @@ BOOL bit_isPreiOS8Environment(void) {
   
   return isPreiOS8Environment;
 }
+
+BOOL bit_isPreiOS10Environment(void) {
+  static BOOL isPreOS10Environment = YES;
+  static dispatch_once_t checkOS10;
+  
+  dispatch_once(&checkOS10, ^{
+    // NSFoundationVersionNumber_iOS_9_MAX = 1299
+    // We hardcode this, so compiling with iOS 7 is possible while still being able to detect the correct environment
+    
+    // runtime check according to
+    // https://developer.apple.com/library/prerelease/ios/documentation/UserExperience/Conceptual/TransitionGuide/SupportingEarlieriOS.html
+    if (floor(NSFoundationVersionNumber) <= 1299.00) {
+      isPreOS10Environment = YES;
+    } else {
+      isPreOS10Environment = NO;
+    }
+  });
+  
+  return isPreOS10Environment;
+}
+
 
 BOOL bit_isAppStoreReceiptSandbox(void) {
 #if TARGET_OS_SIMULATOR
@@ -380,7 +413,7 @@ BOOL bit_isDebuggerAttached(void) {
     name[3] = getpid();
     
     if (sysctl(name, 4, &info, &info_size, NULL, 0) == -1) {
-      NSLog(@"[HockeySDK] ERROR: Checking for a running debugger via sysctl() failed.");
+      BITHockeyLogError(@"[HockeySDK] ERROR: Checking for a running debugger via sysctl() failed.");
       debuggerIsAttached = false;
     }
     
@@ -590,7 +623,7 @@ NSString *bit_validAppIconStringFromIcons(NSBundle *resourceBundle, NSArray *ico
   NSString *currentBestMatch = nil;
   float currentBestMatchHeight = 0;
   float bestMatchHeight = 0;
-
+  
   if (bit_isPreiOS7Environment()) {
     bestMatchHeight = useiPadIcon ? (useHighResIcon ? 144 : 72) : (useHighResIcon ? 114 : 57);
   } else {
@@ -600,19 +633,29 @@ NSString *bit_validAppIconStringFromIcons(NSBundle *resourceBundle, NSArray *ico
   for(NSString *icon in icons) {
     // Don't use imageNamed, otherwise unit tests won't find the fixture icon
     // and using imageWithContentsOfFile doesn't load @2x files with absolut paths (required in tests)
+    
 
-    NSString *iconPathExtension = ([[icon pathExtension] length] > 0) ? [icon pathExtension] : @"png";
     NSMutableArray *iconFilenameVariants = [NSMutableArray new];
     
+    [iconFilenameVariants addObject:icon];
+    [iconFilenameVariants addObject:[NSString stringWithFormat:@"%@@2x", icon]];
     [iconFilenameVariants addObject:[icon stringByDeletingPathExtension]];
     [iconFilenameVariants addObject:[NSString stringWithFormat:@"%@@2x", [icon stringByDeletingPathExtension]]];
     
     for (NSString *iconFilename in iconFilenameVariants) {
       // this call already covers "~ipad" files
-      NSString *iconPath = [resourceBundle pathForResource:iconFilename ofType:iconPathExtension];
+      NSString *iconPath = [resourceBundle pathForResource:iconFilename ofType:@"png"];
+      
+      if (!iconPath && (icon.pathExtension.length > 0)) {
+        iconPath = [resourceBundle pathForResource:iconFilename ofType:icon.pathExtension];
+      }
+      // We still haven't managed to get a path to the app icon, just using a placeholder now.
+      if(!iconPath) {
+        iconPath = [resourceBundle pathForResource:@"AppIconPlaceHolder" ofType:@"png"];
+      }
       
       NSData *imgData = [[NSData alloc] initWithContentsOfFile:iconPath];
-    
+      
       UIImage *iconImage = [[UIImage alloc] initWithData:imgData];
       
       if (iconImage) {
@@ -646,17 +689,15 @@ NSString *bit_validAppIconFilename(NSBundle *bundle, NSBundle *resourceBundle) {
   }
   
   // we test iPad structure anyway and use it if we find a result and don't have another one yet
-  if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+  if (!iconFilename && (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad)) {
     icons = [bundle objectForInfoDictionaryKey:@"CFBundleIcons~ipad"];
     if (icons && [icons isKindOfClass:[NSDictionary class]]) {
       icons = [icons valueForKeyPath:@"CFBundlePrimaryIcon.CFBundleIconFiles"];
     }
     NSString *iPadIconFilename = bit_validAppIconStringFromIcons(resourceBundle, icons);
-    if (iPadIconFilename && !iconFilename) {
-      iconFilename = iPadIconFilename;
-    }
+    iconFilename = iPadIconFilename;
   }
-
+  
   if (!iconFilename) {
     NSString *tempFilename = [bundle objectForInfoDictionaryKey:@"CFBundleIconFile"];
     if (tempFilename) {

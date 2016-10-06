@@ -1,5 +1,6 @@
 #import "BITEnvelope.h"
 #import "BITData.h"
+#import "BITHockeyLogger.h"
 
 /// Data contract class for type Envelope.
 @implementation BITEnvelope
@@ -67,7 +68,7 @@
   if ([NSJSONSerialization isValidJSONObject:dataDict]) {
     [dict setObject:dataDict forKey:@"data"];
   } else {
-    NSLog(@"[HockeyApp] Some of the telemetry data was not NSJSONSerialization compatible and could not be serialized!");
+    BITHockeyLogError(@"[HockeySDK] Some of the telemetry data was not NSJSONSerialization compatible and could not be serialized!");
   }
   return dict;
 }

@@ -1,3 +1,32 @@
+# 4.1.2
+
+- [NEW] New `shouldDisplayUpdateAlertForUpdateManager`-API [#339](https://github.com/bitstadium/HockeySDK-iOS/pull/339) to make the moment of appearance for custom update UI even more customizable. 
+- [IMPROVEMENT] Fix static analyzer warnings. [#351](https://github.com/bitstadium/HockeySDK-iOS/pull/351)
+- [IMPROVEMENT] Internal structure of embedded frameworks changed [#352](https://github.com/bitstadium/HockeySDK-iOS/pull/352)
+- [IMPROVEMENT] Upgrade to PLCrashReporter 1.3
+- [BUGFIX] Enable bitcode in all configurations [#344](https://github.com/bitstadium/HockeySDK-iOS/pull/344)
+- [BUGFIX] Fixed anonymisation of binary paths when running in the simulator [#347](https://github.com/bitstadium/HockeySDK-iOS/pull/347)
+- - [BUGFIX] Rename configurations to not break Carthage integration [#353](https://github.com/bitstadium/HockeySDK-iOS/pull/353)
+
+## 4.1.1
+
+**Attention** Due to changes in iOS 10, it is now necessary to include the `NSPhotoLibraryUsageDescription` in your app's Info.plist file if you want to use HockeySDK's Feedback feature. Since using the feature without the plist key present could lead to an App Store rejection, our default CocoaPods configuration does not include the Feedback feature anymore.
+If you want to continue to use it, use this in your `Podfile`:
+
+```ruby
+pod "HockeySDK", :subspecs => ['AllFeaturesLib']
+```
+
+Additionally, we now also provide a new flavor in our binary distribution. To use all features, including Feedback, use `HockeySDK.embeddedframework` from the `HockeySDKAllFeatures` folder.
+
+- [NEW] The property `userDescription` on `BITCrashMetaData` had to be renamed to `userProvidedeDescription` to provide a name clash with Apple Private API
+- [IMPROVEMENT] Warn if the Feedback feature is being used without `NSPhotoLibraryUsageDescription` being present
+- [IMPROVEMENT] Updated Chinese translations
+- [IMPROVEMENT] Set web view baseURL to `about:blank` to improve security
+- [BUGFIX] Fix an issue in the telemetry channel that could be triggered in multi-threaded environments
+- [BUGFIX] Fix several small layout issues by updating to a newer version of TTTAttributedLabel
+- [BUGFIX] Fix app icons with unusual filenames not showing in the in-app update prompt
+
 ## 4.1.0
 
 - Includes improvements from 4.0.2 release of the SDK.

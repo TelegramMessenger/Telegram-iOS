@@ -103,7 +103,7 @@ static NSString *const kBITCrashMetaAttachment = @"BITCrashMetaAttachment";
   [_sut setLastCrashFilename:tempCrashName];
   
   BITCrashMetaData *metaData = [BITCrashMetaData new];
-  [metaData setUserDescription:@"Test string"];
+  [metaData setUserProvidedDescription:@"Test string"];
   [_sut persistUserProvidedMetaData:metaData];
   
   NSError *error;
