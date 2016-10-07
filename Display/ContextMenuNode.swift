@@ -10,6 +10,7 @@ final class ContextMenuNode: ASDisplayNode {
     private let actionNodes: [ContextMenuActionNode]
     
     var sourceRect: CGRect?
+    var arrowOnBottom: Bool = true
     
     private var dismissedByTouchOutside = false
     
@@ -59,6 +60,7 @@ final class ContextMenuNode: ASDisplayNode {
             verticalOrigin = min(layout.size.height - insets.bottom - 54.0, sourceRect.maxY)
             arrowOnBottom = false
         }
+        self.arrowOnBottom = arrowOnBottom
         
         let horizontalOrigin: CGFloat = floor(min(max(8.0, sourceRect.midX - actionsWidth / 2.0), layout.size.width - actionsWidth - 8.0))
         
@@ -69,7 +71,12 @@ final class ContextMenuNode: ASDisplayNode {
     }
     
     func animateIn() {
-        self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        self.containerNode.layer.animateSpring(from: NSNumber(value: Float(0.2)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.4)
+        
+        let containerPosition = self.containerNode.layer.position
+        self.containerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: containerPosition.x, y: containerPosition.y + (self.arrowOnBottom ? 1.0 : -1.0) * self.containerNode.bounds.size.height / 2.0)), to: NSValue(cgPoint: containerPosition), keyPath: "position", duration: 0.4)
+        
+        self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
     }
     
     func animateOut(completion: @escaping () -> Void) {

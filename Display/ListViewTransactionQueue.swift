@@ -1,7 +1,7 @@
 import Foundation
 import SwiftSignalKit
 
-public typealias ListViewTransaction = @escaping (@escaping (Void) -> Void) -> Void
+public typealias ListViewTransaction = (@escaping (Void) -> Void) -> Void
 
 public final class ListViewTransactionQueue {
     private var transactions: [ListViewTransaction] = []
@@ -10,7 +10,7 @@ public final class ListViewTransactionQueue {
     public init() {
     }
     
-    public func addTransaction(_ transaction: ListViewTransaction) {
+    public func addTransaction(_ transaction: @escaping ListViewTransaction) {
         let beginTransaction = self.transactions.count == 0
         self.transactions.append(transaction)
         

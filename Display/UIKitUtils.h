@@ -8,5 +8,6 @@
 @end
 
 CABasicAnimation * _Nonnull makeSpringAnimation(NSString * _Nonnull keyPath);
+CABasicAnimation * _Nonnull makeSpringBounceAnimation(NSString * _Nonnull keyPath, CGFloat initialVelocity);
 CGFloat springAnimationValueAt(CABasicAnimation * _Nonnull animation, CGFloat t);
 

@@ -99,11 +99,13 @@ public struct ListViewInsertItem {
 
 public struct ListViewUpdateItem {
     public let index: Int
+    public let previousIndex: Int
     public let item: ListViewItem
     public let directionHint: ListViewItemOperationDirectionHint?
     
-    public init(index: Int, item: ListViewItem, directionHint: ListViewItemOperationDirectionHint?) {
+    public init(index: Int, previousIndex: Int, item: ListViewItem, directionHint: ListViewItemOperationDirectionHint?) {
         self.index = index
+        self.previousIndex = previousIndex
         self.item = item
         self.directionHint = directionHint
     }
@@ -579,8 +581,9 @@ private struct ListViewState {
             while i >= 0 {
                 let itemNode = self.nodes[i]
                 let frame = itemNode.frame
+                //print("node \(i) frame \(frame)")
                 if frame.maxY < -self.invisibleInset || frame.origin.y > self.visibleSize.height + self.invisibleInset {
-                    //print("remove \(i)")
+                    //print("remove invisible 1 \(i) frame \(frame)")
                     operations.append(.Remove(index: i, offsetDirection: frame.maxY < -self.invisibleInset ? .Down : .Up))
                     self.nodes.remove(at: i)
                 }
@@ -599,7 +602,7 @@ private struct ListViewState {
                         if self.nodes[j].frame.maxY < upperBound {
                             if let index = self.nodes[j].index {
                                 if index != previousIndex - 1 {
-                                    print("remove monotonity \(j) (\(index))")
+                                    //print("remove monotonity \(j) (\(index))")
                                     operations.append(.Remove(index: j, offsetDirection: .Down))
                                     self.nodes.remove(at: j)
                                 } else {
@@ -633,7 +636,7 @@ private struct ListViewState {
                     }
                     if !removeIndices.isEmpty {
                         for i in removeIndices.reversed() {
-                            print("remove monotonity \(i) (\(self.nodes[i].index!))")
+                            //print("remove monotonity \(i) (\(self.nodes[i].index!))")
                             operations.append(.Remove(index: i, offsetDirection: .Up))
                             self.nodes.remove(at: i)
                         }
@@ -776,7 +779,7 @@ private struct ListViewState {
             
             if let referenceNode = referenceNode , animated {
                 self.nodes.insert(.Placeholder(frame: nodeFrame), at: index)
-                operations.append(.InsertPlaceholder(index: index, referenceNode: referenceNode, offsetDirection: offsetDirection.inverted()))
+                operations.append(.InsertDisappearingPlaceholder(index: index, referenceNode: referenceNode, offsetDirection: offsetDirection.inverted()))
             } else {
                 if nodeFrame.maxY > self.insets.top - CGFloat(FLT_EPSILON) {
                     if let direction = direction , direction == .Down && node.frame.minY < self.visibleSize.height - self.insets.bottom + CGFloat(FLT_EPSILON) {
@@ -849,9 +852,9 @@ private struct ListViewState {
                                 }
                         }
                         
-                        operations.append(.UpdateLayout(index: itemIndex, layout: layout, apply: apply))
+                        operations.append(.UpdateLayout(index: i, layout: layout, apply: apply))
                     case .System:
-                        operations.append(.UpdateLayout(index: itemIndex, layout: layout, apply: apply))
+                        operations.append(.UpdateLayout(index: i, layout: layout, apply: apply))
                 }
                 
                 break
@@ -862,7 +865,7 @@ private struct ListViewState {
 
 private enum ListViewStateOperation {
     case InsertNode(index: Int, offsetDirection: ListViewInsertionOffsetDirection, node: ListViewItemNode, layout: ListViewItemNodeLayout, apply: () -> ())
-    case InsertPlaceholder(index: Int, referenceNode: ListViewItemNode, offsetDirection: ListViewInsertionOffsetDirection)
+    case InsertDisappearingPlaceholder(index: Int, referenceNode: ListViewItemNode, offsetDirection: ListViewInsertionOffsetDirection)
     case Remove(index: Int, offsetDirection: ListViewInsertionOffsetDirection)
     case Remap([Int: Int])
     case UpdateLayout(index: Int, layout: ListViewItemNodeLayout, apply: () -> ())
@@ -928,7 +931,7 @@ public enum ListViewVisibleContentOffset {
     case none
 }
 
-public final class ListView: ASDisplayNode, UIScrollViewDelegate {
+open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
     private final let scroller: ListViewScroller
     private final var visibleSize: CGSize = CGSize()
     private final var insets = UIEdgeInsets()
@@ -1037,6 +1040,10 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         self.view.addSubview(self.scroller)
         self.scroller.panGestureRecognizer.cancelsTouchesInView = true
         self.view.addGestureRecognizer(self.scroller.panGestureRecognizer)
+        
+        let trackingRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.trackingGesture(_:)))
+        trackingRecognizer.delegate = self
+        self.view.addGestureRecognizer(trackingRecognizer)
         
         self.displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
         self.displayLink.add(to: RunLoop.main, forMode: RunLoopMode.commonModes)
@@ -1181,17 +1188,18 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         
         var useScrollDynamics = false
         
+        let anchor: CGFloat
+        if self.isTracking {
+            anchor = self.touchesPosition.y
+        } else if deltaY < 0.0 {
+            anchor = self.visibleSize.height
+        } else {
+            anchor = 0.0
+        }
+        
         for itemNode in self.itemNodes {
             if itemNode.wantsScrollDynamics {
                 useScrollDynamics = true
-                let anchor: CGFloat
-                if self.isTracking {
-                    anchor = self.touchesPosition.y
-                } else if deltaY < 0.0 {
-                    anchor = self.visibleSize.height
-                } else {
-                    anchor = 0.0
-                }
                 
                 var distance: CGFloat
                 let itemFrame = itemNode.apparentFrame
@@ -1443,10 +1451,18 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
     }
 
     private func deleteAndInsertItemsTransaction(deleteIndices: [ListViewDeleteItem], insertIndicesAndItems: [ListViewInsertItem], updateIndicesAndItems: [ListViewUpdateItem], options: ListViewDeleteAndInsertOptions, scrollToItem: ListViewScrollToItem?, updateSizeAndInsets: ListViewUpdateSizeAndInsets?, stationaryItemRange: (Int, Int)?, completion: @escaping (Void) -> Void) {
-        if deleteIndices.isEmpty && insertIndicesAndItems.isEmpty && scrollToItem == nil {
+        if deleteIndices.isEmpty && insertIndicesAndItems.isEmpty && updateIndicesAndItems.isEmpty && scrollToItem == nil {
             if let updateSizeAndInsets = updateSizeAndInsets , self.items.count == 0 || (updateSizeAndInsets.size == self.visibleSize && updateSizeAndInsets.insets == self.insets) {
                 self.visibleSize = updateSizeAndInsets.size
                 self.insets = updateSizeAndInsets.insets
+                
+                if useDynamicTuning {
+                    let size = updateSizeAndInsets.size
+                    self.frictionSlider.frame = CGRect(x: 10.0, y: size.height - insets.bottom - 10.0 - self.frictionSlider.bounds.height, width: size.width - 20.0, height: self.frictionSlider.bounds.height)
+                    self.springSlider.frame = CGRect(x: 10.0, y: self.frictionSlider.frame.minY - self.springSlider.bounds.height, width: size.width - 20.0, height: self.springSlider.bounds.height)
+                    self.freeResistanceSlider.frame = CGRect(x: 10.0, y: self.springSlider.frame.minY - self.freeResistanceSlider.bounds.height, width: size.width - 20.0, height: self.freeResistanceSlider.bounds.height)
+                    self.scrollingResistanceSlider.frame = CGRect(x: 10.0, y: self.freeResistanceSlider.frame.minY - self.scrollingResistanceSlider.bounds.height, width: size.width - 20.0, height: self.scrollingResistanceSlider.bounds.height)
+                }
                 
                 self.ignoreScrollingEvents = true
                 self.scroller.frame = CGRect(origin: CGPoint(), size: updateSizeAndInsets.size)
@@ -1491,17 +1507,6 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        if self.debugInfo {
-            //print("deleteAndInsertItemsTransaction deleteIndices: \(deleteIndices.map({$0.index})) insertIndicesAndItems: \(insertIndicesAndItems.map({"\($0.index) <- \($0.previousIndex)"}))")
-        }
-        
-        /*if scrollToItem != nil {
-            print("Current indices:")
-            for itemNode in self.itemNodes {
-                print("    \(itemNode.index)")
-            }
-        }*/
-        
         var previousNodes: [Int: ListViewItemNode] = [:]
         for insertedItem in sortedIndicesAndItems {
             self.items.insert(insertedItem.item, at: insertedItem.index)
@@ -1517,8 +1522,9 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         for updatedItem in updateIndicesAndItems {
             self.items[updatedItem.index] = updatedItem.item
             for itemNode in self.itemNodes {
-                if itemNode.index == updatedItem.index {
+                if itemNode.index == updatedItem.previousIndex {
                     previousNodes[updatedItem.index] = itemNode
+                    break
                 }
             }
         }
@@ -1750,12 +1756,23 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
                             var updatedState = state
                             var updatedOperations = operations
                             
+                            let heightDelta = layout.size.height - updatedState.nodes[i].frame.size.height
+                            
                             updatedOperations.append(.UpdateLayout(index: i, layout: layout, apply: apply))
                             
-                            if nodeIndex + 1 < updatedState.nodes.count {
-                                for i in nodeIndex + 1 ..< updatedState.nodes.count {
-                                    let frame = updatedState.nodes[i].frame
-                                    updatedState.nodes[i].frame = frame.offsetBy(dx: 0.0, dy: frame.size.height)
+                            if !animated {
+                                let previousFrame = updatedState.nodes[i].frame
+                                updatedState.nodes[i].frame = CGRect(origin: previousFrame.origin, size: layout.size)
+                                if previousFrame.minY < updatedState.insets.top {
+                                    for j in 0 ... i {
+                                        updatedState.nodes[j].frame = updatedState.nodes[j].frame.offsetBy(dx: 0.0, dy: -heightDelta)
+                                    }
+                                } else {
+                                    if i != updatedState.nodes.count {
+                                        for j in i + 1 ..< updatedState.nodes.count {
+                                            updatedState.nodes[j].frame = updatedState.nodes[j].frame.offsetBy(dx: 0.0, dy: heightDelta)
+                                        }
+                                    }
                                 }
                             }
                             
@@ -1998,9 +2015,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
             previousApparentFrames.append((itemNode, itemNode.apparentFrame))
         }
         
-        if self.debugInfo {
-            //print("replay before \(self.itemNodes.map({"\($0.index) \(unsafeAddressOf($0))"}))")
-        }
+        //var takenPreviousNodes = Set<ListViewItemNode>()
         
         for operation in operations {
             switch operation {
@@ -2014,7 +2029,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
                     }
                     self.insertNodeAtIndex(animated: animated, animateAlpha: animateAlpha, previousFrame: previousFrame, nodeIndex: index, offsetDirection: offsetDirection, node: node, layout: layout, apply: apply, timestamp: timestamp)
                     self.addSubnode(node)
-                case let .InsertPlaceholder(index, referenceNode, offsetDirection):
+                case let .InsertDisappearingPlaceholder(index, referenceNode, offsetDirection):
                     var height: CGFloat?
                     
                     for (node, previousFrame) in previousApparentFrames {
@@ -2666,143 +2681,6 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         return ListViewDisplayedItemRange(loadedRange: loadedRange, visibleRange: visibleRange)
     }
     
-    public func updateSizeAndInsets(size: CGSize, insets: UIEdgeInsets, duration: Double = 0.0, options: UIViewAnimationOptions = UIViewAnimationOptions()) {
-        self.transactionQueue.addTransaction({ [weak self] completion in
-            if let strongSelf = self {
-                strongSelf.transactionOffset = 0.0
-                strongSelf.updateSizeAndInsetsTransaction(size: size, insets: insets, duration: duration, options: options, completion: { [weak self] in
-                    if let strongSelf = self {
-                        strongSelf.transactionOffset = 0.0
-                        strongSelf.updateVisibleItemsTransaction(completion: completion)
-                    }
-                })
-            }
-        })
-        
-        if useDynamicTuning {
-            self.frictionSlider.frame = CGRect(x: 10.0, y: size.height - insets.bottom - 10.0 - self.frictionSlider.bounds.height, width: size.width - 20.0, height: self.frictionSlider.bounds.height)
-            self.springSlider.frame = CGRect(x: 10.0, y: self.frictionSlider.frame.minY - self.springSlider.bounds.height, width: size.width - 20.0, height: self.springSlider.bounds.height)
-            self.freeResistanceSlider.frame = CGRect(x: 10.0, y: self.springSlider.frame.minY - self.freeResistanceSlider.bounds.height, width: size.width - 20.0, height: self.freeResistanceSlider.bounds.height)
-            self.scrollingResistanceSlider.frame = CGRect(x: 10.0, y: self.freeResistanceSlider.frame.minY - self.scrollingResistanceSlider.bounds.height, width: size.width - 20.0, height: self.scrollingResistanceSlider.bounds.height)
-        }
-    }
-    
-    private func updateSizeAndInsetsTransaction(size: CGSize, insets: UIEdgeInsets, duration: Double, options: UIViewAnimationOptions, completion: @escaping (Void) -> Void) {
-        if size.equalTo(self.visibleSize) && UIEdgeInsetsEqualToEdgeInsets(self.insets, insets) {
-            completion()
-        } else {
-            if abs(size.width - self.visibleSize.width) > CGFloat(FLT_EPSILON) {
-                let itemNodes = self.itemNodes
-                for itemNode in itemNodes {
-                    itemNode.removeAllAnimations()
-                    itemNode.transitionOffset = 0.0
-                    if let index = itemNode.index {
-                        itemNode.layoutForWidth(size.width, item: self.items[index], previousItem: index == 0 ? nil : self.items[index - 1], nextItem: index == self.items.count - 1 ? nil : self.items[index + 1])
-                    }
-                    itemNode.apparentHeight = itemNode.bounds.height
-                }
-                
-                if itemNodes.count != 0 {
-                    for i in 0 ..< itemNodes.count - 1 {
-                        var nextFrame = itemNodes[i + 1].frame
-                        nextFrame.origin.y = itemNodes[i].apparentFrame.maxY
-                        itemNodes[i + 1].frame = nextFrame
-                    }
-                }
-            }
-            
-            var offsetFix = insets.top - self.insets.top
-            
-            self.visibleSize = size
-            self.insets = insets
-            
-            var completeOffset = offsetFix
-            
-            for itemNode in self.itemNodes {
-                let position = itemNode.position
-                itemNode.position = CGPoint(x: position.x, y: position.y + offsetFix)
-            }
-            
-            let completeDeltaHeight = offsetFix
-            offsetFix = 0.0
-            
-            if Double(completeDeltaHeight) < DBL_EPSILON && self.itemNodes.count != 0 {
-                let firstItemNode = self.itemNodes[0]
-                let lastItemNode = self.itemNodes[self.itemNodes.count - 1]
-                
-                if lastItemNode.index == self.items.count - 1 {
-                    if firstItemNode.index == 0 {
-                        let topGap = firstItemNode.apparentFrame.origin.y - self.insets.top
-                        let bottomGap = self.visibleSize.height - lastItemNode.apparentFrame.maxY - self.insets.bottom
-                        if Double(bottomGap) > DBL_EPSILON {
-                            offsetFix = -bottomGap
-                            if topGap + bottomGap > 0.0 {
-                                offsetFix = topGap
-                            }
-                            
-                            let absOffsetFix = abs(offsetFix)
-                            let absCompleteDeltaHeight = abs(completeDeltaHeight)
-                            offsetFix = min(absOffsetFix, absCompleteDeltaHeight) * (offsetFix < 0 ? -1.0 : 1.0)
-                        }
-                    } else {
-                        offsetFix = completeDeltaHeight
-                    }
-                }
-            }
-            
-            if Double(abs(offsetFix)) > DBL_EPSILON {
-                completeOffset -= offsetFix
-                for itemNode in self.itemNodes {
-                    let position = itemNode.position
-                    itemNode.position = CGPoint(x: position.x, y: position.y - offsetFix)
-                }
-            }
-            
-            self.snapToBounds()
-            
-            self.ignoreScrollingEvents = true
-            self.scroller.frame = CGRect(origin: CGPoint(), size: size)
-            self.scroller.contentSize = CGSize(width: size.width, height: infiniteScrollSize * 2.0)
-            self.lastContentOffset = CGPoint(x: 0.0, y: infiniteScrollSize)
-            self.scroller.contentOffset = self.lastContentOffset
-            
-            self.updateScroller()
-            self.updateVisibleItemRange()
-            
-            let completion = { [weak self] (_: Bool) -> Void in
-                if let strongSelf = self {
-                    strongSelf.updateVisibleItemsTransaction(completion: completion)
-                    strongSelf.ignoreScrollingEvents = false
-                }
-            }
-            
-            if duration > DBL_EPSILON {
-                let animation: CABasicAnimation
-                if (options.rawValue & UInt(7 << 16)) != 0 {
-                    let springAnimation = makeSpringAnimation("sublayerTransform")
-                    springAnimation.duration = duration * UIView.animationDurationFactor()
-                    springAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, -completeOffset, 0.0))
-                    springAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
-                    springAnimation.isRemovedOnCompletion = true
-                    animation = springAnimation
-                } else {
-                    let basicAnimation = CABasicAnimation(keyPath: "sublayerTransform")
-                    basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
-                    basicAnimation.duration = duration * UIView.animationDurationFactor()
-                    basicAnimation.fromValue = NSValue(caTransform3D: CATransform3DMakeTranslation(0.0, -completeOffset, 0.0))
-                    basicAnimation.toValue = NSValue(caTransform3D: CATransform3DIdentity)
-                    basicAnimation.isRemovedOnCompletion = true
-                    animation = basicAnimation
-                }
-                
-                animation.completion = completion
-                self.layer.add(animation, forKey: "sublayerTransform")
-            } else {
-                completion(true)
-            }
-        }
-    }
-    
     private func updateAnimations() {
         self.inVSync = true
         let actionsForVSync = self.actionsForVSync
@@ -2893,10 +2771,9 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        self.isTracking = true
-        self.touchesPosition = (touches.first!).location(in: self.view)
-        self.selectionTouchLocation = self.touchesPosition
+    override open func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        self.touchesPosition = touches.first!.location(in: self.view)
+        self.selectionTouchLocation = touches.first!.location(in: self.view)
         
         self.selectionTouchDelayTimer?.invalidate()
         let timer = Timer(timeInterval: 0.08, target: ListViewTimerProxy { [weak self] in
@@ -2948,7 +2825,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         return nil
     }
     
-    public func forEachItemNode(_ f: @noescape(ListViewItemNode) -> Void) {
+    public func forEachItemNode(_ f: @noescape(ASDisplayNode) -> Void) {
         for itemNode in self.itemNodes {
             if itemNode.index != nil {
                 f(itemNode)
@@ -2956,10 +2833,10 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    override public func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        self.touchesPosition = touches.first!.location(in: self.view)
+    override open func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         if let selectionTouchLocation = self.selectionTouchLocation {
-            let distance = CGPoint(x: selectionTouchLocation.x - self.touchesPosition.x, y: selectionTouchLocation.y - self.touchesPosition.y)
+            let location = touches.first!.location(in: self.view)
+            let distance = CGPoint(x: selectionTouchLocation.x - location.x, y: selectionTouchLocation.y - location.y)
             let maxMovementDistance: CGFloat = 4.0
             if distance.x * distance.x + distance.y * distance.y > maxMovementDistance * maxMovementDistance {
                 self.selectionTouchLocation = nil
@@ -2972,9 +2849,7 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         super.touchesMoved(touches, with: event)
     }
     
-    override public func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        self.isTracking = false
-        
+    override open func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         if let selectionTouchLocation = self.selectionTouchLocation {
             let index = self.itemIndexAtPoint(selectionTouchLocation)
             if index != self.highlightedItemIndex {
@@ -2998,21 +2873,37 @@ public final class ListView: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if let highlightedItemIndex = self.highlightedItemIndex {
-            self.items[highlightedItemIndex].selected()
+            self.items[highlightedItemIndex].selected(listView: self)
         }
         self.selectionTouchLocation = nil
         
         super.touchesEnded(touches, with: event)
     }
     
-    override public func touchesCancelled(_ touches: Set<UITouch>?, with event: UIEvent?) {
-        self.isTracking = false
-        
+    override open func touchesCancelled(_ touches: Set<UITouch>?, with event: UIEvent?) {
         self.selectionTouchLocation = nil
         self.selectionTouchDelayTimer?.invalidate()
         self.selectionTouchDelayTimer = nil
         self.clearHighlightAnimated(false)
         
         super.touchesCancelled(touches, with: event)
+    }
+    
+    @objc func trackingGesture(_ recognizer: UIPanGestureRecognizer) {
+        switch recognizer.state {
+            case .began:
+                self.isTracking = true
+                break
+            case .changed:
+                self.touchesPosition = recognizer.location(in: self.view)
+            case .ended, .cancelled:
+                self.isTracking = false
+            default:
+                break
+        }
+    }
+    
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return true
     }
 }

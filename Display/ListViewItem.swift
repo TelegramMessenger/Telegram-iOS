@@ -15,7 +15,7 @@ public protocol ListViewItem {
     var floatingAccessoryItem: ListViewAccessoryItem? { get }
     var selectable: Bool { get }
     
-    func selected()
+    func selected(listView: ListView)
 }
 
 public extension ListViewItem {
@@ -35,7 +35,7 @@ public extension ListViewItem {
         return false
     }
     
-    func selected() {
+    func selected(listView: ListView) {
     }
     
     func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {

@@ -2,16 +2,16 @@ import Foundation
 import AsyncDisplayKit
 
 var testSpringFrictionLimits: (CGFloat, CGFloat) = (3.0, 60.0)
-var testSpringFriction: CGFloat = 33.26
+var testSpringFriction: CGFloat = 29.3323
 
 var testSpringConstantLimits: (CGFloat, CGFloat) = (3.0, 450.0)
-var testSpringConstant: CGFloat = 450.0
+var testSpringConstant: CGFloat = 353.6746
 
 var testSpringResistanceFreeLimits: (CGFloat, CGFloat) = (0.05, 1.0)
-var testSpringFreeResistance: CGFloat = 1.0
+var testSpringFreeResistance: CGFloat = 0.6721
 
 var testSpringResistanceScrollingLimits: (CGFloat, CGFloat) = (0.1, 1.0)
-var testSpringScrollingResistance: CGFloat = 0.4
+var testSpringScrollingResistance: CGFloat = 0.6721
 
 struct ListViewItemSpring {
     let stiffness: CGFloat

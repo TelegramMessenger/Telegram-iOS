@@ -176,7 +176,7 @@ public class NavigationBar: ASDisplayNode {
             }
             self._previousItem = value
             
-            if let previousItem = value {
+            if let previousItem = value, previousItem.backBarButtonItem == nil {
                 self.previousItemListenerKey = previousItem.addSetTitleListener { [weak self] text in
                     if let strongSelf = self {
                         strongSelf.backButtonNode.text = text ?? "Back"
@@ -204,7 +204,11 @@ public class NavigationBar: ASDisplayNode {
                 self.leftButtonNode.removeFromSupernode()
                 
                 if let previousItem = self.previousItem {
-                    self.backButtonNode.text = previousItem.title ?? "Back"
+                    if let backBarButtonItem = previousItem.backBarButtonItem {
+                        self.backButtonNode.text = backBarButtonItem.title ?? "Back"
+                    } else {
+                        self.backButtonNode.text = previousItem.title ?? "Back"
+                    }
                     
                     if self.backButtonNode.supernode == nil {
                         self.clippingNode.addSubnode(self.backButtonNode)

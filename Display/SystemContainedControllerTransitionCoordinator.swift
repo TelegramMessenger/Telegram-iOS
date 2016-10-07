@@ -55,11 +55,11 @@ final class SystemContainedControllerTransitionCoordinator: NSObject, UIViewCont
         return CGAffineTransform.identity
     }
     
-    public func animate(alongsideTransition animation: ((UIViewControllerTransitionCoordinatorContext) -> Swift.Void)?, completion: (@escaping (UIViewControllerTransitionCoordinatorContext) -> Swift.Void)? = nil) -> Bool {
+    public func animate(alongsideTransition animation: ((UIViewControllerTransitionCoordinatorContext) -> Swift.Void)?, completion: ((UIViewControllerTransitionCoordinatorContext) -> Swift.Void)? = nil) -> Bool {
         return false
     }
     
-    public func animateAlongsideTransition(in view: UIView?, animation: ((UIViewControllerTransitionCoordinatorContext) -> Swift.Void)?, completion: (@escaping (UIViewControllerTransitionCoordinatorContext) -> Swift.Void)? = nil) -> Bool {
+    public func animateAlongsideTransition(in view: UIView?, animation: ((UIViewControllerTransitionCoordinatorContext) -> Swift.Void)?, completion: ((UIViewControllerTransitionCoordinatorContext) -> Swift.Void)? = nil) -> Bool {
         return false
     }
     
