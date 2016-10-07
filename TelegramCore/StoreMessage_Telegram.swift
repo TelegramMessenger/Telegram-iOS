@@ -11,14 +11,18 @@ func tagsForStoreMessage(_ medias: [Media]) -> MessageTags {
         if let _ = media as? TelegramMediaImage {
             let _ = tags.insert(.PhotoOrVideo)
         } else if let file = media as? TelegramMediaFile {
-            if file.isSticker {
+            if file.isSticker || file.isAnimated {
             } else if file.isVideo {
                 let _ = tags.insert(.PhotoOrVideo)
             } else if file.isVoice {
                 let _ = tags.insert(.Voice)
+            } else if file.isMusic {
+                let _ = tags.insert(.Music)
             } else {
                 let _ = tags.insert(.File)
             }
+        } else if let webpage = media as? TelegramMediaWebpage, case .Loaded = webpage.content {
+            tags.insert(.WebPage)
         }
     }
     return tags
@@ -357,27 +361,27 @@ extension StoreMessage {
                 let peerId: PeerId
                 var authorId: PeerId?
                 switch toId {
-                case let .peerUser(userId):
-                    peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
-                    if let fromId = fromId {
-                        authorId = PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId)
-                    } else {
-                        authorId = peerId
-                    }
-                case let .peerChat(chatId):
-                    peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
-                    if let fromId = fromId {
-                        authorId = PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId)
-                    } else {
-                        authorId = peerId
-                    }
-                case let .peerChannel(channelId):
-                    peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
-                    if let fromId = fromId {
-                        authorId = PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId)
-                    } else {
-                        authorId = peerId
-                    }
+                    case let .peerUser(userId):
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
+                        if let fromId = fromId {
+                            authorId = PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId)
+                        } else {
+                            authorId = peerId
+                        }
+                    case let .peerChat(chatId):
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId)
+                        if let fromId = fromId {
+                            authorId = PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId)
+                        } else {
+                            authorId = peerId
+                        }
+                    case let .peerChannel(channelId):
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
+                        if let fromId = fromId {
+                            authorId = PeerId(namespace: Namespaces.Peer.CloudUser, id: fromId)
+                        } else {
+                            authorId = peerId
+                        }
                 }
                 
                 var attributes: [MessageAttribute] = []

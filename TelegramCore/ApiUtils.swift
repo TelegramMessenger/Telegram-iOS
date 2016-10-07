@@ -29,3 +29,11 @@ func apiInputChannel(_ peer: Peer) -> Api.InputChannel? {
         return nil
     }
 }
+
+func apiInputUser(_ peer: Peer) -> Api.InputUser? {
+    if let user = peer as? TelegramUser, let accessHash = user.accessHash {
+        return Api.InputUser.inputUser(userId: user.id.id, accessHash: accessHash)
+    } else {
+        return nil
+    }
+}

@@ -8,7 +8,7 @@ import Foundation
 #endif
 
 func sendUnsentMessage(network: Network, postbox: Postbox, stateManager: StateManager, message: Message) -> Signal<Void, NoError> {
-    return postbox.peerWithId(message.id.peerId)
+    return postbox.loadedPeerWithId(message.id.peerId)
         |> take(1)
         //|> delay(2.0, queue: Queue.concurrentDefaultQueue())
         |> mapToSignal { peer -> Signal<Void, NoError> in
@@ -33,7 +33,7 @@ func sendUnsentMessage(network: Network, postbox: Postbox, stateManager: StateMa
                         return NoError()
                     }
                     |> mapToSignal { result -> Signal<Void, NoError> in
-                        let messageId = result.messageIds.first
+                        let messageId = result.rawMessageIds.first
                         let apiMessage = result.messages.first
                         
                         let modify = postbox.modify { modifier -> Void in

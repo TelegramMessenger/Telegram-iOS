@@ -12,13 +12,21 @@ import Foundation
 private func messageFilterForTagMask(_ tagMask: MessageTags) -> Api.MessagesFilter? {
     if tagMask == .PhotoOrVideo {
         return Api.MessagesFilter.inputMessagesFilterPhotoVideo
+    } else if tagMask == .File {
+        return Api.MessagesFilter.inputMessagesFilterDocument
+    } else if tagMask == .Music {
+        return Api.MessagesFilter.inputMessagesFilterMusic
+    } else if tagMask == .WebPage {
+        return Api.MessagesFilter.inputMessagesFilterUrl
+    } else if tagMask == .Voice {
+        return Api.MessagesFilter.inputMessagesFilterVoice
     } else {
         return nil
     }
 }
 
 func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHistoryHole, direction: HoleFillDirection, tagMask: MessageTags?) -> Signal<Void, NoError> {
-    return postbox.peerWithId(hole.maxIndex.id.peerId)
+    return postbox.loadedPeerWithId(hole.maxIndex.id.peerId)
         |> take(1)
         //|> delay(4.0, queue: Queue.concurrentDefaultQueue())
         |> mapToSignal { peer in
@@ -117,7 +125,7 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
     if hole.index.id.peerId.namespace == Namespaces.Peer.Empty {
         offset = single((0, 0, Api.InputPeer.inputPeerEmpty), NoError.self)
     } else {
-        offset = postbox.peerWithId(hole.index.id.peerId)
+        offset = postbox.loadedPeerWithId(hole.index.id.peerId)
             |> take(1)
             |> map { peer in
                 return (hole.index.timestamp, hole.index.id.id + 1, apiInputPeer(peer) ?? .inputPeerEmpty)
@@ -135,6 +143,7 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                 var storeMessages: [StoreMessage] = []
                 var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
                 var chatStates: [PeerId: PeerChatState] = [:]
+                var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
                 
                 switch result {
                     case let .dialogs(dialogs, messages, chats, users):
@@ -148,13 +157,15 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                             let apiTopMessage: Int32
                             let apiUnreadCount: Int32
                             var apiChannelPts: Int32?
+                            let apiNotificationSettings: Api.PeerNotifySettings
                             switch dialog {
-                                case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, pts, _):
+                                case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, peerNotificationSettings, pts, _):
                                     apiPeer = peer
                                     apiTopMessage = topMessage
                                     apiReadInboxMaxId = readInboxMaxId
                                     apiReadOutboxMaxId = readOutboxMaxId
                                     apiUnreadCount = unreadCount
+                                    apiNotificationSettings = peerNotificationSettings
                                     apiChannelPts = pts
                             }
                             
@@ -176,6 +187,8 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                             if let apiChannelPts = apiChannelPts {
                                 chatStates[peerId] = ChannelState(pts: apiChannelPts)
                             }
+                            
+                            notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
                         }
                         
                         for message in messages {
@@ -199,13 +212,15 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                             let apiReadInboxMaxId: Int32
                             let apiReadOutboxMaxId: Int32
                             let apiUnreadCount: Int32
+                            let apiNotificationSettings: Api.PeerNotifySettings
                             switch dialog {
-                                case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _, _):
+                                case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, peerNotificationSettings, _, _):
                                     apiPeer = peer
                                     apiTopMessage = topMessage
                                     apiReadInboxMaxId = readInboxMaxId
                                     apiReadOutboxMaxId = readOutboxMaxId
                                     apiUnreadCount = unreadCount
+                                    apiNotificationSettings = peerNotificationSettings
                             }
                             
                             let peerId: PeerId
@@ -222,6 +237,8 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                                 readStates[peerId] = [:]
                             }
                             readStates[peerId]![Namespaces.Message.Cloud] = PeerReadState(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount)
+                            
+                            notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
                             
                             let topMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: apiTopMessage)
                             
@@ -256,6 +273,8 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                     modifier.updatePeers(peers, update: { _, updated -> Peer in
                         return updated
                     })
+                    
+                    modifier.updatePeerNotificationSettings(notificationSettings)
                     
                     var allPeersWithMessages = Set<PeerId>()
                     for message in storeMessages {

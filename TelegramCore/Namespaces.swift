@@ -31,7 +31,10 @@ public struct Namespaces {
 
 public extension MessageTags {
     static let PhotoOrVideo = MessageTags(rawValue: 1 << 0)
-    static let File = MessageTags(rawValue: 2 << 0)
-    static let Voice = MessageTags(rawValue: 3 << 0)
-    static let ContainsMention = MessageTags(rawValue: 1 << 30)
+    static let File = MessageTags(rawValue: 1 << 1)
+    static let Music = MessageTags(rawValue: 1 << 2)
+    static let WebPage = MessageTags(rawValue: 1 << 3)
+    static let Voice = MessageTags(rawValue: 1 << 4)
 }
+
+let allMessageTags: MessageTags = [.PhotoOrVideo, .File, .Music, .WebPage, .Voice]

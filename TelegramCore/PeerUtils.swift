@@ -38,6 +38,19 @@ public extension Peer {
         }
     }
     
+    public var addressName: String? {
+        switch self {
+            case let user as TelegramUser:
+                return user.username
+            case let group as TelegramGroup:
+                return nil
+            case let channel as TelegramChannel:
+                return channel.username
+            default:
+                return nil
+        }
+    }
+    
     public var displayLetters: [String] {
         switch self {
             case let user as TelegramUser:
@@ -65,6 +78,25 @@ public extension Peer {
             default:
                 return []
         }
+    }
+    
+    public var profileImageRepresentations: [TelegramMediaImageRepresentation] {
+        if let user = self as? TelegramUser {
+            return user.photo
+        } else if let group = self as? TelegramGroup {
+            return group.photo
+        } else if let channel = self as? TelegramChannel {
+            return channel.photo
+        }
+        return []
+    }
+    
+    public var smallProfileImage: TelegramMediaImageRepresentation? {
+        return smallestImageRepresentation(self.profileImageRepresentations)
+    }
+    
+    public var largeProfileImage: TelegramMediaImageRepresentation? {
+        return largestImageRepresentation(self.profileImageRepresentations)
     }
 }
 

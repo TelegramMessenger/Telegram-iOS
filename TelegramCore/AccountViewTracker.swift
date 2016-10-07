@@ -11,7 +11,7 @@ import Foundation
 
 private func pendingWebpages(entries: [MessageHistoryEntry]) -> Set<MessageId> {
     var messageIds = Set<MessageId>()
-    for case let .MessageEntry(message, _) in entries {
+    for case let .MessageEntry(message, _, _) in entries {
         for media in message.media {
             if let media = media as? TelegramMediaWebpage {
                 if case .Pending = media.content {
@@ -25,7 +25,7 @@ private func pendingWebpages(entries: [MessageHistoryEntry]) -> Set<MessageId> {
 }
 
 private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void, NoError> {
-    return account.postbox.peerWithId(messageId.peerId)
+    return account.postbox.loadedPeerWithId(messageId.peerId)
         |> take(1)
         |> mapToSignal { peer in
             if let inputPeer = apiInputPeer(peer) {
@@ -106,14 +106,27 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
         }
 }
 
+private final class PeerCachedDataContext {
+    var viewIds = Set<Int32>()
+    var timestamp: Double?
+    var referenceData: CachedPeerData?
+    let disposable = MetaDisposable()
+    
+    deinit {
+        self.disposable.dispose()
+    }
+}
+
 public final class AccountViewTracker {
     weak var account: Account?
-    let queue = Queue()
-    var nextViewId: Int32 = 0
+    private let queue = Queue()
+    private var nextViewId: Int32 = 0
     
-    var viewPendingWebpageMessageIds: [Int32: Set<MessageId>] = [:]
-    var pendingWebpageMessageIds: [MessageId: Int] = [:]
-    var webpageDisposables: [MessageId: Disposable] = [:]
+    private var viewPendingWebpageMessageIds: [Int32: Set<MessageId>] = [:]
+    private var pendingWebpageMessageIds: [MessageId: Int] = [:]
+    private var webpageDisposables: [MessageId: Disposable] = [:]
+    
+    private var cachedDataContexts: [PeerId: PeerCachedDataContext] = [:]
     
     init(account: Account) {
         self.account = account
@@ -183,6 +196,47 @@ public final class AccountViewTracker {
         }
     }
     
+    private func updateCachedPeerData(peerId: PeerId, viewId: Int32, referenceData: CachedPeerData?) {
+        self.queue.async {
+            let context: PeerCachedDataContext
+            var dataUpdated = false
+            if let existingContext = self.cachedDataContexts[peerId] {
+                context = existingContext
+            } else {
+                context = PeerCachedDataContext()
+                context.referenceData = referenceData
+                self.cachedDataContexts[peerId] = context
+                dataUpdated = true
+            }
+            context.viewIds.insert(viewId)
+            
+            if (context.referenceData != nil) != (referenceData != nil) {
+                dataUpdated = true
+            }
+            if dataUpdated {
+                if referenceData != nil {
+                    context.disposable.set(nil)
+                } else {
+                    if let account = self.account {
+                        context.disposable.set(fetchAndUpdateCachedPeerData(peerId: peerId, network: account.network, postbox: account.postbox).start())
+                    }
+                }
+            }
+        }
+    }
+    
+    private func removePeerView(peerId: PeerId, id: Int32) {
+        self.queue.async {
+            if let context = self.cachedDataContexts[peerId] {
+                context.viewIds.remove(id)
+                if context.viewIds.isEmpty {
+                    context.disposable.dispose()
+                    self.cachedDataContexts.removeValue(forKey: peerId)
+                }
+            }
+        }
+    }
+    
     func wrappedMessageHistorySignal(_ signal: Signal<(MessageHistoryView, ViewUpdateType), NoError>) -> Signal<(MessageHistoryView, ViewUpdateType), NoError> {
         return withState(signal, { [weak self] () -> Int32 in
             if let strongSelf = self {
@@ -224,6 +278,32 @@ public final class AccountViewTracker {
         if let account = self.account {
             let signal = account.postbox.aroundMessageHistoryViewForPeerId(peerId, index: index, count: count, anchorIndex: anchorIndex, fixedCombinedReadState: fixedCombinedReadState, tagMask: tagMask)
             return wrappedMessageHistorySignal(signal)
+        } else {
+            return .never()
+        }
+    }
+    
+    func wrappedPeerViewSignal(peerId: PeerId, signal: Signal<PeerView, NoError>) -> Signal<PeerView, NoError> {
+        return withState(signal, { [weak self] () -> Int32 in
+            if let strongSelf = self {
+                return OSAtomicIncrement32(&strongSelf.nextViewId)
+            } else {
+                return -1
+            }
+        }, next: { [weak self] next, viewId in
+            if let strongSelf = self {
+                strongSelf.updateCachedPeerData(peerId: peerId, viewId: viewId, referenceData: next.cachedData)
+            }
+        }, disposed: { [weak self] viewId in
+            if let strongSelf = self {
+                strongSelf.removePeerView(peerId: peerId, id: viewId)
+            }
+        })
+    }
+    
+    public func peerView(_ peerId: PeerId) -> Signal<PeerView, NoError> {
+        if let account = self.account {
+            return wrappedPeerViewSignal(peerId: peerId, signal: account.postbox.peerView(id: peerId))
         } else {
             return .never()
         }

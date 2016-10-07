@@ -18,7 +18,7 @@ private enum PeerReadStateMarker: Equatable {
 }
 
 private func inputPeer(postbox: Postbox, peerId: PeerId) -> Signal<Api.InputPeer, VerifyReadStateError> {
-    return postbox.peerWithId(peerId)
+    return postbox.loadedPeerWithId(peerId)
         |> mapToSignalPromotingError { peer -> Signal<Api.InputPeer, VerifyReadStateError> in
             if let inputPeer = apiInputPeer(peer) {
                 return .single(inputPeer)
@@ -44,7 +44,7 @@ private func dialogTopMessage(network: Network, postbox: Postbox, peerId: PeerId
                             apiMessages = messages
                     }
                     if let message = apiMessages.first, let timestamp = message.timestamp {
-                        return .single((message.id, timestamp))
+                        return .single((message.rawId, timestamp))
                     } else {
                         return .fail(.Abort)
                     }

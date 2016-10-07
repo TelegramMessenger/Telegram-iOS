@@ -215,6 +215,11 @@ private var declaredEncodables: Void = {
     declareEncodable(TelegramMediaWebpage.self, f: { TelegramMediaWebpage(decoder: $0) })
     declareEncodable(ViewCountMessageAttribute.self, f: { ViewCountMessageAttribute(decoder: $0) })
     declareEncodable(TelegramMediaAction.self, f: { TelegramMediaAction(decoder: $0) })
+    declareEncodable(TelegramPeerNotificationSettings.self, f: { TelegramPeerNotificationSettings(decoder: $0) })
+    declareEncodable(CachedUserData.self, f: { CachedUserData(decoder: $0) })
+    declareEncodable(BotInfo.self, f: { BotInfo(decoder: $0) })
+    declareEncodable(CachedGroupData.self, f: { CachedGroupData(decoder: $0) })
+    declareEncodable(CachedChannelData.self, f: { CachedChannelData(decoder: $0) })
     
     return
 }()
@@ -225,7 +230,7 @@ public func accountWithId(_ id: AccountId, appGroupPath: String) -> Signal<Eithe
         
         let path = "\(appGroupPath)/account\(id.stringValue)"
         
-        let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))], initializeMessageNamespacesWithHoles: [Namespaces.Message.Cloud], existingMessageTags: [.PhotoOrVideo])
+        let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [ChatListHole(index: MessageIndex(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.Empty, id: 0), namespace: Namespaces.Message.Cloud, id: 1), timestamp: 1))], initializeMessageNamespacesWithHoles: [Namespaces.Message.Cloud], existingMessageTags: allMessageTags)
         
         let postbox = Postbox(basePath: path + "/postbox", globalMessageIdsNamespace: Namespaces.Message.Cloud, seedConfiguration: seedConfiguration)
         return (postbox.state() |> take(1) |> map { accountState in

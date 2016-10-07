@@ -158,6 +158,15 @@ public final class TelegramMediaFile: Media, Equatable {
         return false
     }
     
+    public var isAnimated: Bool {
+        for attribute in self.attributes {
+            if case .Animated = attribute {
+                return true
+            }
+        }
+        return false
+    }
+    
     public var isMusic: Bool {
         for attribute in self.attributes {
             if case .Audio(false, _, _, _, _) = attribute {
