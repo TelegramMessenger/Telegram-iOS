@@ -1,8 +1,12 @@
 #import "MTSignal.h"
 
-#import "MTTimer.h"
-#import "MTQueue.h"
-#import "MTAtomic.h"
+#if defined(MtProtoKitDynamicFramework)
+#   import <MTProtoKitDynamic/MTProtoKitDynamic.h>
+#elif defined(MtProtoKitMacFramework)
+#   import <MTProtoKitMac/MTProtoKitMac.h>
+#else
+#   import <MTProtoKit/MTProtoKit.h>
+#endif
 
 #import <libkern/OSAtomic.h>
 
