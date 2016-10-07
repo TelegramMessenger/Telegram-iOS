@@ -98,7 +98,7 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
         self.addSubnode(self.dateNode)
     }
     
-    func asyncLayout() -> (_ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize) -> (CGSize, () -> Void) {
+    func asyncLayout() -> (_ dateText: String, _ type: ChatMessageDateAndStatusType, _ constrainedSize: CGSize) -> (CGSize, (Bool) -> Void) {
         let dateLayout = TextNode.asyncLayout(self.dateNode)
         
         var checkReadNode = self.checkReadNode
@@ -190,7 +190,7 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
                         
                         let checkSize = checkFullImage!.size
                         
-                        checkSentFrame = CGRect(origin: CGPoint(x: leftInset + date.size.width + 5.0 + statusWidth - checkSize.width, y: 3.0), size: checkSize)
+                        checkSentFrame = CGRect(origin: CGPoint(x: leftInset + date.size.width + 5.0 + statusWidth - checkSize.width - (read ? 0.0 : 2.5), y: 3.0), size: checkSize)
                         if read {
                             checkReadFrame = CGRect(origin: CGPoint(x: checkSentFrame!.origin.x - 6.0, y: checkSentFrame!.origin.y), size: checkSize)
                         }
@@ -211,7 +211,7 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
                 clockMinNode = nil
             }
             
-            return (CGSize(width: leftInset + date.size.width + statusWidth, height: date.size.height), { [weak self] in
+            return (CGSize(width: leftInset + date.size.width + statusWidth, height: date.size.height), { [weak self] animated in
                 if let strongSelf = self {
                     let _ = dateApply()
                     
@@ -246,30 +246,51 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
                     }
                     
                     if let checkSentNode = checkSentNode, let checkReadNode = checkReadNode {
+                        var animateSentNode = false
                         if strongSelf.checkSentNode == nil {
                             strongSelf.checkSentNode = checkSentNode
                             strongSelf.addSubnode(checkSentNode)
+                            animateSentNode = animated
                         }
-                        checkSentNode.image = loadedCheckPartialImage
+                        if checkReadFrame != nil {
+                            checkSentNode.image = loadedCheckPartialImage
+                        } else {
+                            checkSentNode.image = loadedCheckFullImage
+                        }
                         
                         if let checkSentFrame = checkSentFrame {
+                            if checkSentNode.isHidden {
+                                animateSentNode = animated
+                            }
                             checkSentNode.isHidden = false
                             checkSentNode.frame = checkSentFrame
                         } else {
                             checkSentNode.isHidden = true
                         }
                         
+                        var animateReadNode = false
                         if strongSelf.checkReadNode == nil {
+                            animateReadNode = animated
                             strongSelf.checkReadNode = checkReadNode
                             strongSelf.addSubnode(checkReadNode)
                         }
                         checkReadNode.image = loadedCheckFullImage
-                        
+                    
                         if let checkReadFrame = checkReadFrame {
+                            if checkReadNode.isHidden {
+                                animateReadNode = animated
+                            }
                             checkReadNode.isHidden = false
                             checkReadNode.frame = checkReadFrame
                         } else {
                             checkReadNode.isHidden = true
+                        }
+                        
+                        if animateSentNode {
+                            strongSelf.checkSentNode?.layer.animateScale(from: 1.3, to: 1.0, duration: 0.1)
+                        }
+                        if animateReadNode {
+                            strongSelf.checkReadNode?.layer.animateScale(from: 1.3, to: 1.0, duration: 0.1)
                         }
                     } else if let checkSentNode = strongSelf.checkSentNode, let checkReadNode = strongSelf.checkReadNode {
                         checkSentNode.removeFromSupernode()

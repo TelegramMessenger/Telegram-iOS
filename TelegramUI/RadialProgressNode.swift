@@ -52,7 +52,7 @@ private class RadialProgressOverlayNode: ASDisplayNode {
         return RadialProgressOverlayParameters(theme: self.theme, diameter: self.frame.size.width, state: self.state)
     }
     
-    @objc override class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol!, isCancelled: asdisplaynode_iscancelled_block_t, isRasterizing: Bool) {
+    @objc override class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol?, isCancelled: @escaping  asdisplaynode_iscancelled_block_t, isRasterizing: Bool) {
         let context = UIGraphicsGetCurrentContext()!
         
         if !isRasterizing {
@@ -198,7 +198,7 @@ class RadialProgressNode: ASControlNode {
         return RadialProgressParameters(theme: self.theme, diameter: self.frame.size.width, state: self.state)
     }
     
-    @objc override class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol!, isCancelled: asdisplaynode_iscancelled_block_t, isRasterizing: Bool) {
+    @objc override class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol?, isCancelled: @escaping asdisplaynode_iscancelled_block_t, isRasterizing: Bool) {
         let context = UIGraphicsGetCurrentContext()!
         
         if !isRasterizing {

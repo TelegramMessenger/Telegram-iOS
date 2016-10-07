@@ -12,44 +12,12 @@ private func shouldRequestLayoutOnPresentationInterfaceStateTransition(_ lhs: Ch
     return false
 }
 
-enum ChatMessageViewPosition: Equatable {
-    case AroundUnread(count: Int)
-    case Around(index: MessageIndex, anchorIndex: MessageIndex)
-    case Scroll(index: MessageIndex, anchorIndex: MessageIndex, sourceIndex: MessageIndex, scrollPosition: ListViewScrollPosition)
-}
-
-func ==(lhs: ChatMessageViewPosition, rhs: ChatMessageViewPosition) -> Bool {
-    switch lhs {
-        case let .Around(lhsId, lhsAnchorIndex):
-            switch rhs {
-                case let .Around(rhsId, rhsAnchorIndex) where lhsId == rhsId && lhsAnchorIndex == rhsAnchorIndex:
-                    return true
-                default:
-                    return false
-            }
-        case let .Scroll(lhsIndex, lhsAnchorIndex, lhsSourceIndex, lhsScrollPosition):
-            switch rhs {
-                case let .Scroll(rhsIndex, rhsAnchorIndex, rhsSourceIndex, rhsScrollPosition) where lhsIndex == rhsIndex && lhsAnchorIndex == rhsAnchorIndex && lhsSourceIndex == rhsSourceIndex && lhsScrollPosition == rhsScrollPosition:
-                    return true
-                default:
-                    return false
-            }
-        case let .AroundUnread(lhsCount):
-            switch rhs {
-                case let .AroundUnread(rhsCount) where lhsCount == rhsCount:
-                    return true
-                default:
-                    return false
-            }
-    }
-}
-
 class ChatControllerNode: ASDisplayNode {
     let account: Account
     let peerId: PeerId
     
     let backgroundNode: ASDisplayNode
-    let listView: ListView
+    let historyNode: ChatHistoryListNode
     
     private let inputPanelBackgroundNode: ASDisplayNode
     private let inputPanelBackgroundSeparatorNode: ASDisplayNode
@@ -73,7 +41,7 @@ class ChatControllerNode: ASDisplayNode {
     
     var interfaceInteraction: ChatPanelInterfaceInteraction?
     
-    init(account: Account, peerId: PeerId) {
+    init(account: Account, peerId: PeerId, messageId: MessageId?, controllerInteraction: ChatControllerInteraction) {
         self.account = account
         self.peerId = peerId
         
@@ -83,8 +51,7 @@ class ChatControllerNode: ASDisplayNode {
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.clipsToBounds = true
         
-        self.listView = ListView()
-        self.listView.preloadPages = false
+        self.historyNode = ChatHistoryListNode(account: account, peerId: peerId, tagMask: nil, messageId: messageId, controllerInteraction: controllerInteraction)
         
         self.inputPanelBackgroundNode = ASDisplayNode()
         self.inputPanelBackgroundNode.backgroundColor = UIColor(0xfafafa)
@@ -105,15 +72,14 @@ class ChatControllerNode: ASDisplayNode {
         self.backgroundNode.contents = backgroundImage?.cgImage
         self.addSubnode(self.backgroundNode)
         
-        self.listView.transform = CATransform3DMakeRotation(CGFloat(M_PI), 0.0, 0.0, 1.0)
-        self.addSubnode(self.listView)
+        self.addSubnode(self.historyNode)
         
         self.addSubnode(self.inputPanelBackgroundNode)
         self.addSubnode(self.inputPanelBackgroundSeparatorNode)
         
         self.addSubnode(self.navigateToLatestButton)
         
-        self.listView.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+        self.historyNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         
         self.textInputPanelNode = ChatTextInputPanelNode()
         self.textInputPanelNode?.updateHeight = { [weak self] in
@@ -150,9 +116,6 @@ class ChatControllerNode: ASDisplayNode {
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
         
-        self.listView.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
-        self.listView.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
-        
         var duration: Double = 0.0
         var curve: UInt = 0
         switch transition {
@@ -170,8 +133,8 @@ class ChatControllerNode: ASDisplayNode {
         
         self.backgroundNode.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         
-        self.listView.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
-        self.listView.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
+        self.historyNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
+        self.historyNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
         
         let listViewCurve: ListViewAnimationCurve
         if curve == 7 {
@@ -179,8 +142,6 @@ class ChatControllerNode: ASDisplayNode {
         } else {
             listViewCurve = .Default
         }
-        
-        //let inputViewFrame = CGRect(x: 0.0, y: layout.size.height - messageTextInputSize.height - insets.bottom, width: layout.size.width, height: messageTextInputSize.height)
         
         var dismissedInputPanelNode: ASDisplayNode?
         var dismissedAccessoryPanelNode: ASDisplayNode?

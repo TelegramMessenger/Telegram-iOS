@@ -27,7 +27,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void))) {
+    override func asyncLayoutContent() -> (_ item: ChatMessageItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
         let textLayout = TextNode.asyncLayout(self.textNode)
         let statusLayout = self.statusNode.asyncLayout()
         
@@ -57,7 +57,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         } else if message.flags.contains(.Unsent) {
                             statusType = .BubbleOutgoing(.Sending)
                         } else {
-                            statusType = .BubbleOutgoing(.Sent(read: true))
+                            statusType = .BubbleOutgoing(.Sent(read: item.read))
                         }
                     }
                 } else {
@@ -65,7 +65,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 var statusSize: CGSize?
-                var statusApply: (() -> Void)?
+                var statusApply: ((Bool) -> Void)?
                 
                 if let statusType = statusType {
                     let (size, apply) = statusLayout(dateText, statusType, textConstrainedSize)
@@ -136,13 +136,17 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         adjustedStatusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusFrame.size.width - layoutConstants.text.bubbleInsets.right, y: statusFrame.origin.y), size: statusFrame.size)
                     }
                     
-                    return (boundingSize, { [weak self] in
+                    return (boundingSize, { [weak self] animation in
                         if let strongSelf = self {
                             let _ = textApply()
                             
                             if let statusApply = statusApply, let adjustedStatusFrame = adjustedStatusFrame {
                                 strongSelf.statusNode.frame = adjustedStatusFrame
-                                statusApply()
+                                var hasAnimation = true
+                                if case .None = animation {
+                                    hasAnimation = false
+                                }
+                                statusApply(hasAnimation)
                                 if strongSelf.statusNode.supernode == nil {
                                     strongSelf.addSubnode(strongSelf.statusNode)
                                 }

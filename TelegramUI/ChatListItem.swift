@@ -9,22 +9,24 @@ import TelegramCore
 class ChatListItem: ListViewItem {
     let account: Account
     let message: Message
-    let unreadCount: Int
+    let combinedReadState: CombinedPeerReadState?
+    let notificationSettings: PeerNotificationSettings?
     let action: (Message) -> Void
     
     let selectable: Bool = true
     
-    init(account: Account, message: Message, unreadCount: Int, action: @escaping (Message) -> Void) {
+    init(account: Account, message: Message, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, action: @escaping (Message) -> Void) {
         self.account = account
         self.message = message
-        self.unreadCount = unreadCount
+        self.combinedReadState = combinedReadState
+        self.notificationSettings = notificationSettings
         self.action = action
     }
     
     func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> Void) -> Void) {
         async {
             let node = ChatListItemNode()
-            node.setupItem(account: self.account, message: self.message, unreadCount: self.unreadCount)
+            node.setupItem(account: self.account, message: self.message, combinedReadState: self.combinedReadState, notificationSettings: self.notificationSettings)
             node.relativePosition = (first: previousItem == nil, last: nextItem == nil)
             node.insets = ChatListItemNode.insets(first: node.relativePosition.first, last: node.relativePosition.last)
             node.layoutForWidth(width, item: self, previousItem: previousItem, nextItem: nextItem)
@@ -35,7 +37,7 @@ class ChatListItem: ListViewItem {
     func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         if let node = node as? ChatListItemNode {
             Queue.mainQueue().async {
-                node.setupItem(account: self.account, message: self.message, unreadCount: self.unreadCount)
+                node.setupItem(account: self.account, message: self.message, combinedReadState: self.combinedReadState, notificationSettings: self.notificationSettings)
                 let layout = node.asyncLayout()
                 async {
                     let first = previousItem == nil
@@ -53,7 +55,7 @@ class ChatListItem: ListViewItem {
         }
     }
     
-    func selected() {
+    func selected(listView: ListView) {
         self.action(self.message)
     }
 }
@@ -87,24 +89,31 @@ private func generateStatusCheckImage(single: Bool) -> UIImage? {
     })
 }
 
-private func generateBadgeBackgroundImage() -> UIImage? {
+private func generateBadgeBackgroundImage(active: Bool) -> UIImage? {
     return generateImage(CGSize(width: 20.0, height: 20.0), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(UIColor(0x1195f2).cgColor)
+        if active {
+            context.setFillColor(UIColor(0x1195f2).cgColor)
+        } else {
+            context.setFillColor(UIColor(0xbbbbbb).cgColor)
+        }
         context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
     })?.stretchableImage(withLeftCapWidth: 10, topCapHeight: 10)
 }
 
 private let statusSingleCheckImage = generateStatusCheckImage(single: true)
 private let statusDoubleCheckImage = generateStatusCheckImage(single: false)
-private let badgeBackgroundImage = generateBadgeBackgroundImage()
+private let activeBadgeBackgroundImage = generateBadgeBackgroundImage(active: true)
+private let inactiveBadgeBackgroundImage = generateBadgeBackgroundImage(active: false)
+private let peerMutedIcon = UIImage(bundleImageName: "Chat List/PeerMutedIcon")?.precomposed()
 
 private let separatorHeight = 1.0 / UIScreen.main.scale
 
 class ChatListItemNode: ListViewItemNode {
     var account: Account?
     var message: Message?
-    var unreadCount: Int = 0
+    var combinedReadState: CombinedPeerReadState?
+    var notificationSettings: PeerNotificationSettings?
     
     private let highlightedBackgroundNode: ASDisplayNode
     
@@ -117,6 +126,7 @@ class ChatListItemNode: ListViewItemNode {
     let separatorNode: ASDisplayNode
     let badgeBackgroundNode: ASImageNode
     let badgeTextNode: TextNode
+    let mutedIconNode: ASImageNode
     
     var relativePosition: (first: Bool, last: Bool) = (false, false)
     
@@ -163,6 +173,11 @@ class ChatListItemNode: ListViewItemNode {
         self.badgeTextNode.isLayerBacked = true
         self.badgeTextNode.displaysAsynchronously = true
         
+        self.mutedIconNode = ASImageNode()
+        self.mutedIconNode.isLayerBacked = true
+        self.mutedIconNode.displaysAsynchronously = false
+        self.mutedIconNode.displayWithoutProcessing = true
+        
         self.separatorNode = ASDisplayNode()
         self.separatorNode.backgroundColor = UIColor(0xc8c7cc)
         self.separatorNode.isLayerBacked = true
@@ -179,12 +194,14 @@ class ChatListItemNode: ListViewItemNode {
         self.contentNode.addSubnode(self.statusNode)
         self.contentNode.addSubnode(self.badgeBackgroundNode)
         self.contentNode.addSubnode(self.badgeTextNode)
+        self.contentNode.addSubnode(self.mutedIconNode)
     }
     
-    func setupItem(account: Account, message: Message, unreadCount: Int) {
+    func setupItem(account: Account, message: Message, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?) {
         self.account = account
         self.message = message
-        self.unreadCount = unreadCount
+        self.combinedReadState = combinedReadState
+        self.notificationSettings = notificationSettings
         
         let peer = message.peers[message.id.peerId]
         if let peer = peer {
@@ -252,7 +269,8 @@ class ChatListItemNode: ListViewItemNode {
         let badgeTextLayout = TextNode.asyncLayout(self.badgeTextNode)
         
         let message = self.message
-        let unreadCount = self.unreadCount
+        let combinedReadState = self.combinedReadState
+        let notificationSettings = self.notificationSettings
         
         return { account, width, first, last in
             var textAttributedString: NSAttributedString?
@@ -262,6 +280,7 @@ class ChatListItemNode: ListViewItemNode {
             
             var statusImage: UIImage?
             var currentBadgeBackgroundImage: UIImage?
+            var currentMutedIconImage: UIImage?
             
             if let message = message {
                 let peer = message.peers[message.id.peerId]
@@ -316,17 +335,43 @@ class ChatListItemNode: ListViewItemNode {
                 
                 if message.author?.id == account?.peerId {
                     if !message.flags.contains(.Unsent) && !message.flags.contains(.Failed) {
-                        statusImage = statusDoubleCheckImage
+                        if let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIdRead(message.id) {
+                            statusImage = statusDoubleCheckImage
+                        } else {
+                            statusImage = statusSingleCheckImage
+                        }
                     }
                 }
                 
-                if unreadCount != 0 {
-                    currentBadgeBackgroundImage = badgeBackgroundImage
-                    badgeAttributedString = NSAttributedString(string: "\(unreadCount)", font: badgeFont, textColor: UIColor.white)
+                if let combinedReadState = combinedReadState {
+                    let unreadCount = combinedReadState.count
+                    if unreadCount != 0 {
+                        if let notificationSettings = notificationSettings as? TelegramPeerNotificationSettings {
+                            if case .unmuted = notificationSettings.muteState {
+                                currentBadgeBackgroundImage = activeBadgeBackgroundImage
+                            } else {
+                                currentBadgeBackgroundImage = inactiveBadgeBackgroundImage
+                            }
+                        } else {
+                            currentBadgeBackgroundImage = activeBadgeBackgroundImage
+                        }
+                        badgeAttributedString = NSAttributedString(string: "\(unreadCount)", font: badgeFont, textColor: UIColor.white)
+                    }
+                }
+                
+                if let notificationSettings = notificationSettings as? TelegramPeerNotificationSettings {
+                    if case .muted = notificationSettings.muteState {
+                        currentMutedIconImage = peerMutedIcon
+                    }
                 }
             }
             
             let statusWidth = statusImage?.size.width ?? 0.0
+            
+            var muteWidth: CGFloat = 0.0
+            if let currentMutedIconImage = currentMutedIconImage {
+                muteWidth = currentMutedIconImage.size.width + 4.0
+            }
             
             let contentRect = CGRect(origin: CGPoint(x: 2.0, y: 12.0), size: CGSize(width: width - 78.0 - 10.0 - 1.0, height: 68.0 - 12.0 - 9.0))
             
@@ -343,7 +388,7 @@ class ChatListItemNode: ListViewItemNode {
             
             let (textLayout, textApply) = textLayout(textAttributedString, nil, 1, .end, CGSize(width: contentRect.width - badgeSize, height: CGFloat.greatestFiniteMagnitude), nil)
             
-            let titleRect = CGRect(origin: contentRect.origin, size: CGSize(width: contentRect.width - dateLayout.size.width - 10.0 - statusWidth, height: contentRect.height))
+            let titleRect = CGRect(origin: contentRect.origin, size: CGSize(width: contentRect.width - dateLayout.size.width - 10.0 - statusWidth - muteWidth, height: contentRect.height))
             let (titleLayout, titleApply) = titleLayout(titleAttributedString, nil, 1, .end, CGSize(width: titleRect.width, height: CGFloat.greatestFiniteMagnitude), nil)
             
             let insets = ChatListItemNode.insets(first: first, last: last)
@@ -388,6 +433,22 @@ class ChatListItemNode: ListViewItemNode {
                         strongSelf.badgeBackgroundNode.isHidden = true
                     }
                     
+                    var updateContentNode = false
+                    if let currentMutedIconImage = currentMutedIconImage {
+                        strongSelf.mutedIconNode.image = currentMutedIconImage
+                        if strongSelf.mutedIconNode.isHidden {
+                            updateContentNode = true
+                        }
+                        strongSelf.mutedIconNode.isHidden = false
+                        strongSelf.mutedIconNode.frame = CGRect(origin: CGPoint(x: contentRect.origin.x + titleLayout.size.width + 3.0, y: contentRect.origin.y + 6.0), size: currentMutedIconImage.size)
+                    } else {
+                        if !strongSelf.mutedIconNode.isHidden {
+                            updateContentNode = true
+                        }
+                        strongSelf.mutedIconNode.image = nil
+                        strongSelf.mutedIconNode.isHidden = true
+                    }
+                    
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: contentRect.origin.x, y: contentRect.origin.y), size: titleLayout.size)
                     
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(x: contentRect.origin.x, y: contentRect.maxY - textLayout.size.height - 1.0), size: textLayout.size)
@@ -397,6 +458,10 @@ class ChatListItemNode: ListViewItemNode {
                     strongSelf.contentSize = layout.contentSize
                     strongSelf.insets = layout.insets
                     strongSelf.updateBackgroundAndSeparatorsLayout()
+                    
+                    if updateContentNode {
+                        strongSelf.contentNode.setNeedsDisplay()
+                    }
                 }
             })
         }

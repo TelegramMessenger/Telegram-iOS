@@ -40,7 +40,7 @@ class ChatHoleItemNode: ListViewItemNode {
         
         super.init(layerBacked: true)
         
-        self.backgroundNode.image = backgroundImage(color: UIColor.blue)
+        self.backgroundNode.image = backgroundImage(color: UIColor(0x1195f2))
         self.addSubnode(self.backgroundNode)
         
         self.addSubnode(self.labelNode)

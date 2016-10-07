@@ -63,7 +63,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
     
     @objc func imageTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            if let file = media as? TelegramMediaFile, (file.isVideo || file.mimeType.hasPrefix("video/")) {
+            if let file = media as? TelegramMediaFile, (file.isVideo || file.isAnimated || file.mimeType.hasPrefix("video/")) {
                 self.activateLocalContent()
             } else {
                 if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {

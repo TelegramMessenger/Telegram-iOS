@@ -220,7 +220,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     }
     
     override func asyncLayout() -> (_ item: ChatMessageItem, _ width: CGFloat, _ mergedTop: Bool, _ mergedBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
-        var currentContentClassesPropertiesAndLayouts: [(AnyClass, ChatMessageBubbleContentProperties, (_ item: ChatMessageItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void))))] = []
+        var currentContentClassesPropertiesAndLayouts: [(AnyClass, ChatMessageBubbleContentProperties, (_ item: ChatMessageItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))))] = []
         for contentNode in self.contentNodes {
             currentContentClassesPropertiesAndLayouts.append((type(of: contentNode) as AnyClass, contentNode.properties, contentNode.asyncLayoutContent()))
         }
@@ -233,7 +233,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         
         return { item, width, mergedTop, mergedBottom in
             let message = item.message
-            
             let incoming = item.message.effectivelyIncoming
             
             let displayAuthorInfo = !mergedTop && incoming && item.peerId.isGroupOrChannel && item.message.author != nil
@@ -243,7 +242,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             let tmpWidth = width * layoutConstants.bubble.maximumWidthFillFactor
             let maximumContentWidth = floor(tmpWidth - layoutConstants.bubble.edgeInset - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - layoutConstants.bubble.contentInsets.right - avatarInset)
             
-            var contentPropertiesAndPrepareLayouts: [(ChatMessageBubbleContentProperties, (_ item: ChatMessageItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void))))] = []
+            var contentPropertiesAndPrepareLayouts: [(ChatMessageBubbleContentProperties, (_ item: ChatMessageItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))))] = []
             var addedContentNodes: [ChatMessageBubbleContentNode]?
             
             let contentNodeClasses = contentNodeClassesForItem(item)
@@ -286,7 +285,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 }
             }
             
-            var contentPropertiesAndLayouts: [(ChatMessageBubbleContentProperties, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void)))] = []
+            var contentPropertiesAndLayouts: [(ChatMessageBubbleContentProperties, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void)))] = []
             
             let topNodeMergeStatus: ChatMessageBubbleMergeStatus = mergedTop ? (incoming ? .Left : .Right) : .None(incoming ? .Incoming : .Outgoing)
             let bottomNodeMergeStatus: ChatMessageBubbleMergeStatus = mergedBottom ? (incoming ? .Left : .Right) : .None(incoming ? .Incoming : .Outgoing)
@@ -420,7 +419,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 }
             }
             
-            var contentNodePropertiesAndFinalize: [(ChatMessageBubbleContentProperties, (CGFloat) -> (CGSize, () -> Void))] = []
+            var contentNodePropertiesAndFinalize: [(ChatMessageBubbleContentProperties, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))] = []
             
             var maxContentWidth: CGFloat = headerSize.width
             for (contentNodeProperties, contentNodeLayout) in contentPropertiesAndLayouts {
@@ -432,7 +431,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             
             var contentSize = CGSize(width: maxContentWidth, height: 0.0)
             index = 0
-            var contentNodeSizesPropertiesAndApply: [(CGSize, ChatMessageBubbleContentProperties, () -> Void)] = []
+            var contentNodeSizesPropertiesAndApply: [(CGSize, ChatMessageBubbleContentProperties, (ListViewItemUpdateAnimation) -> Void)] = []
             for (properties, finalize) in contentNodePropertiesAndFinalize {
                 let (size, apply) = finalize(maxContentWidth)
                 contentNodeSizesPropertiesAndApply.append((size, properties, apply))
@@ -521,7 +520,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     var contentNodeOrigin = contentOrigin
                     var contentNodeIndex = 0
                     for (size, properties, apply) in contentNodeSizesPropertiesAndApply {
-                        apply()
+                        apply(animation)
                         if contentNodeIndex == 0 && headerSize.height > CGFloat(FLT_EPSILON) {
                             contentNodeOrigin.y += properties.headerSpacing
                         }

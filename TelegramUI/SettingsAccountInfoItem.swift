@@ -78,7 +78,7 @@ class SettingsAccountInfoItemNode: ListControllerGroupableItemNode {
                         statusColor = UIColor(0xb3b3b3)
                     case .Online:
                         statusText = "online"
-                        statusColor = UIColor.blue
+                        statusColor = UIColor(0x1195f2)
                 }
                 
                 let (statusNodeLayout, statusNodeApply) = layoutStatusNode(NSAttributedString(string: statusText, font: statusFont, textColor: statusColor), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), nil)

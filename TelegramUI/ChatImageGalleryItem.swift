@@ -120,16 +120,6 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         let transformedSelfFrame = node.view.convert(node.view.bounds, to: self.view)
         let transformedCopyViewFinalFrame = self.imageNode.view.convert(self.imageNode.view.bounds, to: self.view)
         
-        /*let image = generateImage(node.view.bounds.size, contextGenerator: { size, context in
-            context.clear(CGRect(origin: CGPoint(), size: size))
-            context.translate(x: size.width / 2.0, y: size.height / 2.0)
-            context.scale(x: 1.0, y: -1.0)
-            context.translate(x: -size.width / 2.0, y: -size.height / 2.0)
-            //node.view.drawHierarchy(in: CGRect(origin: CGPoint(), size: size), afterScreenUpdates: false)
-            node.layer.render(in: context)
-        })*/
-        
-        //let copyView = UIImageView(image: image)
         let copyView = node.view.snapshotContentTree()!
         
         self.view.insertSubview(copyView, belowSubview: self.scrollView)
@@ -139,7 +129,6 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             copyView?.removeFromSuperview()
         })
         
-        //copyView.layer.animateFrame(from: transformedSelfFrame, to: transformedCopyViewFinalFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
         copyView.layer.animatePosition(from: CGPoint(x: transformedSelfFrame.midX, y: transformedSelfFrame.midY), to: CGPoint(x: transformedCopyViewFinalFrame.midX, y: transformedCopyViewFinalFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
         let scale = CGSize(width: transformedCopyViewFinalFrame.size.width / transformedSelfFrame.size.width, height: transformedCopyViewFinalFrame.size.height / transformedSelfFrame.size.height)
         copyView.layer.animate(from: NSValue(caTransform3D: CATransform3DIdentity), to: NSValue(caTransform3D: CATransform3DMakeScale(scale.width, scale.height, 1.0)), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false)

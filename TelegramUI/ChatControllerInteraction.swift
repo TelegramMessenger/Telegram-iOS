@@ -10,7 +10,7 @@ public enum ChatControllerInteractionNavigateToPeer {
 public final class ChatControllerInteraction {
     let openMessage: (MessageId) -> Void
     let openPeer: (PeerId, ChatControllerInteractionNavigateToPeer) -> Void
-    let openMessageContextMenu: @escaping (MessageId, ASDisplayNode, CGRect) -> Void
+    let openMessageContextMenu: (MessageId, ASDisplayNode, CGRect) -> Void
     let navigateToMessage: (MessageId, MessageId) -> Void
     let clickThroughMessage: () -> Void
     var hiddenMedia: [MessageId: [Media]] = [:]

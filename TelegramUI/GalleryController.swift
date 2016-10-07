@@ -13,7 +13,9 @@ private func tagsForMessage(_ message: Message) -> MessageTags? {
                 return .PhotoOrVideo
             case let file as TelegramMediaFile:
                 if file.isVideo {
-                    return .PhotoOrVideo
+                    if !file.isAnimated {
+                        return .PhotoOrVideo
+                    }
                 } else if file.isVoice {
                     return .Voice
                 } else if file.isSticker {
@@ -47,7 +49,7 @@ private func mediaForMessage(message: Message) -> Media? {
 
 private func itemForEntry(account: Account, entry: MessageHistoryEntry) -> GalleryItem {
     switch entry {
-        case let .MessageEntry(message, location):
+        case let .MessageEntry(message, _, location):
             if let media = mediaForMessage(message: message) {
                 if let _ = media as? TelegramMediaImage {
                     return ChatImageGalleryItem(account: account, message: message, location: location)
@@ -69,11 +71,37 @@ private func itemForEntry(account: Account, entry: MessageHistoryEntry) -> Galle
     return ChatHoleGalleryItem()
 }
 
-class GalleryControllerPresentationArguments {
-    let transitionNode: (MessageId, Media) -> ASDisplayNode?
+final class GalleryTransitionArguments {
+    let transitionNode: ASDisplayNode
+    let transitionContainerNode: ASDisplayNode
+    let transitionBackgroundNode: ASDisplayNode
     
-    init(transitionNode: @escaping (MessageId, Media) -> ASDisplayNode?) {
+    init(transitionNode: ASDisplayNode, transitionContainerNode: ASDisplayNode, transitionBackgroundNode: ASDisplayNode) {
         self.transitionNode = transitionNode
+        self.transitionContainerNode = transitionContainerNode
+        self.transitionBackgroundNode = transitionBackgroundNode
+    }
+}
+
+final class GalleryControllerPresentationArguments {
+    let transitionArguments: (MessageId, Media) -> GalleryTransitionArguments?
+    
+    init(transitionArguments: @escaping (MessageId, Media) -> GalleryTransitionArguments?) {
+        self.transitionArguments = transitionArguments
+    }
+}
+
+private enum GalleryMessageHistoryView {
+    case view(MessageHistoryView)
+    case single(MessageHistoryEntry)
+    
+    var entries: [MessageHistoryEntry] {
+        switch self {
+            case let .view(view):
+                return view.entries
+            case let .single(entry):
+                return [entry]
+        }
     }
 }
 
@@ -123,16 +151,17 @@ class GalleryController: ViewController {
         
         let messageView = message
             |> filter({ $0 != nil })
-            |> mapToSignal { message -> Signal<MessageHistoryView?, Void> in
+            |> mapToSignal { message -> Signal<GalleryMessageHistoryView?, Void> in
                 if let tags = tagsForMessage(message!) {
                     let view = account.postbox.aroundMessageHistoryViewForPeerId(messageId.peerId, index: MessageIndex(message!), count: 50, anchorIndex: MessageIndex(message!), fixedCombinedReadState: nil, tagMask: tags)
                         
                     return view
-                        |> mapToSignal { (view, _) -> Signal<MessageHistoryView?, Void> in
-                            return .single(view)
+                        |> mapToSignal { (view, _) -> Signal<GalleryMessageHistoryView?, Void> in
+                            let mapped = GalleryMessageHistoryView.view(view)
+                            return .single(mapped)
                         }
                 } else {
-                    return .single(nil)
+                    return .single(GalleryMessageHistoryView.single(MessageHistoryEntry.MessageEntry(message!, false, nil)))
                 }
             }
             |> take(1)
@@ -144,7 +173,7 @@ class GalleryController: ViewController {
                     strongSelf.entries = view.entries
                     loop: for i in 0 ..< strongSelf.entries.count {
                         switch strongSelf.entries[i] {
-                            case let .MessageEntry(message, _) where message.id == messageId:
+                            case let .MessageEntry(message, _, _) where message.id == messageId:
                                 strongSelf.centralEntryIndex = i
                                 break loop
                             default:
@@ -180,14 +209,16 @@ class GalleryController: ViewController {
                         strongSelf.navigationBar.stripeColor = UIColor.clear
                         strongSelf.navigationBar.foregroundColor = UIColor.white
                         strongSelf.navigationBar.accentColor = UIColor.white
-                        strongSelf.galleryNode.backgroundColor = UIColor.black
+                        strongSelf.galleryNode.backgroundNode.backgroundColor = UIColor.black
+                        strongSelf.galleryNode.isBackgroundExtendedOverNavigationBar = true
                     case .light:
                         strongSelf.statusBar.style = .Black
                         strongSelf.navigationBar.backgroundColor = UIColor(red: 0.968626451, green: 0.968626451, blue: 0.968626451, alpha: 1.0)
                         strongSelf.navigationBar.foregroundColor = UIColor.black
                         strongSelf.navigationBar.accentColor = UIColor(0x1195f2)
                         strongSelf.navigationBar.stripeColor = UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0)
-                        strongSelf.galleryNode.backgroundColor = UIColor(0xbdbdc2)
+                        strongSelf.galleryNode.backgroundNode.backgroundColor = UIColor(0xbdbdc2)
+                        strongSelf.galleryNode.isBackgroundExtendedOverNavigationBar = false
                 }
             }
         }))
@@ -214,10 +245,10 @@ class GalleryController: ViewController {
         }
         
         if let centralItemNode = self.galleryNode.pager.centralItemNode(), let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments {
-            if case let .MessageEntry(message, _) = self.entries[centralItemNode.index] {
-                if let media = mediaForMessage(message: message), let node = presentationArguments.transitionNode(message.id, media) {
+            if case let .MessageEntry(message, _, _) = self.entries[centralItemNode.index] {
+                if let media = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media) {
                     animatedOutNode = false
-                    centralItemNode.animateOut(to: node, completion: {
+                    centralItemNode.animateOut(to: transitionArguments.transitionNode, completion: {
                         animatedOutNode = true
                         completion()
                     })
@@ -241,9 +272,9 @@ class GalleryController: ViewController {
         self.galleryNode.transitionNodeForCentralItem = { [weak self] in
             if let strongSelf = self {
                 if let centralItemNode = strongSelf.galleryNode.pager.centralItemNode(), let presentationArguments = strongSelf.presentationArguments as? GalleryControllerPresentationArguments {
-                    if case let .MessageEntry(message, _) = strongSelf.entries[centralItemNode.index] {
-                        if let media = mediaForMessage(message: message), let node = presentationArguments.transitionNode(message.id, media) {
-                            return node
+                    if case let .MessageEntry(message, _, _) = strongSelf.entries[centralItemNode.index] {
+                        if let media = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media) {
+                            return transitionArguments.transitionNode
                         }
                     }
                 }
@@ -261,7 +292,7 @@ class GalleryController: ViewController {
             if let strongSelf = self {
                 var hiddenItem: (MessageId, Media)?
                 if let index = index {
-                    if case let .MessageEntry(message, _) = strongSelf.entries[index], let media = mediaForMessage(message: message) {
+                    if case let .MessageEntry(message, _, _) = strongSelf.entries[index], let media = mediaForMessage(message: message) {
                         hiddenItem = (message.id, media)
                     }
                     
@@ -284,14 +315,14 @@ class GalleryController: ViewController {
         var nodeAnimatesItself = false
         
         if let centralItemNode = self.galleryNode.pager.centralItemNode(), let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments {
-            if case let .MessageEntry(message, _) = self.entries[centralItemNode.index] {
+            if case let .MessageEntry(message, _, _) = self.entries[centralItemNode.index] {
                 self.centralItemTitle.set(centralItemNode.title())
                 self.centralItemTitleView.set(centralItemNode.titleView())
                 self.centralItemNavigationStyle.set(centralItemNode.navigationStyle())
                 
-                if let media = mediaForMessage(message: message), let node = presentationArguments.transitionNode(message.id, media) {
+                if let media = mediaForMessage(message: message), let transitionArguments = presentationArguments.transitionArguments(message.id, media) {
                     nodeAnimatesItself = true
-                    centralItemNode.animateIn(from: node)
+                    centralItemNode.animateIn(from: transitionArguments.transitionNode)
                     
                     self._hiddenMedia.set(.single((message.id, media)))
                 }

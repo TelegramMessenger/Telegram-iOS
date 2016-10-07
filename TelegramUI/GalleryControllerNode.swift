@@ -8,13 +8,23 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var transitionNodeForCentralItem: (() -> ASDisplayNode?)?
     var dismiss: (() -> Void)?
     
-    var containerLayout: ContainerViewLayout?
+    var containerLayout: (CGFloat, ContainerViewLayout)?
+    var backgroundNode: ASDisplayNode
     var scrollView: UIScrollView
     var pager: GalleryPagerNode
     
     var areControlsHidden = false
+    var isBackgroundExtendedOverNavigationBar = true {
+        didSet {
+            if let (navigationBarHeight, layout) = self.containerLayout {
+                self.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: self.isBackgroundExtendedOverNavigationBar ? 0.0 : navigationBarHeight), size: CGSize(width: layout.size.width, height: layout.size.height - (self.isBackgroundExtendedOverNavigationBar ? 0.0 : navigationBarHeight)))
+            }
+        }
+    }
     
     override init() {
+        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode.backgroundColor = UIColor.black
         self.scrollView = UIScrollView()
         self.pager = GalleryPagerNode()
         
@@ -33,6 +43,8 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
+        self.addSubnode(self.backgroundNode)
+        
         self.scrollView.showsVerticalScrollIndicator = false
         self.scrollView.showsHorizontalScrollIndicator = false
         self.scrollView.alwaysBounceHorizontal = false
@@ -43,12 +55,12 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.view.addSubview(self.scrollView)
         
         self.scrollView.addSubview(self.pager.view)
-        
-        self.backgroundColor = UIColor.black
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-        self.containerLayout = layout
+        self.containerLayout = (navigationBarHeight, layout)
+        
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isBackgroundExtendedOverNavigationBar ? 0.0 : navigationBarHeight), size: CGSize(width: layout.size.width, height: layout.size.height - (self.isBackgroundExtendedOverNavigationBar ? 0.0 : navigationBarHeight))))
         
         let previousContentHeight = self.scrollView.contentSize.height
         let previousVerticalOffset = self.scrollView.contentOffset.y
@@ -67,11 +79,11 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func animateIn(animateContent: Bool) {
-        self.backgroundColor = self.backgroundColor?.withAlphaComponent(0.0)
+        self.backgroundNode.backgroundColor = self.backgroundNode.backgroundColor?.withAlphaComponent(0.0)
         self.statusBar?.alpha = 0.0
         self.navigationBar?.alpha = 0.0
         UIView.animate(withDuration: 0.2, animations: {
-            self.backgroundColor = self.backgroundColor?.withAlphaComponent(1.0)
+            self.backgroundNode.backgroundColor = self.backgroundNode.backgroundColor?.withAlphaComponent(1.0)
             self.statusBar?.alpha = 1.0
             self.navigationBar?.alpha = 1.0
         })
@@ -92,7 +104,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         UIView.animate(withDuration: 0.25, animations: {
-            self.backgroundColor = self.backgroundColor?.withAlphaComponent(0.0)
+            self.backgroundNode.backgroundColor = self.backgroundNode.backgroundColor?.withAlphaComponent(0.0)
             self.statusBar?.alpha = 0.0
             self.navigationBar?.alpha = 0.0
         }, completion: { _ in
@@ -114,7 +126,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         let transition = 1.0 - min(1.0, max(0.0, abs(distanceFromEquilibrium) / 50.0))
         let backgroundTransition = 1.0 - min(1.0, max(0.0, abs(distanceFromEquilibrium) / 80.0))
-        self.backgroundColor = self.backgroundColor?.withAlphaComponent(backgroundTransition)
+        self.backgroundNode.backgroundColor = self.backgroundNode.backgroundColor?.withAlphaComponent(backgroundTransition)
         
         if !self.areControlsHidden {
             self.statusBar?.alpha = transition
@@ -126,7 +138,7 @@ class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate {
         targetContentOffset.pointee = scrollView.contentOffset
         
         if abs(velocity.y) > 1.0 {
-            self.layer.animate(from: self.layer.backgroundColor!, to: UIColor(white: 0.0, alpha: 0.0).cgColor, keyPath: "backgroundColor", timingFunction: kCAMediaTimingFunctionLinear, duration: 0.2, removeOnCompletion: false)
+            self.backgroundNode.layer.animate(from: self.backgroundNode.backgroundColor!, to: UIColor(white: 0.0, alpha: 0.0).cgColor, keyPath: "backgroundColor", timingFunction: kCAMediaTimingFunctionLinear, duration: 0.2, removeOnCompletion: false)
             
             var interfaceAnimationCompleted = false
             var contentAnimationCompleted = true

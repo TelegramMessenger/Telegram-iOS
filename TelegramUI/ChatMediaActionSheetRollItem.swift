@@ -88,7 +88,8 @@ private final class ChatMediaActionSheetRollItemNode: ActionSheetItemNode, PHPho
         
         self.listView.bounds = CGRect(x: 0.0, y: 0.0, width: 84.0, height: bounds.size.width)
         self.listView.position = CGPoint(x: bounds.size.width / 2.0, y: 84.0 / 2.0 + 8.0)
-        self.listView.updateSizeAndInsets(size: CGSize(width: 84.0, height: bounds.size.width), insets: UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0), duration: 0.0, options: UIViewAnimationOptions(rawValue: UInt(0)))
+        
+        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: 84.0, height: bounds.size.width), insets: UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0), duration: 0.0, curve: .Default)
         
         let labelSize = self.label.bounds.size
         self.label.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((bounds.size.width - labelSize.width) / 2.0), y: 84.0 + 16.0 + floorToScreenPixels((bounds.height - 84.0 - 16.0 - labelSize.height) / 2.0)), size: labelSize)

@@ -28,7 +28,7 @@ func ==(lhs: ChatListMessageViewPosition, rhs: ChatListMessageViewPosition) -> B
     }
 }
 
-private enum ChatListControllerEntryId: Hashable {
+private enum ChatListControllerEntryId: Hashable, CustomStringConvertible {
     case Search
     case PeerId(Int64)
     
@@ -38,6 +38,15 @@ private enum ChatListControllerEntryId: Hashable {
                 return 0
             case let .PeerId(peerId):
                 return peerId.hashValue
+        }
+    }
+    
+    var description: String {
+        switch self {
+            case .Search:
+                return "search"
+            case let .PeerId(value):
+                return "peerId(\(value))"
         }
     }
 }
@@ -67,7 +76,7 @@ private func ==(lhs: ChatListControllerEntryId, rhs: ChatListControllerEntryId) 
 
 private enum ChatListControllerEntry: Comparable, Identifiable {
     case SearchEntry
-    case MessageEntry(Message, Int)
+    case MessageEntry(Message, CombinedPeerReadState?, PeerNotificationSettings?)
     case HoleEntry(ChatListHole)
     case Nothing(MessageIndex)
     
@@ -75,7 +84,7 @@ private enum ChatListControllerEntry: Comparable, Identifiable {
         switch self {
             case .SearchEntry:
                 return MessageIndex.absoluteUpperBound()
-            case let .MessageEntry(message, _):
+            case let .MessageEntry(message, _, _):
                 return MessageIndex(message)
             case let .HoleEntry(hole):
                 return hole.index
@@ -107,10 +116,20 @@ private func ==(lhs: ChatListControllerEntry, rhs: ChatListControllerEntry) -> B
                 default:
                     return false
             }
-        case let .MessageEntry(lhsMessage, lhsUnreadCount):
+        case let .MessageEntry(lhsMessage, lhsUnreadCount, lhsNotificationSettings):
             switch rhs {
-                case let .MessageEntry(rhsMessage, rhsUnreadCount):
-                    return lhsMessage.id == rhsMessage.id && lhsMessage.flags == rhsMessage.flags && lhsUnreadCount == rhsUnreadCount
+                case let .MessageEntry(rhsMessage, rhsUnreadCount, rhsNotificationSettings):
+                    if lhsMessage.id != rhsMessage.id || lhsMessage.flags != rhsMessage.flags || lhsUnreadCount != rhsUnreadCount {
+                        return false
+                    }
+                    if let lhsNotificationSettings = lhsNotificationSettings, let rhsNotificationSettings = rhsNotificationSettings {
+                        if !lhsNotificationSettings.isEqual(to: rhsNotificationSettings) {
+                            return false
+                        }
+                    } else if (lhsNotificationSettings != nil) != (rhsNotificationSettings != nil) {
+                        return false
+                    }
+                    return true
                 default:
                     break
             }
@@ -302,8 +321,8 @@ public class ChatListController: ViewController {
         var result: [ChatListControllerEntry] = []
         for entry in view.entries {
             switch entry {
-                case let .MessageEntry(message, unreadCount):
-                    result.append(.MessageEntry(message, unreadCount))
+                case let .MessageEntry(message, combinedReadState, notificationSettings):
+                    result.append(.MessageEntry(message, combinedReadState, notificationSettings))
                 case let .HoleEntry(hole):
                     result.append(.HoleEntry(hole))
                 case let .Nothing(index):
@@ -324,9 +343,9 @@ public class ChatListController: ViewController {
                 let viewEntries = strongSelf.chatListControllerEntries(view)
                 
                 strongSelf.messageViewQueue.async {
-                    //let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: currentEntries, rightList: viewEntries)
-                    let (deleteIndices, indicesAndItems) = mergeListsStable(leftList: currentEntries, rightList: viewEntries)
-                    let updateIndices: [(Int, ChatListControllerEntry)] = []
+                    let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: currentEntries, rightList: viewEntries)
+                    //let (deleteIndices, indicesAndItems) = mergeListsStable(leftList: currentEntries, rightList: viewEntries)
+                    //let updateIndices: [(Int, ChatListControllerEntry)] = []
                     
                     Queue.mainQueue().async {
                         var adjustedDeleteIndices: [ListViewDeleteItem] = []
@@ -368,8 +387,8 @@ public class ChatListController: ViewController {
                                     adjustedIndicesAndItems.append(ListViewInsertItem(index: updatedCount - 1 - index, previousIndex: adjustedPreviousIndex, item: ChatListSearchItem(placeholder: "Search for messages or users", activate: { [weak self] in
                                         self?.activateSearch()
                                     }), directionHint: directionHint))
-                                case let .MessageEntry(message, unreadCount):
-                                    adjustedIndicesAndItems.append(ListViewInsertItem(index: adjustedIndex, previousIndex: adjustedPreviousIndex, item: ChatListItem(account: strongSelf.account, message: message, unreadCount: unreadCount, action: { [weak self] message in
+                                case let .MessageEntry(message, combinedReadState, notificationSettings):
+                                    adjustedIndicesAndItems.append(ListViewInsertItem(index: adjustedIndex, previousIndex: adjustedPreviousIndex, item: ChatListItem(account: strongSelf.account, message: message, combinedReadState: combinedReadState, notificationSettings: notificationSettings, action: { [weak self] message in
                                         if let strongSelf = self {
                                             strongSelf.entrySelected(entry)
                                             strongSelf.chatListDisplayNode.listView.clearHighlightAnimated(true)
@@ -383,27 +402,28 @@ public class ChatListController: ViewController {
                         }
                         
                         var adjustedUpdateItems: [ListViewUpdateItem] = []
-                        for (index, entry) in updateIndices {
+                        for (index, entry, previousIndex) in updateIndices {
                             let adjustedIndex = updatedCount - 1 - index
+                            let adjustedPreviousIndex = previousCount - 1 - previousIndex
                             
                             let directionHint: ListViewItemOperationDirectionHint? = nil
                             
                             switch entry {
                                 case .SearchEntry:
-                                    adjustedUpdateItems.append(ListViewUpdateItem(index: updatedCount - 1 - index, item: ChatListSearchItem(placeholder: "Search for messages or users", activate: { [weak self] in
+                                    adjustedUpdateItems.append(ListViewUpdateItem(index: adjustedIndex, previousIndex: adjustedPreviousIndex, item: ChatListSearchItem(placeholder: "Search for messages or users", activate: { [weak self] in
                                         self?.activateSearch()
                                     }), directionHint: directionHint))
-                                case let .MessageEntry(message, unreadCount):
-                                    adjustedUpdateItems.append(ListViewUpdateItem(index: adjustedIndex, item: ChatListItem(account: strongSelf.account, message: message, unreadCount: unreadCount, action: { [weak self] message in
+                                case let .MessageEntry(message, combinedReadState, notificationSettings):
+                                    adjustedUpdateItems.append(ListViewUpdateItem(index: adjustedIndex, previousIndex: adjustedPreviousIndex, item: ChatListItem(account: strongSelf.account, message: message, combinedReadState: combinedReadState, notificationSettings: notificationSettings, action: { [weak self] message in
                                         if let strongSelf = self {
                                             strongSelf.entrySelected(entry)
                                             strongSelf.chatListDisplayNode.listView.clearHighlightAnimated(true)
                                         }
                                         }), directionHint: directionHint))
                                 case .HoleEntry:
-                                    adjustedUpdateItems.append(ListViewUpdateItem(index: updatedCount - 1 - index, item: ChatListHoleItem(), directionHint: directionHint))
+                                    adjustedUpdateItems.append(ListViewUpdateItem(index: adjustedIndex, previousIndex: adjustedPreviousIndex, item: ChatListHoleItem(), directionHint: directionHint))
                                 case .Nothing:
-                                    adjustedUpdateItems.append(ListViewUpdateItem(index: updatedCount - 1 - index, item: ChatListEmptyItem(), directionHint: directionHint))
+                                    adjustedUpdateItems.append(ListViewUpdateItem(index: adjustedIndex, previousIndex: adjustedPreviousIndex, item: ChatListEmptyItem(), directionHint: directionHint))
                             }
                         }
                         
@@ -464,7 +484,8 @@ public class ChatListController: ViewController {
     }
     
     private func entrySelected(_ entry: ChatListControllerEntry) {
-        if case let .MessageEntry(message, _) = entry {
+        if case let .MessageEntry(message, _, _) = entry {
+            //(self.navigationController as? NavigationController)?.pushViewController(PeerMediaCollectionController(account: self.account, peerId: message.id.peerId))
             (self.navigationController as? NavigationController)?.pushViewController(ChatController(account: self.account, peerId: message.id.peerId))
         }
     }

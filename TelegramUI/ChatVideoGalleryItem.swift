@@ -207,10 +207,6 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.videoNode.snapshotNode?.isHidden = true
         
         transformedFrame.origin = CGPoint()
-        /*self.videoNode.layer.animateBounds(from: self.videoNode.layer.bounds, to: transformedFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
-            boundsCompleted = true
-            intermediateCompletion()
-        })*/
         
         let transform = CATransform3DScale(self.videoNode.layer.transform, transformedFrame.size.width / self.videoNode.layer.bounds.size.width, transformedFrame.size.height / self.videoNode.layer.bounds.size.height, 1.0)
         self.videoNode.layer.animate(from: NSValue(caTransform3D: self.videoNode.layer.transform), to: NSValue(caTransform3D: transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in

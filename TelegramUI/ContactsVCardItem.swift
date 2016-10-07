@@ -54,7 +54,7 @@ class ContactsVCardItem: ListViewItem {
         }
     }
     
-    func selected() {
+    func selected(listView: ListView) {
         self.action(self.peer)
     }
 }

@@ -112,7 +112,7 @@ class ContactsPeerItem: ListViewItem {
         }
     }
     
-    func selected() {
+    func selected(listView: ListView) {
         self.action(self.peer)
     }
 }

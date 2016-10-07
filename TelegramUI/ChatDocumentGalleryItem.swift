@@ -135,4 +135,63 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
     override func title() -> Signal<String, NoError> {
         return self._title.get()
     }
+    
+    override func animateIn(from node: ASDisplayNode) {
+        var transformedFrame = node.view.convert(node.view.bounds, to: self.webView)
+        let transformedSuperFrame = node.view.convert(node.view.bounds, to: self.webView.superview)
+        
+        self.webView.layer.animatePosition(from: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), to: self.webView.layer.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+        
+        transformedFrame.origin = CGPoint()
+        
+        let transform = CATransform3DScale(self.webView.layer.transform, transformedFrame.size.width / self.webView.layer.bounds.size.width, transformedFrame.size.height / self.webView.layer.bounds.size.height, 1.0)
+        self.webView.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: self.webView.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
+    }
+    
+    override func animateOut(to node: ASDisplayNode, completion: @escaping () -> Void) {
+        var transformedFrame = node.view.convert(node.view.bounds, to: self.webView)
+        let transformedSuperFrame = node.view.convert(node.view.bounds, to: self.webView.superview)
+        let transformedSelfFrame = node.view.convert(node.view.bounds, to: self.view)
+        let transformedCopyViewInitialFrame = self.webView.convert(self.webView.bounds, to: self.view)
+        
+        var positionCompleted = false
+        var boundsCompleted = false
+        var copyCompleted = false
+        
+        let copyView = node.view.snapshotContentTree()!
+        
+        self.view.insertSubview(copyView, belowSubview: self.webView)
+        copyView.frame = transformedSelfFrame
+        
+        let intermediateCompletion = { [weak copyView] in
+            if positionCompleted && boundsCompleted && copyCompleted {
+                copyView?.removeFromSuperview()
+                completion()
+            }
+        }
+        
+        copyView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, removeOnCompletion: false)
+        
+        copyView.layer.animatePosition(from: CGPoint(x: transformedCopyViewInitialFrame.midX, y: transformedCopyViewInitialFrame.midY), to: CGPoint(x: transformedSelfFrame.midX, y: transformedSelfFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+        let scale = CGSize(width: transformedCopyViewInitialFrame.size.width / transformedSelfFrame.size.width, height: transformedCopyViewInitialFrame.size.height / transformedSelfFrame.size.height)
+        copyView.layer.animate(from: NSValue(caTransform3D: CATransform3DMakeScale(scale.width, scale.height, 1.0)), to: NSValue(caTransform3D: CATransform3DIdentity), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
+            copyCompleted = true
+            intermediateCompletion()
+        })
+        
+        self.webView.layer.animatePosition(from: self.webView.layer.position, to: CGPoint(x: transformedSuperFrame.midX, y: transformedSuperFrame.midY), duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+            positionCompleted = true
+            intermediateCompletion()
+        })
+        
+        self.webView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
+        
+        transformedFrame.origin = CGPoint()
+        
+        let transform = CATransform3DScale(self.webView.layer.transform, transformedFrame.size.width / self.webView.layer.bounds.size.width, transformedFrame.size.height / self.webView.layer.bounds.size.height, 1.0)
+        self.webView.layer.animate(from: NSValue(caTransform3D: self.webView.layer.transform), to: NSValue(caTransform3D: transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
+            boundsCompleted = true
+            intermediateCompletion()
+        })
+    }
 }

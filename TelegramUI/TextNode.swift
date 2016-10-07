@@ -207,7 +207,7 @@ final class TextNode: ASDisplayNode {
         return self.cachedLayout
     }
     
-    @objc override class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol!, isCancelled: asdisplaynode_iscancelled_block_t, isRasterizing: Bool) {
+    @objc override class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol?, isCancelled: @escaping asdisplaynode_iscancelled_block_t, isRasterizing: Bool) {
         let context = UIGraphicsGetCurrentContext()!
         
         context.setAllowsAntialiasing(true)

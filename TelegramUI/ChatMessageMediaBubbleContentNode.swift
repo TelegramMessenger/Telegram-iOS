@@ -35,7 +35,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void))) {
+    override func asyncLayoutContent() -> (_ item: ChatMessageItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
         let interactiveImageLayout = self.interactiveImageNode.asyncLayout()
         
         return { item, layoutConstants, position, constrainedSize in
@@ -58,7 +58,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 return (refinedWidth + layoutConstants.image.bubbleInsets.left + layoutConstants.image.bubbleInsets.right, { boundingWidth in
                     let (imageSize, imageApply) = finishLayout(boundingWidth - layoutConstants.image.bubbleInsets.left - layoutConstants.image.bubbleInsets.right)
                     
-                    return (CGSize(width: imageSize.width + layoutConstants.image.bubbleInsets.left + layoutConstants.image.bubbleInsets.right, height: imageSize.height + layoutConstants.image.bubbleInsets.top + layoutConstants.image.bubbleInsets.bottom), { [weak self] in
+                    return (CGSize(width: imageSize.width + layoutConstants.image.bubbleInsets.left + layoutConstants.image.bubbleInsets.right, height: imageSize.height + layoutConstants.image.bubbleInsets.top + layoutConstants.image.bubbleInsets.bottom), { [weak self] _ in
                         if let strongSelf = self {
                             strongSelf.item = item
                             strongSelf.media = selectedMedia

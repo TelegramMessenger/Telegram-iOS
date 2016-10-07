@@ -59,7 +59,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                     for item in items {
                         switch item {
                             case let .message(message):
-                                listItems.append(ChatListItem(account: account, message: message, unreadCount: 0, action: { [weak strongSelf] _ in
+                                listItems.append(ChatListItem(account: account, message: message, combinedReadState: nil, notificationSettings: nil, action: { [weak strongSelf] _ in
                                     if let strongSelf = strongSelf, let peer = message.peers[message.id.peerId] {
                                         strongSelf.listNode.clearHighlightAnimated(true)
                                         strongSelf.openMessage(peer, message.id)

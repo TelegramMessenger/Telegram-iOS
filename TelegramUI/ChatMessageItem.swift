@@ -41,14 +41,16 @@ public class ChatMessageItem: ListViewItem, CustomStringConvertible {
     let peerId: PeerId
     let controllerInteraction: ChatControllerInteraction
     let message: Message
+    let read: Bool
     
     public let accessoryItem: ListViewAccessoryItem?
     
-    public init(account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, message: Message) {
+    public init(account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, message: Message, read: Bool) {
         self.account = account
         self.peerId = peerId
         self.controllerInteraction = controllerInteraction
         self.message = message
+        self.read = read
         
         var accessoryItem: ListViewAccessoryItem?
         let incoming = message.effectivelyIncoming

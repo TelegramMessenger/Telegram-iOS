@@ -64,7 +64,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void))) {
+    override func asyncLayoutContent() -> (_ item: ChatMessageItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
         let textAsyncLayout = TextNode.asyncLayout(self.textNode)
         let currentImage = self.image
         let imageLayout = self.inlineImageNode.asyncLayout()
@@ -176,7 +176,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let textConstrainedSize = CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height - insets.top - insets.bottom)
                 
-                var statusSizeAndApply: (CGSize, () -> Void)?
+                var statusSizeAndApply: (CGSize, (Bool) -> Void)?
                 
                 if refineContentImageLayout == nil && refineContentFileLayout == nil {
                     statusSizeAndApply = statusLayout(dateText, statusType, textConstrainedSize)
@@ -296,8 +296,13 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         adjustedStatusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusFrame.size.width - insets.right, y: statusFrame.origin.y), size: statusFrame.size)
                     }
                     
-                    return (adjustedBoundingSize, { [weak self] in
+                    return (adjustedBoundingSize, { [weak self] animation in
                         if let strongSelf = self {
+                            var hasAnimation = true
+                            if case .None = animation {
+                                hasAnimation = false
+                            }
+                            
                             strongSelf.lineNode.image = lineImage
                             strongSelf.lineNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 0.0), size: CGSize(width: 2.0, height: adjustedLineHeight - insets.top - insets.bottom - 2.0))
                             
@@ -309,7 +314,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                                 if strongSelf.statusNode.supernode == nil {
                                     strongSelf.addSubnode(strongSelf.statusNode)
                                 }
-                                statusApply()
+                                statusApply(hasAnimation)
                             } else if strongSelf.statusNode.supernode != nil {
                                 strongSelf.statusNode.removeFromSupernode()
                             }

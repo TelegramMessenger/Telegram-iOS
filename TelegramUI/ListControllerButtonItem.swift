@@ -22,7 +22,7 @@ class ListControllerButtonItem: ListControllerGroupableItem {
         completion(node)
     }
     
-    func selected() {
+    func selected(listView: ListView) {
         self.action()
     }
 }
