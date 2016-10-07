@@ -74,12 +74,12 @@ public func ==(lhs: MessageHistoryEntryLocation, rhs: MessageHistoryEntryLocatio
 }
 
 public enum MessageHistoryEntry: Comparable {
-    case MessageEntry(Message, MessageHistoryEntryLocation?)
+    case MessageEntry(Message, Bool, MessageHistoryEntryLocation?)
     case HoleEntry(MessageHistoryHole, MessageHistoryEntryLocation?)
     
     public var index: MessageIndex {
         switch self {
-            case let .MessageEntry(message, _):
+            case let .MessageEntry(message, _, _):
                 return MessageIndex(id: message.id, timestamp: message.timestamp)
             case let .HoleEntry(hole, _):
                 return hole.maxIndex
@@ -89,12 +89,12 @@ public enum MessageHistoryEntry: Comparable {
 
 public func ==(lhs: MessageHistoryEntry, rhs: MessageHistoryEntry) -> Bool {
     switch lhs {
-        case let .MessageEntry(lhsMessage, lhsLocation):
+        case let .MessageEntry(lhsMessage, lhsRead, lhsLocation):
             switch rhs {
                 case .HoleEntry:
                     return false
-                case let .MessageEntry(rhsMessage, rhsLocation):
-                    if MessageIndex(lhsMessage) == MessageIndex(rhsMessage) && lhsMessage.flags == rhsMessage.flags && lhsLocation == rhsLocation {
+                case let .MessageEntry(rhsMessage, rhsRead, rhsLocation):
+                    if MessageIndex(lhsMessage) == MessageIndex(rhsMessage) && lhsMessage.flags == rhsMessage.flags && lhsLocation == rhsLocation && lhsRead == rhsRead {
                         return true
                     }
                     return false
@@ -128,6 +128,7 @@ final class MutableMessageHistoryView {
     let tagMask: MessageTags?
     fileprivate var anchorIndex: MessageHistoryAnchorIndex
     fileprivate let combinedReadState: CombinedPeerReadState?
+    fileprivate var transientReadState: CombinedPeerReadState?
     fileprivate var earlier: MutableMessageHistoryEntry?
     fileprivate var later: MutableMessageHistoryEntry?
     fileprivate var entries: [MutableMessageHistoryEntry]
@@ -137,6 +138,7 @@ final class MutableMessageHistoryView {
         self.id = id
         self.anchorIndex = anchorIndex
         self.combinedReadState = combinedReadState
+        self.transientReadState = combinedReadState
         self.earlier = earlier
         self.entries = entries
         self.later = later
@@ -267,7 +269,7 @@ final class MutableMessageHistoryView {
                     }
                 case let .UpdateReadState(combinedReadState):
                     hasChanges = true
-                    //self.combinedReadState = combinedReadState
+                    self.transientReadState = combinedReadState
                 case let .UpdateEmbeddedMedia(index, embeddedMediaData):
                     for i in 0 ..< self.entries.count {
                         if case let .IntermediateMessageEntry(message, _) = self.entries[i] , MessageIndex(message) == index {
@@ -556,14 +558,33 @@ public final class MessageHistoryView {
         self.anchorIndex = mutableView.anchorIndex.index
         
         var entries: [MessageHistoryEntry] = []
-        for entry in mutableView.entries {
-            switch entry {
-                case let .HoleEntry(hole, location):
-                    entries.append(.HoleEntry(hole, location))
-                case let .MessageEntry(message, location):
-                    entries.append(.MessageEntry(message, location))
-                case .IntermediateMessageEntry:
-                    assertionFailure("unexpected IntermediateMessageEntry in MessageHistoryView.init()")
+        if let transientReadState = mutableView.transientReadState {
+            for entry in mutableView.entries {
+                switch entry {
+                    case let .HoleEntry(hole, location):
+                        entries.append(.HoleEntry(hole, location))
+                    case let .MessageEntry(message, location):
+                        let read: Bool
+                        if message.flags.contains(.Incoming) {
+                            read = false
+                        } else {
+                            read = transientReadState.isOutgoingMessageIdRead(message.id)
+                        }
+                        entries.append(.MessageEntry(message, read, location))
+                    case .IntermediateMessageEntry:
+                        assertionFailure("unexpected IntermediateMessageEntry in MessageHistoryView.init()")
+                }
+            }
+        } else {
+            for entry in mutableView.entries {
+                switch entry {
+                    case let .HoleEntry(hole, location):
+                        entries.append(.HoleEntry(hole, location))
+                    case let .MessageEntry(message, location):
+                        entries.append(.MessageEntry(message, false, location))
+                    case .IntermediateMessageEntry:
+                        assertionFailure("unexpected IntermediateMessageEntry in MessageHistoryView.init()")
+                }
             }
         }
         self.entries = entries
@@ -597,7 +618,7 @@ public final class MessageHistoryView {
                 }
                 if let _ = maxNamespaceIndex , index + 1 < entries.count {
                     for i in index + 1 ..< entries.count {
-                        if case let .MessageEntry(message, _) = entries[i] , !message.flags.contains(.Incoming) {
+                        if case let .MessageEntry(message, _, _) = entries[i] , !message.flags.contains(.Incoming) {
                             maxNamespaceIndex = MessageIndex(message)
                         } else {
                             break

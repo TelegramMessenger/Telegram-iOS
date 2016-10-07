@@ -121,7 +121,7 @@ public final class SqliteValueBox: ValueBox {
         //database.execute("PRAGMA wal_autocheckpoint=200")
         database.execute("PRAGMA journal_size_limit=1536")
         
-        var statement: OpaquePointer? = nil
+        /*var statement: OpaquePointer? = nil
         sqlite3_prepare_v2(database.handle, "PRAGMA integrity_check", -1, &statement, nil)
         let preparedStatement = SqlitePreparedStatement(statement: statement)
         while preparedStatement.step() {
@@ -132,7 +132,7 @@ public final class SqliteValueBox: ValueBox {
             //let value = preparedStatement.stringAt(0)
             //print("integrity_check: \(value)")
         }
-        preparedStatement.destroy()
+        preparedStatement.destroy()*/
         
         sqlite3_busy_timeout(database.handle, 10000000)
         

@@ -6,6 +6,9 @@ final class PostboxTransaction {
     let removedHolesByPeerId: [PeerId: [MessageIndex: HoleFillDirection]]
     let chatListOperations: [ChatListOperation]
     let currentUpdatedPeers: [PeerId: Peer]
+    let currentUpdatedPeerNotificationSettings: [PeerId: PeerNotificationSettings]
+    let currentUpdatedCachedPeerData: [PeerId: CachedPeerData]
+    
     let unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation]
     let updatedSynchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?]
     let updatedMedia: [MediaId: Media?]
@@ -28,6 +31,12 @@ final class PostboxTransaction {
         if !currentUpdatedPeers.isEmpty {
             return false
         }
+        if !currentUpdatedPeerNotificationSettings.isEmpty {
+            return false
+        }
+        if !currentUpdatedCachedPeerData.isEmpty {
+            return false
+        }
         if !unsentMessageOperations.isEmpty {
             return false
         }
@@ -46,12 +55,14 @@ final class PostboxTransaction {
         return true
     }
     
-    init(currentOperationsByPeerId: [PeerId: [MessageHistoryOperation]], peerIdsWithFilledHoles: [PeerId: [MessageIndex: HoleFillDirection]], removedHolesByPeerId: [PeerId: [MessageIndex: HoleFillDirection]], chatListOperations: [ChatListOperation], currentUpdatedPeers: [PeerId: Peer], unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], updatedSynchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?], updatedMedia: [MediaId: Media?], replaceContactPeerIds: Set<PeerId>?, currentUpdatedMasterClientId: Int64?) {
+    init(currentOperationsByPeerId: [PeerId: [MessageHistoryOperation]], peerIdsWithFilledHoles: [PeerId: [MessageIndex: HoleFillDirection]], removedHolesByPeerId: [PeerId: [MessageIndex: HoleFillDirection]], chatListOperations: [ChatListOperation], currentUpdatedPeers: [PeerId: Peer], currentUpdatedPeerNotificationSettings: [PeerId: PeerNotificationSettings], currentUpdatedCachedPeerData: [PeerId: CachedPeerData], unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], updatedSynchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?], updatedMedia: [MediaId: Media?], replaceContactPeerIds: Set<PeerId>?, currentUpdatedMasterClientId: Int64?) {
         self.currentOperationsByPeerId = currentOperationsByPeerId
         self.peerIdsWithFilledHoles = peerIdsWithFilledHoles
         self.removedHolesByPeerId = removedHolesByPeerId
         self.chatListOperations = chatListOperations
         self.currentUpdatedPeers = currentUpdatedPeers
+        self.currentUpdatedPeerNotificationSettings = currentUpdatedPeerNotificationSettings;
+        self.currentUpdatedCachedPeerData = currentUpdatedCachedPeerData
         self.unsentMessageOperations = unsentMessageOperations
         self.updatedSynchronizePeerReadStateOperations = updatedSynchronizePeerReadStateOperations
         self.updatedMedia = updatedMedia

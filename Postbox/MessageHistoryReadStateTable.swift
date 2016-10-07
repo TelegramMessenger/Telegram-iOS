@@ -233,7 +233,7 @@ final class MessageHistoryReadStateTable: Table {
     func applyOutgoingMaxReadId(_ messageId: MessageId) -> (CombinedPeerReadState?, Bool) {
         if let states = self.get(messageId.peerId), let state = states.namespaces[messageId.namespace] {
             if state.maxOutgoingReadId < messageId.id {
-                states.namespaces[messageId.namespace] = PeerReadState(maxIncomingReadId: state.maxIncomingReadId, maxOutgoingReadId: state.maxOutgoingReadId, maxKnownId: state.maxKnownId, count: state.count)
+                states.namespaces[messageId.namespace] = PeerReadState(maxIncomingReadId: state.maxIncomingReadId, maxOutgoingReadId: messageId.id, maxKnownId: state.maxKnownId, count: state.count)
                 self.updatedPeerIds.insert(messageId.peerId)
                 return (CombinedPeerReadState(states: states.namespaces.map({$0})), false)
             }

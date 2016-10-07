@@ -42,6 +42,7 @@ public final class MediaBox {
     private let statusQueue = Queue()
     private let concurrentQueue = Queue.concurrentDefaultQueue()
     private let dataQueue = Queue()
+    private let cacheQueue = Queue()
     
     private var statusContexts: [String: ResourceStatusContext] = [:]
     private var dataContexts: [String: ResourceDataContext] = [:]
@@ -77,7 +78,30 @@ public final class MediaBox {
     }
     
     private func streamingPathForId(_ id: String) -> String {
-        return "\(self.basePath)/\(id)_stream"
+        return "\(self.basePath)/\(fileNameForId(id))_stream"
+    }
+    
+    private func cachePathForId(_ id: String) -> String {
+        return "\(self.basePath)/cache/\(fileNameForId(id))"
+    }
+    
+    public func cachedResource(_ resource: CachedMediaResource) -> Signal<MediaResourceData, NoError> {
+        return Signal { subscriber in
+            self.concurrentQueue.async {
+                let path = self.cachePathForId(resource.id)
+                let currentSize = fileSize(path)
+                subscriber.putNext(MediaResourceData(path: path, size: currentSize))
+                subscriber.putCompletion()
+            }
+            
+            return EmptyDisposable
+        }
+    }
+    
+    public func cacheResource(_ resource: CachedMediaResource, data: Data) {
+        self.cacheQueue.async {
+            let _ = try? data.write(to: URL(fileURLWithPath: self.cachePathForId(resource.id)), options: [.atomic])
+        }
     }
     
     public func resourceStatus(_ resource: MediaResource) -> Signal<MediaResourceStatus, NoError> {

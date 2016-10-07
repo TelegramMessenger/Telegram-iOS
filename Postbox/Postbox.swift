@@ -94,8 +94,20 @@ public final class Modifier {
         return self.postbox?.readStateTable.getCombinedState(id)?.states
     }
     
+    public func getPeerNotificationSettings(_ id: PeerId) -> PeerNotificationSettings? {
+        return self.postbox?.peerNotificationSettingsTable.get(id)
+    }
+    
     public func updatePeers(_ peers: [Peer], update: (Peer, Peer) -> Peer?) {
         self.postbox?.updatePeers(peers, update: update)
+    }
+    
+    public func updatePeerNotificationSettings(_ notificationSettings: [PeerId: PeerNotificationSettings]) {
+        self.postbox?.updatePeerNotificationSettings(notificationSettings)
+    }
+    
+    public func updatePeerCachedData(peerIds: Set<PeerId>, update: (PeerId, CachedPeerData?) -> CachedPeerData?) {
+        self.postbox?.updatePeerCachedData(peerIds: peerIds, update: update)
     }
     
     public func replaceContactPeerIds(_ peerIds: Set<PeerId>) {
@@ -180,6 +192,9 @@ public final class Postbox {
     private var currentRemovedHolesByPeerId: [PeerId: [MessageIndex: HoleFillDirection]] = [:]
     private var currentFilledHolesByPeerId: [PeerId: [MessageIndex: HoleFillDirection]] = [:]
     private var currentUpdatedPeers: [PeerId: Peer] = [:]
+    private var currentUpdatedPeerNotificationSettings: [PeerId: PeerNotificationSettings] = [:]
+    private var currentUpdatedCachedPeerData: [PeerId: CachedPeerData] = [:]
+    
     private var currentReplaceChatListHoles: [(MessageIndex, ChatListHole?)] = []
     private var currentReplacedContactPeerIds: Set<PeerId>?
     private var currentUpdatedMasterClientId: Int64?
@@ -200,6 +215,9 @@ public final class Postbox {
     var metadataTable: MetadataTable!
     var keychainTable: KeychainTable!
     var peerTable: PeerTable!
+    var peerNotificationSettingsTable: PeerNotificationSettingsTable!
+    var cachedPeerDataTable: CachedPeerDataTable!
+    var peerStatusTable: PeerStatusTable!
     var globalMessageIdsTable: GlobalMessageIdsTable!
     var messageHistoryIndexTable: MessageHistoryIndexTable!
     var messageHistoryTable: MessageHistoryTable!
@@ -296,7 +314,7 @@ public final class Postbox {
             self.metadataTable = MetadataTable(valueBox: self.valueBox, tableId: 0)
             
             let userVersion: Int32? = self.metadataTable.userVersion()
-            let currentUserVersion: Int32 = 8
+            let currentUserVersion: Int32 = 10
             
             if userVersion != currentUserVersion {
                 self.valueBox.drop()
@@ -320,6 +338,9 @@ public final class Postbox {
             self.peerChatStateTable = PeerChatStateTable(valueBox: self.valueBox, tableId: 13)
             self.contactsTable = ContactTable(valueBox: self.valueBox, tableId: 16)
             self.peerRatingTable = RatingTable<PeerId>(valueBox: self.valueBox, tableId: 17)
+            self.cachedPeerDataTable = CachedPeerDataTable(valueBox: self.valueBox, tableId: 18)
+            self.peerNotificationSettingsTable = PeerNotificationSettingsTable(valueBox: self.valueBox, tableId: 19)
+            self.peerStatusTable = PeerStatusTable(valueBox: self.valueBox, tableId: 20)
             
             self.tables.append(self.keychainTable)
             self.tables.append(self.peerTable)
@@ -338,11 +359,18 @@ public final class Postbox {
             self.tables.append(self.peerChatStateTable)
             self.tables.append(self.contactsTable)
             self.tables.append(self.peerRatingTable)
+            self.tables.append(self.peerNotificationSettingsTable)
+            self.tables.append(self.cachedPeerDataTable)
+            self.tables.append(self.peerStatusTable)
             
             self.transactionStateVersion = self.metadataTable.transactionStateVersion()
             
             self.viewTracker = ViewTracker(queue: self.queue, fetchEarlierHistoryEntries: self.fetchEarlierHistoryEntries, fetchLaterHistoryEntries: self.fetchLaterHistoryEntries, fetchEarlierChatEntries: self.fetchEarlierChatEntries, fetchLaterChatEntries: self.fetchLaterChatEntries, fetchAnchorIndex: self.fetchAnchorIndex, renderMessage: self.renderIntermediateMessage, getPeer: { peerId in
                 return self.peerTable.get(peerId)
+            }, getPeerNotificationSettings: { peerId in
+                return self.peerNotificationSettingsTable.get(peerId)
+            }, getCachedPeerData: { peerId in
+                return self.cachedPeerDataTable.get(peerId)
             }, unsentMessageIndices: self.messageHistoryUnsentTable!.get(), synchronizePeerReadStateOperations: self.synchronizeReadStateTable!.get())
             
             print("(Postbox initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
@@ -611,7 +639,7 @@ public final class Postbox {
         for entry in intermediateEntries {
             switch entry {
                 case let .Message(message):
-                    entries.append(.IntermediateMessageEntry(message, self.readStateTable.getCombinedState(message.id.peerId)))
+                    entries.append(.IntermediateMessageEntry(message, self.readStateTable.getCombinedState(message.id.peerId), self.peerNotificationSettingsTable.get(message.id.peerId)))
                 case let .Hole(hole):
                     entries.append(.HoleEntry(hole))
                 case let .Nothing(index):
@@ -622,7 +650,7 @@ public final class Postbox {
         if let intermediateLower = intermediateLower {
             switch intermediateLower {
                 case let .Message(message):
-                    lower = .IntermediateMessageEntry(message, self.readStateTable.getCombinedState(message.id.peerId))
+                    lower = .IntermediateMessageEntry(message, self.readStateTable.getCombinedState(message.id.peerId), self.peerNotificationSettingsTable.get(message.id.peerId))
                 case let .Hole(hole):
                     lower = .HoleEntry(hole)
                 case let .Nothing(index):
@@ -633,7 +661,7 @@ public final class Postbox {
         if let intermediateUpper = intermediateUpper {
             switch intermediateUpper {
                 case let .Message(message):
-                    upper = .IntermediateMessageEntry(message, self.readStateTable.getCombinedState(message.id.peerId))
+                    upper = .IntermediateMessageEntry(message, self.readStateTable.getCombinedState(message.id.peerId), self.peerNotificationSettingsTable.get(message.id.peerId))
                 case let .Hole(hole):
                     upper = .HoleEntry(hole)
                 case let .Nothing(index):
@@ -650,7 +678,7 @@ public final class Postbox {
         for entry in intermediateEntries {
             switch entry {
                 case let .Message(message):
-                    entries.append(.IntermediateMessageEntry(message, self.readStateTable.getCombinedState(message.id.peerId)))
+                    entries.append(.IntermediateMessageEntry(message, self.readStateTable.getCombinedState(message.id.peerId), self.peerNotificationSettingsTable.get(message.id.peerId)))
                 case let .Hole(hole):
                     entries.append(.HoleEntry(hole))
                 case let .Nothing(index):
@@ -666,7 +694,7 @@ public final class Postbox {
         for entry in intermediateEntries {
             switch entry {
                 case let .Message(message):
-                    entries.append(.IntermediateMessageEntry(message, self.readStateTable.getCombinedState(message.id.peerId)))
+                    entries.append(.IntermediateMessageEntry(message, self.readStateTable.getCombinedState(message.id.peerId), self.peerNotificationSettingsTable.get(message.id.peerId)))
                 case let .Nothing(index):
                     entries.append(.Nothing(index))
                 case let .Hole(index):
@@ -708,7 +736,7 @@ public final class Postbox {
             self.chatListTable.replaceHole(index, hole: hole, operations: &chatListOperations)
         }
         
-        let transaction = PostboxTransaction(currentOperationsByPeerId: self.currentOperationsByPeerId, peerIdsWithFilledHoles: self.currentFilledHolesByPeerId, removedHolesByPeerId: self.currentRemovedHolesByPeerId, chatListOperations: chatListOperations, currentUpdatedPeers: self.currentUpdatedPeers, unsentMessageOperations: self.currentUnsentOperations, updatedSynchronizePeerReadStateOperations: self.currentUpdatedSynchronizeReadStateOperations, updatedMedia: self.currentUpdatedMedia, replaceContactPeerIds: self.currentReplacedContactPeerIds, currentUpdatedMasterClientId: currentUpdatedMasterClientId)
+        let transaction = PostboxTransaction(currentOperationsByPeerId: self.currentOperationsByPeerId, peerIdsWithFilledHoles: self.currentFilledHolesByPeerId, removedHolesByPeerId: self.currentRemovedHolesByPeerId, chatListOperations: chatListOperations, currentUpdatedPeers: self.currentUpdatedPeers, currentUpdatedPeerNotificationSettings: self.currentUpdatedPeerNotificationSettings, currentUpdatedCachedPeerData: self.currentUpdatedCachedPeerData, unsentMessageOperations: self.currentUnsentOperations, updatedSynchronizePeerReadStateOperations: self.currentUpdatedSynchronizeReadStateOperations, updatedMedia: self.currentUpdatedMedia, replaceContactPeerIds: self.currentReplacedContactPeerIds, currentUpdatedMasterClientId: currentUpdatedMasterClientId)
         var updatedTransactionState: Int64?
         var updatedMasterClientId: Int64?
         if !transaction.isEmpty {
@@ -732,6 +760,8 @@ public final class Postbox {
         self.currentUpdatedMedia.removeAll()
         self.currentReplacedContactPeerIds = nil
         self.currentUpdatedMasterClientId = nil
+        self.currentUpdatedPeerNotificationSettings.removeAll()
+        self.currentUpdatedCachedPeerData.removeAll()
         
         for table in self.tables {
             table.beforeCommit()
@@ -759,6 +789,26 @@ public final class Postbox {
                 }
             } else {
                 self.peerTable.set(peer)
+            }
+        }
+    }
+    
+    fileprivate func updatePeerNotificationSettings(_ notificationSettings: [PeerId: PeerNotificationSettings]) {
+        for (peerId, settings) in notificationSettings {
+            let currentSettings = self.peerNotificationSettingsTable.get(peerId)
+            if currentSettings == nil || !(currentSettings!.isEqual(to: settings)) {
+                self.peerNotificationSettingsTable.set(id: peerId, settings: settings)
+                self.currentUpdatedPeerNotificationSettings[peerId] = settings
+            }
+        }
+    }
+    
+    fileprivate func updatePeerCachedData(peerIds: Set<PeerId>, update: (PeerId, CachedPeerData?) -> CachedPeerData?) {
+        for peerId in peerIds {
+            let currentData = self.cachedPeerDataTable.get(peerId)
+            if let updatedData = update(peerId, currentData) {
+                self.cachedPeerDataTable.set(id: peerId, data: updatedData)
+                self.currentUpdatedCachedPeerData[peerId] = updatedData
             }
         }
     }
@@ -937,7 +987,7 @@ public final class Postbox {
             let (entries, earlier, later) = self.fetchAroundChatEntries(index, count: count)
             
             let mutableView = MutableChatListView(earlier: earlier, entries: entries, later: later, count: count)
-            mutableView.render(self.renderIntermediateMessage)
+            mutableView.render(self.renderIntermediateMessage, getPeerNotificationSettings: { self.peerNotificationSettingsTable.get($0) })
             
             let (index, signal) = self.viewTracker.addChatListView(mutableView)
             
@@ -1012,7 +1062,24 @@ public final class Postbox {
         } |> switchToLatest
     }
     
-    public func peerWithId(_ id: PeerId) -> Signal<Peer, NoError> {
+    public func peerView(id: PeerId) -> Signal<PeerView, NoError> {
+        return self.modify { modifier -> Signal<PeerView, NoError> in
+            let view = MutablePeerView(peerId: id, notificationSettings: self.peerNotificationSettingsTable.get(id), cachedData: self.cachedPeerDataTable.get(id), getPeer: { self.peerTable.get($0) })
+            let (index, signal) = self.viewTracker.addPeerView(view)
+            
+            return (.single(PeerView(view))
+                |> then(signal))
+                |> afterDisposed { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.queue.async {
+                            strongSelf.viewTracker.removePeerView(index)
+                        }
+                    }
+            }
+        } |> switchToLatest
+    }
+    
+    public func loadedPeerWithId(_ id: PeerId) -> Signal<Peer, NoError> {
         return self.modify { modifier -> Signal<Peer, NoError> in
             if let peer = self.peerTable.get(id) {
                 return .single(peer)
