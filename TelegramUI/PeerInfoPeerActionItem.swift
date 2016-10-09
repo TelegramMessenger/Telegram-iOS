@@ -3,36 +3,22 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 
-enum PeerInfoActionKind {
-    case generic
-    case destructive
-}
-
-enum PeerInfoActionAlignment {
-    case natural
-    case center
-}
-
-class PeerInfoActionItem: ListViewItem, PeerInfoItem {
+class PeerInfoPeerActionItem: ListViewItem, PeerInfoItem {
+    let icon: UIImage?
     let title: String
-    let kind: PeerInfoActionKind
-    let alignment: PeerInfoActionAlignment
     let sectionId: PeerInfoItemSectionId
-    let style: PeerInfoListStyle
     let action: () -> Void
     
-    init(title: String, kind: PeerInfoActionKind, alignment: PeerInfoActionAlignment, sectionId: PeerInfoItemSectionId, style: PeerInfoListStyle, action: @escaping () -> Void) {
+    init(icon: UIImage?, title: String, sectionId: PeerInfoItemSectionId, action: @escaping () -> Void) {
+        self.icon = icon
         self.title = title
-        self.kind = kind
-        self.alignment = alignment
         self.sectionId = sectionId
-        self.style = style
         self.action = action
     }
     
     func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> Void) -> Void) {
         async {
-            let node = PeerInfoActionItemNode()
+            let node = PeerInfoPeerActionItemNode()
             let (layout, apply) = node.asyncLayout()(self, width, peerInfoItemNeighbors(item: self, topItem: previousItem as? PeerInfoItem, bottomItem: nextItem as? PeerInfoItem))
             
             node.contentSize = layout.contentSize
@@ -45,7 +31,7 @@ class PeerInfoActionItem: ListViewItem, PeerInfoItem {
     }
     
     func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        if let node = node as? PeerInfoActionItemNode {
+        if let node = node as? PeerInfoPeerActionItemNode {
             Queue.mainQueue().async {
                 let makeLayout = node.asyncLayout()
                 
@@ -71,13 +57,14 @@ class PeerInfoActionItem: ListViewItem, PeerInfoItem {
 
 private let titleFont = Font.regular(17.0)
 
-class PeerInfoActionItemNode: ListViewItemNode {
+class PeerInfoPeerActionItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
     
-    let titleNode: TextNode
+    private let iconNode: ASImageNode
+    private let titleNode: TextNode
     
     init() {
         self.backgroundNode = ASDisplayNode()
@@ -92,6 +79,11 @@ class PeerInfoActionItemNode: ListViewItemNode {
         self.bottomStripeNode.backgroundColor = UIColor(0xc8c7cc)
         self.bottomStripeNode.isLayerBacked = true
         
+        self.iconNode = ASImageNode()
+        self.iconNode.isLayerBacked = true
+        self.iconNode.displayWithoutProcessing = true
+        self.iconNode.displaysAsynchronously = false
+        
         self.titleNode = TextNode()
         self.titleNode.isLayerBacked = true
         self.titleNode.contentMode = .left
@@ -103,43 +95,31 @@ class PeerInfoActionItemNode: ListViewItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false)
         
+        self.addSubnode(self.iconNode)
         self.addSubnode(self.titleNode)
     }
     
-    func asyncLayout() -> (_ item: PeerInfoActionItem, _ width: CGFloat, _ neighbors: PeerInfoItemNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: PeerInfoPeerActionItem, _ width: CGFloat, _ neighbors: PeerInfoItemNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
         return { item, width, neighbors in
-            let sectionInset: CGFloat = 22.0
+            let leftInset: CGFloat = 65.0
             
-            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: item.kind == .destructive ? UIColor(0xff3b30) : UIColor(0x1195f2)), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: UIColor(0x1195f2)), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), nil)
             
             let contentSize: CGSize
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             
-            switch item.style {
-                case .plain:
-                    contentSize = CGSize(width: width, height: 44.0)
-                    insets = peerInfoItemNeighborsPlainInsets(neighbors)
-                case .blocks:
-                    contentSize = CGSize(width: width, height: 44.0)
-                    let topInset: CGFloat
-                    switch neighbors.top {
-                        case .sameSection, .none:
-                            topInset = 0.0
-                        case .otherSection:
-                            topInset = separatorHeight + 35.0
-                    }
-                    let bottomInset: CGFloat
-                    switch neighbors.bottom {
-                        case .sameSection, .otherSection:
-                            bottomInset = 0.0
-                        case .none:
-                            bottomInset = separatorHeight + 35.0
-                    }
-                    insets = UIEdgeInsets(top: topInset, left: 0.0, bottom: bottomInset, right: 0.0)
+            contentSize = CGSize(width: width, height: 44.0)
+            let topInset: CGFloat
+            switch neighbors.top {
+                case .sameSection, .none:
+                    topInset = 0.0
+                case .otherSection:
+                    topInset = separatorHeight + 35.0
             }
+            insets = UIEdgeInsets(top: topInset, left: 0.0, bottom: separatorHeight, right: 0.0)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
@@ -148,59 +128,38 @@ class PeerInfoActionItemNode: ListViewItemNode {
                 if let strongSelf = self {
                     let _ = titleApply()
                     
-                    let leftInset: CGFloat
-                    
-                    switch item.style {
-                        case .plain:
-                            leftInset = 35.0
-                            
-                            if strongSelf.backgroundNode.supernode != nil {
-                               strongSelf.backgroundNode.removeFromSupernode()
-                            }
-                            if strongSelf.topStripeNode.supernode != nil {
-                                strongSelf.topStripeNode.removeFromSupernode()
-                            }
-                            if strongSelf.bottomStripeNode.supernode == nil {
-                                strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 0)
-                            }
-                        
-                            strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: width - leftInset, height: separatorHeight))
-                        case .blocks:
-                            leftInset = 16.0
-                            
-                            if strongSelf.backgroundNode.supernode == nil {
-                                strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
-                            }
-                            if strongSelf.topStripeNode.supernode == nil {
-                                strongSelf.insertSubnode(strongSelf.topStripeNode, at: 1)
-                            }
-                            if strongSelf.bottomStripeNode.supernode == nil {
-                                strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
-                            }
-                            switch neighbors.top {
-                                case .sameSection:
-                                    strongSelf.topStripeNode.isHidden = true
-                                case .none, .otherSection:
-                                    strongSelf.topStripeNode.isHidden = false
-                            }
-                            let bottomStripeInset: CGFloat
-                            switch neighbors.bottom {
-                                case .sameSection:
-                                    bottomStripeInset = 16.0
-                                case .none, .otherSection:
-                                    bottomStripeInset = 0.0
-                            }
-                            strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                            strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
-                            strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
+                    strongSelf.iconNode.image = item.icon
+                    if let image = item.icon {
+                        strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: floor((leftInset - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
                     }
                     
-                    switch item.alignment {
-                        case .natural:
-                            strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 12.0), size: titleLayout.size)
-                        case .center:
-                            strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: floor((width - titleLayout.size.width) / 2.0), y: 12.0), size: titleLayout.size)
+                    if strongSelf.backgroundNode.supernode == nil {
+                        strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
                     }
+                    if strongSelf.topStripeNode.supernode == nil {
+                        strongSelf.insertSubnode(strongSelf.topStripeNode, at: 1)
+                    }
+                    if strongSelf.bottomStripeNode.supernode == nil {
+                        strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
+                    }
+                    switch neighbors.top {
+                        case .sameSection:
+                            strongSelf.topStripeNode.isHidden = true
+                        case .none, .otherSection:
+                            strongSelf.topStripeNode.isHidden = false
+                    }
+                    let bottomStripeInset: CGFloat
+                    switch neighbors.bottom {
+                        case .sameSection:
+                            bottomStripeInset = leftInset
+                        case .none, .otherSection:
+                            bottomStripeInset = 0.0
+                    }
+                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                    strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
+                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
+                    
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 12.0), size: titleLayout.size)
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: width, height: 44.0 + UIScreenPixel + UIScreenPixel))
                 }

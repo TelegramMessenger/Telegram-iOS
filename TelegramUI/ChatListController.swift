@@ -30,12 +30,15 @@ func ==(lhs: ChatListMessageViewPosition, rhs: ChatListMessageViewPosition) -> B
 
 private enum ChatListControllerEntryId: Hashable, CustomStringConvertible {
     case Search
+    case Hole(Int64)
     case PeerId(Int64)
     
     var hashValue: Int {
         switch self {
             case .Search:
                 return 0
+            case let .Hole(peerId):
+                return peerId.hashValue
             case let .PeerId(peerId):
                 return peerId.hashValue
         }
@@ -45,6 +48,8 @@ private enum ChatListControllerEntryId: Hashable, CustomStringConvertible {
         switch self {
             case .Search:
                 return "search"
+            case let .Hole(value):
+                return "hole(\(value))"
             case let .PeerId(value):
                 return "peerId(\(value))"
         }
@@ -60,6 +65,13 @@ private func ==(lhs: ChatListControllerEntryId, rhs: ChatListControllerEntryId) 
         case .Search:
             switch rhs {
                 case .Search:
+                    return true
+                default:
+                    return false
+            }
+        case let .Hole(lhsId):
+            switch rhs {
+                case .Hole(lhsId):
                     return true
                 default:
                     return false
@@ -97,8 +109,12 @@ private enum ChatListControllerEntry: Comparable, Identifiable {
         switch self {
             case .SearchEntry:
                 return .Search
-            default:
-                return .PeerId(self.index.id.peerId.toInt64())
+            case let .MessageEntry(message, _, _):
+                return .PeerId(message.id.peerId.toInt64())
+            case let .HoleEntry(hole):
+                return .Hole(Int64(hole.index.id.id))
+            case let .Nothing(index):
+                return .PeerId(index.id.peerId.toInt64())
         }
     }
 }
@@ -302,7 +318,7 @@ public class ChatListController: ViewController {
                             animated = false
                     }
                     
-                    strongSelf.setPeerView(view, firstTime: strongSelf.chatListViewAndEntries == nil, scrollPosition: firstTime ?scrollPosition : nil, animated: animated)
+                    strongSelf.setPeerView(view, firstTime: strongSelf.chatListViewAndEntries == nil, scrollPosition: firstTime ? scrollPosition : nil, animated: animated)
                     firstTime = false
                 }
             }))

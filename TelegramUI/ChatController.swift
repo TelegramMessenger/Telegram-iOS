@@ -446,10 +446,9 @@ public class ChatController: ViewController {
                 self.navigationActionDisposable.set((self.peerView.get()
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak self] peerView in
-                        if let strongSelf = self, let peer = peerView.peers[peerView.peerId] {
-                            if let chatInfoController = chatInfoController(account: strongSelf.account, peer: peer) {
-                                (strongSelf.navigationController as? NavigationController)?.pushViewController(chatInfoController)
-                            }
+                        if let strongSelf = self, let _ = peerView.peers[peerView.peerId] {
+                            let chatInfoController = PeerInfoController(account: strongSelf.account, peerId: peerView.peerId)
+                            (strongSelf.navigationController as? NavigationController)?.pushViewController(chatInfoController)
                         }
                 }))
                 break

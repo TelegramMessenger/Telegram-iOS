@@ -5,6 +5,7 @@ import TelegramCore
 
 private let messageFont: UIFont = UIFont.systemFont(ofSize: 17.0)
 private let messageBoldFont: UIFont = UIFont.boldSystemFont(ofSize: 17.0)
+private let messageFixedFont: UIFont = UIFont(name: "Menlo-Regular", size: 16.0) ?? UIFont.systemFont(ofSize: 17.0)
 
 class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private let textNode: TextNode
@@ -87,8 +88,16 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         switch entity.type {
                             case .Url:
                                 string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
+                            case .Email:
+                                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
+                            case .TextUrl:
+                                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
                             case .Bold:
                                 string.addAttribute(NSFontAttributeName, value: messageBoldFont, range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
+                            case .Mention:
+                                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
+                            case .Code, .Pre:
+                                string.addAttribute(NSFontAttributeName, value: messageFixedFont, range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
                             default:
                                 break
                         }

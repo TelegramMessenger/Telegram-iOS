@@ -19,7 +19,7 @@ final class PeerInfoTextWithLabelItem: ListViewItem, PeerInfoItem {
     func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> Void) -> Void) {
         async {
             let node = PeerInfoTextWithLabelItemNode()
-            let (layout, apply) = node.asyncLayout()(self, width, peerInfoItemInsets(item: self, topItem: previousItem as? PeerInfoItem, bottomItem: nextItem as? PeerInfoItem))
+            let (layout, apply) = node.asyncLayout()(self, width, peerInfoItemNeighbors(item: self, topItem: previousItem as? PeerInfoItem, bottomItem: nextItem as? PeerInfoItem))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -36,7 +36,7 @@ final class PeerInfoTextWithLabelItem: ListViewItem, PeerInfoItem {
                 let makeLayout = node.asyncLayout()
                 
                 async {
-                    let (layout, apply) = makeLayout(self, width, peerInfoItemInsets(item: self, topItem: previousItem as? PeerInfoItem, bottomItem: nextItem as? PeerInfoItem))
+                    let (layout, apply) = makeLayout(self, width, peerInfoItemNeighbors(item: self, topItem: previousItem as? PeerInfoItem, bottomItem: nextItem as? PeerInfoItem))
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply()
@@ -85,11 +85,12 @@ class PeerInfoTextWithLabelItemNode: ListViewItemNode {
         self.addSubnode(self.textNode)
     }
     
-    func asyncLayout() -> (_ item: PeerInfoTextWithLabelItem, _ width: CGFloat, _ insets: UIEdgeInsets) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: PeerInfoTextWithLabelItem, _ width: CGFloat, _ insets: PeerInfoItemNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
-        return { item, width, insets in
+        return { item, width, neighbors in
+            let insets = peerInfoItemNeighborsPlainInsets(neighbors)
             let leftInset: CGFloat = 35.0
             
             let (labelLayout, labelApply) = makeLabelLayout(NSAttributedString(string: item.label, font: labelFont, textColor: UIColor(0x1195f2)), nil, 1, .end, CGSize(width: width - leftInset - 8.0, height: CGFloat.greatestFiniteMagnitude), nil)

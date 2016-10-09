@@ -24,6 +24,7 @@ class ChatListHoleItem: ListViewItem {
     }
     
     func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+        assert(node is ChatListHoleItemNode)
         if let node = node as? ChatListHoleItemNode {
             Queue.mainQueue().async {
                 let layout = node.asyncLayout()

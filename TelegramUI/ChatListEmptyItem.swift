@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Postbox
 import Display
+import SwiftSignalKit
 
 class ChatListEmptyItem: ListViewItem {
     let selectable: Bool = false
@@ -16,6 +17,18 @@ class ChatListEmptyItem: ListViewItem {
             node.layoutForWidth(width, item: self, previousItem: previousItem, nextItem: nextItem)
             node.updateItemPosition(first: previousItem == nil, last: nextItem == nil)
             completion(node, {})
+        }
+    }
+    
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+        assert(node is ChatListEmptyItemNode)
+        if let node = node as? ChatListEmptyItemNode {
+            Queue.mainQueue().async {
+                node.layoutForWidth(width, item: self, previousItem: previousItem, nextItem: nextItem)
+                node.updateItemPosition(first: previousItem == nil, last: nextItem == nil)
+                
+                completion(ListViewItemNodeLayout(contentSize: node.contentSize, insets: node.insets), {})
+            }
         }
     }
 }

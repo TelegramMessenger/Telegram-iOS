@@ -10,18 +10,20 @@ class PeerInfoAvatarAndNameItem: ListViewItem, PeerInfoItem {
     let peer: Peer?
     let cachedData: CachedPeerData?
     let sectionId: PeerInfoItemSectionId
+    let style: PeerInfoListStyle
     
-    init(account: Account, peer: Peer?, cachedData: CachedPeerData?, sectionId: PeerInfoItemSectionId) {
+    init(account: Account, peer: Peer?, cachedData: CachedPeerData?, sectionId: PeerInfoItemSectionId, style: PeerInfoListStyle) {
         self.account = account
         self.peer = peer
         self.cachedData = cachedData
         self.sectionId = sectionId
+        self.style = style
     }
     
     func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> Void) -> Void) {
         async {
             let node = PeerInfoAvatarAndNameItemNode()
-            let (layout, apply) = node.asyncLayout()(self, width, peerInfoItemInsets(item: self, topItem: previousItem as? PeerInfoItem, bottomItem: nextItem as? PeerInfoItem))
+            let (layout, apply) = node.asyncLayout()(self, width, peerInfoItemNeighbors(item: self, topItem: previousItem as? PeerInfoItem, bottomItem: nextItem as? PeerInfoItem))
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets
@@ -38,7 +40,7 @@ class PeerInfoAvatarAndNameItem: ListViewItem, PeerInfoItem {
                 let makeLayout = node.asyncLayout()
                 
                 async {
-                    let (layout, apply) = makeLayout(self, width, peerInfoItemInsets(item: self, topItem: previousItem as? PeerInfoItem, bottomItem: nextItem as? PeerInfoItem))
+                    let (layout, apply) = makeLayout(self, width, peerInfoItemNeighbors(item: self, topItem: previousItem as? PeerInfoItem, bottomItem: nextItem as? PeerInfoItem))
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply()
@@ -60,12 +62,27 @@ private let nameFont = Font.medium(19.0)
 private let statusFont = Font.regular(15.0)
 
 class PeerInfoAvatarAndNameItemNode: ListViewItemNode {
-    let avatarNode: AvatarNode
+    private let backgroundNode: ASDisplayNode
+    private let topStripeNode: ASDisplayNode
+    private let bottomStripeNode: ASDisplayNode
     
-    let nameNode: TextNode
-    let statusNode: TextNode
+    private let avatarNode: AvatarNode
+    private let nameNode: TextNode
+    private let statusNode: TextNode
     
     init() {
+        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode.isLayerBacked = true
+        self.backgroundNode.backgroundColor = .white
+        
+        self.topStripeNode = ASDisplayNode()
+        self.topStripeNode.backgroundColor = UIColor(0xc8c7cc)
+        self.topStripeNode.isLayerBacked = true
+        
+        self.bottomStripeNode = ASDisplayNode()
+        self.bottomStripeNode.backgroundColor = UIColor(0xc8c7cc)
+        self.bottomStripeNode.isLayerBacked = true
+        
         self.avatarNode = AvatarNode(font: Font.regular(20.0))
         
         self.nameNode = TextNode()
@@ -85,11 +102,11 @@ class PeerInfoAvatarAndNameItemNode: ListViewItemNode {
         self.addSubnode(self.statusNode)
     }
     
-    func asyncLayout() -> (_ item: PeerInfoAvatarAndNameItem, _ width: CGFloat, _ insets: UIEdgeInsets) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: PeerInfoAvatarAndNameItem, _ width: CGFloat, _ neighbors: PeerInfoItemNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let layoutNameNode = TextNode.asyncLayout(self.nameNode)
         let layoutStatusNode = TextNode.asyncLayout(self.statusNode)
         
-        return { item, width, insets in
+        return { item, width, neighbors in
             let (nameNodeLayout, nameNodeApply) = layoutNameNode(NSAttributedString(string: item.peer?.displayTitle ?? "", font: nameFont, textColor: UIColor.black), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), nil)
             
             let statusText: String
@@ -121,8 +138,72 @@ class PeerInfoAvatarAndNameItemNode: ListViewItemNode {
             
             let (statusNodeLayout, statusNodeApply) = layoutStatusNode(NSAttributedString(string: statusText, font: statusFont, textColor: statusColor), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), nil)
             
-            return (ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 96.0), insets: insets), { [weak self] in
+            let separatorHeight = UIScreenPixel
+            
+            let contentSize: CGSize
+            let insets: UIEdgeInsets
+            switch item.style {
+                case .plain:
+                    contentSize = CGSize(width: width, height: 96.0)
+                    insets = peerInfoItemNeighborsPlainInsets(neighbors)
+                case .blocks:
+                    contentSize = CGSize(width: width, height: 92.0)
+                    let topInset: CGFloat
+                    switch neighbors.top {
+                        case .sameSection, .none:
+                            topInset = 0.0
+                        case .otherSection:
+                            topInset = separatorHeight + 35.0
+                    }
+                    insets = UIEdgeInsets(top: topInset, left: 0.0, bottom: separatorHeight, right: 0.0)
+            }
+            
+            let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
+            let layoutSize = layout.size
+            
+            return (layout, { [weak self] in
                 if let strongSelf = self {
+                    switch item.style {
+                        case .plain:
+                            if strongSelf.backgroundNode.supernode != nil {
+                               strongSelf.backgroundNode.removeFromSupernode()
+                            }
+                            if strongSelf.topStripeNode.supernode != nil {
+                                strongSelf.topStripeNode.removeFromSupernode()
+                            }
+                            if strongSelf.bottomStripeNode.supernode != nil {
+                                strongSelf.bottomStripeNode.removeFromSupernode()
+                            }
+                        case .blocks:
+                            if strongSelf.backgroundNode.supernode == nil {
+                                strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
+                            }
+                            if strongSelf.topStripeNode.supernode == nil {
+                                strongSelf.insertSubnode(strongSelf.topStripeNode, at: 1)
+                            }
+                            if strongSelf.bottomStripeNode.supernode == nil {
+                                strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
+                            }
+                            switch neighbors.top {
+                                case .sameSection:
+                                    strongSelf.topStripeNode.isHidden = true
+                                case .none, .otherSection:
+                                    strongSelf.topStripeNode.isHidden = false
+                            }
+                            
+                            let bottomStripeInset: CGFloat
+                            switch neighbors.bottom {
+                                case .sameSection:
+                                    bottomStripeInset = 16.0
+                                case .none, .otherSection:
+                                    bottomStripeInset = 0.0
+                            }
+                        
+                            strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -insets.top), size: CGSize(width: width, height: layoutSize.height))
+                            strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -insets.top), size: CGSize(width: layoutSize.width, height: separatorHeight))
+                            strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: layoutSize.height - insets.top - separatorHeight), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
+                    }
+                    
                     let _ = nameNodeApply()
                     let _ = statusNodeApply()
                     
@@ -132,7 +213,6 @@ class PeerInfoAvatarAndNameItemNode: ListViewItemNode {
                     
                     strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: 15.0, y: 15.0), size: CGSize(width: 66.0, height: 66.0))
                     strongSelf.nameNode.frame = CGRect(origin: CGPoint(x: 94.0, y: 25.0), size: nameNodeLayout.size)
-                    
                     
                     strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: 94.0, y: 25.0 + nameNodeLayout.size.height + 4.0), size: statusNodeLayout.size)
                 }

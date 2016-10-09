@@ -35,6 +35,7 @@ class ChatListItem: ListViewItem {
     }
     
     func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
+        assert(node is ChatListItemNode)
         if let node = node as? ChatListItemNode {
             Queue.mainQueue().async {
                 node.setupItem(account: self.account, message: self.message, combinedReadState: self.combinedReadState, notificationSettings: self.notificationSettings)
