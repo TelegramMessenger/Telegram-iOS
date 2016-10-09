@@ -10,6 +10,17 @@ public enum GroupParticipant: Coding, Equatable {
     case creator(id: PeerId)
     case admin(id: PeerId, invitedBy: PeerId, invitedAt: Int32)
     
+    public var peerId: PeerId {
+        switch self {
+            case let .member(id, _, _):
+                return id
+            case let .creator(id):
+                return id
+            case let .admin(id, _, _):
+                return id
+        }
+    }
+    
     public init(decoder: Decoder) {
         switch decoder.decodeInt32ForKey("v") as Int32 {
             case 0:
@@ -66,7 +77,7 @@ public enum GroupParticipant: Coding, Equatable {
 }
 
 public final class CachedGroupParticipants: Coding, Equatable {
-    let participants: [GroupParticipant]
+    public let participants: [GroupParticipant]
     let version: Int32
     
     init(participants: [GroupParticipant], version: Int32) {

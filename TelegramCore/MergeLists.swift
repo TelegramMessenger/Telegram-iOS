@@ -90,6 +90,25 @@ public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T]) -> ([I
     var insertItems: [(Int, T, Int?)] = []
     var updatedIndices: [(Int, T, Int)] = []
     
+    #if (arch(i386) || arch(x86_64)) && os(iOS)
+    var existingStableIds: [T.T: T] = [:]
+    for item in leftList {
+        if let other = existingStableIds[item.stableId] {
+            assertionFailure()
+        } else {
+            existingStableIds[item.stableId] = item
+        }
+    }
+    existingStableIds.removeAll()
+    for item in rightList {
+        if let other = existingStableIds[item.stableId] {
+            assertionFailure()
+        } else {
+            existingStableIds[item.stableId] = item
+        }
+    }
+    #endif
+    
     var currentList = leftList
     
     /*print("-----------")
@@ -253,7 +272,7 @@ public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T]) -> ([I
     /*if currentList != rightList {
         for l in 0 ..< currentList.count {
             if currentList[l] != rightList[l] {
-                print("here")
+                print("here \(currentList[l]) != \(rightList[l])")
             }
         }
     }*/

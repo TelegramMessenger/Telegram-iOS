@@ -716,6 +716,14 @@ private func finalStateWithUpdates(account: Account, state: MutableState, update
                     default:
                         break
                 }
+            case let .updateChatParticipants(participants):
+                break
+            case let .updateChatParticipantAdd(chatId, userId, inviterId, date, version):
+                break
+            case let .updateChatParticipantDelete(chatId, userId, version):
+                break
+            case let .updateChatParticipantAdmin(chatId, userId, isAdmin, version):
+                break
             default:
                 break
         }
