@@ -281,6 +281,13 @@ final class ViewTracker {
                 if mutableView.replay(transaction.chatListOperations, updatedPeerNotificationSettings: transaction.currentUpdatedPeerNotificationSettings, context: context) {
                     mutableView.complete(context: context, fetchEarlier: self.fetchEarlierChatEntries, fetchLater: self.fetchLaterChatEntries)
                     mutableView.render(self.renderMessage, getPeerNotificationSettings: self.getPeerNotificationSettings)
+                    var updateType: ViewUpdateType = .Generic
+                    for operation in transaction.chatListOperations {
+                        if case .RemoveHoles = operation {
+                            updateType = .UpdateVisible
+                            break
+                        }
+                    }
                     pipe.putNext((ChatListView(mutableView), .Generic))
                 }
             }
