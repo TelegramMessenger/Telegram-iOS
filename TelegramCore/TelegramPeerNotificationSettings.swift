@@ -1,4 +1,9 @@
-import Postbox
+import Foundation
+#if os(macOS)
+    import PostboxMac
+#else
+    import Postbox
+#endif
 
 public enum PeerMuteState: Equatable {
     case unmuted
