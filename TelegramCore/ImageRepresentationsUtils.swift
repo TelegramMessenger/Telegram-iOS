@@ -1,4 +1,3 @@
-import TelegramCore
 
 public func smallestImageRepresentation(_ representations: [TelegramMediaImageRepresentation]) -> TelegramMediaImageRepresentation? {
     if representations.count == 0 {
