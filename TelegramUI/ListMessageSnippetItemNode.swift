@@ -134,7 +134,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                             mutableDescriptionText.append(NSAttributedString(string: text + "\n", font: descriptionFont, textColor: UIColor.black))
                         }
                         
-                        mutableDescriptionText.append(NSAttributedString(string: content.displayUrl, font: descriptionFont, textColor: UIColor(0x1195f2)))
+                        mutableDescriptionText.append(NSAttributedString(string: content.displayUrl, font: descriptionFont, textColor: UIColor(0x007ee5)))
                         
                         let style = NSMutableParagraphStyle()
                         style.lineSpacing = 4.0

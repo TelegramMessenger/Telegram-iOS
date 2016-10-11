@@ -15,13 +15,13 @@ private enum SubscriberAction {
 private func titleAndColorForAction(_ action: SubscriberAction) -> (String, UIColor) {
     switch action {
         case .join:
-            return ("Join", UIColor(0x1195f2))
+            return ("Join", UIColor(0x007ee5))
         case .kicked:
             return ("Join", UIColor.gray)
         case .muteNotifications:
-            return ("Mute", UIColor(0x1195f2))
+            return ("Mute", UIColor(0x007ee5))
         case .unmuteNotifications:
-            return ("Unmute", UIColor(0x1195f2))
+            return ("Unmute", UIColor(0x007ee5))
     }
 }
 

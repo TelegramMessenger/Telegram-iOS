@@ -107,7 +107,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         self.sendButton.titleLabel?.font = Font.medium(17.0)
         self.sendButton.contentEdgeInsets = UIEdgeInsets(top: 8.0, left: 6.0, bottom: 8.0, right: 6.0)
-        self.sendButton.setTitleColor(UIColor(0x1195f2), for: [])
+        self.sendButton.setTitleColor(UIColor(0x007ee5), for: [])
         self.sendButton.setTitleColor(UIColor.gray, for: [.highlighted])
         self.sendButton.setTitle("Send", for: [])
         self.sendButton.sizeToFit()

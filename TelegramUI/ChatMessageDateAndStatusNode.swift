@@ -190,10 +190,10 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
                         
                         let checkSize = checkFullImage!.size
                         
-                        checkSentFrame = CGRect(origin: CGPoint(x: leftInset + date.size.width + 5.0 + statusWidth - checkSize.width - (read ? 0.0 : 2.5), y: 3.0), size: checkSize)
                         if read {
-                            checkReadFrame = CGRect(origin: CGPoint(x: checkSentFrame!.origin.x - 6.0, y: checkSentFrame!.origin.y), size: checkSize)
+                            checkReadFrame = CGRect(origin: CGPoint(x: leftInset + date.size.width + 5.0 + statusWidth - checkSize.width, y: 3.0), size: checkSize)
                         }
+                        checkSentFrame = CGRect(origin: CGPoint(x: leftInset + date.size.width + 5.0 + statusWidth - checkSize.width - 6.0, y: 3.0), size: checkSize)
                     case .Failed:
                         statusWidth = 0.0
                         
@@ -248,14 +248,10 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
                     if let checkSentNode = checkSentNode, let checkReadNode = checkReadNode {
                         var animateSentNode = false
                         if strongSelf.checkSentNode == nil {
+                            checkSentNode.image = loadedCheckFullImage
                             strongSelf.checkSentNode = checkSentNode
                             strongSelf.addSubnode(checkSentNode)
                             animateSentNode = animated
-                        }
-                        if checkReadFrame != nil {
-                            checkSentNode.image = loadedCheckPartialImage
-                        } else {
-                            checkSentNode.image = loadedCheckFullImage
                         }
                         
                         if let checkSentFrame = checkSentFrame {
@@ -271,10 +267,10 @@ class ChatMessageDateAndStatusNode: ASTransformLayerNode {
                         var animateReadNode = false
                         if strongSelf.checkReadNode == nil {
                             animateReadNode = animated
+                            checkReadNode.image = loadedCheckPartialImage
                             strongSelf.checkReadNode = checkReadNode
                             strongSelf.addSubnode(checkReadNode)
                         }
-                        checkReadNode.image = loadedCheckFullImage
                     
                         if let checkReadFrame = checkReadFrame {
                             if checkReadNode.isHidden {

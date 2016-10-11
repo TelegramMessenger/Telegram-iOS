@@ -113,7 +113,7 @@ class PeerInfoAvatarAndNameItemNode: ListViewItemNode {
             let statusColor: UIColor
             if let user = item.peer as? TelegramUser {
                 statusText = "online"
-                statusColor = UIColor(0x1195f2)
+                statusColor = UIColor(0x007ee5)
             } else if let channel = item.peer as? TelegramChannel {
                 if let cachedChannelData = item.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount {
                     statusText = "\(memberCount) members"
@@ -163,8 +163,11 @@ class PeerInfoAvatarAndNameItemNode: ListViewItemNode {
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
+                    let avatarOriginY: CGFloat
                     switch item.style {
                         case .plain:
+                            avatarOriginY = 15.0
+                            
                             if strongSelf.backgroundNode.supernode != nil {
                                strongSelf.backgroundNode.removeFromSupernode()
                             }
@@ -175,6 +178,8 @@ class PeerInfoAvatarAndNameItemNode: ListViewItemNode {
                                 strongSelf.bottomStripeNode.removeFromSupernode()
                             }
                         case .blocks:
+                            avatarOriginY = 13.0
+                            
                             if strongSelf.backgroundNode.supernode == nil {
                                 strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
                             }
@@ -211,7 +216,7 @@ class PeerInfoAvatarAndNameItemNode: ListViewItemNode {
                         strongSelf.avatarNode.setPeer(account: item.account, peer: peer)
                     }
                     
-                    strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: 15.0, y: 15.0), size: CGSize(width: 66.0, height: 66.0))
+                    strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: 15.0, y: avatarOriginY), size: CGSize(width: 66.0, height: 66.0))
                     strongSelf.nameNode.frame = CGRect(origin: CGPoint(x: 94.0, y: 25.0), size: nameNodeLayout.size)
                     
                     strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: 94.0, y: 25.0 + nameNodeLayout.size.height + 4.0), size: statusNodeLayout.size)

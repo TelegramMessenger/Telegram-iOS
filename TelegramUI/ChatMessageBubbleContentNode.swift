@@ -51,6 +51,9 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     func animateAdded(_ currentTimestamp: Double, duration: Double) {
     }
     
+    func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    }
+    
     func animateInsertionIntoBubble(_ duration: Double) {
     }
     

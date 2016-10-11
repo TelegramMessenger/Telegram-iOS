@@ -108,11 +108,11 @@ private let titleFont = Font.medium(16.0)
 private let descriptionFont = Font.regular(13.0)
 private let extensionFont = Font.medium(13.0)
 
-private let downloadFileStartIcon = generateTintedImage(image: UIImage(bundleImageName: "List Menu/ListDownloadStartIcon"), color: UIColor(0x1195f2))
+private let downloadFileStartIcon = generateTintedImage(image: UIImage(bundleImageName: "List Menu/ListDownloadStartIcon"), color: UIColor(0x007ee5))
 private let downloadFilePauseIcon = generateImage(CGSize(width: 11.0, height: 11.0), contextGenerator: { size, context in
     context.clear(CGRect(origin: CGPoint(), size: size))
     
-    context.setFillColor(UIColor(0x1195f2).cgColor)
+    context.setFillColor(UIColor(0x007ee5).cgColor)
 
     context.fill(CGRect(x: 2.0, y: 0.0, width: 2.0, height: 11.0 - 1.0))
     context.fill(CGRect(x: 2.0 + 2.0 + 2.0, y: 0.0, width: 2.0, height: 11.0 - 1.0))
@@ -177,7 +177,7 @@ final class ListMessageFileItemNode: ListMessageNode {
         self.downloadStatusIconNode.displayWithoutProcessing = true
         
         self.progressNode = ASDisplayNode()
-        self.progressNode.backgroundColor = UIColor(0x1195f2)
+        self.progressNode.backgroundColor = UIColor(0x007ee5)
         self.progressNode.isLayerBacked = true
         
         super.init()

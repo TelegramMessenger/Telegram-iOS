@@ -77,7 +77,7 @@ class PeerInfoActionItemNode: ListViewItemNode {
     private let bottomStripeNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
     
-    let titleNode: TextNode
+    private let titleNode: TextNode
     
     init() {
         self.backgroundNode = ASDisplayNode()
@@ -112,7 +112,7 @@ class PeerInfoActionItemNode: ListViewItemNode {
         return { item, width, neighbors in
             let sectionInset: CGFloat = 22.0
             
-            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: item.kind == .destructive ? UIColor(0xff3b30) : UIColor(0x1195f2)), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (titleLayout, titleApply) = makeTitleLayout(NSAttributedString(string: item.title, font: titleFont, textColor: item.kind == .destructive ? UIColor(0xff3b30) : UIColor(0x007ee5)), nil, 1, .end, CGSize(width: width - 20, height: CGFloat.greatestFiniteMagnitude), nil)
             
             let contentSize: CGSize
             let insets: UIEdgeInsets
@@ -244,5 +244,19 @@ class PeerInfoActionItemNode: ListViewItemNode {
                 }
             }
         }
+    }
+    
+    override func animateInsertion(_ currentTimestamp: Double, duration: Double) {
+        self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.topStripeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.bottomStripeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+    }
+    
+    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+        self.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+        self.topStripeNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+        self.bottomStripeNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+        self.titleNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
     }
 }

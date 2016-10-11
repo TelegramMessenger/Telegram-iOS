@@ -215,7 +215,7 @@ class GalleryController: ViewController {
                         strongSelf.statusBar.style = .Black
                         strongSelf.navigationBar.backgroundColor = UIColor(red: 0.968626451, green: 0.968626451, blue: 0.968626451, alpha: 1.0)
                         strongSelf.navigationBar.foregroundColor = UIColor.black
-                        strongSelf.navigationBar.accentColor = UIColor(0x1195f2)
+                        strongSelf.navigationBar.accentColor = UIColor(0x007ee5)
                         strongSelf.navigationBar.stripeColor = UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0)
                         strongSelf.galleryNode.backgroundNode.backgroundColor = UIColor(0xbdbdc2)
                         strongSelf.galleryNode.isBackgroundExtendedOverNavigationBar = false

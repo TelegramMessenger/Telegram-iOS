@@ -40,6 +40,8 @@
 		D0B843D51DA95427005F29E1 /* GroupInfoEntries.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B843D41DA95427005F29E1 /* GroupInfoEntries.swift */; };
 		D0B843D91DAAAA0C005F29E1 /* PeerInfoPeerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B843D81DAAAA0C005F29E1 /* PeerInfoPeerItem.swift */; };
 		D0B843DB1DAAB138005F29E1 /* PeerInfoPeerActionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B843DA1DAAB138005F29E1 /* PeerInfoPeerActionItem.swift */; };
+		D0B844561DAC3AEE005F29E1 /* PresenceStrings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B844551DAC3AEE005F29E1 /* PresenceStrings.swift */; };
+		D0B844581DAC44E8005F29E1 /* PeerPresenceStatusManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B844571DAC44E8005F29E1 /* PeerPresenceStatusManager.swift */; };
 		D0BA6F831D784C520034826E /* ChatInputPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BA6F821D784C520034826E /* ChatInputPanelNode.swift */; };
 		D0BA6F851D784ECD0034826E /* ChatInterfaceStateInputPanels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BA6F841D784ECD0034826E /* ChatInterfaceStateInputPanels.swift */; };
 		D0BA6F881D784F880034826E /* ChatMessageSelectionInputPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BA6F871D784F880034826E /* ChatMessageSelectionInputPanelNode.swift */; };
@@ -252,6 +254,8 @@
 		D0B843D41DA95427005F29E1 /* GroupInfoEntries.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GroupInfoEntries.swift; sourceTree = "<group>"; };
 		D0B843D81DAAAA0C005F29E1 /* PeerInfoPeerItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerInfoPeerItem.swift; sourceTree = "<group>"; };
 		D0B843DA1DAAB138005F29E1 /* PeerInfoPeerActionItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerInfoPeerActionItem.swift; sourceTree = "<group>"; };
+		D0B844551DAC3AEE005F29E1 /* PresenceStrings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresenceStrings.swift; sourceTree = "<group>"; };
+		D0B844571DAC44E8005F29E1 /* PeerPresenceStatusManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerPresenceStatusManager.swift; sourceTree = "<group>"; };
 		D0BA6F821D784C520034826E /* ChatInputPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatInputPanelNode.swift; sourceTree = "<group>"; };
 		D0BA6F841D784ECD0034826E /* ChatInterfaceStateInputPanels.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatInterfaceStateInputPanels.swift; sourceTree = "<group>"; };
 		D0BA6F871D784F880034826E /* ChatMessageSelectionInputPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMessageSelectionInputPanelNode.swift; sourceTree = "<group>"; };
@@ -542,6 +546,14 @@
 				D0DE772A1D932E16002B8809 /* PeerMediaCollectionModeSelectionNode.swift */,
 			);
 			name = "Peer Media Collection";
+			sourceTree = "<group>";
+		};
+		D0B844541DAC3ADF005F29E1 /* Strings */ = {
+			isa = PBXGroup;
+			children = (
+				D0B844551DAC3AEE005F29E1 /* PresenceStrings.swift */,
+			);
+			name = Strings;
 			sourceTree = "<group>";
 		};
 		D0BA6F811D784C3A0034826E /* Input Panels */ = {
@@ -1007,8 +1019,10 @@
 		D0F69E911D6B8C8E0046BCD6 /* Utils */ = {
 			isa = PBXGroup;
 			children = (
+				D0B844541DAC3ADF005F29E1 /* Strings */,
 				D0F69E931D6B8C9B0046BCD6 /* ProgressiveImage.swift */,
 				D0F69E941D6B8C9B0046BCD6 /* WebP.swift */,
+				D0B844571DAC44E8005F29E1 /* PeerPresenceStatusManager.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -1197,6 +1211,7 @@
 				D0F69EA21D6B8E380046BCD6 /* PhotoResources.swift in Sources */,
 				D0BA6F831D784C520034826E /* ChatInputPanelNode.swift in Sources */,
 				D0F69DC71D6B89E70046BCD6 /* TransformImageNode.swift in Sources */,
+				D0B844581DAC44E8005F29E1 /* PeerPresenceStatusManager.swift in Sources */,
 				D0D2686C1D788F8200C422DA /* NavigationAccessoryPanelNode.swift in Sources */,
 				D07A7DA51D95783C005BCD27 /* ListMessageNode.swift in Sources */,
 				D0F69E341D6B8B030046BCD6 /* ChatMessageForwardInfoNode.swift in Sources */,
@@ -1247,6 +1262,7 @@
 				D0F69E761D6B8C340046BCD6 /* ContactsSearchContainerNode.swift in Sources */,
 				D0B843CF1DA922AD005F29E1 /* PeerInfoEntries.swift in Sources */,
 				D0DF0CA61D82BCE0008AEB01 /* MentionsTableCell.swift in Sources */,
+				D0B844561DAC3AEE005F29E1 /* PresenceStrings.swift in Sources */,
 				D0F69E011D6B8A880046BCD6 /* ChatListEmptyItem.swift in Sources */,
 				D0F69E591D6B8BDA0046BCD6 /* GalleryPagerNode.swift in Sources */,
 				D0F69E391D6B8B030046BCD6 /* ChatMessageMediaBubbleContentNode.swift in Sources */,
@@ -1600,6 +1616,7 @@
 					"$(PROJECT_DIR)/third-party/FFmpeg-iOS/lib",
 				);
 				OTHER_LDFLAGS = "-ObjC";
+				OTHER_SWIFT_FLAGS = "-DDEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.TelegramUI;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

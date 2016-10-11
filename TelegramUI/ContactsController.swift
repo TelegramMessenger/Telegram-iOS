@@ -55,7 +55,7 @@ private func ==(lhs: ContactsControllerEntryId, rhs: ContactsControllerEntryId) 
 private enum ContactsEntry: Comparable, Identifiable {
     case search
     case vcard(Peer)
-    case peer(Peer)
+    case peer(Peer, PeerPresence?)
     
     var stableId: ContactsControllerEntryId {
         switch self {
@@ -63,8 +63,25 @@ private enum ContactsEntry: Comparable, Identifiable {
                 return .search
             case .vcard:
                 return .vcard
-            case let .peer(peer):
+            case let .peer(peer, _):
                 return .peerId(peer.id.toInt64())
+        }
+    }
+    
+    func item(account: Account, index: PeerNameIndex, interaction: ContactsControllerInteraction) -> ListViewItem {
+        switch self {
+            case .search:
+                return ChatListSearchItem(placeholder: "Search contacts", activate: {
+                    interaction.activateSearch()
+                })
+            case let .vcard(peer):
+                return ContactsVCardItem(account: account, peer: peer, action: { peer in
+                    interaction.openPeer(peer.id)
+                })
+            case let .peer(peer, presence):
+                return ContactsPeerItem(account: account, peer: peer, presence: presence, index: nil, action: { _ in
+                    interaction.openPeer(peer.id)
+                })
         }
     }
 }
@@ -85,10 +102,20 @@ private func ==(lhs: ContactsEntry, rhs: ContactsEntry) -> Bool {
                 default:
                     return false
             }
-        case let .peer(lhsPeer):
+        case let .peer(lhsPeer, lhsPresence):
             switch rhs {
-                case let .peer(rhsPeer):
-                    return lhsPeer.id == rhsPeer.id
+                case let .peer(rhsPeer, rhsPresence):
+                    if lhsPeer.id != rhsPeer.id {
+                        return false
+                    }
+                    if let lhsPresence = lhsPresence, let rhsPresence = rhsPresence {
+                        if !lhsPresence.isEqual(to: rhsPresence) {
+                            return false
+                        }
+                    } else if (lhsPresence != nil) != (rhsPresence != nil) {
+                        return false
+                    }
+                    return true
                 default:
                     return false
             }
@@ -96,34 +123,97 @@ private func ==(lhs: ContactsEntry, rhs: ContactsEntry) -> Bool {
 }
 
 private func <(lhs: ContactsEntry, rhs: ContactsEntry) -> Bool {
-    return lhs.stableId < rhs.stableId
+    switch lhs {
+        case .search:
+            return true
+        case .vcard:
+            switch rhs {
+                case .search, .vcard:
+                    return false
+                case .peer:
+                    return true
+            }
+        case let .peer(lhsPeer, lhsPresence):
+            switch rhs {
+                case .search:
+                    return false
+                case .vcard:
+                    return false
+                case let .peer(rhsPeer, rhsPresence):
+                    if let lhsPresence = lhsPresence as? TelegramUserPresence, let rhsPresence = rhsPresence as? TelegramUserPresence {
+                        if lhsPresence.status < rhsPresence.status {
+                            return false
+                        } else if lhsPresence.status > rhsPresence.status {
+                            return true
+                        }
+                    } else if let _ = lhsPresence {
+                        return true
+                    } else if let _ = rhsPresence {
+                        return false
+                    }
+                    return lhsPeer.id < rhsPeer.id
+            }
+    }
 }
 
-private func entriesForView(_ view: ContactPeersView) -> [ContactsEntry] {
+private func contactListEntries(_ view: ContactPeersView) -> [ContactsEntry] {
     var entries: [ContactsEntry] = []
     entries.append(.search)
     if let peer = view.accountPeer {
         entries.append(.vcard(peer))
     }
     for peer in view.peers {
-        entries.append(.peer(peer))
+        entries.append(.peer(peer, view.peerPresences[peer.id]))
     }
+    entries.sort()
     return entries
+}
+
+private struct ContactsListTransition {
+    let deletions: [ListViewDeleteItem]
+    let insertions: [ListViewInsertItem]
+    let updates: [ListViewUpdateItem]
+}
+
+private final class ContactsControllerInteraction {
+    let openPeer: (PeerId) -> Void
+    let activateSearch: () -> Void
+    
+    init(openPeer: @escaping (PeerId) -> Void, activateSearch: @escaping () -> Void) {
+        self.openPeer = openPeer
+        self.activateSearch = activateSearch
+    }
+}
+
+private func preparedContactsListTransition(account: Account, index: PeerNameIndex, from fromEntries: [ContactsEntry], to toEntries: [ContactsEntry], interaction: ContactsControllerInteraction) -> ContactsListTransition {
+    let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
+    
+    let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, index: index, interaction: interaction), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, index: index, interaction: interaction), directionHint: nil) }
+    
+    return ContactsListTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
 
 public class ContactsController: ViewController {
     private let queue = Queue()
     
     private let account: Account
-    private let disposable = MetaDisposable()
-    
-    private var entries: [ContactsEntry] = []
+    private let transitionDisposable = MetaDisposable()
     
     private var contactsNode: ContactsControllerNode {
         return self.displayNode as! ContactsControllerNode
     }
     
     private let index: PeerNameIndex = .lastNameFirst
+    
+    private var _ready = Promise<Bool>()
+    override public var ready: Promise<Bool> {
+        return self._ready
+    }
+    private var didSetReady = false
+    
+    private let previousEntries = Atomic<[ContactsEntry]?>(value: nil)
     
     public init(account: Account) {
         self.account = account
@@ -135,12 +225,8 @@ public class ContactsController: ViewController {
         self.tabBarItem.image = UIImage(bundleImageName: "Chat List/Tabs/IconContacts")
         self.tabBarItem.selectedImage = UIImage(bundleImageName: "Chat List/Tabs/IconContactsSelected")
         
-        self.disposable.set((account.postbox.contactPeersView(index: self.index, accountPeerId: account.peerId) |> deliverOn(self.queue)).start(next: { [weak self] view in
-            self?.updateView(view)
-        }))
-        
         self.scrollToTop = { [weak self] in
-            if let strongSelf = self, !strongSelf.entries.isEmpty {
+            if let strongSelf = self {
                 strongSelf.contactsNode.listView.deleteAndInsertItems(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .Top, animated: true, curve: .Default, directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, completion: { _ in })
             }
         }
@@ -151,7 +237,7 @@ public class ContactsController: ViewController {
     }
     
     deinit {
-        self.disposable.dispose()
+        self.transitionDisposable.dispose()
     }
     
     override public func loadDisplayNode() {
@@ -172,68 +258,61 @@ public class ContactsController: ViewController {
         self.displayNodeDidLoad()
     }
     
+    override public func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        let interaction = ContactsControllerInteraction(openPeer: { [weak self] peerId in
+            if let strongSelf = self {
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: peerId))
+            }
+        }, activateSearch: { [weak self] in
+            self?.activateSearch()
+        })
+        
+        let account = self.account
+        let index = self.index
+        let previousEntries = self.previousEntries
+        let transition = account.postbox.contactPeersView(index: self.index, accountPeerId: account.peerId)
+            |> map { view -> (ContactsListTransition, Bool, Bool) in
+                let entries = contactListEntries(view)
+                let previous = previousEntries.swap(entries)
+                return (preparedContactsListTransition(account: account, index: index, from: previous ?? [], to: entries, interaction: interaction), previous == nil, previous != nil)
+            }
+            |> deliverOnMainQueue
+        
+        self.transitionDisposable.set(transition.start(next: { [weak self] (transition, firstTime, animated) in
+            self?.enqueueTransition(transition, firstTime: firstTime, animated: animated)
+        }))
+    }
+    
+    override public func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        
+        self.transitionDisposable.set(nil)
+    }
+    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationBar.frame.maxY, transition: transition)
     }
     
-    private func updateView(_ view: ContactPeersView) {
-        assert(self.queue.isCurrent())
-        
-        let previousEntries = self.entries
-        let updatedEntries = entriesForView(view)
-        
-        let (deleteIndices, indicesAndItems) = mergeListsStable(leftList: previousEntries, rightList: updatedEntries)
-        
-        self.entries = updatedEntries
-        
-        var adjustedDeleteIndices: [ListViewDeleteItem] = []
-        if deleteIndices.count != 0 {
-            for index in deleteIndices {
-                adjustedDeleteIndices.append(ListViewDeleteItem(index: index, directionHint: nil))
-            }
+    private func enqueueTransition(_ transition: ContactsListTransition, firstTime: Bool, animated: Bool) {
+        var options = ListViewDeleteAndInsertOptions()
+        if firstTime {
+            options.insert(.Synchronous)
+            options.insert(.LowLatency)
+        } else if animated {
+            options.insert(.AnimateInsertion)
         }
-        
-        var adjustedIndicesAndItems: [ListViewInsertItem] = []
-        for (index, entry, previousIndex) in indicesAndItems {
-            switch entry {
-                case .search:
-                    adjustedIndicesAndItems.append(ListViewInsertItem(index: index, previousIndex: previousIndex, item: ChatListSearchItem(placeholder: "Search contacts", activate: { [weak self] in
-                        self?.activateSearch()
-                    }), directionHint: nil))
-                case let .vcard(peer):
-                    adjustedIndicesAndItems.append(ListViewInsertItem(index: index, previousIndex: previousIndex, item: ContactsVCardItem(account: self.account, peer: peer, action: { [weak self] _ in
-                        if let strongSelf = self {
-                            strongSelf.entrySelected(entry)
-                            strongSelf.contactsNode.listView.clearHighlightAnimated(true)
-                        }
-                    }), directionHint: nil))
-                case let .peer(peer):
-                    adjustedIndicesAndItems.append(ListViewInsertItem(index: index, previousIndex: previousIndex, item: ContactsPeerItem(account: self.account, peer: peer, index: self.index, action: { [weak self] _ in
-                        if let strongSelf = self {
-                            strongSelf.entrySelected(entry)
-                            strongSelf.contactsNode.listView.clearHighlightAnimated(true)
-                        }
-                    }), directionHint: nil))
+        self.contactsNode.listView.deleteAndInsertItems(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, completion: { [weak self] _ in
+            if let strongSelf = self {
+                if !strongSelf.didSetReady {
+                    strongSelf.didSetReady = true
+                    strongSelf._ready.set(.single(true))
                 }
-        }
-        
-        DispatchQueue.main.async {
-            let options: ListViewDeleteAndInsertOptions = []
-            
-            self.contactsNode.listView.deleteAndInsertItems(deleteIndices: adjustedDeleteIndices, insertIndicesAndItems: adjustedIndicesAndItems, updateIndicesAndItems: [], options: options, scrollToItem: nil, completion: { _ in
-            })
-        }
-    }
-    
-    private func entrySelected(_ entry: ContactsEntry) {
-        if case let .peer(peer) = entry {
-            (self.navigationController as? NavigationController)?.pushViewController(ChatController(account: self.account, peerId: peer.id))
-        }
-        if case let .vcard(peer) = entry {
-            (self.navigationController as? NavigationController)?.pushViewController(ChatController(account: self.account, peerId: peer.id))
-        }
+            }
+        })
     }
     
     private func activateSearch() {

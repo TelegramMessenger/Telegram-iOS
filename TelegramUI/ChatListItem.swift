@@ -94,7 +94,7 @@ private func generateBadgeBackgroundImage(active: Bool) -> UIImage? {
     return generateImage(CGSize(width: 20.0, height: 20.0), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         if active {
-            context.setFillColor(UIColor(0x1195f2).cgColor)
+            context.setFillColor(UIColor(0x007ee5).cgColor)
         } else {
             context.setFillColor(UIColor(0xbbbbbb).cgColor)
         }
@@ -116,6 +116,7 @@ class ChatListItemNode: ListViewItemNode {
     var combinedReadState: CombinedPeerReadState?
     var notificationSettings: PeerNotificationSettings?
     
+    private let backgroundNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
     
     let avatarNode: AvatarNode
@@ -132,6 +133,11 @@ class ChatListItemNode: ListViewItemNode {
     var relativePosition: (first: Bool, last: Bool) = (false, false)
     
     required init() {
+        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode.isLayerBacked = true
+        self.backgroundNode.displaysAsynchronously = false
+        self.backgroundNode.backgroundColor = .white
+        
         self.avatarNode = AvatarNode(font: Font.regular(24.0))
         self.avatarNode.isLayerBacked = true
         
@@ -185,6 +191,7 @@ class ChatListItemNode: ListViewItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false)
         
+        self.addSubnode(self.backgroundNode)
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.contentNode)
@@ -220,6 +227,7 @@ class ChatListItemNode: ListViewItemNode {
         let size = self.bounds.size
         let insets = self.insets
         
+        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
         self.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -insets.top - separatorHeight), size: CGSize(width: size.width, height: size.height + separatorHeight))
     }
     
@@ -469,7 +477,10 @@ class ChatListItemNode: ListViewItemNode {
     }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double) {
-        self.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 0.5)
-        self.avatarNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 0.5)
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 0.5)
+    }
+    
+    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false)
     }
 }

@@ -5,15 +5,19 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 
-class PeerInfoPeerItem: ListViewItem, PeerInfoItem {
+final class PeerInfoPeerItem: ListViewItem, PeerInfoItem {
     let account: Account
     let peer: Peer?
+    let presence: PeerPresence?
+    let label: String?
     let sectionId: PeerInfoItemSectionId
     let action: () -> Void
     
-    init(account: Account, peer: Peer?, sectionId: PeerInfoItemSectionId, action: @escaping () -> Void) {
+    init(account: Account, peer: Peer?, presence: PeerPresence?, label: String?, sectionId: PeerInfoItemSectionId, action: @escaping () -> Void) {
         self.account = account
         self.peer = peer
+        self.presence = presence
+        self.label = label
         self.sectionId = sectionId
         self.action = action
     }
@@ -60,6 +64,7 @@ class PeerInfoPeerItem: ListViewItem, PeerInfoItem {
 private let titleFont = Font.regular(17.0)
 private let titleBoldFont = Font.medium(17.0)
 private let statusFont = Font.regular(14.0)
+private let labelFont = Font.regular(13.0)
 private let avatarFont = Font.regular(17.0)
 
 class PeerInfoPeerItemNode: ListViewItemNode {
@@ -70,7 +75,11 @@ class PeerInfoPeerItemNode: ListViewItemNode {
     
     private let avatarNode: AvatarNode
     private let titleNode: TextNode
+    private let labelNode: TextNode
     private let statusNode: TextNode
+    
+    private var peerPresenceManager: PeerPresenceStatusManager?
+    private var layoutParams: (PeerInfoPeerItem, CGFloat, PeerInfoItemNeighbors)?
     
     init() {
         self.backgroundNode = ASDisplayNode()
@@ -98,6 +107,11 @@ class PeerInfoPeerItemNode: ListViewItemNode {
         self.statusNode.contentMode = .left
         self.statusNode.contentsScale = UIScreen.main.scale
         
+        self.labelNode = TextNode()
+        self.labelNode.isLayerBacked = true
+        self.labelNode.contentMode = .left
+        self.labelNode.contentsScale = UIScreen.main.scale
+        
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.backgroundColor = UIColor(0xd9d9d9)
         self.highlightedBackgroundNode.isLayerBacked = true
@@ -107,15 +121,25 @@ class PeerInfoPeerItemNode: ListViewItemNode {
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.statusNode)
+        self.addSubnode(self.labelNode)
+        
+        self.peerPresenceManager = PeerPresenceStatusManager(update: { [weak self] in
+            if let strongSelf = self, let layoutParams = strongSelf.layoutParams {
+                let (_, apply) = strongSelf.asyncLayout()(layoutParams.0, layoutParams.1, layoutParams.2)
+                apply()
+            }
+        })
     }
     
     func asyncLayout() -> (_ item: PeerInfoPeerItem, _ width: CGFloat, _ neighbors: PeerInfoItemNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
+        let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         
         return { item, width, neighbors in
             var titleAttributedString: NSAttributedString?
             var statusAttributedString: NSAttributedString?
+            var labelAttributedString: NSAttributedString?
             
             if let peer = item.peer {
                 if let user = peer as? TelegramUser {
@@ -133,7 +157,13 @@ class PeerInfoPeerItemNode: ListViewItemNode {
                         titleAttributedString = NSAttributedString(string: "Deleted User", font: titleBoldFont, textColor: UIColor(0xa6a6a6))
                     }
                     
-                    statusAttributedString = NSAttributedString(string: "last seen recently", font: statusFont, textColor: UIColor(0xa6a6a6))
+                    if let presence = item.presence as? TelegramUserPresence {
+                        let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+                        let (string, activity) = stringAndActivityForUserPresence(presence, relativeTo: Int32(timestamp))
+                        statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? UIColor(0x007ee5) : UIColor(0xa6a6a6))
+                    } else {
+                        statusAttributedString = NSAttributedString(string: "last seen recently", font: statusFont, textColor: UIColor(0xa6a6a6))
+                    }
                 } else if let group = peer as? TelegramGroup {
                     titleAttributedString = NSAttributedString(string: group.title, font: titleBoldFont, textColor: UIColor.black)
                 } else if let channel = peer as? TelegramChannel {
@@ -141,10 +171,16 @@ class PeerInfoPeerItemNode: ListViewItemNode {
                 }
             }
             
+            if let label = item.label {
+                labelAttributedString = NSAttributedString(string: label, font: labelFont, textColor: UIColor(0xa6a6a6))
+            }
+            
             let leftInset: CGFloat = 65.0
             
-            let (titleLayout, titleApply) = makeTitleLayout(titleAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0, height: CGFloat.greatestFiniteMagnitude), nil)
-            let (statusLayout, statusApply) = makeStatusLayout(statusAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (labelLayout, labelApply) = makeLabelLayout(labelAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0, height: CGFloat.greatestFiniteMagnitude), nil)
+            
+            let (titleLayout, titleApply) = makeTitleLayout(titleAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - labelLayout.size.width, height: CGFloat.greatestFiniteMagnitude), nil)
+            let (statusLayout, statusApply) = makeStatusLayout(statusAttributedString, nil, 1, .end, CGSize(width: width - leftInset - 8.0 - (labelLayout.size.width > 0.0 ? (labelLayout.size.width) + 15.0 : 0.0), height: CGFloat.greatestFiniteMagnitude), nil)
             
             let contentSize: CGSize
             let insets: UIEdgeInsets
@@ -172,8 +208,13 @@ class PeerInfoPeerItemNode: ListViewItemNode {
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
+                    strongSelf.layoutParams = (item, width, neighbors)
+                    
                     let _ = titleApply()
                     let _ = statusApply()
+                    let _ = labelApply()
+                    
+                    strongSelf.labelNode.isHidden = labelAttributedString == nil
                     
                     if strongSelf.backgroundNode.supernode == nil {
                         strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
@@ -203,13 +244,18 @@ class PeerInfoPeerItemNode: ListViewItemNode {
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 5.0), size: titleLayout.size)
                     strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 25.0), size: statusLayout.size)
+                    strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: width - labelLayout.size.width - 15.0, y: floor((contentSize.height - labelLayout.size.height) / 2.0 - labelLayout.size.height / 10.0)), size: labelLayout.size)
                     
-                    strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: 14.0, y: 4.0), size: CGSize(width: 40.0, height: 40.0))
+                    strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: 12.0, y: 4.0), size: CGSize(width: 40.0, height: 40.0))
                     if let peer = item.peer {
                         strongSelf.avatarNode.setPeer(account: item.account, peer: peer)
                     }
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: width, height: 48.0 + UIScreenPixel + UIScreenPixel))
+                    
+                    if let presence = item.presence as? TelegramUserPresence {
+                        strongSelf.peerPresenceManager?.reset(presence: presence)
+                    }
                 }
             })
         }
@@ -251,5 +297,25 @@ class PeerInfoPeerItemNode: ListViewItemNode {
                 }
             }
         }
+    }
+    
+    override func animateInsertion(_ currentTimestamp: Double, duration: Double) {
+        self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.topStripeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.bottomStripeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.avatarNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.statusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.labelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+    }
+    
+    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+        self.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+        self.topStripeNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+        self.bottomStripeNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+        self.titleNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+        self.avatarNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+        self.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+        self.labelNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
     }
 }

@@ -181,7 +181,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                                             strongSelf.fetchStatus = status
                                             
                                             if strongSelf.progressNode == nil {
-                                                let progressNode = RadialProgressNode(theme: RadialProgressTheme(backgroundColor: UIColor(incoming ? 0x1195f2 : 0x3fc33b), foregroundColor: incoming ? UIColor.white : UIColor(0xe1ffc7), icon: incoming ? fileIconIncomingImage : fileIconOutgoingImage))
+                                                let progressNode = RadialProgressNode(theme: RadialProgressTheme(backgroundColor: UIColor(incoming ? 0x007ee5 : 0x3fc33b), foregroundColor: incoming ? UIColor.white : UIColor(0xe1ffc7), icon: incoming ? fileIconIncomingImage : fileIconOutgoingImage))
                                                 strongSelf.progressNode = progressNode
                                                 progressNode.frame = progressFrame
                                                 strongSelf.addSubnode(progressNode)

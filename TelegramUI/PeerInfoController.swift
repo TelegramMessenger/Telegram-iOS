@@ -16,11 +16,23 @@ final class PeerInfoControllerInteraction {
     }
 }
 
+private struct PeerInfoSortableStableId: Hashable {
+    let id: PeerInfoEntryStableId
+    
+    static func ==(lhs: PeerInfoSortableStableId, rhs: PeerInfoSortableStableId) -> Bool {
+        return lhs.id.isEqual(to: rhs.id)
+    }
+    
+    var hashValue: Int {
+        return self.id.hashValue
+    }
+}
+
 private struct PeerInfoSortableEntry: Identifiable, Comparable {
     let entry: PeerInfoEntry
     
-    var stableId: Int {
-        return self.entry.stableId
+    var stableId: PeerInfoSortableStableId {
+        return PeerInfoSortableStableId(id: self.entry.stableId)
     }
     
     static func ==(lhs: PeerInfoSortableEntry, rhs: PeerInfoSortableEntry) -> Bool {
@@ -48,6 +60,12 @@ private func preparedPeerInfoEntryTransition(account: Account, from fromEntries:
     return PeerInfoEntryTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
 
+private struct PeerInfoEquatableState: Equatable {
+    static func ==(lhs: PeerInfoEquatableState, rhs: PeerInfoEquatableState) -> Bool {
+        
+    }
+}
+
 public final class PeerInfoController: ListController {
     private let account: Account
     private let peerId: PeerId
@@ -62,6 +80,7 @@ public final class PeerInfoController: ListController {
     private let changeSettingsDisposable = MetaDisposable()
     
     private var currentListStyle: PeerInfoListStyle = .plain
+    private var state = Promise<PeerInfoState?>(nil)
     
     public init(account: Account, peerId: PeerId) {
         self.account = account
@@ -155,6 +174,8 @@ public final class PeerInfoController: ListController {
                 let previous = previousEntries.swap(entries)
                 let style: PeerInfoListStyle
                 if let group = view.peers[view.peerId] as? TelegramGroup {
+                    style = .blocks
+                } else if let channel = view.peers[view.peerId] as? TelegramChannel, case .group = channel.info {
                     style = .blocks
                 } else {
                     style = .plain

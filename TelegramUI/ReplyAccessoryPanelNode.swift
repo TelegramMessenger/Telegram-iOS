@@ -23,7 +23,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.closeButton.displaysAsynchronously = false
         
         self.lineNode = ASDisplayNode()
-        self.lineNode.backgroundColor = UIColor(0x1195f2)
+        self.lineNode.backgroundColor = UIColor(0x007ee5)
         
         self.titleNode = ASTextNode()
         self.titleNode.truncationMode = .byTruncatingTail
@@ -56,7 +56,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                     text = messageText
                 }
                 
-                strongSelf.titleNode.attributedText = NSAttributedString(string: authorName, font: Font.regular(14.5), textColor: UIColor(0x1195f2))
+                strongSelf.titleNode.attributedText = NSAttributedString(string: authorName, font: Font.regular(14.5), textColor: UIColor(0x007ee5))
                 strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.5), textColor: UIColor.black)
                 
                 strongSelf.setNeedsLayout()

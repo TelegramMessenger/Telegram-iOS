@@ -28,6 +28,27 @@ private enum GroupInfoSection: UInt32, PeerInfoSection {
     }
 }
 
+enum GroupInfoMemberStatus {
+    case member
+    case admin
+}
+
+private struct GroupPeerEntryStableId: PeerInfoEntryStableId {
+    let peerId: PeerId
+    
+    func isEqual(to: PeerInfoEntryStableId) -> Bool {
+        if let to = to as? GroupPeerEntryStableId, to.peerId == self.peerId {
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    var hashValue: Int {
+        return self.peerId.hashValue
+    }
+}
+
 enum GroupInfoEntry: PeerInfoEntry {
     case info(peer: Peer?, cachedData: CachedPeerData?)
     case setGroupPhoto
@@ -37,7 +58,7 @@ enum GroupInfoEntry: PeerInfoEntry {
     case notifications(settings: PeerNotificationSettings?)
     case usersHeader
     case addMember
-    case member(index: Int, peer: Peer?)
+    case member(index: Int, peerId: PeerId, peer: Peer?, presence: PeerPresence?, memberStatus: GroupInfoMemberStatus)
     case leave
     
     var section: PeerInfoSection {
@@ -132,9 +153,15 @@ enum GroupInfoEntry: PeerInfoEntry {
                 } else {
                     return false
                 }
-            case let .member(lhsIndex, lhsPeer):
-                if case let .member(rhsIndex, rhsPeer) = entry {
+            case let .member(lhsIndex, lhsPeerId, lhsPeer, lhsPresence, lhsMemberStatus):
+                if case let .member(rhsIndex, rhsPeerId, rhsPeer, rhsPresence, rhsMemberStatus) = entry {
                     if lhsIndex != rhsIndex {
+                        return false
+                    }
+                    if lhsMemberStatus != rhsMemberStatus {
+                        return false
+                    }
+                    if lhsPeerId != rhsPeerId {
                         return false
                     }
                     if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
@@ -142,6 +169,13 @@ enum GroupInfoEntry: PeerInfoEntry {
                             return false
                         }
                     } else if (lhsPeer != nil) != (rhsPeer != nil) {
+                        return false
+                    }
+                    if let lhsPresence = lhsPresence, let rhsPresence = rhsPresence {
+                        if !lhsPresence.isEqual(to: rhsPresence) {
+                            return false
+                        }
+                    } else if (lhsPresence != nil) != (rhsPresence != nil) {
                         return false
                     }
                     return true
@@ -157,8 +191,13 @@ enum GroupInfoEntry: PeerInfoEntry {
         }
     }
     
-    var stableId: Int {
-        return self.sortIndex
+    var stableId: PeerInfoEntryStableId {
+        switch self {
+            case let .member(_, peerId, _, _, _):
+                return GroupPeerEntryStableId(peerId: peerId)
+            default:
+                return IntPeerInfoEntryStableId(value: self.sortIndex)
+        }
     }
     
     private var sortIndex: Int {
@@ -179,7 +218,7 @@ enum GroupInfoEntry: PeerInfoEntry {
                 return 6
             case .addMember:
                 return 7
-            case let .member(index, _):
+            case let .member(index, _, _, _, _):
                 return 10 + index
             case .leave:
                 return 1000000
@@ -202,7 +241,14 @@ enum GroupInfoEntry: PeerInfoEntry {
                 return PeerInfoActionItem(title: "Set Group Photo", kind: .generic, alignment: .natural, sectionId: self.section.rawValue, style: .blocks, action: {
                 })
             case let .notifications(settings):
-                return PeerInfoDisclosureItem(title: "Notifications", label: "Enabled", sectionId: self.section.rawValue, style: .blocks, action: {
+                let label: String
+                if let settings = settings as? TelegramPeerNotificationSettings, case .muted = settings.muteState {
+                    label = "Disabled"
+                } else {
+                    label = "Enabled"
+                }
+                return PeerInfoDisclosureItem(title: "Notifications", label: label, sectionId: self.section.rawValue, style: .blocks, action: {
+                    interaction.changeNotificationNoteSettings()
                 })
             case .sharedMedia:
                 return PeerInfoDisclosureItem(title: "Shared Media", label: "", sectionId: self.section.rawValue, style: .blocks, action: {
@@ -212,8 +258,15 @@ enum GroupInfoEntry: PeerInfoEntry {
                 return PeerInfoPeerActionItem(icon: addMemberPlusIcon, title: "Add Member", sectionId: self.section.rawValue, action: {
                     
                 })
-            case let .member(_, peer):
-                return PeerInfoPeerItem(account: account, peer: peer, sectionId: self.section.rawValue, action: {
+            case let .member(_, _, peer, presence, memberStatus):
+                let label: String?
+                switch memberStatus {
+                    case .admin:
+                        label = "admin"
+                    case .member:
+                        label = nil
+                }
+                return PeerInfoPeerItem(account: account, peer: peer, presence: presence, label: label, sectionId: self.section.rawValue, action: {
                     if let peer = peer {
                         interaction.openPeerInfo(peer.id)
                     }
@@ -230,15 +283,58 @@ enum GroupInfoEntry: PeerInfoEntry {
 func groupInfoEntries(view: PeerView) -> [PeerInfoEntry] {
     var entries: [PeerInfoEntry] = []
     entries.append(GroupInfoEntry.info(peer: view.peers[view.peerId], cachedData: view.cachedData))
-    entries.append(GroupInfoEntry.setGroupPhoto)
+    
+    var highlightAdmins = false
+    var canManageGroup = false
+    if let group = view.peers[view.peerId] as? TelegramGroup {
+        if group.flags.contains(.adminsEnabled) {
+            highlightAdmins = true
+            switch group.role {
+                case .admin, .creator:
+                    canManageGroup = true
+                case .member:
+                    break
+            }
+        } else {
+            canManageGroup = true
+        }
+    } else if let channel = view.peers[view.peerId] as? TelegramChannel {
+        highlightAdmins = true
+        switch channel.role {
+            case .creator:
+                canManageGroup = true
+            case .editor, .moderator, .member:
+                break
+        }
+    }
+    
+    if canManageGroup {
+        entries.append(GroupInfoEntry.setGroupPhoto)
+    }
     
     entries.append(GroupInfoEntry.notifications(settings: view.notificationSettings))
     entries.append(GroupInfoEntry.sharedMedia)
     
-    entries.append(GroupInfoEntry.addMember)
+    if canManageGroup {
+        entries.append(GroupInfoEntry.addMember)
+    }
     
     if let cachedGroupData = view.cachedData as? CachedGroupData, let participants = cachedGroupData.participants {
         let sortedParticipants = participants.participants.sorted(by: { lhs, rhs in
+            let lhsPresence = view.peerPresences[lhs.peerId] as? TelegramUserPresence
+            let rhsPresence = view.peerPresences[rhs.peerId] as? TelegramUserPresence
+            if let lhsPresence = lhsPresence, let rhsPresence = rhsPresence {
+                if lhsPresence.status < rhsPresence.status {
+                    return false
+                } else if lhsPresence.status > rhsPresence.status {
+                    return true
+                }
+            } else if let _ = lhsPresence {
+                return true
+            } else if let _ = rhsPresence {
+                return false
+            }
+            
             switch lhs {
                 case .creator:
                     return false
@@ -278,13 +374,28 @@ func groupInfoEntries(view: PeerView) -> [PeerInfoEntry] {
         
         for i in 0 ..< sortedParticipants.count {
             if let peer = view.peers[sortedParticipants[i].peerId] {
-                entries.append(GroupInfoEntry.member(index: i, peer: peer))
+                let memberStatus: GroupInfoMemberStatus
+                if highlightAdmins {
+                    switch sortedParticipants[i] {
+                        case .admin, .creator:
+                            memberStatus = .admin
+                        case .member:
+                            memberStatus = .member
+                    }
+                } else {
+                    memberStatus = .member
+                }
+                entries.append(GroupInfoEntry.member(index: i, peerId: peer.id, peer: peer, presence: view.peerPresences[peer.id], memberStatus: memberStatus))
             }
         }
     }
     
     if let group = view.peers[view.peerId] as? TelegramGroup {
         if case .Member = group.membership {
+            entries.append(GroupInfoEntry.leave)
+        }
+    } else if let channel = view.peers[view.peerId] as? TelegramChannel {
+        if case .member = channel.participationStatus {
             entries.append(GroupInfoEntry.leave)
         }
     }

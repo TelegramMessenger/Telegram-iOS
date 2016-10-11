@@ -258,6 +258,7 @@ final class TextNode: ASDisplayNode {
             
             var updated = false
             if let existingLayout = existingLayout, existingLayout.constrainedSize == constrainedSize && existingLayout.maximumNumberOfLines == maximumNumberOfLines && existingLayout.truncationType == truncationType && existingLayout.cutout == cutout {
+                
                 let stringMatch: Bool
                 if let existingString = existingLayout.attributedString, let string = attributedString {
                     stringMatch = existingString.isEqual(to: string)

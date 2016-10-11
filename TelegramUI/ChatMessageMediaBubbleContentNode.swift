@@ -81,6 +81,10 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         self.interactiveImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
+    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+        self.interactiveImageNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+    }
+    
     override func transitionNode(media: Media) -> ASDisplayNode? {
         if let currentMedia = self.media, currentMedia.isEqual(media) {
             return self.interactiveImageNode

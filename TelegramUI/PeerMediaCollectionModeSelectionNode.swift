@@ -2,7 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import Display
 
-private let checkmarkImage = generateTintedImage(image: UIImage(bundleImageName: "List Menu/Checkmark")?.precomposed(), color: UIColor(0x1195f2))
+private let checkmarkImage = generateTintedImage(image: UIImage(bundleImageName: "List Menu/Checkmark")?.precomposed(), color: UIColor(0x007ee5))
 
 private final class PeerMediaCollectionModeSelectionCaseNode: ASDisplayNode {
     fileprivate let mode: PeerMediaCollectionMode
@@ -17,7 +17,7 @@ private final class PeerMediaCollectionModeSelectionCaseNode: ASDisplayNode {
     var isSelected = false {
         didSet {
             if self.isSelected != oldValue {
-                self.titleNode.attributedText = NSAttributedString(string: titleForPeerMediaCollectionMode(self.mode), font: Font.regular(17.0), textColor: isSelected ? UIColor(0x1195f2) : UIColor.black)
+                self.titleNode.attributedText = NSAttributedString(string: titleForPeerMediaCollectionMode(self.mode), font: Font.regular(17.0), textColor: isSelected ? UIColor(0x007ee5) : UIColor.black)
                 self.checkmarkView.isHidden = !self.isSelected
             }
         }

@@ -187,6 +187,16 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         }
     }
     
+    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+        super.animateRemoved(currentTimestamp, duration: duration)
+        
+        self.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        
+        for contentNode in self.contentNodes {
+            contentNode.animateRemoved(currentTimestamp, duration: duration)
+        }
+    }
+    
     override func animateAdded(_ currentTimestamp: Double, duration: Double) {
         super.animateAdded(currentTimestamp, duration: duration)
         
@@ -347,7 +357,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                         headerSize.height += 4.0
                     }
                     
-                    let inlineBotNameColor = incoming ? UIColor(0x1195f2) : UIColor(0x00a700)
+                    let inlineBotNameColor = incoming ? UIColor(0x007ee5) : UIColor(0x00a700)
                     
                     let attributedString: NSAttributedString
                     if let authorNameString = authorNameString, let authorNameColor = authorNameColor, let inlineBotNameString = inlineBotNameString {

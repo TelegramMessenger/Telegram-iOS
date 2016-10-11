@@ -381,11 +381,24 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double) {
-        self.lineNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        self.lineNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+        self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+        self.statusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.inlineImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
     }
     
     override func animateAdded(_ currentTimestamp: Double, duration: Double) {
-        self.lineNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        self.lineNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+        self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+        self.statusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.inlineImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+    }
+    
+    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+        self.lineNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
+        self.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
+        self.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+        self.inlineImageNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
     }
     
     override func animateInsertionIntoBubble(_ duration: Double) {

@@ -46,9 +46,9 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         self.deleteButton = UIButton()
         self.forwardButton = UIButton()
         
-        self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: UIColor(0x1195f2)), for: [.normal])
+        self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: UIColor(0x007ee5)), for: [.normal])
         self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionThrash"), color: UIColor(0xdededf)), for: [.disabled])
-        self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionForward"), color: UIColor(0x1195f2)), for: [.normal])
+        self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionForward"), color: UIColor(0x007ee5)), for: [.normal])
         self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Acessory Panels/MessageSelectionForward"), color: UIColor(0xdededf)), for: [.disabled])
         
         super.init()

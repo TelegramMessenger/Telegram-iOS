@@ -44,8 +44,8 @@ enum ChannelInfoEntry: PeerInfoEntry {
         }
     }
     
-    var stableId: Int {
-        return self.sortIndex
+    var stableId: PeerInfoEntryStableId {
+        return IntPeerInfoEntryStableId(value: self.sortIndex)
     }
     
     func isEqual(to: PeerInfoEntry) -> Bool {

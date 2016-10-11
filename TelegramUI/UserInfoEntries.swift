@@ -50,8 +50,8 @@ enum UserInfoEntry: PeerInfoEntry {
         }
     }
     
-    var stableId: Int {
-        return self.sortIndex
+    var stableId: PeerInfoEntryStableId {
+        return IntPeerInfoEntryStableId(value: self.sortIndex)
     }
     
     func isEqual(to: PeerInfoEntry) -> Bool {
@@ -229,7 +229,31 @@ enum UserInfoEntry: PeerInfoEntry {
     }
 }
 
-func userInfoEntries(view: PeerView) -> [PeerInfoEntry] {
+final class UserInfoEditingState {
+    
+}
+
+final class UserInfoState: PeerInfoState {
+    fileprivate let editingState: UserInfoEditingState?
+    
+    var navigationButton: PeerInfoNavigationButton {
+        return self.editingState == nil ? .edit : .done
+    }
+    
+    init() {
+        self.editingState = nil
+    }
+    
+    func isEqual(to: PeerInfoState) -> Bool {
+        if let to = to as? UserInfoState {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
+func userInfoEntries(view: PeerView, state: PeerInfoState?) -> [PeerInfoEntry] {
     var entries: [PeerInfoEntry] = []
     entries.append(UserInfoEntry.info(peer: view.peers[view.peerId], cachedData: view.cachedData))
     if let cachedUserData = view.cachedData as? CachedUserData {
@@ -244,9 +268,13 @@ func userInfoEntries(view: PeerView) -> [PeerInfoEntry] {
         if let username = user.username, !username.isEmpty {
             entries.append(UserInfoEntry.userName(value: username))
         }
-        entries.append(UserInfoEntry.sendMessage)
-        entries.append(UserInfoEntry.shareContact)
-        entries.append(UserInfoEntry.startSecretChat)
+        if let state = state as? UserInfoState, let editingState = state.editingState {
+            
+        } else {
+            entries.append(UserInfoEntry.sendMessage)
+            entries.append(UserInfoEntry.shareContact)
+            entries.append(UserInfoEntry.startSecretChat)
+        }
         entries.append(UserInfoEntry.sharedMedia)
         entries.append(UserInfoEntry.notifications(settings: view.notificationSettings))
         entries.append(UserInfoEntry.block)

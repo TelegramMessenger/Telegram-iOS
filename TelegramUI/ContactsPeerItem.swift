@@ -13,14 +13,16 @@ private let statusFont = Font.regular(13.0)
 class ContactsPeerItem: ListViewItem {
     let account: Account
     let peer: Peer
+    let presence: PeerPresence?
     let action: (Peer) -> Void
     let selectable: Bool = true
     
     let headerAccessoryItem: ListViewAccessoryItem?
     
-    init(account: Account, peer: Peer, index: PeerNameIndex?, action: @escaping (Peer) -> Void) {
+    init(account: Account, peer: Peer, presence: PeerPresence?, index: PeerNameIndex?, action: @escaping (Peer) -> Void) {
         self.account = account
         self.peer = peer
+        self.presence = presence
         self.action = action
         
         if let index = index {
@@ -72,7 +74,7 @@ class ContactsPeerItem: ListViewItem {
                     last = false
                 }
             }
-            let (nodeLayout, nodeApply) = makeLayout(self.account, self.peer, width, first, last)
+            let (nodeLayout, nodeApply) = makeLayout(self, width, first, last)
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
@@ -101,7 +103,7 @@ class ContactsPeerItem: ListViewItem {
                         }
                     }
                     
-                    let (nodeLayout, apply) = layout(self.account, self.peer, width, first, last)
+                    let (nodeLayout, apply) = layout(self, width, first, last)
                     Queue.mainQueue().async {
                         completion(nodeLayout, {
                             apply()
@@ -120,6 +122,7 @@ class ContactsPeerItem: ListViewItem {
 private let separatorHeight = 1.0 / UIScreen.main.scale
 
 class ContactsPeerItemNode: ListViewItemNode {
+    private let backgroundNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
     
@@ -127,11 +130,16 @@ class ContactsPeerItemNode: ListViewItemNode {
     private let titleNode: TextNode
     private let statusNode: TextNode
     
-    private var account: Account?
-    private var peer: Peer?
     private var avatarState: (Account, Peer)?
     
+    private var peerPresenceManager: PeerPresenceStatusManager?
+    private var layoutParams: (ContactsPeerItem, CGFloat, Bool, Bool)?
+    
     required init() {
+        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode.backgroundColor = .white
+        self.backgroundNode.isLayerBacked = true
+        
         self.separatorNode = ASDisplayNode()
         self.separatorNode.backgroundColor = UIColor(0xc8c7cc)
         self.separatorNode.isLayerBacked = true
@@ -148,18 +156,29 @@ class ContactsPeerItemNode: ListViewItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false)
         
+        self.addSubnode(self.backgroundNode)
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.statusNode)
+        
+        self.peerPresenceManager = PeerPresenceStatusManager(update: { [weak self] in
+            if let strongSelf = self, let layoutParams = strongSelf.layoutParams {
+                let (_, apply) = strongSelf.asyncLayout()(layoutParams.0, layoutParams.1, layoutParams.2, layoutParams.3)
+                apply()
+            }
+        })
     }
     
     override func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
-        let makeLayout = self.asyncLayout()
-        let (nodeLayout, nodeApply) = makeLayout(self.account, self.peer, width, previousItem != nil, nextItem != nil)
-        self.contentSize = nodeLayout.contentSize
-        self.insets = nodeLayout.insets
-        nodeApply()
+        if let (item, _, _, _) = self.layoutParams {
+            self.layoutParams = (item, width, previousItem != nil, nextItem != nil)
+            let makeLayout = self.asyncLayout()
+            let (nodeLayout, nodeApply) = makeLayout(item, width, previousItem != nil, nextItem != nil)
+            self.contentSize = nodeLayout.contentSize
+            self.insets = nodeLayout.insets
+            nodeApply()
+        }
     }
     
     override func setHighlighted(_ highlighted: Bool, animated: Bool) {
@@ -198,39 +217,45 @@ class ContactsPeerItemNode: ListViewItemNode {
         }
     }
     
-    func asyncLayout() -> (_ account: Account?, _ peer: Peer?, _ width: CGFloat, _ first: Bool, _ last: Bool) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: ContactsPeerItem, _ width: CGFloat, _ first: Bool, _ last: Bool) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
         
-        return { [weak self] account, peer, width, first, last in
+        return { [weak self] item, width, first, last in
             let leftInset: CGFloat = 65.0
             let rightInset: CGFloat = 10.0
             
             var titleAttributedString: NSAttributedString?
             var statusAttributedString: NSAttributedString?
             
-            if let peer = peer {
-                if let user = peer as? TelegramUser {
-                    if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
-                        let string = NSMutableAttributedString()
-                        string.append(NSAttributedString(string: firstName, font: titleFont, textColor: .black))
-                        string.append(NSAttributedString(string: " ", font: titleFont, textColor: .black))
-                        string.append(NSAttributedString(string: lastName, font: titleBoldFont, textColor: .black))
-                        titleAttributedString = string
-                    } else if let firstName = user.firstName, !firstName.isEmpty {
-                        titleAttributedString = NSAttributedString(string: firstName, font: titleBoldFont, textColor: UIColor.black)
-                    } else if let lastName = user.lastName, !lastName.isEmpty {
-                        titleAttributedString = NSAttributedString(string: lastName, font: titleBoldFont, textColor: UIColor.black)
-                    } else {
-                        titleAttributedString = NSAttributedString(string: "Deleted User", font: titleBoldFont, textColor: UIColor(0xa6a6a6))
-                    }
-                    
-                    statusAttributedString = NSAttributedString(string: "last seen recently", font: statusFont, textColor: UIColor(0xa6a6a6))
-                } else if let group = peer as? TelegramGroup {
-                    titleAttributedString = NSAttributedString(string: group.title, font: titleBoldFont, textColor: UIColor.black)
-                } else if let channel = peer as? TelegramChannel {
-                    titleAttributedString = NSAttributedString(string: channel.title, font: titleBoldFont, textColor: UIColor.black)
+            let peer = item.peer
+            
+            if let user = peer as? TelegramUser {
+                if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty, !lastName.isEmpty {
+                    let string = NSMutableAttributedString()
+                    string.append(NSAttributedString(string: firstName, font: titleFont, textColor: .black))
+                    string.append(NSAttributedString(string: " ", font: titleFont, textColor: .black))
+                    string.append(NSAttributedString(string: lastName, font: titleBoldFont, textColor: .black))
+                    titleAttributedString = string
+                } else if let firstName = user.firstName, !firstName.isEmpty {
+                    titleAttributedString = NSAttributedString(string: firstName, font: titleBoldFont, textColor: UIColor.black)
+                } else if let lastName = user.lastName, !lastName.isEmpty {
+                    titleAttributedString = NSAttributedString(string: lastName, font: titleBoldFont, textColor: UIColor.black)
+                } else {
+                    titleAttributedString = NSAttributedString(string: "Deleted User", font: titleBoldFont, textColor: UIColor(0xa6a6a6))
                 }
+                
+                if let presence = item.presence as? TelegramUserPresence {
+                    let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+                    let (string, activity) = stringAndActivityForUserPresence(presence, relativeTo: Int32(timestamp))
+                    statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? UIColor(0x007ee5) : UIColor(0xa6a6a6))
+                } else {
+                    statusAttributedString = NSAttributedString(string: "last seen recently", font: statusFont, textColor: UIColor(0xa6a6a6))
+                }
+            } else if let group = peer as? TelegramGroup {
+                titleAttributedString = NSAttributedString(string: group.title, font: titleBoldFont, textColor: UIColor.black)
+            } else if let channel = peer as? TelegramChannel {
+                titleAttributedString = NSAttributedString(string: channel.title, font: titleBoldFont, textColor: UIColor.black)
             }
             
             let (titleLayout, titleApply) = makeTitleLayout(titleAttributedString, nil, 1, .end, CGSize(width: max(0.0, width - leftInset - rightInset), height: CGFloat.infinity), nil)
@@ -241,11 +266,10 @@ class ContactsPeerItemNode: ListViewItemNode {
             
             return (nodeLayout, { [weak self] in
                 if let strongSelf = self {
-                    strongSelf.peer = peer
-                    strongSelf.account = account
+                    strongSelf.layoutParams = (item, width, first, last)
                     
-                    if let peer = peer, let account = account, strongSelf.avatarState == nil || strongSelf.avatarState!.0 !== account || !strongSelf.avatarState!.1.isEqual(peer) {
-                        strongSelf.avatarNode.setPeer(account: account, peer: peer)
+                    if strongSelf.avatarState == nil || strongSelf.avatarState!.0 !== item.account || !strongSelf.avatarState!.1.isEqual(peer) {
+                        strongSelf.avatarNode.setPeer(account: item.account, peer: item.peer)
                     }
                     
                     strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: 14.0, y: 4.0), size: CGSize(width: 40.0, height: 40.0))
@@ -257,9 +281,14 @@ class ContactsPeerItemNode: ListViewItemNode {
                     strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 25.0), size: statusLayout.size)
                     
                     let topHighlightInset: CGFloat = first ? 0.0 : separatorHeight
+                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: nodeLayout.contentSize.width, height: nodeLayout.contentSize.height))
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: nodeLayout.size.width, height: nodeLayout.size.height + topHighlightInset))
                     strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: 65.0, y: nodeLayout.contentSize.height - separatorHeight), size: CGSize(width: max(0.0, nodeLayout.size.width - 65.0), height: separatorHeight))
                     strongSelf.separatorNode.isHidden = last
+                    
+                    if let presence = item.presence as? TelegramUserPresence {
+                        strongSelf.peerPresenceManager?.reset(presence: presence)
+                    }
                 }
             })
         }
@@ -268,5 +297,13 @@ class ContactsPeerItemNode: ListViewItemNode {
     override func layoutHeaderAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
         let bounds = self.bounds
         accessoryItemNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -29.0), size: CGSize(width: bounds.size.width, height: 29.0))
+    }
+    
+    override func animateInsertion(_ currentTimestamp: Double, duration: Double) {
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 0.5)
+    }
+    
+    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false)
     }
 }

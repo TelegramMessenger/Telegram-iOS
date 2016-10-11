@@ -33,7 +33,7 @@ class ChatMessageActionItemNode: ChatMessageItemView {
         
         super.init(layerBacked: false)
         
-        self.backgroundNode.image = backgroundImage(color: UIColor(0x1195f2))
+        self.backgroundNode.image = backgroundImage(color: UIColor(0x007ee5))
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.labelNode)
     }

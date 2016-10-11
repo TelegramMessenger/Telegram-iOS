@@ -11,14 +11,43 @@ protocol PeerInfoSection {
 
 protocol PeerInfoEntryStableId {
     func isEqual(to: PeerInfoEntryStableId) -> Bool
+    var hashValue: Int { get }
+}
+
+struct IntPeerInfoEntryStableId: PeerInfoEntryStableId {
+    let value: Int
+    
+    func isEqual(to: PeerInfoEntryStableId) -> Bool {
+        if let to = to as? IntPeerInfoEntryStableId, to.value == self.value {
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    var hashValue: Int {
+        return self.value.hashValue
+    }
 }
 
 protocol PeerInfoEntry {
     var section: PeerInfoSection { get }
-    var stableId: Int { get }
+    var stableId: PeerInfoEntryStableId { get }
     func isEqual(to: PeerInfoEntry) -> Bool
     func isOrderedBefore(_ entry: PeerInfoEntry) -> Bool
     func item(account: Account, interaction: PeerInfoControllerInteraction) -> ListViewItem
+}
+
+enum PeerInfoNavigationButton {
+    case none
+    case edit
+    case done
+}
+
+protocol PeerInfoState {
+    func isEqual(to: PeerInfoState) -> Bool
+    
+    var navigationButton: PeerInfoNavigationButton { get }
 }
 
 func peerInfoEntries(view: PeerView) -> [PeerInfoEntry] {
@@ -29,7 +58,7 @@ func peerInfoEntries(view: PeerView) -> [PeerInfoEntry] {
             case .broadcast:
                 return channelBroadcastInfoEntries(view: view)
             case .group:
-                return []
+                return groupInfoEntries(view: view)
         }
     } else if let group = view.peers[view.peerId] as? TelegramGroup {
         return groupInfoEntries(view: view)
