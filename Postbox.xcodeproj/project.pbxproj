@@ -16,7 +16,7 @@
 		D01F7D9B1CBEC390008765C9 /* MessageHistoryInvalidatedReadStateTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01F7D9A1CBEC390008765C9 /* MessageHistoryInvalidatedReadStateTable.swift */; };
 		D01F7D9D1CBF8586008765C9 /* SynchronizePeerReadStatesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01F7D9C1CBF8586008765C9 /* SynchronizePeerReadStatesView.swift */; };
 		D02EB8071D2B07F300D07ED3 /* OrderStatisticTreeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02EB8061D2B07F300D07ED3 /* OrderStatisticTreeTests.swift */; };
-		D03120F81DA53FF4006A2A60 /* PeerStatusTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03120F71DA53FF4006A2A60 /* PeerStatusTable.swift */; };
+		D03120F81DA53FF4006A2A60 /* PeerPresenceTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03120F71DA53FF4006A2A60 /* PeerPresenceTable.swift */; };
 		D03120FA1DA540F0006A2A60 /* CachedPeerData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03120F91DA540F0006A2A60 /* CachedPeerData.swift */; };
 		D03120FC1DA55427006A2A60 /* PeerNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03120FB1DA55427006A2A60 /* PeerNotificationSettings.swift */; };
 		D03120FE1DA562E9006A2A60 /* CachedPeerDataTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03120FD1DA562E9006A2A60 /* CachedPeerDataTable.swift */; };
@@ -116,7 +116,7 @@
 		D0B843F91DAB91A0005F29E1 /* PeerTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F9E8701C5A0E9B00037222 /* PeerTable.swift */; };
 		D0B843FA1DAB91A0005F29E1 /* PeerNotificationSettingsTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03120FF1DA579A0006A2A60 /* PeerNotificationSettingsTable.swift */; };
 		D0B843FB1DAB91A0005F29E1 /* CachedPeerDataTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03120FD1DA562E9006A2A60 /* CachedPeerDataTable.swift */; };
-		D0B843FC1DAB91A0005F29E1 /* PeerStatusTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03120F71DA53FF4006A2A60 /* PeerStatusTable.swift */; };
+		D0B843FC1DAB91A0005F29E1 /* PeerPresenceTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03120F71DA53FF4006A2A60 /* PeerPresenceTable.swift */; };
 		D0B843FD1DAB91A0005F29E1 /* PeerChatStateTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C735271C864DF300BB3149 /* PeerChatStateTable.swift */; };
 		D0B843FE1DAB91A0005F29E1 /* ContactTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0079F591D592E8B00A27A2C /* ContactTable.swift */; };
 		D0B843FF1DAB91A0005F29E1 /* MessageHistoryReadStateTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C674C71CBB11C600183765 /* MessageHistoryReadStateTable.swift */; };
@@ -130,6 +130,7 @@
 		D0B844081DAB91B5005F29E1 /* CachedMediaResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DE76F81D9293B8002B8809 /* CachedMediaResource.swift */; };
 		D0B844091DAB91B5005F29E1 /* MediaResourceData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FC1A3B1CA3FB310056AE9A /* MediaResourceData.swift */; };
 		D0B8440A1DAB91B5005F29E1 /* RandomAccessMediaResourceContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09ADF091D2E89F300C8208D /* RandomAccessMediaResourceContext.swift */; };
+		D0B844511DAC04FE005F29E1 /* PeerStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B844501DAC04FE005F29E1 /* PeerStatus.swift */; };
 		D0C07F6A1B67DB4800966E43 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C07F691B67DB4800966E43 /* SwiftSignalKit.framework */; };
 		D0C674C81CBB11C600183765 /* MessageHistoryReadStateTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C674C71CBB11C600183765 /* MessageHistoryReadStateTable.swift */; };
 		D0C674CC1CBB14A700183765 /* PeerReadState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C674CB1CBB14A700183765 /* PeerReadState.swift */; };
@@ -191,7 +192,7 @@
 		D01F7D9A1CBEC390008765C9 /* MessageHistoryInvalidatedReadStateTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryInvalidatedReadStateTable.swift; sourceTree = "<group>"; };
 		D01F7D9C1CBF8586008765C9 /* SynchronizePeerReadStatesView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SynchronizePeerReadStatesView.swift; sourceTree = "<group>"; };
 		D02EB8061D2B07F300D07ED3 /* OrderStatisticTreeTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OrderStatisticTreeTests.swift; sourceTree = "<group>"; };
-		D03120F71DA53FF4006A2A60 /* PeerStatusTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerStatusTable.swift; sourceTree = "<group>"; };
+		D03120F71DA53FF4006A2A60 /* PeerPresenceTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerPresenceTable.swift; sourceTree = "<group>"; };
 		D03120F91DA540F0006A2A60 /* CachedPeerData.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CachedPeerData.swift; sourceTree = "<group>"; };
 		D03120FB1DA55427006A2A60 /* PeerNotificationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerNotificationSettings.swift; sourceTree = "<group>"; };
 		D03120FD1DA562E9006A2A60 /* CachedPeerDataTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CachedPeerDataTable.swift; sourceTree = "<group>"; };
@@ -234,6 +235,7 @@
 		D0B418151D7DFAF3004562A4 /* PostboxMac.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PostboxMac.h; sourceTree = "<group>"; };
 		D0B418161D7DFAF3004562A4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0B418601D7DFE95004562A4 /* SwiftSignalKitMac.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftSignalKitMac.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug/SwiftSignalKitMac.framework"; sourceTree = "<group>"; };
+		D0B844501DAC04FE005F29E1 /* PeerStatus.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerStatus.swift; sourceTree = "<group>"; };
 		D0C07F691B67DB4800966E43 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C674C71CBB11C600183765 /* MessageHistoryReadStateTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryReadStateTable.swift; sourceTree = "<group>"; };
 		D0C674CB1CBB14A700183765 /* PeerReadState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerReadState.swift; sourceTree = "<group>"; };
@@ -385,7 +387,7 @@
 				D0F9E8701C5A0E9B00037222 /* PeerTable.swift */,
 				D03120FF1DA579A0006A2A60 /* PeerNotificationSettingsTable.swift */,
 				D03120FD1DA562E9006A2A60 /* CachedPeerDataTable.swift */,
-				D03120F71DA53FF4006A2A60 /* PeerStatusTable.swift */,
+				D03120F71DA53FF4006A2A60 /* PeerPresenceTable.swift */,
 				D0C735271C864DF300BB3149 /* PeerChatStateTable.swift */,
 				D0079F591D592E8B00A27A2C /* ContactTable.swift */,
 				D0C674C71CBB11C600183765 /* MessageHistoryReadStateTable.swift */,
@@ -408,6 +410,7 @@
 				D0C674CB1CBB14A700183765 /* PeerReadState.swift */,
 				D0079F6A1D5B3AAB00A27A2C /* PeerNameIndexRepresentation.swift */,
 				D03120F91DA540F0006A2A60 /* CachedPeerData.swift */,
+				D0B844501DAC04FE005F29E1 /* PeerStatus.swift */,
 				D03120FB1DA55427006A2A60 /* PeerNotificationSettings.swift */,
 			);
 			name = Objects;
@@ -747,7 +750,7 @@
 				D0B418311D7DFE16004562A4 /* ValueBox.swift in Sources */,
 				D0B4184E1D7DFE20004562A4 /* MessageHistoryHolesView.swift in Sources */,
 				D0B843F21DAB91A0005F29E1 /* MessageHistoryUnsentTable.swift in Sources */,
-				D0B843FC1DAB91A0005F29E1 /* PeerStatusTable.swift in Sources */,
+				D0B843FC1DAB91A0005F29E1 /* PeerPresenceTable.swift in Sources */,
 				D0B844051DAB91B5005F29E1 /* MediaBox.swift in Sources */,
 				D0B418321D7DFE16004562A4 /* SqliteValueBox.swift in Sources */,
 				D0B843F71DAB91A0005F29E1 /* MetadataTable.swift in Sources */,
@@ -816,6 +819,7 @@
 				D05F09A61C9E9F9300BB6F96 /* MediaResourceStatus.swift in Sources */,
 				D033A6F71C73D512006A2EAB /* MessageHistoryUnsentTable.swift in Sources */,
 				D0D511021D64D73D00A97B8A /* IpcNotifier.mm in Sources */,
+				D0B844511DAC04FE005F29E1 /* PeerStatus.swift in Sources */,
 				D08C713C1C51283C00779C0F /* MessageHistoryIndexTable.swift in Sources */,
 				D0FC1A3C1CA3FB310056AE9A /* MediaResourceData.swift in Sources */,
 				D0F9E86D1C5A0E5D00037222 /* MetadataTable.swift in Sources */,
@@ -823,7 +827,7 @@
 				D0DE76F91D9293B8002B8809 /* CachedMediaResource.swift in Sources */,
 				D0D510F61D63BBE100A97B8A /* MessageHistoryOperation.swift in Sources */,
 				D0AB0B901D65D4AB002C78E7 /* UnsentMessageIndicesView.swift in Sources */,
-				D03120F81DA53FF4006A2A60 /* PeerStatusTable.swift in Sources */,
+				D03120F81DA53FF4006A2A60 /* PeerPresenceTable.swift in Sources */,
 				D0F9E8731C5A1EE500037222 /* GlobalMessageIdsTable.swift in Sources */,
 				D00EED1E1C81F28D00341DFF /* MessageHistoryTagsTable.swift in Sources */,
 				D044CA2C1C617E2D002160FF /* MessageHistoryMetadataTable.swift in Sources */,
@@ -984,6 +988,7 @@
 					"-DSQLCIPHER_CRYPTO_CC=1",
 					"-DSQLITE_ENABLE_FTS3",
 				);
+				OTHER_SWIFT_FLAGS = "-DDEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.Telegram.PostboxMac;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -1180,6 +1185,7 @@
 					"-DSQLCIPHER_CRYPTO_CC=1",
 					"-DSQLITE_ENABLE_FTS3",
 				);
+				OTHER_SWIFT_FLAGS = "-DDEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = "org.telegram.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;

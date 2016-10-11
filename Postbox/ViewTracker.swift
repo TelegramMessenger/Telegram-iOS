@@ -23,6 +23,7 @@ final class ViewTracker {
     private let getPeer: (PeerId) -> Peer?
     private let getPeerNotificationSettings: (PeerId) -> PeerNotificationSettings?
     private let getCachedPeerData: (PeerId) -> CachedPeerData?
+    private let getPeerPresence: (PeerId) -> PeerPresence?
     
     private var chatListViews = Bag<(MutableChatListView, ValuePipe<(ChatListView, ViewUpdateType)>)>()
     private var messageHistoryViews: [PeerId: Bag<(MutableMessageHistoryView, ValuePipe<(MessageHistoryView, ViewUpdateType)>)>] = [:]
@@ -43,7 +44,7 @@ final class ViewTracker {
     
     private var peerViews = Bag<(MutablePeerView, ValuePipe<PeerView>)>()
     
-    init(queue: Queue, fetchEarlierHistoryEntries: @escaping (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchLaterHistoryEntries: @escaping (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchEarlierChatEntries: @escaping (MessageIndex?, Int) -> [MutableChatListEntry], fetchLaterChatEntries: @escaping (MessageIndex?, Int) -> [MutableChatListEntry], fetchAnchorIndex: @escaping (MessageId) -> MessageHistoryAnchorIndex?, renderMessage: @escaping (IntermediateMessage) -> Message, getPeer: @escaping (PeerId) -> Peer?, getPeerNotificationSettings: @escaping (PeerId) -> PeerNotificationSettings?, getCachedPeerData: @escaping (PeerId) -> CachedPeerData?, unsentMessageIndices: [MessageIndex], synchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation]) {
+    init(queue: Queue, fetchEarlierHistoryEntries: @escaping (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchLaterHistoryEntries: @escaping (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchEarlierChatEntries: @escaping (MessageIndex?, Int) -> [MutableChatListEntry], fetchLaterChatEntries: @escaping (MessageIndex?, Int) -> [MutableChatListEntry], fetchAnchorIndex: @escaping (MessageId) -> MessageHistoryAnchorIndex?, renderMessage: @escaping (IntermediateMessage) -> Message, getPeer: @escaping (PeerId) -> Peer?, getPeerNotificationSettings: @escaping (PeerId) -> PeerNotificationSettings?, getCachedPeerData: @escaping (PeerId) -> CachedPeerData?, getPeerPresence: @escaping (PeerId) -> PeerPresence?, unsentMessageIndices: [MessageIndex], synchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation]) {
         self.queue = queue
         self.fetchEarlierHistoryEntries = fetchEarlierHistoryEntries
         self.fetchLaterHistoryEntries = fetchLaterHistoryEntries
@@ -54,6 +55,7 @@ final class ViewTracker {
         self.getPeer = getPeer
         self.getPeerNotificationSettings = getPeerNotificationSettings
         self.getCachedPeerData = getCachedPeerData
+        self.getPeerPresence = getPeerPresence
         
         self.unsentMessageView = UnsentMessageHistoryView(indices: unsentMessageIndices)
         self.synchronizeReadStatesView = MutableSynchronizePeerReadStatesView(operations: synchronizePeerReadStateOperations)
@@ -201,7 +203,11 @@ final class ViewTracker {
         for (mutableView, pipe) in self.peerViews.copyItems() {
             var updatedPeers: [PeerId: Peer] = [:]
             if let peer = self.getPeer(mutableView.peerId) {
-                updatedPeers[peer.id] = peer
+                updatedPeers[mutableView.peerId] = peer
+            }
+            var updatedPeerPresences: [PeerId: PeerPresence] = [:]
+            if let presence = self.getPeerPresence(mutableView.peerId) {
+                updatedPeerPresences[mutableView.peerId] = presence
             }
             
             var updatedNotificationSettings: [PeerId: PeerNotificationSettings] = [:]
@@ -212,14 +218,17 @@ final class ViewTracker {
             var updatedCachedPeerData: [PeerId: CachedPeerData] = [:]
             if let cachedPeerData = self.getCachedPeerData(mutableView.peerId) {
                 updatedCachedPeerData[mutableView.peerId] = cachedPeerData
-                for peerIds in cachedPeerData.peerIds {
-                    if let peer = self.getPeer(mutableView.peerId) {
-                        updatedPeers[peer.id] = peer
+                for peerId in cachedPeerData.peerIds {
+                    if let peer = self.getPeer(peerId) {
+                        updatedPeers[peerId] = peer
+                    }
+                    if let presence = self.getPeerPresence(peerId) {
+                        updatedPeerPresences[peerId] = presence
                     }
                 }
             }
             
-            if mutableView.replay(updatedPeers: updatedPeers, updatedNotificationSettings: updatedNotificationSettings, updatedCachedPeerData: updatedCachedPeerData, getPeer: self.getPeer) {
+            if mutableView.replay(updatedPeers: updatedPeers, updatedNotificationSettings: updatedNotificationSettings, updatedCachedPeerData: updatedCachedPeerData, updatedPeerPresences: updatedPeerPresences, getPeer: self.getPeer, getPeerPresence: self.getPeerPresence) {
                 pipe.putNext(PeerView(mutableView))
             }
         }
@@ -313,16 +322,16 @@ final class ViewTracker {
                     pipe.putNext(ContactPeerIdsView(mutableView))
                 }
             }
-            
-            for (mutableView, pipe) in self.contactPeersViews.copyItems() {
-                if mutableView.replay(replace: replaceContactPeerIds, getPeer: self.getPeer) {
-                    pipe.putNext(ContactPeersView(mutableView))
-                }
+        }
+        
+        for (mutableView, pipe) in self.contactPeersViews.copyItems() {
+            if mutableView.replay(replacePeerIds: transaction.replaceContactPeerIds, updatedPeerPresences: transaction.currentUpdatedPeerPresences, getPeer: self.getPeer, getPeerPresence: self.getPeerPresence) {
+                pipe.putNext(ContactPeersView(mutableView))
             }
         }
         
         for (mutableView, pipe) in self.peerViews.copyItems() {
-            if mutableView.replay(updatedPeers: transaction.currentUpdatedPeers, updatedNotificationSettings: transaction.currentUpdatedPeerNotificationSettings, updatedCachedPeerData: transaction.currentUpdatedCachedPeerData, getPeer: self.getPeer) {
+            if mutableView.replay(updatedPeers: transaction.currentUpdatedPeers, updatedNotificationSettings: transaction.currentUpdatedPeerNotificationSettings, updatedCachedPeerData: transaction.currentUpdatedCachedPeerData, updatedPeerPresences: transaction.currentUpdatedPeerPresences, getPeer: self.getPeer, getPeerPresence: self.getPeerPresence) {
                 pipe.putNext(PeerView(mutableView))
             }
         }

@@ -1,10 +1,10 @@
 import Foundation
 
-final class PeerStatusTable: Table {
+final class PeerPresenceTable: Table {
     private let sharedEncoder = Encoder()
     private let sharedKey = ValueBoxKey(length: 8)
     
-    private var cachedStatuses: [PeerId: Coding] = [:]
+    private var cachedPresences: [PeerId: PeerPresence] = [:]
     private var updatedPeerIds = Set<PeerId>()
     
     override init(valueBox: ValueBox, tableId: Int32) {
@@ -16,34 +16,34 @@ final class PeerStatusTable: Table {
         return self.sharedKey
     }
     
-    func set(id: PeerId, status: Coding) {
-        self.cachedStatuses[id] = status
+    func set(id: PeerId, presence: PeerPresence) {
+        self.cachedPresences[id] = presence
         self.updatedPeerIds.insert(id)
     }
     
-    func get(_ id: PeerId) -> Coding? {
-        if let status = self.cachedStatuses[id] {
-            return status
+    func get(_ id: PeerId) -> PeerPresence? {
+        if let presence = self.cachedPresences[id] {
+            return presence
         }
         if let value = self.valueBox.get(self.tableId, key: self.key(id)) {
-            if let status = Decoder(buffer: value).decodeRootObject() {
-                self.cachedStatuses[id] = status
-                return status
+            if let presence = Decoder(buffer: value).decodeRootObject() as? PeerPresence {
+                self.cachedPresences[id] = presence
+                return presence
             }
         }
         return nil
     }
     
     override func clearMemoryCache() {
-        self.cachedStatuses.removeAll()
+        self.cachedPresences.removeAll()
         self.updatedPeerIds.removeAll()
     }
     
     override func beforeCommit() {
         for peerId in self.updatedPeerIds {
-            if let status = self.cachedStatuses[peerId] {
+            if let presence = self.cachedPresences[peerId] {
                 self.sharedEncoder.reset()
-                self.sharedEncoder.encodeRootObject(status)
+                self.sharedEncoder.encodeRootObject(presence)
                 
                 self.valueBox.set(self.tableId, key: self.key(peerId), value: self.sharedEncoder.readBufferNoCopy())
             }

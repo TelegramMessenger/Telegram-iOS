@@ -5,8 +5,9 @@ final class MutablePeerView {
     var notificationSettings: PeerNotificationSettings?
     var cachedData: CachedPeerData?
     var peers: [PeerId: Peer] = [:]
+    var peerPresences: [PeerId: PeerPresence] = [:]
     
-    init(peerId: PeerId, notificationSettings: PeerNotificationSettings?, cachedData: CachedPeerData?, getPeer: (PeerId) -> Peer?) {
+    init(peerId: PeerId, notificationSettings: PeerNotificationSettings?, cachedData: CachedPeerData?, getPeer: (PeerId) -> Peer?, getPeerPresence: (PeerId) -> PeerPresence?) {
         self.peerId = peerId
         self.notificationSettings = notificationSettings
         self.cachedData = cachedData
@@ -19,10 +20,13 @@ final class MutablePeerView {
             if let peer = getPeer(id) {
                 self.peers[id] = peer
             }
+            if let presence = getPeerPresence(id) {
+                self.peerPresences[id] = presence
+            }
         }
     }
     
-    func replay(updatedPeers: [PeerId: Peer], updatedNotificationSettings: [PeerId: PeerNotificationSettings], updatedCachedPeerData: [PeerId: CachedPeerData], getPeer: (PeerId) -> Peer?) -> Bool {
+    func replay(updatedPeers: [PeerId: Peer], updatedNotificationSettings: [PeerId: PeerNotificationSettings], updatedCachedPeerData: [PeerId: CachedPeerData], updatedPeerPresences: [PeerId: PeerPresence], getPeer: (PeerId) -> Peer?, getPeerPresence: (PeerId) -> PeerPresence?) -> Bool {
         var updated = false
         
         if let cachedData = updatedCachedPeerData[self.peerId], self.cachedData == nil || self.cachedData!.peerIds != cachedData.peerIds {
@@ -39,6 +43,12 @@ final class MutablePeerView {
                 } else if let peer = getPeer(id) {
                     self.peers[id] = peer
                 }
+                
+                if let presence = updatedPeerPresences[id] {
+                    self.peerPresences[id] = presence
+                } else if let presence = getPeerPresence(id) {
+                    self.peerPresences[id] = presence
+                }
             }
             
             var removePeerIds: [PeerId] = []
@@ -51,6 +61,17 @@ final class MutablePeerView {
             for peerId in removePeerIds {
                 self.peers.removeValue(forKey: peerId)
             }
+            
+            removePeerIds.removeAll()
+            for peerId in self.peerPresences.keys {
+                if !peerIds.contains(peerId) {
+                    removePeerIds.append(peerId)
+                }
+            }
+            
+            for peerId in removePeerIds {
+                self.peerPresences.removeValue(forKey: peerId)
+            }
         } else {
             var peerIds = Set<PeerId>()
             peerIds.insert(self.peerId)
@@ -61,6 +82,10 @@ final class MutablePeerView {
             for id in peerIds {
                 if let peer = updatedPeers[id] {
                     self.peers[id] = peer
+                    updated = true
+                }
+                if let presence = updatedPeerPresences[id] {
+                    self.peerPresences[id] = presence
                     updated = true
                 }
             }
@@ -80,11 +105,13 @@ public final class PeerView {
     public let cachedData: CachedPeerData?
     public let notificationSettings: PeerNotificationSettings?
     public let peers: [PeerId: Peer]
+    public let peerPresences: [PeerId: PeerPresence]
     
     init(_ mutableView: MutablePeerView) {
         self.peerId = mutableView.peerId
         self.cachedData = mutableView.cachedData
         self.notificationSettings = mutableView.notificationSettings
         self.peers = mutableView.peers
+        self.peerPresences = mutableView.peerPresences
     }
 }
