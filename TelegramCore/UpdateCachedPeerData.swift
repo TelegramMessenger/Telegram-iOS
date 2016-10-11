@@ -40,6 +40,7 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                     
                                     if let cachedGroupData = CachedGroupData(apiChatFull: fullChat) {
                                         var peers: [Peer] = []
+                                        var peerPresences: [PeerId: PeerPresence] = [:]
                                         for chat in chats {
                                             if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
                                                 peers.append(groupOrChannel)
@@ -48,11 +49,16 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                         for user in users {
                                             let telegramUser = TelegramUser(user: user)
                                             peers.append(telegramUser)
+                                            if let presence = TelegramUserPresence(apiUser: user) {
+                                                peerPresences[telegramUser.id] = presence
+                                            }
                                         }
                                         
                                         modifier.updatePeers(peers, update: { _, updated -> Peer in
                                             return updated
                                         })
+                                        
+                                        modifier.updatePeerPresences(peerPresences)
                                         
                                         modifier.updatePeerCachedData(peerIds: [peerId], update: { peerId, _ in
                                             return cachedGroupData
@@ -77,6 +83,7 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                     
                                     if let cachedChannelData = CachedChannelData(apiChatFull: fullChat) {
                                         var peers: [Peer] = []
+                                        var peerPresences: [PeerId: PeerPresence] = [:]
                                         for chat in chats {
                                             if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
                                                 peers.append(groupOrChannel)
@@ -85,11 +92,16 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                                         for user in users {
                                             let telegramUser = TelegramUser(user: user)
                                             peers.append(telegramUser)
+                                            if let presence = TelegramUserPresence(apiUser: user) {
+                                                peerPresences[telegramUser.id] = presence
+                                            }
                                         }
                                         
                                         modifier.updatePeers(peers, update: { _, updated -> Peer in
                                             return updated
                                         })
+                                        
+                                        modifier.updatePeerPresences(peerPresences)
                                         
                                         modifier.updatePeerCachedData(peerIds: [peerId], update: { peerId, _ in
                                             return cachedChannelData

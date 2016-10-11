@@ -59,6 +59,7 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                         
                         return account.postbox.modify { modifier -> Void in
                             var peers: [Peer] = []
+                            var peerPresences: [PeerId: PeerPresence] = [:]
                             for chat in chats {
                                 if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
                                     peers.append(groupOrChannel)
@@ -67,6 +68,9 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                             for user in users {
                                 let telegramUser = TelegramUser(user: user)
                                 peers.append(telegramUser)
+                                if let presence = TelegramUserPresence(apiUser: user) {
+                                    peerPresences[telegramUser.id] = presence
+                                }
                             }
                             
                             for message in messages {
@@ -98,6 +102,7 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                             modifier.updatePeers(peers, update: { _, updated -> Peer in
                                 return updated
                             })
+                            modifier.updatePeerPresences(peerPresences)
                         }
                     }
             } else {
@@ -202,24 +207,24 @@ public final class AccountViewTracker {
             var dataUpdated = false
             if let existingContext = self.cachedDataContexts[peerId] {
                 context = existingContext
+                context.referenceData = referenceData
+                if context.timestamp == nil || abs(CFAbsoluteTimeGetCurrent() - context.timestamp!) > 60.0 * 60.0 {
+                    dataUpdated = true
+                }
             } else {
                 context = PeerCachedDataContext()
                 context.referenceData = referenceData
                 self.cachedDataContexts[peerId] = context
-                dataUpdated = true
+                if context.referenceData == nil || context.timestamp == nil || abs(CFAbsoluteTimeGetCurrent() - context.timestamp!) > 60.0 * 60.0 {
+                    context.timestamp = CFAbsoluteTimeGetCurrent()
+                    dataUpdated = true
+                }
             }
             context.viewIds.insert(viewId)
             
-            if (context.referenceData != nil) != (referenceData != nil) {
-                dataUpdated = true
-            }
             if dataUpdated {
-                if referenceData != nil {
-                    context.disposable.set(nil)
-                } else {
-                    if let account = self.account {
-                        context.disposable.set(fetchAndUpdateCachedPeerData(peerId: peerId, network: account.network, postbox: account.postbox).start())
-                    }
+                if let account = self.account {
+                    context.disposable.set(fetchAndUpdateCachedPeerData(peerId: peerId, network: account.network, postbox: account.postbox).start())
                 }
             }
         }
@@ -230,8 +235,8 @@ public final class AccountViewTracker {
             if let context = self.cachedDataContexts[peerId] {
                 context.viewIds.remove(id)
                 if context.viewIds.isEmpty {
-                    context.disposable.dispose()
-                    self.cachedDataContexts.removeValue(forKey: peerId)
+                    context.disposable.set(nil)
+                    context.referenceData = nil
                 }
             }
         }

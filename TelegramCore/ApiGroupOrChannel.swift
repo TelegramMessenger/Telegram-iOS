@@ -23,11 +23,33 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
     switch chat {
         case let .chat(flags, id, title, photo, participantsCount, date, version, migratedTo):
             let left = (flags & (1 | 2)) != 0
-            return TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), title: title, photo: imageRepresentationsForApiChatPhoto(photo), participantCount: Int(participantsCount), membership: left ? .Left : .Member, version: Int(version))
+            var migrationReference: TelegramGroupToChannelMigrationReference?
+            if let migratedTo = migratedTo {
+                switch migratedTo {
+                    case let .inputChannel(channelId, accessHash):
+                        migrationReference = TelegramGroupToChannelMigrationReference(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), accessHash: accessHash)
+                    case .inputChannelEmpty:
+                        break
+                }
+            }
+            var groupFlags = TelegramGroupFlags()
+            var role: TelegramGroupRole = .member
+            if (flags & (1 << 0)) != 0 {
+                role = .creator
+            } else if (flags & (1 << 4)) != 0 {
+                role = .admin
+            }
+            if (flags & (1 << 3)) != 0 {
+                groupFlags.insert(.adminsEnabled)
+            }
+            if (flags & (1 << 5)) != 0 {
+                groupFlags.insert(.deactivated)
+            }
+            return TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), title: title, photo: imageRepresentationsForApiChatPhoto(photo), participantCount: Int(participantsCount), role: role, membership: left ? .Left : .Member, flags: groupFlags, migrationReference: migrationReference, version: Int(version))
         case let .chatEmpty(id):
-            TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), title: "", photo: [], participantCount: 0, membership: .Removed, version: 0)
+            TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), title: "", photo: [], participantCount: 0, role: .member, membership: .Removed, flags: [], migrationReference: nil, version: 0)
         case let .chatForbidden(id, title):
-            TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), title: title, photo: [], participantCount: 0, membership: .Removed, version: 0)
+            TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: id), title: title, photo: [], participantCount: 0, role: .member, membership: .Removed, flags: [], migrationReference: nil, version: 0)
         case let .channel(flags, id, accessHash, title, username, photo, date, version, restrictionReason):
             let participationStatus: TelegramChannelParticipationStatus
             if (flags & Int32(1 << 1)) != 0 {

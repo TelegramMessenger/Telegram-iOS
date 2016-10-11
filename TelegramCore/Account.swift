@@ -10,8 +10,20 @@ import Foundation
 #endif
 import TelegramCorePrivateModule
 
-public struct AccountId {
+public struct AccountId: Comparable, Hashable {
     let stringValue: String
+    
+    public static func ==(lhs: AccountId, rhs: AccountId) -> Bool {
+        return lhs.stringValue == rhs.stringValue
+    }
+    
+    public static func <(lhs: AccountId, rhs: AccountId) -> Bool {
+        return lhs.stringValue < rhs.stringValue
+    }
+    
+    public var hashValue: Int {
+        return self.stringValue.hash
+    }
 }
 
 public class AccountState: Coding, Equatable {
@@ -220,6 +232,7 @@ private var declaredEncodables: Void = {
     declareEncodable(BotInfo.self, f: { BotInfo(decoder: $0) })
     declareEncodable(CachedGroupData.self, f: { CachedGroupData(decoder: $0) })
     declareEncodable(CachedChannelData.self, f: { CachedChannelData(decoder: $0) })
+    declareEncodable(TelegramUserPresence.self, f: { TelegramUserPresence(decoder: $0) })
     
     return
 }()
@@ -332,6 +345,7 @@ public class Account {
     public private(set) var viewTracker: AccountViewTracker!
     fileprivate let managedContactsDisposable = MetaDisposable()
     private let becomeMasterDisposable = MetaDisposable()
+    private let updatedPresenceDisposable = MetaDisposable()
     private let managedServiceViewsDisposable = MetaDisposable()
     
     public let graphicsThreadPool = ThreadPool(threadCount: 3, threadPriority: 0.1)
@@ -345,6 +359,7 @@ public class Account {
     private let notificationTokenDisposable = MetaDisposable()
     
     public let shouldBeServiceTaskMaster = Promise<AccountServiceTaskMasterMode>()
+    public let shouldKeepOnlinePresence = Promise<Bool>()
     
     public init(id: AccountId, postbox: Postbox, network: Network, peerId: PeerId) {
         self.id = id
@@ -377,7 +392,12 @@ public class Account {
                     let systemVersion = UIDevice.current.systemVersion
                 #endif
                 
-                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, deviceModel: "iPhome Simulator", systemVersion: systemVersion, appVersion: appVersionString, appSandbox: .boolTrue, langCode: langCode))
+                var appSandbox: Api.Bool = .boolFalse
+                #if DEBUG
+                    appSandbox = .boolTrue
+                #endif
+                
+                return network.request(Api.functions.account.registerDevice(tokenType: 1, token: tokenString, deviceModel: "iPhome Simulator", systemVersion: systemVersion, appVersion: appVersionString, appSandbox: appSandbox, langCode: langCode))
                     |> retryRequest
                     |> mapToSignal { _ -> Signal<Void, NoError> in
                         return .complete()
@@ -400,7 +420,7 @@ public class Account {
                 if shouldBeMaster == .always && !isMaster {
                     self?.postbox.becomeMasterClient()
                 }
-                return ((shouldBeMaster == .now || shouldBeMaster == .always) || true) && isMaster
+                return (shouldBeMaster == .now || shouldBeMaster == .always) && isMaster
             }
             |> distinctUntilChanged
             |> deliverOn(Queue.concurrentDefaultQueue())
@@ -414,12 +434,50 @@ public class Account {
                 }
             }
         self.managedServiceViewsDisposable.set(serviceTasksMaster.start())
+        
+        let updatedPresence = self.shouldKeepOnlinePresence.get()
+            |> distinctUntilChanged
+            |> mapToSignal { [weak self] online -> Signal<Void, NoError> in
+                if let strongSelf = self {
+                    if online {
+                        let delayRequest: Signal<Void, NoError> = .complete() |> delay(60.0, queue: Queue.concurrentDefaultQueue())
+                        let pushStatusOnce = strongSelf.network.request(Api.functions.account.updateStatus(offline: .boolFalse))
+                            |> retryRequest
+                            |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
+                        let pushStatusRepeatedly = (pushStatusOnce |> then(delayRequest)) |> restart
+                        let peerId = strongSelf.peerId
+                        let updatePresenceLocally = strongSelf.postbox.modify { modifier -> Void in
+                            let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 + 60.0 * 60.0 * 24.0 * 356.0
+                            modifier.updatePeerPresences([peerId: TelegramUserPresence(status: .present(until: Int32(timestamp)))])
+                        }
+                        return combineLatest(pushStatusRepeatedly, updatePresenceLocally)
+                            |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
+                    } else {
+                        let pushStatusOnce = strongSelf.network.request(Api.functions.account.updateStatus(offline: .boolTrue))
+                            |> retryRequest
+                            |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
+                        let peerId = strongSelf.peerId
+                        let updatePresenceLocally = strongSelf.postbox.modify { modifier -> Void in
+                            let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 - 1.0
+                            modifier.updatePeerPresences([peerId: TelegramUserPresence(status: .present(until: Int32(timestamp)))])
+                        }
+                        return combineLatest(pushStatusOnce, updatePresenceLocally)
+                            |> mapToSignal { _ -> Signal<Void, NoError> in return .complete() }
+                    }
+                    
+                    return .complete()
+                } else {
+                    return .complete()
+                }
+            }
+        self.updatedPresenceDisposable.set(updatedPresence.start())
     }
     
     deinit {
         self.managedContactsDisposable.dispose()
         self.notificationTokenDisposable.dispose()
         self.managedServiceViewsDisposable.dispose()
+        self.updatedPresenceDisposable.dispose()
     }
 }
 

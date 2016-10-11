@@ -97,6 +97,7 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
                             modifier.fillHole(hole, fillType: HoleFill(complete: messages.count == 0, direction: direction), tagMask: tagMask, messages: storeMessages)
                             
                             var peers: [Peer] = []
+                            var peerPresences: [PeerId: PeerPresence] = [:]
                             for chat in chats {
                                 if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
                                     peers.append(groupOrChannel)
@@ -105,11 +106,15 @@ func fetchMessageHistoryHole(network: Network, postbox: Postbox, hole: MessageHi
                             for user in users {
                                 let telegramUser = TelegramUser(user: user)
                                 peers.append(telegramUser)
+                                if let presence = TelegramUserPresence(apiUser: user) {
+                                    peerPresences[telegramUser.id] = presence
+                                }
                             }
                             
                             modifier.updatePeers(peers, update: { _, updated -> Peer in
                                 return updated
                             })
+                            modifier.updatePeerPresences(peerPresences)
                             
                             return
                         }
@@ -259,6 +264,7 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                 }
                 
                 var peers: [Peer] = []
+                var peerPresences: [PeerId: PeerPresence] = [:]
                 for chat in dialogsChats {
                     if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
                         peers.append(groupOrChannel)
@@ -267,12 +273,16 @@ func fetchChatListHole(network: Network, postbox: Postbox, hole: ChatListHole) -
                 for user in dialogsUsers {
                     let telegramUser = TelegramUser(user: user)
                     peers.append(telegramUser)
+                    if let presence = TelegramUserPresence(apiUser: user) {
+                        peerPresences[telegramUser.id] = presence
+                    }
                 }
                 
                 return postbox.modify { modifier in
                     modifier.updatePeers(peers, update: { _, updated -> Peer in
                         return updated
                     })
+                    modifier.updatePeerPresences(peerPresences)
                     
                     modifier.updatePeerNotificationSettings(notificationSettings)
                     

@@ -19,19 +19,24 @@ private func md5(_ data : Data) -> Data {
     return res
 }
 
-private func updatedRemoteContactPeers(network: Network, hash: String) -> Signal<[Peer]?, NoError> {
+private func updatedRemoteContactPeers(network: Network, hash: String) -> Signal<([Peer], [PeerId: PeerPresence])?, NoError> {
     return network.request(Api.functions.contacts.getContacts(nHash: hash))
         |> retryRequest
-        |> map { result -> [Peer]? in
+        |> map { result -> ([Peer], [PeerId: PeerPresence])? in
             switch result {
                 case .contactsNotModified:
                     return nil
                 case let .contacts(_, users):
                     var peers: [Peer] = []
+                    var peerPresences: [PeerId: PeerPresence] = [:]
                     for user in users {
-                        peers.append(TelegramUser.init(user: user))
+                        let telegramUser = TelegramUser(user: user)
+                        peers.append(telegramUser)
+                        if let presence = TelegramUserPresence(apiUser: user) {
+                            peerPresences[telegramUser.id] = presence
+                        }
                     }
-                    return peers
+                    return (peers, peerPresences)
             }
         }
 }
@@ -65,15 +70,16 @@ func manageContacts(network: Network, postbox: Postbox) -> Signal<Void, NoError>
         }
     
     let updatedPeers = initialContactPeerIdsHash
-        |> mapToSignal { hash -> Signal<[Peer]?, NoError> in
+        |> mapToSignal { hash -> Signal<([Peer], [PeerId: PeerPresence])?, NoError> in
             return updatedRemoteContactPeers(network: network, hash: hash)
         }
     
     let appliedUpdatedPeers = updatedPeers
-        |> mapToSignal { peers -> Signal<Void, NoError> in
-            if let peers = peers {
+        |> mapToSignal { peersAndPresences -> Signal<Void, NoError> in
+            if let (peers, peerPresences) = peersAndPresences {
                 return postbox.modify { modifier in
                     modifier.updatePeers(peers, update: { return $1 })
+                    modifier.updatePeerPresences(peerPresences)
                     modifier.replaceContactPeerIds(Set(peers.map { $0.id }))
                 }
             } else {

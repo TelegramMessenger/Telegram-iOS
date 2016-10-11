@@ -46,7 +46,9 @@ private enum MutationOperation {
     case UpdatePeerNotificationSettings(PeerId, PeerNotificationSettings)
     case AddHole(MessageId)
     case MergeApiChats([Api.Chat])
+    case UpdatePeer(PeerId, (Peer) -> Peer)
     case MergeApiUsers([Api.User])
+    case MergePeerPresences([PeerId: PeerPresence])
 }
 
 private struct MutableState {
@@ -145,13 +147,37 @@ private struct MutableState {
         self.addOperation(.MergeApiChats(chats))
     }
     
+    mutating func updatePeer(_ id: PeerId, _ f: @escaping (Peer) -> Peer) {
+        self.addOperation(.UpdatePeer(id, f))
+    }
+    
     mutating func mergeUsers(_ users: [Api.User]) {
         self.addOperation(.MergeApiUsers(users))
+        
+        var presences: [PeerId: PeerPresence] = [:]
+        for user in users {
+            switch user {
+                case let .user(_, id, _, _, _, _, _, _, status, _, _, _):
+                    if let status = status {
+                        presences[PeerId(namespace: Namespaces.Peer.CloudUser, id: id)] = TelegramUserPresence(apiStatus: status)
+                    }
+                    break
+                case .userEmpty:
+                    break
+            }
+        }
+        if !presences.isEmpty {
+            self.addOperation(.MergePeerPresences(presences))
+        }
+    }
+    
+    mutating func mergePeerPresences(_ presences: [PeerId: PeerPresence]) {
+        self.addOperation(.MergePeerPresences(presences))
     }
     
     mutating func addOperation(_ operation: MutationOperation) {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .UpdateMedia, .ReadInbox, .ReadOutbox, .ResetReadState:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .UpdateMedia, .ReadInbox, .ReadOutbox, .ResetReadState, .MergePeerPresences:
                 break
             case let .AddMessages(messages, _):
                 for message in messages {
@@ -178,6 +204,12 @@ private struct MutableState {
                         peers[user.id] = user
                         insertedPeers[user.id] = user
                     }
+                }
+            case let .UpdatePeer(id, f):
+                if let peer = self.peers[id] {
+                    let updatedPeer = f(peer)
+                    peers[id] = updatedPeer
+                    insertedPeers[id] = updatedPeer
                 }
         }
         
@@ -724,6 +756,23 @@ private func finalStateWithUpdates(account: Account, state: MutableState, update
                 break
             case let .updateChatParticipantAdmin(chatId, userId, isAdmin, version):
                 break
+            case let .updateChatAdmins(chatId, enabled, version):
+                updatedState.updatePeer(PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId), { peer in
+                    if let group = peer as? TelegramGroup {//, group.version == version - 1 {
+                        var flags = group.flags
+                        switch enabled {
+                            case .boolTrue:
+                                flags.insert(.adminsEnabled)
+                            case .boolFalse:
+                                let _ = flags.remove(.adminsEnabled)
+                        }
+                        return group.updateFlags(flags: flags, version: max(group.version, Int(version)))
+                    } else {
+                        return peer
+                    }
+                })
+            case let .updateUserStatus(userId, status):
+                updatedState.mergePeerPresences([PeerId(namespace: Namespaces.Peer.CloudUser, id: userId): TelegramUserPresence(apiStatus: status)])
             default:
                 break
         }
@@ -1048,7 +1097,7 @@ private func optimizedOperations(_ operations: [MutationOperation]) -> [Mutation
     var currentAddMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -1137,6 +1186,14 @@ private func replayFinalState(_ modifier: Modifier, finalState: MutableState) ->
                 modifier.updatePeers(peers, update: { _, updated in
                     return updated
                 })
+            case let .UpdatePeer(id, f):
+                if let peer = modifier.getPeer(id) {
+                    modifier.updatePeers([f(peer)], update: { _, updated in
+                        return updated
+                    })
+                }
+            case let .MergePeerPresences(presences):
+                modifier.updatePeerPresences(presences)
         }
     }
     
@@ -1206,7 +1263,23 @@ private func pollDifference(_ account: Account) -> Signal<Void, NoError> {
     private typealias SignalKitTimer = SwiftSignalKit.Timer
 #endif
 
-public class StateManager {
+private enum StateManagerState {
+    case none
+    case pollingDifference
+}
+
+private final class StateManagerInternal {
+    private let queue = Queue()
+    private let account: Account
+    
+    init(account: Account) {
+        self.account = account
+    }
+    
+    
+}
+
+public final class StateManager {
     private let stateQueue = Queue()
     
     private let account: Account
