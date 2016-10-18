@@ -392,21 +392,14 @@
 
 - (CGSize)calculateSizeThatFits:(CGSize)constrainedSize
 {
-  CGSize size = self.preferredFrameSize;
-  if (CGSizeEqualToSize(size, CGSizeZero)) {
-    size = constrainedSize;
-    
-    // FIXME: Need a better way to allow maps to take up the right amount of space in a layout (sizeRange, etc)
-    // These fallbacks protect against inheriting a constrainedSize that contains a CGFLOAT_MAX value.
-    if (!isValidForLayout(size.width)) {
-      size.width = 100.0;
-    }
-    if (!isValidForLayout(size.height)) {
-      size.height = 100.0;
-    }
+  // FIXME: Need a better way to allow maps to take up the right amount of space in a layout (sizeRange, etc)
+  // These fallbacks protect against inheriting a constrainedSize that contains a CGFLOAT_MAX value.
+  if (!ASIsCGSizeValidForLayout(constrainedSize)) {
+    //ASDisplayNodeAssert(NO, @"Invalid width or height in ASMapNode");
+    constrainedSize = CGSizeZero;
   }
-  [self setSnapshotSizeWithReloadIfNeeded:size];
-  return size;
+  [self setSnapshotSizeWithReloadIfNeeded:constrainedSize];
+  return constrainedSize;
 }
 
 - (void)calculatedLayoutDidChange
@@ -428,8 +421,8 @@
     // If our bounds.size is different from our current snapshot size, then let's request a new image from MKMapSnapshotter.
     if (_needsMapReloadOnBoundsChange) {
       [self setSnapshotSizeWithReloadIfNeeded:self.bounds.size];
-      // FIXME: Adding a check for FetchData here seems to cause intermittent map load failures, but shouldn't.
-      // if (ASInterfaceStateIncludesFetchData(self.interfaceState)) {
+      // FIXME: Adding a check for Preload here seems to cause intermittent map load failures, but shouldn't.
+      // if (ASInterfaceStateIncludesPreload(self.interfaceState)) {
     }
   }
 }

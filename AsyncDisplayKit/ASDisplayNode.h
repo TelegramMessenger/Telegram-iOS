@@ -15,8 +15,10 @@
 #import <AsyncDisplayKit/ASDealloc2MainObject.h>
 #import <AsyncDisplayKit/ASDimension.h>
 #import <AsyncDisplayKit/ASAsciiArtBoxCreator.h>
-#import <AsyncDisplayKit/ASLayoutable.h>
+#import <AsyncDisplayKit/ASLayoutElement.h>
 #import <AsyncDisplayKit/ASContextTransitioning.h>
+
+NS_ASSUME_NONNULL_BEGIN
 
 #define ASDisplayNodeLoggingEnabled 0
 
@@ -40,22 +42,22 @@ typedef CALayer * _Nonnull(^ASDisplayNodeLayerBlock)();
 /**
  * ASDisplayNode loaded callback block. This block is called BEFORE the -didLoad method and is always called on the main thread.
  */
-typedef void (^ASDisplayNodeDidLoadBlock)(ASDisplayNode * _Nonnull node);
+typedef void (^ASDisplayNodeDidLoadBlock)(__kindof ASDisplayNode * node);
 
 /**
  * ASDisplayNode will / did render node content in context.
  */
-typedef void (^ASDisplayNodeContextModifier)(_Nonnull CGContextRef context);
+typedef void (^ASDisplayNodeContextModifier)(CGContextRef context);
 
 /**
  * ASDisplayNode layout spec block. This block can be used instead of implementing layoutSpecThatFits: in subclass
  */
-typedef ASLayoutSpec * _Nonnull(^ASLayoutSpecBlock)(ASDisplayNode * _Nonnull node, ASSizeRange constrainedSize);
+typedef ASLayoutSpec * _Nonnull(^ASLayoutSpecBlock)(__kindof ASDisplayNode * _Nonnull node, ASSizeRange constrainedSize);
 
 /**
  Interface state is available on ASDisplayNode and ASViewController, and
  allows checking whether a node is in an interface situation where it is prudent to trigger certain
- actions: measurement, data fetching, display, and visibility (the latter for animations or other onscreen-only effects).
+ actions: measurement, data loading, display, and visibility (the latter for animations or other onscreen-only effects).
  */
 
 typedef NS_OPTIONS(NSUInteger, ASInterfaceState)
@@ -65,7 +67,7 @@ typedef NS_OPTIONS(NSUInteger, ASInterfaceState)
   /** The element may be added to a view soon that could become visible.  Measure the layout, including size calculation. */
   ASInterfaceStateMeasureLayout = 1 << 0,
   /** The element is likely enough to come onscreen that disk and/or network data required for display should be fetched. */
-  ASInterfaceStateFetchData     = 1 << 1,
+  ASInterfaceStatePreload       = 1 << 1,
   /** The element is very likely to become visible, and concurrent rendering should be executed for any -setNeedsDisplay. */
   ASInterfaceStateDisplay       = 1 << 2,
   /** The element is physically onscreen by at least 1 pixel.
@@ -78,7 +80,7 @@ typedef NS_OPTIONS(NSUInteger, ASInterfaceState)
    * Currently we only set `interfaceState` to other values for
    * nodes contained in table views or collection views.
    */
-  ASInterfaceStateInHierarchy   = ASInterfaceStateMeasureLayout | ASInterfaceStateFetchData | ASInterfaceStateDisplay | ASInterfaceStateVisible,
+  ASInterfaceStateInHierarchy   = ASInterfaceStateMeasureLayout | ASInterfaceStatePreload | ASInterfaceStateDisplay | ASInterfaceStateVisible,
 };
 
 /**
@@ -102,9 +104,7 @@ extern NSInteger const ASDefaultDrawingPriority;
  *
  */
 
-NS_ASSUME_NONNULL_BEGIN
-@interface ASDisplayNode : ASDealloc2MainObject <ASLayoutable>
-
+@interface ASDisplayNode : ASDealloc2MainObject <ASLayoutElement>
 
 /** @name Initializing a node object */
 
@@ -160,6 +160,18 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (instancetype)initWithLayerBlock:(ASDisplayNodeLayerBlock)layerBlock didLoadBlock:(nullable ASDisplayNodeDidLoadBlock)didLoadBlock;
 
+/**
+ * @abstract Add a block of work to be performed on the main thread when the node's view or layer is loaded. Thread safe.
+ * @warning Be careful not to retain self in `body`. Change the block parameter list to `^(MYCustomNode *self) {}` if you
+ *   want to shadow self (e.g. if calling this during `init`).
+ *
+ * @param body The work to be performed when the node is loaded.
+ *
+ * @precondition The node is not already loaded.
+ * @note This will only be called the next time the node is loaded. If the node is later added to a subtree of a node
+ *    that has `shouldRasterizeDescendants=YES`, and is unloaded, this block will not be called if it is loaded again.
+ */
+- (void)onDidLoad:(ASDisplayNodeDidLoadBlock)body;
 
 /** @name Properties */
 
@@ -215,38 +227,40 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, readonly, strong) CALayer * _Nonnull layer;
 
 /**
+ * Returns YES if the node is – at least partially – visible in a window.
+ *
+ * @see didEnterVisibleState and didExitVisibleState
+ */
+@property (readonly, getter=isVisible) BOOL visible;
+
+/**
+ * Returns YES if the node is in the preloading interface state.
+ *
+ * @see didEnterPreloadState and didExitPreloadState
+ */
+@property (readonly, getter=isInPreloadState) BOOL inPreloadState;
+
+/**
+ * Returns YES if the node is in the displaying interface state.
+ *
+ * @see didEnterDisplayState and didExitDisplayState
+ */
+@property (readonly, getter=isInDisplayState) BOOL inDisplayState;
+
+/**
  * @abstract Returns the Interface State of the node.
  *
  * @return The current ASInterfaceState of the node, indicating whether it is visible and other situational properties.
  *
  * @see ASInterfaceState
  */
-@property (nonatomic, readonly) ASInterfaceState interfaceState;
+@property (readonly) ASInterfaceState interfaceState;
 
 
 /** @name Managing dimensions */
 
 /**
- * @abstract Asks the node to measure and return the size that best fits its subnodes.
- *
- * @param constrainedSize The maximum size the receiver should fit in.
- *
- * @return A new size that fits the receiver's subviews.
- *
- * @discussion Though this method does not set the bounds of the view, it does have side effects--caching both the 
- * constraint and the result.
- *
- * @warning Subclasses must not override this; it calls -measureWithSizeRange: with zero min size. 
- * -measureWithSizeRange: caches results from -calculateLayoutThatFits:.  Calling this method may 
- * be expensive if result is not cached.
- *
- * @see measureWithSizeRange:
- * @see [ASDisplayNode(Subclassing) calculateLayoutThatFits:]
- */
-- (CGSize)measure:(CGSize)constrainedSize;
-
-/**
- * @abstract Asks the node to measure a layout based on given size range.
+ * @abstract Asks the node to return a layout based on given size range.
  *
  * @param constrainedSize The minimum and maximum sizes the receiver should fit in.
  *
@@ -260,8 +274,7 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * @see [ASDisplayNode(Subclassing) calculateLayoutThatFits:]
  */
-- (ASLayout *)measureWithSizeRange:(ASSizeRange)constrainedSize;
-
+- (ASLayout *)layoutThatFits:(ASSizeRange)constrainedSize;
 
 /**
  * @abstract Provides a way to declare a block to provide an ASLayoutSpec without having to subclass ASDisplayNode and
@@ -295,16 +308,6 @@ NS_ASSUME_NONNULL_BEGIN
  * @return The minimum and maximum constrained sizes used by calculateLayoutThatFits:.
  */
 @property (nonatomic, readonly, assign) ASSizeRange constrainedSizeForCalculatedLayout;
-
-/**
- * @abstract Provides a default intrinsic content size for calculateSizeThatFits:. This is useful when laying out
- * a node that either has no intrinsic content size or should be laid out at a different size than its intrinsic content
- * size. For example, this property could be set on an ASImageNode to display at a size different from the underlying
- * image size.
- *
- * @return The preferred frame size of this node
- */
-@property (nonatomic, assign, readwrite) CGSize preferredFrameSize;
 
 /** @name Managing the nodes hierarchy */
 
@@ -500,7 +503,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)recursivelyFetchData;
 
 /**
- * @abstract Triggers a recursive call to fetchData when the node has an interfaceState of ASInterfaceStateFetchData
+ * @abstract Triggers a recursive call to fetchData when the node has an interfaceState of ASInterfaceStatePreload
  */
 - (void)setNeedsDataFetch;
 
@@ -551,7 +554,7 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * @return YES if point is inside the receiver's bounds; otherwise, NO.
  */
-- (BOOL)pointInside:(CGPoint)point withEvent:(nullable UIEvent *)event;
+- (BOOL)pointInside:(CGPoint)point withEvent:(nullable UIEvent *)event AS_WARN_UNUSED_RESULT;
 
 
 /** @name Converting Between View Coordinate Systems */
@@ -565,7 +568,7 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * @return The point converted to the coordinate system of node.
  */
-- (CGPoint)convertPoint:(CGPoint)point toNode:(nullable ASDisplayNode *)node;
+- (CGPoint)convertPoint:(CGPoint)point toNode:(nullable ASDisplayNode *)node AS_WARN_UNUSED_RESULT;
 
 
 /** 
@@ -576,7 +579,7 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * @return The point converted to the local coordinate system (bounds) of the receiver.
  */
-- (CGPoint)convertPoint:(CGPoint)point fromNode:(nullable ASDisplayNode *)node;
+- (CGPoint)convertPoint:(CGPoint)point fromNode:(nullable ASDisplayNode *)node AS_WARN_UNUSED_RESULT;
 
 
 /** 
@@ -587,7 +590,7 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * @return The converted rectangle.
  */
-- (CGRect)convertRect:(CGRect)rect toNode:(nullable ASDisplayNode *)node;
+- (CGRect)convertRect:(CGRect)rect toNode:(nullable ASDisplayNode *)node AS_WARN_UNUSED_RESULT;
 
 /** 
  * @abstract Converts a rectangle from the coordinate system of another node to that of the receiver.
@@ -597,22 +600,21 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * @return The converted rectangle.
  */
-- (CGRect)convertRect:(CGRect)rect fromNode:(nullable ASDisplayNode *)node;
+- (CGRect)convertRect:(CGRect)rect fromNode:(nullable ASDisplayNode *)node AS_WARN_UNUSED_RESULT;
 
 @end
 
 /**
  * Convenience methods for debugging.
  */
-
-@interface ASDisplayNode (Debugging) <ASLayoutableAsciiArtProtocol>
+@interface ASDisplayNode (Debugging) <ASLayoutElementAsciiArtProtocol>
 
 /**
  * @abstract Return a description of the node hierarchy.
  *
  * @discussion For debugging: (lldb) po [node displayNodeRecursiveDescription]
  */
-- (NSString *)displayNodeRecursiveDescription;
+- (NSString *)displayNodeRecursiveDescription AS_WARN_UNUSED_RESULT;
 
 @end
 
@@ -651,6 +653,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign)           BOOL clipsToBounds;                    // default==NO
 @property (nonatomic, getter=isOpaque)  BOOL opaque;                           // default==YES
 
+@property (nonatomic, assign)           BOOL allowsGroupOpacity;
 @property (nonatomic, assign)           BOOL allowsEdgeAntialiasing;
 @property (nonatomic, assign)           unsigned int edgeAntialiasingMask;     // default==all values from CAEdgeAntialiasingMask
 
@@ -782,14 +785,18 @@ NS_ASSUME_NONNULL_BEGIN
  * @param animated Animation is optional, but will still proceed through your `animateLayoutTransition` implementation with `isAnimated == NO`.
  * @param shouldMeasureAsync Measure the layout asynchronously.
  * @param measurementCompletion Optional completion block called only if a new layout is calculated.
+ * It is called on main, right after the measurement and before -animateLayoutTransition:.
  *
- * @discussion It is called on main, right after the measurement and before -animateLayoutTransition:. If the passed constrainedSize is the the same as the node's current constrained size, this method is noop.
+ * @discussion If the passed constrainedSize is the the same as the node's current constrained size, this method is noop. If passed YES to shouldMeasureAsync it's guaranteed that measurement is happening on a background thread, otherwise measaurement will happen on the thread that the method was called on. The measurementCompletion callback is always called on the main thread right after the measurement and before -animateLayoutTransition:.
  *
  * @see animateLayoutTransition:
+ *
  */
 - (void)transitionLayoutWithSizeRange:(ASSizeRange)constrainedSize
                              animated:(BOOL)animated
+                   shouldMeasureAsync:(BOOL)shouldMeasureAsync
                 measurementCompletion:(nullable void(^)())completion;
+
 
 /**
  * @abstract Invalidates the current layout and begins a relayout of the node with the current `constrainedSize`. Must be called on main thread.
@@ -797,18 +804,35 @@ NS_ASSUME_NONNULL_BEGIN
  * @discussion It is called right after the measurement and before -animateLayoutTransition:.
  *
  * @param animated Animation is optional, but will still proceed through your `animateLayoutTransition` implementation with `isAnimated == NO`.
+ * @param shouldMeasureAsync Measure the layout asynchronously.
  * @param measurementCompletion Optional completion block called only if a new layout is calculated.
  *
  * @see animateLayoutTransition:
  *
  */
-- (void)transitionLayoutAnimated:(BOOL)animated measurementCompletion:(nullable void(^)())completion;
+- (void)transitionLayoutWithAnimation:(BOOL)animated
+                   shouldMeasureAsync:(BOOL)shouldMeasureAsync
+                measurementCompletion:(nullable void(^)())completion;
 
 /**
  * @abstract Cancels all performing layout transitions. Can be called on any thread.
  */
 - (void)cancelLayoutTransition;
 
+
+#pragma mark - Deprecated
+
+/**
+ * @abstract Provides a default intrinsic content size for calculateSizeThatFits:. This is useful when laying out
+ * a node that either has no intrinsic content size or should be laid out at a different size than its intrinsic content
+ * size. For example, this property could be set on an ASImageNode to display at a size different from the underlying
+ * image size.
+ *
+ * @return Try to create a CGSize for preferredFrameSize of this node from the width and height property of this node. It will return CGSizeZero if widht and height dimensions are not of type ASDimensionUnitPoints.
+ *
+ * @deprecated Deprecated in version 2.0: Just calls through to set the height and width property of the node. Convert to use sizing properties instead: height, minHeight, maxHeight, width, minWidth, maxWidth.
+ */
+@property (nonatomic, assign, readwrite) CGSize preferredFrameSize ASDISPLAYNODE_DEPRECATED;
 
 @end
 
@@ -832,7 +856,7 @@ NS_ASSUME_NONNULL_BEGIN
  * ASDisplayNode participates in ASAsyncTransactions, so you can determine when your subnodes are done rendering.
  * See: -(void)asyncdisplaykit_asyncTransactionContainerStateDidChange in ASDisplayNodeSubclass.h
  */
-@interface ASDisplayNode (ASDisplayNodeAsyncTransactionContainer) <ASDisplayNodeAsyncTransactionContainer>
+@interface ASDisplayNode (ASAsyncTransactionContainer) <ASAsyncTransactionContainer>
 @end
 
 /** UIVIew(AsyncDisplayKit) defines convenience method for adding sub-ASDisplayNode to an UIView. */
@@ -855,73 +879,6 @@ NS_ASSUME_NONNULL_BEGIN
  * @param node The node to be added.
  */
 - (void)addSubnode:(nonnull ASDisplayNode *)node;
-@end
-
-
-@interface ASDisplayNode (Deprecated)
-
-/**
- * @abstract Transitions the current layout with a new constrained size. Must be called on main thread.
- *
- * @param animated Animation is optional, but will still proceed through your `animateLayoutTransition` implementation with `isAnimated == NO`.
- * @param shouldMeasureAsync Measure the layout asynchronously.
- * @param measurementCompletion Optional completion block called only if a new layout is calculated.
- * It is called on main, right after the measurement and before -animateLayoutTransition:.
- *
- * @discussion If the passed constrainedSize is the the same as the node's current constrained size, this method is noop.
- *
- * @see animateLayoutTransition:
- *
- * @deprecated Deprecated in version 2.0: Use transitionLayoutWithSizeRange:animated:measurementCompletion:.
- * shouldMeasureAsync is enabled by default now.
- *
- */
-- (void)transitionLayoutWithSizeRange:(ASSizeRange)constrainedSize
-                             animated:(BOOL)animated
-                   shouldMeasureAsync:(BOOL)shouldMeasureAsync
-                measurementCompletion:(nullable void(^)())completion ASDISPLAYNODE_DEPRECATED;
-
-
-/**
- * @abstract Invalidates the current layout and begins a relayout of the node with the current `constrainedSize`. Must be called on main thread.
- *
- * @discussion It is called right after the measurement and before -animateLayoutTransition:.
- *
- * @param animated Animation is optional, but will still proceed through your `animateLayoutTransition` implementation with `isAnimated == NO`.
- * @param shouldMeasureAsync Measure the layout asynchronously.
- * @param measurementCompletion Optional completion block called only if a new layout is calculated.
- *
- * @see animateLayoutTransition:
- *
- * @deprecated Deprecated in version 2.0: Use transitionLayoutAnimated:measurementCompletion:
- * shouldMeasureAsync is enabled by default now.
- *
- */
-- (void)transitionLayoutWithAnimation:(BOOL)animated
-                   shouldMeasureAsync:(BOOL)shouldMeasureAsync
-                measurementCompletion:(nullable void(^)())completion ASDISPLAYNODE_DEPRECATED;
-
-/**
- * @abstract Cancels all performing layout transitions. Can be called on any thread.
- *
- * @deprecated Deprecated in version 2.0: Use cancelLayoutTransition
- */
-- (void)cancelLayoutTransitionsInProgress ASDISPLAYNODE_DEPRECATED;
-
-/**
- * @abstract A boolean that shows whether the node automatically inserts and removes nodes based on the presence or
- * absence of the node and its subnodes is completely determined in its layoutSpecThatFits: method.
- *
- * @discussion If flag is YES the node no longer require addSubnode: or removeFromSupernode method calls. The presence
- * or absence of subnodes is completely determined in its layoutSpecThatFits: method.
- *
- * @deprecated Deprecated in version 2.0: Use automaticallyManagesSubnodes
- */
-@property (nonatomic, assign) BOOL usesImplicitHierarchyManagement ASDISPLAYNODE_DEPRECATED;
-
-- (void)reclaimMemory ASDISPLAYNODE_DEPRECATED;
-- (void)recursivelyReclaimMemory ASDISPLAYNODE_DEPRECATED;
-@property (nonatomic, assign) BOOL placeholderFadesOut ASDISPLAYNODE_DEPRECATED;
 
 @end
 

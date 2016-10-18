@@ -12,7 +12,6 @@
 
 #import <AsyncDisplayKit/ASDimension.h>
 #import <AsyncDisplayKit/ASStackLayoutDefines.h>
-#import <AsyncDisplayKit/ASRelativeSize.h>
 
 @protocol ASEnvironment;
 @class UITraitCollection;
@@ -38,18 +37,18 @@ typedef struct ASEnvironmentStateExtensions {
 typedef struct ASEnvironmentLayoutOptionsState {
   CGFloat spacingBefore;// = 0;
   CGFloat spacingAfter;// = 0;
-  BOOL flexGrow;// = NO;
-  BOOL flexShrink;// = NO;
-  ASRelativeDimension flexBasis;// = ASRelativeDimensionUnconstrained;
+  CGFloat flexGrow;// = 0;
+  CGFloat flexShrink;// = 0;
+  ASDimension flexBasis;// = ASDimensionAuto;
   ASStackLayoutAlignSelf alignSelf;// = ASStackLayoutAlignSelfAuto;
   CGFloat ascender;// = 0;
   CGFloat descender;// = 0;
   
-  ASRelativeSizeRange sizeRange;// = ASRelativeSizeRangeMake(ASRelativeSizeMakeWithCGSize(CGSizeZero), ASRelativeSizeMakeWithCGSize(CGSizeZero));;
   CGPoint layoutPosition;// = CGPointZero;
   
   struct ASEnvironmentStateExtensions _extensions;
 } ASEnvironmentLayoutOptionsState;
+/// Should be used to create an ASEnvironmentLayoutOptionsState
 extern ASEnvironmentLayoutOptionsState ASEnvironmentLayoutOptionsStateMakeDefault();
 
 
@@ -78,7 +77,7 @@ extern ASEnvironmentTraitCollection ASEnvironmentTraitCollectionMakeDefault();
 
 extern ASEnvironmentTraitCollection ASEnvironmentTraitCollectionFromUITraitCollection(UITraitCollection *traitCollection);
 extern BOOL ASEnvironmentTraitCollectionIsEqualToASEnvironmentTraitCollection(ASEnvironmentTraitCollection lhs, ASEnvironmentTraitCollection rhs);
-
+extern NSString *NSStringFromASEnvironmentTraitCollection(ASEnvironmentTraitCollection traits);
 #pragma mark - ASEnvironmentState
 
 typedef struct ASEnvironmentState {

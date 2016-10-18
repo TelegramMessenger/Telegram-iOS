@@ -12,6 +12,7 @@
 #import "ASCollectionView.h"
 #import "ASAssert.h"
 #import "ASEqualityHelpers.h"
+#import "ASCollectionView+Undeprecated.h"
 
 #define kDefaultItemSize CGSizeMake(50, 50)
 
@@ -22,9 +23,9 @@
 static inline ASSizeRange NodeConstrainedSizeForScrollDirection(ASCollectionView *collectionView) {
   CGSize maxSize = collectionView.bounds.size;
   if (ASScrollDirectionContainsHorizontalDirection(collectionView.scrollableDirections)) {
-    maxSize.width = FLT_MAX;
+    maxSize.width = CGFLOAT_MAX;
   } else {
-    maxSize.height = FLT_MAX;
+    maxSize.height = CGFLOAT_MAX;
   }
   return ASSizeRangeMake(CGSizeZero, maxSize);
 }
@@ -62,7 +63,14 @@ static inline ASSizeRange NodeConstrainedSizeForScrollDirection(ASCollectionView
 - (ASSizeRange)collectionView:(ASCollectionView *)collectionView constrainedSizeForNodeAtIndexPath:(NSIndexPath *)indexPath
 {
   if (_delegateFlags.implementsConstrainedSizeForNodeAtIndexPath) {
+    // TODO: Handle collection node
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     return [collectionView.asyncDelegate collectionView:collectionView constrainedSizeForNodeAtIndexPath:indexPath];
+#pragma clang diagnostic pop
+  } else {
+    // With 2.0 `collectionView:constrainedSizeForNodeAtIndexPath:` was moved to the delegate. Assert if not implemented on the delegate but on the data source
+    ASDisplayNodeAssert([collectionView.asyncDataSource respondsToSelector:@selector(collectionView:constrainedSizeForNodeAtIndexPath:)] == NO, @"collectionView:constrainedSizeForNodeAtIndexPath: was moved from the ASCollectionDataSource to the ASCollectionDelegate.");
   }
   
   return NodeConstrainedSizeForScrollDirection(collectionView);
@@ -142,7 +150,13 @@ static inline ASSizeRange NodeConstrainedSizeForScrollDirection(ASCollectionView
 - (ASSizeRange)collectionView:(ASCollectionView *)collectionView constrainedSizeForNodeAtIndexPath:(NSIndexPath *)indexPath
 {
   if (_delegateFlags.implementsConstrainedSizeForNodeAtIndexPath) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     return [collectionView.asyncDelegate collectionView:collectionView constrainedSizeForNodeAtIndexPath:indexPath];
+#pragma clang diagnostic pop
+  } else {
+    // With 2.0 `collectionView:constrainedSizeForNodeAtIndexPath:` was moved to the delegate. Assert if not implemented on the delegate but on the data source
+    ASDisplayNodeAssert([collectionView.asyncDataSource respondsToSelector:@selector(collectionView:constrainedSizeForNodeAtIndexPath:)] == NO, @"collectionView:constrainedSizeForNodeAtIndexPath: was moved from the ASCollectionDataSource to the ASCollectionDelegate.");
   }
   
   CGSize itemSize = _layout.itemSize;
@@ -168,6 +182,11 @@ static inline ASSizeRange NodeConstrainedSizeForScrollDirection(ASCollectionView
 - (NSUInteger)collectionView:(ASCollectionView *)collectionView supplementaryNodesOfKind:(NSString *)kind inSection:(NSUInteger)section
 {
   return [self layoutHasSupplementaryViewOfKind:kind inSection:section collectionView:collectionView] ? 1 : 0;
+}
+
+- (ASScrollDirection)scrollableDirections
+{
+  return (self.layout.scrollDirection == UICollectionViewScrollDirectionHorizontal) ? ASScrollDirectionHorizontalDirections : ASScrollDirectionVerticalDirections;
 }
 
 #pragma mark - Private helpers

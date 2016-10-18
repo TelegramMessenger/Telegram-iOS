@@ -11,11 +11,17 @@
 #import "ASCellNode+Internal.h"
 
 #import "ASEqualityHelpers.h"
+#import "ASInternalHelpers.h"
 #import "ASDisplayNodeInternal.h"
+#import "ASDisplayNode+FrameworkPrivate.h"
+#import "ASCollectionView+Undeprecated.h"
+#import "ASTableView+Undeprecated.h"
 #import <AsyncDisplayKit/_ASDisplayView.h>
 #import <AsyncDisplayKit/ASDisplayNode+Subclasses.h>
 #import <AsyncDisplayKit/ASDisplayNode+Beta.h>
 #import <AsyncDisplayKit/ASTextNode.h>
+#import <AsyncDisplayKit/ASCollectionNode.h>
+#import <AsyncDisplayKit/ASTableNode.h>
 
 #import <AsyncDisplayKit/ASViewController.h>
 #import <AsyncDisplayKit/ASInsetLayoutSpec.h>
@@ -36,6 +42,7 @@
 
 @implementation ASCellNode
 @synthesize interactionDelegate = _interactionDelegate;
+static NSMutableSet *__cellClassesForVisibilityNotifications = nil; // See +initialize.
 
 - (instancetype)init
 {
@@ -115,35 +122,13 @@
   [self didRelayoutFromOldSize:oldSize toNewSize:self.calculatedSize];
 }
 
-- (void)transitionLayoutAnimated:(BOOL)animated
-           measurementCompletion:(void (^)())completion
-{
-  CGSize oldSize = self.calculatedSize;
-  [super transitionLayoutAnimated:animated
-            measurementCompletion:^{
-              [self didRelayoutFromOldSize:oldSize toNewSize:self.calculatedSize];
-              if (completion) {
-                completion();
-              }
-            }
-   ];
-}
-
-//Deprecated
 - (void)transitionLayoutWithAnimation:(BOOL)animated
                    shouldMeasureAsync:(BOOL)shouldMeasureAsync
                 measurementCompletion:(void(^)())completion
 {
-  [self transitionLayoutAnimated:animated measurementCompletion:completion];
-}
-
-- (void)transitionLayoutWithSizeRange:(ASSizeRange)constrainedSize
-                             animated:(BOOL)animated
-                measurementCompletion:(void (^)())completion
-{
   CGSize oldSize = self.calculatedSize;
-  [super transitionLayoutWithSizeRange:constrainedSize
-                              animated:animated
+  [super transitionLayoutWithAnimation:animated
+                    shouldMeasureAsync:shouldMeasureAsync
                  measurementCompletion:^{
                    [self didRelayoutFromOldSize:oldSize toNewSize:self.calculatedSize];
                    if (completion) {
@@ -153,13 +138,22 @@
    ];
 }
 
-//Deprecated
 - (void)transitionLayoutWithSizeRange:(ASSizeRange)constrainedSize
                              animated:(BOOL)animated
                    shouldMeasureAsync:(BOOL)shouldMeasureAsync
                 measurementCompletion:(void(^)())completion
 {
-  [self transitionLayoutWithSizeRange:constrainedSize animated:animated measurementCompletion:completion];
+  CGSize oldSize = self.calculatedSize;
+  [super transitionLayoutWithSizeRange:constrainedSize
+                              animated:animated
+                    shouldMeasureAsync:shouldMeasureAsync
+                 measurementCompletion:^{
+                   [self didRelayoutFromOldSize:oldSize toNewSize:self.calculatedSize];
+                   if (completion) {
+                     completion();
+                   }
+                 }
+   ];
 }
 
 - (void)didRelayoutFromOldSize:(CGSize)oldSize toNewSize:(CGSize)newSize
@@ -243,6 +237,17 @@
 
 #pragma clang diagnostic pop
 
+- (void)setLayoutAttributes:(UICollectionViewLayoutAttributes *)layoutAttributes
+{
+  ASDisplayNodeAssertMainThread();
+  if (ASObjectIsEqual(layoutAttributes, _layoutAttributes) == NO) {
+    _layoutAttributes = layoutAttributes;
+    if (layoutAttributes != nil) {
+      [self applyLayoutAttributes:layoutAttributes];
+    }
+  }
+}
+
 - (void)applyLayoutAttributes:(UICollectionViewLayoutAttributes *)layoutAttributes
 {
   // To be overriden by subclasses
@@ -253,16 +258,41 @@
   // To be overriden by subclasses
 }
 
-- (void)visibleStateDidChange:(BOOL)isVisible
+- (void)didEnterVisibleState
 {
-  [super visibleStateDidChange:isVisible];
-  
-  if (isVisible && self.neverShowPlaceholders) {
+  [super didEnterVisibleState];
+  if (self.neverShowPlaceholders) {
     [self recursivelyEnsureDisplaySynchronously:YES];
+  }
+  [self handleVisibilityChange:YES];
+}
+
+- (void)didExitVisibleState
+{
+  [super didExitVisibleState];
+  [self handleVisibilityChange:NO];
+}
+
++ (void)initialize
+{
+  [super initialize];
+  if (ASSubclassOverridesSelector([ASCellNode class], self, @selector(cellNodeVisibilityEvent:inScrollView:withCellFrame:))) {
+    if (__cellClassesForVisibilityNotifications == nil) {
+      __cellClassesForVisibilityNotifications = [NSMutableSet set];
+    }
+    [__cellClassesForVisibilityNotifications addObject:self];
+  }
+}
+
+- (void)handleVisibilityChange:(BOOL)isVisible
+{
+  if ([__cellClassesForVisibilityNotifications containsObject:[self class]] == NO) {
+    return; // The work below is expensive, and only valuable for subclasses watching visibility events.
   }
   
   // NOTE: This assertion is failing in some apps and will be enabled soon.
   // ASDisplayNodeAssert(self.isNodeLoaded, @"Node should be loaded in order for it to become visible or invisible.  If not in this situation, we shouldn't trigger creating the view.");
+  
   UIView *view = self.view;
   CGRect cellFrame = CGRectZero;
   
@@ -274,12 +304,50 @@
   }
   
   // If we did not convert, we'll pass along CGRectZero and a nil scrollView.  The EventInvisible call is thus equivalent to
-  // visibleStateDidChange:NO, but is more convenient for the developer than implementing multiple methods.
-  [self cellNodeVisibilityEvent:isVisible ? ASCellNodeVisibilityEventVisible : ASCellNodeVisibilityEventInvisible
+  // didExitVisibileState, but is more convenient for the developer than implementing multiple methods.
+  [self cellNodeVisibilityEvent:isVisible ? ASCellNodeVisibilityEventVisible
+                                          : ASCellNodeVisibilityEventInvisible
                    inScrollView:scrollView
                   withCellFrame:cellFrame];
 }
 
+- (NSMutableArray<NSDictionary *> *)propertiesForDebugDescription
+{
+  NSMutableArray *result = [super propertiesForDebugDescription];
+  
+  UIScrollView *scrollView = self.scrollView;
+  
+  ASDisplayNode *owningNode = scrollView.asyncdisplaykit_node;
+  if ([owningNode isKindOfClass:[ASCollectionNode class]]) {
+    NSIndexPath *ip = [(ASCollectionNode *)owningNode indexPathForNode:self];
+    if (ip != nil) {
+      [result addObject:@{ @"indexPath" : ip }];
+    }
+    [result addObject:@{ @"collectionNode" : ASObjectDescriptionMakeTiny(owningNode) }];
+  } else if ([owningNode isKindOfClass:[ASTableNode class]]) {
+    NSIndexPath *ip = [(ASTableNode *)owningNode indexPathForNode:self];
+    if (ip != nil) {
+      [result addObject:@{ @"indexPath" : ip }];
+    }
+    [result addObject:@{ @"tableNode" : ASObjectDescriptionMakeTiny(owningNode) }];
+  
+  } else if ([scrollView isKindOfClass:[ASCollectionView class]]) {
+    NSIndexPath *ip = [(ASCollectionView *)scrollView indexPathForNode:self];
+    if (ip != nil) {
+      [result addObject:@{ @"indexPath" : ip }];
+    }
+    [result addObject:@{ @"collectionView" : ASObjectDescriptionMakeTiny(scrollView) }];
+    
+  } else if ([scrollView isKindOfClass:[ASTableView class]]) {
+    NSIndexPath *ip = [(ASTableView *)scrollView indexPathForNode:self];
+    if (ip != nil) {
+      [result addObject:@{ @"indexPath" : ip }];
+    }
+    [result addObject:@{ @"tableView" : ASObjectDescriptionMakeTiny(scrollView) }];
+  }
+
+  return result;
+}
 @end
 
 
@@ -301,7 +369,7 @@ static const CGFloat kASTextCellNodeDefaultVerticalPadding = 11.0f;
 
 - (instancetype)init
 {
-  return [self initWithAttributes:[self defaultTextAttributes] insets:[self defaultTextInsets]];
+  return [self initWithAttributes:[ASTextCellNode defaultTextAttributes] insets:[ASTextCellNode defaultTextInsets]];
 }
 
 - (instancetype)initWithAttributes:(NSDictionary *)textAttributes insets:(UIEdgeInsets)textInsets
@@ -321,12 +389,12 @@ static const CGFloat kASTextCellNodeDefaultVerticalPadding = 11.0f;
   return [ASInsetLayoutSpec insetLayoutSpecWithInsets:self.textInsets child:self.textNode];
 }
 
-- (NSDictionary *)defaultTextAttributes
++ (NSDictionary *)defaultTextAttributes
 {
   return @{NSFontAttributeName : [UIFont systemFontOfSize:kASTextCellNodeDefaultFontSize]};
 }
 
-- (UIEdgeInsets)defaultTextInsets
++ (UIEdgeInsets)defaultTextInsets
 {
     return UIEdgeInsetsMake(kASTextCellNodeDefaultVerticalPadding, kASTextCellNodeDefaultHorizontalPadding, kASTextCellNodeDefaultVerticalPadding, kASTextCellNodeDefaultHorizontalPadding);
 }
@@ -337,14 +405,14 @@ static const CGFloat kASTextCellNodeDefaultVerticalPadding = 11.0f;
   
   _textAttributes = [textAttributes copy];
   
-  [self updateAttributedString];
+  [self updateAttributedText];
 }
 
 - (void)setTextInsets:(UIEdgeInsets)textInsets
 {
   _textInsets = textInsets;
 
-  [self updateAttributedString];
+  [self setNeedsLayout];
 }
 
 - (void)setText:(NSString *)text
@@ -353,17 +421,17 @@ static const CGFloat kASTextCellNodeDefaultVerticalPadding = 11.0f;
 
   _text = [text copy];
   
-  [self updateAttributedString];
+  [self updateAttributedText];
 }
 
-- (void)updateAttributedString
+- (void)updateAttributedText
 {
   if (_text == nil) {
-    _textNode.attributedString = nil;
+    _textNode.attributedText = nil;
     return;
   }
   
-  _textNode.attributedString = [[NSAttributedString alloc] initWithString:self.text attributes:self.textAttributes];
+  _textNode.attributedText = [[NSAttributedString alloc] initWithString:self.text attributes:self.textAttributes];
   [self setNeedsLayout];
 }
 

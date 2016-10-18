@@ -14,6 +14,8 @@
 #import "ASImageNode.h"
 #import "ASRangeController.h"
 
+NS_ASSUME_NONNULL_BEGIN
+
 @interface ASImageNode (Debugging)
 
 /**
@@ -62,8 +64,9 @@
               scrollDirection:(ASScrollDirection)direction
                     rangeMode:(ASLayoutRangeMode)mode
       displayTuningParameters:(ASRangeTuningParameters)displayTuningParameters
-    fetchDataTuningParameters:(ASRangeTuningParameters)fetchDataTuningParameters
+      preloadTuningParameters:(ASRangeTuningParameters)preloadTuningParameters
                interfaceState:(ASInterfaceState)interfaceState;
 
 @end
 
+NS_ASSUME_NONNULL_END

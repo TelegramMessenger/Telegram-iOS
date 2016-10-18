@@ -14,6 +14,7 @@
 #import "ASDelegateProxy.h"
 #import "ASDisplayNode+Subclasses.h"
 #import "ASPagerFlowLayout.h"
+#import "ASCollectionView+Undeprecated.h"
 
 @interface ASPagerNode () <ASCollectionDataSource, ASCollectionDelegate, ASCollectionViewDelegateFlowLayout, ASDelegateProxyInterceptor>
 {
@@ -63,8 +64,8 @@
   [super didLoad];
   
   ASCollectionView *cv = self.view;
-  cv.asyncDataSource = (id<ASCollectionViewDataSource>)_proxyDataSource ?: self;
-  cv.asyncDelegate = (id<ASCollectionViewDelegate>)_proxyDelegate ?: self;
+  cv.asyncDataSource = (id<ASCollectionDataSource>)_proxyDataSource ?: self;
+  cv.asyncDelegate = (id<ASCollectionDelegate>)_proxyDelegate ?: self;
 #if TARGET_OS_IOS
   cv.pagingEnabled = YES;
   cv.scrollsToTop = NO;
@@ -81,12 +82,12 @@
   ASRangeTuningParameters minimumRenderParams = { .leadingBufferScreenfuls = 0.0, .trailingBufferScreenfuls = 0.0 };
   ASRangeTuningParameters minimumPreloadParams = { .leadingBufferScreenfuls = 1.0, .trailingBufferScreenfuls = 1.0 };
   [self setTuningParameters:minimumRenderParams forRangeMode:ASLayoutRangeModeMinimum rangeType:ASLayoutRangeTypeDisplay];
-  [self setTuningParameters:minimumPreloadParams forRangeMode:ASLayoutRangeModeMinimum rangeType:ASLayoutRangeTypeFetchData];
+  [self setTuningParameters:minimumPreloadParams forRangeMode:ASLayoutRangeModeMinimum rangeType:ASLayoutRangeTypePreload];
   
   ASRangeTuningParameters fullRenderParams = { .leadingBufferScreenfuls = 1.0, .trailingBufferScreenfuls = 1.0 };
   ASRangeTuningParameters fullPreloadParams = { .leadingBufferScreenfuls = 2.0, .trailingBufferScreenfuls = 2.0 };
   [self setTuningParameters:fullRenderParams forRangeMode:ASLayoutRangeModeFull rangeType:ASLayoutRangeTypeDisplay];
-  [self setTuningParameters:fullPreloadParams forRangeMode:ASLayoutRangeModeFull rangeType:ASLayoutRangeTypeFetchData];
+  [self setTuningParameters:fullPreloadParams forRangeMode:ASLayoutRangeModeFull rangeType:ASLayoutRangeTypePreload];
 }
 
 #pragma mark - Getters / Setters
@@ -109,7 +110,7 @@
   return [self.view nodeForItemAtIndexPath:[NSIndexPath indexPathForItem:index inSection:0]];
 }
 
-#pragma mark - ASCollectionViewDataSource
+#pragma mark - ASCollectionDataSource
 
 - (ASCellNodeBlock)collectionView:(ASCollectionView *)collectionView nodeBlockForItemAtIndexPath:(NSIndexPath *)indexPath
 {

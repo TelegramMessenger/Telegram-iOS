@@ -45,8 +45,10 @@
 
 - (ASLayoutSpec *)layoutSpecThatFits:(ASSizeRange)constrainedSize
 {
-    self.node.sizeRange = ASRelativeSizeRangeMakeWithExactCGSize(constrainedSize.max);
-    return [ASStaticLayoutSpec staticLayoutSpecWithChildren:@[self.node]];
+    // 100% of container
+    _node.style.width = ASDimensionMakeWithFraction(1.0);
+    _node.style.height = ASDimensionMakeWithFraction(1.0);
+    return [ASWrapperLayoutSpec wrapperWithLayoutElement:_node];
 }
 
 #pragma mark - <ASCollectionDataSource, ASCollectionDelegate>
@@ -68,7 +70,7 @@
 
 - (ASSizeRange)collectionView:(ASCollectionView *)collectionView constrainedSizeForNodeAtIndexPath:(NSIndexPath *)indexPath
 {
-    return ASSizeRangeMakeExactSize(CGSizeMake(100, 100));
+    return ASSizeRangeMake(CGSizeMake(100, 100));
 }
 
 @end

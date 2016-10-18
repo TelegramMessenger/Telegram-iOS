@@ -10,8 +10,8 @@
 //
 
 #import "ASSnapshotTestCase.h"
-
 #import <AsyncDisplayKit/AsyncDisplayKit.h>
+#import "ASLayout.h"
 
 @interface ASTextNodeSnapshotTests : ASSnapshotTestCase
 
@@ -25,10 +25,32 @@
   ASTextNode *textNode = [[ASTextNode alloc] init];
   textNode.attributedText = [[NSAttributedString alloc] initWithString:@"judar"
                                                             attributes:@{NSFontAttributeName : [UIFont italicSystemFontOfSize:24]}];
-  [textNode measureWithSizeRange:ASSizeRangeMake(CGSizeZero, CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX))];
+  [textNode layoutThatFits:ASSizeRangeMake(CGSizeZero, CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX))];
   textNode.textContainerInset = UIEdgeInsetsMake(0, 2, 0, 2);
   
   ASSnapshotVerifyNode(textNode, nil);
+}
+
+- (void)testTextContainerInsetIsIncludedWithSmallerConstrainedSize
+{
+  UIView *backgroundView = [[UIView alloc] initWithFrame:CGRectZero];
+  backgroundView.layer.as_allowsHighlightDrawing = YES;
+
+  ASTextNode *textNode = [[ASTextNode alloc] init];
+  textNode.attributedText = [[NSAttributedString alloc] initWithString:@"judar judar judar judar judar judar"
+                                                            attributes:@{ NSFontAttributeName : [UIFont systemFontOfSize:30] }];
+  
+  [textNode layoutThatFits:ASSizeRangeMake(CGSizeZero, CGSizeMake(100, 80))];
+  textNode.frame = CGRectMake(50, 50, textNode.calculatedSize.width, textNode.calculatedSize.height);
+  textNode.textContainerInset = UIEdgeInsetsMake(10, 10, 10, 10);
+
+  [backgroundView addSubview:textNode.view];
+  backgroundView.frame = UIEdgeInsetsInsetRect(textNode.bounds, UIEdgeInsetsMake(-50, -50, -50, -50));
+
+  textNode.highlightRange = NSMakeRange(0, textNode.attributedText.length);
+
+  [ASSnapshotTestCase hackilySynchronouslyRecursivelyRenderNode:textNode];
+  ASSnapshotVerifyLayer(backgroundView.layer, nil);
 }
 
 - (void)testTextContainerInsetHighlight
@@ -40,7 +62,7 @@
   textNode.attributedText = [[NSAttributedString alloc] initWithString:@"yolo"
                                                             attributes:@{ NSFontAttributeName : [UIFont systemFontOfSize:30] }];
 
-  [textNode measureWithSizeRange:ASSizeRangeMake(CGSizeZero, CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX))];
+  [textNode layoutThatFits:ASSizeRangeMake(CGSizeZero, CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX))];
   textNode.frame = CGRectMake(50, 50, textNode.calculatedSize.width, textNode.calculatedSize.height);
   textNode.textContainerInset = UIEdgeInsetsMake(5, 10, 10, 5);
 
@@ -50,7 +72,7 @@
   textNode.highlightRange = NSMakeRange(0, textNode.attributedText.length);
 
   [ASSnapshotTestCase hackilySynchronouslyRecursivelyRenderNode:textNode];
-  FBSnapshotVerifyLayer(backgroundView.layer, nil);
+  ASSnapshotVerifyLayer(backgroundView.layer, nil);
 }
 
 @end
