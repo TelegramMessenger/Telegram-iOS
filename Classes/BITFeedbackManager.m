@@ -77,6 +77,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   BOOL _incomingMessagesAlertShowing;
   BOOL _didEnterBackgroundState;
   BOOL _networkRequestInProgress;
+  BOOL _forceNewThread;
   
   BITFeedbackObservationMode _observationMode;
 }
@@ -93,6 +94,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
     _requireUserEmail = BITFeedbackUserDataElementOptional;
     _showAlertOnIncomingMessages = YES;
     _showFirstRequiredPresentationModal = YES;
+    _forceNewThread = NO;
     
     _disableFeedbackManager = NO;
     _networkRequestInProgress = NO;
@@ -450,7 +452,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   
   if ([unarchiver containsValueForKey:kBITFeedbackUserDataAsked])
     _didAskUserData = YES;
-  
+
   if ([unarchiver containsValueForKey:kBITFeedbackToken]) {
     self.token = [unarchiver decodeObjectForKey:kBITFeedbackToken];
     [self addStringValueToKeychain:self.token forKey:kBITFeedbackToken];
@@ -467,7 +469,11 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
       self.token = nil;
     }
   }
-  
+
+  if (_forceNewThread) {
+    self.token = nil;
+  }
+
   if ([unarchiver containsValueForKey:kBITFeedbackDateOfLastCheck])
     self.lastCheck = [unarchiver decodeObjectForKey:kBITFeedbackDateOfLastCheck];
   

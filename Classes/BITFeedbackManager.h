@@ -225,6 +225,11 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
  */
 @property (nonatomic, readwrite) BITFeedbackObservationMode feedbackObservationMode;
 
+/**
+TODO Add docs
+ */
+@property (nonatomic, readwrite) BOOL forceNewThread;
+
 
 /**
  Prefill feedback compose message user interface with the items given.
