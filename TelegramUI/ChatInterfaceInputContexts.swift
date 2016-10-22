@@ -10,3 +10,16 @@ func inputContextForChatPresentationIntefaceState(_ chatPresentationInterfaceSta
     }
     return nil
 }
+
+func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account) -> ChatTextInputPanelState {
+    switch chatPresentationInterfaceState.inputMode {
+        case .media:
+            return ChatTextInputPanelState(accessoryItems: [.keyboard])
+        case .none, .text:
+            if chatPresentationInterfaceState.interfaceState.inputState.inputText.isEmpty {
+                return ChatTextInputPanelState(accessoryItems: [.stickers])
+            } else {
+                return ChatTextInputPanelState(accessoryItems: [])
+            }
+    }
+}

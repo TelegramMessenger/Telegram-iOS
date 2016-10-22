@@ -38,21 +38,24 @@ protocol PeerInfoEntry {
     func item(account: Account, interaction: PeerInfoControllerInteraction) -> ListViewItem
 }
 
-enum PeerInfoNavigationButton {
-    case none
-    case edit
-    case done
+struct PeerInfoNavigationButton {
+    let title: String
+    let action: (PeerInfoState?) -> PeerInfoState?
 }
 
 protocol PeerInfoState {
     func isEqual(to: PeerInfoState) -> Bool
-    
-    var navigationButton: PeerInfoNavigationButton { get }
 }
 
-func peerInfoEntries(view: PeerView) -> [PeerInfoEntry] {
+struct PeerInfoEntries {
+    let entries: [PeerInfoEntry]
+    let leftNavigationButton: PeerInfoNavigationButton?
+    let rightNavigationButton: PeerInfoNavigationButton?
+}
+
+func peerInfoEntries(view: PeerView, state: PeerInfoState?) -> PeerInfoEntries {
     if let user = view.peers[view.peerId] as? TelegramUser {
-        return userInfoEntries(view: view)
+        return userInfoEntries(view: view, state: state)
     } else if let channel = view.peers[view.peerId] as? TelegramChannel {
         switch channel.info {
             case .broadcast:
@@ -63,5 +66,5 @@ func peerInfoEntries(view: PeerView) -> [PeerInfoEntry] {
     } else if let group = view.peers[view.peerId] as? TelegramGroup {
         return groupInfoEntries(view: view)
     }
-    return []
+    return PeerInfoEntries(entries: [], leftNavigationButton: nil, rightNavigationButton: nil)
 }

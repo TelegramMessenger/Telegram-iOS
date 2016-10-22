@@ -153,7 +153,7 @@ enum ChannelInfoEntry: PeerInfoEntry {
     func item(account: Account, interaction: PeerInfoControllerInteraction) -> ListViewItem {
         switch self {
             case let .info(peer, cachedData):
-                return PeerInfoAvatarAndNameItem(account: account, peer: peer, cachedData: cachedData, sectionId: self.section.rawValue, style: .plain)
+                return PeerInfoAvatarAndNameItem(account: account, peer: peer, cachedData: cachedData, editingState: nil, sectionId: self.section.rawValue, style: .plain)
             case let .about(text):
                 return PeerInfoTextWithLabelItem(label: "about", text: text, multiline: true, sectionId: self.section.rawValue)
             case let .userName(value):
@@ -173,7 +173,7 @@ enum ChannelInfoEntry: PeerInfoEntry {
                     label = "Enabled"
                 }
                 return PeerInfoDisclosureItem(title: "Notifications", label: label, sectionId: self.section.rawValue, style: .plain, action: {
-                    interaction.changeNotificationNoteSettings()
+                    interaction.changeNotificationMuteSettings()
                 })
             case .report:
                 return PeerInfoActionItem(title: "Report", kind: .generic, alignment: .natural, sectionId: self.section.rawValue, style: .plain, action: {
@@ -187,7 +187,7 @@ enum ChannelInfoEntry: PeerInfoEntry {
     }
 }
 
-func channelBroadcastInfoEntries(view: PeerView) -> [PeerInfoEntry] {
+func channelBroadcastInfoEntries(view: PeerView) -> PeerInfoEntries {
     var entries: [PeerInfoEntry] = []
     entries.append(ChannelInfoEntry.info(peer: view.peers[view.peerId], cachedData: view.cachedData))
     if let cachedChannelData = view.cachedData as? CachedChannelData {
@@ -206,5 +206,5 @@ func channelBroadcastInfoEntries(view: PeerView) -> [PeerInfoEntry] {
             entries.append(ChannelInfoEntry.leave)
         }
     }
-    return entries
+    return PeerInfoEntries(entries: entries, leftNavigationButton: nil, rightNavigationButton: nil)
 }

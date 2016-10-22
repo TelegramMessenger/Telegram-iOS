@@ -284,18 +284,18 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                 
                 var updateLayout: GridNodeUpdateLayout?
                 if let updateSizeAndInsets = updateSizeAndInsets {
-                    updateLayout = GridNodeUpdateLayout(layout: GridNodeLayout(size: updateSizeAndInsets.size, insets: updateSizeAndInsets.insets, preloadSize: 400.0, itemSize: CGSize(width: 200.0, height: 200.0), indexOffset: 0), transition: .immediate)
+                    updateLayout = GridNodeUpdateLayout(layout: GridNodeLayout(size: updateSizeAndInsets.size, insets: updateSizeAndInsets.insets, preloadSize: 400.0, itemSize: CGSize(width: 200.0, height: 200.0)), transition: .immediate)
                 }
                 
-                self.transaction(GridNodeTransaction(deleteItems: mappedTransition.deleteItems, insertItems: mappedTransition.insertItems, updateItems: mappedTransition.updateItems, scrollToItem: mappedTransition.scrollToItem, updateLayout: updateLayout, stationaryItemRange: mappedTransition.stationaryItemRange), completion: completion)
+                self.transaction(GridNodeTransaction(deleteItems: mappedTransition.deleteItems, insertItems: mappedTransition.insertItems, updateItems: mappedTransition.updateItems, scrollToItem: mappedTransition.scrollToItem, updateLayout: updateLayout, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: completion)
             } else {
-                self.transaction(GridNodeTransaction(deleteItems: transition.deleteItems, insertItems: transition.insertItems, updateItems: transition.updateItems, scrollToItem: transition.scrollToItem, updateLayout: nil, stationaryItemRange: transition.stationaryItemRange), completion: completion)
+                self.transaction(GridNodeTransaction(deleteItems: transition.deleteItems, insertItems: transition.insertItems, updateItems: transition.updateItems, scrollToItem: transition.scrollToItem, updateLayout: nil, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: completion)
             }
         }
     }
     
     public func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets) {
-        self.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: updateSizeAndInsets.size, insets: updateSizeAndInsets.insets, preloadSize: 400.0, itemSize: itemSizeForContainerLayout(size: updateSizeAndInsets.size), indexOffset: 0), transition: .immediate), stationaryItemRange: nil), completion: { _ in })
+        self.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: updateSizeAndInsets.size, insets: updateSizeAndInsets.insets, preloadSize: 400.0, itemSize: itemSizeForContainerLayout(size: updateSizeAndInsets.size)), transition: .immediate), stationaryItems: .none,updateFirstIndexInSectionOffset: nil), completion: { _ in })
         
         if !self.dequeuedInitialTransitionOnLayout {
             self.dequeuedInitialTransitionOnLayout = true

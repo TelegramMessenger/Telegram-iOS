@@ -90,8 +90,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
                 self.imageNode.setSignal(account: account, signal: chatMessagePhoto(account: account, photo: image), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize.dimensions, self.imageNode)
-                
-                self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(CloudFileMediaResource(location: largestSize.location, size: largestSize.size ?? 0)).start())
+                self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(largestSize.resource).start())
             } else {
                 self._ready.set(.single(Void()))
             }
@@ -190,7 +189,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         if let (account, media) = self.accountAndMedia, let file = media as? TelegramMediaFile {
             if isVisible {
-                self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(CloudFileMediaResource(location: file.location, size: file.size)).start())
+                self.fetchDisposable.set(account.postbox.mediaBox.fetchedResource(file.resource).start())
             } else {
                 self.fetchDisposable.set(nil)
             }

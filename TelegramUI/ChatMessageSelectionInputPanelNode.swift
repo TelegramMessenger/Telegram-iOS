@@ -8,32 +8,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     private let deleteButton: UIButton
     private let forwardButton: UIButton
     
-    override var peer: Peer? {
-        didSet {
-            var canDelete = false
-            if let channel = self.peer as? TelegramChannel {
-                switch channel.info {
-                    case .broadcast:
-                        switch channel.role {
-                            case .creator, .editor, .moderator:
-                                canDelete = true
-                            case .member:
-                                canDelete = false
-                        }
-                    case .group:
-                        switch channel.role {
-                            case .creator, .editor, .moderator:
-                                canDelete = true
-                            case .member:
-                                canDelete = false
-                        }
-                }
-            } else {
-                canDelete = true
-            }
-            self.deleteButton.isHidden = !canDelete
-        }
-    }
+    private var presentationInterfaceState = ChatPresentationInterfaceState()
     
     var selectedMessageCount: Int = 0 {
         didSet {
@@ -63,24 +38,45 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         self.forwardButton.addTarget(self, action: #selector(self.forwardButtonPressed), for: [.touchUpInside])
     }
     
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        return CGSize(width: constrainedSize.width, height: 45.0)
-    }
-    
-    override func layout() {
-        super.layout()
-        
-        let bounds = self.bounds
-        
-        self.deleteButton.frame = CGRect(origin: CGPoint(), size: CGSize(width: 53.0, height: 45.0))
-        self.forwardButton.frame = CGRect(origin: CGPoint(x: bounds.size.width - 57.0, y: 0.0), size: CGSize(width: 57.0, height: 45.0))
-    }
-    
     @objc func deleteButtonPressed() {
         self.interfaceInteraction?.deleteSelectedMessages()
     }
     
     @objc func forwardButtonPressed() {
         self.interfaceInteraction?.forwardSelectedMessages()
+    }
+    
+    override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+        if self.presentationInterfaceState != interfaceState {
+            self.presentationInterfaceState = interfaceState
+            
+            var canDelete = false
+            if let channel = interfaceState.peer as? TelegramChannel {
+                switch channel.info {
+                    case .broadcast:
+                        switch channel.role {
+                            case .creator, .editor, .moderator:
+                                canDelete = true
+                            case .member:
+                                canDelete = false
+                        }
+                    case .group:
+                        switch channel.role {
+                            case .creator, .editor, .moderator:
+                                canDelete = true
+                            case .member:
+                                canDelete = false
+                        }
+                }
+            } else {
+                canDelete = true
+            }
+            self.deleteButton.isHidden = !canDelete
+        }
+        
+        self.deleteButton.frame = CGRect(origin: CGPoint(), size: CGSize(width: 53.0, height: 47.0))
+        self.forwardButton.frame = CGRect(origin: CGPoint(x: width - 57.0, y: 0.0), size: CGSize(width: 57.0, height: 47.0))
+        
+        return 47.0
     }
 }

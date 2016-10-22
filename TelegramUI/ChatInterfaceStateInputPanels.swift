@@ -7,12 +7,10 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
         if let currentPanel = currentPanel as? ChatMessageSelectionInputPanelNode {
             currentPanel.selectedMessageCount = selectionState.selectedIds.count
             currentPanel.interfaceInteraction = interfaceInteraction
-            currentPanel.peer = chatPresentationInterfaceState.peer
             return currentPanel
         } else {
             let panel = ChatMessageSelectionInputPanelNode()
             panel.account = account
-            panel.peer = chatPresentationInterfaceState.peer
             panel.selectedMessageCount = selectionState.selectedIds.count
             panel.interfaceInteraction = interfaceInteraction
             return panel
@@ -27,12 +25,10 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                                 break
                             case .member:
                                 if let currentPanel = currentPanel as? ChatChannelSubscriberInputPanelNode {
-                                    currentPanel.peer = peer
                                     return currentPanel
                                 } else {
                                     let panel = ChatChannelSubscriberInputPanelNode()
                                     panel.account = account
-                                    panel.peer = peer
                                     return panel
                                 }
                         }
@@ -40,12 +36,10 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                         switch channel.participationStatus {
                             case .kicked, .left:
                                 if let currentPanel = currentPanel as? ChatChannelSubscriberInputPanelNode {
-                                    currentPanel.peer = peer
                                     return currentPanel
                                 } else {
                                     let panel = ChatChannelSubscriberInputPanelNode()
                                     panel.account = account
-                                    panel.peer = peer
                                     return panel
                                 }
                             case .member:
@@ -56,19 +50,16 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
             
             if let currentPanel = currentPanel as? ChatTextInputPanelNode {
                 currentPanel.interfaceInteraction = interfaceInteraction
-                currentPanel.peer = peer
                 return currentPanel
             } else {
                 if let textInputPanelNode = textInputPanelNode {
                     textInputPanelNode.interfaceInteraction = interfaceInteraction
                     textInputPanelNode.account = account
-                    textInputPanelNode.peer = peer
                     return textInputPanelNode
                 } else {
                     let panel = ChatTextInputPanelNode()
                     panel.interfaceInteraction = interfaceInteraction
                     panel.account = account
-                    panel.peer = peer
                     return panel
                 }
             }

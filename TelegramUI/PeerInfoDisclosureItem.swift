@@ -244,18 +244,10 @@ class PeerInfoDisclosureItemNode: ListViewItemNode {
     }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double) {
-        self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
-        self.topStripeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
-        self.bottomStripeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
-        self.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
-        self.labelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
-        self.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false)
-        self.topStripeNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false)
-        self.bottomStripeNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false)
-        self.titleNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false)
-        self.labelNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false)
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
 }

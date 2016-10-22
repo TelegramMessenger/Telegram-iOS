@@ -263,6 +263,7 @@ public class ContactsController: ViewController {
         
         let interaction = ContactsControllerInteraction(openPeer: { [weak self] peerId in
             if let strongSelf = self {
+                strongSelf.contactsNode.listView.clearHighlightAnimated(true)
                 (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: peerId))
             }
         }, activateSearch: { [weak self] in

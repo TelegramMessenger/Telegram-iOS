@@ -123,7 +123,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 if let file = webpage.file {
                     if file.isVideo {
-                        let (initialImageWidth, refineLayout) = contentImageLayout(item.account, file, ImageCorners(radius: 4.0), true, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height))
+                        let (initialImageWidth, refineLayout) = contentImageLayout(item.account, item.message, file, ImageCorners(radius: 4.0), true, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height))
                         initialWidth = initialImageWidth + insets.left + insets.right
                         refineContentImageLayout = refineLayout
                     } else {
@@ -132,7 +132,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 } else if let image = webpage.image {
                     if let type = webpage.type, ["photo"].contains(type) {
-                        let (initialImageWidth, refineLayout) = contentImageLayout(item.account, image, ImageCorners(radius: 4.0), true, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height))
+                        let (initialImageWidth, refineLayout) = contentImageLayout(item.account, item.message, image, ImageCorners(radius: 4.0), true, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height))
                         initialWidth = initialImageWidth + insets.left + insets.right
                         refineContentImageLayout = refineLayout
                     } else if let dimensions = largestImageRepresentation(image.representations)?.dimensions {

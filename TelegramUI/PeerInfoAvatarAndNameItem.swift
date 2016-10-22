@@ -5,17 +5,25 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
+struct PeerInfoAvatarAndNameItemEditingState: Equatable {
+    static func ==(lhs: PeerInfoAvatarAndNameItemEditingState, rhs: PeerInfoAvatarAndNameItemEditingState) -> Bool {
+        return true
+    }
+}
+
 class PeerInfoAvatarAndNameItem: ListViewItem, PeerInfoItem {
     let account: Account
     let peer: Peer?
     let cachedData: CachedPeerData?
+    let editingState: PeerInfoAvatarAndNameItemEditingState?
     let sectionId: PeerInfoItemSectionId
     let style: PeerInfoListStyle
     
-    init(account: Account, peer: Peer?, cachedData: CachedPeerData?, sectionId: PeerInfoItemSectionId, style: PeerInfoListStyle) {
+    init(account: Account, peer: Peer?, cachedData: CachedPeerData?, editingState: PeerInfoAvatarAndNameItemEditingState?, sectionId: PeerInfoItemSectionId, style: PeerInfoListStyle) {
         self.account = account
         self.peer = peer
         self.cachedData = cachedData
+        self.editingState = editingState
         self.sectionId = sectionId
         self.style = style
     }
@@ -29,13 +37,17 @@ class PeerInfoAvatarAndNameItem: ListViewItem, PeerInfoItem {
             node.insets = layout.insets
             
             completion(node, {
-                apply()
+                apply(false)
             })
         }
     }
     
     func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
         if let node = node as? PeerInfoAvatarAndNameItemNode {
+            var animated = true
+            if case .None = animation {
+                animated = false
+            }
             Queue.mainQueue().async {
                 let makeLayout = node.asyncLayout()
                 
@@ -43,7 +55,7 @@ class PeerInfoAvatarAndNameItem: ListViewItem, PeerInfoItem {
                     let (layout, apply) = makeLayout(self, width, peerInfoItemNeighbors(item: self, topItem: previousItem as? PeerInfoItem, bottomItem: nextItem as? PeerInfoItem))
                     Queue.mainQueue().async {
                         completion(layout, {
-                            apply()
+                            apply(animated)
                         })
                     }
                 }
@@ -69,6 +81,10 @@ class PeerInfoAvatarAndNameItemNode: ListViewItemNode {
     private let avatarNode: AvatarNode
     private let nameNode: TextNode
     private let statusNode: TextNode
+    
+    private var inputSeparator: ASDisplayNode?
+    private var inputFirstField: ASEditableTextNode?
+    private var inputSecondField: ASEditableTextNode?
     
     init() {
         self.backgroundNode = ASDisplayNode()
@@ -102,7 +118,7 @@ class PeerInfoAvatarAndNameItemNode: ListViewItemNode {
         self.addSubnode(self.statusNode)
     }
     
-    func asyncLayout() -> (_ item: PeerInfoAvatarAndNameItem, _ width: CGFloat, _ neighbors: PeerInfoItemNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: PeerInfoAvatarAndNameItem, _ width: CGFloat, _ neighbors: PeerInfoItemNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let layoutNameNode = TextNode.asyncLayout(self.nameNode)
         let layoutStatusNode = TextNode.asyncLayout(self.statusNode)
         
@@ -161,7 +177,7 @@ class PeerInfoAvatarAndNameItemNode: ListViewItemNode {
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
             
-            return (layout, { [weak self] in
+            return (layout, { [weak self] animated in
                 if let strongSelf = self {
                     let avatarOriginY: CGFloat
                     switch item.style {
@@ -220,6 +236,99 @@ class PeerInfoAvatarAndNameItemNode: ListViewItemNode {
                     strongSelf.nameNode.frame = CGRect(origin: CGPoint(x: 94.0, y: 25.0), size: nameNodeLayout.size)
                     
                     strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: 94.0, y: 25.0 + nameNodeLayout.size.height + 4.0), size: statusNodeLayout.size)
+                    
+                    if let editingState = item.editingState {
+                        if let user = item.peer as? TelegramUser {
+                            if strongSelf.inputSeparator == nil {
+                                let inputSeparator = ASDisplayNode()
+                                inputSeparator.backgroundColor = UIColor(0xc8c7cc)
+                                inputSeparator.isLayerBacked = true
+                                strongSelf.addSubnode(inputSeparator)
+                                strongSelf.inputSeparator = inputSeparator
+                            }
+                            
+                            if strongSelf.inputFirstField == nil {
+                                let inputFirstField = ASEditableTextNode()
+                                inputFirstField.typingAttributes = [NSFontAttributeName: Font.regular(17.0)]
+                                //inputFirstField.backgroundColor = UIColor.lightGray
+                                inputFirstField.attributedPlaceholderText = NSAttributedString(string: "First Name", font: Font.regular(17.0), textColor: UIColor(0xc8c8ce))
+                                inputFirstField.attributedText = NSAttributedString(string: user.firstName ?? "", font: Font.regular(17.0), textColor: UIColor.black)
+                                strongSelf.inputFirstField = inputFirstField
+                                strongSelf.view.addSubnode(inputFirstField)
+                            }
+                            
+                            if strongSelf.inputSecondField == nil {
+                                let inputSecondField = ASEditableTextNode()
+                                inputSecondField.typingAttributes = [NSFontAttributeName: Font.regular(17.0)]
+                                //inputSecondField.backgroundColor = UIColor.lightGray
+                                inputSecondField.attributedPlaceholderText = NSAttributedString(string: "Last Name", font: Font.regular(17.0), textColor: UIColor(0xc8c8ce))
+                                inputSecondField.attributedText = NSAttributedString(string: user.lastName ?? "", font: Font.regular(17.0), textColor: UIColor.black)
+                                strongSelf.inputSecondField = inputSecondField
+                                strongSelf.view.addSubnode(inputSecondField)
+                            }
+                            
+                            strongSelf.inputSeparator?.frame = CGRect(origin: CGPoint(x: 100.0, y: 49.0), size: CGSize(width: width - 100.0, height: separatorHeight))
+                            strongSelf.inputFirstField?.frame = CGRect(origin: CGPoint(x: 111.0, y: 16.0), size: CGSize(width: width - 111.0 - 8.0, height: 30.0))
+                            strongSelf.inputSecondField?.frame = CGRect(origin: CGPoint(x: 111.0, y: 59.0), size: CGSize(width: width - 111.0 - 8.0, height: 30.0))
+                            
+                            if animated {
+                                strongSelf.inputSeparator?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                                strongSelf.inputFirstField?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                                strongSelf.inputSecondField?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                            }
+                        }
+                        
+                        if animated {
+                            strongSelf.statusNode.layer.animateAlpha(from: CGFloat(strongSelf.statusNode.layer.opacity), to: 0.0, duration: 0.3)
+                            strongSelf.statusNode.alpha = 0.0
+                            strongSelf.nameNode.layer.animateAlpha(from: CGFloat(strongSelf.nameNode.layer.opacity), to: 0.0, duration: 0.3)
+                            strongSelf.nameNode.alpha = 0.0
+                        } else {
+                            strongSelf.statusNode.alpha = 0.0
+                            strongSelf.nameNode.alpha = 0.0
+                        }
+                    } else {
+                        if let inputSeparator = strongSelf.inputSeparator {
+                            strongSelf.inputSeparator = nil
+                            
+                            if animated {
+                                inputSeparator.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak inputSeparator] _ in
+                                    inputSeparator?.removeFromSupernode()
+                                })
+                            } else {
+                                inputSeparator.removeFromSupernode()
+                            }
+                        }
+                        if let inputFirstField = strongSelf.inputFirstField {
+                            strongSelf.inputFirstField = nil
+                            if animated {
+                                inputFirstField.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak inputFirstField] _ in
+                                    inputFirstField?.removeFromSupernode()
+                                })
+                            } else {
+                                inputFirstField.removeFromSupernode()
+                            }
+                        }
+                        if let inputSecondField = strongSelf.inputSecondField {
+                            strongSelf.inputSecondField = nil
+                            if animated {
+                                inputSecondField.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak inputSecondField] _ in
+                                    inputSecondField?.removeFromSupernode()
+                                })
+                            } else {
+                                inputSecondField.removeFromSupernode()
+                            }
+                        }
+                        if animated {
+                            strongSelf.statusNode.layer.animateAlpha(from: CGFloat(strongSelf.statusNode.layer.opacity), to: 1.0, duration: 0.3)
+                            strongSelf.statusNode.alpha = 1.0
+                            strongSelf.nameNode.layer.animateAlpha(from: CGFloat(strongSelf.nameNode.layer.opacity), to: 1.0, duration: 0.3)
+                            strongSelf.nameNode.alpha = 1.0
+                        } else {
+                            strongSelf.statusNode.alpha = 1.0
+                            strongSelf.nameNode.alpha = 1.0
+                        }
+                    }
                 }
             })
         }

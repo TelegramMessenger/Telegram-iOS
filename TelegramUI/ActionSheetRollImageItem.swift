@@ -7,8 +7,14 @@ private let testBackground = generateStretchableFilledCircleImage(radius: 8.0, c
 
 final class ActionSheetRollImageItem: ListViewItem {
     let asset: PHAsset
+    let selectedItem: () -> Void
     
-    init(asset: PHAsset) {
+    var selectable: Bool {
+        return true
+    }
+    
+    init(asset: PHAsset, selected: @escaping () -> Void) {
+        self.selectedItem = selected
         self.asset = asset
     }
     
@@ -26,6 +32,10 @@ final class ActionSheetRollImageItem: ListViewItem {
     func updateNode(async: (() -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: (ListViewItemNodeLayout, () -> Void) -> Void) {
         completion(ListViewItemNodeLayout(contentSize: node.contentSize, insets: node.insets), {
         })
+    }
+    
+    func selected(listView: ListView) {
+        self.selectedItem()
     }
 }
 

@@ -74,21 +74,21 @@ class PeerMediaCollectionControllerNode: ASDisplayNode {
         insets.top += navigationBarHeight
         
         if let selectionState = self.mediaCollectionInterfaceState.selectionState {
+            let interfaceState = ChatPresentationInterfaceState().updatedPeer({ _ in self.mediaCollectionInterfaceState.peer })
+            
             if let selectionPanel = self.selectionPanel {
-                selectionPanel.peer = self.mediaCollectionInterfaceState.peer
                 selectionPanel.selectedMessageCount = selectionState.selectedIds.count
-                let panelSize = selectionPanel.measure(layout.size)
-                transition.updateFrame(node: selectionPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelSize.height), size: panelSize))
+                let panelHeight = selectionPanel.updateLayout(width: layout.size.width, transition: transition, interfaceState: interfaceState)
+                transition.updateFrame(node: selectionPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight)))
             } else {
                 let selectionPanel = ChatMessageSelectionInputPanelNode()
-                selectionPanel.peer = self.mediaCollectionInterfaceState.peer
                 selectionPanel.selectedMessageCount = selectionState.selectedIds.count
                 selectionPanel.backgroundColor = UIColor(0xfafafa)
-                let panelSize = selectionPanel.measure(layout.size)
-                selectionPanel.frame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom), size: panelSize)
+                let panelHeight = selectionPanel.updateLayout(width: layout.size.width, transition: .immediate, interfaceState: interfaceState)
                 self.selectionPanel = selectionPanel
                 self.addSubnode(selectionPanel)
-                transition.updateFrame(node: selectionPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelSize.height), size: panelSize))
+                selectionPanel.frame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom), size: CGSize(width: layout.size.width, height: panelHeight))
+                transition.updateFrame(node: selectionPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - insets.bottom - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight)))
             }
         } else if let selectionPanel = self.selectionPanel {
             self.selectionPanel = nil

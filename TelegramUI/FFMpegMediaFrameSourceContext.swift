@@ -80,8 +80,10 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     
     var fetchedCount: Int32 = 0
     
-    let readCount = min(resource.size - context.readingOffset, Int(bufferSize))
-    let data = account.postbox.mediaBox.resourceData(resource, in: context.readingOffset ..< (context.readingOffset + readCount), mode: .complete)
+    let resourceSize: Int = resource.size ?? 0
+    
+    let readCount = min(resourceSize - context.readingOffset, Int(bufferSize))
+    let data = account.postbox.mediaBox.resourceData(resource, size: resourceSize, in: context.readingOffset ..< (context.readingOffset + readCount), mode: .complete)
     var fetchedData: Data?
     let semaphore = DispatchSemaphore(value: 0)
     let _ = data.start(next: { data in
@@ -110,18 +112,20 @@ private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whe
     
     var result: Int64 = offset
     
+    let resourceSize: Int = resource.size ?? 0
+    
     if (whence & AVSEEK_SIZE) != 0 {
-        result = Int64(resource.size)
+        result = Int64(resourceSize)
     } else {
-        context.readingOffset = Int(min(Int64(resource.size), offset))
+        context.readingOffset = Int(min(Int64(resourceSize), offset))
         
         if context.readingOffset != context.requestedDataOffset {
             context.requestedDataOffset = context.readingOffset
             
-            if context.readingOffset >= resource.size {
+            if context.readingOffset >= resourceSize {
                 context.fetchedDataDisposable.set(nil)
             } else {
-                context.fetchedDataDisposable.set(account.postbox.mediaBox.fetchedResourceData(resource, in: context.readingOffset ..< resource.size).start())
+                context.fetchedDataDisposable.set(account.postbox.mediaBox.fetchedResourceData(resource, size: resourceSize, in: context.readingOffset ..< resourceSize).start())
             }
         }
     }
@@ -168,7 +172,9 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         self.account = account
         self.resource = resource
         
-        self.fetchedDataDisposable.set(account.postbox.mediaBox.fetchedResourceData(resource, in: 0 ..< resource.size).start())
+        let resourceSize: Int = resource.size ?? 0
+        
+        self.fetchedDataDisposable.set(account.postbox.mediaBox.fetchedResourceData(resource, size: resourceSize, in: 0 ..< resourceSize).start())
         
         var avFormatContextRef = avformat_alloc_context()
         guard let avFormatContext = avFormatContextRef else {

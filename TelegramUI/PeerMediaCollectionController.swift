@@ -176,7 +176,7 @@ public class PeerMediaCollectionController: ViewController {
                         strongSelf.updateInterfaceState(animated: true, { $0.withToggledSelectedMessage(id) })
                     }
                 }
-            })
+            }, sendSticker: { _ in })
         
         self.controllerInteraction = controllerInteraction
         
@@ -184,7 +184,9 @@ public class PeerMediaCollectionController: ViewController {
             
         }, forwardSelectedMessages: {
                 
-        }, updateTextInputState: { _ in })
+        }, updateTextInputState: { _ in
+        }, updateInputMode: { _ in
+        })
         
         self.updateInterfaceState(animated: false, { return $0 })
         

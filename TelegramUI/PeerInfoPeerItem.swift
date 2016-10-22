@@ -300,22 +300,10 @@ class PeerInfoPeerItemNode: ListViewItemNode {
     }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double) {
-        self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.topStripeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.bottomStripeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.avatarNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.statusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.labelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
-        self.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
-        self.topStripeNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
-        self.bottomStripeNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
-        self.titleNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
-        self.avatarNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
-        self.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
-        self.labelNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
 }

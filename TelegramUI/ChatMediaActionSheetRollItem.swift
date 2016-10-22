@@ -6,8 +6,14 @@ import Photos
 import SwiftSignalKit
 
 final class ChatMediaActionSheetRollItem: ActionSheetItem {
+    private let assetSelected: (PHAsset) -> Void
+    
+    init(assetSelected: @escaping (PHAsset) -> Void) {
+        self.assetSelected = assetSelected
+    }
+    
     func node() -> ActionSheetItemNode {
-        return ChatMediaActionSheetRollItemNode()
+        return ChatMediaActionSheetRollItemNode(assetSelected: self.assetSelected)
     }
 }
 
@@ -19,7 +25,11 @@ private final class ChatMediaActionSheetRollItemNode: ActionSheetItemNode, PHPho
     private var assetCollection: PHAssetCollection?
     private var fetchResult: PHFetchResult<PHAsset>?
     
-    override init() {
+    private let assetSelected: (PHAsset) -> Void
+    
+    init(assetSelected: @escaping (PHAsset) -> Void) {
+        self.assetSelected = assetSelected
+        
         self.listView = ListView()
         self.listView.transform = CATransform3DMakeRotation(-CGFloat(M_PI / 2.0), 0.0, 0.0, 1.0)
         
@@ -64,7 +74,11 @@ private final class ChatMediaActionSheetRollItemNode: ActionSheetItemNode, PHPho
         if let fetchResult = self.fetchResult {
             for i in 0 ..< fetchResult.count {
                 let asset = fetchResult.object(at: i)
-                items.append(ActionSheetRollImageItem(asset: asset))
+                items.append(ActionSheetRollImageItem(asset: asset, selected: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.assetSelected(asset)
+                    }
+                }))
             }
         }
         

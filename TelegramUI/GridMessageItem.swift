@@ -26,6 +26,8 @@ final class GridMessageItem: GridItem {
     private let message: Message
     private let controllerInteraction: ChatControllerInteraction
     
+    let section: GridSection? = nil
+    
     init(account: Account, message: Message, controllerInteraction: ChatControllerInteraction) {
         self.account = account
         self.message = message

@@ -7,8 +7,8 @@ import TelegramCore
 class ChatInputPanelNode: ASDisplayNode {
     var account: Account?
     var interfaceInteraction: ChatPanelInterfaceInteraction?
-    var peer: Peer?
     
-    func updateFrames(transition: ContainedViewLayoutTransition) {
+    func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+        return 0.0
     }
 }

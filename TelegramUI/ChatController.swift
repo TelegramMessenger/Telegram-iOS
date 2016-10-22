@@ -22,7 +22,7 @@ public class ChatController: ViewController {
     private var didSetPeerReady = false
     private let peerView = Promise<PeerView>()
     
-    private var presentationInterfaceState = ChatPresentationInterfaceState(interfaceState: ChatInterfaceState(), peer: nil, inputContext: nil)
+    private var presentationInterfaceState = ChatPresentationInterfaceState()
     private let chatInterfaceStatePromise = Promise<ChatInterfaceState>()
     
     private var chatTitleView: ChatTitleView?
@@ -154,12 +154,16 @@ public class ChatController: ViewController {
                 }
             }
         }, clickThroughMessage: { [weak self] in
-            self?.view.endEditing(true)
+            self?.chatDisplayNode.dismissInput()
         }, toggleMessageSelection: { [weak self] id in
             if let strongSelf = self, strongSelf.isNodeLoaded {
                 if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(id) {
-                    strongSelf.updateChatPresentationInterfaceState(animated: false, { $0.updatedInterfaceState { $0.withToggledSelectedMessage(id) } })
+                    strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState { $0.withToggledSelectedMessage(id) } })
                 }
+            }
+        }, sendSticker: { [weak self] file in
+            if let strongSelf = self {
+                enqueueMessage(account: strongSelf.account, peerId: strongSelf.peerId, text: "", replyMessageId: nil, media: file).start()
             }
         })
         
@@ -173,7 +177,7 @@ public class ChatController: ViewController {
         chatInfoButtonItem.action = #selector(self.rightNavigationButtonAction)
         self.chatInfoNavigationButton = ChatNavigationButton(action: .openChatInfo, buttonItem: chatInfoButtonItem)
         
-        self.updateChatPresentationInterfaceState(animated: false, { return $0 })
+        self.updateChatPresentationInterfaceState(animated: false,  interactive: false, { return $0 })
         
         self.peerView.set(account.viewTracker.peerView(peerId))
         
@@ -184,7 +188,7 @@ public class ChatController: ViewController {
                         strongSelf.chatTitleView?.peerView = peerView
                         (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.setPeer(account: strongSelf.account, peer: peer)
                     }
-                    strongSelf.updateChatPresentationInterfaceState(animated: false, { return $0.updatedPeer { _ in return peerView.peers[peerId] } })
+                    strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { return $0.updatedPeer { _ in return peerView.peers[peerId] } })
                     if !strongSelf.didSetPeerReady {
                         strongSelf.didSetPeerReady = true
                         strongSelf._peerReady.set(.single(true))
@@ -288,12 +292,23 @@ public class ChatController: ViewController {
         }
         
         self.chatDisplayNode.requestUpdateChatInterfaceState = { [weak self] animated, f in
-            self?.updateChatPresentationInterfaceState(animated: animated, { $0.updatedInterfaceState(f) })
+            self?.updateChatPresentationInterfaceState(animated: animated,  interactive: true, { $0.updatedInterfaceState(f) })
         }
         
         self.chatDisplayNode.displayAttachmentMenu = { [weak self] in
             if let strongSelf = self {
                 let controller = ChatMediaActionSheetController()
+                controller.photo = { [weak strongSelf] asset in
+                    if let strongSelf = strongSelf {
+                        var randomId: Int64 = 0
+                        arc4random_buf(&randomId, 8)
+                        let size = CGSize(width: CGFloat(asset.pixelWidth), height: CGFloat(asset.pixelHeight))
+                        let scaledSize = size.aspectFitted(CGSize(width: 1280.0, height: 1280.0))
+                        let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier)
+                        let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: scaledSize, resource: resource)])
+                        enqueueMessage(account: strongSelf.account, peerId: strongSelf.peerId, text: "", replyMessageId: nil, media: media).start()
+                    }
+                }
                 controller.location = { [weak strongSelf] in
                     if let strongSelf = strongSelf {
                         let mapInputController = MapInputController()
@@ -317,14 +332,14 @@ public class ChatController: ViewController {
         let interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { [weak self] messageId in
             if let strongSelf = self, strongSelf.isNodeLoaded {
                 if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(message.id) } })
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(message.id) } })
                     strongSelf.chatDisplayNode.ensureInputViewFocused()
                 }
             }
         }, beginMessageSelection: { [weak self] messageId in
             if let strongSelf = self, strongSelf.isNodeLoaded {
                 if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState { $0.withUpdatedSelectedMessage(message.id) } })
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true,{ $0.updatedInterfaceState { $0.withUpdatedSelectedMessage(message.id) } })
                 }
             }
         }, deleteSelectedMessages: { [weak self] in
@@ -334,7 +349,7 @@ public class ChatController: ViewController {
                         modifier.deleteMessages(Array(messageIds))
                     }).start()
                 }
-                strongSelf.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
+                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
             }
         }, forwardSelectedMessages: { [weak self] in
             if let strongSelf = self {
@@ -343,7 +358,11 @@ public class ChatController: ViewController {
             }
         }, updateTextInputState: { [weak self] textInputState in
             if let strongSelf = self {
-                strongSelf.updateChatPresentationInterfaceState { $0.updatedInterfaceState { $0.withUpdatedInputState(textInputState) } }
+                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withUpdatedInputState(textInputState) } })
+            }
+        }, updateInputMode: { [weak self] f in
+            if let strongSelf = self {
+                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInputMode(f) })
             }
         })
         
@@ -362,6 +381,8 @@ public class ChatController: ViewController {
         
         self.chatDisplayNode.historyNode.preloadPages = true
         self.chatDisplayNode.historyNode.canReadHistory.set(.single(true))
+        
+        self.chatDisplayNode.loadInputPanels()
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -374,13 +395,14 @@ public class ChatController: ViewController {
         })
     }
     
-    func updateChatPresentationInterfaceState(animated: Bool = true, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) {
+    func updateChatPresentationInterfaceState(animated: Bool = true, interactive: Bool, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) {
         let temporaryChatPresentationInterfaceState = f(self.presentationInterfaceState)
         let inputContext = inputContextForChatPresentationIntefaceState(temporaryChatPresentationInterfaceState, account: self.account)
-        let updatedChatPresentationInterfaceState = temporaryChatPresentationInterfaceState.updatedInputContext { _ in return inputContext }
+        let inputTextPanelState = inputTextPanelStateForChatPresentationInterfaceState(temporaryChatPresentationInterfaceState, account: self.account)
+        let updatedChatPresentationInterfaceState = temporaryChatPresentationInterfaceState.updatedInputContext({ _ in return inputContext }).updatedInputTextPanelState({ _ in return inputTextPanelState })
         
         if self.isNodeLoaded {
-            self.chatDisplayNode.updateChatPresentationInterfaceState(updatedChatPresentationInterfaceState, animated: animated)
+            self.chatDisplayNode.updateChatPresentationInterfaceState(updatedChatPresentationInterfaceState, animated: animated, interactive: interactive)
         }
         self.presentationInterfaceState = updatedChatPresentationInterfaceState
         self.chatInterfaceStatePromise.set(.single(updatedChatPresentationInterfaceState.interfaceState))
@@ -429,7 +451,7 @@ public class ChatController: ViewController {
     private func navigationButtonAction(_ action: ChatNavigationButtonAction) {
         switch action {
             case .cancelMessageSelection:
-                self.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
+                self.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
             case .clearHistory:
                 let actionSheet = ActionSheetController()
                 actionSheet.setItemGroups([ActionSheetItemGroup(items: [

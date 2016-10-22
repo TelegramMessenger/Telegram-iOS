@@ -2,7 +2,9 @@ import Foundation
 import Display
 import AsyncDisplayKit
 
-class GridHoleItem: GridItem {
+final class GridHoleItem: GridItem {
+    let section: GridSection? = nil
+    
     func node(layout: GridNodeLayout) -> GridItemNode {
         return GridHoleItemNode()
     }

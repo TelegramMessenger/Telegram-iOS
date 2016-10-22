@@ -5,13 +5,15 @@ import SwiftSignalKit
 import TelegramCore
 
 final class PeerInfoControllerInteraction {
+    let updateState: ((PeerInfoState?) -> PeerInfoState?) -> Void
     let openSharedMedia: () -> Void
-    let changeNotificationNoteSettings: () -> Void
+    let changeNotificationMuteSettings: () -> Void
     let openPeerInfo: (PeerId) -> Void
     
-    init(openSharedMedia: @escaping () -> Void, changeNotificationNoteSettings: @escaping () -> Void, openPeerInfo: @escaping (PeerId) -> Void) {
+    init(updateState: @escaping ((PeerInfoState?) -> PeerInfoState?) -> Void, openSharedMedia: @escaping () -> Void, changeNotificationMuteSettings: @escaping () -> Void, openPeerInfo: @escaping (PeerId) -> Void) {
+        self.updateState = updateState
         self.openSharedMedia = openSharedMedia
-        self.changeNotificationNoteSettings = changeNotificationNoteSettings
+        self.changeNotificationMuteSettings = changeNotificationMuteSettings
         self.openPeerInfo = openPeerInfo
     }
 }
@@ -61,8 +63,16 @@ private func preparedPeerInfoEntryTransition(account: Account, from fromEntries:
 }
 
 private struct PeerInfoEquatableState: Equatable {
+    let state: PeerInfoState?
+    
     static func ==(lhs: PeerInfoEquatableState, rhs: PeerInfoEquatableState) -> Bool {
-        
+        if let lhsState = lhs.state, let rhsState = rhs.state {
+            return lhsState.isEqual(to: rhsState)
+        } else if (lhs.state != nil) != (rhs.state != nil) {
+            return false
+        } else {
+            return true
+        }
     }
 }
 
@@ -80,7 +90,18 @@ public final class PeerInfoController: ListController {
     private let changeSettingsDisposable = MetaDisposable()
     
     private var currentListStyle: PeerInfoListStyle = .plain
-    private var state = Promise<PeerInfoState?>(nil)
+    
+    private var state = PeerInfoEquatableState(state: nil) {
+        didSet {
+            self.statePromise.set(.single(self.state))
+        }
+    }
+    private var statePromise = Promise<PeerInfoEquatableState>(PeerInfoEquatableState(state: nil))
+    
+    private var leftNavigationButtonItem: UIBarButtonItem?
+    private var leftNavigationButton: PeerInfoNavigationButton?
+    private var rightNavigationButtonItem: UIBarButtonItem?
+    private var rightNavigationButton: PeerInfoNavigationButton?
     
     public init(account: Account, peerId: PeerId) {
         self.account = account
@@ -103,13 +124,17 @@ public final class PeerInfoController: ListController {
     override public func displayNodeDidLoad() {
         super.displayNodeDidLoad()
         
-        let interaction = PeerInfoControllerInteraction(openSharedMedia: { [weak self] in
+        let interaction = PeerInfoControllerInteraction(updateState: { [weak self] f in
+            if let strongSelf = self {
+                strongSelf.state = PeerInfoEquatableState(state: f(strongSelf.state.state))
+            }
+        }, openSharedMedia: { [weak self] in
             if let strongSelf = self {
                 if let controller = peerSharedMediaController(account: strongSelf.account, peerId: strongSelf.peerId) {
                     (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
                 }
             }
-        }, changeNotificationNoteSettings: { [weak self] in
+        }, changeNotificationMuteSettings: { [weak self] in
             if let strongSelf = self {
                 let controller = ActionSheetController()
                 let dismissAction: () -> Void = { [weak controller] in
@@ -167,9 +192,11 @@ public final class PeerInfoController: ListController {
         let previousEntries = Atomic<[PeerInfoSortableEntry]?>(value: nil)
         
         let account = self.account
-        let transition = account.viewTracker.peerView(self.peerId)
-            |> map { view -> (PeerInfoEntryTransition, PeerInfoListStyle, Bool, Bool) in
-                let entries = peerInfoEntries(view: view).map { PeerInfoSortableEntry(entry: $0) }
+        let transition = combineLatest(account.viewTracker.peerView(self.peerId), self.statePromise.get()
+            |> distinctUntilChanged)
+            |> map { view, state -> (PeerInfoEntryTransition, PeerInfoListStyle, Bool, Bool, PeerInfoNavigationButton?, PeerInfoNavigationButton?) in
+                let infoEntries = peerInfoEntries(view: view, state: state.state)
+                let entries = infoEntries.entries.map { PeerInfoSortableEntry(entry: $0) }
                 assert(entries == entries.sorted())
                 let previous = previousEntries.swap(entries)
                 let style: PeerInfoListStyle
@@ -180,12 +207,49 @@ public final class PeerInfoController: ListController {
                 } else {
                     style = .plain
                 }
-                return (preparedPeerInfoEntryTransition(account: account, from: previous ?? [], to: entries, interaction: interaction), style, previous == nil, previous != nil)
+                return (preparedPeerInfoEntryTransition(account: account, from: previous ?? [], to: entries, interaction: interaction), style, previous == nil, previous != nil, infoEntries.leftNavigationButton, infoEntries.rightNavigationButton)
             }
             |> deliverOnMainQueue
         
-        self.transitionDisposable.set(transition.start(next: { [weak self] (transition, style, firstTime, animated) in
-            self?.enqueueTransition(transition, style: style, firstTime: firstTime, animated: animated)
+        self.transitionDisposable.set(transition.start(next: { [weak self] (transition, style, firstTime, animated, leftButton, rightButton) in
+            if let strongSelf = self {
+                strongSelf.enqueueTransition(transition, style: style, firstTime: firstTime, animated: animated)
+                if let leftButton = leftButton {
+                    if let leftNavigationButtonItem = strongSelf.leftNavigationButtonItem {
+                        if leftNavigationButtonItem.title != leftButton.title {
+                            strongSelf.leftNavigationButtonItem = UIBarButtonItem(title: leftButton.title, style: .plain, target: strongSelf, action: #selector(strongSelf.leftNavigationButtonPressed))
+                            strongSelf.navigationItem.setLeftBarButton(strongSelf.leftNavigationButtonItem, animated: false)
+                        }
+                        strongSelf.leftNavigationButton = leftButton
+                    } else {
+                        strongSelf.leftNavigationButton = leftButton
+                        strongSelf.leftNavigationButtonItem = UIBarButtonItem(title: leftButton.title, style: .plain, target: strongSelf, action: #selector(strongSelf.leftNavigationButtonPressed))
+                        strongSelf.navigationItem.setLeftBarButton(strongSelf.leftNavigationButtonItem, animated: false)
+                    }
+                } else if strongSelf.leftNavigationButtonItem != nil {
+                    strongSelf.leftNavigationButtonItem = nil
+                    strongSelf.leftNavigationButton = nil
+                    strongSelf.navigationItem.setLeftBarButton(nil, animated: false)
+                }
+                
+                if let rightButton = rightButton {
+                    if let rightNavigationButtonItem = strongSelf.rightNavigationButtonItem {
+                        if rightNavigationButtonItem.title != rightButton.title {
+                            strongSelf.rightNavigationButtonItem = UIBarButtonItem(title: rightButton.title, style: .plain, target: strongSelf, action: #selector(strongSelf.rightNavigationButtonPressed))
+                            strongSelf.navigationItem.setRightBarButton(strongSelf.rightNavigationButtonItem, animated: false)
+                        }
+                        strongSelf.rightNavigationButton = rightButton
+                    } else {
+                        strongSelf.rightNavigationButton = rightButton
+                        strongSelf.rightNavigationButtonItem = UIBarButtonItem(title: rightButton.title, style: .plain, target: strongSelf, action: #selector(strongSelf.rightNavigationButtonPressed))
+                        strongSelf.navigationItem.setRightBarButton(strongSelf.rightNavigationButtonItem, animated: false)
+                    }
+                } else if strongSelf.rightNavigationButtonItem != nil {
+                    strongSelf.rightNavigationButtonItem = nil
+                    strongSelf.rightNavigationButton = nil
+                    strongSelf.navigationItem.setRightBarButton(nil, animated: false)
+                }
+            }
         }))
     }
     
@@ -214,5 +278,17 @@ public final class PeerInfoController: ListController {
                 }
             }
         })
+    }
+    
+    @objc func leftNavigationButtonPressed() {
+        if let leftNavigationButton = self.leftNavigationButton {
+            self.state = PeerInfoEquatableState(state: leftNavigationButton.action(self.state.state))
+        }
+    }
+    
+    @objc func rightNavigationButtonPressed() {
+        if let rightNavigationButton = self.rightNavigationButton {
+            self.state = PeerInfoEquatableState(state: rightNavigationButton.action(self.state.state))
+        }
     }
 }

@@ -25,8 +25,13 @@ private enum UserInfoSection: UInt32, PeerInfoSection {
     }
 }
 
+enum DestructiveUserInfoAction {
+    case block
+    case removeContact
+}
+
 enum UserInfoEntry: PeerInfoEntry {
-    case info(peer: Peer?, cachedData: CachedPeerData?)
+    case info(peer: Peer?, cachedData: CachedPeerData?, editingState: PeerInfoAvatarAndNameItemEditingState?)
     case about(text: String)
     case phoneNumber(index: Int, value: PhoneNumberWithLabel)
     case userName(value: String)
@@ -35,7 +40,8 @@ enum UserInfoEntry: PeerInfoEntry {
     case startSecretChat
     case sharedMedia
     case notifications(settings: PeerNotificationSettings?)
-    case block
+    case notificationSound(settings: PeerNotificationSettings?)
+    case block(action: DestructiveUserInfoAction)
     
     var section: PeerInfoSection {
         switch self {
@@ -43,7 +49,7 @@ enum UserInfoEntry: PeerInfoEntry {
                 return UserInfoSection.info
             case .sendMessage, .shareContact, .startSecretChat:
                 return UserInfoSection.actions
-            case .sharedMedia, .notifications:
+            case .sharedMedia, .notifications, .notificationSound:
                 return UserInfoSection.sharedMediaAndNotifications
             case .block:
                 return UserInfoSection.block
@@ -60,9 +66,9 @@ enum UserInfoEntry: PeerInfoEntry {
         }
         
         switch self {
-            case let .info(lhsPeer, lhsCachedData):
+            case let .info(lhsPeer, lhsCachedData, lhsEditingState):
                 switch entry {
-                    case let .info(rhsPeer, rhsCachedData):
+                    case let .info(rhsPeer, rhsCachedData, rhsEditingState):
                         if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
                             if !lhsPeer.isEqual(rhsPeer) {
                                 return false
@@ -75,6 +81,9 @@ enum UserInfoEntry: PeerInfoEntry {
                                 return false
                             }
                         } else if (lhsCachedData != nil) != (rhsCachedData != nil) {
+                            return false
+                        }
+                        if lhsEditingState != rhsEditingState {
                             return false
                         }
                         return true
@@ -142,9 +151,21 @@ enum UserInfoEntry: PeerInfoEntry {
                     default:
                         return false
                 }
-            case .block:
+            case let .notificationSound(lhsSettings):
                 switch entry {
-                    case .block:
+                case let .notificationSound(rhsSettings):
+                    if let lhsSettings = lhsSettings, let rhsSettings = rhsSettings {
+                        return lhsSettings.isEqual(to: rhsSettings)
+                    } else if (lhsSettings != nil) != (rhsSettings != nil) {
+                        return false
+                    }
+                    return true
+                default:
+                    return false
+                }
+            case let .block(action):
+                switch entry {
+                    case .block(action):
                         return true
                     default:
                         return false
@@ -172,8 +193,10 @@ enum UserInfoEntry: PeerInfoEntry {
                 return 1004
             case .notifications:
                 return 1005
-            case .block:
+            case .notificationSound:
                 return 1006
+            case .block:
+                return 1007
         }
     }
     
@@ -187,8 +210,8 @@ enum UserInfoEntry: PeerInfoEntry {
     
     func item(account: Account, interaction: PeerInfoControllerInteraction) -> ListViewItem {
         switch self {
-            case let .info(peer, cachedData):
-                return PeerInfoAvatarAndNameItem(account: account, peer: peer, cachedData: cachedData, sectionId: self.section.rawValue, style: .plain)
+            case let .info(peer, cachedData, editingState):
+                return PeerInfoAvatarAndNameItem(account: account, peer: peer, cachedData: cachedData, editingState: editingState, sectionId: self.section.rawValue, style: .plain)
             case let .about(text):
                 return PeerInfoTextWithLabelItem(label: "about", text: text, multiline: true, sectionId: self.section.rawValue)
             case let .phoneNumber(_, value):
@@ -219,65 +242,141 @@ enum UserInfoEntry: PeerInfoEntry {
                     label = "Enabled"
                 }
                 return PeerInfoDisclosureItem(title: "Notifications", label: label, sectionId: self.section.rawValue, style: .plain, action: {
-                    interaction.changeNotificationNoteSettings()
+                    interaction.changeNotificationMuteSettings()
                 })
-            case .block:
-                return PeerInfoActionItem(title: "Block User", kind: .destructive, alignment: .natural, sectionId: self.section.rawValue, style: .plain, action: {
+            case let .notificationSound(settings):
+                let label: String
+                label = "Default"
+                return PeerInfoDisclosureItem(title: "Sound", label: label, sectionId: self.section.rawValue, style: .plain, action: {
+                })
+            case let .block(action):
+                let title: String
+                switch action {
+                    case .block:
+                        title = "Block User"
+                    case .removeContact:
+                        title = "Remove Contact"
+                }
+                return PeerInfoActionItem(title: title, kind: .destructive, alignment: .natural, sectionId: self.section.rawValue, style: .plain, action: {
                     
                 })
         }
     }
 }
 
-final class UserInfoEditingState {
+final class UserInfoEditingState: Equatable {
+    let infoState = PeerInfoAvatarAndNameItemEditingState()
     
+    static func ==(lhs: UserInfoEditingState, rhs: UserInfoEditingState) -> Bool {
+        return true
+    }
 }
 
-final class UserInfoState: PeerInfoState {
+private final class UserInfoState: PeerInfoState {
     fileprivate let editingState: UserInfoEditingState?
     
-    var navigationButton: PeerInfoNavigationButton {
-        return self.editingState == nil ? .edit : .done
-    }
-    
-    init() {
-        self.editingState = nil
+    init(editingState: UserInfoEditingState?) {
+        self.editingState = editingState
     }
     
     func isEqual(to: PeerInfoState) -> Bool {
         if let to = to as? UserInfoState {
-            return true
+            return self.editingState == to.editingState
         } else {
             return false
         }
     }
+    
+    func updateEditingState(_ editingState: UserInfoEditingState?) -> UserInfoState {
+        return UserInfoState(editingState: editingState)
+    }
 }
 
-func userInfoEntries(view: PeerView, state: PeerInfoState?) -> [PeerInfoEntry] {
+func userInfoEntries(view: PeerView, state: PeerInfoState?) -> PeerInfoEntries {
     var entries: [PeerInfoEntry] = []
-    entries.append(UserInfoEntry.info(peer: view.peers[view.peerId], cachedData: view.cachedData))
+    
+    var infoEditingState: PeerInfoAvatarAndNameItemEditingState?
+    
+    var isEditing = false
+    if let state = state as? UserInfoState, let editingState = state.editingState {
+        isEditing = true
+        
+        if view.peerIsContact {
+            infoEditingState = editingState.infoState
+        }
+    }
+    
+    entries.append(UserInfoEntry.info(peer: view.peers[view.peerId], cachedData: view.cachedData, editingState: infoEditingState))
     if let cachedUserData = view.cachedData as? CachedUserData {
         if let about = cachedUserData.about, !about.isEmpty {
             entries.append(UserInfoEntry.about(text: about))
         }
     }
+    
+    var editable = true
+    
     if let user = view.peers[view.peerId] as? TelegramUser {
         if let phoneNumber = user.phone, !phoneNumber.isEmpty {
             entries.append(UserInfoEntry.phoneNumber(index: 0, value: PhoneNumberWithLabel(label: "home", number: phoneNumber)))
         }
-        if let username = user.username, !username.isEmpty {
-            entries.append(UserInfoEntry.userName(value: username))
-        }
-        if let state = state as? UserInfoState, let editingState = state.editingState {
-            
-        } else {
+        
+        if !isEditing {
+            if let username = user.username, !username.isEmpty {
+                entries.append(UserInfoEntry.userName(value: username))
+            }
             entries.append(UserInfoEntry.sendMessage)
-            entries.append(UserInfoEntry.shareContact)
+            if view.peerIsContact {
+                entries.append(UserInfoEntry.shareContact)
+            }
             entries.append(UserInfoEntry.startSecretChat)
+            entries.append(UserInfoEntry.sharedMedia)
         }
-        entries.append(UserInfoEntry.sharedMedia)
         entries.append(UserInfoEntry.notifications(settings: view.notificationSettings))
-        entries.append(UserInfoEntry.block)
+        
+        if isEditing {
+            entries.append(UserInfoEntry.notificationSound(settings: view.notificationSettings))
+            if view.peerIsContact {
+                entries.append(UserInfoEntry.block(action: .removeContact))
+            }
+        } else {
+            entries.append(UserInfoEntry.block(action: .block))
+        }
     }
-    return entries
+    
+    var leftNavigationButton: PeerInfoNavigationButton?
+    var rightNavigationButton: PeerInfoNavigationButton?
+    if editable {
+        if let state = state as? UserInfoState, let _ = state.editingState {
+            leftNavigationButton = PeerInfoNavigationButton(title: "Cancel", action: { state in
+                if state == nil {
+                    return UserInfoState(editingState: nil)
+                } else if let state = state as? UserInfoState {
+                    return state.updateEditingState(nil)
+                } else {
+                    return state
+                }
+            })
+            rightNavigationButton = PeerInfoNavigationButton(title: "Done", action: { state in
+                if state == nil {
+                    return UserInfoState(editingState: nil)
+                } else if let state = state as? UserInfoState {
+                    return state.updateEditingState(nil)
+                } else {
+                    return state
+                }
+            })
+        } else {
+            rightNavigationButton = PeerInfoNavigationButton(title: "Edit", action: { state in
+                if state == nil {
+                    return UserInfoState(editingState: UserInfoEditingState())
+                } else if let state = state as? UserInfoState {
+                    return state.updateEditingState(UserInfoEditingState())
+                } else {
+                    return state
+                }
+            })
+        }
+    }
+    
+    return PeerInfoEntries(entries: entries, leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton)
 }

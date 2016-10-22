@@ -39,7 +39,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 if self.telegramFile != telegramFile {
                     self.telegramFile = telegramFile
                     
-                    let signal = chatMessageSticker(account: item.account, file: telegramFile)
+                    let signal = chatMessageSticker(account: item.account, file: telegramFile, small: false)
                     self.imageNode.setSignal(account: item.account, signal: signal)
                     self.fetchDisposable.set(fileInteractiveFetched(account: item.account, file: telegramFile).start())
                 }

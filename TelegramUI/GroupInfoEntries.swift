@@ -236,7 +236,7 @@ enum GroupInfoEntry: PeerInfoEntry {
     func item(account: Account, interaction: PeerInfoControllerInteraction) -> ListViewItem {
         switch self {
             case let .info(peer, cachedData):
-                return PeerInfoAvatarAndNameItem(account: account, peer: peer, cachedData: cachedData, sectionId: self.section.rawValue, style: .blocks)
+                return PeerInfoAvatarAndNameItem(account: account, peer: peer, cachedData: cachedData, editingState: nil, sectionId: self.section.rawValue, style: .blocks)
             case .setGroupPhoto:
                 return PeerInfoActionItem(title: "Set Group Photo", kind: .generic, alignment: .natural, sectionId: self.section.rawValue, style: .blocks, action: {
                 })
@@ -248,7 +248,7 @@ enum GroupInfoEntry: PeerInfoEntry {
                     label = "Enabled"
                 }
                 return PeerInfoDisclosureItem(title: "Notifications", label: label, sectionId: self.section.rawValue, style: .blocks, action: {
-                    interaction.changeNotificationNoteSettings()
+                    interaction.changeNotificationMuteSettings()
                 })
             case .sharedMedia:
                 return PeerInfoDisclosureItem(title: "Shared Media", label: "", sectionId: self.section.rawValue, style: .blocks, action: {
@@ -280,7 +280,7 @@ enum GroupInfoEntry: PeerInfoEntry {
     }
 }
 
-func groupInfoEntries(view: PeerView) -> [PeerInfoEntry] {
+func groupInfoEntries(view: PeerView) -> PeerInfoEntries {
     var entries: [PeerInfoEntry] = []
     entries.append(GroupInfoEntry.info(peer: view.peers[view.peerId], cachedData: view.cachedData))
     
@@ -400,5 +400,5 @@ func groupInfoEntries(view: PeerView) -> [PeerInfoEntry] {
         }
     }
 
-    return entries
+    return PeerInfoEntries(entries: entries, leftNavigationButton: nil, rightNavigationButton: nil)
 }

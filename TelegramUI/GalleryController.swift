@@ -145,7 +145,7 @@ class GalleryController: ViewController {
         
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Done", style: .plain, target: self, action: #selector(self.donePressed))
         
-        self.statusBar.style = .White
+        self.statusBar.statusBarStyle = .White
         
         let message = account.postbox.messageAtId(messageId)
         
@@ -204,7 +204,7 @@ class GalleryController: ViewController {
             if let strongSelf = self {
                 switch style {
                     case .dark:
-                        strongSelf.statusBar.style = .White
+                        strongSelf.statusBar.statusBarStyle = .White
                         strongSelf.navigationBar.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
                         strongSelf.navigationBar.stripeColor = UIColor.clear
                         strongSelf.navigationBar.foregroundColor = UIColor.white
@@ -212,7 +212,7 @@ class GalleryController: ViewController {
                         strongSelf.galleryNode.backgroundNode.backgroundColor = UIColor.black
                         strongSelf.galleryNode.isBackgroundExtendedOverNavigationBar = true
                     case .light:
-                        strongSelf.statusBar.style = .Black
+                        strongSelf.statusBar.statusBarStyle = .Black
                         strongSelf.navigationBar.backgroundColor = UIColor(red: 0.968626451, green: 0.968626451, blue: 0.968626451, alpha: 1.0)
                         strongSelf.navigationBar.foregroundColor = UIColor.black
                         strongSelf.navigationBar.accentColor = UIColor(0x007ee5)

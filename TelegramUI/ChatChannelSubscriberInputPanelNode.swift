@@ -49,23 +49,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     
     private let actionDisposable = MetaDisposable()
     
-    override var peer: Peer? {
-        didSet {
-            if let peer = self.peer, oldValue == nil || !peer.isEqual(oldValue!) {
-                if let action = actionForPeer(peer) {
-                    self.action = action
-                    let (title, color) = titleAndColorForAction(action)
-                    self.button.setTitle(title, for: [])
-                    self.button.setTitleColor(color, for: [.normal])
-                    self.button.setTitleColor(color.withAlphaComponent(0.5), for: [.highlighted])
-                    self.button.sizeToFit()
-                    self.setNeedsLayout()
-                } else {
-                    self.action = nil
-                }
-            }
-        }
-    }
+    private var presentationInterfaceState = ChatPresentationInterfaceState()
     
     override init() {
         self.button = UIButton()
@@ -84,23 +68,6 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         self.actionDisposable.dispose()
     }
     
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        return CGSize(width: constrainedSize.width, height: 45.0)
-    }
-    
-    override func layout() {
-        super.layout()
-        
-        let bounds = self.bounds
-        
-        let buttonSize = self.button.bounds.size
-        self.button.frame = CGRect(origin: CGPoint(x: floor((bounds.size.width - buttonSize.width) / 2.0), y: floor((bounds.size.height - buttonSize.height) / 2.0)), size: buttonSize)
-        
-        //_activityIndicator.frame = CGRectMake(self.frame.size.width - _activityIndicator.frame.size.width - 12.0f, CGFloor((self.frame.size.height - _activityIndicator.frame.size.height) / 2.0f), _activityIndicator.frame.size.width, _activityIndicator.frame.size.height);
-        let indicatorSize = self.activityIndicator.bounds.size
-        self.activityIndicator.frame = CGRect(origin: CGPoint(x: bounds.size.width - indicatorSize.width - 12.0, y: floor((bounds.size.height - indicatorSize.height) / 2.0)), size: indicatorSize)
-    }
-    
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if self.bounds.contains(point) {
             return self.button
@@ -110,7 +77,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     }
     
     @objc func buttonPressed() {
-        guard let account = self.account, let action = self.action, let peer = self.peer else {
+        guard let account = self.account, let action = self.action, let peer = self.presentationInterfaceState.peer else {
             return
         }
         
@@ -134,5 +101,35 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             case .unmuteNotifications:
                 break
         }
+    }
+    
+    override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
+        if self.presentationInterfaceState != interfaceState {
+            let previousState = self.presentationInterfaceState
+            self.presentationInterfaceState = interfaceState
+            
+            if let peer = interfaceState.peer, previousState.peer == nil || !peer.isEqual(previousState.peer!) {
+                if let action = actionForPeer(peer) {
+                    self.action = action
+                    let (title, color) = titleAndColorForAction(action)
+                    self.button.setTitle(title, for: [])
+                    self.button.setTitleColor(color, for: [.normal])
+                    self.button.setTitleColor(color.withAlphaComponent(0.5), for: [.highlighted])
+                    self.button.sizeToFit()
+                } else {
+                    self.action = nil
+                }
+            }
+        }
+        
+        let panelHeight: CGFloat = 47.0
+        
+        let buttonSize = self.button.bounds.size
+        self.button.frame = CGRect(origin: CGPoint(x: floor((width - buttonSize.width) / 2.0), y: floor((panelHeight - buttonSize.height) / 2.0)), size: buttonSize)
+        
+        let indicatorSize = self.activityIndicator.bounds.size
+        self.activityIndicator.frame = CGRect(origin: CGPoint(x: width - indicatorSize.width - 12.0, y: floor((panelHeight - indicatorSize.height) / 2.0)), size: indicatorSize)
+        
+        return 47.0
     }
 }

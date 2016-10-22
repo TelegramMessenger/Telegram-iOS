@@ -15,6 +15,8 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
     private var progressNode: RadialProgressNode?
     private var tapRecognizer: UITapGestureRecognizer?
     
+    private var account: Account?
+    private var messageIdAndFlags: (MessageId, MessageFlags)?
     private var media: Media?
     
     private let statusDisposable = MetaDisposable()
@@ -48,6 +50,11 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
         if let fetchStatus = self.fetchStatus {
             switch fetchStatus {
                 case .Fetching:
+                    if let account = self.account, let (messageId, flags) = self.messageIdAndFlags, flags.contains(.Unsent) && !flags.contains(.Failed) {
+                        account.postbox.modify({ modifier -> Void in
+                            modifier.deleteMessages([messageId])
+                        }).start()
+                    }
                     if let cancel = self.fetchControls.with({ return $0?.cancel }) {
                         cancel()
                     }
@@ -75,11 +82,12 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
         }
     }
     
-    func asyncLayout() -> (_ account: Account, _ media: Media, _ corners: ImageCorners, _ automaticDownload: Bool, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void))) {
+    func asyncLayout() -> (_ account: Account, _ message: Message, _ media: Media, _ corners: ImageCorners, _ automaticDownload: Bool, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void))) {
+        let currentMessageIdAndFlags = self.messageIdAndFlags
         let currentMedia = self.media
         let imageLayout = self.imageNode.asyncLayout()
         
-        return { account, media, corners, automaticDownload, constrainedSize in
+        return { account, message, media, corners, automaticDownload, constrainedSize in
             var initialBoundingSize: CGSize
             var nativeSize: CGSize
             
@@ -113,10 +121,15 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                     mediaUpdated = true
                 }
                 
+                var statusUpdated = mediaUpdated
+                if currentMessageIdAndFlags?.0 != message.id || currentMessageIdAndFlags?.1 != message.flags {
+                    statusUpdated = true
+                }
+                
                 if mediaUpdated {
                     if let image = media as? TelegramMediaImage {
                         updateImageSignal = chatMessagePhoto(account: account, photo: image)
-                        updatedStatusSignal = chatMessagePhotoStatus(account: account, photo: image)
+                        
                         updatedFetchControls = FetchControls(fetch: { [weak self] in
                             if let strongSelf = self {
                                 strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(account: account, photo: image).start())
@@ -126,7 +139,6 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                         })
                     } else if let file = media as? TelegramMediaFile {
                         updateImageSignal = chatMessageVideo(account: account, video: file)
-                        updatedStatusSignal = chatMessageFileStatus(account: account, file: file)
                         updatedFetchControls = FetchControls(fetch: { [weak self] in
                             if let strongSelf = self {
                                 strongSelf.fetchDisposable.set(chatMessageFileInteractiveFetched(account: account, file: file).start())
@@ -134,6 +146,32 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                         }, cancel: {
                             chatMessageFileCancelInteractiveFetch(account: account, file: file)
                         })
+                    }
+                }
+                
+                if statusUpdated {
+                    if let image = media as? TelegramMediaImage {
+                        if message.flags.contains(.Unsent) && !message.flags.contains(.Failed) {
+                            updatedStatusSignal = combineLatest(chatMessagePhotoStatus(account: account, photo: image), account.pendingMessageManager.pendingMessageStatus(message.id))
+                                |> map { resourceStatus, pendingStatus -> MediaResourceStatus in
+                                    if let pendingStatus = pendingStatus {
+                                        return .Fetching(progress: pendingStatus.progress)
+                                    } else {
+                                        return resourceStatus
+                                    }
+                                }
+                        } else {
+                            updatedStatusSignal = chatMessagePhotoStatus(account: account, photo: image)
+                        }
+                    } else if let file = media as? TelegramMediaFile {
+                        updatedStatusSignal = combineLatest(chatMessageFileStatus(account: account, file: file), account.pendingMessageManager.pendingMessageStatus(message.id))
+                            |> map { resourceStatus, pendingStatus -> MediaResourceStatus in
+                                if let pendingStatus = pendingStatus {
+                                    return .Fetching(progress: pendingStatus.progress)
+                                } else {
+                                    return resourceStatus
+                                }
+                            }
                     }
                 }
                 
@@ -153,6 +191,8 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                     
                     return (CGSize(width: adjustedImageSize.width, height: adjustedImageSize.height), { [weak self] in
                         if let strongSelf = self {
+                            strongSelf.account = account
+                            strongSelf.messageIdAndFlags = (message.id, message.flags)
                             strongSelf.media = media
                             strongSelf.imageNode.frame = adjustedImageFrame
                             strongSelf.progressNode?.position = CGPoint(x: adjustedImageFrame.midX, y: adjustedImageFrame.midY)
@@ -225,12 +265,12 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
         }
     }
     
-    static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ account: Account, _ media: Media, _ corners: ImageCorners, _ automaticDownload: Bool, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageInteractiveMediaNode))) {
+    static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ account: Account, _ message: Message, _ media: Media, _ corners: ImageCorners, _ automaticDownload: Bool, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageInteractiveMediaNode))) {
         let currentAsyncLayout = node?.asyncLayout()
         
-        return { account, media, corners, automaticDownload, constrainedSize in
+        return { account, message, media, corners, automaticDownload, constrainedSize in
             var imageNode: ChatMessageInteractiveMediaNode
-            var imageLayout: (_ account: Account, _ media: Media, _ corners: ImageCorners, _ automaticDownload: Bool, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void)))
+            var imageLayout: (_ account: Account, _ message: Message, _ media: Media, _ corners: ImageCorners, _ automaticDownload: Bool, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void)))
             
             if let node = node, let currentAsyncLayout = currentAsyncLayout {
                 imageNode = node
@@ -240,7 +280,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                 imageLayout = imageNode.asyncLayout()
             }
             
-            let (initialWidth, continueLayout) = imageLayout(account, media, corners, automaticDownload, constrainedSize)
+            let (initialWidth, continueLayout) = imageLayout(account, message, media, corners, automaticDownload, constrainedSize)
             
             return (initialWidth, { constrainedSize in
                 let (finalWidth, finalLayout) = continueLayout(constrainedSize)

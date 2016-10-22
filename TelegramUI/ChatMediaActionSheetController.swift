@@ -3,6 +3,7 @@ import Display
 import AsyncDisplayKit
 import UIKit
 import SwiftSignalKit
+import Photos
 
 final class ChatMediaActionSheetController: ActionSheetController {
     private let _ready = Promise<Bool>()
@@ -11,6 +12,7 @@ final class ChatMediaActionSheetController: ActionSheetController {
     }
     private var didSetReady = false
     
+    var photo: (PHAsset) -> Void = { _ in }
     var location: () -> Void = { }
     var contacts: () -> Void = { }
     
@@ -21,7 +23,12 @@ final class ChatMediaActionSheetController: ActionSheetController {
         
         self.setItemGroups([
             ActionSheetItemGroup(items: [
-                ChatMediaActionSheetRollItem(),
+                ChatMediaActionSheetRollItem(assetSelected: { [weak self] asset in
+                    if let strongSelf = self {
+                        self?.dismissAnimated()
+                        strongSelf.photo(asset)
+                    }
+                }),
                 ActionSheetButtonItem(title: "File", action: {}),
                 ActionSheetButtonItem(title: "Location", action: { [weak self] in
                     self?.dismissAnimated()

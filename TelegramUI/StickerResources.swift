@@ -5,42 +5,71 @@ import Display
 import TelegramUIPrivateModule
 import TelegramCore
 
-private func chatMessageStickerDatas(account: Account, file: TelegramMediaFile) -> Signal<(Data?, Data?, Int), NoError> {
-    let fullSizeResource = fileResource(file)
-    let maybeFetched = account.postbox.mediaBox.resourceData(fullSizeResource, complete: true)
+private func imageFromAJpeg(data: Data) -> (UIImage, UIImage)? {
+    if let (colorData, alphaData) = data.withUnsafeBytes({ (bytes: UnsafePointer<UInt8>) -> (Data, Data)? in
+        var colorSize: Int32 = 0
+        memcpy(&colorSize, bytes, 4)
+        if colorSize < 0 || Int(colorSize) > data.count - 8 {
+            return nil
+        }
+        var alphaSize: Int32 = 0
+        memcpy(&alphaSize, bytes.advanced(by: 4 + Int(colorSize)), 4)
+        if alphaSize < 0 || Int(alphaSize) > data.count - Int(colorSize) - 8 {
+            return nil
+        }
+        //let colorData = Data(bytesNoCopy: UnsafeMutablePointer(mutating: bytes).advanced(by: 4), count: Int(colorSize), deallocator: .none)
+        //let alphaData = Data(bytesNoCopy: UnsafeMutablePointer(mutating: bytes).advanced(by: 4 + Int(colorSize) + 4), count: Int(alphaSize), deallocator: .none)
+        let colorData = data.subdata(in: 4 ..< (4 + Int(colorSize)))
+        let alphaData = data.subdata(in: (4 + Int(colorSize) + 4) ..< (4 + Int(colorSize) + 4 + Int(alphaSize)))
+        return (colorData, alphaData)
+    }) {
+        if let colorImage = UIImage(data: colorData), let alphaImage = UIImage(data: alphaData) {
+            return (colorImage, alphaImage)
+            
+            /*return generateImage(CGSize(width: colorImage.size.width * colorImage.scale, height: colorImage.size.height * colorImage.scale), contextGenerator: { size, context in
+                colorImage.draw(in: CGRect(origin: CGPoint(), size: size))
+            }, scale: 1.0)*/
+        }
+    }
+    return nil
+}
+
+private func chatMessageStickerDatas(account: Account, file: TelegramMediaFile, small: Bool) -> Signal<(Data?, Data?, Bool), NoError> {
+    //let maybeFetched = account.postbox.mediaBox.resourceData(file.resource, complete: true)
+    let maybeFetched = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedStickerAJpegRepresentation(size: small ? CGSize(width: 160.0, height: 160.0) : nil))
     
     return maybeFetched |> take(1) |> mapToSignal { maybeData in
-        if maybeData.size >= fullSizeResource.size {
+        if maybeData.size >= file.size {
             let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
             
-            return .single((nil, loadedData, fullSizeResource.size))
+            return .single((nil, loadedData, true))
         } else {
-            let fullSizeData = account.postbox.mediaBox.resourceData(fullSizeResource, complete: true) |> map { next in
-                return next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedIfSafe)
+            //let fullSizeData = account.postbox.mediaBox.resourceData(file.resource, complete: true)
+            
+            let fullSizeData = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedStickerAJpegRepresentation(size: small ? CGSize(width: 160.0, height: 160.0) : nil)) |> map { next in
+                return (next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedIfSafe), next.complete)
             }
             
-            return fullSizeData |> map { data -> (Data?, Data?, Int) in
-                return (nil, data, fullSizeResource.size)
+            return fullSizeData |> map { (data, complete) -> (Data?, Data?, Bool) in
+                return (nil, data, complete)
             }
         }
     }
 }
 
-func chatMessageSticker(account: Account, file: TelegramMediaFile) -> Signal<(TransformImageArguments) -> DrawingContext, NoError> {
-    let signal = chatMessageStickerDatas(account: account, file: file)
+func chatMessageSticker(account: Account, file: TelegramMediaFile, small: Bool) -> Signal<(TransformImageArguments) -> DrawingContext, NoError> {
+    let signal = chatMessageStickerDatas(account: account, file: file, small: small)
     
-    return signal |> map { (thumbnailData, fullSizeData, fullTotalSize) in
+    return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
         return { arguments in
             assertNotOnMainThread()
+            
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
             
-            var fullSizeImage: UIImage?
-            if let fullSizeData = fullSizeData {
-                if fullSizeData.count >= fullTotalSize {
-                    if let image = UIImage.convert(fromWebP: fullSizeData) {
-                        fullSizeImage = image
-                    }
-                } else {
+            var fullSizeImage: (UIImage, UIImage)?
+            if let fullSizeData = fullSizeData, fullSizeComplete {
+                if let image = imageFromAJpeg(data: fullSizeData) {
+                    fullSizeImage = image
                 }
             }
             
@@ -67,10 +96,13 @@ func chatMessageSticker(account: Account, file: TelegramMediaFile) -> Signal<(Tr
                     c.draw(blurredThumbnailImage.cgImage!, in: arguments.drawingRect)
                 }
                 
-                if let fullSizeImage = fullSizeImage, let cgImage = fullSizeImage.cgImage {
+                if let fullSizeImage = fullSizeImage, let cgImage = fullSizeImage.0.cgImage, let cgImageAlpha = fullSizeImage.1.cgImage {
                     c.setBlendMode(.normal)
                     c.interpolationQuality = .medium
-                    c.draw(cgImage, in: arguments.drawingRect)
+                    
+                    let mask = CGImage(maskWidth: cgImageAlpha.width, height: cgImageAlpha.height, bitsPerComponent: cgImageAlpha.bitsPerComponent, bitsPerPixel: cgImageAlpha.bitsPerPixel, bytesPerRow: cgImageAlpha.bytesPerRow, provider: cgImageAlpha.dataProvider!, decode: nil, shouldInterpolate: true)
+                    
+                    c.draw(cgImage.masking(mask!)!, in: arguments.drawingRect)
                 }
             }
             

@@ -48,7 +48,7 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
     private var accountAndFile: (Account, TelegramMediaFile)?
     private let dataDisposable = MetaDisposable()
     
-    private var isVisible = false
+    private var itemIsVisible = false
     
     override init() {
         if #available(iOS 9.0, *) {
@@ -93,7 +93,7 @@ class ChatDocumentGalleryItemNode: GalleryItemNode {
             if let fileName = file.fileName {
                 pathExtension = (fileName as NSString).pathExtension
             }
-            let data = account.postbox.mediaBox.resourceData(CloudFileMediaResource(location: file.location, size: file.size), pathExtension: pathExtension, complete: true)
+            let data = account.postbox.mediaBox.resourceData(file.resource, pathExtension: pathExtension, complete: true)
                 |> deliverOnMainQueue
             self.dataDisposable.set(data.start(next: { [weak self] data in
                 if let strongSelf = self {
