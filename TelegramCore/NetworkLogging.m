@@ -14,7 +14,7 @@ void setBridgingTraceFunction(void (*f)(NSString *, NSString *)) {
 }
 
 #if TARGET_IPHONE_SIMULATOR
-static bool loggingEnabled = false;
+static bool loggingEnabled = true;
 #else
 static bool loggingEnabled = false;
 #endif

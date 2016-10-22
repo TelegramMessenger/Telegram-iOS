@@ -109,6 +109,11 @@ func initializedNetwork(datacenterId: Int, keychain: Keychain) -> Signal<Network
                 5: "149.154.171.5"
             ]
             
+            /*let seedAddressList = [
+                1: "149.154.175.10",
+                2: "149.154.167.40"
+            ]*/
+            
             for (id, ip) in seedAddressList {
                 context.setSeedAddressSetForDatacenterWithId(id, seedAddressSet: MTDatacenterAddressSet(addressList: [MTDatacenterAddress(ip: ip, port: 443, preferForMedia: false, restrictToTcp: false)]))
             }
@@ -154,6 +159,9 @@ public class Network {
         return self._connectionStatus.get() |> distinctUntilChanged
     }
     
+    public let shouldKeepConnection = Promise<Bool>(false)
+    private let shouldKeepConnectionDisposable = MetaDisposable()
+    
     fileprivate init(datacenterId: Int, context: MTContext, mtProto: MTProto, requestService: MTRequestMessageService, connectionStatusDelegate: MTProtoConnectionStatusDelegate, _connectionStatus: Promise<ConnectionStatus>) {
         self.datacenterId = datacenterId
         self.context = context
@@ -161,6 +169,24 @@ public class Network {
         self.requestService = requestService
         self.connectionStatusDelegate = connectionStatusDelegate
         self._connectionStatus = _connectionStatus
+        
+        let shouldKeepConnectionSignal = self.shouldKeepConnection.get()
+            |> distinctUntilChanged
+        self.shouldKeepConnectionDisposable.set(shouldKeepConnectionSignal.start(next: { [weak self] value in
+            if let strongSelf = self {
+                if true || value {
+                    trace("Network", what: "Resume network connection")
+                    strongSelf.mtProto.resume()
+                } else {
+                    trace("Network", what: "Pause network connection")
+                    strongSelf.mtProto.pause()
+                }
+            }
+        }))
+    }
+    
+    deinit {
+        self.shouldKeepConnectionDisposable.dispose()
     }
     
     func download(datacenterId: Int) -> Signal<Download, NoError> {

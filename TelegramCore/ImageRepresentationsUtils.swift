@@ -1,3 +1,8 @@
+#if os(macOS)
+    import PostboxMac
+#else
+    import Postbox
+#endif
 
 public func smallestImageRepresentation(_ representations: [TelegramMediaImageRepresentation]) -> TelegramMediaImageRepresentation? {
     if representations.count == 0 {

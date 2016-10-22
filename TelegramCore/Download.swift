@@ -33,6 +33,39 @@ class Download {
         self.mtProto.stop()
     }
     
+    func uploadPart(fileId: Int64, index: Int, data: Data) -> Signal<Void, NoError> {
+        return Signal<Void, MTRpcError> { subscriber in
+            let request = MTRequest()
+            
+            let saveFilePart = Api.functions.upload.saveFilePart(fileId: fileId, filePart: Int32(index), bytes: Buffer(data: data))
+            
+            request.setPayload(saveFilePart.1.makeData() as Data!, metadata: WrappedRequestMetadata(metadata: saveFilePart.0), responseParser: { response in
+                if let result = saveFilePart.2(Buffer(data: response)) {
+                    return BoxedMessage(result)
+                }
+                return nil
+            })
+            
+            request.dependsOnPasswordEntry = false
+            
+            request.completed = { (boxedResponse, timestamp, error) -> () in
+                if let error = error {
+                    subscriber.putError(error)
+                } else {
+                    subscriber.putCompletion()
+                }
+            }
+            
+            let internalId: Any! = request.internalId
+            
+            self.requestService.add(request)
+            
+            return ActionDisposable {
+                self.requestService.removeRequest(byInternalId: internalId)
+            }
+        } |> retryRequest
+    }
+    
     func part(location: Api.InputFileLocation, offset: Int, length: Int) -> Signal<Data, NoError> {
         return Signal<Data, MTRpcError> { subscriber in
             let request = MTRequest()

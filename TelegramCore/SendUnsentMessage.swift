@@ -7,10 +7,41 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+private func uploadedMessageMedia(network: Network, postbox: Postbox, media: Media) -> Signal<Api.InputMedia?, NoError> {
+    if let image = media as? TelegramMediaImage {
+        if let largestRepresentation = largestImageRepresentation(image.representations) {
+            if let resource = largestRepresentation.resource as? LocalFileMediaResource {
+                return multipartUpload(network: network, postbox: postbox, resource: resource)
+                    |> mapToSignal { result -> Signal<Api.InputMedia?, NoError> in
+                        switch result {
+                            case let .inputFile(file):
+                                return .single(Api.InputMedia.inputMediaUploadedPhoto(file: file, caption: ""))
+                            default:
+                                return .complete()
+                        }
+                    }
+            } else {
+                return .single(nil)
+            }
+        } else {
+            return .single(nil)
+        }
+    } else {
+        return .single(nil)
+    }
+}
+
+private func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox) {
+    if let fromImage = from as? TelegramMediaImage, let toImage = to as? TelegramMediaImage {
+        if let fromLargestRepresentation = largestImageRepresentation(fromImage.representations), let toLargestRepresentation = largestImageRepresentation(toImage.representations) {
+            postbox.mediaBox.moveResourceData(from: fromLargestRepresentation.resource.id, to: toLargestRepresentation.resource.id)
+        }
+    }
+}
+
 func sendUnsentMessage(network: Network, postbox: Postbox, stateManager: StateManager, message: Message) -> Signal<Void, NoError> {
     return postbox.loadedPeerWithId(message.id.peerId)
         |> take(1)
-        //|> delay(2.0, queue: Queue.concurrentDefaultQueue())
         |> mapToSignal { peer -> Signal<Void, NoError> in
             if let inputPeer = apiInputPeer(peer) {
                 var randomId: Int64 = 0
@@ -28,10 +59,29 @@ func sendUnsentMessage(network: Network, postbox: Postbox, stateManager: StateMa
                 if let replyMessageId = replyMessageId {
                     flags |= Int32(1 << 0)
                 }
-                return network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: message.text, randomId: randomId, replyMarkup: nil, entities: nil))
-                    |> mapError { _ -> NoError in
-                        return NoError()
-                    }
+                
+                var sendMessageRequest: Signal<Api.Updates, NoError>
+                
+                if let media = message.media.first {
+                    sendMessageRequest = uploadedMessageMedia(network: network, postbox: postbox, media: media)
+                        |> mapToSignal { inputMedia -> Signal<Api.Updates, NoError> in
+                            if let inputMedia = inputMedia {
+                                return network.request(Api.functions.messages.sendMedia(flags: 0, peer: inputPeer, replyToMsgId: replyMessageId, media: inputMedia, randomId: randomId, replyMarkup: nil))
+                                    |> mapError { _ -> NoError in
+                                        return NoError()
+                                    }
+                            } else {
+                                preconditionFailure()
+                            }
+                        }
+                } else {
+                    sendMessageRequest = network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: message.text, randomId: randomId, replyMarkup: nil, entities: nil))
+                        |> mapError { _ -> NoError in
+                            return NoError()
+                        }
+                }
+                
+                return sendMessageRequest
                     |> mapToSignal { result -> Signal<Void, NoError> in
                         let messageId = result.rawMessageIds.first
                         let apiMessage = result.messages.first
@@ -82,6 +132,11 @@ func sendUnsentMessage(network: Network, postbox: Postbox, stateManager: StateMa
                                 if let forwardInfo = currentMessage.forwardInfo {
                                     storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
                                 }
+                                
+                                if let fromMedia = currentMessage.media.first, let toMedia = media.first {
+                                    applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox)
+                                }
+                                
                                 return StoreMessage(id: updatedId, timestamp: currentMessage.timestamp, flags: [], tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media)
                             })
                         } |> afterDisposed {

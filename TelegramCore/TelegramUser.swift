@@ -126,9 +126,9 @@ public extension TelegramUser {
                 if let photo = photo {
                     switch photo {
                         case let .userProfilePhoto(_, photoSmall, photoBig):
-                            if let smallLocation = telegramMediaLocationFromApiLocation(photoSmall), let largeLocation = telegramMediaLocationFromApiLocation(photoBig) {
-                                telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 80.0, height: 80.0), location: smallLocation, size: nil))
-                                telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), location: largeLocation, size: nil))
+                            if let smallResource = mediaResourceFromApiFileLocation(photoSmall, size: nil), let largeResource = mediaResourceFromApiFileLocation(photoBig, size: nil) {
+                                telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 80.0, height: 80.0), resource: smallResource))
+                                telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: largeResource))
                             }
                         case .userProfilePhotoEmpty:
                             break
@@ -150,9 +150,9 @@ public extension TelegramUser {
                     if let photo = photo {
                         switch photo {
                             case let .userProfilePhoto(_, photoSmall, photoBig):
-                                if let smallLocation = telegramMediaLocationFromApiLocation(photoSmall), let largeLocation = telegramMediaLocationFromApiLocation(photoBig) {
-                                    telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 80.0, height: 80.0), location: smallLocation, size: nil))
-                                    telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), location: largeLocation, size: nil))
+                                if let smallResource = mediaResourceFromApiFileLocation(photoSmall, size: nil), let largeResource = mediaResourceFromApiFileLocation(photoBig, size: nil) {
+                                    telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 80.0, height: 80.0), resource: smallResource))
+                                    telegramPhoto.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: 640.0, height: 640.0), resource: largeResource))
                                 }
                             case .userProfilePhotoEmpty:
                                 break

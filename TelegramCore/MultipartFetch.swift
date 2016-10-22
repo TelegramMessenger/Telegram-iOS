@@ -14,14 +14,14 @@ import Foundation
 #endif
 
 private final class MultipartFetchManager {
-    let parallelParts = 4
+    let parallelParts: Int
     let defaultPartSize = 128 * 1024
     
     let queue = Queue()
     
     var committedOffset: Int
     let range: Range<Int>
-    let completeSize: Int
+    var completeSize: Int?
     let fetchPart: (Int, Int) -> Signal<Data, NoError>
     let partReady: (Data) -> Void
     let completed: () -> Void
@@ -33,9 +33,15 @@ private final class MultipartFetchManager {
     var receivedSize = 0
     var lastStatReport: (timestamp: Double, receivedSize: Int)?
     
-    init(size: Int, range: Range<Int>, fetchPart: @escaping (Int, Int) -> Signal<Data, NoError>, partReady: @escaping (Data) -> Void, completed: @escaping () -> Void) {
+    init(size: Int?, range: Range<Int>, fetchPart: @escaping (Int, Int) -> Signal<Data, NoError>, partReady: @escaping (Data) -> Void, completed: @escaping () -> Void) {
         self.completeSize = size
-        self.range = range
+        if let size = size {
+            self.range = range.lowerBound ..< min(range.upperBound, size)
+            self.parallelParts = 4
+        } else {
+            self.range = range
+            self.parallelParts = 1
+        }
         self.committedOffset = range.lowerBound
         self.fetchPart = fetchPart
         self.partReady = partReady
@@ -81,7 +87,9 @@ private final class MultipartFetchManager {
             }
         }
         
-        if self.committedOffset >= self.range.upperBound {
+        if let completeSize = self.completeSize, self.committedOffset >= completeSize {
+            self.completed()
+        } else if self.committedOffset >= self.range.upperBound {
             self.completed()
         } else {
             while fetchingParts.count < self.parallelParts {
@@ -97,6 +105,7 @@ private final class MultipartFetchManager {
                     let partSize = min(self.range.upperBound - nextOffset, self.defaultPartSize)
                     let part = self.fetchPart(nextOffset, partSize)
                         |> deliverOn(self.queue)
+                    let partOffset = nextOffset
                     self.fetchingParts[nextOffset] = (partSize, part.start(next: { [weak self] data in
                         if let strongSelf = self {
                             var data = data
@@ -104,9 +113,13 @@ private final class MultipartFetchManager {
                                 data = data.subdata(in: 0 ..< partSize)
                             }
                             strongSelf.receivedSize += data.count
-                            assert(data.count == partSize)
+                            if let completeSize = strongSelf.completeSize {
+                                assert(data.count == partSize)
+                            } else if data.count < partSize {
+                                strongSelf.completeSize = partOffset + data.count
+                            }
                             let _ = strongSelf.fetchingParts.removeValue(forKey: nextOffset)
-                            strongSelf.fetchedParts[nextOffset] = data
+                            strongSelf.fetchedParts[partOffset] = data
                             strongSelf.checkState()
                         }
                     }))
@@ -126,15 +139,17 @@ private final class MultipartFetchManager {
     }
 }
 
-func multipartFetch(account: Account, cloudLocation: TelegramCloudMediaLocation, size: Int, range: Range<Int>) -> Signal<Data, NoError> {
-    return account.network.download(datacenterId: cloudLocation.datacenterId)
-        |> mapToSignal { download -> Signal<Data, NoError> in
+func multipartFetch(account: Account, resource: TelegramCloudMediaResource, size: Int?, range: Range<Int>) -> Signal<MediaResourceDataFetchResult, NoError> {
+    return account.network.download(datacenterId: resource.datacenterId)
+        |> mapToSignal { download -> Signal<MediaResourceDataFetchResult, NoError> in
             return Signal { subscriber in
+                let inputLocation = resource.apiInputLocation
                 let manager = MultipartFetchManager(size: size, range: range, fetchPart: { offset, size in
-                    return download.part(location: cloudLocation.apiInputLocation, offset: offset, length: size)
+                    return download.part(location: inputLocation, offset: offset, length: size)
                 }, partReady: { data in
-                    subscriber.putNext(data)
+                    subscriber.putNext(MediaResourceDataFetchResult(data: data, complete: false))
                 }, completed: {
+                    subscriber.putNext(MediaResourceDataFetchResult(data: Data(), complete: true))
                     subscriber.putCompletion()
                 })
                 

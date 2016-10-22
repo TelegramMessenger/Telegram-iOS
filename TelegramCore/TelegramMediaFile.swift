@@ -86,7 +86,7 @@ public enum TelegramMediaFileAttribute: Coding {
 
 public final class TelegramMediaFile: Media, Equatable {
     public let fileId: MediaId
-    public let location: TelegramMediaLocation
+    public let resource: TelegramMediaResource
     public let previewRepresentations: [TelegramMediaImageRepresentation]
     public let mimeType: String
     public let size: Int
@@ -97,9 +97,9 @@ public final class TelegramMediaFile: Media, Equatable {
         return self.fileId
     }
     
-    public init(fileId: MediaId, location: TelegramMediaLocation, previewRepresentations: [TelegramMediaImageRepresentation], mimeType: String, size: Int, attributes: [TelegramMediaFileAttribute]) {
+    public init(fileId: MediaId, resource: TelegramMediaResource, previewRepresentations: [TelegramMediaImageRepresentation], mimeType: String, size: Int, attributes: [TelegramMediaFileAttribute]) {
         self.fileId = fileId
-        self.location = location
+        self.resource = resource
         self.previewRepresentations = previewRepresentations
         self.mimeType = mimeType
         self.size = size
@@ -108,7 +108,7 @@ public final class TelegramMediaFile: Media, Equatable {
     
     public init(decoder: Decoder) {
         self.fileId = MediaId(decoder.decodeBytesForKeyNoCopy("i"))
-        self.location = decoder.decodeObjectForKey("l") as! TelegramMediaLocation
+        self.resource = decoder.decodeObjectForKey("r") as! TelegramMediaResource
         self.previewRepresentations = decoder.decodeObjectArrayForKey("pr")
         self.mimeType = decoder.decodeStringForKey("mt")
         self.size = Int(decoder.decodeInt32ForKey("s"))
@@ -119,7 +119,7 @@ public final class TelegramMediaFile: Media, Equatable {
         let buffer = WriteBuffer()
         self.fileId.encodeToBuffer(buffer)
         encoder.encodeBytes(buffer, forKey: "i")
-        encoder.encodeObject(self.location, forKey: "l")
+        encoder.encodeObject(self.resource, forKey: "r")
         encoder.encodeObjectArray(self.previewRepresentations, forKey: "pr")
         encoder.encodeString(self.mimeType, forKey: "mt")
         encoder.encodeInt32(Int32(self.size), forKey: "s")
@@ -244,7 +244,7 @@ public func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.Docu
 public func telegramMediaFileFromApiDocument(_ document: Api.Document) -> TelegramMediaFile? {
     switch document {
         case let .document(id, accessHash, _, mimeType, size, thumb, dcId, attributes):
-            return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), location: TelegramCloudDocumentLocation(datacenterId: Int(dcId), fileId: id, accessHash: accessHash), previewRepresentations: telegramMediaImageRepresentationsFromApiSizes([thumb]), mimeType: mimeType, size: Int(size), attributes: telegramMediaFileAttributesFromApiAttributes(attributes))
+            return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: Int(size)), previewRepresentations: telegramMediaImageRepresentationsFromApiSizes([thumb]), mimeType: mimeType, size: Int(size), attributes: telegramMediaFileAttributesFromApiAttributes(attributes))
         case .documentEmpty:
             return nil
     }

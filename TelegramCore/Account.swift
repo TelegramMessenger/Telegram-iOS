@@ -218,12 +218,12 @@ private var declaredEncodables: Void = {
     declareEncodable(TelegramMediaMap.self, f: { TelegramMediaMap(decoder: $0) })
     declareEncodable(TelegramMediaFile.self, f: { TelegramMediaFile(decoder: $0) })
     declareEncodable(TelegramMediaFileAttribute.self, f: { TelegramMediaFileAttribute(decoder: $0) })
-    declareEncodable(TelegramCloudFileLocation.self, f: { TelegramCloudFileLocation(decoder: $0) })
+    declareEncodable(CloudFileMediaResource.self, f: { CloudFileMediaResource(decoder: $0) })
     declareEncodable(ChannelState.self, f: { ChannelState(decoder: $0) })
     declareEncodable(InlineBotMessageAttribute.self, f: { InlineBotMessageAttribute(decoder: $0) })
     declareEncodable(TextEntitiesMessageAttribute.self, f: { TextEntitiesMessageAttribute(decoder: $0) })
     declareEncodable(ReplyMessageAttribute.self, f: { ReplyMessageAttribute(decoder: $0) })
-    declareEncodable(TelegramCloudDocumentLocation.self, f: { TelegramCloudDocumentLocation(decoder: $0) })
+    declareEncodable(CloudDocumentMediaResource.self, f: { CloudDocumentMediaResource(decoder: $0) })
     declareEncodable(TelegramMediaWebpage.self, f: { TelegramMediaWebpage(decoder: $0) })
     declareEncodable(ViewCountMessageAttribute.self, f: { ViewCountMessageAttribute(decoder: $0) })
     declareEncodable(TelegramMediaAction.self, f: { TelegramMediaAction(decoder: $0) })
@@ -233,6 +233,10 @@ private var declaredEncodables: Void = {
     declareEncodable(CachedGroupData.self, f: { CachedGroupData(decoder: $0) })
     declareEncodable(CachedChannelData.self, f: { CachedChannelData(decoder: $0) })
     declareEncodable(TelegramUserPresence.self, f: { TelegramUserPresence(decoder: $0) })
+    declareEncodable(LocalFileMediaResource.self, f: { LocalFileMediaResource(decoder: $0) })
+    declareEncodable(PhotoLibraryMediaResource.self, f: { PhotoLibraryMediaResource(decoder: $0) })
+    declareEncodable(StickerPackCollectionInfo.self, f: { StickerPackCollectionInfo(decoder: $0) })
+    declareEncodable(StickerPackItem.self, f: { StickerPackItem(decoder: $0) })
     
     return
 }()
@@ -343,7 +347,9 @@ public class Account {
     
     public private(set) var stateManager: StateManager!
     public private(set) var viewTracker: AccountViewTracker!
+    public private(set) var pendingMessageManager: PendingMessageManager!
     fileprivate let managedContactsDisposable = MetaDisposable()
+    fileprivate let managedStickerPacksDisposable = MetaDisposable()
     private let becomeMasterDisposable = MetaDisposable()
     private let updatedPresenceDisposable = MetaDisposable()
     private let managedServiceViewsDisposable = MetaDisposable()
@@ -369,6 +375,7 @@ public class Account {
         
         self.stateManager = StateManager(account: self)
         self.viewTracker = AccountViewTracker(account: self)
+        self.pendingMessageManager = PendingMessageManager(network: network, postbox: postbox, stateManager: self.stateManager)
         
         let appliedNotificationToken = self.notificationToken.get()
             |> distinctUntilChanged
@@ -415,7 +422,7 @@ public class Account {
             }
         }))
         
-        let serviceTasksMaster = combineLatest(shouldBeServiceTaskMaster.get(), postbox.isMasterClient())
+        let shouldBeMaster = combineLatest(shouldBeServiceTaskMaster.get(), postbox.isMasterClient())
             |> map { [weak self] shouldBeMaster, isMaster -> Bool in
                 if shouldBeMaster == .always && !isMaster {
                     self?.postbox.becomeMasterClient()
@@ -423,11 +430,15 @@ public class Account {
                 return (shouldBeMaster == .now || shouldBeMaster == .always) && isMaster
             }
             |> distinctUntilChanged
+        
+        self.network.shouldKeepConnection.set(shouldBeMaster)
+        
+        let serviceTasksMaster = shouldBeMaster
             |> deliverOn(Queue.concurrentDefaultQueue())
             |> mapToSignal { [weak self] value -> Signal<Void, NoError> in
                 if let strongSelf = self, value {
                     trace("Account", what: "Became master")
-                    return managedServiceViews(network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager)
+                    return managedServiceViews(network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, pendingMessageManager: strongSelf.pendingMessageManager)
                 } else {
                     trace("Account", what: "Resigned master")
                     return .never()
@@ -471,18 +482,21 @@ public class Account {
                 }
             }
         self.updatedPresenceDisposable.set(updatedPresence.start())
+        
+        
     }
     
     deinit {
         self.managedContactsDisposable.dispose()
+        self.managedStickerPacksDisposable.dispose()
         self.notificationTokenDisposable.dispose()
         self.managedServiceViewsDisposable.dispose()
         self.updatedPresenceDisposable.dispose()
     }
 }
 
-public func setupAccount(_ account: Account) {
-    account.postbox.mediaBox.fetchResource = { [weak account] resource, range -> Signal<Data, NoError> in
+public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: ((_ account: Account, _ resource: MediaResource, _ resourceData: MediaResourceData, _ representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError>)? = nil) {
+    account.postbox.mediaBox.fetchResource = { [weak account] resource, range -> Signal<MediaResourceDataFetchResult, NoError> in
         if let strongAccount = account {
             return fetchResource(account: strongAccount, resource: resource, range: range)
         } else {
@@ -490,5 +504,14 @@ public func setupAccount(_ account: Account) {
         }
     }
     
+    account.postbox.mediaBox.fetchCachedResourceRepresentation = { [weak account] resource, resourceData, representation in
+        if let strongAccount = account, let fetchCachedResourceRepresentation = fetchCachedResourceRepresentation {
+            return fetchCachedResourceRepresentation(strongAccount, resource, resourceData, representation)
+        } else {
+            return .never()
+        }
+    }
+    
     account.managedContactsDisposable.set(manageContacts(network: account.network, postbox: account.postbox).start())
+    account.managedStickerPacksDisposable.set(manageStickerPacks(network: account.network, postbox: account.postbox).start())
 }

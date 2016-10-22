@@ -19,6 +19,7 @@ public struct Namespaces {
         public static let CloudMap: Int32 = 4
         public static let CloudFile: Int32 = 5
         public static let CloudWebpage: Int32 = 6
+        public static let LocalImage: Int32 = 7
     }
     
     public struct Peer {
@@ -26,6 +27,13 @@ public struct Namespaces {
         public static let CloudGroup: Int32 = 1
         public static let CloudChannel: Int32 = 2
         public static let Empty: Int32 = Int32.max
+    }
+    
+    public struct ItemCollection {
+        public static let CloudStickerPacks: Int32 = 0
+        public static let CloudMaskPacks: Int32 = 1
+        public static let CloudRecentGifs: Int32 = 2
+        public static let CloudRecentStickers: Int32 = 0
     }
 }
 

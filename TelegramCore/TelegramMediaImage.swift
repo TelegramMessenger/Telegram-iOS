@@ -5,6 +5,10 @@ import Foundation
     import Postbox
 #endif
 
+public enum TelegramMediaRemoteImageReference {
+    case remoteImage(imageId: Int64, accessHash: Int64)
+}
+
 public final class TelegramMediaImage: Media, Equatable {
     public let imageId: MediaId
     public let representations: [TelegramMediaImageRepresentation]
@@ -78,33 +82,22 @@ public func ==(lhs: TelegramMediaImage, rhs: TelegramMediaImage) -> Bool {
 
 public final class TelegramMediaImageRepresentation: Coding, Equatable, CustomStringConvertible {
     public let dimensions: CGSize
-    public let location: TelegramMediaLocation
-    public let size: Int?
+    public let resource: TelegramMediaResource
     
-    public init(dimensions: CGSize, location: TelegramMediaLocation, size: Int?) {
+    public init(dimensions: CGSize, resource: TelegramMediaResource) {
         self.dimensions = dimensions
-        self.location = location
-        self.size = size
+        self.resource = resource
     }
     
     public init(decoder: Decoder) {
         self.dimensions = CGSize(width: CGFloat(decoder.decodeInt32ForKey("dx")), height: CGFloat(decoder.decodeInt32ForKey("dy")))
-        self.location = decoder.decodeObjectForKey("l") as! TelegramMediaLocation
-        let size: Int32? = decoder.decodeInt32ForKey("s")
-        if let size = size {
-            self.size = Int(size)
-        } else {
-            self.size = nil
-        }
+        self.resource = decoder.decodeObjectForKey("r") as! TelegramMediaResource
     }
     
     public func encode(_ encoder: Encoder) {
         encoder.encodeInt32(Int32(self.dimensions.width), forKey: "dx")
         encoder.encodeInt32(Int32(self.dimensions.height), forKey: "dy")
-        encoder.encodeObject(self.location, forKey: "l")
-        if let size = self.size {
-            encoder.encodeInt32(Int32(size), forKey: "s")
-        }
+        encoder.encodeObject(self.resource, forKey: "r")
     }
     
     public var description: String {
@@ -116,10 +109,7 @@ public func ==(lhs: TelegramMediaImageRepresentation, rhs: TelegramMediaImageRep
     if lhs.dimensions != rhs.dimensions {
         return false
     }
-    if lhs.size != rhs.size {
-        return false
-    }
-    if !lhs.location.equalsTo(rhs.location) {
+    if !lhs.resource.isEqual(to: rhs.resource) {
         return false
     }
     return true
@@ -130,12 +120,12 @@ public func telegramMediaImageRepresentationsFromApiSizes(_ sizes: [Api.PhotoSiz
     for size in sizes {
         switch size {
         case let .photoCachedSize(_, location, w, h, bytes):
-            if let location = telegramMediaLocationFromApiLocation(location) {
-                representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), location: location, size: bytes.size))
+            if let resource = mediaResourceFromApiFileLocation(location, size: bytes.size) {
+                representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), resource: resource))
             }
         case let .photoSize(_, location, w, h, size):
-            if let location = telegramMediaLocationFromApiLocation(location) {
-                representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), location: location, size: Int(size)))
+            if let resource = mediaResourceFromApiFileLocation(location, size: Int(size)) {
+                representations.append(TelegramMediaImageRepresentation(dimensions: CGSize(width: CGFloat(w), height: CGFloat(h)), resource: resource))
             }
         case .photoSizeEmpty:
             break
