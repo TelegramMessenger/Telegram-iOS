@@ -228,7 +228,7 @@ final class ViewTracker {
                 }
             }
             
-            if mutableView.replay(updatedPeers: updatedPeers, updatedNotificationSettings: updatedNotificationSettings, updatedCachedPeerData: updatedCachedPeerData, updatedPeerPresences: updatedPeerPresences, getPeer: self.getPeer, getPeerPresence: self.getPeerPresence) {
+            if mutableView.replay(updatedPeers: updatedPeers, updatedNotificationSettings: updatedNotificationSettings, updatedCachedPeerData: updatedCachedPeerData, updatedPeerPresences: updatedPeerPresences, replaceContactPeerIds: nil, getPeer: self.getPeer, getPeerPresence: self.getPeerPresence) {
                 pipe.putNext(PeerView(mutableView))
             }
         }
@@ -331,7 +331,7 @@ final class ViewTracker {
         }
         
         for (mutableView, pipe) in self.peerViews.copyItems() {
-            if mutableView.replay(updatedPeers: transaction.currentUpdatedPeers, updatedNotificationSettings: transaction.currentUpdatedPeerNotificationSettings, updatedCachedPeerData: transaction.currentUpdatedCachedPeerData, updatedPeerPresences: transaction.currentUpdatedPeerPresences, getPeer: self.getPeer, getPeerPresence: self.getPeerPresence) {
+            if mutableView.replay(updatedPeers: transaction.currentUpdatedPeers, updatedNotificationSettings: transaction.currentUpdatedPeerNotificationSettings, updatedCachedPeerData: transaction.currentUpdatedCachedPeerData, updatedPeerPresences: transaction.currentUpdatedPeerPresences, replaceContactPeerIds: transaction.replaceContactPeerIds, getPeer: self.getPeer, getPeerPresence: self.getPeerPresence) {
                 pipe.putNext(PeerView(mutableView))
             }
         }

@@ -4,8 +4,8 @@ public struct MediaId: Hashable, CustomStringConvertible {
     public typealias Namespace = Int32
     public typealias Id = Int64
     
-    let namespace: Namespace
-    let id: Id
+    public let namespace: Namespace
+    public let id: Id
     
     public var hashValue: Int {
         get {
@@ -68,7 +68,7 @@ public func ==(lhs: MediaId, rhs: MediaId) -> Bool {
     return lhs.id == rhs.id && lhs.namespace == rhs.namespace
 }
 
-public protocol Media: Coding {
+public protocol Media: class, Coding {
     var id: MediaId? { get }
     var peerIds: [PeerId] { get }
     

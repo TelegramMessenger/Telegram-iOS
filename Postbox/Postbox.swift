@@ -130,6 +130,10 @@ public final class Modifier {
         self.postbox?.updateMedia(id, update: update)
     }
     
+    public func replaceItemCollections(namespace: ItemCollectionId.Namespace, itemCollections: [(ItemCollectionId, ItemCollectionInfo, [ItemCollectionItem])]) {
+        self.postbox?.replaceItemCollections(namespace: namespace, itemCollections: itemCollections)
+    }
+    
     public func getMessage(_ id: MessageId) -> Message? {
         if let postbox = self.postbox {
             if let entry = postbox.messageHistoryIndexTable.get(id) {
@@ -237,6 +241,8 @@ public final class Postbox {
     var readStateTable: MessageHistoryReadStateTable!
     var synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable!
     var contactsTable: ContactTable!
+    var itemCollectionInfoTable: ItemCollectionInfoTable!
+    var itemCollectionItemTable: ItemCollectionItemTable!
     
     //temporary
     var peerRatingTable: RatingTable<PeerId>!
@@ -296,7 +302,7 @@ public final class Postbox {
             } catch _ {
             }
             
-            //let _ = try? NSFileManager.defaultManager().removeItemAtPath(self.basePath + "/media")
+            //let _ = try? FileManager.default.removeItem(atPath: self.basePath + "/media")
             
             //#if TARGET_IPHONE_SIMULATOR
             
@@ -319,7 +325,7 @@ public final class Postbox {
             self.metadataTable = MetadataTable(valueBox: self.valueBox, tableId: 0)
             
             let userVersion: Int32? = self.metadataTable.userVersion()
-            let currentUserVersion: Int32 = 10
+            let currentUserVersion: Int32 = 11
             
             if userVersion != currentUserVersion {
                 self.valueBox.drop()
@@ -346,6 +352,8 @@ public final class Postbox {
             self.cachedPeerDataTable = CachedPeerDataTable(valueBox: self.valueBox, tableId: 18)
             self.peerNotificationSettingsTable = PeerNotificationSettingsTable(valueBox: self.valueBox, tableId: 19)
             self.peerPresenceTable = PeerPresenceTable(valueBox: self.valueBox, tableId: 20)
+            self.itemCollectionInfoTable = ItemCollectionInfoTable(valueBox: self.valueBox, tableId: 21)
+            self.itemCollectionItemTable = ItemCollectionItemTable(valueBox: self.valueBox, tableId: 22)
             
             self.tables.append(self.keychainTable)
             self.tables.append(self.peerTable)
@@ -367,6 +375,8 @@ public final class Postbox {
             self.tables.append(self.peerNotificationSettingsTable)
             self.tables.append(self.cachedPeerDataTable)
             self.tables.append(self.peerPresenceTable)
+            self.tables.append(self.itemCollectionInfoTable)
+            self.tables.append(self.itemCollectionItemTable)
             
             self.transactionStateVersion = self.metadataTable.transactionStateVersion()
             
@@ -852,6 +862,15 @@ public final class Postbox {
         self.messageHistoryTable.updateMedia(id, media: update, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia)
     }
     
+    fileprivate func replaceItemCollections(namespace: ItemCollectionId.Namespace, itemCollections: [(ItemCollectionId, ItemCollectionInfo, [ItemCollectionItem])]) {
+        var infos: [(ItemCollectionId, ItemCollectionInfo)] = []
+        for (id, info, items) in itemCollections {
+            infos.append(id, info)
+            self.itemCollectionItemTable.replaceItems(collectionId: id, items: items)
+        }
+        self.itemCollectionInfoTable.replaceInfos(namespace: namespace, infos: infos)
+    }
+    
     fileprivate func filterStoredMessageIds(_ messageIds: Set<MessageId>) -> Set<MessageId> {
         var filteredIds = Set<MessageId>()
         
@@ -1086,7 +1105,7 @@ public final class Postbox {
     
     public func peerView(id: PeerId) -> Signal<PeerView, NoError> {
         return self.modify { modifier -> Signal<PeerView, NoError> in
-            let view = MutablePeerView(peerId: id, notificationSettings: self.peerNotificationSettingsTable.get(id), cachedData: self.cachedPeerDataTable.get(id), getPeer: { self.peerTable.get($0) }, getPeerPresence: { self.peerPresenceTable.get($0) })
+            let view = MutablePeerView(peerId: id, notificationSettings: self.peerNotificationSettingsTable.get(id), cachedData: self.cachedPeerDataTable.get(id), peerIsContact: self.contactsTable.isContact(peerId: id), getPeer: { self.peerTable.get($0) }, getPeerPresence: { self.peerPresenceTable.get($0) })
             let (index, signal) = self.viewTracker.addPeerView(view)
             
             return (.single(PeerView(view))
@@ -1175,6 +1194,23 @@ public final class Postbox {
                 }))
             }
             return disposable
+        }
+    }
+    
+    public func itemCollectionsView(namespaces: [ItemCollectionId.Namespace], aroundIndex: ItemCollectionViewEntryIndex?, count: Int) -> Signal<ItemCollectionsView, NoError> {
+        return self.modify { modifier -> ItemCollectionsView in
+            let mutableView = MutableItemCollectionsView(namespaces: namespaces, aroundIndex: aroundIndex, count: count, getInfos: { namespace in
+                return self.itemCollectionInfoTable.getInfos(namespace: namespace)
+            }, lowerCollectionId: { namespaceList, collectionId, collectionIndex in
+                return self.itemCollectionInfoTable.lowerCollectionId(namespaceList: namespaceList, collectionId: collectionId, index: collectionIndex)
+            }, lowerItems: { collectionId, itemIndex, count in
+                return self.itemCollectionItemTable.lowerItems(collectionId: collectionId, itemIndex: itemIndex, count: count)
+            }, higherCollectionId: { namespaceList, collectionId, collectionIndex in
+                return self.itemCollectionInfoTable.higherCollectionId(namespaceList: namespaceList, collectionId: collectionId, index: collectionIndex)
+            }, higherItems: { collectionId, itemIndex, count in
+                return self.itemCollectionItemTable.higherItems(collectionId: collectionId, itemIndex: itemIndex, count: count)
+            })
+            return ItemCollectionsView(mutableView)
         }
     }
     

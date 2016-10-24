@@ -6,11 +6,13 @@ final class MutablePeerView {
     var cachedData: CachedPeerData?
     var peers: [PeerId: Peer] = [:]
     var peerPresences: [PeerId: PeerPresence] = [:]
+    var peerIsContact: Bool
     
-    init(peerId: PeerId, notificationSettings: PeerNotificationSettings?, cachedData: CachedPeerData?, getPeer: (PeerId) -> Peer?, getPeerPresence: (PeerId) -> PeerPresence?) {
+    init(peerId: PeerId, notificationSettings: PeerNotificationSettings?, cachedData: CachedPeerData?, peerIsContact: Bool, getPeer: (PeerId) -> Peer?, getPeerPresence: (PeerId) -> PeerPresence?) {
         self.peerId = peerId
         self.notificationSettings = notificationSettings
         self.cachedData = cachedData
+        self.peerIsContact = peerIsContact
         var peerIds = Set<PeerId>()
         peerIds.insert(peerId)
         if let cachedData = cachedData {
@@ -26,7 +28,7 @@ final class MutablePeerView {
         }
     }
     
-    func replay(updatedPeers: [PeerId: Peer], updatedNotificationSettings: [PeerId: PeerNotificationSettings], updatedCachedPeerData: [PeerId: CachedPeerData], updatedPeerPresences: [PeerId: PeerPresence], getPeer: (PeerId) -> Peer?, getPeerPresence: (PeerId) -> PeerPresence?) -> Bool {
+    func replay(updatedPeers: [PeerId: Peer], updatedNotificationSettings: [PeerId: PeerNotificationSettings], updatedCachedPeerData: [PeerId: CachedPeerData], updatedPeerPresences: [PeerId: PeerPresence], replaceContactPeerIds: Set<PeerId>?, getPeer: (PeerId) -> Peer?, getPeerPresence: (PeerId) -> PeerPresence?) -> Bool {
         var updated = false
         
         if let cachedData = updatedCachedPeerData[self.peerId], self.cachedData == nil || self.cachedData!.peerIds != cachedData.peerIds {
@@ -106,6 +108,7 @@ public final class PeerView {
     public let notificationSettings: PeerNotificationSettings?
     public let peers: [PeerId: Peer]
     public let peerPresences: [PeerId: PeerPresence]
+    public let peerIsContact: Bool
     
     init(_ mutableView: MutablePeerView) {
         self.peerId = mutableView.peerId
@@ -113,5 +116,6 @@ public final class PeerView {
         self.notificationSettings = mutableView.notificationSettings
         self.peers = mutableView.peers
         self.peerPresences = mutableView.peerPresences
+        self.peerIsContact = mutableView.peerIsContact
     }
 }

@@ -20,6 +20,21 @@ final class ContactTable: Table {
         return self.key(PeerId(namespace: Int32.max, id: Int32.max))
     }
     
+    func isContact(peerId: PeerId) -> Bool {
+        if let peerIds = self.peerIds {
+            return peerIds.contains(peerId)
+        } else {
+            var peerIds = Set<PeerId>()
+            self.valueBox.range(self.tableId, start: self.lowerBound(), end: self.upperBound(), keys: { key in
+                peerIds.insert(PeerId(key.getInt64(0)))
+                return true
+                }, limit: 0)
+            self.peerIds = peerIds
+            self.originalPeerIds = peerIds
+            return peerIds.contains(peerId)
+        }
+    }
+    
     func get() -> Set<PeerId> {
         if let peerIds = self.peerIds {
             return peerIds

@@ -92,7 +92,7 @@ public func <(lhs: PeerId, rhs: PeerId) -> Bool {
     return false
 }
 
-public protocol Peer: Coding {
+public protocol Peer: class, Coding {
     var id: PeerId { get }
     var indexName: PeerIndexNameRepresentation { get }
     

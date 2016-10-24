@@ -706,6 +706,12 @@ final class MessageHistoryTable: Table {
     private func justUpdate(_ index: MessageIndex, message: InternalStoreMessage, sharedKey: ValueBoxKey, sharedBuffer: WriteBuffer, sharedEncoder: Encoder, unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation]) -> IntermediateMessage? {
         if let previousMessage = self.getMessage(index) {
             self.valueBox.remove(self.tableId, key: self.key(index))
+            if !previousMessage.tags.isEmpty {
+                self.tagsTable.remove(previousMessage.tags, index: index)
+            }
+            if !message.tags.isEmpty {
+                self.tagsTable.add(message.tags, index: MessageIndex(message))
+            }
             
             switch (previousMessage.flags.contains(.Unsent) && !previousMessage.flags.contains(.Failed), message.flags.contains(.Unsent) && !message.flags.contains(.Failed)) {
                 case (true, false):
