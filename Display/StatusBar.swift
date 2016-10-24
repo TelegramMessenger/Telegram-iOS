@@ -25,9 +25,9 @@ public class StatusBarSurface {
 }
 
 public class StatusBar: ASDisplayNode {
-    public var style: StatusBarStyle = .Black {
+    public var statusBarStyle: StatusBarStyle = .Black {
         didSet {
-            if self.style != oldValue {
+            if self.statusBarStyle != statusBarStyle {
                 self.layer.invalidateUpTheTree()
             }
         }
@@ -64,9 +64,9 @@ public class StatusBar: ASDisplayNode {
     func updateProxyNode(statusBar: UIView) {
         self.removeProxyNodeScheduled = false
         if let proxyNode = proxyNode {
-            proxyNode.style = self.style
+            proxyNode.statusBarStyle = self.statusBarStyle
         } else {
-            self.proxyNode = StatusBarProxyNode(style: self.style, statusBar: statusBar)
+            self.proxyNode = StatusBarProxyNode(statusBarStyle: self.statusBarStyle, statusBar: statusBar)
             self.proxyNode!.isHidden = false
             self.addSubnode(self.proxyNode!)
         }

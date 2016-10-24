@@ -18,7 +18,7 @@ public class ActionSheetButtonItem: ActionSheetItem {
     
     public func node() -> ActionSheetItemNode {
         let textColorIsAccent = self.color == ActionSheetButtonColor.accent
-        let textColor = textColorIsAccent ? UIColor(0x1195f2) : UIColor.red
+        let textColor = textColorIsAccent ? UIColor(0x007ee5) : UIColor.red
         return ActionSheetButtonNode(title: NSAttributedString(string: title, font: ActionSheetButtonNode.defaultFont, textColor: textColor), action: self.action)
     }
 }

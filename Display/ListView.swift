@@ -882,7 +882,7 @@ private final class ListViewBackingLayer: CALayer {
     }
 }
 
-private final class ListViewBackingView: UIView {
+final class ListViewBackingView: UIView {
     weak var target: ASDisplayNode?
     
     override class var layerClass: AnyClass {
@@ -1247,13 +1247,29 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         var topItemEdge: CGFloat = 0.0
         var bottomItemEdge: CGFloat = 0.0
         
-        if itemNodes[0].index == 0 {
-            topItemFound = true
+        for i in 0 ..< self.itemNodes.count {
+            if let index = itemNodes[i].index {
+                if index == 0 {
+                    topItemFound = true
+                }
+                break
+            }
+        }
+        
+        if topItemFound {
             topItemEdge = itemNodes[0].apparentFrame.origin.y
         }
         
-        if itemNodes[itemNodes.count - 1].index == self.items.count - 1 {
-            bottomItemFound = true
+        for i in (0 ..< self.itemNodes.count).reversed() {
+            if let index = itemNodes[i].index {
+                if index == self.items.count - 1 {
+                    bottomItemFound = true
+                }
+                break
+            }
+        }
+        
+        if bottomItemFound {
             bottomItemEdge = itemNodes[itemNodes.count - 1].apparentFrame.maxY
         }
         
@@ -1903,10 +1919,6 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         let previousApparentHeight = node.apparentHeight
         let previousInsets = node.insets
         
-        if node.wantsScrollDynamics && previousFrame != nil {
-            assert(true)
-        }
-        
         node.contentSize = layout.contentSize
         node.insets = layout.insets
         node.apparentHeight = animated ? 0.0 : layout.size.height
@@ -1958,6 +1970,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         
         if node.index == nil {
             node.addApparentHeightAnimation(0.0, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp)
+            node.animateRemoved(timestamp, duration: insertionAnimationDuration * UIView.animationDurationFactor())
         } else if animated {
             if !takenAnimation {
                 node.addApparentHeightAnimation(nodeFrame.size.height, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp, update: { [weak node] progress in
@@ -2015,7 +2028,12 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             previousApparentFrames.append((itemNode, itemNode.apparentFrame))
         }
         
-        //var takenPreviousNodes = Set<ListViewItemNode>()
+        var takenPreviousNodes = Set<ListViewItemNode>()
+        for operation in operations {
+            if case let .InsertNode(_, _, node, _, _) = operation {
+                takenPreviousNodes.insert(node)
+            }
+        }
         
         for operation in operations {
             switch operation {
@@ -2028,19 +2046,35 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                         }
                     }
                     self.insertNodeAtIndex(animated: animated, animateAlpha: animateAlpha, previousFrame: previousFrame, nodeIndex: index, offsetDirection: offsetDirection, node: node, layout: layout, apply: apply, timestamp: timestamp)
-                    self.addSubnode(node)
+                    if let previousFrame = previousFrame, previousFrame.minY >= self.visibleSize.height || previousFrame.maxY < 0.0 {
+                        self.insertSubnode(node, at: 0)
+                    } else {
+                        if animated {
+                            self.insertSubnode(node, at: 0)
+                        } else {
+                            self.addSubnode(node)
+                        }
+                    }
                 case let .InsertDisappearingPlaceholder(index, referenceNode, offsetDirection):
                     var height: CGFloat?
+                    var previousLayout: ListViewItemNodeLayout?
                     
                     for (node, previousFrame) in previousApparentFrames {
                         if node === referenceNode {
                             height = previousFrame.size.height
+                            previousLayout = ListViewItemNodeLayout(contentSize: node.contentSize, insets: node.insets)
                             break
                         }
                     }
                     
-                    if let height = height {
-                        self.insertNodeAtIndex(animated: false, animateAlpha: false, previousFrame: nil, nodeIndex: index, offsetDirection: offsetDirection, node: ListViewItemNode(layerBacked: true), layout: ListViewItemNodeLayout(contentSize: CGSize(width: self.visibleSize.width, height: height), insets: UIEdgeInsets()), apply: { }, timestamp: timestamp)
+                    if let height = height, let previousLayout = previousLayout {
+                        if takenPreviousNodes.contains(referenceNode) {
+                            self.insertNodeAtIndex(animated: false, animateAlpha: false, previousFrame: nil, nodeIndex: index, offsetDirection: offsetDirection, node: ListViewItemNode(layerBacked: true), layout: ListViewItemNodeLayout(contentSize: CGSize(width: self.visibleSize.width, height: height), insets: UIEdgeInsets()), apply: { }, timestamp: timestamp)
+                        } else {
+                            referenceNode.index = nil
+                            self.insertNodeAtIndex(animated: false, animateAlpha: false, previousFrame: nil, nodeIndex: index, offsetDirection: offsetDirection, node: referenceNode, layout: previousLayout, apply: { }, timestamp: timestamp)
+                            self.addSubnode(referenceNode)
+                        }
                     } else {
                         assertionFailure()
                     }
@@ -2103,7 +2137,9 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                                     node.animateFrameTransition(progress)
                                 }
                             })
-                            node.transitionOffset += previousApparentHeight - layout.size.height
+                            
+                            let insetPart: CGFloat = previousInsets.top - layout.insets.top
+                            node.transitionOffset += previousApparentHeight - layout.size.height - insetPart
                             node.addTransitionOffsetAnimation(0.0, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp)
                         }
                     } else {
@@ -2829,6 +2865,16 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         for itemNode in self.itemNodes {
             if itemNode.index != nil {
                 f(itemNode)
+            }
+        }
+    }
+    
+    public func ensureItemNodeVisible(_ node: ListViewItemNode) {
+        if let index = node.index {
+            if node.frame.minY < self.insets.top {
+                self.deleteAndInsertItems(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.Top, animated: true, curve: ListViewAnimationCurve.Default, directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, completion: { _ in })
+            } else if node.frame.maxY > self.visibleSize.height - self.insets.bottom {
+                self.deleteAndInsertItems(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.Bottom, animated: true, curve: ListViewAnimationCurve.Default, directionHint: ListViewScrollToItemDirectionHint.Down), updateSizeAndInsets: nil, stationaryItemRange: nil, completion: { _ in })
             }
         }
     }

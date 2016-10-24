@@ -266,10 +266,31 @@ static void traceLayerSurfaces(int depth, CALayer * _Nonnull layer, NSMutableDic
 
 @end
 
+@interface UITracingLayerView () {
+    void (^_scheduledWithLayout)();
+}
+
+@end
+
 @implementation UITracingLayerView
 
 + (Class)layerClass {
     return [CATracingLayer class];
+}
+
+- (void)scheduleWithLayout:(void (^_Nonnull)())block {
+    _scheduledWithLayout = [block copy];
+    [self setNeedsLayout];
+}
+
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    
+    if (_scheduledWithLayout) {
+        void (^block)() = [_scheduledWithLayout copy];
+        _scheduledWithLayout = nil;
+        block();
+    }
 }
 
 @end

@@ -14,7 +14,7 @@ private struct MappedStatusBarSurface {
 
 private func mapStatusBar(_ statusBar: StatusBar) -> MappedStatusBar {
     let frame = CGRect(origin: statusBar.view.convert(CGPoint(), to: nil), size: statusBar.frame.size)
-    return MappedStatusBar(style: statusBar.style, frame: frame, statusBar: statusBar)
+    return MappedStatusBar(style: statusBar.statusBarStyle, frame: frame, statusBar: statusBar)
 }
 
 private func mappedSurface(_ surface: StatusBarSurface) -> MappedStatusBarSurface {

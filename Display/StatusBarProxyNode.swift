@@ -11,16 +11,16 @@ private enum StatusBarItemType {
     case Battery
 }
 
-func makeStatusBarProxy(_ style: StatusBarStyle, statusBar: UIView) -> StatusBarProxyNode {
-    return StatusBarProxyNode(style: style, statusBar: statusBar)
+func makeStatusBarProxy(_ statusBarStyle: StatusBarStyle, statusBar: UIView) -> StatusBarProxyNode {
+    return StatusBarProxyNode(statusBarStyle: statusBarStyle, statusBar: statusBar)
 }
 
 private class StatusBarItemNode: ASDisplayNode {
-    var style: StatusBarStyle
+    var statusBarStyle: StatusBarStyle
     var targetView: UIView
     
-    init(style: StatusBarStyle, targetView: UIView) {
-        self.style = style
+    init(statusBarStyle: StatusBarStyle, targetView: UIView) {
+        self.statusBarStyle = statusBarStyle
         self.targetView = targetView
         
         super.init()
@@ -67,7 +67,7 @@ private class StatusBarItemNode: ASDisplayNode {
         }
         
         let type: StatusBarItemType = self.targetView.checkIsKind(of: batteryItemClass!) ? .Battery : .Generic
-        tintStatusBarItem(context, type: type, style: style)
+        tintStatusBarItem(context, type: type, style: statusBarStyle)
         self.contents = context.generateImage()?.cgImage
         
         self.frame = self.targetView.frame
@@ -235,9 +235,9 @@ class StatusBarProxyNode: ASDisplayNode {
     private let statusBar: UIView
     
     var timer: Timer?
-    var style: StatusBarStyle {
+    var statusBarStyle: StatusBarStyle {
         didSet {
-            if oldValue != self.style {
+            if oldValue != self.statusBarStyle {
                 if !self.isHidden {
                     self.updateItems()
                 }
@@ -268,8 +268,8 @@ class StatusBarProxyNode: ASDisplayNode {
         }
     }
     
-    init(style: StatusBarStyle, statusBar: UIView) {
-        self.style = style
+    init(statusBarStyle: StatusBarStyle, statusBar: UIView) {
+        self.statusBarStyle = statusBarStyle
         self.statusBar = statusBar
         
         super.init()
@@ -280,7 +280,7 @@ class StatusBarProxyNode: ASDisplayNode {
         //self.backgroundColor = UIColor.blueColor().colorWithAlphaComponent(0.2)
         
         for subview in statusBar.subviews {
-            let itemNode = StatusBarItemNode(style: style, targetView: subview)
+            let itemNode = StatusBarItemNode(statusBarStyle: statusBarStyle, targetView: subview)
             self.itemNodes.append(itemNode)
             self.addSubnode(itemNode)
         }
@@ -308,7 +308,7 @@ class StatusBarProxyNode: ASDisplayNode {
                 self.itemNodes[i].removeFromSupernode()
                 self.itemNodes.remove(at: i)
             } else {
-                self.itemNodes[i].style = self.style
+                self.itemNodes[i].statusBarStyle = self.statusBarStyle
                 self.itemNodes[i].update()
                 i += 1
             }
@@ -324,7 +324,7 @@ class StatusBarProxyNode: ASDisplayNode {
             }
             
             if !found {
-                let itemNode = StatusBarItemNode(style: self.style, targetView: subview)
+                let itemNode = StatusBarItemNode(statusBarStyle: self.statusBarStyle, targetView: subview)
                 itemNode.update()
                 self.itemNodes.append(itemNode)
                 self.addSubnode(itemNode)

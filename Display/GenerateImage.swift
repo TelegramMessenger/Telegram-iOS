@@ -29,9 +29,9 @@ public func generateImagePixel(_ size: CGSize, pixelGenerator: (CGSize, UnsafeMu
     return UIImage(cgImage: image, scale: scale, orientation: .up)
 }
 
-public func generateImage(_ size: CGSize, contextGenerator: (CGSize, CGContext) -> Void, opaque: Bool = false) -> UIImage? {
-    let scale = deviceScale
-    let scaledSize = CGSize(width: size.width * scale, height: size.height * scale)
+public func generateImage(_ size: CGSize, contextGenerator: (CGSize, CGContext) -> Void, opaque: Bool = false, scale: CGFloat? = nil) -> UIImage? {
+    let selectedScale = scale ?? deviceScale
+    let scaledSize = CGSize(width: size.width * selectedScale, height: size.height * selectedScale)
     let bytesPerRow = (4 * Int(scaledSize.width) + 15) & (~15)
     let length = bytesPerRow * Int(scaledSize.height)
     let bytes = malloc(length)!.assumingMemoryBound(to: Int8.self)
@@ -45,12 +45,11 @@ public func generateImage(_ size: CGSize, contextGenerator: (CGSize, CGContext) 
     
     let bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | (opaque ? CGImageAlphaInfo.noneSkipFirst.rawValue : CGImageAlphaInfo.premultipliedFirst.rawValue))
     
-    guard let context = CGContext(data: bytes, width: Int(scaledSize.width), height: Int(scaledSize.height), bitsPerComponent: 8, bytesPerRow: bytesPerRow, space: deviceColorSpace, bitmapInfo: bitmapInfo.rawValue)
-        else {
-            return nil
+    guard let context = CGContext(data: bytes, width: Int(scaledSize.width), height: Int(scaledSize.height), bitsPerComponent: 8, bytesPerRow: bytesPerRow, space: deviceColorSpace, bitmapInfo: bitmapInfo.rawValue) else {
+        return nil
     }
     
-    context.scaleBy(x: scale, y: scale)
+    context.scaleBy(x: selectedScale, y: selectedScale)
     
     contextGenerator(size, context)
     
@@ -59,7 +58,7 @@ public func generateImage(_ size: CGSize, contextGenerator: (CGSize, CGContext) 
         return nil
     }
     
-    return UIImage(cgImage: image, scale: scale, orientation: .up)
+    return UIImage(cgImage: image, scale: selectedScale, orientation: .up)
 }
 
 public func generateFilledCircleImage(radius: CGFloat, color: UIColor?, backgroundColor: UIColor? = nil) -> UIImage? {
@@ -297,7 +296,7 @@ public func readCGFloat(_ index: inout UnsafePointer<UInt8>, end: UnsafePointer<
     }
 }
 
-public func drawSvgPath(_ context: CGContext, path: StaticString) throws {
+public func drawSvgPath(_ context: CGContext, path: StaticString, strokeOnMove: Bool = false) throws {
     var index: UnsafePointer<UInt8> = path.utf8Start
     let end = path.utf8Start.advanced(by: path.utf8CodeUnitCount)
     while index < end {
@@ -316,6 +315,11 @@ public func drawSvgPath(_ context: CGContext, path: StaticString) throws {
             
             //print("Line to \(x), \(y)")
             context.addLine(to: CGPoint(x: x, y: y))
+            
+            if strokeOnMove {
+                context.strokePath()
+                context.move(to: CGPoint(x: x, y: y))
+            }
         } else if c == 67 { // C
             let x1 = try readCGFloat(&index, end: end, separator: 44)
             let y1 = try readCGFloat(&index, end: end, separator: 32)
@@ -326,7 +330,10 @@ public func drawSvgPath(_ context: CGContext, path: StaticString) throws {
             context.addCurve(to: CGPoint(x: x1, y: y1), control1: CGPoint(x: x2, y: y2), control2: CGPoint(x: x, y: y))
             
             //print("Line to \(x), \(y)")
-            
+            if strokeOnMove {
+                context.strokePath()
+                context.move(to: CGPoint(x: x, y: y))
+            }
         } else if c == 90 { // Z
             if index != end && index.pointee != 32 {
                 throw ParsingError.Generic
@@ -336,6 +343,8 @@ public func drawSvgPath(_ context: CGContext, path: StaticString) throws {
             context.fillPath()
             //CGContextBeginPath(context)
             //print("Close")
+        } else {
+            throw ParsingError.Generic
         }
     }
 }

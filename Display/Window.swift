@@ -131,6 +131,8 @@ public class Window: UIWindow {
         self.presentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: .immediate)
         
         super.rootViewController = WindowRootViewController()
+        super.rootViewController?.viewWillAppear(false)
+        super.rootViewController?.viewDidAppear(false)
         
         self.statusBarChangeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.UIApplicationWillChangeStatusBarFrame, object: nil, queue: OperationQueue.main, using: { [weak self] notification in
             if let strongSelf = self {

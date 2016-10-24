@@ -1,6 +1,22 @@
 import Foundation
 import UIKit
 
+private func hasHorizontalGestures(_ view: UIView) -> Bool {
+    if let view = view as? ListViewBackingView {
+        let transform = view.transform
+        let angle = Double(atan2f(Float(transform.b), Float(transform.a)))
+        if abs(angle - M_PI / 2.0) < 0.001 || abs(angle + M_PI / 2.0) < 0.001 || abs(angle - M_PI * 3.0 / 2.0) < 0.001 {
+            return true
+        }
+    }
+    
+    if let superview = view.superview {
+        return hasHorizontalGestures(superview)
+    } else {
+        return false
+    }
+}
+
 class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
     var validatedGesture = false
     var firstLocation: CGPoint = CGPoint()
@@ -22,6 +38,12 @@ class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         
         let touch = touches.first!
         self.firstLocation = touch.location(in: self.view)
+        
+        if let target = self.view?.hitTest(self.firstLocation, with: event) {
+            if hasHorizontalGestures(target) {
+                self.state = .cancelled
+            }
+        }
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {

@@ -97,7 +97,7 @@ class TabBarNode: ASDisplayNode {
             node.displayWithoutProcessing = true
             node.isLayerBacked = true
             if let selectedIndex = self.selectedIndex , selectedIndex == i {
-                node.image = tabBarItemImage(item.selectedImage, title: item.title ?? "", tintColor: UIColor(0x1195f2))
+                node.image = tabBarItemImage(item.selectedImage, title: item.title ?? "", tintColor: UIColor(0x007ee5))
             } else {
                 node.image = tabBarItemImage(item.image, title: item.title ?? "", tintColor: UIColor(0x929292))
             }
@@ -116,7 +116,7 @@ class TabBarNode: ASDisplayNode {
             let item = self.tabBarItems[index]
             
             if let selectedIndex = self.selectedIndex , selectedIndex == index {
-                node.image = tabBarItemImage(item.selectedImage, title: item.title ?? "", tintColor: UIColor(0x1195f2))
+                node.image = tabBarItemImage(item.selectedImage, title: item.title ?? "", tintColor: UIColor(0x007ee5))
             } else {
                 node.image = tabBarItemImage(item.image, title: item.title ?? "", tintColor: UIColor(0x929292))
             }

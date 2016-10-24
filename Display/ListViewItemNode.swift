@@ -2,13 +2,13 @@ import Foundation
 import AsyncDisplayKit
 
 var testSpringFrictionLimits: (CGFloat, CGFloat) = (3.0, 60.0)
-var testSpringFriction: CGFloat = 29.3323
+var testSpringFriction: CGFloat = 31.8211269378662
 
 var testSpringConstantLimits: (CGFloat, CGFloat) = (3.0, 450.0)
-var testSpringConstant: CGFloat = 353.6746
+var testSpringConstant: CGFloat = 443.704223632812
 
 var testSpringResistanceFreeLimits: (CGFloat, CGFloat) = (0.05, 1.0)
-var testSpringFreeResistance: CGFloat = 0.6721
+var testSpringFreeResistance: CGFloat = 0.676197171211243
 
 var testSpringResistanceScrollingLimits: (CGFloat, CGFloat) = (0.1, 1.0)
 var testSpringScrollingResistance: CGFloat = 0.6721
@@ -408,6 +408,9 @@ open class ListViewItemNode: ASDisplayNode {
     }
     
     open func animateAdded(_ currentTimestamp: Double, duration: Double) {
+    }
+    
+    open func animateRemoved(_ currentTimestamp: Double, duration: Double) {
     }
     
     open func setHighlighted(_ highlighted: Bool, animated: Bool) {

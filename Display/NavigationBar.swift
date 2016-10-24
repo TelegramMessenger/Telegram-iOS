@@ -40,7 +40,7 @@ public class NavigationBar: ASDisplayNode {
         }
     }
     
-    public var accentColor: UIColor = UIColor(0x1195f2) {
+    public var accentColor: UIColor = UIColor(0x007ee5) {
         didSet {
             self.backButtonNode.color = self.accentColor
             self.leftButtonNode.color = self.accentColor

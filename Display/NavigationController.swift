@@ -68,13 +68,13 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
         
         let containedLayout = ContainerViewLayout(size: layout.size, intrinsicInsets: layout.intrinsicInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight)
         
-        for controller in self.viewControllers {
+        /*for controller in self.viewControllers {
             if let controller = controller as? ContainableController {
                 controller.containerLayoutUpdated(containedLayout, transition: transition) 
             } else {
                 controller.viewWillTransition(to: layout.size, with: SystemContainedControllerTransitionCoordinator())
             }
-        }
+        }*/
         
         if let topViewController = self.topViewController {
             if let topViewController = topViewController as? ContainableController {
