@@ -268,6 +268,58 @@ public class PhotoLibraryMediaResource: TelegramMediaResource {
     }
 }
 
+public struct LocalFileReferenceMediaResourceId: MediaResourceId {
+    public let randomId: Int64
+    
+    public var uniqueId: String {
+        return "local-file-\(self.randomId)"
+    }
+    
+    public var hashValue: Int {
+        return self.randomId.hashValue
+    }
+    
+    public func isEqual(to: MediaResourceId) -> Bool {
+        if let to = to as? LocalFileReferenceMediaResourceId {
+            return self.randomId == to.randomId
+        } else {
+            return false
+        }
+    }
+}
+
+public class LocalFileReferenceMediaResource: TelegramMediaResource {
+    let localFilePath: String
+    let randomId: Int64
+    
+    public init(localFilePath: String, randomId: Int64) {
+        self.localFilePath = localFilePath
+        self.randomId = randomId
+    }
+    
+    public required init(decoder: Decoder) {
+        self.localFilePath = decoder.decodeStringForKey("p")
+        self.randomId = decoder.decodeInt64ForKey("r")
+    }
+    
+    public func encode(_ encoder: Encoder) {
+        encoder.encodeString(self.localFilePath, forKey: "p")
+        encoder.encodeInt64(self.randomId, forKey: "r")
+    }
+    
+    public var id: MediaResourceId {
+        return LocalFileReferenceMediaResourceId(randomId: self.randomId)
+    }
+    
+    public func isEqual(to: TelegramMediaResource) -> Bool {
+        if let to = to as? LocalFileReferenceMediaResource {
+            return self.localFilePath == to.localFilePath && self.randomId == to.randomId
+        } else {
+            return false
+        }
+    }
+}
+
 func mediaResourceFromApiFileLocation(_ fileLocation: Api.FileLocation, size: Int?) -> TelegramMediaResource? {
     switch fileLocation {
         case let .fileLocation(dcId, volumeId, localId, secret):

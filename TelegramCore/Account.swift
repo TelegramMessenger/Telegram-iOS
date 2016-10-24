@@ -237,6 +237,7 @@ private var declaredEncodables: Void = {
     declareEncodable(PhotoLibraryMediaResource.self, f: { PhotoLibraryMediaResource(decoder: $0) })
     declareEncodable(StickerPackCollectionInfo.self, f: { StickerPackCollectionInfo(decoder: $0) })
     declareEncodable(StickerPackItem.self, f: { StickerPackItem(decoder: $0) })
+    declareEncodable(LocalFileReferenceMediaResource.self, f: { LocalFileReferenceMediaResource(decoder: $0) })
     
     return
 }()

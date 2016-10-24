@@ -58,6 +58,16 @@ private func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaR
 }
 #endif
 
+private func fetchLocalFileResource(path: String) -> Signal<MediaResourceDataFetchResult, NoError> {
+    return Signal { subscriber in
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
+            subscriber.putNext(MediaResourceDataFetchResult(data: data, complete: true))
+            subscriber.putCompletion()
+        }
+        return EmptyDisposable
+    }
+}
+
 func fetchResource(account: Account, resource: MediaResource, range: Range<Int>) -> Signal<MediaResourceDataFetchResult, NoError> {
     if let cloudResource = resource as? TelegramCloudMediaResource {
         return fetchCloudMediaLocation(account: account, resource: cloudResource, size: resource.size, range: range)
@@ -67,6 +77,8 @@ func fetchResource(account: Account, resource: MediaResource, range: Range<Int>)
         #else
             return .never()
         #endif
+    } else if let localFileResource = resource as? LocalFileReferenceMediaResource {
+        return fetchLocalFileResource(path: localFileResource.localFilePath)
     }
     return .never()
 }
