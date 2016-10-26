@@ -40,9 +40,10 @@ script:
 
   - echo $COMMAND
   - eval $COMMAND && rm xcodebuild.log
-  - if [ $LINT == "YES" ]; then
+  - if [ $LINT=="YES"]; then
       cp -R Products/HockeySDK-iOS/ HockeySDK-iOS;
       pod lib lint;
+      carthage build --no-skip-current ;
     fi
 
 # Use better failure diagnostics, copied from https://github.com/0xced/XCDYouTubeKit
