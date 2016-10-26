@@ -8,8 +8,6 @@ env:
     - CONFIGURATION="DEBUG"
 
   matrix:
-    - SCHEME="HockeySDK"             DESTINATION="OS=8.3,name=iPhone 5"                 RUN_TESTS="YES"
-    - SCHEME="HockeySDK"             DESTINATION="OS=8.4,name=iPhone 6"                 RUN_TESTS="YES"
     - SCHEME="HockeySDK"             DESTINATION="OS=9.0,name=iPad Air"                 RUN_TESTS="YES"
     - SCHEME="HockeySDK"             DESTINATION="OS=9.1,name=iPhone 6 Plus"            RUN_TESTS="YES"
     - SCHEME="HockeySDK"             DESTINATION="OS=9.2,name=iPad Pro"                 RUN_TESTS="YES"
