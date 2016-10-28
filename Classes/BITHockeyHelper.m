@@ -617,7 +617,7 @@ NSString *bit_validAppIconStringFromIcons(NSBundle *resourceBundle, NSArray *ico
   
   BOOL useHighResIcon = NO;
   BOOL useiPadIcon = NO;
-  if ([UIScreen mainScreen].scale == 2.0f) useHighResIcon = YES;
+  if ([UIScreen mainScreen].scale >= 2.0f) useHighResIcon = YES;
   if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) useiPadIcon = YES;
   
   NSString *currentBestMatch = nil;
@@ -1047,7 +1047,7 @@ UIImage *bit_appIcon() {
   
   if (icons) {
     BOOL useHighResIcon = NO;
-    if ([UIScreen mainScreen].scale == 2.0f) useHighResIcon = YES;
+    if ([UIScreen mainScreen].scale >= 2.0f) useHighResIcon = YES;
     
     for(NSString *icon in icons) {
       iconString = icon;
