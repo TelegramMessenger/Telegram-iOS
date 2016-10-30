@@ -48,7 +48,7 @@ func serializeBytes(_ value: Buffer, buffer: Buffer, boxed: Bool) {
         }
         
         var length: Int32 = Int32(value.size)
-        var padding = 0
+        var padding: Int32 = 0
         if (length >= 254)
         {
             var tmp: UInt8 = 254
@@ -68,7 +68,7 @@ func serializeBytes(_ value: Buffer, buffer: Buffer, boxed: Bool) {
             buffer.appendBytes(value.data!, length: UInt(length))
         }
 
-        var i = 0
+        var i: Int32 = 0
         var tmp: UInt8 = 0
         while i < padding {
             buffer.appendBytes(&tmp, length: 1)

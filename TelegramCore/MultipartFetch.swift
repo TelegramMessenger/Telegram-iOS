@@ -118,7 +118,7 @@ private final class MultipartFetchManager {
                             } else if data.count < partSize {
                                 strongSelf.completeSize = partOffset + data.count
                             }
-                            let _ = strongSelf.fetchingParts.removeValue(forKey: nextOffset)
+                            let _ = strongSelf.fetchingParts.removeValue(forKey: partOffset)
                             strongSelf.fetchedParts[partOffset] = data
                             strongSelf.checkState()
                         }
