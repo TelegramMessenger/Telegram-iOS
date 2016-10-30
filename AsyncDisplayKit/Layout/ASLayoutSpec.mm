@@ -11,13 +11,13 @@
 #import "ASLayoutSpec.h"
 #import "ASLayoutSpecPrivate.h"
 #import "ASLayoutSpec+Subclasses.h"
-
 #import "ASLayoutElementStylePrivate.h"
 
 @implementation ASLayoutSpec
 
 // Dynamic properties for ASLayoutElements
 @dynamic layoutElementType;
+@synthesize debugName = _debugName;
 @synthesize isFinalLayoutElement = _isFinalLayoutElement;
 
 #pragma mark - Class
@@ -82,12 +82,6 @@
 
 #pragma mark - Layout
 
-// Deprecated
-- (ASLayout *)measureWithSizeRange:(ASSizeRange)constrainedSize
-{
-    return [self layoutThatFits:constrainedSize];
-}
-
 - (ASLayout *)layoutThatFits:(ASSizeRange)constrainedSize
 {
   return [self layoutThatFits:constrainedSize parentSize:constrainedSize.max];
@@ -111,31 +105,17 @@
   return [ASLayout layoutWithLayoutElement:self size:constrainedSize.min];
 }
 
-
-#pragma mark - Parent
-
-- (void)setParent:(id<ASLayoutElement>)parent
-{
-  // FIXME: Locking should be evaluated here.  _parent is not widely used yet, though.
-  _parent = parent;
-  
-  if ([parent supportsUpwardPropagation]) {
-    ASEnvironmentStatePropagateUp(parent, self.environmentState.layoutOptionsState);
-  }
-}
-
 #pragma mark - Child
 
 - (void)setChild:(id<ASLayoutElement>)child
 {
-  ASDisplayNodeAssert(self.isMutable, @"Cannot set properties when layout spec is not mutable");;
+  ASDisplayNodeAssert(self.isMutable, @"Cannot set properties when layout spec is not mutable");
   ASDisplayNodeAssert(_childrenArray.count < 2, @"This layout spec does not support more than one child. Use the setChildren: or the setChild:AtIndex: API");
   
   if (child) {
     id<ASLayoutElement> finalLayoutElement = [self layoutElementToAddFromLayoutElement:child];
     if (finalLayoutElement) {
       _childrenArray[0] = finalLayoutElement;
-      [self propagateUpLayoutElement:finalLayoutElement];
     }
   } else {
     if (_childrenArray.count) {
@@ -148,11 +128,7 @@
 {
   ASDisplayNodeAssert(_childrenArray.count < 2, @"This layout spec does not support more than one child. Use the setChildren: or the setChild:AtIndex: API");
   
-  if (_childrenArray.count) {
-    return _childrenArray[0];
-  }
-  
-  return nil;
+  return _childrenArray.firstObject;
 }
 
 #pragma mark - Children
@@ -195,26 +171,9 @@
   _environmentState = environmentState;
 }
 
-// Subclasses can override this method to return NO, because upward propagation is not enabled if a layout
-// specification has more than one child. Currently ASStackLayoutSpec and ASAbsoluteLayoutSpec are currently
-// the specifications that are known to have more than one.
-- (BOOL)supportsUpwardPropagation
-{
-  return ASEnvironmentStatePropagationEnabled();
-}
-
 - (BOOL)supportsTraitsCollectionPropagation
 {
   return ASEnvironmentStateTraitCollectionPropagationEnabled();
-}
-
-- (void)propagateUpLayoutElement:(id<ASLayoutElement>)layoutElement
-{
-  if ([layoutElement isKindOfClass:[ASLayoutSpec class]]) {
-    [(ASLayoutSpec *)layoutElement setParent:self]; // This will trigger upward propogation if needed.
-  } else if ([self supportsUpwardPropagation]) {
-    ASEnvironmentStatePropagateUp(self, layoutElement.environmentState.layoutOptionsState); // Probably an ASDisplayNode
-  }
 }
 
 - (ASEnvironmentTraitCollection)environmentTraitCollection
@@ -234,6 +193,76 @@
 }
 
 ASEnvironmentLayoutExtensibilityForwarding
+
+#pragma mark - Framework Private
+
+- (nullable NSSet<id<ASLayoutElement>> *)findDuplicatedElementsInSubtree
+{
+  NSMutableSet *result = nil;
+  NSUInteger count = 0;
+  [self _findDuplicatedElementsInSubtreeWithWorkingSet:[[NSMutableSet alloc] init] workingCount:&count result:&result];
+  return result;
+}
+
+/**
+ * This method is extremely performance-sensitive, so we do some strange things.
+ *
+ * @param workingSet A working set of elements for use in the recursion.
+ * @param workingCount The current count of the set for use in the recursion.
+ * @param result The set into which to put the result. This initially points to @c nil to save time if no duplicates exist.
+ */
+- (void)_findDuplicatedElementsInSubtreeWithWorkingSet:(NSMutableSet<id<ASLayoutElement>> *)workingSet workingCount:(NSUInteger *)workingCount result:(NSMutableSet<id<ASLayoutElement>>  * _Nullable *)result
+{
+  Class layoutSpecClass = [ASLayoutSpec class];
+
+  for (id<ASLayoutElement> child in self) {
+    // Add the object into the set.
+    [workingSet addObject:child];
+
+    // Check that addObject: caused the count to increase.
+    // This is faster than using containsObject.
+    NSUInteger oldCount = *workingCount;
+    NSUInteger newCount = workingSet.count;
+    BOOL objectAlreadyExisted = (newCount != oldCount + 1);
+    if (objectAlreadyExisted) {
+      if (*result == nil) {
+        *result = [[NSMutableSet alloc] init];
+      }
+      [*result addObject:child];
+    } else {
+      *workingCount = newCount;
+      // If child is a layout spec we haven't visited, recurse its children.
+      if ([child isKindOfClass:layoutSpecClass]) {
+        [(ASLayoutSpec *)child _findDuplicatedElementsInSubtreeWithWorkingSet:workingSet workingCount:workingCount result:result];
+      }
+    }
+  }
+}
+
+#pragma mark - Debugging
+
+- (NSString *)debugName
+{
+  ASDN::MutexLocker l(__instanceLock__);
+  return _debugName;
+}
+
+- (void)setDebugName:(NSString *)debugName
+{
+  ASDN::MutexLocker l(__instanceLock__);
+  if (!ASObjectIsEqual(_debugName, debugName)) {
+    _debugName = [debugName copy];
+  }
+}
+
+#pragma mark - Deprecated
+
+- (ASLayout *)measureWithSizeRange:(ASSizeRange)constrainedSize
+{
+  return [self layoutThatFits:constrainedSize];
+}
+
+ASLayoutElementStyleForwarding
 
 @end
 
@@ -255,15 +284,40 @@ ASEnvironmentLayoutExtensibilityForwarding
   return self;
 }
 
++ (instancetype)wrapperWithLayoutElements:(NSArray<id<ASLayoutElement>> *)layoutElements
+{
+  return [[self alloc] initWithLayoutElements:layoutElements];
+}
+
+- (instancetype)initWithLayoutElements:(NSArray<id<ASLayoutElement>> *)layoutElements
+{
+  self = [super init];
+  if (self) {
+    self.children = layoutElements;
+  }
+  return self;
+}
+
 - (ASLayout *)calculateLayoutThatFits:(ASSizeRange)constrainedSize
 {
-  ASLayout *sublayout = [self.child layoutThatFits:constrainedSize parentSize:constrainedSize.max];
-  sublayout.position = CGPointZero;
-  return [ASLayout layoutWithLayoutElement:self size:sublayout.size sublayouts:@[sublayout]];
+  NSArray *children = self.children;
+  NSMutableArray *sublayouts = [NSMutableArray arrayWithCapacity:children.count];
+  
+  CGSize size = constrainedSize.min;
+  for (id<ASLayoutElement> child in children) {
+    ASLayout *sublayout = [child layoutThatFits:constrainedSize parentSize:constrainedSize.max];
+    sublayout.position = CGPointZero;
+    
+    size.width = MAX(size.width,  sublayout.size.width);
+    size.height = MAX(size.height, sublayout.size.height);
+    
+    [sublayouts addObject:sublayout];
+  }
+  
+  return [ASLayout layoutWithLayoutElement:self size:size sublayouts:sublayouts];
 }
 
 @end
-
 
 #pragma mark - ASLayoutSpec (Debugging)
 
@@ -299,7 +353,11 @@ ASEnvironmentLayoutExtensibilityForwarding
 
 - (NSString *)asciiArtName
 {
-  return NSStringFromClass([self class]);
+  NSString *string = NSStringFromClass([self class]);
+  if (_debugName) {
+    string = [string stringByAppendingString:[NSString stringWithFormat:@" (debugName = %@)",_debugName]];
+  }
+  return string;
 }
 
 @end

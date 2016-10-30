@@ -15,6 +15,14 @@
 @interface ASDisplayNode (Deprecated)
 
 /**
+ * @abstract The name of this node, which will be displayed in `description`. The default value is nil.
+ * 
+ * @deprecated Deprecated in version 2.0: Use .debugName instead. This value will display in 
+ * results of the -asciiArtString method (@see ASLayoutElementAsciiArtProtocol).
+ */
+@property (nullable, nonatomic, copy) NSString *name ASDISPLAYNODE_DEPRECATED_MSG("Use .debugName instead.");
+
+/**
  * @abstract Asks the node to measure and return the size that best fits its subnodes.
  *
  * @param constrainedSize The maximum size the receiver should fit in.
@@ -33,7 +41,7 @@
  *
  * @deprecated Deprecated in version 2.0: Use layoutThatFits: with a constrained size of (CGSizeZero, constrainedSize) and call size on the returned ASLayout
  */
-- (CGSize)measure:(CGSize)constrainedSize ASDISPLAYNODE_DEPRECATED;
+- (CGSize)measure:(CGSize)constrainedSize ASDISPLAYNODE_DEPRECATED_MSG("Use layoutThatFits: with a constrained size of (CGSizeZero, constrainedSize) and call size on the returned ASLayout.");
 
 /**
  * @abstract Calculate a layout based on given size range.
@@ -42,9 +50,9 @@
  *
  * @return An ASLayout instance defining the layout of the receiver and its children.
  *
- * @deprecated Deprecated in version 2.0: Use ASCalculateRootLayout or ASCalculateLayout instead
+ * @deprecated Deprecated in version 2.0: Use ASCalculateRootLayout() or ASCalculateLayout() instead
  */
-- (ASLayout *)measureWithSizeRange:(ASSizeRange)constrainedSize ASDISPLAYNODE_DEPRECATED;
+- (nonnull ASLayout *)measureWithSizeRange:(ASSizeRange)constrainedSize ASDISPLAYNODE_DEPRECATED_MSG("Use layoutThatFits: instead.");
 
 /**
  * @abstract Called whenever the visiblity of the node changed.
@@ -53,16 +61,16 @@
  *
  * @deprecated @see didEnterVisibleState @see didExitVisibleState
  */
-- (void)visibilityDidChange:(BOOL)isVisible ASDISPLAYNODE_REQUIRES_SUPER ASDISPLAYNODE_DEPRECATED;
+- (void)visibilityDidChange:(BOOL)isVisible ASDISPLAYNODE_REQUIRES_SUPER ASDISPLAYNODE_DEPRECATED_MSG("Use -didEnterVisibleState / -didExitVisibleState instead.");
 
 /**
  * @abstract Called whenever the visiblity of the node changed.
  *
  * @discussion Subclasses may use this to monitor when they become visible.
  *
- * @deprecated @see didEnterVisibleState @see didExitVisibleStat
+ * @deprecated @see didEnterVisibleState @see didExitVisibleState
  */
-- (void)visibleStateDidChange:(BOOL)isVisible ASDISPLAYNODE_REQUIRES_SUPER ASDISPLAYNODE_DEPRECATED;
+- (void)visibleStateDidChange:(BOOL)isVisible ASDISPLAYNODE_REQUIRES_SUPER ASDISPLAYNODE_DEPRECATED_MSG("Use -didEnterVisibleState / -didExitVisibleState instead.");
 
 /**
  * @abstract Called whenever the the node has entered or exited the display state.
@@ -73,7 +81,7 @@
  *
  * @deprecated @see didEnterDisplayState @see didExitDisplayState
  */
-- (void)displayStateDidChange:(BOOL)inDisplayState ASDISPLAYNODE_REQUIRES_SUPER ASDISPLAYNODE_DEPRECATED;
+- (void)displayStateDidChange:(BOOL)inDisplayState ASDISPLAYNODE_REQUIRES_SUPER ASDISPLAYNODE_DEPRECATED_MSG("Use -didEnterDisplayState / -didExitDisplayState instead.");
 
 /**
  * @abstract Called whenever the the node has entered or left the load state.
@@ -84,14 +92,14 @@
  *
  * @deprecated @see didEnterPreloadState @see didExitPreloadState
  */
-- (void)loadStateDidChange:(BOOL)inLoadState ASDISPLAYNODE_REQUIRES_SUPER ASDISPLAYNODE_DEPRECATED;
+- (void)loadStateDidChange:(BOOL)inLoadState ASDISPLAYNODE_REQUIRES_SUPER ASDISPLAYNODE_DEPRECATED_MSG("Use -didEnterPreloadState / -didExitPreloadState instead.");
 
 /**
  * @abstract Cancels all performing layout transitions. Can be called on any thread.
  *
  * @deprecated Deprecated in version 2.0: Use cancelLayoutTransition
  */
-- (void)cancelLayoutTransitionsInProgress ASDISPLAYNODE_DEPRECATED;
+- (void)cancelLayoutTransitionsInProgress ASDISPLAYNODE_DEPRECATED_MSG("Use -cancelLayoutTransition instead.");
 
 /**
  * @abstract A boolean that shows whether the node automatically inserts and removes nodes based on the presence or
@@ -102,6 +110,6 @@
  *
  * @deprecated Deprecated in version 2.0: Use automaticallyManagesSubnodes
  */
-@property (nonatomic, assign) BOOL usesImplicitHierarchyManagement ASDISPLAYNODE_DEPRECATED;
+@property (nonatomic, assign) BOOL usesImplicitHierarchyManagement ASDISPLAYNODE_DEPRECATED_MSG("Set .automaticallyManagesSubnodes instead.");
 
 @end

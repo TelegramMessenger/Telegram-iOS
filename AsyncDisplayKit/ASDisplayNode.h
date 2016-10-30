@@ -175,13 +175,6 @@ extern NSInteger const ASDefaultDrawingPriority;
  */
 - (void)onDidLoad:(ASDisplayNodeDidLoadBlock)body;
 
-/** @name Properties */
-
-/**
- * @abstract The name of this node, which will be displayed in `description`. The default value is nil.
- */
-@property (nullable, nonatomic, copy) NSString *name;
-
 /** 
  * @abstract Returns whether the node is synchronous.
  *
@@ -821,8 +814,32 @@ extern NSInteger const ASDefaultDrawingPriority;
  */
 - (void)cancelLayoutTransition;
 
+@end
+
+@interface ASDisplayNode (DeprecatedProtocolMethods) <ASStackLayoutElement, ASAbsoluteLayoutElement>
 
 #pragma mark - Deprecated
+
+/**
+ * @abstract Asks the node to measure and return the size that best fits its subnodes.
+ *
+ * @param constrainedSize The maximum size the receiver should fit in.
+ *
+ * @return A new size that fits the receiver's subviews.
+ *
+ * @discussion Though this method does not set the bounds of the view, it does have side effects--caching both the
+ * constraint and the result.
+ *
+ * @warning Subclasses must not override this; it calls -measureWithSizeRange: with zero min size.
+ * -measureWithSizeRange: caches results from -calculateLayoutThatFits:.  Calling this method may
+ * be expensive if result is not cached.
+ *
+ * @see measureWithSizeRange:
+ * @see [ASDisplayNode(Subclassing) calculateLayoutThatFits:]
+ *
+ * @deprecated Deprecated in version 2.0: Use layoutThatFits: with a constrained size of (CGSizeZero, constrainedSize) and call size on the returned ASLayout
+ */
+- (CGSize)measure:(CGSize)constrainedSize ASDISPLAYNODE_DEPRECATED;
 
 /**
  * @abstract Provides a default intrinsic content size for calculateSizeThatFits:. This is useful when laying out
@@ -834,7 +851,7 @@ extern NSInteger const ASDefaultDrawingPriority;
  *
  * @deprecated Deprecated in version 2.0: Just calls through to set the height and width property of the node. Convert to use sizing properties instead: height, minHeight, maxHeight, width, minWidth, maxWidth.
  */
-@property (nonatomic, assign, readwrite) CGSize preferredFrameSize ASDISPLAYNODE_DEPRECATED;
+@property (nonatomic, assign, readwrite) CGSize preferredFrameSize ASDISPLAYNODE_DEPRECATED_MSG("Use .style.preferredSize instead OR set individual values with .style.height and .style.width.");
 
 @end
 
