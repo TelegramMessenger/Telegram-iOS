@@ -62,8 +62,6 @@ func chatMessageSticker(account: Account, file: TelegramMediaFile, small: Bool) 
     
     return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
         return { arguments in
-            assertNotOnMainThread()
-            
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
             
             var fullSizeImage: (UIImage, UIImage)?

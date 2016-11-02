@@ -18,7 +18,6 @@ private func chatMessagePhotoDatas(account: Account, photo: TelegramMediaImage, 
         let signal = maybeFullSize |> take(1) |> mapToSignal { maybeData -> Signal<(Data?, Data?, Bool), NoError> in
             if maybeData.complete {
                 let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
-                
                 return .single((nil, loadedData, true))
             } else {
                 let fetchedThumbnail = account.postbox.mediaBox.fetchedResource(smallestRepresentation.resource)
@@ -371,8 +370,21 @@ func chatMessagePhoto(account: Account, photo: TelegramMediaImage) -> Signal<(Tr
     
     return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
         return { arguments in
-            assertNotOnMainThread()
+            var debugTiming = false
+            var startTime = 0.0
+            if arguments.imageSize.equalTo(CGSize(width: 640.0, height: 853.0)) {
+                print("begin draw \(CFAbsoluteTimeGetCurrent() * 1000.0)")
+                debugTiming = true
+                startTime = CFAbsoluteTimeGetCurrent()
+            }
+            
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
+            
+            if debugTiming {
+                let currentTime = CFAbsoluteTimeGetCurrent()
+                print("create context: \((currentTime - startTime) * 1000.0) ms")
+                startTime = currentTime
+            }
             
             let drawingRect = arguments.drawingRect
             let fittedSize = arguments.imageSize.aspectFilled(arguments.boundingSize).fitted(arguments.imageSize)
@@ -381,10 +393,15 @@ func chatMessagePhoto(account: Account, photo: TelegramMediaImage) -> Signal<(Tr
             var fullSizeImage: CGImage?
             if let fullSizeData = fullSizeData {
                 if fullSizeComplete {
-                    let options = NSMutableDictionary()
+                    /*let options = NSMutableDictionary()
                     options.setValue(max(fittedSize.width * context.scale, fittedSize.height * context.scale) as NSNumber, forKey: kCGImageSourceThumbnailMaxPixelSize as String)
                     options.setValue(true as NSNumber, forKey: kCGImageSourceCreateThumbnailFromImageAlways as String)
                     if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options as CFDictionary) {
+                        fullSizeImage = image
+                    }*/
+                    let options = NSMutableDictionary()
+                    options[kCGImageSourceShouldCache as NSString] = false as NSNumber
+                    if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
                         fullSizeImage = image
                     }
                 } else {
@@ -397,6 +414,12 @@ func chatMessagePhoto(account: Account, photo: TelegramMediaImage) -> Signal<(Tr
                         fullSizeImage = image
                     }
                 }
+            }
+            
+            if debugTiming {
+                let currentTime = CFAbsoluteTimeGetCurrent()
+                print("decode full: \((currentTime - startTime) * 1000.0) ms")
+                startTime = currentTime
             }
             
             var thumbnailImage: CGImage?
@@ -418,6 +441,12 @@ func chatMessagePhoto(account: Account, photo: TelegramMediaImage) -> Signal<(Tr
                 blurredThumbnailImage = thumbnailContext.generateImage()
             }
             
+            if debugTiming {
+                let currentTime = CFAbsoluteTimeGetCurrent()
+                print("decode thumbnail: \((currentTime - startTime) * 1000.0) ms")
+                startTime = currentTime
+            }
+            
             context.withFlippedContext { c in
                 c.setBlendMode(.copy)
                 if arguments.boundingSize != arguments.imageSize {
@@ -437,7 +466,19 @@ func chatMessagePhoto(account: Account, photo: TelegramMediaImage) -> Signal<(Tr
                 }
             }
             
+            if debugTiming {
+                let currentTime = CFAbsoluteTimeGetCurrent()
+                print("draw: \((currentTime - startTime) * 1000.0) ms")
+                startTime = currentTime
+            }
+            
             addCorners(context, arguments: arguments)
+            
+            if debugTiming {
+                let currentTime = CFAbsoluteTimeGetCurrent()
+                print("add corners: \((currentTime - startTime) * 1000.0) ms")
+                startTime = currentTime
+            }
             
             return context
         }

@@ -83,7 +83,7 @@ private final class ChatMediaActionSheetRollItemNode: ActionSheetItemNode, PHPho
         }
         
         if !items.isEmpty {
-            self.listView.deleteAndInsertItems(deleteIndices: [], insertIndicesAndItems: (0 ..< items.count).map({ ListViewInsertItem(index: $0, previousIndex: nil, item: items[$0], directionHint: .Down) }), updateIndicesAndItems: [], options: [])
+            self.listView.transaction(deleteIndices: [], insertIndicesAndItems: (0 ..< items.count).map({ ListViewInsertItem(index: $0, previousIndex: nil, item: items[$0], directionHint: .Down) }), updateIndicesAndItems: [], options: [], updateOpaqueState: nil)
         }
         
         //PHPhotoLibrary.shared().register(self)

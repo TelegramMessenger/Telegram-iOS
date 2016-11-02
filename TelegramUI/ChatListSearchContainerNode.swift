@@ -68,7 +68,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
                         }
                     }
                     
-                    strongSelf.listNode.deleteAndInsertItems(deleteIndices: (0 ..< previousItems.count).map({ ListViewDeleteItem(index: $0, directionHint: nil) }), insertIndicesAndItems: (0 ..< listItems.count).map({ ListViewInsertItem(index: $0, previousIndex: nil, item: listItems[$0], directionHint: .Down) }), updateIndicesAndItems: [], options: [])
+                    strongSelf.listNode.transaction(deleteIndices: (0 ..< previousItems.count).map({ ListViewDeleteItem(index: $0, directionHint: nil) }), insertIndicesAndItems: (0 ..< listItems.count).map({ ListViewInsertItem(index: $0, previousIndex: nil, item: listItems[$0], directionHint: .Down) }), updateIndicesAndItems: [], options: [], updateOpaqueState: nil)
                 }
             }))
     }
@@ -120,6 +120,6 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         }
         
         self.listNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.listNode.deleteAndInsertItems(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: navigationBarHeight, left: 0.0, bottom: layout.insets(options: [.input]).bottom, right: 0.0), duration: duration, curve: listViewCurve), stationaryItemRange: nil, completion: { _ in })
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: navigationBarHeight, left: 0.0, bottom: layout.insets(options: [.input]).bottom, right: 0.0), duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
     }
 }

@@ -270,7 +270,7 @@ public final class PeerInfoController: ListController {
         } else if animated {
             options.insert(.AnimateInsertion)
         }
-        self.listDisplayNode.listView.deleteAndInsertItems(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, completion: { [weak self] _ in
+        self.listDisplayNode.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateOpaqueState: nil, completion: { [weak self] _ in
             if let strongSelf = self {
                 if !strongSelf.didSetReady {
                     strongSelf.didSetReady = true

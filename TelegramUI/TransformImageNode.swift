@@ -36,7 +36,7 @@ public class TransformImageNode: ASDisplayNode {
     public var alphaTransitionOnFirstUpdate = false
     private var disposable = MetaDisposable()
     
-    private var argumentsPromise = Promise<TransformImageArguments>()
+    private var argumentsPromise = ValuePromise<TransformImageArguments>(ignoreRepeated: true)
     
     deinit {
         self.disposable.dispose()
@@ -45,7 +45,7 @@ public class TransformImageNode: ASDisplayNode {
     func setSignal(account: Account, signal: Signal<(TransformImageArguments) -> DrawingContext, NoError>, dispatchOnDisplayLink: Bool = true) {
         let argumentsPromise = self.argumentsPromise
         
-        let result = combineLatest(signal, argumentsPromise.get()) |> deliverOn(account.graphicsThreadPool) |> mapToThrottled { transform, arguments -> Signal<UIImage?, NoError> in
+        let result = combineLatest(signal, argumentsPromise.get()) |> deliverOn(Queue.concurrentDefaultQueue() /*account.graphicsThreadPool*/) |> mapToThrottled { transform, arguments -> Signal<UIImage?, NoError> in
             return deferred {
                 return Signal<UIImage?, NoError>.single(transform(arguments).generateImage())
             }
@@ -80,7 +80,7 @@ public class TransformImageNode: ASDisplayNode {
     
     public func asyncLayout() -> (TransformImageArguments) -> (() -> Void) {
         return { arguments in
-            self.argumentsPromise.set(.single(arguments))
+            self.argumentsPromise.set(arguments)
             
             return {
                 

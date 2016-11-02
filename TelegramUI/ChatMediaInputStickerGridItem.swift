@@ -135,12 +135,12 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
     override func layout() {
         super.layout()
         
-        let imageFrame = self.bounds.insetBy(dx: 6.0, dy: 6.0)
-        self.imageNode.frame = imageFrame
+        let boundingSize = self.bounds.insetBy(dx: 6.0, dy: 6.0).size
         
         if let (_, _, mediaDimensions) = self.currentState {
-            let imageSize = mediaDimensions.aspectFitted(imageFrame.size)
-            self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageFrame.size, intrinsicInsets: UIEdgeInsets()))()
+            let imageSize = mediaDimensions.aspectFitted(boundingSize)
+            self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets()))()
+            self.imageNode.frame = CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: imageSize)
         }
     }
     

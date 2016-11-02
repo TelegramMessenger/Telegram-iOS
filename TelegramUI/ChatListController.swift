@@ -173,6 +173,14 @@ extension ChatListEntry: Identifiable {
     }
 }
 
+private final class ChatListOpaqueTransactionState {
+    let chatListViewAndEntries: (ChatListView, [ChatListControllerEntry])
+    
+    init(chatListViewAndEntries: (ChatListView, [ChatListControllerEntry])) {
+        self.chatListViewAndEntries = chatListViewAndEntries
+    }
+}
+
 public class ChatListController: ViewController {
     let account: Account
     
@@ -209,7 +217,7 @@ public class ChatListController: ViewController {
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
                 if let (view, _) = strongSelf.chatListViewAndEntries, view.laterIndex == nil {
-                    strongSelf.chatListDisplayNode.listView.deleteAndInsertItems(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: ListViewScrollToItem(index: 0, position: .Top, animated: true, curve: .Default, directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, completion: { _ in })
+                    strongSelf.chatListDisplayNode.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: ListViewScrollToItem(index: 0, position: .Top, animated: true, curve: .Default, directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                 } else {
                     strongSelf.setMessageViewPosition(.Around(index: MessageIndex.absoluteUpperBound(), anchorIndex: MessageIndex.absoluteUpperBound(), scrollPosition: .Top), hint: "later", force: true)
                 }
@@ -231,9 +239,9 @@ public class ChatListController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = ChatListControllerNode(account: self.account)
         
-        self.chatListDisplayNode.listView.displayedItemRangeChanged = { [weak self] range in
+        self.chatListDisplayNode.listView.displayedItemRangeChanged = { [weak self] range, transactionOpaqueState in
             if let strongSelf = self, !strongSelf.settingView {
-                if let range = range.loadedRange, let (view, _) = strongSelf.chatListViewAndEntries {
+                if let range = range.loadedRange, let (view, _) = (transactionOpaqueState as? ChatListOpaqueTransactionState)?.chatListViewAndEntries {
                     if range.firstIndex < 5 && view.laterIndex != nil {
                         strongSelf.setMessageViewPosition(.Around(index: view.entries[view.entries.count - 1].index, anchorIndex: MessageIndex.absoluteUpperBound(), scrollPosition: nil), hint: "later", force: false)
                     } else if range.firstIndex >= 5 && range.lastIndex >= view.entries.count - 5 && view.earlierIndex != nil {
@@ -477,7 +485,7 @@ public class ChatListController: ViewController {
                                 }
                             }
                             
-                            strongSelf.chatListDisplayNode.listView.deleteAndInsertItems(deleteIndices: adjustedDeleteIndices, insertIndicesAndItems: adjustedIndicesAndItems, updateIndicesAndItems: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, completion: { [weak self] _ in
+                            strongSelf.chatListDisplayNode.listView.transaction(deleteIndices: adjustedDeleteIndices, insertIndicesAndItems: adjustedIndicesAndItems, updateIndicesAndItems: adjustedUpdateItems, options: options, scrollToItem: scrollToItem, updateOpaqueState: ChatListOpaqueTransactionState(chatListViewAndEntries: (view, viewEntries)), completion: { [weak self] _ in
                                 if let strongSelf = self {
                                     strongSelf.ready.set(single(true, NoError.self))
                                     strongSelf.settingView = false

@@ -82,6 +82,7 @@
 		D0E7A1BF1D8C24B900C37A6F /* ChatHistoryViewForLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E7A1BE1D8C24B900C37A6F /* ChatHistoryViewForLocation.swift */; };
 		D0E7A1C11D8C258D00C37A6F /* ChatHistoryEntriesForView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E7A1C01D8C258D00C37A6F /* ChatHistoryEntriesForView.swift */; };
 		D0E7A1C31D8C25D600C37A6F /* PreparedChatHistoryViewTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E7A1C21D8C25D600C37A6F /* PreparedChatHistoryViewTransition.swift */; };
+		D0ED5D4B1DC806D7007CBB15 /* ApplicationSpecificData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ED5D4A1DC806D7007CBB15 /* ApplicationSpecificData.swift */; };
 		D0EE971A1D88BCA0006C18E1 /* ChatInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EE97191D88BCA0006C18E1 /* ChatInfo.swift */; };
 		D0F69D231D6B87D30046BCD6 /* FFMpegMediaFrameSourceContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69CD31D6B87D30046BCD6 /* FFMpegMediaFrameSourceContext.swift */; };
 		D0F69D241D6B87D30046BCD6 /* MediaPlayerAudioRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69CD41D6B87D30046BCD6 /* MediaPlayerAudioRenderer.swift */; };
@@ -304,6 +305,7 @@
 		D0E7A1BE1D8C24B900C37A6F /* ChatHistoryViewForLocation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatHistoryViewForLocation.swift; sourceTree = "<group>"; };
 		D0E7A1C01D8C258D00C37A6F /* ChatHistoryEntriesForView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatHistoryEntriesForView.swift; sourceTree = "<group>"; };
 		D0E7A1C21D8C25D600C37A6F /* PreparedChatHistoryViewTransition.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PreparedChatHistoryViewTransition.swift; sourceTree = "<group>"; };
+		D0ED5D4A1DC806D7007CBB15 /* ApplicationSpecificData.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplicationSpecificData.swift; sourceTree = "<group>"; };
 		D0EE97191D88BCA0006C18E1 /* ChatInfo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatInfo.swift; sourceTree = "<group>"; };
 		D0F69CD31D6B87D30046BCD6 /* FFMpegMediaFrameSourceContext.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FFMpegMediaFrameSourceContext.swift; sourceTree = "<group>"; };
 		D0F69CD41D6B87D30046BCD6 /* MediaPlayerAudioRenderer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaPlayerAudioRenderer.swift; sourceTree = "<group>"; };
@@ -1061,6 +1063,7 @@
 				D0F69E931D6B8C9B0046BCD6 /* ProgressiveImage.swift */,
 				D0F69E941D6B8C9B0046BCD6 /* WebP.swift */,
 				D0B844571DAC44E8005F29E1 /* PeerPresenceStatusManager.swift */,
+				D0ED5D4A1DC806D7007CBB15 /* ApplicationSpecificData.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -1344,6 +1347,7 @@
 				D0F69D771D6B87DF0046BCD6 /* FFMpegMediaPassthroughVideoFrameDecoder.swift in Sources */,
 				D0F69DFE1D6B8A880046BCD6 /* AvatarNode.swift in Sources */,
 				D0F69E9B1D6B8D200046BCD6 /* UIImage+WebP.m in Sources */,
+				D0ED5D4B1DC806D7007CBB15 /* ApplicationSpecificData.swift in Sources */,
 				D0F69E581D6B8BDA0046BCD6 /* GalleryItemNode.swift in Sources */,
 				D0F69E971D6B8C9B0046BCD6 /* WebP.swift in Sources */,
 				D0F69E2F1D6B8B030046BCD6 /* ChatMessageBubbleContentCalclulateImageCorners.swift in Sources */,

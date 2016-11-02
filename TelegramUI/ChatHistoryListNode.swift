@@ -124,6 +124,14 @@ private func mappedChatHistoryViewListTransition(account: Account, peerId: PeerI
     return ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: transition.deleteItems, insertItems: mappedInsertEntries(account: account, peerId: peerId, controllerInteraction: controllerInteraction, mode: mode, entries: transition.insertEntries), updateItems: mappedUpdateEntries(account: account, peerId: peerId, controllerInteraction: controllerInteraction, mode: mode, entries: transition.updateEntries), options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange)
 }
 
+private final class ChatHistoryTransactionOpaqueState {
+    let historyView: ChatHistoryView
+    
+    init(historyView: ChatHistoryView) {
+        self.historyView = historyView
+    }
+}
+
 public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let account: Account
     private let peerId: PeerId
@@ -145,10 +153,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     public let historyReady = Promise<Bool>()
     private var didSetHistoryReady = false
     
-    private let maxVisibleIncomingMessageId = Promise<MessageId>()
-    let canReadHistory = Promise<Bool>()
+    private let maxVisibleIncomingMessageId = ValuePromise<MessageId>()
+    let canReadHistory = ValuePromise<Bool>()
     
-    private let _chatHistoryLocation = Promise<ChatHistoryLocation>()
+    private let _chatHistoryLocation = ValuePromise<ChatHistoryLocation>()
     private var chatHistoryLocation: Signal<ChatHistoryLocation, NoError> {
         return self._chatHistoryLocation.get()
     }
@@ -163,6 +171,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.mode = mode
         
         super.init()
+        
+        //self.debugInfo = true
         
         self.preloadPages = false
         switch self.mode {
@@ -263,32 +273,26 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.readHistoryDisposable.set(readHistory.start())
         
         if let messageId = messageId {
-            self._chatHistoryLocation.set(.single(ChatHistoryLocation.InitialSearch(messageId: messageId, count: 60)))
+            self._chatHistoryLocation.set(ChatHistoryLocation.InitialSearch(messageId: messageId, count: 60))
         } else {
-            self._chatHistoryLocation.set(.single(ChatHistoryLocation.Initial(count: 60)))
+            self._chatHistoryLocation.set(ChatHistoryLocation.Initial(count: 60))
         }
         
-        self.displayedItemRangeChanged = { [weak self] displayedRange in
+        self.displayedItemRangeChanged = { [weak self] displayedRange, opaqueTransactionState in
             if let strongSelf = self {
-                /*if let transactionTag = strongSelf.listViewTransactionTag {
-                 strongSelf.messageViewQueue.dispatch {
-                 if transactionTag == strongSelf.historyViewTransactionTag {
-                 if let range = range, historyView = strongSelf.historyView, firstEntry = historyView.filteredEntries.first, lastEntry = historyView.filteredEntries.last {
-                 if range.firstIndex < 5 && historyView.originalView.laterId != nil {
-                 strongSelf._chatHistoryLocation.set(.single(ChatHistoryLocation.Navigation(index: lastEntry.index, anchorIndex: historyView.originalView.anchorIndex)))
-                 } else if range.lastIndex >= historyView.filteredEntries.count - 5 && historyView.originalView.earlierId != nil {
-                 strongSelf._chatHistoryLocation.set(.single(ChatHistoryLocation.Navigation(index: firstEntry.index, anchorIndex: historyView.originalView.anchorIndex)))
-                 } else {
-                 //strongSelf.account.postbox.updateMessageHistoryViewVisibleRange(messageView.id, earliestVisibleIndex: viewEntries[viewEntries.count - 1 - range.lastIndex].index, latestVisibleIndex: viewEntries[viewEntries.count - 1 - range.firstIndex].index)
-                 }
-                 }
-                 }
-                 }
-                 }*/
-                
-                if let visible = displayedRange.visibleRange, let historyView = strongSelf.historyView {
-                    if let messageId = maxIncomingMessageIdForEntries(historyView.filteredEntries, indexRange: (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)) {
-                        strongSelf.updateMaxVisibleReadIncomingMessageId(messageId)
+                if let historyView = (opaqueTransactionState as? ChatHistoryTransactionOpaqueState)?.historyView {
+                    if let visible = displayedRange.visibleRange {
+                        if let messageId = maxIncomingMessageIdForEntries(historyView.filteredEntries, indexRange: (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)) {
+                            strongSelf.updateMaxVisibleReadIncomingMessageId(messageId)
+                        }
+                    }
+                    
+                    if let loaded = displayedRange.loadedRange, let firstEntry = historyView.filteredEntries.first, let lastEntry = historyView.filteredEntries.last {
+                        if loaded.firstIndex < 5 && historyView.originalView.laterId != nil {
+                            strongSelf._chatHistoryLocation.set(ChatHistoryLocation.Navigation(index: lastEntry.index, anchorIndex: historyView.originalView.anchorIndex))
+                        } else if loaded.lastIndex >= historyView.filteredEntries.count - 5 && historyView.originalView.earlierId != nil {
+                            strongSelf._chatHistoryLocation.set(ChatHistoryLocation.Navigation(index: firstEntry.index, anchorIndex: historyView.originalView.anchorIndex))
+                        }
                     }
                 }
             }
@@ -301,15 +305,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     }
     
     public func scrollToStartOfHistory() {
-        self._chatHistoryLocation.set(.single(ChatHistoryLocation.Scroll(index: MessageIndex.lowerBound(peerId: self.peerId), anchorIndex: MessageIndex.lowerBound(peerId: self.peerId), sourceIndex: MessageIndex.upperBound(peerId: self.peerId), scrollPosition: .Bottom, animated: true)))
+        self._chatHistoryLocation.set(ChatHistoryLocation.Scroll(index: MessageIndex.lowerBound(peerId: self.peerId), anchorIndex: MessageIndex.lowerBound(peerId: self.peerId), sourceIndex: MessageIndex.upperBound(peerId: self.peerId), scrollPosition: .Bottom, animated: true))
     }
     
     public func scrollToEndOfHistory() {
-        self._chatHistoryLocation.set(.single(ChatHistoryLocation.Scroll(index: MessageIndex.upperBound(peerId: self.peerId), anchorIndex: MessageIndex.upperBound(peerId: self.peerId), sourceIndex: MessageIndex.lowerBound(peerId: self.peerId), scrollPosition: .Top, animated: true)))
+        self._chatHistoryLocation.set(ChatHistoryLocation.Scroll(index: MessageIndex.upperBound(peerId: self.peerId), anchorIndex: MessageIndex.upperBound(peerId: self.peerId), sourceIndex: MessageIndex.lowerBound(peerId: self.peerId), scrollPosition: .Top, animated: true))
     }
     
     public func scrollToMessage(from fromIndex: MessageIndex, to toIndex: MessageIndex) {
-        self._chatHistoryLocation.set(.single(ChatHistoryLocation.Scroll(index: toIndex, anchorIndex: toIndex, sourceIndex: fromIndex, scrollPosition: .Center(.Bottom), animated: true)))
+        self._chatHistoryLocation.set(ChatHistoryLocation.Scroll(index: toIndex, anchorIndex: toIndex, sourceIndex: fromIndex, scrollPosition: .Center(.Bottom), animated: true))
     }
     
     public func messageInCurrentHistoryView(_ id: MessageId) -> Message? {
@@ -323,7 +327,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     }
     
     private func updateMaxVisibleReadIncomingMessageId(_ id: MessageId) {
-        self.maxVisibleIncomingMessageId.set(.single(id))
+        self.maxVisibleIncomingMessageId.set(id)
     }
     
     private func enqueueHistoryViewTransition(_ transition: ChatHistoryListViewTransition) -> Signal<Void, NoError> {
@@ -384,15 +388,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 self.layoutActionOnViewTransition = nil
                 let (mappedTransition, updateSizeAndInsets) = layoutActionOnViewTransition(transition)
                 
-                self.deleteAndInsertItems(deleteIndices: mappedTransition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: mappedTransition.options, scrollToItem: mappedTransition.scrollToItem, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: mappedTransition.stationaryItemRange, completion: completion)
+                self.transaction(deleteIndices: mappedTransition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: mappedTransition.options, scrollToItem: mappedTransition.scrollToItem, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: mappedTransition.stationaryItemRange, updateOpaqueState: ChatHistoryTransactionOpaqueState(historyView: transition.historyView), completion: completion)
             } else {
-                self.deleteAndInsertItems(deleteIndices: transition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, completion: completion)
+                self.transaction(deleteIndices: transition.deleteItems, insertIndicesAndItems: transition.insertItems, updateIndicesAndItems: transition.updateItems, options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, updateOpaqueState: ChatHistoryTransactionOpaqueState(historyView: transition.historyView), completion: completion)
             }
         }
     }
     
     public func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets) {
-        self.deleteAndInsertItems(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, completion: { _ in })
+        self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
         if !self.dequeuedInitialTransitionOnLayout {
             self.dequeuedInitialTransitionOnLayout = true

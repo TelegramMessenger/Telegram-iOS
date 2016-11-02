@@ -163,6 +163,7 @@ public class ChatController: ViewController {
             }
         }, sendSticker: { [weak self] file in
             if let strongSelf = self {
+                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({})
                 enqueueMessage(account: strongSelf.account, peerId: strongSelf.peerId, text: "", replyMessageId: nil, media: file).start()
             }
         })
@@ -258,6 +259,7 @@ public class ChatController: ViewController {
                         let _ = options.insert(.Synchronous)
                         let _ = options.insert(.LowLatency)
                         options.remove(.AnimateInsertion)
+                        options.insert(.RequestItemInsertionAnimations)
                         
                         let deleteItems = transition.deleteItems.map({ item in
                             return ListViewDeleteItem(index: item.index, directionHint: nil)
@@ -306,6 +308,7 @@ public class ChatController: ViewController {
                         let scaledSize = size.aspectFitted(CGSize(width: 1280.0, height: 1280.0))
                         let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier)
                         let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: scaledSize, resource: resource)])
+                        strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({})
                         enqueueMessage(account: strongSelf.account, peerId: strongSelf.peerId, text: "", replyMessageId: nil, media: media).start()
                     }
                 }
@@ -380,7 +383,7 @@ public class ChatController: ViewController {
         super.viewDidAppear(animated)
         
         self.chatDisplayNode.historyNode.preloadPages = true
-        self.chatDisplayNode.historyNode.canReadHistory.set(.single(true))
+        self.chatDisplayNode.historyNode.canReadHistory.set(true)
         
         self.chatDisplayNode.loadInputPanels()
     }

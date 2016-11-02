@@ -134,6 +134,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     let textFieldInsets = UIEdgeInsets(top: 6.0, left: 42.0, bottom: 6.0, right: 42.0)
     let textInputViewInternalInsets = UIEdgeInsets(top: 6.5, left: 13.0, bottom: 7.5, right: 13.0)
+    let accessoryButtonSpacing: CGFloat = 0.0
+    let accessoryButtonInset: CGFloat = 4.0 + UIScreenPixel
     
     override init() {
         self.textInputBackgroundView = UIImageView(image: textInputViewBackground)
@@ -204,6 +206,36 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         textInputNode.view.addGestureRecognizer(recognizer)
     }
     
+    private func calculateTextFieldMetrics(width: CGFloat) -> (accessoryButtonsWidth: CGFloat, textFieldHeight: CGFloat) {
+        let accessoryButtonInset = self.accessoryButtonInset
+        let accessoryButtonSpacing = self.accessoryButtonSpacing
+        
+        var accessoryButtonsWidth: CGFloat = 0.0
+        var firstButton = true
+        for (_, button) in self.accessoryItemButtons {
+            if firstButton {
+                firstButton = false
+                accessoryButtonsWidth += accessoryButtonInset
+            } else {
+                accessoryButtonsWidth += accessoryButtonSpacing
+            }
+            accessoryButtonsWidth += button.buttonWidth
+        }
+        
+        let textFieldHeight: CGFloat
+        if let textInputNode = self.textInputNode {
+            textFieldHeight = min(115.0, max(21.0, ceil(textInputNode.measure(CGSize(width: width - self.textFieldInsets.left - self.textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right - accessoryButtonsWidth, height: CGFloat.greatestFiniteMagnitude)).height)))
+        } else {
+            textFieldHeight = 21.0
+        }
+        
+        return (accessoryButtonsWidth, textFieldHeight)
+    }
+    
+    private func panelHeight(textFieldHeight: CGFloat) -> CGFloat {
+        return textFieldHeight + self.textFieldInsets.top + self.textFieldInsets.bottom + self.textInputViewInternalInsets.top + self.textInputViewInternalInsets.bottom
+    }
+    
     override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
         if self.presentationInterfaceState != interfaceState {
             let previousState = self.presentationInterfaceState
@@ -228,8 +260,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         let minimalHeight: CGFloat = 47.0
         let minimalInputHeight: CGFloat = 35.0
-        let accessoryButtonSpacing: CGFloat = 0.0
-        let accessoryButtonInset: CGFloat = 4.0 + UIScreenPixel
         
         var animatedTransition = true
         if case .immediate = transition {
@@ -280,26 +310,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             self.accessoryItemButtons = updatedButtons
         }
         
-        var accessoryButtonsWidth: CGFloat = 0.0
-        var firstButton = true
-        for (_, button) in self.accessoryItemButtons {
-            if firstButton {
-                firstButton = false
-                accessoryButtonsWidth += accessoryButtonInset
-            } else {
-                accessoryButtonsWidth += accessoryButtonSpacing
-            }
-            accessoryButtonsWidth += button.buttonWidth
-        }
-        
-        let textFieldHeight: CGFloat
-        if let textInputNode = self.textInputNode {
-            textFieldHeight = min(115.0, max(21.0, ceil(textInputNode.measure(CGSize(width: width - self.textFieldInsets.left - self.textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right - accessoryButtonsWidth, height: CGFloat.greatestFiniteMagnitude)).height)))
-        } else {
-            textFieldHeight = 21.0
-        }
-        
-        let panelHeight = textFieldHeight + self.textFieldInsets.top + self.textFieldInsets.bottom + self.textInputViewInternalInsets.top + self.textInputViewInternalInsets.bottom
+        let (accessoryButtonsWidth, textFieldHeight) = self.calculateTextFieldMetrics(width: width)
+        let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight)
         
         transition.updateFrame(layer: self.attachmentButton.layer, frame: CGRect(origin: CGPoint(x: 2.0 - UIScreenPixel, y: panelHeight - minimalHeight), size: CGSize(width: 40.0, height: minimalHeight)))
         transition.updateFrame(layer: self.micButton.layer, frame: CGRect(origin: CGPoint(x: width - 43.0 - UIScreenPixel, y: panelHeight - minimalHeight - UIScreenPixel), size: CGSize(width: 44.0, height: minimalHeight)))
@@ -369,6 +381,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
             
             self.interfaceInteraction?.updateTextInputState(self.inputTextState)
+            
+            let (accessoryButtonsWidth, textFieldHeight) = self.calculateTextFieldMetrics(width: self.bounds.size.width)
+            let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight)
+            if !self.bounds.size.height.isEqual(to: panelHeight) {
+                self.updateHeight()
+            }
         }
     }
     

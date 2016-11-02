@@ -64,6 +64,7 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
         switch self {
         case let .stickerPack(index, info, topItem):
             return ChatMediaInputStickerPackItem(account: account, inputNodeInteraction: inputNodeInteraction, collectionId: info.id, stickerPackItem: topItem, index: index, selected: {
+                inputNodeInteraction.navigateToCollectionId(info.id)
             })
         }
     }

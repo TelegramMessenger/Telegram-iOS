@@ -17,6 +17,7 @@ private struct ChatMediaInputGridTransition {
     let updates: [GridNodeUpdateItem]
     let updateFirstIndexInSectionOffset: Int?
     let stationaryItems: GridNodeStationaryItems
+    let scrollToItem: GridNodeScrollToItem?
 }
 
 private func preparedChatMediaInputPanelEntryTransition(account: Account, from fromEntries: [ChatMediaInputPanelEntry], to toEntries: [ChatMediaInputPanelEntry], inputNodeInteraction: ChatMediaInputNodeInteraction) -> ChatMediaInputPanelTransition {
@@ -31,6 +32,7 @@ private func preparedChatMediaInputPanelEntryTransition(account: Account, from f
 
 private func preparedChatMediaInputGridEntryTransition(account: Account, from fromEntries: [ChatMediaInputGridEntry], to toEntries: [ChatMediaInputGridEntry], update: StickerPacksCollectionUpdate, interfaceInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction) -> ChatMediaInputGridTransition {
     var stationaryItems: GridNodeStationaryItems = .none
+    var scrollToItem: GridNodeScrollToItem?
     switch update {
         case .generic:
             break
@@ -48,6 +50,17 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, from fr
                 index += 1
             }
             stationaryItems = .indices(indices)
+        case let .navigate(index):
+            for i in 0 ..< toEntries.count {
+                if toEntries[i].index >= index {
+                    var directionHint: GridNodePreviousItemsTransitionDirectionHint = .up
+                    if !fromEntries.isEmpty && fromEntries[0].index < toEntries[i].index {
+                        directionHint = .down
+                    }
+                    scrollToItem = GridNodeScrollToItem(index: i, position: .top, transition: .animated(duration: 0.45, curve: .spring), directionHint: directionHint, adjustForSection: true)
+                    break
+                }
+            }
     }
     
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
@@ -61,7 +74,7 @@ private func preparedChatMediaInputGridEntryTransition(account: Account, from fr
         firstIndexInSectionOffset = Int(toEntries[0].index.itemIndex.index)
     }
     
-    return ChatMediaInputGridTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: firstIndexInSectionOffset, stationaryItems: stationaryItems)
+    return ChatMediaInputGridTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: firstIndexInSectionOffset, stationaryItems: stationaryItems, scrollToItem: scrollToItem)
 }
 
 private func chatMediaInputPanelEntries(view: ItemCollectionsView) -> [ChatMediaInputPanelEntry] {
@@ -97,6 +110,7 @@ private func chatMediaInputGridEntries(view: ItemCollectionsView) -> [ChatMediaI
 private enum StickerPacksCollectionPosition: Equatable {
     case initial
     case scroll(aroundIndex: ItemCollectionViewEntryIndex)
+    case navigate(index: ItemCollectionViewEntryIndex)
     
     static func ==(lhs: StickerPacksCollectionPosition, rhs: StickerPacksCollectionPosition) -> Bool {
         switch lhs {
@@ -112,6 +126,8 @@ private enum StickerPacksCollectionPosition: Equatable {
                 } else {
                     return false
                 }
+            case .navigate:
+                return false
         }
     }
 }
@@ -119,11 +135,21 @@ private enum StickerPacksCollectionPosition: Equatable {
 private enum StickerPacksCollectionUpdate {
     case generic
     case scroll
+    case navigate(ItemCollectionViewEntryIndex)
 }
 
 final class ChatMediaInputNodeInteraction {
+    let navigateToCollectionId: (ItemCollectionId) -> Void
+    
     var highlightedItemCollectionId: ItemCollectionId?
+    
+    init(navigateToCollectionId: @escaping (ItemCollectionId) -> Void) {
+        self.navigateToCollectionId = navigateToCollectionId
+    }
 }
+
+private let defaultPortraitPanelHeight: CGFloat = UIScreenScale.isEqual(to: 3.0) ? 271.0 : 258.0
+private let defaultLandscapePanelHeight: CGFloat = UIScreenScale.isEqual(to: 3.0) ? 194.0 : 194.0
 
 final class ChatMediaInputNode: ChatInputNode {
     private let account: Account
@@ -161,7 +187,21 @@ final class ChatMediaInputNode: ChatInputNode {
         
         super.init()
         
-        self.inputNodeInteraction = ChatMediaInputNodeInteraction()
+        self.inputNodeInteraction = ChatMediaInputNodeInteraction(navigateToCollectionId: { [weak self] collectionId in
+            if let strongSelf = self, let currentView = strongSelf.currentView, (collectionId != strongSelf.inputNodeInteraction.highlightedItemCollectionId || true) {
+                var index: Int32 = 0
+                for (id, _, _) in currentView.collectionInfos {
+                    if id.namespace == collectionId.namespace {
+                        if id == collectionId {
+                            let itemIndex = ItemCollectionViewEntryIndex.lowerBound(collectionIndex: index, collectionId: id)
+                            strongSelf.itemCollectionsViewPosition.set(.single(.navigate(index: itemIndex)))
+                            break
+                        }
+                        index += 1
+                    }
+                }
+            }
+        })
         
         self.clipsToBounds = true
         self.backgroundColor = UIColor(0xE8EBF0)
@@ -193,6 +233,19 @@ final class ChatMediaInputNode: ChatInputNode {
                                 }
                                 return (view, update)
                             }
+                    case let .navigate(index):
+                        var firstTime = true
+                        return account.postbox.itemCollectionsView(namespaces: [Namespaces.ItemCollection.CloudStickerPacks], aroundIndex: index, count: 140)
+                            |> map { view -> (ItemCollectionsView, StickerPacksCollectionUpdate) in
+                                let update: StickerPacksCollectionUpdate
+                                if firstTime {
+                                    firstTime = false
+                                    update = .navigate(index)
+                                } else {
+                                    update = .generic
+                                }
+                                return (view, update)
+                        }
                 }
         }
         
@@ -218,19 +271,37 @@ final class ChatMediaInputNode: ChatInputNode {
         
         self.gridNode.visibleItemsUpdated = { [weak self] visibleItems in
             if let strongSelf = self {
-                if let topVisible = visibleItems.topVisible {
-                    if let item = topVisible.1 as? ChatMediaInputStickerGridItem {
-                        let collectionId = item.index.collectionId
-                        if strongSelf.inputNodeInteraction.highlightedItemCollectionId != collectionId {
-                            strongSelf.inputNodeInteraction.highlightedItemCollectionId = collectionId
-                            var selectedItemNode: ChatMediaInputStickerPackItemNode?
-                            strongSelf.listView.forEachItemNode { itemNode in
-                                if let itemNode = itemNode as? ChatMediaInputStickerPackItemNode {
-                                    itemNode.updateIsHighlighted()
-                                    if itemNode.currentCollectionId == collectionId {
-                                        strongSelf.listView.ensureItemNodeVisible(itemNode)
-                                    }
+                var topVisibleCollectionId: ItemCollectionId?
+                
+                if let topVisibleSection = visibleItems.topSectionVisible as? ChatMediaInputStickerGridSection {
+                    topVisibleCollectionId = topVisibleSection.collectionId
+                } else if let topVisible = visibleItems.topVisible, let item = topVisible.1 as? ChatMediaInputStickerGridItem {
+                    topVisibleCollectionId = item.index.collectionId
+                }
+                if let collectionId = topVisibleCollectionId {
+                    if strongSelf.inputNodeInteraction.highlightedItemCollectionId != collectionId {
+                        strongSelf.inputNodeInteraction.highlightedItemCollectionId = collectionId
+                        var selectedItemNode: ChatMediaInputStickerPackItemNode?
+                        var ensuredNodeVisible = false
+                        var firstVisibleCollectionId: ItemCollectionId?
+                        strongSelf.listView.forEachItemNode { itemNode in
+                            if let itemNode = itemNode as? ChatMediaInputStickerPackItemNode {
+                                if firstVisibleCollectionId == nil {
+                                    firstVisibleCollectionId = itemNode.currentCollectionId
                                 }
+                                itemNode.updateIsHighlighted()
+                                if itemNode.currentCollectionId == collectionId {
+                                    strongSelf.listView.ensureItemNodeVisible(itemNode)
+                                    ensuredNodeVisible = true
+                                }
+                            }
+                        }
+                        if let currentView = strongSelf.currentView, let firstVisibleCollectionId = firstVisibleCollectionId, !ensuredNodeVisible {
+                            let targetIndex = currentView.collectionInfos.index(where: { id, _, _ in return id == collectionId })
+                            let firstVisibleIndex = currentView.collectionInfos.index(where: { id, _, _ in return id == firstVisibleCollectionId })
+                            if let targetIndex = targetIndex, let firstVisibleIndex = firstVisibleIndex {
+                                let toRight = targetIndex > firstVisibleIndex
+                                strongSelf.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [], scrollToItem: ListViewScrollToItem(index: targetIndex, position: toRight ? .Bottom : .Top, animated: true, curve: .Default, directionHint: toRight ? .Down : .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil)
                             }
                         }
                     }
@@ -262,8 +333,13 @@ final class ChatMediaInputNode: ChatInputNode {
         self.disposable.dispose()
     }
     
+    private func heightForWidth(width: CGFloat) -> CGFloat {
+        return defaultPortraitPanelHeight
+    }
+    
     override func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) -> CGFloat {
         let separatorHeight = UIScreenPixel
+        let panelHeight = self.heightForWidth(width: width)
         
         transition.updateFrame(node: self.collectionListPanel, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: 41.0)))
         transition.updateFrame(node: self.collectionListSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: 41.0), size: CGSize(width: width, height: separatorHeight)))
@@ -293,15 +369,15 @@ final class ChatMediaInputNode: ChatInputNode {
             listViewCurve = .Default
         }
         
-        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: 41.0, height: width), insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0), duration: duration, curve: listViewCurve)
+        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: CGSize(width: 41.0, height: width), insets: UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0), duration: duration, curve: listViewCurve)
         
-        self.listView.deleteAndInsertItems(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, completion: { _ in })
+        self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
-        self.gridNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 41.0), size: CGSize(width: width, height: 258.0 - 41.0))
+        self.gridNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 41.0), size: CGSize(width: width, height: panelHeight - 41.0))
         
-        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: CGSize(width: width, height: 258.0 - 41.0), insets: UIEdgeInsets(), preloadSize: 300.0, itemSize: CGSize(width: 75.0, height: 75.0)), transition: .immediate), stationaryItems: .all, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: CGSize(width: width, height: panelHeight - 41.0), insets: UIEdgeInsets(), preloadSize: 300.0, itemSize: CGSize(width: 75.0, height: 75.0)), transition: .immediate), stationaryItems: .all, updateFirstIndexInSectionOffset: nil), completion: { _ in })
         
-        return 258.0
+        return panelHeight
     }
     
     private func enqueuePanelTransition(_ transition: ChatMediaInputPanelTransition, firstTime: Bool) {
@@ -312,11 +388,11 @@ final class ChatMediaInputNode: ChatInputNode {
         } else {
             options.insert(.AnimateInsertion)
         }
-        self.listView.deleteAndInsertItems(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, completion: { [weak self] _ in
+        self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateOpaqueState: nil, completion: { [weak self] _ in
         })
     }
     
     private func enqueueGridTransition(_ transition: ChatMediaInputGridTransition, firstTime: Bool) {
-        self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: nil, updateLayout: nil, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: transition.updateFirstIndexInSectionOffset), completion: { _ in })
+        self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: transition.scrollToItem, updateLayout: nil, stationaryItems: transition.stationaryItems, updateFirstIndexInSectionOffset: transition.updateFirstIndexInSectionOffset), completion: { _ in })
     }
 }

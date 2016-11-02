@@ -18,7 +18,7 @@ public class ListController: ViewController {
         self.displayNode.backgroundColor = UIColor(0xefeff4)
         
         if !self.items.isEmpty {
-            self.listDisplayNode.listView.deleteAndInsertItems(deleteIndices: [], insertIndicesAndItems: (0 ..< self.items.count).map({ ListViewInsertItem(index: $0, previousIndex: nil, item: self.items[$0], directionHint: .Down) }), updateIndicesAndItems: [], options: [.LowLatency, .Synchronous])
+            self.listDisplayNode.listView.transaction(deleteIndices: [], insertIndicesAndItems: (0 ..< self.items.count).map({ ListViewInsertItem(index: $0, previousIndex: nil, item: self.items[$0], directionHint: .Down) }), updateIndicesAndItems: [], options: [.LowLatency, .Synchronous], updateOpaqueState: nil)
         }
         
         self.displayNodeDidLoad()

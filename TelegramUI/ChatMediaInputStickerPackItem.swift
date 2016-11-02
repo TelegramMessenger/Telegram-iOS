@@ -49,7 +49,7 @@ final class ChatMediaInputStickerPackItem: ListViewItem {
 }
 
 private let boundingSize = CGSize(width: 41.0, height: 41.0)
-private let imageSize = CGSize(width: 30.0, height: 30.0)
+private let boundingImageSize = CGSize(width: 30.0, height: 30.0)
 private let highlightSize = CGSize(width: 35.0, height: 35.0)
 private let verticalOffset: CGFloat = 3.0
 
@@ -76,7 +76,6 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
         
         self.highlightNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - highlightSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - highlightSize.height) / 2.0)), size: highlightSize)
         
-        self.imageNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0)), size: imageSize)
         self.imageNode.transform = CATransform3DMakeRotation(CGFloat(M_PI / 2.0), 0.0, 0.0, 1.0)
         self.imageNode.alphaTransitionOnFirstUpdate = true
         
@@ -97,10 +96,12 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
             self.currentItem = item
             
             if let item = item, let dimensions = item.file.dimensions {
-                let imageApply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: dimensions.aspectFitted(imageSize), boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
+                let imageSize = dimensions.aspectFitted(boundingImageSize)
+                let imageApply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingImageSize, intrinsicInsets: UIEdgeInsets()))
                 imageApply()
                 self.imageNode.setSignal(account: account, signal: chatMessageSticker(account: account, file: item.file, small: true))
                 self.stickerFetchedDisposable.set(fileInteractiveFetched(account: account, file: item.file).start())
+                self.imageNode.frame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0)), size: imageSize)
             }
             
             self.updateIsHighlighted()

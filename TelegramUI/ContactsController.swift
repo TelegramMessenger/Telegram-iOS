@@ -227,7 +227,7 @@ public class ContactsController: ViewController {
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
-                strongSelf.contactsNode.listView.deleteAndInsertItems(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .Top, animated: true, curve: .Default, directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, completion: { _ in })
+                strongSelf.contactsNode.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .Top, animated: true, curve: .Default, directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             }
         }
     }
@@ -306,7 +306,7 @@ public class ContactsController: ViewController {
         } else if animated {
             options.insert(.AnimateInsertion)
         }
-        self.contactsNode.listView.deleteAndInsertItems(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, completion: { [weak self] _ in
+        self.contactsNode.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateOpaqueState: nil, completion: { [weak self] _ in
             if let strongSelf = self {
                 if !strongSelf.didSetReady {
                     strongSelf.didSetReady = true

@@ -29,7 +29,7 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
                 for peer in peers {
                     items.append(HorizontalPeerItem(account: account, peer: peer, action: peerSelected))
                 }
-                strongSelf.listView.deleteAndInsertItems(deleteIndices: [], insertIndicesAndItems: (0 ..< items.count).map({ ListViewInsertItem(index: $0, previousIndex: nil, item: items[$0], directionHint: .Down) }), updateIndicesAndItems: [], options: [])
+                strongSelf.listView.transaction(deleteIndices: [], insertIndicesAndItems: (0 ..< items.count).map({ ListViewInsertItem(index: $0, previousIndex: nil, item: items[$0], directionHint: .Down) }), updateIndicesAndItems: [], options: [], updateOpaqueState: nil)
             }
         }))
     }
@@ -52,6 +52,6 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
         
         self.listView.bounds = CGRect(x: 0.0, y: 0.0, width: 92.0, height: bounds.size.width)
         self.listView.position = CGPoint(x: bounds.size.width / 2.0, y: 92.0 / 2.0 + 29.0)
-        self.listView.deleteAndInsertItems(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: 92.0, height: bounds.size.width), insets: UIEdgeInsets(), duration: 0.0, curve: .Default), stationaryItemRange: nil, completion: { _ in })
+        self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: 92.0, height: bounds.size.width), insets: UIEdgeInsets(), duration: 0.0, curve: .Default), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
     }
 }

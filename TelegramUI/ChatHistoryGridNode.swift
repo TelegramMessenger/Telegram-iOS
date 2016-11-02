@@ -54,7 +54,25 @@ private func mappedChatHistoryViewListTransition(account: Account, peerId: PeerI
             case .Bottom:
                 mappedPosition = .bottom
         }
-        mappedScrollToItem = GridNodeScrollToItem(index: scrollToItem.index, position: mappedPosition)
+        let scrollTransition: ContainedViewLayoutTransition
+        if scrollToItem.animated {
+            switch scrollToItem.curve {
+                case .Default:
+                    scrollTransition = .animated(duration: 0.3, curve: .easeInOut)
+                case let .Spring(duration):
+                    scrollTransition = .animated(duration: duration, curve: .spring)
+            }
+        } else {
+            scrollTransition = .immediate
+        }
+        let directionHint: GridNodePreviousItemsTransitionDirectionHint
+        switch scrollToItem.directionHint {
+            case .Up:
+                directionHint = .up
+            case .Down:
+                directionHint = .down
+        }
+        mappedScrollToItem = GridNodeScrollToItem(index: scrollToItem.index, position: mappedPosition, transition: scrollTransition, directionHint: directionHint, adjustForSection: true)
     }
     
     return ChatHistoryGridViewTransition(historyView: transition.historyView, deleteItems: transition.deleteItems.map { $0.index }, insertItems: mappedInsertEntries(account: account, peerId: peerId, controllerInteraction: controllerInteraction, entries: transition.insertEntries), updateItems: mappedUpdateEntries(account: account, peerId: peerId, controllerInteraction: controllerInteraction, entries: transition.updateEntries), scrollToItem: mappedScrollToItem, stationaryItemRange: transition.stationaryItemRange)

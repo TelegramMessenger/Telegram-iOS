@@ -49,7 +49,7 @@ public class SettingsController: ListController {
                 let item = SettingsAccountInfoItem(account: account, peer: peer, connectionStatus: connectionStatus)
                 strongSelf.items[0] = item
                 if strongSelf.isNodeLoaded {
-                    strongSelf.listDisplayNode.listView.deleteAndInsertItems(deleteIndices: [ListViewDeleteItem(index: 0, directionHint: nil)], insertIndicesAndItems: [ListViewInsertItem(index: 0, previousIndex: 0, item: item, directionHint: .Down)], updateIndicesAndItems: [], options: [.AnimateInsertion])
+                    strongSelf.listDisplayNode.listView.transaction(deleteIndices: [ListViewDeleteItem(index: 0, directionHint: nil)], insertIndicesAndItems: [ListViewInsertItem(index: 0, previousIndex: 0, item: item, directionHint: .Down)], updateIndicesAndItems: [], options: [.AnimateInsertion], updateOpaqueState: nil)
                 }
             }
         }

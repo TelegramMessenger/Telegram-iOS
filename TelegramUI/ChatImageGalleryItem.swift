@@ -85,7 +85,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     fileprivate func setImage(account: Account, image: TelegramMediaImage) {
         if self.accountAndMedia == nil || !self.accountAndMedia!.1.isEqual(image) {
             if let largestSize = largestRepresentationForPhoto(image) {
-                let displaySize = largestSize.dimensions.dividedByScreenScale()
+                let displaySize = largestSize.dimensions.fitted(CGSize(width: 1280.0, height: 1280.0)).dividedByScreenScale().integralFloor
                 self.imageNode.alphaTransitionOnFirstUpdate = false
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))()
                 self.imageNode.setSignal(account: account, signal: chatMessagePhoto(account: account, photo: image), dispatchOnDisplayLink: false)

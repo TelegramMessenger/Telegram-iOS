@@ -506,10 +506,11 @@ class ChatControllerNode: ASDisplayNode {
     }
     
     func loadInputPanels() {
-        /*if self.inputMediaNode == nil {
+        if self.inputMediaNode == nil {
             let inputNode = ChatMediaInputNode(account: self.account, controllerInteraction: self.controllerInteraction)
             inputNode.interfaceInteraction = interfaceInteraction
             self.inputMediaNode = inputNode
-        }*/
+            inputNode.updateLayout(width: self.bounds.size.width, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
+        }
     }
 }
