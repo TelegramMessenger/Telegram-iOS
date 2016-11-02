@@ -12,15 +12,14 @@ func managedServiceViews(network: Network, postbox: Postbox, stateManager: State
         let disposable = DisposableSet()
         disposable.add(managedMessageHistoryHoles(network: network, postbox: postbox).start())
         disposable.add(managedChatListHoles(network: network, postbox: postbox).start())
-        //disposable.add(managedUnsentMessageIndices(network: network, postbox: postbox, stateManager: stateManager).start())
         disposable.add(managedSynchronizePeerReadStates(network: network, postbox: postbox, stateManager: stateManager).start())
         
-        let pendingMessagesDisposable = postbox.unsentMessageIndicesView().start(next: { view in
-            pendingMessageManager.updatePendingMessageIndices(view.indices)
+        let pendingMessagesDisposable = postbox.unsentMessageIdsView().start(next: { view in
+            pendingMessageManager.updatePendingMessageIds(view.ids)
         })
         disposable.add(ActionDisposable(action: {
             pendingMessagesDisposable.dispose()
-            pendingMessageManager.updatePendingMessageIndices(Set())
+            pendingMessageManager.updatePendingMessageIds(Set())
         }))
         
         return disposable

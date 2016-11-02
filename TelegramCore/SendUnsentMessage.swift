@@ -87,7 +87,7 @@ func sendUnsentMessage(network: Network, postbox: Postbox, stateManager: StateMa
                         let apiMessage = result.messages.first
                         
                         let modify = postbox.modify { modifier -> Void in
-                            modifier.updateMessage(MessageIndex(message), update: { currentMessage in
+                            modifier.updateMessage(message.id, update: { currentMessage in
                                 let updatedId: MessageId
                                 if let messageId = messageId {
                                     updatedId = MessageId(peerId: currentMessage.id.peerId, namespace: Namespaces.Message.Cloud, id: messageId)
@@ -147,7 +147,7 @@ func sendUnsentMessage(network: Network, postbox: Postbox, stateManager: StateMa
                     }
                     |> `catch` { _ -> Signal<Void, NoError> in
                         let modify = postbox.modify { modifier -> Void in
-                            modifier.updateMessage(MessageIndex(message), update: { currentMessage in
+                            modifier.updateMessage(message.id, update: { currentMessage in
                                 var storeForwardInfo: StoreMessageForwardInfo?
                                 if let forwardInfo = currentMessage.forwardInfo {
                                     storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)

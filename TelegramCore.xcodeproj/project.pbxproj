@@ -88,7 +88,6 @@
 		D0AB0B921D65E9FA002C78E7 /* ManagedServiceViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB0B911D65E9FA002C78E7 /* ManagedServiceViews.swift */; };
 		D0AB0B941D662ECE002C78E7 /* ManagedMessageHistoryHoles.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB0B931D662ECE002C78E7 /* ManagedMessageHistoryHoles.swift */; };
 		D0AB0B961D662F0B002C78E7 /* ManagedChatListHoles.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB0B951D662F0B002C78E7 /* ManagedChatListHoles.swift */; };
-		D0AB0B981D664E18002C78E7 /* ManagedUnsentMessageIndices.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB0B971D664E18002C78E7 /* ManagedUnsentMessageIndices.swift */; };
 		D0AB0B9A1D666520002C78E7 /* ManagedSynchronizePeerReadStates.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB0B991D666520002C78E7 /* ManagedSynchronizePeerReadStates.swift */; };
 		D0B417C11D7DCEEF004562A4 /* ApiGroupOrChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B417C01D7DCEEF004562A4 /* ApiGroupOrChannel.swift */; };
 		D0B4186B1D7E03D5004562A4 /* TelegramCoreMac.h in Headers */ = {isa = PBXBuildFile; fileRef = D0B418691D7E03D5004562A4 /* TelegramCoreMac.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -193,7 +192,6 @@
 		D0B844471DAB91FD005F29E1 /* ManagedServiceViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB0B911D65E9FA002C78E7 /* ManagedServiceViews.swift */; };
 		D0B844481DAB91FD005F29E1 /* ManagedMessageHistoryHoles.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB0B931D662ECE002C78E7 /* ManagedMessageHistoryHoles.swift */; };
 		D0B844491DAB91FD005F29E1 /* ManagedChatListHoles.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB0B951D662F0B002C78E7 /* ManagedChatListHoles.swift */; };
-		D0B8444A1DAB91FD005F29E1 /* ManagedUnsentMessageIndices.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB0B971D664E18002C78E7 /* ManagedUnsentMessageIndices.swift */; };
 		D0B8444B1DAB91FD005F29E1 /* ManagedSynchronizePeerReadStates.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB0B991D666520002C78E7 /* ManagedSynchronizePeerReadStates.swift */; };
 		D0B8444C1DAB91FD005F29E1 /* UpdateCachedPeerData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B843861DA6F705005F29E1 /* UpdateCachedPeerData.swift */; };
 		D0B8444D1DAB9206005F29E1 /* JoinChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DF0C891D819C7E008AEB01 /* JoinChannel.swift */; };
@@ -300,7 +298,6 @@
 		D0AB0B911D65E9FA002C78E7 /* ManagedServiceViews.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedServiceViews.swift; sourceTree = "<group>"; };
 		D0AB0B931D662ECE002C78E7 /* ManagedMessageHistoryHoles.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedMessageHistoryHoles.swift; sourceTree = "<group>"; };
 		D0AB0B951D662F0B002C78E7 /* ManagedChatListHoles.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedChatListHoles.swift; sourceTree = "<group>"; };
-		D0AB0B971D664E18002C78E7 /* ManagedUnsentMessageIndices.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedUnsentMessageIndices.swift; sourceTree = "<group>"; };
 		D0AB0B991D666520002C78E7 /* ManagedSynchronizePeerReadStates.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedSynchronizePeerReadStates.swift; sourceTree = "<group>"; };
 		D0AC49491D7097A400AA55DA /* SSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SSignalKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug-iphoneos/SSignalKit.framework"; sourceTree = "<group>"; };
 		D0B417C01D7DCEEF004562A4 /* ApiGroupOrChannel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApiGroupOrChannel.swift; sourceTree = "<group>"; };
@@ -584,7 +581,6 @@
 				D0AB0B911D65E9FA002C78E7 /* ManagedServiceViews.swift */,
 				D0AB0B931D662ECE002C78E7 /* ManagedMessageHistoryHoles.swift */,
 				D0AB0B951D662F0B002C78E7 /* ManagedChatListHoles.swift */,
-				D0AB0B971D664E18002C78E7 /* ManagedUnsentMessageIndices.swift */,
 				D0AB0B991D666520002C78E7 /* ManagedSynchronizePeerReadStates.swift */,
 				D0B843861DA6F705005F29E1 /* UpdateCachedPeerData.swift */,
 			);
@@ -921,7 +917,6 @@
 				D03B0CF51D62250800955575 /* TelegramMediaContact.swift in Sources */,
 				D03B0CFB1D62250800955575 /* TelegramMediaWebpage.swift in Sources */,
 				D09A2FEB1D7CDC320018FB72 /* PeerAccessRestrictionInfo.swift in Sources */,
-				D0AB0B981D664E18002C78E7 /* ManagedUnsentMessageIndices.swift in Sources */,
 				D003702B1DA42586004308D3 /* PhoneNumber.swift in Sources */,
 				D03B0CF91D62250800955575 /* TelegramMediaMap.swift in Sources */,
 				D03B0D671D631A8B00955575 /* AccountViewTracker.swift in Sources */,
@@ -1030,7 +1025,6 @@
 				D0B418B91D7E05AD004562A4 /* SearchMessages.swift in Sources */,
 				D0B4188F1D7E057C004562A4 /* ViewCountMessageAttribute.swift in Sources */,
 				D0B8443F1DAB91EF005F29E1 /* UpdateGroup.swift in Sources */,
-				D0B8444A1DAB91FD005F29E1 /* ManagedUnsentMessageIndices.swift in Sources */,
 				D03C53731DAD5CA9004C17B3 /* CachedGroupData.swift in Sources */,
 				D0B844121DAB91CD005F29E1 /* Log.swift in Sources */,
 				D0B8444D1DAB9206005F29E1 /* JoinChannel.swift in Sources */,

@@ -669,14 +669,14 @@ private func finalStateWithUpdates(account: Account, state: MutableState, update
             case let .updateChannelTooLong(_, channelId, _):
                 let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
                 if !channelsToPoll.contains(peerId) {
-                    trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) updateChannelTooLong")
+                    //trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) updateChannelTooLong")
                     channelsToPoll.insert(peerId)
                 }
             case let .updateDeleteChannelMessages(channelId, messages, pts: pts, ptsCount):
                 let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
                 if let previousState = updatedState.channelStates[peerId] {
                     if previousState.pts >= pts {
-                        trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) skip old delete update")
+                        //trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) skip old delete update")
                     } else if previousState.pts + ptsCount == pts {
                         updatedState.deleteMessages(messages.map({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }))
                         updatedState.updateChannelState(peerId, state: previousState.setPts(pts))
@@ -689,7 +689,7 @@ private func finalStateWithUpdates(account: Account, state: MutableState, update
                     }
                 } else {
                     if !channelsToPoll.contains(peerId) {
-                        trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) state unknown")
+                        //trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) state unknown")
                         channelsToPoll.insert(peerId)
                     }
                 }
@@ -699,7 +699,7 @@ private func finalStateWithUpdates(account: Account, state: MutableState, update
                 if let message = StoreMessage(apiMessage: message) {
                     if let previousState = updatedState.channelStates[message.id.peerId] {
                         if previousState.pts >= pts {
-                            trace("State", what: "channel \(message.id.peerId) (\((updatedState.peers[message.id.peerId] as? TelegramChannel)?.title ?? "nil")) skip old message \(message.id) (\(message.text))")
+                            //trace("State", what: "channel \(message.id.peerId) (\((updatedState.peers[message.id.peerId] as? TelegramChannel)?.title ?? "nil")) skip old message \(message.id) (\(message.text))")
                         } else if previousState.pts + ptsCount == pts {
                             updatedState.addMessages([message], location: .UpperHistoryBlock)
                             updatedState.updateChannelState(message.id.peerId, state: previousState.setPts(pts))
@@ -1158,10 +1158,10 @@ private func replayFinalState(_ modifier: Modifier, finalState: MutableState) ->
             case let .UpdateState(state):
                 let currentState = modifier.getState() as! AuthorizedAccountState
                 modifier.setState(currentState.changedState(state))
-                trace("State", what: "setting state \(state)")
+                //trace("State", what: "setting state \(state)")
             case let .UpdateChannelState(peerId, channelState):
                 modifier.setPeerChatState(peerId, state: channelState)
-                trace("State", what: "setting channel \(peerId) \(finalState.peers[peerId]?.displayTitle ?? "nil") state \(channelState)")
+                //trace("State", what: "setting channel \(peerId) \(finalState.peers[peerId]?.displayTitle ?? "nil") state \(channelState)")
             case let .UpdatePeerNotificationSettings(peerId, notificationSettings):
                 modifier.updatePeerNotificationSettings([peerId: notificationSettings])
             case let .AddHole(messageId):

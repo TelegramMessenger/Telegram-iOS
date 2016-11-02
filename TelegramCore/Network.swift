@@ -28,13 +28,20 @@ private struct MTProtoConnectionFlags: OptionSet {
 
 class WrappedRequestMetadata: NSObject {
     let metadata: CustomStringConvertible
-    init(metadata: CustomStringConvertible) {
+    let tag: NetworkRequestDependencyTag?
+    
+    init(metadata: CustomStringConvertible, tag: NetworkRequestDependencyTag?) {
         self.metadata = metadata
+        self.tag = tag
     }
     
     override var description: String {
         return self.metadata.description
     }
+}
+
+public protocol NetworkRequestDependencyTag {
+    func shouldDependOn(other: NetworkRequestDependencyTag) -> Bool
 }
 
 private class MTProtoConnectionStatusDelegate: NSObject, MTProtoDelegate {
@@ -201,24 +208,20 @@ public class Network {
             }
         }
     }
-
-    public func request<T>(_ data: (CustomStringConvertible, Buffer, (Buffer) -> T?)) -> Signal<T, MTRpcError> {
-        return self.request(data, dependsOnPasswordEntry: true)
-    }
     
-    public func request<T>(_ data: (CustomStringConvertible, Buffer, (Buffer) -> T?), dependsOnPasswordEntry: Bool) -> Signal<T, MTRpcError> {
+    public func request<T>(_ data: (CustomStringConvertible, Buffer, (Buffer) -> T?), tag: NetworkRequestDependencyTag? = nil) -> Signal<T, MTRpcError> {
         let requestService = self.requestService
         return Signal { subscriber in
             let request = MTRequest()
             
-            request.setPayload(data.1.makeData() as Data!, metadata: WrappedRequestMetadata(metadata: data.0), responseParser: { response in
+            request.setPayload(data.1.makeData() as Data!, metadata: WrappedRequestMetadata(metadata: data.0, tag: tag), responseParser: { response in
                 if let result = data.2(Buffer(data: response)) {
                     return BoxedMessage(result)
                 }
                 return nil
             })
             
-            request.dependsOnPasswordEntry = dependsOnPasswordEntry
+            request.dependsOnPasswordEntry = false
             
             request.completed = { (boxedResponse, timestamp, error) -> () in
                 if let error = error {
@@ -231,6 +234,15 @@ public class Network {
                     else {
                         subscriber.putError(MTRpcError(errorCode: 500, errorDescription: "TL_VERIFICATION_ERROR"))
                     }
+                }
+            }
+            
+            if let tag = tag {
+                request.shouldDependOnRequest = { other in
+                    if let other = other, let metadata = other.metadata as? WrappedRequestMetadata, let otherTag = metadata.tag {
+                        return tag.shouldDependOn(other: otherTag)
+                    }
+                    return false
                 }
             }
             

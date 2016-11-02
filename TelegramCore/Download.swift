@@ -39,7 +39,7 @@ class Download {
             
             let saveFilePart = Api.functions.upload.saveFilePart(fileId: fileId, filePart: Int32(index), bytes: Buffer(data: data))
             
-            request.setPayload(saveFilePart.1.makeData() as Data!, metadata: WrappedRequestMetadata(metadata: saveFilePart.0), responseParser: { response in
+            request.setPayload(saveFilePart.1.makeData() as Data!, metadata: WrappedRequestMetadata(metadata: saveFilePart.0, tag: nil), responseParser: { response in
                 if let result = saveFilePart.2(Buffer(data: response)) {
                     return BoxedMessage(result)
                 }
@@ -72,7 +72,7 @@ class Download {
             
             let data = Api.functions.upload.getFile(location: location, offset: Int32(offset), limit: Int32(length))
             
-            request.setPayload(data.1.makeData() as Data!, metadata: WrappedRequestMetadata(metadata: data.0), responseParser: { response in
+            request.setPayload(data.1.makeData() as Data!, metadata: WrappedRequestMetadata(metadata: data.0, tag: nil), responseParser: { response in
                 if let result = data.2(Buffer(data: response)) {
                     return BoxedMessage(result)
                 }
@@ -109,22 +109,18 @@ class Download {
     }
     
     func request<T>(_ data: (CustomStringConvertible, Buffer, (Buffer) -> T?)) -> Signal<T, MTRpcError> {
-        return self.request(data, dependsOnPasswordEntry: true)
-    }
-    
-    func request<T>(_ data: (CustomStringConvertible, Buffer, (Buffer) -> T?), dependsOnPasswordEntry: Bool) -> Signal<T, MTRpcError> {
         let requestService = self.requestService
         return Signal { subscriber in
             let request = MTRequest()
             
-            request.setPayload(data.1.makeData() as Data!, metadata: WrappedRequestMetadata(metadata: data.0), responseParser: { response in
+            request.setPayload(data.1.makeData() as Data!, metadata: WrappedRequestMetadata(metadata: data.0, tag: nil), responseParser: { response in
                 if let result = data.2(Buffer(data: response)) {
                     return BoxedMessage(result)
                 }
                 return nil
             })
             
-            request.dependsOnPasswordEntry = dependsOnPasswordEntry
+            request.dependsOnPasswordEntry = false
             
             request.completed = { (boxedResponse, timestamp, error) -> () in
                 if let error = error {

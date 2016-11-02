@@ -25,6 +25,21 @@ private enum PendingMessageResult {
     case progress(Float)
 }
 
+private final class PendingMessageRequestDependencyTag: NetworkRequestDependencyTag {
+    let messageId: MessageId
+    
+    init(messageId: MessageId) {
+        self.messageId = messageId
+    }
+    
+    func shouldDependOn(other: NetworkRequestDependencyTag) -> Bool {
+        if let other = other as? PendingMessageRequestDependencyTag, self.messageId.peerId == other.messageId.peerId && self.messageId.namespace == other.messageId.namespace {
+            return self.messageId.id > other.messageId.id
+        }
+        return false
+    }
+}
+
 private func sendMessageContent(network: Network, postbox: Postbox, stateManager: StateManager, message: Message, content: PendingMessageUploadedContent) -> Signal<Void, NoError> {
     let peer = postbox.loadedPeerWithId(message.id.peerId)
         |> take(1)
@@ -48,15 +63,17 @@ private func sendMessageContent(network: Network, postbox: Postbox, stateManager
                     flags |= Int32(1 << 0)
                 }
                 
+                let dependencyTag = PendingMessageRequestDependencyTag(messageId: message.id)
+                
                 var sendMessageRequest: Signal<Api.Updates, NoError>
                 switch content {
                     case let .text(text):
-                        sendMessageRequest = network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: message.text, randomId: randomId, replyMarkup: nil, entities: nil))
+                        sendMessageRequest = network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: message.text, randomId: randomId, replyMarkup: nil, entities: nil), tag: dependencyTag)
                             |> mapError { _ -> NoError in
                                 return NoError()
                             }
                     case let .media(inputMedia):
-                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: 0, peer: inputPeer, replyToMsgId: replyMessageId, media: inputMedia, randomId: randomId, replyMarkup: nil))
+                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: 0, peer: inputPeer, replyToMsgId: replyMessageId, media: inputMedia, randomId: randomId, replyMarkup: nil), tag: dependencyTag)
                             |> mapError { _ -> NoError in
                                 return NoError()
                             }
@@ -68,7 +85,7 @@ private func sendMessageContent(network: Network, postbox: Postbox, stateManager
                     }
                     |> `catch` { _ -> Signal<Void, NoError> in
                         let modify = postbox.modify { modifier -> Void in
-                            modifier.updateMessage(MessageIndex(message), update: { currentMessage in
+                            modifier.updateMessage(message.id, update: { currentMessage in
                                 var storeForwardInfo: StoreMessageForwardInfo?
                                 if let forwardInfo = currentMessage.forwardInfo {
                                     storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
@@ -90,7 +107,26 @@ private func applySentMessage(postbox: Postbox, stateManager: StateManager, mess
     let apiMessage = result.messages.first
     
     return postbox.modify { modifier -> Void in
-        modifier.updateMessage(MessageIndex(message), update: { currentMessage in
+        var updatedTimestamp: Int32?
+        if let apiMessage = apiMessage {
+            switch apiMessage {
+                case let .message(_, _, _, _, _, _, _, date, _, _, _, _, _, _):
+                    updatedTimestamp = date
+                case .messageEmpty:
+                    break
+                case let .messageService(_, _, _, _, _, date, _):
+                    updatedTimestamp = date
+            }
+        } else {
+            switch result {
+                case let .updateShortSentMessage(_, _, _, _, date, _, _):
+                    updatedTimestamp = date
+                default:
+                    break
+            }
+        }
+
+        modifier.updateMessage(message.id, update: { currentMessage in
             let updatedId: MessageId
             if let messageId = messageId {
                 updatedId = MessageId(peerId: currentMessage.id.peerId, namespace: Namespaces.Message.Cloud, id: messageId)
@@ -140,8 +176,11 @@ private func applySentMessage(postbox: Postbox, stateManager: StateManager, mess
                 applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox)
             }
             
-            return StoreMessage(id: updatedId, timestamp: currentMessage.timestamp, flags: [], tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media)
+            return StoreMessage(id: updatedId, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media)
         })
+        if let updatedTimestamp = updatedTimestamp {
+            modifier.offsetPendingMessagesTimestamps(lowerBound: message.id, timestamp: updatedTimestamp)
+        }
     } |> afterDisposed {
         stateManager.addUpdates(result)
     }
@@ -171,13 +210,8 @@ public final class PendingMessageManager {
         self.stateManager = stateManager
     }
     
-    func updatePendingMessageIndices(_ indices: Set<MessageIndex>) {
+    func updatePendingMessageIds(_ messageIds: Set<MessageId>) {
         self.queue.async {
-            var messageIds = Set<MessageId>()
-            for index in indices {
-                messageIds.insert(index.id)
-            }
-            
             let addedMessageIds = messageIds.subtracting(self.pendingMessageIds)
             let removedMessageIds = self.pendingMessageIds.subtracting(messageIds)
             

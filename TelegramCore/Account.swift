@@ -299,7 +299,7 @@ public struct TwoStepAuthData {
 }
 
 public func twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MTRpcError> {
-    return network.request(Api.functions.account.getPassword(), dependsOnPasswordEntry: false)
+    return network.request(Api.functions.account.getPassword())
     |> map { config -> TwoStepAuthData in
         switch config {
             case let .noPassword(newSalt, emailUnconfirmedPattern):
@@ -330,7 +330,7 @@ public func verifyPassword(_ account: UnauthorizedAccount, password: String) -> 
         data.append(authData.currentSalt!)
         let currentPasswordHash = sha256(data)
         
-        return account.network.request(Api.functions.auth.checkPassword(passwordHash: Buffer(data: currentPasswordHash)), dependsOnPasswordEntry: false)
+        return account.network.request(Api.functions.auth.checkPassword(passwordHash: Buffer(data: currentPasswordHash)))
     }
 }
 
@@ -357,6 +357,8 @@ public class Account {
     
     public let graphicsThreadPool = ThreadPool(threadCount: 3, threadPriority: 0.1)
     //let imageCache: ImageCache = ImageCache(maxResidentSize: 5 * 1024 * 1024)
+    
+    public var applicationSpecificData: Any?
     
     public let settings: AccountSettings = defaultAccountSettings()
     
