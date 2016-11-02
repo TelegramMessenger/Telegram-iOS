@@ -1,18 +1,17 @@
 import Foundation
 
 enum IntermediateMessageHistoryUnsentOperation {
-    case Insert(MessageIndex)
-    case Remove(MessageIndex)
+    case Insert(MessageId)
+    case Remove(MessageId)
 }
 
 final class MessageHistoryUnsentTable: Table {
-    private let sharedKey = ValueBoxKey(length: 4 + 4 + 4 + 8)
+    private let sharedKey = ValueBoxKey(length: 4 + 4 + 8)
     
-    private func key(_ index: MessageIndex) -> ValueBoxKey {
-        self.sharedKey.setInt32(0, value: index.timestamp)
-        self.sharedKey.setInt32(4, value: index.id.namespace)
-        self.sharedKey.setInt32(4 + 4, value: index.id.id)
-        self.sharedKey.setInt64(4 + 4 + 4, value: index.id.peerId.toInt64())
+    private func key(_ id: MessageId) -> ValueBoxKey {
+        self.sharedKey.setInt32(0, value: id.namespace)
+        self.sharedKey.setInt32(4, value: id.id)
+        self.sharedKey.setInt64(4 + 4, value: id.peerId.toInt64())
         
         return self.sharedKey
     }
@@ -24,7 +23,7 @@ final class MessageHistoryUnsentTable: Table {
     }
     
     private func upperBound() -> ValueBoxKey {
-        let key = ValueBoxKey(length: 4 + 4 + 4 + 8)
+        let key = ValueBoxKey(length: 4 + 4 + 8)
         memset(key.memory, 0xff, key.length)
         return key
     }
@@ -33,23 +32,23 @@ final class MessageHistoryUnsentTable: Table {
         super.init(valueBox: valueBox, tableId: tableId)
     }
     
-    func add(_ index: MessageIndex, operations: inout [IntermediateMessageHistoryUnsentOperation]) {
-        self.valueBox.set(self.tableId, key: self.key(index), value: MemoryBuffer())
-        operations.append(.Insert(index))
+    func add(_ id: MessageId, operations: inout [IntermediateMessageHistoryUnsentOperation]) {
+        self.valueBox.set(self.tableId, key: self.key(id), value: MemoryBuffer())
+        operations.append(.Insert(id))
     }
     
-    func remove(_ index: MessageIndex, operations: inout [IntermediateMessageHistoryUnsentOperation]) {
-        self.valueBox.remove(self.tableId, key: self.key(index))
-        operations.append(.Remove(index))
+    func remove(_ id: MessageId, operations: inout [IntermediateMessageHistoryUnsentOperation]) {
+        self.valueBox.remove(self.tableId, key: self.key(id))
+        operations.append(.Remove(id))
     }
     
-    func get() -> [MessageIndex] {
-        var indices: [MessageIndex] = []
+    func get() -> [MessageId] {
+        var ids: [MessageId] = []
         self.valueBox.range(self.tableId, start: self.lowerBound(), end: self.upperBound(), keys: { key in
-            indices.append(MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(4 + 4 + 4)), namespace: key.getInt32(4), id: key.getInt32(4 + 4)), timestamp: key.getInt32(0)))
+            ids.append(MessageId(peerId: PeerId(key.getInt64(4 + 4)), namespace: key.getInt32(0), id: key.getInt32(4)))
             return true
         }, limit: 0)
-        return indices
+        return ids
     }
     
     override func beforeCommit() {

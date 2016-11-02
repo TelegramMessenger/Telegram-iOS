@@ -142,7 +142,7 @@ final class MessageHistoryTable: Table {
                     let message = self.justInsertMessage(storeMessage, sharedKey: sharedKey, sharedBuffer: sharedBuffer, sharedEncoder: sharedEncoder)
                     outputOperations.append(.InsertMessage(message))
                     if message.flags.contains(.Unsent) && !message.flags.contains(.Failed) {
-                        self.unsentTable.add(MessageIndex(message), operations: &unsentMessageOperations)
+                        self.unsentTable.add(message.id, operations: &unsentMessageOperations)
                     }
                     let tags = message.tags.rawValue
                     if tags != 0 {
@@ -174,6 +174,13 @@ final class MessageHistoryTable: Table {
                     if let message = self.justUpdate(index, message: storeMessage, sharedKey: sharedKey, sharedBuffer: sharedBuffer, sharedEncoder: sharedEncoder, unsentMessageOperations: &unsentMessageOperations) {
                         outputOperations.append(.InsertMessage(message))
                     }
+                case let .UpdateTimestamp(index, timestamp):
+                    if accumulatedRemoveIndices.count != 0 {
+                        outputOperations.append(.Remove(accumulatedRemoveIndices))
+                        accumulatedRemoveIndices.removeAll()
+                    }
+                    self.justUpdateTimestamp(index, timestamp: timestamp)
+                    outputOperations.append(.UpdateTimestamp(index, timestamp))
             }
         }
         if accumulatedRemoveIndices.count != 0 {
@@ -269,6 +276,12 @@ final class MessageHistoryTable: Table {
     func updateMessage(_ id: MessageId, message: StoreMessage, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
         var operations: [MessageHistoryIndexOperation] = []
         self.messageHistoryIndexTable.updateMessage(id, message: self.internalStoreMessages([message]).first!, operations: &operations)
+        self.processIndexOperations(id.peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+    }
+    
+    func updateMessageTimestamp(_ id: MessageId, timestamp: Int32, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation], updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
+        var operations: [MessageHistoryIndexOperation] = []
+        self.messageHistoryIndexTable.updateTimestamp(id, timestamp: timestamp, operations: &operations)
         self.processIndexOperations(id.peerId, operations: operations, processedOperationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
     }
     
@@ -408,6 +421,14 @@ final class MessageHistoryTable: Table {
             }
         }
         return nil
+    }
+    
+    func offsetPendingMessagesTimestamps(lowerBound: MessageId, timestamp: Int32, operationsByPeerId: inout [PeerId: [MessageHistoryOperation]], unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation],  updatedPeerReadStateOperations: inout [PeerId: PeerReadStateSynchronizationOperation?]) {
+        for messageId in self.unsentTable.get() {
+            if messageId.peerId == lowerBound.peerId && messageId.namespace == lowerBound.namespace && messageId.id > lowerBound.id {
+                self.updateMessageTimestamp(messageId, timestamp: timestamp, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
+            }
+        }
     }
     
     private func justInsertMessage(_ message: InternalStoreMessage, sharedKey: ValueBoxKey, sharedBuffer: WriteBuffer, sharedEncoder: Encoder) -> IntermediateMessage {
@@ -567,7 +588,7 @@ final class MessageHistoryTable: Table {
                     }
                     
                     if message.flags.contains(.Unsent) && !message.flags.contains(.Failed) {
-                        self.unsentTable.remove(index, operations: &unsentMessageOperations)
+                        self.unsentTable.remove(index.id, operations: &unsentMessageOperations)
                     }
                     
                     let tags = message.tags.rawValue
@@ -705,6 +726,47 @@ final class MessageHistoryTable: Table {
     
     private func justUpdate(_ index: MessageIndex, message: InternalStoreMessage, sharedKey: ValueBoxKey, sharedBuffer: WriteBuffer, sharedEncoder: Encoder, unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation]) -> IntermediateMessage? {
         if let previousMessage = self.getMessage(index) {
+            var previousEmbeddedMediaWithIds: [(MediaId, Media)] = []
+            if previousMessage.embeddedMediaData.length > 4 {
+                var embeddedMediaCount: Int32 = 0
+                let previousEmbeddedMediaData = previousMessage.embeddedMediaData
+                previousEmbeddedMediaData.read(&embeddedMediaCount, offset: 0, length: 4)
+                for _ in 0 ..< embeddedMediaCount {
+                    var mediaLength: Int32 = 0
+                    previousEmbeddedMediaData.read(&mediaLength, offset: 0, length: 4)
+                    if let media = Decoder(buffer: MemoryBuffer(memory: previousEmbeddedMediaData.memory + previousEmbeddedMediaData.offset, capacity: Int(mediaLength), length: Int(mediaLength), freeWhenDone: false)).decodeRootObject() as? Media {
+                        if let mediaId = media.id {
+                            previousEmbeddedMediaWithIds.append((mediaId, media))
+                        }
+                    }
+                    previousEmbeddedMediaData.skip(Int(mediaLength))
+                }
+            }
+            
+            var previousMediaIds = Set<MediaId>()
+            for (mediaId, _) in previousEmbeddedMediaWithIds {
+                previousMediaIds.insert(mediaId)
+            }
+            for mediaId in previousMessage.referencedMedia {
+                previousMediaIds.insert(mediaId)
+            }
+            
+            var updatedMediaIds = Set<MediaId>()
+            for media in message.media {
+                if let mediaId = media.id {
+                    updatedMediaIds.insert(mediaId)
+                }
+            }
+            
+            if previousMediaIds != updatedMediaIds || index.id != message.id {
+                for (_, media) in previousEmbeddedMediaWithIds {
+                    self.messageMediaTable.removeEmbeddedMedia(media)
+                }
+                for mediaId in previousMessage.referencedMedia {
+                    self.messageMediaTable.removeReference(mediaId)
+                }
+            }
+            
             self.valueBox.remove(self.tableId, key: self.key(index))
             if !previousMessage.tags.isEmpty {
                 self.tagsTable.remove(previousMessage.tags, index: index)
@@ -715,13 +777,13 @@ final class MessageHistoryTable: Table {
             
             switch (previousMessage.flags.contains(.Unsent) && !previousMessage.flags.contains(.Failed), message.flags.contains(.Unsent) && !message.flags.contains(.Failed)) {
                 case (true, false):
-                    self.unsentTable.remove(index, operations: &unsentMessageOperations)
+                    self.unsentTable.remove(index.id, operations: &unsentMessageOperations)
                 case (false, true):
-                    self.unsentTable.add(MessageIndex(message), operations: &unsentMessageOperations)
+                    self.unsentTable.add(message.id, operations: &unsentMessageOperations)
                 case (true, true):
                     if index != MessageIndex(message) {
-                        self.unsentTable.remove(index, operations: &unsentMessageOperations)
-                        self.unsentTable.add(MessageIndex(message), operations: &unsentMessageOperations)
+                        self.unsentTable.remove(index.id, operations: &unsentMessageOperations)
+                        self.unsentTable.add(message.id, operations: &unsentMessageOperations)
                     }
                 case (false, false):
                     break
@@ -730,34 +792,6 @@ final class MessageHistoryTable: Table {
             if previousMessage.tags != message.tags {
                 assertionFailure()
             }
-            
-            var previousMedia: [Media] = []
-            if previousMessage.embeddedMediaData.length > 4 {
-                var embeddedMediaCount: Int32 = 0
-                let previousEmbeddedMediaData = previousMessage.embeddedMediaData
-                previousEmbeddedMediaData.read(&embeddedMediaCount, offset: 0, length: 4)
-                for _ in 0 ..< embeddedMediaCount {
-                    var mediaLength: Int32 = 0
-                    previousEmbeddedMediaData.read(&mediaLength, offset: 0, length: 4)
-                    if let media = Decoder(buffer: MemoryBuffer(memory: previousEmbeddedMediaData.memory + previousEmbeddedMediaData.offset, capacity: Int(mediaLength), length: Int(mediaLength), freeWhenDone: false)).decodeRootObject() as? Media {
-                        previousMedia.append(media)
-                    }
-                    previousEmbeddedMediaData.skip(Int(mediaLength))
-                }
-            }
-            
-            var previousReferencedMedia: [Media] = []
-            for mediaId in previousMessage.referencedMedia {
-                if let media = self.messageMediaTable.get(mediaId, embedded: { _ in
-                    return nil
-                }) {
-                    previousMedia.append(media)
-                }
-            }
-            
-            var removedMediaIds: [MediaId] = []
-            
-            //self.updateMedia(from: previousMedia, to: message.media)
             
             sharedBuffer.reset()
             
@@ -844,10 +878,10 @@ final class MessageHistoryTable: Table {
                 if let mediaId = media.id {
                     let mediaInsertResult = self.messageMediaTable.set(media, index: MessageIndex(message), messageHistoryTable: self)
                     switch mediaInsertResult {
-                    case let .Embed(media):
-                        embeddedMedia.append(media)
-                    case .Reference:
-                        referencedMedia.append(mediaId)
+                        case let .Embed(media):
+                            embeddedMedia.append(media)
+                        case .Reference:
+                            referencedMedia.append(mediaId)
                     }
                 } else {
                     embeddedMedia.append(media)
@@ -882,6 +916,30 @@ final class MessageHistoryTable: Table {
             return IntermediateMessage(stableId: stableId, id: message.id, timestamp: message.timestamp, flags: flags, tags: tags, forwardInfo: intermediateForwardInfo, authorId: message.authorId, text: message.text, attributesData: attributesBuffer.makeReadBufferAndReset(), embeddedMediaData: embeddedMediaBuffer.makeReadBufferAndReset(), referencedMedia: referencedMedia)
         } else {
             return nil
+        }
+    }
+    
+    private func justUpdateTimestamp(_ index: MessageIndex, timestamp: Int32) {
+        if let previousMessage = self.getMessage(index) {
+            self.valueBox.remove(self.tableId, key: self.key(index))
+            var updatedMessage = IntermediateMessage(stableId: previousMessage.stableId, id: previousMessage.id, timestamp: timestamp, flags: previousMessage.flags, tags: previousMessage.tags, forwardInfo: previousMessage.forwardInfo, authorId: previousMessage.authorId, text: previousMessage.text, attributesData: previousMessage.attributesData, embeddedMediaData: previousMessage.embeddedMediaData, referencedMedia: previousMessage.referencedMedia)
+            self.storeIntermediateMessage(updatedMessage, sharedKey: self.key(index))
+            
+            let tags = previousMessage.tags.rawValue
+            if tags != 0 {
+                for i in 0 ..< 32 {
+                    let currentTags = tags >> UInt32(i)
+                    if currentTags == 0 {
+                        break
+                    }
+                    
+                    if (currentTags & 1) != 0 {
+                        let tag = MessageTags(rawValue: 1 << UInt32(i))
+                        self.tagsTable.remove(tag, index: index)
+                        self.tagsTable.add(tag, index: MessageIndex(id: index.id, timestamp: timestamp))
+                    }
+                }
+            }
         }
     }
     

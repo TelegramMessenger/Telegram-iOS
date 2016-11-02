@@ -122,8 +122,12 @@ public final class Modifier {
         self.postbox?.replaceRecentPeerIds(peerIds)
     }
     
-    public func updateMessage(_ index: MessageIndex, update: (Message) -> StoreMessage) {
-        self.postbox?.updateMessage(index, update: update)
+    public func updateMessage(_ id: MessageId, update: (Message) -> StoreMessage) {
+        self.postbox?.updateMessage(id, update: update)
+    }
+    
+    public func offsetPendingMessagesTimestamps(lowerBound: MessageId, timestamp: Int32) {
+        self.postbox?.offsetPendingMessagesTimestamps(lowerBound: lowerBound, timestamp: timestamp)
     }
     
     public func updateMedia(_ id: MediaId, update: Media?) {
@@ -325,7 +329,7 @@ public final class Postbox {
             self.metadataTable = MetadataTable(valueBox: self.valueBox, tableId: 0)
             
             let userVersion: Int32? = self.metadataTable.userVersion()
-            let currentUserVersion: Int32 = 11
+            let currentUserVersion: Int32 = 14
             
             if userVersion != currentUserVersion {
                 self.valueBox.drop()
@@ -388,7 +392,7 @@ public final class Postbox {
                 return self.cachedPeerDataTable.get(peerId)
             }, getPeerPresence: { peerId in
                 return self.peerPresenceTable.get(peerId)
-            },unsentMessageIndices: self.messageHistoryUnsentTable!.get(), synchronizePeerReadStateOperations: self.synchronizeReadStateTable!.get())
+            },unsentMessageIds: self.messageHistoryUnsentTable!.get(), synchronizePeerReadStateOperations: self.synchronizeReadStateTable!.get())
             
             print("(Postbox initialization took \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
         })
@@ -735,7 +739,7 @@ public final class Postbox {
             for table in self.tables {
                 table.clearMemoryCache()
             }
-            self.viewTracker.refreshViewsDueToExternalTransaction(fetchAroundChatEntries: self.fetchAroundChatEntries, fetchAroundHistoryEntries: self.fetchAroundHistoryEntries, fetchUnsendMessageIndices: {
+            self.viewTracker.refreshViewsDueToExternalTransaction(fetchAroundChatEntries: self.fetchAroundChatEntries, fetchAroundHistoryEntries: self.fetchAroundHistoryEntries, fetchUnsentMessageIds: {
                 return self.messageHistoryUnsentTable!.get()
             }, fetchSynchronizePeerReadStateOperations: {
                 return self.synchronizeReadStateTable!.get()
@@ -851,11 +855,15 @@ public final class Postbox {
         self.peerRatingTable.replace(items: peerIds)
     }
     
-    fileprivate func updateMessage(_ index: MessageIndex, update: (Message) -> StoreMessage) {
-        if let intermediateMessage = self.messageHistoryTable.getMessage(index) {
+    fileprivate func updateMessage(_ id: MessageId, update: (Message) -> StoreMessage) {
+        if let indexEntry = self.messageHistoryIndexTable.get(id), let intermediateMessage = self.messageHistoryTable.getMessage(indexEntry.index) {
             let message = self.renderIntermediateMessage(intermediateMessage)
-            self.messageHistoryTable.updateMessage(index.id, message: update(message), operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
+            self.messageHistoryTable.updateMessage(id, message: update(message), operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
         }
+    }
+    
+    fileprivate func offsetPendingMessagesTimestamps(lowerBound: MessageId, timestamp: Int32) {
+        self.messageHistoryTable.offsetPendingMessagesTimestamps(lowerBound: lowerBound, timestamp: timestamp, operationsByPeerId: &self.currentOperationsByPeerId, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations)
     }
     
     fileprivate func updateMedia(_ id: MediaId, update: Media?) {
@@ -883,9 +891,9 @@ public final class Postbox {
         return filteredIds
     }
     
-    public func modify<T>(_ f: @escaping(Modifier) -> T) -> Signal<T, NoError> {
+    public func modify<T>(userInteractive: Bool = false, _ f: @escaping(Modifier) -> T) -> Signal<T, NoError> {
         return Signal { subscriber in
-            self.queue.justDispatch {
+            let f: () -> Void = {
                 self.valueBox.begin()
                 self.afterBegin()
                 let result = f(Modifier(postbox: self))
@@ -903,18 +911,23 @@ public final class Postbox {
                     self.masterClientId.set(.single(updatedMasterClientId))
                 }
             }
+            if userInteractive {
+                self.queue.justDispatchWithQoS(qos: DispatchQoS.userInteractive, f)
+            } else {
+                self.queue.justDispatch(f)
+            }
             return EmptyDisposable
         }
     }
     
     public func aroundUnreadMessageHistoryViewForPeerId(_ peerId: PeerId, count: Int, tagMask: MessageTags? = nil) -> Signal<(MessageHistoryView, ViewUpdateType), NoError> {
-        return self.modify { modifier -> Signal<(MessageHistoryView, ViewUpdateType), NoError> in
+        return self.modify(userInteractive: true, { modifier -> Signal<(MessageHistoryView, ViewUpdateType), NoError> in
             var index = MessageHistoryAnchorIndex(index: MessageIndex.upperBound(peerId: peerId), exact: true)
             if let maxReadIndex = self.messageHistoryTable.maxReadIndex(peerId) {
                 index = maxReadIndex
             }
             return self.syncAroundMessageHistoryViewForPeerId(peerId, index: index.index, count: count, anchorIndex: index, unreadIndex: index.index, fixedCombinedReadState: nil, tagMask: tagMask)
-        } |> switchToLatest
+        }) |> switchToLatest
     }
     
     public func aroundIdMessageHistoryViewForPeerId(_ peerId: PeerId, count: Int, messageId: MessageId, tagMask: MessageTags? = nil) -> Signal<(MessageHistoryView, ViewUpdateType), NoError> {
@@ -1173,11 +1186,11 @@ public final class Postbox {
         }
     }
     
-    public func unsentMessageIndicesView() -> Signal<UnsentMessageIndicesView, NoError> {
+    public func unsentMessageIdsView() -> Signal<UnsentMessageIdsView, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.queue.async {
-                disposable.set(self.viewTracker.unsentMessageIndicesViewSignal().start(next: { view in
+                disposable.set(self.viewTracker.unsentMessageIdsViewSignal().start(next: { view in
                     subscriber.putNext(view)
                 }))
             }

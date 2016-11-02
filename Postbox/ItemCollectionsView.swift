@@ -20,6 +20,10 @@ public struct ItemCollectionViewEntryIndex: Comparable {
             return lhs.collectionIndex < rhs.collectionIndex
         }
     }
+    
+    public static func lowerBound(collectionIndex: Int32, collectionId: ItemCollectionId) -> ItemCollectionViewEntryIndex {
+        return ItemCollectionViewEntryIndex(collectionIndex: collectionIndex, collectionId: collectionId, itemIndex: ItemCollectionItemIndex(index: 0, id: 0))
+    }
 }
 
 public struct ItemCollectionViewEntry {

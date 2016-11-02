@@ -46,6 +46,20 @@ enum MutableMessageHistoryEntry {
                 return .HoleEntry(hole, location)
         }
     }
+    
+    func updatedTimestamp(_ timestamp: Int32) -> MutableMessageHistoryEntry {
+        switch self {
+            case let .IntermediateMessageEntry(message, location):
+                var updatedMessage = IntermediateMessage(stableId: message.stableId, id: message.id, timestamp: timestamp, flags: message.flags, tags: message.tags, forwardInfo: message.forwardInfo, authorId: message.authorId, text: message.text, attributesData: message.attributesData, embeddedMediaData: message.embeddedMediaData, referencedMedia: message.referencedMedia)
+                return .IntermediateMessageEntry(updatedMessage, location)
+            case let .MessageEntry(message, location):
+                var updatedMessage = Message(stableId: message.stableId, id: message.id, timestamp: timestamp, flags: message.flags, tags: message.tags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: message.media, peers: message.peers, associatedMessages: message.associatedMessages)
+                return .MessageEntry(updatedMessage, location)
+            case let .HoleEntry(hole, location):
+                var updatedHole = MessageHistoryHole(stableId: hole.stableId, maxIndex: MessageIndex(id: hole.maxIndex.id, timestamp: timestamp), min: hole.min, tags: hole.tags)
+                return .HoleEntry(updatedHole, location)
+        }
+    }
 }
 
 public struct MessageHistoryEntryLocation: Equatable {
@@ -274,6 +288,16 @@ final class MutableMessageHistoryView {
                     for i in 0 ..< self.entries.count {
                         if case let .IntermediateMessageEntry(message, _) = self.entries[i] , MessageIndex(message) == index {
                             self.entries[i] = .IntermediateMessageEntry(IntermediateMessage(stableId: message.stableId, id: message.id, timestamp: message.timestamp, flags: message.flags, tags: message.tags, forwardInfo: message.forwardInfo, authorId: message.authorId, text: message.text, attributesData: message.attributesData, embeddedMediaData: embeddedMediaData, referencedMedia: message.referencedMedia), nil)
+                            hasChanges = true
+                            break
+                        }
+                    }
+                case let .UpdateTimestamp(index, timestamp):
+                    for i in 0 ..< self.entries.count {
+                        let entry = self.entries[i]
+                        if entry.index == index {
+                            self.remove(Set([index]), context: context)
+                            self.add(entry.updatedTimestamp(timestamp), holeFillDirections: [:])
                             hasChanges = true
                             break
                         }

@@ -77,12 +77,16 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible {
 }
 
 public func ==(lhs: MessageId, rhs: MessageId) -> Bool {
-    return lhs.id == rhs.id && lhs.namespace == rhs.namespace
+    return lhs.id == rhs.id && lhs.namespace == rhs.namespace && lhs.peerId == rhs.peerId
 }
 
 public func <(lhs: MessageId, rhs: MessageId) -> Bool {
     if lhs.namespace == rhs.namespace {
-        return lhs.id < rhs.id
+        if lhs.id == rhs.id {
+            return lhs.peerId < rhs.peerId
+        } else {
+            return lhs.id < rhs.id
+        }
     } else {
         return lhs.namespace < rhs.namespace
     }

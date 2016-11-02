@@ -132,7 +132,6 @@
 		D0B844051DAB91B5005F29E1 /* MediaBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D055BD321B7D3D2D00F06C0A /* MediaBox.swift */; };
 		D0B844061DAB91B5005F29E1 /* MediaResourceStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05F09A51C9E9F9300BB6F96 /* MediaResourceStatus.swift */; };
 		D0B844071DAB91B5005F29E1 /* MediaResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CE63F51CA1CCB2002BC462 /* MediaResource.swift */; };
-		D0B844081DAB91B5005F29E1 /* CachedMediaResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DE76F81D9293B8002B8809 /* CachedMediaResource.swift */; };
 		D0B8440A1DAB91B5005F29E1 /* RandomAccessMediaResourceContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09ADF091D2E89F300C8208D /* RandomAccessMediaResourceContext.swift */; };
 		D0B844511DAC04FE005F29E1 /* PeerPresence.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B844501DAC04FE005F29E1 /* PeerPresence.swift */; };
 		D0C07F6A1B67DB4800966E43 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C07F691B67DB4800966E43 /* SwiftSignalKit.framework */; };
@@ -151,7 +150,6 @@
 		D0D511041D64D91C00A97B8A /* IpcNotifier.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D511031D64D75200A97B8A /* IpcNotifier.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0D949F31D35302600740E02 /* RandomAccessResourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D949F21D35302600740E02 /* RandomAccessResourceTests.swift */; };
 		D0D949F51D35353900740E02 /* MappedFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D949F41D35353900740E02 /* MappedFile.swift */; };
-		D0DE76F91D9293B8002B8809 /* CachedMediaResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DE76F81D9293B8002B8809 /* CachedMediaResource.swift */; };
 		D0DF0C8F1D81A350008AEB01 /* PeerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DF0C8E1D81A350008AEB01 /* PeerView.swift */; };
 		D0E1DE151C5E1C6900C7826E /* ViewTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E1DE141C5E1C6900C7826E /* ViewTracker.swift */; };
 		D0E3A7501B28A7E300A402D9 /* Postbox.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E3A74F1B28A7E300A402D9 /* Postbox.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -259,7 +257,6 @@
 		D0D511031D64D75200A97B8A /* IpcNotifier.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IpcNotifier.h; sourceTree = "<group>"; };
 		D0D949F21D35302600740E02 /* RandomAccessResourceTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RandomAccessResourceTests.swift; sourceTree = "<group>"; };
 		D0D949F41D35353900740E02 /* MappedFile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MappedFile.swift; sourceTree = "<group>"; };
-		D0DE76F81D9293B8002B8809 /* CachedMediaResource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CachedMediaResource.swift; sourceTree = "<group>"; };
 		D0DF0C8E1D81A350008AEB01 /* PeerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerView.swift; sourceTree = "<group>"; };
 		D0E1DE141C5E1C6900C7826E /* ViewTracker.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ViewTracker.swift; sourceTree = "<group>"; };
 		D0E3A74A1B28A7E300A402D9 /* Postbox.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Postbox.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -320,7 +317,6 @@
 				D055BD321B7D3D2D00F06C0A /* MediaBox.swift */,
 				D05F09A51C9E9F9300BB6F96 /* MediaResourceStatus.swift */,
 				D0CE63F51CA1CCB2002BC462 /* MediaResource.swift */,
-				D0DE76F81D9293B8002B8809 /* CachedMediaResource.swift */,
 				D09ADF091D2E89F300C8208D /* RandomAccessMediaResourceContext.swift */,
 			);
 			name = "Media Box";
@@ -749,7 +745,6 @@
 				D0B4185C1D7DFE2F004562A4 /* MurMurHash32.m in Sources */,
 				D0B418241D7DFE0C004562A4 /* SimpleSet.swift in Sources */,
 				D03C53601DAD5C9C004C17B3 /* ChatListHole.swift in Sources */,
-				D0B844081DAB91B5005F29E1 /* CachedMediaResource.swift in Sources */,
 				D0B4184C1D7DFE20004562A4 /* ContactPeerIdsView.swift in Sources */,
 				D0B843EC1DAB91A0005F29E1 /* GlobalMessageIdsTable.swift in Sources */,
 				D0B4184F1D7DFE20004562A4 /* ChatListHolesView.swift in Sources */,
@@ -835,7 +830,6 @@
 				D08C713C1C51283C00779C0F /* MessageHistoryIndexTable.swift in Sources */,
 				D0F9E86D1C5A0E5D00037222 /* MetadataTable.swift in Sources */,
 				D0E3A7841B28AE0900A402D9 /* Peer.swift in Sources */,
-				D0DE76F91D9293B8002B8809 /* CachedMediaResource.swift in Sources */,
 				D0D510F61D63BBE100A97B8A /* MessageHistoryOperation.swift in Sources */,
 				D0AB0B901D65D4AB002C78E7 /* UnsentMessageIndicesView.swift in Sources */,
 				D03120F81DA53FF4006A2A60 /* PeerPresenceTable.swift in Sources */,

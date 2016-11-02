@@ -6,4 +6,5 @@ enum MessageHistoryOperation {
     case Remove([MessageIndex])
     case UpdateReadState(CombinedPeerReadState)
     case UpdateEmbeddedMedia(MessageIndex, ReadBuffer)
+    case UpdateTimestamp(MessageIndex, Int32)
 }

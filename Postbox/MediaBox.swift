@@ -87,7 +87,6 @@ private final class CachedMediaResourceRepresentationContext {
 
 public final class MediaBox {
     let basePath: String
-    let buffer = WriteBuffer()
     
     private let statusQueue = Queue()
     private let concurrentQueue = Queue.concurrentDefaultQueue()
@@ -243,7 +242,6 @@ public final class MediaBox {
         assert(pathExtension == nil)
         return Signal { subscriber in
             let disposable = MetaDisposable()
-            
             self.concurrentQueue.async {
                 let paths = self.storePathsForId(resource.id)
                 if let completeSize = fileSize(paths.complete) {

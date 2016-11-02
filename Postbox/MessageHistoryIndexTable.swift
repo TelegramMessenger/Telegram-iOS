@@ -66,6 +66,7 @@ enum MessageHistoryIndexOperation {
     case InsertHole(MessageHistoryHole)
     case Remove(MessageIndex)
     case Update(MessageIndex, InternalStoreMessage)
+    case UpdateTimestamp(MessageIndex, Int32)
 }
 
 private let HistoryEntryTypeMask: Int8 = 1
@@ -94,6 +95,15 @@ private func readHistoryIndexEntry(_ peerId: PeerId, namespace: MessageId.Namesp
         
         return .Hole(MessageHistoryHole(stableId: stableId, maxIndex: index, min: min, tags: tags))
     }
+}
+
+private func modifyHistoryIndexEntryTimestamp(value: ReadBuffer, timestamp: Int32) -> MemoryBuffer {
+    let buffer = WriteBuffer()
+    buffer.write(value.memory.advanced(by: 0), offset: 0, length: 1)
+    var varTimestamp: Int32 = timestamp
+    buffer.write(&varTimestamp, offset: 0, length: 4)
+    buffer.write(value.memory.advanced(by: 5), offset: 0, length: value.length - 5)
+    return buffer
 }
 
 final class MessageHistoryIndexTable: Table {
@@ -352,6 +362,16 @@ final class MessageHistoryIndexTable: Table {
             } else {
                 operations.append(.Update(previousIndex, message))
             }
+        }
+    }
+    
+    func updateTimestamp(_ id: MessageId, timestamp: Int32, operations: inout [MessageHistoryIndexOperation]) {
+        if let previousData = self.valueBox.get(self.tableId, key: self.key(id)), let previousEntry = self.get(id), case let .Message(previousIndex) = previousEntry, previousIndex.timestamp != timestamp {
+            let updatedEntry = modifyHistoryIndexEntryTimestamp(value: previousData, timestamp: timestamp)
+            self.valueBox.remove(self.tableId, key: self.key(id))
+            self.valueBox.set(self.tableId, key: self.key(id), value: updatedEntry)
+            
+            operations.append(.UpdateTimestamp(MessageIndex(id: id, timestamp: previousIndex.timestamp), timestamp))
         }
     }
     

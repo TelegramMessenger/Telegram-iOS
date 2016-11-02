@@ -1,9 +1,9 @@
 import Foundation
 
-public final class UnsentMessageIndicesView {
-    public let indices: Set<MessageIndex>
+public final class UnsentMessageIdsView {
+    public let ids: Set<MessageId>
     
-    init(_ indices: Set<MessageIndex>) {
-        self.indices = indices
+    init(_ ids: Set<MessageId>) {
+        self.ids = ids
     }
 }

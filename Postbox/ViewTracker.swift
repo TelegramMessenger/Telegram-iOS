@@ -37,14 +37,14 @@ final class ViewTracker {
     private let chatListHolesViewSubscribers = Bag<ValuePipe<ChatListHolesView>>()
     
     private var unsentMessageView: UnsentMessageHistoryView
-    private let unsendMessageIndicesViewSubscribers = Bag<ValuePipe<UnsentMessageIndicesView>>()
+    private let unsendMessageIdsViewSubscribers = Bag<ValuePipe<UnsentMessageIdsView>>()
     
     private var synchronizeReadStatesView: MutableSynchronizePeerReadStatesView
     private let synchronizePeerReadStatesViewSubscribers = Bag<ValuePipe<SynchronizePeerReadStatesView>>()
     
     private var peerViews = Bag<(MutablePeerView, ValuePipe<PeerView>)>()
     
-    init(queue: Queue, fetchEarlierHistoryEntries: @escaping (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchLaterHistoryEntries: @escaping (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchEarlierChatEntries: @escaping (MessageIndex?, Int) -> [MutableChatListEntry], fetchLaterChatEntries: @escaping (MessageIndex?, Int) -> [MutableChatListEntry], fetchAnchorIndex: @escaping (MessageId) -> MessageHistoryAnchorIndex?, renderMessage: @escaping (IntermediateMessage) -> Message, getPeer: @escaping (PeerId) -> Peer?, getPeerNotificationSettings: @escaping (PeerId) -> PeerNotificationSettings?, getCachedPeerData: @escaping (PeerId) -> CachedPeerData?, getPeerPresence: @escaping (PeerId) -> PeerPresence?, unsentMessageIndices: [MessageIndex], synchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation]) {
+    init(queue: Queue, fetchEarlierHistoryEntries: @escaping (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchLaterHistoryEntries: @escaping (PeerId, MessageIndex?, Int, MessageTags?) -> [MutableMessageHistoryEntry], fetchEarlierChatEntries: @escaping (MessageIndex?, Int) -> [MutableChatListEntry], fetchLaterChatEntries: @escaping (MessageIndex?, Int) -> [MutableChatListEntry], fetchAnchorIndex: @escaping (MessageId) -> MessageHistoryAnchorIndex?, renderMessage: @escaping (IntermediateMessage) -> Message, getPeer: @escaping (PeerId) -> Peer?, getPeerNotificationSettings: @escaping (PeerId) -> PeerNotificationSettings?, getCachedPeerData: @escaping (PeerId) -> CachedPeerData?, getPeerPresence: @escaping (PeerId) -> PeerPresence?, unsentMessageIds: [MessageId], synchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation]) {
         self.queue = queue
         self.fetchEarlierHistoryEntries = fetchEarlierHistoryEntries
         self.fetchLaterHistoryEntries = fetchLaterHistoryEntries
@@ -57,7 +57,7 @@ final class ViewTracker {
         self.getCachedPeerData = getCachedPeerData
         self.getPeerPresence = getPeerPresence
         
-        self.unsentMessageView = UnsentMessageHistoryView(indices: unsentMessageIndices)
+        self.unsentMessageView = UnsentMessageHistoryView(ids: unsentMessageIds)
         self.synchronizeReadStatesView = MutableSynchronizePeerReadStatesView(operations: synchronizePeerReadStateOperations)
     }
     
@@ -165,7 +165,7 @@ final class ViewTracker {
         self.peerViews.remove(index)
     }
     
-    func refreshViewsDueToExternalTransaction(fetchAroundChatEntries: (_ index: MessageIndex, _ count: Int) -> (entries: [MutableChatListEntry], earlier: MutableChatListEntry?, later: MutableChatListEntry?), fetchAroundHistoryEntries: (_ index: MessageIndex, _ count: Int, _ tagMask: MessageTags?) -> (entries: [MutableMessageHistoryEntry], lower: MutableMessageHistoryEntry?, upper: MutableMessageHistoryEntry?), fetchUnsendMessageIndices: () -> [MessageIndex], fetchSynchronizePeerReadStateOperations: () -> [PeerId: PeerReadStateSynchronizationOperation]) {
+    func refreshViewsDueToExternalTransaction(fetchAroundChatEntries: (_ index: MessageIndex, _ count: Int) -> (entries: [MutableChatListEntry], earlier: MutableChatListEntry?, later: MutableChatListEntry?), fetchAroundHistoryEntries: (_ index: MessageIndex, _ count: Int, _ tagMask: MessageTags?) -> (entries: [MutableMessageHistoryEntry], lower: MutableMessageHistoryEntry?, upper: MutableMessageHistoryEntry?), fetchUnsentMessageIds: () -> [MessageId], fetchSynchronizePeerReadStateOperations: () -> [PeerId: PeerReadStateSynchronizationOperation]) {
         var updateTrackedHolesPeerIds: [PeerId] = []
         
         for (peerId, bag) in self.messageHistoryViews {
@@ -192,7 +192,7 @@ final class ViewTracker {
             self.updateTrackedHoles(peerId)
         }
         
-        if self.unsentMessageView.refreshDueToExternalTransaction(fetchUnsendMessageIndices: fetchUnsendMessageIndices) {
+        if self.unsentMessageView.refreshDueToExternalTransaction(fetchUnsentMessageIds: fetchUnsentMessageIds) {
             self.unsentViewUpdated()
         }
         
@@ -371,8 +371,8 @@ final class ViewTracker {
     }
     
     private func unsentViewUpdated() {
-        for subscriber in self.unsendMessageIndicesViewSubscribers.copyItems() {
-            subscriber.putNext(UnsentMessageIndicesView(self.unsentMessageView.indices))
+        for subscriber in self.unsendMessageIdsViewSubscribers.copyItems() {
+            subscriber.putNext(UnsentMessageIdsView(self.unsentMessageView.ids))
         }
     }
     
@@ -426,14 +426,14 @@ final class ViewTracker {
         }
     }
     
-    func unsentMessageIndicesViewSignal() -> Signal<UnsentMessageIndicesView, NoError> {
+    func unsentMessageIdsViewSignal() -> Signal<UnsentMessageIdsView, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.queue.async {
-                subscriber.putNext(UnsentMessageIndicesView(self.unsentMessageView.indices))
+                subscriber.putNext(UnsentMessageIdsView(self.unsentMessageView.ids))
                 
-                let pipe = ValuePipe<UnsentMessageIndicesView>()
-                let index = self.unsendMessageIndicesViewSubscribers.add(pipe)
+                let pipe = ValuePipe<UnsentMessageIdsView>()
+                let index = self.unsendMessageIdsViewSubscribers.add(pipe)
                 
                 let pipeDisposable = pipe.signal().start(next: { view in
                     subscriber.putNext(view)
@@ -441,7 +441,7 @@ final class ViewTracker {
                 
                 disposable.set(ActionDisposable {
                     pipeDisposable.dispose()
-                    self.unsendMessageIndicesViewSubscribers.remove(index)
+                    self.unsendMessageIdsViewSubscribers.remove(index)
                 })
             }
             return disposable
