@@ -88,12 +88,14 @@ public struct ListViewInsertItem {
     public let previousIndex: Int?
     public let item: ListViewItem
     public let directionHint: ListViewItemOperationDirectionHint?
+    public let forceAnimateInsertion: Bool
     
-    public init(index: Int, previousIndex: Int?, item: ListViewItem, directionHint: ListViewItemOperationDirectionHint?) {
+    public init(index: Int, previousIndex: Int?, item: ListViewItem, directionHint: ListViewItemOperationDirectionHint?, forceAnimateInsertion: Bool = false) {
         self.index = index
         self.previousIndex = previousIndex
         self.item = item
         self.directionHint = directionHint
+        self.forceAnimateInsertion = forceAnimateInsertion
     }
 }
 
@@ -122,6 +124,7 @@ public struct ListViewDeleteAndInsertOptions: OptionSet {
     public static let AnimateAlpha = ListViewDeleteAndInsertOptions(rawValue: 2)
     public static let LowLatency = ListViewDeleteAndInsertOptions(rawValue: 4)
     public static let Synchronous = ListViewDeleteAndInsertOptions(rawValue: 8)
+    public static let RequestItemInsertionAnimations = ListViewDeleteAndInsertOptions(rawValue: 16)
 }
 
 public struct ListViewUpdateSizeAndInsets {
@@ -971,8 +974,10 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     private final var items: [ListViewItem] = []
     private final var itemNodes: [ListViewItemNode] = []
     
-    public final var displayedItemRangeChanged: (ListViewDisplayedItemRange) -> Void = { _ in }
+    public final var displayedItemRangeChanged: (ListViewDisplayedItemRange, Any?) -> Void = { _, _ in }
     public private(set) final var displayedItemRange: ListViewDisplayedItemRange = ListViewDisplayedItemRange(loadedRange: nil, visibleRange: nil)
+    
+    private final var opaqueTransactionState: Any?
     
     public final var visibleContentOffsetChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
     
@@ -1129,8 +1134,9 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             if !forceNext && self.inVSync {
                 action()
             } else {
-                self.actionsForVSync.append(action)
-                self.setNeedsAnimations()
+                action()
+                //self.actionsForVSync.append(action)
+                //self.setNeedsAnimations()
             }
         }
     }
@@ -1448,7 +1454,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         return ListViewState(insets: self.insets, visibleSize: self.visibleSize, invisibleInset: self.invisibleInset, nodes: nodes, scrollPosition: nil, stationaryOffset: nil)
     }
     
-    public func deleteAndInsertItems(deleteIndices: [ListViewDeleteItem], insertIndicesAndItems: [ListViewInsertItem], updateIndicesAndItems: [ListViewUpdateItem], options: ListViewDeleteAndInsertOptions, scrollToItem: ListViewScrollToItem? = nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets? = nil, stationaryItemRange: (Int, Int)? = nil, completion: @escaping (ListViewDisplayedItemRange) -> Void = { _ in }) {
+    public func transaction(deleteIndices: [ListViewDeleteItem], insertIndicesAndItems: [ListViewInsertItem], updateIndicesAndItems: [ListViewUpdateItem], options: ListViewDeleteAndInsertOptions, scrollToItem: ListViewScrollToItem? = nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets? = nil, stationaryItemRange: (Int, Int)? = nil, updateOpaqueState: Any?, completion: @escaping (ListViewDisplayedItemRange) -> Void = { _ in }) {
         if deleteIndices.isEmpty && insertIndicesAndItems.isEmpty && updateIndicesAndItems.isEmpty && scrollToItem == nil && updateSizeAndInsets == nil {
             completion(self.immediateDisplayedItemRange())
             return
@@ -1457,7 +1463,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         self.transactionQueue.addTransaction({ [weak self] transactionCompletion in
             if let strongSelf = self {
                 strongSelf.transactionOffset = 0.0
-                strongSelf.deleteAndInsertItemsTransaction(deleteIndices: deleteIndices, insertIndicesAndItems: insertIndicesAndItems, updateIndicesAndItems: updateIndicesAndItems, options: options, scrollToItem: scrollToItem, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: stationaryItemRange, completion: { [weak strongSelf] in
+                strongSelf.deleteAndInsertItemsTransaction(deleteIndices: deleteIndices, insertIndicesAndItems: insertIndicesAndItems, updateIndicesAndItems: updateIndicesAndItems, options: options, scrollToItem: scrollToItem, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: stationaryItemRange, updateOpaqueState: updateOpaqueState, completion: { [weak strongSelf] in
                     completion(strongSelf?.immediateDisplayedItemRange() ?? ListViewDisplayedItemRange(loadedRange: nil, visibleRange: nil))
                     
                     transactionCompletion()
@@ -1466,7 +1472,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         })
     }
 
-    private func deleteAndInsertItemsTransaction(deleteIndices: [ListViewDeleteItem], insertIndicesAndItems: [ListViewInsertItem], updateIndicesAndItems: [ListViewUpdateItem], options: ListViewDeleteAndInsertOptions, scrollToItem: ListViewScrollToItem?, updateSizeAndInsets: ListViewUpdateSizeAndInsets?, stationaryItemRange: (Int, Int)?, completion: @escaping (Void) -> Void) {
+    private func deleteAndInsertItemsTransaction(deleteIndices: [ListViewDeleteItem], insertIndicesAndItems: [ListViewInsertItem], updateIndicesAndItems: [ListViewUpdateItem], options: ListViewDeleteAndInsertOptions, scrollToItem: ListViewScrollToItem?, updateSizeAndInsets: ListViewUpdateSizeAndInsets?, stationaryItemRange: (Int, Int)?, updateOpaqueState: Any?, completion: @escaping (Void) -> Void) {
         if deleteIndices.isEmpty && insertIndicesAndItems.isEmpty && updateIndicesAndItems.isEmpty && scrollToItem == nil {
             if let updateSizeAndInsets = updateSizeAndInsets , self.items.count == 0 || (updateSizeAndInsets.size == self.visibleSize && updateSizeAndInsets.insets == self.insets) {
                 self.visibleSize = updateSizeAndInsets.size
@@ -1719,7 +1725,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                         let stationaryItemIndex = updatedState.stationaryOffset?.0
                         
                         let next = {
-                            self.replayOperations(animated: animated, animateAlpha: options.contains(.AnimateAlpha), operations: updatedOperations, scrollToItem: scrollToItem, updateSizeAndInsets: updateSizeAndInsets, stationaryItemIndex: stationaryItemIndex, completion: completion)
+                            self.replayOperations(animated: animated, animateAlpha: options.contains(.AnimateAlpha), operations: updatedOperations, requestItemInsertionAnimationsIndices: options.contains(.RequestItemInsertionAnimations) ? insertedIndexSet : Set(), scrollToItem: scrollToItem, updateSizeAndInsets: updateSizeAndInsets, stationaryItemIndex: stationaryItemIndex, updateOpaqueState: updateOpaqueState, completion: completion)
                         }
                         
                         if options.contains(.LowLatency) || options.contains(.Synchronous) {
@@ -1834,7 +1840,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 }
                 
                 if self.debugInfo {
-                    print("insertionItemIndexAndDirection \(insertionItemIndexAndDirection)")
+                    //print("insertionItemIndexAndDirection \(insertionItemIndexAndDirection)")
                 }
                 
                 if let insertionItemIndexAndDirection = insertionItemIndexAndDirection {
@@ -1903,7 +1909,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         }
     }
     
-    private func insertNodeAtIndex(animated: Bool, animateAlpha: Bool, previousFrame: CGRect?, nodeIndex: Int, offsetDirection: ListViewInsertionOffsetDirection, node: ListViewItemNode, layout: ListViewItemNodeLayout, apply: () -> (), timestamp: Double) {
+    private func insertNodeAtIndex(animated: Bool, animateAlpha: Bool, forceAnimateInsertion: Bool, previousFrame: CGRect?, nodeIndex: Int, offsetDirection: ListViewInsertionOffsetDirection, node: ListViewItemNode, layout: ListViewItemNodeLayout, apply: () -> (), timestamp: Double) {
         let insertionOrigin = self.referencePointForInsertionAtIndex(nodeIndex)
         
         let nodeOrigin: CGPoint
@@ -1995,7 +2001,11 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 }
             }
         } else if animateAlpha && previousFrame == nil {
-            node.animateAdded(timestamp, duration: insertionAnimationDuration * UIView.animationDurationFactor())
+            if forceAnimateInsertion {
+                node.animateInsertion(timestamp, duration: insertionAnimationDuration * UIView.animationDurationFactor())
+            } else {
+                node.animateAdded(timestamp, duration: insertionAnimationDuration * UIView.animationDurationFactor())
+            }
         }
         
         if node.apparentHeight > CGFloat(FLT_EPSILON) {
@@ -2020,8 +2030,12 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         }
     }
     
-    private func replayOperations(animated: Bool, animateAlpha: Bool, operations: [ListViewStateOperation], scrollToItem: ListViewScrollToItem?, updateSizeAndInsets: ListViewUpdateSizeAndInsets?, stationaryItemIndex: Int?, completion: () -> Void) {
+    private func replayOperations(animated: Bool, animateAlpha: Bool, operations: [ListViewStateOperation], requestItemInsertionAnimationsIndices: Set<Int>, scrollToItem: ListViewScrollToItem?, updateSizeAndInsets: ListViewUpdateSizeAndInsets?, stationaryItemIndex: Int?, updateOpaqueState: Any?, completion: () -> Void) {
         let timestamp = CACurrentMediaTime()
+        
+        if let updateOpaqueState = updateOpaqueState {
+            self.opaqueTransactionState = updateOpaqueState
+        }
         
         var previousApparentFrames: [(ListViewItemNode, CGRect)] = []
         for itemNode in self.itemNodes {
@@ -2045,7 +2059,11 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                             break
                         }
                     }
-                    self.insertNodeAtIndex(animated: animated, animateAlpha: animateAlpha, previousFrame: previousFrame, nodeIndex: index, offsetDirection: offsetDirection, node: node, layout: layout, apply: apply, timestamp: timestamp)
+                    var forceAnimateInsertion = false
+                    if let index = node.index, requestItemInsertionAnimationsIndices.contains(index) {
+                        forceAnimateInsertion = true
+                    }
+                    self.insertNodeAtIndex(animated: animated, animateAlpha: animateAlpha, forceAnimateInsertion: forceAnimateInsertion, previousFrame: previousFrame, nodeIndex: index, offsetDirection: offsetDirection, node: node, layout: layout, apply: apply, timestamp: timestamp)
                     if let previousFrame = previousFrame, previousFrame.minY >= self.visibleSize.height || previousFrame.maxY < 0.0 {
                         self.insertSubnode(node, at: 0)
                     } else {
@@ -2069,10 +2087,10 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                     
                     if let height = height, let previousLayout = previousLayout {
                         if takenPreviousNodes.contains(referenceNode) {
-                            self.insertNodeAtIndex(animated: false, animateAlpha: false, previousFrame: nil, nodeIndex: index, offsetDirection: offsetDirection, node: ListViewItemNode(layerBacked: true), layout: ListViewItemNodeLayout(contentSize: CGSize(width: self.visibleSize.width, height: height), insets: UIEdgeInsets()), apply: { }, timestamp: timestamp)
+                            self.insertNodeAtIndex(animated: false, animateAlpha: false, forceAnimateInsertion: false, previousFrame: nil, nodeIndex: index, offsetDirection: offsetDirection, node: ListViewItemNode(layerBacked: true), layout: ListViewItemNodeLayout(contentSize: CGSize(width: self.visibleSize.width, height: height), insets: UIEdgeInsets()), apply: { }, timestamp: timestamp)
                         } else {
                             referenceNode.index = nil
-                            self.insertNodeAtIndex(animated: false, animateAlpha: false, previousFrame: nil, nodeIndex: index, offsetDirection: offsetDirection, node: referenceNode, layout: previousLayout, apply: { }, timestamp: timestamp)
+                            self.insertNodeAtIndex(animated: false, animateAlpha: false, forceAnimateInsertion: false, previousFrame: nil, nodeIndex: index, offsetDirection: offsetDirection, node: referenceNode, layout: previousLayout, apply: { }, timestamp: timestamp)
                             self.addSubnode(referenceNode)
                         }
                     } else {
@@ -2644,7 +2662,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             var updatedOperations = operations
             updatedState.removeInvisibleNodes(&updatedOperations)
             self.dispatchOnVSync {
-                self.replayOperations(animated: false, animateAlpha: false, operations: updatedOperations, scrollToItem: nil, updateSizeAndInsets: nil, stationaryItemIndex: nil, completion: completion)
+                self.replayOperations(animated: false, animateAlpha: false, operations: updatedOperations, requestItemInsertionAnimationsIndices: Set(), scrollToItem: nil, updateSizeAndInsets: nil, stationaryItemIndex: nil, updateOpaqueState: nil, completion: completion)
             }
         }
     }
@@ -2654,7 +2672,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         
         if currentRange != self.displayedItemRange || force {
             self.displayedItemRange = currentRange
-            self.displayedItemRangeChanged(currentRange)
+            self.displayedItemRangeChanged(currentRange, self.opaqueTransactionState)
         }
     }
     
@@ -2872,9 +2890,9 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     public func ensureItemNodeVisible(_ node: ListViewItemNode) {
         if let index = node.index {
             if node.frame.minY < self.insets.top {
-                self.deleteAndInsertItems(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.Top, animated: true, curve: ListViewAnimationCurve.Default, directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, completion: { _ in })
+                self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.Top, animated: true, curve: ListViewAnimationCurve.Default, directionHint: ListViewScrollToItemDirectionHint.Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             } else if node.frame.maxY > self.visibleSize.height - self.insets.bottom {
-                self.deleteAndInsertItems(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.Bottom, animated: true, curve: ListViewAnimationCurve.Default, directionHint: ListViewScrollToItemDirectionHint.Down), updateSizeAndInsets: nil, stationaryItemRange: nil, completion: { _ in })
+                self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: ListViewScrollToItem(index: index, position: ListViewScrollPosition.Bottom, animated: true, curve: ListViewAnimationCurve.Default, directionHint: ListViewScrollToItemDirectionHint.Down), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             }
         }
     }

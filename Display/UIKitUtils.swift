@@ -84,6 +84,10 @@ public extension CGSize {
         let scale = UIScreenScale
         return CGSize(width: self.width / scale, height: self.height / scale)
     }
+    
+    public var integralFloor: CGSize {
+        return CGSize(width: floor(self.width), height: floor(self.height))
+    }
 }
 
 public func assertNotOnMainThread(_ file: String = #file, line: Int = #line) {

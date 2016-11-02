@@ -10,17 +10,26 @@ public class DisplayLinkDispatcher: NSObject {
         
         super.init()
         
-        self.displayLink = CADisplayLink(target: self, selector: #selector(self.run))
         if #available(iOS 10.0, *) {
-            self.displayLink.preferredFramesPerSecond = 60
+            //self.displayLink.preferredFramesPerSecond = 60
+        } else {
+            self.displayLink = CADisplayLink(target: self, selector: #selector(self.run))
+            self.displayLink.isPaused = true
+            self.displayLink.add(to: RunLoop.main, forMode: RunLoopMode.commonModes)
         }
-        self.displayLink.isPaused = true
-        self.displayLink.add(to: RunLoop.main, forMode: RunLoopMode.commonModes)
     }
     
     public func dispatch(f: @escaping (Void) -> Void) {
-        self.blocksToDispatch.append(f)
-        self.displayLink.isPaused = false
+        if self.displayLink == nil {
+            if Thread.isMainThread {
+                f()
+            } else {
+                DispatchQueue.main.async(execute: f)
+            }
+        } else {
+            self.blocksToDispatch.append(f)
+            self.displayLink.isPaused = false
+        }
     }
     
     @objc func run() {
