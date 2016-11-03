@@ -86,6 +86,10 @@ public final class Modifier {
         self.postbox?.peerChatStateTable.set(id, state: state)
     }
     
+    public func updatePeerChatInterfaceState(_ id: PeerId, update: (PeerChatInterfaceState?) -> (PeerChatInterfaceState?)) {
+        self.postbox?.updatePeerChatInterfaceState(id, update: update)
+    }
+    
     public func getPeer(_ id: PeerId) -> Peer? {
         return self.postbox?.peerTable.get(id)
     }
@@ -247,6 +251,7 @@ public final class Postbox {
     var contactsTable: ContactTable!
     var itemCollectionInfoTable: ItemCollectionInfoTable!
     var itemCollectionItemTable: ItemCollectionItemTable!
+    var peerChatInterfaceStateTable: PeerChatInterfaceStateTable!
     
     //temporary
     var peerRatingTable: RatingTable<PeerId>!
@@ -358,6 +363,7 @@ public final class Postbox {
             self.peerPresenceTable = PeerPresenceTable(valueBox: self.valueBox, tableId: 20)
             self.itemCollectionInfoTable = ItemCollectionInfoTable(valueBox: self.valueBox, tableId: 21)
             self.itemCollectionItemTable = ItemCollectionItemTable(valueBox: self.valueBox, tableId: 22)
+            self.peerChatInterfaceStateTable = PeerChatInterfaceStateTable(valueBox: self.valueBox, tableId: 23)
             
             self.tables.append(self.keychainTable)
             self.tables.append(self.peerTable)
@@ -381,6 +387,7 @@ public final class Postbox {
             self.tables.append(self.peerPresenceTable)
             self.tables.append(self.itemCollectionInfoTable)
             self.tables.append(self.itemCollectionItemTable)
+            self.tables.append(self.peerChatInterfaceStateTable)
             
             self.transactionStateVersion = self.metadataTable.transactionStateVersion()
             
@@ -845,6 +852,11 @@ public final class Postbox {
         }
     }
     
+    fileprivate func updatePeerChatInterfaceState(_ id: PeerId, update: (PeerChatInterfaceState?) -> (PeerChatInterfaceState?)) {
+        let updatedState = update(self.peerChatInterfaceStateTable.get(id))
+        self.peerChatInterfaceStateTable.set(id, state: updatedState)
+    }
+    
     fileprivate func replaceContactPeerIds(_ peerIds: Set<PeerId>) {
         self.contactsTable.replace(peerIds)
         
@@ -920,8 +932,8 @@ public final class Postbox {
         }
     }
     
-    public func aroundUnreadMessageHistoryViewForPeerId(_ peerId: PeerId, count: Int, tagMask: MessageTags? = nil) -> Signal<(MessageHistoryView, ViewUpdateType), NoError> {
-        return self.modify(userInteractive: true, { modifier -> Signal<(MessageHistoryView, ViewUpdateType), NoError> in
+    public func aroundUnreadMessageHistoryViewForPeerId(_ peerId: PeerId, count: Int, tagMask: MessageTags? = nil) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+        return self.modify(userInteractive: true, { modifier -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in
             var index = MessageHistoryAnchorIndex(index: MessageIndex.upperBound(peerId: peerId), exact: true)
             if let maxReadIndex = self.messageHistoryTable.maxReadIndex(peerId) {
                 index = maxReadIndex
@@ -930,8 +942,8 @@ public final class Postbox {
         }) |> switchToLatest
     }
     
-    public func aroundIdMessageHistoryViewForPeerId(_ peerId: PeerId, count: Int, messageId: MessageId, tagMask: MessageTags? = nil) -> Signal<(MessageHistoryView, ViewUpdateType), NoError> {
-        return self.modify { modifier -> Signal<(MessageHistoryView, ViewUpdateType), NoError> in
+    public func aroundIdMessageHistoryViewForPeerId(_ peerId: PeerId, count: Int, messageId: MessageId, tagMask: MessageTags? = nil) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+        return self.modify { modifier -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in
             var index = MessageHistoryAnchorIndex(index: MessageIndex.upperBound(peerId: peerId), exact: true)
             if let anchorIndex = self.messageHistoryTable.anchorIndex(messageId) {
                 index = anchorIndex
@@ -940,8 +952,8 @@ public final class Postbox {
         } |> switchToLatest
     }
     
-    public func aroundMessageHistoryViewForPeerId(_ peerId: PeerId, index: MessageIndex, count: Int, anchorIndex: MessageIndex, fixedCombinedReadState: CombinedPeerReadState?, tagMask: MessageTags? = nil) -> Signal<(MessageHistoryView, ViewUpdateType), NoError> {
-        return self.modify { modifier -> Signal<(MessageHistoryView, ViewUpdateType), NoError> in
+    public func aroundMessageHistoryViewForPeerId(_ peerId: PeerId, index: MessageIndex, count: Int, anchorIndex: MessageIndex, fixedCombinedReadState: CombinedPeerReadState?, tagMask: MessageTags? = nil) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+        return self.modify { modifier -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in
             return self.syncAroundMessageHistoryViewForPeerId(peerId, index: index, count: count, anchorIndex: MessageHistoryAnchorIndex(index: anchorIndex, exact: true), unreadIndex: nil, fixedCombinedReadState: fixedCombinedReadState, tagMask: tagMask)
         } |> switchToLatest
     }
@@ -972,7 +984,7 @@ public final class Postbox {
         }
     }
     
-    private func syncAroundMessageHistoryViewForPeerId(_ peerId: PeerId, index: MessageIndex, count: Int, anchorIndex: MessageHistoryAnchorIndex, unreadIndex: MessageIndex?, fixedCombinedReadState: CombinedPeerReadState?, tagMask: MessageTags? = nil) -> Signal<(MessageHistoryView, ViewUpdateType), NoError> {
+    private func syncAroundMessageHistoryViewForPeerId(_ peerId: PeerId, index: MessageIndex, count: Int, anchorIndex: MessageHistoryAnchorIndex, unreadIndex: MessageIndex?, fixedCombinedReadState: CombinedPeerReadState?, tagMask: MessageTags? = nil) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         let startTime = CFAbsoluteTimeGetCurrent()
         let (entries, earlier, later) = self.fetchAroundHistoryEntries(index, count: count, tagMask: tagMask)
         print("aroundMessageHistoryViewForPeerId fetchAroundHistoryEntries \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
@@ -989,8 +1001,10 @@ public final class Postbox {
         
         let (index, signal) = self.viewTracker.addMessageHistoryView(peerId, view: mutableView)
         
-        return (.single((MessageHistoryView(mutableView), initialUpdateType))
-            |> then(signal))
+        let initialData = self.initialMessageHistoryData(peerId: peerId)
+        
+        return (.single((MessageHistoryView(mutableView), initialUpdateType, initialData))
+            |> then(signal |> map { ($0.0, $0.1, nil) }))
             |> afterDisposed { [weak self] in
                 if let strongSelf = self {
                     strongSelf.queue.async {
@@ -998,6 +1012,10 @@ public final class Postbox {
                     }
                 }
             }
+    }
+    
+    private func initialMessageHistoryData(peerId: PeerId) -> InitialMessageHistoryData {
+        return InitialMessageHistoryData(peer: self.peerTable.get(peerId), chatInterfaceState: self.peerChatInterfaceStateTable.get(peerId))
     }
     
     public func messageIndexAtId(_ id: MessageId) -> Signal<MessageIndex?, NoError> {
@@ -1025,6 +1043,20 @@ public final class Postbox {
             } else {
                 return .single(nil)
             }
+        } |> switchToLatest
+    }
+    
+    public func messagesAtIds(_ ids: [MessageId]) -> Signal<[Message], NoError> {
+        return self.modify { modifier -> Signal<[Message], NoError> in
+            var messages: [Message] = []
+            for id in ids {
+                if let entry = self.messageHistoryIndexTable.get(id), case let .Message(index) = entry {
+                    if let message = self.messageHistoryTable.getMessage(index) {
+                        messages.append(self.renderIntermediateMessage(message))
+                    }
+                }
+            }
+            return .single(messages)
         } |> switchToLatest
     }
     

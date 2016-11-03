@@ -910,7 +910,7 @@ public final class Decoder {
         }
     }
     
-    public func decodeBytesForKeyNoCopy(_ key: StaticString) -> ReadBuffer! {
+    public func decodeBytesForKeyNoCopy(_ key: StaticString) -> ReadBuffer? {
         if Decoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Bytes) {
             var length: Int32 = 0
             memcpy(&length, self.buffer.memory + self.offset, 4)
