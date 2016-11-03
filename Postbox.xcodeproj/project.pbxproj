@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C26A71921DC9E96F00F69385 /* ItemCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0D31DB4FAE100C6B04F /* ItemCollection.swift */; };
+		C26A71931DC9E97700F69385 /* ItemCollectionInfoTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0D51DB4FCFC00C6B04F /* ItemCollectionInfoTable.swift */; };
+		C26A71941DC9E97E00F69385 /* ItemCollectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0DB1DB5237C00C6B04F /* ItemCollectionsView.swift */; };
+		C26A71951DC9E98900F69385 /* ItemCollectionItemTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0D71DB4FD1300C6B04F /* ItemCollectionItemTable.swift */; };
 		D003E4E61B38DBDB00C22CBC /* MessageHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D003E4E51B38DBDB00C22CBC /* MessageHistoryView.swift */; };
 		D0079F5A1D592E8B00A27A2C /* ContactTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0079F591D592E8B00A27A2C /* ContactTable.swift */; };
 		D0079F631D5A242500A27A2C /* ContactPeerIdsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0079F621D5A242500A27A2C /* ContactPeerIdsView.swift */; };
@@ -701,6 +705,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C26A71951DC9E98900F69385 /* ItemCollectionItemTable.swift in Sources */,
+				C26A71941DC9E97E00F69385 /* ItemCollectionsView.swift in Sources */,
+				C26A71931DC9E97700F69385 /* ItemCollectionInfoTable.swift in Sources */,
+				C26A71921DC9E96F00F69385 /* ItemCollection.swift in Sources */,
 				D03C535C1DAD5C9C004C17B3 /* Message.swift in Sources */,
 				D0B418481D7DFE20004562A4 /* MessageHistoryView.swift in Sources */,
 				D0B418571D7DFE29004562A4 /* Postbox.swift in Sources */,
