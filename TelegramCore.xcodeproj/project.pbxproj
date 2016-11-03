@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C26A718D1DC9E93700F69385 /* StickerManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0E11DB5401A00C6B04F /* StickerManagement.swift */; };
+		C26A718E1DC9E94100F69385 /* StickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0DE1DB539FC00C6B04F /* StickerPack.swift */; };
+		C26A718F1DC9E94D00F69385 /* MultipartUpload.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03C53761DAFF20F004C17B3 /* MultipartUpload.swift */; };
+		C26A71901DC9E95800F69385 /* PendingMessageUploadedContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09BB6B51DB0428000A905C0 /* PendingMessageUploadedContent.swift */; };
+		C26A71911DC9E96000F69385 /* PendingMessageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09BB6B31DB02C2B00A905C0 /* PendingMessageManager.swift */; };
 		D003702B1DA42586004308D3 /* PhoneNumber.swift in Sources */ = {isa = PBXBuildFile; fileRef = D003702A1DA42586004308D3 /* PhoneNumber.swift */; };
 		D021E0DF1DB539FC00C6B04F /* StickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0DE1DB539FC00C6B04F /* StickerPack.swift */; };
 		D021E0E21DB5401A00C6B04F /* StickerManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0E11DB5401A00C6B04F /* StickerManagement.swift */; };
@@ -982,6 +987,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C26A71911DC9E96000F69385 /* PendingMessageManager.swift in Sources */,
+				C26A71901DC9E95800F69385 /* PendingMessageUploadedContent.swift in Sources */,
+				C26A718F1DC9E94D00F69385 /* MultipartUpload.swift in Sources */,
+				C26A718E1DC9E94100F69385 /* StickerPack.swift in Sources */,
+				C26A718D1DC9E93700F69385 /* StickerManagement.swift in Sources */,
 				D0B8443D1DAB91EF005F29E1 /* StateManagement.swift in Sources */,
 				D0B418A71D7E0592004562A4 /* Fetch.swift in Sources */,
 				D0B418911D7E057C004562A4 /* TextEntitiesMessageAttribute.swift in Sources */,
