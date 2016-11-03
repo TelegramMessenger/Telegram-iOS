@@ -24,9 +24,9 @@ public enum TelegramMediaActionType: Coding, Equatable {
             case 1:
                 self = .groupCreated(title: decoder.decodeStringForKey("title"))
             case 2:
-                self = .addedMembers(peerIds: PeerId.decodeArrayFromBuffer(decoder.decodeBytesForKeyNoCopy("peerIds")))
+                self = .addedMembers(peerIds: PeerId.decodeArrayFromBuffer(decoder.decodeBytesForKeyNoCopy("peerIds")!))
             case 3:
-                self = .removedMembers(peerIds: PeerId.decodeArrayFromBuffer(decoder.decodeBytesForKeyNoCopy("peerIds")))
+                self = .removedMembers(peerIds: PeerId.decodeArrayFromBuffer(decoder.decodeBytesForKeyNoCopy("peerIds")!))
             case 4:
                 self = .photoUpdated(image: decoder.decodeObjectForKey("image") as? TelegramMediaImage)
             case 5:

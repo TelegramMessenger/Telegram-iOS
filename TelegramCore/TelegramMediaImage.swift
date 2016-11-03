@@ -24,7 +24,7 @@ public final class TelegramMediaImage: Media, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.imageId = MediaId(decoder.decodeBytesForKeyNoCopy("i"))
+        self.imageId = MediaId(decoder.decodeBytesForKeyNoCopy("i")!)
         self.representations = decoder.decodeObjectArrayForKey("r")
     }
     

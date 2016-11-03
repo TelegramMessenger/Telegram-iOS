@@ -107,7 +107,7 @@ public final class TelegramMediaFile: Media, Equatable {
     }
     
     public init(decoder: Decoder) {
-        self.fileId = MediaId(decoder.decodeBytesForKeyNoCopy("i"))
+        self.fileId = MediaId(decoder.decodeBytesForKeyNoCopy("i")!)
         self.resource = decoder.decodeObjectForKey("r") as! TelegramMediaResource
         self.previewRepresentations = decoder.decodeObjectArrayForKey("pr")
         self.mimeType = decoder.decodeStringForKey("mt")

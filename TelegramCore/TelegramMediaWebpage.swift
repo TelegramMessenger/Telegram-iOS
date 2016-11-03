@@ -165,7 +165,7 @@ public final class TelegramMediaWebpage: Media {
     }
     
     public init(decoder: Decoder) {
-        self.webpageId = MediaId(decoder.decodeBytesForKeyNoCopy("i"))
+        self.webpageId = MediaId(decoder.decodeBytesForKeyNoCopy("i")!)
         
         if decoder.decodeInt32ForKey("ct") == 0 {
             self.content = .Pending(decoder.decodeInt32ForKey("pendingDate"))
