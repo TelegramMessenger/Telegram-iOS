@@ -57,24 +57,59 @@ struct ChatTextInputState: Coding, Equatable {
     }
 }
 
+final class ChatEmbeddedInterfaceState: PeerChatListEmbeddedInterfaceState {
+    let timestamp: Int32
+    let text: String
+    
+    init(timestamp: Int32, text: String) {
+        self.timestamp = timestamp
+        self.text = text
+    }
+    
+    init(decoder: Decoder) {
+        self.timestamp = decoder.decodeInt32ForKey("d")
+        self.text = decoder.decodeStringForKey("t")
+    }
+    
+    func encode(_ encoder: Encoder) {
+        encoder.encodeInt32(self.timestamp, forKey: "d")
+        encoder.encodeString(self.text, forKey: "t")
+    }
+    
+    public func isEqual(to: PeerChatListEmbeddedInterfaceState) -> Bool {
+        if let to = to as? ChatEmbeddedInterfaceState {
+            return self.timestamp == to.timestamp && self.text == to.text
+        } else {
+            return false
+        }
+    }
+}
+
 final class ChatInterfaceState: PeerChatInterfaceState, Equatable {
+    let timestamp: Int32
     let inputState: ChatTextInputState
     let replyMessageId: MessageId?
     let forwardMessageIds: [MessageId]?
     let selectionState: ChatInterfaceSelectionState?
     
     var chatListEmbeddedState: PeerChatListEmbeddedInterfaceState? {
-        return nil
+        if !self.inputState.inputText.isEmpty && self.timestamp != 0 {
+            return ChatEmbeddedInterfaceState(timestamp: self.timestamp, text: self.inputState.inputText)
+        } else {
+            return nil
+        }
     }
     
     init() {
+        self.timestamp = 0
         self.inputState = ChatTextInputState()
         self.replyMessageId = nil
         self.forwardMessageIds = nil
         self.selectionState = nil
     }
     
-    init(inputState: ChatTextInputState, replyMessageId: MessageId?, forwardMessageIds: [MessageId]?, selectionState: ChatInterfaceSelectionState?) {
+    init(timestamp: Int32, inputState: ChatTextInputState, replyMessageId: MessageId?, forwardMessageIds: [MessageId]?, selectionState: ChatInterfaceSelectionState?) {
+        self.timestamp = timestamp
         self.inputState = inputState
         self.replyMessageId = replyMessageId
         self.forwardMessageIds = forwardMessageIds
@@ -82,6 +117,7 @@ final class ChatInterfaceState: PeerChatInterfaceState, Equatable {
     }
     
     init(decoder: Decoder) {
+        self.timestamp = decoder.decodeInt32ForKey("ts")
         if let inputState = decoder.decodeObjectForKey("is", decoder: { return ChatTextInputState(decoder: $0) }) as? ChatTextInputState {
             self.inputState = inputState
         } else {
@@ -108,6 +144,7 @@ final class ChatInterfaceState: PeerChatInterfaceState, Equatable {
     }
     
     func encode(_ encoder: Encoder) {
+        encoder.encodeInt32(self.timestamp, forKey: "ts")
         encoder.encodeObject(self.inputState, forKey: "is")
         if let replyMessageId = self.replyMessageId {
             encoder.encodeInt64(replyMessageId.peerId.toInt64(), forKey: "r.p")
@@ -152,15 +189,15 @@ final class ChatInterfaceState: PeerChatInterfaceState, Equatable {
     }
     
     func withUpdatedInputState(_ inputState: ChatTextInputState) -> ChatInterfaceState {
-        return ChatInterfaceState(inputState: inputState, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, selectionState: self.selectionState)
+        return ChatInterfaceState(timestamp: self.timestamp, inputState: inputState, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, selectionState: self.selectionState)
     }
     
     func withUpdatedReplyMessageId(_ replyMessageId: MessageId?) -> ChatInterfaceState {
-        return ChatInterfaceState(inputState: self.inputState, replyMessageId: replyMessageId, forwardMessageIds: self.forwardMessageIds, selectionState: self.selectionState)
+        return ChatInterfaceState(timestamp: self.timestamp, inputState: self.inputState, replyMessageId: replyMessageId, forwardMessageIds: self.forwardMessageIds, selectionState: self.selectionState)
     }
     
     func withUpdatedForwardMessageIds(_ forwardMessageIds: [MessageId]?) -> ChatInterfaceState {
-        return ChatInterfaceState(inputState: self.inputState, replyMessageId: self.replyMessageId, forwardMessageIds: forwardMessageIds, selectionState: self.selectionState)
+        return ChatInterfaceState(timestamp: self.timestamp, inputState: self.inputState, replyMessageId: self.replyMessageId, forwardMessageIds: forwardMessageIds, selectionState: self.selectionState)
     }
     
     func withUpdatedSelectedMessage(_ messageId: MessageId) -> ChatInterfaceState {
@@ -169,7 +206,7 @@ final class ChatInterfaceState: PeerChatInterfaceState, Equatable {
             selectedIds.formUnion(selectionState.selectedIds)
         }
         selectedIds.insert(messageId)
-        return ChatInterfaceState(inputState: self.inputState, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, selectionState: ChatInterfaceSelectionState(selectedIds: selectedIds))
+        return ChatInterfaceState(timestamp: self.timestamp, inputState: self.inputState, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, selectionState: ChatInterfaceSelectionState(selectedIds: selectedIds))
     }
     
     func withToggledSelectedMessage(_ messageId: MessageId) -> ChatInterfaceState {
@@ -182,10 +219,14 @@ final class ChatInterfaceState: PeerChatInterfaceState, Equatable {
         } else {
             selectedIds.insert(messageId)
         }
-        return ChatInterfaceState(inputState: self.inputState, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, selectionState: ChatInterfaceSelectionState(selectedIds: selectedIds))
+        return ChatInterfaceState(timestamp: self.timestamp, inputState: self.inputState, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, selectionState: ChatInterfaceSelectionState(selectedIds: selectedIds))
     }
     
     func withoutSelectionState() -> ChatInterfaceState {
-        return ChatInterfaceState(inputState: self.inputState, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, selectionState: nil)
+        return ChatInterfaceState(timestamp: self.timestamp, inputState: self.inputState, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, selectionState: nil)
+    }
+    
+    func withUpdatedTimestamp(_ timestamp: Int32) -> ChatInterfaceState {
+        return ChatInterfaceState(timestamp: timestamp, inputState: self.inputState, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, selectionState: self.selectionState)
     }
 }

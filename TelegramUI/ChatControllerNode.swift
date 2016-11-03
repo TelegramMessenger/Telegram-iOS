@@ -144,6 +144,10 @@ class ChatControllerNode: ASDisplayNode {
         if let inputNode = self.inputNode {
             previousInputHeight = inputNode.bounds.size.height
         }
+        var previousInputPanelOrigin = CGPoint(x: 0.0, y: layout.size.height - previousInputHeight)
+        if let inputPanelNode = self.inputPanelNode {
+            previousInputPanelOrigin.y -= inputPanelNode.bounds.size.height
+        }
         self.containerLayoutAndNavigationBarHeight = (layout, navigationBarHeight)
         
         var dismissedInputNode: ChatInputNode?
@@ -261,7 +265,6 @@ class ChatControllerNode: ASDisplayNode {
                 }
                 
                 immediatelyLayoutAccessoryPanelAndAnimateAppearance = true
-                accessoryPanelNode.insets = UIEdgeInsets(top: 0.0, left: 45.0, bottom: 0.0, right: 54.0)
             }
         } else if let accessoryPanelNode = self.accessoryPanelNode {
             dismissedAccessoryPanelNode = self.accessoryPanelNode
@@ -322,7 +325,9 @@ class ChatControllerNode: ASDisplayNode {
         
         if let accessoryPanelNode = self.accessoryPanelNode, let accessoryPanelFrame = accessoryPanelFrame, !accessoryPanelNode.frame.equalTo(accessoryPanelFrame) {
             if immediatelyLayoutAccessoryPanelAndAnimateAppearance {
-                accessoryPanelNode.frame = accessoryPanelFrame.offsetBy(dx: 0.0, dy: accessoryPanelFrame.size.height)
+                var startAccessoryPanelFrame = accessoryPanelFrame
+                startAccessoryPanelFrame.origin.y = previousInputPanelOrigin.y
+                accessoryPanelNode.frame = startAccessoryPanelFrame
                 accessoryPanelNode.alpha = 0.0
             }
             

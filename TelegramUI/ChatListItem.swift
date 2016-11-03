@@ -11,22 +11,24 @@ class ChatListItem: ListViewItem {
     let message: Message
     let combinedReadState: CombinedPeerReadState?
     let notificationSettings: PeerNotificationSettings?
+    let embeddedState: PeerChatListEmbeddedInterfaceState?
     let action: (Message) -> Void
     
     let selectable: Bool = true
     
-    init(account: Account, message: Message, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, action: @escaping (Message) -> Void) {
+    init(account: Account, message: Message, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, embeddedState: PeerChatListEmbeddedInterfaceState?, action: @escaping (Message) -> Void) {
         self.account = account
         self.message = message
         self.combinedReadState = combinedReadState
         self.notificationSettings = notificationSettings
+        self.embeddedState = embeddedState
         self.action = action
     }
     
     func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> Void) -> Void) {
         async {
             let node = ChatListItemNode()
-            node.setupItem(account: self.account, message: self.message, combinedReadState: self.combinedReadState, notificationSettings: self.notificationSettings)
+            node.setupItem(account: self.account, message: self.message, combinedReadState: self.combinedReadState, notificationSettings: self.notificationSettings, embeddedState: self.embeddedState)
             node.relativePosition = (first: previousItem == nil, last: nextItem == nil)
             node.insets = ChatListItemNode.insets(first: node.relativePosition.first, last: node.relativePosition.last)
             node.layoutForWidth(width, item: self, previousItem: previousItem, nextItem: nextItem)
@@ -38,7 +40,7 @@ class ChatListItem: ListViewItem {
         assert(node is ChatListItemNode)
         if let node = node as? ChatListItemNode {
             Queue.mainQueue().async {
-                node.setupItem(account: self.account, message: self.message, combinedReadState: self.combinedReadState, notificationSettings: self.notificationSettings)
+                node.setupItem(account: self.account, message: self.message, combinedReadState: self.combinedReadState, notificationSettings: self.notificationSettings, embeddedState: self.embeddedState)
                 let layout = node.asyncLayout()
                 async {
                     let first = previousItem == nil
@@ -115,6 +117,7 @@ class ChatListItemNode: ListViewItemNode {
     var message: Message?
     var combinedReadState: CombinedPeerReadState?
     var notificationSettings: PeerNotificationSettings?
+    var embeddedState: PeerChatListEmbeddedInterfaceState?
     
     private let backgroundNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
@@ -205,11 +208,12 @@ class ChatListItemNode: ListViewItemNode {
         self.contentNode.addSubnode(self.mutedIconNode)
     }
     
-    func setupItem(account: Account, message: Message, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?) {
+    func setupItem(account: Account, message: Message, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, embeddedState: PeerChatListEmbeddedInterfaceState?) {
         self.account = account
         self.message = message
         self.combinedReadState = combinedReadState
         self.notificationSettings = notificationSettings
+        self.embeddedState = embeddedState
         
         let peer = message.peers[message.id.peerId]
         if let peer = peer {
@@ -280,6 +284,7 @@ class ChatListItemNode: ListViewItemNode {
         let message = self.message
         let combinedReadState = self.combinedReadState
         let notificationSettings = self.notificationSettings
+        let embeddedState = self.embeddedState
         
         return { account, width, first, last in
             var textAttributedString: NSAttributedString?
@@ -317,7 +322,12 @@ class ChatListItemNode: ListViewItemNode {
                 }
                 
                 let attributedText: NSAttributedString
-                if let author = message.author as? TelegramUser, let peer = peer, peer as? TelegramUser == nil {
+                if let embeddedState = embeddedState as? ChatEmbeddedInterfaceState {
+                    let mutableAttributedText = NSMutableAttributedString()
+                    mutableAttributedText.append(NSAttributedString(string: "Draft: ", font: textFont, textColor: UIColor(0xdd4b39)))
+                    mutableAttributedText.append(NSAttributedString(string: embeddedState.text, font: textFont, textColor: UIColor.black))
+                    attributedText = mutableAttributedText;
+                } else if let author = message.author as? TelegramUser, let peer = peer, peer as? TelegramUser == nil {
                     let peerText: NSString = (author.id == account?.peerId ? "You: " : author.compactDisplayTitle + ": ") as NSString
                     
                     let mutableAttributedText = NSMutableAttributedString(string: peerText.appending(messageText as String), attributes: [kCTFontAttributeName as String: textFont])

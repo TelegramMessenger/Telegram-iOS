@@ -391,17 +391,21 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             if self.sendButton.alpha.isZero {
                 self.sendButton.alpha = 1.0
                 self.micButton.alpha = 0.0
-                self.sendButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
-                self.sendButton.layer.animateSpring(from: NSNumber(value: Float(0.1)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.6)
-                self.micButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                if animated {
+                    self.sendButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                    self.sendButton.layer.animateSpring(from: NSNumber(value: Float(0.1)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.6)
+                    self.micButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                }
             }
         } else {
             if self.micButton.alpha.isZero {
                 self.micButton.alpha = 1.0
                 self.sendButton.alpha = 0.0
-                self.micButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
-                self.micButton.layer.animateSpring(from: NSNumber(value: Float(0.1)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.6)
-                self.sendButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                if animated {
+                    self.micButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                    self.micButton.layer.animateSpring(from: NSNumber(value: Float(0.1)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.6)
+                    self.sendButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                }
             }
         }
         

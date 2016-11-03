@@ -453,7 +453,8 @@ public class ChatController: ViewController {
         super.viewWillDisappear(animated)
         
         let peerId = self.peerId
-        let interfaceState = self.presentationInterfaceState.interfaceState
+        let timestamp = Int32(Date().timeIntervalSince1970)
+        let interfaceState = self.presentationInterfaceState.interfaceState.withUpdatedTimestamp(timestamp)
         self.account.postbox.modify({ modifier -> Void in
             modifier.updatePeerChatInterfaceState(peerId, update: { _ in
                 return interfaceState

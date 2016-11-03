@@ -27,6 +27,7 @@
 		D06879571DB8F22200424BBD /* FetchCachedRepresentations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06879561DB8F22200424BBD /* FetchCachedRepresentations.swift */; };
 		D073CE631DCBBE5D007511FD /* MessageSent.caf in Resources */ = {isa = PBXBuildFile; fileRef = D073CE621DCBBE5D007511FD /* MessageSent.caf */; };
 		D073CE651DCBC26B007511FD /* ServiceSoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D073CE641DCBC26B007511FD /* ServiceSoundManager.swift */; };
+		D073CE711DCBF23F007511FD /* DeclareEncodables.swift in Sources */ = {isa = PBXBuildFile; fileRef = D073CE701DCBF23F007511FD /* DeclareEncodables.swift */; };
 		D07A7DA31D957671005BCD27 /* ListMessageSnippetItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07A7DA21D957671005BCD27 /* ListMessageSnippetItemNode.swift */; };
 		D07A7DA51D95783C005BCD27 /* ListMessageNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07A7DA41D95783C005BCD27 /* ListMessageNode.swift */; };
 		D07CFF741DCA207200761F81 /* PeerSelectionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07CFF731DCA207200761F81 /* PeerSelectionController.swift */; };
@@ -256,6 +257,7 @@
 		D06879561DB8F22200424BBD /* FetchCachedRepresentations.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FetchCachedRepresentations.swift; sourceTree = "<group>"; };
 		D073CE621DCBBE5D007511FD /* MessageSent.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = MessageSent.caf; path = TelegramUI/Sounds/MessageSent.caf; sourceTree = "<group>"; };
 		D073CE641DCBC26B007511FD /* ServiceSoundManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ServiceSoundManager.swift; sourceTree = "<group>"; };
+		D073CE701DCBF23F007511FD /* DeclareEncodables.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeclareEncodables.swift; sourceTree = "<group>"; };
 		D07A7DA21D957671005BCD27 /* ListMessageSnippetItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListMessageSnippetItemNode.swift; sourceTree = "<group>"; };
 		D07A7DA41D95783C005BCD27 /* ListMessageNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListMessageNode.swift; sourceTree = "<group>"; };
 		D07CFF731DCA207200761F81 /* PeerSelectionController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerSelectionController.swift; sourceTree = "<group>"; };
@@ -1106,6 +1108,7 @@
 				D0B844571DAC44E8005F29E1 /* PeerPresenceStatusManager.swift */,
 				D0ED5D4A1DC806D7007CBB15 /* ApplicationSpecificData.swift */,
 				D073CE641DCBC26B007511FD /* ServiceSoundManager.swift */,
+				D073CE701DCBF23F007511FD /* DeclareEncodables.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -1432,6 +1435,7 @@
 				D0F69DFF1D6B8A880046BCD6 /* ChatListController.swift in Sources */,
 				D0E7A1C11D8C258D00C37A6F /* ChatHistoryEntriesForView.swift in Sources */,
 				D0F69DF11D6B8A6C0046BCD6 /* AuthorizationController.swift in Sources */,
+				D073CE711DCBF23F007511FD /* DeclareEncodables.swift in Sources */,
 				D0E7A1BF1D8C24B900C37A6F /* ChatHistoryViewForLocation.swift in Sources */,
 				D0F69E891D6B8C850046BCD6 /* FastBlur.m in Sources */,
 				D07CFF761DCA224100761F81 /* PeerSelectionControllerNode.swift in Sources */,

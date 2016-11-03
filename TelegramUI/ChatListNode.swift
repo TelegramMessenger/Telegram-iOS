@@ -37,10 +37,10 @@ private func mappedInsertEntries(account: Account, nodeInteraction: ChatListNode
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListSearchItem(placeholder: "Search for messages or users", activate: {
                     nodeInteraction.activateSearch()
                 }), directionHint: entry.directionHint)
-            case let .MessageEntry(message, combinedReadState, notificationSettings):
+            case let .MessageEntry(_, message, combinedReadState, notificationSettings, embeddedState):
                 switch mode {
                     case .chatList:
-                        return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(account: account, message: message, combinedReadState: combinedReadState, notificationSettings: notificationSettings, action: { _ in
+                        return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(account: account, message: message, combinedReadState: combinedReadState, notificationSettings: notificationSettings, embeddedState: embeddedState, action: { _ in
                             nodeInteraction.peerSelected(message.id.peerId)
                         }), directionHint: entry.directionHint)
                     case .peers:
@@ -63,10 +63,10 @@ private func mappedUpdateEntries(account: Account, nodeInteraction: ChatListNode
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListSearchItem(placeholder: "Search for messages or users", activate: {
                     nodeInteraction.activateSearch()
                 }), directionHint: entry.directionHint)
-            case let .MessageEntry(message, combinedReadState, notificationSettings):
+            case let .MessageEntry(_, message, combinedReadState, notificationSettings, embeddedState):
                 switch mode {
                     case .chatList:
-                        return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(account: account, message: message, combinedReadState: combinedReadState, notificationSettings: notificationSettings, action: { _ in
+                        return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(account: account, message: message, combinedReadState: combinedReadState, notificationSettings: notificationSettings, embeddedState: embeddedState, action: { _ in
                             nodeInteraction.peerSelected(message.id.peerId)
                         }), directionHint: entry.directionHint)
                     case .peers:
