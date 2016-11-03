@@ -1028,6 +1028,8 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             return ListViewBackingView()
         }, didLoad: nil)
         
+        self.clipsToBounds = true
+        
         (self.view as! ListViewBackingView).target = self
         
         self.transactionQueue.transactionCompleted = { [weak self] in
@@ -1997,12 +1999,12 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                         node.addInsetsAnimationToValue(layout.insets, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp)
                     }
                 } else {
-                    node.animateInsertion(timestamp, duration: insertionAnimationDuration * UIView.animationDurationFactor())
+                    node.animateInsertion(timestamp, duration: insertionAnimationDuration * UIView.animationDurationFactor(), short: false)
                 }
             }
         } else if animateAlpha && previousFrame == nil {
             if forceAnimateInsertion {
-                node.animateInsertion(timestamp, duration: insertionAnimationDuration * UIView.animationDurationFactor())
+                node.animateInsertion(timestamp, duration: insertionAnimationDuration * UIView.animationDurationFactor(), short: true)
             } else {
                 node.animateAdded(timestamp, duration: insertionAnimationDuration * UIView.animationDurationFactor())
             }
@@ -2063,9 +2065,15 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                     if let index = node.index, requestItemInsertionAnimationsIndices.contains(index) {
                         forceAnimateInsertion = true
                     }
-                    self.insertNodeAtIndex(animated: animated, animateAlpha: animateAlpha, forceAnimateInsertion: forceAnimateInsertion, previousFrame: previousFrame, nodeIndex: index, offsetDirection: offsetDirection, node: node, layout: layout, apply: apply, timestamp: timestamp)
+                    var updatedPreviousFrame = previousFrame
                     if let previousFrame = previousFrame, previousFrame.minY >= self.visibleSize.height || previousFrame.maxY < 0.0 {
-                        self.insertSubnode(node, at: 0)
+                        updatedPreviousFrame = nil
+                    }
+                    
+                    self.insertNodeAtIndex(animated: animated, animateAlpha: animateAlpha, forceAnimateInsertion: forceAnimateInsertion, previousFrame: updatedPreviousFrame, nodeIndex: index, offsetDirection: offsetDirection, node: node, layout: layout, apply: apply, timestamp: timestamp)
+                    if let updatedPreviousFrame = updatedPreviousFrame {
+                        //self.insertSubnode(node, at: 0)
+                        self.addSubnode(node)
                     } else {
                         if animated {
                             self.insertSubnode(node, at: 0)
@@ -2969,5 +2977,12 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
     
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         return true
+    }
+    
+    public func withTransaction(_ f: @escaping () -> Void) {
+        self.transactionQueue.addTransaction { completion in
+            f()
+            completion()
+        }
     }
 }

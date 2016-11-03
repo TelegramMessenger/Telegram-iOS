@@ -226,6 +226,19 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
         self.setViewControllers(controllers, animated: animated)
     }
     
+    public func replaceTopController(_ controller: ViewController, animated: Bool, ready: ValuePromise<Bool>?) {
+        controller.containerLayoutUpdated(self.containerLayout, transition: .immediate)
+        self.currentPushDisposable.set((controller.ready.get() |> take(1)).start(next: {[weak self] _ in
+            if let strongSelf = self {
+                ready?.set(true)
+                var controllers = strongSelf.viewControllers
+                controllers.removeLast()
+                controllers.append(controller)
+                strongSelf.setViewControllers(controllers, animated: animated)
+            }
+        }))
+    }
+    
     open override func popViewController(animated: Bool) -> UIViewController? {
         var controller: UIViewController?
         var controllers = self.viewControllers
@@ -325,14 +338,26 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
         } else {
             if let topController = self.viewControllers.last , topController.isViewLoaded {
                 topController.navigation_setNavigationController(nil)
+                topController.viewWillDisappear(false)
                 topController.view.removeFromSuperview()
+                topController.viewDidDisappear(false)
             }
             
             self._viewControllers = viewControllers
             
             if let topController = viewControllers.last {
+                if let topController = topController as? ViewController {
+                    if viewControllers.count >= 2 {
+                        topController.navigationBar.previousItem = viewControllers[viewControllers.count - 2].navigationItem
+                    } else {
+                        topController.navigationBar.previousItem = nil
+                    }
+                }
+                
                 topController.navigation_setNavigationController(self)
+                topController.viewWillAppear(false)
                 self.view.addSubview(topController.view)
+                topController.viewDidAppear(false)
             }
         }
     }

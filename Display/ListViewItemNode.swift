@@ -404,7 +404,7 @@ open class ListViewItemNode: ASDisplayNode {
         self.setAnimationForKey("transitionOffset", animation: animation)
     }
     
-    open func animateInsertion(_ currentTimestamp: Double, duration: Double) {
+    open func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
     }
     
     open func animateAdded(_ currentTimestamp: Double, duration: Double) {
