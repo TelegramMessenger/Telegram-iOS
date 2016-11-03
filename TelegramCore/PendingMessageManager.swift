@@ -16,9 +16,13 @@ public struct PendingMessageStatus: Equatable {
 }
 
 private final class PendingMessageContext {
-    var disposable: Disposable?
+    var disposable: MetaDisposable?
     var status: PendingMessageStatus?
     var statusSubscribers = Bag<(PendingMessageStatus?) -> Void>()
+}
+
+private final class PeerPendingMessagesSummaryContext {
+    var messageDeliveredSubscribers = Bag<(Void) -> Void>()
 }
 
 private enum PendingMessageResult {
@@ -40,152 +44,6 @@ private final class PendingMessageRequestDependencyTag: NetworkRequestDependency
     }
 }
 
-private func sendMessageContent(network: Network, postbox: Postbox, stateManager: StateManager, message: Message, content: PendingMessageUploadedContent) -> Signal<Void, NoError> {
-    let peer = postbox.loadedPeerWithId(message.id.peerId)
-        |> take(1)
-        
-    return peer
-        |> mapToSignal { peer -> Signal<Void, NoError> in
-            if let inputPeer = apiInputPeer(peer) {
-                var randomId: Int64 = 0
-                arc4random_buf(&randomId, 8)
-                
-                var replyMessageId: Int32?
-                for attribute in message.attributes {
-                    if let replyAttribute = attribute as? ReplyMessageAttribute {
-                        replyMessageId = replyAttribute.messageId.id
-                        break
-                    }
-                }
-                
-                var flags: Int32 = 0
-                if let replyMessageId = replyMessageId {
-                    flags |= Int32(1 << 0)
-                }
-                
-                let dependencyTag = PendingMessageRequestDependencyTag(messageId: message.id)
-                
-                var sendMessageRequest: Signal<Api.Updates, NoError>
-                switch content {
-                    case let .text(text):
-                        sendMessageRequest = network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: message.text, randomId: randomId, replyMarkup: nil, entities: nil), tag: dependencyTag)
-                            |> mapError { _ -> NoError in
-                                return NoError()
-                            }
-                    case let .media(inputMedia):
-                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: 0, peer: inputPeer, replyToMsgId: replyMessageId, media: inputMedia, randomId: randomId, replyMarkup: nil), tag: dependencyTag)
-                            |> mapError { _ -> NoError in
-                                return NoError()
-                            }
-                }
-                
-                return sendMessageRequest
-                    |> mapToSignal { result -> Signal<Void, NoError> in
-                        return applySentMessage(postbox: postbox, stateManager: stateManager, message: message, result: result)
-                    }
-                    |> `catch` { _ -> Signal<Void, NoError> in
-                        let modify = postbox.modify { modifier -> Void in
-                            modifier.updateMessage(message.id, update: { currentMessage in
-                                var storeForwardInfo: StoreMessageForwardInfo?
-                                if let forwardInfo = currentMessage.forwardInfo {
-                                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
-                                }
-                                return StoreMessage(id: message.id, timestamp: currentMessage.timestamp, flags: [.Failed], tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media)
-                            })
-                        }
-                        
-                        return modify
-                    }
-            } else {
-                return .complete()
-            }
-        }
-}
-
-private func applySentMessage(postbox: Postbox, stateManager: StateManager, message: Message, result: Api.Updates) -> Signal<Void, NoError> {
-    let messageId = result.rawMessageIds.first
-    let apiMessage = result.messages.first
-    
-    return postbox.modify { modifier -> Void in
-        var updatedTimestamp: Int32?
-        if let apiMessage = apiMessage {
-            switch apiMessage {
-                case let .message(_, _, _, _, _, _, _, date, _, _, _, _, _, _):
-                    updatedTimestamp = date
-                case .messageEmpty:
-                    break
-                case let .messageService(_, _, _, _, _, date, _):
-                    updatedTimestamp = date
-            }
-        } else {
-            switch result {
-                case let .updateShortSentMessage(_, _, _, _, date, _, _):
-                    updatedTimestamp = date
-                default:
-                    break
-            }
-        }
-
-        modifier.updateMessage(message.id, update: { currentMessage in
-            let updatedId: MessageId
-            if let messageId = messageId {
-                updatedId = MessageId(peerId: currentMessage.id.peerId, namespace: Namespaces.Message.Cloud, id: messageId)
-            } else {
-                updatedId = currentMessage.id
-            }
-            
-            let media: [Media]
-            let attributes: [MessageAttribute]
-            let text: String
-            if let apiMessage = apiMessage, let updatedMessage = StoreMessage(apiMessage: apiMessage) {
-                media = updatedMessage.media
-                attributes = updatedMessage.attributes
-                text = updatedMessage.text
-            } else if case let .updateShortSentMessage(_, _, _, _, _, apiMedia, entities) = result {
-                let (_, mediaValue) = textAndMediaFromApiMedia(apiMedia)
-                if let mediaValue = mediaValue {
-                    media = [mediaValue]
-                } else {
-                    media = []
-                }
-                
-                var updatedAttributes: [MessageAttribute] = currentMessage.attributes
-                if let entities = entities, !entities.isEmpty {
-                    for i in 0 ..< updatedAttributes.count {
-                        if updatedAttributes[i] is TextEntitiesMessageAttribute {
-                            updatedAttributes.remove(at: i)
-                            break
-                        }
-                    }
-                    updatedAttributes.append(TextEntitiesMessageAttribute(entities: messageTextEntitiesFromApiEntities(entities)))
-                }
-                attributes = updatedAttributes
-                text = currentMessage.text
-            } else {
-                media = currentMessage.media
-                attributes = currentMessage.attributes
-                text = currentMessage.text
-            }
-            
-            var storeForwardInfo: StoreMessageForwardInfo?
-            if let forwardInfo = currentMessage.forwardInfo {
-                storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
-            }
-            
-            if let fromMedia = currentMessage.media.first, let toMedia = media.first {
-                applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox)
-            }
-            
-            return StoreMessage(id: updatedId, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media)
-        })
-        if let updatedTimestamp = updatedTimestamp {
-            modifier.offsetPendingMessagesTimestamps(lowerBound: message.id, timestamp: updatedTimestamp)
-        }
-    } |> afterDisposed {
-        stateManager.addUpdates(result)
-    }
-}
-
 private func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox) {
     if let fromImage = from as? TelegramMediaImage, let toImage = to as? TelegramMediaImage {
         if let fromLargestRepresentation = largestImageRepresentation(fromImage.representations), let toLargestRepresentation = largestImageRepresentation(toImage.representations) {
@@ -203,11 +61,18 @@ public final class PendingMessageManager {
     
     private var messageContexts: [MessageId: PendingMessageContext] = [:]
     private var pendingMessageIds = Set<MessageId>()
+    private let beginSendingMessagesDisposables = DisposableSet()
+    
+    private var peerSummaryContexts: [PeerId: PeerPendingMessagesSummaryContext] = [:]
     
     init(network: Network, postbox: Postbox, stateManager: StateManager) {
         self.network = network
         self.postbox = postbox
         self.stateManager = stateManager
+    }
+    
+    deinit {
+        self.beginSendingMessagesDisposables.dispose()
     }
     
     func updatePendingMessageIds(_ messageIds: Set<MessageId>) {
@@ -226,9 +91,7 @@ public final class PendingMessageManager {
             }
             
             if !addedMessageIds.isEmpty {
-                for id in addedMessageIds {
-                    self.beginSendingMessage(id)
-                }
+                self.beginSendingMessages(Array(addedMessageIds).sorted())
             }
             
             self.pendingMessageIds = messageIds
@@ -245,6 +108,7 @@ public final class PendingMessageManager {
                     messageContext = current
                 } else {
                     messageContext = PendingMessageContext()
+                    messageContext.disposable = MetaDisposable()
                     self.messageContexts[id] = messageContext
                 }
                 
@@ -270,98 +134,296 @@ public final class PendingMessageManager {
         }
     }
     
-    private func beginSendingMessage(_ id: MessageId) {
+    private func beginSendingMessages(_ ids: [MessageId]) {
         assert(self.queue.isCurrent())
         
-        let messageContext: PendingMessageContext
-        if let current = self.messageContexts[id] {
-            messageContext = current
-        } else {
-            messageContext = PendingMessageContext()
-            self.messageContexts[id] = messageContext
-        }
-        
-        assert(messageContext.disposable == nil)
-        
-        let status = PendingMessageStatus(progress: 0.0)
-        if status != messageContext.status {
-            messageContext.status = status
-            for subscriber in messageContext.statusSubscribers.copyItems() {
-                subscriber(status)
+        for id in ids {
+            let messageContext: PendingMessageContext
+            if let current = self.messageContexts[id] {
+                messageContext = current
+            } else {
+                messageContext = PendingMessageContext()
+                messageContext.disposable = MetaDisposable()
+                self.messageContexts[id] = messageContext
             }
-        }
-        
-        let uploadedContent = self.postbox.messageAtId(id)
-            |> take(1)
-            |> mapToSignal { [weak self] message -> Signal<PendingMessageUploadedContentResult, NoError> in
-                if let strongSelf = self, let message = message {
-                    return uploadedMessageContent(network: strongSelf.network, postbox: strongSelf.postbox, message: message)
-                } else {
-                    return .complete()
+            
+            let status = PendingMessageStatus(progress: 0.0)
+            if status != messageContext.status {
+                messageContext.status = status
+                for subscriber in messageContext.statusSubscribers.copyItems() {
+                    subscriber(status)
                 }
             }
+        }
         
-        let peer = self.postbox.loadedPeerWithId(id.peerId)
-            |> take(1)
-        
-        let sendMessage = uploadedContent
-            |> mapToSignal { [weak self] contentResult -> Signal<PendingMessageResult, NoError> in
-                if let strongSelf = self {
-                    switch contentResult {
-                        case let .progress(progress):
-                            return .single(.progress(progress))
-                        case let .content(message, content):
-                            return sendMessageContent(network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, message: message, content: content)
-                                |> map { next -> PendingMessageResult in
-                                    return .progress(1.0)
-                                }
-                    }
-                } else {
-                    return .complete()
+        let disposable = MetaDisposable()
+        let messages = self.postbox.messagesAtIds(ids)
+            |> deliverOn(self.queue)
+            |> afterDisposed { [weak self, weak disposable] in
+                if let strongSelf = self, let strongDisposable = disposable {
+                    strongSelf.beginSendingMessagesDisposables.remove(strongDisposable)
                 }
             }
-        
-        messageContext.disposable = (sendMessage |> deliverOn(self.queue)).start(next: { [weak self] next in
+        self.beginSendingMessagesDisposables.add(disposable)
+        disposable.set(messages.start(next: { [weak self] messages in
             if let strongSelf = self {
                 assert(strongSelf.queue.isCurrent())
                 
-                switch next {
-                    case let .progress(progress):
-                        if let current = strongSelf.messageContexts[id] {
-                            let status = PendingMessageStatus(progress: progress)
-                            current.status = status
-                            for subscriber in current.statusSubscribers.copyItems() {
-                                subscriber(status)
+                for message in messages {
+                    guard let peer = message.peers[message.id.peerId], let messageContext = strongSelf.messageContexts[message.id] else {
+                        continue
+                    }
+                    
+                    let uploadedContent = uploadedMessageContent(network: strongSelf.network, postbox: strongSelf.postbox, message: message)
+                    
+                    let sendMessage = uploadedContent
+                        |> mapToSignal { contentResult -> Signal<PendingMessageResult, NoError> in
+                            if let strongSelf = self {
+                                switch contentResult {
+                                    case let .progress(progress):
+                                        return .single(.progress(progress))
+                                    case let .content(message, content):
+                                        return strongSelf.sendMessageContent(network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, message: message, content: content)
+                                            |> map { next -> PendingMessageResult in
+                                                return .progress(1.0)
+                                            }
+                                }
+                            } else {
+                                return .complete()
+                            }
+                    }
+                    
+                    messageContext.disposable?.set((sendMessage |> deliverOn(strongSelf.queue) |> afterDisposed {
+                        if let strongSelf = self {
+                            assert(strongSelf.queue.isCurrent())
+                            if let current = strongSelf.messageContexts[message.id] {
+                                current.disposable = nil
+                                for subscriber in current.statusSubscribers.copyItems() {
+                                    subscriber(nil)
+                                }
+                                if current.statusSubscribers.isEmpty {
+                                    strongSelf.messageContexts.removeValue(forKey: message.id)
+                                }
                             }
                         }
+                    }).start(next: { next in
+                        if let strongSelf = self {
+                            assert(strongSelf.queue.isCurrent())
+                            
+                            switch next {
+                                case let .progress(progress):
+                                    if let current = strongSelf.messageContexts[message.id] {
+                                        let status = PendingMessageStatus(progress: progress)
+                                        current.status = status
+                                        for subscriber in current.statusSubscribers.copyItems() {
+                                            subscriber(status)
+                                        }
+                                    }
+                            }
+                        }
+                    }))
                 }
             }
-        }, error: { [weak self] error in
+        }))
+    }
+    
+    private func sendMessageContent(network: Network, postbox: Postbox, stateManager: StateManager, message: Message, content: PendingMessageUploadedContent) -> Signal<Void, NoError> {
+        return postbox.modify { [weak self] modifier -> Signal<Void, NoError> in
+            if let peer = modifier.getPeer(message.id.peerId), let inputPeer = apiInputPeer(peer) {
+                var uniqueId: Int64 = 0
+                var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
+                var replyMessageId: Int32?
+                
+                for attribute in message.attributes {
+                    if let replyAttribute = attribute as? ReplyMessageAttribute {
+                        replyMessageId = replyAttribute.messageId.id
+                    } else if let outgoingInfo = attribute as? OutgoingMessageInfoAttribute {
+                        uniqueId = outgoingInfo.uniqueId
+                    } else if let forwardSourceInfo = attribute as? ForwardSourceInfoAttribute {
+                        forwardSourceInfoAttribute = forwardSourceInfo
+                    }
+                }
+                
+                var flags: Int32 = 0
+                if let replyMessageId = replyMessageId {
+                    flags |= Int32(1 << 0)
+                }
+                
+                let dependencyTag = PendingMessageRequestDependencyTag(messageId: message.id)
+                
+                let sendMessageRequest: Signal<Api.Updates, NoError>
+                switch content {
+                case let .text(text):
+                    sendMessageRequest = network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: nil), tag: dependencyTag)
+                        |> mapError { _ -> NoError in
+                            return NoError()
+                    }
+                case let .media(inputMedia):
+                    sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: 0, peer: inputPeer, replyToMsgId: replyMessageId, media: inputMedia, randomId: uniqueId, replyMarkup: nil), tag: dependencyTag)
+                        |> mapError { _ -> NoError in
+                            return NoError()
+                        }
+                case let .forward(sourceInfo):
+                    if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = modifier.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
+                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: 0, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer), tag: dependencyTag)
+                            |> mapError { _ -> NoError in
+                                return NoError()
+                            }
+                    } else {
+                        sendMessageRequest = .fail(NoError())
+                    }
+                }
+                
+                return sendMessageRequest
+                    |> mapToSignal { result -> Signal<Void, NoError> in
+                        if let strongSelf = self {
+                            return strongSelf.applySentMessage(postbox: postbox, stateManager: stateManager, message: message, result: result)
+                        } else {
+                            return .never()
+                        }
+                    }
+                    |> `catch` { _ -> Signal<Void, NoError> in
+                        let modify = postbox.modify { modifier -> Void in
+                            modifier.updateMessage(message.id, update: { currentMessage in
+                                var storeForwardInfo: StoreMessageForwardInfo?
+                                if let forwardInfo = currentMessage.forwardInfo {
+                                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
+                                }
+                                return StoreMessage(id: message.id, timestamp: currentMessage.timestamp, flags: [.Failed], tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: currentMessage.attributes, media: currentMessage.media)
+                            })
+                        }
+                        
+                        return modify
+                }
+            } else {
+                return .complete()
+            }
+        } |> switchToLatest
+    }
+    
+    private func applySentMessage(postbox: Postbox, stateManager: StateManager, message: Message, result: Api.Updates) -> Signal<Void, NoError> {
+        let messageId = result.rawMessageIds.first
+        let apiMessage = result.messages.first
+        
+        return postbox.modify { modifier -> Void in
+            var updatedTimestamp: Int32?
+            if let apiMessage = apiMessage {
+                switch apiMessage {
+                case let .message(_, _, _, _, _, _, _, date, _, _, _, _, _, _):
+                    updatedTimestamp = date
+                case .messageEmpty:
+                    break
+                case let .messageService(_, _, _, _, _, date, _):
+                    updatedTimestamp = date
+                }
+            } else {
+                switch result {
+                case let .updateShortSentMessage(_, _, _, _, date, _, _):
+                    updatedTimestamp = date
+                default:
+                    break
+                }
+            }
+            
+            modifier.updateMessage(message.id, update: { currentMessage in
+                let updatedId: MessageId
+                if let messageId = messageId {
+                    updatedId = MessageId(peerId: currentMessage.id.peerId, namespace: Namespaces.Message.Cloud, id: messageId)
+                } else {
+                    updatedId = currentMessage.id
+                }
+                
+                let media: [Media]
+                let attributes: [MessageAttribute]
+                let text: String
+                if let apiMessage = apiMessage, let updatedMessage = StoreMessage(apiMessage: apiMessage) {
+                    media = updatedMessage.media
+                    attributes = updatedMessage.attributes
+                    text = updatedMessage.text
+                } else if case let .updateShortSentMessage(_, _, _, _, _, apiMedia, entities) = result {
+                    let (_, mediaValue) = textAndMediaFromApiMedia(apiMedia)
+                    if let mediaValue = mediaValue {
+                        media = [mediaValue]
+                    } else {
+                        media = []
+                    }
+                    
+                    var updatedAttributes: [MessageAttribute] = currentMessage.attributes
+                    if let entities = entities, !entities.isEmpty {
+                        for i in 0 ..< updatedAttributes.count {
+                            if updatedAttributes[i] is TextEntitiesMessageAttribute {
+                                updatedAttributes.remove(at: i)
+                                break
+                            }
+                        }
+                        updatedAttributes.append(TextEntitiesMessageAttribute(entities: messageTextEntitiesFromApiEntities(entities)))
+                    }
+                    attributes = updatedAttributes
+                    text = currentMessage.text
+                } else {
+                    media = currentMessage.media
+                    attributes = currentMessage.attributes
+                    text = currentMessage.text
+                }
+                
+                var storeForwardInfo: StoreMessageForwardInfo?
+                if let forwardInfo = currentMessage.forwardInfo {
+                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
+                }
+                
+                if let fromMedia = currentMessage.media.first, let toMedia = media.first {
+                    applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox)
+                }
+                
+                return StoreMessage(id: updatedId, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media)
+            })
+            if let updatedTimestamp = updatedTimestamp {
+                modifier.offsetPendingMessagesTimestamps(lowerBound: message.id, timestamp: updatedTimestamp)
+            }
+        } |> afterDisposed { [weak self] in
+            stateManager.addUpdates(result)
             if let strongSelf = self {
-                assert(strongSelf.queue.isCurrent())
-                if let current = strongSelf.messageContexts[id] {
-                    current.disposable = nil
-                    for subscriber in current.statusSubscribers.copyItems() {
-                        subscriber(nil)
-                    }
-                    if current.statusSubscribers.isEmpty {
-                        strongSelf.messageContexts.removeValue(forKey: id)
+                strongSelf.queue.async {
+                    if let context = strongSelf.peerSummaryContexts[message.id.peerId] {
+                        for subscriber in context.messageDeliveredSubscribers.copyItems() {
+                            subscriber(Void())
+                        }
                     }
                 }
             }
-        }, completed: { [weak self] in
-            if let strongSelf = self {
-                assert(strongSelf.queue.isCurrent())
-                if let current = strongSelf.messageContexts[id] {
-                    current.disposable = nil
-                    for subscriber in current.statusSubscribers.copyItems() {
-                        subscriber(nil)
-                    }
-                    if current.statusSubscribers.isEmpty {
-                        strongSelf.messageContexts.removeValue(forKey: id)
-                    }
+        }
+    }
+    
+    public func deliveredMessageEvents(peerId: PeerId) -> Signal<Bool, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.queue.async {
+                let summaryContext: PeerPendingMessagesSummaryContext
+                if let current = self.peerSummaryContexts[peerId] {
+                    summaryContext = current
+                } else {
+                    summaryContext = PeerPendingMessagesSummaryContext()
+                    self.peerSummaryContexts[peerId] = summaryContext
                 }
+                
+                let index = summaryContext.messageDeliveredSubscribers.add({ _ in
+                    subscriber.putNext(true)
+                })
+                
+                disposable.set(ActionDisposable {
+                    self.queue.async {
+                        if let current = self.peerSummaryContexts[peerId] {
+                            current.messageDeliveredSubscribers.remove(index)
+                            if current.messageDeliveredSubscribers.isEmpty {
+                                self.peerSummaryContexts.removeValue(forKey: peerId)
+                            }
+                        }
+                    }
+                })
             }
-        })
+            
+            return disposable
+        }
     }
 }
