@@ -35,6 +35,9 @@ public class ChatController: ViewController {
     private var controllerInteraction: ChatControllerInteraction?
     private var interfaceInteraction: ChatPanelInterfaceInteraction?
     
+    private let controllerNavigationDisposable = MetaDisposable()
+    private let sentMessageEventsDisposable = MetaDisposable()
+    
     public init(account: Account, peerId: PeerId, messageId: MessageId? = nil) {
         self.account = account
         self.peerId = peerId
@@ -164,7 +167,7 @@ public class ChatController: ViewController {
         }, sendSticker: { [weak self] file in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({})
-                enqueueMessage(account: strongSelf.account, peerId: strongSelf.peerId, text: "", replyMessageId: nil, media: file).start()
+                enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", media: file, replyToMessageId: nil)]).start()
             }
         })
         
@@ -178,7 +181,7 @@ public class ChatController: ViewController {
         chatInfoButtonItem.action = #selector(self.rightNavigationButtonAction)
         self.chatInfoNavigationButton = ChatNavigationButton(action: .openChatInfo, buttonItem: chatInfoButtonItem)
         
-        self.updateChatPresentationInterfaceState(animated: false,  interactive: false, { return $0 })
+        self.updateChatPresentationInterfaceState(animated: false, interactive: false, { return $0 })
         
         self.peerView.set(account.viewTracker.peerView(peerId))
         
@@ -207,6 +210,8 @@ public class ChatController: ViewController {
         self.navigationActionDisposable.dispose()
         self.galleryHiddenMesageAndMediaDisposable.dispose()
         self.peerDisposable.dispose()
+        self.controllerNavigationDisposable.dispose()
+        self.sentMessageEventsDisposable.dispose()
     }
     
     var chatDisplayNode: ChatControllerNode {
@@ -218,7 +223,19 @@ public class ChatController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = ChatControllerNode(account: self.account, peerId: self.peerId, messageId: self.messageId, controllerInteraction: self.controllerInteraction!)
         
-        self.ready.set(combineLatest(self.chatDisplayNode.historyNode.historyReady.get(), self._peerReady.get()) |> map { $0 && $1 })
+        let initialData = self.chatDisplayNode.historyNode.initialData
+            |> take(1)
+            |> beforeNext { [weak self] initialData in
+                if let strongSelf = self, let initialData = initialData {
+                    if let interfaceState = initialData.chatInterfaceState as? ChatInterfaceState {
+                        strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { $0.updatedInterfaceState({ _ in return interfaceState }) })
+                    }
+                }
+            }
+        
+        self.ready.set(combineLatest(self.chatDisplayNode.historyNode.historyReady.get(), self._peerReady.get(), initialData) |> map { historyReady, peerReady, _ in
+            return historyReady && peerReady
+        })
         
         self.chatDisplayNode.historyNode.visibleContentOffsetChanged = { [weak self] offset in
             if let strongSelf = self {
@@ -282,7 +299,7 @@ public class ChatController: ViewController {
                             stationaryItemRange = (maxInsertedItem + 1, Int.max)
                         }
                         
-                        mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange), updateSizeAndInsets)
+                        mappedTransition = (ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: deleteItems, insertItems: insertItems, updateItems: transition.updateItems, options: options, scrollToItem: scrollToItem, stationaryItemRange: stationaryItemRange, initialData: transition.initialData), updateSizeAndInsets)
                     })
                     
                     if let mappedTransition = mappedTransition {
@@ -309,7 +326,7 @@ public class ChatController: ViewController {
                         let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier)
                         let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: scaledSize, resource: resource)])
                         strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({})
-                        enqueueMessage(account: strongSelf.account, peerId: strongSelf.peerId, text: "", replyMessageId: nil, media: media).start()
+                        enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", media: media, replyToMessageId: nil)]).start()
                     }
                 }
                 controller.location = { [weak strongSelf] in
@@ -356,8 +373,48 @@ public class ChatController: ViewController {
             }
         }, forwardSelectedMessages: { [weak self] in
             if let strongSelf = self {
-                let controller = ShareRecipientsActionSheetController()
-                strongSelf.present(controller, in: .window)
+                //let controller = ShareRecipientsActionSheetController()
+                //strongSelf.present(controller, in: .window)
+                
+                if let forwardMessageIdsSet = strongSelf.presentationInterfaceState.interfaceState.selectionState?.selectedIds {
+                    let forwardMessageIds = Array(forwardMessageIdsSet).sorted()
+                    
+                    let controller = PeerSelectionController(account: strongSelf.account)
+                    controller.peerSelected = { [weak controller] peerId in
+                        if let strongSelf = self, let strongController = controller {
+                            if peerId == strongSelf.peerId {
+                                strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(forwardMessageIds).withoutSelectionState() }) })
+                                strongController.dismiss()
+                            } else {
+                                (strongSelf.account.postbox.modify({ modifier -> Void in
+                                    modifier.updatePeerChatInterfaceState(peerId, update: { currentState in
+                                        if let currentState = currentState as? ChatInterfaceState {
+                                            return currentState.withUpdatedForwardMessageIds(forwardMessageIds)
+                                        } else {
+                                            return ChatInterfaceState().withUpdatedForwardMessageIds(forwardMessageIds)
+                                        }
+                                        return currentState
+                                    })
+                                }) |> deliverOnMainQueue).start(completed: {
+                                    if let strongSelf = self {
+                                        strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
+                                        
+                                        let ready = ValuePromise<Bool>()
+                                        
+                                        strongSelf.controllerNavigationDisposable.set((ready.get() |> take(1) |> deliverOnMainQueue).start(next: { _ in
+                                            if let strongController = controller {
+                                                strongController.dismiss()
+                                            }
+                                        }))
+                                        
+                                        (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatController(account: strongSelf.account, peerId: peerId), animated: false, ready: ready)
+                                    }
+                                })
+                            }
+                        }
+                    }
+                    strongSelf.present(controller, in: .window)
+                }
             }
         }, updateTextInputState: { [weak self] textInputState in
             if let strongSelf = self {
@@ -373,6 +430,10 @@ public class ChatController: ViewController {
         self.chatDisplayNode.interfaceInteraction = interfaceInteraction
         
         self.displayNodeDidLoad()
+        
+        self.sentMessageEventsDisposable.set(self.account.pendingMessageManager.deliveredMessageEvents(peerId: self.peerId).start(next: { _ in
+            serviceSoundManager.playMessageDeliveredSound()
+        }))
     }
     
     override public func viewWillAppear(_ animated: Bool) {
@@ -386,6 +447,18 @@ public class ChatController: ViewController {
         self.chatDisplayNode.historyNode.canReadHistory.set(true)
         
         self.chatDisplayNode.loadInputPanels()
+    }
+    
+    override public func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        let peerId = self.peerId
+        let interfaceState = self.presentationInterfaceState.interfaceState
+        self.account.postbox.modify({ modifier -> Void in
+            modifier.updatePeerChatInterfaceState(peerId, update: { _ in
+                return interfaceState
+            })
+        }).start()
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

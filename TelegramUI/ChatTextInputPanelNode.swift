@@ -102,22 +102,37 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     private var presentationInterfaceState = ChatPresentationInterfaceState()
     
+    private var keepSendButtonEnabled = false
+    
     var inputTextState: ChatTextInputState {
-        get {
-            if let textInputNode = self.textInputNode {
-                let text = textInputNode.attributedText?.string ?? ""
-                let selectionRange: Range<Int> = textInputNode.selectedRange.location ..< (textInputNode.selectedRange.location + textInputNode.selectedRange.length)
-                return ChatTextInputState(inputText: text, selectionRange: selectionRange)
-            } else {
-                return ChatTextInputState()
-            }
-        } set(value) {
-            if let textInputNode = self.textInputNode {
-                self.updatingInputState = true
-                textInputNode.attributedText = NSAttributedString(string: value.inputText, font: Font.regular(17.0), textColor: UIColor.black)
-                textInputNode.selectedRange = NSMakeRange(value.selectionRange.lowerBound, value.selectionRange.count)
-                self.updatingInputState = false
-            }
+        if let textInputNode = self.textInputNode {
+            let text = textInputNode.attributedText?.string ?? ""
+            let selectionRange: Range<Int> = textInputNode.selectedRange.location ..< (textInputNode.selectedRange.location + textInputNode.selectedRange.length)
+            return ChatTextInputState(inputText: text, selectionRange: selectionRange)
+        } else {
+            return ChatTextInputState()
+        }
+    }
+    
+    func updateInputTextState(_ state: ChatTextInputState, keepSendButtonEnabled: Bool, animated: Bool) {
+        if !state.inputText.isEmpty && self.textInputNode == nil {
+            self.loadTextInputNode()
+        }
+        
+        if let textInputNode = self.textInputNode {
+            self.updatingInputState = true
+            textInputNode.attributedText = NSAttributedString(string: state.inputText, font: Font.regular(17.0), textColor: UIColor.black)
+            textInputNode.selectedRange = NSMakeRange(state.selectionRange.lowerBound, state.selectionRange.count)
+            self.updatingInputState = false
+            self.keepSendButtonEnabled = keepSendButtonEnabled
+            self.updateTextNodeText(animated: animated)
+        }
+    }
+    
+    func updateKeepSendButtonEnabled(keepSendButtonEnabled: Bool, animated: Bool) {
+        if keepSendButtonEnabled != self.keepSendButtonEnabled {
+            self.keepSendButtonEnabled = keepSendButtonEnabled
+            self.updateTextNodeText(animated: animated)
         }
     }
     
@@ -360,33 +375,40 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     @objc func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
         if let textInputNode = self.textInputNode {
-            self.textPlaceholderNode.isHidden = editableTextNode.attributedText?.length ?? 0 != 0
-            
-            if let text = self.textInputNode?.attributedText, text.length != 0 {
-                if self.sendButton.alpha.isZero {
-                    self.sendButton.alpha = 1.0
-                    self.micButton.alpha = 0.0
-                    self.sendButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
-                    self.sendButton.layer.animateSpring(from: NSNumber(value: Float(0.1)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.6)
-                    self.micButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
-                }
-            } else {
-                if self.micButton.alpha.isZero {
-                    self.micButton.alpha = 1.0
-                    self.sendButton.alpha = 0.0
-                    self.micButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
-                    self.micButton.layer.animateSpring(from: NSNumber(value: Float(0.1)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.6)
-                    self.sendButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
-                }
-            }
-            
             self.interfaceInteraction?.updateTextInputState(self.inputTextState)
-            
-            let (accessoryButtonsWidth, textFieldHeight) = self.calculateTextFieldMetrics(width: self.bounds.size.width)
-            let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight)
-            if !self.bounds.size.height.isEqual(to: panelHeight) {
-                self.updateHeight()
+            self.updateTextNodeText(animated: true)
+        }
+    }
+    
+    private func updateTextNodeText(animated: Bool) {
+        var hasText = false
+        if let textInputNode = self.textInputNode, let attributedText = textInputNode.attributedText, attributedText.length != 0 {
+            hasText = true
+        }
+        self.textPlaceholderNode.isHidden = hasText
+        
+        if hasText || self.keepSendButtonEnabled {
+            if self.sendButton.alpha.isZero {
+                self.sendButton.alpha = 1.0
+                self.micButton.alpha = 0.0
+                self.sendButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                self.sendButton.layer.animateSpring(from: NSNumber(value: Float(0.1)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.6)
+                self.micButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
             }
+        } else {
+            if self.micButton.alpha.isZero {
+                self.micButton.alpha = 1.0
+                self.sendButton.alpha = 0.0
+                self.micButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                self.micButton.layer.animateSpring(from: NSNumber(value: Float(0.1)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.6)
+                self.sendButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+            }
+        }
+        
+        let (accessoryButtonsWidth, textFieldHeight) = self.calculateTextFieldMetrics(width: self.bounds.size.width)
+        let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight)
+        if !self.bounds.size.height.isEqual(to: panelHeight) {
+            self.updateHeight()
         }
     }
     
@@ -412,9 +434,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     @objc func sendButtonPressed() {
         let text = self.textInputNode?.attributedText?.string ?? ""
-        if !text.isEmpty {
-            self.sendMessage()
-        }
+        self.sendMessage()
     }
     
     @objc func attachmentButtonPressed() {

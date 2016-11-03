@@ -4,8 +4,9 @@ import Display
 import Postbox
 import TelegramCore
 
-class ChatListControllerNode: ASDisplayNode {
+final class PeerSelectionControllerNode: ASDisplayNode {
     private let account: Account
+    private let dismiss: () -> Void
     
     let chatListNode: ChatListNode
     var navigationBar: NavigationBar?
@@ -18,9 +19,10 @@ class ChatListControllerNode: ASDisplayNode {
     var requestOpenPeerFromSearch: ((PeerId) -> Void)?
     var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
     
-    init(account: Account) {
+    init(account: Account, dismiss: @escaping () -> Void) {
         self.account = account
-        self.chatListNode = ChatListNode(account: account, mode: .chatList)
+        self.dismiss = dismiss
+        self.chatListNode = ChatListNode(account: account, mode: .peers)
         
         super.init(viewBlock: {
             return UITracingLayerView()
@@ -41,16 +43,16 @@ class ChatListControllerNode: ASDisplayNode {
         var duration: Double = 0.0
         var curve: UInt = 0
         switch transition {
-            case .immediate:
+        case .immediate:
+            break
+        case let .animated(animationDuration, animationCurve):
+            duration = animationDuration
+            switch animationCurve {
+            case .easeInOut:
                 break
-            case let .animated(animationDuration, animationCurve):
-                duration = animationDuration
-                switch animationCurve {
-                    case .easeInOut:
-                        break
-                    case .spring:
-                        curve = 7
-                }
+            case .spring:
+                curve = 7
+            }
         }
         
         let listViewCurve: ListViewAnimationCurve
@@ -91,10 +93,10 @@ class ChatListControllerNode: ASDisplayNode {
                 if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
                     requestOpenPeerFromSearch(peerId)
                 }
-            }, openMessage: { [weak self] peer, messageId in
-                if let requestOpenMessageFromSearch = self?.requestOpenMessageFromSearch {
-                    requestOpenMessageFromSearch(peer, messageId)
-                }
+                }, openMessage: { [weak self] peer, messageId in
+                    if let requestOpenMessageFromSearch = self?.requestOpenMessageFromSearch {
+                        requestOpenMessageFromSearch(peer, messageId)
+                    }
             }), cancel: { [weak self] in
                 if let requestDeactivateSearch = self?.requestDeactivateSearch {
                     requestDeactivateSearch()
@@ -120,5 +122,18 @@ class ChatListControllerNode: ASDisplayNode {
             searchDisplayController.deactivate(placeholder: maybePlaceholderNode)
             self.searchDisplayController = nil
         }
+    }
+    
+    func animateIn() {
+        self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak self] _ in
+        })
+    }
+    
+    func animateOut() {
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { [weak self] _ in
+            if let strongSelf = self {
+                strongSelf.dismiss()
+            }
+        })
     }
 }

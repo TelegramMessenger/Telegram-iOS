@@ -21,8 +21,8 @@ enum ChatHistoryViewUpdateType {
 }
 
 enum ChatHistoryViewUpdate {
-    case Loading
-    case HistoryView(view: MessageHistoryView, type: ChatHistoryViewUpdateType, scrollPosition: ChatHistoryViewScrollPosition?)
+    case Loading(initialData: InitialMessageHistoryData?)
+    case HistoryView(view: MessageHistoryView, type: ChatHistoryViewUpdateType, scrollPosition: ChatHistoryViewScrollPosition?, initialData: InitialMessageHistoryData?)
 }
 
 struct ChatHistoryView {
@@ -59,6 +59,7 @@ struct ChatHistoryViewTransition {
     let options: ListViewDeleteAndInsertOptions
     let scrollToItem: ListViewScrollToItem?
     let stationaryItemRange: (Int, Int)?
+    let initialData: InitialMessageHistoryData?
 }
 
 struct ChatHistoryListViewTransition {
@@ -69,6 +70,7 @@ struct ChatHistoryListViewTransition {
     let options: ListViewDeleteAndInsertOptions
     let scrollToItem: ListViewScrollToItem?
     let stationaryItemRange: (Int, Int)?
+    let initialData: InitialMessageHistoryData?
 }
 
 private func maxIncomingMessageIdForEntries(_ entries: [ChatHistoryEntry], indexRange: (Int, Int)) -> MessageId? {
@@ -121,7 +123,7 @@ private func mappedUpdateEntries(account: Account, peerId: PeerId, controllerInt
 }
 
 private func mappedChatHistoryViewListTransition(account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, mode: ChatHistoryListMode, transition: ChatHistoryViewTransition) -> ChatHistoryListViewTransition {
-    return ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: transition.deleteItems, insertItems: mappedInsertEntries(account: account, peerId: peerId, controllerInteraction: controllerInteraction, mode: mode, entries: transition.insertEntries), updateItems: mappedUpdateEntries(account: account, peerId: peerId, controllerInteraction: controllerInteraction, mode: mode, entries: transition.updateEntries), options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange)
+    return ChatHistoryListViewTransition(historyView: transition.historyView, deleteItems: transition.deleteItems, insertItems: mappedInsertEntries(account: account, peerId: peerId, controllerInteraction: controllerInteraction, mode: mode, entries: transition.insertEntries), updateItems: mappedUpdateEntries(account: account, peerId: peerId, controllerInteraction: controllerInteraction, mode: mode, entries: transition.updateEntries), options: transition.options, scrollToItem: transition.scrollToItem, stationaryItemRange: transition.stationaryItemRange, initialData: transition.initialData)
 }
 
 private final class ChatHistoryTransactionOpaqueState {
@@ -152,6 +154,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     public let historyReady = Promise<Bool>()
     private var didSetHistoryReady = false
+    
+    private let _initialData = Promise<InitialMessageHistoryData?>()
+    private var didSetInitialData = false
+    public var initialData: Signal<InitialMessageHistoryData?, NoError> {
+        return self._initialData.get()
+    }
     
     private let maxVisibleIncomingMessageId = ValuePromise<MessageId>()
     let canReadHistory = ValuePromise<Bool>()
@@ -191,7 +199,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             |> mapToSignal { location in
                 return chatHistoryViewForLocation(location, account: account, peerId: peerId, fixedCombinedReadState: fixedCombinedReadState.with { $0 }, tagMask: tagMask) |> beforeNext { viewUpdate in
                     switch viewUpdate {
-                        case let .HistoryView(view, _, _):
+                        case let .HistoryView(view, _, _, _):
                             let _ = fixedCombinedReadState.swap(view.combinedReadState)
                         default:
                             break
@@ -202,10 +210,16 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         let previousView = Atomic<ChatHistoryView?>(value: nil)
         
         let historyViewTransition = historyViewUpdate |> mapToQueue { [weak self] update -> Signal<ChatHistoryListViewTransition, NoError> in
+            let initialData: InitialMessageHistoryData?
             switch update {
-            case .Loading:
+            case let .Loading(data):
+                initialData = data
                 Queue.mainQueue().async { [weak self] in
                     if let strongSelf = self {
+                        if !strongSelf.didSetInitialData {
+                            strongSelf.didSetInitialData = true
+                            strongSelf._initialData.set(.single(data))
+                        }
                         if !strongSelf.didSetHistoryReady {
                             strongSelf.didSetHistoryReady = true
                             strongSelf.historyReady.set(.single(true))
@@ -213,7 +227,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     }
                 }
                 return .complete()
-            case let .HistoryView(view, type, scrollPosition):
+            case let .HistoryView(view, type, scrollPosition, data):
+                initialData = data
                 let reason: ChatHistoryViewTransitionReason
                 var prepareOnMainQueue = false
                 switch type {
@@ -236,7 +251,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(view, includeUnreadEntry: mode == .bubbles))
                 let previous = previousView.swap(processedView)
                 
-                return preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, account: account, peerId: peerId, controllerInteraction: controllerInteraction, scrollPosition: scrollPosition) |> map({ mappedChatHistoryViewListTransition(account: account, peerId: peerId, controllerInteraction: controllerInteraction, mode: mode, transition: $0) }) |> runOn(prepareOnMainQueue ? Queue.mainQueue() : messageViewQueue)
+                return preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, account: account, peerId: peerId, controllerInteraction: controllerInteraction, scrollPosition: scrollPosition, initialData: initialData) |> map({ mappedChatHistoryViewListTransition(account: account, peerId: peerId, controllerInteraction: controllerInteraction, mode: mode, transition: $0) }) |> runOn(prepareOnMainQueue ? Queue.mainQueue() : messageViewQueue)
             }
         }
         
@@ -344,6 +359,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 if strongSelf.isNodeLoaded {
                     strongSelf.dequeueHistoryViewTransition()
                 } else {
+                    if !strongSelf.didSetInitialData {
+                        strongSelf.didSetInitialData = true
+                        strongSelf._initialData.set(.single(transition.initialData))
+                    }
                     if !strongSelf.didSetHistoryReady {
                         strongSelf.didSetHistoryReady = true
                         strongSelf.historyReady.set(.single(true))
@@ -374,7 +393,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             }
                         }
                     }
-                    
+                    if !strongSelf.didSetInitialData {
+                        strongSelf.didSetInitialData = true
+                        strongSelf._initialData.set(.single(transition.initialData))
+                    }
                     if !strongSelf.didSetHistoryReady {
                         strongSelf.didSetHistoryReady = true
                         strongSelf.historyReady.set(.single(true))

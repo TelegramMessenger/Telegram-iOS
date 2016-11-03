@@ -117,8 +117,8 @@ class ChatMessageActionItemNode: ChatMessageItemView {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double) {
-        super.animateInsertion(currentTimestamp, duration: duration)
+    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+        super.animateInsertion(currentTimestamp, duration: duration, short: short)
         
         self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         self.labelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)

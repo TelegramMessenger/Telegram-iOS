@@ -104,16 +104,28 @@ class ChatControllerNode: ASDisplayNode {
                 }
                 let text = textInputPanelNode.text
                 
-                strongSelf.setupSendActionOnViewUpdate({ [weak strongSelf] in
-                    if let strongSelf = strongSelf, let textInputPanelNode = strongSelf.inputPanelNode as? ChatTextInputPanelNode {
-                        strongSelf.ignoreUpdateHeight = true
-                        textInputPanelNode.text = ""
-                        strongSelf.requestUpdateChatInterfaceState(false, { $0.withUpdatedReplyMessageId(nil) })
-                        strongSelf.ignoreUpdateHeight = false
+                if !text.isEmpty || strongSelf.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil {
+                    strongSelf.setupSendActionOnViewUpdate({ [weak strongSelf] in
+                        if let strongSelf = strongSelf, let textInputPanelNode = strongSelf.inputPanelNode as? ChatTextInputPanelNode {
+                            strongSelf.ignoreUpdateHeight = true
+                            textInputPanelNode.text = ""
+                            strongSelf.requestUpdateChatInterfaceState(false, { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil) })
+                            strongSelf.ignoreUpdateHeight = false
+                        }
+                    })
+                    
+                    var messages: [EnqueueMessage] = []
+                    if !text.isEmpty {
+                        messages.append(.message(text: text, media: nil, replyToMessageId: strongSelf.chatPresentationInterfaceState.interfaceState.replyMessageId))
                     }
-                })
-                
-                let _ = enqueueMessage(account: strongSelf.account, peerId: strongSelf.peerId, text: text, replyMessageId: strongSelf.chatPresentationInterfaceState.interfaceState.replyMessageId).start()
+                    if let forwardMessageIds = strongSelf.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
+                        for id in forwardMessageIds {
+                            messages.append(.forward(source: id))
+                        }
+                    }
+                    
+                    let _ = enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: messages).start()
+                }
             }
         }
         
@@ -240,7 +252,11 @@ class ChatControllerNode: ASDisplayNode {
                 
                 accessoryPanelNode.dismiss = { [weak self, weak accessoryPanelNode] in
                     if let strongSelf = self, let accessoryPanelNode = accessoryPanelNode, strongSelf.accessoryPanelNode === accessoryPanelNode {
-                        strongSelf.requestUpdateChatInterfaceState(true, { $0.withUpdatedReplyMessageId(nil) })
+                        if let _ = accessoryPanelNode as? ReplyAccessoryPanelNode {
+                            strongSelf.requestUpdateChatInterfaceState(true, { $0.withUpdatedReplyMessageId(nil) })
+                        } else if let _ = accessoryPanelNode as? ForwardAccessoryPanelNode {
+                            strongSelf.requestUpdateChatInterfaceState(true, { $0.withUpdatedForwardMessageIds(nil) })
+                        }
                     }
                 }
                 
@@ -439,8 +455,11 @@ class ChatControllerNode: ASDisplayNode {
             var updateInputTextState = self.chatPresentationInterfaceState.interfaceState.inputState != chatPresentationInterfaceState.interfaceState.inputState
             self.chatPresentationInterfaceState = chatPresentationInterfaceState
             
+            let keepSendButtonEnabled = chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil
             if let textInputPanelNode = self.textInputPanelNode, updateInputTextState {
-                textInputPanelNode.inputTextState = chatPresentationInterfaceState.interfaceState.inputState
+                textInputPanelNode.updateInputTextState(chatPresentationInterfaceState.interfaceState.inputState, keepSendButtonEnabled: keepSendButtonEnabled, animated: animated)
+            } else {
+                textInputPanelNode?.updateKeepSendButtonEnabled(keepSendButtonEnabled: keepSendButtonEnabled, animated: animated)
             }
             
             let layoutTransition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .spring) : .immediate

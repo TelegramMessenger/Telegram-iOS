@@ -7,7 +7,16 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
         return nil
     }
     
-    if let replyMessageId = chatPresentationInterfaceState.interfaceState.replyMessageId {
+    if let forwardMessageIds = chatPresentationInterfaceState.interfaceState.forwardMessageIds {
+        if let forwardPanelNode = currentPanel as? ForwardAccessoryPanelNode, forwardPanelNode.messageIds == forwardMessageIds {
+            forwardPanelNode.interfaceInteraction = interfaceInteraction
+            return forwardPanelNode
+        } else {
+            let panelNode = ForwardAccessoryPanelNode(account: account, messageIds: forwardMessageIds)
+            panelNode.interfaceInteraction = interfaceInteraction
+            return panelNode
+        }
+    } else if let replyMessageId = chatPresentationInterfaceState.interfaceState.replyMessageId {
         if let replyPanelNode = currentPanel as? ReplyAccessoryPanelNode, replyPanelNode.messageId == replyMessageId {
             replyPanelNode.interfaceInteraction = interfaceInteraction
             return replyPanelNode

@@ -1,15 +1,33 @@
 import Foundation
 import Postbox
 
-struct ChatInterfaceSelectionState: Equatable {
+struct ChatInterfaceSelectionState: Coding, Equatable {
     let selectedIds: Set<MessageId>
     
     static func ==(lhs: ChatInterfaceSelectionState, rhs: ChatInterfaceSelectionState) -> Bool {
         return lhs.selectedIds == rhs.selectedIds
     }
+    
+    init(selectedIds: Set<MessageId>) {
+        self.selectedIds = selectedIds
+    }
+    
+    init(decoder: Decoder) {
+        if let data = decoder.decodeBytesForKeyNoCopy("i") {
+            self.selectedIds = Set(MessageId.decodeArrayFromBuffer(data))
+        } else {
+            self.selectedIds = Set()
+        }
+    }
+    
+    func encode(_ encoder: Encoder) {
+        let buffer = WriteBuffer()
+        MessageId.encodeArrayToBuffer(Array(selectedIds), buffer: buffer)
+        encoder.encodeBytes(buffer, forKey: "i")
+    }
 }
 
-struct ChatTextInputState: Equatable {
+struct ChatTextInputState: Coding, Equatable {
     let inputText: String
     let selectionRange: Range<Int>
     
@@ -26,35 +44,123 @@ struct ChatTextInputState: Equatable {
         self.inputText = inputText
         self.selectionRange = selectionRange
     }
+    
+    init(decoder: Decoder) {
+        self.inputText = decoder.decodeStringForKey("t")
+        self.selectionRange = Int(decoder.decodeInt32ForKey("s0")) ..< Int(decoder.decodeInt32ForKey("s1"))
+    }
+    
+    func encode(_ encoder: Encoder) {
+        encoder.encodeString(self.inputText, forKey: "t")
+        encoder.encodeInt32(Int32(self.selectionRange.lowerBound), forKey: "s0")
+        encoder.encodeInt32(Int32(self.selectionRange.upperBound), forKey: "s1")
+    }
 }
 
-final class ChatInterfaceState: Equatable {
+final class ChatInterfaceState: PeerChatInterfaceState, Equatable {
     let inputState: ChatTextInputState
     let replyMessageId: MessageId?
+    let forwardMessageIds: [MessageId]?
     let selectionState: ChatInterfaceSelectionState?
+    
+    var chatListEmbeddedState: PeerChatListEmbeddedInterfaceState? {
+        return nil
+    }
     
     init() {
         self.inputState = ChatTextInputState()
         self.replyMessageId = nil
+        self.forwardMessageIds = nil
         self.selectionState = nil
     }
     
-    init(inputState: ChatTextInputState, replyMessageId: MessageId?, selectionState: ChatInterfaceSelectionState?) {
+    init(inputState: ChatTextInputState, replyMessageId: MessageId?, forwardMessageIds: [MessageId]?, selectionState: ChatInterfaceSelectionState?) {
         self.inputState = inputState
         self.replyMessageId = replyMessageId
+        self.forwardMessageIds = forwardMessageIds
         self.selectionState = selectionState
     }
     
+    init(decoder: Decoder) {
+        if let inputState = decoder.decodeObjectForKey("is", decoder: { return ChatTextInputState(decoder: $0) }) as? ChatTextInputState {
+            self.inputState = inputState
+        } else {
+            self.inputState = ChatTextInputState()
+        }
+        let replyMessageIdPeerId: Int64? = decoder.decodeInt64ForKey("r.p")
+        let replyMessageIdNamespace: Int32? = decoder.decodeInt32ForKey("r.n")
+        let replyMessageIdId: Int32? = decoder.decodeInt32ForKey("r.i")
+        if let replyMessageIdPeerId = replyMessageIdPeerId, let replyMessageIdNamespace = replyMessageIdNamespace, let replyMessageIdId = replyMessageIdId {
+            self.replyMessageId = MessageId(peerId: PeerId(replyMessageIdPeerId), namespace: replyMessageIdNamespace, id: replyMessageIdId)
+        } else {
+            self.replyMessageId = nil
+        }
+        if let forwardMessageIdsData = decoder.decodeBytesForKeyNoCopy("fm") {
+            self.forwardMessageIds = MessageId.decodeArrayFromBuffer(forwardMessageIdsData)
+        } else {
+            self.forwardMessageIds = nil
+        }
+        if let selectionState = decoder.decodeObjectForKey("ss", decoder: { return ChatInterfaceSelectionState(decoder: $0) }) as? ChatInterfaceSelectionState {
+            self.selectionState = selectionState
+        } else {
+            self.selectionState = nil
+        }
+    }
+    
+    func encode(_ encoder: Encoder) {
+        encoder.encodeObject(self.inputState, forKey: "is")
+        if let replyMessageId = self.replyMessageId {
+            encoder.encodeInt64(replyMessageId.peerId.toInt64(), forKey: "r.p")
+            encoder.encodeInt32(replyMessageId.namespace, forKey: "r.n")
+            encoder.encodeInt32(replyMessageId.id, forKey: "r.i")
+        } else {
+            encoder.encodeNil(forKey: "r.p")
+            encoder.encodeNil(forKey: "r.n")
+            encoder.encodeNil(forKey: "r.i")
+        }
+        if let forwardMessageIds = self.forwardMessageIds {
+            let buffer = WriteBuffer()
+            MessageId.encodeArrayToBuffer(forwardMessageIds, buffer: buffer)
+            encoder.encodeBytes(buffer, forKey: "fm")
+        } else {
+            encoder.encodeNil(forKey: "fm")
+        }
+        if let selectionState = self.selectionState {
+            encoder.encodeObject(selectionState, forKey: "ss")
+        } else {
+            encoder.encodeNil(forKey: "ss")
+        }
+    }
+    
+    func isEqual(to: PeerChatInterfaceState) -> Bool {
+        if let to = to as? ChatInterfaceState, self == to {
+            return true
+        } else {
+            return false
+        }
+    }
+    
     static func ==(lhs: ChatInterfaceState, rhs: ChatInterfaceState) -> Bool {
+        if let lhsForwardMessageIds = lhs.forwardMessageIds, let rhsForwardMessageIds = rhs.forwardMessageIds {
+            if lhsForwardMessageIds != rhsForwardMessageIds {
+                return false
+            }
+        } else if (lhs.forwardMessageIds != nil) != (rhs.forwardMessageIds != nil) {
+            return false
+        }
         return lhs.inputState == rhs.inputState && lhs.replyMessageId == rhs.replyMessageId && lhs.selectionState == rhs.selectionState
     }
     
     func withUpdatedInputState(_ inputState: ChatTextInputState) -> ChatInterfaceState {
-        return ChatInterfaceState(inputState: inputState, replyMessageId: self.replyMessageId, selectionState: self.selectionState)
+        return ChatInterfaceState(inputState: inputState, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, selectionState: self.selectionState)
     }
     
     func withUpdatedReplyMessageId(_ replyMessageId: MessageId?) -> ChatInterfaceState {
-        return ChatInterfaceState(inputState: self.inputState, replyMessageId: replyMessageId, selectionState: self.selectionState)
+        return ChatInterfaceState(inputState: self.inputState, replyMessageId: replyMessageId, forwardMessageIds: self.forwardMessageIds, selectionState: self.selectionState)
+    }
+    
+    func withUpdatedForwardMessageIds(_ forwardMessageIds: [MessageId]?) -> ChatInterfaceState {
+        return ChatInterfaceState(inputState: self.inputState, replyMessageId: self.replyMessageId, forwardMessageIds: forwardMessageIds, selectionState: self.selectionState)
     }
     
     func withUpdatedSelectedMessage(_ messageId: MessageId) -> ChatInterfaceState {
@@ -63,7 +169,7 @@ final class ChatInterfaceState: Equatable {
             selectedIds.formUnion(selectionState.selectedIds)
         }
         selectedIds.insert(messageId)
-        return ChatInterfaceState(inputState: self.inputState, replyMessageId: self.replyMessageId, selectionState: ChatInterfaceSelectionState(selectedIds: selectedIds))
+        return ChatInterfaceState(inputState: self.inputState, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, selectionState: ChatInterfaceSelectionState(selectedIds: selectedIds))
     }
     
     func withToggledSelectedMessage(_ messageId: MessageId) -> ChatInterfaceState {
@@ -76,10 +182,10 @@ final class ChatInterfaceState: Equatable {
         } else {
             selectedIds.insert(messageId)
         }
-        return ChatInterfaceState(inputState: self.inputState, replyMessageId: self.replyMessageId, selectionState: ChatInterfaceSelectionState(selectedIds: selectedIds))
+        return ChatInterfaceState(inputState: self.inputState, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, selectionState: ChatInterfaceSelectionState(selectedIds: selectedIds))
     }
     
     func withoutSelectionState() -> ChatInterfaceState {
-        return ChatInterfaceState(inputState: self.inputState, replyMessageId: self.replyMessageId, selectionState: nil)
+        return ChatInterfaceState(inputState: self.inputState, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, selectionState: nil)
     }
 }

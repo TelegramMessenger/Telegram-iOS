@@ -79,8 +79,8 @@ final class ListMessageSnippetItemNode: ListMessageNode {
         }
     }
     
-    override public func animateInsertion(_ currentTimestamp: Double, duration: Double) {
-        super.animateInsertion(currentTimestamp, duration: duration)
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+        super.animateInsertion(currentTimestamp, duration: duration, short: short)
         
         self.transitionOffset = self.bounds.size.height * 1.6
         self.addTransitionOffsetAnimation(0.0, duration: duration, beginAt: currentTimestamp)

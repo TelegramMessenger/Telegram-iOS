@@ -156,7 +156,7 @@ class GalleryController: ViewController {
                     let view = account.postbox.aroundMessageHistoryViewForPeerId(messageId.peerId, index: MessageIndex(message!), count: 50, anchorIndex: MessageIndex(message!), fixedCombinedReadState: nil, tagMask: tags)
                         
                     return view
-                        |> mapToSignal { (view, _) -> Signal<GalleryMessageHistoryView?, Void> in
+                        |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, Void> in
                             let mapped = GalleryMessageHistoryView.view(view)
                             return .single(mapped)
                         }

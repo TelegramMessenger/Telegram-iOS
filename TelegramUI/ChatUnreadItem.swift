@@ -52,8 +52,8 @@ class ChatUnreadItemNode: ListViewItemNode {
         self.scrollPositioningInsets = UIEdgeInsets(top: 5.0, left: 0.0, bottom: 5.0, right: 0.0)
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double) {
-        super.animateInsertion(currentTimestamp, duration: duration)
+    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+        super.animateInsertion(currentTimestamp, duration: duration, short: short)
         
         self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
         self.labelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)

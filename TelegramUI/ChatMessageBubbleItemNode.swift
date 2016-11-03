@@ -177,8 +177,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double) {
-        super.animateInsertion(currentTimestamp, duration: duration)
+    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+        super.animateInsertion(currentTimestamp, duration: duration, short: short)
         
         self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         

@@ -1,38 +1,36 @@
-import UIKit
-import Postbox
+import Foundation
 import SwiftSignalKit
 import Display
 import TelegramCore
+import Postbox
 
-public class ChatListController: ViewController {
+public final class PeerSelectionController: ViewController {
     private let account: Account
     
-    let openMessageFromSearchDisposable: MetaDisposable = MetaDisposable()
+    var peerSelected: ((PeerId) -> Void)?
     
-    private var chatListDisplayNode: ChatListControllerNode {
-        return super.displayNode as! ChatListControllerNode
+    private var peerSelectionNode: PeerSelectionControllerNode {
+        return super.displayNode as! PeerSelectionControllerNode
     }
+    
+    let openMessageFromSearchDisposable: MetaDisposable = MetaDisposable()
     
     public init(account: Account) {
         self.account = account
         
         super.init()
         
-        self.title = "Chats"
-        self.tabBarItem.title = "Chats"
-        self.tabBarItem.image = UIImage(bundleImageName: "Chat List/Tabs/IconChats")
-        self.tabBarItem.selectedImage = UIImage(bundleImageName: "Chat List/Tabs/IconChatsSelected")
+        self.title = "Forward"
         
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Edit", style: .plain, target: self, action: #selector(self.editPressed))
-        //self.navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .Compose, target: self, action: Selector("composePressed"))
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Cancel", style: .plain, target: self, action: #selector(self.cancelPressed))
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
-                strongSelf.chatListDisplayNode.chatListNode.scrollToLatest()
+                strongSelf.peerSelectionNode.chatListNode.scrollToLatest()
             }
         }
     }
-
+    
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
@@ -42,26 +40,28 @@ public class ChatListController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatListControllerNode(account: self.account)
+        self.displayNode = PeerSelectionControllerNode(account: self.account, dismiss: { [weak self] in
+            self?.presentingViewController?.dismiss(animated: false, completion: nil)
+        })
+        self.displayNode.backgroundColor = .white
         
-        self.chatListDisplayNode.navigationBar = self.navigationBar
+        self.peerSelectionNode.navigationBar = self.navigationBar
         
-        self.chatListDisplayNode.requestDeactivateSearch = { [weak self] in
+        self.peerSelectionNode.requestDeactivateSearch = { [weak self] in
             self?.deactivateSearch()
         }
         
-        self.chatListDisplayNode.chatListNode.activateSearch = { [weak self] in
+        self.peerSelectionNode.chatListNode.activateSearch = { [weak self] in
             self?.activateSearch()
         }
         
-        self.chatListDisplayNode.chatListNode.peerSelected = { [weak self] peerId in
-            if let strongSelf = self {
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: peerId))
-                strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
+        self.peerSelectionNode.chatListNode.peerSelected = { [weak self] peerId in
+            if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
+                peerSelected(peerId)
             }
         }
         
-        self.chatListDisplayNode.requestOpenMessageFromSearch = { [weak self] peer, messageId in
+        self.peerSelectionNode.requestOpenMessageFromSearch = { [weak self] peer, messageId in
             if let strongSelf = self {
                 let storedPeer = strongSelf.account.postbox.modify { modifier -> Void in
                     if modifier.getPeer(peer.id) == nil {
@@ -78,7 +78,7 @@ public class ChatListController: ViewController {
             }
         }
         
-        self.chatListDisplayNode.requestOpenPeerFromSearch = { [weak self] peerId in
+        self.peerSelectionNode.requestOpenPeerFromSearch = { [weak self] peerId in
             if let strongSelf = self {
                 (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: peerId))
             }
@@ -91,6 +91,12 @@ public class ChatListController: ViewController {
         super.viewWillAppear(animated)
     }
     
+    override public func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        self.peerSelectionNode.animateIn()
+    }
+    
     override public func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
     }
@@ -98,11 +104,11 @@ public class ChatListController: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.chatListDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationBar.frame.maxY, transition: transition)
+        self.peerSelectionNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationBar.frame.maxY, transition: transition)
     }
     
-    @objc func editPressed() {
-        
+    @objc func cancelPressed() {
+        self.dismiss()
     }
     
     private func activateSearch() {
@@ -110,16 +116,19 @@ public class ChatListController: ViewController {
             if let scrollToTop = self.scrollToTop {
                 scrollToTop()
             }
-            self.chatListDisplayNode.activateSearch()
+            self.peerSelectionNode.activateSearch()
             self.setDisplayNavigationBar(false, transition: .animated(duration: 0.5, curve: .spring))
         }
     }
     
     private func deactivateSearch() {
         if !self.displayNavigationBar {
-            self.chatListDisplayNode.deactivateSearch()
+            self.peerSelectionNode.deactivateSearch()
             self.setDisplayNavigationBar(true, transition: .animated(duration: 0.5, curve: .spring))
         }
     }
+    
+    public func dismiss() {
+        self.peerSelectionNode.animateOut()
+    }
 }
-
