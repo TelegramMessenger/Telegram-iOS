@@ -37,6 +37,8 @@ class NavigationTransitionCoordinator {
     
     private let inlineNavigationBarTransition: Bool
     
+    private(set) var animatingCompletion = false
+    
     init(transition: NavigationTransition, container: UIView, topView: UIView, topNavigationBar: NavigationBar?, bottomView: UIView, bottomNavigationBar: NavigationBar?) {
         self.transition = transition
         self.container = container
@@ -176,6 +178,7 @@ class NavigationTransitionCoordinator {
     }
     
     func animateCompletion(_ velocity: CGFloat, completion: @escaping () -> ()) {
+        self.animatingCompletion = true
         let distance = (1.0 - self.progress) * self.container.bounds.size.width
         let f = {
             switch self.transition {

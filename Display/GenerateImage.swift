@@ -80,7 +80,28 @@ public func generateFilledCircleImage(radius: CGFloat, color: UIColor?, backgrou
 }
 
 public func generateStretchableFilledCircleImage(radius: CGFloat, color: UIColor?, backgroundColor: UIColor? = nil) -> UIImage? {
-    return generateFilledCircleImage(radius: radius, color: color, backgroundColor: backgroundColor)?.stretchableImage(withLeftCapWidth: Int(radius), topCapHeight: Int(radius))
+    let intRadius = Int(radius)
+    let cap = intRadius == 1 ? 2 : intRadius
+    return generateFilledCircleImage(radius: radius, color: color, backgroundColor: backgroundColor)?.stretchableImage(withLeftCapWidth: cap, topCapHeight: cap)
+}
+
+public func generateVerticallyStretchableFilledCircleImage(radius: CGFloat, color: UIColor?, backgroundColor: UIColor? = nil) -> UIImage? {
+    return generateImage(CGSize(width: radius * 2.0, height: radius * 2.0 + radius), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        if let backgroundColor = backgroundColor {
+            context.setFillColor(backgroundColor.cgColor)
+            context.fill(CGRect(origin: CGPoint(), size: size))
+        }
+        
+        if let color = color {
+            context.setFillColor(color.cgColor)
+        } else {
+            context.setFillColor(UIColor.clear.cgColor)
+            context.setBlendMode(.copy)
+        }
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: radius + radius, height: radius + radius)))
+        context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: radius), size: CGSize(width: radius + radius, height: radius + radius)))
+    })?.stretchableImage(withLeftCapWidth: Int(radius), topCapHeight: Int(radius))
 }
 
 public func generateTintedImage(image: UIImage?, color: UIColor, backgroundColor: UIColor? = nil) -> UIImage? {

@@ -129,12 +129,12 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
                     self.navigationTransitionCoordinator = navigationTransitionCoordinator
                 }
             case UIGestureRecognizerState.changed:
-                if let navigationTransitionCoordinator = self.navigationTransitionCoordinator {
+                if let navigationTransitionCoordinator = self.navigationTransitionCoordinator, !navigationTransitionCoordinator.animatingCompletion {
                     let translation = recognizer.translation(in: self.view).x
                     navigationTransitionCoordinator.progress = max(0.0, min(1.0, translation / self.view.frame.width))
                 }
             case UIGestureRecognizerState.ended:
-                if let navigationTransitionCoordinator = self.navigationTransitionCoordinator {
+                if let navigationTransitionCoordinator = self.navigationTransitionCoordinator, !navigationTransitionCoordinator.animatingCompletion {
                     let velocity = recognizer.velocity(in: self.view).x
                     
                     if velocity > 1000 || navigationTransitionCoordinator.progress > 0.2 {
@@ -183,7 +183,7 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
                     }
                 }
             case .cancelled:
-                if let navigationTransitionCoordinator = self.navigationTransitionCoordinator {
+                if let navigationTransitionCoordinator = self.navigationTransitionCoordinator, !navigationTransitionCoordinator.animatingCompletion {
                     if self.viewControllers.count >= 2 && self.navigationTransitionCoordinator == nil {
                         let topController = self.viewControllers[self.viewControllers.count - 1] as UIViewController
                         let bottomController = self.viewControllers[self.viewControllers.count - 2] as UIViewController
@@ -318,6 +318,8 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
                 let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Push, container: self.view, topView: topView, topNavigationBar: (topController as? ViewController)?.navigationBar, bottomView: bottomView, bottomNavigationBar: (bottomController as? ViewController)?.navigationBar)
                 self.navigationTransitionCoordinator = navigationTransitionCoordinator
                 
+                topView.isUserInteractionEnabled = false
+                
                 navigationTransitionCoordinator.animateCompletion(0.0, completion: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.navigationTransitionCoordinator = nil
@@ -327,6 +329,8 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
                         strongSelf.setViewControllers(viewControllers, animated: false)
                         topController.setIgnoreAppearanceMethodInvocations(false)
                         bottomController.setIgnoreAppearanceMethodInvocations(false)
+                        
+                        topController.view.isUserInteractionEnabled = true
                         
                         bottomController.viewDidDisappear(true)
                         topController.viewDidAppear(true)
