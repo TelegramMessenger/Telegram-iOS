@@ -211,6 +211,7 @@ public final class Postbox {
     private var currentUpdatedPeerNotificationSettings: [PeerId: PeerNotificationSettings] = [:]
     private var currentUpdatedCachedPeerData: [PeerId: CachedPeerData] = [:]
     private var currentUpdatedPeerPresences: [PeerId: PeerPresence] = [:]
+    private var currentUpdatedPeerChatListEmbeddedStates: [PeerId: PeerChatListEmbeddedInterfaceState?] = [:]
     
     private var currentReplaceChatListHoles: [(MessageIndex, ChatListHole?)] = []
     private var currentReplacedContactPeerIds: Set<PeerId>?
@@ -659,15 +660,15 @@ public final class Postbox {
     }
     
     private func fetchAroundChatEntries(_ index: MessageIndex, count: Int) -> (entries: [MutableChatListEntry], earlier: MutableChatListEntry?, later: MutableChatListEntry?) {
-        let (intermediateEntries, intermediateLower, intermediateUpper) = self.chatListTable.entriesAround(index, messageHistoryTable: self.messageHistoryTable, count: count)
+        let (intermediateEntries, intermediateLower, intermediateUpper) = self.chatListTable.entriesAround(index, messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable, count: count)
         var entries: [MutableChatListEntry] = []
         var lower: MutableChatListEntry?
         var upper: MutableChatListEntry?
         
         for entry in intermediateEntries {
             switch entry {
-                case let .Message(message):
-                    entries.append(.IntermediateMessageEntry(message, self.readStateTable.getCombinedState(message.id.peerId), self.peerNotificationSettingsTable.get(message.id.peerId)))
+                case let .Message(index, message, embeddedState):
+                    entries.append(.IntermediateMessageEntry(index, message, self.readStateTable.getCombinedState(message.id.peerId), self.peerNotificationSettingsTable.get(message.id.peerId), embeddedState))
                 case let .Hole(hole):
                     entries.append(.HoleEntry(hole))
                 case let .Nothing(index):
@@ -677,8 +678,8 @@ public final class Postbox {
         
         if let intermediateLower = intermediateLower {
             switch intermediateLower {
-                case let .Message(message):
-                    lower = .IntermediateMessageEntry(message, self.readStateTable.getCombinedState(message.id.peerId), self.peerNotificationSettingsTable.get(message.id.peerId))
+                case let .Message(index, message, embeddedState):
+                    lower = .IntermediateMessageEntry(index, message, self.readStateTable.getCombinedState(message.id.peerId), self.peerNotificationSettingsTable.get(message.id.peerId), embeddedState)
                 case let .Hole(hole):
                     lower = .HoleEntry(hole)
                 case let .Nothing(index):
@@ -688,8 +689,8 @@ public final class Postbox {
         
         if let intermediateUpper = intermediateUpper {
             switch intermediateUpper {
-                case let .Message(message):
-                    upper = .IntermediateMessageEntry(message, self.readStateTable.getCombinedState(message.id.peerId), self.peerNotificationSettingsTable.get(message.id.peerId))
+                case let .Message(index, message, embeddedState):
+                    upper = .IntermediateMessageEntry(index, message, self.readStateTable.getCombinedState(message.id.peerId), self.peerNotificationSettingsTable.get(message.id.peerId), embeddedState)
                 case let .Hole(hole):
                     upper = .HoleEntry(hole)
                 case let .Nothing(index):
@@ -701,12 +702,12 @@ public final class Postbox {
     }
     
     private func fetchEarlierChatEntries(_ index: MessageIndex?, count: Int) -> [MutableChatListEntry] {
-        let intermediateEntries = self.chatListTable.earlierEntries(index, messageHistoryTable: self.messageHistoryTable, count: count)
+        let intermediateEntries = self.chatListTable.earlierEntries(index, messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable, count: count)
         var entries: [MutableChatListEntry] = []
         for entry in intermediateEntries {
             switch entry {
-                case let .Message(message):
-                    entries.append(.IntermediateMessageEntry(message, self.readStateTable.getCombinedState(message.id.peerId), self.peerNotificationSettingsTable.get(message.id.peerId)))
+                case let .Message(index, message, embeddedState):
+                    entries.append(.IntermediateMessageEntry(index, message, self.readStateTable.getCombinedState(message.id.peerId), self.peerNotificationSettingsTable.get(message.id.peerId), embeddedState))
                 case let .Hole(hole):
                     entries.append(.HoleEntry(hole))
                 case let .Nothing(index):
@@ -717,12 +718,12 @@ public final class Postbox {
     }
     
     private func fetchLaterChatEntries(_ index: MessageIndex?, count: Int) -> [MutableChatListEntry] {
-        let intermediateEntries = self.chatListTable.laterEntries(index, messageHistoryTable: self.messageHistoryTable, count: count)
+        let intermediateEntries = self.chatListTable.laterEntries(index, messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable, count: count)
         var entries: [MutableChatListEntry] = []
         for entry in intermediateEntries {
             switch entry {
-                case let .Message(message):
-                    entries.append(.IntermediateMessageEntry(message, self.readStateTable.getCombinedState(message.id.peerId), self.peerNotificationSettingsTable.get(message.id.peerId)))
+                case let .Message(index, message, embeddedState):
+                    entries.append(.IntermediateMessageEntry(index, message, self.readStateTable.getCombinedState(message.id.peerId), self.peerNotificationSettingsTable.get(message.id.peerId), embeddedState))
                 case let .Nothing(index):
                     entries.append(.Nothing(index))
                 case let .Hole(index):
@@ -759,12 +760,12 @@ public final class Postbox {
     
     private func beforeCommit() -> (updatedTransactionStateVersion: Int64?, updatedMasterClientId: Int64?) {
         var chatListOperations: [ChatListOperation] = []
-        self.chatListTable.replay(self.currentOperationsByPeerId, messageHistoryTable: self.messageHistoryTable, operations: &chatListOperations)
+        self.chatListTable.replay(historyOperationsByPeerId: self.currentOperationsByPeerId, updatedPeerChatListEmbeddedStates: currentUpdatedPeerChatListEmbeddedStates, messageHistoryTable: self.messageHistoryTable, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable, operations: &chatListOperations)
         for (index, hole) in self.currentReplaceChatListHoles {
             self.chatListTable.replaceHole(index, hole: hole, operations: &chatListOperations)
         }
         
-        let transaction = PostboxTransaction(currentOperationsByPeerId: self.currentOperationsByPeerId, peerIdsWithFilledHoles: self.currentFilledHolesByPeerId, removedHolesByPeerId: self.currentRemovedHolesByPeerId, chatListOperations: chatListOperations, currentUpdatedPeers: self.currentUpdatedPeers, currentUpdatedPeerNotificationSettings: self.currentUpdatedPeerNotificationSettings, currentUpdatedCachedPeerData: self.currentUpdatedCachedPeerData, currentUpdatedPeerPresences: currentUpdatedPeerPresences, unsentMessageOperations: self.currentUnsentOperations, updatedSynchronizePeerReadStateOperations: self.currentUpdatedSynchronizeReadStateOperations, updatedMedia: self.currentUpdatedMedia, replaceContactPeerIds: self.currentReplacedContactPeerIds, currentUpdatedMasterClientId: currentUpdatedMasterClientId)
+        let transaction = PostboxTransaction(currentOperationsByPeerId: self.currentOperationsByPeerId, peerIdsWithFilledHoles: self.currentFilledHolesByPeerId, removedHolesByPeerId: self.currentRemovedHolesByPeerId, chatListOperations: chatListOperations, currentUpdatedPeers: self.currentUpdatedPeers, currentUpdatedPeerNotificationSettings: self.currentUpdatedPeerNotificationSettings, currentUpdatedCachedPeerData: self.currentUpdatedCachedPeerData, currentUpdatedPeerPresences: currentUpdatedPeerPresences, currentUpdatedPeerChatListEmbeddedStates: self.currentUpdatedPeerChatListEmbeddedStates, unsentMessageOperations: self.currentUnsentOperations, updatedSynchronizePeerReadStateOperations: self.currentUpdatedSynchronizeReadStateOperations, updatedMedia: self.currentUpdatedMedia, replaceContactPeerIds: self.currentReplacedContactPeerIds, currentUpdatedMasterClientId: currentUpdatedMasterClientId)
         var updatedTransactionState: Int64?
         var updatedMasterClientId: Int64?
         if !transaction.isEmpty {
@@ -791,6 +792,7 @@ public final class Postbox {
         self.currentUpdatedPeerNotificationSettings.removeAll()
         self.currentUpdatedCachedPeerData.removeAll()
         self.currentUpdatedPeerPresences.removeAll()
+        self.currentUpdatedPeerChatListEmbeddedStates.removeAll()
         
         for table in self.tables {
             table.beforeCommit()
@@ -854,7 +856,10 @@ public final class Postbox {
     
     fileprivate func updatePeerChatInterfaceState(_ id: PeerId, update: (PeerChatInterfaceState?) -> (PeerChatInterfaceState?)) {
         let updatedState = update(self.peerChatInterfaceStateTable.get(id))
-        self.peerChatInterfaceStateTable.set(id, state: updatedState)
+        let (_, updatedEmbeddedState) = self.peerChatInterfaceStateTable.set(id, state: updatedState)
+        if updatedEmbeddedState {
+            self.currentUpdatedPeerChatListEmbeddedStates[id] = updatedState?.chatListEmbeddedState
+        }
     }
     
     fileprivate func replaceContactPeerIds(_ peerIds: Set<PeerId>) {

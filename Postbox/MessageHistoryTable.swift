@@ -419,6 +419,16 @@ final class MessageHistoryTable: Table {
             if case let .Message(message) = entry {
                 return message
             }
+        } else if let tableIndex = self.messageHistoryIndexTable.get(index.id) {
+            if case let .Message(updatedIndex) = tableIndex {
+                let key = self.key(updatedIndex)
+                if let value = self.valueBox.get(self.tableId, key: key) {
+                    let entry = self.readIntermediateEntry(key, value: value)
+                    if case let .Message(message) = entry {
+                        return message
+                    }
+                }
+            }
         }
         return nil
     }

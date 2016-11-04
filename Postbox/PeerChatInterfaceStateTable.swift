@@ -23,20 +23,30 @@ final class PeerChatInterfaceStateTable: Table {
         }
     }
     
-    func set(_ peerId: PeerId, state: PeerChatInterfaceState?) {
+    func set(_ peerId: PeerId, state: PeerChatInterfaceState?) -> (updated: Bool, updatedEmbeddedState: Bool) {
         let currentState = self.get(peerId)
         var updated = false
+        var updatedEmbeddedState = false
         if let currentState = currentState, let state = state {
             if !currentState.isEqual(to: state) {
                 updated = true
+                if let currentEmbeddedState = currentState.chatListEmbeddedState, let embeddedState = state.chatListEmbeddedState {
+                    if !currentEmbeddedState.isEqual(to: embeddedState) {
+                        updatedEmbeddedState = true
+                    }
+                } else if (currentState.chatListEmbeddedState != nil) != (state.chatListEmbeddedState != nil) {
+                    updatedEmbeddedState = true
+                }
             }
         } else if (currentState != nil) != (state != nil) {
             updated = true
+            updatedEmbeddedState = true
         }
         if updated {
             self.states[peerId] = state
             self.peerIdsWithUpdatedStates.insert(peerId)
         }
+        return (updated, updatedEmbeddedState)
     }
     
     override func clearMemoryCache() {
