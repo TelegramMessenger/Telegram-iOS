@@ -69,7 +69,7 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible {
         var i = 0
         var array: [MessageId] = []
         while i < Int(length) {
-            array[i] = MessageId(buffer)
+            array.append(MessageId(buffer))
             i += 1
         }
         return array
