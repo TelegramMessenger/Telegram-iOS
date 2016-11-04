@@ -2167,6 +2167,14 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                             let insetPart: CGFloat = previousInsets.top - layout.insets.top
                             node.transitionOffset += previousApparentHeight - layout.size.height - insetPart
                             node.addTransitionOffsetAnimation(0.0, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp)
+                        } else {
+                            if node.shouldAnimateHorizontalFrameTransition() {
+                                node.addApparentHeightAnimation(updatedApparentHeight, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp, update: { [weak node] progress in
+                                    if let node = node {
+                                        node.animateFrameTransition(progress)
+                                    }
+                                })
+                            }
                         }
                     } else {
                         node.apparentHeight = updatedApparentHeight

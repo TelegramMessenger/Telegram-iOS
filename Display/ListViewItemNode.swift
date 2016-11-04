@@ -419,4 +419,8 @@ open class ListViewItemNode: ASDisplayNode {
     open func animateFrameTransition(_ progress: CGFloat) {
         
     }
+    
+    open func shouldAnimateHorizontalFrameTransition() -> Bool {
+        return false
+    }
 }
