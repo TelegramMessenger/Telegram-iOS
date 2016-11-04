@@ -91,6 +91,14 @@ public class MemoryBuffer: Equatable, CustomStringConvertible {
         
         return hexString as String
     }
+    
+    public func makeData() -> Data {
+        if self.length == 0 {
+            return Data()
+        } else {
+            return Data(bytes: self.memory, count: self.length)
+        }
+    }
 }
 
 public func ==(lhs: MemoryBuffer, rhs: MemoryBuffer) -> Bool {
@@ -116,7 +124,7 @@ public final class WriteBuffer: MemoryBuffer {
         return ReadBuffer(memory: self.memory, length: self.offset, freeWhenDone: false)
     }
     
-    public func makeData() -> Data {
+    override public func makeData() -> Data {
         return Data(bytes: self.memory.assumingMemoryBound(to: UInt8.self), count: self.offset)
     }
     
