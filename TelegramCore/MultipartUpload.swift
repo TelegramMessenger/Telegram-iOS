@@ -167,8 +167,11 @@ func multipartUpload(network: Network, postbox: Postbox, resource: MediaResource
 
                 manager.start()
                 
+                let fetchedResource = postbox.mediaBox.fetchedResource(resource).start()
+                
                 return ActionDisposable {
                     manager.cancel()
+                    fetchedResource.dispose()
                 }
             }
     }

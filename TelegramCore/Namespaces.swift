@@ -20,6 +20,7 @@ public struct Namespaces {
         public static let CloudFile: Int32 = 5
         public static let CloudWebpage: Int32 = 6
         public static let LocalImage: Int32 = 7
+        public static let LocalFile: Int32 = 8
     }
     
     public struct Peer {
