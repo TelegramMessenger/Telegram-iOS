@@ -49,6 +49,8 @@ private func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox)
         if let fromLargestRepresentation = largestImageRepresentation(fromImage.representations), let toLargestRepresentation = largestImageRepresentation(toImage.representations) {
             postbox.mediaBox.moveResourceData(from: fromLargestRepresentation.resource.id, to: toLargestRepresentation.resource.id)
         }
+    } else if let fromFile = from as? TelegramMediaFile, let toFile = to as? TelegramMediaFile {
+        postbox.mediaBox.moveResourceData(from: fromFile.resource.id, to: toFile.resource.id)
     }
 }
 

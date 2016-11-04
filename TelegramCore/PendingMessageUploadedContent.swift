@@ -34,8 +34,12 @@ func uploadedMessageContent(network: Network, postbox: Postbox, message: Message
     } else if let media = message.media.first {
         if let image = media as? TelegramMediaImage, let largestRepresentation = largestImageRepresentation(image.representations) {
             return uploadedMediaImageContent(network: network, postbox: postbox, image: image, message: message)
-        } else if let file = media as? TelegramMediaFile, let resource = file.resource as? CloudDocumentMediaResource {
-            return .single(.content(message, .media(Api.InputMedia.inputMediaDocument(id: Api.InputDocument.inputDocument(id: resource.fileId, accessHash: resource.accessHash), caption: message.text))))
+        } else if let file = media as? TelegramMediaFile {
+            if let resource = file.resource as? CloudDocumentMediaResource {
+                return .single(.content(message, .media(Api.InputMedia.inputMediaDocument(id: Api.InputDocument.inputDocument(id: resource.fileId, accessHash: resource.accessHash), caption: message.text))))
+            } else {
+                return uploadedMediaFileContent(network: network, postbox: postbox, file: file, message: message)
+            }
         } else {
             return .single(.content(message, .text(message.text)))
         }
@@ -58,4 +62,55 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, image
     } else {
         return .single(.content(message, .text(message.text)))
     }
+}
+
+private func inputDocumentAttributesFromFile(_ file: TelegramMediaFile) -> [Api.DocumentAttribute] {
+    var attributes: [Api.DocumentAttribute] = []
+    for attribute in file.attributes {
+        switch attribute {
+            case .Animated:
+                attributes.append(.documentAttributeAnimated)
+            case let .FileName(fileName):
+                attributes.append(.documentAttributeFilename(fileName: fileName))
+            case let .ImageSize(size):
+                attributes.append(.documentAttributeImageSize(w: Int32(size.width), h: Int32(size.height)))
+            case let .Sticker(displayText):
+                attributes.append(.documentAttributeSticker(alt: displayText, stickerset: .inputStickerSetEmpty))
+            case let .Video(duration, size):
+                attributes.append(.documentAttributeVideo(duration: Int32(duration), w: Int32(size.width), h: Int32(size.height)))
+            case let .Audio(isVoice, duration, title, performer, waveform):
+                var flags: Int32 = 0
+                if isVoice {
+                    flags |= Int32(1 << 10)
+                }
+                if let _ = title {
+                    flags |= Int32(1 << 0)
+                }
+                if let _ = performer {
+                    flags |= Int32(1 << 1)
+                }
+                var waveformBuffer: Buffer?
+                if let waveform = waveform {
+                    flags |= Int32(1 << 2)
+                    waveformBuffer = Buffer(data: waveform.makeData())
+                }
+                attributes.append(.documentAttributeAudio(flags: flags, duration: Int32(duration), title: title, performer: performer, waveform: waveformBuffer))
+                break
+            case .Unknown:
+                break
+        }
+    }
+    return attributes
+}
+
+private func uploadedMediaFileContent(network: Network, postbox: Postbox, file: TelegramMediaFile, message: Message) -> Signal<PendingMessageUploadedContentResult, NoError> {
+    return multipartUpload(network: network, postbox: postbox, resource: file.resource)
+        |> map { next -> PendingMessageUploadedContentResult in
+            switch next {
+                case let .progress(progress):
+                    return .progress(progress)
+                case let .inputFile(inputFile):
+                    return .content(message, .media(Api.InputMedia.inputMediaUploadedDocument(file: inputFile, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFile(file), caption: message.text)))
+            }
+        }
 }
