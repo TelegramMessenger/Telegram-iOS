@@ -324,9 +324,20 @@ public class ChatController: ViewController {
                         let size = CGSize(width: CGFloat(asset.pixelWidth), height: CGFloat(asset.pixelHeight))
                         let scaledSize = size.aspectFitted(CGSize(width: 1280.0, height: 1280.0))
                         let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier)
-                        let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: scaledSize, resource: resource)])
-                        strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({})
-                        enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", media: media, replyToMessageId: nil)]).start()
+                        
+                        if true {
+                            let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: scaledSize, resource: resource)])
+                            strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({})
+                            enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", media: media, replyToMessageId: nil)]).start()
+                        } else {
+                            let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), resource: resource, previewRepresentations: [], mimeType: "image/jpeg", size: 0, attributes: [.FileName(fileName: "image.jpeg"), .ImageSize(size: scaledSize)])
+                            enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", media: media, replyToMessageId: nil)]).start()
+                        }
+                    }
+                }
+                controller.files = { [weak strongSelf] in
+                    if let strongSelf = strongSelf {
+                        
                     }
                 }
                 controller.location = { [weak strongSelf] in

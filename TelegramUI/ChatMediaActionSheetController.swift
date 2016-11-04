@@ -13,6 +13,7 @@ final class ChatMediaActionSheetController: ActionSheetController {
     private var didSetReady = false
     
     var photo: (PHAsset) -> Void = { _ in }
+    var files: () -> Void = { }
     var location: () -> Void = { }
     var contacts: () -> Void = { }
     
@@ -29,7 +30,12 @@ final class ChatMediaActionSheetController: ActionSheetController {
                         strongSelf.photo(asset)
                     }
                 }),
-                ActionSheetButtonItem(title: "File", action: {}),
+                ActionSheetButtonItem(title: "File", action: { [weak self] in
+                    if let strongSelf = self {
+                        self?.dismissAnimated()
+                        strongSelf.files()
+                    }
+                }),
                 ActionSheetButtonItem(title: "Location", action: { [weak self] in
                     self?.dismissAnimated()
                     if let location = self?.location {

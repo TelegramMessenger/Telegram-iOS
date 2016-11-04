@@ -127,7 +127,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         initialWidth = initialImageWidth + insets.left + insets.right
                         refineContentImageLayout = refineLayout
                     } else {
-                        let (_, refineLayout) = contentFileLayout(item.account, file, item.message.flags.contains(.Incoming), CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height))
+                        let (_, refineLayout) = contentFileLayout(item.account, item.message, file, item.message.flags.contains(.Incoming), CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height))
                         refineContentFileLayout = refineLayout
                     }
                 } else if let image = webpage.image {

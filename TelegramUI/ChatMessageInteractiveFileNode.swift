@@ -35,6 +35,8 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
     private let fetchDisposable = MetaDisposable()
     
     var activateLocalContent: () -> Void = { }
+    
+    private var messageIdAndFlags: (MessageId, MessageFlags)?
     private var file: TelegramMediaFile?
     
     init() {
@@ -90,13 +92,14 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
         }
     }
     
-    func asyncLayout() -> (_ account: Account, _ file: TelegramMediaFile, _ incoming: Bool, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void))) {
+    func asyncLayout() -> (_ account: Account, _ message: Message, _ file: TelegramMediaFile, _ incoming: Bool, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void))) {
         let currentFile = self.file
         
         let titleAsyncLayout = TextNode.asyncLayout(self.titleNode)
         let descriptionAsyncLayout = TextNode.asyncLayout(self.descriptionNode)
+        let currentMessageIdAndFlags = self.messageIdAndFlags
         
-        return { account, file, incoming, constrainedSize in
+        return { account, message, file, incoming, constrainedSize in
             return (CGFloat.greatestFiniteMagnitude, { constrainedSize in
                 //var updateImageSignal: Signal<TransformImageArguments -> DrawingContext, NoError>?
                 var updatedStatusSignal: Signal<MediaResourceStatus, NoError>?
@@ -109,9 +112,12 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                     mediaUpdated = true
                 }
                 
+                var statusUpdated = mediaUpdated
+                if currentMessageIdAndFlags?.0 != message.id || currentMessageIdAndFlags?.1 != message.flags {
+                    statusUpdated = true
+                }
+                
                 if mediaUpdated {
-                    //updateImageSignal = chatMessagePhoto(account, photo: image)
-                    updatedStatusSignal = chatMessageFileStatus(account: account, file: file)
                     updatedFetchControls = FetchControls(fetch: { [weak self] in
                         if let strongSelf = self {
                             strongSelf.fetchDisposable.set(chatMessageFileInteractiveFetched(account: account, file: file).start())
@@ -119,6 +125,17 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                     }, cancel: {
                         chatMessageFileCancelInteractiveFetch(account: account, file: file)
                     })
+                }
+                
+                if statusUpdated {
+                    updatedStatusSignal = combineLatest(chatMessageFileStatus(account: account, file: file), account.pendingMessageManager.pendingMessageStatus(message.id))
+                        |> map { resourceStatus, pendingStatus -> MediaResourceStatus in
+                            if let pendingStatus = pendingStatus {
+                                return .Fetching(progress: pendingStatus.progress)
+                            } else {
+                                return resourceStatus
+                            }
+                        }
                 }
                 
                 var candidateTitleString: NSAttributedString?
@@ -162,6 +179,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                     
                     return (titleFrame.union(descriptionFrame).union(progressFrame).size, { [weak self] in
                         if let strongSelf = self {
+                            strongSelf.messageIdAndFlags = (message.id, message.flags)
                             strongSelf.file = file
                             
                             let _ = titleApply()
@@ -212,12 +230,12 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
         }
     }
     
-    static func asyncLayout(_ node: ChatMessageInteractiveFileNode?) -> (_ account: Account, _ file: TelegramMediaFile, _ incoming: Bool, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageInteractiveFileNode))) {
+    static func asyncLayout(_ node: ChatMessageInteractiveFileNode?) -> (_ account: Account, _ message: Message, _ file: TelegramMediaFile, _ incoming: Bool, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageInteractiveFileNode))) {
         let currentAsyncLayout = node?.asyncLayout()
         
-        return { account, file, incoming, constrainedSize in
+        return { account, message, file, incoming, constrainedSize in
             var fileNode: ChatMessageInteractiveFileNode
-            var fileLayout: (_ account: Account, _ file: TelegramMediaFile, _ incoming: Bool, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void)))
+            var fileLayout: (_ account: Account, _ message: Message, _ file: TelegramMediaFile, _ incoming: Bool, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> Void)))
             
             if let node = node, let currentAsyncLayout = currentAsyncLayout {
                 fileNode = node
@@ -227,7 +245,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                 fileLayout = fileNode.asyncLayout()
             }
             
-            let (initialWidth, continueLayout) = fileLayout(account, file, incoming, constrainedSize)
+            let (initialWidth, continueLayout) = fileLayout(account, message, file, incoming, constrainedSize)
             
             return (initialWidth, { constrainedSize in
                 let (finalWidth, finalLayout) = continueLayout(constrainedSize)

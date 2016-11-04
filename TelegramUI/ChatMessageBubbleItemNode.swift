@@ -624,6 +624,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         }
     }
     
+    override func shouldAnimateHorizontalFrameTransition() -> Bool {
+        if let _ = self.backgroundFrameTransition {
+            return true
+        } else {
+            return false
+        }
+    }
+    
     override func animateFrameTransition(_ progress: CGFloat) {
         super.animateFrameTransition(progress)
         

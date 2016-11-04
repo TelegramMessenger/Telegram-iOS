@@ -72,9 +72,9 @@ private func chatMessagePhotoDatas(account: Account, photo: TelegramMediaImage, 
 }
 
 private func chatMessageFileDatas(account: Account, file: TelegramMediaFile, progressive: Bool = false) -> Signal<(Data?, (Data, String)?, Bool), NoError> {
-    if let smallestRepresentation = smallestImageRepresentation(file.previewRepresentations), let largestRepresentation = largestImageRepresentation(file.previewRepresentations) {
+    if let smallestRepresentation = smallestImageRepresentation(file.previewRepresentations) {
         let thumbnailResource = smallestRepresentation.resource
-        let fullSizeResource = largestRepresentation.resource
+        let fullSizeResource = file.resource
         
         let maybeFullSize = account.postbox.mediaBox.resourceData(fullSizeResource)
         
