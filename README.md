@@ -162,7 +162,7 @@ Our examples will use the **default** SDK (`HockeySDK.embeddedframework`).
   func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool
   ```
 
-4. Add the following lines to setup and start the Application Insights SDK:
+4. Add the following lines to setup and start the HockeyApp SDK:
 
   ```swift
   BITHockeyManager.shared().configure(withIdentifier: "cdef2c2b4ddf420b9cdf470a9667eb27")
