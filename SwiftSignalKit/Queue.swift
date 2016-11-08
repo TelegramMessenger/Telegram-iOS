@@ -57,7 +57,7 @@ public final class Queue {
         }
     }
     
-    public func async(_ f: @escaping(Void) -> Void) {
+    public func async(_ f: @escaping () -> Void) {
         if self.isCurrent() {
             f()
         } else {
@@ -65,7 +65,7 @@ public final class Queue {
         }
     }
     
-    public func sync(_ f: (Void) -> Void) {
+    public func sync(_ f: () -> Void) {
         if self.isCurrent() {
             f()
         } else {
@@ -73,12 +73,16 @@ public final class Queue {
         }
     }
     
-    public func justDispatch(_ f: @escaping(Void) -> Void) {
+    public func justDispatch(_ f: @escaping () -> Void) {
         self.nativeQueue.async(execute: f)
     }
     
+    public func justDispatchWithQoS(qos: DispatchQoS, _ f: @escaping () -> Void) {
+        self.nativeQueue.async(group: nil, qos: qos, flags: [.enforceQoS], execute: f)
+    }
+    
     public func after(_ delay: Double, _ f: @escaping(Void) -> Void) {
-        let time: DispatchTime = DispatchTime.now() + Double(Int64(delay * Double(NSEC_PER_SEC)))
+        let time: DispatchTime = DispatchTime.now() + delay
         self.nativeQueue.asyncAfter(deadline: time, execute: f)
     }
 }
