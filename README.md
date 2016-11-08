@@ -63,6 +63,7 @@ This document contains the following sections:
 
 1. We assume that you already have a project in Xcode and that this project is opened in Xcode 7 or later.
 2. The SDK supports iOS 6.0 and later.
+3. Xcode 8 
 
 <a id="setup"></a>
 ## 2. Setup
