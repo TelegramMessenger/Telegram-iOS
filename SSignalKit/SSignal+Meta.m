@@ -20,13 +20,14 @@
     
     NSMutableArray *_queuedSignals;
     bool _queueMode;
+    bool _throttleMode;
 }
 
 @end
 
 @implementation SSignalQueueState
 
-- (instancetype)initWithSubscriber:(SSubscriber *)subscriber queueMode:(bool)queueMode
+- (instancetype)initWithSubscriber:(SSubscriber *)subscriber queueMode:(bool)queueMode throttleMode:(bool)throttleMode
 {
     self = [super init];
     if (self != nil)
@@ -35,6 +36,7 @@
         _currentDisposable = [[SMetaDisposable alloc] init];
         _queuedSignals = queueMode ? [[NSMutableArray alloc] init] : nil;
         _queueMode = queueMode;
+        _throttleMode = throttleMode;
     }
     return self;
 }
@@ -48,8 +50,10 @@
 {
     bool startSignal = false;
     OSSpinLockLock(&_lock);
-    if (_queueMode && _executingSignal)
-    {
+    if (_queueMode && _executingSignal) {
+        if (_throttleMode) {
+            [_queuedSignals removeAllObjects];
+        }
         [_queuedSignals addObject:signal];
     }
     else
@@ -152,7 +156,7 @@
 {
     return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
     {
-        SSignalQueueState *state = [[SSignalQueueState alloc] initWithSubscriber:subscriber queueMode:false];
+        SSignalQueueState *state = [[SSignalQueueState alloc] initWithSubscriber:subscriber queueMode:false throttleMode:false];
         
         [state beginWithDisposable:[self startWithNext:^(id next)
         {
@@ -177,6 +181,10 @@
 - (SSignal *)mapToQueue:(SSignal *(^)(id))f
 {
     return [[self map:f] queue];
+}
+
+- (SSignal *)mapToThrottled:(SSignal *(^)(id))f {
+    return [[self map:f] throttled];
 }
 
 - (SSignal *)then:(SSignal *)signal
@@ -216,7 +224,7 @@
 {
     return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
     {
-        SSignalQueueState *state = [[SSignalQueueState alloc] initWithSubscriber:subscriber queueMode:true];
+        SSignalQueueState *state = [[SSignalQueueState alloc] initWithSubscriber:subscriber queueMode:true throttleMode:false];
         
         [state beginWithDisposable:[self startWithNext:^(id next)
         {
@@ -229,6 +237,24 @@
             [state beginCompletion];
         }]];
         
+        return state;
+    }];
+}
+
+- (SSignal *)throttled {
+    return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
+        SSignalQueueState *state = [[SSignalQueueState alloc] initWithSubscriber:subscriber queueMode:true throttleMode:true];
+        [state beginWithDisposable:[self startWithNext:^(id next)
+        {
+            [state enqueueSignal:next];
+        } error:^(id error)
+        {
+            [subscriber putError:error];
+        } completed:^
+        {
+            [state beginCompletion];
+        }]];
+
         return state;
     }];
 }
