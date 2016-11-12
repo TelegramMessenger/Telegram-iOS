@@ -71,7 +71,7 @@
 #endif
 
 #ifndef ASDISPLAYNODE_WARN_DEPRECATED
-# define ASDISPLAYNODE_WARN_DEPRECATED 0
+# define ASDISPLAYNODE_WARN_DEPRECATED 1
 #endif
 
 #ifndef ASDISPLAYNODE_DEPRECATED
@@ -94,6 +94,17 @@
 # define ASDISPLAYNODE_NOTHROW __attribute__ ((nothrow))
 #else
 # define ASDISPLAYNODE_NOTHROW
+#endif
+
+/**
+ * The event backtraces take a static 2KB of memory
+ * and retain all objects present in all the registers
+ * of the stack frames. The memory consumption impact
+ * is too significant even to be enabled during general
+ * development.
+ */
+#ifndef AS_SAVE_EVENT_BACKTRACES
+# define AS_SAVE_EVENT_BACKTRACES 0
 #endif
 
 #define ARRAY_COUNT(x) sizeof(x) / sizeof(x[0])

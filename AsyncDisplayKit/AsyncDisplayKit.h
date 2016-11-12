@@ -84,6 +84,7 @@
 #import <AsyncDisplayKit/ASTraitCollection.h>
 #import <AsyncDisplayKit/ASVisibilityProtocols.h>
 #import <AsyncDisplayKit/ASWeakSet.h>
+#import <AsyncDisplayKit/ASEventLog.h>
 
 #import <AsyncDisplayKit/CoreGraphics+ASConvenience.h>
 #import <AsyncDisplayKit/NSMutableAttributedString+TextKitAdditions.h>
@@ -93,5 +94,6 @@
 #import <AsyncDisplayKit/NSArray+Diffing.h>
 
 #import <AsyncDisplayKit/AsyncDisplayKit+Debug.h>
+#import <AsyncDisplayKit/ASDisplayNode+Deprecated.h>
 
 #import <AsyncDisplayKit/ASCollectionNode+Beta.h>

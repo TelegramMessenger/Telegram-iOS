@@ -212,7 +212,6 @@ static NSString * const kCellReuseIdentifier = @"_ASCollectionViewCell";
   struct {
     unsigned int didChangeCollectionViewDataSource:1;
     unsigned int didChangeCollectionViewDelegate:1;
-	unsigned int scrollableDirections:1;
   } _layoutInspectorFlags;
 }
 
@@ -244,10 +243,10 @@ static NSString * const kCellReuseIdentifier = @"_ASCollectionViewCell";
 
 - (instancetype)initWithFrame:(CGRect)frame collectionViewLayout:(UICollectionViewLayout *)layout
 {
-  return [self _initWithFrame:frame collectionViewLayout:layout layoutFacilitator:nil];
+  return [self _initWithFrame:frame collectionViewLayout:layout layoutFacilitator:nil eventLog:nil];
 }
 
-- (instancetype)_initWithFrame:(CGRect)frame collectionViewLayout:(UICollectionViewLayout *)layout layoutFacilitator:(id<ASCollectionViewLayoutFacilitatorProtocol>)layoutFacilitator
+- (instancetype)_initWithFrame:(CGRect)frame collectionViewLayout:(UICollectionViewLayout *)layout layoutFacilitator:(id<ASCollectionViewLayoutFacilitatorProtocol>)layoutFacilitator eventLog:(ASEventLog *)eventLog
 {
   if (!(self = [super initWithFrame:frame collectionViewLayout:layout]))
     return nil;
@@ -259,7 +258,7 @@ static NSString * const kCellReuseIdentifier = @"_ASCollectionViewCell";
   _rangeController.delegate = self;
   _rangeController.layoutController = _layoutController;
   
-  _dataController = [[ASCollectionDataController alloc] initWithDataSource:self];
+  _dataController = [[ASCollectionDataController alloc] initWithDataSource:self eventLog:eventLog];
   _dataController.delegate = _rangeController;
   _dataController.environmentDelegate = self;
   
@@ -515,7 +514,6 @@ static NSString * const kCellReuseIdentifier = @"_ASCollectionViewCell";
   
   _layoutInspectorFlags.didChangeCollectionViewDataSource = [_layoutInspector respondsToSelector:@selector(didChangeCollectionViewDataSource:)];
   _layoutInspectorFlags.didChangeCollectionViewDelegate = [_layoutInspector respondsToSelector:@selector(didChangeCollectionViewDelegate:)];
-  _layoutInspectorFlags.scrollableDirections = [_layoutInspector respondsToSelector:@selector(scrollableDirections)];
 }
 
 - (void)setTuningParameters:(ASRangeTuningParameters)tuningParameters forRangeType:(ASLayoutRangeType)rangeType
@@ -580,6 +578,23 @@ static NSString * const kCellReuseIdentifier = @"_ASCollectionViewCell";
     ASCellNode *node = [self nodeForItemAtIndexPath:indexPath];
     return [_dataController indexPathForNode:node];
   }
+}
+
+- (NSArray<NSIndexPath *> *)convertIndexPathsToCollectionNode:(NSArray<NSIndexPath *> *)indexPaths
+{
+  if (indexPaths == nil) {
+    return nil;
+  }
+
+  NSMutableArray<NSIndexPath *> *indexPathsArray = [NSMutableArray arrayWithCapacity:indexPaths.count];
+
+  for (NSIndexPath *indexPathInView in indexPaths) {
+    NSIndexPath *indexPath = [self convertIndexPathToCollectionNode:indexPathInView];
+    if (indexPath != nil) {
+      [indexPathsArray addObject:indexPath];
+    }
+  }
+  return indexPathsArray;
 }
 
 - (ASCellNode *)supplementaryNodeForElementKind:(NSString *)elementKind atIndexPath:(NSIndexPath *)indexPath
@@ -1100,23 +1115,8 @@ static NSString * const kCellReuseIdentifier = @"_ASCollectionViewCell";
 
 - (ASScrollDirection)scrollableDirections
 {
-  //Cache results of layoutInspector to ensure flags are up to date if getter lazily loads a new one.
-  id<ASCollectionViewLayoutInspecting> layoutInspector = self.layoutInspector;
-  if (_layoutInspectorFlags.scrollableDirections) {
-    return [layoutInspector scrollableDirections];
-  } else {
-    ASScrollDirection scrollableDirection = ASScrollDirectionNone;
-    CGFloat totalContentWidth = self.contentSize.width + self.contentInset.left + self.contentInset.right;
-    CGFloat totalContentHeight = self.contentSize.height + self.contentInset.top + self.contentInset.bottom;
-    
-    if (self.alwaysBounceHorizontal || totalContentWidth > self.bounds.size.width) { // Can scroll horizontally.
-      scrollableDirection |= ASScrollDirectionHorizontalDirections;
-    }
-    if (self.alwaysBounceVertical || totalContentHeight > self.bounds.size.height) { // Can scroll vertically.
-      scrollableDirection |= ASScrollDirectionVerticalDirections;
-    }
-    return scrollableDirection;
-  }
+  ASDisplayNodeAssertNotNil(self.layoutInspector, @"Layout inspector should be assigned.");
+  return [self.layoutInspector scrollableDirections];
 }
 
 - (ASScrollDirection)flowLayoutScrollableDirections:(UICollectionViewFlowLayout *)flowLayout {
@@ -1655,6 +1655,9 @@ static NSString * const kCellReuseIdentifier = @"_ASCollectionViewCell";
  */
 - (void)layer:(CALayer *)layer didChangeBoundsWithOldValue:(CGRect)oldBounds newValue:(CGRect)newBounds
 {
+  if (self.collectionViewLayout == nil) {
+    return;
+  }
   CGSize lastUsedSize = _lastBoundsSizeUsedForMeasuringNodes;
   if (CGSizeEqualToSize(lastUsedSize, newBounds.size)) {
     return;

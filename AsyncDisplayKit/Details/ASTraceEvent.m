@@ -45,7 +45,7 @@
       }
     }
     _threadDescription = threadDescription;
-    
+
     _backtrace = backtrace;
     _timestamp = CACurrentMediaTime() - refTime;
   }

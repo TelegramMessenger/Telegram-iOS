@@ -13,6 +13,7 @@
 #import "ASTableNode.h"
 #import "ASTableViewInternal.h"
 #import "ASEnvironmentInternal.h"
+#import "ASDisplayNodeInternal.h"
 #import "ASDisplayNode+Subclasses.h"
 #import "ASInternalHelpers.h"
 #import "ASCellNode+Internal.h"
@@ -79,7 +80,7 @@
 - (instancetype)_initWithFrame:(CGRect)frame style:(UITableViewStyle)style dataControllerClass:(Class)dataControllerClass
 {
   ASDisplayNodeViewBlock tableViewBlock = ^UIView *{
-    return [[ASTableView alloc] _initWithFrame:frame style:style dataControllerClass:dataControllerClass];
+    return [[ASTableView alloc] _initWithFrame:frame style:style dataControllerClass:dataControllerClass eventLog:ASDisplayNodeGetEventLog(self)];
   };
 
   if (self = [super initWithViewBlock:tableViewBlock]) {
@@ -388,19 +389,24 @@ ASEnvironmentCollectionTableSetEnvironmentState(_environmentStateLock)
 
 - (void)reloadDataInitiallyIfNeeded
 {
+  ASDisplayNodeAssertMainThread();
   if (!self.dataController.initialReloadDataHasBeenCalled) {
-    [self reloadData];
+    // Note: Just calling reloadData isn't enough here – we need to
+    // ensure that _nodesConstrainedWidth is updated first.
+    [self.view layoutIfNeeded];
   }
 }
 
 - (NSInteger)numberOfRowsInSection:(NSInteger)section
 {
+  ASDisplayNodeAssertMainThread();
   [self reloadDataInitiallyIfNeeded];
   return [self.dataController numberOfRowsInSection:section];
 }
 
 - (NSInteger)numberOfSections
 {
+  ASDisplayNodeAssertMainThread();
   [self reloadDataInitiallyIfNeeded];
   return [self.dataController numberOfSections];
 }
@@ -453,6 +459,14 @@ ASEnvironmentCollectionTableSetEnvironmentState(_environmentStateLock)
     return [tableView convertIndexPathToTableNode:indexPath];
   }
   return indexPath;
+}
+
+- (NSArray<NSIndexPath *> *)indexPathsForSelectedRows
+{
+  ASDisplayNodeAssertMainThread();
+  ASTableView *tableView = self.view;
+
+  return [tableView convertIndexPathsToTableNode:tableView.indexPathsForSelectedRows];
 }
 
 - (nullable NSIndexPath *)indexPathForRowAtPoint:(CGPoint)point
@@ -559,6 +573,16 @@ ASEnvironmentCollectionTableSetEnvironmentState(_environmentStateLock)
 - (void)waitUntilAllUpdatesAreCommitted
 {
   [self.view waitUntilAllUpdatesAreCommitted];
+}
+
+#pragma mark - Debugging (Private)
+
+- (NSMutableArray<NSDictionary *> *)propertiesForDebugDescription
+{
+  NSMutableArray<NSDictionary *> *result = [super propertiesForDebugDescription];
+  [result addObject:@{ @"dataSource" : ASObjectDescriptionMakeTiny(self.dataSource) }];
+  [result addObject:@{ @"delegate" : ASObjectDescriptionMakeTiny(self.delegate) }];
+  return result;
 }
 
 @end

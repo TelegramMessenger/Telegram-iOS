@@ -75,7 +75,8 @@
   ASSnapshotVerifyView(backgroundView, nil);
 }
 
-- (void)testThatFastPathTruncationWorks
+// This test is disabled because the fast-path is disabled.
+- (void)DISABLED_testThatFastPathTruncationWorks
 {
   ASTextNode *textNode = [[ASTextNode alloc] init];
   textNode.attributedText = [[NSAttributedString alloc] initWithString:@"Quality is Important" attributes:@{ NSForegroundColorAttributeName: [UIColor blueColor], NSFontAttributeName: [UIFont italicSystemFontOfSize:24] }];
@@ -87,8 +88,21 @@
 {
   ASTextNode *textNode = [[ASTextNode alloc] init];
   textNode.attributedText = [[NSAttributedString alloc] initWithString:@"Quality is Important" attributes:@{ NSForegroundColorAttributeName: [UIColor blueColor], NSFontAttributeName: [UIFont italicSystemFontOfSize:24] }];
-  [textNode layoutThatFits:ASSizeRangeMake(CGSizeZero, CGSizeMake(100, 50))];
+  // Set exclusion paths to trigger slow path
   textNode.exclusionPaths = @[ [UIBezierPath bezierPath] ];
+  [textNode layoutThatFits:ASSizeRangeMake(CGSizeZero, CGSizeMake(100, 50))];
+  ASSnapshotVerifyNode(textNode, nil);
+}
+
+- (void)testShadowing
+{
+  ASTextNode *textNode = [[ASTextNode alloc] init];
+  textNode.attributedText = [[NSAttributedString alloc] initWithString:@"Quality is Important"];
+  textNode.shadowColor = [UIColor blackColor].CGColor;
+  textNode.shadowOpacity = 0.3;
+  textNode.shadowRadius = 3;
+  textNode.shadowOffset = CGSizeMake(0, 1);
+  [textNode layoutThatFits:ASSizeRangeMake(CGSizeZero, CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX))];
   ASSnapshotVerifyNode(textNode, nil);
 }
 

@@ -102,7 +102,7 @@ ASOVERLOADABLE ASDISPLAYNODE_INLINE ASDimension ASDimensionMake(ASDimensionUnit 
   if (unit == ASDimensionUnitAuto ) {
     ASDisplayNodeCAssert(value == 0, @"ASDimension auto value must be 0.");
   } else if (unit == ASDimensionUnitPoints) {
-    ASDisplayNodeCAssert(ASPointsValidForSize(value), @"ASDimension points value (%f) must be valid for size.", value);
+    ASDisplayNodeCAssertPositiveReal(@"Points", value);
   } else if (unit == ASDimensionUnitFraction) {
     ASDisplayNodeCAssert( 0 <= value && value <= 1.0, @"ASDimension fraction value (%f) must be between 0 and 1.", value);
   }
@@ -132,7 +132,7 @@ ASOVERLOADABLE AS_WARN_UNUSED_RESULT extern ASDimension ASDimensionMake(NSString
  */
 ASDISPLAYNODE_INLINE AS_WARN_UNUSED_RESULT ASDimension ASDimensionMakeWithPoints(CGFloat points)
 {
-  ASDisplayNodeCAssert(ASPointsValidForSize(points), @"ASDimension points value (%f) must be valid for size.", points);
+  ASDisplayNodeCAssertPositiveReal(@"Points", points);
   return ASDimensionMake(ASDimensionUnitPoints, points);
 }
 
@@ -208,7 +208,12 @@ ASDISPLAYNODE_INLINE AS_WARN_UNUSED_RESULT ASLayoutSize ASLayoutSizeMake(ASDimen
 /*
  * Returns a string representation of a relative size.
  */
-ASDISPLAYNODE_INLINE AS_WARN_UNUSED_RESULT NSString *NSStringFromASLayoutSize(ASLayoutSize size);
+ASDISPLAYNODE_INLINE AS_WARN_UNUSED_RESULT NSString *NSStringFromASLayoutSize(ASLayoutSize size)
+{
+  return [NSString stringWithFormat:@"{%@, %@}",
+          NSStringFromASDimension(size.width),
+          NSStringFromASDimension(size.height)];
+}
 
 #pragma mark - ASSizeRange
 
@@ -360,9 +365,9 @@ typedef NS_ENUM(NSInteger, ASRelativeDimensionType) {
 #define ASRelativeDimensionMakeWithFraction ASDimensionMakeWithFraction
 
 /**
- * Function is deprecated. Use ASSizeRangeMakeWithExactCGSize instead.
+ * Function is deprecated. Use ASSizeRangeMake instead.
  */
-extern AS_WARN_UNUSED_RESULT ASSizeRange ASSizeRangeMakeExactSize(CGSize size) ASDISPLAYNODE_DEPRECATED_MSG("Use ASSizeRangeMakeWithExactCGSize instead.");
+extern AS_WARN_UNUSED_RESULT ASSizeRange ASSizeRangeMakeExactSize(CGSize size) ASDISPLAYNODE_DEPRECATED_MSG("Use ASSizeRangeMake instead.");
 
 /**
  Expresses an inclusive range of relative sizes. Used to provide additional constraint to layout.

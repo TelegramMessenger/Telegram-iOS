@@ -308,9 +308,16 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, readonly) NSInteger numberOfSections;
 
 /**
+ * Similar to -visibleCells.
+ *
+ * @return an array containing the nodes being displayed on screen. This must be called on the main thread.
+ */
+@property (nonatomic, readonly) NSArray<__kindof ASCellNode *> *visibleNodes;
+
+/**
  * Retrieves the node for the row at the given index path.
  */
-- (nullable ASCellNode *)nodeForRowAtIndexPath:(NSIndexPath *)indexPath AS_WARN_UNUSED_RESULT;
+- (nullable __kindof ASCellNode *)nodeForRowAtIndexPath:(NSIndexPath *)indexPath AS_WARN_UNUSED_RESULT;
 
 /**
  * Similar to -indexPathForCell:.
@@ -349,7 +356,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (nullable __kindof UITableViewCell *)cellForRowAtIndexPath:(NSIndexPath *)indexPath AS_WARN_UNUSED_RESULT;
 
 /**
- * Similar to -[UITableView indexPathForSelectedRow]
+ * Similar to UITableView.indexPathForSelectedRow
  *
  * @return The value of this property is an index path identifying the row and section
  *   indexes of the selected row, or nil if the index path is invalid. If there are multiple selections,
@@ -358,7 +365,9 @@ NS_ASSUME_NONNULL_BEGIN
  *
  * @discussion This method must be called from the main thread.
  */
-- (nullable NSIndexPath *)indexPathForSelectedRow AS_WARN_UNUSED_RESULT;
+@property (nonatomic, readonly, nullable) NSIndexPath *indexPathForSelectedRow;
+
+@property (nonatomic, readonly, nullable) NSArray<NSIndexPath *> *indexPathsForSelectedRows;
 
 /**
  * Similar to -[UITableView indexPathForRowAtPoint:]
@@ -416,13 +425,6 @@ NS_ASSUME_NONNULL_BEGIN
  * @see @c numberOfSectionsInTableView:
  */
 - (NSInteger)tableNode:(ASTableNode *)tableNode numberOfRowsInSection:(NSInteger)section;
-
-/**
- * Similar to -visibleCells.
- *
- * @return an array containing the nodes being displayed on screen. This must be called on the main thread.
- */
-@property(readonly, copy) NSArray<__kindof ASCellNode *> *visibleNodes;
 
 /**
  * Asks the data source for a block to create a node to represent the row at the given index path.

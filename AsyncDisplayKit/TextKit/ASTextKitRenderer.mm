@@ -35,20 +35,11 @@ static NSCharacterSet *_defaultAvoidTruncationCharacterSet()
   return truncationCharacterSet;
 }
 
-@interface ASTextKitRenderer()
-/**
- * This object is lazily created. It is provided to the NSAttributedString
- * drawing methods used by the fast-paths in the size calculation and drawing
- * instance methods.
- */
-@property (nonatomic, strong, readonly) NSStringDrawingContext *stringDrawingContext;
-@end
-
 @implementation ASTextKitRenderer {
   CGSize _calculatedSize;
   BOOL _sizeIsCalculated;
 }
-@synthesize attributes = _attributes, context = _context, shadower = _shadower, truncater = _truncater, fontSizeAdjuster = _fontSizeAdjuster, stringDrawingContext = _stringDrawingContext;
+@synthesize attributes = _attributes, context = _context, shadower = _shadower, truncater = _truncater, fontSizeAdjuster = _fontSizeAdjuster;
 
 #pragma mark - Initialization
 
@@ -68,10 +59,10 @@ static NSCharacterSet *_defaultAvoidTruncationCharacterSet()
 {
   if (!_shadower) {
     ASTextKitAttributes attributes = _attributes;
-    _shadower = [[ASTextKitShadower alloc] initWithShadowOffset:attributes.shadowOffset
-                                                    shadowColor:attributes.shadowColor
-                                                  shadowOpacity:attributes.shadowOpacity
-                                                   shadowRadius:attributes.shadowRadius];
+    _shadower = [ASTextKitShadower shadowerWithShadowOffset:attributes.shadowOffset
+                                                shadowColor:attributes.shadowColor
+                                              shadowOpacity:attributes.shadowOpacity
+                                               shadowRadius:attributes.shadowRadius];
   }
   return _shadower;
 }
@@ -118,15 +109,18 @@ static NSCharacterSet *_defaultAvoidTruncationCharacterSet()
 
 - (NSStringDrawingContext *)stringDrawingContext
 {
-  if (_stringDrawingContext == nil) {
-    _stringDrawingContext = [[NSStringDrawingContext alloc] init];
-
-    if (isinf(_constrainedSize.width) == NO && _attributes.maximumNumberOfLines > 0) {
-      ASDisplayNodeAssert(_attributes.maximumNumberOfLines != 1, @"Max line count 1 is not supported in fast-path.");
-      [_stringDrawingContext setValue:@(_attributes.maximumNumberOfLines) forKey:@"maximumNumberOfLines"];
-    }
+  // String drawing contexts are not safe to use from more than one thread.
+  // i.e. if they are created on one thread, it is unsafe to use them on another.
+  // Therefore we always need to create a new one.
+  //
+  // http://web.archive.org/web/20140703122636/https://developer.apple.com/library/ios/documentation/uikit/reference/NSAttributedString_UIKit_Additions/Reference/Reference.html
+  NSStringDrawingContext *stringDrawingContext = [[NSStringDrawingContext alloc] init];
+  
+  if (isinf(_constrainedSize.width) == NO && _attributes.maximumNumberOfLines > 0) {
+    ASDisplayNodeAssert(_attributes.maximumNumberOfLines != 1, @"Max line count 1 is not supported in fast-path.");
+    [stringDrawingContext setValue:@(_attributes.maximumNumberOfLines) forKey:@"maximumNumberOfLines"];
   }
-  return _stringDrawingContext;
+  return stringDrawingContext;
 }
 
 #pragma mark - Sizing
@@ -138,27 +132,6 @@ static NSCharacterSet *_defaultAvoidTruncationCharacterSet()
     _sizeIsCalculated = YES;
   }
   return _calculatedSize;
-}
-
-- (void)setConstrainedSize:(CGSize)constrainedSize
-{
-  if (!CGSizeEqualToSize(constrainedSize, _constrainedSize)) {
-    _sizeIsCalculated = NO;
-    _constrainedSize = constrainedSize;
-    _calculatedSize = CGSizeZero;
-    
-    // Throw away the all subcomponents to create them with the new constrained size new as well as let the
-    // truncater do it's job again for the new constrained size. This is necessary as after a truncation did happen
-    // the context would use the truncated string and not the original string to truncate based on the new
-    // constrained size
-
-    ASPerformBackgroundDeallocation(_context);
-    ASPerformBackgroundDeallocation(_truncater);
-    ASPerformBackgroundDeallocation(_fontSizeAdjuster);
-    _context = nil;
-    _truncater = nil;
-    _fontSizeAdjuster = nil;
-  }
 }
 
 - (void)_calculateSize
@@ -232,12 +205,15 @@ static NSCharacterSet *_defaultAvoidTruncationCharacterSet()
 
 - (BOOL)canUseFastPath
 {
-  return self.isScaled == NO
-    && self.usesCustomTruncation == NO
-    && self.usesExclusionPaths == NO
-    // NSAttributedString drawing methods ignore usesLineFragmentOrigin if max line count 1,
-    // rendering them useless:
-    && (_attributes.maximumNumberOfLines != 1 || isinf(_constrainedSize.width));
+  return NO;
+//  Fast path is temporarily disabled, because it's crashing in production.
+//  NOTE: Remember to re-enable testFastPathTruncation when we re-enable this.
+//  return self.isScaled == NO
+//    && self.usesCustomTruncation == NO
+//    && self.usesExclusionPaths == NO
+//    // NSAttributedString drawing methods ignore usesLineFragmentOrigin if max line count 1,
+//    // rendering them useless:
+//    && (_attributes.maximumNumberOfLines != 1 || isinf(_constrainedSize.width));
 }
 
 #pragma mark - Drawing
