@@ -6,6 +6,8 @@ import XCTest
 import Postbox
 @testable import Postbox
 
+import SwiftSignalKit
+
 private let peerId = PeerId(namespace: 1, id: 1)
 private let namespace: Int32 = 1
 private let authorPeerId = PeerId(namespace: 1, id: 6)
@@ -83,7 +85,7 @@ class ReadStateTableTests: XCTestCase {
         var randomId: Int64 = 0
         arc4random_buf(&randomId, 8)
         path = NSTemporaryDirectory() + "\(randomId)"
-        self.valueBox = SqliteValueBox(basePath: path!)
+        self.valueBox = SqliteValueBox(basePath: path!, queue: Queue.mainQueue())
         
         let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [], initializeMessageNamespacesWithHoles: [], existingMessageTags: [.First, .Second])
         

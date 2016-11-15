@@ -6,6 +6,8 @@ import XCTest
 import Postbox
 @testable import Postbox
 
+import SwiftSignalKit
+
 private let peerId = PeerId(namespace: 1, id: 1)
 private let namespace: Int32 = 1
 private let authorPeerId = PeerId(namespace: 1, id: 6)
@@ -120,6 +122,10 @@ private class TestExternalMedia: Media {
 }
 
 private class TestPeer: Peer {
+    var indexName: PeerIndexNameRepresentation {
+        return .title("Test")
+    }
+
     let id: PeerId
     let data: String
     
@@ -160,7 +166,7 @@ private enum MediaEntry: Equatable {
             case let .Direct(media, referenceCount):
                 self = .Direct(media, referenceCount)
             case let .MessageReference(index):
-                self = MessageReference(index.id.id)
+                self = .MessageReference(index.id.id)
         }
     }
 }
@@ -219,7 +225,7 @@ class MessageHistoryTableTests: XCTestCase {
         var randomId: Int64 = 0
         arc4random_buf(&randomId, 8)
         path = NSTemporaryDirectory() + "\(randomId)"
-        self.valueBox = SqliteValueBox(basePath: path!)
+        self.valueBox = SqliteValueBox(basePath: path!, queue: Queue.mainQueue())
         
         let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [], initializeMessageNamespacesWithHoles: [], existingMessageTags: [.First, .Second])
         
@@ -330,12 +336,12 @@ class MessageHistoryTableTests: XCTestCase {
         }
     }
     
-    private func expectUnsent(_ indices: [(Int32, Int32)]) {
-        let actualUnsent = self.unsentTable!.get().map({ ($0.id.id, $0.timestamp) })
+    private func expectUnsent(_ indices: [Int32]) {
+        let actualUnsent = self.unsentTable!.get().map({ $0.id })
         var match = true
         if actualUnsent.count == indices.count {
             for i in 0 ..< indices.count {
-                if indices[i].0 != actualUnsent[i].0 || indices[i].1 != actualUnsent[i].1 {
+                if indices[i] != actualUnsent[i] {
                     match = false
                     break
                 }
@@ -778,13 +784,13 @@ class MessageHistoryTableTests: XCTestCase {
     func testAddUnsent() {
         addMessage(100, 100, "m100", [], [.Unsent])
         expectEntries([.Message(100, 100, "m100", [], [.Unsent])])
-        expectUnsent([(100, 100)])
+        expectUnsent([100])
     }
     
     func testRemoveUnsent() {
         addMessage(100, 100, "m100", [], [.Unsent])
         expectEntries([.Message(100, 100, "m100", [], [.Unsent])])
-        expectUnsent([(100, 100)])
+        expectUnsent([100])
         
         removeMessages([100])
         expectEntries([])
@@ -794,7 +800,7 @@ class MessageHistoryTableTests: XCTestCase {
     func testUpdateUnsentToSentSameIndex() {
         addMessage(100, 100, "m100", [], [.Unsent])
         expectEntries([.Message(100, 100, "m100", [], [.Unsent])])
-        expectUnsent([(100, 100)])
+        expectUnsent([100])
         
         updateMessage(100, 100, 100, "m100", [], [], [])
         expectEntries([.Message(100, 100, "m100", [], [])])
@@ -804,7 +810,7 @@ class MessageHistoryTableTests: XCTestCase {
     func testUpdateUnsentToFailed() {
         addMessage(100, 100, "m100", [], [.Unsent])
         expectEntries([.Message(100, 100, "m100", [], [.Unsent])])
-        expectUnsent([(100, 100)])
+        expectUnsent([100])
         
         updateMessage(100, 100, 100, "m100", [], [.Unsent, .Failed], [])
         expectEntries([.Message(100, 100, "m100", [], [.Unsent, .Failed])])
@@ -814,7 +820,7 @@ class MessageHistoryTableTests: XCTestCase {
     func testUpdateDifferentIndex() {
         addMessage(100, 100, "m100", [], [.Unsent])
         expectEntries([.Message(100, 100, "m100", [], [.Unsent])])
-        expectUnsent([(100, 100)])
+        expectUnsent([100])
         
         updateMessage(100, 200, 200, "m100", [], [], [])
         expectEntries([.Message(200, 200, "m100", [], [])])
@@ -826,7 +832,7 @@ class MessageHistoryTableTests: XCTestCase {
         
         addMessage(100, 100, "m100", [], [.Unsent])
         expectEntries([.Hole(1, 99, 100), .Message(100, 100, "m100", [], [.Unsent]), .Hole(101, Int32.max, Int32.max)])
-        expectUnsent([(100, 100)])
+        expectUnsent([100])
         
         updateMessage(100, 200, 200, "m100", [], [], [])
         expectEntries([.Hole(1, 199, 200), .Message(200, 200, "m100", [], []), .Hole(201, Int32.max, Int32.max)])

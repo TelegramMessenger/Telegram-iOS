@@ -6,6 +6,8 @@ import XCTest
 import Postbox
 @testable import Postbox
 
+import SwiftSignalKit
+
 private let namespace: Int32 = 1
 
 private let authorPeerId = PeerId(namespace: 2, id: 3)
@@ -75,6 +77,7 @@ class ChatListTableTests: XCTestCase {
     var tagsTable: MessageHistoryTagsTable?
     var readStateTable: MessageHistoryReadStateTable?
     var synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable?
+    var peerChatInterfaceStateTable: PeerChatInterfaceStateTable?
     
     override class func setUp() {
         super.setUp()
@@ -86,7 +89,7 @@ class ChatListTableTests: XCTestCase {
         var randomId: Int64 = 0
         arc4random_buf(&randomId, 8)
         path = NSTemporaryDirectory() + "\(randomId)"
-        self.valueBox = SqliteValueBox(basePath: path!)
+        self.valueBox = SqliteValueBox(basePath: path!, queue: Queue.mainQueue())
         
         let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [], initializeMessageNamespacesWithHoles: [], existingMessageTags: [])
         
@@ -102,6 +105,7 @@ class ChatListTableTests: XCTestCase {
         self.historyTable = MessageHistoryTable(valueBox: self.valueBox!, tableId: 4, messageHistoryIndexTable: self.indexTable!, messageMediaTable: self.mediaTable!, historyMetadataTable: self.historyMetadataTable!, unsentTable: self.unsentTable!, tagsTable: self.tagsTable!, readStateTable: self.readStateTable!, synchronizeReadStateTable: self.synchronizeReadStateTable!)
         self.chatListIndexTable = ChatListIndexTable(valueBox: self.valueBox!, tableId: 5)
         self.chatListTable = ChatListTable(valueBox: self.valueBox!, tableId: 6, indexTable: self.chatListIndexTable!, metadataTable: self.historyMetadataTable!, seedConfiguration: seedConfiguration)
+        self.peerChatInterfaceStateTable = PeerChatInterfaceStateTable(valueBox: self.valueBox!, tableId: 20)
     }
     
     override func tearDown() {
@@ -123,18 +127,20 @@ class ChatListTableTests: XCTestCase {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
+        let updatedPeerChatListEmbeddedStates: [PeerId: PeerChatListEmbeddedInterfaceState?] = [:]
         self.historyTable!.addMessages([StoreMessage(id: MessageId(peerId: PeerId(namespace: namespace, id: peerId), namespace: namespace, id: id), timestamp: timestamp, flags: [], tags: [], forwardInfo: nil, authorId: authorPeerId, text: text, attributes: [], media: media)], location: .Random, operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         var operations: [ChatListOperation] = []
-        self.chatListTable!.replay(operationsByPeerId, messageHistoryTable: self.historyTable!, operations: &operations)
+        self.chatListTable!.replay(historyOperationsByPeerId: operationsByPeerId, updatedPeerChatListEmbeddedStates: updatedPeerChatListEmbeddedStates, messageHistoryTable: self.historyTable!, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable!, operations: &operations)
     }
     
     private func addHole(_ peerId: Int32, _ id: Int32) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
+        let updatedPeerChatListEmbeddedStates: [PeerId: PeerChatListEmbeddedInterfaceState?] = [:]
         self.historyTable!.addHoles([MessageId(peerId: PeerId(namespace: namespace, id: peerId), namespace: namespace, id: id)], operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         var operations: [ChatListOperation] = []
-        self.chatListTable!.replay(operationsByPeerId, messageHistoryTable: self.historyTable!, operations: &operations)
+        self.chatListTable!.replay(historyOperationsByPeerId: operationsByPeerId, updatedPeerChatListEmbeddedStates: updatedPeerChatListEmbeddedStates, messageHistoryTable: self.historyTable!, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable!, operations: &operations)
     }
     
     private func addChatListHole(_ peerId: Int32, _ id: Int32, _ timestamp: Int32) {
@@ -156,24 +162,26 @@ class ChatListTableTests: XCTestCase {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
+        let updatedPeerChatListEmbeddedStates: [PeerId: PeerChatListEmbeddedInterfaceState?] = [:]
         self.historyTable!.removeMessages(ids.map({ MessageId(peerId: PeerId(namespace: namespace, id: peerId), namespace: namespace, id: $0) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         var operations: [ChatListOperation] = []
-        self.chatListTable!.replay(operationsByPeerId, messageHistoryTable: self.historyTable!, operations: &operations)
+        self.chatListTable!.replay(historyOperationsByPeerId: operationsByPeerId, updatedPeerChatListEmbeddedStates: updatedPeerChatListEmbeddedStates, messageHistoryTable: self.historyTable!, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable!, operations: &operations)
     }
     
     private func fillHole(_ peerId: Int32, _ id: Int32, _ fillType: HoleFill, _ messages: [(Int32, Int32, String, [Media])]) {
         var operationsByPeerId: [PeerId: [MessageHistoryOperation]] = [:]
         var unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation] = []
         var updatedPeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
+        let updatedPeerChatListEmbeddedStates: [PeerId: PeerChatListEmbeddedInterfaceState?] = [:]
         self.historyTable!.fillHole(MessageId(peerId: PeerId(namespace: namespace, id: peerId), namespace: namespace, id: id), fillType: fillType, tagMask: nil, messages: messages.map({ StoreMessage(id: MessageId(peerId: PeerId(namespace: namespace, id: peerId), namespace: namespace, id: $0.0), timestamp: $0.1, flags: [], tags: [], forwardInfo: nil, authorId: authorPeerId, text: $0.2, attributes: [], media: $0.3) }), operationsByPeerId: &operationsByPeerId, unsentMessageOperations: &unsentMessageOperations, updatedPeerReadStateOperations: &updatedPeerReadStateOperations)
         var operations: [ChatListOperation] = []
-        self.chatListTable!.replay(operationsByPeerId, messageHistoryTable: self.historyTable!, operations: &operations)
+        self.chatListTable!.replay(historyOperationsByPeerId: operationsByPeerId, updatedPeerChatListEmbeddedStates: updatedPeerChatListEmbeddedStates, messageHistoryTable: self.historyTable!, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable!, operations: &operations)
     }
     
     private func expectEntries(_ entries: [Entry]) {
-        let actualEntries = self.chatListTable!.debugList(self.historyTable!).map({ entry -> Entry in
+        let actualEntries = self.chatListTable!.debugList(self.historyTable!, peerChatInterfaceStateTable: self.peerChatInterfaceStateTable!).map({ entry -> Entry in
             switch entry {
-                case let .Message(message):
+                case let .Message(_, message, _):
                     if message.authorId != authorPeerId {
                         XCTFail("Expected authorId \(authorPeerId), actual \(message.authorId)")
                     }

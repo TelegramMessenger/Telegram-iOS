@@ -23,6 +23,7 @@ struct IntermediateMessageForwardInfo {
 
 class IntermediateMessage {
     let stableId: UInt32
+    let stableVersion: UInt32
     let id: MessageId
     let timestamp: Int32
     let flags: MessageFlags
@@ -34,8 +35,9 @@ class IntermediateMessage {
     let embeddedMediaData: ReadBuffer
     let referencedMedia: [MediaId]
     
-    init(stableId: UInt32, id: MessageId, timestamp: Int32, flags: MessageFlags, tags: MessageTags, forwardInfo: IntermediateMessageForwardInfo?, authorId: PeerId?, text: String, attributesData: ReadBuffer, embeddedMediaData: ReadBuffer, referencedMedia: [MediaId]) {
+    init(stableId: UInt32, stableVersion: UInt32, id: MessageId, timestamp: Int32, flags: MessageFlags, tags: MessageTags, forwardInfo: IntermediateMessageForwardInfo?, authorId: PeerId?, text: String, attributesData: ReadBuffer, embeddedMediaData: ReadBuffer, referencedMedia: [MediaId]) {
         self.stableId = stableId
+        self.stableVersion = stableVersion
         self.id = id
         self.timestamp = timestamp
         self.flags = flags

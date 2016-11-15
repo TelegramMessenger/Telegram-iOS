@@ -69,7 +69,7 @@ public struct MessageId: Hashable, Comparable, CustomStringConvertible {
         var i = 0
         var array: [MessageId] = []
         while i < Int(length) {
-            array[i] = MessageId(buffer)
+            array.append(MessageId(buffer))
             i += 1
         }
         return array
@@ -201,12 +201,17 @@ public struct MessageFlags: OptionSet {
             rawValue |= MessageFlags.Incoming.rawValue
         }
         
+        if flags.contains(StoreMessageFlags.Personal) {
+            rawValue |= MessageFlags.Personal.rawValue
+        }
+        
         self.rawValue = rawValue
     }
     
     public static let Unsent = MessageFlags(rawValue: 1)
     public static let Failed = MessageFlags(rawValue: 2)
     public static let Incoming = MessageFlags(rawValue: 4)
+    public static let Personal = MessageFlags(rawValue: 8)
 }
 
 public struct StoreMessageForwardInfo {
@@ -268,6 +273,7 @@ public extension MessageAttribute {
 
 public final class Message {
     public let stableId: UInt32
+    public let stableVersion: UInt32
     public let id: MessageId
     public let timestamp: Int32
     public let flags: MessageFlags
@@ -279,9 +285,11 @@ public final class Message {
     public let media: [Media]
     public let peers: SimpleDictionary<PeerId, Peer>
     public let associatedMessages: SimpleDictionary<MessageId, Message>
+    public let associatedMessageIds: [MessageId]
     
-    public init(stableId: UInt32, id: MessageId, timestamp: Int32, flags: MessageFlags, tags: MessageTags, forwardInfo: MessageForwardInfo?, author: Peer?, text: String, attributes: [MessageAttribute], media: [Media], peers: SimpleDictionary<PeerId, Peer>, associatedMessages: SimpleDictionary<MessageId, Message>) {
+    public init(stableId: UInt32, stableVersion: UInt32, id: MessageId, timestamp: Int32, flags: MessageFlags, tags: MessageTags, forwardInfo: MessageForwardInfo?, author: Peer?, text: String, attributes: [MessageAttribute], media: [Media], peers: SimpleDictionary<PeerId, Peer>, associatedMessages: SimpleDictionary<MessageId, Message>, associatedMessageIds: [MessageId]) {
         self.stableId = stableId
+        self.stableVersion = stableVersion
         self.id = id
         self.timestamp = timestamp
         self.flags = flags
@@ -293,6 +301,7 @@ public final class Message {
         self.media = media
         self.peers = peers
         self.associatedMessages = associatedMessages
+        self.associatedMessageIds = associatedMessageIds
     }
 }
 
@@ -310,6 +319,7 @@ public struct StoreMessageFlags: OptionSet {
     public static let Unsent = StoreMessageFlags(rawValue: 1)
     public static let Failed = StoreMessageFlags(rawValue: 2)
     public static let Incoming = StoreMessageFlags(rawValue: 4)
+    public static let Personal = StoreMessageFlags(rawValue: 8)
 }
 
 public enum StoreMessageId {

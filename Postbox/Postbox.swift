@@ -335,7 +335,7 @@ public final class Postbox {
             self.metadataTable = MetadataTable(valueBox: self.valueBox, tableId: 0)
             
             let userVersion: Int32? = self.metadataTable.userVersion()
-            let currentUserVersion: Int32 = 14
+            let currentUserVersion: Int32 = 15
             
             if userVersion != currentUserVersion {
                 self.valueBox.drop()
