@@ -129,7 +129,7 @@ extension Api.Message {
                 }
                 
                 switch action {
-                    case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear:
+                    case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionHistoryClear, .messageActionGameScore:
                         break
                     case let .messageActionChannelMigrateFrom(_, chatId):
                         result.append(PeerId(namespace: Namespaces.Peer.CloudGroup, id: chatId))
@@ -222,6 +222,8 @@ func textAndMediaFromApiMedia(_ media: Api.MessageMedia?) -> (String?, Media?) {
                 break
             case .messageMediaEmpty:
                 break
+            case .messageMediaGame:
+                break
         }
     }
     
@@ -261,10 +263,12 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
     return result
 }
 
+//message#c09be45f flags:# out:flags.1?true mentioned:flags.4?true media_unread:flags.5?true silent:flags.13?true post:flags.14?true id:int from_id:flags.8?int to_id:Peer fwd_from:flags.2?MessageFwdHeader via_bot_id:flags.11?int reply_to_msg_id:flags.3?int date:int message:string media:flags.9?MessageMedia reply_markup:flags.6?ReplyMarkup entities:flags.7?Vector<MessageEntity> views:flags.10?int edit_date:flags.15?int = Message;
+
 extension StoreMessage {
     convenience init?(apiMessage: Api.Message) {
         switch apiMessage {
-            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, date, message, media, _, entities, views, _):
+            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, date, message, media, replyMarkup, entities, views, editDate):
                 let peerId: PeerId
                 var authorId: PeerId?
                 switch toId {
@@ -345,13 +349,24 @@ extension StoreMessage {
                     attributes.append(ViewCountMessageAttribute(count: Int(views)))
                 }
                 
+                if let editDate = editDate {
+                    attributes.append(EditedMessageAttribute(date: editDate))
+                }
+                
                 if let entities = entities, !entities.isEmpty {
                     attributes.append(TextEntitiesMessageAttribute(entities: messageTextEntitiesFromApiEntities(entities)))
                 }
                 
+                if let replyMarkup = replyMarkup {
+                    attributes.append(ReplyMarkupMessageAttribute(apiMarkup: replyMarkup))
+                }
+                
                 var storeFlags = StoreMessageFlags()
-                if (flags & 2) == 0 {
+                if (flags & (1 << 1)) == 0 {
                     let _ = storeFlags.insert(.Incoming)
+                }
+                if (flags & (1 << 4)) != 0 {
+                    let _ = storeFlags.insert(.Personal)
                 }
                 
                 self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), timestamp: date, flags: storeFlags, tags: tagsForStoreMessage(medias), forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)

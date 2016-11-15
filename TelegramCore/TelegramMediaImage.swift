@@ -136,7 +136,7 @@ public func telegramMediaImageRepresentationsFromApiSizes(_ sizes: [Api.PhotoSiz
 
 public func telegramMediaImageFromApiPhoto(_ photo: Api.Photo) -> TelegramMediaImage? {
     switch photo {
-        case let .photo(id, accessHash, _, sizes):
+        case let .photo(flags, id, accessHash, date, sizes):
             return TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudImage, id: id), representations: telegramMediaImageRepresentationsFromApiSizes(sizes))
         case .photoEmpty:
             return nil

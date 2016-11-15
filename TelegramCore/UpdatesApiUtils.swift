@@ -140,6 +140,10 @@ extension Api.Update {
                 return message
             case let .updateNewChannelMessage(message, _, _):
                 return message
+            case let .updateEditMessage(message, _, _):
+                return message
+            case let .updateEditChannelMessage(message, _, _):
+                return message
             default:
                 return nil
         }
@@ -173,6 +177,10 @@ extension Api.Update {
             case let .updateNewChannelMessage(message, _, _):
                 return message.peerIds
             case let .updateNewMessage(message, _, _):
+                return message.peerIds
+            case let .updateEditMessage(message, _, _):
+                return message.peerIds
+            case let .updateEditChannelMessage(message, _, _):
                 return message.peerIds
             //case let .updateReadChannelInbox(channelId, _):
             //    return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)]

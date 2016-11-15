@@ -214,9 +214,11 @@ public final class TelegramMediaWebpage: Media {
 
 func telegramMediaWebpageFromApiWebpage(_ webpage: Api.WebPage) -> TelegramMediaWebpage? {
     switch webpage {
+        case .webPageNotModified:
+            return nil
         case let .webPagePending(id, date):
             return TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), content: .Pending(date))
-        case let .webPage(_, id, url, displayUrl, type, siteName, title, description, photo, embedUrl, embedType, embedWidth, embedHeight, duration, author, document):
+        case let .webPage(_, id, url, displayUrl, hash, type, siteName, title, description, photo, embedUrl, embedType, embedWidth, embedHeight, duration, author, document, cachedPage):
             var embedSize: CGSize?
             if let embedWidth = embedWidth, let embedHeight = embedHeight {
                 embedSize = CGSize(width: CGFloat(embedWidth), height: CGFloat(embedHeight))

@@ -46,7 +46,7 @@ public final class CachedUserData: CachedPeerData {
 extension CachedUserData {
     convenience init(apiUserFull: Api.UserFull) {
         switch apiUserFull {
-            case let .userFull(_, _, about, _, _, _, apiBotInfo):
+            case let .userFull(_, _, about, _, _, _, apiBotInfo, commonChatsCount):
                 let botInfo: BotInfo?
                 if let apiBotInfo = apiBotInfo {
                     botInfo = BotInfo(apiBotInfo: apiBotInfo)

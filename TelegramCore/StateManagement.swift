@@ -37,6 +37,7 @@ private enum MutationOperation {
     case AddMessages([StoreMessage], AddMessagesLocation)
     case DeleteMessagesWithGlobalIds([Int32])
     case DeleteMessages([MessageId])
+    case EditMessage(MessageId, StoreMessage)
     case UpdateMedia(MediaId, Media?)
     case ReadInbox(MessageId)
     case ReadOutbox(MessageId)
@@ -111,6 +112,10 @@ private struct MutableState {
         self.addOperation(.DeleteMessages(messageIds))
     }
     
+    mutating func editMessage(_ id: MessageId, message: StoreMessage) {
+        self.addOperation(.EditMessage(id, message))
+    }
+    
     mutating func updateMedia(_ id: MediaId, media: Media?) {
         self.addOperation(.UpdateMedia(id, media))
     }
@@ -177,7 +182,7 @@ private struct MutableState {
     
     mutating func addOperation(_ operation: MutationOperation) {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .UpdateMedia, .ReadInbox, .ReadOutbox, .ResetReadState, .MergePeerPresences:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .ReadInbox, .ReadOutbox, .ResetReadState, .MergePeerPresences:
                 break
             case let .AddMessages(messages, _):
                 for message in messages {
@@ -297,6 +302,9 @@ private func peerIdsFromDifference(_ difference: Api.updates.Difference) -> Set<
                     peerIds.insert(peerId)
                 }
             }
+        case let .differenceTooLong(pts):
+            assertionFailure()
+            break
     }
     
     return peerIds
@@ -339,6 +347,8 @@ private func associatedMessageIdsFromDifference(_ difference: Api.updates.Differ
                     }
                 }
             }
+        case .differenceTooLong:
+            break
     }
     
     return messageIds
@@ -373,6 +383,8 @@ private func peersWithNewMessagesFromDifference(_ difference: Api.updates.Differ
                     peerIds.insert(messageId.peerId)
                 }
             }
+        case .differenceTooLong:
+            break
     }
     
     return peerIds
@@ -572,6 +584,9 @@ private func finalStateWithDifference(account: Account, state: MutableState, dif
                 case let .state(pts, qts, date, seq, _):
                     updatedState.updateState(AuthorizedAccountState.State(pts: pts, qts: qts, date: date, seq: seq))
             }
+        case .differenceTooLong:
+            assertionFailure()
+            break
     }
     
     updatedState.mergeChats(chats)
@@ -693,8 +708,37 @@ private func finalStateWithUpdates(account: Account, state: MutableState, update
                         channelsToPoll.insert(peerId)
                     }
                 }
+        case let .updateEditChannelMessage(apiMessage, pts, ptsCount):
+            if let message = StoreMessage(apiMessage: apiMessage), case let .Id(messageId) = message.id {
+                let peerId = messageId.peerId
+                if let previousState = updatedState.channelStates[peerId] {
+                    if previousState.pts >= pts {
+                        //trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) skip old delete update")
+                    } else if previousState.pts + ptsCount == pts {
+                        updatedState.editMessage(messageId, message: message)
+                        updatedState.updateChannelState(peerId, state: previousState.setPts(pts))
+                    } else {
+                        if !channelsToPoll.contains(peerId) {
+                            trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) delete pts hole")
+                            channelsToPoll.insert(peerId)
+                            //updatedMissingUpdates = true
+                        }
+                    }
+                } else {
+                    if !channelsToPoll.contains(peerId) {
+                        //trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) state unknown")
+                        channelsToPoll.insert(peerId)
+                    }
+                }
+            } else {
+                trace("State", what: "Invalid updateEditChannelMessage")
+            }
             case let .updateDeleteMessages(messages, _, _):
                 updatedState.deleteMessagesWithGlobalIds(messages)
+            case let .updateEditMessage(apiMessage, _, _):
+                if let message = StoreMessage(apiMessage: apiMessage), case let .Id(messageId) = message.id {
+                    updatedState.editMessage(messageId, message: message)
+                }
             case let .updateNewChannelMessage(message, pts, ptsCount):
                 if let message = StoreMessage(apiMessage: message) {
                     if let previousState = updatedState.channelStates[message.id.peerId] {
@@ -928,7 +972,7 @@ private func resolveMissingPeerNotificationSettings(account: Account, state: Mut
 
 private func pollChannel(_ account: Account, peer: Peer, state: MutableState) -> Signal<MutableState, NoError> {
     if let inputChannel = apiInputChannel(peer) {
-        return account.network.request(Api.functions.updates.getChannelDifference(channel: inputChannel, filter: .channelMessagesFilterEmpty, pts: state.channelStates[peer.id]?.pts ?? 1, limit: 20))
+        return account.network.request(Api.functions.updates.getChannelDifference(flags: 0, channel: inputChannel, filter: .channelMessagesFilterEmpty, pts: state.channelStates[peer.id]?.pts ?? 1, limit: 20))
             |> retryRequest
             |> map { difference -> MutableState in
                 var updatedState = state
@@ -1097,7 +1141,7 @@ private func optimizedOperations(_ operations: [MutationOperation]) -> [Mutation
     var currentAddMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings:
+            case .AddHole, .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ResetReadState, .UpdatePeerNotificationSettings:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -1147,6 +1191,8 @@ private func replayFinalState(_ modifier: Modifier, finalState: MutableState) ->
                 modifier.deleteMessagesWithGlobalIds(ids)
             case let .DeleteMessages(ids):
                 modifier.deleteMessages(ids)
+            case let .EditMessage(id, message):
+                modifier.updateMessage(id, update: { _ in message })
             case let .UpdateMedia(id, media):
                 modifier.updateMedia(id, update: media)
             case let .ReadInbox(messageId):
@@ -1212,7 +1258,7 @@ private func pollDifference(_ account: Account) -> Signal<Void, NoError> {
         |> take(1)
         |> mapToSignal { state -> Signal<Void, NoError> in
             if let authorizedState = (state as! AuthorizedAccountState).state {
-                let request = account.network.request(Api.functions.updates.getDifference(pts: authorizedState.pts, date: authorizedState.date, qts: authorizedState.qts))
+                let request = account.network.request(Api.functions.updates.getDifference(flags: 0, pts: authorizedState.pts, ptsTotalLimit: nil, date: authorizedState.date, qts: authorizedState.qts))
                     |> retryRequest
                 return request |> mapToSignal { difference -> Signal<Void, NoError> in
                     return initialStateWithDifference(account, difference: difference)

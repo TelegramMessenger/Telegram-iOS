@@ -129,6 +129,8 @@ extension Api.Update {
                     return (pts, ptsCount)
                 case let .updateReadMessages(_, pts, ptsCount):
                     return (pts, ptsCount)
+                case let .updateEditMessage(_, pts, ptsCount):
+                    return (pts, ptsCount)
                 case let .updateReadMessagesContents(_, pts, ptsCount):
                     return (pts, ptsCount)
                 case let .updateRestoreMessages(_, pts):
