@@ -176,6 +176,8 @@
 		D0E3A7881B28AE9C00A402D9 /* Coding.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E3A7871B28AE9C00A402D9 /* Coding.swift */; };
 		D0E3A79E1B28B50400A402D9 /* Message.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E3A79D1B28B50400A402D9 /* Message.swift */; };
 		D0E3A7A21B28B7DC00A402D9 /* Media.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E3A7A11B28B7DC00A402D9 /* Media.swift */; };
+		D0F7AB321DCFAB18009AD9A1 /* PeerChatTopTaggedMessageIds.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB311DCFAB18009AD9A1 /* PeerChatTopTaggedMessageIds.swift */; };
+		D0F7AB331DCFAB1C009AD9A1 /* PeerChatTopTaggedMessageIds.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB311DCFAB18009AD9A1 /* PeerChatTopTaggedMessageIds.swift */; };
 		D0F9E85B1C565EBB00037222 /* MessageMediaTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F9E85A1C565EBB00037222 /* MessageMediaTable.swift */; };
 		D0F9E8611C57766A00037222 /* MessageHistoryTableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F9E8601C57766A00037222 /* MessageHistoryTableTests.swift */; };
 		D0F9E8631C579F0200037222 /* MediaCleanupTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F9E8621C579F0200037222 /* MediaCleanupTable.swift */; };
@@ -289,6 +291,7 @@
 		D0E3A7871B28AE9C00A402D9 /* Coding.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Coding.swift; sourceTree = "<group>"; };
 		D0E3A79D1B28B50400A402D9 /* Message.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
 		D0E3A7A11B28B7DC00A402D9 /* Media.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Media.swift; sourceTree = "<group>"; };
+		D0F7AB311DCFAB18009AD9A1 /* PeerChatTopTaggedMessageIds.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerChatTopTaggedMessageIds.swift; sourceTree = "<group>"; };
 		D0F9E85A1C565EBB00037222 /* MessageMediaTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageMediaTable.swift; sourceTree = "<group>"; };
 		D0F9E8601C57766A00037222 /* MessageHistoryTableTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageHistoryTableTests.swift; sourceTree = "<group>"; };
 		D0F9E8621C579F0200037222 /* MediaCleanupTable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaCleanupTable.swift; sourceTree = "<group>"; };
@@ -418,6 +421,7 @@
 				D021E0D51DB4FCFC00C6B04F /* ItemCollectionInfoTable.swift */,
 				D021E0D71DB4FD1300C6B04F /* ItemCollectionItemTable.swift */,
 				D07CFF821DCA909100761F81 /* PeerChatInterfaceStateTable.swift */,
+				D0F7AB311DCFAB18009AD9A1 /* PeerChatTopTaggedMessageIds.swift */,
 			);
 			name = Tables;
 			sourceTree = "<group>";
@@ -799,6 +803,7 @@
 				D0B418321D7DFE16004562A4 /* SqliteValueBox.swift in Sources */,
 				D073CE8C1DCBF3BB007511FD /* ChatListTable.swift in Sources */,
 				D073CE921DCBF3BB007511FD /* PeerTable.swift in Sources */,
+				D0F7AB331DCFAB1C009AD9A1 /* PeerChatTopTaggedMessageIds.swift in Sources */,
 				D073CE741DCBF3B4007511FD /* Peer.swift in Sources */,
 				D073CE7A1DCBF3B4007511FD /* PeerReadState.swift in Sources */,
 				D073CE801DCBF3B4007511FD /* PeerChatInterfaceState.swift in Sources */,
@@ -881,6 +886,7 @@
 				D00EED1E1C81F28D00341DFF /* MessageHistoryTagsTable.swift in Sources */,
 				D044CA2C1C617E2D002160FF /* MessageHistoryMetadataTable.swift in Sources */,
 				D03120FC1DA55427006A2A60 /* PeerNotificationSettings.swift in Sources */,
+				D0F7AB321DCFAB18009AD9A1 /* PeerChatTopTaggedMessageIds.swift in Sources */,
 				D03BCCF81C73561C0097A291 /* Table.swift in Sources */,
 				D021E0DC1DB5237C00C6B04F /* ItemCollectionsView.swift in Sources */,
 				D0C735281C864DF300BB3149 /* PeerChatStateTable.swift in Sources */,
@@ -991,7 +997,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 3.0;
+				SWIFT_VERSION = 3.0.1;
 			};
 			name = Hockeyapp;
 		};
@@ -1241,7 +1247,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 3.0;
+				SWIFT_VERSION = 3.0.1;
 			};
 			name = Debug;
 		};
@@ -1272,7 +1278,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 3.0;
+				SWIFT_VERSION = 3.0.1;
 			};
 			name = Release;
 		};

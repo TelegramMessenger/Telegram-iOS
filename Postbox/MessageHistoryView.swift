@@ -50,10 +50,10 @@ enum MutableMessageHistoryEntry {
     func updatedTimestamp(_ timestamp: Int32) -> MutableMessageHistoryEntry {
         switch self {
             case let .IntermediateMessageEntry(message, location):
-                var updatedMessage = IntermediateMessage(stableId: message.stableId, id: message.id, timestamp: timestamp, flags: message.flags, tags: message.tags, forwardInfo: message.forwardInfo, authorId: message.authorId, text: message.text, attributesData: message.attributesData, embeddedMediaData: message.embeddedMediaData, referencedMedia: message.referencedMedia)
+                var updatedMessage = IntermediateMessage(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, timestamp: timestamp, flags: message.flags, tags: message.tags, forwardInfo: message.forwardInfo, authorId: message.authorId, text: message.text, attributesData: message.attributesData, embeddedMediaData: message.embeddedMediaData, referencedMedia: message.referencedMedia)
                 return .IntermediateMessageEntry(updatedMessage, location)
             case let .MessageEntry(message, location):
-                var updatedMessage = Message(stableId: message.stableId, id: message.id, timestamp: timestamp, flags: message.flags, tags: message.tags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: message.media, peers: message.peers, associatedMessages: message.associatedMessages)
+                var updatedMessage = Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, timestamp: timestamp, flags: message.flags, tags: message.tags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: message.media, peers: message.peers, associatedMessages: message.associatedMessages, associatedMessageIds: message.associatedMessageIds)
                 return .MessageEntry(updatedMessage, location)
             case let .HoleEntry(hole, location):
                 var updatedHole = MessageHistoryHole(stableId: hole.stableId, maxIndex: MessageIndex(id: hole.maxIndex.id, timestamp: timestamp), min: hole.min, tags: hole.tags)
@@ -208,16 +208,10 @@ final class MutableMessageHistoryView {
                 }
                 
                 for _ in 0 ..< self.entries.count - 1 - maxClipIndex {
-                    /*if case let .MessageEntry(message) = self.entries.last! {
-                        print("remove last \(message.text)")
-                    }*/
                     self.entries.removeLast()
                 }
                 
                 for _ in 0 ..< minClipIndex {
-                    /*if case let .MessageEntry(message) = self.entries.first! {
-                        print("remove first \(message.text)")
-                    }*/
                     self.entries.removeFirst()
                 }
                 
@@ -258,7 +252,7 @@ final class MutableMessageHistoryView {
         return true
     }
     
-    func replay(_ operations: [MessageHistoryOperation], holeFillDirections: [MessageIndex: HoleFillDirection], updatedMedia: [MediaId: Media?], context: MutableMessageHistoryViewReplayContext) -> Bool {
+    func replay(_ operations: [MessageHistoryOperation], holeFillDirections: [MessageIndex: HoleFillDirection], updatedMedia: [MediaId: Media?], context: MutableMessageHistoryViewReplayContext, renderIntermediateMessage: (IntermediateMessage) -> Message) -> Bool {
         let tagMask = self.tagMask
         let unwrappedTagMask: UInt32 = tagMask?.rawValue ?? 0
         
@@ -287,7 +281,7 @@ final class MutableMessageHistoryView {
                 case let .UpdateEmbeddedMedia(index, embeddedMediaData):
                     for i in 0 ..< self.entries.count {
                         if case let .IntermediateMessageEntry(message, _) = self.entries[i] , MessageIndex(message) == index {
-                            self.entries[i] = .IntermediateMessageEntry(IntermediateMessage(stableId: message.stableId, id: message.id, timestamp: message.timestamp, flags: message.flags, tags: message.tags, forwardInfo: message.forwardInfo, authorId: message.authorId, text: message.text, attributesData: message.attributesData, embeddedMediaData: embeddedMediaData, referencedMedia: message.referencedMedia), nil)
+                            self.entries[i] = .IntermediateMessageEntry(IntermediateMessage(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, timestamp: message.timestamp, flags: message.flags, tags: message.tags, forwardInfo: message.forwardInfo, authorId: message.authorId, text: message.text, attributesData: message.attributesData, embeddedMediaData: embeddedMediaData, referencedMedia: message.referencedMedia), nil)
                             hasChanges = true
                             break
                         }
@@ -328,7 +322,7 @@ final class MutableMessageHistoryView {
                                     messageMedia.append(media)
                                 }
                             }
-                            let updatedMessage = Message(stableId: message.stableId, id: message.id, timestamp: message.timestamp, flags: message.flags, tags: message.tags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: messageMedia, peers: message.peers, associatedMessages: message.associatedMessages)
+                            let updatedMessage = Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, timestamp: message.timestamp, flags: message.flags, tags: message.tags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: messageMedia, peers: message.peers, associatedMessages: message.associatedMessages, associatedMessageIds: message.associatedMessageIds)
                             self.entries[i] = .MessageEntry(updatedMessage, nil)
                             hasChanges = true
                         }
@@ -356,6 +350,33 @@ final class MutableMessageHistoryView {
                     default:
                         break
                 }
+            }
+        }
+        
+        for operation in operations {
+            switch operation {
+                case let .InsertMessage(intermediateMessage):
+                    for i in 0 ..< self.entries.count {
+                        switch self.entries[i] {
+                            case let .MessageEntry(message, location):
+                                if message.associatedMessageIds.count != message.associatedMessages.count {
+                                    if message.associatedMessageIds.contains(intermediateMessage.id) && message.associatedMessages[intermediateMessage.id] == nil {
+                                        var updatedAssociatedMessages = message.associatedMessages
+                                        let renderedMessage = renderIntermediateMessage(intermediateMessage)
+                                        updatedAssociatedMessages[intermediateMessage.id] = renderedMessage
+                                        let updatedMessage = Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, timestamp: message.timestamp, flags: message.flags, tags: message.tags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: message.media, peers: message.peers, associatedMessages: updatedAssociatedMessages, associatedMessageIds: message.associatedMessageIds)
+                                        self.entries[i] = .MessageEntry(updatedMessage, location)
+                                        hasChanges = true
+                                    }
+                                }
+                                break
+                            default:
+                                break
+                        }
+                    }
+                    break
+                default:
+                    break
             }
         }
         
@@ -419,6 +440,11 @@ final class MutableMessageHistoryView {
             hasChanges = true
         }
         
+        var ids = Set<MessageId>()
+        for index in indices {
+            ids.insert(index.id)
+        }
+        
         if self.entries.count != 0 {
             var i = self.entries.count - 1
             while i >= 0 {
@@ -426,6 +452,16 @@ final class MutableMessageHistoryView {
                     self.entries.remove(at: i)
                     context.removedEntries = true
                     hasChanges = true
+                } else {
+                    switch self.entries[i] {
+                        case let .MessageEntry(message, location):
+                            if let updatedAssociatedMessages = message.associatedMessages.filteredOut(keysIn: ids) {
+                                let updatedMessage = Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, timestamp: message.timestamp, flags: message.flags, tags: message.tags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: message.media, peers: message.peers, associatedMessages: updatedAssociatedMessages, associatedMessageIds: message.associatedMessageIds)
+                                self.entries[i] = .MessageEntry(updatedMessage, location)
+                            }
+                        default:
+                            break
+                    }
                 }
                 i -= 1
             }

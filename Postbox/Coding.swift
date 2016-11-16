@@ -928,4 +928,17 @@ public final class Decoder {
             return nil
         }
     }
+    
+    public func decodeBytesForKey(_ key: StaticString) -> ReadBuffer? {
+        if Decoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .Bytes) {
+            var length: Int32 = 0
+            memcpy(&length, self.buffer.memory + self.offset, 4)
+            self.offset += 4 + Int(length)
+            let copyBytes = malloc(Int(length))!
+            memcpy(copyBytes, self.buffer.memory.advanced(by: self.offset - Int(length)), Int(length))
+            return ReadBuffer(memory: copyBytes, length: Int(length), freeWhenDone: true)
+        } else {
+            return nil
+        }
+    }
 }
