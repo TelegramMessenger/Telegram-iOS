@@ -11,6 +11,7 @@ private let typeImageSize: Int32 = 2
 private let typeAnimated: Int32 = 3
 private let typeVideo: Int32 = 4
 private let typeAudio: Int32 = 5
+private let typeHasLinkedStickers: Int32 = 6
 
 public enum TelegramMediaFileAttribute: Coding {
     case FileName(fileName: String)
@@ -19,7 +20,7 @@ public enum TelegramMediaFileAttribute: Coding {
     case Animated
     case Video(duration: Int, size: CGSize)
     case Audio(isVoice: Bool, duration: Int, title: String?, performer: String?, waveform: MemoryBuffer?)
-    case Unknown
+    case HasLinkedStickers
     
     public init(decoder: Decoder) {
         let type: Int32 = decoder.decodeInt32ForKey("t")
@@ -41,8 +42,10 @@ public enum TelegramMediaFileAttribute: Coding {
                     waveform = MemoryBuffer(copyOf: waveformBuffer)
                 }
                 self = .Audio(isVoice: decoder.decodeInt32ForKey("iv") != 0, duration: Int(decoder.decodeInt32ForKey("du")), title: decoder.decodeStringForKey("ti"), performer: decoder.decodeStringForKey("pe"), waveform: waveform)
+            case typeHasLinkedStickers:
+                self = .HasLinkedStickers
             default:
-                self = .Unknown
+                preconditionFailure()
         }
     }
     
@@ -78,8 +81,8 @@ public enum TelegramMediaFileAttribute: Coding {
                 if let waveform = waveform {
                     encoder.encodeBytes(waveform, forKey: "wf")
                 }
-            case .Unknown:
-                break
+            case .HasLinkedStickers:
+                encoder.encodeInt32(typeHasLinkedStickers, forKey: "t")
         }
     }
 }
@@ -219,8 +222,10 @@ public func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.Docu
         switch attribute {
             case let .documentAttributeFilename(fileName):
                 result.append(.FileName(fileName: fileName))
-            case let .documentAttributeSticker(alt, _):
+            case let .documentAttributeSticker(flags, alt, stickerSet, maskCoords):
                 result.append(.Sticker(displayText: alt))
+            case .documentAttributeHasStickers:
+                result.append(.HasLinkedStickers)
             case let .documentAttributeImageSize(w, h):
                 result.append(.ImageSize(size: CGSize(width: CGFloat(w), height: CGFloat(h))))
             case .documentAttributeAnimated:
@@ -243,7 +248,7 @@ public func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.Docu
 
 public func telegramMediaFileFromApiDocument(_ document: Api.Document) -> TelegramMediaFile? {
     switch document {
-        case let .document(id, accessHash, _, mimeType, size, thumb, dcId, attributes):
+        case let .document(id, accessHash, _, mimeType, size, thumb, dcId, _, attributes):
             return TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudFile, id: id), resource: CloudDocumentMediaResource(datacenterId: Int(dcId), fileId: id, accessHash: accessHash, size: Int(size)), previewRepresentations: telegramMediaImageRepresentationsFromApiSizes([thumb]), mimeType: mimeType, size: Int(size), attributes: telegramMediaFileAttributesFromApiAttributes(attributes))
         case .documentEmpty:
             return nil

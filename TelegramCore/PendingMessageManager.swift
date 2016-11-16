@@ -44,16 +44,6 @@ private final class PendingMessageRequestDependencyTag: NetworkRequestDependency
     }
 }
 
-private func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox) {
-    if let fromImage = from as? TelegramMediaImage, let toImage = to as? TelegramMediaImage {
-        if let fromLargestRepresentation = largestImageRepresentation(fromImage.representations), let toLargestRepresentation = largestImageRepresentation(toImage.representations) {
-            postbox.mediaBox.moveResourceData(from: fromLargestRepresentation.resource.id, to: toLargestRepresentation.resource.id)
-        }
-    } else if let fromFile = from as? TelegramMediaFile, let toFile = to as? TelegramMediaFile {
-        postbox.mediaBox.moveResourceData(from: fromFile.resource.id, to: toFile.resource.id)
-    }
-}
-
 public final class PendingMessageManager {
     private let network: Network
     private let postbox: Postbox
@@ -259,7 +249,7 @@ public final class PendingMessageManager {
                     sendMessageRequest = network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: nil), tag: dependencyTag)
                         |> mapError { _ -> NoError in
                             return NoError()
-                    }
+                        }
                 case let .media(inputMedia):
                     sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: 0, peer: inputPeer, replyToMsgId: replyMessageId, media: inputMedia, randomId: uniqueId, replyMarkup: nil), tag: dependencyTag)
                         |> mapError { _ -> NoError in
@@ -307,83 +297,7 @@ public final class PendingMessageManager {
         let messageId = result.rawMessageIds.first
         let apiMessage = result.messages.first
         
-        return postbox.modify { modifier -> Void in
-            var updatedTimestamp: Int32?
-            if let apiMessage = apiMessage {
-                switch apiMessage {
-                case let .message(_, _, _, _, _, _, _, date, _, _, _, _, _, _):
-                    updatedTimestamp = date
-                case .messageEmpty:
-                    break
-                case let .messageService(_, _, _, _, _, date, _):
-                    updatedTimestamp = date
-                }
-            } else {
-                switch result {
-                case let .updateShortSentMessage(_, _, _, _, date, _, _):
-                    updatedTimestamp = date
-                default:
-                    break
-                }
-            }
-            
-            modifier.updateMessage(message.id, update: { currentMessage in
-                let updatedId: MessageId
-                if let messageId = messageId {
-                    updatedId = MessageId(peerId: currentMessage.id.peerId, namespace: Namespaces.Message.Cloud, id: messageId)
-                } else {
-                    updatedId = currentMessage.id
-                }
-                
-                let media: [Media]
-                let attributes: [MessageAttribute]
-                let text: String
-                if let apiMessage = apiMessage, let updatedMessage = StoreMessage(apiMessage: apiMessage) {
-                    media = updatedMessage.media
-                    attributes = updatedMessage.attributes
-                    text = updatedMessage.text
-                } else if case let .updateShortSentMessage(_, _, _, _, _, apiMedia, entities) = result {
-                    let (_, mediaValue) = textAndMediaFromApiMedia(apiMedia)
-                    if let mediaValue = mediaValue {
-                        media = [mediaValue]
-                    } else {
-                        media = []
-                    }
-                    
-                    var updatedAttributes: [MessageAttribute] = currentMessage.attributes
-                    if let entities = entities, !entities.isEmpty {
-                        for i in 0 ..< updatedAttributes.count {
-                            if updatedAttributes[i] is TextEntitiesMessageAttribute {
-                                updatedAttributes.remove(at: i)
-                                break
-                            }
-                        }
-                        updatedAttributes.append(TextEntitiesMessageAttribute(entities: messageTextEntitiesFromApiEntities(entities)))
-                    }
-                    attributes = updatedAttributes
-                    text = currentMessage.text
-                } else {
-                    media = currentMessage.media
-                    attributes = currentMessage.attributes
-                    text = currentMessage.text
-                }
-                
-                var storeForwardInfo: StoreMessageForwardInfo?
-                if let forwardInfo = currentMessage.forwardInfo {
-                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date)
-                }
-                
-                if let fromMedia = currentMessage.media.first, let toMedia = media.first {
-                    applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox)
-                }
-                
-                return StoreMessage(id: updatedId, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media)
-            })
-            if let updatedTimestamp = updatedTimestamp {
-                modifier.offsetPendingMessagesTimestamps(lowerBound: message.id, timestamp: updatedTimestamp)
-            }
-        } |> afterDisposed { [weak self] in
-            stateManager.addUpdates(result)
+        return applyUpdateMessage(postbox: postbox, stateManager: stateManager, message: message, result: result) |> afterDisposed { [weak self] in
             if let strongSelf = self {
                 strongSelf.queue.async {
                     if let context = strongSelf.peerSummaryContexts[message.id.peerId] {

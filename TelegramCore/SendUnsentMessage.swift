@@ -15,7 +15,7 @@ private func uploadedMessageMedia(network: Network, postbox: Postbox, media: Med
                     |> mapToSignal { result -> Signal<Api.InputMedia?, NoError> in
                         switch result {
                             case let .inputFile(file):
-                                return .single(Api.InputMedia.inputMediaUploadedPhoto(file: file, caption: ""))
+                                return .single(Api.InputMedia.inputMediaUploadedPhoto(flags: 0, file: file, caption: "", stickers: nil))
                             default:
                                 return .complete()
                         }

@@ -6,7 +6,7 @@ import Foundation
 #endif
 
 public class ViewCountMessageAttribute: MessageAttribute {
-    let count: Int
+    public let count: Int
     
     public var associatedMessageIds: [MessageId] = []
     

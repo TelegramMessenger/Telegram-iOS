@@ -16,7 +16,8 @@ func fetchAndUpdateCachedPeerData(peerId: PeerId, network: Network, postbox: Pos
                     |> mapToSignal { result -> Signal<Void, NoError> in
                         return postbox.modify { modifier -> Void in
                             switch result {
-                                case let .userFull(_, _, _, _, _, notifySettings, _):
+                                
+                                case let .userFull(_, _, _, _, _, notifySettings, _, commonChatCount):
                                     modifier.updatePeerNotificationSettings([peerId: TelegramPeerNotificationSettings(apiSettings: notifySettings)])
                             }
                             modifier.updatePeerCachedData(peerIds: [peerId], update: { peerId, _ in

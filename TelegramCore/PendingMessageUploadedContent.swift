@@ -56,7 +56,7 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, image
                     case let .progress(progress):
                         return .progress(progress)
                     case let .inputFile(file):
-                        return .content(message, .media(Api.InputMedia.inputMediaUploadedPhoto(file: file, caption: message.text)))
+                        return .content(message, .media(Api.InputMedia.inputMediaUploadedPhoto(flags: 0, file: file, caption: message.text, stickers: nil)))
                 }
             }
     } else {
@@ -75,7 +75,9 @@ private func inputDocumentAttributesFromFile(_ file: TelegramMediaFile) -> [Api.
             case let .ImageSize(size):
                 attributes.append(.documentAttributeImageSize(w: Int32(size.width), h: Int32(size.height)))
             case let .Sticker(displayText):
-                attributes.append(.documentAttributeSticker(alt: displayText, stickerset: .inputStickerSetEmpty))
+                attributes.append(.documentAttributeSticker(flags: 0, alt: displayText, stickerset: .inputStickerSetEmpty, maskCoords: nil))
+            case .HasLinkedStickers:
+                attributes.append(.documentAttributeHasStickers)
             case let .Video(duration, size):
                 attributes.append(.documentAttributeVideo(duration: Int32(duration), w: Int32(size.width), h: Int32(size.height)))
             case let .Audio(isVoice, duration, title, performer, waveform):
@@ -95,9 +97,6 @@ private func inputDocumentAttributesFromFile(_ file: TelegramMediaFile) -> [Api.
                     waveformBuffer = Buffer(data: waveform.makeData())
                 }
                 attributes.append(.documentAttributeAudio(flags: flags, duration: Int32(duration), title: title, performer: performer, waveform: waveformBuffer))
-                break
-            case .Unknown:
-                break
         }
     }
     return attributes
@@ -110,7 +109,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, file: 
                 case let .progress(progress):
                     return .progress(progress)
                 case let .inputFile(inputFile):
-                    return .content(message, .media(Api.InputMedia.inputMediaUploadedDocument(file: inputFile, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFile(file), caption: message.text)))
+                    return .content(message, .media(Api.InputMedia.inputMediaUploadedDocument(flags: 0, file: inputFile, mimeType: file.mimeType, attributes: inputDocumentAttributesFromFile(file), caption: message.text, stickers: nil)))
             }
         }
 }

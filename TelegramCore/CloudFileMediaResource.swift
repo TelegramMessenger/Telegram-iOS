@@ -139,7 +139,7 @@ public class CloudDocumentMediaResource: TelegramCloudMediaResource {
     }
     
     var apiInputLocation: Api.InputFileLocation {
-        return Api.InputFileLocation.inputDocumentFileLocation(id: self.fileId, accessHash: self.accessHash)
+        return Api.InputFileLocation.inputDocumentFileLocation(id: self.fileId, accessHash: self.accessHash, version: 0)
     }
     
     public init(datacenterId: Int, fileId: Int64, accessHash: Int64, size: Int) {

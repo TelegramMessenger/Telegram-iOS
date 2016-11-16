@@ -13,6 +13,9 @@
 		C26A71901DC9E95800F69385 /* PendingMessageUploadedContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09BB6B51DB0428000A905C0 /* PendingMessageUploadedContent.swift */; };
 		C26A71911DC9E96000F69385 /* PendingMessageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09BB6B31DB02C2B00A905C0 /* PendingMessageManager.swift */; };
 		D003702B1DA42586004308D3 /* PhoneNumber.swift in Sources */ = {isa = PBXBuildFile; fileRef = D003702A1DA42586004308D3 /* PhoneNumber.swift */; };
+		D01AC91D1DD5DA5E00E8160F /* RequestMessageActionCallback.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AC91C1DD5DA5E00E8160F /* RequestMessageActionCallback.swift */; };
+		D01AC9211DD5E7E500E8160F /* RequestEditMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AC9201DD5E7E500E8160F /* RequestEditMessage.swift */; };
+		D01AC9231DD5E9A200E8160F /* ApplyUpdateMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AC9221DD5E9A200E8160F /* ApplyUpdateMessage.swift */; };
 		D021E0DF1DB539FC00C6B04F /* StickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0DE1DB539FC00C6B04F /* StickerPack.swift */; };
 		D021E0E21DB5401A00C6B04F /* StickerManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0E11DB5401A00C6B04F /* StickerManagement.swift */; };
 		D03121021DA57E93006A2A60 /* TelegramPeerNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03121011DA57E93006A2A60 /* TelegramPeerNotificationSettings.swift */; };
@@ -217,6 +220,10 @@
 		D0DF0C911D81A857008AEB01 /* ImageRepresentationsUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DF0C901D81A857008AEB01 /* ImageRepresentationsUtils.swift */; };
 		D0DF0C931D81AD09008AEB01 /* MessageUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DF0C921D81AD09008AEB01 /* MessageUtils.swift */; };
 		D0DF0CA81D82BF32008AEB01 /* PeerParticipants.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0DF0CA71D82BF32008AEB01 /* PeerParticipants.swift */; };
+		D0F7AB2C1DCE889D009AD9A1 /* EditedMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB2B1DCE889D009AD9A1 /* EditedMessageAttribute.swift */; };
+		D0F7AB2D1DCE889D009AD9A1 /* EditedMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB2B1DCE889D009AD9A1 /* EditedMessageAttribute.swift */; };
+		D0F7AB2F1DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB2E1DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift */; };
+		D0F7AB301DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB2E1DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -231,6 +238,9 @@
 
 /* Begin PBXFileReference section */
 		D003702A1DA42586004308D3 /* PhoneNumber.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhoneNumber.swift; sourceTree = "<group>"; };
+		D01AC91C1DD5DA5E00E8160F /* RequestMessageActionCallback.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RequestMessageActionCallback.swift; sourceTree = "<group>"; };
+		D01AC9201DD5E7E500E8160F /* RequestEditMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RequestEditMessage.swift; sourceTree = "<group>"; };
+		D01AC9221DD5E9A200E8160F /* ApplyUpdateMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplyUpdateMessage.swift; sourceTree = "<group>"; };
 		D021E0DE1DB539FC00C6B04F /* StickerPack.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickerPack.swift; sourceTree = "<group>"; };
 		D021E0E11DB5401A00C6B04F /* StickerManagement.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickerManagement.swift; sourceTree = "<group>"; };
 		D03121011DA57E93006A2A60 /* TelegramPeerNotificationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramPeerNotificationSettings.swift; sourceTree = "<group>"; };
@@ -363,6 +373,8 @@
 		D0DF0C901D81A857008AEB01 /* ImageRepresentationsUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageRepresentationsUtils.swift; sourceTree = "<group>"; };
 		D0DF0C921D81AD09008AEB01 /* MessageUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageUtils.swift; sourceTree = "<group>"; };
 		D0DF0CA71D82BF32008AEB01 /* PeerParticipants.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerParticipants.swift; sourceTree = "<group>"; };
+		D0F7AB2B1DCE889D009AD9A1 /* EditedMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EditedMessageAttribute.swift; sourceTree = "<group>"; };
+		D0F7AB2E1DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReplyMarkupMessageAttribute.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -522,6 +534,8 @@
 				D03B0CE11D62249B00955575 /* InlineBotMessageAttribute.swift */,
 				D073CE5C1DCB97F6007511FD /* ForwardSourceInfoAttribute.swift */,
 				D073CE5F1DCB9D14007511FD /* OutgoingMessageInfoAttribute.swift */,
+				D0F7AB2B1DCE889D009AD9A1 /* EditedMessageAttribute.swift */,
+				D0F7AB2E1DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift */,
 			);
 			name = Attributes;
 			sourceTree = "<group>";
@@ -554,6 +568,7 @@
 				D03B0D071D62255C00955575 /* UpdatesApiUtils.swift */,
 				D09BB6B31DB02C2B00A905C0 /* PendingMessageManager.swift */,
 				D09BB6B51DB0428000A905C0 /* PendingMessageUploadedContent.swift */,
+				D01AC9221DD5E9A200E8160F /* ApplyUpdateMessage.swift */,
 			);
 			name = State;
 			sourceTree = "<group>";
@@ -618,6 +633,8 @@
 			isa = PBXGroup;
 			children = (
 				D03B0D711D631ABA00955575 /* SearchMessages.swift */,
+				D01AC91C1DD5DA5E00E8160F /* RequestMessageActionCallback.swift */,
+				D01AC9201DD5E7E500E8160F /* RequestEditMessage.swift */,
 			);
 			name = Messages;
 			sourceTree = "<group>";
@@ -907,6 +924,7 @@
 				D0B843B91DA7FF30005F29E1 /* NBMetadataCoreTest.m in Sources */,
 				D09A2FE61D7CD4940018FB72 /* TelegramChannel.swift in Sources */,
 				D03B0D0E1D62255C00955575 /* UpdateGroup.swift in Sources */,
+				D01AC9231DD5E9A200E8160F /* ApplyUpdateMessage.swift in Sources */,
 				D03B0CF71D62250800955575 /* TelegramMediaImage.swift in Sources */,
 				D073CE601DCB9D14007511FD /* OutgoingMessageInfoAttribute.swift in Sources */,
 				D03B0D6B1D631A9D00955575 /* Phonebook.swift in Sources */,
@@ -916,6 +934,8 @@
 				D0DF0CA81D82BF32008AEB01 /* PeerParticipants.swift in Sources */,
 				D03B0D5F1D631A6900955575 /* Serialization.swift in Sources */,
 				D03B0D441D6319F900955575 /* CloudFileMediaResource.swift in Sources */,
+				D01AC9211DD5E7E500E8160F /* RequestEditMessage.swift in Sources */,
+				D01AC91D1DD5DA5E00E8160F /* RequestMessageActionCallback.swift in Sources */,
 				D09BB6B61DB0428000A905C0 /* PendingMessageUploadedContent.swift in Sources */,
 				D0B843B71DA7FF30005F29E1 /* NBMetadataCoreMapper.m in Sources */,
 				D0AB0B921D65E9FA002C78E7 /* ManagedServiceViews.swift in Sources */,
@@ -941,6 +961,7 @@
 				D03B0D671D631A8B00955575 /* AccountViewTracker.swift in Sources */,
 				D0B843BB1DA7FF30005F29E1 /* NBMetadataCoreTestMapper.m in Sources */,
 				D03B0D101D62255C00955575 /* UpdatesApiUtils.swift in Sources */,
+				D0F7AB2C1DCE889D009AD9A1 /* EditedMessageAttribute.swift in Sources */,
 				D03B0CBF1D62234A00955575 /* Log.swift in Sources */,
 				D0B843B51DA7FF30005F29E1 /* NBMetadataCore.m in Sources */,
 				D03B0CD61D62245300955575 /* TelegramUser.swift in Sources */,
@@ -948,6 +969,7 @@
 				D03B0CE41D62249F00955575 /* TextEntitiesMessageAttribute.swift in Sources */,
 				D03B0CD31D62244300955575 /* Namespaces.swift in Sources */,
 				D0DF0C8A1D819C7E008AEB01 /* JoinChannel.swift in Sources */,
+				D0F7AB2F1DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift in Sources */,
 				D0B843971DA7FBBC005F29E1 /* ChangePeerNotificationSettings.swift in Sources */,
 				D09BB6B41DB02C2B00A905C0 /* PendingMessageManager.swift in Sources */,
 				D0B843851DA6EDC4005F29E1 /* CachedChannelData.swift in Sources */,
@@ -1050,6 +1072,7 @@
 				D0B418B91D7E05AD004562A4 /* SearchMessages.swift in Sources */,
 				D0B8443F1DAB91EF005F29E1 /* UpdateGroup.swift in Sources */,
 				D03C53731DAD5CA9004C17B3 /* CachedGroupData.swift in Sources */,
+				D0F7AB2D1DCE889D009AD9A1 /* EditedMessageAttribute.swift in Sources */,
 				D0B844121DAB91CD005F29E1 /* Log.swift in Sources */,
 				D0B8444D1DAB9206005F29E1 /* JoinChannel.swift in Sources */,
 				D03C53721DAD5CA9004C17B3 /* CachedUserData.swift in Sources */,
@@ -1057,6 +1080,7 @@
 				D0B8444B1DAB91FD005F29E1 /* ManagedSynchronizePeerReadStates.swift in Sources */,
 				D073CE6C1DCBCF17007511FD /* TextEntitiesMessageAttribute.swift in Sources */,
 				D03C53751DAD5CA9004C17B3 /* TelegramUserPresence.swift in Sources */,
+				D0F7AB301DCF507E009AD9A1 /* ReplyMarkupMessageAttribute.swift in Sources */,
 				D073CE6D1DCBCF17007511FD /* InlineBotMessageAttribute.swift in Sources */,
 				D0B8440F1DAB91CD005F29E1 /* Either.swift in Sources */,
 				D03C536E1DAD5CA9004C17B3 /* PhoneNumber.swift in Sources */,
@@ -1185,7 +1209,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 3.0;
+				SWIFT_VERSION = 3.0.1;
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
 			};
 			name = Hockeyapp;
@@ -1328,7 +1352,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 3.0;
+				SWIFT_VERSION = 3.0.1;
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
 			};
 			name = Debug;
@@ -1362,7 +1386,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 3.0;
+				SWIFT_VERSION = 3.0.1;
 				USER_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/third-party/FFmpeg-iOS/include";
 			};
 			name = Release;

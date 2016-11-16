@@ -240,6 +240,8 @@ private var declaredEncodables: Void = {
     declareEncodable(LocalFileReferenceMediaResource.self, f: { LocalFileReferenceMediaResource(decoder: $0) })
     declareEncodable(OutgoingMessageInfoAttribute.self, f: { OutgoingMessageInfoAttribute(decoder: $0) })
     declareEncodable(ForwardSourceInfoAttribute.self, f: { ForwardSourceInfoAttribute(decoder: $0) })
+    declareEncodable(EditedMessageAttribute.self, f: { EditedMessageAttribute(decoder: $0) })
+    declareEncodable(ReplyMarkupMessageAttribute.self, f: { ReplyMarkupMessageAttribute(decoder: $0) })
     return
 }()
 
@@ -359,7 +361,7 @@ public class Account {
     public let graphicsThreadPool = ThreadPool(threadCount: 3, threadPriority: 0.1)
     //let imageCache: ImageCache = ImageCache(maxResidentSize: 5 * 1024 * 1024)
     
-    public var applicationSpecificData: Any?
+    public var applicationContext: Any?
     
     public let settings: AccountSettings = defaultAccountSettings()
     
@@ -518,4 +520,10 @@ public func setupAccount(_ account: Account, fetchCachedResourceRepresentation: 
     
     account.managedContactsDisposable.set(manageContacts(network: account.network, postbox: account.postbox).start())
     account.managedStickerPacksDisposable.set(manageStickerPacks(network: account.network, postbox: account.postbox).start())
+    
+    /*account.network.request(Api.functions.help.getScheme(version: 0)).start(next: { result in
+        if case let .scheme(text, _, _, _) = result {
+            print("\(text)")
+        }
+    })*/
 }
