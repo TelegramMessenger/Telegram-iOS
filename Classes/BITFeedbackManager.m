@@ -735,9 +735,13 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   NSString *token = [jsonDictionary objectForKey:@"token"];
   NSDictionary *feedbackObject = [jsonDictionary objectForKey:@"feedback"];
   if (feedback && token && feedbackObject) {
-    // update the thread token, which is not available until the 1st message was successfully sent
-    self.token = token;
-    
+    if (self.forceNewThread) {
+      self.token = nil;
+    } else {
+      // update the thread token, which is not available until the 1st message was successfully sent
+      self.token = token;
+    }
+        
     self.lastCheck = [NSDate date];
     
     // add all new messages
