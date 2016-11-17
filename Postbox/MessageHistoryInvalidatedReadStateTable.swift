@@ -25,6 +25,10 @@ public func ==(lhs: PeerReadStateSynchronizationOperation, rhs: PeerReadStateSyn
 }
 
 final class MessageHistorySynchronizeReadStateTable: Table {
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .int64)
+    }
+    
     private let sharedKey = ValueBoxKey(length: 8)
     
     private func key(peerId: PeerId) -> ValueBoxKey {
@@ -35,8 +39,8 @@ final class MessageHistorySynchronizeReadStateTable: Table {
     private var updatedPeerIds: [PeerId: PeerReadStateSynchronizationOperation?] = [:]
     
     private func lowerBound() -> ValueBoxKey {
-        let key = ValueBoxKey(length: 1)
-        key.setInt8(0, value: 0)
+        let key = ValueBoxKey(length: 8)
+        key.setInt64(0, value: 0)
         return key
     }
     
@@ -55,7 +59,7 @@ final class MessageHistorySynchronizeReadStateTable: Table {
         self.beforeCommit()
         
         var operations: [PeerId: PeerReadStateSynchronizationOperation] = [:]
-        self.valueBox.range(self.tableId, start: self.lowerBound(), end: self.upperBound(), values: { key, value in
+        self.valueBox.range(self.table, start: self.lowerBound(), end: self.upperBound(), values: { key, value in
             var operationValue: Int8 = 0
             value.read(&operationValue, offset: 0, length: 1)
             
@@ -92,9 +96,9 @@ final class MessageHistorySynchronizeReadStateTable: Table {
                         buffer.write(&operationValue, offset: 0, length: 1)
                 }
                 
-                self.valueBox.set(self.tableId, key: key, value: buffer)
+                self.valueBox.set(self.table, key: key, value: buffer)
             } else {
-                self.valueBox.remove(self.tableId, key: key)
+                self.valueBox.remove(self.table, key: key)
             }
         }
         self.updatedPeerIds.removeAll()

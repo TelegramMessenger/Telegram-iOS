@@ -6,18 +6,18 @@ public protocol MediaResourceId {
     func isEqual(to: MediaResourceId) -> Bool
 }
 
-struct WrappedMediaResourceId: Hashable {
-    let id: MediaResourceId
+public struct WrappedMediaResourceId: Hashable {
+    public let id: MediaResourceId
     
-    init(_ id: MediaResourceId) {
+    public init(_ id: MediaResourceId) {
         self.id = id
     }
     
-    static func ==(lhs: WrappedMediaResourceId, rhs: WrappedMediaResourceId) -> Bool {
+    public static func ==(lhs: WrappedMediaResourceId, rhs: WrappedMediaResourceId) -> Bool {
         return lhs.id.isEqual(to: rhs.id)
     }
     
-    var hashValue: Int {
+    public var hashValue: Int {
         return self.id.hashValue
     }
 }

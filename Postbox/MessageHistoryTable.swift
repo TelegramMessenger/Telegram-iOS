@@ -34,6 +34,10 @@ enum RenderedMessageHistoryEntry {
 }
 
 final class MessageHistoryTable: Table {
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .binary)
+    }
+    
     let messageHistoryIndexTable: MessageHistoryIndexTable
     let messageMediaTable: MessageMediaTable
     let historyMetadataTable: MessageHistoryMetadataTable
@@ -42,7 +46,7 @@ final class MessageHistoryTable: Table {
     let readStateTable: MessageHistoryReadStateTable
     let synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable
     
-    init(valueBox: ValueBox, tableId: Int32, messageHistoryIndexTable: MessageHistoryIndexTable, messageMediaTable: MessageMediaTable, historyMetadataTable: MessageHistoryMetadataTable, unsentTable: MessageHistoryUnsentTable, tagsTable: MessageHistoryTagsTable, readStateTable: MessageHistoryReadStateTable, synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, messageHistoryIndexTable: MessageHistoryIndexTable, messageMediaTable: MessageMediaTable, historyMetadataTable: MessageHistoryMetadataTable, unsentTable: MessageHistoryUnsentTable, tagsTable: MessageHistoryTagsTable, readStateTable: MessageHistoryReadStateTable, synchronizeReadStateTable: MessageHistorySynchronizeReadStateTable) {
         self.messageHistoryIndexTable = messageHistoryIndexTable
         self.messageMediaTable = messageMediaTable
         self.historyMetadataTable = historyMetadataTable
@@ -51,7 +55,7 @@ final class MessageHistoryTable: Table {
         self.readStateTable = readStateTable
         self.synchronizeReadStateTable = synchronizeReadStateTable
         
-        super.init(valueBox: valueBox, tableId: tableId)
+        super.init(valueBox: valueBox, table: table)
     }
     
     private func key(_ index: MessageIndex, key: ValueBoxKey = ValueBoxKey(length: 8 + 4 + 4 + 4)) -> ValueBoxKey {
@@ -393,7 +397,7 @@ final class MessageHistoryTable: Table {
         var currentKey = self.upperBound(peerId)
         while true {
             var entry: IntermediateMessageHistoryEntry?
-            self.valueBox.range(self.tableId, start: currentKey, end: self.lowerBound(peerId), values: { key, value in
+            self.valueBox.range(self.table, start: currentKey, end: self.lowerBound(peerId), values: { key, value in
                 entry = self.readIntermediateEntry(key, value: value)
                 return true
             }, limit: 1)
@@ -414,7 +418,7 @@ final class MessageHistoryTable: Table {
     
     func getMessage(_ index: MessageIndex) -> IntermediateMessage? {
         let key = self.key(index)
-        if let value = self.valueBox.get(self.tableId, key: key) {
+        if let value = self.valueBox.get(self.table, key: key) {
             let entry = self.readIntermediateEntry(key, value: value)
             if case let .Message(message) = entry {
                 return message
@@ -422,7 +426,7 @@ final class MessageHistoryTable: Table {
         } else if let tableIndex = self.messageHistoryIndexTable.get(index.id) {
             if case let .Message(updatedIndex) = tableIndex {
                 let key = self.key(updatedIndex)
-                if let value = self.valueBox.get(self.tableId, key: key) {
+                if let value = self.valueBox.get(self.table, key: key) {
                     let entry = self.readIntermediateEntry(key, value: value)
                     if case let .Message(message) = entry {
                         return message
@@ -563,7 +567,7 @@ final class MessageHistoryTable: Table {
             sharedBuffer.write(&idId, offset: 0, length: 8)
         }
         
-        self.valueBox.set(self.tableId, key: self.key(MessageIndex(message), key: sharedKey), value: sharedBuffer)
+        self.valueBox.set(self.table, key: self.key(MessageIndex(message), key: sharedKey), value: sharedBuffer)
         
         return IntermediateMessage(stableId: stableId, stableVersion: stableVersion, id: message.id, timestamp: message.timestamp, flags: flags, tags: message.tags, forwardInfo: intermediateForwardInfo, authorId: message.authorId, text: message.text, attributesData: attributesBuffer.makeReadBufferAndReset(), embeddedMediaData: embeddedMediaBuffer.makeReadBufferAndReset(), referencedMedia: referencedMedia)
     }
@@ -578,12 +582,12 @@ final class MessageHistoryTable: Table {
         sharedBuffer.write(&minId, offset: 0, length: 4)
         var tags: UInt32 = hole.tags
         sharedBuffer.write(&tags, offset: 0, length: 4)
-        self.valueBox.set(self.tableId, key: self.key(hole.maxIndex), value: sharedBuffer.readBufferNoCopy())
+        self.valueBox.set(self.table, key: self.key(hole.maxIndex), value: sharedBuffer.readBufferNoCopy())
     }
     
     private func justRemove(_ index: MessageIndex, unsentMessageOperations: inout [IntermediateMessageHistoryUnsentOperation]) {
         let key = self.key(index)
-        if let value = self.valueBox.get(self.tableId, key: key) {
+        if let value = self.valueBox.get(self.table, key: key) {
             switch self.readIntermediateEntry(key, value: value) {
                 case let .Message(message):
                     let embeddedMediaData = message.embeddedMediaData
@@ -639,7 +643,7 @@ final class MessageHistoryTable: Table {
                     }
             }
             
-            self.valueBox.remove(self.tableId, key: key)
+            self.valueBox.remove(self.table, key: key)
         }
     }
     
@@ -780,7 +784,7 @@ final class MessageHistoryTable: Table {
                 }
             }
             
-            self.valueBox.remove(self.tableId, key: self.key(index))
+            self.valueBox.remove(self.table, key: self.key(index))
             if !previousMessage.tags.isEmpty {
                 self.tagsTable.remove(previousMessage.tags, index: index)
             }
@@ -923,7 +927,7 @@ final class MessageHistoryTable: Table {
                 sharedBuffer.write(&idId, offset: 0, length: 8)
             }
             
-            self.valueBox.set(self.tableId, key: self.key(MessageIndex(message), key: sharedKey), value: sharedBuffer)
+            self.valueBox.set(self.table, key: self.key(MessageIndex(message), key: sharedKey), value: sharedBuffer)
             
             return IntermediateMessage(stableId: stableId, stableVersion: stableVersion, id: message.id, timestamp: message.timestamp, flags: flags, tags: tags, forwardInfo: intermediateForwardInfo, authorId: message.authorId, text: message.text, attributesData: attributesBuffer.makeReadBufferAndReset(), embeddedMediaData: embeddedMediaBuffer.makeReadBufferAndReset(), referencedMedia: referencedMedia)
         } else {
@@ -933,7 +937,7 @@ final class MessageHistoryTable: Table {
     
     private func justUpdateTimestamp(_ index: MessageIndex, timestamp: Int32) {
         if let previousMessage = self.getMessage(index) {
-            self.valueBox.remove(self.tableId, key: self.key(index))
+            self.valueBox.remove(self.table, key: self.key(index))
             var updatedMessage = IntermediateMessage(stableId: previousMessage.stableId, stableVersion: previousMessage.stableVersion + 1, id: previousMessage.id, timestamp: timestamp, flags: previousMessage.flags, tags: previousMessage.tags, forwardInfo: previousMessage.forwardInfo, authorId: previousMessage.authorId, text: previousMessage.text, attributesData: previousMessage.attributesData, embeddedMediaData: previousMessage.embeddedMediaData, referencedMedia: previousMessage.referencedMedia)
             self.storeIntermediateMessage(updatedMessage, sharedKey: self.key(index))
             
@@ -1072,7 +1076,7 @@ final class MessageHistoryTable: Table {
             sharedBuffer.write(&idId, offset: 0, length: 8)
         }
         
-        self.valueBox.set(self.tableId, key: self.key(MessageIndex(id: message.id, timestamp: message.timestamp), key: sharedKey), value: sharedBuffer)
+        self.valueBox.set(self.table, key: self.key(MessageIndex(id: message.id, timestamp: message.timestamp), key: sharedKey), value: sharedBuffer)
     }
     
     private func readIntermediateEntry(_ key: ValueBoxKey, value: ReadBuffer) -> IntermediateMessageHistoryEntry {
@@ -1295,7 +1299,7 @@ final class MessageHistoryTable: Table {
         var lower: IntermediateMessageHistoryEntry?
         var upper: IntermediateMessageHistoryEntry?
         
-        self.valueBox.range(self.tableId, start: self.key(index), end: self.lowerBound(index.id.peerId), values: { key, value in
+        self.valueBox.range(self.table, start: self.key(index), end: self.lowerBound(index.id.peerId), values: { key, value in
             lowerEntries.append(self.readIntermediateEntry(key, value: value))
             return true
         }, limit: count / 2 + 1)
@@ -1305,7 +1309,7 @@ final class MessageHistoryTable: Table {
             lowerEntries.removeLast()
         }
         
-        self.valueBox.range(self.tableId, start: self.key(index).predecessor, end: self.upperBound(index.id.peerId), values: { key, value in
+        self.valueBox.range(self.table, start: self.key(index).predecessor, end: self.upperBound(index.id.peerId), values: { key, value in
             upperEntries.append(self.readIntermediateEntry(key, value: value))
             return true
         }, limit: count - lowerEntries.count + 1)
@@ -1316,7 +1320,7 @@ final class MessageHistoryTable: Table {
         
         if lowerEntries.count != 0 && lowerEntries.count + upperEntries.count < count {
             var additionalLowerEntries: [IntermediateMessageHistoryEntry] = []
-            self.valueBox.range(self.tableId, start: self.key(lowerEntries.last!.index), end: self.lowerBound(index.id.peerId), values: { key, value in
+            self.valueBox.range(self.table, start: self.key(lowerEntries.last!.index), end: self.lowerBound(index.id.peerId), values: { key, value in
                 additionalLowerEntries.append(self.readIntermediateEntry(key, value: value))
                 return true
             }, limit: count - lowerEntries.count - upperEntries.count + 1)
@@ -1345,7 +1349,7 @@ final class MessageHistoryTable: Table {
         var entries: [IntermediateMessageHistoryEntry] = []
         for index in indices {
             let key = self.key(index)
-            if let value = self.valueBox.get(self.tableId, key: key) {
+            if let value = self.valueBox.get(self.table, key: key) {
                 entries.append(readIntermediateEntry(key, value: value))
             } else {
                 assertionFailure()
@@ -1357,7 +1361,7 @@ final class MessageHistoryTable: Table {
         
         if let lowerIndex = lower {
             let key = self.key(lowerIndex)
-            if let value = self.valueBox.get(self.tableId, key: key) {
+            if let value = self.valueBox.get(self.table, key: key) {
                 lowerEntry = readIntermediateEntry(key, value: value)
             } else {
                 assertionFailure()
@@ -1366,7 +1370,7 @@ final class MessageHistoryTable: Table {
         
         if let upperIndex = upper {
             let key = self.key(upperIndex)
-            if let value = self.valueBox.get(self.tableId, key: key) {
+            if let value = self.valueBox.get(self.table, key: key) {
                 upperEntry = readIntermediateEntry(key, value: value)
             } else {
                 assertionFailure()
@@ -1390,7 +1394,7 @@ final class MessageHistoryTable: Table {
         } else {
             key = self.upperBound(peerId)
         }
-        self.valueBox.range(self.tableId, start: key, end: self.lowerBound(peerId), values: { key, value in
+        self.valueBox.range(self.table, start: key, end: self.lowerBound(peerId), values: { key, value in
             entries.append(self.readIntermediateEntry(key, value: value))
             return true
         }, limit: count)
@@ -1409,7 +1413,7 @@ final class MessageHistoryTable: Table {
         var entries: [IntermediateMessageHistoryEntry] = []
         for index in indices {
             let key = self.key(index)
-            if let value = self.valueBox.get(self.tableId, key: key) {
+            if let value = self.valueBox.get(self.table, key: key) {
                 entries.append(readIntermediateEntry(key, value: value))
             } else {
                 assertionFailure()
@@ -1433,7 +1437,7 @@ final class MessageHistoryTable: Table {
         } else {
             key = self.lowerBound(peerId)
         }
-        self.valueBox.range(self.tableId, start: key, end: self.upperBound(peerId), values: { key, value in
+        self.valueBox.range(self.table, start: key, end: self.upperBound(peerId), values: { key, value in
             entries.append(self.readIntermediateEntry(key, value: value))
             return true
         }, limit: count)
@@ -1452,7 +1456,7 @@ final class MessageHistoryTable: Table {
         var entries: [IntermediateMessageHistoryEntry] = []
         for index in indices {
             let key = self.key(index)
-            if let value = self.valueBox.get(self.tableId, key: key) {
+            if let value = self.valueBox.get(self.table, key: key) {
                 entries.append(readIntermediateEntry(key, value: value))
             } else {
                 assertionFailure()
@@ -1484,6 +1488,19 @@ final class MessageHistoryTable: Table {
             return MessageHistoryAnchorIndex(index: MessageIndex(id: messageId, timestamp: upper.index.timestamp), exact: true)
         }
         return nil
+    }
+    
+    func findMessageId(peerId: PeerId, namespace: MessageId.Namespace, timestamp: Int32) -> MessageId? {
+        var result: MessageId?
+        self.valueBox.range(self.table, start: self.key(MessageIndex(id: MessageId(peerId: peerId, namespace: 0, id: 0), timestamp: timestamp)), end: self.key(MessageIndex(id: MessageId(peerId: peerId, namespace: Int32.max, id: Int32.max), timestamp: timestamp)), values: { key, value in
+            let entry = self.readIntermediateEntry(key, value: value)
+            if case let .Message(message) = entry {
+                result = entry.index.id
+                return false
+            }
+            return true
+        }, limit: 0)
+        return result
     }
 
     func debugList(_ peerId: PeerId, peerTable: PeerTable) -> [RenderedMessageHistoryEntry] {

@@ -1,8 +1,8 @@
 import Foundation
 
 class MessageOrderStatisticTable: Table {
-    override init(valueBox: ValueBox, tableId: Int32) {
-        super.init(valueBox: valueBox, tableId: tableId)
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .binary)
     }
     
     /*private func update(peerId: PeerId, tagMask: MessageTags, id: Int32, count: Int) {
@@ -16,14 +16,14 @@ class MessageOrderStatisticTable: Table {
         while (idx <= 1000000) {
             key.setInt32(8 + 4, value: idx)
             var value: Int32 = 0
-            if let data = self.valueBox.get(self.tableId, key: key) {
+            if let data = self.valueBox.get(self.table, key: key) {
                 data.read(&value, offset: 0, length: 4)
             }
             if value == 0 {
-                self.valueBox.remove(self.tableId, key: key)
+                self.valueBox.remove(self.table, key: key)
             } else {
                 writeValue = value
-                self.valueBox.set(self.tableId, key: key, value: buffer)
+                self.valueBox.set(self.table, key: key, value: buffer)
             }
             idx += idx & -idx
         }
@@ -39,7 +39,7 @@ class MessageOrderStatisticTable: Table {
         while (idx > 0) {
             key.setInt32(8, value: idx)
             var value: Int32 = 0
-            if let data = self.valueBox.get(self.tableId, key: key) {
+            if let data = self.valueBox.get(self.table, key: key) {
                 data.read(&value, offset: 0, length: 4)
             }
             sum += value

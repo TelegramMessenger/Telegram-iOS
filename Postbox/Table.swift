@@ -2,11 +2,11 @@ import Foundation
 
 class Table {
     final let valueBox: ValueBox
-    final let tableId: Int32
+    final let table: ValueBoxTable
     
-    init(valueBox: ValueBox, tableId: Int32) {
+    init(valueBox: ValueBox, table: ValueBoxTable) {
         self.valueBox = valueBox
-        self.tableId = tableId
+        self.table = table
     }
     
     func clearMemoryCache() {

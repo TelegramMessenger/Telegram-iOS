@@ -28,6 +28,9 @@ public func ==(lhs: ChatListEntry, rhs: ChatListEntry) -> Bool {
                     if lhsReadState != rhsReadState {
                         return false
                     }
+                    if lhsMessage.stableVersion != rhsMessage.stableVersion {
+                        return false
+                    }
                     if let lhsSettings = lhsSettings, let rhsSettings = rhsSettings {
                         if !lhsSettings.isEqual(to: rhsSettings) {
                             return false

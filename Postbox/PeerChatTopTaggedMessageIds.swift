@@ -1,6 +1,10 @@
 import Foundation
 
 final class PeerChatTopTaggedMessageIdsTable: Table {
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .binary)
+    }
+    
     private var cachedTopIds: [PeerId: [MessageId.Namespace: MessageId?]] = [:]
     private var updatedPeerIds = Set<PeerId>()
     

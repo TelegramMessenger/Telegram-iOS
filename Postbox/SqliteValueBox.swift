@@ -6,11 +6,24 @@ import sqlcipher
     import SwiftSignalKit
 #endif
 
+private func checkTableKey(_ table: ValueBoxTable, _ key: ValueBoxKey) {
+    switch table.keyType {
+        case .binary:
+            break
+        case .int64:
+            assert(key.length == 8)
+    }
+}
+
 private struct SqlitePreparedStatement {
     let statement: OpaquePointer?
     
     func bind(_ index: Int, data: UnsafeRawPointer, length: Int) {
         sqlite3_bind_blob(statement, Int32(index), data, Int32(length), nil)
+    }
+    
+    func bind(_ index: Int, number: Int64) {
+        sqlite3_bind_int64(statement, Int32(index), number)
     }
     
     func bindNull(_ index: Int) {
@@ -19,10 +32,6 @@ private struct SqlitePreparedStatement {
     
     func bind(_ index: Int, number: Int32) {
         sqlite3_bind_int(statement, Int32(index), number)
-    }
-    
-    func bind(_ index: Int, number: Int64) {
-        sqlite3_bind_int64(statement, Int32(index), number)
     }
     
     func reset() {
@@ -65,12 +74,12 @@ private struct SqlitePreparedStatement {
     }
 }
 
-public final class SqliteValueBox: ValueBox {
+final class SqliteValueBox: ValueBox {
     private let lock = NSRecursiveLock()
     
     private let basePath: String
     private var database: Database!
-    private var tables = Set<Int32>()
+    private var tables: [Int32: ValueBoxTable] = [:]
     private var getStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var rangeKeyAscStatementsLimit: [Int32 : SqlitePreparedStatement] = [:]
     private var rangeKeyAscStatementsNoLimit: [Int32 : SqlitePreparedStatement] = [:]
@@ -83,6 +92,7 @@ public final class SqliteValueBox: ValueBox {
     private var existsStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var updateStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var insertStatements: [Int32 : SqlitePreparedStatement] = [:]
+    private var insertOrReplaceStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var deleteStatements: [Int32 : SqlitePreparedStatement] = [:]
     
     private var readQueryTime: CFAbsoluteTime = 0.0
@@ -137,13 +147,14 @@ public final class SqliteValueBox: ValueBox {
         sqlite3_busy_timeout(database.handle, 10000000)
         
         let result = self.getUserVersion(database)
-        if result != 1 {
-            database.execute("PRAGMA user_version=1")
-            database.execute("CREATE TABLE __meta_tables (name INTEGER)")
+        if result != 2 {
+            database.execute("PRAGMA user_version=2")
+            database.execute("DROP TABLE IF EXISTS __meta_tables")
+            database.execute("CREATE TABLE __meta_tables (name INTEGER, keyType INTEGER)")
         }
         
-        for table in self.listTables(database).map({Int32($0)}) {
-            self.tables.insert(table)
+        for table in self.listTables(database) {
+            self.tables[table.id] = table
         }
         lock.unlock()
         
@@ -195,279 +206,394 @@ public final class SqliteValueBox: ValueBox {
         return value
     }
     
-    private func listTables(_ database: Database) -> [Int64] {
+    private func listTables(_ database: Database) -> [ValueBoxTable] {
         assert(self.queue.isCurrent())
         var statement: OpaquePointer? = nil
-        sqlite3_prepare_v2(database.handle, "SELECT name FROM __meta_tables", -1, &statement, nil)
+        sqlite3_prepare_v2(database.handle, "SELECT name, keyType FROM __meta_tables", -1, &statement, nil)
         let preparedStatement = SqlitePreparedStatement(statement: statement)
-        var tables: [Int64] = []
+        var tables: [ValueBoxTable] = []
         while preparedStatement.step() {
             let value = preparedStatement.int64At(0)
-            tables.append(value)
+            let keyType = preparedStatement.int64At(1)
+            tables.append(ValueBoxTable(id: Int32(value), keyType: ValueBoxKeyType(rawValue: Int32(keyType))!))
         }
         preparedStatement.destroy()
         return tables
     }
     
-    private func getStatement(_ table: Int32, key: ValueBoxKey) -> SqlitePreparedStatement {
+    private func checkTable(_ table: ValueBoxTable) {
+        if let currentTable = self.tables[table.id] {
+            precondition(currentTable.keyType == table.keyType)
+        } else {
+            switch table.keyType {
+                case .binary:
+                    self.database.execute("CREATE TABLE t\(table.id) (key BLOB, value BLOB)")
+                    self.database.execute("CREATE INDEX t\(table.id)_key ON t\(table.id) (key)")
+                case .int64:
+                    self.database.execute("CREATE TABLE t\(table.id) (key INTEGER PRIMARY KEY, value BLOB)")
+            }
+            self.tables[table.id] = table
+            self.database.execute("INSERT INTO __meta_tables(name, keyType) VALUES (\(table.id), \(table.keyType.rawValue))")
+        }
+    }
+    
+    private func getStatement(_ table: ValueBoxTable, key: ValueBoxKey) -> SqlitePreparedStatement {
         assert(self.queue.isCurrent())
+        checkTableKey(table, key)
+        
         let resultStatement: SqlitePreparedStatement
         
-        if let statement = self.getStatements[table] {
+        if let statement = self.getStatements[table.id] {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "SELECT value FROM t\(table) WHERE key=?", -1, &statement, nil)
+            sqlite3_prepare_v2(self.database.handle, "SELECT value FROM t\(table.id) WHERE key=?", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
-            self.getStatements[table] = preparedStatement
+            self.getStatements[table.id] = preparedStatement
             resultStatement =  preparedStatement
         }
         
         resultStatement.reset()
         
-        resultStatement.bind(1, data: key.memory, length: key.length)
+        switch table.keyType {
+            case .binary:
+                resultStatement.bind(1, data: key.memory, length: key.length)
+            case .int64:
+                resultStatement.bind(1, number: key.getInt64(0))
+        }
         
         return resultStatement
     }
     
-    private func rangeKeyAscStatementLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey, limit: Int) -> SqlitePreparedStatement {
+    private func rangeKeyAscStatementLimit(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey, limit: Int) -> SqlitePreparedStatement {
         assert(self.queue.isCurrent())
+        checkTableKey(table, start)
+        checkTableKey(table, end)
+        
         let resultStatement: SqlitePreparedStatement
         
-        if let statement = self.rangeKeyAscStatementsLimit[table] {
+        if let statement = self.rangeKeyAscStatementsLimit[table.id] {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table) WHERE key > ? AND key < ? ORDER BY key ASC LIMIT ?", -1, &statement, nil)
+            sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key ASC LIMIT ?", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
-            self.rangeKeyAscStatementsLimit[table] = preparedStatement
+            self.rangeKeyAscStatementsLimit[table.id] = preparedStatement
             resultStatement = preparedStatement
         }
         resultStatement.reset()
         
-        resultStatement.bind(1, data: start.memory, length: start.length)
-        resultStatement.bind(2, data: end.memory, length: end.length)
+        switch table.keyType {
+            case .binary:
+                resultStatement.bind(1, data: start.memory, length: start.length)
+                resultStatement.bind(2, data: end.memory, length: end.length)
+            case .int64:
+                resultStatement.bind(1, number: start.getInt64(0))
+                resultStatement.bind(2, number: end.getInt64(0))
+        }
         resultStatement.bind(3, number: Int32(limit))
         
         return resultStatement
     }
     
-    private func rangeKeyAscStatementNoLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey) ->
+    private func rangeKeyAscStatementNoLimit(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey) ->
         SqlitePreparedStatement {
-            assert(self.queue.isCurrent())
+        assert(self.queue.isCurrent())
+        checkTableKey(table, start)
+        checkTableKey(table, end)
+        
         let resultStatement: SqlitePreparedStatement
         
-        if let statement = self.rangeKeyAscStatementsNoLimit[table] {
+        if let statement = self.rangeKeyAscStatementsNoLimit[table.id] {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table) WHERE key > ? AND key < ? ORDER BY key ASC", -1, &statement, nil)
+            sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key ASC", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
-            self.rangeKeyAscStatementsNoLimit[table] = preparedStatement
+            self.rangeKeyAscStatementsNoLimit[table.id] = preparedStatement
             resultStatement = preparedStatement
         }
         
         resultStatement.reset()
         
-        resultStatement.bind(1, data: start.memory, length: start.length)
-        resultStatement.bind(2, data: end.memory, length: end.length)
+        switch table.keyType {
+            case .binary:
+                resultStatement.bind(1, data: start.memory, length: start.length)
+                resultStatement.bind(2, data: end.memory, length: end.length)
+            case .int64:
+                resultStatement.bind(1, number: start.getInt64(0))
+                resultStatement.bind(2, number: end.getInt64(0))
+        }
         
         return resultStatement
     }
     
-    private func rangeKeyDescStatementLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey, limit: Int) -> SqlitePreparedStatement {
+    private func rangeKeyDescStatementLimit(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey, limit: Int) -> SqlitePreparedStatement {
         let resultStatement: SqlitePreparedStatement
+        checkTableKey(table, start)
+        checkTableKey(table, end)
         
-        if let statement = self.rangeKeyDescStatementsLimit[table] {
+        if let statement = self.rangeKeyDescStatementsLimit[table.id] {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table) WHERE key > ? AND key < ? ORDER BY key DESC LIMIT ?", -1, &statement, nil)
+            sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key DESC LIMIT ?", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
-            self.rangeKeyDescStatementsLimit[table] = preparedStatement
+            self.rangeKeyDescStatementsLimit[table.id] = preparedStatement
             resultStatement = preparedStatement
         }
         
         resultStatement.reset()
         
-        resultStatement.bind(1, data: start.memory, length: start.length)
-        resultStatement.bind(2, data: end.memory, length: end.length)
+        switch table.keyType {
+            case .binary:
+                resultStatement.bind(1, data: start.memory, length: start.length)
+                resultStatement.bind(2, data: end.memory, length: end.length)
+            case .int64:
+                resultStatement.bind(1, number: start.getInt64(0))
+                resultStatement.bind(2, number: end.getInt64(0))
+        }
         resultStatement.bind(3, number: Int32(limit))
         
         return resultStatement
     }
     
-    private func rangeKeyDescStatementNoLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey) -> SqlitePreparedStatement {
+    private func rangeKeyDescStatementNoLimit(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey) -> SqlitePreparedStatement {
         assert(self.queue.isCurrent())
         let resultStatement: SqlitePreparedStatement
+        checkTableKey(table, start)
+        checkTableKey(table, end)
         
-        if let statement = self.rangeKeyDescStatementsNoLimit[table] {
+        if let statement = self.rangeKeyDescStatementsNoLimit[table.id] {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table) WHERE key > ? AND key < ? ORDER BY key DESC", -1, &statement, nil)
+            sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key DESC", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
-            self.rangeKeyDescStatementsNoLimit[table] = preparedStatement
+            self.rangeKeyDescStatementsNoLimit[table.id] = preparedStatement
             resultStatement = preparedStatement
         }
         
         resultStatement.reset()
         
-        resultStatement.bind(1, data: start.memory, length: start.length)
-        resultStatement.bind(2, data: end.memory, length: end.length)
+        switch table.keyType {
+            case .binary:
+                resultStatement.bind(1, data: start.memory, length: start.length)
+                resultStatement.bind(2, data: end.memory, length: end.length)
+            case .int64:
+                resultStatement.bind(1, number: start.getInt64(0))
+                resultStatement.bind(2, number: end.getInt64(0))
+        }
         
         return resultStatement
     }
     
-    private func rangeValueAscStatementLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey, limit: Int) -> SqlitePreparedStatement {
+    private func rangeValueAscStatementLimit(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey, limit: Int) -> SqlitePreparedStatement {
         assert(self.queue.isCurrent())
+        checkTableKey(table, start)
+        checkTableKey(table, end)
+        
         let resultStatement: SqlitePreparedStatement
         
-        if let statement = self.rangeValueAscStatementsLimit[table] {
+        if let statement = self.rangeValueAscStatementsLimit[table.id] {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table) WHERE key > ? AND key < ? ORDER BY key ASC LIMIT ?", -1, &statement, nil)
+            sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key ASC LIMIT ?", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
-            self.rangeValueAscStatementsLimit[table] = preparedStatement
+            self.rangeValueAscStatementsLimit[table.id] = preparedStatement
             resultStatement = preparedStatement
         }
         resultStatement.reset()
         
-        resultStatement.bind(1, data: start.memory, length: start.length)
-        resultStatement.bind(2, data: end.memory, length: end.length)
+        switch table.keyType {
+            case .binary:
+                resultStatement.bind(1, data: start.memory, length: start.length)
+                resultStatement.bind(2, data: end.memory, length: end.length)
+            case .int64:
+                resultStatement.bind(1, number: start.getInt64(0))
+                resultStatement.bind(2, number: end.getInt64(0))
+        }
         resultStatement.bind(3, number: Int32(limit))
         
         return resultStatement
     }
     
-    private func rangeValueAscStatementNoLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey) -> SqlitePreparedStatement {
+    private func rangeValueAscStatementNoLimit(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey) -> SqlitePreparedStatement {
         assert(self.queue.isCurrent())
+        checkTableKey(table, start)
+        checkTableKey(table, end)
+        
         let resultStatement: SqlitePreparedStatement
         
-        if let statement = self.rangeValueAscStatementsNoLimit[table] {
+        if let statement = self.rangeValueAscStatementsNoLimit[table.id] {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table) WHERE key > ? AND key < ? ORDER BY key ASC", -1, &statement, nil)
+            sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key ASC", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
-            self.rangeValueAscStatementsNoLimit[table] = preparedStatement
+            self.rangeValueAscStatementsNoLimit[table.id] = preparedStatement
             resultStatement = preparedStatement
         }
         
         resultStatement.reset()
         
-        resultStatement.bind(1, data: start.memory, length: start.length)
-        resultStatement.bind(2, data: end.memory, length: end.length)
+        switch table.keyType {
+            case .binary:
+                resultStatement.bind(1, data: start.memory, length: start.length)
+                resultStatement.bind(2, data: end.memory, length: end.length)
+            case .int64:
+                resultStatement.bind(1, number: start.getInt64(0))
+                resultStatement.bind(2, number: end.getInt64(0))
+        }
         
         return resultStatement
     }
     
-    private func rangeValueDescStatementLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey, limit: Int) -> SqlitePreparedStatement {
+    private func rangeValueDescStatementLimit(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey, limit: Int) -> SqlitePreparedStatement {
         assert(self.queue.isCurrent())
+        checkTableKey(table, start)
+        checkTableKey(table, end)
+        
         let resultStatement: SqlitePreparedStatement
         
-        if let statement = self.rangeValueDescStatementsLimit[table] {
+        if let statement = self.rangeValueDescStatementsLimit[table.id] {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table) WHERE key > ? AND key < ? ORDER BY key DESC LIMIT ?", -1, &statement, nil)
+            sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key DESC LIMIT ?", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
-            self.rangeValueDescStatementsLimit[table] = preparedStatement
+            self.rangeValueDescStatementsLimit[table.id] = preparedStatement
             resultStatement = preparedStatement
         }
         
         resultStatement.reset()
         
-        resultStatement.bind(1, data: start.memory, length: start.length)
-        resultStatement.bind(2, data: end.memory, length: end.length)
+        switch table.keyType {
+            case .binary:
+                resultStatement.bind(1, data: start.memory, length: start.length)
+                resultStatement.bind(2, data: end.memory, length: end.length)
+            case .int64:
+                resultStatement.bind(1, number: start.getInt64(0))
+                resultStatement.bind(2, number: end.getInt64(0))
+        }
         resultStatement.bind(3, number: Int32(limit))
         
         return resultStatement
     }
     
-    private func rangeValueDescStatementNoLimit(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey) -> SqlitePreparedStatement {
+    private func rangeValueDescStatementNoLimit(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey) -> SqlitePreparedStatement {
         assert(self.queue.isCurrent())
+        checkTableKey(table, start)
+        checkTableKey(table, end)
+        
         let resultStatement: SqlitePreparedStatement
         
-        if let statement = self.rangeKeyDescStatementsNoLimit[table] {
+        if let statement = self.rangeKeyDescStatementsNoLimit[table.id] {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table) WHERE key > ? AND key < ? ORDER BY key DESC", -1, &statement, nil)
+            sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key DESC", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
-            self.rangeValueDescStatementsNoLimit[table] = preparedStatement
+            self.rangeValueDescStatementsNoLimit[table.id] = preparedStatement
             resultStatement = preparedStatement
         }
         
         resultStatement.reset()
         
-        resultStatement.bind(1, data: start.memory, length: start.length)
-        resultStatement.bind(2, data: end.memory, length: end.length)
+        switch table.keyType {
+            case .binary:
+                resultStatement.bind(1, data: start.memory, length: start.length)
+                resultStatement.bind(2, data: end.memory, length: end.length)
+            case .int64:
+                resultStatement.bind(1, number: start.getInt64(0))
+                resultStatement.bind(2, number: end.getInt64(0))
+        }
         
         return resultStatement
     }
     
-    private func existsStatement(_ table: Int32, key: ValueBoxKey) -> SqlitePreparedStatement {
+    private func existsStatement(_ table: ValueBoxTable, key: ValueBoxKey) -> SqlitePreparedStatement {
         assert(self.queue.isCurrent())
+        checkTableKey(table, key)
+        
         let resultStatement: SqlitePreparedStatement
         
-        if let statement = self.existsStatements[table] {
+        if let statement = self.existsStatements[table.id] {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "SELECT rowid FROM t\(table) WHERE key=?", -1, &statement, nil)
+            sqlite3_prepare_v2(self.database.handle, "SELECT rowid FROM t\(table.id) WHERE key=?", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
-            self.existsStatements[table] = preparedStatement
+            self.existsStatements[table.id] = preparedStatement
             resultStatement = preparedStatement
         }
         
         resultStatement.reset()
         
-        resultStatement.bind(1, data: key.memory, length: key.length)
+        switch table.keyType {
+            case .binary:
+                resultStatement.bind(1, data: key.memory, length: key.length)
+            case .int64:
+                resultStatement.bind(1, number: key.getInt64(0))
+        }
         
         return resultStatement
     }
     
-    private func updateStatement(_ table: Int32, key: ValueBoxKey, value: MemoryBuffer) -> SqlitePreparedStatement {
+    private func updateStatement(_ table: ValueBoxTable, key: ValueBoxKey, value: MemoryBuffer) -> SqlitePreparedStatement {
         assert(self.queue.isCurrent())
+        checkTableKey(table, key)
+        
         let resultStatement: SqlitePreparedStatement
         
-        if let statement = self.updateStatements[table] {
+        if let statement = self.updateStatements[table.id] {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "UPDATE t\(table) SET value=? WHERE key=?", -1, &statement, nil)
+            sqlite3_prepare_v2(self.database.handle, "UPDATE t\(table.id) SET value=? WHERE key=?", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
-            self.updateStatements[table] = preparedStatement
+            self.updateStatements[table.id] = preparedStatement
             resultStatement = preparedStatement
         }
         
         resultStatement.reset()
 
         resultStatement.bind(1, data: value.memory, length: value.length)
-        resultStatement.bind(2, data: key.memory, length: key.length)
+        switch table.keyType {
+            case .binary:
+                resultStatement.bind(2, data: key.memory, length: key.length)
+            case .int64:
+                resultStatement.bind(2, number: key.getInt64(0))
+        }
         
         return resultStatement
     }
     
-    private func insertStatement(_ table: Int32, key: ValueBoxKey, value: MemoryBuffer) -> SqlitePreparedStatement {
+    private func insertStatement(_ table: ValueBoxTable, key: ValueBoxKey, value: MemoryBuffer) -> SqlitePreparedStatement {
         assert(self.queue.isCurrent())
+        checkTableKey(table, key)
+        
         let resultStatement: SqlitePreparedStatement
         
-        if let statement = self.insertStatements[table] {
+        if let statement = self.insertStatements[table.id] {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "INSERT INTO t\(table) (key, value) VALUES(?, ?)", -1, &statement, nil)
+            sqlite3_prepare_v2(self.database.handle, "INSERT INTO t\(table.id) (key, value) VALUES(?, ?)", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
-            self.insertStatements[table] = preparedStatement
+            self.insertStatements[table.id] = preparedStatement
             resultStatement = preparedStatement
         }
         
         resultStatement.reset()
         
-        resultStatement.bind(1, data: key.memory, length: key.length)
+        switch table.keyType {
+            case .binary:
+                resultStatement.bind(1, data: key.memory, length: key.length)
+            case .int64:
+                resultStatement.bind(1, number: key.getInt64(0))
+        }
         if value.length == 0 {
             resultStatement.bindNull(2)
         } else {
@@ -477,31 +603,71 @@ public final class SqliteValueBox: ValueBox {
         return resultStatement
     }
     
-    private func deleteStatement(_ table: Int32, key: ValueBoxKey) -> SqlitePreparedStatement {
+    private func insertOrReplaceStatement(_ table: ValueBoxTable, key: ValueBoxKey, value: MemoryBuffer) -> SqlitePreparedStatement {
         assert(self.queue.isCurrent())
+        checkTableKey(table, key)
+        
         let resultStatement: SqlitePreparedStatement
         
-        if let statement = self.deleteStatements[table] {
+        if let statement = self.insertOrReplaceStatements[table.id] {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            sqlite3_prepare_v2(self.database.handle, "DELETE FROM t\(table) WHERE key=?", -1, &statement, nil)
+            sqlite3_prepare_v2(self.database.handle, "INSERT OR REPLACE INTO t\(table.id) (key, value) VALUES(?, ?)", -1, &statement, nil)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
-            self.deleteStatements[table] = preparedStatement
+            self.insertOrReplaceStatements[table.id] = preparedStatement
             resultStatement = preparedStatement
         }
         
         resultStatement.reset()
         
-        resultStatement.bind(1, data: key.memory, length: key.length)
+        switch table.keyType {
+        case .binary:
+            resultStatement.bind(1, data: key.memory, length: key.length)
+        case .int64:
+            resultStatement.bind(1, number: key.getInt64(0))
+        }
+        if value.length == 0 {
+            resultStatement.bindNull(2)
+        } else {
+            resultStatement.bind(2, data: value.memory, length: value.length)
+        }
         
         return resultStatement
     }
     
-    public func get(_ table: Int32, key: ValueBoxKey) -> ReadBuffer? {
+    private func deleteStatement(_ table: ValueBoxTable, key: ValueBoxKey) -> SqlitePreparedStatement {
+        assert(self.queue.isCurrent())
+        checkTableKey(table, key)
+        
+        let resultStatement: SqlitePreparedStatement
+        
+        if let statement = self.deleteStatements[table.id] {
+            resultStatement = statement
+        } else {
+            var statement: OpaquePointer? = nil
+            sqlite3_prepare_v2(self.database.handle, "DELETE FROM t\(table.id) WHERE key=?", -1, &statement, nil)
+            let preparedStatement = SqlitePreparedStatement(statement: statement)
+            self.deleteStatements[table.id] = preparedStatement
+            resultStatement = preparedStatement
+        }
+        
+        resultStatement.reset()
+        
+        switch table.keyType {
+            case .binary:
+                resultStatement.bind(1, data: key.memory, length: key.length)
+            case .int64:
+                resultStatement.bind(1, number: key.getInt64(0))
+        }
+        
+        return resultStatement
+    }
+    
+    public func get(_ table: ValueBoxTable, key: ValueBoxKey) -> ReadBuffer? {
         assert(self.queue.isCurrent())
         let startTime = CFAbsoluteTimeGetCurrent()
-        if self.tables.contains(table) {
+        if let _ = self.tables[table.id] {
             let statement = self.getStatement(table, key: key)
             
             var buffer: ReadBuffer?
@@ -521,7 +687,7 @@ public final class SqliteValueBox: ValueBox {
         return nil
     }
     
-    public func exists(_ table: Int32, key: ValueBoxKey) -> Bool {
+    public func exists(_ table: ValueBoxTable, key: ValueBoxKey) -> Bool {
         assert(self.queue.isCurrent())
         if let _ = self.get(table, key: key) {
             return true
@@ -529,13 +695,13 @@ public final class SqliteValueBox: ValueBox {
         return false
     }
     
-    public func range(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey, values: @noescape(ValueBoxKey, ReadBuffer) -> Bool, limit: Int) {
+    public func range(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey, values: (ValueBoxKey, ReadBuffer) -> Bool, limit: Int) {
         assert(self.queue.isCurrent())
         if start == end {
             return
         }
         
-        if self.tables.contains(table) {
+        if let _ = self.tables[table.id] {
             let statement: SqlitePreparedStatement
             
             var startTime = CFAbsoluteTimeGetCurrent()
@@ -577,9 +743,9 @@ public final class SqliteValueBox: ValueBox {
         }
     }
     
-    public func range(_ table: Int32, start: ValueBoxKey, end: ValueBoxKey, keys: @noescape(ValueBoxKey) -> Bool, limit: Int) {
+    public func range(_ table: ValueBoxTable, start: ValueBoxKey, end: ValueBoxKey, keys: (ValueBoxKey) -> Bool, limit: Int) {
         assert(self.queue.isCurrent())
-        if self.tables.contains(table) {
+        if let _ = self.tables[table.id] {
             let statement: SqlitePreparedStatement
             
             var startTime = CFAbsoluteTimeGetCurrent()
@@ -620,43 +786,44 @@ public final class SqliteValueBox: ValueBox {
         }
     }
     
-    public func set(_ table: Int32, key: ValueBoxKey, value: MemoryBuffer) {
+    public func set(_ table: ValueBoxTable, key: ValueBoxKey, value: MemoryBuffer) {
         assert(self.queue.isCurrent())
-        if !self.tables.contains(table) {
-            self.database.execute("CREATE TABLE t\(table) (key BLOB, value BLOB)")
-            self.database.execute("CREATE INDEX t\(table)_key ON t\(table) (key)")
-            self.tables.insert(table)
-            self.database.execute("INSERT INTO __meta_tables(name) VALUES (\(table))")
-        }
+        self.checkTable(table)
         
         let startTime = CFAbsoluteTimeGetCurrent()
         
-        var exists = false
-        let existsStatement = self.existsStatement(table, key: key)
-        if existsStatement.step() {
-            exists = true
-        }
-        existsStatement.reset()
-        
-        if exists {
-            let statement = self.updateStatement(table, key: key, value: value)
+        if case .int64 = table.keyType {
+            let statement = self.insertOrReplaceStatement(table, key: key, value: value)
             while statement.step() {
             }
             statement.reset()
         } else {
-            let statement = self.insertStatement(table, key: key, value: value)
-            while statement.step() {
+            var exists = false
+            let existsStatement = self.existsStatement(table, key: key)
+            if existsStatement.step() {
+                exists = true
             }
-            statement.reset()
+            existsStatement.reset()
+            
+            if exists {
+                let statement = self.updateStatement(table, key: key, value: value)
+                while statement.step() {
+                }
+                statement.reset()
+            } else {
+                let statement = self.insertStatement(table, key: key, value: value)
+                while statement.step() {
+                }
+                statement.reset()
+            }
         }
         
         self.writeQueryTime += CFAbsoluteTimeGetCurrent() - startTime
     }
     
-    public func remove(_ table: Int32, key: ValueBoxKey) {
+    public func remove(_ table: ValueBoxTable, key: ValueBoxKey) {
         assert(self.queue.isCurrent())
-        if self.tables.contains(table) {
-            
+        if let _ = self.tables[table.id] {
             let startTime = CFAbsoluteTimeGetCurrent()
             
             let statement = self.deleteStatement(table, key: key)
@@ -729,6 +896,11 @@ public final class SqliteValueBox: ValueBox {
             statement.destroy()
         }
         self.insertStatements.removeAll()
+        
+        for (_, statement) in self.insertOrReplaceStatements {
+            statement.destroy()
+        }
+        self.insertOrReplaceStatements.removeAll()
         
         for (_, statement) in self.deleteStatements {
             statement.destroy()

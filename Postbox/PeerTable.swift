@@ -1,15 +1,15 @@
 import Foundation
 
 final class PeerTable: Table {
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .int64)
+    }
+    
     private let sharedEncoder = Encoder()
     private let sharedKey = ValueBoxKey(length: 8)
     
     private var cachedPeers: [PeerId: Peer] = [:]
     private var updatedPeerIds = Set<PeerId>()
-    
-    override init(valueBox: ValueBox, tableId: Int32) {
-        super.init(valueBox: valueBox, tableId: tableId)
-    }
     
     private func key(_ id: PeerId) -> ValueBoxKey {
         self.sharedKey.setInt64(0, value: id.toInt64())
@@ -25,7 +25,7 @@ final class PeerTable: Table {
         if let peer = self.cachedPeers[id] {
             return peer
         }
-        if let value = self.valueBox.get(self.tableId, key: self.key(id)) {
+        if let value = self.valueBox.get(self.table, key: self.key(id)) {
             if let peer = Decoder(buffer: value).decodeRootObject() as? Peer {
                 self.cachedPeers[id] = peer
                 return peer
@@ -45,7 +45,7 @@ final class PeerTable: Table {
                 self.sharedEncoder.reset()
                 self.sharedEncoder.encodeRootObject(peer)
                 
-                self.valueBox.set(self.tableId, key: self.key(peerId), value: self.sharedEncoder.readBufferNoCopy())
+                self.valueBox.set(self.table, key: self.key(peerId), value: self.sharedEncoder.readBufferNoCopy())
             }
         }
         

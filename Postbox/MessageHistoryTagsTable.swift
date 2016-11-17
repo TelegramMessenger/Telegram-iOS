@@ -1,11 +1,11 @@
 import Foundation
 
 class MessageHistoryTagsTable: Table {
-    private let sharedKey = ValueBoxKey(length: 8 + 4 + 4 + 4 + 4)
-    
-    override init(valueBox: ValueBox, tableId: Int32) {
-        super.init(valueBox: valueBox, tableId: tableId)
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .binary)
     }
+    
+    private let sharedKey = ValueBoxKey(length: 8 + 4 + 4 + 4 + 4)
     
     private func key(_ tagMask: MessageTags, index: MessageIndex, key: ValueBoxKey = ValueBoxKey(length: 8 + 4 + 4 + 4 + 4)) -> ValueBoxKey {
         key.setInt64(0, value: index.id.peerId.toInt64())
@@ -31,23 +31,23 @@ class MessageHistoryTagsTable: Table {
     }
     
     func add(_ tagMask: MessageTags, index: MessageIndex) {
-        self.valueBox.set(self.tableId, key: self.key(tagMask, index: index, key: self.sharedKey), value: MemoryBuffer())
+        self.valueBox.set(self.table, key: self.key(tagMask, index: index, key: self.sharedKey), value: MemoryBuffer())
     }
     
     func remove(_ tagMask: MessageTags, index: MessageIndex) {
-        self.valueBox.remove(self.tableId, key: self.key(tagMask, index: index, key: self.sharedKey))
+        self.valueBox.remove(self.table, key: self.key(tagMask, index: index, key: self.sharedKey))
     }
     
     func entryLocation(at index: MessageIndex, tagMask: MessageTags) -> MessageHistoryEntryLocation? {
-        if let _ = self.valueBox.get(self.tableId, key: self.key(tagMask, index: index)) {
+        if let _ = self.valueBox.get(self.table, key: self.key(tagMask, index: index)) {
             var greaterCount = 0
-            self.valueBox.range(self.tableId, start: self.key(tagMask, index: index), end: self.upperBound(tagMask, peerId: index.id.peerId), keys: { _ in
+            self.valueBox.range(self.table, start: self.key(tagMask, index: index), end: self.upperBound(tagMask, peerId: index.id.peerId), keys: { _ in
                 greaterCount += 1
                 return true
             }, limit: 0)
             
             var lowerCount = 0
-            self.valueBox.range(self.tableId, start: self.key(tagMask, index: index), end: self.lowerBound(tagMask, peerId: index.id.peerId), keys: { _ in
+            self.valueBox.range(self.table, start: self.key(tagMask, index: index), end: self.lowerBound(tagMask, peerId: index.id.peerId), keys: { _ in
                 lowerCount += 1
                 return true
             }, limit: 0)
@@ -63,7 +63,7 @@ class MessageHistoryTagsTable: Table {
         var lower: MessageIndex?
         var upper: MessageIndex?
         
-        self.valueBox.range(self.tableId, start: self.key(tagMask, index: index), end: self.lowerBound(tagMask, peerId: index.id.peerId), keys: { key in
+        self.valueBox.range(self.table, start: self.key(tagMask, index: index), end: self.lowerBound(tagMask, peerId: index.id.peerId), keys: { key in
             let index = MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(0)), namespace: key.getInt32(8 + 4 + 4), id: key.getInt32(8 + 4 + 4 + 4)), timestamp: key.getInt32(8 + 4))
             lowerEntries.append(index)
             return true
@@ -74,7 +74,7 @@ class MessageHistoryTagsTable: Table {
             lowerEntries.removeLast()
         }
         
-        self.valueBox.range(self.tableId, start: self.key(tagMask, index: index).predecessor, end: self.upperBound(tagMask, peerId: index.id.peerId), keys: { key in
+        self.valueBox.range(self.table, start: self.key(tagMask, index: index).predecessor, end: self.upperBound(tagMask, peerId: index.id.peerId), keys: { key in
             let index = MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(0)), namespace: key.getInt32(8 + 4 + 4), id: key.getInt32(8 + 4 + 4 + 4)), timestamp: key.getInt32(8 + 4))
             upperEntries.append(index)
             return true
@@ -86,7 +86,7 @@ class MessageHistoryTagsTable: Table {
         
         if lowerEntries.count != 0 && lowerEntries.count + upperEntries.count < count {
             var additionalLowerEntries: [MessageIndex] = []
-            self.valueBox.range(self.tableId, start: self.key(tagMask, index: lowerEntries.last!), end: self.lowerBound(tagMask, peerId: index.id.peerId), keys: { key in
+            self.valueBox.range(self.table, start: self.key(tagMask, index: lowerEntries.last!), end: self.lowerBound(tagMask, peerId: index.id.peerId), keys: { key in
                 let index = MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(0)), namespace: key.getInt32(8 + 4 + 4), id: key.getInt32(8 + 4 + 4 + 4)), timestamp: key.getInt32(8 + 4))
                 additionalLowerEntries.append(index)
                 return true
@@ -112,7 +112,7 @@ class MessageHistoryTagsTable: Table {
         } else {
             key = self.upperBound(tagMask, peerId: peerId)
         }
-        self.valueBox.range(self.tableId, start: key, end: self.lowerBound(tagMask, peerId: peerId), keys: { key in
+        self.valueBox.range(self.table, start: key, end: self.lowerBound(tagMask, peerId: peerId), keys: { key in
             let index = MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(0)), namespace: key.getInt32(8 + 4 + 4), id: key.getInt32(8 + 4 + 4 + 4)), timestamp: key.getInt32(8 + 4))
             indices.append(index)
             return true
@@ -128,7 +128,7 @@ class MessageHistoryTagsTable: Table {
         } else {
             key = self.lowerBound(tagMask, peerId: peerId)
         }
-        self.valueBox.range(self.tableId, start: key, end: self.upperBound(tagMask, peerId: peerId), keys: { key in
+        self.valueBox.range(self.table, start: key, end: self.upperBound(tagMask, peerId: peerId), keys: { key in
             let index = MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(0)), namespace: key.getInt32(8 + 4 + 4), id: key.getInt32(8 + 4 + 4 + 4)), timestamp: key.getInt32(8 + 4))
             indices.append(index)
             return true

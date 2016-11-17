@@ -1,6 +1,10 @@
 import Foundation
 
 final class ContactTable: Table {
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .int64)
+    }
+    
     private var originalPeerIds: Set<PeerId>?
     private var peerIds: Set<PeerId>?
     
@@ -25,7 +29,7 @@ final class ContactTable: Table {
             return peerIds.contains(peerId)
         } else {
             var peerIds = Set<PeerId>()
-            self.valueBox.range(self.tableId, start: self.lowerBound(), end: self.upperBound(), keys: { key in
+            self.valueBox.range(self.table, start: self.lowerBound(), end: self.upperBound(), keys: { key in
                 peerIds.insert(PeerId(key.getInt64(0)))
                 return true
                 }, limit: 0)
@@ -40,7 +44,7 @@ final class ContactTable: Table {
             return peerIds
         } else {
             var peerIds = Set<PeerId>()
-            self.valueBox.range(self.tableId, start: self.lowerBound(), end: self.upperBound(), keys: { key in
+            self.valueBox.range(self.table, start: self.lowerBound(), end: self.upperBound(), keys: { key in
                 peerIds.insert(PeerId(key.getInt64(0)))
                 return true
             }, limit: 0)
@@ -78,11 +82,11 @@ final class ContactTable: Table {
         let sharedKey = self.key(PeerId(namespace: 0, id: 0))
         
         for peerId in self.removedPeerIds {
-            self.valueBox.remove(self.tableId, key: self.key(peerId, sharedKey: sharedKey))
+            self.valueBox.remove(self.table, key: self.key(peerId, sharedKey: sharedKey))
         }
         
         for peerId in self.addedPeerIds {
-            self.valueBox.set(self.tableId, key: self.key(peerId, sharedKey: sharedKey), value: MemoryBuffer())
+            self.valueBox.set(self.table, key: self.key(peerId, sharedKey: sharedKey), value: MemoryBuffer())
         }
         
         self.originalPeerIds = self.peerIds

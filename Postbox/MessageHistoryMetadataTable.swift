@@ -8,6 +8,10 @@ private enum MetadataPrefix: Int8 {
 }
 
 final class MessageHistoryMetadataTable: Table {
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .binary)
+    }
+    
     let sharedPeerHistoryInitializedKey = ValueBoxKey(length: 8 + 1)
     let sharedPeerNextMessageIdByNamespaceKey = ValueBoxKey(length: 8 + 1 + 4)
     let sharedBuffer = WriteBuffer()
@@ -20,10 +24,6 @@ final class MessageHistoryMetadataTable: Table {
     
     private var nextMessageStableId: UInt32?
     private var nextMessageStableIdUpdated = false
-    
-    override init(valueBox: ValueBox, tableId: Int32) {
-        super.init(valueBox: valueBox, tableId: tableId)
-    }
     
     private func peerHistoryInitializedKey(_ id: PeerId) -> ValueBoxKey {
         self.sharedPeerHistoryInitializedKey.setInt64(0, value: id.toInt64())
@@ -47,7 +47,7 @@ final class MessageHistoryMetadataTable: Table {
     
     func setInitializedChatList() {
         self.initializedChatList = true
-        self.valueBox.set(self.tableId, key: self.key(MetadataPrefix.ChatListInitialized), value: MemoryBuffer())
+        self.valueBox.set(self.table, key: self.key(MetadataPrefix.ChatListInitialized), value: MemoryBuffer())
     }
     
     func isInitializedChatList() -> Bool {
@@ -55,7 +55,7 @@ final class MessageHistoryMetadataTable: Table {
             return initializedChatList
         }
         
-        if self.valueBox.get(self.tableId, key: self.key(MetadataPrefix.ChatListInitialized)) != nil {
+        if self.valueBox.get(self.table, key: self.key(MetadataPrefix.ChatListInitialized)) != nil {
             self.initializedChatList = true
             return true
         }
@@ -66,14 +66,14 @@ final class MessageHistoryMetadataTable: Table {
     func setInitialized(_ peerId: PeerId) {
         self.initializedHistoryPeerIds.insert(peerId)
         self.sharedBuffer.reset()
-        self.valueBox.set(self.tableId, key: self.peerHistoryInitializedKey(peerId), value: self.sharedBuffer)
+        self.valueBox.set(self.table, key: self.peerHistoryInitializedKey(peerId), value: self.sharedBuffer)
     }
     
     func isInitialized(_ peerId: PeerId) -> Bool {
         if self.initializedHistoryPeerIds.contains(peerId) {
             return true
         } else {
-            if self.valueBox.exists(self.tableId, key: self.peerHistoryInitializedKey(peerId)) {
+            if self.valueBox.exists(self.table, key: self.peerHistoryInitializedKey(peerId)) {
                 self.initializedHistoryPeerIds.insert(peerId)
                 return true
             } else {
@@ -94,7 +94,7 @@ final class MessageHistoryMetadataTable: Table {
                 return MessageId(peerId: peerId, namespace: namespace, id: nextId)
             } else {
                 var nextId: Int32 = 1
-                if let value = self.valueBox.get(self.tableId, key: self.peerNextMessageIdByNamespaceKey(peerId, namespace: namespace)) {
+                if let value = self.valueBox.get(self.table, key: self.peerNextMessageIdByNamespaceKey(peerId, namespace: namespace)) {
                     value.read(&nextId, offset: 0, length: 4)
                 }
                 self.peerNextMessageIdByNamespace[peerId]![namespace] = nextId + 1
@@ -107,7 +107,7 @@ final class MessageHistoryMetadataTable: Table {
             }
         } else {
             var nextId: Int32 = 1
-            if let value = self.valueBox.get(self.tableId, key: self.peerNextMessageIdByNamespaceKey(peerId, namespace: namespace)) {
+            if let value = self.valueBox.get(self.table, key: self.peerNextMessageIdByNamespaceKey(peerId, namespace: namespace)) {
                 value.read(&nextId, offset: 0, length: 4)
             }
             
@@ -127,7 +127,7 @@ final class MessageHistoryMetadataTable: Table {
             self.nextMessageStableIdUpdated = true
             return nextId
         } else {
-            if let value = self.valueBox.get(self.tableId, key: self.key(.NextStableMessageId)) {
+            if let value = self.valueBox.get(self.table, key: self.key(.NextStableMessageId)) {
                 var nextId: UInt32 = 0
                 value.read(&nextId, offset: 0, length: 4)
                 self.nextMessageStableId = nextId + 1
@@ -159,9 +159,9 @@ final class MessageHistoryMetadataTable: Table {
                     sharedBuffer.reset()
                     var mutableMaxId = maxId
                     sharedBuffer.write(&mutableMaxId, offset: 0, length: 4)
-                    self.valueBox.set(self.tableId, key: self.peerNextMessageIdByNamespaceKey(peerId, namespace: namespace), value: sharedBuffer)
+                    self.valueBox.set(self.table, key: self.peerNextMessageIdByNamespaceKey(peerId, namespace: namespace), value: sharedBuffer)
                 } else {
-                    self.valueBox.remove(self.tableId, key: self.peerNextMessageIdByNamespaceKey(peerId, namespace: namespace))
+                    self.valueBox.remove(self.table, key: self.peerNextMessageIdByNamespaceKey(peerId, namespace: namespace))
                 }
             }
         }
@@ -170,7 +170,7 @@ final class MessageHistoryMetadataTable: Table {
         if self.nextMessageStableIdUpdated {
             if let nextMessageStableId = self.nextMessageStableId {
                 var nextId: UInt32 = nextMessageStableId
-                self.valueBox.set(self.tableId, key: self.key(.NextStableMessageId), value: MemoryBuffer(memory: &nextId, capacity: 4, length: 4, freeWhenDone: false))
+                self.valueBox.set(self.table, key: self.key(.NextStableMessageId), value: MemoryBuffer(memory: &nextId, capacity: 4, length: 4, freeWhenDone: false))
                 self.nextMessageStableIdUpdated = false
             }
         }

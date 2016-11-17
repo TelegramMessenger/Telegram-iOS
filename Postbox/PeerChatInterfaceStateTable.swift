@@ -1,6 +1,10 @@
 import Foundation
 
 final class PeerChatInterfaceStateTable: Table {
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .int64)
+    }
+    
     private var states: [PeerId: PeerChatInterfaceState?] = [:]
     private var peerIdsWithUpdatedStates = Set<PeerId>()
     
@@ -14,7 +18,7 @@ final class PeerChatInterfaceStateTable: Table {
     func get(_ peerId: PeerId) -> PeerChatInterfaceState? {
         if let cachedValue = self.states[peerId] {
             return cachedValue
-        } else if let value = self.valueBox.get(self.tableId, key: self.key(peerId, sharedKey: self.sharedKey)), let state = Decoder(buffer: value).decodeRootObject() as? PeerChatInterfaceState {
+        } else if let value = self.valueBox.get(self.table, key: self.key(peerId, sharedKey: self.sharedKey)), let state = Decoder(buffer: value).decodeRootObject() as? PeerChatInterfaceState {
             self.states[peerId] = state
             return state
         } else {
@@ -62,9 +66,9 @@ final class PeerChatInterfaceStateTable: Table {
                     if let state = state {
                     sharedEncoder.reset()
                     sharedEncoder.encodeRootObject(state)
-                    self.valueBox.set(self.tableId, key: self.key(peerId, sharedKey: self.sharedKey), value: sharedEncoder.readBufferNoCopy())
+                    self.valueBox.set(self.table, key: self.key(peerId, sharedKey: self.sharedKey), value: sharedEncoder.readBufferNoCopy())
                     } else {
-                        self.valueBox.remove(self.tableId, key: self.key(peerId, sharedKey: self.sharedKey))
+                        self.valueBox.remove(self.table, key: self.key(peerId, sharedKey: self.sharedKey))
                     }
                 }
             }

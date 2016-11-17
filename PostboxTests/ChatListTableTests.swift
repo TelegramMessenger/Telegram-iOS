@@ -68,7 +68,6 @@ class ChatListTableTests: XCTestCase {
     var globalMessageIdsTable: GlobalMessageIdsTable?
     var indexTable: MessageHistoryIndexTable?
     var mediaTable: MessageMediaTable?
-    var mediaCleanupTable: MediaCleanupTable?
     var historyTable: MessageHistoryTable?
     var chatListIndexTable: ChatListIndexTable?
     var chatListTable: ChatListTable?
@@ -93,19 +92,18 @@ class ChatListTableTests: XCTestCase {
         
         let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [], initializeMessageNamespacesWithHoles: [], existingMessageTags: [])
         
-        self.globalMessageIdsTable = GlobalMessageIdsTable(valueBox: self.valueBox!, tableId: 7, namespace: namespace)
-        self.historyMetadataTable = MessageHistoryMetadataTable(valueBox: self.valueBox!, tableId: 8)
-        self.unsentTable = MessageHistoryUnsentTable(valueBox: self.valueBox!, tableId: 9)
-        self.tagsTable = MessageHistoryTagsTable(valueBox: self.valueBox!, tableId: 10)
-        self.indexTable = MessageHistoryIndexTable(valueBox: self.valueBox!, tableId: 1, globalMessageIdsTable: self.globalMessageIdsTable!, metadataTable: self.historyMetadataTable!, seedConfiguration: seedConfiguration)
-        self.mediaCleanupTable = MediaCleanupTable(valueBox: self.valueBox!, tableId: 3)
-        self.mediaTable = MessageMediaTable(valueBox: self.valueBox!, tableId: 2, mediaCleanupTable: self.mediaCleanupTable!)
-        self.readStateTable = MessageHistoryReadStateTable(valueBox: self.valueBox!, tableId: 11)
-        self.synchronizeReadStateTable = MessageHistorySynchronizeReadStateTable(valueBox: self.valueBox!, tableId: 12)
-        self.historyTable = MessageHistoryTable(valueBox: self.valueBox!, tableId: 4, messageHistoryIndexTable: self.indexTable!, messageMediaTable: self.mediaTable!, historyMetadataTable: self.historyMetadataTable!, unsentTable: self.unsentTable!, tagsTable: self.tagsTable!, readStateTable: self.readStateTable!, synchronizeReadStateTable: self.synchronizeReadStateTable!)
-        self.chatListIndexTable = ChatListIndexTable(valueBox: self.valueBox!, tableId: 5)
-        self.chatListTable = ChatListTable(valueBox: self.valueBox!, tableId: 6, indexTable: self.chatListIndexTable!, metadataTable: self.historyMetadataTable!, seedConfiguration: seedConfiguration)
-        self.peerChatInterfaceStateTable = PeerChatInterfaceStateTable(valueBox: self.valueBox!, tableId: 20)
+        self.globalMessageIdsTable = GlobalMessageIdsTable(valueBox: self.valueBox!, table: GlobalMessageIdsTable.tableSpec(7), namespace: namespace)
+        self.historyMetadataTable = MessageHistoryMetadataTable(valueBox: self.valueBox!, table: MessageHistoryMetadataTable.tableSpec(8))
+        self.unsentTable = MessageHistoryUnsentTable(valueBox: self.valueBox!, table: MessageHistoryUnsentTable.tableSpec(9))
+        self.tagsTable = MessageHistoryTagsTable(valueBox: self.valueBox!, table: MessageHistoryTagsTable.tableSpec(10))
+        self.indexTable = MessageHistoryIndexTable(valueBox: self.valueBox!, table: MessageHistoryIndexTable.tableSpec(1), globalMessageIdsTable: self.globalMessageIdsTable!, metadataTable: self.historyMetadataTable!, seedConfiguration: seedConfiguration)
+        self.mediaTable = MessageMediaTable(valueBox: self.valueBox!, table: MessageMediaTable.tableSpec(2))
+        self.readStateTable = MessageHistoryReadStateTable(valueBox: self.valueBox!, table: MessageHistoryReadStateTable.tableSpec(11))
+        self.synchronizeReadStateTable = MessageHistorySynchronizeReadStateTable(valueBox: self.valueBox!, table: MessageHistorySynchronizeReadStateTable.tableSpec(12))
+        self.historyTable = MessageHistoryTable(valueBox: self.valueBox!, table: MessageHistoryTable.tableSpec(4), messageHistoryIndexTable: self.indexTable!, messageMediaTable: self.mediaTable!, historyMetadataTable: self.historyMetadataTable!, unsentTable: self.unsentTable!, tagsTable: self.tagsTable!, readStateTable: self.readStateTable!, synchronizeReadStateTable: self.synchronizeReadStateTable!)
+        self.chatListIndexTable = ChatListIndexTable(valueBox: self.valueBox!, table: ChatListIndexTable.tableSpec(5))
+        self.chatListTable = ChatListTable(valueBox: self.valueBox!, table: ChatListTable.tableSpec(6), indexTable: self.chatListIndexTable!, metadataTable: self.historyMetadataTable!, seedConfiguration: seedConfiguration)
+        self.peerChatInterfaceStateTable = PeerChatInterfaceStateTable(valueBox: self.valueBox!, table: PeerChatInterfaceStateTable.tableSpec(20))
     }
     
     override func tearDown() {
@@ -114,7 +112,6 @@ class ChatListTableTests: XCTestCase {
         self.historyTable = nil
         self.indexTable = nil
         self.mediaTable = nil
-        self.mediaCleanupTable = nil
         self.chatListIndexTable = nil
         self.chatListTable = nil
         

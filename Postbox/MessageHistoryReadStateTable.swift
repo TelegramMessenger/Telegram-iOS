@@ -16,6 +16,10 @@ private final class InternalPeerReadStates {
 }
 
 final class MessageHistoryReadStateTable: Table {
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .int64)
+    }
+    
     private var cachedPeerReadStates: [PeerId: InternalPeerReadStates?] = [:]
     private var updatedPeerIds = Set<PeerId>()
     
@@ -26,15 +30,15 @@ final class MessageHistoryReadStateTable: Table {
         return self.sharedKey
     }
     
-    override init(valueBox: ValueBox, tableId: Int32) {
-        super.init(valueBox: valueBox, tableId: tableId)
+    override init(valueBox: ValueBox, table: ValueBoxTable) {
+        super.init(valueBox: valueBox, table: table)
     }
 
     private func get(_ id: PeerId) -> InternalPeerReadStates? {
         if let states = self.cachedPeerReadStates[id] {
             return states
         } else {
-            if let value = self.valueBox.get(self.tableId, key: self.key(id)) {
+            if let value = self.valueBox.get(self.table, key: self.key(id)) {
                 var count: Int32 = 0
                 value.read(&count, offset: 0, length: 4)
                 var stateByNamespace: [MessageId.Namespace: PeerReadState] = [:]
@@ -278,9 +282,9 @@ final class MessageHistoryReadStateTable: Table {
                     sharedBuffer.write(&maxKnownId, offset: 0, length: 4)
                     sharedBuffer.write(&count, offset: 0, length: 4)
                 }
-                self.valueBox.set(self.tableId, key: self.key(id), value: sharedBuffer)
+                self.valueBox.set(self.table, key: self.key(id), value: sharedBuffer)
             } else {
-                self.valueBox.remove(self.tableId, key: self.key(id))
+                self.valueBox.remove(self.table, key: self.key(id))
             }
         }
         self.updatedPeerIds.removeAll()

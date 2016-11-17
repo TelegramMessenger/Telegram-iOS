@@ -1,17 +1,18 @@
 import Foundation
 
 final class MediaCleanupTable: Table {
-    var debugMedia: [Media] = []
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .binary)
+    }
     
-    override init(valueBox: ValueBox, tableId: Int32) {
-        super.init(valueBox: valueBox, tableId: tableId)
+    override init(valueBox: ValueBox, table: ValueBoxTable) {
+        super.init(valueBox: valueBox, table: table)
     }
     
     func add(_ media: Media, sharedEncoder: Encoder = Encoder()) {
-        debugMedia.append(media)
     }
     
     func debugList() -> [Media] {
-        return self.debugMedia
+        return []
     }
 }
