@@ -5,7 +5,7 @@ public final class Subscriber<T, E> {
     private var error: ((E) -> Void)!
     private var completed: (() -> Void)!
     
-    private var lock: OSSpinLock = 0
+    private var lock = pthread_mutex_t()
     private var terminated = false
     internal var disposable: Disposable!
     
@@ -13,6 +13,11 @@ public final class Subscriber<T, E> {
         self.next = next
         self.error = error
         self.completed = completed
+        pthread_mutex_init(&self.lock, nil)
+    }
+    
+    deinit {
+        pthread_mutex_destroy(&self.lock)
     }
     
     internal func assignDisposable(_ disposable: Disposable) {
@@ -24,23 +29,23 @@ public final class Subscriber<T, E> {
     }
     
     internal func markTerminatedWithoutDisposal() {
-        OSSpinLockLock(&self.lock)
+        pthread_mutex_lock(&self.lock)
         if !self.terminated {
             self.terminated = true
             self.next = nil
             self.error = nil
             self.completed = nil
         }
-        OSSpinLockUnlock(&self.lock)
+        pthread_mutex_unlock(&self.lock)
     }
     
     public func putNext(_ next: T) {
         var action: ((T) -> Void)! = nil
-        OSSpinLockLock(&self.lock)
+        pthread_mutex_lock(&self.lock)
         if !self.terminated {
             action = self.next
         }
-        OSSpinLockUnlock(&self.lock)
+        pthread_mutex_unlock(&self.lock)
         
         if action != nil {
             action(next)
@@ -51,7 +56,7 @@ public final class Subscriber<T, E> {
         var shouldDispose = false
         var action: ((E) -> Void)! = nil
         
-        OSSpinLockLock(&self.lock)
+        pthread_mutex_lock(&self.lock)
         if !self.terminated {
             action = self.error
             shouldDispose = true;
@@ -60,7 +65,7 @@ public final class Subscriber<T, E> {
             self.completed = nil;
             self.terminated = true
         }
-        OSSpinLockUnlock(&self.lock)
+        pthread_mutex_unlock(&self.lock)
         
         if action != nil {
             action(error)
@@ -77,7 +82,7 @@ public final class Subscriber<T, E> {
         var shouldDispose = false
         var action: (() -> Void)! = nil
         
-        OSSpinLockLock(&self.lock)
+        pthread_mutex_lock(&self.lock)
         if !self.terminated {
             action = self.completed
             shouldDispose = true;
@@ -86,7 +91,7 @@ public final class Subscriber<T, E> {
             self.completed = nil;
             self.terminated = true
         }
-        OSSpinLockUnlock(&self.lock)
+        pthread_mutex_unlock(&self.lock)
         
         if action != nil {
             action()

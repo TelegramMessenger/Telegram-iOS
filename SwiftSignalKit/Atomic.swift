@@ -1,35 +1,42 @@
 import Foundation
 
 public final class Atomic<T> {
-    private var lock: OSSpinLock = 0
+    private var lock: pthread_mutex_t
     private var value: T
     
     public init(value: T) {
+        self.lock = pthread_mutex_t()
         self.value = value
+        
+        pthread_mutex_init(&self.lock, nil)
+    }
+    
+    deinit {
+        pthread_mutex_destroy(&self.lock)
     }
     
     public func with<R>(_ f: (T) -> R) -> R {
-        OSSpinLockLock(&self.lock)
+        pthread_mutex_lock(&self.lock)
         let result = f(self.value)
-        OSSpinLockUnlock(&self.lock)
+        pthread_mutex_unlock(&self.lock)
         
         return result
     }
     
     public func modify(_ f: (T) -> T) -> T {
-        OSSpinLockLock(&self.lock)
+        pthread_mutex_lock(&self.lock)
         let result = f(self.value)
         self.value = result
-        OSSpinLockUnlock(&self.lock)
+        pthread_mutex_unlock(&self.lock)
         
         return result
     }
     
     public func swap(_ value: T) -> T {
-        OSSpinLockLock(&self.lock)
+        pthread_mutex_lock(&self.lock)
         let previous = self.value
         self.value = value
-        OSSpinLockUnlock(&self.lock)
+        pthread_mutex_unlock(&self.lock)
         
         return previous
     }

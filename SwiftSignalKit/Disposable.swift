@@ -28,18 +28,23 @@ public final class ActionDisposable : Disposable {
 }
 
 public final class MetaDisposable : Disposable {
-    private var lock: OSSpinLock = 0
+    private var lock = pthread_mutex_t()
     private var disposed = false
     private var disposable: Disposable! = nil
     
     public init() {
+        pthread_mutex_init(&self.lock, nil)
+    }
+    
+    deinit {
+        pthread_mutex_destroy(&self.lock)
     }
     
     public func set(_ disposable: Disposable?) {
         var previousDisposable: Disposable! = nil
         var disposeImmediately = false
         
-        OSSpinLockLock(&self.lock)
+        pthread_mutex_lock(&self.lock)
         disposeImmediately = self.disposed
         if !disposeImmediately {
             previousDisposable = self.disposable
@@ -49,7 +54,7 @@ public final class MetaDisposable : Disposable {
                 self.disposable = nil
             }
         }
-        OSSpinLockUnlock(&self.lock)
+        pthread_mutex_unlock(&self.lock)
         
         if previousDisposable != nil {
             previousDisposable.dispose()
@@ -66,13 +71,13 @@ public final class MetaDisposable : Disposable {
     {
         var disposable: Disposable! = nil
         
-        OSSpinLockLock(&self.lock)
+        pthread_mutex_lock(&self.lock)
         if !self.disposed {
             self.disposed = true
             disposable = self.disposable
             self.disposable = nil
         }
-        OSSpinLockUnlock(&self.lock)
+        pthread_mutex_unlock(&self.lock)
         
         if disposable != nil {
             disposable.dispose()
@@ -81,24 +86,28 @@ public final class MetaDisposable : Disposable {
 }
 
 public final class DisposableSet : Disposable {
-    private var lock: OSSpinLock = 0
+    private var lock = pthread_mutex_t()
     private var disposed = false
     private var disposables: [Disposable] = []
     
     public init() {
-        
+        pthread_mutex_init(&self.lock, nil)
+    }
+    
+    deinit {
+        pthread_mutex_destroy(&self.lock)
     }
     
     public func add(_ disposable: Disposable) {
         var disposeImmediately = false
         
-        OSSpinLockLock(&self.lock)
+        pthread_mutex_lock(&self.lock)
         if self.disposed {
             disposeImmediately = true
         } else {
             self.disposables.append(disposable)
         }
-        OSSpinLockUnlock(&self.lock)
+        pthread_mutex_unlock(&self.lock)
         
         if disposeImmediately {
             disposable.dispose()
@@ -106,22 +115,22 @@ public final class DisposableSet : Disposable {
     }
     
     public func remove(_ disposable: Disposable) {
-        OSSpinLockLock(&self.lock)
+        pthread_mutex_lock(&self.lock)
         if let index = self.disposables.index(where: { $0 === disposable }) {
             self.disposables.remove(at: index)
         }
-        OSSpinLockUnlock(&self.lock)
+        pthread_mutex_unlock(&self.lock)
     }
     
     public func dispose() {
         var disposables: [Disposable] = []
-        OSSpinLockLock(&self.lock)
+        pthread_mutex_lock(&self.lock)
         if !self.disposed {
             self.disposed = true
             disposables = self.disposables
             self.disposables = []
         }
-        OSSpinLockUnlock(&self.lock)
+        pthread_mutex_unlock(&self.lock)
         
         if disposables.count != 0 {
             for disposable in disposables {
