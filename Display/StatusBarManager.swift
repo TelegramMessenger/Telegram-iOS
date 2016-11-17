@@ -71,17 +71,22 @@ class StatusBarManager {
         var mappedSurfaces = self.surfaces.map({ optimizeMappedSurface(statusBarSize: statusBarFrame.size, surface: mappedSurface($0)) })
         
         var reduceSurfaces = true
-        var reduceSurfacesStatusBarStyle: StatusBarStyle?
+        var reduceSurfacesStatusBarStyleAndAlpha: (StatusBarStyle, CGFloat)?
         outer: for surface in mappedSurfaces {
             for mappedStatusBar in surface.statusBars {
                 if mappedStatusBar.frame.origin.equalTo(CGPoint()) {
-                    if let reduceSurfacesStatusBarStyle = reduceSurfacesStatusBarStyle {
-                        if mappedStatusBar.style != reduceSurfacesStatusBarStyle {
+                    let statusBarAlpha = mappedStatusBar.statusBar?.alpha ?? 1.0
+                    if let reduceSurfacesStatusBarStyleAndAlpha = reduceSurfacesStatusBarStyleAndAlpha {
+                        if mappedStatusBar.style != reduceSurfacesStatusBarStyleAndAlpha.0 {
+                            reduceSurfaces = false
+                            break outer
+                        }
+                        if !statusBarAlpha.isEqual(to: reduceSurfacesStatusBarStyleAndAlpha.1) {
                             reduceSurfaces = false
                             break outer
                         }
                     } else {
-                        reduceSurfacesStatusBarStyle = mappedStatusBar.style
+                        reduceSurfacesStatusBarStyleAndAlpha = (mappedStatusBar.style, statusBarAlpha)
                     }
                 }
             }

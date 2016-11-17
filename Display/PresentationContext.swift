@@ -130,7 +130,7 @@ final class PresentationContext {
     }
     
     func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        for controller in self.controllers {
+        for controller in self.controllers.reversed() {
             if controller.isViewLoaded {
                 if let result = controller.view.hitTest(point, with: event) {
                     return result

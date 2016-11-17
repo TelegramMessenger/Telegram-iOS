@@ -52,9 +52,10 @@ public struct ListViewItemNodeLayout {
 }
 
 open class ListViewItemNode: ASDisplayNode {
+    let rotated: Bool
     final var index: Int?
     
-    final var accessoryItemNode: ListViewAccessoryItemNode? {
+    public final var accessoryItemNode: ListViewAccessoryItemNode? {
         didSet {
             if let accessoryItemNode = self.accessoryItemNode {
                 self.layoutAccessoryItemNode(accessoryItemNode)
@@ -132,7 +133,7 @@ open class ListViewItemNode: ASDisplayNode {
         return ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
     }
     
-    public init(layerBacked: Bool, dynamicBounce: Bool = true) {
+    public init(layerBacked: Bool, dynamicBounce: Bool = true, rotated: Bool = false) {
         if true {
             if dynamicBounce {
                 self.spring = ListViewItemSpring(stiffness: -280.0, damping: -24.0, mass: 0.85)
@@ -141,6 +142,8 @@ open class ListViewItemNode: ASDisplayNode {
         } else {
             self.wantsScrollDynamics = false
         }
+        
+        self.rotated = rotated
         
         //super.init()
         
@@ -422,5 +425,9 @@ open class ListViewItemNode: ASDisplayNode {
     
     open func shouldAnimateHorizontalFrameTransition() -> Bool {
         return false
+    }
+    
+    open func header() -> ListViewItemHeader? {
+        return nil
     }
 }

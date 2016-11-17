@@ -41,6 +41,23 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
+    func animateOffsetAdditive(node: ASDisplayNode, offset: CGFloat) {
+        switch self {
+            case .immediate:
+                break
+            case let .animated(duration, curve):
+                let timingFunction: String
+                switch curve {
+                    case .easeInOut:
+                        timingFunction = kCAMediaTimingFunctionEaseInEaseOut
+                    case .spring:
+                        timingFunction = kCAMediaTimingFunctionSpring
+                }
+                node.layer.animateBoundsOriginYAdditive(from: offset, to: 0.0, duration: duration, timingFunction: timingFunction)
+                break
+        }
+    }
+    
     func updateFrame(layer: CALayer, frame: CGRect, completion: ((Bool) -> Void)? = nil) {
         switch self {
             case .immediate:

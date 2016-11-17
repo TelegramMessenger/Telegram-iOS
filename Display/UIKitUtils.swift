@@ -55,6 +55,10 @@ public extension CGSize {
         return fittedSize
     }
     
+    public func cropped(_ size: CGSize) -> CGSize {
+        return CGSize(width: min(size.width, self.width), height: min(size.height, self.height))
+    }
+    
     public func fittedToArea(_ area: CGFloat) -> CGSize {
         if self.height < 1.0 || self.width < 1.0 {
             return CGSize()
@@ -72,6 +76,11 @@ public extension CGSize {
     
     public func aspectFitted(_ size: CGSize) -> CGSize {
         let scale = min(size.width / max(1.0, self.width), size.height / max(1.0, self.height))
+        return CGSize(width: floor(self.width * scale), height: floor(self.height * scale))
+    }
+    
+    public func fittedToWidthOrSmaller(_ width: CGFloat) -> CGSize {
+        let scale = min(1.0, width / max(1.0, self.width))
         return CGSize(width: floor(self.width * scale), height: floor(self.height * scale))
     }
     

@@ -105,6 +105,7 @@
 		D0E1D6721CBC201E00B04029 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0E1D6711CBC201E00B04029 /* AsyncDisplayKit.framework */; };
 		D0E49C881B83A3580099E553 /* ImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E49C871B83A3580099E553 /* ImageCache.swift */; };
 		D0F1132F1D6F3C20008C3597 /* ContextMenuActionNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F1132E1D6F3C20008C3597 /* ContextMenuActionNode.swift */; };
+		D0F7AB371DCFF6F8009AD9A1 /* ListViewItemHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F7AB361DCFF6F8009AD9A1 /* ListViewItemHeader.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -220,6 +221,7 @@
 		D0E1D6711CBC201E00B04029 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0E49C871B83A3580099E553 /* ImageCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageCache.swift; sourceTree = "<group>"; };
 		D0F1132E1D6F3C20008C3597 /* ContextMenuActionNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContextMenuActionNode.swift; sourceTree = "<group>"; };
+		D0F7AB361DCFF6F8009AD9A1 /* ListViewItemHeader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListViewItemHeader.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -515,15 +517,16 @@
 			isa = PBXGroup;
 			children = (
 				D0C2DFBB1CC4431D0044FF83 /* ASTransformLayerNode.swift */,
-				D0C2DFBC1CC4431D0044FF83 /* ListViewItemNode.swift */,
 				D0C2DFBD1CC4431D0044FF83 /* Spring.swift */,
 				D0C2DFBE1CC4431D0044FF83 /* ListView.swift */,
 				D0C2DFBF1CC4431D0044FF83 /* ListViewItem.swift */,
+				D0C2DFBC1CC4431D0044FF83 /* ListViewItemNode.swift */,
 				D0C2DFC01CC4431D0044FF83 /* ListViewAnimation.swift */,
 				D0C2DFC21CC4431D0044FF83 /* ListViewTransactionQueue.swift */,
 				D0C2DFC31CC4431D0044FF83 /* ListViewAccessoryItem.swift */,
 				D0C2DFC41CC4431D0044FF83 /* ListViewScroller.swift */,
 				D0C2DFC51CC4431D0044FF83 /* ListViewAccessoryItemNode.swift */,
+				D0F7AB361DCFF6F8009AD9A1 /* ListViewItemHeader.swift */,
 			);
 			name = "List Node";
 			sourceTree = "<group>";
@@ -745,6 +748,7 @@
 				D05CC3151B695A9600E235A3 /* NavigationTransitionCoordinator.swift in Sources */,
 				D03B0E701D6331FB00955575 /* StatusBarHost.swift in Sources */,
 				D08E90471D243C2F00533158 /* HighlightTrackingButton.swift in Sources */,
+				D0F7AB371DCFF6F8009AD9A1 /* ListViewItemHeader.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -877,7 +881,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 3.0;
+				SWIFT_VERSION = 3.0.1;
 			};
 			name = Debug;
 		};
@@ -902,7 +906,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
-				SWIFT_VERSION = 3.0;
+				SWIFT_VERSION = 3.0.1;
 			};
 			name = Release;
 		};
@@ -990,7 +994,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
 				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 3.0;
+				SWIFT_VERSION = 3.0.1;
 			};
 			name = Hockeyapp;
 		};

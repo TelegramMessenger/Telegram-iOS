@@ -301,7 +301,7 @@ public func readCGFloat(_ index: inout UnsafePointer<UInt8>, end: UnsafePointer<
             }
         } else if c == separator {
             break
-        } else if c < 48 || c > 57 {
+        } else if !((c >= 48 && c <= 57) || c == 45 || c == 101 || c == 69) {
             throw ParsingError.Generic
         }
     }
@@ -348,7 +348,7 @@ public func drawSvgPath(_ context: CGContext, path: StaticString, strokeOnMove: 
             let y2 = try readCGFloat(&index, end: end, separator: 32)
             let x = try readCGFloat(&index, end: end, separator: 44)
             let y = try readCGFloat(&index, end: end, separator: 32)
-            context.addCurve(to: CGPoint(x: x1, y: y1), control1: CGPoint(x: x2, y: y2), control2: CGPoint(x: x, y: y))
+            context.addCurve(to: CGPoint(x: x, y: y), control1: CGPoint(x: x1, y: y1), control2: CGPoint(x: x2, y: y2))
             
             //print("Line to \(x), \(y)")
             if strokeOnMove {
@@ -364,6 +364,8 @@ public func drawSvgPath(_ context: CGContext, path: StaticString, strokeOnMove: 
             context.fillPath()
             //CGContextBeginPath(context)
             //print("Close")
+        } else if c == 32 { // space
+            continue
         } else {
             throw ParsingError.Generic
         }

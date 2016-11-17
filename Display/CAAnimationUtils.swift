@@ -39,7 +39,7 @@ public extension CAAnimation {
 }
 
 public extension CALayer {
-    public func animate(from: AnyObject, to: AnyObject, keyPath: String, timingFunction: String, duration: Double, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    public func animate(from: AnyObject, to: AnyObject, keyPath: String, timingFunction: String, duration: Double, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         if timingFunction == kCAMediaTimingFunctionSpring {
             let animation = makeSpringAnimation(keyPath)
             animation.fromValue = from
@@ -71,7 +71,11 @@ public extension CALayer {
             animation.fromValue = from
             animation.toValue = to
             animation.duration = duration
-            animation.timingFunction = CAMediaTimingFunction(name: timingFunction)
+            if let mediaTimingFunction = mediaTimingFunction {
+                animation.timingFunction = mediaTimingFunction
+            } else {
+                animation.timingFunction = CAMediaTimingFunction(name: timingFunction)
+            }
             animation.isRemovedOnCompletion = removeOnCompletion
             animation.fillMode = kCAFillModeForwards
             animation.speed = speed
@@ -158,8 +162,11 @@ public extension CALayer {
     }
     
     public func animateBoundsOriginYAdditive(from: CGFloat, to: CGFloat, duration: Double, timingFunction: String = kCAMediaTimingFunctionEaseInEaseOut) {
-        //self.animateAdditive(from: from as NSNumber, to: to as NSNumber, keyPath: "bounds.origin.y", key: "boundsOriginYAdditive", timingFunction: timingFunction, duration: duration, removeOnCompletion: true)
         self.animate(from: from as NSNumber, to: to as NSNumber, keyPath: "bounds.origin.y", timingFunction: timingFunction, duration: duration, additive: true)
+    }
+    
+    public func animateBoundsOriginYAdditive(from: CGFloat, to: CGFloat, duration: Double, mediaTimingFunction: CAMediaTimingFunction) {
+        self.animate(from: from as NSNumber, to: to as NSNumber, keyPath: "bounds.origin.y", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: duration, mediaTimingFunction: mediaTimingFunction, additive: true)
     }
     
     public func animateFrame(from: CGRect, to: CGRect, duration: Double, timingFunction: String, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
