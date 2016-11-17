@@ -245,25 +245,25 @@ public final class PendingMessageManager {
                 
                 let sendMessageRequest: Signal<Api.Updates, NoError>
                 switch content {
-                case let .text(text):
-                    sendMessageRequest = network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: nil), tag: dependencyTag)
-                        |> mapError { _ -> NoError in
-                            return NoError()
-                        }
-                case let .media(inputMedia):
-                    sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: 0, peer: inputPeer, replyToMsgId: replyMessageId, media: inputMedia, randomId: uniqueId, replyMarkup: nil), tag: dependencyTag)
-                        |> mapError { _ -> NoError in
-                            return NoError()
-                        }
-                case let .forward(sourceInfo):
-                    if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = modifier.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
-                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: 0, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer), tag: dependencyTag)
+                    case let .text(text):
+                        sendMessageRequest = network.request(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: nil), tag: dependencyTag)
                             |> mapError { _ -> NoError in
                                 return NoError()
                             }
-                    } else {
-                        sendMessageRequest = .fail(NoError())
-                    }
+                    case let .media(inputMedia):
+                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, media: inputMedia, randomId: uniqueId, replyMarkup: nil), tag: dependencyTag)
+                            |> mapError { _ -> NoError in
+                                return NoError()
+                            }
+                    case let .forward(sourceInfo):
+                        if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = modifier.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
+                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: 0, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer), tag: dependencyTag)
+                                |> mapError { _ -> NoError in
+                                    return NoError()
+                                }
+                        } else {
+                            sendMessageRequest = .fail(NoError())
+                        }
                 }
                 
                 return sendMessageRequest

@@ -10,6 +10,15 @@ import Foundation
 public enum EnqueueMessage {
     case message(text: String, media: Media?, replyToMessageId: MessageId?)
     case forward(source: MessageId)
+    
+    public func withUpdatedReplyToMessageId(_ replyToMessageId: MessageId?) -> EnqueueMessage {
+        switch self {
+            case let .message(text, media, _):
+                return .message(text: text, media: media, replyToMessageId: replyToMessageId)
+            case .forward:
+                return self
+        }
+    }
 }
 
 private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAttribute]) -> [MessageAttribute] {

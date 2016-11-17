@@ -36,6 +36,10 @@ public struct Namespaces {
         public static let CloudRecentGifs: Int32 = 2
         public static let CloudRecentStickers: Int32 = 0
     }
+    
+    struct CachedItemCollection {
+        public static let resolvedByNamePeers: Int8 = 0
+    }
 }
 
 public extension MessageTags {

@@ -17,7 +17,7 @@ public func requestMessageActionCallback(account: Account, messageId: MessageId,
                 var flags: Int32 = 0
                 var dataBuffer: Buffer?
                 if let data = data {
-                    flags != Int32(1 << 0)
+                    flags |= Int32(1 << 0)
                     dataBuffer = Buffer(data: data.makeData())
                 }
                 return account.network.request(Api.functions.messages.getBotCallbackAnswer(flags: flags, peer: inputPeer, msgId: messageId.id, data: dataBuffer))
