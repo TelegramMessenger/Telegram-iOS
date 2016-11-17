@@ -130,6 +130,7 @@ public class PeerMediaCollectionController: ViewController {
                 if let strongSelf = self {
                     (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: id, messageId: nil))
                 }
+            }, openPeerMention: { _ in
             }, openMessageContextMenu: { [weak self] id, node, frame in
                 if let strongSelf = self, strongSelf.isNodeLoaded {
                     if let message = strongSelf.mediaCollectionDisplayNode.historyNode.messageInCurrentHistoryView(id) {
@@ -176,17 +177,25 @@ public class PeerMediaCollectionController: ViewController {
                         strongSelf.updateInterfaceState(animated: true, { $0.withToggledSelectedMessage(id) })
                     }
                 }
-            }, sendSticker: { _ in })
+            }, sendMessage: { _ in
+            },sendSticker: { _ in
+            }, requestMessageActionCallback: { _, _ in
+            }, openUrl: { _ in
+            }, shareCurrentLocation: {
+            }, shareAccountContact: {
+            }, sendBotCommand: { _, _ in
+            })
         
         self.controllerInteraction = controllerInteraction
         
-        self.interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _ in }, beginMessageSelection: { _ in }, deleteSelectedMessages: {
+        self.interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _ in }, setupEditMessage: { _ in }, beginMessageSelection: { _ in }, deleteSelectedMessages: {
             
         }, forwardSelectedMessages: {
                 
         }, updateTextInputState: { _ in
         }, updateInputMode: { _ in
-        })
+        }, editMessage: { _, _ in
+        }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })
         

@@ -29,6 +29,14 @@ private func messagesShouldBeMerged(_ lhs: Message, _ rhs: Message) -> Bool {
                 return false
             }
         }
+        for attribute in lhs.attributes {
+            if let attribute = attribute as? ReplyMarkupMessageAttribute {
+                if attribute.flags.contains(.inline) && !attribute.rows.isEmpty {
+                    return false
+                }
+                break
+            }
+        }
         
         return true
     }
@@ -36,7 +44,39 @@ private func messagesShouldBeMerged(_ lhs: Message, _ rhs: Message) -> Bool {
     return false
 }
 
-public class ChatMessageItem: ListViewItem, CustomStringConvertible {
+func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -> Bool{
+    let lhsHeader: ChatMessageDateHeader?
+    let rhsHeader: ChatMessageDateHeader?
+    if let lhs = lhs as? ChatMessageItem {
+        lhsHeader = lhs.header
+    } else if let lhs = lhs as? ChatHoleItem {
+        lhsHeader = lhs.header
+    } else if let lhs = lhs as? ChatUnreadItem {
+        lhsHeader = lhs.header
+    } else {
+        lhsHeader = nil
+    }
+    if let rhs = rhs {
+        if let rhs = rhs as? ChatMessageItem {
+            rhsHeader = rhs.header
+        } else if let rhs = rhs as? ChatHoleItem {
+            rhsHeader = rhs.header
+        } else if let rhs = rhs as? ChatUnreadItem {
+            rhsHeader = rhs.header
+        } else {
+            rhsHeader = nil
+        }
+    } else {
+        rhsHeader = nil
+    }
+    if let lhsHeader = lhsHeader, let rhsHeader = rhsHeader {
+        return lhsHeader.id == rhsHeader.id
+    } else {
+        return false
+    }
+}
+
+public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
     let account: Account
     let peerId: PeerId
     let controllerInteraction: ChatControllerInteraction
@@ -44,6 +84,7 @@ public class ChatMessageItem: ListViewItem, CustomStringConvertible {
     let read: Bool
     
     public let accessoryItem: ListViewAccessoryItem?
+    let header: ChatMessageDateHeader
     
     public init(account: Account, peerId: PeerId, controllerInteraction: ChatControllerInteraction, message: Message, read: Bool) {
         self.account = account
@@ -55,6 +96,8 @@ public class ChatMessageItem: ListViewItem, CustomStringConvertible {
         var accessoryItem: ListViewAccessoryItem?
         let incoming = message.effectivelyIncoming
         let displayAuthorInfo = incoming && message.author != nil && peerId.isGroupOrChannel
+        
+        self.header = ChatMessageDateHeader(timestamp: message.timestamp)
         
         if displayAuthorInfo {
             var hasActionMedia = false
@@ -90,8 +133,8 @@ public class ChatMessageItem: ListViewItem, CustomStringConvertible {
             node.setupItem(self)
             
             let nodeLayout = node.asyncLayout()
-            let (top, bottom) = self.mergedWithItems(top: previousItem, bottom: nextItem)
-            let (layout, apply) = nodeLayout(self, width, top, bottom)
+            let (top, bottom, dateAtBottom) = self.mergedWithItems(top: previousItem, bottom: nextItem)
+            let (layout, apply) = nodeLayout(self, width, top, bottom, dateAtBottom)
             
             node.updateSelectionState(animated: false)
             
@@ -111,17 +154,37 @@ public class ChatMessageItem: ListViewItem, CustomStringConvertible {
         }
     }
     
-    final func mergedWithItems(top: ListViewItem?, bottom: ListViewItem?) -> (top: Bool, bottom: Bool) {
+    final func mergedWithItems(top: ListViewItem?, bottom: ListViewItem?) -> (top: Bool, bottom: Bool, dateAtBottom: Bool) {
         var mergedTop = false
         var mergedBottom = false
+        var dateAtBottom = false
         if let top = top as? ChatMessageItem {
-            mergedBottom = messagesShouldBeMerged(message, top.message)
+            if top.header.id != self.header.id {
+                mergedBottom = false
+            } else {
+                mergedBottom = messagesShouldBeMerged(message, top.message)
+            }
         }
         if let bottom = bottom as? ChatMessageItem {
-            mergedTop = messagesShouldBeMerged(message, bottom.message)
+            if bottom.header.id != self.header.id {
+                mergedTop = false
+                dateAtBottom = true
+            } else {
+                mergedTop = messagesShouldBeMerged(bottom.message, message)
+            }
+        } else if let bottom = bottom as? ChatUnreadItem {
+            if bottom.header.id != self.header.id {
+                dateAtBottom = true
+            }
+        } else if let bottom = bottom as? ChatHoleItem {
+            if bottom.header.id != self.header.id {
+                dateAtBottom = true
+            }
+        } else {
+            dateAtBottom = true
         }
         
-        return (mergedTop, mergedBottom)
+        return (mergedTop, mergedBottom, dateAtBottom)
     }
     
     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
@@ -134,9 +197,9 @@ public class ChatMessageItem: ListViewItem, CustomStringConvertible {
                 let nodeLayout = node.asyncLayout()
                 
                 async {
-                    let (top, bottom) = self.mergedWithItems(top: previousItem, bottom: nextItem)
+                    let (top, bottom, dateAtBottom) = self.mergedWithItems(top: previousItem, bottom: nextItem)
                     
-                    let (layout, apply) = nodeLayout(self, width, top, bottom)
+                    let (layout, apply) = nodeLayout(self, width, top, bottom, dateAtBottom)
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply(animation)
@@ -150,4 +213,6 @@ public class ChatMessageItem: ListViewItem, CustomStringConvertible {
     public var description: String {
         return "(ChatMessageItem id: \(self.message.id), text: \"\(self.message.text)\")"
     }
+    
+    
 }

@@ -52,7 +52,7 @@ public class AuthorizationController: NavigationController {
         let accountSignal = authorizationSequence |> mapToSignal { [weak self] authorization, account -> Signal<Account, NoError> in
             if let strongSelf = self {
                 switch authorization {
-                    case let .authorization(user):
+                    case let .authorization(_, _, user):
                         let user = TelegramUser(user: user)
                         
                         return account.postbox.modify { modifier -> AccountState in

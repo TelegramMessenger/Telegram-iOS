@@ -53,27 +53,27 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
             case let .HoleChanges(filledHoleDirections, removeHoleDirections):
                 if let (_, removeDirection) = removeHoleDirections.first {
                     switch removeDirection {
-                    case .LowerToUpper:
-                        var holeIndex: MessageIndex?
-                        for (index, _) in filledHoleDirections {
-                            if holeIndex == nil || index < holeIndex! {
-                                holeIndex = index
-                            }
-                        }
-                        
-                        if let holeIndex = holeIndex {
-                            for i in 0 ..< toView.filteredEntries.count {
-                                if toView.filteredEntries[i].index >= holeIndex {
-                                    let index = toView.filteredEntries.count - 1 - (i - 1)
-                                    stationaryItemRange = (index, Int.max)
-                                    break
+                        case .LowerToUpper:
+                            var holeIndex: MessageIndex?
+                            for (index, _) in filledHoleDirections {
+                                if holeIndex == nil || index < holeIndex! {
+                                    holeIndex = index
                                 }
                             }
-                        }
-                    case .UpperToLower:
-                        break
-                    case .AroundIndex:
-                        break
+                            
+                            if let holeIndex = holeIndex {
+                                for i in 0 ..< toView.filteredEntries.count {
+                                    if toView.filteredEntries[i].index >= holeIndex {
+                                        let index = toView.filteredEntries.count - 1 - (i - 1)
+                                        stationaryItemRange = (index, Int.max)
+                                        break
+                                    }
+                                }
+                            }
+                        case .UpperToLower:
+                            break
+                        case .AroundIndex:
+                            break
                     }
                 }
         }
@@ -94,15 +94,6 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
             }
             
             adjustedIndicesAndItems.append(ChatHistoryViewTransitionInsertEntry(index: adjustedIndex, previousIndex: adjustedPrevousIndex, entry: entry, directionHint: directionHint))
-            
-            /*switch entry {
-                case let .MessageEntry(message):
-                    adjustedIndicesAndItems.append(ListViewInsertItem(index: adjustedIndex, previousIndex: adjustedPrevousIndex, item: ChatMessageItem(account: account, peerId: peerId, controllerInteraction: controllerInteraction, message: message), directionHint: directionHint))
-                case .HoleEntry:
-                    adjustedIndicesAndItems.append(ListViewInsertItem(index: adjustedIndex, previousIndex: adjustedPrevousIndex, item: ChatHoleItem(), directionHint: directionHint))
-                case .UnreadEntry:
-                    adjustedIndicesAndItems.append(ListViewInsertItem(index: adjustedIndex, previousIndex: adjustedPrevousIndex, item: ChatUnreadItem(), directionHint: directionHint))
-            }*/
         }
         
         for (index, entry, previousIndex) in updateIndices {

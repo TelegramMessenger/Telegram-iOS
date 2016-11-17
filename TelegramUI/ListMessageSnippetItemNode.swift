@@ -71,8 +71,8 @@ final class ListMessageSnippetItemNode: ListMessageNode {
     override public func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         if let item = item as? ListMessageItem {
             let doLayout = self.asyncLayout()
-            let merged = (top: false, bottom: false)//item.mergedWithItems(top: previousItem, bottom: nextItem)
-            let (layout, apply) = doLayout(item, width, merged.top, merged.bottom)
+            let merged = (top: false, bottom: false, dateAtBottom: false)//item.mergedWithItems(top: previousItem, bottom: nextItem)
+            let (layout, apply) = doLayout(item, width, merged.top, merged.bottom, merged.dateAtBottom)
             self.contentSize = layout.contentSize
             self.insets = layout.insets
             apply(.None)
@@ -87,7 +87,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
         //self.layer.animateBoundsOriginYAdditive(from: -self.bounds.size.height * 1.4, to: 0.0, duration: duration)
     }
     
-    override func asyncLayout() -> (_ item: ListMessageItem, _ width: CGFloat, _ mergedTop: Bool, _ mergedBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+    override func asyncLayout() -> (_ item: ListMessageItem, _ width: CGFloat, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let titleNodeMakeLayout = TextNode.asyncLayout(self.titleNode)
         let descriptionNodeMakeLayout = TextNode.asyncLayout(self.descriptionNode)
         let iconTextMakeLayout = TextNode.asyncLayout(self.iconTextNode)
@@ -96,7 +96,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
         let currentMedia = self.currentMedia
         let currentIconImageRepresentation = self.currentIconImageRepresentation
         
-        return { [weak self] item, width, _, _ in
+        return { [weak self] item, width, _, _, _ in
             let leftInset: CGFloat = 65.0
             
             var extensionIconImage: UIImage?

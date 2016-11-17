@@ -15,6 +15,14 @@ private func backgroundImage(color: UIColor) -> UIImage? {
 private let titleFont = UIFont.systemFont(ofSize: 13.0)
 
 class ChatHoleItem: ListViewItem {
+    let index: MessageIndex
+    let header: ChatMessageDateHeader
+    
+    init(index: MessageIndex) {
+        self.index = index
+        self.header = ChatMessageDateHeader(timestamp: index.timestamp)
+    }
+    
     func nodeConfiguredForWidth(async: @escaping (@escaping () -> Void) -> Void, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> Void) -> Void) {
         
         async {
@@ -26,8 +34,11 @@ class ChatHoleItem: ListViewItem {
 }
 
 class ChatHoleItemNode: ListViewItemNode {
+    var item: ChatHoleItem?
     let backgroundNode: ASImageNode
     let labelNode: TextNode
+    
+    private let layoutConstants = ChatMessageItemLayoutConstants()
     
     init() {
         self.backgroundNode = ASImageNode()
@@ -49,27 +60,41 @@ class ChatHoleItemNode: ListViewItemNode {
     }
     
     override func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
-        let (layout, apply) = self.asyncLayout()(width)
-        apply()
-        self.contentSize = layout.contentSize
-        self.insets = layout.insets
+        if let item = item as? ChatHoleItem {
+            let dateAtBottom = !chatItemsHaveCommonDateHeader(item, nextItem)
+            let (layout, apply) = self.asyncLayout()(item, width, dateAtBottom)
+            apply()
+            self.contentSize = layout.contentSize
+            self.insets = layout.insets
+        }
     }
     
-    func asyncLayout() -> (_ width: CGFloat) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: ChatHoleItem, _ width: CGFloat, _ dateAtBottom: Bool) -> (ListViewItemNodeLayout, () -> Void) {
         let labelLayout = TextNode.asyncLayout(self.labelNode)
-        return { width in
+        let layoutConstants = self.layoutConstants
+        return { item, width, dateAtBottom in
             let (size, apply) = labelLayout(NSAttributedString(string: "Loading", font: titleFont, textColor: UIColor.white), nil, 1, .end, CGSize(width: width, height: CGFloat.greatestFiniteMagnitude), nil)
             
             let backgroundSize = CGSize(width: size.size.width + 8.0 + 8.0, height: 20.0)
             
-            return (ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 20.0), insets: UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)), { [weak self] in
+            return (ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 20.0), insets: UIEdgeInsets(top: 4.0 + (dateAtBottom ? layoutConstants.timestampHeaderHeight : 0.0), left: 0.0, bottom: 4.0, right: 0.0)), { [weak self] in
                 if let strongSelf = self {
+                    strongSelf.item = item
+                    
                     let _ = apply()
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - backgroundSize.width) / 2.0), y: 0.0), size: backgroundSize)
                     strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: strongSelf.backgroundNode.frame.origin.x + 8.0, y: floorToScreenPixels((backgroundSize.height - size.size.height) / 2.0) - 1.0), size: size.size)
                 }
             })
+        }
+    }
+    
+    override public func header() -> ListViewItemHeader? {
+        if let item = self.item {
+            return item.header
+        } else {
+            return nil
         }
     }
 }

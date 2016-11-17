@@ -67,7 +67,7 @@ enum ChannelInfoEntry: PeerInfoEntry {
                             if !lhsCachedData.isEqual(to: rhsCachedData) {
                                 return false
                             }
-                        } else if (rhsCachedData == nil) != (rhsCachedData != nil) {
+                        } else if (lhsCachedData != nil) != (rhsCachedData != nil) {
                             return false
                         }
                         return true

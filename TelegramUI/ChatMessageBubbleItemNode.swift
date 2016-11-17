@@ -43,15 +43,15 @@ private func ==(lhs: ChatMessageBackgroundType, rhs: ChatMessageBackgroundType) 
     }
 }
 
-private let chatMessageBackgroundIncomingImage = UIImage(bundleImageName: "Chat/Message/Background/BubbleIncoming")?.precomposed()
-private let chatMessageBackgroundOutgoingImage = UIImage(bundleImageName: "Chat/Message/Background/BubbleOutgoing")?.precomposed()
-private let chatMessageBackgroundIncomingMergedTopImage = UIImage(bundleImageName: "Chat/Message/Background/BubbleIncomingMergedTop")?.precomposed()
-private let chatMessageBackgroundIncomingMergedBottomImage = UIImage(bundleImageName: "Chat/Message/Background/BubbleIncomingMergedBottom")?.precomposed()
-private let chatMessageBackgroundIncomingMergedBothImage = UIImage(bundleImageName: "Chat/Message/Background/BubbleIncomingMergedBoth")?.precomposed()
-private let chatMessageBackgroundOutgoingMergedImage = UIImage(bundleImageName: "Chat/Message/Background/BubbleOutgoingMerged")?.precomposed()
-private let chatMessageBackgroundOutgoingMergedTopImage = UIImage(bundleImageName: "Chat/Message/Background/BubbleOutgoingMerged")?.precomposed()
-private let chatMessageBackgroundOutgoingMergedBottomImage = UIImage(bundleImageName: "Chat/Message/Background/BubbleOutgoingMerged")?.precomposed()
-private let chatMessageBackgroundOutgoingMergedBothImage = UIImage(bundleImageName: "Chat/Message/Background/BubbleOutgoingMerged")?.precomposed()
+private let chatMessageBackgroundIncomingImage = messageBubbleImage(incoming: true, neighbors: .none)
+private let chatMessageBackgroundIncomingMergedTopImage = messageBubbleImage(incoming: true, neighbors: .top)
+private let chatMessageBackgroundIncomingMergedBottomImage = messageBubbleImage(incoming: true, neighbors: .bottom)
+private let chatMessageBackgroundIncomingMergedBothImage = messageBubbleImage(incoming: true, neighbors: .both)
+
+private let chatMessageBackgroundOutgoingImage = messageBubbleImage(incoming: false, neighbors: .none)
+private let chatMessageBackgroundOutgoingMergedTopImage = messageBubbleImage(incoming: false, neighbors: .top)
+private let chatMessageBackgroundOutgoingMergedBottomImage = messageBubbleImage(incoming: false, neighbors: .bottom)
+private let chatMessageBackgroundOutgoingMergedBothImage = messageBubbleImage(incoming: false, neighbors: .both)
 
 class ChatMessageBackground: ASImageNode {
     private var type: ChatMessageBackgroundType?
@@ -77,9 +77,9 @@ class ChatMessageBackground: ASImageNode {
                     case .None:
                         image = chatMessageBackgroundIncomingImage
                     case .Top:
-                        image = chatMessageBackgroundIncomingMergedBottomImage
-                    case .Bottom:
                         image = chatMessageBackgroundIncomingMergedTopImage
+                    case .Bottom:
+                        image = chatMessageBackgroundIncomingMergedBottomImage
                     case .Both:
                         image = chatMessageBackgroundIncomingMergedBothImage
                 }
@@ -160,6 +160,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     private var replyInfoNode: ChatMessageReplyInfoNode?
     
     private var contentNodes: [ChatMessageBubbleContentNode] = []
+    private var actionButtonsNode: ChatMessageActionButtonsNode?
     
     private var messageId: MessageId?
     
@@ -180,20 +181,24 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         super.animateInsertion(currentTimestamp, duration: duration, short: short)
         
-        self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        for node in self.subnodes {
+            if node !== self.accessoryItemNode {
+                node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
+        }
         
         for contentNode in self.contentNodes {
-            contentNode.animateInsertion(currentTimestamp, duration: duration)
+            //contentNode.animateInsertion(currentTimestamp, duration: duration)
         }
     }
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         super.animateRemoved(currentTimestamp, duration: duration)
         
-        self.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         
         for contentNode in self.contentNodes {
-            contentNode.animateRemoved(currentTimestamp, duration: duration)
+            //contentNode.animateRemoved(currentTimestamp, duration: duration)
         }
     }
     
@@ -223,13 +228,22 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 if let forwardInfoNode = strongSelf.forwardInfoNode, forwardInfoNode.frame.contains(point) {
                     return true
                 }
+                for contentNode in strongSelf.contentNodes {
+                    let tapAction = contentNode.tapActionAtPoint(CGPoint(x: point.x - contentNode.frame.minX, y: point.y - contentNode.frame.minY))
+                    switch tapAction {
+                        case .none:
+                            break
+                        case .url, .peerMention, .textMention, .botCommand:
+                            return true
+                    }
+                }
             }
             return false
         }
         self.view.addGestureRecognizer(recognizer)
     }
     
-    override func asyncLayout() -> (_ item: ChatMessageItem, _ width: CGFloat, _ mergedTop: Bool, _ mergedBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+    override func asyncLayout() -> (_ item: ChatMessageItem, _ width: CGFloat, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         var currentContentClassesPropertiesAndLayouts: [(AnyClass, ChatMessageBubbleContentProperties, (_ item: ChatMessageItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))))] = []
         for contentNode in self.contentNodes {
             currentContentClassesPropertiesAndLayouts.append((type(of: contentNode) as AnyClass, contentNode.properties, contentNode.asyncLayoutContent()))
@@ -238,10 +252,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         let authorNameLayout = TextNode.asyncLayout(self.nameNode)
         let forwardInfoLayout = ChatMessageForwardInfoNode.asyncLayout(self.forwardInfoNode)
         let replyInfoLayout = ChatMessageReplyInfoNode.asyncLayout(self.replyInfoNode)
+        let actionButtonsLayout = ChatMessageActionButtonsNode.asyncLayout(self.actionButtonsNode)
         
         let layoutConstants = self.layoutConstants
         
-        return { item, width, mergedTop, mergedBottom in
+        return { item, width, mergedTop, mergedBottom, dateHeaderAtBottom in
             let message = item.message
             let incoming = item.message.effectivelyIncoming
             
@@ -279,12 +294,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             var authorNameString: String?
             var inlineBotNameString: String?
             var replyMessage: Message?
+            var replyMarkup: ReplyMarkupMessageAttribute?
             
             for attribute in message.attributes {
                 if let attribute = attribute as? InlineBotMessageAttribute, let bot = message.peers[attribute.peerId] as? TelegramUser {
                     inlineBotNameString = bot.username
                 } else if let attribute = attribute as? ReplyMessageAttribute {
                     replyMessage = message.associatedMessages[attribute.messageId]
+                } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
+                    replyMarkup = attribute
                 }
             }
             
@@ -455,14 +473,26 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 index += 1
             }
             
+            var actionButtonsSizeApply: (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode)?
+            if let replyMarkup = replyMarkup {
+                actionButtonsSizeApply = actionButtonsLayout(replyMarkup, maxContentWidth)
+            }
+            
             let layoutBubbleSize = CGSize(width: max(contentSize.width, headerSize.width) + layoutConstants.bubble.contentInsets.left + layoutConstants.bubble.contentInsets.right, height: max(layoutConstants.bubble.minimumSize.height, headerSize.height + contentSize.height + layoutConstants.bubble.contentInsets.top + layoutConstants.bubble.contentInsets.bottom))
             
             let backgroundFrame = CGRect(origin: CGPoint(x: incoming ? (layoutConstants.bubble.edgeInset + avatarInset) : (width - layoutBubbleSize.width - layoutConstants.bubble.edgeInset), y: 0.0), size: layoutBubbleSize)
             
             let contentOrigin = CGPoint(x: backgroundFrame.origin.x + (incoming ? layoutConstants.bubble.contentInsets.left : layoutConstants.bubble.contentInsets.right), y: backgroundFrame.origin.y + layoutConstants.bubble.contentInsets.top + headerSize.height)
 
-            let layoutSize = CGSize(width: width, height: layoutBubbleSize.height)
-            let layoutInsets = UIEdgeInsets(top: mergedTop ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, left: 0.0, bottom: mergedBottom ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, right: 0.0)
+            var layoutSize = CGSize(width: width, height: layoutBubbleSize.height)
+            if let actionButtonsSizeApply = actionButtonsSizeApply {
+                layoutSize.height += actionButtonsSizeApply.0.height
+            }
+            
+            var layoutInsets = UIEdgeInsets(top: mergedTop ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, left: 0.0, bottom: mergedBottom ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, right: 0.0)
+            if dateHeaderAtBottom {
+                layoutInsets.top += layoutConstants.timestampHeaderHeight
+            }
             
             let layout = ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets)
             
@@ -486,10 +516,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     
                     if let forwardInfoNode = forwardInfoSizeApply.1() {
                         strongSelf.forwardInfoNode = forwardInfoNode
+                        var animateFrame = true
                         if forwardInfoNode.supernode == nil {
                             strongSelf.addSubnode(forwardInfoNode)
+                            animateFrame = false
                         }
+                        let previousForwardInfoNodeFrame = forwardInfoNode.frame
                         forwardInfoNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + forwardInfoOriginY), size: forwardInfoSizeApply.0)
+                        if case let .System(duration) = animation {
+                            if animateFrame {
+                                forwardInfoNode.layer.animateFrame(from: previousForwardInfoNodeFrame, to: forwardInfoNode.frame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                            }
+                        }
                     } else {
                         strongSelf.forwardInfoNode?.removeFromSupernode()
                         strongSelf.forwardInfoNode = nil
@@ -497,10 +535,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     
                     if let replyInfoNode = replyInfoSizeApply.1() {
                         strongSelf.replyInfoNode = replyInfoNode
+                        var animateFrame = true
                         if replyInfoNode.supernode == nil {
                             strongSelf.addSubnode(replyInfoNode)
+                            animateFrame = false
                         }
+                        let previousReplyInfoNodeFrame = replyInfoNode.frame
                         replyInfoNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + replyInfoOriginY), size: replyInfoSizeApply.0)
+                        if case let .System(duration) = animation {
+                            if animateFrame {
+                                replyInfoNode.layer.animateFrame(from: previousReplyInfoNodeFrame, to: replyInfoNode.frame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                            }
+                        }
                     } else {
                         strongSelf.replyInfoNode?.removeFromSupernode()
                         strongSelf.replyInfoNode = nil
@@ -573,8 +619,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     }
                     
                     if case .System = animation {
-                        strongSelf.backgroundFrameTransition = (strongSelf.backgroundNode.frame, backgroundFrame)
-                        strongSelf.enableTransitionClippingNode()
+                        if !strongSelf.backgroundNode.frame.equalTo(backgroundFrame) {
+                            strongSelf.backgroundFrameTransition = (strongSelf.backgroundNode.frame, backgroundFrame)
+                            strongSelf.enableTransitionClippingNode()
+                        }
                     } else {
                         if let _ = strongSelf.backgroundFrameTransition {
                             strongSelf.animateFrameTransition(1.0)
@@ -585,6 +633,35 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     }
                     let offset: CGFloat = incoming ? 42.0 : 0.0
                     strongSelf.selectionNode?.frame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: width, height: layout.size.height))
+                    
+                    if let actionButtonsSizeApply = actionButtonsSizeApply {
+                        var animated = false
+                        if let _ = strongSelf.actionButtonsNode {
+                            if case .System = animation {
+                                animated = true
+                            }
+                        }
+                        let actionButtonsNode = actionButtonsSizeApply.1(animated)
+                        let previousFrame = actionButtonsNode.frame
+                        let actionButtonsFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + (incoming ? layoutConstants.bubble.contentInsets.left : layoutConstants.bubble.contentInsets.right), y: backgroundFrame.maxY), size: actionButtonsSizeApply.0)
+                        actionButtonsNode.frame = actionButtonsFrame
+                        if actionButtonsNode !== strongSelf.actionButtonsNode {
+                            strongSelf.actionButtonsNode = actionButtonsNode
+                            actionButtonsNode.buttonPressed = { button in
+                                if let strongSelf = self {
+                                    strongSelf.performMessageButtonAction(button: button)
+                                }
+                            }
+                            strongSelf.addSubnode(actionButtonsNode)
+                        } else {
+                            if case let .System(duration) = animation {
+                                actionButtonsNode.layer.animateFrame(from: previousFrame, to: actionButtonsFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                            }
+                        }
+                    } else if let actionButtonsNode = strongSelf.actionButtonsNode {
+                        actionButtonsNode.removeFromSupernode()
+                        strongSelf.actionButtonsNode = nil
+                    }
                 }
             })
         }
@@ -606,6 +683,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             backgroundFrame = backgroundFrame.insetBy(dx: 0.0, dy: 1.0)
             node.frame = backgroundFrame
             node.bounds = CGRect(origin: CGPoint(x: backgroundFrame.origin.x, y: backgroundFrame.origin.y), size: backgroundFrame.size)
+            if let forwardInfoNode = self.forwardInfoNode {
+                node.addSubnode(forwardInfoNode)
+            }
+            if let replyInfoNode = self.replyInfoNode {
+                node.addSubnode(replyInfoNode)
+            }
             for contentNode in self.contentNodes {
                 node.addSubnode(contentNode)
             }
@@ -616,6 +699,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     
     private func disableTransitionClippingNode() {
         if let transitionClippingNode = self.transitionClippingNode {
+            if let forwardInfoNode = self.forwardInfoNode {
+                self.addSubnode(forwardInfoNode)
+            }
+            if let replyInfoNode = self.replyInfoNode {
+                self.addSubnode(replyInfoNode)
+            }
             for contentNode in self.contentNodes {
                 self.addSubnode(contentNode)
             }
@@ -650,6 +739,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     self.disableTransitionClippingNode()
                 }
             }
+            
+            if CGFloat(1.0).isLessThanOrEqualTo(progress) {
+                self.backgroundFrameTransition = nil
+            }
         }
     }
     
@@ -679,9 +772,43 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                     return
                                 }
                             }
-                            self.controllerInteraction?.clickThroughMessage()
+                            var foundTapAction = false
+                            loop: for contentNode in self.contentNodes {
+                                let tapAction = contentNode.tapActionAtPoint(CGPoint(x: location.x - contentNode.frame.minX, y: location.y - contentNode.frame.minY))
+                                switch tapAction {
+                                    case .none:
+                                        break
+                                    case let .url(url):
+                                        foundTapAction = true
+                                        if let controllerInteraction = self.controllerInteraction {
+                                            controllerInteraction.openUrl(url)
+                                        }
+                                        break loop
+                                    case let .peerMention(peerId):
+                                        foundTapAction = true
+                                        if let controllerInteraction = self.controllerInteraction {
+                                            controllerInteraction.openPeer(peerId, .info)
+                                        }
+                                        break loop
+                                    case let .textMention(name):
+                                        foundTapAction = true
+                                        if let controllerInteraction = self.controllerInteraction {
+                                            controllerInteraction.openPeerMention(name)
+                                        }
+                                        break loop
+                                    case let .botCommand(command):
+                                        foundTapAction = true
+                                        if let item = self.item, let controllerInteraction = self.controllerInteraction {
+                                            controllerInteraction.sendBotCommand(item.message.id, command)
+                                        }
+                                        break loop
+                                }
+                            }
+                            if !foundTapAction {
+                                self.controllerInteraction?.clickThroughMessage()
+                            }
                         case .longTap, .doubleTap:
-                            if let item = self.item {
+                            if let item = self.item, self.backgroundNode.frame.contains(location) {
                                 self.controllerInteraction?.openMessageContextMenu(item.message.id, self, self.backgroundNode.frame)
                             }
                     }
@@ -701,7 +828,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         }
         
         if !self.backgroundNode.frame.contains(point) {
-            return nil
+            if self.actionButtonsNode == nil || !self.actionButtonsNode!.frame.contains(point) {
+                return nil
+            }
         }
         
         return super.hitTest(point, with: event)
@@ -784,6 +913,27 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 } else {
                     selectionNode.removeFromSupernode()
                 }
+            }
+        }
+    }
+    
+    private func performMessageButtonAction(button: ReplyMarkupButton) {
+        if let item = self.item, let controllerInteraction = self.controllerInteraction {
+            switch button.action {
+                case .text:
+                    controllerInteraction.sendMessage(button.title)
+                case let .url(url):
+                    controllerInteraction.openUrl(url)
+                case .requestMap:
+                    controllerInteraction.shareCurrentLocation()
+                case .requestPhone:
+                    controllerInteraction.shareAccountContact()
+                case .openWebApp:
+                    controllerInteraction.requestMessageActionCallback(item.message.id, nil)
+                case let .callback(data):
+                    controllerInteraction.requestMessageActionCallback(item.message.id, data)
+                case let .switchInline(samePeer, query):
+                    break
             }
         }
     }

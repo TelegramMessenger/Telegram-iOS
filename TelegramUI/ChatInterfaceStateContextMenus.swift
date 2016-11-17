@@ -22,9 +22,34 @@ func contextMenuForChatPresentationIntefaceState(_ chatPresentationInterfaceStat
     } else {
         canReply = true
     }
+    
+    var canEdit = false
+    if let author = message.author, author.id == account.peerId {
+        var hasUneditableAttributes = false
+        for attribute in message.attributes {
+            if let _ = attribute as? InlineBotMessageAttribute {
+                hasUneditableAttributes = true
+                break
+            }
+        }
+        
+        if !hasUneditableAttributes {
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent())
+            if message.timestamp >= timestamp - 60 * 60 * 24 * 2 {
+                canEdit = true
+            }
+        }
+    }
+    
     if canReply {
         actions.append(ContextMenuAction(content: .text("Reply"), action: {
             interfaceInteraction.setupReplyMessage(message.id)
+        }))
+    }
+    
+    if canEdit {
+        actions.append(ContextMenuAction(content: .text("Edit"), action: {
+            interfaceInteraction.setupEditMessage(message.id)
         }))
     }
     

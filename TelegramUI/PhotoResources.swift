@@ -130,7 +130,7 @@ private enum Corner: Hashable {
             case let .BottomLeft(radius):
                 return radius | (3 << 24)
             case let .BottomRight(radius):
-                return radius | (2 << 24)
+                return radius | (4 << 24)
         }
     }
     
@@ -282,19 +282,31 @@ private func tailContext(_ tail: Tail) -> DrawingContext {
                 case let .BottomLeft(radius):
                     rect = CGRect(origin: CGPoint(x: 3.0, y: -CGFloat(radius)), size: CGSize(width: CGFloat(radius << 1), height: CGFloat(radius << 1)))
                 
-                    c.move(to: CGPoint(x: 3.0, y: 0.0))
-                    c.addLine(to: CGPoint(x: 3.0, y: 8.7))
-                    c.addLine(to: CGPoint(x: 2.0, y: 11.7))
-                    c.addLine(to: CGPoint(x: 1.5, y: 12.7))
-                    c.addLine(to: CGPoint(x: 0.8, y: 13.7))
-                    c.addLine(to: CGPoint(x: 0.2, y: 14.4))
-                    c.addLine(to: CGPoint(x: 3.5, y: 13.8))
-                    c.addLine(to: CGPoint(x: 5.0, y: 13.2))
-                    c.addLine(to: CGPoint(x: 3.0 + CGFloat(radius) - 9.5, y: 11.5))
+                    c.move(to: CGPoint(x: 3.0, y: 1.0))
+                    c.addLine(to: CGPoint(x: 3.0, y: 11.0))
+                    c.addLine(to: CGPoint(x: 2.3, y: 13.0))
+                    c.addLine(to: CGPoint(x: 0.0, y: 16.6))
+                    c.addLine(to: CGPoint(x: 4.5, y: 15.5))
+                    c.addLine(to: CGPoint(x: 6.5, y: 14.3))
+                    c.addLine(to: CGPoint(x: 9.0, y: 12.5))
                     c.closePath()
                     c.fillPath()
                 case let .BottomRight(radius):
-                    rect = CGRect(origin: CGPoint(x: -CGFloat(radius) + 3.0, y: -CGFloat(radius)), size: CGSize(width: CGFloat(radius << 1), height: CGFloat(radius << 1)))
+                    rect = CGRect(origin: CGPoint(x: 3.0, y: -CGFloat(radius)), size: CGSize(width: CGFloat(radius << 1), height: CGFloat(radius << 1)))
+                
+                    c.translateBy(x: context.size.width / 2.0, y: context.size.height / 2.0)
+                    c.scaleBy(x: -1.0, y: 1.0)
+                    c.translateBy(x: -context.size.width / 2.0, y: -context.size.height / 2.0)
+                
+                    c.move(to: CGPoint(x: 3.0, y: 1.0))
+                    c.addLine(to: CGPoint(x: 3.0, y: 11.0))
+                    c.addLine(to: CGPoint(x: 2.3, y: 13.0))
+                    c.addLine(to: CGPoint(x: 0.0, y: 16.6))
+                    c.addLine(to: CGPoint(x: 4.5, y: 15.5))
+                    c.addLine(to: CGPoint(x: 6.5, y: 14.3))
+                    c.addLine(to: CGPoint(x: 9.0, y: 12.5))
+                    c.closePath()
+                    c.fillPath()
                 
                     /*CGContextMoveToPoint(c, 3.0, 0.0)
                     CGContextAddLineToPoint(c, 3.0, 8.7)
@@ -360,7 +372,12 @@ private func addCorners(_ context: DrawingContext, arguments: TransformImageArgu
         case let .Tail(radius):
             if radius > CGFloat(FLT_EPSILON) {
                 let tail = tailContext(.BottomRight(Int(radius)))
-                context.blt(tail, at: CGPoint(x: drawingRect.maxX - radius - 3.0, y: drawingRect.maxY - radius))
+                let color = context.colorAt(CGPoint(x: drawingRect.maxX - 1.0, y: drawingRect.maxY - 1.0))
+                context.withContext { c in
+                    c.setFillColor(color.cgColor)
+                    c.fill(CGRect(x: drawingRect.maxX, y: drawingRect.maxY - 6.0, width: 3.0, height: 6.0))
+                }
+                context.blt(tail, at: CGPoint(x: drawingRect.maxX - radius, y: drawingRect.maxY - radius))
             }
     }
 }
@@ -370,24 +387,17 @@ func chatMessagePhoto(account: Account, photo: TelegramMediaImage) -> Signal<(Tr
     
     return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
         return { arguments in
-            var debugTiming = false
-            var startTime = 0.0
-            if arguments.imageSize.equalTo(CGSize(width: 640.0, height: 853.0)) {
-                print("begin draw \(CFAbsoluteTimeGetCurrent() * 1000.0)")
-                debugTiming = true
-                startTime = CFAbsoluteTimeGetCurrent()
-            }
-            
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
             
-            if debugTiming {
-                let currentTime = CFAbsoluteTimeGetCurrent()
-                print("create context: \((currentTime - startTime) * 1000.0) ms")
-                startTime = currentTime
+            let drawingRect = arguments.drawingRect
+            var fittedSize = arguments.imageSize
+            if abs(fittedSize.width - arguments.boundingSize.width).isLessThanOrEqualTo(CGFloat(1.0)) {
+                fittedSize.width = arguments.boundingSize.width
+            }
+            if abs(fittedSize.height - arguments.boundingSize.height).isLessThanOrEqualTo(CGFloat(1.0)) {
+                fittedSize.height = arguments.boundingSize.height
             }
             
-            let drawingRect = arguments.drawingRect
-            let fittedSize = arguments.imageSize.aspectFilled(arguments.boundingSize).fitted(arguments.imageSize)
             let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
             
             var fullSizeImage: CGImage?
@@ -416,12 +426,6 @@ func chatMessagePhoto(account: Account, photo: TelegramMediaImage) -> Signal<(Tr
                 }
             }
             
-            if debugTiming {
-                let currentTime = CFAbsoluteTimeGetCurrent()
-                print("decode full: \((currentTime - startTime) * 1000.0) ms")
-                startTime = currentTime
-            }
-            
             var thumbnailImage: CGImage?
             if let thumbnailData = thumbnailData, let imageSource = CGImageSourceCreateWithData(thumbnailData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
                 thumbnailImage = image
@@ -439,12 +443,6 @@ func chatMessagePhoto(account: Account, photo: TelegramMediaImage) -> Signal<(Tr
                 telegramFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
                 
                 blurredThumbnailImage = thumbnailContext.generateImage()
-            }
-            
-            if debugTiming {
-                let currentTime = CFAbsoluteTimeGetCurrent()
-                print("decode thumbnail: \((currentTime - startTime) * 1000.0) ms")
-                startTime = currentTime
             }
             
             context.withFlippedContext { c in
@@ -466,19 +464,7 @@ func chatMessagePhoto(account: Account, photo: TelegramMediaImage) -> Signal<(Tr
                 }
             }
             
-            if debugTiming {
-                let currentTime = CFAbsoluteTimeGetCurrent()
-                print("draw: \((currentTime - startTime) * 1000.0) ms")
-                startTime = currentTime
-            }
-            
             addCorners(context, arguments: arguments)
-            
-            if debugTiming {
-                let currentTime = CFAbsoluteTimeGetCurrent()
-                print("add corners: \((currentTime - startTime) * 1000.0) ms")
-                startTime = currentTime
-            }
             
             return context
         }

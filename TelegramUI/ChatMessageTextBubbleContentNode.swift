@@ -2,6 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import Display
 import TelegramCore
+import Postbox
 
 private let messageFont: UIFont = UIFont.systemFont(ofSize: 17.0)
 private let messageBoldFont: UIFont = UIFont.boldSystemFont(ofSize: 17.0)
@@ -45,7 +46,19 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 var timeinfo = tm()
                 localtime_r(&t, &timeinfo)
                 
-                let dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
+                var edited = false
+                for attribute in message.attributes {
+                    if let attribute = attribute as? EditedMessageAttribute {
+                        edited = true
+                        break
+                    }
+                }
+                let dateText: String
+                if edited {
+                    dateText = String(format: "edited %02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
+                } else {
+                    dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
+                }
                 //let dateText = "\(message.id.id)"
                 
                 let statusType: ChatMessageDateAndStatusType?
@@ -83,19 +96,46 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 if let entities = entities {
+                    var nsString: NSString?
                     let string = NSMutableAttributedString(string: message.text, attributes: [NSFontAttributeName: messageFont, NSForegroundColorAttributeName: UIColor.black])
                     for entity in entities.entities {
+                        let range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
                         switch entity.type {
                             case .Url:
-                                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
+                                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: range)
+                                if nsString == nil {
+                                    nsString = message.text as NSString
+                                }
+                                string.addAttribute(TextNode.UrlAttribute, value: nsString!.substring(with: range), range: range)
                             case .Email:
                                 string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
-                            case .TextUrl:
+                                if nsString == nil {
+                                    nsString = message.text as NSString
+                                }
+                                string.addAttribute(TextNode.UrlAttribute, value: "mailto:\(nsString!.substring(with: range))", range: range)
+                            case let .TextUrl(url):
                                 string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
+                                if nsString == nil {
+                                    nsString = message.text as NSString
+                                }
+                                string.addAttribute(TextNode.UrlAttribute, value: url, range: range)
                             case .Bold:
                                 string.addAttribute(NSFontAttributeName, value: messageBoldFont, range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
                             case .Mention:
                                 string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
+                                if nsString == nil {
+                                    nsString = message.text as NSString
+                                }
+                                string.addAttribute(TextNode.TelegramPeerTextMentionAttribute, value: nsString!.substring(with: range), range: range)
+                            case let .TextMention(peerId):
+                                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
+                                string.addAttribute(TextNode.TelegramPeerMentionAttribute, value: peerId.toInt64() as NSNumber, range: range)
+                            case .BotCommand:
+                                string.addAttribute(NSForegroundColorAttributeName, value: UIColor(0x004bad), range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
+                                if nsString == nil {
+                                    nsString = message.text as NSString
+                                }
+                                string.addAttribute(TextNode.TelegramBotCommandAttribute, value: nsString!.substring(with: range), range: range)
                             case .Code, .Pre:
                                 string.addAttribute(NSFontAttributeName, value: messageFixedFont, range: NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
                             default:
@@ -147,9 +187,31 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     return (boundingSize, { [weak self] animation in
                         if let strongSelf = self {
+                            let cachedLayout = strongSelf.textNode.cachedLayout
+                            
+                            if case .System = animation {
+                                if let cachedLayout = cachedLayout {
+                                    if cachedLayout != textLayout {
+                                        if let textContents = strongSelf.textNode.contents {
+                                            let fadeNode = ASDisplayNode()
+                                            fadeNode.displaysAsynchronously = false
+                                            fadeNode.contents = textContents
+                                            fadeNode.frame = strongSelf.textNode.frame
+                                            fadeNode.isLayerBacked = true
+                                            strongSelf.addSubnode(fadeNode)
+                                            fadeNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak fadeNode] _ in
+                                                fadeNode?.removeFromSupernode()
+                                            })
+                                            strongSelf.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                                        }
+                                    }
+                                }
+                            }
+                            
                             let _ = textApply()
                             
                             if let statusApply = statusApply, let adjustedStatusFrame = adjustedStatusFrame {
+                                let previousStatusFrame = strongSelf.statusNode.frame
                                 strongSelf.statusNode.frame = adjustedStatusFrame
                                 var hasAnimation = true
                                 if case .None = animation {
@@ -158,6 +220,13 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 statusApply(hasAnimation)
                                 if strongSelf.statusNode.supernode == nil {
                                     strongSelf.addSubnode(strongSelf.statusNode)
+                                } else {
+                                    if case let .System(duration) = animation {
+                                        let delta = CGPoint(x: previousStatusFrame.minX - adjustedStatusFrame.minX, y: previousStatusFrame.minY - adjustedStatusFrame.minY)
+                                        let statusPosition = strongSelf.statusNode.layer.position
+                                        let previousPosition = CGPoint(x: statusPosition.x + delta.x, y: statusPosition.y + delta.y)
+                                        strongSelf.statusNode.layer.animatePosition(from: previousPosition, to: statusPosition, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+                                    }
                                 }
                             } else if strongSelf.statusNode.supernode != nil {
                                 strongSelf.statusNode.removeFromSupernode()
@@ -184,5 +253,21 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+    }
+    
+    override func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {
+        let textNodeFrame = self.textNode.frame
+        let attributes = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY))
+        if let url = attributes[TextNode.UrlAttribute] as? String {
+            return .url(url)
+        } else if let peerId = attributes[TextNode.TelegramPeerMentionAttribute] as? NSNumber {
+            return .peerMention(PeerId(peerId.int64Value))
+        } else if let peerName = attributes[TextNode.TelegramPeerTextMentionAttribute] as? String {
+            return .textMention(peerName)
+        } else if let botCommand = attributes[TextNode.TelegramBotCommandAttribute] as? String {
+            return .botCommand(botCommand)
+        } else {
+            return .none
+        }
     }
 }

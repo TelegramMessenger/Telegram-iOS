@@ -73,10 +73,10 @@ struct ChatHistoryListViewTransition {
     let initialData: InitialMessageHistoryData?
 }
 
-private func maxIncomingMessageIdForEntries(_ entries: [ChatHistoryEntry], indexRange: (Int, Int)) -> MessageId? {
+private func maxIncomingMessageIndexForEntries(_ entries: [ChatHistoryEntry], indexRange: (Int, Int)) -> MessageIndex? {
     for i in (indexRange.0 ... indexRange.1).reversed() {
         if case let .MessageEntry(message, _) = entries[i], message.flags.contains(.Incoming) {
-            return message.id
+            return MessageIndex(message)
         }
     }
     return nil
@@ -95,9 +95,9 @@ private func mappedInsertEntries(account: Account, peerId: PeerId, controllerInt
                 }
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
             case .HoleEntry:
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatHoleItem(), directionHint: entry.directionHint)
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatHoleItem(index: entry.entry.index), directionHint: entry.directionHint)
             case .UnreadEntry:
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(), directionHint: entry.directionHint)
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index), directionHint: entry.directionHint)
         }
     }
 }
@@ -115,9 +115,9 @@ private func mappedUpdateEntries(account: Account, peerId: PeerId, controllerInt
                 }
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
             case .HoleEntry:
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatHoleItem(), directionHint: entry.directionHint)
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatHoleItem(index: entry.entry.index), directionHint: entry.directionHint)
             case .UnreadEntry:
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(), directionHint: entry.directionHint)
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index), directionHint: entry.directionHint)
         }
     }
 }
@@ -161,7 +161,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         return self._initialData.get()
     }
     
-    private let maxVisibleIncomingMessageId = ValuePromise<MessageId>()
+    private let maxVisibleIncomingMessageIndex = ValuePromise<MessageIndex>(ignoreRepeated: true)
     let canReadHistory = ValuePromise<Bool>()
     
     private let _chatHistoryLocation = ValuePromise<ChatHistoryLocation>()
@@ -264,22 +264,24 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         self.historyDisposable.set(appliedTransition.start())
         
-        let previousMaxIncomingMessageId = Atomic<MessageId?>(value: nil)
-        let readHistory = combineLatest(self.maxVisibleIncomingMessageId.get(), self.canReadHistory.get())
-            |> map { messageId, canRead in
+        let previousMaxIncomingMessageIdByNamespace = Atomic<[MessageId.Namespace: MessageId]>(value: [:])
+        let readHistory = combineLatest(self.maxVisibleIncomingMessageIndex.get(), self.canReadHistory.get())
+            |> map { messageIndex, canRead in
                 if canRead {
                     var apply = false
-                    let _ = previousMaxIncomingMessageId.modify { previousId in
-                        if previousId == nil || previousId! < messageId {
+                    let _ = previousMaxIncomingMessageIdByNamespace.modify { dict in
+                        let previousIndex = dict[messageIndex.id.namespace]
+                        if previousIndex == nil || previousIndex!.id < messageIndex.id.id {
                             apply = true
-                            return messageId
-                        } else {
-                            return previousId
+                            var dict = dict
+                            dict[messageIndex.id.namespace] = messageIndex.id
+                            return dict
                         }
+                        return dict
                     }
                     if apply {
                         let _ = account.postbox.modify({ modifier in
-                            modifier.applyInteractiveReadMaxId(messageId)
+                            modifier.applyInteractiveReadMaxId(messageIndex.id)
                         }).start()
                     }
                 }
@@ -297,8 +299,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             if let strongSelf = self {
                 if let historyView = (opaqueTransactionState as? ChatHistoryTransactionOpaqueState)?.historyView {
                     if let visible = displayedRange.visibleRange {
-                        if let messageId = maxIncomingMessageIdForEntries(historyView.filteredEntries, indexRange: (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)) {
-                            strongSelf.updateMaxVisibleReadIncomingMessageId(messageId)
+                        if let messageIndex = maxIncomingMessageIndexForEntries(historyView.filteredEntries, indexRange: (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)) {
+                            strongSelf.updateMaxVisibleReadIncomingMessageIndex(messageIndex)
                         }
                     }
                     
@@ -341,8 +343,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         return nil
     }
     
-    private func updateMaxVisibleReadIncomingMessageId(_ id: MessageId) {
-        self.maxVisibleIncomingMessageId.set(id)
+    private func updateMaxVisibleReadIncomingMessageIndex(_ index: MessageIndex) {
+        self.maxVisibleIncomingMessageIndex.set(index)
     }
     
     private func enqueueHistoryViewTransition(_ transition: ChatHistoryListViewTransition) -> Signal<Void, NoError> {
@@ -388,8 +390,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         strongSelf.account.postbox.updateMessageHistoryViewVisibleRange(transition.historyView.originalView.id, earliestVisibleIndex: transition.historyView.filteredEntries[transition.historyView.filteredEntries.count - 1 - range.lastIndex].index, latestVisibleIndex: transition.historyView.filteredEntries[transition.historyView.filteredEntries.count - 1 - range.firstIndex].index)
                         
                         if let visible = visibleRange.visibleRange {
-                            if let messageId = maxIncomingMessageIdForEntries(transition.historyView.filteredEntries, indexRange: (transition.historyView.filteredEntries.count - 1 - visible.lastIndex, transition.historyView.filteredEntries.count - 1 - visible.firstIndex)) {
-                                strongSelf.updateMaxVisibleReadIncomingMessageId(messageId)
+                            if let messageIndex = maxIncomingMessageIndexForEntries(transition.historyView.filteredEntries, indexRange: (transition.historyView.filteredEntries.count - 1 - visible.lastIndex, transition.historyView.filteredEntries.count - 1 - visible.firstIndex)) {
+                                strongSelf.updateMaxVisibleReadIncomingMessageIndex(messageIndex)
                             }
                         }
                     }

@@ -29,6 +29,14 @@ struct ChatMessageBubbleContentPosition {
     let bottom: ChatMessageBubbleRelativePosition
 }
 
+enum ChatMessageBubbleContentTapAction {
+    case none
+    case url(String)
+    case textMention(String)
+    case peerMention(PeerId)
+    case botCommand(String)
+}
+
 class ChatMessageBubbleContentNode: ASDisplayNode {
     var properties: ChatMessageBubbleContentProperties {
         return ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0)
@@ -41,7 +49,7 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
         super.init()
     }
     
-    func asyncLayoutContent() -> (_ item: ChatMessageItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
+    func asyncLayoutContent() -> (_ item: ChatMessageItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ position: ChatMessageBubbleContentPosition, _ constrainedSize: CGSize) -> (maxWidth: CGFloat, layout: (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))) {
         preconditionFailure()
     }
     
@@ -62,5 +70,9 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     }
     
     func updateHiddenMedia(_ media: [Media]?) {
+    }
+    
+    func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {
+        return .none
     }
 }

@@ -82,6 +82,11 @@ final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, UIGestu
         super.touchesBegan(touches, with: event)
         
         if let touch = touches.first {
+            if let hitResult = self.view?.hitTest(touch.location(in: self.view), with: event), let _ = hitResult as? UIButton {
+                self.state = .failed
+                return
+            }
+            
             self.tapCount += 1
             if self.tapCount == 2 {
                 self.timer?.invalidate()

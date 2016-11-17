@@ -102,29 +102,43 @@ class ChatControllerNode: ASDisplayNode {
                 if textInputPanelNode.textInputNode?.isFirstResponder() ?? false {
                     applyKeyboardAutocorrection()
                 }
-                let text = textInputPanelNode.text
                 
-                if !text.isEmpty || strongSelf.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil {
-                    strongSelf.setupSendActionOnViewUpdate({ [weak strongSelf] in
-                        if let strongSelf = strongSelf, let textInputPanelNode = strongSelf.inputPanelNode as? ChatTextInputPanelNode {
-                            strongSelf.ignoreUpdateHeight = true
-                            textInputPanelNode.text = ""
-                            strongSelf.requestUpdateChatInterfaceState(false, { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil) })
-                            strongSelf.ignoreUpdateHeight = false
-                        }
-                    })
+                var effectivePresentationInterfaceState = strongSelf.chatPresentationInterfaceState
+                if let textInputPanelNode = strongSelf.textInputPanelNode {
+                    effectivePresentationInterfaceState = effectivePresentationInterfaceState.updatedInterfaceState { $0.withUpdatedEffectiveInputState(textInputPanelNode.inputTextState) }
+                }
+                
+                if let editMessage = effectivePresentationInterfaceState.interfaceState.editMessage {
+                    let text = editMessage.inputState.inputText
                     
-                    var messages: [EnqueueMessage] = []
-                    if !text.isEmpty {
-                        messages.append(.message(text: text, media: nil, replyToMessageId: strongSelf.chatPresentationInterfaceState.interfaceState.replyMessageId))
+                    if let interfaceInteraction = strongSelf.interfaceInteraction, !text.isEmpty {
+                        interfaceInteraction.editMessage(editMessage.messageId, editMessage.inputState.inputText)
                     }
-                    if let forwardMessageIds = strongSelf.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
-                        for id in forwardMessageIds {
-                            messages.append(.forward(source: id))
-                        }
-                    }
+                } else {
+                    let text = effectivePresentationInterfaceState.interfaceState.composeInputState.inputText
                     
-                    let _ = enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: messages).start()
+                    if !text.isEmpty || strongSelf.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil {
+                        strongSelf.setupSendActionOnViewUpdate({ [weak strongSelf] in
+                            if let strongSelf = strongSelf, let textInputPanelNode = strongSelf.inputPanelNode as? ChatTextInputPanelNode {
+                                strongSelf.ignoreUpdateHeight = true
+                                textInputPanelNode.text = ""
+                                strongSelf.requestUpdateChatInterfaceState(false, { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil) })
+                                strongSelf.ignoreUpdateHeight = false
+                            }
+                        })
+                        
+                        var messages: [EnqueueMessage] = []
+                        if !text.isEmpty {
+                            messages.append(.message(text: text, media: nil, replyToMessageId: strongSelf.chatPresentationInterfaceState.interfaceState.replyMessageId))
+                        }
+                        if let forwardMessageIds = strongSelf.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
+                            for id in forwardMessageIds {
+                                messages.append(.forward(source: id))
+                            }
+                        }
+                        
+                        let _ = enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: messages).start()
+                    }
                 }
             }
         }
@@ -260,6 +274,8 @@ class ChatControllerNode: ASDisplayNode {
                             strongSelf.requestUpdateChatInterfaceState(true, { $0.withUpdatedReplyMessageId(nil) })
                         } else if let _ = accessoryPanelNode as? ForwardAccessoryPanelNode {
                             strongSelf.requestUpdateChatInterfaceState(true, { $0.withUpdatedForwardMessageIds(nil) })
+                        } else if let _ = accessoryPanelNode as? EditAccessoryPanelNode {
+                            strongSelf.requestUpdateChatInterfaceState(true, { $0.withUpdatedEditMessage(nil) })
                         }
                     }
                 }
@@ -452,17 +468,17 @@ class ChatControllerNode: ASDisplayNode {
     
     func updateChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, animated: Bool, interactive: Bool) {
         if let textInputPanelNode = self.textInputPanelNode {
-            self.chatPresentationInterfaceState = self.chatPresentationInterfaceState.updatedInterfaceState { $0.withUpdatedInputState(textInputPanelNode.inputTextState) }
+            self.chatPresentationInterfaceState = self.chatPresentationInterfaceState.updatedInterfaceState { $0.withUpdatedEffectiveInputState(textInputPanelNode.inputTextState) }
         }
         
         if self.chatPresentationInterfaceState != chatPresentationInterfaceState {
             var updatedInputFocus = self.chatPresentationInterfaceStateRequiresInputFocus(self.chatPresentationInterfaceState) != self.chatPresentationInterfaceStateRequiresInputFocus(chatPresentationInterfaceState)
-            var updateInputTextState = self.chatPresentationInterfaceState.interfaceState.inputState != chatPresentationInterfaceState.interfaceState.inputState
+            var updateInputTextState = self.chatPresentationInterfaceState.interfaceState.effectiveInputState != chatPresentationInterfaceState.interfaceState.effectiveInputState
             self.chatPresentationInterfaceState = chatPresentationInterfaceState
             
-            let keepSendButtonEnabled = chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil
+            let keepSendButtonEnabled = chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil || chatPresentationInterfaceState.interfaceState.editMessage != nil
             if let textInputPanelNode = self.textInputPanelNode, updateInputTextState {
-                textInputPanelNode.updateInputTextState(chatPresentationInterfaceState.interfaceState.inputState, keepSendButtonEnabled: keepSendButtonEnabled, animated: animated)
+                textInputPanelNode.updateInputTextState(chatPresentationInterfaceState.interfaceState.effectiveInputState, keepSendButtonEnabled: keepSendButtonEnabled, animated: animated)
             } else {
                 textInputPanelNode?.updateKeepSendButtonEnabled(keepSendButtonEnabled: keepSendButtonEnabled, animated: animated)
             }

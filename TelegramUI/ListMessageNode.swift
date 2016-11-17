@@ -18,8 +18,8 @@ class ListMessageNode: ListViewItemNode {
     override public func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
     }
     
-    func asyncLayout() -> (_ item: ListMessageItem, _ width: CGFloat, _ mergedTop: Bool, _ mergedBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
-        return { _, width, _, _ in
+    func asyncLayout() -> (_ item: ListMessageItem, _ width: CGFloat, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+        return { _, width, _, _, _ in
             return (ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 1.0), insets: UIEdgeInsets()), { _ in
                 
             })

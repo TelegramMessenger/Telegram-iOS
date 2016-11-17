@@ -7,10 +7,12 @@ private let defaultFont = UIFont.systemFont(ofSize: 15.0)
 private final class TextNodeLine {
     let line: CTLine
     let frame: CGRect
+    let range: NSRange
     
-    init(line: CTLine, frame: CGRect) {
+    init(line: CTLine, frame: CGRect, range: NSRange) {
         self.line = line
         self.frame = frame
+        self.range = range
     }
 }
 
@@ -60,10 +62,41 @@ final class TextNodeLayout: NSObject {
             return 0.0
         }
     }
+    
+    func attributesAtPoint(_ point: CGPoint) -> [String: Any] {
+        if let attributedString = self.attributedString {
+            for line in self.lines {
+                let lineFrame = line.frame.offsetBy(dx: 0.0, dy: -line.frame.size.height)
+                if lineFrame.contains(point) {
+                    let index = CTLineGetStringIndexForPosition(line.line, CGPoint(x: point.x - lineFrame.minX, y: point.y - lineFrame.minY))
+                    if index >= 0 && index < attributedString.length {
+                        return attributedString.attributes(at: index, effectiveRange: nil)
+                    }
+                    break
+                }
+            }
+            for line in self.lines {
+                let lineFrame = line.frame.offsetBy(dx: 0.0, dy: -line.frame.size.height)
+                if lineFrame.offsetBy(dx: 0.0, dy: -lineFrame.size.height).insetBy(dx: -3.0, dy: -3.0).contains(point) {
+                    let index = CTLineGetStringIndexForPosition(line.line, CGPoint(x: point.x - lineFrame.minX, y: point.y - lineFrame.minY))
+                    if index >= 0 && index < attributedString.length {
+                        return attributedString.attributes(at: index, effectiveRange: nil)
+                    }
+                    break
+                }
+            }
+        }
+        return [:]
+    }
 }
 
 final class TextNode: ASDisplayNode {
-    private var cachedLayout: TextNodeLayout?
+    static let UrlAttribute = "UrlAttributeT"
+    static let TelegramPeerMentionAttribute = "TelegramPeerMention"
+    static let TelegramPeerTextMentionAttribute = "TelegramPeerTextMention"
+    static let TelegramBotCommandAttribute = "TelegramBotCommand"
+    
+    private(set) var cachedLayout: TextNodeLayout?
     
     override init() {
         super.init()
@@ -73,10 +106,20 @@ final class TextNode: ASDisplayNode {
         self.clipsToBounds = false
     }
     
+    func attributesAtPoint(_ point: CGPoint) -> [String: Any] {
+        if let cachedLayout = self.cachedLayout {
+            return cachedLayout.attributesAtPoint(point)
+        } else {
+            return [:]
+        }
+    }
+    
     private class func calculateLayout(attributedString: NSAttributedString?, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, backgroundColor: UIColor?, constrainedSize: CGSize, cutout: TextNodeCutout?) -> TextNodeLayout {
         if let attributedString = attributedString {
+            let stringLength = attributedString.length
+            
             let font: CTFont
-            if attributedString.length != 0 {
+            if stringLength != 0 {
                 if let stringFont = attributedString.attribute(kCTFontAttributeName as String, at: 0, effectiveRange: nil) {
                     font = stringFont as! CTFont
                 } else {
@@ -148,7 +191,8 @@ final class TextNode: ASDisplayNode {
                     
                     let coreTextLine: CTLine
                     
-                    let originalLine = CTTypesetterCreateLineWithOffset(typesetter, CFRange(location: lastLineCharacterIndex, length: attributedString.length - lastLineCharacterIndex), 0.0)
+                    let lineRange = CFRange(location: lastLineCharacterIndex, length: stringLength - lastLineCharacterIndex)
+                    let originalLine = CTTypesetterCreateLineWithOffset(typesetter, lineRange, 0.0)
                     
                     if CTLineGetTypographicBounds(originalLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(originalLine) < Double(constrainedSize.width) {
                         coreTextLine = originalLine
@@ -168,7 +212,7 @@ final class TextNode: ASDisplayNode {
                     layoutSize.height += fontLineHeight + fontLineSpacing
                     layoutSize.width = max(layoutSize.width, lineWidth + lineAdditionalWidth)
                     
-                    lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame))
+                    lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length)))
                     
                     break
                 } else {
@@ -179,7 +223,8 @@ final class TextNode: ASDisplayNode {
                             layoutSize.height += fontLineSpacing
                         }
                         
-                        let coreTextLine = CTTypesetterCreateLineWithOffset(typesetter, CFRangeMake(lastLineCharacterIndex, lineCharacterCount), 100.0)
+                        let lineRange = CFRangeMake(lastLineCharacterIndex, lineCharacterCount)
+                        let coreTextLine = CTTypesetterCreateLineWithOffset(typesetter, lineRange, 100.0)
                         lastLineCharacterIndex += lineCharacterCount
                         
                         let lineWidth = ceil(CGFloat(CTLineGetTypographicBounds(coreTextLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(coreTextLine)))
@@ -187,7 +232,7 @@ final class TextNode: ASDisplayNode {
                         layoutSize.height += fontLineHeight
                         layoutSize.width = max(layoutSize.width, lineWidth + lineAdditionalWidth)
                         
-                        lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame))
+                        lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length)))
                     } else {
                         if !lines.isEmpty {
                             layoutSize.height += fontLineSpacing

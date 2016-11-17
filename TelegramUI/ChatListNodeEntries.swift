@@ -111,6 +111,9 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                         if lhsIndex != rhsIndex {
                             return false
                         }
+                        if lhsMessage.stableVersion != rhsMessage.stableVersion {
+                            return false
+                        }
                         if lhsMessage.id != rhsMessage.id || lhsMessage.flags != rhsMessage.flags || lhsUnreadCount != rhsUnreadCount {
                             return false
                         }

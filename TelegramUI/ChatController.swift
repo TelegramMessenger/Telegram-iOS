@@ -37,11 +37,19 @@ public class ChatController: ViewController {
     
     private let controllerNavigationDisposable = MetaDisposable()
     private let sentMessageEventsDisposable = MetaDisposable()
+    private let messageActionCallbackDisposable = MetaDisposable()
+    private let editMessageDisposable = MetaDisposable()
+    private let enqueueMediaMessageDisposable = MetaDisposable()
+    private var resolvePeerByNameDisposable: MetaDisposable?
+    
+    private let editingMessage = ValuePromise<Bool>(false, ignoreRepeated: true)
     
     public init(account: Account, peerId: PeerId, messageId: MessageId? = nil) {
         self.account = account
         self.peerId = peerId
         self.messageId = messageId
+        
+        performanceSpinnerAcquire()
         
         super.init()
         
@@ -118,6 +126,23 @@ public class ChatController: ViewController {
             if let strongSelf = self {
                 (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: id, messageId: nil))
             }
+        }, openPeerMention: { [weak self] name in
+            if let strongSelf = self {
+                let disposable: MetaDisposable
+                if let resolvePeerByNameDisposable = strongSelf.resolvePeerByNameDisposable {
+                    disposable = resolvePeerByNameDisposable
+                } else {
+                    disposable = MetaDisposable()
+                    strongSelf.resolvePeerByNameDisposable = disposable
+                }
+                disposable.set((resolvePeerByName(account: strongSelf.account, name: name, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { peerId in
+                    if let strongSelf = self {
+                        if let peerId = peerId {
+                            (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: peerId, messageId: nil))
+                        }
+                    }
+                }))
+            }
         }, openMessageContextMenu: { [weak self] id, node, frame in
             if let strongSelf = self, strongSelf.isNodeLoaded {
                 if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(id) {
@@ -164,10 +189,41 @@ public class ChatController: ViewController {
                     strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState { $0.withToggledSelectedMessage(id) } })
                 }
             }
+        }, sendMessage: { [weak self] text in
+            if let strongSelf = self {
+                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({})
+                enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: text, media: nil, replyToMessageId: nil)]).start()
+            }
         }, sendSticker: { [weak self] file in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({})
                 enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", media: file, replyToMessageId: nil)]).start()
+            }
+        }, requestMessageActionCallback: { [weak self] messageId, data in
+            if let strongSelf = self {
+                strongSelf.messageActionCallbackDisposable.set(requestMessageActionCallback(account: strongSelf.account, messageId: messageId, data: data).start())
+            }
+        }, openUrl: { [weak self] url in
+            if let strongSelf = self {
+                if let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext {
+                    applicationContext.openUrl(url)
+                }
+            }
+        }, shareCurrentLocation: { [weak self] in
+            if let strongSelf = self {
+                
+            }
+        }, shareAccountContact: { [weak self] in
+            if let strongSelf = self {
+            }
+        }, sendBotCommand: { [weak self] messageId, command in
+            if let strongSelf = self {
+                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({})
+                var postAsReply = false
+                if strongSelf.peerId.namespace == Namespaces.Peer.CloudChannel || strongSelf.peerId.namespace == Namespaces.Peer.CloudGroup {
+                    postAsReply = true
+                }
+                enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: command, media: nil, replyToMessageId: postAsReply ? messageId : nil)]).start()
             }
         })
         
@@ -212,6 +268,10 @@ public class ChatController: ViewController {
         self.peerDisposable.dispose()
         self.controllerNavigationDisposable.dispose()
         self.sentMessageEventsDisposable.dispose()
+        self.messageActionCallbackDisposable.dispose()
+        self.editMessageDisposable.dispose()
+        self.enqueueMediaMessageDisposable.dispose()
+        self.resolvePeerByNameDisposable?.dispose()
     }
     
     var chatDisplayNode: ChatControllerNode {
@@ -316,6 +376,63 @@ public class ChatController: ViewController {
         
         self.chatDisplayNode.displayAttachmentMenu = { [weak self] in
             if let strongSelf = self {
+                if true {
+                    let emptyController = LegacyEmptyController()
+                    let navigationController = makeLegacyNavigationController(rootController: emptyController)
+                    navigationController.setNavigationBarHidden(true, animated: false)
+                    
+                    let legacyController = LegacyController(legacyController: navigationController, presentation: .custom)
+                    
+                    var presentOverlayController: ((UIViewController) -> (() -> Void))?
+                    let controller = legacyAttachmentMenu(parentController: legacyController, presentOverlayController: { controller in
+                        if let presentOverlayController = presentOverlayController {
+                            return presentOverlayController(controller)
+                        } else {
+                            return {
+                            }
+                        }
+                    }, openGallery: {
+                        self?.presentMediaPicker()
+                    }, openCamera: { cameraView, menuController in
+                        if let strongSelf = self {
+                            presentedLegacyCamera(cameraView: cameraView, menuController: menuController, parentController: strongSelf, sendMessagesWithSignals: { signals in
+                                self?.enqueueMediaMessages(signals: signals)
+                            })
+                        }
+                    }, sendMessagesWithSignals: { [weak self] signals in
+                        self?.enqueueMediaMessages(signals: signals)
+                    })
+                    controller.applicationInterface = legacyController.applicationInterface
+                    controller.didDismiss = { [weak legacyController] _ in
+                        legacyController?.dismiss()
+                    }
+                    
+                    strongSelf.present(legacyController, in: .window)
+                    controller.present(in: emptyController, sourceView: nil, animated: true)
+                    
+                    presentOverlayController = { [weak legacyController] controller in
+                        if let strongSelf = self, let legacyController = legacyController {
+                            let childController = LegacyController(legacyController: controller, presentation: .custom)
+                            legacyController.present(childController, in: .window)
+                            return { [weak childController] in
+                                childController?.dismiss()
+                            }
+                        } else {
+                            return {
+                            }
+                        }
+                    }
+                    
+                    //controller presentInViewController:self sourceView:_inputTextPanel.attachButton animated:true];
+                    
+                    return
+                }
+                
+                if true {
+                    strongSelf.presentMediaPicker()
+                    return
+                }
+                
                 let controller = ChatMediaActionSheetController()
                 controller.photo = { [weak strongSelf] asset in
                     if let strongSelf = strongSelf {
@@ -325,7 +442,7 @@ public class ChatController: ViewController {
                         let scaledSize = size.aspectFitted(CGSize(width: 1280.0, height: 1280.0))
                         let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier)
                         
-                        if true {
+                        if false {
                             let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: scaledSize, resource: resource)])
                             strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({})
                             enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", media: media, replyToMessageId: nil)]).start()
@@ -364,6 +481,13 @@ public class ChatController: ViewController {
             if let strongSelf = self, strongSelf.isNodeLoaded {
                 if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(message.id) } })
+                    strongSelf.chatDisplayNode.ensureInputViewFocused()
+                }
+            }
+        }, setupEditMessage: { [weak self] messageId in
+            if let strongSelf = self, strongSelf.isNodeLoaded {
+                if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withUpdatedEditMessage(ChatEditMessageState(messageId: messageId, inputState: ChatTextInputState(inputText: message.text))) } })
                     strongSelf.chatDisplayNode.ensureInputViewFocused()
                 }
             }
@@ -429,13 +553,25 @@ public class ChatController: ViewController {
             }
         }, updateTextInputState: { [weak self] textInputState in
             if let strongSelf = self {
-                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withUpdatedInputState(textInputState) } })
+                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withUpdatedEffectiveInputState(textInputState) } })
             }
         }, updateInputMode: { [weak self] f in
             if let strongSelf = self {
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInputMode(f) })
             }
-        })
+        }, editMessage: { [weak self] messageId, text in
+            if let strongSelf = self {
+                let editingMessage = strongSelf.editingMessage
+                editingMessage.set(true)
+                strongSelf.editMessageDisposable.set((requestEditMessage(account: strongSelf.account, messageId: messageId, text: text) |> deliverOnMainQueue |> afterDisposed({
+                        editingMessage.set(false)
+                    })).start(completed: {
+                    if let strongSelf = self {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedEditMessage(nil) }) })
+                    }
+                }))
+            }
+        }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get()))
         
         self.interfaceInteraction = interfaceInteraction
         self.chatDisplayNode.interfaceInteraction = interfaceInteraction
@@ -463,6 +599,7 @@ public class ChatController: ViewController {
     override public func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         
+        self.chatDisplayNode.historyNode.canReadHistory.set(false)
         let peerId = self.peerId
         let timestamp = Int32(Date().timeIntervalSince1970)
         let interfaceState = self.presentationInterfaceState.interfaceState.withUpdatedTimestamp(timestamp)
@@ -563,5 +700,61 @@ public class ChatController: ViewController {
                 }))
                 break
         }
+    }
+    
+    private func presentMediaPicker() {
+        legacyAssetPicker().start(next: { [weak self] generator in
+            if let strongSelf = self {
+                var presentOverlayController: ((UIViewController) -> (() -> Void))?
+                let controller = generator({ controller in
+                    return presentOverlayController!(controller)
+                })
+                let legacyController = LegacyController(legacyController: controller, presentation: .modal)
+                
+                presentOverlayController = { [weak legacyController] controller in
+                    if let strongSelf = self, let legacyController = legacyController {
+                        let childController = LegacyController(legacyController: controller, presentation: .custom)
+                        legacyController.present(childController, in: .window)
+                        return { [weak childController] in
+                            childController?.dismiss()
+                        }
+                    } else {
+                        return {
+                        }
+                    }
+                }
+                
+                configureLegacyAssetPicker(controller)
+                controller.descriptionGenerator = legacyAssetPickerItemGenerator()
+                controller.completionBlock = { [weak self, weak legacyController] signals in
+                    if let strongSelf = self, let legacyController = legacyController {
+                        legacyController.dismiss()
+                        strongSelf.enqueueMediaMessages(signals: signals)
+                    }
+                }
+                controller.dismissalBlock = { [weak legacyController] in
+                    if let legacyController = legacyController {
+                        legacyController.dismiss()
+                    }
+                }
+                strongSelf.present(legacyController, in: .window)
+            }
+        })
+    }
+    
+    private func enqueueMediaMessages(signals: [Any]?) {
+        self.enqueueMediaMessageDisposable.set((legacyAssetPickerEnqueueMessages(account: self.account, peerId: self.peerId, signals: signals!) |> deliverOnMainQueue).start(next: { [weak self] messages in
+            if let strongSelf = self {
+                let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
+                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                    if let strongSelf = self {
+                        strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, {
+                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
+                        })
+                    }
+                })
+                enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: messages.map { $0.withUpdatedReplyToMessageId(replyMessageId) }).start()
+            }
+        }))
     }
 }

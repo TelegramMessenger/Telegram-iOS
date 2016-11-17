@@ -36,8 +36,8 @@ final class ListMessageItem: ListViewItem {
             node.setupItem(self)
             
             let nodeLayout = node.asyncLayout()
-            let (top, bottom) = (false, false) //self.mergedWithItems(top: previousItem, bottom: nextItem)
-            let (layout, apply) = nodeLayout(self, width, top, bottom)
+            let (top, bottom, dateAtBottom) = (false, false, false) //self.mergedWithItems(top: previousItem, bottom: nextItem)
+            let (layout, apply) = nodeLayout(self, width, top, bottom, dateAtBottom)
             
             node.updateSelectionState(animated: false)
             
@@ -67,9 +67,9 @@ final class ListMessageItem: ListViewItem {
                 let nodeLayout = node.asyncLayout()
                 
                 async {
-                    let (top, bottom) = (false, false) //self.mergedWithItems(top: previousItem, bottom: nextItem)
+                    let (top, bottom, dateAtBottom) = (false, false, false) //self.mergedWithItems(top: previousItem, bottom: nextItem)
                     
-                    let (layout, apply) = nodeLayout(self, width, top, bottom)
+                    let (layout, apply) = nodeLayout(self, width, top, bottom, dateAtBottom)
                     Queue.mainQueue().async {
                         completion(layout, {
                             apply(animation)

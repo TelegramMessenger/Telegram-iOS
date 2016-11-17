@@ -19,10 +19,15 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
                 if preloaded {
                     return .HistoryView(view: view, type: .Generic(type: updateType), scrollPosition: nil, initialData: initialData)
                 } else {
+                    var scrollPosition: ChatHistoryViewScrollPosition?
+                    
                     if let maxReadIndex = view.maxReadIndex {
+                        let aroundIndex = maxReadIndex
+                        scrollPosition = .Unread(index: maxReadIndex)
+                        
                         var targetIndex = 0
                         for i in 0 ..< view.entries.count {
-                            if view.entries[i].index >= maxReadIndex {
+                            if view.entries[i].index >= aroundIndex {
                                 targetIndex = i
                                 break
                             }
@@ -37,13 +42,23 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocation, account: Accoun
                                 }
                             }
                         }
-                        
-                        preloaded = true
-                        return .HistoryView(view: view, type: .Initial(fadeIn: fadeIn), scrollPosition: .Unread(index: maxReadIndex), initialData: initialData)
                     } else {
-                        preloaded = true
-                        return .HistoryView(view: view, type: .Initial(fadeIn: fadeIn), scrollPosition: nil, initialData: initialData)
+                        var messageCount = 0
+                        for entry in view.entries.reversed() {
+                            if case .HoleEntry = entry {
+                                fadeIn = true
+                                return .Loading(initialData: initialData)
+                            } else {
+                                messageCount += 1
+                            }
+                            if messageCount >= 1 {
+                                break
+                            }
+                        }
                     }
+                    
+                    preloaded = true
+                    return .HistoryView(view: view, type: .Initial(fadeIn: fadeIn), scrollPosition: scrollPosition, initialData: initialData)
                 }
             }
         case let .InitialSearch(messageId, count):

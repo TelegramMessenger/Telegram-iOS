@@ -50,10 +50,11 @@ class ChatMessageActionItemNode: ChatMessageItemView {
         super.setupItem(item)
     }
     
-    override func asyncLayout() -> (_ item: ChatMessageItem, _ width: CGFloat, _ mergedTop: Bool, _ mergedBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+    override func asyncLayout() -> (_ item: ChatMessageItem, _ width: CGFloat, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let labelLayout = TextNode.asyncLayout(self.labelNode)
+        let layoutConstants = self.layoutConstants
         
-        return { item, width, mergedTop, mergedBottom in
+        return { item, width, mergedTop, mergedBottom, dateHeaderAtBottom in
             var attributedString: NSAttributedString?
             
             for media in item.message.media {
@@ -105,8 +106,12 @@ class ChatMessageActionItemNode: ChatMessageItemView {
             let (size, apply) = labelLayout(attributedString, nil, 1, .end, CGSize(width: width, height: CGFloat.greatestFiniteMagnitude), nil)
             
             let backgroundSize = CGSize(width: size.size.width + 8.0 + 8.0, height: 20.0)
+            var layoutInsets = UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)
+            if dateHeaderAtBottom {
+                layoutInsets.top += layoutConstants.timestampHeaderHeight
+            }
             
-            return (ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 20.0), insets: UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0, right: 0.0)), { [weak self] animation in
+            return (ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 20.0), insets: layoutInsets), { [weak self] animation in
                 if let strongSelf = self {
                     let _ = apply()
                     

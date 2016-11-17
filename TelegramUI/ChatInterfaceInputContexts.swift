@@ -3,12 +3,16 @@ import TelegramCore
 import Postbox
 
 func inputContextForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account) -> ChatPresentationInputContext? {
-    if chatPresentationInterfaceState.interfaceState.inputState.inputText == "#" {
-        return .hashtag
-    } else if chatPresentationInterfaceState.interfaceState.inputState.inputText == "@" {
-        return .mention
+    if let _ = chatPresentationInterfaceState.interfaceState.editMessage {
+        return nil
+    } else {
+        if chatPresentationInterfaceState.interfaceState.composeInputState.inputText == "#" {
+            return .hashtag
+        } else if chatPresentationInterfaceState.interfaceState.composeInputState.inputText == "@" {
+            return .mention
+        }
+        return nil
     }
-    return nil
 }
 
 func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account) -> ChatTextInputPanelState {
@@ -16,10 +20,14 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
         case .media:
             return ChatTextInputPanelState(accessoryItems: [.keyboard])
         case .none, .text:
-            if chatPresentationInterfaceState.interfaceState.inputState.inputText.isEmpty {
-                return ChatTextInputPanelState(accessoryItems: [.stickers])
-            } else {
+            if let _ = chatPresentationInterfaceState.interfaceState.editMessage {
                 return ChatTextInputPanelState(accessoryItems: [])
+            } else {
+                if chatPresentationInterfaceState.interfaceState.composeInputState.inputText.isEmpty {
+                    return ChatTextInputPanelState(accessoryItems: [.stickers])
+                } else {
+                    return ChatTextInputPanelState(accessoryItems: [])
+                }
             }
     }
 }

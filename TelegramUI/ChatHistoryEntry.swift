@@ -41,12 +41,27 @@ func ==(lhs: ChatHistoryEntry, rhs: ChatHistoryEntry) -> Bool {
         case let .MessageEntry(lhsMessage, lhsRead):
             switch rhs {
                 case let .MessageEntry(rhsMessage, rhsRead) where MessageIndex(lhsMessage) == MessageIndex(rhsMessage) && lhsMessage.flags == rhsMessage.flags && lhsRead == rhsRead:
+                    if lhsMessage.stableVersion != rhsMessage.stableVersion {
+                        return false
+                    }
                     if lhsMessage.media.count != rhsMessage.media.count {
                         return false
                     }
                     for i in 0 ..< lhsMessage.media.count {
                         if !lhsMessage.media[i].isEqual(rhsMessage.media[i]) {
                             return false
+                        }
+                    }
+                    if lhsMessage.associatedMessages.count != rhsMessage.associatedMessages.count {
+                        return false
+                    }
+                    if !lhsMessage.associatedMessages.isEmpty {
+                        for (id, message) in lhsMessage.associatedMessages {
+                            if let otherMessage = rhsMessage.associatedMessages[id] {
+                                if otherMessage.stableVersion != message.stableVersion {
+                                    return false
+                                }
+                            }
                         }
                     }
                     return true
