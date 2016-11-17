@@ -226,7 +226,14 @@
     _pendingState.delegate = delegate;
   } else {
     ASDisplayNodeAssert([self isNodeLoaded], @"ASCollectionNode should be loaded if pendingState doesn't exist");
-    self.view.asyncDelegate = delegate;
+
+    // Manually trampoline to the main thread. The view requires this be called on main
+    // and asserting here isn't an option – it is a common pattern for users to clear
+    // the delegate/dataSource in dealloc, which may be running on a background thread.
+    ASCollectionView *view = self.view;
+    ASPerformBlockOnMainThread(^{
+      view.asyncDelegate = delegate;
+    });
   }
 }
 
@@ -245,7 +252,13 @@
     _pendingState.dataSource = dataSource;
   } else {
     ASDisplayNodeAssert([self isNodeLoaded], @"ASCollectionNode should be loaded if pendingState doesn't exist");
-    self.view.asyncDataSource = dataSource;
+    // Manually trampoline to the main thread. The view requires this be called on main
+    // and asserting here isn't an option – it is a common pattern for users to clear
+    // the delegate/dataSource in dealloc, which may be running on a background thread.
+    ASCollectionView *view = self.view;
+    ASPerformBlockOnMainThread(^{
+      view.asyncDataSource = dataSource;
+    });
   }
 }
 

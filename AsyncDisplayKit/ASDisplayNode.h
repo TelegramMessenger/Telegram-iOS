@@ -107,8 +107,6 @@ extern NSInteger const ASDefaultDrawingPriority;
 
 @interface ASDisplayNode : NSObject <ASLayoutElement>
 
-- (CGSize)measure:(CGSize)constrainedSize;
-
 /** @name Initializing a node object */
 
 

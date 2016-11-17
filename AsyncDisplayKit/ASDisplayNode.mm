@@ -1274,7 +1274,7 @@ static ASDisplayNodeMethodOverrides GetASDisplayNodeMethodOverrides(Class c)
   // We generate placeholders at measureWithSizeRange: time so that a node is guaranteed to have a placeholder ready to go.
   // This is also because measurement is usually asynchronous, but placeholders need to be set up synchronously.
   // First measurement is guaranteed to be before the node is onscreen, so we can create the image async. but still have it appear sync.
-  if (_placeholderEnabled && [self _displaysAsynchronously] && self.contents == nil) {
+  if (_placeholderEnabled && [self _displaysAsynchronously]) {
     
     // Zero-sized nodes do not require a placeholder.
     ASLayout *layout = _calculatedDisplayNodeLayout->layout;
@@ -1284,7 +1284,11 @@ static ASDisplayNodeMethodOverrides GetASDisplayNodeMethodOverrides(Class c)
     }
 
     if (!_placeholderImage) {
-      _placeholderImage = [self placeholderImage];
+      ASPerformBlockOnMainThread(^{
+        if (self.contents == nil) {
+          _placeholderImage = [self placeholderImage];
+        }
+      });
     }
   }
   
@@ -2289,7 +2293,7 @@ ASDISPLAYNODE_INLINE BOOL nodeIsInRasterizedTree(ASDisplayNode *node) {
 - (NSArray *)subnodes
 {
   ASDN::MutexLocker l(__instanceLock__);
-  return [_subnodes copy];
+  return ([_subnodes copy] ?: @[]);
 }
 
 - (ASDisplayNode *)supernode

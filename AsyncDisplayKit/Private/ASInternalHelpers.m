@@ -90,14 +90,17 @@ BOOL ASClassRequiresMainThreadDeallocation(Class class)
     return NO;
   }
 
-  if ([class isSubclassOfClass:[UIView class]] || [class isSubclassOfClass:[CALayer class]]) {
+  if ([class isSubclassOfClass:[UIResponder class]]
+      || [class isSubclassOfClass:[CALayer class]]
+      || [class isSubclassOfClass:[UIGestureRecognizer class]]) {
     return YES;
   }
 
-  NSString *name = NSStringFromClass(class);
-  if ([name hasPrefix:@"UI"] || [name hasPrefix:@"CA"]) {
+  const char *name = class_getName(class);
+  if (strncmp(name, "UI", 2) == 0 || strncmp(name, "AV", 2) == 0 || strncmp(name, "CA", 2) == 0) {
     return YES;
   }
+
   return NO;
 }
 

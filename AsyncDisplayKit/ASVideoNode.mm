@@ -53,11 +53,6 @@ static NSString * const kRate = @"rate";
     unsigned int delegateVideoNodeDidSetCurrentItem:1;
     unsigned int delegateVideoNodeDidStallAtTimeInterval:1;
     unsigned int delegateVideoNodeDidRecoverFromStall:1;
-    
-    //Flags for deprecated methods
-    unsigned int delegateVideoPlaybackDidFinish_deprecated:1;
-    unsigned int delegateVideoNodeWasTapped_deprecated:1;
-    unsigned int delegateVideoNodeDidPlayToSecond_deprecated:1;
   } _delegateFlags;
   
   BOOL _shouldBePlaying;
@@ -669,6 +664,19 @@ static NSString * const kRate = @"rate";
     }
   }
   return YES;
+}
+
+- (void)resetToPlaceholder
+{
+  ASDN::MutexLocker l(__instanceLock__);
+  
+  if (_playerNode != nil) {
+    [_playerNode removeFromSupernode];
+    _playerNode = nil;
+  }
+  
+  [_player seekToTime:kCMTimeZero];
+  [self pause];
 }
 
 
