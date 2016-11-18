@@ -7,11 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C2379D271DDCB4F20063AD30 /* RequestEditMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AC9201DD5E7E500E8160F /* RequestEditMessage.swift */; };
 		C26A718D1DC9E93700F69385 /* StickerManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0E11DB5401A00C6B04F /* StickerManagement.swift */; };
 		C26A718E1DC9E94100F69385 /* StickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0DE1DB539FC00C6B04F /* StickerPack.swift */; };
-		C26A718F1DC9E94D00F69385 /* MultipartUpload.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03C53761DAFF20F004C17B3 /* MultipartUpload.swift */; };
 		C26A71901DC9E95800F69385 /* PendingMessageUploadedContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09BB6B51DB0428000A905C0 /* PendingMessageUploadedContent.swift */; };
 		C26A71911DC9E96000F69385 /* PendingMessageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09BB6B31DB02C2B00A905C0 /* PendingMessageManager.swift */; };
+		C2B1E46C1DDC74970001C3ED /* ApplyUpdateMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AC9221DD5E9A200E8160F /* ApplyUpdateMessage.swift */; };
 		D003702B1DA42586004308D3 /* PhoneNumber.swift in Sources */ = {isa = PBXBuildFile; fileRef = D003702A1DA42586004308D3 /* PhoneNumber.swift */; };
 		D01AC91D1DD5DA5E00E8160F /* RequestMessageActionCallback.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AC91C1DD5DA5E00E8160F /* RequestMessageActionCallback.swift */; };
 		D01AC9211DD5E7E500E8160F /* RequestEditMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AC9201DD5E7E500E8160F /* RequestEditMessage.swift */; };
@@ -94,11 +95,7 @@
 		D073CE6D1DCBCF17007511FD /* InlineBotMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B0CE11D62249B00955575 /* InlineBotMessageAttribute.swift */; };
 		D073CE6E1DCBCF17007511FD /* ForwardSourceInfoAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D073CE5C1DCB97F6007511FD /* ForwardSourceInfoAttribute.swift */; };
 		D073CE6F1DCBCF17007511FD /* OutgoingMessageInfoAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D073CE5F1DCB9D14007511FD /* OutgoingMessageInfoAttribute.swift */; };
-		D073CEA11DCBF3D3007511FD /* StickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0DE1DB539FC00C6B04F /* StickerPack.swift */; };
-		D073CEA21DCBF3E1007511FD /* PendingMessageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09BB6B31DB02C2B00A905C0 /* PendingMessageManager.swift */; };
-		D073CEA31DCBF3E1007511FD /* PendingMessageUploadedContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09BB6B51DB0428000A905C0 /* PendingMessageUploadedContent.swift */; };
 		D073CEA41DCBF3EA007511FD /* MultipartUpload.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03C53761DAFF20F004C17B3 /* MultipartUpload.swift */; };
-		D073CEA51DCBF3F5007511FD /* StickerManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0E11DB5401A00C6B04F /* StickerManagement.swift */; };
 		D09A2FE61D7CD4940018FB72 /* TelegramChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09A2FE51D7CD4940018FB72 /* TelegramChannel.swift */; };
 		D09A2FEB1D7CDC320018FB72 /* PeerAccessRestrictionInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09A2FEA1D7CDC320018FB72 /* PeerAccessRestrictionInfo.swift */; };
 		D09BB6B41DB02C2B00A905C0 /* PendingMessageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09BB6B31DB02C2B00A905C0 /* PendingMessageManager.swift */; };
@@ -1024,9 +1021,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C2379D271DDCB4F20063AD30 /* RequestEditMessage.swift in Sources */,
+				C2B1E46C1DDC74970001C3ED /* ApplyUpdateMessage.swift in Sources */,
 				C26A71911DC9E96000F69385 /* PendingMessageManager.swift in Sources */,
 				C26A71901DC9E95800F69385 /* PendingMessageUploadedContent.swift in Sources */,
-				C26A718F1DC9E94D00F69385 /* MultipartUpload.swift in Sources */,
 				C26A718E1DC9E94100F69385 /* StickerPack.swift in Sources */,
 				C26A718D1DC9E93700F69385 /* StickerManagement.swift in Sources */,
 				D0B8443D1DAB91EF005F29E1 /* StateManagement.swift in Sources */,
@@ -1047,7 +1045,6 @@
 				D0B418951D7E0580004562A4 /* TelegramMediaContact.swift in Sources */,
 				D0B8444F1DAB9206005F29E1 /* ChangePeerNotificationSettings.swift in Sources */,
 				D0B8443B1DAB91EF005F29E1 /* Holes.swift in Sources */,
-				D073CEA11DCBF3D3007511FD /* StickerPack.swift in Sources */,
 				D0B8443E1DAB91EF005F29E1 /* SynchronizePeerReadState.swift in Sources */,
 				D0B8440D1DAB91CD005F29E1 /* ImageRepresentationsUtils.swift in Sources */,
 				D03C536A1DAD5CA9004C17B3 /* TelegramUser.swift in Sources */,
@@ -1065,7 +1062,6 @@
 				D0B844451DAB91FD005F29E1 /* AccountViewTracker.swift in Sources */,
 				D0B8444E1DAB9206005F29E1 /* PeerParticipants.swift in Sources */,
 				D0B418A61D7E0592004562A4 /* CloudFileMediaResource.swift in Sources */,
-				D073CEA51DCBF3F5007511FD /* StickerManagement.swift in Sources */,
 				D03C536D1DAD5CA9004C17B3 /* ApiGroupOrChannel.swift in Sources */,
 				D0B418A91D7E0597004562A4 /* Buffer.swift in Sources */,
 				D0B8442E1DAB91E0005F29E1 /* NBMetadataCoreTestMapper.m in Sources */,
@@ -1108,14 +1104,12 @@
 				D0B418AB1D7E0597004562A4 /* MultipartFetch.swift in Sources */,
 				D0B418B71D7E05A6004562A4 /* Phonebook.swift in Sources */,
 				D03C53741DAD5CA9004C17B3 /* CachedChannelData.swift in Sources */,
-				D073CEA31DCBF3E1007511FD /* PendingMessageUploadedContent.swift in Sources */,
 				D0B418861D7E056D004562A4 /* Namespaces.swift in Sources */,
 				D0B418AD1D7E0597004562A4 /* Serialization.swift in Sources */,
 				D03C536F1DAD5CA9004C17B3 /* BotInfo.swift in Sources */,
 				D0B844101DAB91CD005F29E1 /* MergeLists.swift in Sources */,
 				D0B844331DAB91E0005F29E1 /* NBPhoneNumber.m in Sources */,
 				D0B844301DAB91E0005F29E1 /* NBNumberFormat.m in Sources */,
-				D073CEA21DCBF3E1007511FD /* PendingMessageManager.swift in Sources */,
 				D0B418971D7E0580004562A4 /* TelegramMediaImage.swift in Sources */,
 				D0B844361DAB91E0005F29E1 /* NBPhoneNumberUtil.m in Sources */,
 				D073CE6F1DCBCF17007511FD /* OutgoingMessageInfoAttribute.swift in Sources */,
