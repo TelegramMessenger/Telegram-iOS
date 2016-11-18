@@ -1,6 +1,10 @@
 import Foundation
 
 final class ItemCollectionInfoTable: Table {
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .binary)
+    }
+    
     private let sharedKey = ValueBoxKey(length: 4 + 4 + 8)
     
     private var cachedInfos: [ItemCollectionId.Namespace: [(Int, ItemCollectionId, ItemCollectionInfo)]] = [:]
@@ -29,7 +33,7 @@ final class ItemCollectionInfoTable: Table {
             return cachedInfo
         } else {
             var infos: [(Int, ItemCollectionId, ItemCollectionInfo)] = []
-            self.valueBox.range(self.tableId, start: self.lowerBound(namespace: namespace), end: self.upperBound(namespace: namespace), values: { key, value in
+            self.valueBox.range(self.table, start: self.lowerBound(namespace: namespace), end: self.upperBound(namespace: namespace), values: { key, value in
                 if let info = Decoder(buffer: value).decodeRootObject() as? ItemCollectionInfo {
                     infos.append((Int(key.getInt32(4)), ItemCollectionId(namespace: namespace, id: key.getInt64(4 + 4)), info))
                 }
@@ -45,7 +49,7 @@ final class ItemCollectionInfoTable: Table {
         var currentKey = self.key(collectionId: collectionId, index: index)
         while true {
             var resultCollectionIdAndIndex: (ItemCollectionId, Int32)?
-            self.valueBox.range(self.tableId, start: currentKey, end: self.lowerBound(namespace: currentNamespace), keys: { key in
+            self.valueBox.range(self.table, start: currentKey, end: self.lowerBound(namespace: currentNamespace), keys: { key in
                 resultCollectionIdAndIndex = (ItemCollectionId(namespace: currentNamespace, id: key.getInt64(4 + 4)), key.getInt32(4))
                 return true
             }, limit: 1)
@@ -68,7 +72,7 @@ final class ItemCollectionInfoTable: Table {
         var currentKey = self.key(collectionId: collectionId, index: index)
         while true {
             var resultCollectionIdAndIndex: (ItemCollectionId, Int32)?
-            self.valueBox.range(self.tableId, start: currentKey, end: self.upperBound(namespace: currentNamespace), keys: { key in
+            self.valueBox.range(self.table, start: currentKey, end: self.upperBound(namespace: currentNamespace), keys: { key in
                 resultCollectionIdAndIndex = (ItemCollectionId(namespace: currentNamespace, id: key.getInt64(4 + 4)), key.getInt32(4))
                 return true
             }, limit: 1)
@@ -90,13 +94,13 @@ final class ItemCollectionInfoTable: Table {
         self.cachedInfos.removeAll()
         
         var currentCollectionKeys: [ValueBoxKey] = []
-        self.valueBox.range(self.tableId, start: self.lowerBound(namespace: namespace), end: self.upperBound(namespace: namespace), keys: { key in
+        self.valueBox.range(self.table, start: self.lowerBound(namespace: namespace), end: self.upperBound(namespace: namespace), keys: { key in
             currentCollectionKeys.append(key)
             return true
         }, limit: 0)
         
         for key in currentCollectionKeys {
-            self.valueBox.remove(self.tableId, key: key)
+            self.valueBox.remove(self.table, key: key)
         }
         
         var index: Int32 = 0
@@ -104,7 +108,7 @@ final class ItemCollectionInfoTable: Table {
         for (id, info) in infos {
             sharedEncoder.reset()
             sharedEncoder.encodeRootObject(info)
-            self.valueBox.set(self.tableId, key: self.key(collectionId: id, index: index), value: sharedEncoder.readBufferNoCopy())
+            self.valueBox.set(self.table, key: self.key(collectionId: id, index: index), value: sharedEncoder.readBufferNoCopy())
             index += 1
         }
     }

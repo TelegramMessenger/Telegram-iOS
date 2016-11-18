@@ -592,7 +592,11 @@ final class MutableMessageHistoryView {
                         }
                     }
                     
-                    return (hole, hole.maxIndex <= self.anchorIndex.index ? .UpperToLower : .LowerToUpper)
+                    if hole.maxIndex.timestamp == Int32.max && self.anchorIndex.index.timestamp == Int32.max {
+                        return (hole, .UpperToLower)
+                    } else {
+                        return (hole, hole.maxIndex <= self.anchorIndex.index ? .UpperToLower : .LowerToUpper)
+                    }
                 }
             }
             

@@ -8,20 +8,24 @@ private enum MetadataKey: Int32 {
 }
 
 final class MetadataTable: Table {
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .int64)
+    }
+    
     private let sharedBuffer = WriteBuffer()
     
-    override init(valueBox: ValueBox, tableId: Int32) {
-        super.init(valueBox: valueBox, tableId: tableId)
+    override init(valueBox: ValueBox, table: ValueBoxTable) {
+        super.init(valueBox: valueBox, table: table)
     }
     
     private func key(_ key: MetadataKey) -> ValueBoxKey {
-        let valueBoxKey = ValueBoxKey(length: 4)
-        valueBoxKey.setInt32(0, value: key.rawValue)
+        let valueBoxKey = ValueBoxKey(length: 8)
+        valueBoxKey.setInt64(0, value: Int64(key.rawValue))
         return valueBoxKey
     }
     
     func userVersion() -> Int32? {
-        if let value = self.valueBox.get(self.tableId, key: self.key(.UserVersion)) {
+        if let value = self.valueBox.get(self.table, key: self.key(.UserVersion)) {
             var version: Int32 = 0
             value.read(&version, offset: 0, length: 4)
             return version
@@ -34,11 +38,11 @@ final class MetadataTable: Table {
         let buffer = sharedBuffer
         var varVersion: Int32 = version
         buffer.write(&varVersion, offset: 0, length: 4)
-        self.valueBox.set(self.tableId, key: self.key(.UserVersion), value: buffer)
+        self.valueBox.set(self.table, key: self.key(.UserVersion), value: buffer)
     }
     
     func state() -> Coding? {
-        if let value = self.valueBox.get(self.tableId, key: self.key(.State)) {
+        if let value = self.valueBox.get(self.table, key: self.key(.State)) {
             if let state = Decoder(buffer: value).decodeRootObject() {
                 return state
             }
@@ -49,11 +53,11 @@ final class MetadataTable: Table {
     func setState(_ state: Coding) {
         let encoder = Encoder()
         encoder.encodeRootObject(state)
-        self.valueBox.set(self.tableId, key: self.key(.State), value: encoder.readBufferNoCopy())
+        self.valueBox.set(self.table, key: self.key(.State), value: encoder.readBufferNoCopy())
     }
     
     func transactionStateVersion() -> Int64 {
-        if let value = self.valueBox.get(self.tableId, key: self.key(.TransactionStateVersion)) {
+        if let value = self.valueBox.get(self.table, key: self.key(.TransactionStateVersion)) {
             var version: Int64 = 0
             value.read(&version, offset: 0, length: 8)
             return version
@@ -67,12 +71,12 @@ final class MetadataTable: Table {
         sharedBuffer.reset()
         let buffer = sharedBuffer
         buffer.write(&version, offset: 0, length: 8)
-        self.valueBox.set(self.tableId, key: self.key(.TransactionStateVersion), value: buffer)
+        self.valueBox.set(self.table, key: self.key(.TransactionStateVersion), value: buffer)
         return version
     }
     
     func masterClientId() -> Int64 {
-        if let value = self.valueBox.get(self.tableId, key: self.key(.MasterClientId)) {
+        if let value = self.valueBox.get(self.table, key: self.key(.MasterClientId)) {
             var clientId: Int64 = 0
             value.read(&clientId, offset: 0, length: 8)
             return clientId
@@ -86,6 +90,6 @@ final class MetadataTable: Table {
         let buffer = sharedBuffer
         var clientId = id
         buffer.write(&clientId, offset: 0, length: 8)
-        self.valueBox.set(self.tableId, key: self.key(.MasterClientId), value: buffer)
+        self.valueBox.set(self.table, key: self.key(.MasterClientId), value: buffer)
     }
 }

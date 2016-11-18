@@ -71,7 +71,6 @@ class ReadStateTableTests: XCTestCase {
     var globalMessageIdsTable: GlobalMessageIdsTable?
     var indexTable: MessageHistoryIndexTable?
     var mediaTable: MessageMediaTable?
-    var mediaCleanupTable: MediaCleanupTable?
     var historyTable: MessageHistoryTable?
     var historyMetadataTable: MessageHistoryMetadataTable?
     var unsentTable: MessageHistoryUnsentTable?
@@ -89,16 +88,15 @@ class ReadStateTableTests: XCTestCase {
         
         let seedConfiguration = SeedConfiguration(initializeChatListWithHoles: [], initializeMessageNamespacesWithHoles: [], existingMessageTags: [.First, .Second])
         
-        self.globalMessageIdsTable = GlobalMessageIdsTable(valueBox: self.valueBox!, tableId: 5, namespace: namespace)
-        self.historyMetadataTable = MessageHistoryMetadataTable(valueBox: self.valueBox!, tableId: 7)
-        self.unsentTable = MessageHistoryUnsentTable(valueBox: self.valueBox!, tableId: 8)
-        self.tagsTable = MessageHistoryTagsTable(valueBox: self.valueBox!, tableId: 9)
-        self.indexTable = MessageHistoryIndexTable(valueBox: self.valueBox!, tableId: 1, globalMessageIdsTable: self.globalMessageIdsTable!, metadataTable: self.historyMetadataTable!, seedConfiguration: seedConfiguration)
-        self.mediaCleanupTable = MediaCleanupTable(valueBox: self.valueBox!, tableId: 3)
-        self.mediaTable = MessageMediaTable(valueBox: self.valueBox!, tableId: 2, mediaCleanupTable: self.mediaCleanupTable!)
-        self.readStateTable = MessageHistoryReadStateTable(valueBox: self.valueBox!, tableId: 10)
-        self.synchronizeReadStateTable = MessageHistorySynchronizeReadStateTable(valueBox: self.valueBox!, tableId: 11)
-        self.historyTable = MessageHistoryTable(valueBox: self.valueBox!, tableId: 4, messageHistoryIndexTable: self.indexTable!, messageMediaTable: self.mediaTable!, historyMetadataTable: self.historyMetadataTable!, unsentTable: self.unsentTable!, tagsTable: self.tagsTable!, readStateTable: self.readStateTable!, synchronizeReadStateTable: self.synchronizeReadStateTable!)
+        self.globalMessageIdsTable = GlobalMessageIdsTable(valueBox: self.valueBox!, table: GlobalMessageIdsTable.tableSpec(5), namespace: namespace)
+        self.historyMetadataTable = MessageHistoryMetadataTable(valueBox: self.valueBox!, table: MessageHistoryMetadataTable.tableSpec(7))
+        self.unsentTable = MessageHistoryUnsentTable(valueBox: self.valueBox!, table: MessageHistoryUnsentTable.tableSpec(8))
+        self.tagsTable = MessageHistoryTagsTable(valueBox: self.valueBox!, table: MessageHistoryTagsTable.tableSpec(9))
+        self.indexTable = MessageHistoryIndexTable(valueBox: self.valueBox!, table: MessageHistoryIndexTable.tableSpec(1), globalMessageIdsTable: self.globalMessageIdsTable!, metadataTable: self.historyMetadataTable!, seedConfiguration: seedConfiguration)
+        self.mediaTable = MessageMediaTable(valueBox: self.valueBox!, table: MessageMediaTable.tableSpec(2))
+        self.readStateTable = MessageHistoryReadStateTable(valueBox: self.valueBox!, table: MessageHistoryReadStateTable.tableSpec(10))
+        self.synchronizeReadStateTable = MessageHistorySynchronizeReadStateTable(valueBox: self.valueBox!, table: MessageHistorySynchronizeReadStateTable.tableSpec(11))
+        self.historyTable = MessageHistoryTable(valueBox: self.valueBox!, table: MessageHistoryTable.tableSpec(4), messageHistoryIndexTable: self.indexTable!, messageMediaTable: self.mediaTable!, historyMetadataTable: self.historyMetadataTable!, unsentTable: self.unsentTable!, tagsTable: self.tagsTable!, readStateTable: self.readStateTable!, synchronizeReadStateTable: self.synchronizeReadStateTable!)
     }
     
     override func tearDown() {
@@ -107,7 +105,6 @@ class ReadStateTableTests: XCTestCase {
         self.historyTable = nil
         self.indexTable = nil
         self.mediaTable = nil
-        self.mediaCleanupTable = nil
         self.peerTable = nil
         self.historyMetadataTable = nil
         

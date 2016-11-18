@@ -107,6 +107,10 @@ private func modifyHistoryIndexEntryTimestamp(value: ReadBuffer, timestamp: Int3
 }
 
 final class MessageHistoryIndexTable: Table {
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .binary)
+    }
+    
     let globalMessageIdsNamespace: Int32
     let globalMessageIdsTable: GlobalMessageIdsTable
     let metadataTable: MessageHistoryMetadataTable
@@ -114,13 +118,13 @@ final class MessageHistoryIndexTable: Table {
     
     var cachedMaxEntryByPeerId: [PeerId: [MessageId.Namespace: ValueBoxKey]] = [:]
     
-    init(valueBox: ValueBox, tableId: Int32, globalMessageIdsTable: GlobalMessageIdsTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
+    init(valueBox: ValueBox, table: ValueBoxTable, globalMessageIdsTable: GlobalMessageIdsTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
         self.globalMessageIdsTable = globalMessageIdsTable
         self.globalMessageIdsNamespace = globalMessageIdsTable.namespace
         self.seedConfiguration = seedConfiguration
         self.metadataTable = metadataTable
         
-        super.init(valueBox: valueBox, tableId: tableId)
+        super.init(valueBox: valueBox, table: table)
     }
     
     private func key(_ id: MessageId) -> ValueBoxKey {
@@ -231,7 +235,7 @@ final class MessageHistoryIndexTable: Table {
                         var modifyHole: (MessageIndex, MessageHistoryHole)?
                         let startKey = self.key(MessageId(peerId: peerId, namespace: namespace, id: lowerIndex.id.id))
                         
-                        self.valueBox.range(self.tableId, start: startKey, end: self.upperBound(peerId, namespace: namespace), values: { key, value in
+                        self.valueBox.range(self.table, start: startKey, end: self.upperBound(peerId, namespace: namespace), values: { key, value in
                             let entry = readHistoryIndexEntry(peerId, namespace: namespace, key: key, value: value)
                             if case let .Hole(hole) = entry {
                                 if lowerIndex.id.id <= hole.min {
@@ -261,7 +265,7 @@ final class MessageHistoryIndexTable: Table {
             let index = MessageIndex(id: message.id, timestamp: message.timestamp)
             
             var upperItem: HistoryIndexEntry?
-            self.valueBox.range(self.tableId, start: self.key(index.id).predecessor, end: self.upperBound(index.id.peerId, namespace: index.id.namespace), values: { key, value in
+            self.valueBox.range(self.table, start: self.key(index.id).predecessor, end: self.upperBound(index.id.peerId, namespace: index.id.namespace), values: { key, value in
                 upperItem = readHistoryIndexEntry(index.id.peerId, namespace: index.id.namespace, key: key, value: value)
                 return true
             }, limit: 1)
@@ -366,10 +370,10 @@ final class MessageHistoryIndexTable: Table {
     }
     
     func updateTimestamp(_ id: MessageId, timestamp: Int32, operations: inout [MessageHistoryIndexOperation]) {
-        if let previousData = self.valueBox.get(self.tableId, key: self.key(id)), let previousEntry = self.get(id), case let .Message(previousIndex) = previousEntry, previousIndex.timestamp != timestamp {
+        if let previousData = self.valueBox.get(self.table, key: self.key(id)), let previousEntry = self.get(id), case let .Message(previousIndex) = previousEntry, previousIndex.timestamp != timestamp {
             let updatedEntry = modifyHistoryIndexEntryTimestamp(value: previousData, timestamp: timestamp)
-            self.valueBox.remove(self.tableId, key: self.key(id))
-            self.valueBox.set(self.tableId, key: self.key(id), value: updatedEntry)
+            self.valueBox.remove(self.table, key: self.key(id))
+            self.valueBox.set(self.table, key: self.key(id), value: updatedEntry)
             
             operations.append(.UpdateTimestamp(MessageIndex(id: id, timestamp: previousIndex.timestamp), timestamp))
         }
@@ -379,7 +383,7 @@ final class MessageHistoryIndexTable: Table {
         self.ensureInitialized(id.peerId, operations: &operations)
         
         var upperItem: HistoryIndexEntry?
-        self.valueBox.range(self.tableId, start: self.key(id).predecessor, end: self.upperBound(id.peerId, namespace: id.namespace), values: { key, value in
+        self.valueBox.range(self.table, start: self.key(id).predecessor, end: self.upperBound(id.peerId, namespace: id.namespace), values: { key, value in
             upperItem = readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value)
             return true
         }, limit: 1)
@@ -559,7 +563,7 @@ final class MessageHistoryIndexTable: Table {
         value.write(&stableId, offset: 0, length: 4)
         value.write(&min, offset: 0, length: 4)
         value.write(&tags, offset: 0, length: 4)
-        self.valueBox.set(self.tableId, key: self.key(hole.id), value: value)
+        self.valueBox.set(self.table, key: self.key(hole.id), value: value)
         
         operations.append(.InsertHole(hole))
     }
@@ -575,7 +579,7 @@ final class MessageHistoryIndexTable: Table {
         var timestamp: Int32 = index.timestamp
         value.write(&flags, offset: 0, length: 1)
         value.write(&timestamp, offset: 0, length: 4)
-        self.valueBox.set(self.tableId, key: self.key(index.id), value: value)
+        self.valueBox.set(self.table, key: self.key(index.id), value: value)
         
         operations.append(.InsertMessage(message))
         
@@ -585,7 +589,7 @@ final class MessageHistoryIndexTable: Table {
     }
     
     private func justRemove(_ index: MessageIndex, operations: inout [MessageHistoryIndexOperation]) {
-        self.valueBox.remove(self.tableId, key: self.key(index.id))
+        self.valueBox.remove(self.table, key: self.key(index.id))
         
         operations.append(.Remove(index))
         if index.id.namespace == self.globalMessageIdsNamespace {
@@ -597,13 +601,13 @@ final class MessageHistoryIndexTable: Table {
         let key = self.key(id)
         
         var lowerItem: HistoryIndexEntry?
-        self.valueBox.range(self.tableId, start: bindUpper ? key : key.successor, end: self.lowerBound(id.peerId, namespace: id.namespace), values: { key, value in
+        self.valueBox.range(self.table, start: bindUpper ? key : key.successor, end: self.lowerBound(id.peerId, namespace: id.namespace), values: { key, value in
             lowerItem = readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value)
             return true
         }, limit: 1)
         
         var upperItem: HistoryIndexEntry?
-        self.valueBox.range(self.tableId, start: bindUpper ? key.predecessor : key, end: self.upperBound(id.peerId, namespace: id.namespace), values: { key, value in
+        self.valueBox.range(self.table, start: bindUpper ? key.predecessor : key, end: self.upperBound(id.peerId, namespace: id.namespace), values: { key, value in
             upperItem = readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value)
             return true
         }, limit: 1)
@@ -616,7 +620,7 @@ final class MessageHistoryIndexTable: Table {
         self.ensureInitialized(id.peerId, operations: &operations)
         
         let key = self.key(id)
-        if let value = self.valueBox.get(self.tableId, key: key) {
+        if let value = self.valueBox.get(self.table, key: key) {
             return readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value)
         }
         return nil
@@ -627,7 +631,7 @@ final class MessageHistoryIndexTable: Table {
         self.ensureInitialized(peerId, operations: &operations)
         
         var entry: HistoryIndexEntry?
-        self.valueBox.range(self.tableId, start: self.upperBound(peerId, namespace: namespace), end: self.lowerBound(peerId, namespace: namespace), values: { key, value in
+        self.valueBox.range(self.table, start: self.upperBound(peerId, namespace: namespace), end: self.lowerBound(peerId, namespace: namespace), values: { key, value in
             entry = readHistoryIndexEntry(peerId, namespace: namespace, key: key, value: value)
             return false
         }, limit: 1)
@@ -636,12 +640,12 @@ final class MessageHistoryIndexTable: Table {
     }
     
     func exists(_ id: MessageId) -> Bool {
-        return self.valueBox.exists(self.tableId, key: self.key(id))
+        return self.valueBox.exists(self.table, key: self.key(id))
     }
     
     func holeContainingId(_ id: MessageId) -> MessageHistoryHole? {
         var result: MessageHistoryHole?
-        self.valueBox.range(self.tableId, start: self.key(MessageId(peerId: id.peerId, namespace: id.namespace, id: id.id)).predecessor, end: self.upperBound(id.peerId, namespace: id.namespace), values: { key, value in
+        self.valueBox.range(self.table, start: self.key(MessageId(peerId: id.peerId, namespace: id.namespace, id: id.id)).predecessor, end: self.upperBound(id.peerId, namespace: id.namespace), values: { key, value in
             if case let .Hole(hole) = readHistoryIndexEntry(id.peerId, namespace: id.namespace, key: key, value: value) {
                 result = hole
             }
@@ -655,7 +659,7 @@ final class MessageHistoryIndexTable: Table {
         var count = 0
         var holes = false
         
-        self.valueBox.range(self.tableId, start: self.key(MessageId(peerId: peerId, namespace: namespace, id: minId)).predecessor, end: self.key(MessageId(peerId: peerId, namespace: namespace, id: maxId)).successor, values: { _, value in
+        self.valueBox.range(self.table, start: self.key(MessageId(peerId: peerId, namespace: namespace, id: minId)).predecessor, end: self.key(MessageId(peerId: peerId, namespace: namespace, id: maxId)).successor, values: { _, value in
             var flags: Int8 = 0
             value.read(&flags, offset: 0, length: 1)
             if (flags & HistoryEntryTypeMask) == HistoryEntryTypeMessage {
@@ -668,7 +672,7 @@ final class MessageHistoryIndexTable: Table {
             return true
         }, limit: 0)
         
-        self.valueBox.range(self.tableId, start: self.key(MessageId(peerId: peerId, namespace: namespace, id: maxId)), end: self.upperBound(peerId, namespace: namespace), values: { key, value in
+        self.valueBox.range(self.table, start: self.key(MessageId(peerId: peerId, namespace: namespace, id: maxId)), end: self.upperBound(peerId, namespace: namespace), values: { key, value in
             var flags: Int8 = 0
             value.read(&flags, offset: 0, length: 1)
             if (flags & HistoryEntryTypeMask) == HistoryEntryTypeHole {
@@ -688,7 +692,7 @@ final class MessageHistoryIndexTable: Table {
         var holes = false
         
         for id in ids {
-            self.valueBox.range(self.tableId, start: self.key(MessageId(peerId: peerId, namespace: namespace, id: id)).predecessor, end: self.upperBound(peerId, namespace: namespace), values: { key, value in
+            self.valueBox.range(self.table, start: self.key(MessageId(peerId: peerId, namespace: namespace, id: id)).predecessor, end: self.upperBound(peerId, namespace: namespace), values: { key, value in
                 let entryId = key.getInt32(8 + 4)
                 var flags: Int8 = 0
                 value.read(&flags, offset: 0, length: 1)
@@ -714,7 +718,7 @@ final class MessageHistoryIndexTable: Table {
     
     func debugList(_ peerId: PeerId, namespace: MessageId.Namespace) -> [HistoryIndexEntry] {
         var list: [HistoryIndexEntry] = []
-        self.valueBox.range(self.tableId, start: self.lowerBound(peerId, namespace: namespace), end: self.upperBound(peerId, namespace: namespace), values: { key, value in
+        self.valueBox.range(self.table, start: self.lowerBound(peerId, namespace: namespace), end: self.upperBound(peerId, namespace: namespace), values: { key, value in
             list.append(readHistoryIndexEntry(peerId, namespace: namespace, key: key, value: value))
             
             return true

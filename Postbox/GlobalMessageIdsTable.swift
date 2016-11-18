@@ -1,19 +1,23 @@
 import Foundation
 
 final class GlobalMessageIdsTable: Table {
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .int64)
+    }
+    
     let namespace: Int32
     
-    let sharedKey = ValueBoxKey(length: 4)
+    let sharedKey = ValueBoxKey(length: 8)
     let sharedBuffer = WriteBuffer()
     
-    init(valueBox: ValueBox, tableId: Int32, namespace: Int32) {
+    init(valueBox: ValueBox, table: ValueBoxTable, namespace: Int32) {
         self.namespace = namespace
         
-        super.init(valueBox: valueBox, tableId: tableId)
+        super.init(valueBox: valueBox, table: table)
     }
     
     private func key(_ id: Int32) -> ValueBoxKey {
-        self.sharedKey.setInt32(0, value: id)
+        self.sharedKey.setInt64(0, value: Int64(id))
         return self.sharedKey
     }
     
@@ -23,11 +27,11 @@ final class GlobalMessageIdsTable: Table {
         var idNamespace: Int32 = id.namespace
         self.sharedBuffer.write(&idPeerId, offset: 0, length: 8)
         self.sharedBuffer.write(&idNamespace, offset: 0, length: 4)
-        self.valueBox.set(self.tableId, key: self.key(globalId), value: self.sharedBuffer)
+        self.valueBox.set(self.table, key: self.key(globalId), value: self.sharedBuffer)
     }
     
     func get(_ globalId: Int32) -> MessageId? {
-        if let value = self.valueBox.get(self.tableId, key: self.key(globalId)) {
+        if let value = self.valueBox.get(self.table, key: self.key(globalId)) {
             var idPeerId: Int64 = 0
             var idNamespace: Int32 = 0
             value.read(&idPeerId, offset: 0, length: 8)
@@ -38,6 +42,6 @@ final class GlobalMessageIdsTable: Table {
     }
     
     func remove(_ globalId: Int32) {
-        self.valueBox.remove(self.tableId, key: self.key(globalId))
+        self.valueBox.remove(self.table, key: self.key(globalId))
     }
 }

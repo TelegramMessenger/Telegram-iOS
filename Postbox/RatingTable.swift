@@ -23,6 +23,10 @@ extension PeerId: RatingTableItem {
 }
 
 final class RatingTable<T: RatingTableItem>: Table {
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .binary)
+    }
+    
     private var items: [T]?
     
     func get() -> [T] {
@@ -35,7 +39,7 @@ final class RatingTable<T: RatingTableItem>: Table {
             memset(upperBound.memory, 0xff, upperBound.length)
             
             var result: [T] = []
-            self.valueBox.range(self.tableId, start: lowerBound, end: upperBound, keys: { key in
+            self.valueBox.range(self.table, start: lowerBound, end: upperBound, keys: { key in
                 result.append(T.fromKey(key: key))
                 return true
             }, limit: 0)
@@ -51,19 +55,19 @@ final class RatingTable<T: RatingTableItem>: Table {
         let upperBound = T.emptyKey()
         memset(lowerBound.memory, 0, lowerBound.length)
         memset(upperBound.memory, 0xff, upperBound.length)
-        self.valueBox.range(self.tableId, start: lowerBound, end: upperBound, keys: { key in
+        self.valueBox.range(self.table, start: lowerBound, end: upperBound, keys: { key in
             keys.append(key)
             return true
         }, limit: 0)
         
         for key in keys {
-            self.valueBox.remove(self.tableId, key: key)
+            self.valueBox.remove(self.table, key: key)
         }
         
         let sharedKey = T.emptyKey()
         var index: Int32 = 0
         for item in items {
-            self.valueBox.set(self.tableId, key: item.ratingKey(rating: index, sharedKey: sharedKey), value: MemoryBuffer())
+            self.valueBox.set(self.table, key: item.ratingKey(rating: index, sharedKey: sharedKey), value: MemoryBuffer())
             index += 1
         }
         

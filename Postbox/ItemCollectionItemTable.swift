@@ -6,6 +6,10 @@ enum ItemCollectionOperation {
 }
 
 final class ItemCollectionItemTable: Table {
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .binary)
+    }
+    
     private let sharedKey = ValueBoxKey(length: 4 + 8 + 4 + 8)
     
     private func key(collectionId: ItemCollectionId, index: ItemCollectionItemIndex) -> ValueBoxKey {
@@ -44,7 +48,7 @@ final class ItemCollectionItemTable: Table {
     
     func lowerItems(collectionId: ItemCollectionId, itemIndex: ItemCollectionItemIndex, count: Int) -> [ItemCollectionItem] {
         var items: [ItemCollectionItem] = []
-        self.valueBox.range(self.tableId, start: self.key(collectionId: collectionId, index: itemIndex), end: self.lowerBound(collectionId: collectionId), values: { _, value in
+        self.valueBox.range(self.table, start: self.key(collectionId: collectionId, index: itemIndex), end: self.lowerBound(collectionId: collectionId), values: { _, value in
             if let item = Decoder(buffer: value).decodeRootObject() as? ItemCollectionItem {
                 items.append(item)
             }
@@ -55,7 +59,7 @@ final class ItemCollectionItemTable: Table {
     
     func higherItems(collectionId: ItemCollectionId, itemIndex: ItemCollectionItemIndex, count: Int) -> [ItemCollectionItem] {
         var items: [ItemCollectionItem] = []
-        self.valueBox.range(self.tableId, start: self.key(collectionId: collectionId, index: itemIndex), end: self.upperBound(collectionId: collectionId), values: { _, value in
+        self.valueBox.range(self.table, start: self.key(collectionId: collectionId, index: itemIndex), end: self.upperBound(collectionId: collectionId), values: { _, value in
             if let item = Decoder(buffer: value).decodeRootObject() as? ItemCollectionItem {
                 items.append(item)
             }
@@ -66,7 +70,7 @@ final class ItemCollectionItemTable: Table {
     
     func getSummaryIndices(namespace: ItemCollectionId.Namespace) -> [ItemCollectionId: [ItemCollectionItemIndex]] {
         var summaryIndices: [ItemCollectionId: [ItemCollectionItemIndex]] = [:]
-        self.valueBox.range(self.tableId, start: self.lowerBound(namespace: namespace), end: self.upperBound(namespace: namespace), keys: { key in
+        self.valueBox.range(self.table, start: self.lowerBound(namespace: namespace), end: self.upperBound(namespace: namespace), keys: { key in
             let collectionId = ItemCollectionId(namespace: namespace, id: key.getInt64(4))
             let itemIndex = ItemCollectionItemIndex(index: key.getInt32(4 + 8), id: key.getInt64(4 + 8 + 4))
             if summaryIndices[collectionId] != nil {
@@ -81,7 +85,7 @@ final class ItemCollectionItemTable: Table {
     
     func getItems(namespace: ItemCollectionId.Namespace) -> [ItemCollectionId: [ItemCollectionItem]] {
         var items: [ItemCollectionId: [ItemCollectionItem]] = [:]
-        self.valueBox.range(self.tableId, start: self.lowerBound(namespace: namespace), end: self.upperBound(namespace: namespace), values: { key, value in
+        self.valueBox.range(self.table, start: self.lowerBound(namespace: namespace), end: self.upperBound(namespace: namespace), values: { key, value in
             let collectionId = ItemCollectionId(namespace: namespace, id: key.getInt64(4))
             //let itemIndex = ItemCollectionItemIndex(index: key.getInt32(4 + 8), id: key.getInt64(4 + 8 + 4))
             if let item = Decoder(buffer: value).decodeRootObject() as? ItemCollectionItem {
@@ -98,7 +102,7 @@ final class ItemCollectionItemTable: Table {
     
     func replaceItems(collectionId: ItemCollectionId, items: [ItemCollectionItem]) {
         var currentIndices = Set<ItemCollectionItemIndex>()
-        self.valueBox.range(self.tableId, start: self.lowerBound(collectionId: collectionId), end: self.upperBound(collectionId: collectionId), keys: { key in
+        self.valueBox.range(self.table, start: self.lowerBound(collectionId: collectionId), end: self.upperBound(collectionId: collectionId), keys: { key in
             let itemIndex = ItemCollectionItemIndex(index: key.getInt32(4 + 8), id: key.getInt64(4 + 8 + 4))
             currentIndices.insert(itemIndex)
             return true
@@ -114,7 +118,7 @@ final class ItemCollectionItemTable: Table {
         let removedIndices = currentIndices.subtracting(updatedIndices)
         
         for index in removedIndices {
-            self.valueBox.remove(self.tableId, key: self.key(collectionId: collectionId, index: index))
+            self.valueBox.remove(self.table, key: self.key(collectionId: collectionId, index: index))
         }
         
         let sharedEncoder = Encoder()
@@ -122,7 +126,7 @@ final class ItemCollectionItemTable: Table {
             let item = itemByIndex[index]!
             sharedEncoder.reset()
             sharedEncoder.encodeRootObject(item)
-            self.valueBox.set(self.tableId, key: self.key(collectionId: collectionId, index: index), value: sharedEncoder.readBufferNoCopy())
+            self.valueBox.set(self.table, key: self.key(collectionId: collectionId, index: index), value: sharedEncoder.readBufferNoCopy())
         }
     }
     

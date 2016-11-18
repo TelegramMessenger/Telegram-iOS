@@ -1,6 +1,10 @@
 import Foundation
 
 final class PeerChatStateTable: Table {
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .int64)
+    }
+    
     private var cachedPeerChatStates: [PeerId: Coding?] = [:]
     private var updatedPeerIds = Set<PeerId>()
     
@@ -15,7 +19,7 @@ final class PeerChatStateTable: Table {
         if let state = self.cachedPeerChatStates[id] {
             return state
         } else {
-            if let value = self.valueBox.get(self.tableId, key: self.key(id)), let state = Decoder(buffer: value).decodeRootObject() {
+            if let value = self.valueBox.get(self.table, key: self.key(id)), let state = Decoder(buffer: value).decodeRootObject() {
                 self.cachedPeerChatStates[id] = state
                 return state
             } else {
@@ -41,9 +45,9 @@ final class PeerChatStateTable: Table {
             if let wrappedState = self.cachedPeerChatStates[id], let state = wrappedState {
                 sharedEncoder.reset()
                 sharedEncoder.encodeRootObject(state)
-                self.valueBox.set(self.tableId, key: self.key(id), value: sharedEncoder.readBufferNoCopy())
+                self.valueBox.set(self.table, key: self.key(id), value: sharedEncoder.readBufferNoCopy())
             } else {
-                self.valueBox.remove(self.tableId, key: self.key(id))
+                self.valueBox.remove(self.table, key: self.key(id))
             }
         }
         self.updatedPeerIds.removeAll()

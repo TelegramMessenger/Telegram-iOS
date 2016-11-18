@@ -31,17 +31,21 @@ private enum ChatListEntryType: Int8 {
 }
 
 final class ChatListTable: Table {
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .binary)
+    }
+    
     let indexTable: ChatListIndexTable
     let emptyMemoryBuffer = MemoryBuffer()
     let metadataTable: MessageHistoryMetadataTable
     let seedConfiguration: SeedConfiguration
     
-    init(valueBox: ValueBox, tableId: Int32, indexTable: ChatListIndexTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
+    init(valueBox: ValueBox, table: ValueBoxTable, indexTable: ChatListIndexTable, metadataTable: MessageHistoryMetadataTable, seedConfiguration: SeedConfiguration) {
         self.indexTable = indexTable
         self.metadataTable = metadataTable
         self.seedConfiguration = seedConfiguration
         
-        super.init(valueBox: valueBox, tableId: tableId)
+        super.init(valueBox: valueBox, table: table)
     }
     
     private func key(_ index: MessageIndex, type: ChatListEntryType) -> ValueBoxKey {
@@ -119,7 +123,7 @@ final class ChatListTable: Table {
     func addHole(_ hole: ChatListHole, operations: inout [ChatListOperation]) {
         self.ensureInitialized()
         
-        if self.valueBox.get(self.tableId, key: self.key(hole.index, type: .Hole)) == nil {
+        if self.valueBox.get(self.table, key: self.key(hole.index, type: .Hole)) == nil {
             self.justInsertHole(hole)
             operations.append(.InsertHole(hole))
         }
@@ -128,7 +132,7 @@ final class ChatListTable: Table {
     func replaceHole(_ index: MessageIndex, hole: ChatListHole?, operations: inout [ChatListOperation]) {
         self.ensureInitialized()
         
-        if self.valueBox.get(self.tableId, key: self.key(index, type: .Hole)) != nil {
+        if self.valueBox.get(self.table, key: self.key(index, type: .Hole)) != nil {
             if let hole = hole {
                 if hole.index != index {
                     self.justRemoveHole(index)
@@ -144,19 +148,19 @@ final class ChatListTable: Table {
     }
     
     private func justInsertMessage(_ index: MessageIndex) {
-        self.valueBox.set(self.tableId, key: self.key(index, type: .Message), value: self.emptyMemoryBuffer)
+        self.valueBox.set(self.table, key: self.key(index, type: .Message), value: self.emptyMemoryBuffer)
     }
     
     private func justRemoveMessage(_ index: MessageIndex) {
-        self.valueBox.remove(self.tableId, key: self.key(index, type: .Message))
+        self.valueBox.remove(self.table, key: self.key(index, type: .Message))
     }
     
     private func justInsertHole(_ hole: ChatListHole) {
-        self.valueBox.set(self.tableId, key: self.key(hole.index, type: .Hole), value: self.emptyMemoryBuffer)
+        self.valueBox.set(self.table, key: self.key(hole.index, type: .Hole), value: self.emptyMemoryBuffer)
     }
     
     private func justRemoveHole(_ index: MessageIndex) {
-        self.valueBox.remove(self.tableId, key: self.key(index, type: .Hole))
+        self.valueBox.remove(self.table, key: self.key(index, type: .Hole))
     }
     
     func entriesAround(_ index: MessageIndex, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable, count: Int) -> (entries: [ChatListIntermediateEntry], lower: ChatListIntermediateEntry?, upper: ChatListIntermediateEntry?) {
@@ -167,7 +171,7 @@ final class ChatListTable: Table {
         var lower: ChatListIntermediateEntry?
         var upper: ChatListIntermediateEntry?
         
-        self.valueBox.range(self.tableId, start: self.key(index, type: .Message), end: self.lowerBound(), keys: { key in
+        self.valueBox.range(self.table, start: self.key(index, type: .Message), end: self.lowerBound(), keys: { key in
             let index = MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(4 + 4 + 4)), namespace: key.getInt32(4), id: key.getInt32(4 + 4)), timestamp: key.getInt32(0))
             let type: Int8 = key.getInt8(4 + 4 + 4 + 8)
             if type == ChatListEntryType.Message.rawValue {
@@ -186,7 +190,7 @@ final class ChatListTable: Table {
             lowerEntries.removeLast()
         }
         
-        self.valueBox.range(self.tableId, start: self.key(index, type: .Message).predecessor, end: self.upperBound(), keys: { key in
+        self.valueBox.range(self.table, start: self.key(index, type: .Message).predecessor, end: self.upperBound(), keys: { key in
             let index = MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(4 + 4 + 4)), namespace: key.getInt32(4), id: key.getInt32(4 + 4)), timestamp: key.getInt32(0))
             let type: Int8 = key.getInt8(4 + 4 + 4 + 8)
             if type == ChatListEntryType.Message.rawValue {
@@ -214,7 +218,7 @@ final class ChatListTable: Table {
                 case .Hole:
                     startEntryType = .Hole
             }
-            self.valueBox.range(self.tableId, start: self.key(lowerEntries.last!.index, type: startEntryType), end: self.lowerBound(), keys: { key in
+            self.valueBox.range(self.table, start: self.key(lowerEntries.last!.index, type: startEntryType), end: self.lowerBound(), keys: { key in
                 let index = MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(4 + 4 + 4)), namespace: key.getInt32(4), id: key.getInt32(4 + 4)), timestamp: key.getInt32(0))
                 let type: Int8 = key.getInt8(4 + 4 + 4 + 8)
                 if type == ChatListEntryType.Message.rawValue {
@@ -252,7 +256,7 @@ final class ChatListTable: Table {
             key = self.upperBound()
         }
         
-        self.valueBox.range(self.tableId, start: key, end: self.lowerBound(), keys: { key in
+        self.valueBox.range(self.table, start: key, end: self.lowerBound(), keys: { key in
             let index = MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(4 + 4 + 4)), namespace: key.getInt32(4), id: key.getInt32(4 + 4)), timestamp: key.getInt32(0))
             let type: Int8 = key.getInt8(4 + 4 + 4 + 8)
             if type == ChatListEntryType.Message.rawValue {
@@ -280,7 +284,7 @@ final class ChatListTable: Table {
             key = self.lowerBound()
         }
         
-        self.valueBox.range(self.tableId, start: key, end: self.upperBound(), keys: { key in
+        self.valueBox.range(self.table, start: key, end: self.upperBound(), keys: { key in
             let index = MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(4 + 4 + 4)), namespace: key.getInt32(4), id: key.getInt32(4 + 4)), timestamp: key.getInt32(0))
             let type: Int8 = key.getInt8(4 + 4 + 4 + 8)
             if type == ChatListEntryType.Message.rawValue {

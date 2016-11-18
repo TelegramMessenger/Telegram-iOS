@@ -1,8 +1,8 @@
 import Foundation
 
 final class ChatListIndexTable: Table {
-    override init(valueBox: ValueBox, tableId: Int32) {
-        super.init(valueBox: valueBox, tableId: tableId)
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .int64)
     }
     
     private func key(_ peerId: PeerId) -> ValueBoxKey {
@@ -19,15 +19,15 @@ final class ChatListIndexTable: Table {
         writeBuffer.write(&idNamespace, offset: 0, length: 4)
         writeBuffer.write(&idId, offset: 0, length: 4)
         writeBuffer.write(&idTimestamp, offset: 0, length: 4)
-        self.valueBox.set(self.tableId, key: self.key(index.id.peerId), value: writeBuffer.readBufferNoCopy())
+        self.valueBox.set(self.table, key: self.key(index.id.peerId), value: writeBuffer.readBufferNoCopy())
     }
     
     func remove(_ peerId: PeerId) {
-        self.valueBox.remove(self.tableId, key: self.key(peerId))
+        self.valueBox.remove(self.table, key: self.key(peerId))
     }
     
     func get(_ peerId: PeerId) -> MessageIndex? {
-        if let value = self.valueBox.get(self.tableId, key: self.key(peerId)) {
+        if let value = self.valueBox.get(self.table, key: self.key(peerId)) {
             var idNamespace: Int32 = 0
             var idId: Int32 = 0
             var idTimestamp: Int32 = 0
