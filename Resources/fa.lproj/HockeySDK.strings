@@ -11,7 +11,7 @@
 "HockeyYes" = "بله";
 
 /* For dialogs no buttons */
-"HockeyNo" = "نه";
+"HockeyNo" = "خیر";
 
 /* For dialogs ok buttons */
 "HockeyOK" = "قبول";
@@ -25,7 +25,7 @@
 /* Crash dialog */
 
 /* Title showing in the alert box when crash report data has been found */
-"CrashDataFoundTitle" = "%@ ترک غیر منتظره";
++"CrashDataFoundTitle" = "%@ ترک غیر منتظره";
 
 /* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
 "CrashDataFoundAnonymousDescription" = "آیا می خواهید یک گزارش ناشناس ارسال کنید بنابراین ما میتوانیم مشکل را حل بکنم؟";
