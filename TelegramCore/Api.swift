@@ -152,7 +152,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[628472761] = { return Api.Update.parse_updateContactRegistered($0) }
     dict[1602468195] = { return Api.Update.parse_updateContactLocated($0) }
     dict[1869154659] = { return Api.Update.parse_updateActivation($0) }
-    dict[-1895411046] = { return Api.Update.parse_updateNewAuthorization($0) }
     dict[-623425266] = { return Api.Update.parse_updatePhoneCallRequested($0) }
     dict[1443495816] = { return Api.Update.parse_updatePhoneCallConfirmed($0) }
     dict[833498306] = { return Api.Update.parse_updatePhoneCallDeclined($0) }
@@ -168,7 +167,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1548249383] = { return Api.Update.parse_updateUserTyping($0) }
     dict[-1704596961] = { return Api.Update.parse_updateChatUserTyping($0) }
     dict[-1489818765] = { return Api.Update.parse_updateUserName($0) }
-    dict[942527460] = { return Api.Update.parse_updateServiceNotification($0) }
     dict[-298113238] = { return Api.Update.parse_updatePrivacy($0) }
     dict[314130811] = { return Api.Update.parse_updateUserPhone($0) }
     dict[522914557] = { return Api.Update.parse_updateNewMessage($0) }
@@ -208,6 +206,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-103646630] = { return Api.Update.parse_updateInlineBotCallbackQuery($0) }
     dict[1081547008] = { return Api.Update.parse_updateChannelWebPage($0) }
     dict[-1425052898] = { return Api.Update.parse_updatePhoneCall($0) }
+    dict[-337352679] = { return Api.Update.parse_updateServiceNotification($0) }
     dict[367766557] = { return Api.ChannelParticipant.parse_channelParticipant($0) }
     dict[-1557620115] = { return Api.ChannelParticipant.parse_channelParticipantSelf($0) }
     dict[-1861910545] = { return Api.ChannelParticipant.parse_channelParticipantModerator($0) }
@@ -351,7 +350,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[182649427] = { return Api.MessageRange.parse_messageRange($0) }
     dict[946083368] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultSuccess($0) }
     dict[904138920] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultArchive($0) }
-    dict[-1704251862] = { return Api.Config.parse_config($0) }
+    dict[-1233953423] = { return Api.Config.parse_config($0) }
     dict[-75283823] = { return Api.TopPeerCategoryPeers.parse_topPeerCategoryPeers($0) }
     dict[-1107729093] = { return Api.Game.parse_game($0) }
     dict[-1032140601] = { return Api.BotCommand.parse_botCommand($0) }
@@ -4441,7 +4440,6 @@ public struct Api {
         case updateContactRegistered(userId: Int32, date: Int32)
         case updateContactLocated(contacts: [Api.ContactLocated])
         case updateActivation(userId: Int32)
-        case updateNewAuthorization(authKeyId: Int64, date: Int32, device: String, location: String)
         case updatePhoneCallRequested(phoneCall: Api.PhoneCall)
         case updatePhoneCallConfirmed(id: Int64, aOrB: Buffer, connection: Api.PhoneConnection)
         case updatePhoneCallDeclined(id: Int64)
@@ -4457,7 +4455,6 @@ public struct Api {
         case updateUserTyping(userId: Int32, action: Api.SendMessageAction)
         case updateChatUserTyping(chatId: Int32, userId: Int32, action: Api.SendMessageAction)
         case updateUserName(userId: Int32, firstName: String, lastName: String, username: String)
-        case updateServiceNotification(type: String, message: String, media: Api.MessageMedia, popup: Api.Bool)
         case updatePrivacy(key: Api.PrivacyKey, rules: [Api.PrivacyRule])
         case updateUserPhone(userId: Int32, phone: String)
         case updateNewMessage(message: Api.Message, pts: Int32, ptsCount: Int32)
@@ -4497,6 +4494,7 @@ public struct Api {
         case updateInlineBotCallbackQuery(flags: Int32, queryId: Int64, userId: Int32, msgId: Api.InputBotInlineMessageID, chatInstance: Int64, data: Buffer?, gameShortName: String?)
         case updateChannelWebPage(channelId: Int32, webpage: Api.WebPage, pts: Int32, ptsCount: Int32)
         case updatePhoneCall(phoneCall: Api.PhoneCall)
+        case updateServiceNotification(flags: Int32, inboxDate: Int32?, type: String, message: String, media: Api.MessageMedia, entities: [Api.MessageEntity])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
@@ -4553,15 +4551,6 @@ public struct Api {
                         buffer.appendInt32(1869154659)
                     }
                     serializeInt32(userId, buffer: buffer, boxed: false)
-                    break
-                case .updateNewAuthorization(let authKeyId, let date, let device, let location):
-                    if boxed {
-                        buffer.appendInt32(-1895411046)
-                    }
-                    serializeInt64(authKeyId, buffer: buffer, boxed: false)
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    serializeString(device, buffer: buffer, boxed: false)
-                    serializeString(location, buffer: buffer, boxed: false)
                     break
                 case .updatePhoneCallRequested(let phoneCall):
                     if boxed {
@@ -4675,15 +4664,6 @@ public struct Api {
                     serializeString(firstName, buffer: buffer, boxed: false)
                     serializeString(lastName, buffer: buffer, boxed: false)
                     serializeString(username, buffer: buffer, boxed: false)
-                    break
-                case .updateServiceNotification(let type, let message, let media, let popup):
-                    if boxed {
-                        buffer.appendInt32(942527460)
-                    }
-                    serializeString(type, buffer: buffer, boxed: false)
-                    serializeString(message, buffer: buffer, boxed: false)
-                    let _ = media.serialize(buffer, true)
-                    let _ = popup.serialize(buffer, true)
                     break
                 case .updatePrivacy(let key, let rules):
                     if boxed {
@@ -5017,6 +4997,21 @@ public struct Api {
                     }
                     let _ = phoneCall.serialize(buffer, true)
                     break
+                case .updateServiceNotification(let flags, let inboxDate, let type, let message, let media, let entities):
+                    if boxed {
+                        buffer.appendInt32(-337352679)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(inboxDate!, buffer: buffer, boxed: false)}
+                    serializeString(type, buffer: buffer, boxed: false)
+                    serializeString(message, buffer: buffer, boxed: false)
+                    let _ = media.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(entities.count))
+                    for item in entities {
+                        let _ = item.serialize(buffer, true)
+                    }
+                    break
     }
     return true
     }
@@ -5113,26 +5108,6 @@ public struct Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.Update.updateActivation(userId: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        fileprivate static func parse_updateNewAuthorization(_ reader: BufferReader) -> Update? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: String?
-            _4 = parseString(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.Update.updateNewAuthorization(authKeyId: _1!, date: _2!, device: _3!, location: _4!)
             }
             else {
                 return nil
@@ -5379,30 +5354,6 @@ public struct Api {
             let _c4 = _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.Update.updateUserName(userId: _1!, firstName: _2!, lastName: _3!, username: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-        fileprivate static func parse_updateServiceNotification(_ reader: BufferReader) -> Update? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: Api.MessageMedia?
-            if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.MessageMedia
-            }
-            var _4: Api.Bool?
-            if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.Bool
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.Update.updateServiceNotification(type: _1!, message: _2!, media: _3!, popup: _4!)
             }
             else {
                 return nil
@@ -6064,6 +6015,36 @@ public struct Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.Update.updatePhoneCall(phoneCall: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        fileprivate static func parse_updateServiceNotification(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_2 = reader.readInt32() }
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: Api.MessageMedia?
+            if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.MessageMedia
+            }
+            var _6: [Api.MessageEntity]?
+            if let _ = reader.readInt32() {
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 1) == 0) || _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.Update.updateServiceNotification(flags: _1!, inboxDate: _2, type: _3!, message: _4!, media: _5!, entities: _6!)
             }
             else {
                 return nil
@@ -9084,13 +9065,13 @@ public struct Api {
     }
 
     public enum Config: /*CustomStringConvertible, */ApiSerializeableObject {
-        case config(flags: Int32, date: Int32, expires: Int32, testMode: Api.Bool, thisDc: Int32, dcOptions: [Api.DcOption], chatSizeMax: Int32, megagroupSizeMax: Int32, forwardedCountMax: Int32, onlineUpdatePeriodMs: Int32, offlineBlurTimeoutMs: Int32, offlineIdleTimeoutMs: Int32, onlineCloudTimeoutMs: Int32, notifyCloudDelayMs: Int32, notifyDefaultDelayMs: Int32, chatBigSize: Int32, pushChatPeriodMs: Int32, pushChatLimit: Int32, savedGifsLimit: Int32, editTimeLimit: Int32, ratingEDecay: Int32, stickersRecentLimit: Int32, tmpSessions: Int32?, disabledFeatures: [Api.DisabledFeature])
+        case config(flags: Int32, date: Int32, expires: Int32, testMode: Api.Bool, thisDc: Int32, dcOptions: [Api.DcOption], chatSizeMax: Int32, megagroupSizeMax: Int32, forwardedCountMax: Int32, onlineUpdatePeriodMs: Int32, offlineBlurTimeoutMs: Int32, offlineIdleTimeoutMs: Int32, onlineCloudTimeoutMs: Int32, notifyCloudDelayMs: Int32, notifyDefaultDelayMs: Int32, chatBigSize: Int32, pushChatPeriodMs: Int32, pushChatLimit: Int32, savedGifsLimit: Int32, editTimeLimit: Int32, ratingEDecay: Int32, stickersRecentLimit: Int32, tmpSessions: Int32?, callReceiveTimeoutMs: Int32, callRingTimeoutMs: Int32, callConnectTimeoutMs: Int32, callPacketTimeoutMs: Int32, disabledFeatures: [Api.DisabledFeature])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) -> Swift.Bool {
     switch self {
-                case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let chatBigSize, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let ratingEDecay, let stickersRecentLimit, let tmpSessions, let disabledFeatures):
+                case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let chatBigSize, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let ratingEDecay, let stickersRecentLimit, let tmpSessions, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let disabledFeatures):
                     if boxed {
-                        buffer.appendInt32(-1704251862)
+                        buffer.appendInt32(-1233953423)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
@@ -9119,6 +9100,10 @@ public struct Api {
                     serializeInt32(ratingEDecay, buffer: buffer, boxed: false)
                     serializeInt32(stickersRecentLimit, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(tmpSessions!, buffer: buffer, boxed: false)}
+                    serializeInt32(callReceiveTimeoutMs, buffer: buffer, boxed: false)
+                    serializeInt32(callRingTimeoutMs, buffer: buffer, boxed: false)
+                    serializeInt32(callConnectTimeoutMs, buffer: buffer, boxed: false)
+                    serializeInt32(callPacketTimeoutMs, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(disabledFeatures.count))
                     for item in disabledFeatures {
@@ -9180,9 +9165,17 @@ public struct Api {
             _22 = reader.readInt32()
             var _23: Int32?
             if Int(_1!) & Int(1 << 0) != 0 {_23 = reader.readInt32() }
-            var _24: [Api.DisabledFeature]?
+            var _24: Int32?
+            _24 = reader.readInt32()
+            var _25: Int32?
+            _25 = reader.readInt32()
+            var _26: Int32?
+            _26 = reader.readInt32()
+            var _27: Int32?
+            _27 = reader.readInt32()
+            var _28: [Api.DisabledFeature]?
             if let _ = reader.readInt32() {
-                _24 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DisabledFeature.self)
+                _28 = Api.parseVector(reader, elementSignature: 0, elementType: Api.DisabledFeature.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -9208,8 +9201,12 @@ public struct Api {
             let _c22 = _22 != nil
             let _c23 = (Int(_1!) & Int(1 << 0) == 0) || _23 != nil
             let _c24 = _24 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 {
-                return Api.Config.config(flags: _1!, date: _2!, expires: _3!, testMode: _4!, thisDc: _5!, dcOptions: _6!, chatSizeMax: _7!, megagroupSizeMax: _8!, forwardedCountMax: _9!, onlineUpdatePeriodMs: _10!, offlineBlurTimeoutMs: _11!, offlineIdleTimeoutMs: _12!, onlineCloudTimeoutMs: _13!, notifyCloudDelayMs: _14!, notifyDefaultDelayMs: _15!, chatBigSize: _16!, pushChatPeriodMs: _17!, pushChatLimit: _18!, savedGifsLimit: _19!, editTimeLimit: _20!, ratingEDecay: _21!, stickersRecentLimit: _22!, tmpSessions: _23, disabledFeatures: _24!)
+            let _c25 = _25 != nil
+            let _c26 = _26 != nil
+            let _c27 = _27 != nil
+            let _c28 = _28 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 {
+                return Api.Config.config(flags: _1!, date: _2!, expires: _3!, testMode: _4!, thisDc: _5!, dcOptions: _6!, chatSizeMax: _7!, megagroupSizeMax: _8!, forwardedCountMax: _9!, onlineUpdatePeriodMs: _10!, offlineBlurTimeoutMs: _11!, offlineIdleTimeoutMs: _12!, onlineCloudTimeoutMs: _13!, notifyCloudDelayMs: _14!, notifyDefaultDelayMs: _15!, chatBigSize: _16!, pushChatPeriodMs: _17!, pushChatLimit: _18!, savedGifsLimit: _19!, editTimeLimit: _20!, ratingEDecay: _21!, stickersRecentLimit: _22!, tmpSessions: _23, callReceiveTimeoutMs: _24!, callRingTimeoutMs: _25!, callConnectTimeoutMs: _26!, callPacketTimeoutMs: _27!, disabledFeatures: _28!)
             }
             else {
                 return nil

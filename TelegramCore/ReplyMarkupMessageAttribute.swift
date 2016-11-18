@@ -75,6 +75,7 @@ public enum ReplyMarkupButtonAction: Coding {
             case let .switchInline(samePeer, query):
                 encoder.encodeInt32(5, forKey: "v")
                 encoder.encodeInt32(samePeer ? 1 : 0, forKey: "s")
+                encoder.encodeString(query, forKey: "1")
             case .openWebApp:
                 encoder.encodeInt32(6, forKey: "v")
         }

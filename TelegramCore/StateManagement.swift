@@ -22,14 +22,16 @@ private final class InitialState {
     let channelStates: [PeerId: ChannelState]
     let peerNotificationSettings: [PeerId: PeerNotificationSettings]
     let peerIdsWithNewMessages: Set<PeerId>
+    let locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]
     
-    init(state: AuthorizedAccountState.State, peerIds: Set<PeerId>, messageIds: Set<MessageId>, peerIdsWithNewMessages: Set<PeerId>, channelStates: [PeerId: ChannelState], peerNotificationSettings: [PeerId: PeerNotificationSettings]) {
+    init(state: AuthorizedAccountState.State, peerIds: Set<PeerId>, messageIds: Set<MessageId>, peerIdsWithNewMessages: Set<PeerId>, channelStates: [PeerId: ChannelState], peerNotificationSettings: [PeerId: PeerNotificationSettings], locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]) {
         self.state = state
         self.peerIds = peerIds
         self.messageIds = messageIds
         self.channelStates = channelStates
         self.peerIdsWithNewMessages = peerIdsWithNewMessages
         self.peerNotificationSettings = peerNotificationSettings
+        self.locallyGeneratedMessageTimestamps = locallyGeneratedMessageTimestamps
     }
 }
 
@@ -64,19 +66,24 @@ private struct MutableState {
     fileprivate var peerNotificationSettings: [PeerId: PeerNotificationSettings]
     fileprivate var storedMessages: Set<MessageId>
     
+    fileprivate var storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>]
+    
     fileprivate var insertedPeers: [PeerId: Peer] = [:]
     
-    init(initialState: InitialState, initialPeers: [PeerId: Peer], initialStoredMessages: Set<MessageId>) {
+    fileprivate var preCachedResources: [(MediaResource, Data)] = []
+    
+    init(initialState: InitialState, initialPeers: [PeerId: Peer], initialStoredMessages: Set<MessageId>, storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>]) {
         self.initialState = initialState
         self.state = initialState.state
         self.peers = initialPeers
         self.storedMessages = initialStoredMessages
         self.channelStates = initialState.channelStates
         self.peerNotificationSettings = initialState.peerNotificationSettings
+        self.storedMessagesByPeerIdAndTimestamp = storedMessagesByPeerIdAndTimestamp
         self.branchOperationIndex = 0
     }
     
-    init(initialState: InitialState, operations: [MutationOperation], state: AuthorizedAccountState.State, peers: [PeerId: Peer], channelStates: [PeerId: ChannelState], peerNotificationSettings: [PeerId: PeerNotificationSettings], storedMessages: Set<MessageId>, branchOperationIndex: Int) {
+    init(initialState: InitialState, operations: [MutationOperation], state: AuthorizedAccountState.State, peers: [PeerId: Peer], channelStates: [PeerId: ChannelState], peerNotificationSettings: [PeerId: PeerNotificationSettings], storedMessages: Set<MessageId>, storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>], branchOperationIndex: Int) {
         self.initialState = initialState
         self.operations = operations
         self.state = state
@@ -84,11 +91,12 @@ private struct MutableState {
         self.channelStates = channelStates
         self.storedMessages = storedMessages
         self.peerNotificationSettings = peerNotificationSettings
+        self.storedMessagesByPeerIdAndTimestamp = storedMessagesByPeerIdAndTimestamp
         self.branchOperationIndex = branchOperationIndex
     }
     
     func branch() -> MutableState {
-        return MutableState(initialState: self.initialState, operations: self.operations, state: self.state, peers: self.peers, channelStates: self.channelStates, peerNotificationSettings: self.peerNotificationSettings, storedMessages: self.storedMessages, branchOperationIndex: self.operations.count)
+        return MutableState(initialState: self.initialState, operations: self.operations, state: self.state, peers: self.peers, channelStates: self.channelStates, peerNotificationSettings: self.peerNotificationSettings, storedMessages: self.storedMessages, storedMessagesByPeerIdAndTimestamp: self.storedMessagesByPeerIdAndTimestamp, branchOperationIndex: self.operations.count)
     }
     
     mutating func merge(_ other: MutableState) {
@@ -98,6 +106,11 @@ private struct MutableState {
         for (_, peer) in other.insertedPeers {
             self.peers[peer.id] = peer
         }
+        self.preCachedResources.append(contentsOf: other.preCachedResources)
+    }
+    
+    mutating func addPreCachedResource(_ resource: MediaResource, data: Data) {
+        self.preCachedResources.append((resource, data))
     }
     
     mutating func addMessages(_ messages: [StoreMessage], location: AddMessagesLocation) {
@@ -258,7 +271,6 @@ private func associatedMessageIdsFromUpdateGroups(_ groups: [UpdateGroup]) -> Se
     return messageIds
 }
 
-
 private func peersWithNewMessagesFromUpdateGroups(_ groups: [UpdateGroup]) -> Set<PeerId> {
     var peerIds = Set<PeerId>()
     
@@ -271,6 +283,29 @@ private func peersWithNewMessagesFromUpdateGroups(_ groups: [UpdateGroup]) -> Se
     }
     
     return peerIds
+}
+
+private func locallyGeneratedMessageTimestampsFromUpdateGroups(_ groups: [UpdateGroup]) -> [PeerId: [(MessageId.Namespace, Int32)]] {
+    var messageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]] = [:]
+    for group in groups {
+        for update in group.updates {
+            switch update {
+                case let .updateServiceNotification(_, date, _, _, _, _):
+                    if let date = date {
+                        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 777000)
+                        if messageTimestamps[peerId] == nil {
+                            messageTimestamps[peerId] = [(Namespaces.Message.Local, date)]
+                        } else {
+                            messageTimestamps[peerId]!.append((Namespaces.Message.Local, date))
+                        }
+                    }
+                default:
+                    break
+            }
+        }
+    }
+    
+    return messageTimestamps
 }
 
 private func peerIdsFromDifference(_ difference: Api.updates.Difference) -> Set<PeerId> {
@@ -390,7 +425,43 @@ private func peersWithNewMessagesFromDifference(_ difference: Api.updates.Differ
     return peerIds
 }
 
-private func initialStateWithPeerIds(_ modifier: Modifier, peerIds: Set<PeerId>, associatedMessageIds: Set<MessageId>, peerIdsWithNewMessages: Set<PeerId>) -> MutableState {
+private func locallyGeneratedMessageTimestampsFromDifference(_ difference: Api.updates.Difference) -> [PeerId: [(MessageId.Namespace, Int32)]] {
+    var messageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]] = [:]
+    
+    var otherUpdates: [Api.Update]?
+    switch difference {
+        case let .difference(_, _, apiOtherUpdates, _, _, _):
+            otherUpdates = apiOtherUpdates
+        case .differenceEmpty:
+            break
+        case let .differenceSlice(_, _, apiOtherUpdates, _, _, _):
+            otherUpdates = apiOtherUpdates
+        case .differenceTooLong:
+            break
+    }
+    
+    if let otherUpdates = otherUpdates {
+        for update in otherUpdates {
+            switch update {
+                case let .updateServiceNotification(_, date, _, _, _, _):
+                    if let date = date {
+                        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 777000)
+                        if messageTimestamps[peerId] == nil {
+                            messageTimestamps[peerId] = [(Namespaces.Message.Local, date)]
+                        } else {
+                            messageTimestamps[peerId]!.append((Namespaces.Message.Local, date))
+                        }
+                    }
+                default:
+                    break
+            }
+        }
+    }
+    
+    return messageTimestamps
+}
+
+private func initialStateWithPeerIds(_ modifier: Modifier, peerIds: Set<PeerId>, associatedMessageIds: Set<MessageId>, peerIdsWithNewMessages: Set<PeerId>, locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]) -> MutableState {
     var peers: [PeerId: Peer] = [:]
     var channelStates: [PeerId: ChannelState] = [:]
     
@@ -407,6 +478,20 @@ private func initialStateWithPeerIds(_ modifier: Modifier, peerIds: Set<PeerId>,
     }
     
     let storedMessages = modifier.filterStoredMessageIds(associatedMessageIds)
+    var storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>] = [:]
+    if !locallyGeneratedMessageTimestamps.isEmpty {
+        for (peerId, namespacesAndTimestamps) in locallyGeneratedMessageTimestamps {
+            for (namespace, timestamp) in namespacesAndTimestamps {
+                if let messageId = modifier.storedMessageId(peerId: peerId, namespace: namespace, timestamp: timestamp) {
+                    if storedMessagesByPeerIdAndTimestamp[peerId] == nil {
+                        storedMessagesByPeerIdAndTimestamp[peerId] = Set([MessageIndex(id: messageId, timestamp: timestamp)])
+                    } else {
+                        storedMessagesByPeerIdAndTimestamp[peerId]!.insert(MessageIndex(id: messageId, timestamp: timestamp))
+                    }
+                }
+            }
+        }
+    }
     
     var peerNotificationSettings: [PeerId: PeerNotificationSettings] = [:]
     for peerId in peerIdsWithNewMessages {
@@ -415,7 +500,7 @@ private func initialStateWithPeerIds(_ modifier: Modifier, peerIds: Set<PeerId>,
         }
     }
     
-    return MutableState(initialState: InitialState(state: (modifier.getState() as? AuthorizedAccountState)!.state!, peerIds: peerIds, messageIds: associatedMessageIds, peerIdsWithNewMessages: peerIdsWithNewMessages, channelStates: channelStates, peerNotificationSettings: peerNotificationSettings), initialPeers: peers, initialStoredMessages: storedMessages)
+    return MutableState(initialState: InitialState(state: (modifier.getState() as? AuthorizedAccountState)!.state!, peerIds: peerIds, messageIds: associatedMessageIds, peerIdsWithNewMessages: peerIdsWithNewMessages, channelStates: channelStates, peerNotificationSettings: peerNotificationSettings, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestamps), initialPeers: peers, initialStoredMessages: storedMessages, storedMessagesByPeerIdAndTimestamp: storedMessagesByPeerIdAndTimestamp)
 }
 
 private func initialStateWithUpdateGroups(_ account: Account, groups: [UpdateGroup]) -> Signal<MutableState, NoError> {
@@ -424,7 +509,7 @@ private func initialStateWithUpdateGroups(_ account: Account, groups: [UpdateGro
         let associatedMessageIds = associatedMessageIdsFromUpdateGroups(groups)
         let peerIdsWithNewMessages = peersWithNewMessagesFromUpdateGroups(groups)
         
-        return initialStateWithPeerIds(modifier, peerIds: peerIds, associatedMessageIds: associatedMessageIds, peerIdsWithNewMessages: peerIdsWithNewMessages)
+        return initialStateWithPeerIds(modifier, peerIds: peerIds, associatedMessageIds: associatedMessageIds, peerIdsWithNewMessages: peerIdsWithNewMessages, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromUpdateGroups(groups))
     }
 }
 
@@ -433,7 +518,7 @@ private func initialStateWithDifference(_ account: Account, difference: Api.upda
         let peerIds = peerIdsFromDifference(difference)
         let associatedMessageIds = associatedMessageIdsFromDifference(difference)
         let peerIdsWithNewMessages = peersWithNewMessagesFromDifference(difference)
-        return initialStateWithPeerIds(modifier, peerIds: peerIds, associatedMessageIds: associatedMessageIds, peerIdsWithNewMessages: peerIdsWithNewMessages)
+        return initialStateWithPeerIds(modifier, peerIds: peerIds, associatedMessageIds: associatedMessageIds, peerIdsWithNewMessages: peerIdsWithNewMessages, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromDifference(difference))
     }
 }
 
@@ -593,6 +678,11 @@ private func finalStateWithDifference(account: Account, state: MutableState, dif
     updatedState.mergeUsers(users)
     
     for message in messages {
+        if let preCachedResources = message.preCachedResources {
+            for (resource, data) in preCachedResources {
+                updatedState.addPreCachedResource(resource, data: data)
+            }
+        }
         if let message = StoreMessage(apiMessage: message) {
             updatedState.addMessages([message], location: .UpperHistoryBlock)
         }
@@ -715,6 +805,11 @@ private func finalStateWithUpdates(account: Account, state: MutableState, update
                     if previousState.pts >= pts {
                         //trace("State", what: "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) skip old delete update")
                     } else if previousState.pts + ptsCount == pts {
+                        if let preCachedResources = apiMessage.preCachedResources {
+                            for (resource, data) in preCachedResources {
+                                updatedState.addPreCachedResource(resource, data: data)
+                            }
+                        }
                         updatedState.editMessage(messageId, message: message)
                         updatedState.updateChannelState(peerId, state: previousState.setPts(pts))
                     } else {
@@ -737,14 +832,24 @@ private func finalStateWithUpdates(account: Account, state: MutableState, update
                 updatedState.deleteMessagesWithGlobalIds(messages)
             case let .updateEditMessage(apiMessage, _, _):
                 if let message = StoreMessage(apiMessage: apiMessage), case let .Id(messageId) = message.id {
+                    if let preCachedResources = apiMessage.preCachedResources {
+                        for (resource, data) in preCachedResources {
+                            updatedState.addPreCachedResource(resource, data: data)
+                        }
+                    }
                     updatedState.editMessage(messageId, message: message)
                 }
-            case let .updateNewChannelMessage(message, pts, ptsCount):
-                if let message = StoreMessage(apiMessage: message) {
+            case let .updateNewChannelMessage(apiMessage, pts, ptsCount):
+                if let message = StoreMessage(apiMessage: apiMessage) {
                     if let previousState = updatedState.channelStates[message.id.peerId] {
                         if previousState.pts >= pts {
                             //trace("State", what: "channel \(message.id.peerId) (\((updatedState.peers[message.id.peerId] as? TelegramChannel)?.title ?? "nil")) skip old message \(message.id) (\(message.text))")
                         } else if previousState.pts + ptsCount == pts {
+                            if let preCachedResources = apiMessage.preCachedResources {
+                                for (resource, data) in preCachedResources {
+                                    updatedState.addPreCachedResource(resource, data: data)
+                                }
+                            }
                             updatedState.addMessages([message], location: .UpperHistoryBlock)
                             updatedState.updateChannelState(message.id.peerId, state: previousState.setPts(pts))
                         } else {
@@ -762,10 +867,52 @@ private func finalStateWithUpdates(account: Account, state: MutableState, update
                         }
                     }
                 }
-            case let .updateNewMessage(message, _, _):
-                if let message = StoreMessage(apiMessage: message) {
+            case let .updateNewMessage(apiMessage, _, _):
+                if let message = StoreMessage(apiMessage: apiMessage) {
+                    if let preCachedResources = apiMessage.preCachedResources {
+                        for (resource, data) in preCachedResources {
+                            updatedState.addPreCachedResource(resource, data: data)
+                        }
+                    }
                     updatedState.addMessages([message], location: .UpperHistoryBlock)
                 }
+            case let .updateServiceNotification(flags, date, type, text, media, entities):
+                if let date = date {
+                    let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 777000)
+                    
+                    var alreadyStored = false
+                    if let storedMessages = updatedState.storedMessagesByPeerIdAndTimestamp[peerId] {
+                        for index in storedMessages {
+                            if index.timestamp == date {
+                                alreadyStored = true
+                                break
+                            }
+                        }
+                    }
+                    
+                    if alreadyStored {
+                        trace("State", what: "skipping message at \(date) for \(peerId): already stored")
+                    } else {
+                        var attributes: [MessageAttribute] = []
+                        if !entities.isEmpty {
+                            attributes.append(TextEntitiesMessageAttribute(entities: messageTextEntitiesFromApiEntities(entities)))
+                        }
+                        var messageText = text
+                        var medias: [Media] = []
+                        
+                        let (mediaText, mediaValue) = textAndMediaFromApiMedia(media)
+                        if let mediaText = mediaText {
+                            messageText = mediaText
+                        }
+                        if let mediaValue = mediaValue {
+                            medias.append(mediaValue)
+                        }
+                        
+                        let message = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, timestamp: date, flags: [.Incoming], tags: [], forwardInfo: nil, authorId: peerId, text: messageText, attributes: attributes, media: [])
+                        updatedState.addMessages([message], location: .UpperHistoryBlock)
+                    }
+                }
+                break
             case let .updateReadChannelInbox(channelId, maxId):
                 updatedState.readInbox(MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: maxId))
             case let .updateReadChannelOutbox(channelId, maxId):
@@ -989,8 +1136,13 @@ private func pollChannel(_ account: Account, peer: Peer, state: MutableState) ->
                         updatedState.mergeChats(chats)
                         updatedState.mergeUsers(users)
                         
-                        for message in newMessages {
-                            if let message = StoreMessage(apiMessage: message) {
+                        for apiMessage in newMessages {
+                            if let message = StoreMessage(apiMessage: apiMessage) {
+                                if let preCachedResources = apiMessage.preCachedResources {
+                                    for (resource, data) in preCachedResources {
+                                        updatedState.addPreCachedResource(resource, data: data)
+                                    }
+                                }
                                 updatedState.addMessages([message], location: .UpperHistoryBlock)
                             }
                         }
@@ -1025,8 +1177,14 @@ private func pollChannel(_ account: Account, peer: Peer, state: MutableState) ->
                         
                         updatedState.addHole(MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32.max))
                     
-                        for message in messages {
-                            if let message = StoreMessage(apiMessage: message) {
+                        for apiMessage in messages {
+                            if let message = StoreMessage(apiMessage: apiMessage) {
+                                if let preCachedResources = apiMessage.preCachedResources {
+                                    for (resource, data) in preCachedResources {
+                                        updatedState.addPreCachedResource(resource, data: data)
+                                    }
+                                }
+                                
                                 let location: AddMessagesLocation
                                 if case let .Id(id) = message.id, id.id == topMessage {
                                     location = .UpperHistoryBlock
@@ -1269,6 +1427,11 @@ private func pollDifference(_ account: Account) -> Signal<Void, NoError> {
                             } else {
                                 return finalStateWithDifference(account: account, state: state, difference: difference)
                                     |> mapToSignal { finalState -> Signal<Void, NoError> in
+                                        if !finalState.state.preCachedResources.isEmpty {
+                                            for (resource, data) in finalState.state.preCachedResources {
+                                                account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                                            }
+                                        }
                                         return account.postbox.modify { modifier -> Signal<Void, NoError> in
                                             if replayFinalState(modifier, finalState: finalState.state) {
                                                 if case .differenceSlice = difference {
@@ -1451,6 +1614,12 @@ public final class StateManager {
                                         |> mapToSignal { state in
                                             return finalStateWithUpdateGroups(account, state: state, groups: groups)
                                                 |> mapToSignal { finalState in
+                                                    if !finalState.state.preCachedResources.isEmpty {
+                                                        for (resource, data) in finalState.state.preCachedResources {
+                                                            account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                                                        }
+                                                    }
+                                                    
                                                     return account.postbox.modify { modifier -> Bool in
                                                         return replayFinalState(modifier, finalState: finalState.state)
                                                     } |> deliverOn(stateQueue) |> mapToSignal { [weak strongSelf] result in

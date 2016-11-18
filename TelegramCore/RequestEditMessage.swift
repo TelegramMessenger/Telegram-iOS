@@ -30,8 +30,8 @@ public func requestEditMessage(account: Account, messageId: MessageId, text: Str
                     }
                     |> mapToSignal { result -> Signal<Bool, NoError> in
                         if let result = result {
-                            return .single(true)
                             account.stateManager.addUpdates(result)
+                            return .single(true)
                         } else {
                             return .single(false)
                         }

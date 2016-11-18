@@ -5,6 +5,39 @@ import Foundation
     import Postbox
 #endif
 
+extension Api.MessageMedia {
+    var preCachedResources: [(MediaResource, Data)]? {
+        switch self {
+            case let .messageMediaPhoto(photo, _):
+                switch photo {
+                    case let .photo(_, _, _, _, sizes):
+                        for size in sizes {
+                            switch size {
+                                case let .photoCachedSize(_, location, _, _, bytes):
+                                    switch location {
+                                        case let .fileLocation(dcId, volumeId, localId, secret):
+                                            let data = bytes.makeData()
+                                            let resource = CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: data.count)
+                                            return [(resource, data)]
+                                        default:
+                                            break
+                                    }
+                                default:
+                                    break
+                            }
+                        }
+                        return nil
+                    default:
+                        return nil
+                }
+            case let .messageMediaDocument(document, _):
+                return nil
+            default:
+                return nil
+        }
+    }
+}
+
 extension Api.Message {
     var rawId: Int32 {
         switch self {
@@ -54,6 +87,15 @@ extension Api.Message {
             case let .messageService(_, _, _, _, _, date, _):
                 return date
             case .messageEmpty:
+                return nil
+        }
+    }
+    
+    var preCachedResources: [(MediaResource, Data)]? {
+        switch self {
+            case let .message(_, _, _, _, _, _, _, _, _, media, _, _, _, _):
+                return media?.preCachedResources
+            default:
                 return nil
         }
     }
