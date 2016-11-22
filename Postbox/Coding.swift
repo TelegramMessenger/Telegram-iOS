@@ -31,6 +31,10 @@ public func declareEncodable(_ type: Any.Type, f: @escaping(Decoder) -> Coding) 
     typeStore.dict[murMurHashString32("\(type)")] = f
 }
 
+public func persistentHash32(_ string: String) -> Int32 {
+    return murMurHashString32(string)
+}
+
 private let emptyMemory = malloc(1)!
 
 public class MemoryBuffer: Equatable, CustomStringConvertible {
