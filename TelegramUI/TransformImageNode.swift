@@ -42,12 +42,16 @@ public class TransformImageNode: ASDisplayNode {
         self.disposable.dispose()
     }
     
-    func setSignal(account: Account, signal: Signal<(TransformImageArguments) -> DrawingContext, NoError>, dispatchOnDisplayLink: Bool = true) {
+    func setSignal(account: Account, signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>, dispatchOnDisplayLink: Bool = true) {
         let argumentsPromise = self.argumentsPromise
         
         let result = combineLatest(signal, argumentsPromise.get()) |> deliverOn(Queue.concurrentDefaultQueue() /*account.graphicsThreadPool*/) |> mapToThrottled { transform, arguments -> Signal<UIImage?, NoError> in
             return deferred {
-                return Signal<UIImage?, NoError>.single(transform(arguments).generateImage())
+                if let context = transform(arguments) {
+                    return Signal<UIImage?, NoError>.single(context.generateImage())
+                } else {
+                    return Signal<UIImage?, NoError>.single(nil)
+                }
             }
         }
         

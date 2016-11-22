@@ -55,6 +55,6 @@ class ChatListEmptyItemNode: ListViewItemNode {
     }
     
     func updateItemPosition(first: Bool, last: Bool) {
-        self.insets = UIEdgeInsets(top: first ? 4.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0)
+        self.insets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
     }
 }

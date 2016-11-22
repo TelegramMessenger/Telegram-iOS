@@ -162,13 +162,23 @@ class LegacyController: ViewController {
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationBar.frame.maxY, transition: transition)
     }
     
-    func dismiss() {
+    public func dismiss() {
         switch self.presentation {
             case .modal:
                 self.controllerNode.animateModalOut { [weak self] in
+                    if let controller = self?.legacyController as? TGViewController {
+                        controller.didDismiss()
+                    } else if let controller = self?.legacyController as? TGNavigationController {
+                        controller.didDismiss()
+                    }
                     self?.presentingViewController?.dismiss(animated: false, completion: nil)
                 }
             case .custom:
+                if let controller = self.legacyController as? TGViewController {
+                    controller.didDismiss()
+                } else if let controller = self.legacyController as? TGNavigationController {
+                    controller.didDismiss()
+                }
                 self.presentingViewController?.dismiss(animated: false, completion: nil)
         }
     }

@@ -41,7 +41,7 @@ final class ChatMessageDateHeader: ListViewItemHeader {
 private func backgroundImage(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 26.0, height: 26.0), contextGenerator: { size, context -> Void in
         context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(UIColor(0x748391, 0.45).cgColor)
+        context.setFillColor(color.cgColor)
         context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
     })?.stretchableImage(withLeftCapWidth: 13, topCapHeight: 13)
 }
@@ -66,6 +66,7 @@ private let months: [String] = [
 final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     let labelNode: TextNode
     let backgroundNode: ASImageNode
+    let stickBackgroundNode: ASImageNode
     
     private let timestamp: Int32
     
@@ -84,12 +85,19 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.backgroundNode.displayWithoutProcessing = true
         self.backgroundNode.displaysAsynchronously = false
         
+        self.stickBackgroundNode = ASImageNode()
+        self.stickBackgroundNode.isLayerBacked = true
+        self.stickBackgroundNode.displayWithoutProcessing = true
+        self.stickBackgroundNode.displaysAsynchronously = false
+        
         super.init(dynamicBounce: true)
         
         self.isLayerBacked = true
         self.transform = CATransform3DMakeRotation(CGFloat(M_PI), 0.0, 0.0, 1.0)
         
-        self.backgroundNode.image = backgroundImage(color: UIColor(0x007ee5))
+        self.backgroundNode.image = backgroundImage(color: UIColor(0x748391, 0.45))
+        self.stickBackgroundNode.image = backgroundImage(color: UIColor(0x939fab, 0.5))
+        self.backgroundNode.addSubnode(self.stickBackgroundNode)
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.labelNode)
         
@@ -129,12 +137,15 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         let backgroundSize = CGSize(width: size.width + 8.0 + 8.0, height: 26.0)
         
         let backgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((bounds.size.width - backgroundSize.width) / 2.0), y: (34.0 - 26.0) / 2.0), size: backgroundSize)
+        self.stickBackgroundNode.frame = CGRect(origin: CGPoint(), size: backgroundFrame.size)
         self.backgroundNode.frame = backgroundFrame
         self.labelNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + 8.0, y: backgroundFrame.origin.y + floorToScreenPixels((backgroundSize.height - size.height) / 2.0) - 1.0), size: size)
     }
     
     override func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {
         if !self.stickDistanceFactor.isEqual(to: factor) {
+            self.stickBackgroundNode.alpha = factor
+            
             let wasZero = self.stickDistanceFactor < 0.5
             let isZero = factor < 0.5
             self.stickDistanceFactor = factor

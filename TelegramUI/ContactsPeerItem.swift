@@ -187,10 +187,6 @@ class ContactsPeerItemNode: ListViewItemNode {
         super.setHighlighted(highlighted, animated: animated)
         
         if highlighted {
-            /*self.contentNode.displaysAsynchronously = false
-            self.contentNode.backgroundColor = UIColor.clear
-            self.contentNode.isOpaque = false*/
-            
             self.highlightedBackgroundNode.alpha = 1.0
             if self.highlightedBackgroundNode.supernode == nil {
                 self.insertSubnode(self.highlightedBackgroundNode, aboveSubnode: self.separatorNode)
@@ -202,18 +198,12 @@ class ContactsPeerItemNode: ListViewItemNode {
                         if let strongSelf = self {
                             if completed {
                                 strongSelf.highlightedBackgroundNode.removeFromSupernode()
-                                /*strongSelf.contentNode.backgroundColor = UIColor.white
-                                strongSelf.contentNode.isOpaque = true
-                                strongSelf.contentNode.displaysAsynchronously = true*/
                             }
                         }
-                        })
+                    })
                     self.highlightedBackgroundNode.alpha = 0.0
                 } else {
                     self.highlightedBackgroundNode.removeFromSupernode()
-                    /*self.contentNode.backgroundColor = UIColor.white
-                    self.contentNode.isOpaque = true
-                    self.contentNode.displaysAsynchronously = true*/
                 }
             }
         }

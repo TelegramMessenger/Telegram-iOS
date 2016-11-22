@@ -1,0 +1,136 @@
+import Foundation
+import SwiftSignalKit
+import TelegramCore
+import Postbox
+
+func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentQuery: ChatPresentationInputQuery?) -> (ChatPresentationInputQuery?, Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError>)? {
+    if let inputQuery = inputContextQueryForChatPresentationIntefaceState(chatPresentationInterfaceState, account: account) {
+        if inputQuery == currentQuery {
+            return nil
+        } else {
+            switch inputQuery {
+                case let .hashtag(query):
+                    /*var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .complete()
+                    if let currentQuery = currentQuery {
+                        switch currentQuery {
+                            case .hashtag:
+                                break
+                            default:
+                                signal = .single({ _ in return nil })
+                        }
+                    }
+                    
+                    let hashtags: Signal<ChatPresentationInputQueryResult?, NoError> = .single(.hashtags((0 ..< 3).map { "tag\($0)" }))
+                    
+                    return (inputQuery, signal |> then(hashtags))*/
+                    return (nil, .single({ _ in return nil }))
+                case let .mention(query):
+                    let normalizedQuery = query.lowercased()
+                    
+                    if let peer = chatPresentationInterfaceState.peer {
+                        var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .complete()
+                        if let currentQuery = currentQuery {
+                            switch currentQuery {
+                                case .mention:
+                                    break
+                                default:
+                                    signal = .single({ _ in return nil })
+                            }
+                        }
+                        
+                        let participants = peerParticipants(account: account, id: peer.id)
+                            |> map { peers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+                                let filteredPeers = peers.filter { peer in
+                                    if peer.indexName.match(query: normalizedQuery) {
+                                        return true
+                                    }
+                                    if let addressName = peer.addressName, addressName.lowercased().hasPrefix(normalizedQuery) {
+                                        return true
+                                    }
+                                    return false
+                                }
+                                let sortedPeers = filteredPeers.sorted(by: { lhs, rhs in
+                                    let result = lhs.indexName.indexName(.lastNameFirst).compare(rhs.indexName.indexName(.lastNameFirst))
+                                    return result == .orderedAscending
+                                })
+                                return { _ in return .mentions(sortedPeers) }
+                            }
+                        
+                        return (inputQuery, signal |> then(participants))
+                    } else {
+                        return (nil, .single({ _ in return nil }))
+                    }
+                case let .command(query):
+                    return (nil, .single({ _ in return nil }))
+                case let .contextRequest(addressName, query):
+                    guard let chatPeer = chatPresentationInterfaceState.peer else {
+                        return (nil, .single({ _ in return nil }))
+                    }
+                    
+                    var delayRequest = true
+                    var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .complete()
+                    if let currentQuery = currentQuery {
+                        switch currentQuery {
+                            case let .contextRequest(currentAddressName, currentContextQuery) where currentAddressName == addressName:
+                                if currentContextQuery.isEmpty != query.isEmpty {
+                                    delayRequest = false
+                                }
+                            default:
+                                delayRequest = false
+                                signal = .single({ _ in return nil })
+                        }
+                    }
+                    
+                    let contextBot = resolvePeerByName(account: account, name: addressName)
+                        |> mapToSignal { peerId -> Signal<Peer?, NoError> in
+                            if let peerId = peerId {
+                                return account.postbox.loadedPeerWithId(peerId)
+                                    |> map { peer -> Peer? in
+                                        return peer
+                                    }
+                                    |> take(1)
+                            } else {
+                                return .single(nil)
+                            }
+                        }
+                        |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> in
+                            if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
+                                let contextResults = requestChatContextResults(account: account, botId: user.id, peerId: chatPeer.id, query: query, offset: "")
+                                    |> map { results -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+                                        return { _ in
+                                            return .contextRequestResult(user, results)
+                                        }
+                                    }
+                                
+                                let botResult: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .single({ previousResult in
+                                    var passthroughPreviousResult: ChatContextResultCollection?
+                                    if let previousResult = previousResult {
+                                        if case let .contextRequestResult(previousUser, previousResults) = previousResult {
+                                            if previousUser.id == user.id {
+                                                passthroughPreviousResult = previousResults
+                                            }
+                                        }
+                                    }
+                                    return .contextRequestResult(user, passthroughPreviousResult)
+                                })
+                                
+                                let maybeDelayedContextResults: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError>
+                                if delayRequest {
+                                    maybeDelayedContextResults = contextResults |> delay(0.4, queue: Queue.concurrentDefaultQueue())
+                                } else {
+                                    maybeDelayedContextResults = contextResults
+                                }
+                                
+                                return botResult |> then(maybeDelayedContextResults)
+                            } else {
+                                return .single({ _ in return nil })
+                            }
+                        }
+                    
+                    return (inputQuery, signal |> then(contextBot))
+            }
+        }
+    } else {
+        return (nil, .single({ _ in return nil }))
+    }
+}

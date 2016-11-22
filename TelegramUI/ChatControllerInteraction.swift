@@ -4,13 +4,13 @@ import AsyncDisplayKit
 import TelegramCore
 
 public enum ChatControllerInteractionNavigateToPeer {
-    case chat
+    case chat(textInputState: ChatTextInputState?)
     case info
 }
 
 public final class ChatControllerInteraction {
     let openMessage: (MessageId) -> Void
-    let openPeer: (PeerId, ChatControllerInteractionNavigateToPeer) -> Void
+    let openPeer: (PeerId?, ChatControllerInteractionNavigateToPeer) -> Void
     let openPeerMention: (String) -> Void
     let openMessageContextMenu: (MessageId, ASDisplayNode, CGRect) -> Void
     let navigateToMessage: (MessageId, MessageId) -> Void
@@ -26,7 +26,7 @@ public final class ChatControllerInteraction {
     let shareAccountContact: () -> Void
     let sendBotCommand: (MessageId, String) -> Void
     
-    public init(openMessage: @escaping (MessageId) -> Void, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, openPeerMention: @escaping (String) -> Void, openMessageContextMenu: @escaping (MessageId, ASDisplayNode, CGRect) -> Void, navigateToMessage: @escaping (MessageId, MessageId) -> Void, clickThroughMessage: @escaping () -> Void, toggleMessageSelection: @escaping (MessageId) -> Void, sendMessage: @escaping (String) -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void, requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?) -> Void, openUrl: @escaping (String) -> Void, shareCurrentLocation: @escaping () -> Void, shareAccountContact: @escaping () -> Void, sendBotCommand: @escaping (MessageId, String) -> Void) {
+    public init(openMessage: @escaping (MessageId) -> Void, openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer) -> Void, openPeerMention: @escaping (String) -> Void, openMessageContextMenu: @escaping (MessageId, ASDisplayNode, CGRect) -> Void, navigateToMessage: @escaping (MessageId, MessageId) -> Void, clickThroughMessage: @escaping () -> Void, toggleMessageSelection: @escaping (MessageId) -> Void, sendMessage: @escaping (String) -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void, requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?) -> Void, openUrl: @escaping (String) -> Void, shareCurrentLocation: @escaping () -> Void, shareAccountContact: @escaping () -> Void, sendBotCommand: @escaping (MessageId, String) -> Void) {
         self.openMessage = openMessage
         self.openPeer = openPeer
         self.openPeerMention = openPeerMention

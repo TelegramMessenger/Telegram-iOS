@@ -144,7 +144,15 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                 for attribute in file.attributes {
                     if case let .Audio(_, _, title, performer, _) = attribute {
                         candidateTitleString = NSAttributedString(string: title ?? "Unknown Track", font: titleFont, textColor: incoming ? incomingTitleColor : outgoingTitleColor)
-                        candidateDescriptionString = NSAttributedString(string: performer ?? dataSizeString(file.size), font: descriptionFont, textColor:incoming ? incomingDescriptionColor : outgoingDescriptionColor)
+                        let descriptionText: String
+                        if let performer = performer {
+                            descriptionText = performer
+                        } else if let size = file.size {
+                            descriptionText = dataSizeString(size)
+                        } else {
+                            descriptionText = ""
+                        }
+                        candidateDescriptionString = NSAttributedString(string: descriptionText, font: descriptionFont, textColor:incoming ? incomingDescriptionColor : outgoingDescriptionColor)
                         break
                     }
                 }
@@ -161,7 +169,13 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                 if let candidateDescriptionString = candidateDescriptionString {
                     descriptionString = candidateDescriptionString
                 } else {
-                    descriptionString = NSAttributedString(string: dataSizeString(file.size), font: descriptionFont, textColor:incoming ? incomingDescriptionColor : outgoingDescriptionColor)
+                    let descriptionText: String
+                    if let size = file.size {
+                        descriptionText = dataSizeString(size)
+                    } else {
+                        descriptionText = ""
+                    }
+                    descriptionString = NSAttributedString(string: descriptionText, font: descriptionFont, textColor:incoming ? incomingDescriptionColor : outgoingDescriptionColor)
                 }
                 
                 let textConstrainedSize = CGSize(width: constrainedSize.width - 44.0 - 8.0, height: constrainedSize.height)

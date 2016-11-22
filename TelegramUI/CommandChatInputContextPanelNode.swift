@@ -4,48 +4,50 @@ import Postbox
 import TelegramCore
 import Display
 
-private struct HashtagChatInputContextPanelEntry: Equatable, Comparable, Identifiable {
+private struct CommandChatInputContextPanelEntry: Equatable, Comparable, Identifiable {
     let index: Int
+    let peer: Peer
+    let command: String
     let text: String
     
-    var stableId: Int {
-        return self.text.hashValue
+    var stableId: Int64 {
+        return self.peer.id.toInt64()
     }
     
-    static func ==(lhs: HashtagChatInputContextPanelEntry, rhs: HashtagChatInputContextPanelEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.text == rhs.text
+    static func ==(lhs: CommandChatInputContextPanelEntry, rhs: CommandChatInputContextPanelEntry) -> Bool {
+        return lhs.index == rhs.index && lhs.peer.isEqual(rhs.peer) && lhs.command == rhs.command && lhs.text == rhs.text
     }
     
-    static func <(lhs: HashtagChatInputContextPanelEntry, rhs: HashtagChatInputContextPanelEntry) -> Bool {
+    static func <(lhs: CommandChatInputContextPanelEntry, rhs: CommandChatInputContextPanelEntry) -> Bool {
         return lhs.index < rhs.index
     }
     
-    func item(hashtagSelected: @escaping (String) -> Void) -> ListViewItem {
-        return HashtagChatInputPanelItem(text: self.text, hashtagSelected: hashtagSelected)
+    func item(account: Account, peerSelected: @escaping (Peer) -> Void) -> ListViewItem {
+        return CommandChatInputPanelItem(account: account, peer: self.peer, peerSelected: peerSelected)
     }
 }
 
-private struct HashtagChatInputContextPanelTransition {
+private struct CommandChatInputContextPanelTransition {
     let deletions: [ListViewDeleteItem]
     let insertions: [ListViewInsertItem]
     let updates: [ListViewUpdateItem]
 }
 
-private func preparedTransition(from fromEntries: [HashtagChatInputContextPanelEntry], to toEntries: [HashtagChatInputContextPanelEntry], hashtagSelected: @escaping (String) -> Void) -> HashtagChatInputContextPanelTransition {
+private func preparedTransition(from fromEntries: [CommandChatInputContextPanelEntry], to toEntries: [CommandChatInputContextPanelEntry], account: Account, peerSelected: @escaping (Peer) -> Void) -> CommandChatInputContextPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(hashtagSelected: hashtagSelected), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(hashtagSelected: hashtagSelected), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, peerSelected: peerSelected), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, peerSelected: peerSelected), directionHint: nil) }
     
-    return HashtagChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates)
+    return CommandChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
 
-final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
+final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
     private let listView: ListView
-    private var currentEntries: [HashtagChatInputContextPanelEntry]?
+    private var currentEntries: [CommandChatInputContextPanelEntry]?
     
-    private var enqueuedTransitions: [(HashtagChatInputContextPanelTransition, Bool)] = []
+    private var enqueuedTransitions: [(CommandChatInputContextPanelTransition, Bool)] = []
     private var hasValidLayout = false
     
     override init(account: Account) {
@@ -63,37 +65,33 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         self.addSubnode(self.listView)
     }
     
-    func updateResults(_ results: [String]) {
-        var entries: [HashtagChatInputContextPanelEntry] = []
+    func updateResults(_ results: [(Peer, BotCommand)]) {
+        var entries: [CommandChatInputContextPanelEntry] = []
         var index = 0
-        var textSet = Set<Int>()
-        for text in results {
-            let textHash = text.hashValue
-            if textSet.contains(textHash) {
-                continue
-            }
-            textSet.insert(textHash)
-            entries.append(HashtagChatInputContextPanelEntry(index: index, text: text))
+        for (peer, command) in results {
+            entries.append(CommandChatInputContextPanelEntry(index: index, peer: peer, command: command.text, text: command.description))
             index += 1
         }
         
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, hashtagSelected: { [weak self] text in
+        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, peerSelected: { [weak self] peer in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 interfaceInteraction.updateTextInputState { textInputState in
                     if let (range, type, _) = textInputStateContextQueryRangeAndType(textInputState) {
                         var inputText = textInputState.inputText
                         
-                        let replacementText = text + " "
-                        inputText.replaceSubrange(range, with: replacementText)
-                        
-                        let utfLowerIndex = inputText.utf16.distance(from: inputText.utf16.startIndex, to: range.lowerBound.samePosition(in: inputText.utf16))
-                        
-                        let replacementLength = replacementText.utf16.distance(from: replacementText.utf16.startIndex, to: replacementText.utf16.endIndex)
-                        
-                        let utfUpperPosition = utfLowerIndex + replacementLength
-                        
-                        return ChatTextInputState(inputText: inputText, selectionRange: utfUpperPosition ..< utfUpperPosition)
+                        if let addressName = peer.addressName, !addressName.isEmpty {
+                            let replacementText = addressName + " "
+                            inputText.replaceSubrange(range, with: replacementText)
+                            
+                            let utfLowerIndex = inputText.utf16.distance(from: inputText.utf16.startIndex, to: range.lowerBound.samePosition(in: inputText.utf16))
+                            
+                            let replacementLength = replacementText.utf16.distance(from: replacementText.utf16.startIndex, to: replacementText.utf16.endIndex)
+                            
+                            let utfUpperPosition = utfLowerIndex + replacementLength
+                            
+                            return ChatTextInputState(inputText: inputText, selectionRange: utfUpperPosition ..< utfUpperPosition)
+                        }
                     }
                     return textInputState
                 }
@@ -103,7 +101,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         self.enqueueTransition(transition, firstTime: firstTime)
     }
     
-    private func enqueueTransition(_ transition: HashtagChatInputContextPanelTransition, firstTime: Bool) {
+    private func enqueueTransition(_ transition: CommandChatInputContextPanelTransition, firstTime: Bool) {
         enqueuedTransitions.append((transition, firstTime))
         
         if self.hasValidLayout {
@@ -122,7 +120,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
                 options.insert(.Synchronous)
                 options.insert(.LowLatency)
             } else {
-            //options.insert(.AnimateInsertion)
+                //options.insert(.AnimateInsertion)
             }
             self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateOpaqueState: nil, completion: { [weak self] _ in
                 if let strongSelf = self, firstTime {
@@ -150,16 +148,16 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         var duration: Double = 0.0
         var curve: UInt = 0
         switch transition {
-            case .immediate:
+        case .immediate:
+            break
+        case let .animated(animationDuration, animationCurve):
+            duration = animationDuration
+            switch animationCurve {
+            case .easeInOut:
                 break
-            case let .animated(animationDuration, animationCurve):
-                duration = animationDuration
-                    switch animationCurve {
-                    case .easeInOut:
-                        break
-                    case .spring:
-                        curve = 7
-                }
+            case .spring:
+                curve = 7
+            }
         }
         
         let listViewCurve: ListViewAnimationCurve

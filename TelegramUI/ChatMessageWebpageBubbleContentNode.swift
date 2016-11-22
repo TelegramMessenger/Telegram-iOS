@@ -88,7 +88,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             var textString: NSAttributedString?
             var inlineImageDimensions: CGSize?
             var inlineImageSize: CGSize?
-            var updateInlineImageSignal: Signal<(TransformImageArguments) -> DrawingContext, NoError>?
+            var updateInlineImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
             var textCutout: TextNodeCutout?
             var initialWidth: CGFloat = CGFloat.greatestFiniteMagnitude
             var refineContentImageLayout: ((CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageInteractiveMediaNode)))?

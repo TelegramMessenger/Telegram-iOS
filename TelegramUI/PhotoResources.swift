@@ -382,7 +382,7 @@ private func addCorners(_ context: DrawingContext, arguments: TransformImageArgu
     }
 }
 
-func chatMessagePhoto(account: Account, photo: TelegramMediaImage) -> Signal<(TransformImageArguments) -> DrawingContext, NoError> {
+func chatMessagePhoto(account: Account, photo: TelegramMediaImage) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatMessagePhotoDatas(account: account, photo: photo)
     
     return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
@@ -471,7 +471,7 @@ func chatMessagePhoto(account: Account, photo: TelegramMediaImage) -> Signal<(Tr
     }
 }
 
-func mediaGridMessagePhoto(account: Account, photo: TelegramMediaImage) -> Signal<(TransformImageArguments) -> DrawingContext, NoError> {
+func mediaGridMessagePhoto(account: Account, photo: TelegramMediaImage) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatMessagePhotoDatas(account: account, photo: photo, fullRepresentationSize: CGSize(width: 127.0, height: 127.0), autoFetchFullSize: true)
     
     return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
@@ -594,48 +594,48 @@ func chatWebpageSnippetPhotoData(account: Account, photo: TelegramMediaImage) ->
     }
 }
 
-func chatWebpageSnippetPhoto(account: Account, photo: TelegramMediaImage) -> Signal<(TransformImageArguments) -> DrawingContext, NoError> {
+func chatWebpageSnippetPhoto(account: Account, photo: TelegramMediaImage) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatWebpageSnippetPhotoData(account: account, photo: photo)
     
     return signal |> map { fullSizeData in
         return { arguments in
-            assertNotOnMainThread()
-            let context = DrawingContext(size: arguments.drawingSize, clear: true)
-            
-            let drawingRect = arguments.drawingRect
-            let fittedSize = arguments.imageSize.aspectFilled(arguments.boundingSize).fitted(arguments.imageSize)
-            let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
-            
             var fullSizeImage: CGImage?
             if let fullSizeData = fullSizeData {
                 let options = NSMutableDictionary()
-                options.setValue(max(fittedSize.width * context.scale, fittedSize.height * context.scale) as NSNumber, forKey: kCGImageSourceThumbnailMaxPixelSize as String)
-                options.setValue(true as NSNumber, forKey: kCGImageSourceCreateThumbnailFromImageAlways as String)
-                if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options as CFDictionary) {
+                if let imageSource = CGImageSourceCreateWithData(fullSizeData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, options as CFDictionary) {
                     fullSizeImage = image
                 }
             }
             
-            context.withFlippedContext { c in
-                c.setBlendMode(.copy)
-                if arguments.boundingSize.width > arguments.imageSize.width || arguments.boundingSize.height > arguments.imageSize.height {
-                    c.fill(arguments.drawingRect)
-                }
+            if let fullSizeImage = fullSizeImage {
+                let context = DrawingContext(size: arguments.drawingSize, clear: true)
                 
-                if let fullSizeImage = fullSizeImage {
+                let fittedSize = CGSize(width: fullSizeImage.width, height: fullSizeImage.height).aspectFilled(arguments.boundingSize)
+                let drawingRect = arguments.drawingRect
+                
+                let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+                
+                context.withFlippedContext { c in
+                    c.setBlendMode(.copy)
+                    if arguments.boundingSize.width > arguments.imageSize.width || arguments.boundingSize.height > arguments.imageSize.height {
+                        c.fill(arguments.drawingRect)
+                    }
+                    
                     c.interpolationQuality = .medium
                     c.draw(fullSizeImage, in: fittedRect)
                 }
+                
+                addCorners(context, arguments: arguments)
+                
+                return context
+            } else {
+                return nil
             }
-            
-            addCorners(context, arguments: arguments)
-            
-            return context
         }
     }
 }
 
-func chatMessageVideo(account: Account, video: TelegramMediaFile) -> Signal<(TransformImageArguments) -> DrawingContext, NoError> {
+func chatMessageVideo(account: Account, video: TelegramMediaFile) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatMessageFileDatas(account: account, file: video)
     
     return signal |> map { (thumbnailData, fullSizeDataAndPath, fullSizeComplete) in
@@ -731,7 +731,7 @@ func chatMessageVideo(account: Account, video: TelegramMediaFile) -> Signal<(Tra
     }
 }
 
-func chatMessageImageFile(account: Account, file: TelegramMediaFile, progressive: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext, NoError> {
+func chatMessageImageFile(account: Account, file: TelegramMediaFile, progressive: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatMessageFileDatas(account: account, file: file, progressive: progressive)
     
     return signal |> map { (thumbnailData, fullSizeDataAndPath, fullSizeComplete) in

@@ -58,7 +58,7 @@ final class ListMessageItem: ListViewItem {
     }
     
     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: ListViewItemNode, width: CGFloat, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping () -> Void) -> Void) {
-        if let node = node as? ListMessageFileItemNode {
+        if let node = node as? ListMessageNode {
             Queue.mainQueue().async {
                 node.setupItem(self)
                 
@@ -77,6 +77,8 @@ final class ListMessageItem: ListViewItem {
                     }
                 }
             }
+        } else {
+            assertionFailure()
         }
     }
     

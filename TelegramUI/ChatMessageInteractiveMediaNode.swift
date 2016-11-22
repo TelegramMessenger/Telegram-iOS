@@ -103,7 +103,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                     let drawingSize = nativeSize.fittedToWidthOrSmaller(boundingWidth)
                     let boundingSize = CGSize(width: max(boundingWidth, drawingSize.width), height: drawingSize.height).cropped(layoutConstants.image.maxDimensions)
                     
-                    var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext, NoError>?
+                    var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
                     var updatedStatusSignal: Signal<MediaResourceStatus, NoError>?
                     var updatedFetchControls: FetchControls?
                     

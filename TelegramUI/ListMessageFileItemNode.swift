@@ -239,7 +239,7 @@ final class ListMessageFileItemNode: ListMessageNode {
             var extensionText: NSAttributedString?
             
             var iconImageRepresentation: TelegramMediaImageRepresentation?
-            var updateIconImageSignal: Signal<(TransformImageArguments) -> DrawingContext, NoError>?
+            var updateIconImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
             var updatedStatusSignal: Signal<MediaResourceStatus, NoError>?
             var updatedFetchControls: FetchControls?
             
@@ -267,7 +267,14 @@ final class ListMessageFileItemNode: ListMessageNode {
                     
                     let dateString = dateFormatter.string(from: Date(timeIntervalSince1970: Double(item.message.timestamp)))
                     
-                    descriptionText = NSAttributedString(string: "\(dataSizeString(file.size)) • \(dateString)", font: descriptionFont, textColor: UIColor(0xa8a8a8))
+                    let descriptionString: String
+                    if let size = file.size {
+                        descriptionString = "\(dataSizeString(size)) • \(dateString)"
+                    } else {
+                        descriptionString = "\(dateString)"
+                    }
+                
+                    descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: UIColor(0xa8a8a8))
                     
                     break
                 }

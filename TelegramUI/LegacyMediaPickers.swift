@@ -19,9 +19,9 @@ func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, captionsE
     controller.shouldShowFileTipIfNeeded = showFileTooltip
 }
 
-func legacyAssetPicker() -> Signal<(@escaping (UIViewController) -> (() -> Void)) -> TGMediaAssetsController, NoError> {
+func legacyAssetPicker(fileMode: Bool) -> Signal<(@escaping (UIViewController) -> (() -> Void)) -> TGMediaAssetsController, NoError> {
     return Signal { subscriber in
-        let intent = TGMediaAssetsControllerSendMediaIntent
+        let intent = fileMode ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent
     
         if TGMediaAssetsLibrary.authorizationStatus() == TGMediaLibraryAuthorizationStatusNotDetermined {
             TGMediaAssetsLibrary.requestAuthorization(for: TGMediaAssetAnyType, completion: { (status, group) in
@@ -55,9 +55,15 @@ func legacyAssetPicker() -> Signal<(@escaping (UIViewController) -> (() -> Void)
     }
 }
 
-private enum LegacyAssetItem {
+private enum LegacyAssetData {
     case image(UIImage)
     case asset(PHAsset)
+    case tempFile(String)
+}
+
+private enum LegacyAssetItem {
+    case image(LegacyAssetData)
+    case file(LegacyAssetData, mimeType: String, name: String)
 }
 
 private final class LegacyAssetItemWrapper: NSObject {
@@ -76,13 +82,37 @@ func legacyAssetPickerItemGenerator() -> ((Any?, String?, String?) -> [AnyHashab
         if (dict["type"] as! NSString) == "editedPhoto" || (dict["type"] as! NSString) == "capturedPhoto" {
             let image = dict["image"] as! UIImage
             var result: [AnyHashable : Any] = [:]
-            result["item" as NSString] = LegacyAssetItemWrapper(item: .image(image))
+            result["item" as NSString] = LegacyAssetItemWrapper(item: .image(.image(image)))
             return result
         } else if (dict["type"] as! NSString) == "cloudPhoto" {
             let asset = dict["asset"] as! TGMediaAsset
+            var asFile = false
+            if let document = dict["document"] as? NSNumber, document.boolValue {
+                asFile = true
+            }
             var result: [AnyHashable : Any] = [:]
-            result["item" as NSString] = LegacyAssetItemWrapper(item: .asset(asset.backingAsset))
+            if asFile {
+                //result["item" as NSString] = LegacyAssetItemWrapper(item: .file(.asset(asset.backingAsset)))
+                return nil
+            } else {
+                result["item" as NSString] = LegacyAssetItemWrapper(item: .image(.asset(asset.backingAsset)))
+            }
             return result
+        } else if (dict["type"] as! NSString) == "file" {
+            if let tempFileUrl = dict["tempFileUrl"] as? URL {
+                var mimeType = "application/binary"
+                if let customMimeType = dict["mimeType"] as? String {
+                    mimeType = customMimeType
+                }
+                var name = "file"
+                if let customName = dict["fileName"] as? String {
+                    name = customName
+                }
+                
+                var result: [AnyHashable : Any] = [:]
+                result["item" as NSString] = LegacyAssetItemWrapper(item: .file(.tempFile(tempFileUrl.path), mimeType: mimeType, name: name))
+                return result
+            }
         }
         return nil
     }
@@ -96,30 +126,46 @@ func legacyAssetPickerEnqueueMessages(account: Account, peerId: PeerId, signals:
             for item in (anyValues as! NSArray) {
                 if let item = (item as? NSDictionary)?.object(forKey: "item") as? LegacyAssetItemWrapper {
                     switch item.item {
-                        case let .image(image):
-                            var randomId: Int64 = 0
-                            arc4random_buf(&randomId, 8)
-                            let tempFilePath = NSTemporaryDirectory() + "\(randomId).jpeg"
-                            let scaledSize = image.size.aspectFitted(CGSize(width: 1280.0, height: 1280.0))
-                            if let scaledImage = generateImage(scaledSize, contextGenerator: { size, context in
-                                context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
-                            }, opaque: true) {
-                                if let scaledImageData = UIImageJPEGRepresentation(image, 0.52) {
-                                    let _ = try? scaledImageData.write(to: URL(fileURLWithPath: tempFilePath))
-                                    let resource = LocalFileReferenceMediaResource(localFilePath: tempFilePath, randomId: randomId)
+                        case let .image(data):
+                            switch data {
+                                case let .image(image):
+                                    var randomId: Int64 = 0
+                                    arc4random_buf(&randomId, 8)
+                                    let tempFilePath = NSTemporaryDirectory() + "\(randomId).jpeg"
+                                    let scaledSize = image.size.aspectFitted(CGSize(width: 1280.0, height: 1280.0))
+                                    if let scaledImage = generateImage(scaledSize, contextGenerator: { size, context in
+                                        context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+                                    }, opaque: true) {
+                                        if let scaledImageData = UIImageJPEGRepresentation(image, 0.52) {
+                                            let _ = try? scaledImageData.write(to: URL(fileURLWithPath: tempFilePath))
+                                            let resource = LocalFileReferenceMediaResource(localFilePath: tempFilePath, randomId: randomId)
+                                            let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: scaledSize, resource: resource)])
+                                            messages.append(.message(text: "", attributes: [], media: media, replyToMessageId: nil))
+                                        }
+                                    }
+                                case let .asset(asset):
+                                    var randomId: Int64 = 0
+                                    arc4random_buf(&randomId, 8)
+                                    let size = CGSize(width: CGFloat(asset.pixelWidth), height: CGFloat(asset.pixelHeight))
+                                    let scaledSize = size.aspectFitted(CGSize(width: 1280.0, height: 1280.0))
+                                    let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier)
+                                    
                                     let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: scaledSize, resource: resource)])
-                                    messages.append(.message(text: "", media: media, replyToMessageId: nil))
-                                }
+                                    messages.append(.message(text: "", attributes: [], media: media, replyToMessageId: nil))
+                                case .tempFile:
+                                    break
                             }
-                        case let .asset(asset):
-                            var randomId: Int64 = 0
-                            arc4random_buf(&randomId, 8)
-                            let size = CGSize(width: CGFloat(asset.pixelWidth), height: CGFloat(asset.pixelHeight))
-                            let scaledSize = size.aspectFitted(CGSize(width: 1280.0, height: 1280.0))
-                            let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier)
-                            
-                            let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: scaledSize, resource: resource)])
-                            messages.append(.message(text: "", media: media, replyToMessageId: nil))
+                        case let .file(data, mimeType, name):
+                            switch data {
+                                case let .tempFile(path):
+                                    var randomId: Int64 = 0
+                                    arc4random_buf(&randomId, 8)
+                                    let resource = LocalFileReferenceMediaResource(localFilePath: path, randomId: randomId)
+                                    let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), resource: resource, previewRepresentations: [], mimeType: mimeType, size: nil, attributes: [.FileName(fileName: name)])
+                                    messages.append(.message(text: "", attributes: [], media: media, replyToMessageId: nil))
+                                default:
+                                    break
+                            }
                     }
                 }
             }

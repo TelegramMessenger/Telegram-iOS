@@ -3,105 +3,206 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import Display
-import SwiftSignalKit
 
-final class MentionChatInputContextPanelNode: ChatInputContextPanelNode, UITableViewDelegate, UITableViewDataSource {
-    private let tableView: UITableView
-    private let tableBackgroundView: UIView
+private struct MentionChatInputContextPanelEntry: Equatable, Comparable, Identifiable {
+    let index: Int
+    let peer: Peer
     
-    private var account: Account?
-    private var results: [Peer] = []
+    var stableId: Int64 {
+        return self.peer.id.toInt64()
+    }
     
-    private let disposable = MetaDisposable()
+    static func ==(lhs: MentionChatInputContextPanelEntry, rhs: MentionChatInputContextPanelEntry) -> Bool {
+        return lhs.index == rhs.index && lhs.peer.isEqual(rhs.peer)
+    }
     
-    override init() {
-        self.tableView = UITableView(frame: CGRect(), style: .plain)
-        self.tableBackgroundView = UIView()
-        self.tableBackgroundView.backgroundColor = UIColor.white
+    static func <(lhs: MentionChatInputContextPanelEntry, rhs: MentionChatInputContextPanelEntry) -> Bool {
+        return lhs.index < rhs.index
+    }
+    
+    func item(account: Account, peerSelected: @escaping (Peer) -> Void) -> ListViewItem {
+        return MentionChatInputPanelItem(account: account, peer: self.peer, peerSelected: peerSelected)
+    }
+}
+
+private struct CommandChatInputContextPanelTransition {
+    let deletions: [ListViewDeleteItem]
+    let insertions: [ListViewInsertItem]
+    let updates: [ListViewUpdateItem]
+}
+
+private func preparedTransition(from fromEntries: [MentionChatInputContextPanelEntry], to toEntries: [MentionChatInputContextPanelEntry], account: Account, peerSelected: @escaping (Peer) -> Void) -> CommandChatInputContextPanelTransition {
+    let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
+    
+    let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, peerSelected: peerSelected), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, peerSelected: peerSelected), directionHint: nil) }
+    
+    return CommandChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates)
+}
+
+final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
+    private let listView: ListView
+    private var currentEntries: [MentionChatInputContextPanelEntry]?
+    
+    private var enqueuedTransitions: [(CommandChatInputContextPanelTransition, Bool)] = []
+    private var hasValidLayout = false
+    
+    override init(account: Account) {
+        self.listView = ListView()
+        self.listView.isOpaque = false
+        self.listView.stackFromBottom = true
+        self.listView.stackFromBottomInsetItemFactor = 3.5
+        self.listView.limitHitTestToNodes = true
         
-        super.init()
+        super.init(account: account)
         
+        self.isOpaque = false
         self.clipsToBounds = true
         
-        self.tableView.dataSource = self
-        self.tableView.delegate = self
-        self.tableView.rowHeight = 42.0
-        self.tableView.showsVerticalScrollIndicator = false
-        self.tableView.backgroundColor = nil
-        self.tableView.isOpaque = false
-        self.tableView.separatorInset = UIEdgeInsets(top: 0.0, left: 61.0, bottom: 0.0, right: 0.0)
-        
-        self.view.addSubview(self.tableBackgroundView)
-        self.view.addSubview(self.tableView)
+        self.addSubnode(self.listView)
     }
     
-    deinit {
-        self.disposable.dispose()
-    }
-    
-    func setup(account: Account, peerId: PeerId, query: String) {
-        self.account = account
-        let signal = peerParticipants(account: account, id: peerId)
-            |> deliverOnMainQueue
-        
-        self.disposable.set(signal.start(next: { [weak self] peers in
-            if let strongSelf = self {
-                strongSelf.results = peers
-                strongSelf.tableView.reloadData()
-                strongSelf.updateTable(animated: true)
+    func updateResults(_ results: [Peer]) {
+        var entries: [MentionChatInputContextPanelEntry] = []
+        var index = 0
+        var peerIdSet = Set<Int64>()
+        for peer in results {
+            let peerId = peer.id.toInt64()
+            if peerIdSet.contains(peerId) {
+                continue
             }
-        }))
-    }
-    
-    private func updateTable(animated: Bool = false) {
-        let itemsHeight = CGFloat(self.results.count) * self.tableView.rowHeight
-        let minimalDisplayedItemsHeight = floor(self.tableView.rowHeight * 3.5)
-        let topInset = max(0.0, self.bounds.size.height - min(itemsHeight, minimalDisplayedItemsHeight))
-        
-        if animated {
-            self.layer.animateBounds(from: self.layer.bounds.offsetBy(dx: 0.0, dy: -self.layer.bounds.size.height), to: self.layer.bounds, duration: 0.45, timingFunction: kCAMediaTimingFunctionSpring)
+            peerIdSet.insert(peerId)
+            entries.append(MentionChatInputContextPanelEntry(index: index, peer: peer))
+            index += 1
         }
         
-        self.tableView.contentInset = UIEdgeInsets(top: topInset, left: 0.0, bottom: 0.0, right: 0.0)
-        self.tableView.contentOffset = CGPoint(x: 0.0, y: -topInset)
-        self.tableView.setNeedsLayout()
+        let firstTime = self.currentEntries == nil
+        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, peerSelected: { [weak self] peer in
+            if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
+                interfaceInteraction.updateTextInputState { textInputState in
+                    if let (range, type, _) = textInputStateContextQueryRangeAndType(textInputState) {
+                        var inputText = textInputState.inputText
+                        
+                        if let addressName = peer.addressName, !addressName.isEmpty {
+                            let replacementText = addressName + " "
+                            inputText.replaceSubrange(range, with: replacementText)
+                            
+                            let utfLowerIndex = inputText.utf16.distance(from: inputText.utf16.startIndex, to: range.lowerBound.samePosition(in: inputText.utf16))
+                            
+                            let replacementLength = replacementText.utf16.distance(from: replacementText.utf16.startIndex, to: replacementText.utf16.endIndex)
+                            
+                            let utfUpperPosition = utfLowerIndex + replacementLength
+                            
+                            return ChatTextInputState(inputText: inputText, selectionRange: utfUpperPosition ..< utfUpperPosition)
+                        }
+                    }
+                    return textInputState
+                }
+            }
+        })
+        self.currentEntries = entries
+        self.enqueueTransition(transition, firstTime: firstTime)
     }
     
-    override func updateFrames(transition: ContainedViewLayoutTransition) {
-        self.tableView.frame = self.bounds
-        self.updateTable()
+    private func enqueueTransition(_ transition: CommandChatInputContextPanelTransition, firstTime: Bool) {
+        enqueuedTransitions.append((transition, firstTime))
+        
+        if self.hasValidLayout {
+            while !self.enqueuedTransitions.isEmpty {
+                self.dequeueTransition()
+            }
+        }
     }
     
-    override func animateIn() {
-        self.layer.animateBounds(from: self.layer.bounds.offsetBy(dx: 0.0, dy: -self.layer.bounds.size.height), to: self.layer.bounds, duration: 0.45, timingFunction: kCAMediaTimingFunctionSpring)
+    private func dequeueTransition() {
+        if let (transition, firstTime) = self.enqueuedTransitions.first {
+            self.enqueuedTransitions.remove(at: 0)
+            
+            var options = ListViewDeleteAndInsertOptions()
+            if firstTime {
+                options.insert(.Synchronous)
+                options.insert(.LowLatency)
+            } else {
+                //options.insert(.AnimateInsertion)
+            }
+            self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateOpaqueState: nil, completion: { [weak self] _ in
+                if let strongSelf = self, firstTime {
+                    var topItemOffset: CGFloat?
+                    strongSelf.listView.forEachItemNode { itemNode in
+                        if topItemOffset == nil {
+                            topItemOffset = itemNode.frame.minY
+                        }
+                    }
+                    
+                    if let topItemOffset = topItemOffset {
+                        let position = strongSelf.listView.layer.position
+                        strongSelf.listView.layer.animatePosition(from: CGPoint(x: position.x, y: position.y + (strongSelf.listView.bounds.size.height - topItemOffset)), to: position, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                    }
+                }
+            })
+        }
+    }
+    
+    override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+        var insets = UIEdgeInsets()
+        
+        transition.updateFrame(node: self.listView, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+        
+        var duration: Double = 0.0
+        var curve: UInt = 0
+        switch transition {
+        case .immediate:
+            break
+        case let .animated(animationDuration, animationCurve):
+            duration = animationDuration
+            switch animationCurve {
+            case .easeInOut:
+                break
+            case .spring:
+                curve = 7
+            }
+        }
+        
+        let listViewCurve: ListViewAnimationCurve
+        if curve == 7 {
+            listViewCurve = .Spring(duration: duration)
+        } else {
+            listViewCurve = .Default
+        }
+        
+        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: size, insets: insets, duration: duration, curve: listViewCurve)
+        
+        self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        
+        if !hasValidLayout {
+            hasValidLayout = true
+            while !self.enqueuedTransitions.isEmpty {
+                self.dequeueTransition()
+            }
+        }
     }
     
     override func animateOut(completion: @escaping () -> Void) {
-        self.layer.animateBounds(from: self.layer.bounds, to: self.layer.bounds.offsetBy(dx: 0.0, dy: -self.layer.bounds.size.height), duration: 0.25, timingFunction: kCAMediaTimingFunctionEaseOut, removeOnCompletion: false, completion: { _ in
+        var topItemOffset: CGFloat?
+        self.listView.forEachItemNode { itemNode in
+            if topItemOffset == nil {
+                topItemOffset = itemNode.frame.minY
+            }
+        }
+        
+        if let topItemOffset = topItemOffset {
+            let position = self.listView.layer.position
+            self.listView.layer.animatePosition(from: position, to: CGPoint(x: position.x, y: position.y + (self.listView.bounds.size.height - topItemOffset)), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+                completion()
+            })
+        } else {
             completion()
-        })
-    }
-    
-    public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return self.results.count
-    }
-    
-    public func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        var cell = (tableView.dequeueReusableCell(withIdentifier: "C") as? MentionsTableCell) ?? MentionsTableCell()
-        if let account = self.account {
-            cell.setupPeer(account: account, peer: self.results[indexPath.row])
         }
-        return cell
     }
     
-    func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        self.tableBackgroundView.frame = CGRect(origin: CGPoint(x: 0.0, y: max(0.0, -self.tableView.contentOffset.y)), size: self.bounds.size)
-    }
-    
-    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        if let addressName = self.results[indexPath.row].addressName {
-            let string = "@" + addressName + " "
-            self.interfaceInteraction?.updateTextInputState(ChatTextInputState(inputText: string, selectionRange: string.characters.count ..< string.characters.count))
-        }
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let listViewFrame = self.listView.frame
+        return self.listView.hitTest(CGPoint(x: point.x - listViewFrame.minX, y: point.y - listViewFrame.minY), with: event)
     }
 }

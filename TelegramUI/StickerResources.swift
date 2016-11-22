@@ -39,7 +39,7 @@ private func chatMessageStickerDatas(account: Account, file: TelegramMediaFile, 
     let maybeFetched = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedStickerAJpegRepresentation(size: small ? CGSize(width: 160.0, height: 160.0) : nil))
     
     return maybeFetched |> take(1) |> mapToSignal { maybeData in
-        if maybeData.size >= file.size {
+        if maybeData.complete {
             let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
             
             return .single((nil, loadedData, true))
@@ -57,7 +57,7 @@ private func chatMessageStickerDatas(account: Account, file: TelegramMediaFile, 
     }
 }
 
-func chatMessageSticker(account: Account, file: TelegramMediaFile, small: Bool) -> Signal<(TransformImageArguments) -> DrawingContext, NoError> {
+func chatMessageSticker(account: Account, file: TelegramMediaFile, small: Bool) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatMessageStickerDatas(account: account, file: file, small: small)
     
     return signal |> map { (thumbnailData, fullSizeData, fullSizeComplete) in

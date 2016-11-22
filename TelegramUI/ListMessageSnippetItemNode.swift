@@ -105,7 +105,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
             var iconText: NSAttributedString?
             
             var iconImageRepresentation: TelegramMediaImageRepresentation?
-            var updateIconImageSignal: Signal<(TransformImageArguments) -> DrawingContext, NoError>?
+            var updateIconImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
             
             let applyIconTextBackgroundImage = iconTextBackgroundImage
             

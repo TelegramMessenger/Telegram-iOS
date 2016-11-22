@@ -23,7 +23,6 @@ public class ChatController: ViewController {
     private let peerView = Promise<PeerView>()
     
     private var presentationInterfaceState = ChatPresentationInterfaceState()
-    private let chatInterfaceStatePromise = Promise<ChatInterfaceState>()
     
     private var chatTitleView: ChatTitleView?
     private var leftNavigationButton: ChatNavigationButton?
@@ -43,6 +42,11 @@ public class ChatController: ViewController {
     private var resolvePeerByNameDisposable: MetaDisposable?
     
     private let editingMessage = ValuePromise<Bool>(false, ignoreRepeated: true)
+    
+    private let botCallbackAlertMessage = Promise<String?>(nil)
+    private var botCallbackAlertMessageDisposable: Disposable?
+    
+    private var contextQueryState: (ChatPresentationInputQuery?, Disposable)?
     
     public init(account: Account, peerId: PeerId, messageId: MessageId? = nil) {
         self.account = account
@@ -124,7 +128,97 @@ public class ChatController: ViewController {
             }
         }, openPeer: { [weak self] id, navigation in
             if let strongSelf = self {
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: id, messageId: nil))
+                if id == strongSelf.peerId {
+                    switch navigation {
+                        case .info:
+                            strongSelf.navigationButtonAction(.openChatInfo)
+                        case let .chat(textInputState):
+                            if let textInputState = textInputState {
+                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                    return ($0.updatedInterfaceState {
+                                        return $0.withUpdatedComposeInputState(textInputState)
+                                    }).updatedInputMode({ _ in
+                                        return .text
+                                    })
+                                })
+                            }
+                    }
+                } else {
+                    if let id = id {
+                        switch navigation {
+                            case .info:
+                                break
+                            case let .chat(textInputState):
+                                if let textInputState = textInputState {
+                                    (strongSelf.account.postbox.modify({ modifier -> Void in
+                                        modifier.updatePeerChatInterfaceState(id, update: { currentState in
+                                            if let currentState = currentState as? ChatInterfaceState {
+                                                return currentState.withUpdatedComposeInputState(textInputState)
+                                            } else {
+                                                return ChatInterfaceState().withUpdatedComposeInputState(textInputState)
+                                            }
+                                            return currentState
+                                        })
+                                    })).start(completed: {
+                                        if let strongSelf = self {
+                                            (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: id, messageId: nil))
+                                        }
+                                    })
+                                } else {
+                                    (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: id, messageId: nil))
+                                }
+                        }
+                    } else {
+                        switch navigation {
+                            case .info:
+                                break
+                            case let .chat(textInputState):
+                                if let textInputState = textInputState {
+                                    let controller = PeerSelectionController(account: strongSelf.account)
+                                    controller.peerSelected = { [weak controller] peerId in
+                                        if let strongSelf = self, let strongController = controller {
+                                            if peerId == strongSelf.peerId {
+                                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                                    return ($0.updatedInterfaceState {
+                                                        return $0.withUpdatedComposeInputState(textInputState)
+                                                    }).updatedInputMode({ _ in
+                                                        return .text
+                                                    })
+                                                })
+                                                strongController.dismiss()
+                                            } else {
+                                                (strongSelf.account.postbox.modify({ modifier -> Void in
+                                                    modifier.updatePeerChatInterfaceState(peerId, update: { currentState in
+                                                        if let currentState = currentState as? ChatInterfaceState {
+                                                            return currentState.withUpdatedComposeInputState(textInputState)
+                                                        } else {
+                                                            return ChatInterfaceState().withUpdatedComposeInputState(textInputState)
+                                                        }
+                                                        return currentState
+                                                    })
+                                                }) |> deliverOnMainQueue).start(completed: {
+                                                    if let strongSelf = self {
+                                                        strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
+                                                        
+                                                        let ready = ValuePromise<Bool>()
+                                                        
+                                                        strongSelf.controllerNavigationDisposable.set((ready.get() |> take(1) |> deliverOnMainQueue).start(next: { _ in
+                                                            if let strongController = controller {
+                                                                strongController.dismiss()
+                                                            }
+                                                        }))
+                                                        
+                                                        (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatController(account: strongSelf.account, peerId: peerId), animated: false, ready: ready)
+                                                    }
+                                                })
+                                            }
+                                        }
+                                    }
+                                    strongSelf.present(controller, in: .window)
+                                }
+                        }
+                    }
+                }
             }
         }, openPeerMention: { [weak self] name in
             if let strongSelf = self {
@@ -192,20 +286,77 @@ public class ChatController: ViewController {
         }, sendMessage: { [weak self] text in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({})
-                enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: text, media: nil, replyToMessageId: nil)]).start()
+                enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: text, attributes: [], media: nil, replyToMessageId: nil)]).start()
             }
         }, sendSticker: { [weak self] file in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({})
-                enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", media: file, replyToMessageId: nil)]).start()
+                enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", attributes: [], media: file, replyToMessageId: nil)]).start()
             }
         }, requestMessageActionCallback: { [weak self] messageId, data in
             if let strongSelf = self {
-                strongSelf.messageActionCallbackDisposable.set(requestMessageActionCallback(account: strongSelf.account, messageId: messageId, data: data).start())
+                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                    return $0.updatedTitlePanelContext {
+                        if !$0.contains(where: {
+                            switch $0 {
+                                case .requestInProgress:
+                                    return true
+                                default:
+                                    return false
+                            }
+                        }) {
+                            var updatedContexts = $0
+                            updatedContexts.append(.requestInProgress)
+                            return updatedContexts
+                        }
+                        return $0
+                    }
+                })
+                
+                strongSelf.messageActionCallbackDisposable.set((requestMessageActionCallback(account: strongSelf.account, messageId: messageId, data: data) |> afterDisposed {
+                    Queue.mainQueue().async {
+                        if let strongSelf = self {
+                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                                return $0.updatedTitlePanelContext {
+                                    if let index = $0.index(where: {
+                                        switch $0 {
+                                            case .requestInProgress:
+                                                return true
+                                            default:
+                                                return false
+                                        }
+                                    }) {
+                                        var updatedContexts = $0
+                                        updatedContexts.remove(at: index)
+                                        return updatedContexts
+                                    }
+                                    return $0
+                                }
+                            })
+                        }
+                    }
+                }).start(next: { result in
+                    if let strongSelf = self {
+                        switch result {
+                            case .none:
+                                break
+                            case let .alert(text):
+                                let message: Signal<String?, NoError> = .single(text)
+                                let noMessage: Signal<String?, NoError> = .single(nil)
+                                let delayedNoMessage: Signal<String?, NoError> = noMessage |> delay(1.0, queue: Queue.mainQueue())
+                                strongSelf.botCallbackAlertMessage.set(message |> then(delayedNoMessage))
+                            case let .url(url):
+                                if let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext {
+                                    applicationContext.openUrl(url)
+                                }
+                        }
+                    }
+                }))
             }
         }, openUrl: { [weak self] url in
             if let strongSelf = self {
                 if let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext {
+                    //openUrl(url, in: (strongSelf.view.window as! Window))
                     applicationContext.openUrl(url)
                 }
             }
@@ -220,10 +371,10 @@ public class ChatController: ViewController {
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({})
                 var postAsReply = false
-                if strongSelf.peerId.namespace == Namespaces.Peer.CloudChannel || strongSelf.peerId.namespace == Namespaces.Peer.CloudGroup {
+                if !command.contains("@") && (strongSelf.peerId.namespace == Namespaces.Peer.CloudChannel || strongSelf.peerId.namespace == Namespaces.Peer.CloudGroup) {
                     postAsReply = true
                 }
-                enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: command, media: nil, replyToMessageId: postAsReply ? messageId : nil)]).start()
+                enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: command, attributes: [], media: nil, replyToMessageId: postAsReply ? messageId : nil)]).start()
             }
         })
         
@@ -231,6 +382,30 @@ public class ChatController: ViewController {
         
         self.chatTitleView = ChatTitleView(frame: CGRect())
         self.navigationItem.titleView = self.chatTitleView
+        self.chatTitleView?.pressed = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                    return $0.updatedTitlePanelContext {
+                        if let index = $0.index(where: {
+                            switch $0 {
+                                case .chatInfo:
+                                    return true
+                                default:
+                                    return false
+                            }
+                        }) {
+                            var updatedContexts = $0
+                            updatedContexts.remove(at: index)
+                            return updatedContexts
+                        } else {
+                            var updatedContexts = $0
+                            updatedContexts.insert(.chatInfo, at: 0)
+                            return updatedContexts
+                        }
+                    }
+                })
+            }
+        }
         
         let chatInfoButtonItem = UIBarButtonItem(customDisplayNode: ChatAvatarNavigationNode())!
         chatInfoButtonItem.target = self
@@ -255,6 +430,53 @@ public class ChatController: ViewController {
                     }
                 }
             }))
+        
+        botCallbackAlertMessageDisposable = (self.botCallbackAlertMessage.get()
+            |> deliverOnMainQueue).start(next: { [weak self] message in
+                if let strongSelf = self {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                        return $0.updatedTitlePanelContext {
+                            if let message = message {
+                                if let index = $0.index(where: {
+                                    switch $0 {
+                                        case .toastAlert:
+                                            return true
+                                        default:
+                                            return false
+                                    }
+                                }) {
+                                    if $0[index] != ChatTitlePanelContext.toastAlert(message) {
+                                        var updatedContexts = $0
+                                        updatedContexts[index] = .toastAlert(message)
+                                        return updatedContexts
+                                    } else {
+                                        return $0
+                                    }
+                                } else {
+                                    var updatedContexts = $0
+                                    updatedContexts.append(.toastAlert(message))
+                                    return updatedContexts
+                                }
+                            } else {
+                                if let index = $0.index(where: {
+                                    switch $0 {
+                                        case .toastAlert:
+                                            return true
+                                        default:
+                                            return false
+                                    }
+                                }) {
+                                    var updatedContexts = $0
+                                    updatedContexts.remove(at: index)
+                                    return updatedContexts
+                                } else {
+                                    return $0
+                                }
+                            }
+                        }
+                    })
+                }
+            })
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -272,6 +494,8 @@ public class ChatController: ViewController {
         self.editMessageDisposable.dispose()
         self.enqueueMediaMessageDisposable.dispose()
         self.resolvePeerByNameDisposable?.dispose()
+        self.botCallbackAlertMessageDisposable?.dispose()
+        self.contextQueryState?.1.dispose()
     }
     
     var chatDisplayNode: ChatControllerNode {
@@ -377,6 +601,8 @@ public class ChatController: ViewController {
         self.chatDisplayNode.displayAttachmentMenu = { [weak self] in
             if let strongSelf = self {
                 if true {
+                    strongSelf.chatDisplayNode.dismissInput()
+                    
                     let emptyController = LegacyEmptyController()
                     let navigationController = makeLegacyNavigationController(rootController: emptyController)
                     navigationController.setNavigationBarHidden(true, animated: false)
@@ -392,13 +618,15 @@ public class ChatController: ViewController {
                             }
                         }
                     }, openGallery: {
-                        self?.presentMediaPicker()
+                        self?.presentMediaPicker(fileMode: false)
                     }, openCamera: { cameraView, menuController in
                         if let strongSelf = self {
                             presentedLegacyCamera(cameraView: cameraView, menuController: menuController, parentController: strongSelf, sendMessagesWithSignals: { signals in
                                 self?.enqueueMediaMessages(signals: signals)
                             })
                         }
+                    }, openFileGallery: {
+                        self?.presentMediaPicker(fileMode: true)
                     }, sendMessagesWithSignals: { [weak self] signals in
                         self?.enqueueMediaMessages(signals: signals)
                     })
@@ -423,13 +651,6 @@ public class ChatController: ViewController {
                         }
                     }
                     
-                    //controller presentInViewController:self sourceView:_inputTextPanel.attachButton animated:true];
-                    
-                    return
-                }
-                
-                if true {
-                    strongSelf.presentMediaPicker()
                     return
                 }
                 
@@ -445,10 +666,10 @@ public class ChatController: ViewController {
                         if false {
                             let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: scaledSize, resource: resource)])
                             strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({})
-                            enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", media: media, replyToMessageId: nil)]).start()
+                            enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", attributes: [], media: media, replyToMessageId: nil)]).start()
                         } else {
                             let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), resource: resource, previewRepresentations: [], mimeType: "image/jpeg", size: 0, attributes: [.FileName(fileName: "image.jpeg"), .ImageSize(size: scaledSize)])
-                            enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", media: media, replyToMessageId: nil)]).start()
+                            enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", attributes: [], media: media, replyToMessageId: nil)]).start()
                         }
                     }
                 }
@@ -551,9 +772,9 @@ public class ChatController: ViewController {
                     strongSelf.present(controller, in: .window)
                 }
             }
-        }, updateTextInputState: { [weak self] textInputState in
+        }, updateTextInputState: { [weak self] f in
             if let strongSelf = self {
-                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withUpdatedEffectiveInputState(textInputState) } })
+                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withUpdatedEffectiveInputState(f($0.effectiveInputState)) } })
             }
         }, updateInputMode: { [weak self] f in
             if let strongSelf = self {
@@ -571,6 +792,16 @@ public class ChatController: ViewController {
                     }
                 }))
             }
+        }, beginMessageSearch: { [weak self] in
+            if let strongSelf = self {
+                
+            }
+        }, openPeerInfo: { [weak self] in
+            self?.navigationButtonAction(.openChatInfo)
+        }, togglePeerNotifications: {
+            
+        }, sendContextResult: { [weak self] results, result in
+            self?.enqueueChatContextResult(results, result)
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get()))
         
         self.interfaceInteraction = interfaceInteraction
@@ -610,6 +841,29 @@ public class ChatController: ViewController {
         }).start()
     }
     
+    override public func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        
+        self.updateChatPresentationInterfaceState(animated: false, interactive: false, {
+            $0.updatedTitlePanelContext {
+                if let index = $0.index(where: {
+                    switch $0 {
+                        case .chatInfo:
+                            return true
+                        default:
+                            return false
+                    }
+                }) {
+                    var updatedContexts = $0
+                    updatedContexts.remove(at: index)
+                    return updatedContexts
+                } else {
+                    return $0
+                }
+            }
+        })
+    }
+    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
@@ -622,15 +876,40 @@ public class ChatController: ViewController {
     
     func updateChatPresentationInterfaceState(animated: Bool = true, interactive: Bool, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) {
         let temporaryChatPresentationInterfaceState = f(self.presentationInterfaceState)
-        let inputContext = inputContextForChatPresentationIntefaceState(temporaryChatPresentationInterfaceState, account: self.account)
+        let inputContextQuery = inputContextQueryForChatPresentationIntefaceState(temporaryChatPresentationInterfaceState, account: self.account)
         let inputTextPanelState = inputTextPanelStateForChatPresentationInterfaceState(temporaryChatPresentationInterfaceState, account: self.account)
-        let updatedChatPresentationInterfaceState = temporaryChatPresentationInterfaceState.updatedInputContext({ _ in return inputContext }).updatedInputTextPanelState({ _ in return inputTextPanelState })
+        var updatedChatPresentationInterfaceState = temporaryChatPresentationInterfaceState.updatedInputTextPanelState({ _ in return inputTextPanelState })
         
+        if let (updatedContextQueryState, updatedContextQuerySignal) = contextQueryResultStateForChatInterfacePresentationState(updatedChatPresentationInterfaceState, account: self.account, currentQuery: self.contextQueryState?.0) {
+            self.contextQueryState?.1.dispose()
+            var inScope = true
+            var inScopeResult: ((ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?)?
+            self.contextQueryState = (updatedContextQueryState, (updatedContextQuerySignal |> deliverOnMainQueue).start(next: { [weak self] result in
+                if let strongSelf = self {
+                    if Thread.isMainThread && inScope {
+                        inScope = false
+                        inScopeResult = result
+                    } else {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                            $0.updatedInputQueryResult { previousResult in
+                                return result(previousResult)
+                            }
+                        })
+                    }
+                }
+            }))
+            inScope = false
+            if let inScopeResult = inScopeResult {
+                updatedChatPresentationInterfaceState = updatedChatPresentationInterfaceState.updatedInputQueryResult { previousResult in
+                    return inScopeResult(previousResult)
+                }
+            }
+        }
+        
+        self.presentationInterfaceState = updatedChatPresentationInterfaceState
         if self.isNodeLoaded {
             self.chatDisplayNode.updateChatPresentationInterfaceState(updatedChatPresentationInterfaceState, animated: animated, interactive: interactive)
         }
-        self.presentationInterfaceState = updatedChatPresentationInterfaceState
-        self.chatInterfaceStatePromise.set(.single(updatedChatPresentationInterfaceState.interfaceState))
         
         if let button = leftNavigationButtonForChatInterfaceState(updatedChatPresentationInterfaceState.interfaceState, currentButton: self.leftNavigationButton, target: self, selector: #selector(self.leftNavigationButtonAction)) {
             self.navigationItem.setLeftBarButton(button.buttonItem, animated: true)
@@ -702,8 +981,8 @@ public class ChatController: ViewController {
         }
     }
     
-    private func presentMediaPicker() {
-        legacyAssetPicker().start(next: { [weak self] generator in
+    private func presentMediaPicker(fileMode: Bool) {
+        legacyAssetPicker(fileMode: fileMode).start(next: { [weak self] generator in
             if let strongSelf = self {
                 var presentOverlayController: ((UIViewController) -> (() -> Void))?
                 let controller = generator({ controller in
@@ -748,7 +1027,7 @@ public class ChatController: ViewController {
                 let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
                     if let strongSelf = self {
-                        strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
                             $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
                         })
                     }
@@ -756,5 +1035,19 @@ public class ChatController: ViewController {
                 enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: messages.map { $0.withUpdatedReplyToMessageId(replyMessageId) }).start()
             }
         }))
+    }
+    
+    private func enqueueChatContextResult(_ results: ChatContextResultCollection, _ result: ChatContextResult) {
+        if let message = outgoingMessageWithChatContextResult(results, result) {
+            let replyMessageId = self.presentationInterfaceState.interfaceState.replyMessageId
+            self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
+                if let strongSelf = self {
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                        $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: "")) }
+                    })
+                }
+            })
+            enqueueMessages(account: self.account, peerId: self.peerId, messages: [message.withUpdatedReplyToMessageId(replyMessageId)]).start()
+        }
     }
 }

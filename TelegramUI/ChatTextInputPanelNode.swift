@@ -23,6 +23,43 @@ private let textInputViewBackground: UIImage = {
     return image
 }()
 
+private let searchLayoutClearButtonImage = generateImage(CGSize(width: 14.0, height: 14.0), contextGenerator: { size, context in
+    context.clear(CGRect(origin: CGPoint(), size: size))
+    context.setFillColor(UIColor(0x9099A2, 0.6).cgColor)
+    context.setStrokeColor(UIColor.white.cgColor)
+    context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+    
+    context.setLineWidth(1.5)
+    context.setLineCap(.round)
+    context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+    context.rotate(by: CGFloat(M_PI / 4))
+    context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+    
+    let lineHeight: CGFloat = 7.0
+    
+    context.beginPath()
+    context.move(to: CGPoint(x: size.width / 2.0, y: (size.width - lineHeight) / 2.0))
+    context.addLine(to: CGPoint(x: size.width / 2.0, y: (size.width - lineHeight) / 2.0 + lineHeight))
+    context.strokePath()
+    
+    context.beginPath()
+    context.move(to: CGPoint(x: (size.width - lineHeight) / 2.0, y: size.width / 2.0))
+    context.addLine(to: CGPoint(x: (size.width - lineHeight) / 2.0 + lineHeight, y: size.width / 2.0))
+    context.strokePath()
+})
+
+private let searchLayoutProgressImage = generateImage(CGSize(width: 22.0, height: 22.0), contextGenerator: { size, context in
+    context.clear(CGRect(origin: CGPoint(), size: size))
+    context.setStrokeColor(UIColor(0x9099A2, 0.6).cgColor)
+    
+    let lineWidth: CGFloat = 2.0
+    let cutoutWidth: CGFloat = 4.0
+    context.setLineWidth(lineWidth)
+    
+    context.strokeEllipse(in: CGRect(origin: CGPoint(x: lineWidth / 2.0, y: lineWidth / 2.0), size: CGSize(width: size.width - lineWidth, height: size.height - lineWidth)))
+    context.clear(CGRect(origin: CGPoint(x: (size.width - cutoutWidth) / 2.0, y: 0.0), size: CGSize(width: cutoutWidth, height: size.height / 2.0)))
+})
+
 private let attachmentIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconAttachment"), color: UIColor(0x9099A2))
 private let micIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconMicrophone"), color: UIColor(0x9099A2))
 private let sendIcon = UIImage(bundleImageName: "Chat/Input/Text/IconSend")?.precomposed()
@@ -56,7 +93,7 @@ private let keyboardImage = UIImage(bundleImageName: "Chat/Input/Text/AccessoryI
 private let stickersImage = UIImage(bundleImageName: "Chat/Input/Text/AccessoryIconStickers")?.precomposed()
 private let inputButtonsImage = UIImage(bundleImageName: "Chat/Input/Text/AccessoryIconInputButtons")?.precomposed()
 
-private final class AccessoryItemIconButton: UIButton {
+private final class AccessoryItemIconButton: HighlightableButton {
     init(item: ChatTextInputAccessoryItem) {
         super.init(frame: CGRect())
         
@@ -86,9 +123,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     var textInputNode: ASEditableTextNode?
     
     let textInputBackgroundView: UIImageView
-    let micButton: UIButton
-    let sendButton: UIButton
-    let attachmentButton: UIButton
+    let micButton: HighlightableButton
+    let sendButton: HighlightableButton
+    let attachmentButton: HighlightableButton
+    let searchLayoutClearButton: HighlightableButton
+    let searchLayoutProgressView: UIImageView
     
     private var accessoryItemButtons: [(ChatTextInputAccessoryItem, AccessoryItemIconButton)] = []
     
@@ -103,6 +142,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     private var presentationInterfaceState = ChatPresentationInterfaceState()
     
     private var keepSendButtonEnabled = false
+    private var extendedSearchLayout = false
     
     var inputTextState: ChatTextInputState {
         if let textInputNode = self.textInputNode {
@@ -114,7 +154,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
     }
     
-    func updateInputTextState(_ state: ChatTextInputState, keepSendButtonEnabled: Bool, animated: Bool) {
+    func updateInputTextState(_ state: ChatTextInputState, keepSendButtonEnabled: Bool, extendedSearchLayout: Bool, animated: Bool) {
         if !state.inputText.isEmpty && self.textInputNode == nil {
             self.loadTextInputNode()
         }
@@ -125,13 +165,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             textInputNode.selectedRange = NSMakeRange(state.selectionRange.lowerBound, state.selectionRange.count)
             self.updatingInputState = false
             self.keepSendButtonEnabled = keepSendButtonEnabled
+            self.extendedSearchLayout = extendedSearchLayout
             self.updateTextNodeText(animated: animated)
         }
     }
     
-    func updateKeepSendButtonEnabled(keepSendButtonEnabled: Bool, animated: Bool) {
-        if keepSendButtonEnabled != self.keepSendButtonEnabled {
+    func updateKeepSendButtonEnabled(keepSendButtonEnabled: Bool, extendedSearchLayout: Bool, animated: Bool) {
+        if keepSendButtonEnabled != self.keepSendButtonEnabled || extendedSearchLayout != self.extendedSearchLayout {
             self.keepSendButtonEnabled = keepSendButtonEnabled
+            self.extendedSearchLayout = extendedSearchLayout
             self.updateTextNodeText(animated: animated)
         }
     }
@@ -156,9 +198,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.textInputBackgroundView = UIImageView(image: textInputViewBackground)
         self.textPlaceholderNode = TextNode()
         self.textPlaceholderNode.isLayerBacked = true
-        self.attachmentButton = UIButton()
-        self.micButton = UIButton()
-        self.sendButton = UIButton()
+        self.attachmentButton = HighlightableButton()
+        self.searchLayoutClearButton = HighlightableButton()
+        self.searchLayoutProgressView = UIImageView(image: searchLayoutProgressImage)
+        self.searchLayoutProgressView.isHidden = true
+        self.micButton = HighlightableButton()
+        self.sendButton = HighlightableButton()
         
         super.init()
         
@@ -175,6 +220,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.sendButton.alpha = 0.0
         self.view.addSubview(self.sendButton)
         
+        self.searchLayoutClearButton.setImage(searchLayoutClearButtonImage, for: [])
+        self.searchLayoutClearButton.addTarget(self, action: #selector(self.searchLayoutClearButtonPressed), for: .touchUpInside)
+        self.searchLayoutClearButton.alpha = 0.0
+        
+        self.searchLayoutClearButton.addSubview(self.searchLayoutProgressView)
+        
         self.view.addSubview(self.textInputBackgroundView)
         
         let placeholderLayout = TextNode.asyncLayout(self.textPlaceholderNode)
@@ -182,6 +233,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.textPlaceholderNode.frame = CGRect(origin: CGPoint(), size: placeholderSize.size)
         let _ = placeholderApply()
         self.addSubnode(self.textPlaceholderNode)
+        
+        self.view.addSubview(self.searchLayoutClearButton)
         
         self.textInputBackgroundView.clipsToBounds = true
         let recognizer = TouchDownGestureRecognizer(target: self, action: #selector(self.textInputBackgroundViewTap(_:)))
@@ -329,8 +382,21 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight)
         
         transition.updateFrame(layer: self.attachmentButton.layer, frame: CGRect(origin: CGPoint(x: 2.0 - UIScreenPixel, y: panelHeight - minimalHeight), size: CGSize(width: 40.0, height: minimalHeight)))
-        transition.updateFrame(layer: self.micButton.layer, frame: CGRect(origin: CGPoint(x: width - 43.0 - UIScreenPixel, y: panelHeight - minimalHeight - UIScreenPixel), size: CGSize(width: 44.0, height: minimalHeight)))
-        transition.updateFrame(layer: self.sendButton.layer, frame: CGRect(origin: CGPoint(x: width - 43.0 - UIScreenPixel, y: panelHeight - minimalHeight - UIScreenPixel), size: CGSize(width: 44.0, height: minimalHeight)))
+        
+        var composeButtonsOffset: CGFloat = 0.0
+        var textInputBackgroundWidthOffset: CGFloat = 0.0
+        if self.extendedSearchLayout {
+            composeButtonsOffset = 44.0
+            textInputBackgroundWidthOffset = 36.0
+        }
+        transition.updateFrame(layer: self.micButton.layer, frame: CGRect(origin: CGPoint(x: width - 43.0 - UIScreenPixel + composeButtonsOffset, y: panelHeight - minimalHeight - UIScreenPixel), size: CGSize(width: 44.0, height: minimalHeight)))
+        transition.updateFrame(layer: self.sendButton.layer, frame: CGRect(origin: CGPoint(x: width - 43.0 - UIScreenPixel + composeButtonsOffset, y: panelHeight - minimalHeight - UIScreenPixel), size: CGSize(width: 44.0, height: minimalHeight)))
+        
+        let searchLayoutClearButtonSize = CGSize(width: 44.0, height: minimalHeight)
+        transition.updateFrame(layer: self.searchLayoutClearButton.layer, frame: CGRect(origin: CGPoint(x: width - self.textFieldInsets.left - self.textFieldInsets.right + textInputBackgroundWidthOffset + 3.0, y: panelHeight - minimalHeight), size: searchLayoutClearButtonSize))
+
+        let searchProgressSize = self.searchLayoutProgressView.bounds.size
+        transition.updateFrame(layer: self.searchLayoutProgressView.layer, frame: CGRect(origin: CGPoint(x: floor((searchLayoutClearButtonSize.width - searchProgressSize.width) / 2.0), y: floor((searchLayoutClearButtonSize.height - searchProgressSize.height) / 2.0)), size: searchProgressSize))
         
         if let textInputNode = self.textInputNode {
             transition.updateFrame(node: textInputNode, frame: CGRect(x: self.textFieldInsets.left + self.textInputViewInternalInsets.left, y: self.textFieldInsets.top + self.textInputViewInternalInsets.top, width: width - self.textFieldInsets.left - self.textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right - accessoryButtonsWidth, height: panelHeight - self.textFieldInsets.top - self.textFieldInsets.bottom - self.textInputViewInternalInsets.top - self.textInputViewInternalInsets.bottom))
@@ -338,7 +404,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         transition.updateFrame(node: self.textPlaceholderNode, frame: CGRect(origin: CGPoint(x: self.textFieldInsets.left + self.textInputViewInternalInsets.left, y: self.textFieldInsets.top + self.textInputViewInternalInsets.top + 0.5), size: self.textPlaceholderNode.frame.size))
         
-        transition.updateFrame(layer: self.textInputBackgroundView.layer, frame: CGRect(x: self.textFieldInsets.left, y: self.textFieldInsets.top, width: width -  self.textFieldInsets.left - self.textFieldInsets.right, height: panelHeight - self.textFieldInsets.top - self.textFieldInsets.bottom))
+        transition.updateFrame(layer: self.textInputBackgroundView.layer, frame: CGRect(x: self.textFieldInsets.left, y: self.textFieldInsets.top, width: width - self.textFieldInsets.left - self.textFieldInsets.right + textInputBackgroundWidthOffset, height: panelHeight - self.textFieldInsets.top - self.textFieldInsets.bottom))
         
         var nextButtonTopRight = CGPoint(x: width - self.textFieldInsets.right - accessoryButtonInset, y: panelHeight - self.textFieldInsets.bottom - minimalInputHeight)
         for (_, button) in self.accessoryItemButtons.reversed() {
@@ -375,7 +441,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     @objc func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
         if let textInputNode = self.textInputNode {
-            self.interfaceInteraction?.updateTextInputState(self.inputTextState)
+            let inputTextState = self.inputTextState
+            self.interfaceInteraction?.updateTextInputState({ _ in return inputTextState })
             self.updateTextNodeText(animated: true)
         }
     }
@@ -387,24 +454,74 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         self.textPlaceholderNode.isHidden = hasText
         
-        if hasText || self.keepSendButtonEnabled {
-            if self.sendButton.alpha.isZero {
-                self.sendButton.alpha = 1.0
+        if self.extendedSearchLayout {
+            if !self.sendButton.alpha.isZero {
+                self.sendButton.alpha = 0.0
+                if animated {
+                    self.sendButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                    self.sendButton.layer.animateScale(from: 1.0, to: 0.2, duration: 0.2)
+                }
+            }
+            if !self.micButton.alpha.isZero {
                 self.micButton.alpha = 0.0
                 if animated {
-                    self.sendButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
-                    self.sendButton.layer.animateSpring(from: NSNumber(value: Float(0.1)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.6)
                     self.micButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                    self.micButton.layer.animateScale(from: 1.0, to: 0.2, duration: 0.2)
+                }
+            }
+            if self.searchLayoutClearButton.alpha.isZero {
+                self.searchLayoutClearButton.alpha = 1.0
+                if animated {
+                    self.searchLayoutClearButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                    self.searchLayoutClearButton.layer.animateScale(from: 0.8, to: 1.0, duration: 0.2)
                 }
             }
         } else {
-            if self.micButton.alpha.isZero {
-                self.micButton.alpha = 1.0
-                self.sendButton.alpha = 0.0
+            var animateWithBounce = true
+            if !self.searchLayoutClearButton.alpha.isZero {
+                animateWithBounce = false
+                self.searchLayoutClearButton.alpha = 0.0
                 if animated {
-                    self.micButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
-                    self.micButton.layer.animateSpring(from: NSNumber(value: Float(0.1)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.6)
-                    self.sendButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                    self.searchLayoutClearButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                    self.searchLayoutClearButton.layer.animateScale(from: 1.0, to: 0.8, duration: 0.2)
+                }
+            }
+            
+            if hasText || self.keepSendButtonEnabled {
+                if self.sendButton.alpha.isZero {
+                    self.sendButton.alpha = 1.0
+                    if animated {
+                        self.sendButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                        if animateWithBounce {
+                            self.sendButton.layer.animateSpring(from: NSNumber(value: Float(0.1)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.6)
+                        } else {
+                            self.sendButton.layer.animateScale(from: 0.2, to: 1.0, duration: 0.25)
+                        }
+                    }
+                }
+                if !self.micButton.alpha.isZero {
+                    self.micButton.alpha = 0.0
+                    if animated {
+                        self.micButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                    }
+                }
+            } else {
+                if self.micButton.alpha.isZero {
+                    self.micButton.alpha = 1.0
+                    if animated {
+                        self.micButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                        if animateWithBounce {
+                            self.micButton.layer.animateSpring(from: NSNumber(value: Float(0.1)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.6)
+                        } else {
+                            self.micButton.layer.animateScale(from: 0.2, to: 1.0, duration: 0.25)
+                        }
+                    }
+                }
+                if !self.sendButton.alpha.isZero {
+                    self.sendButton.alpha = 0.0
+                    if animated {
+                        self.sendButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                    }
                 }
             }
         }
@@ -418,7 +535,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     @objc func editableTextNodeDidChangeSelection(_ editableTextNode: ASEditableTextNode, fromSelectedRange: NSRange, toSelectedRange: NSRange, dueToEditing: Bool) {
         if !dueToEditing && !updatingInputState {
-            self.interfaceInteraction?.updateTextInputState(self.inputTextState)
+            let inputTextState = self.inputTextState
+            self.interfaceInteraction?.updateTextInputState({ _ in return inputTextState })
         }
     }
     
@@ -443,6 +561,23 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     @objc func attachmentButtonPressed() {
         self.displayAttachmentMenu()
+    }
+    
+    @objc func searchLayoutClearButtonPressed() {
+        if let interfaceInteraction = self.interfaceInteraction {
+            interfaceInteraction.updateTextInputState { textInputState in
+                if let (range, type, queryRange) = textInputStateContextQueryRangeAndType(textInputState), type == [.contextRequest] {
+                    if let queryRange = queryRange, !queryRange.isEmpty {
+                        var inputText = textInputState.inputText
+                        inputText.replaceSubrange(queryRange, with: "")
+                        return ChatTextInputState(inputText: inputText)
+                    } else {
+                        return ChatTextInputState(inputText: "")
+                    }
+                }
+                return textInputState
+            }
+        }
     }
     
     @objc func micButtonPressed() {

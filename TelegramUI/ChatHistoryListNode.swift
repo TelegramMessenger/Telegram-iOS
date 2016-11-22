@@ -95,7 +95,14 @@ private func mappedInsertEntries(account: Account, peerId: PeerId, controllerInt
                 }
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
             case .HoleEntry:
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatHoleItem(index: entry.entry.index), directionHint: entry.directionHint)
+                let item: ListViewItem
+                switch mode {
+                    case .bubbles:
+                        item = ChatHoleItem(index: entry.entry.index)
+                    case .list:
+                        item = ListMessageHoleItem()
+                }
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
             case .UnreadEntry:
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index), directionHint: entry.directionHint)
         }
@@ -115,7 +122,14 @@ private func mappedUpdateEntries(account: Account, peerId: PeerId, controllerInt
                 }
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
             case .HoleEntry:
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatHoleItem(index: entry.entry.index), directionHint: entry.directionHint)
+                let item: ListViewItem
+                switch mode {
+                    case .bubbles:
+                        item = ChatHoleItem(index: entry.entry.index)
+                    case .list:
+                        item = ListMessageHoleItem()
+                }
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: item, directionHint: entry.directionHint)
             case .UnreadEntry:
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index), directionHint: entry.directionHint)
         }
@@ -179,6 +193,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.mode = mode
         
         super.init()
+        
+        //self.stackFromBottom = true
         
         //self.debugInfo = true
         

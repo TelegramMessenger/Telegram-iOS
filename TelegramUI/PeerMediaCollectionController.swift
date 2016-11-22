@@ -128,7 +128,9 @@ public class PeerMediaCollectionController: ViewController {
             }
             }, openPeer: { [weak self] id, navigation in
                 if let strongSelf = self {
-                    (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: id, messageId: nil))
+                    if let id = id {
+                        (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: id, messageId: nil))
+                    }
                 }
             }, openPeerMention: { _ in
             }, openMessageContextMenu: { [weak self] id, node, frame in
@@ -188,13 +190,18 @@ public class PeerMediaCollectionController: ViewController {
         
         self.controllerInteraction = controllerInteraction
         
-        self.interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _ in }, setupEditMessage: { _ in }, beginMessageSelection: { _ in }, deleteSelectedMessages: {
-            
+        self.interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _ in
+        }, setupEditMessage: { _ in
+        }, beginMessageSelection: { _ in
+        }, deleteSelectedMessages: {
         }, forwardSelectedMessages: {
-                
         }, updateTextInputState: { _ in
         }, updateInputMode: { _ in
         }, editMessage: { _, _ in
+        }, beginMessageSearch: {
+        }, openPeerInfo: {
+        }, togglePeerNotifications: {
+        }, sendContextResult: { _ in
         }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })

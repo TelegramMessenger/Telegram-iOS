@@ -86,7 +86,7 @@ class ChatListSearchItemNode: ListViewItemNode {
         return { width in
             let searchBarApply = searchBarNodeLayout(NSAttributedString(string: placeholder ?? "Search", font: searchBarFont, textColor: UIColor(0x8e8e93)), CGSize(width: width - 16.0, height: CGFloat.greatestFiniteMagnitude))
             
-            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 44.0), insets: UIEdgeInsets())
+            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 44.0 + 4.0), insets: UIEdgeInsets())
             
             return (layout, { [weak self] in
                 if let strongSelf = self {

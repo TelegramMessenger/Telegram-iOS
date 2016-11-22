@@ -27,11 +27,11 @@ struct ChatInterfaceSelectionState: Coding, Equatable {
     }
 }
 
-struct ChatTextInputState: Coding, Equatable {
+public struct ChatTextInputState: Coding, Equatable {
     let inputText: String
     let selectionRange: Range<Int>
     
-    static func ==(lhs: ChatTextInputState, rhs: ChatTextInputState) -> Bool {
+    public static func ==(lhs: ChatTextInputState, rhs: ChatTextInputState) -> Bool {
         return lhs.inputText == rhs.inputText && lhs.selectionRange == rhs.selectionRange
     }
     
@@ -51,12 +51,12 @@ struct ChatTextInputState: Coding, Equatable {
         self.selectionRange = length ..< length
     }
     
-    init(decoder: Decoder) {
+    public init(decoder: Decoder) {
         self.inputText = decoder.decodeStringForKey("t")
         self.selectionRange = Int(decoder.decodeInt32ForKey("s0")) ..< Int(decoder.decodeInt32ForKey("s1"))
     }
     
-    func encode(_ encoder: Encoder) {
+    public func encode(_ encoder: Encoder) {
         encoder.encodeString(self.inputText, forKey: "t")
         encoder.encodeInt32(Int32(self.selectionRange.lowerBound), forKey: "s0")
         encoder.encodeInt32(Int32(self.selectionRange.upperBound), forKey: "s1")
@@ -247,6 +247,12 @@ final class ChatInterfaceState: PeerChatInterfaceState, Equatable {
             return false
         }
         return lhs.composeInputState == rhs.composeInputState && lhs.replyMessageId == rhs.replyMessageId && lhs.selectionState == rhs.selectionState && lhs.editMessage == rhs.editMessage
+    }
+    
+    func withUpdatedComposeInputState(_ inputState: ChatTextInputState) -> ChatInterfaceState {
+        var updatedComposeInputState = inputState
+        
+        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: updatedComposeInputState, replyMessageId: self.replyMessageId, forwardMessageIds: self.forwardMessageIds, editMessage: self.editMessage, selectionState: self.selectionState)
     }
     
     func withUpdatedEffectiveInputState(_ inputState: ChatTextInputState) -> ChatInterfaceState {

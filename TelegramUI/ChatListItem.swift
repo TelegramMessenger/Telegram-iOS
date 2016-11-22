@@ -29,7 +29,7 @@ class ChatListItem: ListViewItem {
         async {
             let node = ChatListItemNode()
             node.setupItem(account: self.account, message: self.message, combinedReadState: self.combinedReadState, notificationSettings: self.notificationSettings, embeddedState: self.embeddedState)
-            node.relativePosition = (first: previousItem == nil, last: nextItem == nil)
+            node.relativePosition = (first: previousItem == nil || previousItem! is ChatListSearchItem, last: nextItem == nil)
             node.insets = ChatListItemNode.insets(first: node.relativePosition.first, last: node.relativePosition.last)
             node.layoutForWidth(width, item: self, previousItem: previousItem, nextItem: nextItem)
             completion(node, {})
@@ -43,7 +43,7 @@ class ChatListItem: ListViewItem {
                 node.setupItem(account: self.account, message: self.message, combinedReadState: self.combinedReadState, notificationSettings: self.notificationSettings, embeddedState: self.embeddedState)
                 let layout = node.asyncLayout()
                 async {
-                    let first = previousItem == nil
+                    let first = previousItem == nil || previousItem! is ChatListSearchItem
                     let last = nextItem == nil
                     
                     let (nodeLayout, apply) = layout(self.account, width, first, last)
@@ -232,11 +232,12 @@ class ChatListItemNode: ListViewItemNode {
         let insets = self.insets
         
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -insets.top - separatorHeight), size: CGSize(width: size.width, height: size.height + separatorHeight))
+        let topNegativeInset: CGFloat = self.relativePosition.first ? 4.0 : 0.0
+        self.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -insets.top - separatorHeight - topNegativeInset), size: CGSize(width: size.width, height: size.height + separatorHeight + topNegativeInset))
     }
     
     class func insets(first: Bool, last: Bool) -> UIEdgeInsets {
-        return UIEdgeInsets(top: first ? 4.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0)
+        return UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
     }
     
     override func setHighlighted(_ highlighted: Bool, animated: Bool) {

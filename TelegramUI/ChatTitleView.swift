@@ -33,7 +33,13 @@ final class ChatTitleView: UIView {
         var shouldUpdateLayout = false
         if let peerView = self.peerView, let peer = peerView.peers[peerView.peerId] {
             if let user = peer as? TelegramUser {
-                if let presence = peerView.peerPresences[peerView.peerId] as? TelegramUserPresence {
+                if let _ = user.botInfo {
+                    let string = NSAttributedString(string: "bot", font: Font.regular(13.0), textColor: UIColor(0x787878))
+                    if self.infoNode.attributedText == nil || !self.infoNode.attributedText!.isEqual(to: string) {
+                        self.infoNode.attributedText = string
+                        shouldUpdateLayout = true
+                    }
+                } else if let presence = peerView.peerPresences[peerView.peerId] as? TelegramUserPresence {
                     let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                     let (string, activity) = stringAndActivityForUserPresence(presence, relativeTo: Int32(timestamp))
                     let attributedString = NSAttributedString(string: string, font: Font.regular(13.0), textColor: activity ? UIColor(0x007ee5) : UIColor(0x787878))

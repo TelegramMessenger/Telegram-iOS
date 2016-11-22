@@ -4,7 +4,7 @@ import TelegramLegacyComponents
 import Display
 import SwiftSignalKit
 
-func legacyAttachmentMenu(parentController: LegacyController, presentOverlayController: @escaping (UIViewController) -> (() -> Void), openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, sendMessagesWithSignals: @escaping ([Any]?) -> Void) -> TGMenuSheetController {
+func legacyAttachmentMenu(parentController: LegacyController, presentOverlayController: @escaping (UIViewController) -> (() -> Void), openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?) -> Void) -> TGMenuSheetController {
     let controller = TGMenuSheetController()
     controller.applicationInterface = parentController.applicationInterface
     controller.dismissesByOutsideTap = true
@@ -39,7 +39,9 @@ func legacyAttachmentMenu(parentController: LegacyController, presentOverlayCont
     })
     itemViews.append(galleryItem)
     
-    let fileItem = TGMenuSheetButtonItemView(title: "File", type: TGMenuSheetButtonTypeDefault, action: {
+    let fileItem = TGMenuSheetButtonItemView(title: "File", type: TGMenuSheetButtonTypeDefault, action: {[weak controller] in
+        controller?.dismiss(animated: true)
+        openFileGallery()
     })
     itemViews.append(fileItem)
     
@@ -256,4 +258,8 @@ func legacyAttachmentMenu(parentController: LegacyController, presentOverlayCont
     
     [self.view endEditing:true];
     [controller presentInViewController:self sourceView:_inputTextPanel.attachButton animated:true];*/
+}
+
+func legacyFileAttachmentMenu(menuSheetController: TGMenuSheetController) {
+    
 }

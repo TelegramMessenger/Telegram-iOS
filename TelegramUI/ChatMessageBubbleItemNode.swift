@@ -767,7 +767,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                     if let sourceMessageId = forwardInfo.sourceMessageId {
                                         self.controllerInteraction?.navigateToMessage(item.message.id, sourceMessageId)
                                     } else {
-                                        self.controllerInteraction?.openPeer(forwardInfo.source?.id ?? forwardInfo.author.id, .chat)
+                                        self.controllerInteraction?.openPeer(forwardInfo.source?.id ?? forwardInfo.author.id, .chat(textInputState: nil))
                                     }
                                     return
                                 }
@@ -787,7 +787,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                     case let .peerMention(peerId):
                                         foundTapAction = true
                                         if let controllerInteraction = self.controllerInteraction {
-                                            controllerInteraction.openPeer(peerId, .info)
+                                            controllerInteraction.openPeer(peerId, .chat(textInputState: nil))
                                         }
                                         break loop
                                     case let .textMention(name):
@@ -933,7 +933,26 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 case let .callback(data):
                     controllerInteraction.requestMessageActionCallback(item.message.id, data)
                 case let .switchInline(samePeer, query):
-                    break
+                    var botPeer: Peer?
+                    
+                    var found = false
+                    for attribute in item.message.attributes {
+                        if let attribute = attribute as? InlineBotMessageAttribute {
+                            botPeer = item.message.peers[attribute.peerId]
+                            found = true
+                        }
+                    }
+                    if !found {
+                        botPeer = item.message.author
+                    }
+                    
+                    var peerId: PeerId?
+                    if samePeer {
+                        peerId = item.message.id.peerId
+                    }
+                    if let botPeer = botPeer, let addressName = botPeer.addressName {
+                        controllerInteraction.openPeer(peerId, .chat(textInputState: ChatTextInputState(inputText: "@\(addressName) \(query)")))
+                    }
             }
         }
     }
