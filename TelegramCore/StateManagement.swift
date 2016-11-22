@@ -880,6 +880,16 @@ private func finalStateWithUpdates(account: Account, state: MutableState, update
                 if let date = date {
                     let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 777000)
                     
+                    if updatedState.peers[peerId] == nil {
+                        updatedState.updatePeer(peerId, { peer in
+                            if peer == nil {
+                                return TelegramUser(id: peerId, accessHash: nil, firstName: "Telegram Notifications", lastName: nil, username: nil, phone: nil, photo: [], botInfo: BotUserInfo(flags: [], inlinePlaceholder: nil))
+                            } else {
+                                return peer
+                            }
+                        })
+                    }
+                    
                     var alreadyStored = false
                     if let storedMessages = updatedState.storedMessagesByPeerIdAndTimestamp[peerId] {
                         for index in storedMessages {

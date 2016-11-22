@@ -9,7 +9,13 @@ import Foundation
     import MtProtoKitDynamic
 #endif
 
-public func requestMessageActionCallback(account: Account, messageId: MessageId, data: MemoryBuffer?) -> Signal<Void, NoError> {
+public enum MessageActionCallbackResult {
+    case none
+    case alert(String)
+    case url(String)
+}
+
+public func requestMessageActionCallback(account: Account, messageId: MessageId, data: MemoryBuffer?) -> Signal<MessageActionCallbackResult, NoError> {
     return account.postbox.loadedPeerWithId(messageId.peerId)
         |> take(1)
         |> mapToSignal { peer in
@@ -22,11 +28,22 @@ public func requestMessageActionCallback(account: Account, messageId: MessageId,
                 }
                 return account.network.request(Api.functions.messages.getBotCallbackAnswer(flags: flags, peer: inputPeer, msgId: messageId.id, data: dataBuffer))
                     |> retryRequest
-                    |> map { result in
-                        return Void()
+                    |> map { result -> MessageActionCallbackResult in
+                        //messages.botCallbackAnswer#36585ea4 flags:# alert:flags.1?true has_url:flags.3?true message:flags.0?string url:flags.2?string cache_time:int = messages.BotCallbackAnswer;
+
+                        switch result {
+                            case let .botCallbackAnswer(_, message, url, cacheTime):
+                                if let message = message {
+                                    return .alert(message)
+                                } else if let url = url {
+                                    return .url(url)
+                                } else {
+                                    return .none
+                                }
+                        }
                     }
             } else {
-                return .complete()
+                return .single(.none)
             }
         }
 }

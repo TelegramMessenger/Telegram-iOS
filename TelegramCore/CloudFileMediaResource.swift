@@ -132,7 +132,7 @@ public class CloudDocumentMediaResource: TelegramCloudMediaResource {
     public let datacenterId: Int
     let fileId: Int64
     let accessHash: Int64
-    public let size: Int
+    public let size: Int?
     
     public var id: MediaResourceId {
         return CloudDocumentMediaResourceId(datacenterId: self.datacenterId, fileId: self.fileId, accessHash: self.accessHash)
@@ -142,7 +142,7 @@ public class CloudDocumentMediaResource: TelegramCloudMediaResource {
         return Api.InputFileLocation.inputDocumentFileLocation(id: self.fileId, accessHash: self.accessHash, version: 0)
     }
     
-    public init(datacenterId: Int, fileId: Int64, accessHash: Int64, size: Int) {
+    public init(datacenterId: Int, fileId: Int64, accessHash: Int64, size: Int?) {
         self.datacenterId = datacenterId
         self.fileId = fileId
         self.accessHash = accessHash
@@ -153,14 +153,22 @@ public class CloudDocumentMediaResource: TelegramCloudMediaResource {
         self.datacenterId = Int(decoder.decodeInt32ForKey("d") as Int32)
         self.fileId = decoder.decodeInt64ForKey("f")
         self.accessHash = decoder.decodeInt64ForKey("a")
-        self.size = Int(decoder.decodeInt32ForKey("n") as Int32)
+        if let size = (decoder.decodeInt32ForKey("n") as Int32?) {
+            self.size = Int(size)
+        } else {
+            self.size = nil
+        }
     }
     
     public func encode(_ encoder: Encoder) {
         encoder.encodeInt32(Int32(self.datacenterId), forKey: "d")
         encoder.encodeInt64(self.fileId, forKey: "f")
         encoder.encodeInt64(self.accessHash, forKey: "a")
-        encoder.encodeInt32(Int32(size), forKey: "n")
+        if let size = self.size {
+            encoder.encodeInt32(Int32(size), forKey: "n")
+        } else {
+            encoder.encodeNil(forKey: "n")
+        }
     }
     
     public func isEqual(to: TelegramMediaResource) -> Bool {
@@ -314,6 +322,66 @@ public class LocalFileReferenceMediaResource: TelegramMediaResource {
     public func isEqual(to: TelegramMediaResource) -> Bool {
         if let to = to as? LocalFileReferenceMediaResource {
             return self.localFilePath == to.localFilePath && self.randomId == to.randomId
+        } else {
+            return false
+        }
+    }
+}
+
+public struct HttpReferenceMediaResourceId: MediaResourceId {
+    public let url: String
+    
+    public func isEqual(to: MediaResourceId) -> Bool {
+        if let to = to as? HttpReferenceMediaResourceId {
+            return self.url == to.url
+        } else {
+            return false
+        }
+    }
+    
+    public var hashValue: Int {
+        return self.url.hashValue
+    }
+    
+    public var uniqueId: String {
+        return "http-\(persistentHash32(self.url))"
+    }
+}
+
+public final class HttpReferenceMediaResource: TelegramMediaResource {
+    public let url: String
+    public let size: Int?
+    
+    public init(url: String, size: Int?) {
+        self.url = url
+        self.size = size
+    }
+    
+    public required init(decoder: Decoder) {
+        self.url = decoder.decodeStringForKey("u")
+        if let size = (decoder.decodeInt32ForKey("s") as Int32?) {
+            self.size = Int(size)
+        } else {
+            self.size = nil
+        }
+    }
+    
+    public func encode(_ encoder: Encoder) {
+        encoder.encodeString(self.url, forKey: "u")
+        if let size = self.size {
+            encoder.encodeInt32(Int32(size), forKey: "s")
+        } else {
+            encoder.encodeNil(forKey: "s")
+        }
+    }
+    
+    public var id: MediaResourceId {
+        return HttpReferenceMediaResourceId(url: self.url)
+    }
+    
+    public func isEqual(to: TelegramMediaResource) -> Bool {
+        if let to = to as? HttpReferenceMediaResource {
+            return to.url == self.url
         } else {
             return false
         }

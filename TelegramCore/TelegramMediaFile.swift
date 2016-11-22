@@ -92,7 +92,7 @@ public final class TelegramMediaFile: Media, Equatable {
     public let resource: TelegramMediaResource
     public let previewRepresentations: [TelegramMediaImageRepresentation]
     public let mimeType: String
-    public let size: Int
+    public let size: Int?
     public let attributes: [TelegramMediaFileAttribute]
     public let peerIds: [PeerId] = []
     
@@ -100,7 +100,7 @@ public final class TelegramMediaFile: Media, Equatable {
         return self.fileId
     }
     
-    public init(fileId: MediaId, resource: TelegramMediaResource, previewRepresentations: [TelegramMediaImageRepresentation], mimeType: String, size: Int, attributes: [TelegramMediaFileAttribute]) {
+    public init(fileId: MediaId, resource: TelegramMediaResource, previewRepresentations: [TelegramMediaImageRepresentation], mimeType: String, size: Int?, attributes: [TelegramMediaFileAttribute]) {
         self.fileId = fileId
         self.resource = resource
         self.previewRepresentations = previewRepresentations
@@ -114,7 +114,11 @@ public final class TelegramMediaFile: Media, Equatable {
         self.resource = decoder.decodeObjectForKey("r") as! TelegramMediaResource
         self.previewRepresentations = decoder.decodeObjectArrayForKey("pr")
         self.mimeType = decoder.decodeStringForKey("mt")
-        self.size = Int(decoder.decodeInt32ForKey("s"))
+        if let size = (decoder.decodeInt32ForKey("s") as Int32?) {
+            self.size = Int(size)
+        } else {
+            self.size = nil
+        }
         self.attributes = decoder.decodeObjectArrayForKey("at")
     }
     
@@ -125,7 +129,11 @@ public final class TelegramMediaFile: Media, Equatable {
         encoder.encodeObject(self.resource, forKey: "r")
         encoder.encodeObjectArray(self.previewRepresentations, forKey: "pr")
         encoder.encodeString(self.mimeType, forKey: "mt")
-        encoder.encodeInt32(Int32(self.size), forKey: "s")
+        if let size = self.size {
+            encoder.encodeInt32(Int32(size), forKey: "s")
+        } else {
+            encoder.encodeNil(forKey: "s")
+        }
         encoder.encodeObjectArray(self.attributes, forKey: "at")
     }
     

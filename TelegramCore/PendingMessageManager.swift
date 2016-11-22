@@ -224,6 +224,7 @@ public final class PendingMessageManager {
             if let peer = modifier.getPeer(message.id.peerId), let inputPeer = apiInputPeer(peer) {
                 var uniqueId: Int64 = 0
                 var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?
+                var outgoingChatContextResultAttribute: OutgoingChatContextResultMessageAttribute?
                 var replyMessageId: Int32?
                 
                 for attribute in message.attributes {
@@ -231,8 +232,10 @@ public final class PendingMessageManager {
                         replyMessageId = replyAttribute.messageId.id
                     } else if let outgoingInfo = attribute as? OutgoingMessageInfoAttribute {
                         uniqueId = outgoingInfo.uniqueId
-                    } else if let forwardSourceInfo = attribute as? ForwardSourceInfoAttribute {
-                        forwardSourceInfoAttribute = forwardSourceInfo
+                    } else if let attribute = attribute as? ForwardSourceInfoAttribute {
+                        forwardSourceInfoAttribute = attribute
+                    } else if let attribute = attribute as? OutgoingChatContextResultMessageAttribute {
+                        outgoingChatContextResultAttribute = attribute
                     }
                 }
                 
@@ -264,6 +267,11 @@ public final class PendingMessageManager {
                         } else {
                             sendMessageRequest = .fail(NoError())
                         }
+                    case let .chatContextResult(chatContextResult):
+                        sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id))
+                            |> mapError { _ -> NoError in
+                                return NoError()
+                            }
                 }
                 
                 return sendMessageRequest

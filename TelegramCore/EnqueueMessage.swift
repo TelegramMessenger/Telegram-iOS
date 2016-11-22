@@ -8,15 +8,34 @@ import Foundation
 #endif
 
 public enum EnqueueMessage {
-    case message(text: String, media: Media?, replyToMessageId: MessageId?)
+    case message(text: String, attributes: [MessageAttribute], media: Media?, replyToMessageId: MessageId?)
     case forward(source: MessageId)
     
     public func withUpdatedReplyToMessageId(_ replyToMessageId: MessageId?) -> EnqueueMessage {
         switch self {
-            case let .message(text, media, _):
-                return .message(text: text, media: media, replyToMessageId: replyToMessageId)
+            case let .message(text, attributes, media, _):
+                return .message(text: text, attributes: attributes, media: media, replyToMessageId: replyToMessageId)
             case .forward:
                 return self
+        }
+    }
+}
+
+private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAttribute]) -> [MessageAttribute] {
+    return attributes.filter { attribute in
+        switch attribute {
+            case let _ as TextEntitiesMessageAttribute:
+                return true
+            case let _ as InlineBotMessageAttribute:
+                return true
+            case let _ as OutgoingMessageInfoAttribute:
+                return true
+            case let _ as ReplyMarkupMessageAttribute:
+                return true
+            case let _ as OutgoingChatContextResultMessageAttribute:
+                return true
+            default:
+                return false
         }
     }
 }
@@ -49,7 +68,9 @@ public func enqueueMessages(account: Account, peerId: PeerId, messages: [Enqueue
                 attributes.append(OutgoingMessageInfoAttribute(uniqueId: randomId))
                 
                 switch message {
-                    case let .message(text, media, replyToMessageId):
+                    case let .message(text, requestedAttributes, media, replyToMessageId):
+                        attributes.append(contentsOf: filterMessageAttributesForOutgoingMessage(requestedAttributes))
+                            
                         if let replyToMessageId = replyToMessageId {
                             attributes.append(ReplyMessageAttribute(messageId: replyToMessageId))
                         }
