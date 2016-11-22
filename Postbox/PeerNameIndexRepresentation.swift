@@ -11,7 +11,7 @@ public enum PeerNameIndex {
 }
 
 extension PeerIndexNameRepresentation {
-    func indexName(_ index: PeerNameIndex) -> String {
+    public func indexName(_ index: PeerNameIndex) -> String {
         switch self {
             case let .title(title):
                 return title
@@ -25,7 +25,7 @@ extension PeerIndexNameRepresentation {
         }
     }
     
-    func match(query: String) -> Bool {
+    public func match(query: String) -> Bool {
         switch self {
             case let .title(title):
                 return title.lowercased().hasPrefix(query)

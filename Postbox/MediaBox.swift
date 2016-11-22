@@ -201,8 +201,14 @@ public final class MediaBox {
                                     }
                                     
                                     if fetchingData {
-                                        //status = .Fetching(progress: Float(currentSize) / Float(resourceSize))
-                                        status = .Fetching(progress: 0.0)
+                                        let currentSize = fileSize(paths.partial) ?? 0
+                                        
+                                        if let resourceSize = resource.size {
+                                            status = .Fetching(progress: Float(currentSize) / Float(resourceSize))
+                                        } else {
+                                            status = .Fetching(progress: 0.0)
+                                        }
+
                                     } else {
                                         status = .Remote
                                     }
@@ -239,24 +245,50 @@ public final class MediaBox {
     }
     
     public func resourceData(_ resource: MediaResource, pathExtension: String? = nil, complete: Bool = true) -> Signal<MediaResourceData, NoError> {
-        assert(pathExtension == nil)
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.concurrentQueue.async {
                 let paths = self.storePathsForId(resource.id)
                 if let completeSize = fileSize(paths.complete) {
-                    subscriber.putNext(MediaResourceData(path: paths.complete, size: completeSize, complete: true))
-                    subscriber.putCompletion()
+                    if let pathExtension = pathExtension {
+                        let symlinkPath = paths.complete + ".\(pathExtension)"
+                        if fileSize(symlinkPath) == nil {
+                            let _ = try? FileManager.default.createSymbolicLink(atPath: symlinkPath, withDestinationPath: URL(fileURLWithPath: paths.complete).lastPathComponent)
+                        }
+                        subscriber.putNext(MediaResourceData(path: symlinkPath, size: completeSize, complete: true))
+                        subscriber.putCompletion()
+                    } else {
+                        subscriber.putNext(MediaResourceData(path: paths.complete, size: completeSize, complete: true))
+                        subscriber.putCompletion()
+                    }
                 } else {
                     self.dataQueue.async {
                         let resourceId = WrappedMediaResourceId(resource.id)
                         var currentContext: ResourceDataContext? = self.dataContexts[resourceId]
                         if let currentContext = currentContext, currentContext.data.complete {
-                            subscriber.putNext(currentContext.data)
-                            subscriber.putCompletion()
+                            if let pathExtension = pathExtension {
+                                let symlinkPath = paths.complete + ".\(pathExtension)"
+                                if fileSize(symlinkPath) == nil {
+                                    let _ = try? FileManager.default.createSymbolicLink(atPath: symlinkPath, withDestinationPath: URL(fileURLWithPath: paths.complete).lastPathComponent)
+                                }
+                                subscriber.putNext(MediaResourceData(path: symlinkPath, size: currentContext.data.size, complete: currentContext.data.complete))
+                                subscriber.putCompletion()
+                            } else {
+                                subscriber.putNext(currentContext.data)
+                                subscriber.putCompletion()
+                            }
                         } else if let completeSize = fileSize(paths.complete) {
-                            subscriber.putNext(MediaResourceData(path: paths.complete, size: completeSize, complete: true))
-                            subscriber.putCompletion()
+                            if let pathExtension = pathExtension {
+                                let symlinkPath = paths.complete + ".\(pathExtension)"
+                                if fileSize(symlinkPath) == nil {
+                                    let _ = try? FileManager.default.createSymbolicLink(atPath: symlinkPath, withDestinationPath: URL(fileURLWithPath: paths.complete).lastPathComponent)
+                                }
+                                subscriber.putNext(MediaResourceData(path: symlinkPath, size: completeSize, complete: true))
+                                subscriber.putCompletion()
+                            } else {
+                                subscriber.putNext(MediaResourceData(path: paths.complete, size: completeSize, complete: true))
+                                subscriber.putCompletion()
+                            }
                         } else {
                             let dataContext: ResourceDataContext
                             if let currentContext = currentContext {
@@ -270,15 +302,33 @@ public final class MediaBox {
                             let index: Bag<(MediaResourceData) -> Void>.Index
                             if complete {
                                 index = dataContext.completeDataSubscribers.add { data in
-                                    subscriber.putNext(data)
-                                    subscriber.putCompletion()
+                                    if let pathExtension = pathExtension, data.complete {
+                                        let symlinkPath = paths.complete + ".\(pathExtension)"
+                                        if fileSize(symlinkPath) == nil {
+                                            let _ = try? FileManager.default.createSymbolicLink(atPath: symlinkPath, withDestinationPath: URL(fileURLWithPath: paths.complete).lastPathComponent)
+                                        }
+                                        subscriber.putNext(MediaResourceData(path: symlinkPath, size: data.size, complete: data.complete))
+                                        subscriber.putCompletion()
+                                    } else {
+                                        subscriber.putNext(data)
+                                        subscriber.putCompletion()
+                                    }
                                 }
                                 subscriber.putNext(MediaResourceData(path: dataContext.data.path, size: 0, complete: false))
                             } else {
                                 index = dataContext.progresiveDataSubscribers.add { data in
-                                    subscriber.putNext(data)
-                                    if data.complete {
+                                    if let pathExtension = pathExtension, data.complete {
+                                        let symlinkPath = paths.complete + ".\(pathExtension)"
+                                        if fileSize(symlinkPath) == nil {
+                                            let _ = try? FileManager.default.createSymbolicLink(atPath: symlinkPath, withDestinationPath: URL(fileURLWithPath: paths.complete).lastPathComponent)
+                                        }
+                                        subscriber.putNext(MediaResourceData(path: symlinkPath, size: data.size, complete: data.complete))
                                         subscriber.putCompletion()
+                                    } else {
+                                        subscriber.putNext(data)
+                                        if data.complete {
+                                            subscriber.putCompletion()
+                                        }
                                     }
                                 }
                                 subscriber.putNext(dataContext.data)
@@ -455,8 +505,12 @@ public final class MediaBox {
                     let index: Bag<Void>.Index = dataContext.fetchSubscribers.add(Void())
                     
                     if dataContext.fetchDisposable == nil {
-                        //let status: MediaResourceStatus = .Fetching(progress: Float(currentSize) / Float(resourceSize))
-                        let status: MediaResourceStatus = .Fetching(progress: 0.0)
+                        let status: MediaResourceStatus
+                        if let resourceSize = resource.size {
+                            status = .Fetching(progress: Float(currentSize) / Float(resourceSize))
+                        } else {
+                            status = .Fetching(progress: 0.0)
+                        }
                         self.statusQueue.async {
                             if let statusContext = self.statusContexts[resourceId] {
                                 statusContext.status = status
@@ -526,8 +580,11 @@ public final class MediaBox {
                                     if updatedData.complete {
                                         status = .Local
                                     } else {
-                                        //status = .Fetching(progress: Float(updatedSize) / Float(resourceSize))
-                                        status = .Fetching(progress: 0.0)
+                                        if let resourceSize = resource.size {
+                                            status = .Fetching(progress: Float(updatedSize) / Float(resourceSize))
+                                        } else {
+                                            status = .Fetching(progress: 0.0)
+                                        }
                                     }
                                     
                                     self.statusQueue.async {
