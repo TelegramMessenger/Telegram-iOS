@@ -79,6 +79,8 @@ func fetchResource(account: Account, resource: MediaResource, range: Range<Int>)
         #endif
     } else if let localFileResource = resource as? LocalFileReferenceMediaResource {
         return fetchLocalFileResource(path: localFileResource.localFilePath)
+    } else if let httpReference = resource as? HttpReferenceMediaResource {
+        return fetchHttpResource(url: httpReference.url)
     }
     return .never()
 }

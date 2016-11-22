@@ -203,13 +203,11 @@ func textAndMediaFromApiMedia(_ media: Api.MessageMedia?) -> (String?, Media?) {
                 let mediaContact = TelegramMediaContact(firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, peerId: contactPeerId)
                 return (nil, mediaContact)
             case let .messageMediaGeo(geo):
-                if let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil) {
-                    return (nil, mediaMap)
-                }
+                let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil)
+                return (nil, mediaMap)
             case let .messageMediaVenue(geo, title, address, provider, venueId):
-                if let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: title, address: address, provider: provider, venueId: venueId) {
-                    return (nil, mediaMap)
-                }
+                let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: title, address: address, provider: provider, venueId: venueId)
+                return (nil, mediaMap)
             case let .messageMediaDocument(document, caption):
                 if let mediaFile = telegramMediaFileFromApiDocument(document) {
                     return (caption, mediaFile)
@@ -262,8 +260,6 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
     }
     return result
 }
-
-//message#c09be45f flags:# out:flags.1?true mentioned:flags.4?true media_unread:flags.5?true silent:flags.13?true post:flags.14?true id:int from_id:flags.8?int to_id:Peer fwd_from:flags.2?MessageFwdHeader via_bot_id:flags.11?int reply_to_msg_id:flags.3?int date:int message:string media:flags.9?MessageMedia reply_markup:flags.6?ReplyMarkup entities:flags.7?Vector<MessageEntity> views:flags.10?int edit_date:flags.15?int = Message;
 
 extension StoreMessage {
     convenience init?(apiMessage: Api.Message) {

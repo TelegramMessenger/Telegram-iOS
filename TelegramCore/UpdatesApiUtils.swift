@@ -232,6 +232,12 @@ extension Api.Update {
                 return [PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)]
             case let .updateUserPhoto(userId, _, _, _):
                 return [PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)]
+            case let .updateServiceNotification(_, inboxDate, _, _, _, _):
+                if let _ = inboxDate {
+                    return [PeerId(namespace: Namespaces.Peer.CloudUser, id: 777000)]
+                } else {
+                    return []
+                }
             default:
                 return []
         }

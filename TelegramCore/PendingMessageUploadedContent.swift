@@ -11,6 +11,7 @@ enum PendingMessageUploadedContent {
     case text(String)
     case media(Api.InputMedia)
     case forward(ForwardSourceInfoAttribute)
+    case chatContextResult(OutgoingChatContextResultMessageAttribute)
 }
 
 enum PendingMessageUploadedContentResult {
@@ -19,6 +20,13 @@ enum PendingMessageUploadedContentResult {
 }
 
 func uploadedMessageContent(network: Network, postbox: Postbox, message: Message) -> Signal<PendingMessageUploadedContentResult, NoError> {
+    var outgoingChatContextResultAttribute: OutgoingChatContextResultMessageAttribute?
+    for attribute in message.attributes {
+        if let attribute = attribute as? OutgoingChatContextResultMessageAttribute {
+            outgoingChatContextResultAttribute = attribute
+        }
+    }
+    
     if let forwardInfo = message.forwardInfo {
         var forwardSourceInfo: ForwardSourceInfoAttribute?
         for attribute in message.attributes {
@@ -31,6 +39,8 @@ func uploadedMessageContent(network: Network, postbox: Postbox, message: Message
         } else {
             return .never()
         }
+    } else if let outgoingChatContextResultAttribute = outgoingChatContextResultAttribute {
+        return .single(.content(message, .chatContextResult(outgoingChatContextResultAttribute)))
     } else if let media = message.media.first {
         if let image = media as? TelegramMediaImage, let largestRepresentation = largestImageRepresentation(image.representations) {
             return uploadedMediaImageContent(network: network, postbox: postbox, image: image, message: message)

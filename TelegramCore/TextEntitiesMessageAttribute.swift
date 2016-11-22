@@ -5,7 +5,7 @@ import Foundation
     import Postbox
 #endif
 
-public enum MessageTextEntityType {
+public enum MessageTextEntityType: Equatable {
     case Unknown
     case Mention
     case Hashtag
@@ -18,9 +18,86 @@ public enum MessageTextEntityType {
     case Pre
     case TextUrl(url: String)
     case TextMention(peerId: PeerId)
+    
+    public static func ==(lhs: MessageTextEntityType, rhs: MessageTextEntityType) -> Bool {
+        switch lhs {
+            case .Unknown:
+                if case .Unknown = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .Mention:
+                if case .Mention = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .Hashtag:
+                if case .Hashtag = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .BotCommand:
+                if case .BotCommand = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .Url:
+                if case .Url = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .Email:
+                if case .Email = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .Bold:
+                if case .Bold = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .Italic:
+                if case .Italic = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .Code:
+                if case .Code = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .Pre:
+                if case .Pre = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .TextUrl(url):
+                if case let .TextUrl(url) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .TextMention(peerId):
+                if case .TextMention(peerId) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
-public struct MessageTextEntity: Coding {
+public struct MessageTextEntity: Coding, Equatable {
     public let range: Range<Int>
     public let type: MessageTextEntityType
     
@@ -92,9 +169,13 @@ public struct MessageTextEntity: Coding {
                 encoder.encodeInt64(peerId.toInt64(), forKey: "peerId")
         }
     }
+    
+    public static func ==(lhs: MessageTextEntity, rhs: MessageTextEntity) -> Bool {
+        return lhs.range == rhs.range && lhs.type == rhs.type
+    }
 }
 
-public class TextEntitiesMessageAttribute: MessageAttribute {
+public class TextEntitiesMessageAttribute: MessageAttribute, Equatable {
     public let entities: [MessageTextEntity]
     
     public var associatedPeerIds: [PeerId] {
@@ -120,5 +201,9 @@ public class TextEntitiesMessageAttribute: MessageAttribute {
     
     public func encode(_ encoder: Encoder) {
         encoder.encodeObjectArray(self.entities, forKey: "entities")
+    }
+    
+    public static func ==(lhs: TextEntitiesMessageAttribute, rhs: TextEntitiesMessageAttribute) -> Bool {
+        return lhs.entities == rhs.entities
     }
 }

@@ -5,30 +5,7 @@ import Foundation
     import Postbox
 #endif
 
-/*
- 
- keyboardButton#a2fa4880 text:string = KeyboardButton;
- keyboardButtonUrl#258aff05 text:string url:string = KeyboardButton;
- keyboardButtonCallback#683a5e46 text:string data:bytes = KeyboardButton;
- keyboardButtonRequestPhone#b16a6c29 text:string = KeyboardButton;
- keyboardButtonRequestGeoLocation#fc796b3f text:string = KeyboardButton;
- keyboardButtonSwitchInline#568a748 flags:# same_peer:flags.0?true text:string query:string = KeyboardButton;
- keyboardButtonGame#50f41ccf text:string = KeyboardButton;
- 
- keyboardButtonRow#77608b83 buttons:Vector<KeyboardButton> = KeyboardButtonRow;
- 
- */
-
-/*
- 
- replyKeyboardHide#a03e5b85 flags:# selective:flags.2?true = ReplyMarkup;
- replyKeyboardForceReply#f4108aa0 flags:# single_use:flags.1?true selective:flags.2?true = ReplyMarkup;
- replyKeyboardMarkup#3502758c flags:# resize:flags.0?true single_use:flags.1?true selective:flags.2?true rows:Vector<KeyboardButtonRow> = ReplyMarkup;
- replyInlineMarkup#48a30254 rows:Vector<KeyboardButtonRow> = ReplyMarkup;
- 
- */
-
-public enum ReplyMarkupButtonAction: Coding {
+public enum ReplyMarkupButtonAction: Coding, Equatable {
     case text
     case url(String)
     case callback(MemoryBuffer)
@@ -75,14 +52,61 @@ public enum ReplyMarkupButtonAction: Coding {
             case let .switchInline(samePeer, query):
                 encoder.encodeInt32(5, forKey: "v")
                 encoder.encodeInt32(samePeer ? 1 : 0, forKey: "s")
-                encoder.encodeString(query, forKey: "1")
+                encoder.encodeString(query, forKey: "q")
             case .openWebApp:
                 encoder.encodeInt32(6, forKey: "v")
         }
     }
+    
+    public static func ==(lhs: ReplyMarkupButtonAction, rhs: ReplyMarkupButtonAction) -> Bool {
+        switch lhs {
+            case .text:
+                if case .text = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .url(url):
+                if case .url(url) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .callback(data):
+                if case .callback(data) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .requestPhone:
+                if case .requestPhone = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .requestMap:
+                if case .requestMap = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .switchInline(samePeer, query):
+                if case .switchInline(samePeer, query) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .openWebApp:
+                if case .openWebApp = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
-public struct ReplyMarkupButton: Coding {
+public struct ReplyMarkupButton: Coding, Equatable {
     public let title: String
     public let action: ReplyMarkupButtonAction
     
@@ -100,9 +124,13 @@ public struct ReplyMarkupButton: Coding {
         encoder.encodeString(self.title, forKey: ".t")
         self.action.encode(encoder)
     }
+    
+    public static func ==(lhs: ReplyMarkupButton, rhs: ReplyMarkupButton) -> Bool {
+        return lhs.title == rhs.title && lhs.action == rhs.action
+    }
 }
 
-public struct ReplyMarkupRow: Coding {
+public struct ReplyMarkupRow: Coding, Equatable {
     public let buttons: [ReplyMarkupButton]
     
     init(buttons: [ReplyMarkupButton]) {
@@ -115,6 +143,10 @@ public struct ReplyMarkupRow: Coding {
     
     public func encode(_ encoder: Encoder) {
         encoder.encodeObjectArray(self.buttons, forKey: "b")
+    }
+    
+    public static func ==(lhs: ReplyMarkupRow, rhs: ReplyMarkupRow) -> Bool {
+        return lhs.buttons == rhs.buttons
     }
 }
 
@@ -135,7 +167,7 @@ public struct ReplyMarkupMessageFlags: OptionSet {
     public static let inline = ReplyMarkupMessageFlags(rawValue: 1 << 3)
 }
 
-public class ReplyMarkupMessageAttribute: MessageAttribute {
+public class ReplyMarkupMessageAttribute: MessageAttribute, Equatable {
     public let rows: [ReplyMarkupRow]
     public let flags: ReplyMarkupMessageFlags
     
@@ -152,6 +184,10 @@ public class ReplyMarkupMessageAttribute: MessageAttribute {
     public func encode(_ encoder: Encoder) {
         encoder.encodeObjectArray(self.rows, forKey: "r")
         encoder.encodeInt32(self.flags.rawValue, forKey: "f")
+    }
+    
+    public static func ==(lhs: ReplyMarkupMessageAttribute, rhs: ReplyMarkupMessageAttribute) -> Bool {
+        return lhs.flags == rhs.flags && lhs.rows == rhs.rows
     }
 }
 
