@@ -65,6 +65,16 @@
     return queue;
 }
 
++ (MTQueue *)concurrentLowQueue {
+    static MTQueue *queue = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^ {
+        queue = [[MTQueue alloc] init];
+        queue->_queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0);
+    });
+    return queue;
+}
+
 - (dispatch_queue_t)nativeQueue
 {
     return _queue;
@@ -79,6 +89,10 @@
         return [NSThread isMainThread];
     else
         return dispatch_get_specific(_name) == _name;
+}
+
+- (void)dispatch:(dispatch_block_t)block {
+    [self dispatchOnQueue:block synchronous:false];
 }
 
 - (void)dispatchOnQueue:(dispatch_block_t)block

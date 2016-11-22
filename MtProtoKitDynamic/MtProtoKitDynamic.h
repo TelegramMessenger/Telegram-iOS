@@ -65,6 +65,7 @@ FOUNDATION_EXPORT const unsigned char MtProtoKitDynamicVersionString[];
 #import <MTProtoKitDynamic/MTHttpTransport.h>
 #import <MTProtoKitDynamic/MTHttpRequestOperation.h>
 #import <MTProtoKitDynamic/MTAtomic.h>
+#import <MTProtoKitDynamic/MTBag.h>
 #import <MTProtoKitDynamic/MTDisposable.h>
 #import <MTProtoKitDynamic/MTSubscriber.h>
 #import <MTProtoKitDynamic/MTSignal.h>

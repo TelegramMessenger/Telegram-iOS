@@ -563,6 +563,24 @@ static dispatch_block_t recursiveBlock(void (^block)(dispatch_block_t recurse))
     }];
 }
 
+- (MTSignal *)filter:(bool (^)(id))f
+{
+    return [[MTSignal alloc] initWithGenerator:^id<MTDisposable> (MTSubscriber *subscriber)
+    {
+        return [self startWithNext:^(id next)
+        {
+            if (f(next))
+                [subscriber putNext:next];
+        } error:^(id error)
+        {
+            [subscriber putError:error];
+        } completed:^
+        {
+            [subscriber putCompletion];
+        }];
+    }];
+}
+
 - (MTSignal *)mapToSignal:(MTSignal *(^)(id))f
 {
     return [[self map:f] switchToLatest];
@@ -592,6 +610,208 @@ static dispatch_block_t recursiveBlock(void (^block)(dispatch_block_t recurse))
         
         return compositeDisposable;
     }];
+}
+
+- (MTSignal *)deliverOn:(MTQueue *)queue
+{
+    return [[MTSignal alloc] initWithGenerator:^id<MTDisposable> (MTSubscriber *subscriber)
+    {
+        return [self startWithNext:^(id next)
+        {
+            [queue dispatchOnQueue:^
+            {
+                [subscriber putNext:next];
+            }];
+        } error:^(id error)
+        {
+            [queue dispatchOnQueue:^
+            {
+                [subscriber putError:error];
+            }];
+        } completed:^
+        {
+            [queue dispatchOnQueue:^
+            {
+                [subscriber putCompletion];
+            }];
+        }];
+    }];
+}
+
+- (MTSignal *)startOn:(MTQueue *)queue
+{
+    return [[MTSignal alloc] initWithGenerator:^id<MTDisposable> (MTSubscriber *subscriber)
+    {
+        __block bool isCancelled = false;
+        MTMetaDisposable *disposable = [[MTMetaDisposable alloc] init];
+        [disposable setDisposable:[[MTBlockDisposable alloc] initWithBlock:^
+        {
+            isCancelled = true;
+        }]];
+        
+        [queue dispatchOnQueue:^
+        {
+            if (!isCancelled)
+            {
+                [disposable setDisposable:[self startWithNext:^(id next)
+                {
+                    [subscriber putNext:next];
+                } error:^(id error)
+                {
+                    [subscriber putError:error];
+                } completed:^
+                {
+                    [subscriber putCompletion];
+                }]];
+            }
+        }];
+        
+        return disposable;
+    }];
+}
+
+- (MTSignal *)takeLast
+{
+    return [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber)
+    {
+        MTAtomic *last = [[MTAtomic alloc] initWithValue:nil];
+        return [self startWithNext:^(id next)
+        {
+            [last swap:[[MTSignal_ValueContainer alloc] initWithValue:next]];
+        } error:^(id error)
+        {
+            [subscriber putError:error];
+        } completed:^
+        {
+            MTSignal_ValueContainer *value = [last with:^id(id value) {
+                return value;
+            }];
+            if (value != nil)
+            {
+                [subscriber putNext:value.value];
+            }
+            [subscriber putCompletion];
+        }];
+    }];
+}
+
+- (MTSignal *)reduceLeft:(id)value with:(id (^)(id, id))f
+{
+    return [[MTSignal alloc] initWithGenerator:^(MTSubscriber *subscriber)
+    {
+        __block id intermediateResult = value;
+        
+        return [self startWithNext:^(id next)
+        {
+            intermediateResult = f(intermediateResult, next);
+        } error:^(id error)
+        {
+            [subscriber putError:error];
+        } completed:^
+        {
+            if (intermediateResult != nil)
+                [subscriber putNext:intermediateResult];
+            [subscriber putCompletion];
+        }];
+    }];
+}
+
+@end
+
+@interface MTPipeReplayState : NSObject
+
+@property (nonatomic, readonly) bool hasReceivedValue;
+@property (nonatomic, strong, readonly) id recentValue;
+
+@end
+
+@implementation MTPipeReplayState
+
+- (instancetype)initWithReceivedValue:(bool)receivedValue recentValue:(id)recentValue
+{
+    self = [super init];
+    if (self != nil)
+    {
+        _hasReceivedValue = receivedValue;
+        _recentValue = recentValue;
+    }
+    return self;
+}
+
+@end
+
+@implementation MTPipe
+
+- (instancetype)init
+{
+    return [self initWithReplay:false];
+}
+
+- (instancetype)initWithReplay:(bool)replay
+{
+    self = [super init];
+    if (self != nil)
+    {
+        MTAtomic *subscribers = [[MTAtomic alloc] initWithValue:[[MTBag alloc] init]];
+        MTAtomic *replayState = replay ? [[MTAtomic alloc] initWithValue:[[MTPipeReplayState alloc] initWithReceivedValue:false recentValue:nil]] : nil;
+        
+        _signalProducer = [^MTSignal *
+        {
+            return [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber)
+            {
+                __block NSUInteger index = 0;
+                [subscribers with:^id(MTBag *bag)
+                {
+                    index = [bag addItem:[^(id next)
+                    {
+                        [subscriber putNext:next];
+                    } copy]];
+                    return nil;
+                }];
+                
+                if (replay)
+                {
+                    [replayState with:^id(MTPipeReplayState *state)
+                    {
+                        if (state.hasReceivedValue)
+                            [subscriber putNext:state.recentValue];
+                        return nil;
+                    }];
+                }
+                
+                return [[MTBlockDisposable alloc] initWithBlock:^
+                {
+                    [subscribers with:^id(MTBag *bag)
+                    {
+                        [bag removeItem:index];
+                        return nil;
+                    }];
+                }];
+            }];
+        } copy];
+        
+        _sink = [^(id next)
+        {
+            NSArray *items = [subscribers with:^id(MTBag *bag)
+            {
+                return [bag copyItems];
+            }];
+            
+            for (void (^item)(id) in items)
+            {
+                item(next);
+            }
+            
+            if (replay)
+            {
+                [replayState modify:^id(__unused MTPipeReplayState *state)
+                {
+                    return [[MTPipeReplayState alloc] initWithReceivedValue:true recentValue:next];
+                }];
+            }
+        } copy];
+    }
+    return self;
 }
 
 @end
