@@ -197,6 +197,10 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
 @end
 
 @implementation ASTableView
+{
+  __weak id<ASTableDelegate> _asyncDelegate;
+  __weak id<ASTableDataSource> _asyncDataSource;
+}
 
 // Using _ASDisplayLayer ensures things like -layout are properly forwarded to ASTableNode.
 + (Class)layerClass
@@ -304,6 +308,11 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
   ASDisplayNodeAssert(delegate == nil, @"ASTableView uses asyncDelegate, not UITableView's delegate property.");
 }
 
+- (id<ASTableDataSource>)asyncDataSource
+{
+  return _asyncDataSource;
+}
+
 - (void)setAsyncDataSource:(id<ASTableDataSource>)asyncDataSource
 {
   // Changing super.dataSource will trigger a setNeedsLayout, so this must happen on the main thread.
@@ -344,6 +353,11 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
   }
   
   super.dataSource = (id<UITableViewDataSource>)_proxyDataSource;
+}
+
+- (id<ASTableDelegate>)asyncDelegate
+{
+  return _asyncDelegate;
 }
 
 - (void)setAsyncDelegate:(id<ASTableDelegate>)asyncDelegate

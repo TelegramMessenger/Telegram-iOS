@@ -224,8 +224,10 @@ static NSString * const kCellReuseIdentifier = @"_ASCollectionViewCell";
 @end
 
 @implementation ASCollectionView
-@synthesize asyncDelegate = _asyncDelegate;
-@synthesize asyncDataSource = _asyncDataSource;
+{
+  __weak id<ASCollectionDelegate> _asyncDelegate;
+  __weak id<ASCollectionDataSource> _asyncDataSource;
+}
 
 // Using _ASDisplayLayer ensures things like -layout are properly forwarded to ASCollectionNode.
 + (Class)layerClass
@@ -368,6 +370,11 @@ static NSString * const kCellReuseIdentifier = @"_ASCollectionViewCell";
   }
 }
 
+- (id<ASCollectionDataSource>)asyncDataSource
+{
+  return _asyncDataSource;
+}
+
 - (void)setAsyncDataSource:(id<ASCollectionDataSource>)asyncDataSource
 {
   // Changing super.dataSource will trigger a setNeedsLayout, so this must happen on the main thread.
@@ -416,6 +423,11 @@ static NSString * const kCellReuseIdentifier = @"_ASCollectionViewCell";
   if (_layoutInspectorFlags.didChangeCollectionViewDataSource) {
     [layoutInspector didChangeCollectionViewDataSource:asyncDataSource];
   }
+}
+
+- (id<ASCollectionDelegate>)asyncDelegate
+{
+  return _asyncDelegate;
 }
 
 - (void)setAsyncDelegate:(id<ASCollectionDelegate>)asyncDelegate
