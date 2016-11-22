@@ -8,12 +8,14 @@
 @interface UIViewControllerPresentingProxy : UIViewController
 
 @property (nonatomic, copy) void (^dismiss)();
+@property (nonatomic, strong, readonly) UIViewController *rootController;
 
 @end
 
 @implementation UIViewControllerPresentingProxy
 
-- (instancetype)init {
+- (instancetype)initWithRootController:(UIViewController *)rootController {
+    _rootController = rootController;
     return self;
 }
 
@@ -92,6 +94,7 @@ static bool notyfyingShiftState = false;
         [RuntimeUtils swizzleInstanceMethodOfClass:[UIViewController class] currentSelector:@selector(viewDidDisappear:) newSelector:@selector(_65087dc8_viewDidDisappear:)];
         [RuntimeUtils swizzleInstanceMethodOfClass:[UIViewController class] currentSelector:@selector(navigationController) newSelector:@selector(_65087dc8_navigationController)];
         [RuntimeUtils swizzleInstanceMethodOfClass:[UIViewController class] currentSelector:@selector(presentingViewController) newSelector:@selector(_65087dc8_presentingViewController)];
+        [RuntimeUtils swizzleInstanceMethodOfClass:[UIViewController class] currentSelector:@selector(presentViewController:animated:completion:) newSelector:@selector(_65087dc8_presentViewController:animated:completion:)];
         
         //[RuntimeUtils swizzleInstanceMethodOfClass:NSClassFromString(@"UIKeyboardImpl") currentSelector:@selector(notifyShiftState) withAnotherClass:[UIKeyboardImpl_65087dc8 class] newSelector:@selector(notifyShiftState)];
         //[RuntimeUtils swizzleInstanceMethodOfClass:NSClassFromString(@"UIInputWindowController") currentSelector:@selector(updateViewConstraints) withAnotherClass:[UIInputWindowController_65087dc8 class] newSelector:@selector(updateViewConstraints)];
@@ -156,8 +159,8 @@ static bool notyfyingShiftState = false;
     [self setAssociatedObject:[[NSWeakReference alloc] initWithValue:presentingViewController] forKey:UIViewControllerPresentingControllerKey];
 }
 
-- (void)navigation_setDismiss:(void (^_Nullable)())dismiss {
-    UIViewControllerPresentingProxy *proxy = [[UIViewControllerPresentingProxy alloc] init];
+- (void)navigation_setDismiss:(void (^_Nullable)())dismiss rootController:(UIViewController *)rootController {
+    UIViewControllerPresentingProxy *proxy = [[UIViewControllerPresentingProxy alloc] initWithRootController:rootController];
     proxy.dismiss = dismiss;
     [self setAssociatedObject:proxy forKey:UIViewControllerPresentingProxyControllerKey];
 }
@@ -173,7 +176,16 @@ static bool notyfyingShiftState = false;
         return controller;
     }
     
-    return [self associatedObjectForKey:UIViewControllerPresentingProxyControllerKey];
+    UIView *result = [self associatedObjectForKey:UIViewControllerPresentingProxyControllerKey];
+    if (result != nil) {
+        return result;
+    }
+    
+    return [self _65087dc8_presentingViewController];
+}
+
+- (void)_65087dc8_presentViewController:(UIViewController *)viewControllerToPresent animated:(BOOL)flag completion:(void (^)(void))completion {
+    [self _65087dc8_presentViewController:viewControllerToPresent animated:flag completion:completion];
 }
 
 @end

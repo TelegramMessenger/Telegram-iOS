@@ -5,875 +5,6 @@ import SwiftSignalKit
 private let usePerformanceTracker = false
 private let useDynamicTuning = false
 
-public enum ListViewCenterScrollPositionOverflow {
-    case Top
-    case Bottom
-}
-
-public enum ListViewScrollPosition: Equatable {
-    case Top
-    case Bottom
-    case Center(ListViewCenterScrollPositionOverflow)
-}
-
-public func ==(lhs: ListViewScrollPosition, rhs: ListViewScrollPosition) -> Bool {
-    switch lhs {
-        case .Top:
-            switch rhs {
-                case .Top:
-                    return true
-                default:
-                    return false
-            }
-        case .Bottom:
-            switch rhs {
-                case .Bottom:
-                    return true
-                default:
-                    return false
-            }
-        case let .Center(lhsOverflow):
-            switch rhs {
-                case let .Center(rhsOverflow) where lhsOverflow == rhsOverflow:
-                    return true
-                default:
-                    return false
-            }
-    }
-}
-
-public enum ListViewScrollToItemDirectionHint {
-    case Up
-    case Down
-}
-
-public enum ListViewAnimationCurve {
-    case Spring(duration: Double)
-    case Default
-}
-
-public struct ListViewScrollToItem {
-    public let index: Int
-    public let position: ListViewScrollPosition
-    public let animated: Bool
-    public let curve: ListViewAnimationCurve
-    public let directionHint: ListViewScrollToItemDirectionHint
-    
-    public init(index: Int, position: ListViewScrollPosition, animated: Bool, curve: ListViewAnimationCurve, directionHint: ListViewScrollToItemDirectionHint) {
-        self.index = index
-        self.position = position
-        self.animated = animated
-        self.curve = curve
-        self.directionHint = directionHint
-    }
-}
-
-public enum ListViewItemOperationDirectionHint {
-    case Up
-    case Down
-}
-
-public struct ListViewDeleteItem {
-    public let index: Int
-    public let directionHint: ListViewItemOperationDirectionHint?
-    
-    public init(index: Int, directionHint: ListViewItemOperationDirectionHint?) {
-        self.index = index
-        self.directionHint = directionHint
-    }
-}
-
-public struct ListViewInsertItem {
-    public let index: Int
-    public let previousIndex: Int?
-    public let item: ListViewItem
-    public let directionHint: ListViewItemOperationDirectionHint?
-    public let forceAnimateInsertion: Bool
-    
-    public init(index: Int, previousIndex: Int?, item: ListViewItem, directionHint: ListViewItemOperationDirectionHint?, forceAnimateInsertion: Bool = false) {
-        self.index = index
-        self.previousIndex = previousIndex
-        self.item = item
-        self.directionHint = directionHint
-        self.forceAnimateInsertion = forceAnimateInsertion
-    }
-}
-
-public struct ListViewUpdateItem {
-    public let index: Int
-    public let previousIndex: Int
-    public let item: ListViewItem
-    public let directionHint: ListViewItemOperationDirectionHint?
-    
-    public init(index: Int, previousIndex: Int, item: ListViewItem, directionHint: ListViewItemOperationDirectionHint?) {
-        self.index = index
-        self.previousIndex = previousIndex
-        self.item = item
-        self.directionHint = directionHint
-    }
-}
-
-public struct ListViewDeleteAndInsertOptions: OptionSet {
-    public let rawValue: Int
-    
-    public init(rawValue: Int) {
-        self.rawValue = rawValue
-    }
-    
-    public static let AnimateInsertion = ListViewDeleteAndInsertOptions(rawValue: 1)
-    public static let AnimateAlpha = ListViewDeleteAndInsertOptions(rawValue: 2)
-    public static let LowLatency = ListViewDeleteAndInsertOptions(rawValue: 4)
-    public static let Synchronous = ListViewDeleteAndInsertOptions(rawValue: 8)
-    public static let RequestItemInsertionAnimations = ListViewDeleteAndInsertOptions(rawValue: 16)
-}
-
-public struct ListViewUpdateSizeAndInsets {
-    public let size: CGSize
-    public let insets: UIEdgeInsets
-    public let duration: Double
-    public let curve: ListViewAnimationCurve
-    
-    public init(size: CGSize, insets: UIEdgeInsets, duration: Double, curve: ListViewAnimationCurve) {
-        self.size = size
-        self.insets = insets
-        self.duration = duration
-        self.curve = curve
-    }
-}
-
-public struct ListViewItemRange: Equatable {
-    public let firstIndex: Int
-    public let lastIndex: Int
-}
-
-public func ==(lhs: ListViewItemRange, rhs: ListViewItemRange) -> Bool {
-    return lhs.firstIndex == rhs.firstIndex && lhs.lastIndex == rhs.lastIndex
-}
-
-public struct ListViewDisplayedItemRange: Equatable {
-    public let loadedRange: ListViewItemRange?
-    public let visibleRange: ListViewItemRange?
-}
-
-public func ==(lhs: ListViewDisplayedItemRange, rhs: ListViewDisplayedItemRange) -> Bool {
-    return lhs.loadedRange == rhs.loadedRange && lhs.visibleRange == rhs.visibleRange
-}
-
-private struct IndexRange {
-    let first: Int
-    let last: Int
-    
-    func contains(_ index: Int) -> Bool {
-        return index >= first && index <= last
-    }
-    
-    var empty: Bool {
-        return first > last
-    }
-}
-
-private struct OffsetRanges {
-    var offsets: [(IndexRange, CGFloat)] = []
-    
-    mutating func append(_ other: OffsetRanges) {
-        self.offsets.append(contentsOf: other.offsets)
-    }
-    
-    mutating func offset(_ indexRange: IndexRange, offset: CGFloat) {
-        self.offsets.append((indexRange, offset))
-    }
-    
-    func offsetForIndex(_ index: Int) -> CGFloat {
-        var result: CGFloat = 0.0
-        for offset in self.offsets {
-            if offset.0.contains(index) {
-                result += offset.1
-            }
-        }
-        return result
-    }
-}
-
-private func binarySearch(_ inputArr: [Int], searchItem: Int) -> Int? {
-    var lowerIndex = 0;
-    var upperIndex = inputArr.count - 1
-    
-    if lowerIndex > upperIndex {
-        return nil
-    }
-    
-    while (true) {
-        let currentIndex = (lowerIndex + upperIndex) / 2
-        if (inputArr[currentIndex] == searchItem) {
-            return currentIndex
-        } else if (lowerIndex > upperIndex) {
-            return nil
-        } else {
-            if (inputArr[currentIndex] > searchItem) {
-                upperIndex = currentIndex - 1
-            } else {
-                lowerIndex = currentIndex + 1
-            }
-        }
-    }
-}
-
-private struct TransactionState {
-    let visibleSize: CGSize
-    let items: [ListViewItem]
-}
-
-private struct PendingNode {
-    let index: Int
-    let node: ListViewItemNode
-    let apply: () -> ()
-    let frame: CGRect
-    let apparentHeight: CGFloat
-}
-
-private enum ListViewStateNode {
-    case Node(index: Int, frame: CGRect, referenceNode: ListViewItemNode?)
-    case Placeholder(frame: CGRect)
-    
-    var index: Int? {
-        switch self {
-            case .Node(let index, _, _):
-                return index
-            case .Placeholder(_):
-                return nil
-        }
-    }
-    
-    var frame: CGRect {
-        get {
-            switch self {
-                case .Node(_, let frame, _):
-                    return frame
-                case .Placeholder(let frame):
-                    return frame
-            }
-        } set(value) {
-            switch self {
-                case let .Node(index, _, referenceNode):
-                    self = .Node(index: index, frame: value, referenceNode: referenceNode)
-                case .Placeholder(_):
-                    self = .Placeholder(frame: value)
-            }
-        }
-    }
-}
-
-private enum ListViewInsertionOffsetDirection {
-    case Up
-    case Down
-    
-    init(_ hint: ListViewItemOperationDirectionHint) {
-        switch hint {
-            case .Up:
-                self = .Up
-            case .Down:
-                self = .Down
-        }
-    }
-    
-    func inverted() -> ListViewInsertionOffsetDirection {
-        switch self {
-            case .Up:
-                return .Down
-            case .Down:
-                return .Up
-        }
-    }
-}
-
-private struct ListViewInsertionPoint {
-    let index: Int
-    let point: CGPoint
-    let direction: ListViewInsertionOffsetDirection
-}
-
-private struct ListViewState {
-    var insets: UIEdgeInsets
-    var visibleSize: CGSize
-    let invisibleInset: CGFloat
-    var nodes: [ListViewStateNode]
-    var scrollPosition: (Int, ListViewScrollPosition)?
-    var stationaryOffset: (Int, CGFloat)?
-    
-    mutating func fixScrollPostition(_ itemCount: Int) {
-        if let (fixedIndex, fixedPosition) = self.scrollPosition {
-            for node in self.nodes {
-                if let index = node.index , index == fixedIndex {
-                    let offset: CGFloat
-                    switch fixedPosition {
-                        case .Bottom:
-                            offset = (self.visibleSize.height - self.insets.bottom) - node.frame.maxY
-                        case .Top:
-                            offset = self.insets.top - node.frame.minY
-                        case let .Center(overflow):
-                            let contentAreaHeight = self.visibleSize.height - self.insets.bottom - self.insets.top
-                            if node.frame.size.height <= contentAreaHeight + CGFloat(FLT_EPSILON) {
-                                offset = self.insets.top + floor((contentAreaHeight - node.frame.size.height) / 2.0) - node.frame.minY
-                            } else {
-                                switch overflow {
-                                    case .Top:
-                                        offset = self.insets.top - node.frame.minY
-                                    case .Bottom:
-                                        offset = (self.visibleSize.height - self.insets.bottom) - node.frame.maxY
-                                }
-                            }
-                    }
-                    
-                    var minY: CGFloat = CGFloat.greatestFiniteMagnitude
-                    var maxY: CGFloat = 0.0
-                    for i in 0 ..< self.nodes.count {
-                        var frame = self.nodes[i].frame
-                        frame = frame.offsetBy(dx: 0.0, dy: offset)
-                        self.nodes[i].frame = frame
-                        
-                        minY = min(minY, frame.minY)
-                        maxY = max(maxY, frame.maxY)
-                    }
-                    
-                    var additionalOffset: CGFloat = 0.0
-                    if minY > self.insets.top {
-                        additionalOffset = self.insets.top - minY
-                    }
-                    
-                    if abs(additionalOffset) > CGFloat(FLT_EPSILON) {
-                        for i in 0 ..< self.nodes.count {
-                            var frame = self.nodes[i].frame
-                            frame = frame.offsetBy(dx: 0.0, dy: additionalOffset)
-                            self.nodes[i].frame = frame
-                        }
-                    }
-                    
-                    self.snapToBounds(itemCount, snapTopItem: true)
-                    
-                    break
-                }
-            }
-        } else if let (stationaryIndex, stationaryOffset) = self.stationaryOffset {
-            for node in self.nodes {
-                if node.index == stationaryIndex {
-                    let offset = stationaryOffset - node.frame.minY
-                    
-                    if abs(offset) > CGFloat(FLT_EPSILON) {
-                        for i in 0 ..< self.nodes.count {
-                            var frame = self.nodes[i].frame
-                            frame = frame.offsetBy(dx: 0.0, dy: offset)
-                            self.nodes[i].frame = frame
-                        }
-                    }
-                    
-                    break
-                }
-            }
-            
-            //self.snapToBounds(itemCount, snapTopItem: true)
-        }
-    }
-    
-    mutating func setupStationaryOffset(_ index: Int, boundary: Int, frames: [Int: CGRect]) {
-        if index < boundary {
-            for node in self.nodes {
-                if let nodeIndex = node.index , nodeIndex >= index {
-                    if let frame = frames[nodeIndex] {
-                        self.stationaryOffset = (nodeIndex, frame.minY)
-                        break
-                    }
-                }
-            }
-        } else {
-            for node in self.nodes.reversed() {
-                if let nodeIndex = node.index , nodeIndex <= index {
-                    if let frame = frames[nodeIndex] {
-                        self.stationaryOffset = (nodeIndex, frame.minY)
-                        break
-                    }
-                }
-            }
-        }
-    }
-    
-    mutating func snapToBounds(_ itemCount: Int, snapTopItem: Bool) {
-        var completeHeight: CGFloat = 0.0
-        var topItemFound = false
-        var bottomItemFound = false
-        var topItemEdge: CGFloat = 0.0
-        var bottomItemEdge: CGFloat = 0.0
-        
-        for node in self.nodes {
-            if let index = node.index {
-                if index == 0 {
-                    topItemFound = true
-                    topItemEdge = node.frame.minY
-                }
-                break
-            }
-        }
-        
-        for node in self.nodes.reversed() {
-            if let index = node.index {
-                if index == itemCount - 1 {
-                    bottomItemFound = true
-                    bottomItemEdge = node.frame.maxY
-                }
-                break
-            }
-        }
-        
-        if topItemFound && bottomItemFound {
-            for node in self.nodes {
-                completeHeight += node.frame.size.height
-            }
-        }
-        
-        let overscroll: CGFloat = 0.0
-        
-        var offset: CGFloat = 0.0
-        if topItemFound && bottomItemFound {
-            let areaHeight = min(completeHeight, self.visibleSize.height - self.insets.bottom - self.insets.top)
-            if bottomItemEdge < self.insets.top + areaHeight - overscroll {
-                offset = self.insets.top + areaHeight - overscroll - bottomItemEdge
-            } else if topItemEdge > self.insets.top - overscroll && snapTopItem {
-                offset = (self.insets.top - overscroll) - topItemEdge
-            }
-        } else if topItemFound {
-            if topItemEdge > self.insets.top - overscroll && snapTopItem {
-                offset = (self.insets.top - overscroll) - topItemEdge
-            }
-        } else if bottomItemFound {
-            if bottomItemEdge < self.visibleSize.height - self.insets.bottom - overscroll {
-                offset = self.visibleSize.height - self.insets.bottom - overscroll - bottomItemEdge
-            }
-        }
-        
-        if abs(offset) > CGFloat(FLT_EPSILON) {
-            for i in  0 ..< self.nodes.count {
-                var frame = self.nodes[i].frame
-                frame.origin.y += offset
-                self.nodes[i].frame = frame
-            }
-        }
-    }
-    
-    func insertionPoint(_ insertDirectionHints: [Int: ListViewItemOperationDirectionHint], itemCount: Int) -> ListViewInsertionPoint? {
-        var fixedNode: (nodeIndex: Int, index: Int, frame: CGRect)?
-        
-        if let (fixedIndex, _) = self.scrollPosition {
-            for i in 0 ..< self.nodes.count {
-                let node = self.nodes[i]
-                if let index = node.index , index == fixedIndex {
-                    fixedNode = (i, index, node.frame)
-                    break
-                }
-            }
-            
-            if fixedNode == nil {
-                return ListViewInsertionPoint(index: fixedIndex, point: CGPoint(), direction: .Down)
-            }
-        }
-        
-        if fixedNode == nil {
-            if let (fixedIndex, _) = self.stationaryOffset {
-                for i in 0 ..< self.nodes.count {
-                    let node = self.nodes[i]
-                    if let index = node.index , index == fixedIndex {
-                        fixedNode = (i, index, node.frame)
-                        break
-                    }
-                }
-            }
-        }
-        
-        if fixedNode == nil {
-            for i in 0 ..< self.nodes.count {
-                let node = self.nodes[i]
-                if let index = node.index , node.frame.maxY >= self.insets.top {
-                    fixedNode = (i, index, node.frame)
-                    break
-                }
-            }
-        }
-        
-        if fixedNode == nil && self.nodes.count != 0 {
-            for i in (0 ..< self.nodes.count).reversed() {
-                let node = self.nodes[i]
-                if let index = node.index {
-                    fixedNode = (i, index, node.frame)
-                    break
-                }
-            }
-        }
-        
-        if let fixedNode = fixedNode {
-            var currentUpperNode = fixedNode
-            for i in (0 ..< fixedNode.nodeIndex).reversed() {
-                let node = self.nodes[i]
-                if let index = node.index {
-                    if index != currentUpperNode.index - 1 {
-                        if currentUpperNode.frame.minY > -self.invisibleInset - CGFloat(FLT_EPSILON) {
-                            var directionHint: ListViewInsertionOffsetDirection?
-                            if let hint = insertDirectionHints[currentUpperNode.index - 1] , currentUpperNode.frame.minY > self.insets.top - CGFloat(FLT_EPSILON) {
-                                directionHint = ListViewInsertionOffsetDirection(hint)
-                            }
-                            return ListViewInsertionPoint(index: currentUpperNode.index - 1, point: CGPoint(x: 0.0, y: currentUpperNode.frame.minY), direction: directionHint ?? .Up)
-                        } else {
-                            break
-                        }
-                    }
-                    currentUpperNode = (i, index, node.frame)
-                }
-            }
-            
-            if currentUpperNode.index != 0 && currentUpperNode.frame.minY > -self.invisibleInset - CGFloat(FLT_EPSILON) {
-                var directionHint: ListViewInsertionOffsetDirection?
-                if let hint = insertDirectionHints[currentUpperNode.index - 1] , currentUpperNode.frame.minY > self.insets.top - CGFloat(FLT_EPSILON) {
-                    directionHint = ListViewInsertionOffsetDirection(hint)
-                }
-                
-                return ListViewInsertionPoint(index: currentUpperNode.index - 1, point: CGPoint(x: 0.0, y: currentUpperNode.frame.minY), direction: directionHint ?? .Up)
-            }
-            
-            var currentLowerNode = fixedNode
-            if fixedNode.nodeIndex + 1 < self.nodes.count {
-                for i in (fixedNode.nodeIndex + 1) ..< self.nodes.count {
-                    let node = self.nodes[i]
-                    if let index = node.index {
-                        if index != currentLowerNode.index + 1 {
-                            if currentLowerNode.frame.maxY < self.visibleSize.height + self.invisibleInset - CGFloat(FLT_EPSILON) {
-                                var directionHint: ListViewInsertionOffsetDirection?
-                                if let hint = insertDirectionHints[currentLowerNode.index + 1] , currentLowerNode.frame.maxY < self.visibleSize.height - self.insets.bottom + CGFloat(FLT_EPSILON) {
-                                    directionHint = ListViewInsertionOffsetDirection(hint)
-                                }
-                                return ListViewInsertionPoint(index: currentLowerNode.index + 1, point: CGPoint(x: 0.0, y: currentLowerNode.frame.maxY), direction: directionHint ?? .Down)
-                            } else {
-                                break
-                            }
-                        }
-                        currentLowerNode = (i, index, node.frame)
-                    }
-                }
-            }
-            
-            if currentLowerNode.index != itemCount - 1 && currentLowerNode.frame.maxY < self.visibleSize.height + self.invisibleInset - CGFloat(FLT_EPSILON) {
-                var directionHint: ListViewInsertionOffsetDirection?
-                if let hint = insertDirectionHints[currentLowerNode.index + 1] , currentLowerNode.frame.maxY < self.visibleSize.height - self.insets.bottom + CGFloat(FLT_EPSILON) {
-                    directionHint = ListViewInsertionOffsetDirection(hint)
-                }
-                return ListViewInsertionPoint(index: currentLowerNode.index + 1, point: CGPoint(x: 0.0, y: currentLowerNode.frame.maxY), direction: directionHint ?? .Down)
-            }
-        } else if itemCount != 0 {
-            return ListViewInsertionPoint(index: 0, point: CGPoint(x: 0.0, y: self.insets.top), direction: .Down)
-        }
-        
-        return nil
-    }
-    
-    mutating func removeInvisibleNodes(_ operations: inout [ListViewStateOperation]) {
-        var i = 0
-        var visibleItemNodeHeight: CGFloat = 0.0
-        while i < self.nodes.count {
-            visibleItemNodeHeight += self.nodes[i].frame.height
-            i += 1
-        }
-        
-        if visibleItemNodeHeight > (self.visibleSize.height + self.invisibleInset + self.invisibleInset) {
-            i = self.nodes.count - 1
-            while i >= 0 {
-                let itemNode = self.nodes[i]
-                let frame = itemNode.frame
-                //print("node \(i) frame \(frame)")
-                if frame.maxY < -self.invisibleInset || frame.origin.y > self.visibleSize.height + self.invisibleInset {
-                    //print("remove invisible 1 \(i) frame \(frame)")
-                    operations.append(.Remove(index: i, offsetDirection: frame.maxY < -self.invisibleInset ? .Down : .Up))
-                    self.nodes.remove(at: i)
-                }
-                
-                i -= 1
-            }
-        }
-        
-        let upperBound = -self.invisibleInset + CGFloat(FLT_EPSILON)
-        for i in 0 ..< self.nodes.count {
-            let node = self.nodes[i]
-            if let index = node.index , node.frame.maxY > upperBound {
-                if i != 0 {
-                    var previousIndex = index
-                    for j in (0 ..< i).reversed() {
-                        if self.nodes[j].frame.maxY < upperBound {
-                            if let index = self.nodes[j].index {
-                                if index != previousIndex - 1 {
-                                    //print("remove monotonity \(j) (\(index))")
-                                    operations.append(.Remove(index: j, offsetDirection: .Down))
-                                    self.nodes.remove(at: j)
-                                } else {
-                                    previousIndex = index
-                                }
-                            }
-                        }
-                    }
-                }
-                break
-            }
-        }
-        
-        let lowerBound = self.visibleSize.height + self.invisibleInset - CGFloat(FLT_EPSILON)
-        for i in (0 ..< self.nodes.count).reversed() {
-            let node = self.nodes[i]
-            if let index = node.index , node.frame.minY < lowerBound {
-                if i != self.nodes.count - 1 {
-                    var previousIndex = index
-                    var removeIndices: [Int] = []
-                    for j in (i + 1) ..< self.nodes.count {
-                        if self.nodes[j].frame.minY > lowerBound {
-                            if let index = self.nodes[j].index {
-                                if index != previousIndex + 1 {
-                                    removeIndices.append(j)
-                                } else {
-                                    previousIndex = index
-                                }
-                            }
-                        }
-                    }
-                    if !removeIndices.isEmpty {
-                        for i in removeIndices.reversed() {
-                            //print("remove monotonity \(i) (\(self.nodes[i].index!))")
-                            operations.append(.Remove(index: i, offsetDirection: .Up))
-                            self.nodes.remove(at: i)
-                        }
-                    }
-                }
-                break
-            }
-        }
-    }
-    
-    func nodeInsertionPointAndIndex(_ itemIndex: Int) -> (CGPoint, Int) {
-        if self.nodes.count == 0 {
-            return (CGPoint(x: 0.0, y: self.insets.top), 0)
-        } else {
-            var index = 0
-            var lastNodeWithIndex = -1
-            for node in self.nodes {
-                if let nodeItemIndex = node.index {
-                    if nodeItemIndex > itemIndex {
-                        break
-                    }
-                    lastNodeWithIndex = index
-                }
-                index += 1
-            }
-            lastNodeWithIndex += 1
-            return (CGPoint(x: 0.0, y: lastNodeWithIndex == 0 ? self.nodes[0].frame.minY : self.nodes[lastNodeWithIndex - 1].frame.maxY), lastNodeWithIndex)
-        }
-    }
-    
-    func continuousHeightRelativeToNodeIndex(_ fixedNodeIndex: Int) -> CGFloat {
-        let fixedIndex = self.nodes[fixedNodeIndex].index!
-        
-        var height: CGFloat = 0.0
-        
-        if fixedNodeIndex != 0 {
-            var upperIndex = fixedIndex
-            for i in (0 ..< fixedNodeIndex).reversed() {
-                if let index = self.nodes[i].index {
-                    if index == upperIndex - 1 {
-                        height += self.nodes[i].frame.size.height
-                        upperIndex = index
-                    } else {
-                        break
-                    }
-                }
-            }
-        }
-        
-        if fixedNodeIndex != self.nodes.count - 1 {
-            var lowerIndex = fixedIndex
-            for i in (fixedNodeIndex + 1) ..< self.nodes.count {
-                if let index = self.nodes[i].index {
-                    if index == lowerIndex + 1 {
-                        height += self.nodes[i].frame.size.height
-                        lowerIndex = index
-                    } else {
-                        break
-                    }
-                }
-            }
-        }
-        
-        return height
-    }
-    
-    mutating func insertNode(_ itemIndex: Int, node: ListViewItemNode, layout: ListViewItemNodeLayout, apply: @escaping () -> (), offsetDirection: ListViewInsertionOffsetDirection, animated: Bool, operations: inout [ListViewStateOperation], itemCount: Int) {
-        let (insertionOrigin, insertionIndex) = self.nodeInsertionPointAndIndex(itemIndex)
-        
-        let nodeOrigin: CGPoint
-        switch offsetDirection {
-            case .Up:
-                nodeOrigin = CGPoint(x: insertionOrigin.x, y: insertionOrigin.y - (animated ? 0.0 : layout.size.height))
-            case .Down:
-                nodeOrigin = insertionOrigin
-        }
-        
-        let nodeFrame = CGRect(origin: nodeOrigin, size: CGSize(width: layout.size.width, height: animated ? 0.0 : layout.size.height))
-        
-        operations.append(.InsertNode(index: insertionIndex, offsetDirection: offsetDirection, node: node, layout: layout, apply: apply))
-        self.nodes.insert(.Node(index: itemIndex, frame: nodeFrame, referenceNode: nil), at: insertionIndex)
-        
-        if !animated {
-            switch offsetDirection {
-                case .Up:
-                    var i = insertionIndex - 1
-                    while i >= 0 {
-                        var frame = self.nodes[i].frame
-                        frame.origin.y -= nodeFrame.size.height
-                        self.nodes[i].frame = frame
-                        i -= 1
-                    }
-                case .Down:
-                    var i = insertionIndex + 1
-                    while i < self.nodes.count {
-                        var frame = self.nodes[i].frame
-                        frame.origin.y += nodeFrame.size.height
-                        self.nodes[i].frame = frame
-                        i += 1
-                }
-            }
-        }
-        
-        var previousIndex: Int?
-        for node in self.nodes {
-            if let index = node.index {
-                if let currentPreviousIndex = previousIndex {
-                    if index <= currentPreviousIndex {
-                        print("index <= previousIndex + 1")
-                        break
-                    }
-                    previousIndex = index
-                } else {
-                    previousIndex = index
-                }
-            }
-        }
-        
-        if let _ = self.scrollPosition {
-            self.fixScrollPostition(itemCount)
-        }
-    }
-    
-    mutating func removeNodeAtIndex(_ index: Int, direction: ListViewItemOperationDirectionHint?, animated: Bool, operations: inout [ListViewStateOperation]) {
-        let node = self.nodes[index]
-        if case let .Node(_, _, referenceNode) = node {
-            let nodeFrame = node.frame
-            self.nodes.remove(at: index)
-            let offsetDirection: ListViewInsertionOffsetDirection
-            if let direction = direction {
-                offsetDirection = ListViewInsertionOffsetDirection(direction)
-            } else {
-                if nodeFrame.maxY < self.insets.top + CGFloat(FLT_EPSILON) {
-                    offsetDirection = .Down
-                } else {
-                    offsetDirection = .Up
-                }
-            }
-            operations.append(.Remove(index: index, offsetDirection: offsetDirection))
-            
-            if let referenceNode = referenceNode , animated {
-                self.nodes.insert(.Placeholder(frame: nodeFrame), at: index)
-                operations.append(.InsertDisappearingPlaceholder(index: index, referenceNode: referenceNode, offsetDirection: offsetDirection.inverted()))
-            } else {
-                if nodeFrame.maxY > self.insets.top - CGFloat(FLT_EPSILON) {
-                    if let direction = direction , direction == .Down && node.frame.minY < self.visibleSize.height - self.insets.bottom + CGFloat(FLT_EPSILON) {
-                        for i in (0 ..< index).reversed() {
-                            var frame = self.nodes[i].frame
-                            frame.origin.y += nodeFrame.size.height
-                            self.nodes[i].frame = frame
-                        }
-                    } else {
-                        for i in index ..< self.nodes.count {
-                            var frame = self.nodes[i].frame
-                            frame.origin.y -= nodeFrame.size.height
-                            self.nodes[i].frame = frame
-                        }
-                    }
-                } else if index != 0 {
-                    for i in (0 ..< index).reversed() {
-                        var frame = self.nodes[i].frame
-                        frame.origin.y += nodeFrame.size.height
-                        self.nodes[i].frame = frame
-                    }
-                }
-            }
-        } else {
-            assertionFailure()
-        }
-    }
-    
-    mutating func updateNodeAtItemIndex(_ itemIndex: Int, layout: ListViewItemNodeLayout, direction: ListViewItemOperationDirectionHint?, animation: ListViewItemUpdateAnimation, apply: @escaping () -> Void, operations: inout [ListViewStateOperation]) {
-        var i = -1
-        for node in self.nodes {
-            i += 1
-            if node.index == itemIndex {
-                switch animation {
-                    case .None:
-                        let offsetDirection: ListViewInsertionOffsetDirection
-                        if let direction = direction {
-                            offsetDirection = ListViewInsertionOffsetDirection(direction)
-                        } else {
-                            if node.frame.maxY < self.insets.top + CGFloat(FLT_EPSILON) {
-                                offsetDirection = .Down
-                            } else {
-                                offsetDirection = .Up
-                            }
-                        }
-                        
-                        switch offsetDirection {
-                            case .Up:
-                                let offsetDelta = -(layout.size.height - node.frame.size.height)
-                                var updatedFrame = node.frame
-                                updatedFrame.origin.y += offsetDelta
-                                updatedFrame.size.height = layout.size.height
-                                self.nodes[i].frame = updatedFrame
-                            
-                                for j in 0 ..< i {
-                                    var frame = self.nodes[j].frame
-                                    frame.origin.y += offsetDelta
-                                    self.nodes[j].frame = frame
-                                }
-                            case .Down:
-                                let offsetDelta = layout.size.height - node.frame.size.height
-                                var updatedFrame = node.frame
-                                updatedFrame.size.height = layout.size.height
-                                self.nodes[i].frame = updatedFrame
-                            
-                                for j in i + 1 ..< self.nodes.count {
-                                    var frame = self.nodes[j].frame
-                                    frame.origin.y += offsetDelta
-                                    self.nodes[j].frame = frame
-                                }
-                        }
-                        
-                        operations.append(.UpdateLayout(index: i, layout: layout, apply: apply))
-                    case .System:
-                        operations.append(.UpdateLayout(index: i, layout: layout, apply: apply))
-                }
-                
-                break
-            }
-        }
-    }
-}
-
-private enum ListViewStateOperation {
-    case InsertNode(index: Int, offsetDirection: ListViewInsertionOffsetDirection, node: ListViewItemNode, layout: ListViewItemNodeLayout, apply: () -> ())
-    case InsertDisappearingPlaceholder(index: Int, referenceNode: ListViewItemNode, offsetDirection: ListViewInsertionOffsetDirection)
-    case Remove(index: Int, offsetDirection: ListViewInsertionOffsetDirection)
-    case Remap([Int: Int])
-    case UpdateLayout(index: Int, layout: ListViewItemNodeLayout, apply: () -> ())
-}
-
 private let infiniteScrollSize: CGFloat = 10000.0
 private let insertionAnimationDuration: Double = 0.4
 
@@ -886,7 +17,7 @@ private final class ListViewBackingLayer: CALayer {
 }
 
 final class ListViewBackingView: UIView {
-    weak var target: ASDisplayNode?
+    weak var target: ListView?
     
     override class var layerClass: AnyClass {
         return ListViewBackingLayer.self
@@ -912,6 +43,15 @@ final class ListViewBackingView: UIView {
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         self.target?.touchesEnded(touches, with: event)
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let target = target, target.limitHitTestToNodes {
+            if !target.internalHitTest(point, with: event) {
+                return nil
+            }
+        }
+        return super.hitTest(point, with: event)
     }
 }
 
@@ -957,6 +97,10 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             }
         }
     }
+    
+    public final var stackFromBottom: Bool = false
+    public final var stackFromBottomInsetItemFactor: CGFloat = 0.0
+    public final var limitHitTestToNodes: Bool = false
     
     private var touchesPosition = CGPoint()
     private var isTracking = false
@@ -1273,7 +417,9 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             }
         }
         
-        self.snapToBounds()
+        if !self.snapToBounds(snapTopItem: false, stackFromBottom: self.stackFromBottom).offset.isZero {
+            self.updateVisibleContentOffset()
+        }
         self.updateScroller()
         
         self.updateItemHeaders()
@@ -1313,9 +459,33 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         //CATransaction.commit()
     }
     
-    private func snapToBounds(_ snapTopItem: Bool = false) {
+    private func calculateAdditionalTopInverseInset() -> CGFloat {
+        var additionalInverseTopInset: CGFloat = 0.0
+        if !self.stackFromBottomInsetItemFactor.isZero {
+            var remainingFactor = self.stackFromBottomInsetItemFactor
+            for itemNode in self.itemNodes {
+                if remainingFactor.isLessThanOrEqualTo(0.0) {
+                    break
+                }
+                
+                let itemFactor: CGFloat
+                if CGFloat(1.0).isLessThanOrEqualTo(remainingFactor) {
+                    itemFactor = 1.0
+                } else {
+                    itemFactor = remainingFactor
+                }
+                
+                additionalInverseTopInset += floor(itemNode.apparentBounds.height * itemFactor)
+                
+                remainingFactor -= 1.0
+            }
+        }
+        return additionalInverseTopInset
+    }
+    
+    private func snapToBounds(snapTopItem: Bool, stackFromBottom: Bool) -> (snappedTopInset: CGFloat, offset: CGFloat) {
         if self.itemNodes.count == 0 {
-            return
+            return (0.0, 0.0)
         }
         
         var overscroll: CGFloat = 0.0
@@ -1338,6 +508,12 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 }
                 break
             }
+        }
+        
+        var effectiveInsets = self.insets
+        if topItemFound && !self.stackFromBottomInsetItemFactor.isZero {
+            let additionalInverseTopInset = self.calculateAdditionalTopInverseInset()
+            effectiveInsets.top = max(effectiveInsets.top, self.visibleSize.height - additionalInverseTopInset)
         }
         
         if topItemFound {
@@ -1365,23 +541,38 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
         
         var offset: CGFloat = 0.0
         if topItemFound && bottomItemFound {
-            let areaHeight = min(completeHeight, self.visibleSize.height - self.insets.bottom - self.insets.top)
-            if bottomItemEdge < self.insets.top + areaHeight - overscroll {
-                offset = self.insets.top + areaHeight - overscroll - bottomItemEdge
-                //print("bottom edge offset \(offset) = \(self.insets.top) + \(areaHeight) - \(overscroll) - \(bottomItemEdge)")
-            } else if topItemEdge > self.insets.top - overscroll && snapTopItem {
-                offset = (self.insets.top - overscroll) - topItemEdge
-                //print("top edge offset \(offset)")
+            let visibleAreaHeight = self.visibleSize.height - effectiveInsets.bottom - effectiveInsets.top
+            if self.stackFromBottom {
+                if visibleAreaHeight > completeHeight {
+                    let areaHeight = completeHeight
+                    if topItemEdge < self.visibleSize.height - effectiveInsets.bottom - areaHeight - overscroll {
+                        offset = self.visibleSize.height - effectiveInsets.bottom - areaHeight - overscroll - topItemEdge
+                    } else if bottomItemEdge > self.visibleSize.height - effectiveInsets.bottom - overscroll {
+                        offset = self.visibleSize.height - effectiveInsets.bottom - overscroll - bottomItemEdge
+                    }
+                } else {
+                    let areaHeight = min(completeHeight, visibleAreaHeight)
+                    if bottomItemEdge < effectiveInsets.top + areaHeight - overscroll {
+                        offset = effectiveInsets.top + areaHeight - overscroll - bottomItemEdge
+                    } else if topItemEdge > effectiveInsets.top - overscroll {
+                        offset = (effectiveInsets.top - overscroll) - topItemEdge
+                    }
+                }
+            } else {
+                let areaHeight = min(completeHeight, visibleAreaHeight)
+                if bottomItemEdge < effectiveInsets.top + areaHeight - overscroll {
+                    offset = effectiveInsets.top + areaHeight - overscroll - bottomItemEdge
+                } else if topItemEdge > effectiveInsets.top - overscroll && /*snapTopItem*/ true {
+                    offset = (effectiveInsets.top - overscroll) - topItemEdge
+                }
             }
         } else if topItemFound {
-            if topItemEdge > self.insets.top - overscroll && snapTopItem {
-                offset = (self.insets.top - overscroll) - topItemEdge
-                //print("top only edge offset \(offset)")
+            if topItemEdge > effectiveInsets.top - overscroll && /*snapTopItem*/ true {
+                offset = (effectiveInsets.top - overscroll) - topItemEdge
             }
         } else if bottomItemFound {
-            if bottomItemEdge < self.visibleSize.height - self.insets.bottom - overscroll {
-                offset = self.visibleSize.height - self.insets.bottom - overscroll - bottomItemEdge
-                //print("bottom only edge offset \(offset)")
+            if bottomItemEdge < self.visibleSize.height - effectiveInsets.bottom - overscroll {
+                offset = self.visibleSize.height - effectiveInsets.bottom - overscroll - bottomItemEdge
             }
         }
         
@@ -1391,9 +582,14 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 frame.origin.y += offset
                 itemNode.frame = frame
             }
-            
-            self.updateVisibleContentOffset()
         }
+        
+        var snappedTopInset: CGFloat = 0.0
+        if !self.stackFromBottomInsetItemFactor.isZero && topItemFound {
+            snappedTopInset = max(0.0, (effectiveInsets.top - self.insets.top) - (topItemEdge + offset))
+        }
+        
+        return (snappedTopInset, offset)
     }
     
     private func updateVisibleContentOffset() {
@@ -1426,36 +622,61 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             return
         }
         
-        var completeHeight = self.insets.top + self.insets.bottom
         var topItemFound = false
         var bottomItemFound = false
         var topItemEdge: CGFloat = 0.0
         var bottomItemEdge: CGFloat = 0.0
         
-        if itemNodes[0].index == 0 {
-            topItemFound = true
-            topItemEdge = itemNodes[0].apparentFrame.origin.y
+        for i in 0 ..< self.itemNodes.count {
+            if let index = itemNodes[i].index {
+                if index == 0 {
+                    topItemFound = true
+                    topItemEdge = itemNodes[0].apparentFrame.origin.y
+                    break
+                }
+            }
         }
+        
+        var effectiveInsets = self.insets
+        if topItemFound && !self.stackFromBottomInsetItemFactor.isZero {
+            let additionalInverseTopInset = self.calculateAdditionalTopInverseInset()
+            effectiveInsets.top = max(effectiveInsets.top, self.visibleSize.height - additionalInverseTopInset)
+        }
+        
+        var completeHeight = effectiveInsets.top + effectiveInsets.bottom
         
         if itemNodes[itemNodes.count - 1].index == self.items.count - 1 {
             bottomItemFound = true
             bottomItemEdge = itemNodes[itemNodes.count - 1].apparentFrame.maxY
         }
         
+        topItemEdge -= effectiveInsets.top
+        bottomItemEdge += effectiveInsets.bottom
+        
         if topItemFound && bottomItemFound {
             for itemNode in self.itemNodes {
                 completeHeight += itemNode.apparentBounds.height
             }
+            
+            if self.stackFromBottom {
+                let updatedCompleteHeight = max(completeHeight, self.visibleSize.height)
+                let deltaCompleteHeight = updatedCompleteHeight - completeHeight
+                topItemEdge -= deltaCompleteHeight
+                bottomItemEdge -= deltaCompleteHeight
+                completeHeight = updatedCompleteHeight
+            }
         }
         
-        topItemEdge -= self.insets.top
-        bottomItemEdge += self.insets.bottom
-        
+        let wasIgnoringScrollingEvents = self.ignoreScrollingEvents
         self.ignoreScrollingEvents = true
         if topItemFound && bottomItemFound {
+            if self.stackFromBottom {
+                self.lastContentOffset = CGPoint(x: 0.0, y: -topItemEdge)
+            } else {
+                self.lastContentOffset = CGPoint(x: 0.0, y: -topItemEdge)
+            }
             self.scroller.contentSize = CGSize(width: self.visibleSize.width, height: completeHeight)
-            self.lastContentOffset = CGPoint(x: 0.0, y: -topItemEdge)
-            self.scroller.contentOffset = self.lastContentOffset;
+            self.scroller.contentOffset = self.lastContentOffset
         } else if topItemFound {
             self.scroller.contentSize = CGSize(width: self.visibleSize.width, height: infiniteScrollSize * 2.0)
             self.lastContentOffset = CGPoint(x: 0.0, y: -topItemEdge)
@@ -1471,8 +692,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             self.lastContentOffset = CGPoint(x: 0.0, y: infiniteScrollSize)
             self.scroller.contentOffset = self.lastContentOffset
         }
-        
-        self.ignoreScrollingEvents = false
+        self.ignoreScrollingEvents = wasIgnoringScrollingEvents
     }
     
     private func async(_ f: @escaping () -> Void) {
@@ -1533,7 +753,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 nodes.append(.Placeholder(frame: node.apparentFrame))
             }
         }
-        return ListViewState(insets: self.insets, visibleSize: self.visibleSize, invisibleInset: self.invisibleInset, nodes: nodes, scrollPosition: nil, stationaryOffset: nil)
+        return ListViewState(insets: self.insets, visibleSize: self.visibleSize, invisibleInset: self.invisibleInset, nodes: nodes, scrollPosition: nil, stationaryOffset: nil, stackFromBottom: self.stackFromBottom)
     }
     
     public func transaction(deleteIndices: [ListViewDeleteItem], insertIndicesAndItems: [ListViewInsertItem], updateIndicesAndItems: [ListViewUpdateItem], options: ListViewDeleteAndInsertOptions, scrollToItem: ListViewScrollToItem? = nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets? = nil, stationaryItemRange: (Int, Int)? = nil, updateOpaqueState: Any?, completion: @escaping (ListViewDisplayedItemRange) -> Void = { _ in }) {
@@ -1556,7 +776,7 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
 
     private func deleteAndInsertItemsTransaction(deleteIndices: [ListViewDeleteItem], insertIndicesAndItems: [ListViewInsertItem], updateIndicesAndItems: [ListViewUpdateItem], options: ListViewDeleteAndInsertOptions, scrollToItem: ListViewScrollToItem?, updateSizeAndInsets: ListViewUpdateSizeAndInsets?, stationaryItemRange: (Int, Int)?, updateOpaqueState: Any?, completion: @escaping (Void) -> Void) {
         if deleteIndices.isEmpty && insertIndicesAndItems.isEmpty && updateIndicesAndItems.isEmpty && scrollToItem == nil {
-            if let updateSizeAndInsets = updateSizeAndInsets , self.items.count == 0 || (updateSizeAndInsets.size == self.visibleSize && updateSizeAndInsets.insets == self.insets) {
+            if let updateSizeAndInsets = updateSizeAndInsets , (self.items.count == 0 || (updateSizeAndInsets.size == self.visibleSize && updateSizeAndInsets.insets == self.insets)) {
                 self.visibleSize = updateSizeAndInsets.size
                 self.insets = updateSizeAndInsets.insets
                 
@@ -1568,11 +788,13 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                     self.scrollingResistanceSlider.frame = CGRect(x: 10.0, y: self.freeResistanceSlider.frame.minY - self.scrollingResistanceSlider.bounds.height, width: size.width - 20.0, height: self.scrollingResistanceSlider.bounds.height)
                 }
                 
+                let wasIgnoringScrollingEvents = self.ignoreScrollingEvents
                 self.ignoreScrollingEvents = true
                 self.scroller.frame = CGRect(origin: CGPoint(), size: updateSizeAndInsets.size)
                 self.scroller.contentSize = CGSize(width: updateSizeAndInsets.size.width, height: infiniteScrollSize * 2.0)
                 self.lastContentOffset = CGPoint(x: 0.0, y: infiniteScrollSize)
                 self.scroller.contentOffset = self.lastContentOffset
+                self.ignoreScrollingEvents = wasIgnoringScrollingEvents
                 
                 self.updateScroller()
                 
@@ -2393,20 +1615,39 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             var headerNodesTransition: (ContainedViewLayoutTransition, Bool, CGFloat) = (.immediate, false, 0.0)
             
             if let updateSizeAndInsets = updateSizeAndInsets {
-                self.visibleSize = updateSizeAndInsets.size
-                
-                if self.insets != updateSizeAndInsets.insets {
+                if self.insets != updateSizeAndInsets.insets || !self.visibleSize.height.isEqual(to: updateSizeAndInsets.size.height) {
+                    let previousVisibleSize = self.visibleSize
+                    self.visibleSize = updateSizeAndInsets.size
+                    
                     var offsetFix = updateSizeAndInsets.insets.top - self.insets.top
                     
                     self.insets = updateSizeAndInsets.insets
-                    
-                    var completeOffset = offsetFix
-                    sizeAndInsetsOffset = offsetFix
+                    self.visibleSize = updateSizeAndInsets.size
                     
                     for itemNode in self.itemNodes {
                         let position = itemNode.position
                         itemNode.position = CGPoint(x: position.x, y: position.y + offsetFix)
                     }
+                    
+                    let (snappedTopInset, snapToBoundsOffset) = self.snapToBounds(snapTopItem: scrollToItem != nil, stackFromBottom: self.stackFromBottom)
+                    
+                    if !snappedTopInset.isZero && (previousVisibleSize.height.isZero || previousApparentFrames.isEmpty) {
+                        offsetFix += snappedTopInset
+                        
+                        for itemNode in self.itemNodes {
+                            let position = itemNode.position
+                            itemNode.position = CGPoint(x: position.x, y: position.y + snappedTopInset)
+                        }
+                    }
+                    
+                    var completeOffset = offsetFix
+                    
+                    if !snapToBoundsOffset.isZero {
+                        self.updateVisibleContentOffset()
+                    }
+                    
+                    sizeAndInsetsOffset = offsetFix
+                    completeOffset += snapToBoundsOffset
                     
                     if updateSizeAndInsets.duration > DBL_EPSILON {
                         let animation: CABasicAnimation
@@ -2441,16 +1682,37 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                         
                         self.layer.add(animation, forKey: nil)
                     }
+                } else {
+                    self.visibleSize = updateSizeAndInsets.size
+                    
+                    if !self.snapToBounds(snapTopItem: scrollToItem != nil, stackFromBottom: self.stackFromBottom).offset.isZero {
+                        self.updateVisibleContentOffset()
+                    }
                 }
                 
+                let wasIgnoringScrollingEvents = self.ignoreScrollingEvents
                 self.ignoreScrollingEvents = true
                 self.scroller.frame = CGRect(origin: CGPoint(), size: self.visibleSize)
                 self.scroller.contentSize = CGSize(width: self.visibleSize.width, height: infiniteScrollSize * 2.0)
                 self.lastContentOffset = CGPoint(x: 0.0, y: infiniteScrollSize)
                 self.scroller.contentOffset = self.lastContentOffset
+                self.ignoreScrollingEvents = wasIgnoringScrollingEvents
+            } else {
+                let (snappedTopInset, snapToBoundsOffset) = self.snapToBounds(snapTopItem: scrollToItem != nil, stackFromBottom: self.stackFromBottom)
+                
+                if !snappedTopInset.isZero && previousApparentFrames.isEmpty {
+                    let offsetFix = snappedTopInset
+                    
+                    for itemNode in self.itemNodes {
+                        let position = itemNode.position
+                        itemNode.position = CGPoint(x: position.x, y: position.y + snappedTopInset)
+                    }
+                }
+                
+                if !snapToBoundsOffset.isZero {
+                    self.updateVisibleContentOffset()
+                }
             }
-            
-            self.snapToBounds(scrollToItem != nil)
             
             self.updateAccessoryNodes(animated: animated, currentTimestamp: timestamp)
             self.updateFloatingAccessoryNodes(animated: animated, currentTimestamp: timestamp)
@@ -3090,7 +2352,9 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
                 index += 1
             }
             
-            self.snapToBounds()
+            if !self.snapToBounds(snapTopItem: false, stackFromBottom: self.stackFromBottom).offset.isZero {
+                self.updateVisibleContentOffset()
+            }
         }
         
         self.debugCheckMonotonity()
@@ -3255,5 +2519,21 @@ open class ListView: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDel
             f()
             completion()
         }
+    }
+    
+    fileprivate func internalHitTest(_ point: CGPoint, with event: UIEvent?) -> Bool {
+        if self.limitHitTestToNodes {
+            var foundHit = false
+            for itemNode in self.itemNodes {
+                if itemNode.frame.contains(point) {
+                    foundHit = true
+                    break
+                }
+            }
+            if !foundHit {
+                return false
+            }
+        }
+        return true
     }
 }

@@ -52,11 +52,12 @@ final class PresentationContext {
                     
                     strongSelf.controllers.append(controller)
                     if let view = strongSelf.view, let layout = strongSelf.layout {
-                        controller.navigation_setDismiss { [weak strongSelf, weak controller] in
+                        controller.navigation_setDismiss({ [weak strongSelf, weak controller] in
                             if let strongSelf = strongSelf, let controller = controller {
                                 strongSelf.dismiss(controller)
                             }
-                        }
+                        }, rootController: nil)
+                        controller.setIgnoreAppearanceMethodInvocations(true)
                         if layout != initialLayout {
                             controller.view.frame = CGRect(origin: CGPoint(), size: layout.size)
                             view.addSubview(controller.view)
@@ -64,6 +65,7 @@ final class PresentationContext {
                         } else {
                             view.addSubview(controller.view)
                         }
+                        controller.setIgnoreAppearanceMethodInvocations(false)
                         view.layer.invalidateUpTheTree()
                         controller.viewWillAppear(false)
                         controller.viewDidAppear(false)

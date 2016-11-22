@@ -174,9 +174,9 @@ private func findCurrentResponder(_ view: UIView) -> UIResponder? {
         }
     }
     
-    override open func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
+    /*override open func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
         preconditionFailure("use present(_:in)")
-    }
+    }*/
     
     override open func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         if let navigationController = self.navigationController as? NavigationController {

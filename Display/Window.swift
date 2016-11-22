@@ -2,6 +2,8 @@ import Foundation
 import AsyncDisplayKit
 
 private class WindowRootViewController: UIViewController {
+    var presentController: ((UIViewController, Bool, (() -> Void)?) -> Void)?
+    
     override var preferredStatusBarStyle: UIStatusBarStyle {
         return .default
     }
@@ -9,6 +11,12 @@ private class WindowRootViewController: UIViewController {
     override var prefersStatusBarHidden: Bool {
         return false
     }
+    
+    /*override func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
+        if let presentController = self.presentController {
+            presentController(viewControllerToPresent, flag, completion)
+        }
+    }*/
 }
 
 private struct WindowLayout: Equatable {
@@ -130,9 +138,20 @@ public class Window: UIWindow {
         self.presentationContext.view = self
         self.presentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: .immediate)
         
-        super.rootViewController = WindowRootViewController()
-        super.rootViewController?.viewWillAppear(false)
-        super.rootViewController?.viewDidAppear(false)
+        let rootViewController = WindowRootViewController()
+        super.rootViewController = rootViewController
+        rootViewController.viewWillAppear(false)
+        rootViewController.viewDidAppear(false)
+        rootViewController.view.isHidden = true
+        
+        rootViewController.presentController = { [weak self] controller, animated, completion in
+            if let strongSelf = self {
+                strongSelf.present(LegacyPresentedController(legacyController: controller, presentation: .custom))
+                if let completion = completion {
+                    completion()
+                }
+            }
+        }
         
         self.statusBarChangeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.UIApplicationWillChangeStatusBarFrame, object: nil, queue: OperationQueue.main, using: { [weak self] notification in
             if let strongSelf = self {
@@ -230,18 +249,18 @@ public class Window: UIWindow {
         }
     }
     
-    private var rootController: ContainableController?
+    private var _rootController: ContainableController?
     public var viewController: ContainableController? {
         get {
-            return rootController
+            return _rootController
         }
         set(value) {
-            if let rootController = self.rootController {
+            if let rootController = self._rootController {
                 rootController.view.removeFromSuperview()
             }
-            self.rootController = value
+            self._rootController = value
             
-            if let rootController = self.rootController {
+            if let rootController = self._rootController {
                 rootController.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: .immediate)
                 
                 self.addSubview(rootController.view)
@@ -343,14 +362,13 @@ public class Window: UIWindow {
                 }
                 self.windowLayout = WindowLayout(size: updatingLayout.layout.size, statusBarHeight: statusBarHeight, inputHeight: updatingLayout.layout.inputHeight)
                 
-                self.rootController?.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: updatingLayout.transition)
-                
+                self._rootController?.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: updatingLayout.transition)
                 self.presentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout), transition: updatingLayout.transition)
             }
         }
     }
     
-    func present(_ controller: ViewController) {
+    public func present(_ controller: ViewController) {
         self.presentationContext.present(controller)
     }
 }

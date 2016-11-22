@@ -368,11 +368,11 @@ open class NavigationController: NavigationControllerProxy, ContainableControlle
     
     override open func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
         if let controller = viewControllerToPresent as? NavigationController {
-            controller.navigation_setDismiss { [weak self] in
+            controller.navigation_setDismiss({ [weak self] in
                 if let strongSelf = self {
                     strongSelf.dismiss(animated: false, completion: nil)
                 }
-            }
+            }, rootController: self.view!.window!.rootViewController)
             self._presentedViewController = controller
             
             self.view.endEditing(true)

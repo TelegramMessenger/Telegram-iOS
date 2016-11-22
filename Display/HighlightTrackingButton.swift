@@ -1,22 +1,26 @@
 import UIKit
 
-public class HighlightTrackingButton: UIButton {
+open class HighlightTrackingButton: UIButton {
+    public var internalHighligthedChanged: (Bool) -> Void = { _ in }
     public var highligthedChanged: (Bool) -> Void = { _ in }
     
-    public override func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
+    open override func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
         self.highligthedChanged(true)
+        self.internalHighligthedChanged(true)
         
         return super.beginTracking(touch, with: event)
     }
     
-    public override func endTracking(_ touch: UITouch?, with event: UIEvent?) {
+    open override func endTracking(_ touch: UITouch?, with event: UIEvent?) {
         self.highligthedChanged(false)
+        self.internalHighligthedChanged(false)
         
         super.endTracking(touch, with: event)
     }
     
-    public override func cancelTracking(with event: UIEvent?) {
+    open override func cancelTracking(with event: UIEvent?) {
         self.highligthedChanged(false)
+        self.internalHighligthedChanged(false)
         
         super.cancelTracking(with: event)
     }
