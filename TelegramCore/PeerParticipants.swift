@@ -24,7 +24,7 @@ private struct PeerParticipants: Equatable {
 }
 
 public func peerParticipants(account: Account, id: PeerId) -> Signal<[Peer], NoError> {
-    return account.viewTracker.peerView(id) |> map { view -> PeerParticipants in
+    return account.postbox.peerView(id: id) |> map { view -> PeerParticipants in
         if let cachedGroupData = view.cachedData as? CachedGroupData, let participants = cachedGroupData.participants {
             var peers: [Peer] = []
             for participant in participants.participants {

@@ -209,7 +209,7 @@ public class Network {
         }
     }
     
-    public func request<T>(_ data: (CustomStringConvertible, Buffer, (Buffer) -> T?), tag: NetworkRequestDependencyTag? = nil) -> Signal<T, MTRpcError> {
+    public func request<T>(_ data: (CustomStringConvertible, Buffer, (Buffer) -> T?), tag: NetworkRequestDependencyTag? = nil, automaticFloodWait: Bool = true) -> Signal<T, MTRpcError> {
         let requestService = self.requestService
         return Signal { subscriber in
             let request = MTRequest()
@@ -222,6 +222,16 @@ public class Network {
             })
             
             request.dependsOnPasswordEntry = false
+            
+            request.shouldContinueExecutionWithErrorContext = { errorContext in
+                guard let errorContext = errorContext else {
+                    return true
+                }
+                if errorContext.floodWaitSeconds > 0 && !automaticFloodWait {
+                    return false
+                }
+                return true
+            }
             
             request.completed = { (boxedResponse, timestamp, error) -> () in
                 if let error = error {

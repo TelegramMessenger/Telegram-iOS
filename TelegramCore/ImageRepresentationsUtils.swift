@@ -41,3 +41,31 @@ public func largestImageRepresentation(_ representations: [TelegramMediaImageRep
         return representations[index]
     }
 }
+
+public func imageRepresentationLargerThan(_ representations: [TelegramMediaImageRepresentation], size: CGSize) -> TelegramMediaImageRepresentation? {
+    if representations.count == 0 {
+        return nil
+    } else {
+        var index: Int?
+        
+        for i in 0 ..< representations.count {
+            let representationDimensions = representations[i].dimensions
+            if let rindex = index {
+                let dimensions = representations[rindex].dimensions
+                if representationDimensions.width > size.width && representationDimensions.height > size.height && representationDimensions.width < dimensions.width && representationDimensions.height < dimensions.height {
+                    index = i
+                }
+            } else {
+                if representationDimensions.width > size.width && representationDimensions.height > size.height {
+                    index = i
+                }
+            }
+        }
+        
+        if let index = index {
+            return representations[index]
+        } else {
+            return largestImageRepresentation(representations)
+        }
+    }
+}

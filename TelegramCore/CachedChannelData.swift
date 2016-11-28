@@ -77,14 +77,26 @@ public final class CachedChannelData: CachedPeerData {
     public let about: String?
     public let participantsSummary: CachedChannelParticipantsSummary
     public let exportedInvitation: ExportedInvitation?
+    public let botInfos: [CachedPeerBotInfo]
     
-    public let peerIds: Set<PeerId> = Set<PeerId>()
+    public let peerIds: Set<PeerId>
     
-    init(flags: CachedChannelFlags, about: String?, participantsSummary: CachedChannelParticipantsSummary, exportedInvitation: ExportedInvitation?) {
+    init(flags: CachedChannelFlags, about: String?, participantsSummary: CachedChannelParticipantsSummary, exportedInvitation: ExportedInvitation?, botInfos: [CachedPeerBotInfo]) {
         self.flags = flags
         self.about = about
         self.participantsSummary = participantsSummary
         self.exportedInvitation = exportedInvitation
+        self.botInfos = botInfos
+        var peerIds = Set<PeerId>()
+        /*if let participants = participants {
+            for participant in participants.participants {
+                peerIds.insert(participant.peerId)
+            }
+        }*/
+        for botInfo in botInfos {
+            peerIds.insert(botInfo.peerId)
+        }
+        self.peerIds = peerIds
     }
     
     public init(decoder: Decoder) {
@@ -92,6 +104,18 @@ public final class CachedChannelData: CachedPeerData {
         self.about = decoder.decodeStringForKey("a")
         self.participantsSummary = CachedChannelParticipantsSummary(decoder: decoder)
         self.exportedInvitation = decoder.decodeObjectForKey("i", decoder: { ExportedInvitation(decoder: $0) }) as? ExportedInvitation
+        self.botInfos = decoder.decodeObjectArrayWithDecoderForKey("b") as [CachedPeerBotInfo]
+        var peerIds = Set<PeerId>()
+        /*if let participants = participants {
+            for participant in participants.participants {
+                peerIds.insert(participant.peerId)
+            }
+        }*/
+        for botInfo in self.botInfos {
+            peerIds.insert(botInfo.peerId)
+        }
+        
+        self.peerIds = peerIds
     }
     
     public func encode(_ encoder: Encoder) {
@@ -107,6 +131,7 @@ public final class CachedChannelData: CachedPeerData {
         } else {
             encoder.encodeNil(forKey: "i")
         }
+        encoder.encodeObjectArray(self.botInfos, forKey: "b")
     }
     
     public func isEqual(to: CachedPeerData) -> Bool {
@@ -130,6 +155,10 @@ public final class CachedChannelData: CachedPeerData {
             return false
         }
         
+        if other.botInfos != self.botInfos {
+            return false
+        }
+        
         return true
     }
 }
@@ -137,7 +166,7 @@ public final class CachedChannelData: CachedPeerData {
 extension CachedChannelData {
     convenience init?(apiChatFull: Api.ChatFull) {
         switch apiChatFull {
-            case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, _, _, _, _, _, apiExportedInvite, _, migratedFromChatId, _, pinnedMsgId):
+            case let .channelFull(flags, _, about, participantsCount, adminsCount, kickedCount, _, _, _, _, _, apiExportedInvite, apiBotInfos, migratedFromChatId, _, pinnedMsgId):
                 var channelFlags = CachedChannelFlags()
                 if (flags & (1 << 3)) != 0 {
                     channelFlags.insert(.canDisplayParticipants)
@@ -157,7 +186,16 @@ extension CachedChannelData {
                 if let kickedCount = kickedCount {
                     intKickedCount = Int(kickedCount)
                 }
-                self.init(flags: channelFlags, about: about, participantsSummary: CachedChannelParticipantsSummary(memberCount: intParticipantsCount, adminCount: intAdminsCount, bannedCount: intKickedCount), exportedInvitation: ExportedInvitation(apiExportedInvite: apiExportedInvite))
+                var botInfos: [CachedPeerBotInfo] = []
+                for botInfo in apiBotInfos {
+                    switch botInfo {
+                    case let .botInfo(userId, _, _):
+                        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: userId)
+                        let parsedBotInfo = BotInfo(apiBotInfo: botInfo)
+                        botInfos.append(CachedPeerBotInfo(peerId: peerId, botInfo: parsedBotInfo))
+                    }
+                }
+                self.init(flags: channelFlags, about: about, participantsSummary: CachedChannelParticipantsSummary(memberCount: intParticipantsCount, adminCount: intAdminsCount, bannedCount: intKickedCount), exportedInvitation: ExportedInvitation(apiExportedInvite: apiExportedInvite), botInfos: botInfos)
             case .chatFull:
                 return nil
         }

@@ -388,6 +388,39 @@ public final class HttpReferenceMediaResource: TelegramMediaResource {
     }
 }
 
+public struct EmptyMediaResourceId: MediaResourceId {
+    public var uniqueId: String {
+        return "empty"
+    }
+    
+    public var hashValue: Int {
+        return 0
+    }
+    
+    public func isEqual(to: MediaResourceId) -> Bool {
+        return to is EmptyMediaResourceId
+    }
+}
+
+public final class EmptyMediaResource: TelegramMediaResource {
+    public init() {
+    }
+    
+    public init(decoder: Decoder) {
+    }
+    
+    public func encode(_ encoder: Encoder) {
+    }
+    
+    public var id: MediaResourceId {
+        return EmptyMediaResourceId()
+    }
+    
+    public func isEqual(to: TelegramMediaResource) -> Bool {
+        return to is EmptyMediaResource
+    }
+}
+
 func mediaResourceFromApiFileLocation(_ fileLocation: Api.FileLocation, size: Int?) -> TelegramMediaResource? {
     switch fileLocation {
         case let .fileLocation(dcId, volumeId, localId, secret):
