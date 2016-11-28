@@ -7,6 +7,11 @@ import Foundation
     import SwiftSignalKit
 #endif
 
+private func aspectFitSize(_ size: CGSize, to: CGSize) -> CGSize {
+    let scale = min(to.width / max(1.0, size.width), to.height / max(1.0, size.height))
+    return CGSize(width: floor(size.width * scale), height: floor(size.height * scale))
+}
+
 /*
 if ([result isKindOfClass:[TGBotContextMediaResult class]]) {
     TGBotContextMediaResult *concreteResult = (TGBotContextMediaResult *)result;
@@ -118,17 +123,67 @@ public func outgoingMessageWithChatContextResult(_ results: ChatContextResultCol
     
     switch result.message {
         case let .auto(caption, replyMarkup):
+            if let replyMarkup = replyMarkup {
+                attributes.append(replyMarkup)
+            }
             switch result {
                 case let .internalReference(id, type, title, description, image, file, message):
                     if let image = image {
-                        return .message(text: "", attributes: attributes, media: image, replyToMessageId: nil)
+                        return .message(text: caption, attributes: attributes, media: image, replyToMessageId: nil)
                     } else if let file = file {
-                        return .message(text: "", attributes: attributes, media: file, replyToMessageId: nil)
+                        return .message(text: caption, attributes: attributes, media: file, replyToMessageId: nil)
                     } else {
                         return nil
                     }
                 case let .externalReference(id, type, title, description, url, thumbnailUrl, contentUrl, contentType, dimensions, duration, message):
-                    return nil
+                    if type == "photo" {
+                        if let thumbnailUrl = thumbnailUrl {
+                            var randomId: Int64 = 0
+                            arc4random_buf(&randomId, 8)
+                            let thumbnailResource = HttpReferenceMediaResource(url: thumbnailUrl, size: nil)
+                            let imageDimensions = dimensions ?? CGSize(width: 128.0, height: 128.0)
+                            let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: aspectFitSize(imageDimensions, to: CGSize(width: 90.0, height: 90.0)), resource: thumbnailResource), TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: EmptyMediaResource())])
+                            return .message(text: caption, attributes: attributes, media: tmpImage, replyToMessageId: nil)
+                        } else {
+                            return .message(text: caption, attributes: attributes, media: nil, replyToMessageId: nil)
+                        }
+                    } else if type == "document" || type == "gif" || type == "audio" || type == "voice" {
+                        var previewRepresentations: [TelegramMediaImageRepresentation] = []
+                        if let thumbnailUrl = thumbnailUrl {
+                            var randomId: Int64 = 0
+                            arc4random_buf(&randomId, 8)
+                            let thumbnailResource = HttpReferenceMediaResource(url: thumbnailUrl, size: nil)
+                            previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: dimensions ?? CGSize(width: 128.0, height: 128.0), resource: thumbnailResource))
+                        }
+                        var fileName = "file"
+                        if let contentUrl = contentUrl, let url = URL(string: contentUrl) {
+                            if !url.lastPathComponent.isEmpty {
+                                fileName = url.lastPathComponent
+                            }
+                        }
+                        
+                        var fileAttributes: [TelegramMediaFileAttribute] = []
+                        fileAttributes.append(.FileName(fileName: fileName))
+                        
+                        if type == "gif" {
+                            fileAttributes.append(.Animated)
+                        }
+                        
+                        if let dimensions = dimensions {
+                            fileAttributes.append(.ImageSize(size: dimensions))
+                        }
+                        
+                        if type == "audio" || type == "voice" {
+                            fileAttributes.append(.Audio(isVoice: type == "voice", duration: Int(Int32(duration ?? 0)), title: title, performer: description, waveform: nil))
+                        }
+                        
+                        var randomId: Int64 = 0
+                        arc4random_buf(&randomId, 8)
+                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), resource: EmptyMediaResource(), previewRepresentations: previewRepresentations, mimeType: contentType ?? "application/binary", size: nil, attributes: fileAttributes)
+                        return .message(text: caption, attributes: attributes, media: file, replyToMessageId: nil)
+                    } else {
+                        return .message(text: caption, attributes: attributes, media: nil, replyToMessageId: nil)
+                    }
             }
         case let .text(text, entities, disableUrlPreview, replyMarkup):
             if let entities = entities {

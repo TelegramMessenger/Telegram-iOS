@@ -69,7 +69,9 @@ private func fetchLocalFileResource(path: String) -> Signal<MediaResourceDataFet
 }
 
 func fetchResource(account: Account, resource: MediaResource, range: Range<Int>) -> Signal<MediaResourceDataFetchResult, NoError> {
-    if let cloudResource = resource as? TelegramCloudMediaResource {
+    if let _ = resource as? EmptyMediaResource {
+        return .never()
+    } else if let cloudResource = resource as? TelegramCloudMediaResource {
         return fetchCloudMediaLocation(account: account, resource: cloudResource, size: resource.size, range: range)
     } else if let photoLibraryResource = resource as? PhotoLibraryMediaResource {
         #if os(iOS)

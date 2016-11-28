@@ -9,10 +9,16 @@ import Foundation
 
 private func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox) {
     if let fromImage = from as? TelegramMediaImage, let toImage = to as? TelegramMediaImage {
+        if let fromSmallestRepresentation = smallestImageRepresentation(fromImage.representations), let toSmallestRepresentation = smallestImageRepresentation(toImage.representations) {
+            postbox.mediaBox.moveResourceData(from: fromSmallestRepresentation.resource.id, to: toSmallestRepresentation.resource.id)
+        }
         if let fromLargestRepresentation = largestImageRepresentation(fromImage.representations), let toLargestRepresentation = largestImageRepresentation(toImage.representations) {
             postbox.mediaBox.moveResourceData(from: fromLargestRepresentation.resource.id, to: toLargestRepresentation.resource.id)
         }
     } else if let fromFile = from as? TelegramMediaFile, let toFile = to as? TelegramMediaFile {
+        if let fromPreview = smallestImageRepresentation(fromFile.previewRepresentations), let toPreview = smallestImageRepresentation(toFile.previewRepresentations) {
+            postbox.mediaBox.moveResourceData(from: fromPreview.resource.id, to: toPreview.resource.id)
+        }
         postbox.mediaBox.moveResourceData(from: fromFile.resource.id, to: toFile.resource.id)
     }
 }
@@ -91,7 +97,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: StateManager, message: M
                 applyMediaResourceChanges(from: fromMedia, to: toMedia, postbox: postbox)
             }
             
-            return StoreMessage(id: updatedId, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: currentMessage.tags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media)
+            return StoreMessage(id: updatedId, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: tagsForStoreMessage(media), forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media)
         })
         if let updatedTimestamp = updatedTimestamp {
             modifier.offsetPendingMessagesTimestamps(lowerBound: message.id, timestamp: updatedTimestamp)
