@@ -414,7 +414,7 @@ public final class MediaBox {
                             if let dataContext = strongSelf.randomAccessContexts[resourceId] {
                                 dataContext.removeListenerForFetchedData(listener)
                                 if !dataContext.hasDataListeners() {
-                                    let _ = strongSelf.randomAccessContexts.removeValue(forKey: resourceId)
+                                    //let _ = strongSelf.randomAccessContexts.removeValue(forKey: resourceId)
                                 }
                             }
                         }
@@ -470,7 +470,7 @@ public final class MediaBox {
                             if let dataContext = strongSelf.randomAccessContexts[resourceId] {
                                 dataContext.removeListenerForData(listener)
                                 if !dataContext.hasDataListeners() {
-                                    let _ = strongSelf.randomAccessContexts.removeValue(forKey: resourceId)
+                                    //let _ = strongSelf.randomAccessContexts.removeValue(forKey: resourceId)
                                 }
                             }
                         }
