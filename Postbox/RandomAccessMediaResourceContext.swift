@@ -177,7 +177,7 @@ public final class RandomAccessMediaResourceContext {
         for range in ranges.sorted(by: { $0.offset < $1.offset }) {
             var offset = range.offset
             let endOffset = offset + range.data.count
-            assert(offset % self.blockSize == 0)
+            assert(offset % self.blockSize == 0 || (endOffset == self.size && range.data.count == 0))
             assert(offset >= 0)
             
             assert(endOffset == self.size || (endOffset < self.size && endOffset % self.blockSize == 0))
