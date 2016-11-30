@@ -77,7 +77,6 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   BOOL _incomingMessagesAlertShowing;
   BOOL _didEnterBackgroundState;
   BOOL _networkRequestInProgress;
-  BOOL _forceNewThread;
   
   BITFeedbackObservationMode _observationMode;
 }
@@ -94,7 +93,6 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
     _requireUserEmail = BITFeedbackUserDataElementOptional;
     _showAlertOnIncomingMessages = YES;
     _showFirstRequiredPresentationModal = YES;
-    _forceNewThread = NO;
     
     _disableFeedbackManager = NO;
     _networkRequestInProgress = NO;
@@ -470,7 +468,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
     }
   }
 
-  if (_forceNewThread) {
+  if ([self shouldForceNewThread]) {
     self.token = nil;
   }
 
@@ -663,6 +661,15 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   [self saveMessages];
 }
 
+- (BOOL)shouldForceNewThread {
+  if (self.delegate && [self.delegate respondsToSelector:@selector(forceNewFeedbackThreadForFeedbackManager:)]) {
+    return [self.delegate forceNewFeedbackThreadForFeedbackManager:self];
+  }
+  else {
+    return NO;
+  }
+}
+
 
 #pragma mark - User
 
@@ -735,8 +742,8 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   NSString *token = [jsonDictionary objectForKey:@"token"];
   NSDictionary *feedbackObject = [jsonDictionary objectForKey:@"feedback"];
   if (feedback && token && feedbackObject) {
-    if (self.forceNewThread) {
-      self.token = nil;
+    if ([self shouldForceNewThread]) {
+        self.token = nil;
     } else {
       // update the thread token, which is not available until the 1st message was successfully sent
       self.token = token;

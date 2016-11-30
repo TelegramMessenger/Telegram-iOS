@@ -82,6 +82,16 @@ NS_ASSUME_NONNULL_BEGIN
  */
 - (nullable NSArray *)preparedItemsForFeedbackManager:(BITFeedbackManager *)feedbackManager;
 
+/**
+ *  Indicates if a new thread should be created for each new feedback message
+ *
+ *  Setting it to `YES` will force a new thread whenever a new message is sent as
+ *  opposed to the default resume thread behaviour.
+ *  
+ *  @return A BOOL indicating if each feedback message should be sent as a new thread.
+ */
+- (BOOL)forceNewFeedbackThreadForFeedbackManager:(BITFeedbackManager *)feedbackManager;
+
 @end
 
 NS_ASSUME_NONNULL_END

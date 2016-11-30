@@ -226,17 +226,6 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
 @property (nonatomic, readwrite) BITFeedbackObservationMode feedbackObservationMode;
 
 /**
- Indicates if a new thread should be created for each new feedback message
-
- Setting thos to `YES` will force a new thread whenever a new message is sent as 
- opposed to the default resume thread behaviour.
-
- Default is `NO`
- */
-@property (nonatomic, readwrite) BOOL forceNewThread;
-
-
-/**
  Prefill feedback compose message user interface with the items given.
  
  All NSString-Content in the array will be concatenated and result in the message,
