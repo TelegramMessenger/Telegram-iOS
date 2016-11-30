@@ -1,7 +1,7 @@
 /*
  * Author: Andreas Linde <mail@andreaslinde.de>
  *
- * Copyright (c) 2012-2014 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2012-2016 HockeyApp, Bit Stadium GmbH.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -450,7 +450,7 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   
   if ([unarchiver containsValueForKey:kBITFeedbackUserDataAsked])
     _didAskUserData = YES;
-  
+
   if ([unarchiver containsValueForKey:kBITFeedbackToken]) {
     self.token = [unarchiver decodeObjectForKey:kBITFeedbackToken];
     [self addStringValueToKeychain:self.token forKey:kBITFeedbackToken];
@@ -467,7 +467,11 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
       self.token = nil;
     }
   }
-  
+
+  if ([self shouldForceNewThread]) {
+    self.token = nil;
+  }
+
   if ([unarchiver containsValueForKey:kBITFeedbackDateOfLastCheck])
     self.lastCheck = [unarchiver decodeObjectForKey:kBITFeedbackDateOfLastCheck];
   
@@ -657,6 +661,15 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   [self saveMessages];
 }
 
+- (BOOL)shouldForceNewThread {
+  if (self.delegate && [self.delegate respondsToSelector:@selector(forceNewFeedbackThreadForFeedbackManager:)]) {
+    return [self.delegate forceNewFeedbackThreadForFeedbackManager:self];
+  }
+  else {
+    return NO;
+  }
+}
+
 
 #pragma mark - User
 
@@ -729,9 +742,13 @@ typedef void (^BITLatestImageFetchCompletionBlock)(UIImage *_Nonnull latestImage
   NSString *token = [jsonDictionary objectForKey:@"token"];
   NSDictionary *feedbackObject = [jsonDictionary objectForKey:@"feedback"];
   if (feedback && token && feedbackObject) {
-    // update the thread token, which is not available until the 1st message was successfully sent
-    self.token = token;
-    
+    if ([self shouldForceNewThread]) {
+        self.token = nil;
+    } else {
+      // update the thread token, which is not available until the 1st message was successfully sent
+      self.token = token;
+    }
+        
     self.lastCheck = [NSDate date];
     
     // add all new messages
