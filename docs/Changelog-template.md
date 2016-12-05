@@ -1,4 +1,12 @@
-# 4.1.2
+## 4.1.3
+
+- [NEW] Added `forceNewFeedbackThreadForFeedbackManager:`-callback to `BITFeedbackManagerDelegate` to force a new feedback thread for each new feedback.
+- [NEW] Norwegian (Bokmal) localization
+- [NEW] Persian (Farsi) localization
+- [BUGFIX] Fix analyzer warning in `BITChannelManagerTests`
+- [BUGFIX] Add check for nil in `BITChannel`.
+
+## 4.1.2
 
 - [NEW] New `shouldDisplayUpdateAlertForUpdateManager`-API [#339](https://github.com/bitstadium/HockeySDK-iOS/pull/339) to make the moment of appearance for custom update UI even more customizable. 
 - [IMPROVEMENT] Fix static analyzer warnings. [#351](https://github.com/bitstadium/HockeySDK-iOS/pull/351)
