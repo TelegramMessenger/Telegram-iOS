@@ -2,6 +2,10 @@ import Foundation
 import UIKit
 
 private func hasHorizontalGestures(_ view: UIView) -> Bool {
+    if view.disablesInteractiveTransitionGestureRecognizer {
+        return true
+    }
+    
     if let view = view as? ListViewBackingView {
         let transform = view.transform
         let angle = Double(atan2f(Float(transform.b), Float(transform.a)))

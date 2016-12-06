@@ -7,6 +7,14 @@ open class ActionSheetController: ViewController {
     
     private var groups: [ActionSheetItemGroup] = []
     
+    public init() {
+        super.init(navigationBar: NavigationBar())
+    }
+    
+    required public init(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
     public func dismissAnimated() {
         self.actionSheetNode.animateOut()
     }

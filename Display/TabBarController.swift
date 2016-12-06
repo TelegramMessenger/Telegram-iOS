@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 
-public class TabBarController: ViewController {
+open class TabBarController: ViewController {
     private var containerLayout = ContainerViewLayout()
     
     private var tabBarControllerNode: TabBarControllerNode {
@@ -37,15 +37,15 @@ public class TabBarController: ViewController {
     
     var currentController: ViewController?
     
-    override public init() {
-        super.init()
+    override public init(navigationBar: NavigationBar = NavigationBar()) {
+        super.init(navigationBar: navigationBar)
     }
 
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override public func loadDisplayNode() {
+    override open func loadDisplayNode() {
         self.displayNode = TabBarControllerNode(itemSelected: { [weak self] index in
             if let strongSelf = self {
                 strongSelf.selectedIndex = index
@@ -100,7 +100,7 @@ public class TabBarController: ViewController {
         }
     }
     
-    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.containerLayout = layout

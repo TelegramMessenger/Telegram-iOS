@@ -34,6 +34,7 @@ static const void *UIViewControllerIgnoreAppearanceMethodInvocationsKey = &UIVie
 static const void *UIViewControllerNavigationControllerKey = &UIViewControllerNavigationControllerKey;
 static const void *UIViewControllerPresentingControllerKey = &UIViewControllerPresentingControllerKey;
 static const void *UIViewControllerPresentingProxyControllerKey = &UIViewControllerPresentingProxyControllerKey;
+static const void *disablesInteractiveTransitionGestureRecognizerKey = &disablesInteractiveTransitionGestureRecognizerKey;
 
 static bool notyfyingShiftState = false;
 
@@ -186,6 +187,18 @@ static bool notyfyingShiftState = false;
 
 - (void)_65087dc8_presentViewController:(UIViewController *)viewControllerToPresent animated:(BOOL)flag completion:(void (^)(void))completion {
     [self _65087dc8_presentViewController:viewControllerToPresent animated:flag completion:completion];
+}
+
+@end
+
+@implementation UIView (Navigation)
+
+- (bool)disablesInteractiveTransitionGestureRecognizer {
+    return [[self associatedObjectForKey:disablesInteractiveTransitionGestureRecognizerKey] boolValue];
+}
+
+- (void)setDisablesInteractiveTransitionGestureRecognizer:(bool)disablesInteractiveTransitionGestureRecognizer {
+    [self setAssociatedObject:@(disablesInteractiveTransitionGestureRecognizer) forKey:disablesInteractiveTransitionGestureRecognizerKey];
 }
 
 @end

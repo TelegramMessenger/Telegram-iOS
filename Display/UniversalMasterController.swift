@@ -6,8 +6,8 @@ import SwiftSignalKit
 class UniversalMasterController: ViewController {
     private var controllers: [ViewController] = []
     
-    public override init() {
-        super.init()
+    public init() {
+        super.init(navigationBar: NavigationBar())
     }
     
     required public init(coder aDecoder: NSCoder) {

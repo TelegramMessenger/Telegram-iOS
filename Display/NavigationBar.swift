@@ -31,8 +31,8 @@ private func backArrowImage(color: UIColor) -> UIImage? {
     }
 }
 
-public class NavigationBar: ASDisplayNode {
-    public var foregroundColor: UIColor = UIColor.black {
+open class NavigationBar: ASDisplayNode {
+    open var foregroundColor: UIColor = UIColor.black {
         didSet {
             if let title = self.title {
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(17.0), textColor: self.foregroundColor)
@@ -40,7 +40,7 @@ public class NavigationBar: ASDisplayNode {
         }
     }
     
-    public var accentColor: UIColor = UIColor(0x007ee5) {
+    open var accentColor: UIColor = UIColor(0x007ee5) {
         didSet {
             self.backButtonNode.color = self.accentColor
             self.leftButtonNode.color = self.accentColor
@@ -361,7 +361,7 @@ public class NavigationBar: ASDisplayNode {
         }
     }
     
-    public override func layout() {
+    open override func layout() {
         var size = self.bounds.size
         
         let leftButtonInset: CGFloat = 8.0

@@ -10,4 +10,10 @@
 
 @end
 
+@interface UIView (Navigation)
+
+@property (nonatomic) bool disablesInteractiveTransitionGestureRecognizer;
+
+@end
+
 void applyKeyboardAutocorrection();

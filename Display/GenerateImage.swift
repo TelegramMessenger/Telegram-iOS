@@ -61,8 +61,8 @@ public func generateImage(_ size: CGSize, contextGenerator: (CGSize, CGContext) 
     return UIImage(cgImage: image, scale: selectedScale, orientation: .up)
 }
 
-public func generateFilledCircleImage(radius: CGFloat, color: UIColor?, backgroundColor: UIColor? = nil) -> UIImage? {
-    return generateImage(CGSize(width: radius * 2.0, height: radius * 2.0), contextGenerator: { size, context in
+public func generateFilledCircleImage(diameter: CGFloat, color: UIColor?, backgroundColor: UIColor? = nil) -> UIImage? {
+    return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         if let backgroundColor = backgroundColor {
             context.setFillColor(backgroundColor.cgColor)
@@ -82,7 +82,13 @@ public func generateFilledCircleImage(radius: CGFloat, color: UIColor?, backgrou
 public func generateStretchableFilledCircleImage(radius: CGFloat, color: UIColor?, backgroundColor: UIColor? = nil) -> UIImage? {
     let intRadius = Int(radius)
     let cap = intRadius == 1 ? 2 : intRadius
-    return generateFilledCircleImage(radius: radius, color: color, backgroundColor: backgroundColor)?.stretchableImage(withLeftCapWidth: cap, topCapHeight: cap)
+    return generateFilledCircleImage(diameter: radius * 2.0, color: color, backgroundColor: backgroundColor)?.stretchableImage(withLeftCapWidth: cap, topCapHeight: cap)
+}
+
+public func generateStretchableFilledCircleImage(diameter: CGFloat, color: UIColor?, backgroundColor: UIColor? = nil) -> UIImage? {
+    let intRadius = Int(diameter / 2.0)
+    let cap = intRadius == 1 ? 2 : intRadius
+    return generateFilledCircleImage(diameter: diameter, color: color, backgroundColor: backgroundColor)?.stretchableImage(withLeftCapWidth: cap, topCapHeight: cap)
 }
 
 public func generateVerticallyStretchableFilledCircleImage(radius: CGFloat, color: UIColor?, backgroundColor: UIColor? = nil) -> UIImage? {
@@ -258,11 +264,12 @@ public class DrawingContext {
                             let dstPixel = dstLine + dx
                             
                             let baseColor = dstPixel.pointee
+                            let baseAlpha = (baseColor >> 24) & 0xff
                             let baseR = (baseColor >> 16) & 0xff
                             let baseG = (baseColor >> 8) & 0xff
                             let baseB = baseColor & 0xff
                             
-                            let alpha = srcPixel.pointee >> 24
+                            let alpha = min(baseAlpha, srcPixel.pointee >> 24)
                             
                             let r = (baseR * alpha) / 255
                             let g = (baseG * alpha) / 255

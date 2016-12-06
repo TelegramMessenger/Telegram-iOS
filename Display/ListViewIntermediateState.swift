@@ -120,6 +120,7 @@ public struct ListViewDeleteAndInsertOptions: OptionSet {
     public static let LowLatency = ListViewDeleteAndInsertOptions(rawValue: 4)
     public static let Synchronous = ListViewDeleteAndInsertOptions(rawValue: 8)
     public static let RequestItemInsertionAnimations = ListViewDeleteAndInsertOptions(rawValue: 16)
+    public static let AnimateTopItemPosition = ListViewDeleteAndInsertOptions(rawValue: 32)
 }
 
 public struct ListViewUpdateSizeAndInsets {

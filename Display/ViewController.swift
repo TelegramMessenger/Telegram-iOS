@@ -53,6 +53,10 @@ private func findCurrentResponder(_ view: UIView) -> UIResponder? {
     private weak var activeInputViewCandidate: UIResponder?
     private weak var activeInputView: UIResponder?
     
+    open var navigationHeight: CGFloat {
+        return self.navigationBar.frame.maxY
+    }
+    
     private let _ready = Promise<Bool>(true)
     open var ready: Promise<Bool> {
         return self._ready
@@ -85,9 +89,9 @@ private func findCurrentResponder(_ view: UIView) -> UIResponder? {
         }
     }
     
-    public init() {
+    public init(navigationBar: NavigationBar = NavigationBar()) {
         self.statusBar = StatusBar()
-        self.navigationBar = NavigationBar()
+        self.navigationBar = navigationBar
         self.presentationContext = PresentationContext()
         
         super.init(nibName: nil, bundle: nil)
@@ -174,9 +178,9 @@ private func findCurrentResponder(_ view: UIView) -> UIResponder? {
         }
     }
     
-    /*override open func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
+    override open func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
         preconditionFailure("use present(_:in)")
-    }*/
+    }
     
     override open func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         if let navigationController = self.navigationController as? NavigationController {
