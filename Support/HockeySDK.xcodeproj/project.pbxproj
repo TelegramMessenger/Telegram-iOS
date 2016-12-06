@@ -750,6 +750,7 @@
 		97F0FA0218AE5AED00EF50AA /* BITFeedbackMessageAttachment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BITFeedbackMessageAttachment.h; sourceTree = "<group>"; };
 		97F0FA0318AE5AED00EF50AA /* BITFeedbackMessageAttachment.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = BITFeedbackMessageAttachment.m; sourceTree = "<group>"; };
 		B2156DD01D9DED7F0001DDDC /* AppIconPlaceHolder.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = AppIconPlaceHolder.png; sourceTree = "<group>"; };
+		B280F42D1DDF999F006179A7 /* fa */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fa; path = fa.lproj/HockeySDK.strings; sourceTree = "<group>"; };
 		B29855421D85EB5D007FF452 /* allfeatures.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = allfeatures.xcconfig; sourceTree = "<group>"; };
 		B29855431D85EBAC007FF452 /* module_allfeatures.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module_allfeatures.modulemap; sourceTree = "<group>"; };
 		B2D1CE5D1D9DE4F700CA74A8 /* FeedbackPlaceholder.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = FeedbackPlaceholder.png; sourceTree = "<group>"; };
@@ -1643,6 +1644,7 @@
 				"zh-Hans",
 				ro,
 				hu,
+				fa,
 				nb,
 			);
 			mainGroup = E400560F148D79B500EB22B9;
@@ -2045,6 +2047,7 @@
 				1EA512DF167F7EF000FC9FBA /* zh-Hans */,
 				BEE0207C16C5107E004426EA /* hu */,
 				1E20A57F181E9D4600D5B770 /* nl */,
+				B280F42D1DDF999F006179A7 /* fa */,
 				E328A2FB1C88B344008BB527 /* nb */,
 			);
 			name = HockeySDK.strings;
