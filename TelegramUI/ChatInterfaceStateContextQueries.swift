@@ -4,7 +4,7 @@ import TelegramCore
 import Postbox
 
 func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account, currentQuery: ChatPresentationInputQuery?) -> (ChatPresentationInputQuery?, Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError>)? {
-    if let inputQuery = inputContextQueryForChatPresentationIntefaceState(chatPresentationInterfaceState, account: account) {
+    if let inputQuery = inputContextQueryForChatPresentationIntefaceState(chatPresentationInterfaceState) {
         if inputQuery == currentQuery {
             return nil
         } else {
@@ -61,7 +61,35 @@ func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentation
                         return (nil, .single({ _ in return nil }))
                     }
                 case let .command(query):
-                    return (nil, .single({ _ in return nil }))
+                    let normalizedQuery = query.lowercased()
+                    
+                    if let peer = chatPresentationInterfaceState.peer {
+                        var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .complete()
+                        if let currentQuery = currentQuery {
+                            switch currentQuery {
+                                case .command:
+                                    break
+                                default:
+                                    signal = .single({ _ in return nil })
+                            }
+                        }
+                        
+                        let participants = peerCommands(account: account, id: peer.id)
+                            |> map { commands -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+                                let filteredCommands = commands.commands.filter { command in
+                                    if command.command.text.hasPrefix(normalizedQuery) {
+                                        return true
+                                    }
+                                    return false
+                                }
+                                let sortedCommands = filteredCommands
+                                return { _ in return .commands(sortedCommands) }
+                        }
+                        
+                        return (inputQuery, signal |> then(participants))
+                    } else {
+                        return (nil, .single({ _ in return nil }))
+                    }
                 case let .contextRequest(addressName, query):
                     guard let chatPeer = chatPresentationInterfaceState.peer else {
                         return (nil, .single({ _ in return nil }))
@@ -72,7 +100,7 @@ func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentation
                     if let currentQuery = currentQuery {
                         switch currentQuery {
                             case let .contextRequest(currentAddressName, currentContextQuery) where currentAddressName == addressName:
-                                if currentContextQuery.isEmpty != query.isEmpty {
+                                if query.isEmpty && !currentContextQuery.isEmpty {
                                     delayRequest = false
                                 }
                             default:

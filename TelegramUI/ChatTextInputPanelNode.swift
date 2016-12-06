@@ -61,7 +61,6 @@ private let searchLayoutProgressImage = generateImage(CGSize(width: 22.0, height
 })
 
 private let attachmentIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconAttachment"), color: UIColor(0x9099A2))
-private let micIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconMicrophone"), color: UIColor(0x9099A2))
 private let sendIcon = UIImage(bundleImageName: "Chat/Input/Text/IconSend")?.precomposed()
 
 enum ChatTextInputAccessoryItem {
@@ -70,28 +69,59 @@ enum ChatTextInputAccessoryItem {
     case inputButtons
 }
 
+struct ChatTextInputPanelAudioRecordingState: Equatable {
+    let recorder: ManagedAudioRecorder
+    
+    init(recorder: ManagedAudioRecorder) {
+        self.recorder = recorder
+    }
+    
+    static func ==(lhs: ChatTextInputPanelAudioRecordingState, rhs: ChatTextInputPanelAudioRecordingState) -> Bool {
+        return lhs.recorder === rhs.recorder
+    }
+}
+
 struct ChatTextInputPanelState: Equatable {
     let accessoryItems: [ChatTextInputAccessoryItem]
+    let contextPlaceholder: NSAttributedString?
+    let audioRecordingState: ChatTextInputPanelAudioRecordingState?
     
-    init(accessoryItems: [ChatTextInputAccessoryItem]) {
+    init(accessoryItems: [ChatTextInputAccessoryItem], contextPlaceholder: NSAttributedString?, audioRecordingState: ChatTextInputPanelAudioRecordingState?) {
         self.accessoryItems = accessoryItems
+        self.contextPlaceholder = contextPlaceholder
+        self.audioRecordingState = audioRecordingState
     }
     
     init() {
         self.accessoryItems = []
+        self.contextPlaceholder = nil
+        self.audioRecordingState = nil
     }
     
     static func ==(lhs: ChatTextInputPanelState, rhs: ChatTextInputPanelState) -> Bool {
         if lhs.accessoryItems != rhs.accessoryItems {
             return false
         }
+        if let lhsContextPlaceholder = lhs.contextPlaceholder, let rhsContextPlaceholder = rhs.contextPlaceholder {
+            return lhsContextPlaceholder.isEqual(to: rhsContextPlaceholder)
+        } else if (lhs.contextPlaceholder != nil) != (rhs.contextPlaceholder != nil) {
+            return false
+        }
+        if lhs.audioRecordingState != rhs.audioRecordingState {
+            return false
+        }
         return true
+    }
+    
+    func withUpdatedAudioRecordingState(_ audioRecordingState: ChatTextInputPanelAudioRecordingState?) -> ChatTextInputPanelState {
+        return ChatTextInputPanelState(accessoryItems: self.accessoryItems, contextPlaceholder: self.contextPlaceholder, audioRecordingState: audioRecordingState)
     }
 }
 
 private let keyboardImage = UIImage(bundleImageName: "Chat/Input/Text/AccessoryIconKeyboard")?.precomposed()
 private let stickersImage = UIImage(bundleImageName: "Chat/Input/Text/AccessoryIconStickers")?.precomposed()
 private let inputButtonsImage = UIImage(bundleImageName: "Chat/Input/Text/AccessoryIconInputButtons")?.precomposed()
+private let audioRecordingDotImage = generateFilledCircleImage(diameter: 9.0, color: UIColor(0xed2521))
 
 private final class AccessoryItemIconButton: HighlightableButton {
     init(item: ChatTextInputAccessoryItem) {
@@ -120,14 +150,19 @@ private final class AccessoryItemIconButton: HighlightableButton {
 
 class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     var textPlaceholderNode: TextNode
+    var contextPlaceholderNode: TextNode?
     var textInputNode: ASEditableTextNode?
     
     let textInputBackgroundView: UIImageView
-    let micButton: HighlightableButton
+    let micButton: ChatTextInputAudioRecordingButton
     let sendButton: HighlightableButton
     let attachmentButton: HighlightableButton
     let searchLayoutClearButton: HighlightableButton
     let searchLayoutProgressView: UIImageView
+    var audioRecordingInfoContainerNode: ASDisplayNode?
+    var audioRecordingDotNode: ASImageNode?
+    var audioRecordingTimeNode: ChatTextInputAudioRecordingTimeNode?
+    var audioRecordingCancelIndicator: ChatTextInputAudioRecordingCancelIndicator?
     
     private var accessoryItemButtons: [(ChatTextInputAccessoryItem, AccessoryItemIconButton)] = []
     
@@ -151,6 +186,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             return ChatTextInputState(inputText: text, selectionRange: selectionRange)
         } else {
             return ChatTextInputState()
+        }
+    }
+    
+    override var account: Account? {
+        didSet {
+            self.micButton.account = self.account
         }
     }
     
@@ -202,7 +243,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.searchLayoutClearButton = HighlightableButton()
         self.searchLayoutProgressView = UIImageView(image: searchLayoutProgressImage)
         self.searchLayoutProgressView.isHidden = true
-        self.micButton = HighlightableButton()
+        self.micButton = ChatTextInputAudioRecordingButton()
         self.sendButton = HighlightableButton()
         
         super.init()
@@ -211,8 +252,21 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.attachmentButton.addTarget(self, action: #selector(self.attachmentButtonPressed), for: .touchUpInside)
         self.view.addSubview(self.attachmentButton)
         
-        self.micButton.setImage(micIcon, for: [])
-        self.micButton.addTarget(self, action: #selector(self.micButtonPressed), for: .touchUpInside)
+        self.micButton.beginRecording = { [weak self] in
+            if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
+                interfaceInteraction.beginAudioRecording()
+            }
+        }
+        self.micButton.endRecording = { [weak self] sendAudio in
+            if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
+                interfaceInteraction.finishAudioRecording(sendAudio)
+            }
+        }
+        self.micButton.offsetRecordingControls = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.updateLayout(width: strongSelf.bounds.size.width, transition: .immediate, interfaceState: strongSelf.presentationInterfaceState)
+            }
+        }
         self.view.addSubview(self.micButton)
         
         self.sendButton.setImage(sendIcon, for: [])
@@ -381,7 +435,139 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         let (accessoryButtonsWidth, textFieldHeight) = self.calculateTextFieldMetrics(width: width)
         let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight)
         
-        transition.updateFrame(layer: self.attachmentButton.layer, frame: CGRect(origin: CGPoint(x: 2.0 - UIScreenPixel, y: panelHeight - minimalHeight), size: CGSize(width: 40.0, height: minimalHeight)))
+        var audioRecordingItemsVerticalOffset: CGFloat = 0.0
+        if let audioRecordingState = interfaceState.inputTextPanelState.audioRecordingState {
+            self.micButton.audioRecorder = audioRecordingState.recorder
+            let audioRecordingInfoContainerNode: ASDisplayNode
+            if let currentAudioRecordingInfoContainerNode = self.audioRecordingInfoContainerNode {
+                audioRecordingInfoContainerNode = currentAudioRecordingInfoContainerNode
+            } else {
+                audioRecordingInfoContainerNode = ASDisplayNode()
+                self.audioRecordingInfoContainerNode = audioRecordingInfoContainerNode
+                self.insertSubnode(audioRecordingInfoContainerNode, at: 0)
+            }
+            
+            audioRecordingItemsVerticalOffset = panelHeight * 2.0
+            transition.updateAlpha(layer: self.textInputBackgroundView.layer, alpha: 0.0)
+            if let textInputNode = self.textInputNode {
+                transition.updateAlpha(node: textInputNode, alpha: 0.0)
+            }
+            for (_, button) in self.accessoryItemButtons {
+                transition.updateAlpha(layer: button.layer, alpha: 0.0)
+            }
+            
+            var animateCancelSlideIn = false
+            let audioRecordingCancelIndicator: ChatTextInputAudioRecordingCancelIndicator
+            if let currentAudioRecordingCancelIndicator = self.audioRecordingCancelIndicator {
+                audioRecordingCancelIndicator = currentAudioRecordingCancelIndicator
+            } else {
+                animateCancelSlideIn = transition.isAnimated
+                
+                audioRecordingCancelIndicator = ChatTextInputAudioRecordingCancelIndicator()
+                self.audioRecordingCancelIndicator = audioRecordingCancelIndicator
+                self.insertSubnode(audioRecordingCancelIndicator, at: 0)
+            }
+            
+            audioRecordingCancelIndicator.frame = CGRect(origin: CGPoint(x: floor((width - audioRecordingCancelIndicator.bounds.size.width) / 2.0) - self.micButton.controlsOffset, y: panelHeight - minimalHeight + floor((minimalHeight - audioRecordingCancelIndicator.bounds.size.height) / 2.0)), size: audioRecordingCancelIndicator.bounds.size)
+            
+            if animateCancelSlideIn {
+                let position = audioRecordingCancelIndicator.layer.position
+                audioRecordingCancelIndicator.layer.animatePosition(from: CGPoint(x: width + audioRecordingCancelIndicator.bounds.size.width, y: position.y), to: position, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+            }
+            
+            var animateTimeSlideIn = false
+            let audioRecordingTimeNode: ChatTextInputAudioRecordingTimeNode
+            if let currentAudioRecordingTimeNode = self.audioRecordingTimeNode {
+                audioRecordingTimeNode = currentAudioRecordingTimeNode
+            } else {
+                audioRecordingTimeNode = ChatTextInputAudioRecordingTimeNode()
+                self.audioRecordingTimeNode = audioRecordingTimeNode
+                audioRecordingInfoContainerNode.addSubnode(audioRecordingTimeNode)
+                
+                if transition.isAnimated {
+                    animateTimeSlideIn = true
+                }
+            }
+            
+            let audioRecordingTimeSize = audioRecordingTimeNode.measure(CGSize(width: 200.0, height: 100.0))
+            
+            audioRecordingInfoContainerNode.frame = CGRect(origin: CGPoint(x: min(0.0, audioRecordingCancelIndicator.frame.minX - audioRecordingTimeSize.width - 8.0 - 28.0), y: 0.0), size: CGSize(width: width, height: panelHeight))
+            
+            audioRecordingTimeNode.frame = CGRect(origin: CGPoint(x: 28.0, y: panelHeight - minimalHeight + floor((minimalHeight - audioRecordingTimeSize.height) / 2.0)), size: audioRecordingTimeSize)
+            if animateTimeSlideIn {
+                let position = audioRecordingTimeNode.layer.position
+                audioRecordingTimeNode.layer.animatePosition(from: CGPoint(x: position.x - 28.0 - audioRecordingTimeSize.width, y: position.y), to: position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+            }
+            
+            audioRecordingTimeNode.audioRecorder = audioRecordingState.recorder
+            
+            var animateDotSlideIn = false
+            let audioRecordingDotNode: ASImageNode
+            if let currentAudioRecordingDotNode = self.audioRecordingDotNode {
+                audioRecordingDotNode = currentAudioRecordingDotNode
+            } else {
+                animateDotSlideIn = transition.isAnimated
+                
+                audioRecordingDotNode = ASImageNode()
+                audioRecordingDotNode.image = audioRecordingDotImage
+                self.audioRecordingDotNode = audioRecordingDotNode
+                audioRecordingInfoContainerNode.addSubnode(audioRecordingDotNode)
+            }
+            audioRecordingDotNode.frame = CGRect(origin: CGPoint(x: audioRecordingTimeNode.frame.minX - 17.0, y: panelHeight - minimalHeight + floor((minimalHeight - 9.0) / 2.0)), size: CGSize(width: 9.0, height: 9.0))
+            if animateDotSlideIn {
+                let position = audioRecordingDotNode.layer.position
+                audioRecordingDotNode.layer.animatePosition(from: CGPoint(x: position.x - 9.0 - 51.0, y: position.y), to: position, duration: 0.7, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak audioRecordingDotNode] finished in
+                    if finished {
+                        let animation = CAKeyframeAnimation(keyPath: "opacity")
+                        animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.0 as NSNumber]
+                        animation.keyTimes = [0.0 as NSNumber, 0.4546 as NSNumber, 0.9091 as NSNumber, 1 as NSNumber]
+                        animation.duration = 0.5
+                        animation.autoreverses = true
+                        animation.repeatCount = Float.infinity
+                        
+                        audioRecordingDotNode?.layer.add(animation, forKey: "recording")
+                    }
+                })
+            }
+        } else {
+            self.micButton.audioRecorder = nil
+            transition.updateAlpha(layer: self.textInputBackgroundView.layer, alpha: 1.0)
+            if let textInputNode = self.textInputNode {
+                transition.updateAlpha(node: textInputNode, alpha: 1.0)
+            }
+            for (_, button) in self.accessoryItemButtons {
+                transition.updateAlpha(layer: button.layer, alpha: 1.0)
+            }
+            
+            if let audioRecordingInfoContainerNode = self.audioRecordingInfoContainerNode {
+                self.audioRecordingInfoContainerNode = nil
+                transition.updateFrame(node: audioRecordingInfoContainerNode, frame: CGRect(origin: CGPoint(x: -width, y: 0.0), size: audioRecordingInfoContainerNode.bounds.size), completion: { [weak audioRecordingInfoContainerNode] _ in
+                    audioRecordingInfoContainerNode?.removeFromSupernode()
+                })
+            }
+            
+            if let audioRecordingDotNode = self.audioRecordingDotNode {
+                self.audioRecordingDotNode = nil
+            }
+            
+            if let audioRecordingTimeNode = self.audioRecordingTimeNode {
+                self.audioRecordingTimeNode = nil
+            }
+            
+            if let audioRecordingCancelIndicator = self.audioRecordingCancelIndicator {
+                self.audioRecordingCancelIndicator = nil
+                if transition.isAnimated {
+                    let position = audioRecordingCancelIndicator.layer.position
+                    audioRecordingCancelIndicator.layer.animatePosition(from: position, to: CGPoint(x: 0.0 - audioRecordingCancelIndicator.bounds.size.width, y: position.y), duration: 0.3, removeOnCompletion: false, completion: { [weak audioRecordingCancelIndicator] _ in
+                        audioRecordingCancelIndicator?.removeFromSupernode()
+                    })
+                } else {
+                    audioRecordingCancelIndicator.removeFromSupernode()
+                }
+            }
+        }
+        
+        transition.updateFrame(layer: self.attachmentButton.layer, frame: CGRect(origin: CGPoint(x: 2.0 - UIScreenPixel, y: panelHeight - minimalHeight + audioRecordingItemsVerticalOffset), size: CGSize(width: 40.0, height: minimalHeight)))
         
         var composeButtonsOffset: CGFloat = 0.0
         var textInputBackgroundWidthOffset: CGFloat = 0.0
@@ -399,14 +585,36 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         transition.updateFrame(layer: self.searchLayoutProgressView.layer, frame: CGRect(origin: CGPoint(x: floor((searchLayoutClearButtonSize.width - searchProgressSize.width) / 2.0), y: floor((searchLayoutClearButtonSize.height - searchProgressSize.height) / 2.0)), size: searchProgressSize))
         
         if let textInputNode = self.textInputNode {
-            transition.updateFrame(node: textInputNode, frame: CGRect(x: self.textFieldInsets.left + self.textInputViewInternalInsets.left, y: self.textFieldInsets.top + self.textInputViewInternalInsets.top, width: width - self.textFieldInsets.left - self.textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right - accessoryButtonsWidth, height: panelHeight - self.textFieldInsets.top - self.textFieldInsets.bottom - self.textInputViewInternalInsets.top - self.textInputViewInternalInsets.bottom))
+            transition.updateFrame(node: textInputNode, frame: CGRect(x: self.textFieldInsets.left + self.textInputViewInternalInsets.left, y: self.textFieldInsets.top + self.textInputViewInternalInsets.top + audioRecordingItemsVerticalOffset, width: width - self.textFieldInsets.left - self.textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right - accessoryButtonsWidth, height: panelHeight - self.textFieldInsets.top - self.textFieldInsets.bottom - self.textInputViewInternalInsets.top - self.textInputViewInternalInsets.bottom))
         }
         
-        transition.updateFrame(node: self.textPlaceholderNode, frame: CGRect(origin: CGPoint(x: self.textFieldInsets.left + self.textInputViewInternalInsets.left, y: self.textFieldInsets.top + self.textInputViewInternalInsets.top + 0.5), size: self.textPlaceholderNode.frame.size))
+        if let contextPlaceholder = self.presentationInterfaceState.inputTextPanelState.contextPlaceholder {
+            let placeholderLayout = TextNode.asyncLayout(self.contextPlaceholderNode)
+            let (placeholderSize, placeholderApply) = placeholderLayout(contextPlaceholder, nil, 1, .end, CGSize(width: width - self.textFieldInsets.left - self.textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right - accessoryButtonsWidth, height: CGFloat.greatestFiniteMagnitude), nil)
+            let contextPlaceholderNode = placeholderApply()
+            if let currentContextPlaceholderNode = self.contextPlaceholderNode, currentContextPlaceholderNode !== contextPlaceholderNode {
+                self.contextPlaceholderNode = nil
+                currentContextPlaceholderNode.removeFromSupernode()
+            }
+            
+            if self.contextPlaceholderNode !== contextPlaceholderNode {
+                self.contextPlaceholderNode = contextPlaceholderNode
+                self.insertSubnode(contextPlaceholderNode, aboveSubnode: self.textPlaceholderNode)
+            }
+            
+            placeholderApply()
+            
+            contextPlaceholderNode.frame = CGRect(origin: CGPoint(x: self.textFieldInsets.left + self.textInputViewInternalInsets.left, y: self.textFieldInsets.top + self.textInputViewInternalInsets.top + 0.5 + audioRecordingItemsVerticalOffset), size: placeholderSize.size)
+        } else if let contextPlaceholderNode = self.contextPlaceholderNode {
+            self.contextPlaceholderNode = nil
+            contextPlaceholderNode.removeFromSupernode()
+        }
         
-        transition.updateFrame(layer: self.textInputBackgroundView.layer, frame: CGRect(x: self.textFieldInsets.left, y: self.textFieldInsets.top, width: width - self.textFieldInsets.left - self.textFieldInsets.right + textInputBackgroundWidthOffset, height: panelHeight - self.textFieldInsets.top - self.textFieldInsets.bottom))
+        transition.updateFrame(node: self.textPlaceholderNode, frame: CGRect(origin: CGPoint(x: self.textFieldInsets.left + self.textInputViewInternalInsets.left, y: self.textFieldInsets.top + self.textInputViewInternalInsets.top + 0.5 + audioRecordingItemsVerticalOffset), size: self.textPlaceholderNode.frame.size))
         
-        var nextButtonTopRight = CGPoint(x: width - self.textFieldInsets.right - accessoryButtonInset, y: panelHeight - self.textFieldInsets.bottom - minimalInputHeight)
+        transition.updateFrame(layer: self.textInputBackgroundView.layer, frame: CGRect(x: self.textFieldInsets.left, y: self.textFieldInsets.top + audioRecordingItemsVerticalOffset, width: width - self.textFieldInsets.left - self.textFieldInsets.right + textInputBackgroundWidthOffset, height: panelHeight - self.textFieldInsets.top - self.textFieldInsets.bottom))
+        
+        var nextButtonTopRight = CGPoint(x: width - self.textFieldInsets.right - accessoryButtonInset, y: panelHeight - self.textFieldInsets.bottom - minimalInputHeight + audioRecordingItemsVerticalOffset)
         for (_, button) in self.accessoryItemButtons.reversed() {
             let buttonSize = CGSize(width: button.buttonWidth, height: minimalInputHeight)
             let buttonFrame = CGRect(origin: CGPoint(x: nextButtonTopRight.x - buttonSize.width, y: nextButtonTopRight.y + floor((minimalInputHeight - buttonSize.height) / 2.0)), size: buttonSize)
@@ -578,9 +786,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 return textInputState
             }
         }
-    }
-    
-    @objc func micButtonPressed() {
     }
     
     @objc func textInputBackgroundViewTap(_ recognizer: UITapGestureRecognizer) {

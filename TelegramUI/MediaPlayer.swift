@@ -3,6 +3,7 @@ import SwiftSignalKit
 import Postbox
 import CoreMedia
 import TelegramCore
+import Postbox
 
 private struct MediaPlayerControlTimebase {
     let timebase: CMTimebase
@@ -29,7 +30,7 @@ private enum MediaPlayerState {
 
 private final class MediaPlayerContext {
     private let queue: Queue
-    private let account: Account
+    private let postbox: Postbox
     private let resource: MediaResource
     
     private var state: MediaPlayerState = .empty
@@ -61,11 +62,11 @@ private final class MediaPlayerContext {
         }
     }
     
-    init(queue: Queue, account: Account, resource: MediaResource) {
+    init(queue: Queue, postbox: Postbox, resource: MediaResource) {
         assert(queue.isCurrent())
         
         self.queue = queue
-        self.account = account
+        self.postbox = postbox
         self.resource = resource
     }
     
@@ -123,7 +124,7 @@ private final class MediaPlayerContext {
             }
         }
         
-        let frameSource = FFMpegMediaFrameSource(queue: self.queue, account: account, resource: resource)
+        let frameSource = FFMpegMediaFrameSource(queue: self.queue, postbox: self.postbox, resource: resource)
         let disposable = MetaDisposable()
         self.state = .seeking(frameSource: frameSource, timestamp: timestamp, disposable: disposable, action: action)
         
@@ -310,6 +311,8 @@ private final class MediaPlayerContext {
             duration = max(duration, CMTimeGetSeconds(audioTrackFrameBuffer.duration))
         }
         
+        var loopNow = false
+        
         var worstStatus: MediaTrackFrameBufferStatus?
         for status in [videoStatus, audioStatus] {
             if let status = status {
@@ -368,6 +371,7 @@ private final class MediaPlayerContext {
             let nextTickDelay = max(0.0, finishedAt - timestamp)
             if nextTickDelay.isLessThanOrEqualTo(0.0) {
                 rate = 0.0
+                loopNow = true
             } else {
                 let tickTimer = SwiftSignalKit.Timer(timeout: nextTickDelay, repeat: false, completion: { [weak self] in
                     self?.tick()
@@ -426,6 +430,10 @@ private final class MediaPlayerContext {
         }
         let status = MediaPlayerStatus(duration: duration, timestamp: timestamp, status: playbackStatus)
         self.status.set(.single(status))
+        
+        if loopNow {
+            self.seek(timestamp: 0.0, action: .play)
+        }
     }
 }
 
@@ -467,9 +475,9 @@ final class MediaPlayer {
         }
     }
     
-    init(account: Account, resource: MediaResource) {
+    init(postbox: Postbox, resource: MediaResource) {
         self.queue.async {
-            let context = MediaPlayerContext(queue: self.queue, account: account, resource: resource)
+            let context = MediaPlayerContext(queue: self.queue, postbox: postbox, resource: resource)
             self.contextRef = Unmanaged.passRetained(context)
         }
     }

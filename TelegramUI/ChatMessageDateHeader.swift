@@ -97,6 +97,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         
         self.backgroundNode.image = backgroundImage(color: UIColor(0x748391, 0.45))
         self.stickBackgroundNode.image = backgroundImage(color: UIColor(0x939fab, 0.5))
+        self.stickBackgroundNode.alpha = 0.0
         self.backgroundNode.addSubnode(self.stickBackgroundNode)
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.labelNode)

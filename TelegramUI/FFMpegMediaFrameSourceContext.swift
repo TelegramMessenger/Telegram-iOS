@@ -12,9 +12,6 @@ private struct StreamContext {
     fileprivate let timebase: CMTime
     fileprivate let duration: CMTime
     fileprivate let decoder: MediaTrackFrameDecoder
-    
-    func close() {
-    }
 }
 
 struct FFMpegMediaFrameSourceDescription {
@@ -33,11 +30,6 @@ private struct InitializedState {
     
     fileprivate let audioStream: StreamContext?
     fileprivate let videoStream: StreamContext?
-    
-    func close() {
-        self.videoStream?.close()
-        self.audioStream?.close()
-    }
 }
 
 struct FFMpegMediaFrameSourceStreamContextInfo {
@@ -50,31 +42,9 @@ struct FFMpegMediaFrameSourceContextInfo {
     let videoStream: FFMpegMediaFrameSourceStreamContextInfo?
 }
 
-/*private func getFormatCallback(codecContext: UnsafeMutablePointer<AVCodecContext>?, formats: UnsafePointer<AVPixelFormat>?) -> AVPixelFormat {
-    var formats = formats!
-    while formats.pointee != AV_PIX_FMT_NONE {
-        let desc = av_pix_fmt_desc_get(formats.pointee)!
-        
-        if formats.pointee == AV_PIX_FMT_VIDEOTOOLBOX {
-            let result = av_videotoolbox_default_init(codecContext!)
-            if (result < 0) {
-                print("av_videotoolbox_default_init failed (\(result))")
-                formats = formats.successor()
-                continue
-            }
-            
-            return formats.pointee;
-        } else if (desc.pointee.flags & UInt64(AV_PIX_FMT_FLAG_HWACCEL)) == 0 {
-            return formats.pointee
-        }
-        formats = formats.successor()
-    }
-    return formats.pointee
-}*/
-
 private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: UnsafeMutablePointer<UInt8>?, bufferSize: Int32) -> Int32 {
     let context = Unmanaged<FFMpegMediaFrameSourceContext>.fromOpaque(userData!).takeUnretainedValue()
-    guard let account = context.account, let resource = context.resource else {
+    guard let postbox = context.postbox, let resource = context.resource else {
         return 0
     }
     
@@ -83,7 +53,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     let resourceSize: Int = resource.size ?? 0
     
     let readCount = min(resourceSize - context.readingOffset, Int(bufferSize))
-    let data = account.postbox.mediaBox.resourceData(resource, size: resourceSize, in: context.readingOffset ..< (context.readingOffset + readCount), mode: .complete)
+    let data = postbox.mediaBox.resourceData(resource, size: resourceSize, in: context.readingOffset ..< (context.readingOffset + readCount), mode: .complete)
     var fetchedData: Data?
     let semaphore = DispatchSemaphore(value: 0)
     let _ = data.start(next: { data in
@@ -106,7 +76,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
 
 private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whence: Int32) -> Int64 {
     let context = Unmanaged<FFMpegMediaFrameSourceContext>.fromOpaque(userData!).takeUnretainedValue()
-    guard let account = context.account, let resource = context.resource else {
+    guard let postbox = context.postbox, let resource = context.resource else {
         return 0
     }
     
@@ -125,7 +95,7 @@ private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whe
             if context.readingOffset >= resourceSize {
                 context.fetchedDataDisposable.set(nil)
             } else {
-                context.fetchedDataDisposable.set(account.postbox.mediaBox.fetchedResourceData(resource, size: resourceSize, in: context.readingOffset ..< resourceSize).start())
+                context.fetchedDataDisposable.set(postbox.mediaBox.fetchedResourceData(resource, size: resourceSize, in: context.readingOffset ..< resourceSize).start())
             }
         }
     }
@@ -138,7 +108,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
     
     var closed = false
     
-    fileprivate var account: Account?
+    fileprivate var postbox: Postbox?
     fileprivate var resource: MediaResource?
     
     private let ioBufferSize = 64 * 1024
@@ -162,19 +132,19 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         fetchedDataDisposable.dispose()
     }
     
-    func initializeState(account: Account, resource: MediaResource) {
+    func initializeState(postbox: Postbox, resource: MediaResource) {
         if self.readingError || self.initializedState != nil {
             return
         }
         
         let _ = FFMpegMediaFrameSourceContextHelpers.registerFFMpegGlobals
         
-        self.account = account
+        self.postbox = postbox
         self.resource = resource
         
         let resourceSize: Int = resource.size ?? 0
         
-        self.fetchedDataDisposable.set(account.postbox.mediaBox.fetchedResourceData(resource, size: resourceSize, in: 0 ..< resourceSize).start())
+        self.fetchedDataDisposable.set(postbox.mediaBox.fetchedResourceData(resource, size: resourceSize, in: 0 ..< resourceSize).start())
         
         var avFormatContextRef = avformat_alloc_context()
         guard let avFormatContext = avFormatContextRef else {
@@ -210,7 +180,28 @@ final class FFMpegMediaFrameSourceContext: NSObject {
                 
                 let codecPar = avFormatContext.pointee.streams.advanced(by: streamIndex).pointee!.pointee.codecpar!
                 
-                if codecPar.pointee.codec_id == AV_CODEC_ID_H264 {
+                if false {
+                    if let codec = avcodec_find_decoder(codecPar.pointee.codec_id) {
+                        if let codecContext = avcodec_alloc_context3(codec) {
+                            if avcodec_parameters_to_context(codecContext, avFormatContext.pointee.streams[streamIndex]!.pointee.codecpar) >= 0 {
+                                if avcodec_open2(codecContext, codec, nil) >= 0 {
+                                    let (fps, timebase) = FFMpegMediaFrameSourceContextHelpers.streamFpsAndTimeBase(stream: avFormatContext.pointee.streams.advanced(by: streamIndex).pointee!, defaultTimeBase: CMTimeMake(1, 24))
+                                    
+                                    let duration = CMTimeMake(avFormatContext.pointee.streams.advanced(by: streamIndex).pointee!.pointee.duration, timebase.timescale)
+                                    
+                                    videoStream = StreamContext(index: streamIndex, codecContext: codecContext, fps: fps, timebase: timebase, duration: duration, decoder: FFMpegMediaVideoFrameDecoder(codecContext: codecContext))
+                                    break
+                                } else {
+                                    var codecContextRef: UnsafeMutablePointer<AVCodecContext>? = codecContext
+                                    avcodec_free_context(&codecContextRef)
+                                }
+                            } else {
+                                var codecContextRef: UnsafeMutablePointer<AVCodecContext>? = codecContext
+                                avcodec_free_context(&codecContextRef)
+                            }
+                        }
+                    }
+                } else if codecPar.pointee.codec_id == AV_CODEC_ID_H264 {
                     if let videoFormat = FFMpegMediaFrameSourceContextHelpers.createFormatDescriptionFromCodecData(UInt32(kCMVideoCodecType_H264), codecPar.pointee.width, codecPar.pointee.height, codecPar.pointee.extradata, codecPar.pointee.extradata_size, 0x43637661) {
                         let (fps, timebase) = FFMpegMediaFrameSourceContextHelpers.streamFpsAndTimeBase(stream: avFormatContext.pointee.streams.advanced(by: streamIndex).pointee!, defaultTimeBase: CMTimeMake(1, 1000))
                         

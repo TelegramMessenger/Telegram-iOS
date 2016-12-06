@@ -4,26 +4,36 @@ import Postbox
 import TelegramCore
 import Display
 
+private struct CommandChatInputContextPanelEntryStableId: Hashable {
+    let command: PeerCommand
+    
+    var hashValue: Int {
+        return command.command.text.hashValue ^ command.peer.id.hashValue
+    }
+    
+    static func ==(lhs: CommandChatInputContextPanelEntryStableId, rhs: CommandChatInputContextPanelEntryStableId) -> Bool {
+        return lhs.command == rhs.command
+    }
+}
+
 private struct CommandChatInputContextPanelEntry: Equatable, Comparable, Identifiable {
     let index: Int
-    let peer: Peer
-    let command: String
-    let text: String
+    let command: PeerCommand
     
-    var stableId: Int64 {
-        return self.peer.id.toInt64()
+    var stableId: CommandChatInputContextPanelEntryStableId {
+        return CommandChatInputContextPanelEntryStableId(command: self.command)
     }
     
     static func ==(lhs: CommandChatInputContextPanelEntry, rhs: CommandChatInputContextPanelEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.peer.isEqual(rhs.peer) && lhs.command == rhs.command && lhs.text == rhs.text
+        return lhs.index == rhs.index && lhs.command == rhs.command
     }
     
     static func <(lhs: CommandChatInputContextPanelEntry, rhs: CommandChatInputContextPanelEntry) -> Bool {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, peerSelected: @escaping (Peer) -> Void) -> ListViewItem {
-        return CommandChatInputPanelItem(account: account, peer: self.peer, peerSelected: peerSelected)
+    func item(account: Account, commandSelected: @escaping (PeerCommand, Bool) -> Void) -> ListViewItem {
+        return CommandChatInputPanelItem(account: account, command: self.command, commandSelected: commandSelected)
     }
 }
 
@@ -33,12 +43,12 @@ private struct CommandChatInputContextPanelTransition {
     let updates: [ListViewUpdateItem]
 }
 
-private func preparedTransition(from fromEntries: [CommandChatInputContextPanelEntry], to toEntries: [CommandChatInputContextPanelEntry], account: Account, peerSelected: @escaping (Peer) -> Void) -> CommandChatInputContextPanelTransition {
+private func preparedTransition(from fromEntries: [CommandChatInputContextPanelEntry], to toEntries: [CommandChatInputContextPanelEntry], account: Account, commandSelected: @escaping (PeerCommand, Bool) -> Void) -> CommandChatInputContextPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, peerSelected: peerSelected), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, peerSelected: peerSelected), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, commandSelected: commandSelected), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, commandSelected: commandSelected), directionHint: nil) }
     
     return CommandChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -54,7 +64,7 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
         self.listView = ListView()
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true
-        self.listView.stackFromBottomInsetItemFactor = 3.5
+        self.listView.keepBottomItemOverscrollBackground = true
         self.listView.limitHitTestToNodes = true
         
         super.init(account: account)
@@ -65,23 +75,31 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
         self.addSubnode(self.listView)
     }
     
-    func updateResults(_ results: [(Peer, BotCommand)]) {
+    func updateResults(_ results: [PeerCommand]) {
         var entries: [CommandChatInputContextPanelEntry] = []
         var index = 0
-        for (peer, command) in results {
-            entries.append(CommandChatInputContextPanelEntry(index: index, peer: peer, command: command.text, text: command.description))
+        var stableIds = Set<CommandChatInputContextPanelEntryStableId>()
+        for command in results {
+            let entry = CommandChatInputContextPanelEntry(index: index, command: command)
+            if stableIds.contains(entry.stableId) {
+                continue
+            }
+            stableIds.insert(entry.stableId)
+            entries.append(entry)
             index += 1
         }
         
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, peerSelected: { [weak self] peer in
+        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, commandSelected: { [weak self] command, sendImmediately in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
-                interfaceInteraction.updateTextInputState { textInputState in
-                    if let (range, type, _) = textInputStateContextQueryRangeAndType(textInputState) {
-                        var inputText = textInputState.inputText
+                if sendImmediately {
+                    interfaceInteraction.sendBotCommand(command.peer, "/" + command.command.text)
+                } else {
+                    interfaceInteraction.updateTextInputState { textInputState in
+                        if let (range, type, _) = textInputStateContextQueryRangeAndType(textInputState) {
+                            var inputText = textInputState.inputText
                         
-                        if let addressName = peer.addressName, !addressName.isEmpty {
-                            let replacementText = addressName + " "
+                            let replacementText = command.command.text + " "
                             inputText.replaceSubrange(range, with: replacementText)
                             
                             let utfLowerIndex = inputText.utf16.distance(from: inputText.utf16.startIndex, to: range.lowerBound.samePosition(in: inputText.utf16))
@@ -92,8 +110,8 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
                             
                             return ChatTextInputState(inputText: inputText, selectionRange: utfUpperPosition ..< utfUpperPosition)
                         }
+                        return textInputState
                     }
-                    return textInputState
                 }
             }
         })
@@ -117,12 +135,18 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
             
             var options = ListViewDeleteAndInsertOptions()
             if firstTime {
-                options.insert(.Synchronous)
-                options.insert(.LowLatency)
+                //options.insert(.Synchronous)
+                //options.insert(.LowLatency)
             } else {
-                //options.insert(.AnimateInsertion)
+                options.insert(.AnimateTopItemPosition)
             }
-            self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateOpaqueState: nil, completion: { [weak self] _ in
+            
+            var insets = UIEdgeInsets()
+            insets.top = topInsetForLayout(size: self.listView.bounds.size)
+            
+            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: self.listView.bounds.size, insets: insets, duration: 0.0, curve: .Default)
+            
+            self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: updateSizeAndInsets, updateOpaqueState: nil, completion: { [weak self] _ in
                 if let strongSelf = self, firstTime {
                     var topItemOffset: CGFloat?
                     strongSelf.listView.forEachItemNode { itemNode in
@@ -140,8 +164,15 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
         }
     }
     
+    private func topInsetForLayout(size: CGSize) -> CGFloat {
+        var minimumItemHeights: CGFloat = floor(MentionChatInputPanelItemNode.itemHeight * 3.5)
+        
+        return max(size.height - minimumItemHeights, 0.0)
+    }
+    
     override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
         var insets = UIEdgeInsets()
+        insets.top = self.topInsetForLayout(size: size)
         
         transition.updateFrame(node: self.listView, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
         

@@ -25,8 +25,9 @@ public final class ChatControllerInteraction {
     let shareCurrentLocation: () -> Void
     let shareAccountContact: () -> Void
     let sendBotCommand: (MessageId, String) -> Void
+    let updateInputState: ((ChatTextInputState) -> ChatTextInputState) -> Void
     
-    public init(openMessage: @escaping (MessageId) -> Void, openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer) -> Void, openPeerMention: @escaping (String) -> Void, openMessageContextMenu: @escaping (MessageId, ASDisplayNode, CGRect) -> Void, navigateToMessage: @escaping (MessageId, MessageId) -> Void, clickThroughMessage: @escaping () -> Void, toggleMessageSelection: @escaping (MessageId) -> Void, sendMessage: @escaping (String) -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void, requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?) -> Void, openUrl: @escaping (String) -> Void, shareCurrentLocation: @escaping () -> Void, shareAccountContact: @escaping () -> Void, sendBotCommand: @escaping (MessageId, String) -> Void) {
+    public init(openMessage: @escaping (MessageId) -> Void, openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer) -> Void, openPeerMention: @escaping (String) -> Void, openMessageContextMenu: @escaping (MessageId, ASDisplayNode, CGRect) -> Void, navigateToMessage: @escaping (MessageId, MessageId) -> Void, clickThroughMessage: @escaping () -> Void, toggleMessageSelection: @escaping (MessageId) -> Void, sendMessage: @escaping (String) -> Void, sendSticker: @escaping (TelegramMediaFile) -> Void, requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?) -> Void, openUrl: @escaping (String) -> Void, shareCurrentLocation: @escaping () -> Void, shareAccountContact: @escaping () -> Void, sendBotCommand: @escaping (MessageId, String) -> Void, updateInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void) {
         self.openMessage = openMessage
         self.openPeer = openPeer
         self.openPeerMention = openPeerMention
@@ -41,5 +42,6 @@ public final class ChatControllerInteraction {
         self.shareCurrentLocation = shareCurrentLocation
         self.shareAccountContact = shareAccountContact
         self.sendBotCommand = sendBotCommand
+        self.updateInputState = updateInputState
     }
 }

@@ -67,7 +67,7 @@ private func contextForCurrentThread() -> FFMpegMediaFrameSourceContext? {
 
 final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
     private let queue: Queue
-    private let account: Account
+    private let postbox: Postbox
     private let resource: MediaResource
     
     private let taskQueue: ThreadTaskQueue
@@ -87,9 +87,9 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         }
     }
    
-    init(queue: Queue, account: Account, resource: MediaResource) {
+    init(queue: Queue, postbox: Postbox, resource: MediaResource) {
         self.queue = queue
-        self.account = account
+        self.postbox = postbox
         self.resource = resource
         
         self.taskQueue = ThreadTaskQueue()
@@ -136,11 +136,11 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         
         self.generatingFrames = true
         
-        let account = self.account
+        let postbox = self.postbox
         let resource = self.resource
         let queue = self.queue
         self.performWithContext { [weak self] context in
-            context.initializeState(account: account, resource: resource)
+            context.initializeState(postbox: postbox, resource: resource)
             
             let frames = context.takeFrames(until: timestamp)
             
@@ -177,11 +177,11 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
             let disposable = MetaDisposable()
             
             let queue = self.queue
-            let account = self.account
+            let postbox = self.postbox
             let resource = self.resource
             
             self.performWithContext { [weak self] context in
-                context.initializeState(account: account, resource: resource)
+                context.initializeState(postbox: postbox, resource: resource)
                 
                 context.seek(timestamp: timestamp, completed: { [weak self] streamDescriptions, timestamp in
                     queue.async { [weak self] in

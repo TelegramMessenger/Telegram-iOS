@@ -336,6 +336,6 @@ class GalleryController: ViewController {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.galleryNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.galleryNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationBar.frame.maxY, transition: transition)
+        self.galleryNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
 }

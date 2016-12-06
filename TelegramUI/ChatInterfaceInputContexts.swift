@@ -1,6 +1,7 @@
 import Foundation
 import TelegramCore
 import Postbox
+import Display
 
 struct PossibleContextQueryTypes: OptionSet {
     var rawValue: Int32
@@ -15,7 +16,8 @@ struct PossibleContextQueryTypes: OptionSet {
     
     static let hashtag = PossibleContextQueryTypes(rawValue: (1 << 0))
     static let mention = PossibleContextQueryTypes(rawValue: (1 << 1))
-    static let contextRequest = PossibleContextQueryTypes(rawValue: (1 << 2))
+    static let command = PossibleContextQueryTypes(rawValue: (1 << 2))
+    static let contextRequest = PossibleContextQueryTypes(rawValue: (1 << 3))
 }
 
 private func makeScalar(_ c: Character) -> Character {
@@ -27,6 +29,7 @@ private let spaceScalar = makeScalar(" ")
 private let newlineScalar = makeScalar("\n")
 private let hashScalar = makeScalar("#")
 private let atScalar = makeScalar("@")
+private let slashScalar = makeScalar("/")
 private let alphanumerics = CharacterSet.alphanumerics
 
 func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) -> (Range<String.Index>, PossibleContextQueryTypes, Range<String.Index>?)? {
@@ -78,7 +81,7 @@ func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) ->
         
         var possibleQueryRange: Range<String.Index>?
         
-        var possibleTypes = PossibleContextQueryTypes([.mention])
+        var possibleTypes = PossibleContextQueryTypes([.command, .mention])
         var definedType = false
         
         while true {
@@ -94,6 +97,12 @@ func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) ->
                 break
             } else if c == atScalar {
                 possibleTypes = possibleTypes.intersection([.mention])
+                definedType = true
+                index = inputText.index(after: index)
+                possibleQueryRange = index ..< maxIndex
+                break
+            } else if c == slashScalar {
+                possibleTypes = possibleTypes.intersection([.command])
                 definedType = true
                 index = inputText.index(after: index)
                 possibleQueryRange = index ..< maxIndex
@@ -115,7 +124,7 @@ func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) ->
     return nil
 }
 
-func inputContextQueryForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account) -> ChatPresentationInputQuery? {
+func inputContextQueryForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState) -> ChatPresentationInputQuery? {
     let inputState = chatPresentationInterfaceState.interfaceState.effectiveInputState
     if let (possibleQueryRange, possibleTypes, additionalStringRange) = textInputStateContextQueryRangeAndType(inputState) {
         let query = inputState.inputText.substring(with: possibleQueryRange)
@@ -123,6 +132,8 @@ func inputContextQueryForChatPresentationIntefaceState(_ chatPresentationInterfa
             return .hashtag(query)
         } else if possibleTypes == [.mention] {
             return .mention(query)
+        } else if possibleTypes == [.command] {
+            return .command(query)
         } else if possibleTypes == [.contextRequest], let additionalStringRange = additionalStringRange {
             let additionalString = inputState.inputText.substring(with: additionalStringRange)
             return .contextRequest(addressName: query, query: additionalString)
@@ -134,17 +145,30 @@ func inputContextQueryForChatPresentationIntefaceState(_ chatPresentationInterfa
 }
 
 func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, account: Account) -> ChatTextInputPanelState {
+    var contextPlaceholder: NSAttributedString?
+    if let inputQueryResult = chatPresentationInterfaceState.inputQueryResult {
+        if case let .contextRequestResult(peer, _) = inputQueryResult, let botUser = peer as? TelegramUser, let botInfo = botUser.botInfo, let inlinePlaceholder = botInfo.inlinePlaceholder {
+            if let inputQuery = inputContextQueryForChatPresentationIntefaceState(chatPresentationInterfaceState) {
+                if case let .contextRequest(addressName, query) = inputQuery, query.isEmpty {
+                    let string = NSMutableAttributedString()
+                    string.append(NSAttributedString(string: "@" + addressName, font: Font.regular(17.0), textColor: UIColor.clear))
+                    string.append(NSAttributedString(string: " " + inlinePlaceholder, font: Font.regular(17.0), textColor: UIColor(0xC8C8CE)))
+                    contextPlaceholder = string
+                }
+            }
+        }
+    }
     switch chatPresentationInterfaceState.inputMode {
         case .media:
-            return ChatTextInputPanelState(accessoryItems: [.keyboard])
+            return ChatTextInputPanelState(accessoryItems: [.keyboard], contextPlaceholder: contextPlaceholder, audioRecordingState: chatPresentationInterfaceState.inputTextPanelState.audioRecordingState)
         case .none, .text:
             if let _ = chatPresentationInterfaceState.interfaceState.editMessage {
-                return ChatTextInputPanelState(accessoryItems: [])
+                return ChatTextInputPanelState(accessoryItems: [], contextPlaceholder: contextPlaceholder, audioRecordingState: chatPresentationInterfaceState.inputTextPanelState.audioRecordingState)
             } else {
                 if chatPresentationInterfaceState.interfaceState.composeInputState.inputText.isEmpty {
-                    return ChatTextInputPanelState(accessoryItems: [.stickers])
+                    return ChatTextInputPanelState(accessoryItems: [.stickers], contextPlaceholder: contextPlaceholder, audioRecordingState: chatPresentationInterfaceState.inputTextPanelState.audioRecordingState)
                 } else {
-                    return ChatTextInputPanelState(accessoryItems: [])
+                    return ChatTextInputPanelState(accessoryItems: [], contextPlaceholder: contextPlaceholder, audioRecordingState: chatPresentationInterfaceState.inputTextPanelState.audioRecordingState)
                 }
             }
     }

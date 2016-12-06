@@ -18,26 +18,52 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
                 return panel
             }
         case let .mentions(peers):
-            if let currentPanel = currentPanel as? MentionChatInputContextPanelNode {
-                currentPanel.updateResults(peers)
-                return currentPanel
+            if !peers.isEmpty {
+                if let currentPanel = currentPanel as? MentionChatInputContextPanelNode {
+                    currentPanel.updateResults(peers)
+                    return currentPanel
+                } else {
+                    let panel = MentionChatInputContextPanelNode(account: account)
+                    panel.interfaceInteraction = interfaceInteraction
+                    panel.updateResults(peers)
+                    return panel
+                }
             } else {
-                let panel = MentionChatInputContextPanelNode(account: account)
-                panel.interfaceInteraction = interfaceInteraction
-                panel.updateResults(peers)
-                return panel
+                return nil
             }
-        case let .commands(peersAndCommands):
-            return nil
+        case let .commands(commands):
+            if !commands.isEmpty {
+                if let currentPanel = currentPanel as? CommandChatInputContextPanelNode {
+                    currentPanel.updateResults(commands)
+                    return currentPanel
+                } else {
+                    let panel = CommandChatInputContextPanelNode(account: account)
+                    panel.interfaceInteraction = interfaceInteraction
+                    panel.updateResults(commands)
+                    return panel
+                }
+            } else {
+                return nil
+            }
         case let .contextRequestResult(peer, results):
             if let results = results, (!results.results.isEmpty || results.switchPeer != nil) {
                 switch results.presentation {
-                    case .list, .media:
+                    case .list:
                         if let currentPanel = currentPanel as? VerticalListContextResultsChatInputContextPanelNode {
                             currentPanel.updateResults(results)
                             return currentPanel
                         } else {
                             let panel = VerticalListContextResultsChatInputContextPanelNode(account: account)
+                            panel.interfaceInteraction = interfaceInteraction
+                            panel.updateResults(results)
+                            return panel
+                        }
+                    case .media:
+                        if let currentPanel = currentPanel as? HorizontalListContextResultsChatInputContextPanelNode {
+                            currentPanel.updateResults(results)
+                            return currentPanel
+                        } else {
+                            let panel = HorizontalListContextResultsChatInputContextPanelNode(account: account)
                             panel.interfaceInteraction = interfaceInteraction
                             panel.updateResults(results)
                             return panel

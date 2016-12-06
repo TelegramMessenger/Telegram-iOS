@@ -24,9 +24,12 @@ final class ChatPanelInterfaceInteraction {
     let openPeerInfo: () -> Void
     let togglePeerNotifications: () -> Void
     let sendContextResult: (ChatContextResultCollection, ChatContextResult) -> Void
+    let sendBotCommand: (Peer, String) -> Void
+    let beginAudioRecording: () -> Void
+    let finishAudioRecording: (Bool) -> Void
     let statuses: ChatPanelInterfaceInteractionStatuses?
     
-    init(setupReplyMessage: @escaping (MessageId) -> Void, setupEditMessage: @escaping (MessageId) -> Void, beginMessageSelection: @escaping (MessageId) -> Void, deleteSelectedMessages: @escaping () -> Void, forwardSelectedMessages: @escaping () -> Void, updateTextInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void, updateInputMode: @escaping ((ChatInputMode) -> ChatInputMode) -> Void, editMessage: @escaping (MessageId, String) -> Void, beginMessageSearch: @escaping () -> Void, openPeerInfo: @escaping () -> Void, togglePeerNotifications: @escaping () -> Void, sendContextResult: @escaping (ChatContextResultCollection, ChatContextResult) -> Void, statuses: ChatPanelInterfaceInteractionStatuses?) {
+    init(setupReplyMessage: @escaping (MessageId) -> Void, setupEditMessage: @escaping (MessageId) -> Void, beginMessageSelection: @escaping (MessageId) -> Void, deleteSelectedMessages: @escaping () -> Void, forwardSelectedMessages: @escaping () -> Void, updateTextInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void, updateInputMode: @escaping ((ChatInputMode) -> ChatInputMode) -> Void, editMessage: @escaping (MessageId, String) -> Void, beginMessageSearch: @escaping () -> Void, openPeerInfo: @escaping () -> Void, togglePeerNotifications: @escaping () -> Void, sendContextResult: @escaping (ChatContextResultCollection, ChatContextResult) -> Void, sendBotCommand: @escaping (Peer, String) -> Void, beginAudioRecording: @escaping () -> Void, finishAudioRecording: @escaping (Bool) -> Void, statuses: ChatPanelInterfaceInteractionStatuses?) {
         self.setupReplyMessage = setupReplyMessage
         self.setupEditMessage = setupEditMessage
         self.beginMessageSelection = beginMessageSelection
@@ -39,6 +42,9 @@ final class ChatPanelInterfaceInteraction {
         self.openPeerInfo = openPeerInfo
         self.togglePeerNotifications = togglePeerNotifications
         self.sendContextResult = sendContextResult
+        self.sendBotCommand = sendBotCommand
+        self.beginAudioRecording = beginAudioRecording
+        self.finishAudioRecording = finishAudioRecording
         self.statuses = statuses
     }
 }

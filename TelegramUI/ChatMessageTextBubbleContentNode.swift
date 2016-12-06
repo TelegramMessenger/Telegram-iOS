@@ -47,18 +47,22 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 localtime_r(&t, &timeinfo)
                 
                 var edited = false
+                var viewCount: Int?
                 for attribute in message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
                         edited = true
-                        break
+                    } else if let attribute = attribute as? ViewCountMessageAttribute {
+                        viewCount = attribute.count
                     }
                 }
-                let dateText: String
-                if edited {
-                    dateText = String(format: "edited %02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
-                } else {
-                    dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
+                var dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
+                if let viewCount = viewCount {
+                    dateText = "\(viewCount) " + dateText
                 }
+                if edited {
+                    dateText = "edited " + dateText
+                }
+                
                 //let dateText = "\(message.id.id)"
                 
                 let statusType: ChatMessageDateAndStatusType?

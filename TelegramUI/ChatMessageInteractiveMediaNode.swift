@@ -94,6 +94,9 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
                 nativeSize = CGSize(width: floor(dimensions.width * 0.5), height: floor(dimensions.height * 0.5)).fitted(constrainedSize)
             } else if let file = media as? TelegramMediaFile, let dimensions = file.dimensions {
                 nativeSize = CGSize(width: floor(dimensions.width * 0.5), height: floor(dimensions.height * 0.5)).fitted(constrainedSize)
+                if file.isAnimated {
+                    nativeSize = nativeSize.fitted(CGSize(width: 480.0, height: 480.0))
+                }
             } else {
                 nativeSize = CGSize(width: 54.0, height: 54.0)
             }
@@ -101,7 +104,7 @@ final class ChatMessageInteractiveMediaNode: ASTransformNode {
             return (layoutConstants.image.maxDimensions.width, { constrainedSize in
                 return (min(layoutConstants.image.maxDimensions.width, nativeSize.width), { boundingWidth in
                     let drawingSize = nativeSize.fittedToWidthOrSmaller(boundingWidth)
-                    let boundingSize = CGSize(width: max(boundingWidth, drawingSize.width), height: drawingSize.height).cropped(layoutConstants.image.maxDimensions)
+                    let boundingSize = CGSize(width: max(boundingWidth, drawingSize.width), height: drawingSize.height).cropped(CGSize(width: CGFloat.greatestFiniteMagnitude, height: layoutConstants.image.maxDimensions.height))
                     
                     var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
                     var updatedStatusSignal: Signal<MediaResourceStatus, NoError>?

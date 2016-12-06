@@ -6,7 +6,7 @@ import Display
 import AsyncDisplayKit
 import TelegramCore
 
-public class ChatController: ViewController {
+public class ChatController: TelegramController {
     private var containerLayout = ContainerViewLayout()
     
     private let account: Account
@@ -48,6 +48,11 @@ public class ChatController: ViewController {
     
     private var contextQueryState: (ChatPresentationInputQuery?, Disposable)?
     
+    private var audioRecorderValue: ManagedAudioRecorder?
+    private var audioRecorderFeedback: HapticFeedback?
+    private var audioRecorder = Promise<ManagedAudioRecorder?>()
+    private var audioRecorderDisposable: Disposable?
+    
     public init(account: Account, peerId: PeerId, messageId: MessageId? = nil) {
         self.account = account
         self.peerId = peerId
@@ -55,7 +60,7 @@ public class ChatController: ViewController {
         
         performanceSpinnerAcquire()
         
-        super.init()
+        super.init(account: account)
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: nil, action: nil)
         
@@ -87,8 +92,12 @@ public class ChatController: ViewController {
                 }
                 
                 if let galleryMedia = galleryMedia {
-                    if let file = galleryMedia as? TelegramMediaFile, file.mimeType == "audio/mpeg" {
-                        //debugPlayMedia(account: strongSelf.account, file: file)
+                    if let file = galleryMedia as? TelegramMediaFile, file.isMusic || file.isVoice {
+                        if let applicationContext = strongSelf.account.applicationContext as? TelegramApplicationContext {
+                            let player = ManagedAudioPlaylistPlayer(postbox: strongSelf.account.postbox, playlist: peerMessageHistoryAudioPlaylist(account: strongSelf.account, messageId: id))
+                            applicationContext.mediaManager.setPlaylistPlayer(player)
+                            player.control(.navigation(.next))
+                        }
                     } else {
                         let gallery = GalleryController(account: strongSelf.account, messageId: id)
                         
@@ -376,6 +385,14 @@ public class ChatController: ViewController {
                 }
                 enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: command, attributes: [], media: nil, replyToMessageId: postAsReply ? messageId : nil)]).start()
             }
+        }, updateInputState: { [weak self] f in
+            if let strongSelf = self {
+                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                    return $0.updatedInterfaceState {
+                        return $0.withUpdatedEffectiveInputState(f($0.effectiveInputState))
+                    }
+                })
+            }
         })
         
         self.controllerInteraction = controllerInteraction
@@ -477,6 +494,47 @@ public class ChatController: ViewController {
                     })
                 }
             })
+        
+        self.audioRecorderDisposable = (self.audioRecorder.get() |> deliverOnMainQueue).start(next: { [weak self] audioRecorder in
+            if let strongSelf = self {
+                if strongSelf.audioRecorderValue !== audioRecorder {
+                    strongSelf.audioRecorderValue = audioRecorder
+                    
+                    if let audioRecorder = audioRecorder {
+                        /*(audioRecorder.recordingState
+                            |> filter { state in
+                                switch state {
+                                    case .recording:
+                                        return true
+                                    case .paused:
+                                        return false
+                                }
+                            } |> take(1) |> deliverOnMainQueue).start(completed: {
+                                self?.audioRecorderFeedback?.tap()
+                            })*/
+                    } else {
+                        strongSelf.audioRecorderFeedback = nil
+                    }
+                    
+                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
+                        $0.updatedInputTextPanelState { panelState in
+                            if let audioRecorder = audioRecorder {
+                                if panelState.audioRecordingState == nil {
+                                    return panelState.withUpdatedAudioRecordingState(ChatTextInputPanelAudioRecordingState(recorder: audioRecorder))
+                                }
+                            } else {
+                                return panelState.withUpdatedAudioRecordingState(nil)
+                            }
+                            return panelState
+                        }
+                    })
+                    
+                    if let audioRecorder = audioRecorder {
+                        audioRecorder.start()
+                    }
+                }
+            }
+        })
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -496,6 +554,7 @@ public class ChatController: ViewController {
         self.resolvePeerByNameDisposable?.dispose()
         self.botCallbackAlertMessageDisposable?.dispose()
         self.contextQueryState?.1.dispose()
+        self.audioRecorderDisposable?.dispose()
     }
     
     var chatDisplayNode: ChatControllerNode {
@@ -802,6 +861,30 @@ public class ChatController: ViewController {
             
         }, sendContextResult: { [weak self] results, result in
             self?.enqueueChatContextResult(results, result)
+        }, sendBotCommand: { [weak self] botPeer, command in
+            if let strongSelf = self {
+                if let peer = strongSelf.presentationInterfaceState.peer, let addressName = botPeer.addressName {
+                    let messageText: String
+                    if peer is TelegramUser {
+                        messageText = command
+                    } else {
+                        messageText = command + "@" + addressName
+                    }
+                    let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
+                    strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                        if let strongSelf = self {
+                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: "")) }
+                            })
+                        }
+                    })
+                    enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: messageText, attributes: [], media: nil, replyToMessageId: replyMessageId)]).start()
+                }
+            }
+        }, beginAudioRecording: { [weak self] in
+            self?.requestAudioRecorder()
+        }, finishAudioRecording: { [weak self] sendAudio in
+            self?.dismissAudioRecorder(sendAudio: sendAudio)
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get()))
         
         self.interfaceInteraction = interfaceInteraction
@@ -869,14 +952,13 @@ public class ChatController: ViewController {
         
         self.containerLayout = layout
         
-        self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationBar.frame.maxY, transition: transition,  listViewTransaction: { updateSizeAndInsets in
+        self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition,  listViewTransaction: { updateSizeAndInsets in
             self.chatDisplayNode.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets)
         })
     }
     
     func updateChatPresentationInterfaceState(animated: Bool = true, interactive: Bool, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) {
         let temporaryChatPresentationInterfaceState = f(self.presentationInterfaceState)
-        let inputContextQuery = inputContextQueryForChatPresentationIntefaceState(temporaryChatPresentationInterfaceState, account: self.account)
         let inputTextPanelState = inputTextPanelStateForChatPresentationInterfaceState(temporaryChatPresentationInterfaceState, account: self.account)
         var updatedChatPresentationInterfaceState = temporaryChatPresentationInterfaceState.updatedInputTextPanelState({ _ in return inputTextPanelState })
         
@@ -1049,5 +1131,51 @@ public class ChatController: ViewController {
             })
             enqueueMessages(account: self.account, peerId: self.peerId, messages: [message.withUpdatedReplyToMessageId(replyMessageId)]).start()
         }
+    }
+    
+    private func requestAudioRecorder() {
+        if self.audioRecorderValue == nil {
+            if let applicationContext = self.account.applicationContext as? TelegramApplicationContext {
+                if self.audioRecorderFeedback == nil {
+                    //self.audioRecorderFeedback = HapticFeedback()
+                    self.audioRecorderFeedback?.prepareTap()
+                }
+                self.audioRecorder.set(applicationContext.mediaManager.audioRecorder())
+            }
+        }
+    }
+    
+    private func dismissAudioRecorder(sendAudio: Bool) {
+        if let audioRecorderValue = self.audioRecorderValue {
+            audioRecorderValue.stop()
+            if sendAudio {
+                (audioRecorderValue.takenRecordedData() |> deliverOnMainQueue).start(next: { [weak self] data in
+                    if let strongSelf = self, let data = data {
+                        if data.duration < 0.5 {
+                            strongSelf.audioRecorderFeedback?.error()
+                            strongSelf.audioRecorderFeedback = nil
+                        } else {
+                            var randomId: Int64 = 0
+                            arc4random_buf(&randomId, 8)
+                            
+                            let resource = LocalFileMediaResource(fileId: randomId)
+                            
+                            strongSelf.account.postbox.mediaBox.storeResourceData(resource.id, data: data.compressedData)
+                            
+                            var waveformBuffer: MemoryBuffer?
+                            if let waveform = data.waveform {
+                                waveformBuffer = MemoryBuffer(data: waveform)
+                            }
+                            
+                            enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: "", attributes: [], media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), resource: resource, previewRepresentations: [], mimeType: "audio/ogg", size: data.compressedData.count, attributes: [.Audio(isVoice: true, duration: Int(data.duration), title: nil, performer: nil, waveform: waveformBuffer)]), replyToMessageId: nil)]).start()
+                            
+                            strongSelf.audioRecorderFeedback?.success()
+                            strongSelf.audioRecorderFeedback = nil
+                        }
+                    }
+                })
+            }
+        }
+        self.audioRecorder.set(.single(nil))
     }
 }

@@ -85,6 +85,27 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
             
+            var t = Int(item.message.timestamp)
+            var timeinfo = tm()
+            localtime_r(&t, &timeinfo)
+            
+            var edited = false
+            var viewCount: Int?
+            for attribute in item.message.attributes {
+                if let attribute = attribute as? EditedMessageAttribute {
+                    edited = true
+                } else if let attribute = attribute as? ViewCountMessageAttribute {
+                    viewCount = attribute.count
+                }
+            }
+            var dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
+            if let viewCount = viewCount {
+                dateText = "\(viewCount) " + dateText
+            }
+            if edited {
+                dateText = "edited " + dateText
+            }
+            
             var textString: NSAttributedString?
             var inlineImageDimensions: CGSize?
             var inlineImageSize: CGSize?
@@ -127,7 +148,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         initialWidth = initialImageWidth + insets.left + insets.right
                         refineContentImageLayout = refineLayout
                     } else {
-                        let (_, refineLayout) = contentFileLayout(item.account, item.message, file, item.message.flags.contains(.Incoming), CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height))
+                        let (_, refineLayout) = contentFileLayout(item.account, item.message, file, item.message.flags.contains(.Incoming), nil, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height))
                         refineContentFileLayout = refineLayout
                     }
                 } else if let image = webpage.image {
@@ -154,13 +175,6 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             }
             
             return (initialWidth, { constrainedSize in
-                var t = Int(item.message.timestamp)
-                var timeinfo = tm()
-                localtime_r(&t, &timeinfo)
-                
-                let dateText = String(format: "%02d:%02d", arguments: [Int(timeinfo.tm_hour), Int(timeinfo.tm_min)])
-                //let dateText = "\(message.id.id)"
-                
                 let statusType: ChatMessageDateAndStatusType
                 if item.message.flags.contains(.Incoming) {
                     statusType = .BubbleIncoming

@@ -67,7 +67,7 @@ private class RadialProgressOverlayNode: ASDisplayNode {
             //CGContextSetLineCap(context, .Round)
             
             switch parameters.state {
-                case .None, .Remote, .Play:
+                case .None, .Remote, .Play, .Icon:
                     break
                 case let .Fetching(progress):
                     let startAngle = -CGFloat(M_PI_2)
@@ -109,6 +109,7 @@ public enum RadialProgressState {
     case Remote
     case Fetching(progress: Float)
     case Play
+    case Icon
 }
 
 public struct RadialProgressTheme {
@@ -158,6 +159,13 @@ class RadialProgressNode: ASControlNode {
                 case .Play:
                     switch self.state {
                         case .Play:
+                            break
+                        default:
+                            self.setNeedsDisplay()
+                    }
+                case .Icon:
+                    switch self.state {
+                        case .Icon:
                             break
                         default:
                             self.setNeedsDisplay()
@@ -244,10 +252,28 @@ class RadialProgressNode: ASControlNode {
                     context.addLine(to: CGPoint(x: parameters.diameter / 2.0, y: parameters.diameter / 2.0 + arrowLength / 2.0 + arrowHeadOffset))
                     context.addLine(to: CGPoint(x: parameters.diameter / 2.0 + arrowHeadSize / 2.0, y: parameters.diameter / 2.0 + arrowLength / 2.0 - arrowHeadSize / 2.0 + arrowHeadOffset))
                     context.strokePath()
-                case .Play:
+                case .Icon:
                     if let icon = parameters.theme.icon {
                         icon.draw(at: CGPoint(x: floor((parameters.diameter - icon.size.width) / 2.0), y: floor((parameters.diameter - icon.size.height) / 2.0)))
                     }
+                case .Play:
+                    context.setFillColor(parameters.theme.foregroundColor.cgColor)
+                    
+                    let size = CGSize(width: 15.0, height: 18.0)
+                    context.translateBy(x: (parameters.diameter - size.width) / 2.0 + 1.5, y: (parameters.diameter - size.height) / 2.0)
+                    if (parameters.diameter < 40.0) {
+                        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                        context.scaleBy(x: 0.8, y: 0.8)
+                        context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                    }
+                    let _ = try? drawSvgPath(context, path: "M1.71891969,0.209353049 C0.769586558,-0.350676705 0,0.0908839327 0,1.18800046 L0,16.8564753 C0,17.9569971 0.750549162,18.357187 1.67393713,17.7519379 L14.1073836,9.60224049 C15.0318735,8.99626906 15.0094718,8.04970371 14.062401,7.49100858 L1.71891969,0.209353049 ")
+                    context.fillPath()
+                    if (parameters.diameter < 40.0) {
+                        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                        context.scaleBy(x: 1.0 / 0.8, y: 1.0 / 0.8)
+                        context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                    }
+                    context.translateBy(x: -(parameters.diameter - size.width) / 2.0 - 1.5, y: -(parameters.diameter - size.height) / 2.0)
             }
         }
     }

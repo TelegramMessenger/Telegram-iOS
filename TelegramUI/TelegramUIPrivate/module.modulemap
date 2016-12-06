@@ -5,6 +5,8 @@ module TelegramUIPrivateModule {
     header "../../third-party/FFmpeg-iOS/include/libavutil/avutil.h"
     header "../../third-party/FFmpeg-iOS/include/libavutil/pixdesc.h"  
     header "../../third-party/FFmpeg-iOS/include/libswresample/swresample.h"
+    header "../../third-party/opusenc/opusenc.h"
+    header "../TGDataItem.h"
     header "../FFMpegSwResample.h"
     header "../FastBlur.h"
     header "../UIImage+WebP.h"

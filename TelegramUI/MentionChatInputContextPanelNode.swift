@@ -52,7 +52,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
         self.listView = ListView()
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true
-        self.listView.stackFromBottomInsetItemFactor = 3.5
+        self.listView.keepBottomItemOverscrollBackground = true
         self.listView.limitHitTestToNodes = true
         
         super.init(account: account)
@@ -121,12 +121,18 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
             
             var options = ListViewDeleteAndInsertOptions()
             if firstTime {
-                options.insert(.Synchronous)
-                options.insert(.LowLatency)
+                //options.insert(.Synchronous)
+                //options.insert(.LowLatency)
             } else {
-                //options.insert(.AnimateInsertion)
+                options.insert(.AnimateTopItemPosition)
             }
-            self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateOpaqueState: nil, completion: { [weak self] _ in
+            
+            var insets = UIEdgeInsets()
+            insets.top = topInsetForLayout(size: self.listView.bounds.size)
+            
+            let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: self.listView.bounds.size, insets: insets, duration: 0.0, curve: .Default)
+            
+            self.listView.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: updateSizeAndInsets, updateOpaqueState: nil, completion: { [weak self] _ in
                 if let strongSelf = self, firstTime {
                     var topItemOffset: CGFloat?
                     strongSelf.listView.forEachItemNode { itemNode in
@@ -144,24 +150,31 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
         }
     }
     
+    private func topInsetForLayout(size: CGSize) -> CGFloat {
+        var minimumItemHeights: CGFloat = floor(MentionChatInputPanelItemNode.itemHeight * 3.5)
+        
+        return max(size.height - minimumItemHeights, 0.0)
+    }
+    
     override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
         var insets = UIEdgeInsets()
+        insets.top = topInsetForLayout(size: size)
         
         transition.updateFrame(node: self.listView, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
         
         var duration: Double = 0.0
         var curve: UInt = 0
         switch transition {
-        case .immediate:
-            break
-        case let .animated(animationDuration, animationCurve):
-            duration = animationDuration
-            switch animationCurve {
-            case .easeInOut:
+            case .immediate:
                 break
-            case .spring:
-                curve = 7
-            }
+            case let .animated(animationDuration, animationCurve):
+                duration = animationDuration
+                switch animationCurve {
+                case .easeInOut:
+                    break
+                case .spring:
+                    curve = 7
+                }
         }
         
         let listViewCurve: ListViewAnimationCurve

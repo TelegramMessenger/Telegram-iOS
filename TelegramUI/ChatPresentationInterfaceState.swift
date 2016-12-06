@@ -41,7 +41,7 @@ enum ChatPresentationInputQuery: Equatable {
 enum ChatPresentationInputQueryResult: Equatable {
     case hashtags([String])
     case mentions([Peer])
-    case commands([(Peer, String)])
+    case commands([PeerCommand])
     case contextRequestResult(Peer, ChatContextResultCollection?)
     
     static func ==(lhs: ChatPresentationInputQueryResult, rhs: ChatPresentationInputQueryResult) -> Bool {
@@ -69,16 +69,10 @@ enum ChatPresentationInputQueryResult: Equatable {
                 }
             case let .commands(lhsCommands):
                 if case let .commands(rhsCommands) = rhs {
-                    if lhsCommands.count != rhsCommands.count {
+                    if lhsCommands != rhsCommands {
                         return false
-                    } else {
-                        for i in 0 ..< lhsCommands.count {
-                            if !lhsCommands[i].0.isEqual(rhsCommands[i].0) || lhsCommands[i].1 != rhsCommands[i].1 {
-                                return false
-                            }
-                        }
-                        return true
                     }
+                    return true
                 } else {
                     return false
                 }

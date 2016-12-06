@@ -17,8 +17,8 @@ final class MapInputController: ViewController {
         }
     }
     
-    override init() {
-        super.init()
+    init() {
+        super.init(navigationBar: NavigationBar())
         
         self._ready.set(.single(true))
         
@@ -57,6 +57,6 @@ final class MapInputController: ViewController {
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.mapInputNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationBar.frame.maxY, transition: transition)
+        self.mapInputNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
 }

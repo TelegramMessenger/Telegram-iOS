@@ -41,7 +41,25 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
             
-            let (initialWidth, refineLayout) = interactiveFileLayout(item.account, item.message, selectedFile!, item.message.flags.contains(.Incoming), CGSize(width: constrainedSize.width, height: constrainedSize.height))
+            let incoming = item.message.effectivelyIncoming
+            let statusType: ChatMessageDateAndStatusType?
+            if case .None = position.bottom {
+                if incoming {
+                    statusType = .BubbleIncoming
+                } else {
+                    if item.message.flags.contains(.Failed) {
+                        statusType = .BubbleOutgoing(.Failed)
+                    } else if item.message.flags.contains(.Unsent) {
+                        statusType = .BubbleOutgoing(.Sending)
+                    } else {
+                        statusType = .BubbleOutgoing(.Sent(read: item.read))
+                    }
+                }
+            } else {
+                statusType = nil
+            }
+            
+            let (initialWidth, refineLayout) = interactiveFileLayout(item.account, item.message, selectedFile!, item.message.flags.contains(.Incoming), statusType, CGSize(width: constrainedSize.width, height: constrainedSize.height))
             
             return (initialWidth + layoutConstants.file.bubbleInsets.left + layoutConstants.file.bubbleInsets.right, { constrainedSize in
                 let (refinedWidth, finishLayout) = refineLayout(constrainedSize)

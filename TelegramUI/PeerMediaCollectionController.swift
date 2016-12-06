@@ -76,7 +76,7 @@ public class PeerMediaCollectionController: ViewController {
                 
                 if let galleryMedia = galleryMedia {
                     if let file = galleryMedia as? TelegramMediaFile, file.mimeType == "audio/mpeg" {
-                        //debugPlayMedia(account: strongSelf.account, file: file)
+                        
                     } else {
                         let gallery = GalleryController(account: strongSelf.account, messageId: id)
                         
@@ -186,6 +186,7 @@ public class PeerMediaCollectionController: ViewController {
             }, shareCurrentLocation: {
             }, shareAccountContact: {
             }, sendBotCommand: { _, _ in
+            }, updateInputState: { _ in
             })
         
         self.controllerInteraction = controllerInteraction
@@ -202,6 +203,9 @@ public class PeerMediaCollectionController: ViewController {
         }, openPeerInfo: {
         }, togglePeerNotifications: {
         }, sendContextResult: { _ in
+        }, sendBotCommand: {_ in
+        }, beginAudioRecording: {
+        }, finishAudioRecording: { _ in 
         }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })
@@ -267,7 +271,7 @@ public class PeerMediaCollectionController: ViewController {
         
         self.containerLayout = layout
         
-        self.mediaCollectionDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationBar.frame.maxY, transition: transition,  listViewTransaction: { updateSizeAndInsets in
+        self.mediaCollectionDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition,  listViewTransaction: { updateSizeAndInsets in
             self.mediaCollectionDisplayNode.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets)
         })
     }

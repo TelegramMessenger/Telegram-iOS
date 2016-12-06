@@ -105,7 +105,7 @@ private func contentNodeClassesForItem(_ item: ChatMessageItem) -> [AnyClass] {
         if let _ = media as? TelegramMediaImage {
             result.append(ChatMessageMediaBubbleContentNode.self)
         } else if let file = media as? TelegramMediaFile {
-            if file.isVideo {
+            if file.isVideo || (file.isAnimated && file.dimensions != nil) {
                 result.append(ChatMessageMediaBubbleContentNode.self)
             } else {
                 result.append(ChatMessageFileBubbleContentNode.self)
@@ -222,6 +222,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
         recognizer.doNotWaitForDoubleTapAtPoint = { [weak self] point in
             if let strongSelf = self {
+                if let nameNode = strongSelf.nameNode, nameNode.frame.contains(point) {
+                    if let item = strongSelf.item {
+                        for attribute in item.message.attributes {
+                            if let attribute = attribute as? InlineBotMessageAttribute {
+                                return true
+                            }
+                        }
+                    }
+                }
                 if let replyInfoNode = strongSelf.replyInfoNode, replyInfoNode.frame.contains(point) {
                     return true
                 }
@@ -752,7 +761,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                     switch gesture {
                         case .tap:
-                            if let replyInfoNode = self.replyInfoNode, replyInfoNode.frame.contains(location) {
+                            if let nameNode = self.nameNode, nameNode.frame.contains(location) {
+                                if let item = self.item {
+                                    for attribute in item.message.attributes {
+                                        if let attribute = attribute as? InlineBotMessageAttribute, let botPeer = item.message.peers[attribute.peerId], let addressName = botPeer.addressName {
+                                            self.controllerInteraction?.updateInputState { textInputState in
+                                                return ChatTextInputState(inputText: "@" + addressName + " ")
+                                            }
+                                            return
+                                        }
+                                    }
+                                }
+                            } else if let replyInfoNode = self.replyInfoNode, replyInfoNode.frame.contains(location) {
                                 if let item = self.item {
                                     for attribute in item.message.attributes {
                                         if let attribute = attribute as? ReplyMessageAttribute {

@@ -121,7 +121,7 @@ final class ChatVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 /*let source = VideoPlayerSource(account: account, resource: CloudFileMediaResource(location: file.location, size: file.size))
                 self.videoNode.player = VideoPlayer(source: source)*/
                 
-                let player = MediaPlayer(account: account, resource: file.resource)
+                let player = MediaPlayer(postbox: account.postbox, resource: file.resource)
                 player.attachPlayerNode(self.videoNode)
                 self.player = player
                 self.videoStatusDisposable.set((player.status |> deliverOnMainQueue).start(next: { [weak self] status in
