@@ -50,6 +50,16 @@ public final class Bag<T> {
         return self.items
     }
     
+    public func copyItemsWithIndices() -> [(Index, T)] {
+        var result: [(Index, T)] = []
+        var i = 0
+        for key in self.itemKeys {
+            result.append((key, self.items[i]))
+            i += 1
+        }
+        return result
+    }
+    
     public var isEmpty: Bool {
         return self.items.isEmpty
     }
