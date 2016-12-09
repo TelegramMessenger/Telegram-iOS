@@ -1,7 +1,7 @@
 /*
- * Author: Stephan Diederich
+ * Authors: Stephan Diederich, Benjamin Scholtysik
  *
- * Copyright (c) 2013-2014 HockeyApp, Bit Stadium GmbH.
+ * Copyright (c) 2013-2016 HockeyApp, Bit Stadium GmbH.
  * All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -81,6 +81,16 @@ NS_ASSUME_NONNULL_BEGIN
  *  @see `[BITFeedbackComposeViewController prepareWithItems:]
  */
 - (nullable NSArray *)preparedItemsForFeedbackManager:(BITFeedbackManager *)feedbackManager;
+
+/**
+ *  Indicates if a new thread should be created for each new feedback message
+ *
+ *  Setting it to `YES` will force a new thread whenever a new message is sent as
+ *  opposed to the default resume thread behaviour.
+ *  
+ *  @return A BOOL indicating if each feedback message should be sent as a new thread.
+ */
+- (BOOL)forceNewFeedbackThreadForFeedbackManager:(BITFeedbackManager *)feedbackManager;
 
 @end
 

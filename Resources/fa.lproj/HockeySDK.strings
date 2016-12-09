@@ -1,0 +1,276 @@
+/*
+ Localization provided by MasihTak under MIT license
+ The Mac OS X and iOS localization experts.
+ https://masihtak.com
+ */
+
+
+/* General */
+
+/* For dialogs yes buttons */
+"HockeyYes" = "بله";
+
+/* For dialogs no buttons */
+"HockeyNo" = "خیر";
+
+/* For dialogs ok buttons */
+"HockeyOK" = "قبول";
+
+/* Replacement for app name, if it could not be detected */
+"HockeyAppNamePlaceholder" = "این برنامه";
+
+/* Crash */
+
+
+/* Crash dialog */
+
+/* Title showing in the alert box when crash report data has been found */
++"CrashDataFoundTitle" = "%@ ترک غیر منتظره";
+
+/* Description explaining that crash data has been found and ask the user if the data might be uploaded to the developers server */
+"CrashDataFoundAnonymousDescription" = "آیا می خواهید یک گزارش ناشناس ارسال کنید بنابراین ما میتوانیم مشکل را حل بکنم؟";
+
+/* Description explaining that crash data has been found and ask the user if the non anonymous data might be uplaoded to the developers server */
+"CrashDataFoundDescription" = "آیا می خواهید یک گزارش به ما ارسال کنید بنابراین ما میتوانیم مشکل را حل بکنیم؟";
+
+/* Alert box button if the users wants to send crash data always automatically */
+"CrashSendReportAlways" = "همیشه ارسال کن";
+
+/* Alert box button to send the crash report once */
+"CrashSendReport" = "ارسال گزارش";
+
+/* Alert box button to decline sending the report */
+"CrashDontSendReport" = "ارسال نکن";
+
+/* Text showing in a processing box that the crash data is being uploaded to the server */
+"CrashReportSending" = "... درحال ارسال";
+
+
+/* Update */
+
+
+/* Update Alert view */
+
+/* Update available */
+"UpdateAvailable" = "به روز رسانی در دسترس است";
+
+"UpdateAlertTextWithAppVersion" = "%@ در دسترس است.";
+
+"UpdateAlertMandatoryTextWithAppVersion" = "%@ در دسترس است و یک به روز رسانی الزامی است!";
+
+"UpdateIgnore" = "نادیده گرفتن";
+
+"UpdateShow" = "نمایش";
+
+"UpdateInstall" = "نصب";
+
+"UpdateRemindMe" = "به من یادآوری کن";
+
+
+/* Update Details */
+
+"UpdateScreenTitle" = "به روز رسانی";
+
+"UpdateButtonCheck" = "بررسی";
+
+"UpdateButtonSearching" = "درحال بررسی";
+
+"UpdateButtonUpdate" = "به روز رسانی";
+
+"UpdateButtonInstalling" = "درحال نصب";
+
+"UpdateButtonOffline" = "آفلاین";
+
+"UpdateInstalled" = "نصب شده";
+
+"UpdateVersion" = "نسخه";
+
+"UpdateShowPreviousVersions" = "... نمایش نسخه های قبلی";
+
+"UpdateNoUpdateAvailableTitle" = "هیچ به روز رسانی در دسترس نیست";
+
+"UpdateNoUpdateAvailableMessage" = "%@ در حال حاضر آخرین نسخه است.";
+
+"UpdateError" = "خطا";
+
+"UpdateWarning" = "هشدار";
+
+"UpdateNoReleaseNotesAvailable" = "هیچ یادداشتی برای این انتشار موجود نیست.";
+
+
+/* Update Authorization  */
+
+"UpdateAuthorizationProgress" = "... درحال گرفتن اجازه";
+
+"UpdateAuthorizationOffline" = "اتصال به اینترنت مورد نیاز است!";
+
+"UpdateAuthorizationDenied" = "اجازه داده نشد. لطفا با توسعه دهنده تماس بگیرید.";
+
+
+/* Update Expiry  */
+
+"UpdateExpired" = "%@ منقضی شده است و دیگر نمی تواند اسفاده شود.";
+
+
+/* Update Simulator Warning */
+
+"UpdateSimulatorMessage" = "به روز رسانی Hockey در شبیه ساز کار نمی کند.\nموارد خدمات:// url طرح اجرا شده اما غیر کاربردی است.";
+
+
+/* Feedback */
+
+
+/* New Message Alert */
+
+/* Alert Title */
+"HockeyFeedbackNewMessageTitle" = "پاسخ جدید بازخورد";
+
+/* Alert Text */
+"HockeyFeedbackNewMessageText" = "یک پاسخ جدید برای بازخورد شما موجود است. آیا می خواهید آن را مشاهده کنید؟";
+
+/* Alert Ignore Button */
+"HockeyFeedbackIgnore" = "نادیده گرفتن";
+
+/* Alert Show Button */
+"HockeyFeedbackShow" = "نمایش";
+
+
+/* List View */
+
+/* Title */
+"HockeyFeedbackListTitle" = "بازخورد";
+
+/* Last Updated */
+"HockeyFeedbackListLastUpdated" = "آخرین به روز رسانی: %@";
+
+/* Never Updated */
+"HockeyFeedbackListNeverUpdated" = "هرگز";
+
+/* Provide Feedback Button Title */
+"HockeyFeedbackListButtonWriteFeedback" = "ارائه بازخورد";
+
+/* Add a Response Button Title */
+"HockeyFeedbackListButtonWriteResponse" = "اضافه کردن پاسخ";
+
+/* User Data Set Name Button Title */
+"HockeyFeedbackListButtonUserDataSetName" = "نام خود را وارد کنید";
+
+/* User Data Set Email Button Title */
+"HockeyFeedbackListButtonUserDataSetEmail" = "آدرس پست الکترونیکی خود را وارد کنید";
+
+/* User Data With Name Button Title */
+"HockeyFeedbackListButtonUserDataWithName" = "نام: %@";
+
+/* User Data With Email Button Title */
+"HockeyFeedbackListButtonUserDataWithEmail" = "پست الکترونیک: %@";
+
+/* Button title for deleting all local messages*/
+"HockeyFeedbackListButtonDeleteAllMessages" = "حذف تمام پیام ها";
+
+/* Message pending to be send */
+"HockeyFeedbackListMessagePending" = "در انتظار";
+
+
+/* Delete All Messages Action Sheet / Alert View */
+
+/* Title for the Action Sheet */
+"HockeyFeedbackListDeleteAllTitle" = "این تمام پیام ها را در این دستگاه پاک می کند.";
+
+/* Button Title to perform delete action */
+"HockeyFeedbackListDeleteAllDelete" = "حذف";
+
+/* Button Title to cancel delete action */
+"HockeyFeedbackListDeleteAllCancel" = "انصراف";
+
+
+/* Open Link In Safari Action Sheet / Alert View */
+
+/* Button Title to cancel */
+"HockeyFeedbackListLinkActionCancel" = "انصراف";
+
+/* Button Title to Open the Link */
+"HockeyFeedbackListLinkActionOpen" = "باز کردن";
+
+/* Button Title to Copy the Link */
+"HockeyFeedbackListLinkActionCopy" = "کپی";
+
+
+/* UIActivity */
+
+/* Activity Sharing Button Title, App Name will be inserted */
+"HockeyFeedbackActivityButtonTitle" = "%@ بازخورد";
+
+/* if there can no app name be found, use this instead for HockeyFeedbackActivityButtonTitle */
+"HockeyFeedbackActivityAppPlaceholder" = "برنامه";
+
+
+/* Compose Message */
+
+/* Title */
+"HockeyFeedbackComposeTitle" = "بازخورد جدید";
+
+/* Send button */
+"HockeyFeedbackComposeSend" = "ارسال";
+
+/* Add Image button for attachment actions */
+"HockeyFeedbackComposeAttachmentAddImage" = "اضافه کردن تصویر";
+
+/* Edit button for attachment actions */
+"HockeyFeedbackComposeAttachmentEdit" = "ویرایش تصویر";
+
+/* Delete button for attachment actions */
+"HockeyFeedbackComposeAttachmentDelete" = "حذف تصویر";
+
+/* Cancel button for attachment actions */
+"HockeyFeedbackComposeAttachmentCancel" = "انصراف";
+
+
+/* Set User Data */
+
+/* Title */
+"HockeyFeedbackUserDataTitle" = "اطلاعات من";
+
+/* Description On What Should Be Entered */
+"HockeyFeedbackUserDataDescription" = "لطفا قبل از نوشتن بازخورد اطلاعات خود را ارائه دهید.";
+
+/* Name Field */
+"HockeyFeedbackUserDataName" = "نام";
+
+/* Name Placeholder */
+"HockeyFeedbackUserDataNamePlaceHolder" = "Masih Abjadi";
+
+/* Email Field */
+"HockeyFeedbackUserDataEmail" = "پست الکترونیک";
+
+/* Email Placeholder */
+"HockeyFeedbackUserDataEmailPlaceholder" = "email@example.com";
+
+
+/* Authenticator */
+
+/* View Controller Title*/
+"HockeyAuthenticatorViewControllerTitle" = "HockeyApp";
+
+/* BITAuthenticatorAuthTypeUDIDProvider */
+"HockeyAuthenticationViewControllerWebUDIDLoginDescription" = "توسعه دهنده UDID این دستگاه را درخواست کرده است.برای باز کردن وب سایت HockeyApp و گرفتن اجازه دسترسی در پایین ضربه بزنید.";
+"HockeyAuthenticationViewControllerWebLoginButtonTitle" = "باز کردن HockeyApp";
+
+/* BITAuthenticatorIdentificationTypeWebAuth */
+"HockeyAuthenticationViewControllerWebAuthLoginDescription" = "توسعه دهنده آدرس پست الکترونیکی حساب HockeyApp شما را درخواست کرده است. برای باز کردن وب سایت HockeyApp و گرفتن اجازه دسترسی در پایین ضربه بزنید.";
+
+/* BITAuthenticatorAuthTypeEmail and BITAuthenticatorAuthTypeEmailAndPassword */
+"HockeyAuthenticationViewControllerDataEmailAndPasswordDescription" = "برای اجازه دسترسی به این برنامه لطفا آدرس  پست الکترونیکی و رمز عبور حساب HockeyApp خود را وارد کنید.";
+"HockeyAuthenticationViewControllerDataEmailDescription" = "برای اجازه دسترسی به این برنامه لطفا آدرس  پست الکترونیکی حساب HockeyApp خود را وارد کنید.";
+"HockeyAuthenticationViewControllerEmailPlaceholder" = "email@example.com";
+"HockeyAuthenticationViewControllerPasswordPlaceholder" = "مورد نیاز";
+"HockeyAuthenticationViewControllerEmailDescription" = "پست الکترونیک";
+"HockeyAuthenticationViewControllerPasswordDescription" = "رمز عبور";
+
+/* Error presented to the user if authentication failed because of networking issues */
+"HockeyAuthenticationViewControllerNetworkError" = "اجازه داده نشد چون به نظر می رسد دستگاه شما از اینترنت قطع شده است. لطفا دوباره امتحان کنید.";
+
+"HockeyAuthenticationFailedAuthenticate" = "تأیید نشد. لطفا دوباره امتحان کنید و یا با توسعه دهنده این برنامه تماس بگیرید.";
+"HockeyAuthenticationNotMember" = "شما مجاز به استفاده از این برنامه نیستید. لطفا با توسعه دهنده این برنامه تماس بگیرید.";
+"HockeyAuthenticationContactDeveloper" = "خطای مجوز. لطفا با توسعه دهنده این برنامه تماس بگیرید.";
+"HockeyAuthenticationWrongEmailPassword" = "شما یک پست الکترونیک و یا رمز عبور نامعتبر وارد کرده اید. لطفا ورودی های خود را بررسی و دوباره امتحان کنید.";
+"HockeyAuthenticationAuthSecretMissing" = "مجوز مخفی HockeySDK تنظیم نشده است. لطفا با توسعه دهنده این برنامه تماس بگیرید.";

@@ -225,7 +225,6 @@ typedef NS_ENUM(NSInteger, BITFeedbackObservationMode) {
  */
 @property (nonatomic, readwrite) BITFeedbackObservationMode feedbackObservationMode;
 
-
 /**
  Prefill feedback compose message user interface with the items given.
  
