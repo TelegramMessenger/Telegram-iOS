@@ -242,6 +242,7 @@ NSData *MTAesDecrypt(NSData *data, NSData *key, NSData *iv)
 NSData *MTRsaEncrypt(NSString *publicKey, NSData *data)
 {
 #if TARGET_OS_IOS
+    
     NSMutableData *updatedData = [[NSMutableData alloc] initWithData:data];
     while (updatedData.length < 256) {
         uint8_t zero = 0;
