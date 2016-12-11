@@ -2338,7 +2338,7 @@ ASDISPLAYNODE_INLINE BOOL nodeIsInRasterizedTree(ASDisplayNode *node) {
 
     
     // If we don't have contents finished drawing by the time we are on screen, immediately add the placeholder (if it is enabled and we do have something to draw).
-    if (self.contents == nil) {
+    if (self.contents == nil && [self __implementsDisplay]) {
       CALayer *layer = self.layer;
       [layer setNeedsDisplay];
       
