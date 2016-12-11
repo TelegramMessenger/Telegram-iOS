@@ -475,7 +475,7 @@ static NSString * const kRate = @"rate";
   ASDN::MutexLocker l(__instanceLock__);
 
   if (ASObjectIsEqual(assetURL, self.assetURL) == NO) {
-    [self _setAndFetchAsset:[AVURLAsset assetWithURL:assetURL] url:assetURL];
+    [self locked_setAndFetchAsset:[AVURLAsset assetWithURL:assetURL] url:assetURL];
   }
 }
 
@@ -497,7 +497,7 @@ static NSString * const kRate = @"rate";
   ASDN::MutexLocker l(__instanceLock__);
   
   if (ASAssetIsEqual(asset, _asset) == NO) {
-    [self _setAndFetchAsset:asset url:nil];
+    [self locked_setAndFetchAsset:asset url:nil];
   }
 }
 
@@ -507,9 +507,10 @@ static NSString * const kRate = @"rate";
   return _asset;
 }
 
-- (void)_setAndFetchAsset:(AVAsset *)asset url:(NSURL *)assetURL
+- (void)locked_setAndFetchAsset:(AVAsset *)asset url:(NSURL *)assetURL
 {
   [self didExitPreloadState];
+  self.videoPlaceholderImage = nil;
   _asset = asset;
   _assetURL = assetURL;
   [self setNeedsPreload];
