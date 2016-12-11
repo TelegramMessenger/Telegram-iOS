@@ -8,6 +8,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import "ASBasicImageDownloader.h"
 
 #import <objc/runtime.h>
@@ -314,3 +316,5 @@ static const char *kContextKey = NSStringFromClass(ASBasicImageDownloaderContext
 }
 
 @end
+
+#endif

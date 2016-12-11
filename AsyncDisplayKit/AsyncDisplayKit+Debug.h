@@ -52,6 +52,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
+#ifndef MINIMAL_ASDK
 @interface ASRangeController (Debugging)
 
 /**
@@ -75,5 +76,6 @@ NS_ASSUME_NONNULL_BEGIN
                interfaceState:(ASInterfaceState)interfaceState;
 
 @end
+#endif
 
 NS_ASSUME_NONNULL_END

@@ -8,6 +8,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import "ASBatchContext.h"
 
 #import "ASThread.h"
@@ -68,3 +70,5 @@ typedef NS_ENUM(NSInteger, ASBatchContextState) {
 }
 
 @end
+
+#endif

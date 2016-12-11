@@ -8,6 +8,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #if TARGET_OS_IOS
 #import <AsyncDisplayKit/ASButtonNode.h>
 #import <AsyncDisplayKit/ASNetworkImageNode.h>
@@ -154,3 +156,4 @@ NS_ASSUME_NONNULL_BEGIN
 NS_ASSUME_NONNULL_END
 #endif
 
+#endif

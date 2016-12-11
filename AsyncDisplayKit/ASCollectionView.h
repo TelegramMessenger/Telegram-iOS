@@ -8,6 +8,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import <UIKit/UIKit.h>
 
 #import <AsyncDisplayKit/ASRangeController.h>
@@ -441,3 +443,5 @@ ASDISPLAYNODE_DEPRECATED_MSG("Renamed to ASCollectionDelegate.")
 @end
 
 NS_ASSUME_NONNULL_END
+
+#endif

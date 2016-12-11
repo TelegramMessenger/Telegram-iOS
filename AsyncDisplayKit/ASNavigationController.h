@@ -10,6 +10,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import <UIKit/UIKit.h>
 
 #import "ASVisibilityProtocols.h"
@@ -31,3 +33,5 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 NS_ASSUME_NONNULL_END
+
+#endif

@@ -10,6 +10,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import "ASNavigationController.h"
 
 @implementation ASNavigationController
@@ -98,3 +100,5 @@ ASVisibilityDepthImplementation;
 }
 
 @end
+
+#endif

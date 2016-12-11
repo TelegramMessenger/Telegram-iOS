@@ -8,6 +8,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import "ASCollectionViewLayoutController.h"
 
 #import "ASAssert.h"
@@ -75,3 +77,5 @@ typedef struct ASRangeGeometry ASRangeGeometry;
 }
 
 @end
+
+#endif

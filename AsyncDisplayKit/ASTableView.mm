@@ -8,6 +8,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import "ASTableViewInternal.h"
 
 #import "ASAssert.h"
@@ -1695,3 +1697,5 @@ static NSString * const kCellReuseIdentifier = @"_ASTableViewCell";
 }
 
 @end
+
+#endif

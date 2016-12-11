@@ -8,6 +8,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import "ASCollectionViewFlowLayoutInspector.h"
 #import "ASCollectionView.h"
 #import "ASAssert.h"
@@ -160,3 +162,5 @@
 }
 
 @end
+
+#endif

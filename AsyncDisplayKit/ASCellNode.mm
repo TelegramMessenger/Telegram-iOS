@@ -8,6 +8,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import "ASCellNode+Internal.h"
 
 #import "ASEqualityHelpers.h"
@@ -468,3 +470,5 @@ static const CGFloat kASTextCellNodeDefaultVerticalPadding = 11.0f;
 }
 
 @end
+
+#endif

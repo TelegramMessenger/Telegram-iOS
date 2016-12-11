@@ -6,6 +6,8 @@
 //  Copyright © 2016 Facebook. All rights reserved.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import <AsyncDisplayKit/ASCellNode.h>
 
 typedef NS_ENUM(NSInteger, ASLayoutElementPropertyType) {
@@ -26,3 +28,4 @@ typedef NS_ENUM(NSInteger, ASLayoutElementPropertyType) {
 
 @end
 
+#endif

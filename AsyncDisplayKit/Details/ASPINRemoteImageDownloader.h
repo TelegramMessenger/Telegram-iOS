@@ -10,6 +10,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #if PIN_REMOTE_IMAGE
 
 #import <Foundation/Foundation.h>
@@ -54,5 +56,7 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 NS_ASSUME_NONNULL_END
+
+#endif
 
 #endif

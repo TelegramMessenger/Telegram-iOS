@@ -7,17 +7,26 @@
 //
 
 #import "ASLayoutElementInspectorNode.h"
+
+#ifndef MINIMAL_ASDK
 #import "ASLayoutElementInspectorCell.h"
+#endif
+
 #import "ASDisplayNode+Beta.h"
 #import "ASLayoutSpec+Debug.h"
 #import <AsyncDisplayKit/AsyncDisplayKit.h>
 
-@interface ASLayoutElementInspectorNode () <ASTableDelegate, ASTableDataSource>
+@interface ASLayoutElementInspectorNode ()
+#ifndef MINIMAL_ASDK
+<ASTableDelegate, ASTableDataSource>
+#endif
 @end
 
 @implementation ASLayoutElementInspectorNode
 {
+#ifndef MINIMAL_ASDK
   ASTableNode  *_tableNode;
+#endif
 }
 
 #pragma mark - class methods
@@ -39,11 +48,13 @@
   self = [super init];
   if (self) {
     
+#ifndef MINIMAL_ASDK
     _tableNode                 = [[ASTableNode alloc] init];
     _tableNode.delegate        = self;
     _tableNode.dataSource      = self;
 
     [self addSubnode:_tableNode];  // required because of manual layout
+#endif
   }
   return self;
 }
@@ -51,16 +62,20 @@
 - (void)didLoad
 {
   [super didLoad];
+#ifndef MINIMAL_ASDK
   _tableNode.view.backgroundColor = [UIColor colorWithRed:40/255.0 green:43/255.0 blue:53/255.0 alpha:1];
   _tableNode.view.separatorStyle = UITableViewCellSeparatorStyleNone;
   _tableNode.view.allowsSelection = NO;
   _tableNode.view.sectionHeaderHeight = 40;
+#endif
 }
 
 - (void)layout
 {
   [super layout];
+#ifndef MINIMAL_ASDK
   _tableNode.frame = self.bounds;
+#endif
 }
 
 #pragma mark - intstance methods
@@ -69,11 +84,14 @@
   if (_layoutElementToEdit != layoutElementToEdit) {
     _layoutElementToEdit = layoutElementToEdit;
   }
+#ifndef MINIMAL_ASDK
   [_tableNode reloadData];
+#endif
 }
 
 #pragma mark - ASTableDataSource
 
+#ifndef MINIMAL_ASDK
 - (ASCellNode *)tableView:(ASTableView *)tableView nodeForRowAtIndexPath:(NSIndexPath *)indexPath
 {
   if (indexPath.section == 0) {
@@ -118,6 +136,8 @@
   
   return headerTitle;
 }
+
+#endif
 
 //- (ASLayoutSpec *)layoutSpecThatFits:(ASSizeRange)constrainedSize
 //{

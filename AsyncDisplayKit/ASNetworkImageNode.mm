@@ -8,6 +8,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import "ASNetworkImageNode.h"
 
 #import "ASBasicImageDownloader.h"
@@ -594,3 +596,5 @@ static const CGSize kMinReleaseImageOnBackgroundSize = {20.0, 20.0};
 }
 
 @end
+
+#endif

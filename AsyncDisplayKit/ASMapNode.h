@@ -8,6 +8,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import <AsyncDisplayKit/ASImageNode.h>
 #if TARGET_OS_IOS
 #import <MapKit/MapKit.h>
@@ -79,5 +81,7 @@ typedef NS_OPTIONS(NSUInteger, ASMapNodeShowAnnotationsOptions)
 @end
 
 NS_ASSUME_NONNULL_END
+
+#endif
 
 #endif

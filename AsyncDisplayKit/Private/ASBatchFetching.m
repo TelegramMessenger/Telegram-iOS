@@ -8,6 +8,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import "ASBatchFetching.h"
 
 BOOL ASDisplayShouldFetchBatchForScrollView(UIScrollView<ASBatchFetchingScrollView> *scrollView, ASScrollDirection scrollDirection, CGPoint contentOffset)
@@ -67,3 +69,5 @@ BOOL ASDisplayShouldFetchBatchForContext(ASBatchContext *context,
 
   return hasSmallContent || remainingDistance <= triggerDistance;
 }
+
+#endif

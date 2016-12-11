@@ -9,6 +9,9 @@
 //  LICENSE file in the root directory of this source tree. An additional grant
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
+
+#ifndef MINIMAL_ASDK
+
 #if TARGET_OS_IOS
 #import <Foundation/Foundation.h>
 #import <Photos/Photos.h>
@@ -68,4 +71,6 @@ extern NSString *const ASPhotosURLScheme;
 @end
 
 // NS_ASSUME_NONNULL_END
+#endif
+
 #endif

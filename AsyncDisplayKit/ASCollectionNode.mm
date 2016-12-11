@@ -10,6 +10,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import "ASCollectionInternal.h"
 #import "ASCollectionViewLayoutFacilitatorProtocol.h"
 #import "ASCollectionNode.h"
@@ -588,3 +590,5 @@ ASEnvironmentCollectionTableSetEnvironmentState(_environmentStateLock)
 }
 
 @end
+
+#endif

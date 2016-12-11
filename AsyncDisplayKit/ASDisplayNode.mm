@@ -3492,11 +3492,13 @@ static const char *ASDisplayNodeDrawingPriorityKey = "ASDrawingPriority";
     [result addObject:@{ @"frame" : [NSValue valueWithCGRect:_pendingViewState.frame] }];
   }
   
+#ifndef MINIMAL_ASDK
   // Check supernode so that if we are cell node we don't find self.
   ASCellNode *cellNode = ASDisplayNodeFindFirstSupernodeOfClass([self _deallocSafeSupernode], [ASCellNode class]);
   if (cellNode != nil) {
     [result addObject:@{ @"cellNode" : ASObjectDescriptionMakeTiny(cellNode) }];
   }
+#endif
   
   [result addObject:@{ @"interfaceState" : NSStringFromASInterfaceState(self.interfaceState)} ];
   

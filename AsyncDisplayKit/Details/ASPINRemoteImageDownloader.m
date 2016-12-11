@@ -10,6 +10,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #if PIN_REMOTE_IMAGE
 #import "ASPINRemoteImageDownloader.h"
 
@@ -300,4 +302,6 @@ static ASPINRemoteImageDownloader *sharedDownloader = nil;
 }
 
 @end
+#endif
+
 #endif

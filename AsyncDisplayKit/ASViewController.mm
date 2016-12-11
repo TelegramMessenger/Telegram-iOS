@@ -10,6 +10,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import "ASViewController.h"
 #import "ASAssert.h"
 #import "ASAvailability.h"
@@ -337,3 +339,5 @@ ASVisibilityDepthImplementation;
 }
 
 @end
+
+#endif

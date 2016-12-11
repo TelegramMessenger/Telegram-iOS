@@ -6,6 +6,8 @@
 //  Copyright © 2016 Facebook. All rights reserved.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import "ASLayoutElementInspectorCell.h"
 #import <AsyncDisplayKit/AsyncDisplayKit.h>
 
@@ -567,3 +569,4 @@ __weak static ASLayoutElementInspectorCell *__currentlyOpenedCell = nil;
 @end
 
 
+#endif

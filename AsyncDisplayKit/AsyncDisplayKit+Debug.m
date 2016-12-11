@@ -207,6 +207,8 @@ static BOOL __enableHitTestDebug = NO;
 
 #pragma mark - ASRangeController (Debugging)
 
+#ifndef MINIMAL_ASDK
+
 @interface _ASRangeDebugOverlayView : UIView
 
 + (instancetype)sharedInstance;
@@ -752,3 +754,5 @@ static BOOL __shouldShowRangeDebugOverlay = NO;
 }
 
 @end
+
+#endif

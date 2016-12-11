@@ -8,6 +8,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import <AsyncDisplayKit/ASLayoutRangeType.h>
 
 @protocol ASRangeControllerUpdateRangeProtocol <NSObject>
@@ -19,3 +21,5 @@
 - (void)updateCurrentRangeWithMode:(ASLayoutRangeMode)rangeMode;
 
 @end
+
+#endif

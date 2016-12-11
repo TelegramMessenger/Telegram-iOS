@@ -8,6 +8,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import "ASDataController.h"
 
 #import "ASAssert.h"
@@ -1081,4 +1083,6 @@ static volatile int64_t _totalMeasuredNodes = 0;
 }
 
 @end
+#endif
+
 #endif

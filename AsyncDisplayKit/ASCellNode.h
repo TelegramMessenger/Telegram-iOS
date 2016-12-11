@@ -8,6 +8,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import <AsyncDisplayKit/ASDisplayNode.h>
 
 NS_ASSUME_NONNULL_BEGIN
@@ -201,3 +203,5 @@ typedef NS_ENUM(NSUInteger, ASCellNodeVisibilityEvent) {
 @end
 
 NS_ASSUME_NONNULL_END
+
+#endif

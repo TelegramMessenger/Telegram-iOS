@@ -10,6 +10,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import <AsyncDisplayKit/ASDataController.h>
 
 /**
@@ -25,3 +27,5 @@
 @interface ASChangeSetDataController : ASDataController
 
 @end
+
+#endif

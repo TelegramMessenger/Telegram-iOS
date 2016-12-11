@@ -10,6 +10,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import "ASVideoPlayerNode.h"
 #import "ASDefaultPlaybackButton.h"
 #import "ASDisplayNodeInternal.h"
@@ -924,3 +926,5 @@ static void *ASVideoPlayerNodeContext = &ASVideoPlayerNodeContext;
 }
 
 @end
+
+#endif

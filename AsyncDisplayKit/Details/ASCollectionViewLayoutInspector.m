@@ -6,6 +6,8 @@
 //  Copyright © 2016 Facebook. All rights reserved.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import "ASCollectionViewLayoutInspector.h"
 
 #import "ASCollectionView.h"
@@ -92,3 +94,5 @@ ASSizeRange NodeConstrainedSizeForScrollDirection(ASCollectionView *collectionVi
 }
 
 @end
+
+#endif

@@ -10,6 +10,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 @class ASCollectionView;
 
 @protocol ASSectionContext
@@ -21,3 +23,5 @@
 @property (nonatomic, weak, nullable) ASCollectionView *collectionView;
 
 @end
+
+#endif

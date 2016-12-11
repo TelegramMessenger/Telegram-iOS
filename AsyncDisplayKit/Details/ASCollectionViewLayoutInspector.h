@@ -6,6 +6,8 @@
 //  Copyright © 2016 Facebook. All rights reserved.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import <Foundation/Foundation.h>
 #import <AsyncDisplayKit/ASDimension.h>
 #import <AsyncDisplayKit/ASScrollDirection.h>
@@ -81,3 +83,5 @@ extern ASSizeRange NodeConstrainedSizeForScrollDirection(ASCollectionView *colle
 @end
 
 NS_ASSUME_NONNULL_END
+
+#endif

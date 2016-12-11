@@ -1572,7 +1572,6 @@
 		058D0A01195D050800B7D73C /* Private */ = {
 			isa = PBXGroup;
 			children = (
-				69C4CAF51DA3147000B1EC9B /* ASLayoutElementStylePrivate.h */,
 				058D0A03195D050800B7D73C /* _ASCoreAnimationExtras.h */,
 				058D0A04195D050800B7D73C /* _ASCoreAnimationExtras.mm */,
 				AC026B6D1BD57DBF00BBC17E /* _ASHierarchyChangeSet.h */,
@@ -2781,6 +2780,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				MODULEMAP_FILE = AsyncDisplayKit/module.modulemap;
 				MTL_ENABLE_DEBUG_INFO = YES;
+				OTHER_CFLAGS = "-DMINIMAL_ASDK=1";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.facebook.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = AsyncDisplayKit;
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
@@ -2815,6 +2815,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				MODULEMAP_FILE = AsyncDisplayKit/module.modulemap;
 				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CFLAGS = "-DMINIMAL_ASDK=1";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.facebook.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = AsyncDisplayKit;
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;
@@ -2952,6 +2953,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				MODULEMAP_FILE = AsyncDisplayKit/module.modulemap;
 				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CFLAGS = "-DMINIMAL_ASDK=1";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.facebook.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = AsyncDisplayKit;
 				PROVISIONING_PROFILE_SPECIFIER = X834Q8SBVP/;

@@ -8,6 +8,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import <UIKit/UIKit.h>
 
 #import "ASBatchContext.h"
@@ -55,3 +57,5 @@ extern BOOL ASDisplayShouldFetchBatchForContext(ASBatchContext *context,
                                                 CGFloat leadingScreens);
 
 ASDISPLAYNODE_EXTERN_C_END
+
+#endif

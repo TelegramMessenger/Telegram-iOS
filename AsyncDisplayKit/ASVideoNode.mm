@@ -7,6 +7,9 @@
 //  LICENSE file in the root directory of this source tree. An additional grant
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
+
+#ifndef MINIMAL_ASDK
+
 #if TARGET_OS_IOS
 #import <AVFoundation/AVFoundation.h>
 #import "ASDisplayNodeInternal.h"
@@ -795,4 +798,6 @@ static NSString * const kRate = @"rate";
 }
 
 @end
+#endif
+
 #endif

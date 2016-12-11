@@ -8,6 +8,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #pragma once
 #import <vector>
 
@@ -196,3 +198,5 @@ typedef void (^ASDataControllerCompletionBlock)(NSArray<ASCellNode *> *nodes, NS
 - (void)willDeleteRowsAtIndexPaths:(NSArray<NSIndexPath *> *)indexPaths;
 
 @end
+
+#endif

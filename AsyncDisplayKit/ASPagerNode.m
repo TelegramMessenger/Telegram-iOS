@@ -10,6 +10,8 @@
 //  of patent rights can be found in the PATENTS file in the same directory.
 //
 
+#ifndef MINIMAL_ASDK
+
 #import "ASPagerNode.h"
 #import "ASDelegateProxy.h"
 #import "ASDisplayNode+Subclasses.h"
@@ -209,3 +211,5 @@
 }
 
 @end
+
+#endif
