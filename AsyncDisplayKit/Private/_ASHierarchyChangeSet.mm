@@ -30,7 +30,7 @@
       NSLog(__VA_ARGS__);\
     } else {\
       NSLog(__VA_ARGS__);\
-      [NSException raise:ASCollectionInvalidUpdateException format:__VA_ARGS__];\
+      [NSException raise:@"ASCollectionInvalidUpdateException" format:__VA_ARGS__];\
     }\
   _Pragma("clang diagnostic pop")
 #else
