@@ -157,6 +157,31 @@ __unused static NSString * _Nonnull NSStringFromASHierarchyState(ASHierarchyStat
 - (void)recursivelyEnsureDisplaySynchronously:(BOOL)synchronously;
 
 /**
+ * @abstract Calls -didExitPreloadState on the receiver and its subnode hierarchy.
+ *
+ * @discussion Clears any memory-intensive preloaded content.
+ * This method is used to notify the node that it should purge any content that is both expensive to fetch and to
+ * retain in memory.
+ *
+ * @see [ASDisplayNode(Subclassing) didExitPreloadState] and [ASDisplayNode(Subclassing) didEnterPreloadState]
+ */
+- (void)recursivelyClearPreloadedData;
+
+/**
+ * @abstract Calls -didEnterPreloadState on the receiver and its subnode hierarchy.
+ *
+ * @discussion Fetches content from remote sources for the current node and all subnodes.
+ *
+ * @see [ASDisplayNode(Subclassing) didEnterPreloadState] and [ASDisplayNode(Subclassing) didExitPreloadState]
+ */
+- (void)recursivelyPreload;
+
+/**
+ * @abstract Triggers a recursive call to -didEnterPreloadState when the node has an interfaceState of ASInterfaceStatePreload
+ */
+- (void)setNeedsPreload;
+
+/**
  * @abstract Allows a node to bypass all ensureDisplay passes.  Defaults to NO.
  *
  * @discussion Nodes that are expensive to draw and expected to have placeholder even with
@@ -173,6 +198,20 @@ __unused static NSString * _Nonnull NSStringFromASHierarchyState(ASHierarchyStat
  * @abstract Checks whether a node should be scheduled for display, considering its current and new interface states.
  */
 - (BOOL)shouldScheduleDisplayWithNewInterfaceState:(ASInterfaceState)newInterfaceState;
+
+/**
+ * @abstract Informs the root node that the intrinsic size of the receiver is no longer valid.
+ *
+ * @discussion The size of a root node is determined by each subnode. Calling invalidateSize will let the root node know
+ * that the intrinsic size of the receiver node is no longer valid and a resizing of the root node needs to happen.
+ */
+- (void)setNeedsLayoutFromAbove;
+
+/**
+ * @abstract Subclass hook for nodes that are acting as root nodes. This method is called if one of the subnodes
+ * size is invalidated and may need to result in a different size as the current calculated size.
+ */
+- (void)_locked_displayNodeDidInvalidateSizeNewSize:(CGSize)newSize;
 
 @end
 

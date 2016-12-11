@@ -33,7 +33,11 @@ void ASPerformBackgroundDeallocation(id object);
 
 CGFloat ASScreenScale();
 
+CGSize ASFloorSizeValues(CGSize s);
+
 CGFloat ASFloorPixelValue(CGFloat f);
+
+CGSize ASCeilSizeValues(CGSize s);
 
 CGFloat ASCeilPixelValue(CGFloat f);
 

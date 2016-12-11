@@ -12,7 +12,7 @@
 
 #import "ASBatchFetching.h"
 
-BOOL ASDisplayShouldFetchBatchForScrollView(UIScrollView<ASBatchFetchingScrollView> *scrollView, ASScrollDirection scrollDirection, CGPoint contentOffset)
+BOOL ASDisplayShouldFetchBatchForScrollView(UIScrollView<ASBatchFetchingScrollView> *scrollView, ASScrollDirection scrollDirection, ASScrollDirection scrollableDirections, CGPoint contentOffset)
 {
   // Don't fetch if the scroll view does not allow
   if (![scrollView canBatchFetch]) {
@@ -24,11 +24,12 @@ BOOL ASDisplayShouldFetchBatchForScrollView(UIScrollView<ASBatchFetchingScrollVi
   CGRect bounds = scrollView.bounds;
   CGSize contentSize = scrollView.contentSize;
   CGFloat leadingScreens = scrollView.leadingScreensForBatching;
-  return ASDisplayShouldFetchBatchForContext(context, scrollDirection, bounds, contentSize, contentOffset, leadingScreens);
+  return ASDisplayShouldFetchBatchForContext(context, scrollDirection, scrollableDirections, bounds, contentSize, contentOffset, leadingScreens);
 }
 
 BOOL ASDisplayShouldFetchBatchForContext(ASBatchContext *context,
                                          ASScrollDirection scrollDirection,
+                                         ASScrollDirection scrollableDirections,
                                          CGRect bounds,
                                          CGSize contentSize,
                                          CGPoint targetOffset,
@@ -39,19 +40,14 @@ BOOL ASDisplayShouldFetchBatchForContext(ASBatchContext *context,
     return NO;
   }
 
-  // Only Down and Right scrolls are currently supported (tail loading)
-  if (!ASScrollDirectionContainsDown(scrollDirection) && !ASScrollDirectionContainsRight(scrollDirection)) {
-    return NO;
-  }
-
   // No fetching for null states
-  if (leadingScreens <= 0.0 || CGRectEqualToRect(bounds, CGRectZero)) {
+  if (leadingScreens <= 0.0 || CGRectIsEmpty(bounds)) {
     return NO;
   }
 
   CGFloat viewLength, offset, contentLength;
 
-  if (ASScrollDirectionContainsDown(scrollDirection)) {
+  if (ASScrollDirectionContainsVerticalDirection(scrollableDirections)) {
     viewLength = bounds.size.height;
     offset = targetOffset.y;
     contentLength = contentSize.height;
@@ -63,11 +59,16 @@ BOOL ASDisplayShouldFetchBatchForContext(ASBatchContext *context,
 
   // target offset will always be 0 if the content size is smaller than the viewport
   BOOL hasSmallContent = offset == 0.0 && contentLength < viewLength;
+  if (hasSmallContent) {
+    return YES;
+  }
+
+  BOOL isScrollingTowardEnd = (ASScrollDirectionContainsDown(scrollDirection) || ASScrollDirectionContainsRight(scrollDirection));
 
   CGFloat triggerDistance = viewLength * leadingScreens;
   CGFloat remainingDistance = contentLength - viewLength - offset;
 
-  return hasSmallContent || remainingDistance <= triggerDistance;
+  return isScrollingTowardEnd && remainingDistance <= triggerDistance;
 }
 
 #endif

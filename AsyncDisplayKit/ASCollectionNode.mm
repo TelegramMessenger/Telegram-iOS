@@ -135,12 +135,6 @@
   return nil;
 }
 
-- (void)dealloc
-{
-  self.delegate = nil;
-  self.dataSource = nil;
-}
-
 #pragma mark ASDisplayNode
 
 - (void)didLoad
@@ -175,10 +169,10 @@
   [self.rangeController clearContents];
 }
 
-- (void)clearFetchedData
+- (void)didExitPreloadState
 {
-  [super clearFetchedData];
-  [self.rangeController clearFetchedData];
+  [super didExitPreloadState];
+  [self.rangeController clearPreloadedData];
 }
 
 - (void)interfaceStateDidChange:(ASInterfaceState)newState fromState:(ASInterfaceState)oldState
@@ -234,7 +228,8 @@
     // Manually trampoline to the main thread. The view requires this be called on main
     // and asserting here isn't an option – it is a common pattern for users to clear
     // the delegate/dataSource in dealloc, which may be running on a background thread.
-    ASCollectionView *view = self.view;
+    // It is important that we avoid retaining self in this block, so that this method is dealloc-safe.
+    ASCollectionView *view = (ASCollectionView *)_view;
     ASPerformBlockOnMainThread(^{
       view.asyncDelegate = delegate;
     });
@@ -259,7 +254,8 @@
     // Manually trampoline to the main thread. The view requires this be called on main
     // and asserting here isn't an option – it is a common pattern for users to clear
     // the delegate/dataSource in dealloc, which may be running on a background thread.
-    ASCollectionView *view = self.view;
+    // It is important that we avoid retaining self in this block, so that this method is dealloc-safe.
+    ASCollectionView *view = (ASCollectionView *)_view;
     ASPerformBlockOnMainThread(^{
       view.asyncDataSource = dataSource;
     });

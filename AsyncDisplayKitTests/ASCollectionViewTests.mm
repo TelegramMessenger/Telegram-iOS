@@ -58,6 +58,7 @@
 @interface ASCollectionViewTestDelegate : NSObject <ASCollectionDataSource, ASCollectionDelegate, UICollectionViewDelegateFlowLayout>
 
 @property (nonatomic, assign) NSInteger sectionGeneration;
+@property (nonatomic, copy) void(^willBeginBatchFetch)(ASBatchContext *);
 
 @end
 
@@ -127,6 +128,15 @@
 - (ASCellNode *)collectionView:(ASCollectionView *)collectionView nodeForSupplementaryElementOfKind:(NSString *)kind atIndexPath:(NSIndexPath *)indexPath
 {
   return [[ASCellNode alloc] init];
+}
+
+- (void)collectionNode:(ASCollectionNode *)collectionNode willBeginBatchFetchWithContext:(ASBatchContext *)context
+{
+  if (_willBeginBatchFetch != nil) {
+    _willBeginBatchFetch(context);
+  } else {
+    [context cancelBatchFetching];
+  }
 }
 
 @end
@@ -212,8 +222,6 @@
 
 - (void)testReloadIfNeeded
 {
-  [ASDisplayNode setSuppressesInvalidCollectionUpdateExceptions:NO];
-
   __block ASCollectionViewTestController *testController = [[ASCollectionViewTestController alloc] initWithNibName:nil bundle:nil];
   __block ASCollectionViewTestDelegate *del = testController.asyncDelegate;
   __block ASCollectionNode *cn = testController.collectionNode;
@@ -323,26 +331,26 @@
 - (void)testTuningParametersWithExplicitRangeMode
 {
   UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc] init];
-  ASCollectionView *collectionView = [[ASCollectionView alloc] initWithFrame:CGRectZero collectionViewLayout:layout];
+  ASCollectionNode *collectionNode = [[ASCollectionNode alloc] initWithCollectionViewLayout:layout];
   
   ASRangeTuningParameters minimumRenderParams = { .leadingBufferScreenfuls = 0.1, .trailingBufferScreenfuls = 0.1 };
   ASRangeTuningParameters minimumPreloadParams = { .leadingBufferScreenfuls = 0.1, .trailingBufferScreenfuls = 0.1 };
   ASRangeTuningParameters fullRenderParams = { .leadingBufferScreenfuls = 0.5, .trailingBufferScreenfuls = 0.5 };
   ASRangeTuningParameters fullPreloadParams = { .leadingBufferScreenfuls = 1, .trailingBufferScreenfuls = 0.5 };
   
-  [collectionView setTuningParameters:minimumRenderParams forRangeMode:ASLayoutRangeModeMinimum rangeType:ASLayoutRangeTypeDisplay];
-  [collectionView setTuningParameters:minimumPreloadParams forRangeMode:ASLayoutRangeModeMinimum rangeType:ASLayoutRangeTypePreload];
-  [collectionView setTuningParameters:fullRenderParams forRangeMode:ASLayoutRangeModeFull rangeType:ASLayoutRangeTypeDisplay];
-  [collectionView setTuningParameters:fullPreloadParams forRangeMode:ASLayoutRangeModeFull rangeType:ASLayoutRangeTypePreload];
+  [collectionNode setTuningParameters:minimumRenderParams forRangeMode:ASLayoutRangeModeMinimum rangeType:ASLayoutRangeTypeDisplay];
+  [collectionNode setTuningParameters:minimumPreloadParams forRangeMode:ASLayoutRangeModeMinimum rangeType:ASLayoutRangeTypePreload];
+  [collectionNode setTuningParameters:fullRenderParams forRangeMode:ASLayoutRangeModeFull rangeType:ASLayoutRangeTypeDisplay];
+  [collectionNode setTuningParameters:fullPreloadParams forRangeMode:ASLayoutRangeModeFull rangeType:ASLayoutRangeTypePreload];
   
   XCTAssertTrue(ASRangeTuningParametersEqualToRangeTuningParameters(minimumRenderParams,
-                                                                    [collectionView tuningParametersForRangeMode:ASLayoutRangeModeMinimum rangeType:ASLayoutRangeTypeDisplay]));
+                                                                    [collectionNode tuningParametersForRangeMode:ASLayoutRangeModeMinimum rangeType:ASLayoutRangeTypeDisplay]));
   XCTAssertTrue(ASRangeTuningParametersEqualToRangeTuningParameters(minimumPreloadParams,
-                                                                    [collectionView tuningParametersForRangeMode:ASLayoutRangeModeMinimum rangeType:ASLayoutRangeTypePreload]));
+                                                                    [collectionNode tuningParametersForRangeMode:ASLayoutRangeModeMinimum rangeType:ASLayoutRangeTypePreload]));
   XCTAssertTrue(ASRangeTuningParametersEqualToRangeTuningParameters(fullRenderParams,
-                                                                    [collectionView tuningParametersForRangeMode:ASLayoutRangeModeFull rangeType:ASLayoutRangeTypeDisplay]));
+                                                                    [collectionNode tuningParametersForRangeMode:ASLayoutRangeModeFull rangeType:ASLayoutRangeTypeDisplay]));
   XCTAssertTrue(ASRangeTuningParametersEqualToRangeTuningParameters(fullPreloadParams,
-                                                                    [collectionView tuningParametersForRangeMode:ASLayoutRangeModeFull rangeType:ASLayoutRangeTypePreload]));
+                                                                    [collectionNode tuningParametersForRangeMode:ASLayoutRangeModeFull rangeType:ASLayoutRangeTypePreload]));
 }
 
 - (void)testTuningParameters
@@ -373,7 +381,6 @@
 #pragma mark - Update Validations
 
 #define updateValidationTestPrologue \
-  [ASDisplayNode setSuppressesInvalidCollectionUpdateExceptions:NO];\
   ASCollectionViewTestController *testController = [[ASCollectionViewTestController alloc] initWithNibName:nil bundle:nil];\
   __unused ASCollectionViewTestDelegate *del = testController.asyncDelegate;\
   __unused ASCollectionView *cv = testController.collectionView;\
@@ -806,6 +813,82 @@
   // Passing nil blocks should not crash
   [cn performBatchUpdates:nil completion:nil];
   [cn performBatchAnimated:NO updates:nil completion:nil];
+}
+
+- (void)testThatMultipleBatchFetchesDontHappenUnnecessarily
+{
+  UIWindow *window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+  ASCollectionViewTestController *testController = [[ASCollectionViewTestController alloc] initWithNibName:nil bundle:nil];
+  window.rootViewController = testController;
+
+  // Start with 1 item so that our content does not fill bounds.
+  __block NSInteger itemCount = 1;
+  testController.asyncDelegate->_itemCounts = {itemCount};
+  [window makeKeyAndVisible];
+  [window layoutIfNeeded];
+
+  ASCollectionNode *cn = testController.collectionNode;
+  [cn waitUntilAllUpdatesAreCommitted];
+  XCTAssertGreaterThan(cn.bounds.size.height, cn.view.contentSize.height, @"Expected initial data not to fill collection view area.");
+
+  __block NSUInteger batchFetchCount = 0;
+  XCTestExpectation *expectation = [self expectationWithDescription:@"Batch fetching completed and then some"];
+  __weak ASCollectionViewTestController *weakController = testController;
+  testController.asyncDelegate.willBeginBatchFetch = ^(ASBatchContext *context) {
+
+    // Ensure only 1 batch fetch happens
+    batchFetchCount += 1;
+    if (batchFetchCount > 1) {
+      XCTFail(@"Too many batch fetches!");
+      return;
+    }
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+      // Up the item count to 1000 so that we're well beyond the
+      // edge of the collection view and not ready for another batch fetch.
+      NSMutableArray *indexPaths = [NSMutableArray array];
+      for (; itemCount < 1000; itemCount++) {
+        [indexPaths addObject:[NSIndexPath indexPathForItem:itemCount inSection:0]];
+      }
+      weakController.asyncDelegate->_itemCounts = {itemCount};
+      [cn insertItemsAtIndexPaths:indexPaths];
+      [context completeBatchFetching:YES];
+
+      // Let the run loop turn before we consider the test passed.
+      dispatch_async(dispatch_get_main_queue(), ^{
+        [expectation fulfill];
+      });
+    });
+  };
+  [self waitForExpectationsWithTimeout:3 handler:nil];
+}
+
+- (void)testThatBatchFetchHappensForEmptyCollection
+{
+  UIWindow *window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+  ASCollectionViewTestController *testController = [[ASCollectionViewTestController alloc] initWithNibName:nil bundle:nil];
+  window.rootViewController = testController;
+
+  // Start with 1 item so that our content does not fill bounds.
+  testController.asyncDelegate->_itemCounts = {};
+  [window makeKeyAndVisible];
+  [window layoutIfNeeded];
+
+  ASCollectionNode *cn = testController.collectionNode;
+  [cn waitUntilAllUpdatesAreCommitted];
+
+  __block NSUInteger batchFetchCount = 0;
+  XCTestExpectation *e = [self expectationWithDescription:@"Batch fetching completed"];
+  testController.asyncDelegate.willBeginBatchFetch = ^(ASBatchContext *context) {
+    // Ensure only 1 batch fetch happens
+    batchFetchCount += 1;
+    if (batchFetchCount > 1) {
+      XCTFail(@"Too many batch fetches!");
+      return;
+    }
+    [e fulfill];
+  };
+  [self waitForExpectationsWithTimeout:3 handler:nil];
 }
 
 @end

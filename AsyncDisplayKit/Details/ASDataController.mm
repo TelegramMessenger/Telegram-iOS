@@ -38,6 +38,7 @@ const static char * kASDataControllerEditingQueueKey = "kASDataControllerEditing
 const static char * kASDataControllerEditingQueueContext = "kASDataControllerEditingQueueContext";
 
 NSString * const ASDataControllerRowNodeKind = @"_ASDataControllerRowNodeKind";
+NSString * const ASCollectionInvalidUpdateException = @"ASCollectionInvalidUpdateException";
 
 #if AS_MEASURE_AVOIDED_DATACONTROLLER_WORK
 @interface ASDataController (AvoidedWorkMeasuring)
