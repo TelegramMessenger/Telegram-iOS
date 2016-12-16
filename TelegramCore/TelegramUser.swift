@@ -74,7 +74,7 @@ public final class TelegramUser: Peer {
     }
     
     public var indexName: PeerIndexNameRepresentation {
-        return .personName(first: self.firstName ?? "", last: self.lastName ?? "")
+        return .personName(first: self.firstName ?? "", last: self.lastName ?? "", addressName: self.username)
     }
     
     public init(id: PeerId, accessHash: Int64?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: [TelegramMediaImageRepresentation], botInfo: BotUserInfo?) {

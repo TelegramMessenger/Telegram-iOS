@@ -20,8 +20,9 @@ public final class TelegramMediaWebpageLoadedContent: Coding, Equatable {
     
     public let image: TelegramMediaImage?
     public let file: TelegramMediaFile?
+    public let instantPage: InstantPage?
     
-    public init(url: String, displayUrl: String, type: String?, websiteName: String?, title: String?, text: String?, embedUrl: String?, embedType: String?, embedSize: CGSize?, duration: Int?, author: String?, image: TelegramMediaImage?, file: TelegramMediaFile?) {
+    public init(url: String, displayUrl: String, type: String?, websiteName: String?, title: String?, text: String?, embedUrl: String?, embedType: String?, embedSize: CGSize?, duration: Int?, author: String?, image: TelegramMediaImage?, file: TelegramMediaFile?, instantPage: InstantPage?) {
         self.url = url
         self.displayUrl = displayUrl
         self.type = type
@@ -35,6 +36,7 @@ public final class TelegramMediaWebpageLoadedContent: Coding, Equatable {
         self.author = author
         self.image = image
         self.file = file
+        self.instantPage = instantPage
     }
     
     public init(decoder: Decoder) {
@@ -69,6 +71,12 @@ public final class TelegramMediaWebpageLoadedContent: Coding, Equatable {
         } else {
             self.file = nil
         }
+        
+        if let instantPage = decoder.decodeObjectForKey("ip", decoder: { InstantPage(decoder: $0) }) as? InstantPage {
+            self.instantPage = instantPage
+        } else {
+            self.instantPage = nil
+        }
     }
     
     public func encode(_ encoder: Encoder) {
@@ -76,37 +84,65 @@ public final class TelegramMediaWebpageLoadedContent: Coding, Equatable {
         encoder.encodeString(self.displayUrl, forKey: "d")
         if let type = self.type {
             encoder.encodeString(type, forKey: "ty")
+        } else {
+            encoder.encodeNil(forKey: "ty")
         }
         if let websiteName = self.websiteName {
             encoder.encodeString(websiteName, forKey: "ws")
+        } else {
+            encoder.encodeNil(forKey: "ws")
         }
         if let title = self.title {
             encoder.encodeString(title, forKey: "ti")
+        } else {
+            encoder.encodeNil(forKey: "ti")
         }
         if let text = self.text {
             encoder.encodeString(text, forKey: "tx")
+        } else {
+            encoder.encodeNil(forKey: "tx")
         }
         if let embedUrl = self.embedUrl {
             encoder.encodeString(embedUrl, forKey: "eu")
+        } else {
+            encoder.encodeNil(forKey: "eu")
         }
         if let embedType = self.embedType {
             encoder.encodeString(embedType, forKey: "et")
+        } else {
+            encoder.encodeNil(forKey: "et")
         }
         if let embedSize = self.embedSize {
             encoder.encodeInt32(Int32(embedSize.width), forKey: "esw")
             encoder.encodeInt32(Int32(embedSize.height), forKey: "esh")
+        } else {
+            encoder.encodeNil(forKey: "esw")
+            encoder.encodeNil(forKey: "esh")
         }
         if let duration = self.duration {
             encoder.encodeInt32(Int32(duration), forKey: "du")
+        } else {
+            encoder.encodeNil(forKey: "du")
         }
         if let author = self.author {
             encoder.encodeString(author, forKey: "au")
+        } else {
+            encoder.encodeNil(forKey: "au")
         }
         if let image = self.image {
             encoder.encodeObject(image, forKey: "im")
+        } else {
+            encoder.encodeNil(forKey: "im")
         }
         if let file = self.file {
             encoder.encodeObject(file, forKey: "fi")
+        } else {
+            encoder.encodeNil(forKey: "fi")
+        }
+        if let instantPage = self.instantPage {
+            encoder.encodeObject(instantPage, forKey: "ip")
+        } else {
+            encoder.encodeNil(forKey: "ip")
         }
     }
 }
@@ -142,6 +178,10 @@ public func ==(lhs: TelegramMediaWebpageLoadedContent, rhs: TelegramMediaWebpage
         return false
     }
     
+    if lhs.instantPage != rhs.instantPage {
+        return false
+    }
+    
     return true
 }
 
@@ -150,7 +190,7 @@ public enum TelegramMediaWebpageContent {
     case Loaded(TelegramMediaWebpageLoadedContent)
 }
 
-public final class TelegramMediaWebpage: Media {
+public final class TelegramMediaWebpage: Media, Equatable {
     public var id: MediaId? {
         return self.webpageId
     }
@@ -191,24 +231,32 @@ public final class TelegramMediaWebpage: Media {
     
     public func isEqual(_ other: Media) -> Bool {
         if let other = other as? TelegramMediaWebpage, self.webpageId == other.webpageId {
-            switch self.content {
-                case let .Pending(lhsDate):
-                    switch other.content {
-                        case let .Pending(rhsDate) where lhsDate == rhsDate:
-                            return true
-                        default:
-                            return false
-                    }
-                case let .Loaded(lhsContent):
-                    switch other.content {
-                        case let .Loaded(rhsContent) where lhsContent == rhsContent:
-                            return true
-                        default:
-                            return false
-                    }
-            }
+            return self == other
         }
         return false
+    }
+    
+    public static func ==(lhs: TelegramMediaWebpage, rhs: TelegramMediaWebpage) -> Bool {
+        if lhs.webpageId != rhs.webpageId {
+            return false
+        }
+        
+        switch lhs.content {
+            case let .Pending(lhsDate):
+                switch rhs.content {
+                    case let .Pending(rhsDate) where lhsDate == rhsDate:
+                        return true
+                    default:
+                        return false
+                }
+            case let .Loaded(lhsContent):
+                switch rhs.content {
+                    case let .Loaded(rhsContent) where lhsContent == rhsContent:
+                        return true
+                    default:
+                        return false
+                }
+        }
     }
 }
 
@@ -227,7 +275,19 @@ func telegramMediaWebpageFromApiWebpage(_ webpage: Api.WebPage) -> TelegramMedia
             if let duration = duration {
                 webpageDuration = Int(duration)
             }
-            return TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), content: .Loaded(TelegramMediaWebpageLoadedContent(url: url, displayUrl: displayUrl, type: type, websiteName: siteName, title: title, text: description, embedUrl: embedUrl, embedType: embedType, embedSize: embedSize, duration: webpageDuration, author: author, image: photo == nil ? nil : telegramMediaImageFromApiPhoto(photo!), file:document == nil ? nil : telegramMediaFileFromApiDocument(document!))))
+            var image: TelegramMediaImage?
+            if let photo = photo {
+                image = telegramMediaImageFromApiPhoto(photo)
+            }
+            var file: TelegramMediaFile?
+            if let document = document {
+                file = telegramMediaFileFromApiDocument(document)
+            }
+            var instantPage: InstantPage?
+            if let cachedPage = cachedPage {
+                instantPage = InstantPage(apiPage: cachedPage)
+            }
+            return TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), content: .Loaded(TelegramMediaWebpageLoadedContent(url: url, displayUrl: displayUrl, type: type, websiteName: siteName, title: title, text: description, embedUrl: embedUrl, embedType: embedType, embedSize: embedSize, duration: webpageDuration, author: author, image: image, file: file, instantPage: instantPage)))
         case .webPageEmpty:
             return nil
     }

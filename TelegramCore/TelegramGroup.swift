@@ -53,7 +53,7 @@ public final class TelegramGroup: Peer {
     public let version: Int
     
     public var indexName: PeerIndexNameRepresentation {
-        return .title(self.title)
+        return .title(title: self.title, addressName: nil)
     }
     
     public init(id: PeerId, title: String, photo: [TelegramMediaImageRepresentation], participantCount: Int, role: TelegramGroupRole, membership: TelegramGroupMembership, flags: TelegramGroupFlags, migrationReference: TelegramGroupToChannelMigrationReference?, version: Int) {
