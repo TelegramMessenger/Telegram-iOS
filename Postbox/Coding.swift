@@ -103,6 +103,10 @@ public class MemoryBuffer: Equatable, CustomStringConvertible {
             return Data(bytes: self.memory, count: self.length)
         }
     }
+    
+    public func withDataNoCopy(_ f: (Data) -> Void) {
+        f(Data(bytesNoCopy: self.memory, count: self.length, deallocator: .none))
+    }
 }
 
 public func ==(lhs: MemoryBuffer, rhs: MemoryBuffer) -> Bool {
@@ -891,6 +895,63 @@ public final class Decoder {
                 
                 let key = failed ? nil : (typeStore.decode(keyHash, decoder: innerDecoder) as? K)
                     
+                var valueHash: Int32 = 0
+                memcpy(&valueHash, self.buffer.memory + self.offset, 4)
+                self.offset += 4
+                
+                var valueLength: Int32 = 0
+                memcpy(&valueLength, self.buffer.memory + self.offset, 4)
+                
+                innerDecoder = Decoder(buffer: ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(valueLength), freeWhenDone: false))
+                self.offset += 4 + Int(valueLength)
+                
+                let value = failed ? nil : (typeStore.decode(valueHash, decoder: innerDecoder) as? V)
+                
+                if let key = key, let value = value {
+                    dictionary[key] = value
+                } else {
+                    failed = true
+                }
+                
+                i += 1
+            }
+            
+            if failed {
+                return [:]
+            } else {
+                return dictionary
+            }
+        } else {
+            return [:]
+        }
+    }
+    
+    public func decodeObjectDictionaryForKey<K, V: Coding where K: Hashable>(_ key: StaticString, keyDecoder: (Decoder) -> K) -> [K : V] {
+        if Decoder.positionOnKey(self.buffer.memory, offset: &self.offset, maxOffset: self.buffer.length, length: self.buffer.length, key: key, valueType: .ObjectDictionary) {
+            var length: Int32 = 0
+            memcpy(&length, self.buffer.memory + self.offset, 4)
+            self.offset += 4
+            
+            var dictionary: [K : V] = [:]
+            
+            var failed = false
+            var i: Int32 = 0
+            while i < length {
+                var keyHash: Int32 = 0
+                memcpy(&keyHash, self.buffer.memory + self.offset, 4)
+                self.offset += 4
+                
+                var keyLength: Int32 = 0
+                memcpy(&keyLength, self.buffer.memory + self.offset, 4)
+                
+                var innerDecoder = Decoder(buffer: ReadBuffer(memory: self.buffer.memory + (self.offset + 4), length: Int(keyLength), freeWhenDone: false))
+                self.offset += 4 + Int(keyLength)
+                
+                var key: K?
+                if !failed {
+                    key = keyDecoder(innerDecoder)
+                }
+                
                 var valueHash: Int32 = 0
                 memcpy(&valueHash, self.buffer.memory + self.offset, 4)
                 self.offset += 4

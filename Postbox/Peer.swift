@@ -13,8 +13,8 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable {
     }
     
     public init(_ n: Int64) {
-        self.namespace = Int32((n >> 32) & 0xffffffff)
-        self.id = Int32(n & 0xffffffff)
+        self.namespace = Int32((n >> 32) & 0x7fffffff)
+        self.id = Int32(n & 0x7fffffff)
     }
     
     public func toInt64() -> Int64 {

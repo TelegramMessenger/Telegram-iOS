@@ -1,6 +1,6 @@
 import Foundation
 
-public struct MediaId: Hashable, CustomStringConvertible {
+public struct MediaId: Hashable, Coding, CustomStringConvertible {
     public typealias Namespace = Int32
     public typealias Id = Int64
     
@@ -33,6 +33,16 @@ public struct MediaId: Hashable, CustomStringConvertible {
         memcpy(&id, buffer.memory + (buffer.offset + 4), 8)
         self.id = id
         buffer.offset += 12
+    }
+    
+    public init(decoder: Decoder) {
+        self.namespace = decoder.decodeInt32ForKey("n")
+        self.id = decoder.decodeInt64ForKey("i")
+    }
+    
+    public func encode(_ encoder: Encoder) {
+        encoder.encodeInt32(self.namespace, forKey: "n")
+        encoder.encodeInt64(self.id, forKey: "i")
     }
     
     public func encodeToBuffer(_ buffer: WriteBuffer) {

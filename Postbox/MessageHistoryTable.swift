@@ -1487,7 +1487,8 @@ final class MessageHistoryTable: Table {
         } else if let upper = upper {
             return MessageHistoryAnchorIndex(index: MessageIndex(id: messageId, timestamp: upper.index.timestamp), exact: true)
         }
-        return nil
+        
+        return MessageHistoryAnchorIndex(index: MessageIndex(id: messageId, timestamp: 1), exact: false)
     }
     
     func findMessageId(peerId: PeerId, namespace: MessageId.Namespace, timestamp: Int32) -> MessageId? {

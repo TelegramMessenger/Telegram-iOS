@@ -245,6 +245,19 @@ final class ChatListTable: Table {
         return (entries: entries, lower: lower, upper: upper)
     }
     
+    func topPeerIds(count: Int) -> [PeerId] {
+        var peerIds: [PeerId] = []
+        self.valueBox.range(self.table, start: self.upperBound(), end: self.lowerBound(), keys: { key in
+            let index = MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(4 + 4 + 4)), namespace: key.getInt32(4), id: key.getInt32(4 + 4)), timestamp: key.getInt32(0))
+            let type: Int8 = key.getInt8(4 + 4 + 4 + 8)
+            if type == ChatListEntryType.Message.rawValue {
+                peerIds.append(index.id.peerId)
+            }
+            return true
+        }, limit: count)
+        return peerIds
+    }
+    
     func earlierEntries(_ index: MessageIndex?, messageHistoryTable: MessageHistoryTable, peerChatInterfaceStateTable: PeerChatInterfaceStateTable, count: Int) -> [ChatListIntermediateEntry] {
         self.ensureInitialized()
         
