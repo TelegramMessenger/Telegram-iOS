@@ -12,7 +12,7 @@ private final class ValueBoxKeyImpl {
     }
 }
 
-public struct ValueBoxKey: Comparable, CustomStringConvertible {
+public struct ValueBoxKey: Hashable, CustomStringConvertible {
     public let memory: UnsafeMutableRawPointer
     public let length: Int
     private let impl: ValueBoxKeyImpl
@@ -89,6 +89,16 @@ public struct ValueBoxKey: Comparable, CustomStringConvertible {
         return key
     }
     
+    public func isPrefix(to other: ValueBoxKey) -> Bool {
+        if self.length == 0 {
+            return true
+        } else if self.length <= other.length {
+            return memcmp(self.memory, other.memory, self.length) == 0
+        } else {
+            return false
+        }
+    }
+    
     public var successor: ValueBoxKey {
         let key = ValueBoxKey(length: self.length)
         memcpy(key.memory, self.memory, self.length)
@@ -137,6 +147,15 @@ public struct ValueBoxKey: Comparable, CustomStringConvertible {
             string.appendFormat("%02x", byte)
         }
         return string as String
+    }
+    
+    public var hashValue: Int {
+        var hash = 37
+        let bytes = self.memory.assumingMemoryBound(to: Int8.self)
+        for i in 0 ..< self.length {
+            hash = (hash &* 54059) ^ (Int(bytes[i]) &* 76963)
+        }
+        return hash
     }
 }
 

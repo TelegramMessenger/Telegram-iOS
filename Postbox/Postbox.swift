@@ -266,6 +266,8 @@ public final class Postbox {
     var peerChatInterfaceStateTable: PeerChatInterfaceStateTable!
     var itemCacheMetaTable: ItemCacheMetaTable!
     var itemCacheTable: ItemCacheTable!
+    var peerNameTokenIndexTable: PeerNameTokenIndexTable!
+    var peerNameIndexTable: PeerNameIndexTable!
     
     //temporary
     var peerRatingTable: RatingTable<PeerId>!
@@ -348,7 +350,7 @@ public final class Postbox {
             self.metadataTable = MetadataTable(valueBox: self.valueBox, table: MetadataTable.tableSpec(0))
             
             let userVersion: Int32? = self.metadataTable.userVersion()
-            let currentUserVersion: Int32 = 16
+            let currentUserVersion: Int32 = 1
             
             if userVersion != currentUserVersion {
                 self.valueBox.drop()
@@ -366,8 +368,6 @@ public final class Postbox {
             self.readStateTable = MessageHistoryReadStateTable(valueBox: self.valueBox, table: MessageHistoryReadStateTable.tableSpec(14))
             self.synchronizeReadStateTable = MessageHistorySynchronizeReadStateTable(valueBox: self.valueBox, table: MessageHistorySynchronizeReadStateTable.tableSpec(15))
             self.messageHistoryTable = MessageHistoryTable(valueBox: self.valueBox, table: MessageHistoryTable.tableSpec(7), messageHistoryIndexTable: self.messageHistoryIndexTable, messageMediaTable: self.mediaTable, historyMetadataTable: self.messageHistoryMetadataTable, unsentTable: self.messageHistoryUnsentTable!, tagsTable: self.messageHistoryTagsTable, readStateTable: self.readStateTable, synchronizeReadStateTable: self.synchronizeReadStateTable!)
-            self.chatListIndexTable = ChatListIndexTable(valueBox: self.valueBox, table: ChatListIndexTable.tableSpec(8))
-            self.chatListTable = ChatListTable(valueBox: self.valueBox, table: ChatListTable.tableSpec(9), indexTable: self.chatListIndexTable, metadataTable: self.messageHistoryMetadataTable, seedConfiguration: self.seedConfiguration)
             self.peerChatStateTable = PeerChatStateTable(valueBox: self.valueBox, table: PeerChatStateTable.tableSpec(13))
             self.contactsTable = ContactTable(valueBox: self.valueBox, table: ContactTable.tableSpec(16))
             self.peerRatingTable = RatingTable<PeerId>(valueBox: self.valueBox, table: RatingTable<PeerId>.tableSpec(17))
@@ -379,6 +379,10 @@ public final class Postbox {
             self.peerChatInterfaceStateTable = PeerChatInterfaceStateTable(valueBox: self.valueBox, table: PeerChatInterfaceStateTable.tableSpec(23))
             self.itemCacheMetaTable = ItemCacheMetaTable(valueBox: self.valueBox, table: ItemCacheMetaTable.tableSpec(24))
             self.itemCacheTable = ItemCacheTable(valueBox: self.valueBox, table: ItemCacheTable.tableSpec(25))
+            self.peerNameTokenIndexTable = PeerNameTokenIndexTable(valueBox: self.valueBox, table: PeerNameTokenIndexTable.tableSpec(26))
+            self.peerNameIndexTable = PeerNameIndexTable(valueBox: self.valueBox, table: PeerNameIndexTable.tableSpec(27), peerTable: self.peerTable, peerNameTokenIndexTable: self.peerNameTokenIndexTable)
+            self.chatListIndexTable = ChatListIndexTable(valueBox: self.valueBox, table: ChatListIndexTable.tableSpec(8), peerNameIndexTable: self.peerNameIndexTable)
+            self.chatListTable = ChatListTable(valueBox: self.valueBox, table: ChatListTable.tableSpec(9), indexTable: self.chatListIndexTable, metadataTable: self.messageHistoryMetadataTable, seedConfiguration: self.seedConfiguration)
             
             self.tables.append(self.keychainTable)
             self.tables.append(self.peerTable)
@@ -404,6 +408,8 @@ public final class Postbox {
             self.tables.append(self.peerChatInterfaceStateTable)
             self.tables.append(self.itemCacheMetaTable)
             self.tables.append(self.itemCacheTable)
+            self.tables.append(self.peerNameIndexTable)
+            self.tables.append(self.peerNameTokenIndexTable)
             
             self.transactionStateVersion = self.metadataTable.transactionStateVersion()
             
@@ -832,9 +838,13 @@ public final class Postbox {
                 if let updatedPeer = update(currentPeer, peer) {
                     self.peerTable.set(updatedPeer)
                     self.currentUpdatedPeers[updatedPeer.id] = updatedPeer
+                    if currentPeer.indexName != updatedPeer.indexName {
+                        self.peerNameIndexTable.markPeerNameUpdated(peerId: peer.id, name: updatedPeer.indexName)
+                    }
                 }
             } else {
                 self.peerTable.set(peer)
+                self.peerNameIndexTable.markPeerNameUpdated(peerId: peer.id, name: peer.indexName)
             }
         }
     }
@@ -1166,17 +1176,45 @@ public final class Postbox {
     
     public func searchContacts(query: String) -> Signal<[Peer], NoError> {
         return self.modify { modifier -> Signal<[Peer], NoError> in
-            var peers: [Peer] = []
-            for peerId in self.contactsTable.get() {
+            let (_, contactPeerIds) = self.peerNameIndexTable.matchingPeerIds(tokens: (regular: stringIndexTokens(query, transliteration: .none), transliterated: stringIndexTokens(query, transliteration: .transliterated)), categories: [.contacts], chatListIndexTable: self.chatListIndexTable, contactTable: self.contactsTable)
+            
+            var contactPeers: [Peer] = []
+            for peerId in contactPeerIds {
                 if let peer = self.peerTable.get(peerId) {
-                    if peer.indexName.match(query: query) {
-                        peers.append(peer)
+                    contactPeers.append(peer)
+                }
+            }
+            
+            contactPeers.sort(by: { $0.indexName.indexName(.lastNameFirst) < $1.indexName.indexName(.lastNameFirst) })
+            return .single(contactPeers)
+        } |> switchToLatest
+    }
+    
+    public func searchPeers(query: String) -> Signal<[Peer], NoError> {
+        return self.modify { modifier -> Signal<[Peer], NoError> in
+            var peerIds = Set<PeerId>()
+            var chatPeers: [Peer] = []
+            
+            let (chatPeerIds, contactPeerIds) = self.peerNameIndexTable.matchingPeerIds(tokens: (regular: stringIndexTokens(query, transliteration: .none), transliterated: stringIndexTokens(query, transliteration: .transliterated)), categories: [.chats, .contacts], chatListIndexTable: self.chatListIndexTable, contactTable: self.contactsTable)
+            
+            for peerId in chatPeerIds {
+                if let peer = self.peerTable.get(peerId) {
+                    chatPeers.append(peer)
+                    peerIds.insert(peerId)
+                }
+            }
+            
+            var contactPeers: [Peer] = []
+            for peerId in contactPeerIds {
+                if !peerIds.contains(peerId) {
+                    if let peer = self.peerTable.get(peerId) {
+                        contactPeers.append(peer)
                     }
                 }
             }
             
-            peers.sort(by: { $0.indexName.indexName(.lastNameFirst) < $1.indexName.indexName(.lastNameFirst) })
-            return .single(peers)
+            contactPeers.sort(by: { $0.indexName.indexName(.lastNameFirst) < $1.indexName.indexName(.lastNameFirst) })
+            return .single(chatPeers + contactPeers)
         } |> switchToLatest
     }
     
