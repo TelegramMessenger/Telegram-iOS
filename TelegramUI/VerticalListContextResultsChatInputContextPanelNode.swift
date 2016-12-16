@@ -4,36 +4,88 @@ import Postbox
 import TelegramCore
 import Display
 
-private struct ChatContextResultStableId: Hashable {
-    let result: ChatContextResult
+private enum VerticalChatContextResultsEntryStableId: Hashable {
+    case action
+    case result(ChatContextResult)
     
     var hashValue: Int {
-        return result.id.hashValue
+        switch self {
+            case .action:
+                return 0
+            case let .result(result):
+                return result.id.hashValue
+        }
     }
     
-    static func ==(lhs: ChatContextResultStableId, rhs: ChatContextResultStableId) -> Bool {
-        return lhs.result == rhs.result
+    static func ==(lhs: VerticalChatContextResultsEntryStableId, rhs: VerticalChatContextResultsEntryStableId) -> Bool {
+        switch lhs {
+            case .action:
+                if case .action = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .result(lhsResult):
+                if case let .result(rhsResult) = rhs, lhsResult == rhsResult {
+                    return true
+                } else {
+                    return false
+                }
+        }
     }
 }
 
-private struct VerticalListContextResultsChatInputContextPanelEntry: Equatable, Comparable, Identifiable {
-    let index: Int
-    let result: ChatContextResult
+private enum VerticalListContextResultsChatInputContextPanelEntry: Comparable, Identifiable {
+    case action(String)
+    case result(Int, ChatContextResult)
     
-    var stableId: ChatContextResultStableId {
-        return ChatContextResultStableId(result: self.result)
+    var stableId: VerticalChatContextResultsEntryStableId {
+        switch self {
+            case .action:
+                return .action
+            case let .result(_, result):
+                return .result(result)
+        }
     }
     
     static func ==(lhs: VerticalListContextResultsChatInputContextPanelEntry, rhs: VerticalListContextResultsChatInputContextPanelEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.result == rhs.result
+        switch lhs {
+            case let .action(title):
+                if case .action(title) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .result(index, result):
+                if case .result(index, result) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
     }
     
     static func <(lhs: VerticalListContextResultsChatInputContextPanelEntry, rhs: VerticalListContextResultsChatInputContextPanelEntry) -> Bool {
-        return lhs.index < rhs.index
+        switch lhs {
+            case .action:
+                return true
+            case let .result(index, _):
+                switch rhs {
+                    case .action:
+                        return false
+                    case let .result(rhsIndex, _):
+                        return index < rhsIndex
+                }
+        }
     }
     
-    func item(account: Account, resultSelected: @escaping (ChatContextResult) -> Void) -> ListViewItem {
-        return VerticalListContextResultsChatInputPanelItem(account: account, result: self.result, resultSelected: resultSelected)
+    func item(account: Account, actionSelected: @escaping () -> Void, resultSelected: @escaping (ChatContextResult) -> Void) -> ListViewItem {
+        switch self {
+            case let .action(title):
+                return VerticalListContextResultsChatInputPanelButtonItem(title: title, pressed: actionSelected)
+            case let .result(_, result):
+                return VerticalListContextResultsChatInputPanelItem(account: account, result: result, resultSelected: resultSelected)
+        }
     }
 }
 
@@ -43,12 +95,12 @@ private struct VerticalListContextResultsChatInputContextPanelTransition {
     let updates: [ListViewUpdateItem]
 }
 
-private func preparedTransition(from fromEntries: [VerticalListContextResultsChatInputContextPanelEntry], to toEntries: [VerticalListContextResultsChatInputContextPanelEntry], account: Account, resultSelected: @escaping (ChatContextResult) -> Void) -> VerticalListContextResultsChatInputContextPanelTransition {
+private func preparedTransition(from fromEntries: [VerticalListContextResultsChatInputContextPanelEntry], to toEntries: [VerticalListContextResultsChatInputContextPanelEntry], account: Account, actionSelected: @escaping () -> Void, resultSelected: @escaping (ChatContextResult) -> Void) -> VerticalListContextResultsChatInputContextPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, resultSelected: resultSelected), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, resultSelected: resultSelected), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, actionSelected: actionSelected, resultSelected: resultSelected), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, actionSelected: actionSelected, resultSelected: resultSelected), directionHint: nil) }
     
     return VerticalListContextResultsChatInputContextPanelTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -81,9 +133,14 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         self.currentResults = results
         var entries: [VerticalListContextResultsChatInputContextPanelEntry] = []
         var index = 0
-        var resultIds = Set<ChatContextResultStableId>()
+        var resultIds = Set<VerticalChatContextResultsEntryStableId>()
+        if let switchPeer = results.switchPeer {
+            let entry: VerticalListContextResultsChatInputContextPanelEntry = .action(switchPeer.text)
+            entries.append(entry)
+            resultIds.insert(entry.stableId)
+        }
         for result in results.results {
-            let entry = VerticalListContextResultsChatInputContextPanelEntry(index: index, result: result)
+            let entry: VerticalListContextResultsChatInputContextPanelEntry = .result(index, result)
             if resultIds.contains(entry.stableId) {
                 continue
             } else {
@@ -94,7 +151,11 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         }
         
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, resultSelected: { [weak self] result in
+        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, account: self.account, actionSelected: { [weak self] in
+            if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
+                
+            }
+        }, resultSelected: { [weak self] result in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 interfaceInteraction.sendContextResult(results, result)
             }
@@ -126,7 +187,7 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
             }
             
             var insets = UIEdgeInsets()
-            insets.top = topInsetForLayout(size: self.listView.bounds.size)
+            insets.top = topInsetForLayout(size: self.listView.bounds.size, hasSwitchPeer: self.currentResults?.switchPeer != nil)
             
             let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: self.listView.bounds.size, insets: insets, duration: 0.0, curve: .Default)
             
@@ -150,15 +211,18 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
         }
     }
     
-    private func topInsetForLayout(size: CGSize) -> CGFloat {
+    private func topInsetForLayout(size: CGSize, hasSwitchPeer: Bool) -> CGFloat {
         var minimumItemHeights: CGFloat = floor(VerticalListContextResultsChatInputPanelItemNode.itemHeight * 3.5)
+        if hasSwitchPeer {
+            minimumItemHeights += VerticalListContextResultsChatInputPanelButtonItemNode.itemHeight
+        }
         
         return max(size.height - minimumItemHeights, 0.0)
     }
     
     override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
         var insets = UIEdgeInsets()
-        insets.top = self.topInsetForLayout(size: size)
+        insets.top = self.topInsetForLayout(size: size, hasSwitchPeer: self.currentResults?.switchPeer != nil)
         
         transition.updateFrame(node: self.listView, frame: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
         

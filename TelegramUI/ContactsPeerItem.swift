@@ -10,20 +10,29 @@ private let titleFont = Font.regular(17.0)
 private let titleBoldFont = Font.medium(17.0)
 private let statusFont = Font.regular(13.0)
 
+enum ContactsPeerItemStatus {
+    case none
+    case presence(PeerPresence)
+    case addressName
+}
+
 class ContactsPeerItem: ListViewItem {
     let account: Account
     let peer: Peer?
-    let presence: PeerPresence?
+    let status: ContactsPeerItemStatus
     let action: (Peer) -> Void
     let selectable: Bool = true
     
     let headerAccessoryItem: ListViewAccessoryItem?
     
-    init(account: Account, peer: Peer?, presence: PeerPresence?, index: PeerNameIndex?, action: @escaping (Peer) -> Void) {
+    let header: ListViewItemHeader?
+    
+    init(account: Account, peer: Peer?, status: ContactsPeerItemStatus, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (Peer) -> Void) {
         self.account = account
         self.peer = peer
-        self.presence = presence
+        self.status = status
         self.action = action
+        self.header = header
         
         if let index = index {
             var letter: String = "#"
@@ -61,20 +70,8 @@ class ContactsPeerItem: ListViewItem {
         async {
             let node = ContactsPeerItemNode()
             let makeLayout = node.asyncLayout()
-            var first = false
-            var last = false
-            if let headerAccessoryItem = self.headerAccessoryItem {
-                first = true
-                if let previousItem = previousItem, let previousHeaderItem = previousItem.headerAccessoryItem, previousHeaderItem.isEqualToItem(headerAccessoryItem) {
-                    first = false
-                }
-                
-                last = true
-                if let nextItem = nextItem, let nextHeaderItem = nextItem.headerAccessoryItem, nextHeaderItem.isEqualToItem(headerAccessoryItem) {
-                    last = false
-                }
-            }
-            let (nodeLayout, nodeApply) = makeLayout(self, width, first, last)
+            let (first, last, firstWithHeader) = ContactsPeerItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
+            let (nodeLayout, nodeApply) = makeLayout(self, width, first, last, firstWithHeader)
             node.contentSize = nodeLayout.contentSize
             node.insets = nodeLayout.insets
             
@@ -89,21 +86,8 @@ class ContactsPeerItem: ListViewItem {
             Queue.mainQueue().async {
                 let layout = node.asyncLayout()
                 async {
-                    var first = false
-                    var last = false
-                    if let headerAccessoryItem = self.headerAccessoryItem {
-                        first = true
-                        if let previousItem = previousItem, let previousHeaderItem = previousItem.headerAccessoryItem, previousHeaderItem.isEqualToItem(headerAccessoryItem) {
-                            first = false
-                        }
-                        
-                        last = true
-                        if let nextItem = nextItem, let nextHeaderItem = nextItem.headerAccessoryItem, nextHeaderItem.isEqualToItem(headerAccessoryItem) {
-                            last = false
-                        }
-                    }
-                    
-                    let (nodeLayout, apply) = layout(self, width, first, last)
+                    let (first, last, firstWithHeader) = ContactsPeerItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
+                    let (nodeLayout, apply) = layout(self, width, first, last, firstWithHeader)
                     Queue.mainQueue().async {
                         completion(nodeLayout, {
                             apply()
@@ -118,6 +102,36 @@ class ContactsPeerItem: ListViewItem {
         if let peer = self.peer {
             self.action(peer)
         }
+    }
+    
+    static func mergeType(item: ContactsPeerItem, previousItem: ListViewItem?, nextItem: ListViewItem?) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
+        var first = false
+        var last = false
+        var firstWithHeader = false
+        if let previousItem = previousItem {
+            if let header = item.header {
+                if let previousItem = previousItem as? ContactsPeerItem {
+                    firstWithHeader = header.id != previousItem.header?.id
+                } else {
+                    firstWithHeader = true
+                }
+            }
+        } else {
+            first = true
+            firstWithHeader = item.header != nil
+        }
+        if let nextItem = nextItem {
+            if let header = item.header {
+                if let nextItem = nextItem as? ContactsPeerItem {
+                    last = header.id != nextItem.header?.id
+                } else {
+                    last = true
+                }
+            }
+        } else {
+            last = true
+        }
+        return (first, last, firstWithHeader)
     }
 }
 
@@ -135,7 +149,7 @@ class ContactsPeerItemNode: ListViewItemNode {
     private var avatarState: (Account, Peer?)?
     
     private var peerPresenceManager: PeerPresenceStatusManager?
-    private var layoutParams: (ContactsPeerItem, CGFloat, Bool, Bool)?
+    private var layoutParams: (ContactsPeerItem, CGFloat, Bool, Bool, Bool)?
     
     required init() {
         self.backgroundNode = ASDisplayNode()
@@ -166,17 +180,18 @@ class ContactsPeerItemNode: ListViewItemNode {
         
         self.peerPresenceManager = PeerPresenceStatusManager(update: { [weak self] in
             if let strongSelf = self, let layoutParams = strongSelf.layoutParams {
-                let (_, apply) = strongSelf.asyncLayout()(layoutParams.0, layoutParams.1, layoutParams.2, layoutParams.3)
+                let (_, apply) = strongSelf.asyncLayout()(layoutParams.0, layoutParams.1, layoutParams.2, layoutParams.3, layoutParams.4)
                 apply()
             }
         })
     }
     
     override func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
-        if let (item, _, _, _) = self.layoutParams {
-            self.layoutParams = (item, width, previousItem != nil, nextItem != nil)
+        if let (item, _, _, _, _) = self.layoutParams {
+            let (first, last, firstWithHeader) = ContactsPeerItem.mergeType(item: item as! ContactsPeerItem, previousItem: previousItem, nextItem: nextItem)
+            self.layoutParams = (item, width, first, last, firstWithHeader)
             let makeLayout = self.asyncLayout()
-            let (nodeLayout, nodeApply) = makeLayout(item, width, previousItem != nil, nextItem != nil)
+            let (nodeLayout, nodeApply) = makeLayout(item, width, first, last, firstWithHeader)
             self.contentSize = nodeLayout.contentSize
             self.insets = nodeLayout.insets
             nodeApply()
@@ -209,16 +224,17 @@ class ContactsPeerItemNode: ListViewItemNode {
         }
     }
     
-    func asyncLayout() -> (_ item: ContactsPeerItem, _ width: CGFloat, _ first: Bool, _ last: Bool) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: ContactsPeerItem, _ width: CGFloat, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
         
-        return { [weak self] item, width, first, last in
+        return { [weak self] item, width, first, last, firstWithHeader in
             let leftInset: CGFloat = 65.0
             let rightInset: CGFloat = 10.0
             
             var titleAttributedString: NSAttributedString?
             var statusAttributedString: NSAttributedString?
+            var userPresence: TelegramUserPresence?
             
             if let peer = item.peer {
                 if let user = peer as? TelegramUser {
@@ -235,16 +251,26 @@ class ContactsPeerItemNode: ListViewItemNode {
                     } else {
                         titleAttributedString = NSAttributedString(string: "Deleted User", font: titleBoldFont, textColor: UIColor(0xa6a6a6))
                     }
-                    
-                    if let presence = item.presence as? TelegramUserPresence {
-                        let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-                        let (string, activity) = stringAndActivityForUserPresence(presence, relativeTo: Int32(timestamp))
-                        statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? UIColor(0x007ee5) : UIColor(0xa6a6a6))
-                    }
                 } else if let group = peer as? TelegramGroup {
                     titleAttributedString = NSAttributedString(string: group.title, font: titleBoldFont, textColor: UIColor.black)
                 } else if let channel = peer as? TelegramChannel {
                     titleAttributedString = NSAttributedString(string: channel.title, font: titleBoldFont, textColor: UIColor.black)
+                }
+                
+                switch item.status {
+                    case .none:
+                        break
+                    case let .presence(presence):
+                        if let presence = presence as? TelegramUserPresence {
+                            userPresence = presence
+                            let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+                            let (string, activity) = stringAndActivityForUserPresence(presence, relativeTo: Int32(timestamp))
+                            statusAttributedString = NSAttributedString(string: string, font: statusFont, textColor: activity ? UIColor(0x007ee5) : UIColor(0xa6a6a6))
+                        }
+                    case .addressName:
+                        if let addressName = peer.addressName {
+                            statusAttributedString = NSAttributedString(string: "@" + addressName, font: statusFont, textColor: UIColor(0xa6a6a6))
+                        }
                 }
             }
             
@@ -252,7 +278,7 @@ class ContactsPeerItemNode: ListViewItemNode {
             
             let (statusLayout, statusApply) = makeStatusLayout(statusAttributedString, nil, 1, .end, CGSize(width: max(0.0, width - leftInset - rightInset), height: CGFloat.infinity), nil)
             
-            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 48.0), insets: UIEdgeInsets(top: first ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0))
+            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 48.0), insets: UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0))
             
             let titleFrame: CGRect
             if statusAttributedString != nil {
@@ -263,7 +289,7 @@ class ContactsPeerItemNode: ListViewItemNode {
             
             return (nodeLayout, { [weak self] in
                 if let strongSelf = self {
-                    strongSelf.layoutParams = (item, width, first, last)
+                    strongSelf.layoutParams = (item, width, first, last, firstWithHeader)
                     if let peer = item.peer {
                         strongSelf.avatarNode.setPeer(account: item.account, peer: peer)
                     }
@@ -282,8 +308,8 @@ class ContactsPeerItemNode: ListViewItemNode {
                     strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: 65.0, y: nodeLayout.contentSize.height - separatorHeight), size: CGSize(width: max(0.0, nodeLayout.size.width - 65.0), height: separatorHeight))
                     strongSelf.separatorNode.isHidden = last
                     
-                    if let presence = item.presence as? TelegramUserPresence {
-                        strongSelf.peerPresenceManager?.reset(presence: presence)
+                    if let userPresence = userPresence {
+                        strongSelf.peerPresenceManager?.reset(presence: userPresence)
                     }
                 }
             })
@@ -301,5 +327,13 @@ class ContactsPeerItemNode: ListViewItemNode {
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false)
+    }
+    
+    override public func header() -> ListViewItemHeader? {
+        if let (item, _, _, _, _) = self.layoutParams {
+            return item.header
+        } else {
+            return nil
+        }
     }
 }

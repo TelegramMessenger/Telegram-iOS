@@ -28,6 +28,12 @@ private enum MediaPlayerState {
     case playing(MediaPlayerLoadedState)
 }
 
+enum MediaPlayerActionAtEnd {
+    case loop
+    case action(() -> Void)
+    case stop
+}
+
 private final class MediaPlayerContext {
     private let queue: Queue
     private let postbox: Postbox
@@ -38,7 +44,10 @@ private final class MediaPlayerContext {
     
     private var tickTimer: SwiftSignalKit.Timer?
     
-    fileprivate var status = Promise<MediaPlayerStatus>()
+    private var lastStatusUpdateTimestamp: Double?
+    private let playerStatus: ValuePromise<MediaPlayerStatus>
+    
+    fileprivate var actionAtEnd: MediaPlayerActionAtEnd = .stop
     
     fileprivate var playerNode: MediaPlayerNode? {
         didSet {
@@ -62,10 +71,11 @@ private final class MediaPlayerContext {
         }
     }
     
-    init(queue: Queue, postbox: Postbox, resource: MediaResource) {
+    init(queue: Queue, playerStatus: ValuePromise<MediaPlayerStatus>, postbox: Postbox, resource: MediaResource) {
         assert(queue.isCurrent())
         
         self.queue = queue
+        self.playerStatus = playerStatus
         self.postbox = postbox
         self.resource = resource
     }
@@ -122,6 +132,24 @@ private final class MediaPlayerContext {
                     CMTimebaseSetRate(loadedState.controlTimebase.timebase, 0.0)
                 }
             }
+            let timestamp = CMTimeGetSeconds(CMTimebaseGetTime(loadedState.controlTimebase.timebase))
+            var duration: Double = 0.0
+            var videoStatus: MediaTrackFrameBufferStatus?
+            if let videoTrackFrameBuffer = loadedState.mediaBuffers.videoBuffer {
+                videoStatus = videoTrackFrameBuffer.status(at: timestamp)
+                duration = max(duration, CMTimeGetSeconds(videoTrackFrameBuffer.duration))
+            }
+            
+            var audioStatus: MediaTrackFrameBufferStatus?
+            if let audioTrackFrameBuffer = loadedState.mediaBuffers.audioBuffer {
+                audioStatus = audioTrackFrameBuffer.status(at: timestamp)
+                duration = max(duration, CMTimeGetSeconds(audioTrackFrameBuffer.duration))
+            }
+            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: duration, timestamp: min(max(timestamp, 0.0), duration), status: .buffering(whilePlaying: action == .play))
+            self.playerStatus.set(status)
+        } else {
+            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: 0.0, timestamp: 0.0, status: .buffering(whilePlaying: action == .play))
+            self.playerStatus.set(status)
         }
         
         let frameSource = FFMpegMediaFrameSource(queue: self.queue, postbox: self.postbox, resource: resource)
@@ -200,6 +228,7 @@ private final class MediaPlayerContext {
                                                 strongSelf.state = .paused(loadedState)
                                         }
                                         
+                                        strongSelf.lastStatusUpdateTimestamp = nil
                                         strongSelf.tick()
                                     }
                                 }
@@ -213,6 +242,7 @@ private final class MediaPlayerContext {
                                     strongSelf.state = .paused(loadedState)
                             }
                             
+                            strongSelf.lastStatusUpdateTimestamp = nil
                             strongSelf.tick()
                         }
                     }
@@ -235,6 +265,7 @@ private final class MediaPlayerContext {
                                     strongSelf.state = .paused(loadedState)
                             }
                             
+                            strongSelf.lastStatusUpdateTimestamp = nil
                             strongSelf.tick()
                         }
                     }
@@ -248,11 +279,14 @@ private final class MediaPlayerContext {
         
         switch self.state {
             case .empty:
+                self.lastStatusUpdateTimestamp = nil
                 self.seek(timestamp: 0.0, action: .play)
             case let .seeking(frameSource, timestamp, disposable, _):
                 self.state = .seeking(frameSource: frameSource, timestamp: timestamp, disposable: disposable, action: .play)
+                self.lastStatusUpdateTimestamp = nil
             case let .paused(loadedState):
                 self.state = .playing(loadedState)
+                self.lastStatusUpdateTimestamp = nil
                 self.tick()
             case .playing:
                 break
@@ -267,11 +301,33 @@ private final class MediaPlayerContext {
                 break
             case let .seeking(frameSource, timestamp, disposable, _):
                 self.state = .seeking(frameSource: frameSource, timestamp: timestamp, disposable: disposable, action: .pause)
+                self.lastStatusUpdateTimestamp = nil
             case .paused:
                 break
             case let .playing(loadedState):
                 self.state = .paused(loadedState)
+                self.lastStatusUpdateTimestamp = nil
                 self.tick()
+        }
+    }
+    
+    fileprivate func togglePlayPause() {
+        assert(self.queue.isCurrent())
+        
+        switch self.state {
+            case .empty:
+                break
+            case let .seeking(_, _, _, action):
+                switch action {
+                    case .play:
+                        self.pause()
+                    case .pause:
+                        self.play()
+                }
+            case .paused:
+                self.play()
+            case .playing:
+                self.pause()
         }
     }
     
@@ -311,7 +367,7 @@ private final class MediaPlayerContext {
             duration = max(duration, CMTimeGetSeconds(audioTrackFrameBuffer.duration))
         }
         
-        var loopNow = false
+        var performActionAtEndNow = false
         
         var worstStatus: MediaTrackFrameBufferStatus?
         for status in [videoStatus, audioStatus] {
@@ -355,15 +411,15 @@ private final class MediaPlayerContext {
         var buffering = false
         
         if let worstStatus = worstStatus, case let .full(fullUntil) = worstStatus, fullUntil.isFinite {
-            let nextTickDelay = max(0.0, fullUntil - timestamp)
-            let tickTimer = SwiftSignalKit.Timer(timeout: nextTickDelay, repeat: false, completion: { [weak self] in
-                self?.tick()
-            }, queue: self.queue)
-            self.tickTimer = tickTimer
-            tickTimer.start()
-            
             if case .playing = self.state {
                 rate = 1.0
+                
+                let nextTickDelay = max(0.0, fullUntil - timestamp)
+                let tickTimer = SwiftSignalKit.Timer(timeout: nextTickDelay, repeat: false, completion: { [weak self] in
+                    self?.tick()
+                    }, queue: self.queue)
+                self.tickTimer = tickTimer
+                tickTimer.start()
             } else {
                 rate = 0.0
             }
@@ -371,16 +427,16 @@ private final class MediaPlayerContext {
             let nextTickDelay = max(0.0, finishedAt - timestamp)
             if nextTickDelay.isLessThanOrEqualTo(0.0) {
                 rate = 0.0
-                loopNow = true
+                performActionAtEndNow = true
             } else {
-                let tickTimer = SwiftSignalKit.Timer(timeout: nextTickDelay, repeat: false, completion: { [weak self] in
-                    self?.tick()
-                }, queue: self.queue)
-                self.tickTimer = tickTimer
-                tickTimer.start()
-                
                 if case .playing = self.state {
                     rate = 1.0
+                    
+                    let tickTimer = SwiftSignalKit.Timer(timeout: nextTickDelay, repeat: false, completion: { [weak self] in
+                        self?.tick()
+                        }, queue: self.queue)
+                    self.tickTimer = tickTimer
+                    tickTimer.start()
                 } else {
                     rate = 0.0
                 }
@@ -422,62 +478,113 @@ private final class MediaPlayerContext {
         
         let playbackStatus: MediaPlayerPlaybackStatus
         if buffering {
-            playbackStatus = .buffering
+            var whilePlaying = false
+            if case .playing = self.state {
+                whilePlaying = true
+            }
+            playbackStatus = .buffering(whilePlaying: whilePlaying)
         } else if rate.isEqual(to: 1.0) {
             playbackStatus = .playing
         } else {
             playbackStatus = .paused
         }
-        let status = MediaPlayerStatus(duration: duration, timestamp: timestamp, status: playbackStatus)
-        self.status.set(.single(status))
+        let statusTimestamp = CACurrentMediaTime()
+        if self.lastStatusUpdateTimestamp == nil || self.lastStatusUpdateTimestamp! < statusTimestamp + 500 {
+            lastStatusUpdateTimestamp = statusTimestamp
+            let status = MediaPlayerStatus(generationTimestamp: statusTimestamp, duration: duration, timestamp: min(max(timestamp, 0.0), duration), status: playbackStatus)
+            self.playerStatus.set(status)
+        }
         
-        if loopNow {
-            self.seek(timestamp: 0.0, action: .play)
+        if performActionAtEndNow {
+            switch self.actionAtEnd {
+                case .loop:
+                    self.seek(timestamp: 0.0, action: .play)
+                case .stop:
+                    self.pause()
+                case let .action(f):
+                    self.pause()
+                    f()
+            }
         }
     }
 }
 
-enum MediaPlayerPlaybackStatus {
+enum MediaPlayerPlaybackStatus: Equatable {
     case playing
     case paused
-    case buffering
+    case buffering(whilePlaying: Bool)
+    
+    static func ==(lhs: MediaPlayerPlaybackStatus, rhs: MediaPlayerPlaybackStatus) -> Bool {
+        switch lhs {
+            case .playing:
+                if case .playing = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .paused:
+                if case .paused = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .buffering(whilePlaying):
+                if case .buffering(whilePlaying) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
-struct MediaPlayerStatus {
+struct MediaPlayerStatus: Equatable {
+    let generationTimestamp: Double
     let duration: Double
     let timestamp: Double
     let status: MediaPlayerPlaybackStatus
+    
+    static func ==(lhs: MediaPlayerStatus, rhs: MediaPlayerStatus) -> Bool {
+        if !lhs.generationTimestamp.isEqual(to: rhs.generationTimestamp) {
+            return false
+        }
+        if !lhs.duration.isEqual(to: rhs.duration) {
+            return false
+        }
+        if !lhs.timestamp.isEqual(to: rhs.timestamp) {
+            return false
+        }
+        if lhs.status != rhs.status {
+            return false
+        }
+        return true
+    }
 }
 
 final class MediaPlayer {
     private let queue = Queue()
     private var contextRef: Unmanaged<MediaPlayerContext>?
     
+    private let statusValue = ValuePromise<MediaPlayerStatus>(MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, timestamp: 0.0, status: .paused), ignoreRepeated: true)
+    
     var status: Signal<MediaPlayerStatus, NoError> {
-        return Signal { [weak self] subscriber in
-            let disposable = MetaDisposable()
-            
-            if let strongSelf = self {
-                strongSelf.queue.async {
-                    if let context = strongSelf.contextRef?.takeUnretainedValue() {
-                        disposable.set(context.status.get().start(next: { next in
-                            subscriber.putNext(next)
-                        }, error: { error in
-                            subscriber.putError(error)
-                        }, completed: {
-                            subscriber.putCompletion()
-                        }))
-                    }
+        return self.statusValue.get()
+    }
+    
+    var actionAtEnd: MediaPlayerActionAtEnd = .stop {
+        didSet {
+            let value = self.actionAtEnd
+            self.queue.async {
+                if let context = self.contextRef?.takeUnretainedValue() {
+                    context.actionAtEnd = value
                 }
             }
-            
-            return disposable
         }
     }
     
     init(postbox: Postbox, resource: MediaResource) {
         self.queue.async {
-            let context = MediaPlayerContext(queue: self.queue, postbox: postbox, resource: resource)
+            let context = MediaPlayerContext(queue: self.queue, playerStatus: self.statusValue, postbox: postbox, resource: resource)
             self.contextRef = Unmanaged.passRetained(context)
         }
     }
@@ -501,6 +608,14 @@ final class MediaPlayer {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 context.pause()
+            }
+        }
+    }
+    
+    func togglePlayPause() {
+        self.queue.async {
+            if let context = self.contextRef?.takeUnretainedValue() {
+                context.togglePlayPause()
             }
         }
     }

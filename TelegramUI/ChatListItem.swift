@@ -16,12 +16,15 @@ class ChatListItem: ListViewItem {
     
     let selectable: Bool = true
     
-    init(account: Account, message: Message, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, embeddedState: PeerChatListEmbeddedInterfaceState?, action: @escaping (Message) -> Void) {
+    let header: ListViewItemHeader?
+    
+    init(account: Account, message: Message, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, embeddedState: PeerChatListEmbeddedInterfaceState?, header: ListViewItemHeader?, action: @escaping (Message) -> Void) {
         self.account = account
         self.message = message
         self.combinedReadState = combinedReadState
         self.notificationSettings = notificationSettings
         self.embeddedState = embeddedState
+        self.header = header
         self.action = action
     }
     
@@ -29,8 +32,8 @@ class ChatListItem: ListViewItem {
         async {
             let node = ChatListItemNode()
             node.setupItem(account: self.account, message: self.message, combinedReadState: self.combinedReadState, notificationSettings: self.notificationSettings, embeddedState: self.embeddedState)
-            node.relativePosition = (first: previousItem == nil || previousItem! is ChatListSearchItem, last: nextItem == nil)
-            node.insets = ChatListItemNode.insets(first: node.relativePosition.first, last: node.relativePosition.last)
+            let (first, last, firstWithHeader) = ChatListItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
+            node.insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
             node.layoutForWidth(width, item: self, previousItem: previousItem, nextItem: nextItem)
             completion(node, {})
         }
@@ -43,14 +46,12 @@ class ChatListItem: ListViewItem {
                 node.setupItem(account: self.account, message: self.message, combinedReadState: self.combinedReadState, notificationSettings: self.notificationSettings, embeddedState: self.embeddedState)
                 let layout = node.asyncLayout()
                 async {
-                    let first = previousItem == nil || previousItem! is ChatListSearchItem
-                    let last = nextItem == nil
+                    let (first, last, firstWithHeader) = ChatListItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
                     
-                    let (nodeLayout, apply) = layout(self.account, width, first, last)
+                    let (nodeLayout, apply) = layout(self.account, self, width, first, last, firstWithHeader)
                     Queue.mainQueue().async {
                         completion(nodeLayout, { [weak node] in
                             apply()
-                            node?.updateBackgroundAndSeparatorsLayout()
                         })
                     }
                 }
@@ -60,6 +61,29 @@ class ChatListItem: ListViewItem {
     
     func selected(listView: ListView) {
         self.action(self.message)
+    }
+    
+    static func mergeType(item: ChatListItem, previousItem: ListViewItem?, nextItem: ListViewItem?) -> (first: Bool, last: Bool, firstWithHeader: Bool) {
+        var first = false
+        var last = false
+        var firstWithHeader = false
+        if let previousItem = previousItem {
+            if let header = item.header {
+                if let previousItem = previousItem as? ChatListItem {
+                    firstWithHeader = header.id != previousItem.header?.id
+                } else {
+                    firstWithHeader = true
+                }
+            }
+        } else {
+            first = true
+            firstWithHeader = item.header != nil
+        }
+        if let nextItem = nextItem {
+        } else {
+            last = true
+        }
+        return (first, last, firstWithHeader)
     }
 }
 
@@ -133,7 +157,7 @@ class ChatListItemNode: ListViewItemNode {
     let badgeTextNode: TextNode
     let mutedIconNode: ASImageNode
     
-    var relativePosition: (first: Bool, last: Bool) = (false, false)
+    var layoutParams: (ChatListItem, first: Bool, last: Bool, firstWithHeader: Bool)?
     
     required init() {
         self.backgroundNode = ASDisplayNode()
@@ -223,21 +247,13 @@ class ChatListItemNode: ListViewItemNode {
     
     override func layoutForWidth(_ width: CGFloat, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         let layout = self.asyncLayout()
-        let (_, apply) = layout(self.account, width, self.relativePosition.first, self.relativePosition.last)
+        let (first, last, firstWithHeader) = ChatListItem.mergeType(item: item as! ChatListItem, previousItem: previousItem, nextItem: nextItem)
+        let (_, apply) = layout(self.account, item as! ChatListItem, width, first, last, firstWithHeader)
         apply()
     }
     
-    func updateBackgroundAndSeparatorsLayout() {
-        let size = self.bounds.size
-        let insets = self.insets
-        
-        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
-        let topNegativeInset: CGFloat = self.relativePosition.first ? 4.0 : 0.0
-        self.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -insets.top - separatorHeight - topNegativeInset), size: CGSize(width: size.width, height: size.height + separatorHeight + topNegativeInset))
-    }
-    
-    class func insets(first: Bool, last: Bool) -> UIEdgeInsets {
-        return UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
+    class func insets(first: Bool, last: Bool, firstWithHeader: Bool) -> UIEdgeInsets {
+        return UIEdgeInsets(top: firstWithHeader ? 29.0 : 0.0, left: 0.0, bottom: 0.0, right: 0.0)
     }
     
     override func setHighlighted(_ highlighted: Bool, animated: Bool) {
@@ -276,7 +292,7 @@ class ChatListItemNode: ListViewItemNode {
         }
     }
     
-    func asyncLayout() -> (_ account: Account?, _ width: CGFloat, _ first: Bool, _ last: Bool) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ account: Account?, _ item: ChatListItem, _ width: CGFloat, _ first: Bool, _ last: Bool, _ firstWithHeader: Bool) -> (ListViewItemNodeLayout, () -> Void) {
         let dateLayout = TextNode.asyncLayout(self.dateNode)
         let textLayout = TextNode.asyncLayout(self.textNode)
         let titleLayout = TextNode.asyncLayout(self.titleNode)
@@ -287,7 +303,7 @@ class ChatListItemNode: ListViewItemNode {
         let notificationSettings = self.notificationSettings
         let embeddedState = self.embeddedState
         
-        return { account, width, first, last in
+        return { account, item, width, first, last, firstWithHeader in
             var textAttributedString: NSAttributedString?
             var dateAttributedString: NSAttributedString?
             var titleAttributedString: NSAttributedString?
@@ -411,12 +427,12 @@ class ChatListItemNode: ListViewItemNode {
             let titleRect = CGRect(origin: contentRect.origin, size: CGSize(width: contentRect.width - dateLayout.size.width - 10.0 - statusWidth - muteWidth, height: contentRect.height))
             let (titleLayout, titleApply) = titleLayout(titleAttributedString, nil, 1, .end, CGSize(width: titleRect.width, height: CGFloat.greatestFiniteMagnitude), nil)
             
-            let insets = ChatListItemNode.insets(first: first, last: last)
+            let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
             let layout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 68.0), insets: insets)
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
-                    strongSelf.relativePosition = (first, last)
+                    strongSelf.layoutParams = (item, first, last, firstWithHeader)
                     
                     strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: 10.0, y: 4.0), size: CGSize(width: 60.0, height: 60.0))
                     strongSelf.contentNode.frame = CGRect(origin: CGPoint(x: 78.0, y: 0.0), size: CGSize(width: width - 78.0, height: 60.0))
@@ -477,7 +493,10 @@ class ChatListItemNode: ListViewItemNode {
                     
                     strongSelf.contentSize = layout.contentSize
                     strongSelf.insets = layout.insets
-                    strongSelf.updateBackgroundAndSeparatorsLayout()
+                    
+                    strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
+                    let topNegativeInset: CGFloat = 0.0
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -separatorHeight - topNegativeInset), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height + separatorHeight + topNegativeInset))
                     
                     if updateContentNode {
                         strongSelf.contentNode.setNeedsDisplay()
@@ -493,5 +512,13 @@ class ChatListItemNode: ListViewItemNode {
     
     override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false)
+    }
+    
+    override public func header() -> ListViewItemHeader? {
+        if let (item, _, _, _) = self.layoutParams {
+            return item.header
+        } else {
+            return nil
+        }
     }
 }

@@ -5,8 +5,45 @@ import AVFoundation
 import MobileCoreServices
 import TelegramCore
 
+private struct WrappedAudioPlaylistItemId: Hashable, Equatable {
+    let playlistId: AudioPlaylistId
+    let itemId: AudioPlaylistItemId
+    
+    static func ==(lhs: WrappedAudioPlaylistItemId, rhs: WrappedAudioPlaylistItemId) -> Bool {
+        return lhs.itemId.isEqual(to: rhs.itemId) && lhs.playlistId.isEqual(to: rhs.playlistId)
+    }
+    
+    var hashValue: Int {
+        return self.itemId.hashValue
+    }
+}
+
 private final class ManagedAudioPlaylistPlayerStatusesContext {
-    let subscribers
+    private var subscribers: [WrappedAudioPlaylistItemId: Bag<(AudioPlaylistState?) -> Void>] = [:]
+    
+    func addSubscriber(id: WrappedAudioPlaylistItemId, _ f: @escaping (AudioPlaylistState?) -> Void) -> Int {
+        let bag: Bag<(AudioPlaylistState?) -> Void>
+        if let currentBag = self.subscribers[id] {
+            bag = currentBag
+        } else {
+            bag = Bag()
+            self.subscribers[id] = bag
+        }
+        return bag.add(f)
+    }
+    
+    func removeSubscriber(id: WrappedAudioPlaylistItemId, index: Int) {
+        if let bag = subscribers[id] {
+            bag.remove(index)
+            if bag.isEmpty {
+                self.subscribers.removeValue(forKey: id)
+            }
+        }
+    }
+    
+    func subscribersForId(_ id: WrappedAudioPlaylistItemId) -> [(AudioPlaylistState) -> Void]? {
+        return self.subscribers[id]?.copyItems()
+    }
 }
 
 private struct WrappedManagedMediaId: Hashable {
@@ -46,11 +83,12 @@ final class MediaManager {
     let audioSession = ManagedAudioSession()
     
     private let playlistPlayer = Atomic<ManagedAudioPlaylistPlayer?>(value: nil)
-    private let playlistPlayerStateValue = Promise<AudioPlaylistState?>(nil)
-    var playlistPlayerState: Signal<AudioPlaylistState?, NoError> {
-        return self.playlistPlayerStateValue.get()
+    private let playlistPlayerStateAndStatusValue = Promise<AudioPlaylistStateAndStatus?>(nil)
+    var playlistPlayerStateAndStatus: Signal<AudioPlaylistStateAndStatus?, NoError> {
+        return self.playlistPlayerStateAndStatusValue.get()
     }
     private var playlistPlayerStateValueDisposable: Disposable?
+    private let playlistPlayerStatusesContext = Atomic(value: ManagedAudioPlaylistPlayerStatusesContext())
     
     private var managedVideoContexts: [WrappedManagedMediaId: ActiveManagedVideoContext] = [:]
     
@@ -144,20 +182,49 @@ final class MediaManager {
         
         if updatedPlayer {
             if let player = player {
-                self.playlistPlayerStateValue.set(player.state)
+                self.playlistPlayerStateAndStatusValue.set(player.stateAndStatus)
             } else {
-                self.playlistPlayerStateValue.set(.single(nil))
+                self.playlistPlayerStateAndStatusValue.set(.single(nil))
             }
         }
     }
     
-    func playlistPlayerState(playlistId: AudioPlaylistId, itemId: AudioPlaylistItemId) -> Signal<AudioPlaylistState?, NoError> {
-        return Signal { subscriber in
-            
-            
-            return ActionDisposable {
-                
-            }
+    func playlistPlayerControl(_ control: AudioPlaylistControl) {
+        var player: ManagedAudioPlaylistPlayer?
+        self.playlistPlayer.with { currentPlayer -> Void in
+            player = currentPlayer
         }
+        
+        if let player = player {
+            player.control(control)
+        }
+    }
+    
+    func filteredPlaylistPlayerStateAndStatus(playlistId: AudioPlaylistId, itemId: AudioPlaylistItemId) -> Signal<AudioPlaylistStateAndStatus?, NoError> {
+        return self.playlistPlayerStateAndStatusValue.get()
+            |> map { state -> AudioPlaylistStateAndStatus? in
+                if let state = state, let item = state.state.item, state.state.playlistId.isEqual(to: playlistId), item.id.isEqual(to: itemId) {
+                    return state
+                }
+                return nil
+            }
+        /*return Signal { subscriber in
+            let id = WrappedAudioPlaylistItemId(playlistId: playlistId, itemId: itemId)
+            let index = self.playlistPlayerStatusesContext.with { context -> Int in
+                context.addSubscriber(id: id, { state in
+                    subscriber.putNext(state)
+                })
+            }
+            
+            
+            
+            return ActionDisposable { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.playlistPlayerStatusesContext.with { context -> Void in
+                        context.removeSubscriber(id: id, index: index)
+                    }
+                }
+            }
+        }*/
     }
 }

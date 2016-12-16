@@ -79,7 +79,13 @@ private enum ContactsEntry: Comparable, Identifiable {
                     interaction.openPeer(peer.id)
                 })
             case let .peer(peer, presence):
-                return ContactsPeerItem(account: account, peer: peer, presence: presence, index: nil, action: { _ in
+                let status: ContactsPeerItemStatus
+                if let presence = presence {
+                    status = .presence(presence)
+                } else {
+                    status = .none
+                }
+                return ContactsPeerItem(account: account, peer: peer, status: status, index: nil, header: nil, action: { _ in
                     interaction.openPeer(peer.id)
                 })
         }

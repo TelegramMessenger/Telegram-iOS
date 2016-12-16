@@ -17,7 +17,7 @@ class ChatListHoleItem: ListViewItem {
         async {
             let node = ChatListHoleItemNode()
             node.relativePosition = (first: previousItem == nil, last: nextItem == nil)
-            node.insets = ChatListItemNode.insets(first: node.relativePosition.first, last: node.relativePosition.last)
+            node.insets = ChatListItemNode.insets(first: false, last: false, firstWithHeader: false)
             node.layoutForWidth(width, item: self, previousItem: previousItem, nextItem: nextItem)
             completion(node, {})
         }
@@ -78,7 +78,7 @@ class ChatListHoleItemNode: ListViewItemNode {
         return { width, first, last in
             let (labelLayout, labelApply) = labelNodeLayout(NSAttributedString(string: "Loading", font: titleFont, textColor: UIColor(0xc8c7cc)), nil, 1, .end, CGSize(width: width, height: CGFloat.greatestFiniteMagnitude), nil)
             
-            let insets = ChatListItemNode.insets(first: first, last: last)
+            let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: false)
             let layout = ListViewItemNodeLayout(contentSize: CGSize(width: width, height: 68.0), insets: insets)
             
             return (layout, { [weak self] in

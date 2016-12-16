@@ -7,9 +7,9 @@ import TelegramCore
 final class HorizontalPeerItem: ListViewItem {
     let account: Account
     let peer: Peer
-    let action: (PeerId) -> Void
+    let action: (Peer) -> Void
     
-    init(account: Account, peer: Peer, action: @escaping (PeerId) -> Void) {
+    init(account: Account, peer: Peer, action: @escaping (Peer) -> Void) {
         self.account = account
         self.peer = peer
         self.action = action
@@ -37,7 +37,7 @@ private final class HorizontalPeerItemNode: ListViewItemNode {
     private let avatarNode: AvatarNode
     private let titleNode: ASTextNode
     private var peer: Peer?
-    fileprivate var action: ((PeerId) -> Void)?
+    fileprivate var action: ((Peer) -> Void)?
     
     init() {
         self.avatarNode = AvatarNode(font: Font.regular(14.0))
@@ -72,7 +72,7 @@ private final class HorizontalPeerItemNode: ListViewItemNode {
     @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if let peer = self.peer, let action = self.action {
-                action(peer.id)
+                action(peer)
             }
         }
     }

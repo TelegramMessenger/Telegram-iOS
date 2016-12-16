@@ -36,12 +36,13 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
     
     private let statusDisposable = MetaDisposable()
     private let fetchControls = Atomic<FetchControls?>(value: nil)
-    private var fetchStatus: MediaResourceStatus?
+    private var resourceStatus: FileMediaResourceStatus?
     private let fetchDisposable = MetaDisposable()
     
     var activateLocalContent: () -> Void = { }
     
-    private var messageIdAndFlags: (MessageId, MessageFlags)?
+    private var account: Account?
+    private var message: Message?
     private var file: TelegramMediaFile?
     
     init() {
@@ -75,29 +76,32 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
     }
     
     @objc func progressPressed() {
-        if let fetchStatus = self.fetchStatus {
-            switch fetchStatus {
-                case .Fetching:
-                    if let cancel = self.fetchControls.with({ return $0?.cancel }) {
-                        cancel()
+        if let resourceStatus = self.resourceStatus {
+            switch resourceStatus {
+                case let .fetchStatus(fetchStatus):
+                    switch fetchStatus {
+                        case .Fetching:
+                            if let cancel = self.fetchControls.with({ return $0?.cancel }) {
+                                cancel()
+                            }
+                        case .Remote:
+                            if let fetch = self.fetchControls.with({ return $0?.fetch }) {
+                                fetch()
+                            }
+                        case .Local:
+                            self.activateLocalContent()
                     }
-                case .Remote:
-                    if let fetch = self.fetchControls.with({ return $0?.fetch }) {
-                        fetch()
+                case .playbackStatus:
+                    if let account = self.account, let applicationContext = account.applicationContext as? TelegramApplicationContext {
+                        applicationContext.mediaManager.playlistPlayerControl(.playback(.togglePlayPause))
                     }
-                case .Local:
-                    break
             }
         }
     }
     
     @objc func fileTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {
-                self.activateLocalContent()
-            } else {
-                self.progressPressed()
-            }
+            self.progressPressed()
         }
     }
     
@@ -106,13 +110,13 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
         
         let titleAsyncLayout = TextNode.asyncLayout(self.titleNode)
         let descriptionAsyncLayout = TextNode.asyncLayout(self.descriptionNode)
-        let currentMessageIdAndFlags = self.messageIdAndFlags
+        let currentMessage = self.message
         let statusLayout = self.dateAndStatusNode.asyncLayout()
         
         return { account, message, file, incoming, dateAndStatusType, constrainedSize in
             return (CGFloat.greatestFiniteMagnitude, { constrainedSize in
                 //var updateImageSignal: Signal<TransformImageArguments -> DrawingContext, NoError>?
-                var updatedStatusSignal: Signal<MediaResourceStatus, NoError>?
+                var updatedStatusSignal: Signal<FileMediaResourceStatus, NoError>?
                 var updatedFetchControls: FetchControls?
                 
                 var mediaUpdated = false
@@ -123,7 +127,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                 }
                 
                 var statusUpdated = mediaUpdated
-                if currentMessageIdAndFlags?.0 != message.id || currentMessageIdAndFlags?.1 != message.flags {
+                if currentMessage?.id != message.id || currentMessage?.flags != message.flags {
                     statusUpdated = true
                 }
                 
@@ -138,18 +142,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                 }
                 
                 if statusUpdated {
-                    if message.flags.contains(.Unsent) && !message.flags.contains(.Failed) {
-                        updatedStatusSignal = combineLatest(chatMessageFileStatus(account: account, file: file), account.pendingMessageManager.pendingMessageStatus(message.id))
-                            |> map { resourceStatus, pendingStatus -> MediaResourceStatus in
-                                if let pendingStatus = pendingStatus {
-                                    return .Fetching(progress: pendingStatus.progress)
-                                } else {
-                                    return resourceStatus
-                                }
-                            }
-                    } else {
-                        updatedStatusSignal = chatMessageFileStatus(account: account, file: file)
-                    }
+                    updatedStatusSignal = fileMediaResourceStatus(account: account, file: file, message: message)
                 }
                 
                 var statusSize: CGSize?
@@ -193,8 +186,15 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                 for attribute in file.attributes {
                     if case let .Audio(voice, duration, title, performer, waveform) = attribute {
                         isAudio = true
-                        if let _ = updatedStatusSignal {
-                            updatedStatusSignal = .single(.Local)
+                        if let currentUpdatedStatusSignal = updatedStatusSignal {
+                            updatedStatusSignal = currentUpdatedStatusSignal |> map { status in
+                                switch status {
+                                    case .fetchStatus:
+                                        return .fetchStatus(.Local)
+                                    case .playbackStatus:
+                                        return status
+                                }
+                            }
                         }
                         
                         audioDuration = Int32(duration)
@@ -293,7 +293,8 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                     
                     return (fittedLayoutSize, { [weak self] in
                         if let strongSelf = self {
-                            strongSelf.messageIdAndFlags = (message.id, message.flags)
+                            strongSelf.account = account
+                            strongSelf.message = message
                             strongSelf.file = file
                             
                             let _ = titleApply()
@@ -331,7 +332,7 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                                 strongSelf.statusDisposable.set((updatedStatusSignal |> deliverOnMainQueue).start(next: { [weak strongSelf] status in
                                     displayLinkDispatcher.dispatch {
                                         if let strongSelf = strongSelf {
-                                            strongSelf.fetchStatus = status
+                                            strongSelf.resourceStatus = status
                                             
                                             if strongSelf.progressNode == nil {
                                                 let progressNode = RadialProgressNode(theme: RadialProgressTheme(backgroundColor: UIColor(incoming ? 0x007ee5 : 0x3fc33b), foregroundColor: incoming ? UIColor.white : UIColor(0xe1ffc7), icon: incoming ? fileIconIncomingImage : fileIconOutgoingImage))
@@ -341,19 +342,29 @@ final class ChatMessageInteractiveFileNode: ASTransformNode {
                                             }
                                             
                                             switch status {
-                                                case let .Fetching(progress):
-                                                    strongSelf.progressNode?.state = .Fetching(progress: progress)
-                                                case .Local:
-                                                    if isAudio {
-                                                        strongSelf.progressNode?.state = .Play
-                                                    } else {
-                                                        strongSelf.progressNode?.state = .Icon
+                                                case let .fetchStatus(fetchStatus):
+                                                    switch fetchStatus {
+                                                        case let .Fetching(progress):
+                                                            strongSelf.progressNode?.state = .Fetching(progress: progress)
+                                                        case .Local:
+                                                            if isAudio {
+                                                                strongSelf.progressNode?.state = .Play
+                                                            } else {
+                                                                strongSelf.progressNode?.state = .Icon
+                                                            }
+                                                        case .Remote:
+                                                            if isAudio {
+                                                                strongSelf.progressNode?.state = .Play
+                                                            } else {
+                                                                strongSelf.progressNode?.state = .Remote
+                                                            }
                                                     }
-                                                case .Remote:
-                                                    if isAudio {
-                                                        strongSelf.progressNode?.state = .Play
-                                                    } else {
-                                                        strongSelf.progressNode?.state = .Remote
+                                                case let .playbackStatus(playbackStatus):
+                                                    switch playbackStatus {
+                                                        case .playing:
+                                                            strongSelf.progressNode?.state = .Pause
+                                                        case .paused:
+                                                            strongSelf.progressNode?.state = .Play
                                                     }
                                             }
                                         }

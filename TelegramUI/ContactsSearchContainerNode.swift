@@ -55,7 +55,7 @@ final class ContactsSearchContainerNode: SearchDisplayControllerContentNode {
                     for item in items {
                         switch item {
                             case let .peer(peer):
-                                listItems.append(ContactsPeerItem(account: account, peer: peer, presence: nil, index: nil, action: { [weak self] peer in
+                                listItems.append(ContactsPeerItem(account: account, peer: peer, status: .none, index: nil, header: nil, action: { [weak self] peer in
                                     if let openPeer = self?.openPeer {
                                         self?.listNode.clearHighlightAnimated(true)
                                         openPeer(peer.id)

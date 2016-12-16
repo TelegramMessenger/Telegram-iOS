@@ -41,7 +41,7 @@ func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentation
                         let participants = peerParticipants(account: account, id: peer.id)
                             |> map { peers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                                 let filteredPeers = peers.filter { peer in
-                                    if peer.indexName.match(query: normalizedQuery) {
+                                    if peer.indexName.matchesByTokens(normalizedQuery) {
                                         return true
                                     }
                                     if let addressName = peer.addressName, addressName.lowercased().hasPrefix(normalizedQuery) {

@@ -10,8 +10,8 @@ struct PeerMessageHistoryAudioPlaylistItemId: AudioPlaylistItemId {
         return self.id.hashValue
     }
     
-    func isEqual(other: AudioPlaylistItemId) -> Bool {
-        if let other = other as? PeerMessageHistoryAudioPlaylistItemId {
+    func isEqual(to: AudioPlaylistItemId) -> Bool {
+        if let other = to as? PeerMessageHistoryAudioPlaylistItemId {
             return self.id == other.id
         } else {
             return false
@@ -68,8 +68,8 @@ private final class PeerMessageHistoryAudioPlaylistItem: AudioPlaylistItem {
         self.entry = entry
     }
     
-    func isEqual(other: AudioPlaylistItem) -> Bool {
-        if let other = other as? PeerMessageHistoryAudioPlaylistItem {
+    func isEqual(to: AudioPlaylistItem) -> Bool {
+        if let other = to as? PeerMessageHistoryAudioPlaylistItem {
             return self.entry == other.entry
         } else {
             return false
@@ -80,8 +80,8 @@ private final class PeerMessageHistoryAudioPlaylistItem: AudioPlaylistItem {
 struct PeerMessageHistoryAudioPlaylistId: AudioPlaylistId {
     let peerId: PeerId
     
-    func isEqual(other: AudioPlaylistId) -> Bool {
-        if let other = other as? PeerMessageHistoryAudioPlaylistId {
+    func isEqual(to: AudioPlaylistId) -> Bool {
+        if let other = to as? PeerMessageHistoryAudioPlaylistId {
             if self.peerId != other.peerId {
                 return false
             }
@@ -92,15 +92,51 @@ struct PeerMessageHistoryAudioPlaylistId: AudioPlaylistId {
     }
 }
 
+func peerMessageAudioPlaylistAndItemIds(_ message: Message) -> (AudioPlaylistId, AudioPlaylistItemId)? {
+    return (PeerMessageHistoryAudioPlaylistId(peerId: message.id.peerId), PeerMessageHistoryAudioPlaylistItemId(id: message.id))
+}
+
 func peerMessageHistoryAudioPlaylist(account: Account, messageId: MessageId) -> AudioPlaylist {
     return AudioPlaylist(id: PeerMessageHistoryAudioPlaylistId(peerId: messageId.peerId), navigate: { item, navigation in
-        return account.postbox.messageAtId(messageId)
-            |> map { message -> AudioPlaylistItem? in
-                if let message = message {
-                    return PeerMessageHistoryAudioPlaylistItem(entry: .MessageEntry(message, false, nil))
-                } else {
-                    return nil
+        if let item = item as? PeerMessageHistoryAudioPlaylistItem {
+            return account.postbox.aroundMessageHistoryViewForPeerId(item.entry.index.id.peerId, index: item.entry.index, count: 10, anchorIndex: item.entry.index, fixedCombinedReadState: nil, tagMask: .Music)
+                |> take(1)
+                |> map { (view, _, _) -> AudioPlaylistItem? in
+                    var index = 0
+                    for entry in view.entries {
+                        if entry.index.id == item.entry.index.id {
+                            switch navigation {
+                                case .previous:
+                                    if index + 1 < view.entries.count {
+                                        return PeerMessageHistoryAudioPlaylistItem(entry: view.entries[index + 1])
+                                    } else {
+                                        return PeerMessageHistoryAudioPlaylistItem(entry: view.entries.last!)
+                                    }
+                                case .next:
+                                    if index != 0 {
+                                        return PeerMessageHistoryAudioPlaylistItem(entry: view.entries[index - 1])
+                                    } else {
+                                        return PeerMessageHistoryAudioPlaylistItem(entry: view.entries.first!)
+                                    }
+                            }
+                        }
+                        index += 1
+                    }
+                    if !view.entries.isEmpty {
+                        return PeerMessageHistoryAudioPlaylistItem(entry: view.entries.first!)
+                    } else {
+                        return nil
+                    }
                 }
-            }
-        })
+        } else {
+            return account.postbox.messageAtId(messageId)
+                |> map { message -> AudioPlaylistItem? in
+                    if let message = message {
+                        return PeerMessageHistoryAudioPlaylistItem(entry: .MessageEntry(message, false, nil))
+                    } else {
+                        return nil
+                    }
+                }
+        }
+    })
 }

@@ -32,6 +32,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
     
     private let statusNode: ChatMessageDateAndStatusNode
     
+    private var webPage: TelegramMediaWebpage?
     private var image: TelegramMediaImage?
     
     required init() {
@@ -75,11 +76,13 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         return { item, layoutConstants, _, constrainedSize in
             let insets = UIEdgeInsets(top: 0.0, left: 9.0 + 8.0, bottom: 5.0, right: 8.0)
             
-            var webpage: TelegramMediaWebpageLoadedContent?
+            var webPage: TelegramMediaWebpage?
+            var webPageContent: TelegramMediaWebpageLoadedContent?
             for media in item.message.media {
                 if let media = media as? TelegramMediaWebpage {
+                    webPage = media
                     if case let .Loaded(content) = media.content {
-                        webpage = content
+                        webPageContent = content
                     }
                     break
                 }
@@ -115,12 +118,12 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             var refineContentImageLayout: ((CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageInteractiveMediaNode)))?
             var refineContentFileLayout: ((CGSize) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageInteractiveFileNode)))?
             
-            if let webpage = webpage {
+            if let webpage = webPageContent {
                 let string = NSMutableAttributedString()
                 var notEmpty = false
                 
                 if let websiteName = webpage.websiteName, !websiteName.isEmpty {
-                    string.append(NSAttributedString(string: websiteName, font: titleFont, textColor: item.message.flags.contains(.Incoming) ? incomingAccentColor : outgoingAccentColor))
+                    string.append(NSAttributedString(string: websiteName, font: titleFont, textColor: item.message.effectivelyIncoming ? incomingAccentColor : outgoingAccentColor))
                     notEmpty = true
                 }
                 
@@ -148,7 +151,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         initialWidth = initialImageWidth + insets.left + insets.right
                         refineContentImageLayout = refineLayout
                     } else {
-                        let (_, refineLayout) = contentFileLayout(item.account, item.message, file, item.message.flags.contains(.Incoming), nil, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height))
+                        let (_, refineLayout) = contentFileLayout(item.account, item.message, file, item.message.effectivelyIncoming, nil, CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height))
                         refineContentFileLayout = refineLayout
                     }
                 } else if let image = webpage.image {
@@ -226,7 +229,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 textFrame = textFrame.offsetBy(dx: insets.left, dy: insets.top)
                 
-                let lineImage = item.message.flags.contains(.Incoming) ? incomingLineImage : outgoingLineImage
+                let lineImage = item.message.effectivelyIncoming ? incomingLineImage : outgoingLineImage
                 
                 var boundingSize = textFrame.size
                 if let statusFrame = statusFrame {
@@ -305,6 +308,10 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         adjustedLineHeight += imageHeigthAddition + 4.0
                     }
                     
+                    if let _ = webPageContent?.instantPage {
+                        adjustedBoundingSize.height += 4.0
+                    }
+                    
                     var adjustedStatusFrame: CGRect?
                     if let statusFrame = statusFrame {
                         adjustedStatusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusFrame.size.width - insets.right, y: statusFrame.origin.y), size: statusFrame.size)
@@ -333,7 +340,8 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.statusNode.removeFromSupernode()
                             }
                             
-                            strongSelf.image = webpage?.image
+                            strongSelf.webPage = webPage
+                            strongSelf.image = webPageContent?.image
                             
                             if let imageFrame = imageFrame {
                                 if let updateImageSignal = updateInlineImageSignal {
@@ -420,5 +428,16 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
         self.statusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         self.inlineImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+    }
+    
+    override func tapActionAtPoint(_ point: CGPoint) -> ChatMessageBubbleContentTapAction {
+        if self.bounds.contains(point) {
+            if let webPage = self.webPage, case let .Loaded(content) = webPage.content {
+                if content.instantPage != nil {
+                    return .instantPage
+                }
+            }
+        }
+        return .none
     }
 }

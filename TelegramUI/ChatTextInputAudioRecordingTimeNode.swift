@@ -22,7 +22,7 @@ final class ChatTextInputAudioRecordingTimeNode: ASDisplayNode {
             self.setNeedsDisplay()
         }
     }
-    private var stateDisposable = MetaDisposable()
+    private let stateDisposable = MetaDisposable()
     
     var audioRecorder: ManagedAudioRecorder? {
         didSet {
@@ -67,7 +67,7 @@ final class ChatTextInputAudioRecordingTimeNode: ASDisplayNode {
         return ChatTextInputAudioRecordingTimeNodeParameters(timestamp: self.timestamp)
     }
     
-    @objc override class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol?, isCancelled: @escaping asdisplaynode_iscancelled_block_t, isRasterizing: Bool) {
+    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol?, isCancelled: () -> Bool, isRasterizing: Bool) {
         let context = UIGraphicsGetCurrentContext()!
         
         if !isRasterizing {

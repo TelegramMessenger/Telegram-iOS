@@ -16,7 +16,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
     var requestDeactivateSearch: (() -> Void)?
-    var requestOpenPeerFromSearch: ((PeerId) -> Void)?
+    var requestOpenPeerFromSearch: ((Peer) -> Void)?
     var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
     
     init(account: Account, dismiss: @escaping () -> Void) {
@@ -89,14 +89,14 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }
         
         if let placeholderNode = maybePlaceholderNode {
-            self.searchDisplayController = SearchDisplayController(contentNode: ChatListSearchContainerNode(account: self.account, openPeer: { [weak self] peerId in
+            self.searchDisplayController = SearchDisplayController(contentNode: ChatListSearchContainerNode(account: self.account, openPeer: { [weak self] peer in
                 if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
-                    requestOpenPeerFromSearch(peerId)
+                    requestOpenPeerFromSearch(peer)
                 }
-                }, openMessage: { [weak self] peer, messageId in
-                    if let requestOpenMessageFromSearch = self?.requestOpenMessageFromSearch {
-                        requestOpenMessageFromSearch(peer, messageId)
-                    }
+            }, openMessage: { [weak self] peer, messageId in
+                if let requestOpenMessageFromSearch = self?.requestOpenMessageFromSearch {
+                    requestOpenMessageFromSearch(peer, messageId)
+                }
             }), cancel: { [weak self] in
                 if let requestDeactivateSearch = self?.requestDeactivateSearch {
                     requestDeactivateSearch()

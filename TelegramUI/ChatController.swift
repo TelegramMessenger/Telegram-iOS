@@ -58,7 +58,9 @@ public class ChatController: TelegramController {
         self.peerId = peerId
         self.messageId = messageId
         
-        performanceSpinnerAcquire()
+        /*if #available(iOSApplicationExtension 10.0, *) {
+            kdebug_signpost(1, 0, 0, 0, 0)
+        }*/
         
         super.init(account: account)
         
@@ -384,6 +386,20 @@ public class ChatController: TelegramController {
                     postAsReply = true
                 }
                 enqueueMessages(account: strongSelf.account, peerId: strongSelf.peerId, messages: [.message(text: command, attributes: [], media: nil, replyToMessageId: postAsReply ? messageId : nil)]).start()
+            }
+        }, openInstantPage: { [weak self] messageId in
+            if let strongSelf = self, strongSelf.isNodeLoaded {
+                if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
+                    for media in message.media {
+                        if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+                            if let instantPage = content.instantPage {
+                                let pageController = InstantPageController(account: strongSelf.account, webPage: webpage)
+                                (strongSelf.navigationController as? NavigationController)?.pushViewController(pageController)
+                            }
+                            break
+                        }
+                    }
+                }
             }
         }, updateInputState: { [weak self] f in
             if let strongSelf = self {

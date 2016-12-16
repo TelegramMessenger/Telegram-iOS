@@ -4,6 +4,7 @@ import CoreMedia
 
 enum MediaTrackEvent {
     case frames([MediaTrackDecodableFrame])
+    case endOfStream
 }
 
 struct MediaFrameSourceSeekResult {

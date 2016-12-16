@@ -52,7 +52,7 @@ private class RadialProgressOverlayNode: ASDisplayNode {
         return RadialProgressOverlayParameters(theme: self.theme, diameter: self.frame.size.width, state: self.state)
     }
     
-    @objc override class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol?, isCancelled: @escaping  asdisplaynode_iscancelled_block_t, isRasterizing: Bool) {
+    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol?, isCancelled: () -> Bool, isRasterizing: Bool) {
         let context = UIGraphicsGetCurrentContext()!
         
         if !isRasterizing {
@@ -67,7 +67,7 @@ private class RadialProgressOverlayNode: ASDisplayNode {
             //CGContextSetLineCap(context, .Round)
             
             switch parameters.state {
-                case .None, .Remote, .Play, .Icon:
+                case .None, .Remote, .Play, .Pause, .Icon:
                     break
                 case let .Fetching(progress):
                     let startAngle = -CGFloat(M_PI_2)
@@ -109,6 +109,7 @@ public enum RadialProgressState {
     case Remote
     case Fetching(progress: Float)
     case Play
+    case Pause
     case Icon
 }
 
@@ -163,6 +164,13 @@ class RadialProgressNode: ASControlNode {
                         default:
                             self.setNeedsDisplay()
                     }
+                case .Pause:
+                    switch self.state {
+                        case .Pause:
+                            break
+                        default:
+                            self.setNeedsDisplay()
+                    }
                 case .Icon:
                     switch self.state {
                         case .Icon:
@@ -206,7 +214,7 @@ class RadialProgressNode: ASControlNode {
         return RadialProgressParameters(theme: self.theme, diameter: self.frame.size.width, state: self.state)
     }
     
-    @objc override class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol?, isCancelled: @escaping asdisplaynode_iscancelled_block_t, isRasterizing: Bool) {
+    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol?, isCancelled: () -> Bool, isRasterizing: Bool) {
         let context = UIGraphicsGetCurrentContext()!
         
         if !isRasterizing {
@@ -274,6 +282,24 @@ class RadialProgressNode: ASControlNode {
                         context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
                     }
                     context.translateBy(x: -(parameters.diameter - size.width) / 2.0 - 1.5, y: -(parameters.diameter - size.height) / 2.0)
+                case .Pause:
+                    context.setFillColor(parameters.theme.foregroundColor.cgColor)
+                    
+                    let size = CGSize(width: 15.0, height: 16.0)
+                    context.translateBy(x: (parameters.diameter - size.width) / 2.0, y: (parameters.diameter - size.height) / 2.0)
+                    if (parameters.diameter < 40.0) {
+                        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                        context.scaleBy(x: 0.8, y: 0.8)
+                        context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                    }
+                    let _ = try? drawSvgPath(context, path: "M0,1.00087166 C0,0.448105505 0.443716645,0 0.999807492,0 L4.00019251,0 C4.55237094,0 5,0.444630861 5,1.00087166 L5,14.9991283 C5,15.5518945 4.55628335,16 4.00019251,16 L0.999807492,16 C0.447629061,16 0,15.5553691 0,14.9991283 L0,1.00087166 Z M10,1.00087166 C10,0.448105505 10.4437166,0 10.9998075,0 L14.0001925,0 C14.5523709,0 15,0.444630861 15,1.00087166 L15,14.9991283 C15,15.5518945 14.5562834,16 14.0001925,16 L10.9998075,16 C10.4476291,16 10,15.5553691 10,14.9991283 L10,1.00087166 ")
+                    context.fillPath()
+                    if (parameters.diameter < 40.0) {
+                        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                        context.scaleBy(x: 1.0 / 0.8, y: 1.0 / 0.8)
+                        context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                    }
+                    context.translateBy(x: -(parameters.diameter - size.width) / 2.0, y: -(parameters.diameter - size.height) / 2.0)
             }
         }
     }

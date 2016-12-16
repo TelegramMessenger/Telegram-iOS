@@ -242,7 +242,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     switch tapAction {
                         case .none:
                             break
-                        case .url, .peerMention, .textMention, .botCommand:
+                        case .url, .peerMention, .textMention, .botCommand, .instantPage:
                             return true
                     }
                 }
@@ -820,6 +820,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                                         foundTapAction = true
                                         if let item = self.item, let controllerInteraction = self.controllerInteraction {
                                             controllerInteraction.sendBotCommand(item.message.id, command)
+                                        }
+                                    case .instantPage:
+                                        foundTapAction = true
+                                        if let item = self.item, let controllerInteraction = self.controllerInteraction {
+                                            controllerInteraction.openInstantPage(item.message.id)
                                         }
                                         break loop
                                 }

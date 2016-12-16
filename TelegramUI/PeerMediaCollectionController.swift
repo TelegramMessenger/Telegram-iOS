@@ -186,6 +186,7 @@ public class PeerMediaCollectionController: ViewController {
             }, shareCurrentLocation: {
             }, shareAccountContact: {
             }, sendBotCommand: { _, _ in
+            }, openInstantPage: {_ in
             }, updateInputState: { _ in
             })
         

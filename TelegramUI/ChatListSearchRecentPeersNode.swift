@@ -11,7 +11,7 @@ final class ChatListSearchRecentPeersNode: ASDisplayNode {
     
     private let disposable = MetaDisposable()
     
-    init(account: Account, peerSelected: @escaping (PeerId) -> Void) {
+    init(account: Account, peerSelected: @escaping (Peer) -> Void) {
         self.sectionHeaderNode = ListSectionHeaderNode()
         self.sectionHeaderNode.title = "PEOPLE"
         

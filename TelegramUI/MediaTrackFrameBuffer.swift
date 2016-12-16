@@ -29,6 +29,7 @@ final class MediaTrackFrameBuffer {
     private var frameSourceSinkIndex: Int?
     
     private var frames: [MediaTrackDecodableFrame] = []
+    private var endOfStream = false
     private var bufferedUntilTime: CMTime?
     
     init(frameSource: MediaFrameSource, decoder: MediaTrackFrameDecoder, type: MediaTrackFrameType, duration: CMTime) {
@@ -50,6 +51,8 @@ final class MediaTrackFrameBuffer {
                         if !filteredFrames.isEmpty {
                             strongSelf.addFrames(filteredFrames)
                         }
+                    case .endOfStream:
+                        strongSelf.endOfStreamReached()
                 }
             }
         }
@@ -79,10 +82,15 @@ final class MediaTrackFrameBuffer {
         self.statusUpdated()
     }
     
+    private func endOfStreamReached() {
+        self.endOfStream = true
+        self.statusUpdated()
+    }
+    
     func status(at timestamp: Double) -> MediaTrackFrameBufferStatus {
         var bufferedDuration = 0.0
         if let bufferedUntilTime = bufferedUntilTime {
-            if CMTimeCompare(bufferedUntilTime, self.duration) >= 0 {
+            if CMTimeCompare(bufferedUntilTime, self.duration) >= 0 || self.endOfStream {
                 return .finished(at: CMTimeGetSeconds(bufferedUntilTime))
             }
             

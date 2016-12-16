@@ -142,7 +142,7 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
         self.performWithContext { [weak self] context in
             context.initializeState(postbox: postbox, resource: resource)
             
-            let frames = context.takeFrames(until: timestamp)
+            let (frames, endOfStream) = context.takeFrames(until: timestamp)
             
             queue.async { [weak self] in
                 if let strongSelf = self {
@@ -150,6 +150,9 @@ final class FFMpegMediaFrameSource: NSObject, MediaFrameSource {
                     
                     for sink in strongSelf.eventSinkBag.copyItems() {
                         sink(.frames(frames))
+                        if endOfStream {
+                            sink(.endOfStream)
+                        }
                     }
                     
                     if strongSelf.requestedFrameGenerationTimestamp != nil && !strongSelf.requestedFrameGenerationTimestamp!.isEqual(to: timestamp) {

@@ -117,7 +117,7 @@ public final class AvatarNode: ASDisplayNode {
         return parameters ?? NSObject()
     }
     
-    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol?, isCancelled: @escaping asdisplaynode_iscancelled_block_t, isRasterizing: Bool) {
+    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: NSObjectProtocol?, isCancelled: () -> Bool, isRasterizing: Bool) {
         assertNotOnMainThread()
         
         let context = UIGraphicsGetCurrentContext()!

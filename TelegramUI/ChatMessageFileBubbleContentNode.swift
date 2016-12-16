@@ -59,7 +59,7 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 statusType = nil
             }
             
-            let (initialWidth, refineLayout) = interactiveFileLayout(item.account, item.message, selectedFile!, item.message.flags.contains(.Incoming), statusType, CGSize(width: constrainedSize.width, height: constrainedSize.height))
+            let (initialWidth, refineLayout) = interactiveFileLayout(item.account, item.message, selectedFile!, item.message.effectivelyIncoming, statusType, CGSize(width: constrainedSize.width, height: constrainedSize.height))
             
             return (initialWidth + layoutConstants.file.bubbleInsets.left + layoutConstants.file.bubbleInsets.right, { constrainedSize in
                 let (refinedWidth, finishLayout) = refineLayout(constrainedSize)

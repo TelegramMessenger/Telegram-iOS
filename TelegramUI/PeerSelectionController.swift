@@ -78,9 +78,21 @@ public final class PeerSelectionController: ViewController {
             }
         }
         
-        self.peerSelectionNode.requestOpenPeerFromSearch = { [weak self] peerId in
+        self.peerSelectionNode.requestOpenPeerFromSearch = { [weak self] peer in
             if let strongSelf = self {
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: peerId))
+                let storedPeer = strongSelf.account.postbox.modify { modifier -> Void in
+                    if modifier.getPeer(peer.id) == nil {
+                        modifier.updatePeers([peer], update: { previousPeer, updatedPeer in
+                            return updatedPeer
+                        })
+                    }
+                }
+                strongSelf.openMessageFromSearchDisposable.set((storedPeer |> deliverOnMainQueue).start(completed: { [weak strongSelf] in
+                    if let strongSelf = strongSelf {
+                        (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(account: strongSelf.account, peerId: peer.id))
+                    }
+                }))
+                
             }
         }
         

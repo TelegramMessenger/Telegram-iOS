@@ -3,19 +3,46 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
-enum AudioPlaylistItemLabelInfo {
+enum AudioPlaylistItemLabelInfo: Equatable {
     case music(title: String?, performer: String?)
     case voice
+    
+    static func ==(lhs: AudioPlaylistItemLabelInfo, rhs: AudioPlaylistItemLabelInfo) -> Bool {
+        switch lhs {
+            case let .music(lhsTitle, lhsPerformer):
+                if case let .music(rhsTitle, rhsPerformer) = rhs, lhsTitle == rhsTitle, lhsPerformer == rhsPerformer {
+                    return true
+                } else {
+                    return false
+                }
+            case .voice:
+                if case .voice = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
-struct AudioPlaylistItemInfo {
+struct AudioPlaylistItemInfo: Equatable {
     let duration: Double
     let labelInfo: AudioPlaylistItemLabelInfo
+    
+    static func ==(lhs: AudioPlaylistItemInfo, rhs: AudioPlaylistItemInfo) -> Bool {
+        if !lhs.duration.isEqual(to: rhs.duration) {
+            return false
+        }
+        if lhs.labelInfo != rhs.labelInfo {
+            return false
+        }
+        return true
+    }
 }
 
 protocol AudioPlaylistItemId {
     var hashValue: Int { get }
-    func isEqual(other: AudioPlaylistItemId) -> Bool
+    func isEqual(to: AudioPlaylistItemId) -> Bool
 }
 
 protocol AudioPlaylistItem {
@@ -23,7 +50,7 @@ protocol AudioPlaylistItem {
     var resource: MediaResource? { get }
     var info: AudioPlaylistItemInfo? { get }
     
-    func isEqual(other: AudioPlaylistItem) -> Bool
+    func isEqual(to: AudioPlaylistItem) -> Bool
 }
 
 enum AudioPlaylistNavigation {
@@ -34,6 +61,8 @@ enum AudioPlaylistNavigation {
 enum AudioPlaylistPlayback {
     case play
     case pause
+    case togglePlayPause
+    case seek(Double)
 }
 
 enum AudioPlaylistControl {
@@ -42,7 +71,7 @@ enum AudioPlaylistControl {
 }
 
 protocol AudioPlaylistId {
-    func isEqual(other: AudioPlaylistId) -> Bool
+    func isEqual(to: AudioPlaylistId) -> Bool
 }
 
 struct AudioPlaylist {
@@ -55,18 +84,28 @@ struct AudioPlaylistState: Equatable {
     let item: AudioPlaylistItem?
     
     static func ==(lhs: AudioPlaylistState, rhs: AudioPlaylistState) -> Bool {
-        if !lhs.playlistId.isEqual(other: rhs.playlistId) {
+        if !lhs.playlistId.isEqual(to: rhs.playlistId) {
             return false
         }
         
         if let lhsItem = lhs.item, let rhsItem = rhs.item {
-            if !lhsItem.isEqual(other: rhsItem) {
+            if !lhsItem.isEqual(to: rhsItem) {
                 return false
             }
         } else if (lhs.item != nil) != (rhs.item != nil) {
             return false
         }
         return true
+    }
+}
+
+struct AudioPlaylistStateAndStatus: Equatable {
+    let state: AudioPlaylistState
+    let playbackId: Int32
+    let status: Signal<MediaPlayerStatus, NoError>?
+    
+    static func ==(lhs: AudioPlaylistStateAndStatus, rhs: AudioPlaylistStateAndStatus) -> Bool {
+        return lhs.state == rhs.state && lhs.playbackId == rhs.playbackId
     }
 }
 
@@ -83,6 +122,7 @@ private final class AudioPlaylistItemState {
 private final class AudioPlaylistInternalState {
     var currentItem: AudioPlaylistItemState?
     let navigationDisposable = MetaDisposable()
+    var nextPlaybackId: Int32 = 0
 }
 
 final class ManagedAudioPlaylistPlayer {
@@ -90,10 +130,10 @@ final class ManagedAudioPlaylistPlayer {
     let playlist: AudioPlaylist
     
     private let currentState = Atomic<AudioPlaylistInternalState>(value: AudioPlaylistInternalState())
-    private let currentStateValue = Promise<AudioPlaylistState?>()
+    private let currentStateAndStatusValue = Promise<AudioPlaylistStateAndStatus?>()
     
-    var state: Signal<AudioPlaylistState?, NoError> {
-        return self.currentStateValue.get()
+    var stateAndStatus: Signal<AudioPlaylistStateAndStatus?, NoError> {
+        return self.currentStateAndStatusValue.get()
     }
     
     init(postbox: Postbox, playlist: AudioPlaylist) {
@@ -117,6 +157,10 @@ final class ManagedAudioPlaylistPlayer {
                                 item.player?.play()
                             case .pause:
                                 item.player?.pause()
+                            case .togglePlayPause:
+                                item.player?.togglePlayPause()
+                            case let .seek(timestamp):
+                                item.player?.seek(timestamp: timestamp)
                         }
                     }
                 }
@@ -125,24 +169,34 @@ final class ManagedAudioPlaylistPlayer {
                 var currentItem: AudioPlaylistItem?
                 self.currentState.with { state -> Void in
                     state.navigationDisposable.set(disposable)
+                    currentItem = state.currentItem?.item
                 }
                 disposable.set(self.playlist.navigate(currentItem, navigation).start(next: { [weak self] item in
                     if let strongSelf = self {
-                        let updatedState = strongSelf.currentState.with { state -> AudioPlaylistState in
+                        let updatedStateAndStatus = strongSelf.currentState.with { state -> AudioPlaylistStateAndStatus in
                             if let item = item {
-                                var player: MediaPlayer?
                                 if let resource = item.resource {
-                                    player = MediaPlayer(postbox: strongSelf.postbox, resource: resource)
+                                    let player = MediaPlayer(postbox: strongSelf.postbox, resource: resource)
+                                    player.actionAtEnd = .action({
+                                        if let strongSelf = self {
+                                            strongSelf.control(.navigation(.next))
+                                        }
+                                    })
+                                    state.currentItem = AudioPlaylistItemState(item: item, player: player)
+                                    player.play()
+                                    let playbackId = state.nextPlaybackId
+                                    state.nextPlaybackId += 1
+                                    return AudioPlaylistStateAndStatus(state: AudioPlaylistState(playlistId: strongSelf.playlist.id, item: item), playbackId: playbackId, status: player.status)
+                                } else {
+                                    state.currentItem = AudioPlaylistItemState(item: item, player: nil)
+                                    return AudioPlaylistStateAndStatus(state: AudioPlaylistState(playlistId: strongSelf.playlist.id, item: item), playbackId: 0, status: nil)
                                 }
-                                state.currentItem = AudioPlaylistItemState(item: item, player: player)
-                                player?.play()
-                                return AudioPlaylistState(playlistId: strongSelf.playlist.id, item: item)
                             } else {
                                 state.currentItem = nil
-                                return AudioPlaylistState(playlistId: strongSelf.playlist.id, item: nil)
+                                return AudioPlaylistStateAndStatus(state: AudioPlaylistState(playlistId: strongSelf.playlist.id, item: nil), playbackId: 0, status: nil)
                             }
                         }
-                        strongSelf.currentStateValue.set(.single(updatedState))
+                        strongSelf.currentStateAndStatusValue.set(.single(updatedStateAndStatus))
                     }
                 }))
         }

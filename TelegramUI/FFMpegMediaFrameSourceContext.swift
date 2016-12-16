@@ -260,13 +260,13 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         }
     }
     
-    func takeFrames(until: Double) -> [MediaTrackDecodableFrame] {
+    func takeFrames(until: Double) -> (frames: [MediaTrackDecodableFrame], endOfStream: Bool) {
         if self.readingError {
-            return []
+            return ([], true)
         }
         
         guard let initializedState = self.initializedState else {
-            return []
+            return ([], true)
         }
         
         var videoTimestamp: Double?
@@ -280,6 +280,7 @@ final class FFMpegMediaFrameSourceContext: NSObject {
         }
         
         var frames: [MediaTrackDecodableFrame] = []
+        var endOfStream = false
         
         while !self.readingError && ((videoTimestamp == nil || videoTimestamp!.isLess(than: until)) || (audioTimestamp == nil || audioTimestamp!.isLess(than: until))) {
             
@@ -332,11 +333,12 @@ final class FFMpegMediaFrameSourceContext: NSObject {
                     }
                 }
             } else {
+                endOfStream = true
                 break
             }
         }
         
-        return frames
+        return (frames, endOfStream)
     }
     
     func contextInfo() -> FFMpegMediaFrameSourceContextInfo? {
